@@ -1,363 +1,10 @@
-/**
- * Tests for BrowserPaneManager.
- *
- * Mocks Electron BrowserWindow and session modules to validate lifecycle,
- * session binding, and navigation behavior.
- */
-
-import { describe, it, expect, beforeEach, mock } from 'bun:test'
-
-const createdWindows: any[] = []
-let toolbarLoadFailuresRemaining = 0
-let emptyStateLoadError: Error | null = null
-let nextMockWebContentsId = 0
-const mockShellOpenExternal = mock(async () => {})
-const mockIpcMainHandle = mock(() => {})
-const mockDialogShowMessageBox = mock(async () => ({ response: 0, checkboxChecked: false }))
-const mockSessionListeners: Record<string, Function[]> = {}
-const mockNativeTheme = { shouldUseDarkColors: false }
-let mockPermissionCheckHandler: ((...args: any[]) => boolean) | null = null
-let mockPermissionRequestHandler: ((...args: any[]) => void) | null = null
-const mockCanvasImage = () => ({
-  isEmpty: () => false, getSize: () => ({ width: 120, height: 90 }),
-  crop: mock((_rect: unknown) => ({ isEmpty: () => false, toBitmap: () => Buffer.from([0, 0, 255, 255]), toPNG: () => Buffer.from('canvas-png') })),
-})
-let canvasImage = mockCanvasImage()
-
-function createMockWebContents() {
-  const listeners: Record<string, Function[]> = {}
-  let currentUrl = 'about:blank'
-  return {
-    id: ++nextMockWebContentsId,
-    userAgent: 'Mock Chrome Electron/99.0.0',
-    session: {},
-    isDestroyed: mock(() => false),
-    on: (event: string, cb: Function) => {
-      if (!listeners[event]) listeners[event] = []
-      listeners[event].push(cb)
-    },
-    once: (event: string, cb: Function) => {
-      const wrapped = (...args: unknown[]) => {
-        listeners[event] = (listeners[event] || []).filter(listener => listener !== wrapped)
-        cb(...args)
-      }
-      if (!listeners[event]) listeners[event] = []
-      listeners[event].push(wrapped)
-    },
-    removeListener: (event: string, cb: Function) => {
-      listeners[event] = (listeners[event] || []).filter(listener => listener !== cb)
-    },
-    loadURL: mock(async (url: string) => {
-      currentUrl = url
-      if (url.includes('browser-empty-state.html') && emptyStateLoadError) {
-        const error = emptyStateLoadError
-        emptyStateLoadError = null
-        throw error
-      }
-      const isToolbarUrl = typeof url === 'string' && url.includes('browser-toolbar.html')
-      if (isToolbarUrl && toolbarLoadFailuresRemaining > 0) {
-        toolbarLoadFailuresRemaining--
-        throw new Error('mock toolbar load failure')
-      }
-    }),
-    loadFile: mock(async (path: string, _opts?: unknown) => {
-      const isToolbarUrl = typeof path === 'string' && path.includes('browser-toolbar.html')
-      if (isToolbarUrl && toolbarLoadFailuresRemaining > 0) {
-        toolbarLoadFailuresRemaining--
-        throw new Error('mock toolbar load failure')
-      }
-    }),
-    getTitle: mock(() => 'Test Page'),
-    getURL: mock(() => currentUrl),
-    canGoBack: mock(() => false),
-    canGoForward: mock(() => false),
-    goBack: mock(() => {}),
-    goForward: mock(() => {}),
-    reload: mock(() => {}),
-    stop: mock(() => {}),
-    setUserAgent: mock(() => {}),
-    capturePage: mock(async () => {
-      const img = {
-        isEmpty: () => false,
-        getSize: () => ({ width: 2400, height: 1800 }),
-        resize: (_opts: any) => img,
-        toPNG: () => Buffer.from('fake-png'),
-        toJPEG: (_quality: number) => Buffer.from('fake-jpeg'),
-      }
-      return img
-    }),
-    executeJavaScript: mock(async (expr: string) => eval(expr)),
-    focus: mock(() => {}),
-    setWindowOpenHandler: mock((_handler: any) => {}),
-    send: mock((_channel: string, _payload?: unknown) => {}),
-    debugger: {
-      attach: mock(() => {}),
-      detach: mock(() => {}),
-      sendCommand: mock(async () => ({ nodes: [] })),
-      on: mock(() => {}),
-    },
-    _listeners: listeners,
-    _emit: (event: string, ...args: unknown[]) => {
-      for (const cb of listeners[event] || []) {
-        if (event === 'did-create-window') {
-          cb(...args)
-        } else {
-          cb({}, ...args)
-        }
-      }
-    },
-  }
-}
-
-function createMockWebContentsView() {
-  const webContents = createMockWebContents()
-  return {
-    webContents,
-    setBounds: mock(() => {}),
-    setBackgroundColor: mock((_color: string) => {}),
-  }
-}
-
-function createMockWindow(opts?: { width?: number; height?: number; minWidth?: number; minHeight?: number }) {
-  const listeners: Record<string, Function[]> = {}
-  const webContents = createMockWebContents()
-  let contentWidth = opts?.width ?? 1200
-  let contentHeight = opts?.height ?? 900
-  const minWidth = opts?.minWidth ?? 0
-  const minHeight = opts?.minHeight ?? 0
-  const childViews: any[] = []
-  let destroyed = false
-  let resizable = true
-
-  const win = {
-    webContents,
-    contentView: {
-      children: childViews,
-      addChildView: mock((view: any, index?: number) => {
-        const existingIndex = childViews.indexOf(view)
-        if (existingIndex >= 0) childViews.splice(existingIndex, 1)
-        if (typeof index === 'number') childViews.splice(index, 0, view)
-        else childViews.push(view)
-      }),
-      removeChildView: mock((view: any) => {
-        const existingIndex = childViews.indexOf(view)
-        if (existingIndex >= 0) childViews.splice(existingIndex, 1)
-      }),
-    },
-    on: (event: string, cb: Function) => {
-      if (!listeners[event]) listeners[event] = []
-      listeners[event].push(cb)
-    },
-    once: (event: string, cb: Function) => {
-      const wrapped = (...args: any[]) => {
-        listeners[event] = (listeners[event] || []).filter(fn => fn !== wrapped)
-        cb(...args)
-      }
-      if (!listeners[event]) listeners[event] = []
-      listeners[event].push(wrapped)
-    },
-    _emit: (event: string, ...args: any[]) => {
-      for (const cb of listeners[event] || []) cb(...args)
-    },
-    isDestroyed: mock(() => destroyed),
-    isResizable: mock(() => {
-      if (destroyed) throw new TypeError('Object has been destroyed')
-      return resizable
-    }),
-    setResizable: mock((value: boolean) => {
-      if (destroyed) throw new TypeError('Object has been destroyed')
-      resizable = value
-    }),
-    isMinimized: mock(() => false),
-    restore: mock(() => {}),
-    show: mock(() => {}),
-    showInactive: mock(() => {}),
-    setWindowButtonVisibility: mock((_visible: boolean) => {}),
-    hide: mock(() => {
-      win._emit('hide')
-    }),
-    focus: mock(() => {}),
-    destroy: mock(() => {
-      destroyed = true
-      win._emit('closed')
-    }),
-    getContentSize: mock(() => [contentWidth, contentHeight]),
-    setContentSize: mock((width: number, height: number) => {
-      contentWidth = Math.max(minWidth, Math.floor(width))
-      contentHeight = Math.max(minHeight, Math.floor(height))
-    }),
-    loadURL: mock(async (_url: string) => {}),
-  }
-  createdWindows.push(win)
-  return win
-}
-
-mock.module('electron', () => ({
-  app: {
-    getName: mock(() => 'Robb Agents'),
-    getPath: mock((name: string) => name === 'downloads' ? '/tmp/mock-downloads' : `/tmp/mock-${name}`),
-  },
-  BrowserWindow: class MockBrowserWindow {
-    webContents: any
-    constructor(opts?: any) {
-      const win = createMockWindow(opts)
-      this.webContents = win.webContents
-      Object.assign(this, win)
-    }
-  },
-  WebContentsView: class MockWebContentsView {
-    webContents: any
-    constructor(_opts?: any) {
-      const view = createMockWebContentsView()
-      this.webContents = view.webContents
-      Object.assign(this, view)
-    }
-  },
-  dialog: {
-    showMessageBox: mockDialogShowMessageBox,
-  },
-  ipcMain: {
-    handle: mockIpcMainHandle,
-  },
-  Menu: {
-    buildFromTemplate: mock(() => ({
-      popup: mock(() => {}),
-    })),
-  },
-  nativeTheme: mockNativeTheme,
-  nativeImage: { createFromBuffer: () => canvasImage },
-  shell: {
-    openExternal: mockShellOpenExternal,
-  },
-  session: {
-    fromPartition: mock(() => ({
-      setPermissionCheckHandler: mock((handler: (...args: any[]) => boolean) => {
-        mockPermissionCheckHandler = handler
-      }),
-      setPermissionRequestHandler: mock((handler: (...args: any[]) => void) => {
-        mockPermissionRequestHandler = handler
-      }),
-      webRequest: {
-        onBeforeRequest: mock((_cb: any) => {}),
-        onCompleted: mock((_cb: any) => {}),
-        onErrorOccurred: mock((_cb: any) => {}),
-      },
-      on: mock((event: string, cb: any) => {
-        if (!mockSessionListeners[event]) mockSessionListeners[event] = []
-        mockSessionListeners[event].push(cb)
-      }),
-    })),
-  },
-}))
-
-mock.module('../logger', () => {
-  const stubLog = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} }
-  return {
-    mainLog: stubLog,
-    sessionLog: stubLog,
-    handlerLog: stubLog,
-    windowLog: stubLog,
-    agentLog: stubLog,
-    searchLog: stubLog,
-    isDebugMode: false,
-    getLogFilePath: () => '/tmp/main.log',
-  }
-})
-
-mock.module('../browser-cdp', () => ({
-  BrowserCDP: class MockBrowserCDP {
-    detach = mock(() => {})
-    getAccessibilitySnapshot = mock(async () => ({
-      url: 'https://example.com',
-      title: 'Example',
-      nodes: [],
-    }))
-    clickElement = mock(async () => ({
-      ref: '@e1',
-      box: { x: 0, y: 0, width: 10, height: 10 },
-      clickPoint: { x: 5, y: 5 },
-    }))
-    fillElement = mock(async () => ({
-      ref: '@e1',
-      box: { x: 0, y: 0, width: 10, height: 10 },
-      clickPoint: { x: 5, y: 5 },
-    }))
-    selectOption = mock(async () => ({
-      ref: '@e1',
-      box: { x: 0, y: 0, width: 10, height: 10 },
-      clickPoint: { x: 5, y: 5 },
-    }))
-    renderTemporaryOverlay = mock(async () => {})
-    clearTemporaryOverlay = mock(async () => {})
-    getViewportMetrics = mock(async () => ({ width: 1200, height: 900, dpr: 2, scrollX: 0, scrollY: 0 }))
-    getElementGeometry = mock(async () => ({
-      ref: '@e1',
-      box: { x: 0, y: 0, width: 10, height: 10 },
-      clickPoint: { x: 5, y: 5 },
-    }))
-    getElementGeometryBySelector = mock(async () => ({
-      ref: 'selector:div.card',
-      box: { x: 5, y: 5, width: 20, height: 20 },
-      clickPoint: { x: 15, y: 15 },
-    }))
-  },
-}))
-
-const { BrowserPaneManager } = await import('../browser-pane-manager')
-
-type TestBrowserInstance = {
-  title: string
-  currentUrl: string
-  cdp: {
-    clickElement: (ref: string) => Promise<{
-      ref: string
-      box: { x: number; y: number; width: number; height: number }
-      clickPoint: { x: number; y: number }
-    }>
-    getAccessibilitySnapshot: () => Promise<{
-      url: string
-      title: string
-      nodes: Array<{ ref: string; role: string; name: string; disabled?: boolean }>
-    }>
-  }
-  pageView: {
-    webContents: {
-      _emit: (event: string, ...args: unknown[]) => void
-      executeJavaScript: (expression: string) => Promise<unknown>
-    }
-  }
-  lastAction: unknown
-}
-
-function getTestBrowserInstance(
-  manager: InstanceType<typeof BrowserPaneManager>,
-  id: string,
-): TestBrowserInstance {
-  const state = manager as unknown as { instances: Map<string, TestBrowserInstance> }
-  const instance = state.instances.get(id)
-  if (!instance) throw new Error(`Missing test browser instance: ${id}`)
-  return instance
-}
+import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { browserFixture, createBrowserPaneTestManager, createMockWindow, getTestBrowserInstance, mockDialogShowMessageBox, mockIpcMainHandle, mockSessionListeners, mockShellOpenExternal } from './fixtures/browser-pane-fixture'
 
 describe('BrowserPaneManager', () => {
-  let manager: InstanceType<typeof BrowserPaneManager>
-
-  beforeEach(() => {
-    createdWindows.length = 0
-    toolbarLoadFailuresRemaining = 0
-    emptyStateLoadError = null
-    mockNativeTheme.shouldUseDarkColors = false
-    canvasImage = mockCanvasImage()
-    mockShellOpenExternal.mockClear()
-    mockIpcMainHandle.mockClear()
-    mockDialogShowMessageBox.mockClear()
-    mockPermissionCheckHandler = null
-    mockPermissionRequestHandler = null
-    for (const event of Object.keys(mockSessionListeners)) delete mockSessionListeners[event]
-    manager = new BrowserPaneManager()
-  })
-
-  it('creates and lists instances', () => {
+let manager: ReturnType<typeof createBrowserPaneTestManager>
+beforeEach(() => { manager = createBrowserPaneTestManager() })
+it('creates and lists instances', () => {
     const id = manager.createInstance('test-1')
     const list = manager.listInstances()
     expect(id).toBe('test-1')
@@ -366,177 +13,7 @@ describe('BrowserPaneManager', () => {
     expect(list[0].agentControlActive).toBe(false)
   })
 
-  it('captures an explicit canvas crop without capturePage, overlay changes, focus or clipboard', async () => {
-    manager.createInstance('canvas-image', { ownerType: 'session', ownerSessionId: 'task', workspaceId: 'ws' })
-    const instance = (manager as any).instances.get('canvas-image')
-    instance.cdp.captureCanvasBitmap = mock(async (_selector: string, current: () => boolean) => {
-      expect(current()).toBe(true)
-      return { png: Buffer.from('validated-source-png'), receipt: {
-        width: 120, height: 90, sourceRect: { x: 0, y: 0, width: 80, height: 60 },
-        region: { x: 10, y: 20, width: 40, height: 30 }, canvasBox: { x: 10, y: 20, width: 60, height: 45 },
-        viewport: { width: 1200, height: 852, dpr: 2, scrollX: 0, scrollY: 0 }, capturedAt: 123,
-      } }
-    })
-    const result = await manager.screenshotRegion('canvas-image', { source: 'canvas', selector: 'canvas' })
-    expect(result.metadata?.source).toBe('canvas-bitmap')
-    expect(result.metadata?.imageToViewport).toEqual({ x: 10, y: 20, scaleX: 0.5, scaleY: 0.5 })
-    expect(canvasImage.crop).toHaveBeenCalledWith({ x: 0, y: 0, width: 80, height: 60 })
-    expect(result.imageBuffer.toString()).toBe('canvas-png')
-    expect(instance.pageView.webContents.capturePage).not.toHaveBeenCalled()
-    expect(instance.pageView.webContents.focus).not.toHaveBeenCalled()
-    expect(instance.cdp.renderTemporaryOverlay).not.toHaveBeenCalled()
-  })
-
-  it('rejects a canvas image after its owner changes during the read', async () => {
-    manager.createInstance('canvas-race', { ownerType: 'session', ownerSessionId: 'task', workspaceId: 'ws' })
-    const instance = (manager as any).instances.get('canvas-race')
-    instance.cdp.captureCanvasBitmap = mock(async () => { instance.ownerSessionId = 'other'; return { png: Buffer.alloc(0), receipt: {} } })
-    await expect(manager.screenshotRegion('canvas-race', { source: 'canvas', selector: 'canvas' })).rejects.toThrow('ownership changed')
-  })
-
-  it('does not widen the remote browser owner gate for canvas capture', async () => {
-    manager.createInstance('canvas-owner', { ownerType: 'session', ownerSessionId: 'remote:ws:other', workspaceId: 'ws' })
-    const instance = (manager as any).instances.get('canvas-owner')
-    instance.cdp.captureCanvasBitmap = mock(async () => { throw Error('must not read') })
-    await expect((manager as any).dispatchCapability({ v: 1, workspaceId: 'ws', sessionId: 'task', method: 'screenshotRegion', args: ['canvas-owner', { source: 'canvas', selector: 'canvas' }] })).rejects.toThrow('not owned')
-    expect(instance.cdp.captureCanvasBitmap).not.toHaveBeenCalled()
-  })
-
-  it('rejects ambiguous or unbounded transport options without attempting a canvas read', async () => {
-    manager.createInstance('canvas-args')
-    const instance = (manager as any).instances.get('canvas-args')
-    instance.cdp.captureCanvasBitmap = mock(async () => { throw Error('must not read') })
-    for (const extra of [{ padding: 0 }, { ref: '@e1' }, { x: 1 }, { selector: ['canvas'] }, { format: 'jpeg' }, { source: true }]) {
-      await expect(manager.screenshotRegion('canvas-args', { source: 'canvas', selector: 'canvas', ...extra } as any)).rejects.toThrow('Canvas capture requires')
-    }
-    expect(instance.cdp.captureCanvasBitmap).not.toHaveBeenCalled()
-  })
-
-  it('does not turn an empty/transparent bitmap or oversized encoding into a successful screenshot', async () => {
-    manager.createInstance('canvas-empty')
-    const instance = (manager as any).instances.get('canvas-empty')
-    instance.cdp.captureCanvasBitmap = mock(async () => ({ png: Buffer.from('validated-source'), receipt: {
-      width: 120, height: 90, sourceRect: { x: 0, y: 0, width: 80, height: 60 },
-    } }))
-    canvasImage.crop = mock(() => ({ isEmpty: () => false, toBitmap: () => Buffer.alloc(4), toPNG: () => Buffer.from('data') }))
-    await expect(manager.screenshotRegion('canvas-empty', { source: 'canvas', selector: 'canvas' })).rejects.toThrow('does not prove')
-    canvasImage.crop = mock(() => ({ isEmpty: () => false, toBitmap: () => Buffer.from([0, 0, 0, 255]), toPNG: () => Buffer.alloc(4 * 1024 * 1024 + 1) }))
-    await expect(manager.screenshotRegion('canvas-empty', { source: 'canvas', selector: 'canvas' })).rejects.toThrow('image limit')
-    expect(instance.pageView.webContents.capturePage).not.toHaveBeenCalled()
-  })
-
-  it('composes page, overlay, and toolbar as ordered WebContentsView children', () => {
-    manager.createInstance('web-contents-views')
-    const instance = (manager as any).instances.get('web-contents-views')
-
-    expect(instance.window.contentView.children).toHaveLength(3)
-    expect(instance.window.contentView.children[0]).toBe(instance.pageView)
-    expect(instance.window.contentView.children[1]).toBe(instance.nativeOverlayView)
-    expect(instance.window.contentView.children[2]).toBe(instance.toolbarView)
-
-    instance.window._emit('resize')
-    expect(instance.pageView.setBounds).toHaveBeenCalled()
-    expect(instance.nativeOverlayView.setBounds).toHaveBeenCalled()
-    expect(instance.toolbarView.setBounds).toHaveBeenCalled()
-    expect(instance.window.contentView.children[2]).toBe(instance.toolbarView)
-  })
-
-  it('sets native view transparency in both themes instead of relying on page CSS', () => {
-    for (const [dark, pageBackground] of [[false, '#fafafb'], [true, '#2b292e']] as const) {
-      mockNativeTheme.shouldUseDarkColors = dark
-      const id = manager.createInstance(`native-background-${dark}`)
-      const instance = (manager as any).instances.get(id)
-      // Electron exposes background color on View, never on WebContents.
-      expect(instance.toolbarView.webContents.setBackgroundColor).toBeUndefined()
-      expect(instance.nativeOverlayView.webContents.setBackgroundColor).toBeUndefined()
-      expect(instance.pageView.setBackgroundColor).toHaveBeenCalledWith(pageBackground)
-      expect(instance.toolbarView.setBackgroundColor).toHaveBeenCalledWith('#00000000')
-      expect(instance.nativeOverlayView.setBackgroundColor).toHaveBeenCalledWith('#00000000')
-    }
-  })
-
-  it('keeps the page beneath transparent full-window toolbar and menu overlay views', async () => {
-    const id = manager.createInstance('transparent-menu')
-    await Promise.resolve()
-    const instance = (manager as any).instances.get(id)
-    manager.registerToolbarIpc()
-    const registration = (
-      mockIpcMainHandle.mock.calls as unknown as Array<[
-        string, (event: unknown, instanceId: string, open: boolean, height?: number) => Promise<void>,
-      ]>
-    ).find(([channel]) => channel === 'browser-toolbar:menu-geometry')
-    if (!registration) throw new Error('Missing menu geometry handler')
-    const [, setMenuGeometry] = registration
-    await setMenuGeometry({}, id, true, 120)
-    expect(instance.toolbarView.setBounds).toHaveBeenLastCalledWith({ x: 0, y: 0, width: 1200, height: 900 })
-    expect(instance.nativeOverlayView.setBounds).toHaveBeenLastCalledWith({ x: 0, y: 48, width: 1200, height: 852 })
-    expect(instance.toolbarView.setBackgroundColor).toHaveBeenLastCalledWith('#00000000')
-    expect(instance.nativeOverlayView.setBackgroundColor).toHaveBeenLastCalledWith('#00000000')
-    expect(instance.window.contentView.children).toEqual([instance.pageView, instance.nativeOverlayView, instance.toolbarView])
-    await setMenuGeometry({}, id, false)
-    expect(instance.toolbarView.setBounds).toHaveBeenLastCalledWith({ x: 0, y: 0, width: 1200, height: 48 })
-    expect(instance.nativeOverlayView.setBounds).toHaveBeenLastCalledWith({ x: 0, y: 0, width: 0, height: 0 })
-  })
-
-  it('grants scoped browser permissions only with live autonomous session context', async () => {
-    const instanceId = manager.createForSession('session-autonomous', { workspaceId: 'workspace-autonomous' })
-    const instance = (manager as any).instances.get(instanceId)
-    await manager.navigate(instanceId, 'https://signup.microsoft.com/account')
-    instance.pageView.webContents._emit('did-navigate', 'https://signup.microsoft.com/account')
-    manager.setAgentControl('session-autonomous', {}, { workspaceId: 'workspace-autonomous' })
-    manager.setPermissionAutonomyResolver(() => ({
-      permissionMode: 'allow-all',
-      externalActionPolicy: 'allow-in-execute',
-    }))
-
-    expect((manager as any).getPermissionContext(
-      instance.pageView.webContents,
-      'https://microsoft-api.arkoselabs.com/',
-    )).toEqual({
-      agentControlled: true,
-      permissionMode: 'allow-all',
-      externalActionPolicy: 'allow-in-execute',
-      requestingOrigin: 'https://microsoft-api.arkoselabs.com/',
-      topLevelUrl: 'https://signup.microsoft.com/account',
-    })
-    expect(mockPermissionCheckHandler).not.toBeNull()
-    expect(mockPermissionCheckHandler!(
-      instance.pageView.webContents,
-      'sensors',
-      'https://microsoft-api.arkoselabs.com/',
-      {},
-    )).toBe(true)
-
-    let requestDecision: boolean | undefined
-    mockPermissionRequestHandler!(
-      instance.pageView.webContents,
-      'media',
-      (allowed: boolean) => { requestDecision = allowed },
-      { requestingUrl: 'https://microsoft-api.arkoselabs.com/challenge' },
-    )
-    expect(requestDecision).toBe(true)
-  })
-
-  it('keeps browser permissions denied when the live session is not autonomous', async () => {
-    const instanceId = manager.createForSession('session-ask', { workspaceId: 'workspace-ask' })
-    const instance = (manager as any).instances.get(instanceId)
-    await manager.navigate(instanceId, 'https://example.com/')
-    instance.pageView.webContents._emit('did-navigate', 'https://example.com/')
-    manager.setAgentControl('session-ask', {}, { workspaceId: 'workspace-ask' })
-    manager.setPermissionAutonomyResolver(() => ({
-      permissionMode: 'ask',
-      externalActionPolicy: 'allow-in-execute',
-    }))
-
-    expect(mockPermissionCheckHandler!(
-      instance.pageView.webContents,
-      'geolocation',
-      'https://example.com/',
-      {},
-    )).toBe(false)
-  })
-
-  it('is idempotent when explicit ID already exists', () => {
+it('is idempotent when explicit ID already exists', () => {
     const first = manager.createInstance('same-id')
     const second = manager.createInstance('same-id')
     expect(first).toBe('same-id')
@@ -544,8 +21,8 @@ describe('BrowserPaneManager', () => {
     expect(manager.listInstances()).toHaveLength(1)
   })
 
-  it('does not replace an immediate navigation when the empty state load is aborted', async () => {
-    emptyStateLoadError = Object.assign(new Error("ERR_ABORTED (-3) loading 'https://example.com/'"), {
+it('does not replace an immediate navigation when the empty state load is aborted', async () => {
+    browserFixture.emptyStateLoadError = Object.assign(new Error("ERR_ABORTED (-3) loading 'https://example.com/'"), {
       code: 'ERR_ABORTED',
       errno: -3,
     })
@@ -553,19 +30,19 @@ describe('BrowserPaneManager', () => {
     manager.createInstance('empty-state-aborted')
     await Bun.sleep(0)
 
-    const instance = (manager as any).instances.get('empty-state-aborted')
+    const instance = getTestBrowserInstance(manager, 'empty-state-aborted')
     const loadedUrls = instance.pageView.webContents.loadURL.mock.calls.map((call: [string]) => call[0])
     expect(loadedUrls).not.toContain('about:blank')
   })
 
-  it('allows http(s) popups with shared browser partition', () => {
+it('allows http(s) popups with shared browser partition', () => {
     manager.createInstance('popup-allow')
-    const instance = (manager as any).instances.get('popup-allow')
+    const instance = getTestBrowserInstance(manager, 'popup-allow')
     const openHandler = instance.pageView.webContents.setWindowOpenHandler.mock.calls[0][0]
 
     const result = openHandler({
       url: 'https://accounts.google.com/o/oauth2/v2/auth',
-      disposition: 'new-popup',
+      disposition: 'new-window',
       frameName: 'oauth-popup',
     })
 
@@ -575,7 +52,7 @@ describe('BrowserPaneManager', () => {
     expect(result.overrideBrowserWindowOptions?.webPreferences?.contextIsolation).toBe(true)
   })
 
-  it('prompts the user when WebAuthn returns multiple discoverable accounts', async () => {
+it('prompts the user when WebAuthn returns multiple discoverable accounts', async () => {
     manager.createInstance('passkey-select')
     const listener = mockSessionListeners['select-webauthn-account']?.[0]
     let resolveSelection!: (credentialId: string | undefined) => void
@@ -598,7 +75,7 @@ describe('BrowserPaneManager', () => {
     expect(credentialId).toBe('credential-1')
   })
 
-  it('cancels WebAuthn account selection when the native dialog is dismissed', async () => {
+it('cancels WebAuthn account selection when the native dialog is dismissed', async () => {
     mockDialogShowMessageBox.mockResolvedValueOnce({ response: 2, checkboxChecked: false })
     manager.createInstance('passkey-cancel')
     const listener = mockSessionListeners['select-webauthn-account']?.[0]
@@ -621,14 +98,14 @@ describe('BrowserPaneManager', () => {
     expect(credentialId).toBeUndefined()
   })
 
-  it('denies app deep-link popups and forwards to deep-link handler', async () => {
+it('denies app deep-link popups and forwards to deep-link handler', async () => {
     manager.createInstance('popup-deeplink')
-    const instance = (manager as any).instances.get('popup-deeplink')
+    const instance = getTestBrowserInstance(manager, 'popup-deeplink')
     const openHandler = instance.pageView.webContents.setWindowOpenHandler.mock.calls[0][0]
 
     const result = openHandler({
       url: 'craftagents://settings',
-      disposition: 'new-popup',
+      disposition: 'new-window',
       frameName: '',
     })
 
@@ -637,24 +114,24 @@ describe('BrowserPaneManager', () => {
     expect(mockShellOpenExternal).toHaveBeenCalledWith('craftagents://settings')
   })
 
-  it('destroys child popups when parent instance is destroyed', () => {
+it('destroys child popups when parent instance is destroyed', () => {
     manager.createInstance('popup-parent')
-    const instance = (manager as any).instances.get('popup-parent')
+    const instance = getTestBrowserInstance(manager, 'popup-parent')
 
     const popupWindow = createMockWindow({ width: 520, height: 720 })
     instance.pageView.webContents._emit('did-create-window', popupWindow, { url: 'https://accounts.google.com/signin' })
 
-    expect((manager as any).popupWindowsByParentInstanceId.get('popup-parent')?.size).toBe(1)
+    expect(manager['popupWindowsByParentInstanceId'].get('popup-parent')?.size).toBe(1)
 
     manager.destroyInstance('popup-parent')
 
     expect(popupWindow.destroy).toHaveBeenCalledTimes(1)
-    expect((manager as any).popupWindowsByParentInstanceId.has('popup-parent')).toBe(false)
+    expect(manager['popupWindowsByParentInstanceId'].has('popup-parent')).toBe(false)
   })
 
-  it('unregisters a popup after Electron destroys its webContents wrapper', () => {
+it('unregisters a popup after Electron destroys its webContents wrapper', () => {
     manager.createInstance('popup-destroyed-webcontents')
-    const instance = (manager as any).instances.get('popup-destroyed-webcontents')
+    const instance = getTestBrowserInstance(manager, 'popup-destroyed-webcontents')
     const popupWindow = createMockWindow({ width: 520, height: 720 })
 
     instance.pageView.webContents._emit('did-create-window', popupWindow, { url: 'https://accounts.google.com/signin' })
@@ -664,28 +141,28 @@ describe('BrowserPaneManager', () => {
     })
 
     expect(() => popupWindow._emit('closed')).not.toThrow()
-    expect((manager as any).popupWindowsByParentInstanceId.has('popup-destroyed-webcontents')).toBe(false)
+    expect(manager['popupWindowsByParentInstanceId'].has('popup-destroyed-webcontents')).toBe(false)
   })
 
-  it('destroys instances', () => {
+it('destroys instances', () => {
     manager.createInstance('d1')
     manager.destroyInstance('d1')
     expect(manager.listInstances()).toHaveLength(0)
   })
 
-  it('destroys all instances even when Electron has already removed a native webContents wrapper', () => {
+it('destroys all instances even when Electron has already removed a native webContents wrapper', () => {
     manager.createInstance('native-already-destroyed')
     manager.createInstance('still-alive')
-    const instance = (manager as any).instances.get('native-already-destroyed')
+    const instance = getTestBrowserInstance(manager, 'native-already-destroyed')
     const wcId = instance.pageWebContentsId
     Object.defineProperty(instance.pageView, 'webContents', { configurable: true, get: () => undefined })
-    expect(() => (manager as any).getInstanceByWebContentsId(wcId)).not.toThrow()
+    expect(() => manager['getInstanceByWebContentsId'](wcId)).not.toThrow()
     expect(() => manager.destroyAll()).not.toThrow()
     expect(manager.listInstances()).toHaveLength(0)
     expect(() => manager.destroyAll()).not.toThrow()
   })
 
-  it('destroys instance via toolbar destroy IPC handler', async () => {
+it('destroys instance via toolbar destroy IPC handler', async () => {
     manager.createInstance('d-ipc-destroy')
     manager.registerToolbarIpc()
 
@@ -705,7 +182,7 @@ describe('BrowserPaneManager', () => {
     expect(manager.listInstances()).toHaveLength(0)
   })
 
-  it('emits removed callback exactly once when destroy triggers closed', () => {
+it('emits removed callback exactly once when destroy triggers closed', () => {
     const removed: string[] = []
     manager.onRemoved((id) => removed.push(id))
 
@@ -716,12 +193,12 @@ describe('BrowserPaneManager', () => {
     expect(manager.listInstances()).toHaveLength(0)
   })
 
-  it('ignores late state events after instance was removed', () => {
+it('ignores late state events after instance was removed', () => {
     const states: string[] = []
     manager.onStateChange((info) => states.push(info.id))
 
     manager.createInstance('d-late-state')
-    const instance = (manager as any).instances.get('d-late-state')
+    const instance = getTestBrowserInstance(manager, 'd-late-state')
     states.length = 0
 
     manager.destroyInstance('d-late-state')
@@ -733,7 +210,7 @@ describe('BrowserPaneManager', () => {
     expect(states.length).toBe(countAfterDestroy)
   })
 
-  it('binds and unbinds sessions', () => {
+it('binds and unbinds sessions', () => {
     manager.createInstance('b1')
     manager.bindSession('b1', 'session-abc')
     expect(manager.listInstances()[0].boundSessionId).toBe('session-abc')
@@ -744,7 +221,7 @@ describe('BrowserPaneManager', () => {
     expect(manager.listInstances()[0].ownerType).toBe('manual')
   })
 
-  it('createForSession returns canonical bound instance', () => {
+it('createForSession returns canonical bound instance', () => {
     const id1 = manager.createForSession('sess-1')
     const id2 = manager.createForSession('sess-1')
     const info = manager.listInstances()[0]
@@ -755,14 +232,14 @@ describe('BrowserPaneManager', () => {
     expect(manager.listInstances()).toHaveLength(1)
   })
 
-  it('getOrCreateForSession reuses existing instance', () => {
+it('getOrCreateForSession reuses existing instance', () => {
     const id1 = manager.getOrCreateForSession('sess-1')
     const id2 = manager.getOrCreateForSession('sess-1')
     expect(id1).toBe(id2)
     expect(manager.listInstances()).toHaveLength(1)
   })
 
-  it('createForSession reuses an unbound manual window before creating new', () => {
+it('createForSession reuses an unbound manual window before creating new', () => {
     manager.createInstance('manual-1')
 
     const id = manager.createForSession('sess-reuse')
@@ -775,681 +252,38 @@ describe('BrowserPaneManager', () => {
     expect(manager.listInstances()).toHaveLength(1)
   })
 
-  describe('explicit remote keyboard text', () => {
-    it('uses one bounded CDP text operation and revokes it if the browser is rebound', async () => {
-      const manager = new BrowserPaneManager()
-      manager.createInstance('keyboard-fixture')
-      const instance = (manager as any).instances.get('keyboard-fixture')
-      let calls = 0
-      instance.cdp.typeKeys = async (text: string, isCurrent: () => boolean) => {
-        calls++
-        expect(text).toBe('é € []')
-        expect(isCurrent()).toBe(true)
-        instance.boundSessionId = 'another-session'
-        expect(isCurrent()).toBe(false)
-      }
-      await manager.sendKey('keyboard-fixture', { key: 'Unidentified', text: 'é € []' })
-      expect(calls).toBe(1)
-      await manager.destroyAll()
-    })
-
-    it('applies host clipboard policy before page JavaScript can return a forged success', async () => {
-      const manager = new BrowserPaneManager()
-      manager.createInstance('clipboard-policy-fixture')
-      const instance = (manager as any).instances.get('clipboard-policy-fixture')
-      let pageCalls = 0
-      instance.cdp.setClipboard = async () => { pageCalls++ }
-      instance.cdp.getClipboard = async () => { pageCalls++; return 'old system contents' }
-      await expect(manager.setClipboard('clipboard-policy-fixture', 'text')).rejects.toThrow('denied by browser policy')
-      await expect(manager.getClipboard('clipboard-policy-fixture')).rejects.toThrow('unknown, not empty')
-      expect(pageCalls).toBe(0)
-      await manager.destroyAll()
-    })
-
-    it('rejects shortcut modifiers before delivering keyboard text', async () => {
-      const manager = new BrowserPaneManager()
-      manager.createInstance('keyboard-modifiers')
-      const instance = (manager as any).instances.get('keyboard-modifiers')
-      instance.cdp.typeKeys = async () => { throw new Error('must not deliver') }
-      await expect(manager.sendKey('keyboard-modifiers', { key: 'Unidentified', text: 'v', modifiers: ['meta'] })).rejects.toThrow('shortcut modifiers')
-      for (const modifiers of [{}, 0, true, '']) {
-        await expect(manager.sendKey('keyboard-modifiers', { key: 'Unidentified', text: 'v', modifiers: modifiers as any })).rejects.toThrow('shortcut modifiers')
-      }
-      await manager.destroyAll()
-    })
-  })
-
-  describe('workspaceId stamping', () => {
-    it('createForSession with workspaceId stamps the field on a new instance', () => {
-      const id = manager.createForSession('sess-ws', { workspaceId: 'ws-alpha' })
-      const info = manager.listInstances().find((i) => i.id === id)
-      expect(info?.workspaceId).toBe('ws-alpha')
-    })
-
-    it('createForSession without workspaceId defaults to null', () => {
-      const id = manager.createForSession('sess-plain')
-      const info = manager.listInstances().find((i) => i.id === id)
-      expect(info?.workspaceId).toBeNull()
-    })
-
-    it('manual createInstance with no options leaves workspaceId null (unbound window)', () => {
-      manager.createInstance('manual-ws')
-      const info = manager.listInstances().find((i) => i.id === 'manual-ws')
-      expect(info?.workspaceId).toBeNull()
-    })
-
-    it('manual createInstance accepts workspaceId option (TopBar manual open)', () => {
-      // The browser-pane CREATE handler passes ctx.workspaceId so TopBar-
-      // opened windows stay scoped to the workspace the user clicked from,
-      // rather than being broadcast to every workspace.
-      manager.createInstance('manual-scoped', { workspaceId: 'ws-toolbar' })
-      const info = manager.listInstances().find((i) => i.id === 'manual-scoped')
-      expect(info?.workspaceId).toBe('ws-toolbar')
-    })
-
-    it('reusing an unbound manual window adopts the new binder workspace', () => {
-      manager.createInstance('manual-reuse')
-      expect(manager.listInstances().find((i) => i.id === 'manual-reuse')?.workspaceId).toBeNull()
-
-      const id = manager.createForSession('sess-reuse-ws', { workspaceId: 'ws-beta' })
-      expect(id).toBe('manual-reuse')
-
-      const info = manager.listInstances().find((i) => i.id === 'manual-reuse')
-      expect(info?.workspaceId).toBe('ws-beta')
-      expect(info?.ownerSessionId).toBe('sess-reuse-ws')
-    })
-
-    it('bindSession with workspaceId overwrites the instance workspaceId', () => {
-      manager.createInstance('bind-ws')
-      manager.bindSession('bind-ws', 'sess-bound', { workspaceId: 'ws-gamma' })
-      const info = manager.listInstances().find((i) => i.id === 'bind-ws')
-      expect(info?.workspaceId).toBe('ws-gamma')
-      expect(info?.boundSessionId).toBe('sess-bound')
-    })
-
-    it('setAgentControl backfills workspaceId when previously null', () => {
-      // Legacy path: instance was created without a workspace, then the overlay
-      // path supplies it. Backfill should stamp it.
-      manager.createInstance('legacy-overlay')
-      manager.bindSession('legacy-overlay', 'sess-legacy')
-      manager.setAgentControl('sess-legacy', { displayName: 'browser_navigate' }, { workspaceId: 'ws-delta' })
-
-      const info = manager.listInstances().find((i) => i.id === 'legacy-overlay')
-      expect(info?.workspaceId).toBe('ws-delta')
-    })
-
-    it('toInfo emits workspaceId on the DTO', () => {
-      manager.createForSession('sess-dto', { workspaceId: 'ws-epsilon' })
-      const dto = manager.listInstances().find((i) => i.ownerSessionId === 'sess-dto')
-      expect(dto).toBeDefined()
-      expect(dto).toHaveProperty('workspaceId', 'ws-epsilon')
-    })
-
-    describe('cross-workspace reuse', () => {
-      it('does NOT reuse an unbound session window from another workspace', () => {
-        // Session in workspace A opens a window, then its turn ends — the
-        // unbind path sets ownerType='manual' and clears boundSessionId, but
-        // workspaceId stays = A. A session in workspace B asking for a window
-        // must NOT pick it up; that would "move" the window across workspaces.
-        const wsA = manager.createForSession('sess-a', { workspaceId: 'ws-a' })
-        manager.unbindAllForSession('sess-a')
-
-        // Sanity: instance is now unbound + manual but retains workspaceId=A.
-        const after = manager.listInstances().find((i) => i.id === wsA)
-        expect(after?.boundSessionId).toBeNull()
-        expect(after?.ownerType).toBe('manual')
-        expect(after?.workspaceId).toBe('ws-a')
-
-        const wsB = manager.createForSession('sess-b', { workspaceId: 'ws-b' })
-        expect(wsB).not.toBe(wsA)
-        expect(manager.listInstances()).toHaveLength(2)
-
-        // Workspace-A's window still belongs to A.
-        const stillA = manager.listInstances().find((i) => i.id === wsA)
-        expect(stillA?.workspaceId).toBe('ws-a')
-      })
-
-      it('DOES reuse an unbound window within the same workspace (next-turn case)', () => {
-        // The legitimate same-workspace reuse: session-A ends a turn, leaves
-        // an unbound window behind; the same workspace's session-A (or any
-        // session in workspace A) should grab it on the next turn.
-        const original = manager.createForSession('sess-a1', { workspaceId: 'ws-a' })
-        manager.unbindAllForSession('sess-a1')
-
-        const reused = manager.createForSession('sess-a2', { workspaceId: 'ws-a' })
-        expect(reused).toBe(original)
-        expect(manager.listInstances()).toHaveLength(1)
-      })
-
-      it('lets any workspace adopt a truly unbound (workspaceId=null) manual window', () => {
-        manager.createInstance('manual-anyworkspace')
-        expect(manager.listInstances().find((i) => i.id === 'manual-anyworkspace')?.workspaceId).toBeNull()
-
-        const adopted = manager.createForSession('sess-c', { workspaceId: 'ws-c' })
-        expect(adopted).toBe('manual-anyworkspace')
-        expect(manager.listInstances().find((i) => i.id === 'manual-anyworkspace')?.workspaceId).toBe('ws-c')
-      })
-
-      it('does NOT reuse a workspaceId=null unbound window when allowReuseManual=false', () => {
-        // Remote-bridge dispatcher path: every lifecycle call passes
-        // allowReuseManual=false so a stale window from before workspace
-        // stamping (workspaceId=null) cannot get hijacked by a remote agent
-        // for an unrelated workspace.
-        manager.createInstance('legacy-unstamped')
-        expect(manager.listInstances().find((i) => i.id === 'legacy-unstamped')?.workspaceId).toBeNull()
-
-        const fresh = manager.createForSession('sess-d', {
-          workspaceId: 'ws-d',
-          allowReuseManual: false,
-        })
-        expect(fresh).not.toBe('legacy-unstamped')
-        // Legacy window is left untouched.
-        expect(manager.listInstances().find((i) => i.id === 'legacy-unstamped')?.workspaceId).toBeNull()
-        // A new instance was created for the remote session.
-        expect(manager.listInstances().find((i) => i.id === fresh)?.ownerSessionId).toBe('sess-d')
-      })
-    })
-  })
-
-  it('navigate normalizes hostnames to https', async () => {
-    manager.createInstance('nav-1')
-    await manager.navigate('nav-1', 'example.com')
-    const instance = (manager as any).instances.get('nav-1')
-    expect(instance.pageView.webContents.loadURL).toHaveBeenCalledWith('https://example.com')
-  })
-
-  it('navigate treats plain text as search query', async () => {
-    manager.createInstance('nav-2')
-    await manager.navigate('nav-2', 'craft agents browser tools')
-    const instance = (manager as any).instances.get('nav-2')
-    expect(instance.pageView.webContents.loadURL).toHaveBeenCalledWith(
-      'https://duckduckgo.com/?q=craft%20agents%20browser%20tools'
-    )
-  })
-
-  it('clears navigation timeout timer on success', async () => {
-    manager.createInstance('nav-timeout')
-
-    const originalClearTimeout = globalThis.clearTimeout
-    const clearTimeoutSpy = mock((handle: Parameters<typeof clearTimeout>[0]) => originalClearTimeout(handle))
-    ;(globalThis as any).clearTimeout = clearTimeoutSpy
-
-    try {
-      await manager.navigate('nav-timeout', 'https://example.com')
-      expect(clearTimeoutSpy.mock.calls.length).toBeGreaterThan(0)
-    } finally {
-      ;(globalThis as any).clearTimeout = originalClearTimeout
-    }
-  })
-
-  it('re-checks the live URL at the local mutation point after a concurrent navigation', async () => {
-    manager.createInstance('gmail-local-race')
-    await Bun.sleep(0)
-    await manager.navigate('gmail-local-race', 'https://cms.example.test/form')
-    const instance = (manager as any).instances.get('gmail-local-race')
-    const originalLoadURL = instance.pageView.webContents.loadURL
-    let navigationStarted!: () => void
-    let releaseNavigation!: () => void
-    const started = new Promise<void>((resolve) => { navigationStarted = resolve })
-    const held = new Promise<void>((resolve) => { releaseNavigation = resolve })
-    instance.pageView.webContents.loadURL = mock(async (url: string) => {
-      navigationStarted()
-      await held
-      await originalLoadURL(url)
-    })
-    const policy = {
-      reason: 'contextual-gmail-reply' as const,
-      blockedHosts: ['mail.google.com'],
-      matchSubdomains: true,
-    }
-
-    await manager.clickElement('gmail-local-race', '@save', undefined, policy)
-    expect(instance.cdp.clickElement).toHaveBeenCalledTimes(1)
-    instance.cdp.clickElement.mockClear()
-
-    const navigation = manager.navigate('gmail-local-race', 'https://mail.google.com/mail/u/0/#inbox')
-    await started
-    const click = manager.clickElement('gmail-local-race', '@send', undefined, policy)
-    let clickError: unknown
-    const clickSettled = click.then(
-      () => { throw new Error('Expected Gmail click to be blocked') },
-      (error) => { clickError = error },
-    )
-    await Bun.sleep(0)
-    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
-    releaseNavigation()
-
-    await navigation
-    await clickSettled
-    expect(String(clickError)).toContain('browser mutations on Gmail are disabled')
-    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
-  })
-
-  it('keeps a history navigation serialized until its Gmail URL commits before a local mutation', async () => {
-    manager.createInstance('gmail-local-history-race')
-    await Bun.sleep(0)
-    await manager.navigate('gmail-local-history-race', 'https://cms.example.test/form')
-    const instance = (manager as any).instances.get('gmail-local-history-race')
-    const originalLoadURL = instance.pageView.webContents.loadURL
-    let historyStarted!: () => void
-    let releaseHistory!: () => void
-    const started = new Promise<void>((resolve) => { historyStarted = resolve })
-    const held = new Promise<void>((resolve) => { releaseHistory = resolve })
-    instance.pageView.webContents.canGoBack = mock(() => true)
-    instance.pageView.webContents.goBack = mock(() => {
-      historyStarted()
-      instance.pageView.webContents._emit(
-        'did-navigate-in-page',
-        'https://mail.google.com/frame-only',
-        false,
-      )
-      void held.then(async () => {
-        const gmailUrl = 'https://mail.google.com/mail/u/0/#inbox'
-        await originalLoadURL(gmailUrl)
-        instance.pageView.webContents._emit('did-navigate', gmailUrl)
-      })
-    })
-    const policy = {
-      reason: 'contextual-gmail-reply' as const,
-      blockedHosts: ['mail.google.com'],
-      matchSubdomains: true,
-    }
-
-    const historyNavigation = manager.goBack('gmail-local-history-race')
-    await started
-    const click = manager.clickElement('gmail-local-history-race', '@send', undefined, policy)
-    let clickError: unknown
-    const clickSettled = click.then(
-      () => { throw new Error('Expected Gmail click after history navigation to be blocked') },
-      (error) => { clickError = error },
-    )
-    await Bun.sleep(0)
-    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
-    releaseHistory()
-
-    await historyNavigation
-    await clickSettled
-    expect(String(clickError)).toContain('browser mutations on Gmail are disabled')
-    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
-  })
-
-  it('ignores a sub-frame in-page event while a guarded click awaits its main-frame Gmail navigation', async () => {
-    manager.createInstance('gmail-local-click-navigation-race')
-    await Bun.sleep(0)
-    await manager.navigate('gmail-local-click-navigation-race', 'https://cms.example.test/form')
-    const instance = (manager as any).instances.get('gmail-local-click-navigation-race')
-    const originalLoadURL = instance.pageView.webContents.loadURL
-    let clickStarted!: () => void
-    let releaseNavigation!: () => void
-    const started = new Promise<void>((resolve) => { clickStarted = resolve })
-    const held = new Promise<void>((resolve) => { releaseNavigation = resolve })
-    instance.cdp.clickElement = mock(async () => {
-      clickStarted()
-      instance.pageView.webContents._emit(
-        'did-navigate-in-page',
-        'https://cms.example.test/embedded-frame',
-        false,
-      )
-      void held.then(async () => {
-        const gmailUrl = 'https://mail.google.com/mail/u/0/#inbox'
-        await originalLoadURL(gmailUrl)
-        instance.pageView.webContents._emit('did-navigate', gmailUrl)
-      })
-      return {
-        ref: '@open-mail',
-        box: { x: 0, y: 0, width: 10, height: 10 },
-        clickPoint: { x: 5, y: 5 },
-      }
-    })
-    const policy = {
-      reason: 'contextual-gmail-reply' as const,
-      blockedHosts: ['mail.google.com'],
-      matchSubdomains: true,
-    }
-
-    const navigationClick = manager.clickElement(
-      'gmail-local-click-navigation-race',
-      '@open-mail',
-      { waitFor: 'navigation' },
-      policy,
-    )
-    await started
-    const followupClick = manager.clickElement(
-      'gmail-local-click-navigation-race',
-      '@send',
-      undefined,
-      policy,
-    )
-    let followupError: unknown
-    const followupSettled = followupClick.then(
-      () => { throw new Error('Expected Gmail follow-up click to be blocked') },
-      (error) => { followupError = error },
-    )
-    await Bun.sleep(0)
-    expect(instance.cdp.clickElement).toHaveBeenCalledTimes(1)
-    releaseNavigation()
-
-    await navigationClick
-    await followupSettled
-    expect(String(followupError)).toContain('browser mutations on Gmail are disabled')
-    expect(instance.cdp.clickElement).toHaveBeenCalledTimes(1)
-  })
-
-  it('fails closed at the local mutation point when Electron exposes no parseable live URL', async () => {
-    manager.createInstance('gmail-local-unknown-url')
-    await Bun.sleep(0)
-    const instance = (manager as any).instances.get('gmail-local-unknown-url')
-    instance.currentUrl = ''
-    instance.pageView.webContents.getURL = mock(() => 'not a valid URL')
-    const policy = {
-      reason: 'contextual-gmail-reply' as const,
-      blockedHosts: ['mail.google.com'],
-      matchSubdomains: true,
-    }
-
-    let clickError: unknown
-    await manager.clickElement('gmail-local-unknown-url', '@send', undefined, policy).then(
-      () => { throw new Error('Expected a mutation with an unknown live URL to be blocked') },
-      (error) => { clickError = error },
-    )
-    expect(String(clickError)).toContain('browser mutations on Gmail are disabled')
-    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
-  })
-
-  it('re-applies a remote mutation URL policy after a concurrent capability navigation', async () => {
-    const createRequest = {
-      v: 1 as const,
-      workspaceId: 'ws-gmail-race',
-      sessionId: 'session-gmail-race',
-      method: 'createForSession' as const,
-      args: ['session-gmail-race', { show: false }],
-    }
-    const instanceId = await (manager as any).dispatchCapability(createRequest) as string
-    await Bun.sleep(0)
-    await (manager as any).dispatchCapability({
-      ...createRequest,
-      method: 'navigate',
-      args: [instanceId, 'https://cms.example.test/form'],
-    })
-    const instance = (manager as any).instances.get(instanceId)
-    const originalLoadURL = instance.pageView.webContents.loadURL
-    let navigationStarted!: () => void
-    let releaseNavigation!: () => void
-    const started = new Promise<void>((resolve) => { navigationStarted = resolve })
-    const held = new Promise<void>((resolve) => { releaseNavigation = resolve })
-    instance.pageView.webContents.loadURL = mock(async (url: string) => {
-      navigationStarted()
-      await held
-      await originalLoadURL(url)
-    })
-    const policy = {
-      reason: 'contextual-gmail-reply' as const,
-      blockedHosts: ['mail.google.com'],
-      matchSubdomains: true,
-    }
-
-    const navigation = (manager as any).dispatchCapability({
-      ...createRequest,
-      method: 'navigate',
-      args: [instanceId, 'https://mail.google.com/mail/u/0/#inbox'],
-    })
-    await started
-    const click = (manager as any).dispatchCapability({
-      ...createRequest,
-      v: 2,
-      method: 'clickElement',
-      args: [instanceId, '@send', undefined],
-      mutationUrlPolicy: policy,
-    })
-    let clickError: unknown
-    const clickSettled = click.then(
-      () => { throw new Error('Expected remote Gmail click to be blocked') },
-      (error: unknown) => { clickError = error },
-    )
-    await Bun.sleep(0)
-    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
-    releaseNavigation()
-
-    await navigation
-    await clickSettled
-    expect(String(clickError)).toContain('browser mutations on Gmail are disabled')
-    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
-  })
-
-  it('keeps a remote history capability serialized until Gmail commits before its mutation', async () => {
-    const createRequest = {
-      v: 1 as const,
-      workspaceId: 'ws-gmail-history-race',
-      sessionId: 'session-gmail-history-race',
-      method: 'createForSession' as const,
-      args: ['session-gmail-history-race', { show: false }],
-    }
-    const instanceId = await (manager as any).dispatchCapability(createRequest) as string
-    await Bun.sleep(0)
-    await (manager as any).dispatchCapability({
-      ...createRequest,
-      method: 'navigate',
-      args: [instanceId, 'https://cms.example.test/form'],
-    })
-    const instance = (manager as any).instances.get(instanceId)
-    const originalLoadURL = instance.pageView.webContents.loadURL
-    let historyStarted!: () => void
-    let releaseHistory!: () => void
-    const started = new Promise<void>((resolve) => { historyStarted = resolve })
-    const held = new Promise<void>((resolve) => { releaseHistory = resolve })
-    instance.pageView.webContents.canGoBack = mock(() => true)
-    instance.pageView.webContents.goBack = mock(() => {
-      historyStarted()
-      instance.pageView.webContents._emit(
-        'did-fail-load',
-        -3,
-        'ERR_ABORTED',
-        'https://mail.google.com/frame-only',
-        false,
-      )
-      void held.then(async () => {
-        const gmailUrl = 'https://mail.google.com/mail/u/0/#inbox'
-        await originalLoadURL(gmailUrl)
-        instance.pageView.webContents._emit('did-navigate', gmailUrl)
-      })
-    })
-    const policy = {
-      reason: 'contextual-gmail-reply' as const,
-      blockedHosts: ['mail.google.com'],
-      matchSubdomains: true,
-    }
-
-    const historyNavigation = (manager as any).dispatchCapability({
-      ...createRequest,
-      method: 'goBack',
-      args: [instanceId],
-    })
-    await started
-    const click = (manager as any).dispatchCapability({
-      ...createRequest,
-      v: 2,
-      method: 'clickElement',
-      args: [instanceId, '@send', undefined],
-      mutationUrlPolicy: policy,
-    })
-    let clickError: unknown
-    const clickSettled = click.then(
-      () => { throw new Error('Expected remote Gmail click after history navigation to be blocked') },
-      (error: unknown) => { clickError = error },
-    )
-    await Bun.sleep(0)
-    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
-    releaseHistory()
-
-    await historyNavigation
-    await clickSettled
-    expect(String(clickError)).toContain('browser mutations on Gmail are disabled')
-    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
-  })
-
-  it('keeps a remote guarded click queued through sub-frame events until main-frame Gmail commits', async () => {
-    const createRequest = {
-      v: 1 as const,
-      workspaceId: 'ws-gmail-click-navigation-race',
-      sessionId: 'session-gmail-click-navigation-race',
-      method: 'createForSession' as const,
-      args: ['session-gmail-click-navigation-race', { show: false }],
-    }
-    const instanceId = await (manager as any).dispatchCapability(createRequest) as string
-    await Bun.sleep(0)
-    await (manager as any).dispatchCapability({
-      ...createRequest,
-      method: 'navigate',
-      args: [instanceId, 'https://cms.example.test/form'],
-    })
-    const instance = (manager as any).instances.get(instanceId)
-    const originalLoadURL = instance.pageView.webContents.loadURL
-    let clickStarted!: () => void
-    let releaseNavigation!: () => void
-    const started = new Promise<void>((resolve) => { clickStarted = resolve })
-    const held = new Promise<void>((resolve) => { releaseNavigation = resolve })
-    instance.cdp.clickElement = mock(async () => {
-      clickStarted()
-      instance.pageView.webContents._emit(
-        'did-navigate-in-page',
-        'https://cms.example.test/embedded-frame',
-        false,
-      )
-      void held.then(async () => {
-        const gmailUrl = 'https://mail.google.com/mail/u/0/#inbox'
-        await originalLoadURL(gmailUrl)
-        instance.pageView.webContents._emit('did-navigate', gmailUrl)
-      })
-      return {
-        ref: '@open-mail',
-        box: { x: 0, y: 0, width: 10, height: 10 },
-        clickPoint: { x: 5, y: 5 },
-      }
-    })
-    const mutationUrlPolicy = {
-      reason: 'contextual-gmail-reply' as const,
-      blockedHosts: ['mail.google.com'],
-      matchSubdomains: true,
-    }
-
-    const navigationClick = (manager as any).dispatchCapability({
-      ...createRequest,
-      v: 2,
-      method: 'clickElement',
-      args: [instanceId, '@open-mail', { waitFor: 'navigation' }],
-      mutationUrlPolicy,
-    })
-    await started
-    const followupClick = (manager as any).dispatchCapability({
-      ...createRequest,
-      v: 2,
-      method: 'clickElement',
-      args: [instanceId, '@send', undefined],
-      mutationUrlPolicy,
-    })
-    let followupError: unknown
-    const followupSettled = followupClick.then(
-      () => { throw new Error('Expected remote Gmail follow-up click to be blocked') },
-      (error: unknown) => { followupError = error },
-    )
-    await Bun.sleep(0)
-    expect(instance.cdp.clickElement).toHaveBeenCalledTimes(1)
-    releaseNavigation()
-
-    await navigationClick
-    await followupSettled
-    expect(String(followupError)).toContain('browser mutations on Gmail are disabled')
-    expect(instance.cdp.clickElement).toHaveBeenCalledTimes(1)
-  })
-
-  it('fails closed for a remote mutation policy when the desktop live URL is malformed', async () => {
-    const createRequest = {
-      v: 1 as const,
-      workspaceId: 'ws-gmail-unknown-url',
-      sessionId: 'session-gmail-unknown-url',
-      method: 'createForSession' as const,
-      args: ['session-gmail-unknown-url', { show: false }],
-    }
-    const instanceId = await (manager as any).dispatchCapability(createRequest) as string
-    await Bun.sleep(0)
-    const instance = (manager as any).instances.get(instanceId)
-    instance.currentUrl = ''
-    instance.pageView.webContents.getURL = mock(() => 'https://[invalid')
-    const policy = {
-      reason: 'contextual-gmail-reply' as const,
-      blockedHosts: ['mail.google.com'],
-      matchSubdomains: true,
-    }
-
-    let clickError: unknown
-    await (manager as any).dispatchCapability({
-      ...createRequest,
-      v: 2,
-      method: 'clickElement',
-      args: [instanceId, '@send', undefined],
-      mutationUrlPolicy: policy,
-    }).then(
-      () => { throw new Error('Expected remote mutation with malformed URL to be blocked') },
-      (error: unknown) => { clickError = error },
-    )
-    expect(String(clickError)).toContain('browser mutations on Gmail are disabled')
-    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
-  })
-
-  it('rejects malformed or observational v2 capability requests before dispatch', async () => {
-    const base = {
-      workspaceId: 'ws-policy-contract',
-      sessionId: 'session-policy-contract',
-      args: ['missing-instance', '@send', undefined],
-    }
-    await expect((manager as any).dispatchCapability({
-      ...base,
-      v: 2,
-      method: 'clickElement',
-    })).rejects.toThrow('v2 is reserved for a policy-bearing page mutation')
-    await expect((manager as any).dispatchCapability({
-      ...base,
-      v: 2,
-      method: 'navigate',
-      mutationUrlPolicy: {
-        reason: 'contextual-gmail-reply',
-        blockedHosts: ['mail.google.com'],
-      },
-    })).rejects.toThrow('v2 is reserved for a policy-bearing page mutation')
-  })
-
-  it('focus brings the instance window to front', () => {
+it('focus brings the instance window to front', () => {
     manager.createInstance('f1')
     manager.focus('f1')
 
-    const instance = (manager as any).instances.get('f1')
+    const instance = getTestBrowserInstance(manager, 'f1')
     instance.window._emit('ready-to-show')
 
     expect(instance.window.show).toHaveBeenCalled()
     expect(instance.window.focus).toHaveBeenCalled()
   })
 
-  it('dedupes repeated focus calls before ready-to-show', () => {
+it('dedupes repeated focus calls before ready-to-show', () => {
     manager.createInstance('f2')
 
     manager.focus('f2')
     manager.focus('f2')
     manager.focus('f2')
 
-    const instance = (manager as any).instances.get('f2')
+    const instance = getTestBrowserInstance(manager, 'f2')
     instance.window._emit('ready-to-show')
 
     expect(instance.window.show.mock.calls.length).toBe(1)
     expect(instance.window.focus.mock.calls.length).toBe(1)
   })
 
-  it('cancels deferred pre-ready focus when hide happens first', () => {
+it('cancels deferred pre-ready focus when hide happens first', () => {
     manager.createInstance('f-hide-race')
 
     manager.focus('f-hide-race')
     manager.hide('f-hide-race')
 
-    const instance = (manager as any).instances.get('f-hide-race')
+    const instance = getTestBrowserInstance(manager, 'f-hide-race')
     const showCallsBeforeReady = instance.window.show.mock.calls.length
     const focusCallsBeforeReady = instance.window.focus.mock.calls.length
 
@@ -1459,9 +293,9 @@ describe('BrowserPaneManager', () => {
     expect(instance.window.focus.mock.calls.length).toBe(focusCallsBeforeReady)
   })
 
-  it('user close hides window and keeps instance alive', () => {
+it('user close hides window and keeps instance alive', () => {
     manager.createInstance('h1')
-    const instance = (manager as any).instances.get('h1')
+    const instance = getTestBrowserInstance(manager, 'h1')
 
     const closeEvent = { preventDefault: mock(() => {}) }
     instance.window._emit('close', closeEvent)
@@ -1472,11 +306,11 @@ describe('BrowserPaneManager', () => {
     expect(manager.listInstances()[0].isVisible).toBe(false)
   })
 
-  it('does not intercept close when destroy is explicit', () => {
+it('does not intercept close when destroy is explicit', () => {
     manager.createInstance('h-explicit-destroy')
-    const instance = (manager as any).instances.get('h-explicit-destroy')
+    const instance = getTestBrowserInstance(manager, 'h-explicit-destroy')
 
-    ;(manager as any).destroyingIds.add('h-explicit-destroy')
+    ;manager['destroyingIds'].add('h-explicit-destroy')
 
     const closeEvent = { preventDefault: mock(() => {}) }
     instance.window._emit('close', closeEvent)
@@ -1485,11 +319,11 @@ describe('BrowserPaneManager', () => {
     expect(instance.window.hide).not.toHaveBeenCalled()
   })
 
-  it('still destroys instance when cleanup throws', () => {
+it('still destroys instance when cleanup throws', () => {
     manager.createInstance('destroy-cleanup-throw')
-    const instance = (manager as any).instances.get('destroy-cleanup-throw')
+    const instance = getTestBrowserInstance(manager, 'destroy-cleanup-throw')
 
-    ;(manager as any).updateNativeOverlayState = () => {
+    ;manager['updateNativeOverlayState'] = () => {
       throw new Error('mock overlay cleanup failure')
     }
 
@@ -1498,743 +332,32 @@ describe('BrowserPaneManager', () => {
     expect(manager.listInstances()).toHaveLength(0)
   })
 
-  it('emits removed callback when window closes', () => {
+it('emits removed callback when window closes', () => {
     const removed: string[] = []
     manager.onRemoved((id) => removed.push(id))
     manager.createInstance('r1')
 
-    const instance = (manager as any).instances.get('r1')
+    const instance = getTestBrowserInstance(manager, 'r1')
     instance.window._emit('closed')
 
     expect(removed).toEqual(['r1'])
     expect(manager.listInstances()).toHaveLength(0)
   })
 
-  it('retries toolbar load and recovers', async () => {
-    toolbarLoadFailuresRemaining = 2
-    manager.createInstance('retry-toolbar')
-
-    await Bun.sleep(1400)
-
-    const instance = (manager as unknown as {
-      instances: Map<string, { toolbarView: ReturnType<typeof createMockWebContentsView> }>
-    }).instances.get('retry-toolbar')
-    if (!instance) throw new Error('retry-toolbar instance was not created')
-    const toolbarWebContents = instance.toolbarView.webContents
-    const fileAttempts = toolbarWebContents.loadFile.mock.calls.length
-    const toolbarUrlAttempts = toolbarWebContents.loadURL.mock.calls
-      .filter((args: [string]) => args[0]?.includes('browser-toolbar.html')).length
-    const totalAttempts = fileAttempts + toolbarUrlAttempts
-
-    expect(totalAttempts).toBe(3)
-    expect(toolbarWebContents.loadURL).not.toHaveBeenCalledWith(expect.stringContaining('data:text/html'))
-  })
-
-  it('stops toolbar retries when the instance is destroyed during its initial load', async () => {
-    toolbarLoadFailuresRemaining = 20
-    manager.createInstance('destroy-during-toolbar-load')
-    const instance = (manager as any).instances.get('destroy-during-toolbar-load')
-
-    manager.destroyInstance('destroy-during-toolbar-load')
-    await Bun.sleep(600)
-
-    const fileAttempts = instance.toolbarView.webContents.loadFile.mock.calls.length
-    const toolbarUrlAttempts = instance.toolbarView.webContents.loadURL.mock.calls
-      .filter((args: [string]) => args[0]?.includes('browser-toolbar.html')).length
-
-    expect(fileAttempts + toolbarUrlAttempts).toBe(1)
-    expect(instance.toolbarView.webContents.loadURL).not.toHaveBeenCalledWith(expect.stringContaining('data:text/html'))
-    expect(instance.toolbarReady).toBe(false)
-  })
-
-  it('loads toolbar fallback page after retry exhaustion', async () => {
-    toolbarLoadFailuresRemaining = 20
-    manager.createInstance('fallback-toolbar')
-
-    await Bun.sleep(3200)
-
-    const instance = (manager as unknown as {
-      instances: Map<string, { toolbarView: ReturnType<typeof createMockWebContentsView> }>
-    }).instances.get('fallback-toolbar')
-    if (!instance) throw new Error('fallback-toolbar instance was not created')
-    const toolbarWebContents = instance.toolbarView.webContents
-    const fileAttempts = toolbarWebContents.loadFile.mock.calls.length
-    const toolbarUrlAttempts = toolbarWebContents.loadURL.mock.calls
-      .filter((args: [string]) => args[0]?.includes('browser-toolbar.html')).length
-    const totalAttempts = fileAttempts + toolbarUrlAttempts
-
-    expect(totalAttempts).toBe(5)
-    expect(toolbarWebContents.loadURL).toHaveBeenCalledWith(expect.stringContaining('data:text/html'))
-  })
-
-  it('captures and filters console entries', () => {
-    manager.createInstance('console-1')
-    const instance = (manager as any).instances.get('console-1')
-
-    instance.pageView.webContents._emit('console-message', 2, 'warn message')
-    instance.pageView.webContents._emit('console-message', 3, 'error message')
-
-    const allEntries = manager.getConsoleLogs('console-1', { level: 'all', limit: 10 })
-    expect(allEntries).toHaveLength(2)
-
-    const warnEntries = manager.getConsoleLogs('console-1', { level: 'warn', limit: 10 })
-    expect(warnEntries).toHaveLength(1)
-    expect(warnEntries[0].message).toBe('warn message')
-  })
-
-  it('redacts OAuth callback artifacts before retaining browser console entries', () => {
-    manager.createInstance('console-oauth')
-    const instance = (manager as any).instances.get('console-oauth')
-    const authorizationCode = 'authorization-code-value'
-    const oauthState = 'oauth-state-value'
-    const clientInfo = 'client-identity-value'
-    const message = `navigation failed: https://login.example.test/callback#code=${authorizationCode}&state=${oauthState}&client_info=${clientInfo}`
-
-    instance.pageView.webContents._emit('console-message', 3, message)
-
-    const [entry] = manager.getConsoleLogs('console-oauth', { level: 'all', limit: 10 })
-    expect(entry.message).toContain('code=[REDACTED]')
-    expect(entry.message).toContain('state=[REDACTED]')
-    expect(entry.message).toContain('client_info=[REDACTED]')
-    expect(entry.message).not.toContain(authorizationCode)
-    expect(entry.message).not.toContain(oauthState)
-    expect(entry.message).not.toContain(clientInfo)
-  })
-
-  it('applies observer theme signal and skips regular console logging for it', () => {
-    manager.createInstance('theme-signal')
-    const instance = (manager as any).instances.get('theme-signal')
-    instance.themeObserverToken = 'tok-1'
-
-    instance.pageView.webContents._emit('console-message', 1, '__craft_theme_color__:tok-1:#123456')
-
-    expect(manager.listInstances().find(i => i.id === 'theme-signal')?.themeColor).toBe('#123456')
-    expect(manager.getConsoleLogs('theme-signal', { level: 'all', limit: 10 })).toHaveLength(0)
-  })
-
-  it('dedupes repeated observer theme signals', () => {
-    manager.createInstance('theme-dedupe')
-    const instance = (manager as any).instances.get('theme-dedupe')
-    instance.themeObserverToken = 'tok-2'
-
-    instance.pageView.webContents._emit('console-message', 1, '__craft_theme_color__:tok-2:#445566')
-    const sendCallsAfterFirst = instance.window.webContents.send.mock.calls.length
-
-    instance.pageView.webContents._emit('console-message', 1, '__craft_theme_color__:tok-2:#445566')
-    const sendCallsAfterSecond = instance.window.webContents.send.mock.calls.length
-
-    expect(sendCallsAfterSecond).toBe(sendCallsAfterFirst)
-  })
-
-  it('ignores observer theme signals from stale token', () => {
-    manager.createInstance('theme-stale-token')
-    const instance = (manager as any).instances.get('theme-stale-token')
-    instance.themeObserverToken = 'tok-current'
-    instance.themeColor = '#aaaaaa'
-
-    instance.pageView.webContents._emit('console-message', 1, '__craft_theme_color__:tok-old:#bbccdd')
-
-    expect(manager.listInstances().find(i => i.id === 'theme-stale-token')?.themeColor).toBe('#aaaaaa')
-  })
-
-  it('clears theme on explicit null sentinel signal', () => {
-    manager.createInstance('theme-null')
-    const instance = (manager as any).instances.get('theme-null')
-    instance.themeObserverToken = 'tok-null'
-
-    instance.pageView.webContents._emit('console-message', 1, '__craft_theme_color__:tok-null:#223344')
-    expect(manager.listInstances().find(i => i.id === 'theme-null')?.themeColor).toBe('#223344')
-
-    instance.pageView.webContents._emit('console-message', 1, '__craft_theme_color__:tok-null:__NULL__')
-    expect(manager.listInstances().find(i => i.id === 'theme-null')?.themeColor).toBeNull()
-  })
-
-  it('replays toolbar state with theme color when window is shown', () => {
-    manager.createInstance('theme-show-replay')
-    const instance = (manager as any).instances.get('theme-show-replay')
-
-    instance.currentUrl = 'https://example.com'
-    instance.title = 'Example'
-    instance.canGoBack = true
-    instance.canGoForward = false
-    instance.themeColor = '#123456'
-
-    const sendsBeforeShow = instance.toolbarView.webContents.send.mock.calls.length
-    instance.window._emit('show')
-
-    const sendCallsAfterShow = instance.toolbarView.webContents.send.mock.calls.slice(sendsBeforeShow)
-    expect(sendCallsAfterShow).toContainEqual([
-      'browser-toolbar:state-update',
-      {
-        url: 'https://example.com',
-        title: 'Example',
-        isLoading: false,
-        canGoBack: true,
-        canGoForward: false,
-        themeColor: '#123456',
-      },
-    ])
-  })
-
-  it('replays full toolbar state when toolbar renderer finishes loading', () => {
-    toolbarLoadFailuresRemaining = 20
-    manager.createInstance('toolbar-finish-load-replay')
-    const instance = (manager as any).instances.get('toolbar-finish-load-replay')
-
-    instance.currentUrl = 'https://craft.do'
-    instance.title = 'Craft'
-    instance.isLoading = true
-    instance.canGoBack = true
-    instance.canGoForward = true
-    instance.themeColor = '#654321'
-
-    instance.toolbarView.webContents.getURL = mock(() => 'http://localhost:5173/browser-toolbar.html?instanceId=toolbar-finish-load-replay')
-
-    const sendsBeforeFinishLoad = instance.toolbarView.webContents.send.mock.calls.length
-    instance.toolbarView.webContents._emit('did-finish-load')
-
-    const sendCallsAfterFinishLoad = instance.toolbarView.webContents.send.mock.calls.slice(sendsBeforeFinishLoad)
-    expect(sendCallsAfterFinishLoad).toContainEqual([
-      'browser-toolbar:state-update',
-      {
-        url: 'https://craft.do',
-        title: 'Craft',
-        isLoading: true,
-        canGoBack: true,
-        canGoForward: true,
-        themeColor: '#654321',
-      },
-    ])
-  })
-
-  it('does not mark toolbar ready for about:blank did-finish-load', () => {
-    toolbarLoadFailuresRemaining = 20
-    manager.createInstance('toolbar-ignore-about-blank')
-    const instance = (manager as any).instances.get('toolbar-ignore-about-blank')
-
-    instance.toolbarView.webContents.getURL = mock(() => 'about:blank')
-    instance.toolbarView.webContents._emit('did-finish-load')
-
-    expect(instance.toolbarReady).toBe(false)
-  })
-
-  it('marks toolbar ready for fallback data page did-finish-load', () => {
-    toolbarLoadFailuresRemaining = 20
-    manager.createInstance('toolbar-fallback-ready')
-    const instance = (manager as any).instances.get('toolbar-fallback-ready')
-
-    instance.toolbarView.webContents.getURL = mock(() => 'data:text/html;charset=UTF-8,%3Chtml%3E%3C%2Fhtml%3E')
-    instance.toolbarView.webContents._emit('did-finish-load')
-
-    expect(instance.toolbarReady).toBe(true)
-  })
-
-  it('keeps focus deferred until a valid toolbar document loads', () => {
-    toolbarLoadFailuresRemaining = 20
-    manager.createInstance('toolbar-focus-guard')
-    const instance = (manager as any).instances.get('toolbar-focus-guard')
-
-    manager.focus('toolbar-focus-guard')
-    expect(instance.pendingShowOnReady).toBe(true)
-    expect(instance.window.show).toHaveBeenCalledTimes(0)
-
-    instance.toolbarView.webContents.getURL = mock(() => 'about:blank')
-    instance.toolbarView.webContents._emit('did-finish-load')
-    expect(instance.window.show).toHaveBeenCalledTimes(0)
-
-    instance.toolbarView.webContents.getURL = mock(() => 'file:///mock/renderer/browser-toolbar.html')
-    instance.toolbarView.webContents._emit('did-finish-load')
-
-    expect(instance.toolbarReady).toBe(true)
-    expect(instance.window.show).toHaveBeenCalledTimes(1)
-    expect(instance.window.focus).toHaveBeenCalledTimes(1)
-  })
-
-  it('runs early theme extraction shortly after navigation', async () => {
-    manager.createInstance('theme-early')
-    const instance = (manager as any).instances.get('theme-early')
-    instance.pageView.webContents.executeJavaScript = mock(async () => '#0f1e2d')
-
-    instance.pageView.webContents._emit('did-navigate', 'https://example.com')
-
-    await Bun.sleep(140)
-
-    expect(manager.listInstances().find(i => i.id === 'theme-early')?.themeColor).toBe('#0f1e2d')
-  })
-
-  it('clears pending in-page theme timer on full navigation', async () => {
-    manager.createInstance('theme-timer-clear')
-    const instance = (manager as any).instances.get('theme-timer-clear')
-
-    instance.pageView.webContents._emit('did-navigate-in-page', 'https://example.com/route-a')
-    await Bun.sleep(0)
-    expect(instance.inPageThemeTimer).not.toBeNull()
-
-    instance.pageView.webContents._emit('did-navigate', 'https://example.com/full-nav')
-    expect(instance.inPageThemeTimer).toBeNull()
-  })
-
-  it('throws when screenshot capture returns empty NativeImage', async () => {
-    manager.createInstance('screenshot-empty-image')
-    const instance = (manager as any).instances.get('screenshot-empty-image')
-    instance.pageView.webContents.capturePage = mock(async () => ({
-      isEmpty: () => true,
-      getSize: () => ({ width: 0, height: 0 }),
-      resize: function() { return this },
-      toPNG: () => Buffer.from('ignored'),
-      toJPEG: () => Buffer.from('ignored'),
-    }))
-
-    await expect(manager.screenshot('screenshot-empty-image')).rejects.toThrow('Failed to capture screenshot: empty image buffer')
-  })
-
-  it('throws when screenshot capture returns empty PNG buffer', async () => {
-    manager.createInstance('screenshot-empty-png')
-    const instance = (manager as any).instances.get('screenshot-empty-png')
-    instance.pageView.webContents.capturePage = mock(async () => ({
-      isEmpty: () => false,
-      getSize: () => ({ width: 2400, height: 1800 }),
-      resize: function() { return this },
-      toPNG: () => Buffer.alloc(0),
-      toJPEG: () => Buffer.alloc(0),
-    }))
-
-    await expect(manager.screenshot('screenshot-empty-png')).rejects.toThrow('Failed to capture screenshot: empty image buffer')
-  })
-
-  it('recovers screenshot via non-disruptive inactive reveal and restores hidden state', async () => {
-    manager.createInstance('screenshot-rescue-success')
-    const instance = (manager as any).instances.get('screenshot-rescue-success')
-
-    let captureCalls = 0
-    instance.pageView.webContents.capturePage = mock(async () => {
-      captureCalls += 1
-      if (captureCalls <= 3) {
-        return {
-          isEmpty: () => true,
-          getSize: () => ({ width: 0, height: 0 }),
-          resize: function() { return this },
-          toPNG: () => Buffer.alloc(0),
-          toJPEG: () => Buffer.alloc(0),
-        }
-      }
-
-      const img = {
-        isEmpty: () => false,
-        getSize: () => ({ width: 2400, height: 1800 }),
-        resize: () => img,
-        toPNG: () => Buffer.from('rescued-png'),
-        toJPEG: (_q: number) => Buffer.from('rescued-jpeg'),
-      }
-      return img
-    })
-
-    const result = await manager.screenshot('screenshot-rescue-success', { includeMetadata: true })
-
-    expect(result.imageBuffer.toString()).toBe('rescued-png')
-    expect(instance.window.showInactive).toHaveBeenCalledTimes(1)
-    expect(instance.window.focus).not.toHaveBeenCalled()
-    expect(instance.window.hide).toHaveBeenCalled()
-    expect(result.metadata?.warnings?.some((w: string) => w.includes('temporary inactive reveal'))).toBe(true)
-  })
-
-  it('throws when region screenshot capture returns empty NativeImage', async () => {
-    manager.createInstance('region-empty-image')
-    const instance = (manager as any).instances.get('region-empty-image')
-    instance.pageView.webContents.capturePage = mock(async () => ({
-      isEmpty: () => true,
-      getSize: () => ({ width: 0, height: 0 }),
-      resize: function() { return this },
-      toPNG: () => Buffer.from('ignored'),
-      toJPEG: () => Buffer.from('ignored'),
-    }))
-
-    await expect(manager.screenshotRegion('region-empty-image', { x: 10, y: 20, width: 120, height: 80 })).rejects.toThrow(
-      'Failed to capture region screenshot: empty image buffer'
-    )
-  })
-
-  it('throws when region screenshot capture returns empty PNG buffer', async () => {
-    manager.createInstance('region-empty-png')
-    const instance = (manager as any).instances.get('region-empty-png')
-    instance.pageView.webContents.capturePage = mock(async () => ({
-      isEmpty: () => false,
-      getSize: () => ({ width: 2400, height: 1800 }),
-      resize: function() { return this },
-      toPNG: () => Buffer.alloc(0),
-      toJPEG: () => Buffer.alloc(0),
-    }))
-
-    await expect(manager.screenshotRegion('region-empty-png', { x: 10, y: 20, width: 120, height: 80 })).rejects.toThrow(
-      'Failed to capture region screenshot: empty image buffer'
-    )
-  })
-
-  it('captures screenshot region from ref target', async () => {
-    manager.createInstance('region-ref')
-    const result = await manager.screenshotRegion('region-ref', { ref: '@e1' })
-
-    expect(result.imageBuffer).toBeInstanceOf(Buffer)
-    expect(result.metadata?.targetMode).toBe('ref')
-  })
-
-  it('captures screenshot region from selector target', async () => {
-    manager.createInstance('region-selector')
-    const result = await manager.screenshotRegion('region-selector', { selector: 'div.card', padding: 4 })
-
-    expect(result.imageBuffer).toBeInstanceOf(Buffer)
-    expect(result.metadata?.targetMode).toBe('selector')
-  })
-
-  it('throws for ambiguous screenshot region target modes', async () => {
-    manager.createInstance('region-ambiguous')
-
-    await expect(
-      manager.screenshotRegion('region-ambiguous', { ref: '@e1', selector: 'div.card' })
-    ).rejects.toThrow('Region screenshot target is ambiguous')
-  })
-
-  it('throws when selector target cannot be resolved', async () => {
-    manager.createInstance('region-selector-missing')
-    const instance = (manager as any).instances.get('region-selector-missing')
-    instance.cdp.getElementGeometryBySelector = mock(async () => {
-      throw new Error('No element found for selector "div.missing"')
-    })
-
-    await expect(
-      manager.screenshotRegion('region-selector-missing', { selector: 'div.missing' })
-    ).rejects.toThrow('No element found for selector "div.missing"')
-  })
-
-  it('throws when resolved region is outside viewport', async () => {
-    manager.createInstance('region-oob')
-
-    await expect(
-      manager.screenshotRegion('region-oob', { x: 5000, y: 5000, width: 100, height: 100 })
-    ).rejects.toThrow('Resolved screenshot region is outside the current viewport')
-  })
-
-  it('resizes browser window viewport and returns effective applied size', () => {
+it('resizes browser window viewport and returns effective applied size', () => {
     manager.createInstance('resize-1')
     const resized = manager.windowResize('resize-1', 1280, 720)
 
-    const instance = (manager as any).instances.get('resize-1')
+    const instance = getTestBrowserInstance(manager, 'resize-1')
     expect(instance.window.setContentSize).toHaveBeenCalledWith(1280, 768)
     expect(resized).toEqual({ width: 1280, height: 720 })
   })
 
-  it('returns effective viewport size when min window constraints apply', () => {
+it('returns effective viewport size when min window constraints apply', () => {
     manager.createInstance('resize-min')
     const resized = manager.windowResize('resize-min', 200, 200)
 
     // BrowserWindow minHeight is 500, toolbar is 48, so effective viewport height is 452.
     expect(resized).toEqual({ width: 700, height: 452 })
-  })
-
-  describe('agent control overlay', () => {
-    it('setAgentControl activates native overlay on bound instance', async () => {
-      manager.createInstance('ac-1')
-      manager.bindSession('ac-1', 'sess-1')
-
-      manager.setAgentControl('sess-1', { displayName: 'Navigate Page', intent: 'Loading example.com' })
-      await Promise.resolve()
-
-      const instance = (manager as any).instances.get('ac-1')
-      expect(instance.agentControl).toEqual({
-        active: true,
-        sessionId: 'sess-1',
-        displayName: 'Navigate Page',
-        intent: 'Loading example.com',
-      })
-      expect(instance.nativeOverlayView.webContents.executeJavaScript).toHaveBeenCalled()
-      expect(instance.nativeOverlayView.webContents.focus).not.toHaveBeenCalled()
-      expect(manager.listInstances().find(i => i.id === 'ac-1')?.agentControlActive).toBe(true)
-    })
-
-    it('keeps native overlay visible for active session control', async () => {
-      manager.createInstance('ac-idle')
-      manager.bindSession('ac-idle', 'sess-idle')
-
-      manager.setAgentControl('sess-idle', {
-        displayName: 'Browser',
-        intent: 'Session controls this window',
-      })
-      await Promise.resolve()
-
-      const instance = (manager as any).instances.get('ac-idle')
-      expect(instance.nativeOverlayView.setBounds).toHaveBeenCalledWith({ x: 0, y: 48, width: 1200, height: 852 })
-      expect(instance.nativeOverlayView.setBackgroundColor).toHaveBeenLastCalledWith('#00000000')
-      expect(instance.nativeOverlayView.webContents.focus).not.toHaveBeenCalled()
-      expect(manager.listInstances().find(i => i.id === 'ac-idle')?.agentControlActive).toBe(true)
-    })
-
-    it('emits state change when agent control is set and cleared', () => {
-      const stateEvents: any[] = []
-      manager.onStateChange((info) => stateEvents.push(info))
-
-      manager.createInstance('ac-state')
-      manager.bindSession('ac-state', 'sess-state')
-
-      manager.setAgentControl('sess-state', { displayName: 'Browser Snapshot' })
-      manager.clearAgentControl('sess-state')
-
-      const acStateEvents = stateEvents.filter((event) => event.id === 'ac-state')
-      expect(acStateEvents.some((event) => event.agentControlActive === true)).toBe(true)
-      expect(acStateEvents.some((event) => event.agentControlActive === false)).toBe(true)
-    })
-
-    it('reapplies native overlay after did-stop-loading while control is active', async () => {
-      manager.createInstance('ac-reapply')
-      manager.bindSession('ac-reapply', 'sess-reapply')
-
-      manager.setAgentControl('sess-reapply', { displayName: 'Navigate Page', intent: 'Loading example.com' })
-      await Promise.resolve()
-
-      const instance = (manager as any).instances.get('ac-reapply')
-      const callCountAfterSet = instance.nativeOverlayView.webContents.executeJavaScript.mock.calls.length
-
-      instance.pageView.webContents._emit('did-stop-loading')
-      await Promise.resolve()
-
-      expect(instance.nativeOverlayView.webContents.executeJavaScript.mock.calls.length).toBeGreaterThan(callCountAfterSet)
-      expect(instance.nativeOverlayView.setBackgroundColor).toHaveBeenLastCalledWith('#00000000')
-    })
-
-    it('ignores late page lifecycle events after the browser window is destroyed', () => {
-      manager.createInstance('ac-late-page-event')
-      manager.bindSession('ac-late-page-event', 'sess-late-page-event')
-      manager.setAgentControl('sess-late-page-event', { displayName: 'Navigate Page' })
-
-      const instance = (manager as any).instances.get('ac-late-page-event')
-      manager.destroyInstance('ac-late-page-event')
-
-      expect(() => instance.pageView.webContents._emit('did-stop-loading')).not.toThrow()
-      expect(() => instance.pageView.webContents._emit('did-navigate', 'https://example.com/late')).not.toThrow()
-      expect(() => instance.window._emit('show')).not.toThrow()
-    })
-
-    it('reapplies native overlay after hide/show while control is active', async () => {
-      manager.createInstance('ac-show-reapply')
-      manager.bindSession('ac-show-reapply', 'sess-show-reapply')
-
-      manager.setAgentControl('sess-show-reapply', { displayName: 'Click Button', intent: 'Clicking submit' })
-      await Promise.resolve()
-
-      const instance = (manager as any).instances.get('ac-show-reapply')
-      const callCountAfterSet = instance.nativeOverlayView.webContents.executeJavaScript.mock.calls.length
-
-      instance.window._emit('hide')
-      instance.window._emit('show')
-      await Promise.resolve()
-
-      expect(instance.nativeOverlayView.webContents.executeJavaScript.mock.calls.length).toBeGreaterThan(callCountAfterSet)
-      expect(instance.nativeOverlayView.setBackgroundColor).toHaveBeenLastCalledWith('#00000000')
-    })
-
-    it('setAgentControl uses fallback label when no intent', async () => {
-      manager.createInstance('ac-2')
-      manager.bindSession('ac-2', 'sess-2')
-
-      manager.setAgentControl('sess-2', { displayName: 'Browser Snapshot' })
-      await Promise.resolve()
-
-      const instance = (manager as any).instances.get('ac-2')
-      const calls = instance.nativeOverlayView.webContents.executeJavaScript.mock.calls
-      expect(calls.length).toBeGreaterThan(0)
-      expect(String(calls[calls.length - 1][0])).toContain('Browser Snapshot')
-    })
-
-    it('setAgentControl uses default label when no metadata', async () => {
-      manager.createInstance('ac-3')
-      manager.bindSession('ac-3', 'sess-3')
-
-      manager.setAgentControl('sess-3', {})
-      await Promise.resolve()
-
-      const instance = (manager as any).instances.get('ac-3')
-      const calls = instance.nativeOverlayView.webContents.executeJavaScript.mock.calls
-      expect(calls.length).toBeGreaterThan(0)
-      expect(String(calls[calls.length - 1][0])).toContain('Agent is working…')
-    })
-
-    it('clearAgentControl dismisses native overlay', () => {
-      manager.createInstance('ac-4')
-      manager.bindSession('ac-4', 'sess-4')
-
-      manager.setAgentControl('sess-4', { displayName: 'Click Button', intent: 'Clicking submit' })
-      manager.clearAgentControl('sess-4')
-
-      const instance = (manager as any).instances.get('ac-4')
-      expect(instance.agentControl).toBeNull()
-      expect(instance.nativeOverlayView.setBounds).toHaveBeenCalledWith({ x: 0, y: 0, width: 0, height: 0 })
-    })
-
-    it('clearAgentControl is a no-op when not active', () => {
-      manager.createInstance('ac-5')
-      manager.bindSession('ac-5', 'sess-5')
-
-      manager.clearAgentControl('sess-5')
-
-      const instance = (manager as any).instances.get('ac-5')
-      expect(instance.nativeOverlayView.webContents.executeJavaScript).not.toHaveBeenCalled()
-    })
-
-    it('clearVisualsForSession resets agent control state', async () => {
-      manager.createInstance('ac-6')
-      manager.bindSession('ac-6', 'sess-6')
-
-      manager.setAgentControl('sess-6', { displayName: 'Fill Input', intent: 'Typing email' })
-      await manager.clearVisualsForSession('sess-6')
-
-      const instance = (manager as any).instances.get('ac-6')
-      expect(instance.agentControl).toBeNull()
-      expect(instance.nativeOverlayView.setBounds).toHaveBeenCalledWith({ x: 0, y: 0, width: 0, height: 0 })
-    })
-
-    it('setAgentControl ignores unbound sessions', () => {
-      manager.createInstance('ac-7')
-
-      manager.setAgentControl('nonexistent-session', { displayName: 'Test' })
-
-      const instance = (manager as any).instances.get('ac-7')
-      expect(instance.agentControl).toBeNull()
-      expect(instance.nativeOverlayView.webContents.executeJavaScript).not.toHaveBeenCalled()
-    })
-
-    it('navigate does not trigger overlay by itself', async () => {
-      manager.createInstance('ac-8')
-      manager.bindSession('ac-8', 'sess-8')
-
-      await manager.navigate('ac-8', 'https://example.com')
-
-      const instance = (manager as any).instances.get('ac-8')
-      expect(instance.agentControl).toBeNull()
-      expect(instance.nativeOverlayView.webContents.executeJavaScript).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('failed interaction tracking', () => {
-    it('observes navigation that starts before the click promise resolves', async () => {
-      manager.createInstance('fast-navigation')
-      const instance = getTestBrowserInstance(manager, 'fast-navigation')
-      instance.cdp.clickElement = mock(async () => {
-        instance.pageView.webContents._emit('did-navigate', 'https://example.com/next')
-        return {
-          ref: '@e1',
-          box: { x: 0, y: 0, width: 10, height: 10 },
-          clickPoint: { x: 5, y: 5 },
-        }
-      })
-
-      await manager.clickElement('fast-navigation', '@e1', {
-        waitFor: 'navigation',
-        timeoutMs: 100,
-      })
-
-      expect(instance.lastAction).toMatchObject({
-        tool: 'browser_click',
-        ref: '@e1',
-        status: 'succeeded',
-      })
-    })
-
-    it('clickElement records failed lastAction on error', async () => {
-      manager.createInstance('fail-click')
-      const instance = (manager as any).instances.get('fail-click')
-      instance.cdp.clickElement = mock(async () => { throw new Error('click failed') })
-
-      await expect(manager.clickElement('fail-click', '@e1')).rejects.toThrow('click failed')
-
-      expect(instance.lastAction).toMatchObject({
-        tool: 'browser_click',
-        ref: '@e1',
-        status: 'failed',
-      })
-    })
-
-    it('fillElement records failed lastAction on error', async () => {
-      manager.createInstance('fail-fill')
-      const instance = (manager as any).instances.get('fail-fill')
-      instance.cdp.fillElement = mock(async () => { throw new Error('fill failed') })
-
-      await expect(manager.fillElement('fail-fill', '@e2', 'hello')).rejects.toThrow('fill failed')
-
-      expect(instance.lastAction).toMatchObject({
-        tool: 'browser_fill',
-        ref: '@e2',
-        status: 'failed',
-      })
-    })
-
-    it('selectOption records failed lastAction on error', async () => {
-      manager.createInstance('fail-select')
-      const instance = (manager as any).instances.get('fail-select')
-      instance.cdp.selectOption = mock(async () => { throw new Error('select failed') })
-
-      await expect(manager.selectOption('fail-select', '@e3', 'opt-1')).rejects.toThrow('select failed')
-
-      expect(instance.lastAction).toMatchObject({
-        tool: 'browser_select',
-        ref: '@e3',
-        status: 'failed',
-      })
-    })
-  })
-
-  describe('security challenge detection', () => {
-    it('does not treat a sparse normal page as a security challenge or request an AX snapshot', async () => {
-      manager.createInstance('sparse-normal')
-      const instance = getTestBrowserInstance(manager, 'sparse-normal')
-      instance.title = 'Settings'
-      instance.currentUrl = 'https://example.com/settings'
-      instance.pageView.webContents.executeJavaScript = mock(async () => [])
-      let snapshotCalls = 0
-      instance.cdp.getAccessibilitySnapshot = mock(async () => {
-        snapshotCalls += 1
-        return {
-          url: instance.currentUrl,
-          title: instance.title,
-          nodes: [{ ref: '@e1', role: 'button', name: 'Save' }],
-        }
-      })
-
-      const result = await manager.detectSecurityChallenge('sparse-normal')
-
-      expect(result).toEqual({ detected: false, provider: 'none', signals: [] })
-      expect(snapshotCalls).toBe(0)
-    })
-
-    it('classifies hCaptcha without relying on sparse-page heuristics', async () => {
-      manager.createInstance('hcaptcha-page')
-      const instance = getTestBrowserInstance(manager, 'hcaptcha-page')
-      instance.title = 'Verify'
-      instance.currentUrl = 'https://example.com/login'
-      instance.pageView.webContents.executeJavaScript = mock(async () => ['dom:hcaptcha'])
-
-      const result = await manager.detectSecurityChallenge('hcaptcha-page')
-
-      expect(result.detected).toBe(true)
-      expect(result.provider).toBe('hcaptcha')
-      expect(result.signals).toContain('dom:hcaptcha')
-    })
-
-    it('waits until a manual security challenge has cleared', async () => {
-      manager.createInstance('challenge-clear')
-      const instance = getTestBrowserInstance(manager, 'challenge-clear')
-      let detectionCalls = 0
-      instance.pageView.webContents.executeJavaScript = mock(async () => {
-        detectionCalls += 1
-        return detectionCalls === 1 ? ['dom:hcaptcha'] : []
-      })
-
-      const result = await manager.waitFor('challenge-clear', {
-        kind: 'challenge-clear',
-        timeoutMs: 200,
-        pollMs: 25,
-      })
-
-      expect(result.detail).toBe('security challenge cleared')
-      expect(detectionCalls).toBe(2)
-    })
   })
 })
