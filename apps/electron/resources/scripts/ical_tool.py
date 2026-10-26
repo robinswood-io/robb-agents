@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["icalendar>=7.0,<8", "click>=8.3,<9", "python-dateutil>=2.9,<3"]
+# dependencies = ["icalendar==7.3.0", "click==8.5.0", "python-dateutil==3.0.0"]
 # ///
 """Calendar (.ics) file operations tool.
 

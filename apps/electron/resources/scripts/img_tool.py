@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["Pillow>=12.1,<13", "click>=8.3,<9"]
+# dependencies = ["Pillow==13.0.0", "click==8.5.0"]
 # ///
 """Image processing tool.
 

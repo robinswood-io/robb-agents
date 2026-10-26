@@ -1,0 +1,170 @@
+{
+  "status": "passed",
+  "nativePythonASTsUnchanged": 9,
+  "stableRegistryPackages": 12,
+  "sharedPdfHelperHasNoDuplicateScriptMetadata": true,
+  "files": [
+    {
+      "file": "apps/electron/resources/scripts/pdf_common.py",
+      "beforeHash": "b29f2d90c3e0f79a6aa81b95ba90c5482c5fa38e78392def2c569c23c451d7ec",
+      "upgrades": [],
+      "lines": 410
+    },
+    {
+      "file": "apps/electron/resources/scripts/xlsx_tool.py",
+      "beforeHash": "16722667745b2396ae90375a2e6e944e5c526ac593f6759368d0d92bea034bf4",
+      "upgrades": [
+        {
+          "from": "openpyxl>=3.1,<4",
+          "to": "openpyxl==3.1.5"
+        },
+        {
+          "from": "click>=8.3,<9",
+          "to": "click==8.5.0"
+        }
+      ],
+      "lines": 375
+    },
+    {
+      "file": "apps/electron/resources/scripts/docx_tool.py",
+      "beforeHash": "cb6327cbc3e94f7b3ea0aa22c83b8abe1e1fddf2320fc43d5f45fcee564e23f8",
+      "upgrades": [
+        {
+          "from": "python-docx>=1.2,<2",
+          "to": "python-docx==1.2.0"
+        },
+        {
+          "from": "click>=8.3,<9",
+          "to": "click==8.5.0"
+        }
+      ],
+      "lines": 390
+    },
+    {
+      "file": "apps/electron/resources/scripts/markitdown_cli.py",
+      "beforeHash": "07996b5a67a7a0dd10cfc12856fac1b1f9a40b90463a60150efa9fd20933a95d",
+      "upgrades": [
+        {
+          "from": "markitdown[pdf,pptx,docx,xlsx]>=0.1.5,<0.2",
+          "to": "markitdown[pdf,pptx,docx,xlsx]==0.1.9"
+        },
+        {
+          "from": "python-docx>=1.1,<2",
+          "to": "python-docx==1.2.0"
+        },
+        {
+          "from": "click>=8.3,<9",
+          "to": "click==8.5.0"
+        }
+      ],
+      "lines": 137
+    },
+    {
+      "file": "apps/electron/resources/scripts/pdf_tool.py",
+      "beforeHash": "b657605b45f0f0b5217f03c982340580e3a743713cb5be0f045de8c9e15eabab",
+      "upgrades": [
+        {
+          "from": "pypdfium2>=5.5,<6",
+          "to": "pypdfium2==5.14.0"
+        },
+        {
+          "from": "pypdf>=6.7,<7",
+          "to": "pypdf==6.21.2"
+        },
+        {
+          "from": "img2pdf>=0.5,<1",
+          "to": "img2pdf==0.6.3"
+        },
+        {
+          "from": "Pillow>=10,<12",
+          "to": "Pillow==13.0.0"
+        },
+        {
+          "from": "click>=8.3,<9",
+          "to": "click==8.5.0"
+        },
+        {
+          "from": "python-pptx>=1.0,<2",
+          "to": "python-pptx==1.0.2"
+        },
+        {
+          "from": "python-docx>=1.1,<2",
+          "to": "python-docx==1.2.0"
+        }
+      ],
+      "lines": 49
+    },
+    {
+      "file": "apps/electron/resources/scripts/doc_diff.py",
+      "beforeHash": "0fb58bbb61f7624c0d060627e9f758c325b9b7e3b533eeb8a7a91b6072b27a92",
+      "upgrades": [
+        {
+          "from": "markitdown>=0.1.5,<0.2",
+          "to": "markitdown==0.1.9"
+        },
+        {
+          "from": "python-docx>=1.1,<2",
+          "to": "python-docx==1.2.0"
+        },
+        {
+          "from": "diff-match-patch>=20241021",
+          "to": "diff-match-patch==20241021"
+        },
+        {
+          "from": "click>=8.3,<9",
+          "to": "click==8.5.0"
+        }
+      ],
+      "lines": 251
+    },
+    {
+      "file": "apps/electron/resources/scripts/ical_tool.py",
+      "beforeHash": "6a7a6f86d9f0fd970f742fb0e767cee2468bea2d0ad308c855c7f67fcfc03bc8",
+      "upgrades": [
+        {
+          "from": "icalendar>=7.0,<8",
+          "to": "icalendar==7.3.0"
+        },
+        {
+          "from": "click>=8.3,<9",
+          "to": "click==8.5.0"
+        },
+        {
+          "from": "python-dateutil>=2.9,<3",
+          "to": "python-dateutil==3.0.0"
+        }
+      ],
+      "lines": 372
+    },
+    {
+      "file": "apps/electron/resources/scripts/img_tool.py",
+      "beforeHash": "31529a7f1ffbf56e9926df055df6a3c29e3c307d1a98657e9b169cc0f78e747e",
+      "upgrades": [
+        {
+          "from": "Pillow>=12.1,<13",
+          "to": "Pillow==13.0.0"
+        },
+        {
+          "from": "click>=8.3,<9",
+          "to": "click==8.5.0"
+        }
+      ],
+      "lines": 370
+    },
+    {
+      "file": "apps/electron/resources/scripts/pptx_tool.py",
+      "beforeHash": "942ec3ef58738cad4834669fa3b6c4fa3b711fb96e6fb4ea5ed19369fb0569a9",
+      "upgrades": [
+        {
+          "from": "python-pptx>=1.0,<2",
+          "to": "python-pptx==1.0.2"
+        },
+        {
+          "from": "click>=8.3,<9",
+          "to": "click==8.5.0"
+        }
+      ],
+      "lines": 364
+    }
+  ]
+}

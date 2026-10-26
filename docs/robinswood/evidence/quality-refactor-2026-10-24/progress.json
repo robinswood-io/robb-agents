@@ -103,16 +103,16 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-26T10:14:53.054127+00:00",
+  "updatedAt": "2026-10-26T10:42:07.852210+00:00",
   "current": {
-    "lastEvidence": "native-decomposition-and-filter-contracts-summary.json",
+    "lastEvidence": "appearance-document-dev-summary.json",
     "sourceGate": {
-      "max-lines": 30,
+      "max-lines": 28,
       "no-explicit-any": 0
     },
     "globalLint": {
       "files": 3633,
-      "errors": 23,
+      "errors": 21,
       "warnings": 99,
       "fatal": 0,
       "rules": {

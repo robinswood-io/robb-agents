@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["markitdown>=0.1.5,<0.2", "python-docx>=1.1,<2", "diff-match-patch>=20241021", "click>=8.3,<9"]
+# dependencies = ["markitdown==0.1.9", "python-docx==1.2.0", "diff-match-patch==20241021", "click==8.5.0"]
 # ///
 """Document comparison tool.
 

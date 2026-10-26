@@ -1,0 +1,9 @@
+{
+  "status": "passed",
+  "sourceFiles": [
+    "scripts/electron-dev.ts",
+    "scripts/electron-dev-support.ts"
+  ],
+  "allExistingAssertionsPreserved": true,
+  "changes": "Existing source checks inspect both native modules; the Google OAuth secret-exclusion check also covers the new helper."
+}

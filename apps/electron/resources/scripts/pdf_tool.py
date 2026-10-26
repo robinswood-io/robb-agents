@@ -1,13 +1,13 @@
 # /// script
 # requires-python = ">=3.12"
 # dependencies = [
-#   "pypdfium2>=5.5,<6",
-#   "pypdf>=6.7,<7",
-#   "img2pdf>=0.5,<1",
-#   "Pillow>=10,<12",
-#   "click>=8.3,<9",
-#   "python-pptx>=1.0,<2",
-#   "python-docx>=1.1,<2",
+#   "pypdfium2==5.14.0",
+#   "pypdf==6.21.2",
+#   "img2pdf==0.6.3",
+#   "Pillow==13.0.0",
+#   "click==8.5.0",
+#   "python-pptx==1.0.2",
+#   "python-docx==1.2.0",
 # ]
 # ///
 """PDF operations tool.

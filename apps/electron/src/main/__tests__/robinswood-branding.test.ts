@@ -142,7 +142,7 @@ describe('Robinswood visible branding', () => {
     expect(logger).toContain("join(CONFIG_DIR, 'logs', 'auto-update.log')")
     expect(logger).not.toContain("join(homedir(), '.craft-agent', 'logs'")
 
-    const electronDev = readRepoFile('scripts/electron-dev.ts')
+    const electronDev = ['scripts/electron-dev.ts', 'scripts/electron-dev-support.ts'].map(readRepoFile).join('\n')
     expect(electronDev).toContain('Robb Agents Dev.app')
     expect(electronDev).toContain('io.robinswood.robbagents.dev')
     expect(electronDev).toContain('.craft-agent-dev')
@@ -197,6 +197,7 @@ describe('Robinswood visible branding', () => {
     for (const path of [
       'apps/electron/package.json',
       'scripts/electron-dev.ts',
+      'scripts/electron-dev-support.ts',
       'scripts/build/win32.ts',
     ]) {
       expect(readRepoFile(path)).not.toContain('define:process.env.GOOGLE_OAUTH_CLIENT_SECRET')
