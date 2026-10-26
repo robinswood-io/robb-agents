@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .install_staging_retention_fixtures import atomic, journal, recovery
 import importlib.util
 import os
 from pathlib import Path
@@ -51,7 +52,10 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
                 raise OSError('simulated plist write failure')
             return original_write(path, data, mode)
 
-        with mock.patch.object(installer, 'write_owned_file', side_effect=fail_plist_stage):
+        with (
+            mock.patch.object(installer, 'write_owned_file', side_effect=fail_plist_stage),
+            mock.patch.object(journal, 'write_owned_file', side_effect=fail_plist_stage),
+        ):
             with self.assertRaisesRegex(OSError, 'simulated plist write failure'):
                 self.run_install(runner)
 
@@ -92,7 +96,10 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
                 operation=operation,
             )
 
-        with mock.patch.object(installer, 'swap_verified', side_effect=fail_new_plist_swap):
+        with (
+            mock.patch.object(atomic, 'swap_verified', side_effect=fail_new_plist_swap),
+            mock.patch.object(recovery, 'swap_verified', side_effect=fail_new_plist_swap),
+        ):
             with self.assertRaisesRegex(OSError, 'simulated atomic plist publication failure'):
                 self.run_install(runner)
 
@@ -119,7 +126,7 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
             source.chmod(0o600)
 
         with mock.patch.object(
-            installer,
+            atomic,
             'before_atomic_rename',
             side_effect=substitute_after_revalidation,
         ):
@@ -158,7 +165,7 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
             swap_destination.write_bytes(b'external bytes')
 
         with mock.patch.object(
-            installer,
+            atomic,
             'before_atomic_rename',
             side_effect=substitute_after_revalidation,
         ):
@@ -187,7 +194,7 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
                 raise SimulatedProcessDeath(operation)
 
         with mock.patch.object(
-            installer,
+            atomic,
             'after_atomic_rename',
             side_effect=die_after_move,
         ):
@@ -226,7 +233,7 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
                 raise SimulatedProcessDeath(operation)
 
         with mock.patch.object(
-            installer,
+            atomic,
             'after_atomic_rename',
             side_effect=die_after_second_rollback_quarantine,
         ):
@@ -420,7 +427,7 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
                 raise SimulatedProcessDeath(operation)
 
         with mock.patch.object(
-            installer,
+            atomic,
             'after_atomic_rename',
             side_effect=die_after_publish_swap,
         ):

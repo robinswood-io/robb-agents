@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .install_staging_retention_fixtures import atomic, journal, recovery
 import importlib.util
 import os
 from pathlib import Path
@@ -42,7 +43,7 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
                 raise SimulatedProcessDeath(operation)
 
         with mock.patch.object(
-            installer,
+            atomic,
             'after_atomic_rename',
             side_effect=die_after_rollback_swap,
         ):
@@ -72,7 +73,7 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
                 raise SimulatedProcessDeath(operation)
 
         with mock.patch.object(
-            installer,
+            atomic,
             'after_atomic_rename',
             side_effect=die_after_second_journal_publish,
         ):
@@ -110,10 +111,9 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
                     raise SimulatedProcessDeath('mid update journal write')
             return original_write(path, data, mode)
 
-        with mock.patch.object(
-            installer,
-            'write_owned_file',
-            side_effect=die_mid_second_journal_write,
+        with (
+            mock.patch.object(installer, 'write_owned_file', side_effect=die_mid_second_journal_write),
+            mock.patch.object(journal, 'write_owned_file', side_effect=die_mid_second_journal_write),
         ):
             with self.assertRaises(SimulatedProcessDeath):
                 self.run_install(runner)
@@ -222,10 +222,9 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
                 raise SimulatedProcessDeath('mid staged write')
             return original_write(path, data, mode)
 
-        with mock.patch.object(
-            installer,
-            'write_owned_file',
-            side_effect=die_mid_script_write,
+        with (
+            mock.patch.object(installer, 'write_owned_file', side_effect=die_mid_script_write),
+            mock.patch.object(journal, 'write_owned_file', side_effect=die_mid_script_write),
         ):
             with self.assertRaises(SimulatedProcessDeath):
                 self.run_install(runner)
@@ -253,10 +252,9 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
                 raise SimulatedProcessDeath('mid initial journal write')
             return original_write(path, data, mode)
 
-        with mock.patch.object(
-            installer,
-            'write_owned_file',
-            side_effect=die_mid_initial_journal,
+        with (
+            mock.patch.object(installer, 'write_owned_file', side_effect=die_mid_initial_journal),
+            mock.patch.object(journal, 'write_owned_file', side_effect=die_mid_initial_journal),
         ):
             with self.assertRaises(SimulatedProcessDeath):
                 self.run_install(runner)

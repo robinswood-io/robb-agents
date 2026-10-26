@@ -18,7 +18,14 @@ spec = importlib.util.spec_from_file_location(
 installer = importlib.util.module_from_spec(spec)
 assert spec.loader is not None
 sys.modules[spec.name] = installer
-spec.loader.exec_module(installer)
+sys.path.insert(0, str(Path(__file__).parents[1]))
+try:
+    spec.loader.exec_module(installer)
+finally:
+    sys.path.pop(0)
+atomic = sys.modules['robb_retention_atomic']
+journal = sys.modules['robb_retention_journal']
+recovery = sys.modules['robb_retention_recovery']
 production_renameatx_np = installer.renameatx_np
 
 
@@ -146,7 +153,7 @@ class InstallStagingRetentionTestCase(unittest.TestCase):
         self.renameatx_patch = None
         if sys.platform != 'darwin':
             self.renameatx_patch = mock.patch.object(
-                installer,
+                atomic,
                 'renameatx_np',
                 side_effect=emulate_renameatx_np,
             )
