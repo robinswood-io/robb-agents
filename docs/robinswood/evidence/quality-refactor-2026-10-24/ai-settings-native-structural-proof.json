@@ -1,0 +1,54 @@
+{
+  "status": "passed",
+  "nativeDeclarationBodiesPreserved": true,
+  "reviewedStableDependencyAdditions": {
+    "handleRenameSubmit": [
+      "setRenameDialogOpen",
+      "setRenamingConnection",
+      "setRenameValue"
+    ],
+    "handleEditConnection": [
+      "setEditInitialValues",
+      "setIsDirectEdit"
+    ],
+    "handleValidateConnection": [
+      "setValidationStates"
+    ],
+    "updateSetting": [
+      "t"
+    ]
+  },
+  "nativeMainJSXAndInlineCallbacksPreserved": true,
+  "nativeRootAndActionHooksReinlinedExactly": true,
+  "viewAddsNoStateOrEffects": true,
+  "nativeValuesPassedDirectly": true,
+  "nativeImportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/pages/settings/AiSettingsPage.tsx",
+      "lines": 441,
+      "sha256": "00cd59cdd9e5fbf78cb8da3caf4256b3fa554fc14c11a6d7e9dbf36ea0c07e77"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/ai-connection-settings.tsx",
+      "lines": 332,
+      "sha256": "3661d3be7394c405d6b3d78507f4e6be4783f002c5d957951cb449653bcf41a9"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/ai-workspace-overrides.tsx",
+      "lines": 230,
+      "sha256": "a0f3a7e5f89e8eef7751dddc160d43c788839f43eb88c17739dfcb6262cc0812"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/ai-settings-content.tsx",
+      "lines": 363,
+      "sha256": "03e919349d8991e7bbad0cc300639dccc23cbe85c929ae0fc70ccf5c677c5733"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/use-ai-connection-actions.ts",
+      "lines": 209,
+      "sha256": "95964ffbc689dd932be37d02c870089016f19abb96d01e6778272fec54abeca7"
+    }
+  ]
+}
