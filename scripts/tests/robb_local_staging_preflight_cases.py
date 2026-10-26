@@ -102,6 +102,24 @@ class LocalStagingTests(LocalStagingTestCase):
             with self.assertRaisesRegex(staging.StagingError, "40-character"):
                 staging.verify_clean_checkout(repo, "abc", GitRunner())
 
+    def test_stopped_app_accepts_only_a_dead_runtime_lock(self):
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            lock = base / ".server.lock"
+            app = base / staging.APP_NAME
+            runner = lambda _command: completed(stdout="")
+            lock.write_text(json.dumps({"pid": 999_999_999, "startedAt": 1}), encoding="utf-8")
+            staging.wait_until_stopped(app, lock, timeout=0.1, runner=runner)
+            staging.assert_application_stopped(app, lock, runner=runner)
+
+            lock.write_text("invalid", encoding="utf-8")
+            with self.assertRaisesRegex(staging.StagingError, "Runtime lock"):
+                staging.assert_application_stopped(app, lock, runner=runner)
+            with mock.patch("robb_staging_runtime.process_is_alive", return_value=True):
+                lock.write_text(json.dumps({"pid": 123, "startedAt": 1}), encoding="utf-8")
+                with self.assertRaisesRegex(staging.StagingError, "runtimeLockActive=True"):
+                    staging.assert_application_stopped(app, lock, runner=runner)
+
     def test_bundle_requires_clean_production_arm64_and_local_candidate_signature(self):
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)

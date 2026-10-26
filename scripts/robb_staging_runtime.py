@@ -34,6 +34,12 @@ def process_is_alive(pid: int) -> bool:
         # If the OS refuses inspection, fail closed and treat the PID as live.
         return True
 
+def runtime_lock_is_active(lock_file: Path) -> bool:
+    if not lock_file.exists():
+        return False
+    pid, _ = parse_runtime_lock(lock_file)
+    return process_is_alive(pid)
+
 def bundle_processes(app: Path, runner: Runner = run_command) -> list[tuple[int, str]]:
     prefix = str(app.resolve()) + "/Contents/"
     result = runner(["/bin/ps", "-axo", "pid=,command="])
@@ -47,10 +53,11 @@ def bundle_processes(app: Path, runner: Runner = run_command) -> list[tuple[int,
 
 def assert_application_stopped(app: Path, lock_file: Path, runner: Runner = run_command) -> None:
     processes = bundle_processes(app, runner)
-    if processes or lock_file.exists():
+    lock_active = runtime_lock_is_active(lock_file)
+    if processes or lock_active:
         raise StagingError(
             "Robb Agents reopened before the atomic exchange; transaction aborted. "
-            f"Remaining processes={processes}, runtimeLockExists={lock_file.exists()}"
+            f"Remaining processes={processes}, runtimeLockActive={lock_active}"
         )
 
 def wait_until_stopped(
@@ -62,14 +69,14 @@ def wait_until_stopped(
 ) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        if not bundle_processes(app, runner) and not lock_file.exists():
+        if not bundle_processes(app, runner) and not runtime_lock_is_active(lock_file):
             return
         time.sleep(0.25)
     processes = bundle_processes(app, runner)
     raise StagingError(
         "Robb Agents did not stop cleanly; no files were exchanged. "
         f"Remaining processes={[(pid, command) for pid, command in processes]}, "
-        f"runtimeLockExists={lock_file.exists()}"
+        f"runtimeLockActive={runtime_lock_is_active(lock_file)}"
     )
 
 def quit_application(
