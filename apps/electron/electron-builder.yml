@@ -2,7 +2,7 @@ appId: io.robinswood.robbagents
 productName: Robb Agents
 copyright: Copyright © 2026 Robinswood
 
-electronVersion: "43.4.0"
+electronVersion: "45.0.0"
 
 # Hook to compile macOS 26+ Liquid Glass icon after packaging
 afterPack: scripts/afterPack.cjs
