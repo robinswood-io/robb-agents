@@ -1,0 +1,133 @@
+{
+  "status": "tested; local integration pending remaining quality work",
+  "scope": "governance-settings-native",
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/pages/settings/GovernanceSettingsPage.tsx",
+      "lines": 334,
+      "sha256": "a2670c47f62cf74c0b2cf0afe23a71f5702f2393ba3529b8d5d6dbb6ae77d59c"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/governance-settings-options.ts",
+      "lines": 45,
+      "sha256": "a57c36657602adf8e60cdc02c1fe54aa065930a8e93f072f89b78f1ea9d8fec9"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/governance-emergency-controls.tsx",
+      "lines": 177,
+      "sha256": "9a0a16329da60a27e1691765f5e275a08ac29d75607fff3d71fb453d4003c15f"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/governance-remote-supervision.tsx",
+      "lines": 141,
+      "sha256": "a4846a4b36ec651841c82a0e141f24cc968e0405c4beaf815fac04cea10c805d"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/governance-settings-content.tsx",
+      "lines": 478,
+      "sha256": "89ca9c3f2d42490812b1c9e05d152fc01a46231ff04f3c29a1f86295108f483b"
+    }
+  ],
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/pages/settings/GovernanceSettingsPage.tsx",
+        "apps/electron/src/renderer/pages/settings/governance-settings-options.ts",
+        "apps/electron/src/renderer/pages/settings/governance-emergency-controls.tsx",
+        "apps/electron/src/renderer/pages/settings/governance-remote-supervision.tsx",
+        "apps/electron/src/renderer/pages/settings/governance-settings-content.tsx",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.21,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/governance-settings-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 4.65,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/governance-settings-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 24.78,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/governance-settings-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/shared/src/governance/workspace-governance.test.ts",
+        "packages/shared/src/governance/workspace-governance-store.test.ts",
+        "packages/shared/src/governance/kill-switch-registry.test.ts",
+        "packages/shared/src/remote-supervision/remote-supervision.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.19,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/governance-settings-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 13.48,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/governance-settings-native-build.log"
+    }
+  },
+  "targetedTests": {
+    "pass": 16,
+    "fail": 0
+  },
+  "browser": {
+    "before": 7,
+    "after": 7,
+    "nativeCallbackPayloadsEqual": true,
+    "errors": 0
+  },
+  "sourceGate": {
+    "max-lines": 12
+  },
+  "globalLint": {
+    "files": 3674,
+    "errors": 12,
+    "warnings": 69,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 12,
+      "react-hooks/exhaustive-deps": 69
+    }
+  },
+  "limits": [
+    "Other historical files and lint findings remain",
+    "No installation or final real-model mission claim",
+    "Global suite rerun prohibited by PreToolUse; last full suite f521166: 10759 passed"
+  ]
+}
