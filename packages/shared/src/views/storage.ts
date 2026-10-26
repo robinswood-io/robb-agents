@@ -109,11 +109,11 @@ function migrateFromSmartLabels(workspaceRootPath: string): ViewsConfig | null {
   if (!existsSync(labelsConfigPath)) return null;
 
   try {
-    const labelsConfig = readJsonFileSync<Record<string, any>>(labelsConfigPath);
+    const labelsConfig = readJsonFileSync<Record<string, unknown> & { smartLabels?: ViewConfig[] }>(labelsConfigPath);
     if (!labelsConfig.smartLabels || !Array.isArray(labelsConfig.smartLabels)) return null;
 
     // Migrate: rename IDs from smart-* to view-*
-    const views: ViewConfig[] = labelsConfig.smartLabels.map((sl: any) => ({
+    const views: ViewConfig[] = labelsConfig.smartLabels.map((sl) => ({
       ...sl,
       id: sl.id?.startsWith('smart-') ? sl.id.replace('smart-', 'view-') : sl.id,
     }));

@@ -160,7 +160,11 @@ function parseSseResponsePayload(sseText: string): ResponsesApiResponse {
 
     for (const line of dataLines) {
       if (line === '[DONE]') continue;
-      let event: any;
+      let event: {
+        type?: string;
+        item?: NonNullable<ResponsesApiResponse['output']>[number];
+        response?: ResponsesApiResponse;
+      } | null;
       try {
         event = JSON.parse(line);
       } catch {

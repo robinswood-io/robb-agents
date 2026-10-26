@@ -46,7 +46,12 @@ export class GoogleSearchProvider implements WebSearchProvider {
       throw new Error(`Google Search failed (HTTP ${response.status}): ${errorText}`);
     }
 
-    const data = (await response.json()) as any;
+    const data = (await response.json()) as {
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+        groundingMetadata?: GroundingMetadata;
+      }>;
+    };
     const candidate = data.candidates?.[0];
     if (!candidate?.content?.parts?.length) {
       throw new Error(`Google Search returned no results for "${query}"`);
@@ -54,7 +59,7 @@ export class GoogleSearchProvider implements WebSearchProvider {
 
     // Extract the grounded text response
     const text = candidate.content.parts
-      .map((p: any) => p.text || '')
+      .map((p) => p.text || '')
       .join('')
       .trim();
 

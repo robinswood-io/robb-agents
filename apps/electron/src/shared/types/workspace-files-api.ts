@@ -27,7 +27,7 @@ export interface WorkspaceFilesApi {
   // App lifecycle
   relaunchApp(): Promise<void>
   removeWorkspace(workspaceId: string): Promise<boolean>
-  invokeOnServer(url: string, token: string, channel: string, ...args: any[]): Promise<any>
+  invokeOnServer(url: string, token: string, channel: string, ...args: unknown[]): Promise<unknown>
 
   // Remote session transfer (main-process orchestrated, supports chunked upload)
   transferSessionToWorkspace(sessionId: string, targetWorkspaceId: string, sessionIndex?: number, sessionCount?: number): Promise<{ sessionId: string }>

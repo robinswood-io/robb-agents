@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button'
 import { WorkspaceAvatar } from '@/components/ui/workspace-avatar'
 import { useWorkspaceIcons } from '@/hooks/useWorkspaceIcon'
 import { cn } from '@/lib/utils'
-import type { Workspace, ExportResourcesOptions, ResourceImportMode } from '../../../shared/types'
+import type { Workspace, ExportResourcesOptions, ResourceImportMode, ResourceImportResult } from '../../../shared/types'
 
 export type SendResourceType = 'source' | 'skill' | 'automation'
 
@@ -84,7 +84,7 @@ export function SendResourceToWorkspaceDialog({
     const abort = new AbortController()
     healthCheckAbort.current = abort
 
-    const remoteTargets = targetWorkspaces.filter(w => w.remoteServer)
+    const remoteTargets = workspaces.filter(w => w.id !== activeWorkspaceId && w.remoteServer)
     if (remoteTargets.length === 0) return
 
     // Mark all remote as checking
@@ -108,7 +108,7 @@ export function SendResourceToWorkspaceDialog({
     }
 
     return () => abort.abort()
-  }, [open, targetWorkspaces.map(w => w.id).join(',')])
+  }, [open, workspaces, activeWorkspaceId])
 
   const handleSend = useCallback(async () => {
     if (!selectedWorkspaceId || !activeWorkspaceId || resourceIds.length === 0) return
@@ -146,7 +146,7 @@ export function SendResourceToWorkspaceDialog({
           url, token,
           'resources:import',
           remoteWorkspaceId, bundle, mode,
-        )
+        ) as ResourceImportResult
       } else {
         // Local target — direct RPC
         importResult = await window.electronAPI.importResources(
@@ -157,7 +157,7 @@ export function SendResourceToWorkspaceDialog({
       }
 
       // 3. Report result
-      const bucket = importResult[`${resourceType}s`] ?? importResult[resourceType + 's']
+      const bucket = importResult[`${resourceType}s`]
       const imported = bucket?.imported?.length ?? 0
       const skipped = bucket?.skipped?.length ?? 0
 
@@ -178,9 +178,9 @@ export function SendResourceToWorkspaceDialog({
       onOpenChange(false)
       setSelectedWorkspaceId(null)
       onTransferComplete?.()
-    } catch (error: any) {
-      const isUnsupported = error?.code === 'CHANNEL_NOT_FOUND' ||
-        (error?.message ?? '').includes('No handler for')
+    } catch (error) {
+      const isUnsupported = (error as { code?: string } | null | undefined)?.code === 'CHANNEL_NOT_FOUND' ||
+        ((error as { message?: string } | null | undefined)?.message ?? '').includes('No handler for')
       const message = isUnsupported
         ? `${targetName} is running an older version that doesn't support resource import. Update the remote server and try again.`
         : error instanceof Error ? error.message : 'Unknown error'

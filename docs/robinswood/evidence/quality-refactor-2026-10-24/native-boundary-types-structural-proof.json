@@ -1,0 +1,78 @@
+{
+  "status": "passed",
+  "runtimeJavaScriptIdenticalOutsideReviewedResourceExpressions": true,
+  "controlledResourceChanges": [
+    "Health check uses the current workspace address and auth when its props change",
+    "The redundant read of the same import-result bucket is removed"
+  ],
+  "removedExplicitAny": 20,
+  "newExplicitAny": 0,
+  "newRuntimeStateOrWorkflow": false,
+  "files": [
+    {
+      "file": "apps/electron/src/main/chunked-rpc.ts",
+      "lines": 144,
+      "sha256": "8444ba1c12d7867f51bd7c9624fd9eb52309e862e9a4bfc3f8f8e2728502e602"
+    },
+    {
+      "file": "apps/electron/src/renderer/lib/transport-wait.ts",
+      "lines": 52,
+      "sha256": "b10790b6de53d288f0a9e046813d9bd0f22b2b8e455c21bc1ab75e6b0d3bb74e"
+    },
+    {
+      "file": "apps/electron/src/shared/types/workspace-files-api.ts",
+      "lines": 111,
+      "sha256": "04e25b5dae50617217c1a4d5a34e2a41e826d271c7f0a55331a41c2ae9bec9e9"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/SendResourceToWorkspaceDialog.tsx",
+      "lines": 284,
+      "sha256": "ecba446cdaedb5a35cf0fc010b2fe4a7d18ad7f9165ddac5541f3154a42089b8"
+    },
+    {
+      "file": "apps/webui/src/shims/open.ts",
+      "lines": 5,
+      "sha256": "3164e911a6b596e593c2110a5ac947bc66e3830164984ea7486845447a954d41"
+    },
+    {
+      "file": "apps/webui/src/shims/sentry-electron.ts",
+      "lines": 5,
+      "sha256": "daa97ade8c94b77846ce4efd138144b47b67d08bf5a608a829b1eeb16bd31264"
+    },
+    {
+      "file": "packages/core/src/utils/debug.ts",
+      "lines": 11,
+      "sha256": "bd7e90792012b46a9c11108e33e6c84e402a30023a61d6768135eba5e7b20eb8"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tool-execution-checkpoint.ts",
+      "lines": 33,
+      "sha256": "40b36068241b7e4d4ae64678684aa7a073c876de93cc7c9c1415a9c3c8ebf407"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tools/search/providers/google.ts",
+      "lines": 89,
+      "sha256": "d87ffaf1a3a910ba567ff5332df13db064977147eb3fc35f6a084f03d0532496"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tools/search/providers/chatgpt.ts",
+      "lines": 213,
+      "sha256": "22441d23fa5de348f2f161883c83fa6e6184508dedc05bf16609d8ed095f2f1b"
+    },
+    {
+      "file": "packages/shared/src/colors/migrate.ts",
+      "lines": 119,
+      "sha256": "f334f4e0aabc2e18bac2a9973f2f26b997c68f8521626ec4c1c6bfbd397d4f7e"
+    },
+    {
+      "file": "packages/shared/src/utils/debug.ts",
+      "lines": 165,
+      "sha256": "35ea08baa773b77e2ac232eaf2ed6c7b89eff1a07711ead0289621f6048ce5d4"
+    },
+    {
+      "file": "packages/shared/src/views/storage.ts",
+      "lines": 132,
+      "sha256": "c280a13c0c627a4b22cee0b4ec51c49ee1e26d9a0270537eb526099cdb9d8cd8"
+    }
+  ]
+}

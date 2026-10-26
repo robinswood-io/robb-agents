@@ -17,11 +17,11 @@ function detectEnvironment(): Environment {
     return 'electron-renderer';
   }
   // Electron main process
-  if ((process as any).type === 'browser') {
+  if ((process as typeof process & { type?: string }).type === 'browser') {
     return 'electron-main';
   }
   // Electron renderer process (with nodeIntegration)
-  if ((process as any).type === 'renderer') {
+  if ((process as typeof process & { type?: string }).type === 'renderer') {
     return 'electron-renderer';
   }
   // Default: CLI/scripts

@@ -26,7 +26,7 @@ export async function waitForTransportConnected(
     let unsubscribe: (() => void) | null = null
     let timeout: ReturnType<typeof setTimeout> | null = null
 
-    const finish = (fn: (value: any) => void, value: any) => {
+    const finish = <Value>(fn: (value: Value) => void, value: Value) => {
       if (settled) return
       settled = true
       if (unsubscribe) unsubscribe()

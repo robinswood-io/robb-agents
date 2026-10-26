@@ -1,0 +1,339 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Contrats natifs des utilitaires et actualisation de la connexion lors d’un import de ressources",
+  "changes": [
+    "20 any supprimés dans 13 fichiers : paramètres RPC opaques en unknown, générique de résolution du transport, structures récursives de couleurs, vues historiques et réponses de recherche typées.",
+    "Le JavaScript reste identique hors trois expressions contrôlées du dialogue de transfert : vérification de connexion actualisée sur les props réelles, et accès redondant au même résultat supprimé.",
+    "Le défaut de vérification d’une adresse modifiée avec le même identifiant est observé avant correction. Les quatre parcours navigateur passent ensuite ; transferts et erreurs anciens serveurs utilisent seulement des stubs QA."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/main/chunked-rpc.ts",
+      "lines": 144,
+      "sha256": "8444ba1c12d7867f51bd7c9624fd9eb52309e862e9a4bfc3f8f8e2728502e602"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/SendResourceToWorkspaceDialog.tsx",
+      "lines": 284,
+      "sha256": "ecba446cdaedb5a35cf0fc010b2fe4a7d18ad7f9165ddac5541f3154a42089b8"
+    },
+    {
+      "file": "apps/electron/src/renderer/lib/transport-wait.ts",
+      "lines": 52,
+      "sha256": "b10790b6de53d288f0a9e046813d9bd0f22b2b8e455c21bc1ab75e6b0d3bb74e"
+    },
+    {
+      "file": "apps/electron/src/shared/types/workspace-files-api.ts",
+      "lines": 111,
+      "sha256": "04e25b5dae50617217c1a4d5a34e2a41e826d271c7f0a55331a41c2ae9bec9e9"
+    },
+    {
+      "file": "apps/webui/src/shims/open.ts",
+      "lines": 5,
+      "sha256": "3164e911a6b596e593c2110a5ac947bc66e3830164984ea7486845447a954d41"
+    },
+    {
+      "file": "apps/webui/src/shims/sentry-electron.ts",
+      "lines": 5,
+      "sha256": "daa97ade8c94b77846ce4efd138144b47b67d08bf5a608a829b1eeb16bd31264"
+    },
+    {
+      "file": "packages/core/src/utils/debug.ts",
+      "lines": 11,
+      "sha256": "bd7e90792012b46a9c11108e33e6c84e402a30023a61d6768135eba5e7b20eb8"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tool-execution-checkpoint.ts",
+      "lines": 33,
+      "sha256": "40b36068241b7e4d4ae64678684aa7a073c876de93cc7c9c1415a9c3c8ebf407"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tools/search/providers/chatgpt.ts",
+      "lines": 213,
+      "sha256": "22441d23fa5de348f2f161883c83fa6e6184508dedc05bf16609d8ed095f2f1b"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tools/search/providers/google.ts",
+      "lines": 89,
+      "sha256": "d87ffaf1a3a910ba567ff5332df13db064977147eb3fc35f6a084f03d0532496"
+    },
+    {
+      "file": "packages/shared/src/colors/migrate.ts",
+      "lines": 119,
+      "sha256": "f334f4e0aabc2e18bac2a9973f2f26b997c68f8521626ec4c1c6bfbd397d4f7e"
+    },
+    {
+      "file": "packages/shared/src/utils/debug.ts",
+      "lines": 165,
+      "sha256": "35ea08baa773b77e2ac232eaf2ed6c7b89eff1a07711ead0289621f6048ce5d4"
+    },
+    {
+      "file": "packages/shared/src/views/storage.ts",
+      "lines": 132,
+      "sha256": "c280a13c0c627a4b22cee0b4ec51c49ee1e26d9a0270537eb526099cdb9d8cd8"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/renderer/lib/__tests__/transport-wait.test.ts",
+        "packages/pi-agent-server/src/tool-execution-checkpoint.test.ts",
+        "packages/pi-agent-server/src/tools/search/providers/chatgpt.test.ts",
+        "packages/pi-agent-server/src/tools/search/create-search-tool.test.ts",
+        "packages/shared/src/config/__tests__/storage-migrations.test.ts",
+        "packages/shared/src/config/__tests__/storage-startup-migration.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 8.26,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-boundary-types-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 25.97,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-boundary-types-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 36.94,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-boundary-types-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/run-owned-files-eslint.py",
+        "native-boundary-types"
+      ],
+      "exitCode": 0,
+      "seconds": 2.36,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-boundary-types-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 24.22,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-boundary-types-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 138.9,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-boundary-types-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "runtimeJavaScriptIdenticalOutsideReviewedResourceExpressions": true,
+    "controlledResourceChanges": [
+      "Health check uses the current workspace address and auth when its props change",
+      "The redundant read of the same import-result bucket is removed"
+    ],
+    "removedExplicitAny": 20,
+    "newExplicitAny": 0,
+    "newRuntimeStateOrWorkflow": false,
+    "files": [
+      {
+        "file": "apps/electron/src/main/chunked-rpc.ts",
+        "lines": 144,
+        "sha256": "8444ba1c12d7867f51bd7c9624fd9eb52309e862e9a4bfc3f8f8e2728502e602"
+      },
+      {
+        "file": "apps/electron/src/renderer/lib/transport-wait.ts",
+        "lines": 52,
+        "sha256": "b10790b6de53d288f0a9e046813d9bd0f22b2b8e455c21bc1ab75e6b0d3bb74e"
+      },
+      {
+        "file": "apps/electron/src/shared/types/workspace-files-api.ts",
+        "lines": 111,
+        "sha256": "04e25b5dae50617217c1a4d5a34e2a41e826d271c7f0a55331a41c2ae9bec9e9"
+      },
+      {
+        "file": "apps/electron/src/renderer/components/app-shell/SendResourceToWorkspaceDialog.tsx",
+        "lines": 284,
+        "sha256": "ecba446cdaedb5a35cf0fc010b2fe4a7d18ad7f9165ddac5541f3154a42089b8"
+      },
+      {
+        "file": "apps/webui/src/shims/open.ts",
+        "lines": 5,
+        "sha256": "3164e911a6b596e593c2110a5ac947bc66e3830164984ea7486845447a954d41"
+      },
+      {
+        "file": "apps/webui/src/shims/sentry-electron.ts",
+        "lines": 5,
+        "sha256": "daa97ade8c94b77846ce4efd138144b47b67d08bf5a608a829b1eeb16bd31264"
+      },
+      {
+        "file": "packages/core/src/utils/debug.ts",
+        "lines": 11,
+        "sha256": "bd7e90792012b46a9c11108e33e6c84e402a30023a61d6768135eba5e7b20eb8"
+      },
+      {
+        "file": "packages/pi-agent-server/src/tool-execution-checkpoint.ts",
+        "lines": 33,
+        "sha256": "40b36068241b7e4d4ae64678684aa7a073c876de93cc7c9c1415a9c3c8ebf407"
+      },
+      {
+        "file": "packages/pi-agent-server/src/tools/search/providers/google.ts",
+        "lines": 89,
+        "sha256": "d87ffaf1a3a910ba567ff5332df13db064977147eb3fc35f6a084f03d0532496"
+      },
+      {
+        "file": "packages/pi-agent-server/src/tools/search/providers/chatgpt.ts",
+        "lines": 213,
+        "sha256": "22441d23fa5de348f2f161883c83fa6e6184508dedc05bf16609d8ed095f2f1b"
+      },
+      {
+        "file": "packages/shared/src/colors/migrate.ts",
+        "lines": 119,
+        "sha256": "f334f4e0aabc2e18bac2a9973f2f26b997c68f8521626ec4c1c6bfbd397d4f7e"
+      },
+      {
+        "file": "packages/shared/src/utils/debug.ts",
+        "lines": 165,
+        "sha256": "35ea08baa773b77e2ac232eaf2ed6c7b89eff1a07711ead0289621f6048ce5d4"
+      },
+      {
+        "file": "packages/shared/src/views/storage.ts",
+        "lines": 132,
+        "sha256": "c280a13c0c627a4b22cee0b4ec51c49ee1e26d9a0270537eb526099cdb9d8cd8"
+      }
+    ]
+  },
+  "fullTestSummary": {
+    "pass": 10746,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "native-boundary-types-targeted": {
+      "pass": 47,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": {
+    "targetedPass": 47,
+    "targetedExpectCalls": 135
+  },
+  "sourceGate": {
+    "max-lines": 44,
+    "no-explicit-any": 150
+  },
+  "globalLint": {
+    "files": 3598,
+    "errors": 178,
+    "warnings": 100,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 145,
+      "max-lines": 33,
+      "react-hooks/exhaustive-deps": 79,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "44 fichiers trop longs et 150 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T04:20:03.041738+00:00",
+  "additionalProofs": {
+    "native-boundary-types-resource-browser-proof.json": {
+      "status": "passed",
+      "before": {
+        "status": "baseline-recorded",
+        "cases": [
+          {
+            "name": "same workspace ID with a changed server address triggers a fresh health check",
+            "status": "failed",
+            "error": "TimeoutError: page.waitForFunction: Timeout 1500ms exceeded."
+          },
+          {
+            "name": "remote transfer uses the current server and closes on success",
+            "status": "passed"
+          },
+          {
+            "name": "an unsupported remote importer leaves an actionable visible error",
+            "status": "passed"
+          },
+          {
+            "name": "local transfer uses the native local import API",
+            "status": "passed"
+          }
+        ],
+        "failed": [
+          {
+            "name": "same workspace ID with a changed server address triggers a fresh health check",
+            "status": "failed",
+            "error": "TimeoutError: page.waitForFunction: Timeout 1500ms exceeded."
+          }
+        ],
+        "errors": [],
+        "consoleErrors": [],
+        "browserVersion": "145.0.7632.6",
+        "headless": false,
+        "limits": [
+          "Données et appels QA en mémoire ; aucune connexion réelle ni écriture métier."
+        ]
+      },
+      "after": {
+        "status": "passed",
+        "cases": [
+          {
+            "name": "same workspace ID with a changed server address triggers a fresh health check",
+            "status": "passed"
+          },
+          {
+            "name": "remote transfer uses the current server and closes on success",
+            "status": "passed"
+          },
+          {
+            "name": "an unsupported remote importer leaves an actionable visible error",
+            "status": "passed"
+          },
+          {
+            "name": "local transfer uses the native local import API",
+            "status": "passed"
+          }
+        ],
+        "failed": [],
+        "errors": [],
+        "consoleErrors": [],
+        "browserVersion": "145.0.7632.6",
+        "headless": false,
+        "limits": [
+          "Données et appels QA en mémoire ; aucune connexion réelle ni écriture métier."
+        ]
+      }
+    }
+  }
+}
