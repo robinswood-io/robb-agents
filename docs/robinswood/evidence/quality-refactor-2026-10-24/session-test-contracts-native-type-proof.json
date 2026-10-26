@@ -1,0 +1,51 @@
+{
+  "status": "passed",
+  "runtimeJavaScriptPreservedOutsideNativeFixtureCompletions": true,
+  "nativeFixtureCompletions": [
+    "Native session DTO metadata and cost turn messageId",
+    "Required isError false flags on fake tool results",
+    "Unused boolean mock results are false instead of undefined",
+    "Removed no-op assignments to absent applyRoutingPolicyForNextTurn"
+  ],
+  "nativeLiteralPropertyAccessEquivalent": true,
+  "removedExplicitAny": 19,
+  "newExplicitAny": 0,
+  "newRuntimeStateOrWorkflow": false,
+  "files": [
+    {
+      "file": "packages/server-core/src/sessions/combined-delegation-guards.test.ts",
+      "lines": 92,
+      "sha256": "05a83d94df6e0f3413aa2319a050b0edf0c18cb8ecf957ab4d99007ee01cedf6"
+    },
+    {
+      "file": "packages/server-core/src/sessions/explicit-retry-allowance.test.ts",
+      "lines": 102,
+      "sha256": "78f1cfed841daaa48ca65f7734cf24491741028c0a4524205f3cd8cc8d3101ec"
+    },
+    {
+      "file": "packages/server-core/src/sessions/native-question-retry.test.ts",
+      "lines": 627,
+      "sha256": "33f692a0109061381a300319c9b7b1ba5454d971de853c6034e2d14a6749fb13"
+    },
+    {
+      "file": "packages/server-core/src/sessions/pi-retry-streaming.test.ts",
+      "lines": 72,
+      "sha256": "a6145583055a10fdf00f811b475ce394ff09035c6ea82bf97b0c593e5dc506cb"
+    },
+    {
+      "file": "packages/server-core/src/sessions/runtime-error-receipts.test.ts",
+      "lines": 186,
+      "sha256": "b4cc5fdf5dcffc8ed444b73b93a1ef164bc9a32dff5f456c10122a8a26a64bb3"
+    },
+    {
+      "file": "packages/server-core/src/sessions/user-input-lifecycle.test.ts",
+      "lines": 1309,
+      "sha256": "2faa37f6df2a6a6b35c348064caec98f708460e6d181d4e3c9253cbc979a4bcb"
+    },
+    {
+      "file": "packages/server-core/src/sessions/yolo-runtime.test.ts",
+      "lines": 211,
+      "sha256": "2bbf9880e8e7eca58abbcf21ced35907958b1d9175f8206a3f0231a979f03e3c"
+    }
+  ]
+}

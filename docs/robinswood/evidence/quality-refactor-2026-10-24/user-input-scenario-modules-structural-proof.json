@@ -1,0 +1,28 @@
+{
+  "status": "passed",
+  "fixtureRuntimeImports": [],
+  "packing": "Contiguous native cases retain their lexical scopes, file-owned state, module initializer order and lifecycle",
+  "source": "packages/server-core/src/sessions/user-input-lifecycle.test.ts",
+  "typing": {
+    "status": "passed",
+    "typedSourceHash": "2faa37f6df2a6a6b35c348064caec98f708460e6d181d4e3c9253cbc979a4bcb",
+    "nativeSourceUnchanged": true,
+    "typeEdits": 0
+  },
+  "testDeclarations": 39,
+  "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+  "nestedSuiteIdentityPreserved": true,
+  "nativeSetupAndBeforeEachRetainedPerFile": true,
+  "nativeModuleInitializersAndOwnedStatePreserved": true,
+  "nativeExternalImportOrderPreserved": true,
+  "sharedDeclarations": [],
+  "sharedMutableStateAdded": false,
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 432,
+  "currentSourceHashes": {
+    "packages/server-core/src/sessions/user-input-lifecycle.test.ts": "157bf39772145c322e42de5da7685c015618191ba3709d1c81d749d20df25a54",
+    "packages/server-core/src/sessions/user-input-lifecycle-keeps-an-answer-durable-when-it-arrives-just-before-the-question.test.ts": "74e09de53c51ef59977e5ab30b4a94b564c8795dfb0fe0a463a66e94f86ff07e",
+    "packages/server-core/src/sessions/user-input-lifecycle-does-not-wake-an-idle-session-if-stop-arrives-while-the-answer-is.test.ts": "b2280d70bde604f37ecc2e388359ae8ffee6924a550c0558bab1710d72e7722d",
+    "packages/server-core/src/sessions/user-input-lifecycle-keeps-a-failed-direct-send-recoverable-after-irreversibly-denying.test.ts": "cc3fd6c78400f9a237dd3bf008c5f057e19ae637e73f99e63969a5b9aa354315"
+  }
+}

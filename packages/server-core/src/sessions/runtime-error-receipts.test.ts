@@ -1,3 +1,6 @@
+import type { AgentBackend } from '@craft-agent/shared/agent/backend/types.ts';
+import type { SessionEvent } from '@craft-agent/shared/protocol';
+import type { SessionOperations } from './SessionManager/operation-types.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it, spyOn } from 'bun:test'
@@ -28,11 +31,11 @@ function harness() {
   const workspace = { id: 'isolated-watchdog', slug: 'isolated-watchdog', rootPath, name: 'Watchdog fixture', createdAt: 1 }
   const manager = withSessionOperationsForTest(new SessionManager())
   managers.push(manager)
-  const runtime = manager as any
+  const runtime = manager as unknown as SessionOperations
   const started = deferred()
   const stall = deferred()
   releases.push(stall.resolve)
-  runtime.sendEvent = (event: any) => {
+  runtime.sendEvent = (event: SessionEvent) => {
     if (event.type === 'tool_start' && event.toolUseId === 'uncertain-call') started.resolve()
   }
   runtime.startGenerationTelemetry = () => {}
@@ -63,7 +66,7 @@ function harness() {
   sessionRuntimeStateForTest(manager).sessions.set(session.id, session)
   let chats = 0
   let dispatch: Promise<void> | undefined
-  const agent = {
+  const agent = ({
     getModel: () => 'fixture-model', getSessionId: () => null, setAllSources: () => {},
     isProcessing: () => false, forceAbort: () => {}, dispose: () => {},
     async *chat() {
@@ -71,7 +74,7 @@ function harness() {
       yield { type: 'tool_start', toolName: 'Bash', toolUseId: 'uncertain-call', input: { command: 'fixture-observation-only' } }
       await stall.promise
     },
-  }
+  } satisfies Partial<AgentBackend> & { dispose?: () => void }) as Partial<AgentBackend> as AgentBackend
   runtime.getOrCreateAgent = async () => { session.agent = agent as never; return agent }
   const send = manager.sendMessage.bind(manager)
   manager.sendMessage = (...args) => { dispatch = send(...args); return dispatch }

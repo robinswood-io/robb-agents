@@ -1,3 +1,4 @@
+import type { SessionOperations } from './SessionManager/operation-types.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest , requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
@@ -18,15 +19,15 @@ function fixture() {
   parent.isProcessing = true
   parent.processingGeneration = 1
   parent.activeObjective = transitionObjectiveContract({ messageId: 'objective', text: 'Inspect the target files.', nowMs: 1 })
-  const host = withSessionOperationsForTest(new SessionManager()) as any
+  const host = withSessionOperationsForTest(new SessionManager()) as unknown as SessionOperations
   sessionRuntimeStateForTest(host).sessions.set(parent.id, parent)
   const created: Managed[] = [], sent: string[] = []
-  host.persistSession = () => {}
+  host.persistSession = () => false
   host.flushSession = async () => {}
   host.sendEvent = () => {}
-  host.createSession = async (_id: string, options: any, internal: any) => {
-    const child = createManagedSession({ ...options, id: `child-${created.length}`, delegation: internal.delegation }, workspace)
-    sessionRuntimeStateForTest(host).sessions.set(child.id, child); created.push(child); return child
+  host.createSession = async (_id: string, options, internal) => {
+    const child = createManagedSession({ ...options, id: `child-${created.length}`, delegation: internal!.delegation }, workspace)
+    sessionRuntimeStateForTest(host).sessions.set(child.id, child); created.push(child); return { ...child, workspaceId: workspace.id, workspaceName: workspace.name }
   }
   host.sendMessage = async (id: string, _prompt: string, ...args: unknown[]) => {
     sent.push(id); requiredTestValue(sessionRuntimeStateForTest(host).sessions.get(id)).isProcessing = true

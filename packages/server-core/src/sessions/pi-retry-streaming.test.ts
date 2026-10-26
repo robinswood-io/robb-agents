@@ -1,3 +1,4 @@
+import type { SessionOperations } from './SessionManager/operation-types.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it, jest } from 'bun:test';
@@ -6,9 +7,9 @@ import type { SessionEvent } from '@craft-agent/shared/protocol';
 import { SessionManager, createManagedSession } from './SessionManager.ts';
 
 function harness() {
-  const host = Object.create(SessionManager.prototype) as any;
+  const host = Object.create(SessionManager.prototype) as SessionOperations;
   Object.defineProperty(host, 'runtimeState', { value: host, configurable: true });
-  withSessionOperationsForTest(host);
+  withSessionOperationsForTest(host as unknown as SessionManager);
   const events: SessionEvent[] = [];
   sessionRuntimeStateForTest(host).pendingDeltas = new Map();
   sessionRuntimeStateForTest(host).deltaFlushTimers = new Map();

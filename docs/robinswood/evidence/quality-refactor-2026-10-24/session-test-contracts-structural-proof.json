@@ -1,0 +1,114 @@
+{
+  "status": "passed",
+  "removedExplicitAny": 19,
+  "nativeTypes": {
+    "status": "passed",
+    "runtimeJavaScriptPreservedOutsideNativeFixtureCompletions": true,
+    "nativeFixtureCompletions": [
+      "Native session DTO metadata and cost turn messageId",
+      "Required isError false flags on fake tool results",
+      "Unused boolean mock results are false instead of undefined",
+      "Removed no-op assignments to absent applyRoutingPolicyForNextTurn"
+    ],
+    "nativeLiteralPropertyAccessEquivalent": true,
+    "removedExplicitAny": 19,
+    "newExplicitAny": 0,
+    "newRuntimeStateOrWorkflow": false,
+    "files": [
+      {
+        "file": "packages/server-core/src/sessions/combined-delegation-guards.test.ts",
+        "lines": 92,
+        "sha256": "05a83d94df6e0f3413aa2319a050b0edf0c18cb8ecf957ab4d99007ee01cedf6"
+      },
+      {
+        "file": "packages/server-core/src/sessions/explicit-retry-allowance.test.ts",
+        "lines": 102,
+        "sha256": "78f1cfed841daaa48ca65f7734cf24491741028c0a4524205f3cd8cc8d3101ec"
+      },
+      {
+        "file": "packages/server-core/src/sessions/native-question-retry.test.ts",
+        "lines": 627,
+        "sha256": "33f692a0109061381a300319c9b7b1ba5454d971de853c6034e2d14a6749fb13"
+      },
+      {
+        "file": "packages/server-core/src/sessions/pi-retry-streaming.test.ts",
+        "lines": 72,
+        "sha256": "a6145583055a10fdf00f811b475ce394ff09035c6ea82bf97b0c593e5dc506cb"
+      },
+      {
+        "file": "packages/server-core/src/sessions/runtime-error-receipts.test.ts",
+        "lines": 186,
+        "sha256": "b4cc5fdf5dcffc8ed444b73b93a1ef164bc9a32dff5f456c10122a8a26a64bb3"
+      },
+      {
+        "file": "packages/server-core/src/sessions/user-input-lifecycle.test.ts",
+        "lines": 1309,
+        "sha256": "2faa37f6df2a6a6b35c348064caec98f708460e6d181d4e3c9253cbc979a4bcb"
+      },
+      {
+        "file": "packages/server-core/src/sessions/yolo-runtime.test.ts",
+        "lines": 211,
+        "sha256": "2bbf9880e8e7eca58abbcf21ced35907958b1d9175f8206a3f0231a979f03e3c"
+      }
+    ]
+  },
+  "splitSuites": [
+    {
+      "status": "passed",
+      "fixtureRuntimeImports": [],
+      "packing": "Contiguous native cases retain their lexical scopes, file-owned state, module initializer order and lifecycle",
+      "source": "packages/server-core/src/sessions/native-question-retry.test.ts",
+      "typing": {
+        "status": "passed",
+        "typedSourceHash": "33f692a0109061381a300319c9b7b1ba5454d971de853c6034e2d14a6749fb13",
+        "nativeSourceUnchanged": true,
+        "typeEdits": 0
+      },
+      "testDeclarations": 14,
+      "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+      "nestedSuiteIdentityPreserved": true,
+      "nativeSetupAndBeforeEachRetainedPerFile": true,
+      "nativeModuleInitializersAndOwnedStatePreserved": true,
+      "nativeExternalImportOrderPreserved": true,
+      "sharedDeclarations": [],
+      "sharedMutableStateAdded": false,
+      "runtimeImportCycles": 0,
+      "maximumFileLines": 397,
+      "currentSourceHashes": {
+        "packages/server-core/src/sessions/native-question-retry.test.ts": "d8d779a04a0beb97703b15f9213c92ac1edb5f457caee5f89980b68d1d27361b",
+        "packages/server-core/src/sessions/native-question-retry-keeps-a-non-retry-legacy-hidden-answer-snapshot-until-hydration-c.test.ts": "9e544517e770ef82e3da5fbdfea62a0d032c79a53eb4e1a1743d27fc0cc171c8"
+      }
+    },
+    {
+      "status": "passed",
+      "fixtureRuntimeImports": [],
+      "packing": "Contiguous native cases retain their lexical scopes, file-owned state, module initializer order and lifecycle",
+      "source": "packages/server-core/src/sessions/user-input-lifecycle.test.ts",
+      "typing": {
+        "status": "passed",
+        "typedSourceHash": "2faa37f6df2a6a6b35c348064caec98f708460e6d181d4e3c9253cbc979a4bcb",
+        "nativeSourceUnchanged": true,
+        "typeEdits": 0
+      },
+      "testDeclarations": 39,
+      "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+      "nestedSuiteIdentityPreserved": true,
+      "nativeSetupAndBeforeEachRetainedPerFile": true,
+      "nativeModuleInitializersAndOwnedStatePreserved": true,
+      "nativeExternalImportOrderPreserved": true,
+      "sharedDeclarations": [],
+      "sharedMutableStateAdded": false,
+      "runtimeImportCycles": 0,
+      "maximumFileLines": 432,
+      "currentSourceHashes": {
+        "packages/server-core/src/sessions/user-input-lifecycle.test.ts": "157bf39772145c322e42de5da7685c015618191ba3709d1c81d749d20df25a54",
+        "packages/server-core/src/sessions/user-input-lifecycle-keeps-an-answer-durable-when-it-arrives-just-before-the-question.test.ts": "74e09de53c51ef59977e5ab30b4a94b564c8795dfb0fe0a463a66e94f86ff07e",
+        "packages/server-core/src/sessions/user-input-lifecycle-does-not-wake-an-idle-session-if-stop-arrives-while-the-answer-is.test.ts": "b2280d70bde604f37ecc2e388359ae8ffee6924a550c0558bab1710d72e7722d",
+        "packages/server-core/src/sessions/user-input-lifecycle-keeps-a-failed-direct-send-recoverable-after-irreversibly-denying.test.ts": "cc3fd6c78400f9a237dd3bf008c5f057e19ae637e73f99e63969a5b9aa354315"
+      }
+    }
+  ],
+  "maximumFinalLines": 432,
+  "nativeBodiesScopesHooksAndModuleOrderPreserved": true,
+  "sharedMutableStateAdded": false
+}
