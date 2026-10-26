@@ -232,7 +232,6 @@
     /**
      * export to either browser or node.js
      */
-    /* eslint-disable quote-props */
     if (typeof exports !== 'undefined') {
         exports['sprintf'] = sprintf
         exports['vsprintf'] = vsprintf
@@ -250,5 +249,4 @@
             })
         }
     }
-    /* eslint-enable quote-props */
-}(); // eslint-disable-line
+}();

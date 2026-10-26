@@ -20,7 +20,6 @@ describe('pending auth in lightweight session snapshots', () => {
     ]
     managed.pendingAuthRequestId = 'oauth-current'
     const manager = withSessionOperationsForTest(new SessionManager())
-    const internals = manager as unknown as { sessions: Map<string, typeof managed> }
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 
     const reloaded = manager.getSessions(managed.workspace.id)[0]!

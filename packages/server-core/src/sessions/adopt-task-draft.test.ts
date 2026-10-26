@@ -11,7 +11,6 @@ const fixtureWorkspace = { id: 'ws', slug: 'ws', name: 'Fixture', rootPath: '/tm
 // review asked for (no silent capture of an unrelated/non-draft session).
 describe('adoptGeneratedTaskOrchestrator guards', () => {
   function seed(sm: SessionManager, id: string, fields: { taskDraft?: boolean; taskSlug?: string; missionRouteLockSha256?: string; llmConnection?: string }) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;sessionRuntimeStateForTest(sm).sessions.set(id, createManagedSession({ id, ...fields }, fixtureWorkspace))
   }
 
@@ -37,7 +36,6 @@ describe('adoptGeneratedTaskOrchestrator guards', () => {
     seed(sm, 'orch', { taskDraft: false, taskSlug: 'slug-a' })
     expect(await sm.adoptGeneratedTaskOrchestrator('orch', 'slug-b')).toBe(false)
     // The existing binding is untouched.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(requiredTestValue(sessionRuntimeStateForTest(sm).sessions.get('orch')).taskSlug).toBe('slug-a')
   })
 
@@ -52,7 +50,6 @@ describe('adoptGeneratedTaskOrchestrator guards', () => {
     expect(await sm.adoptGeneratedTaskOrchestrator('specialist', 'slug-a', {
       llmConnection: 'replacement-connection',
     })).toBe(false)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const specialized = requiredTestValue(sessionRuntimeStateForTest(sm).sessions.get('specialist'))
     expect(specialized).toMatchObject({
       taskDraft: true,
@@ -68,7 +65,6 @@ describe('adoptGeneratedTaskOrchestrator guards', () => {
 // storage wiring), so we pin the three early-return guards that run before any I/O.
 describe('bindExistingSessionToTask guards', () => {
   function seed(sm: SessionManager, id: string, fields: { taskDraft?: boolean; taskSlug?: string; missionRouteLockSha256?: string; llmConnection?: string }) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;sessionRuntimeStateForTest(sm).sessions.set(id, createManagedSession({ id, ...fields }, fixtureWorkspace))
   }
 
@@ -88,7 +84,6 @@ describe('bindExistingSessionToTask guards', () => {
     seed(sm, 'orch', { taskSlug: 'slug-a' })
     expect(await sm.bindExistingSessionToTask('orch', 'slug-b')).toBe(false)
     // The existing binding is untouched.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(requiredTestValue(sessionRuntimeStateForTest(sm).sessions.get('orch')).taskSlug).toBe('slug-a')
   })
 
@@ -102,7 +97,6 @@ describe('bindExistingSessionToTask guards', () => {
     expect(await sm.bindExistingSessionToTask('specialist', 'slug-a', {
       llmConnection: 'replacement-connection',
     })).toBe(false)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const specialized = requiredTestValue(sessionRuntimeStateForTest(sm).sessions.get('specialist'))
     expect(specialized).toMatchObject({
       llmConnection: 'sealed-connection',
@@ -120,18 +114,17 @@ describe('adopt/bind route changed fields through canonical live-update mutators
     const sm = withSessionOperationsForTest(new SessionManager())
     const calls = { model: [] as unknown[], cwd: [] as unknown[], mode: [] as unknown[] }
     const events: string[] = []
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const any = sm as any
-    any.sendEvent = (e: { type: string }) => events.push(e.type)
-    any.persistSession = () => {}
-    any.flushSession = async () => {}
-    any.setMetadataWriteGuard = () => {}
+    const internals = sm
+    internals['sendEvent'] = (e: { type: string }) => events.push(e.type)
+    internals['persistSession'] = () => false
+    internals['flushSession'] = async () => {}
+    internals['setMetadataWriteGuard'] = () => {}
     // adopt/bind already own a session-operation lease, so they call the
     // canonical model-update implementation directly instead of nesting the
     // public lease wrapper. Stub that internal seam in this partial harness.
-    any.performUpdateSessionModel = async (_managed: unknown, m: string) => { calls.model.push(m) }
-    any.updateWorkingDirectory = (_id: string, p: string) => { calls.cwd.push(p) }
-    any.setSessionPermissionMode = (_id: string, m: string) => { calls.mode.push(m) }
+    internals['performUpdateSessionModel'] = async (_managed: unknown, m: string) => { calls.model.push(m) }
+    internals['updateWorkingDirectory'] = (_id: string, p: string) => { calls.cwd.push(p) }
+    internals['setSessionPermissionMode'] = (_id: string, m: string) => { calls.mode.push(m) }
     sessionRuntimeStateForTest(sm).sessions.set('s', createManagedSession({
       id: 's',
       taskDraft: true,
@@ -156,7 +149,6 @@ describe('adopt/bind route changed fields through canonical live-update mutators
     expect(calls.cwd).toEqual(['/new/dir'])
     expect(calls.mode).toEqual(['allow-all'])
     // Connection can't go through setSessionConnection (session has started) → set directly + event.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(requiredTestValue(sessionRuntimeStateForTest(sm).sessions.get('s')).llmConnection).toBe('new-conn')
     expect(events).toContain('connection_changed')
     expect(events).toContain('session_metadata_changed')
@@ -209,7 +201,6 @@ describe('adopt/bind route changed fields through canonical live-update mutators
             model: 'same-model', llmConnection: 'same-conn',
           })
       expect(result).toBe(true)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect(sessionRuntimeStateForTest(sm).sessions.get('s')).toMatchObject({
         modelRoutePinned: true,
         connectionRoutePinned: true,

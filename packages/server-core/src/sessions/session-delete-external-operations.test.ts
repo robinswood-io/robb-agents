@@ -258,7 +258,6 @@ describe('session deletion external-operation fences', () => {
       { id: 'workspace-share-fence', name: 'Share', rootPath: root, createdAt: 1 } as never,
       { messagesLoaded: true },
     )
-    const runtime = manager as unknown as { sessions: Map<string, typeof managed> }
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 
     let releaseUpload!: () => void

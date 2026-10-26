@@ -1,0 +1,285 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Suppression du code mort et des directives de lint obsolètes",
+  "changes": [
+    "12 directives devenues inutiles supprimées, ainsi que deux directives rendues obsolètes par le typage et la suppression de leur paire. Aucun réglage de lint désactivé.",
+    "Six déclarations privées non utilisées supprimées, dont une fonction de hash jamais appelée et son import crypto.",
+    "Deux any et un type Function non contrôlé retirés ; le shim navigateur accepte un paramètre opaque inutilisé et un callback typé.",
+    "La fixture d’adoption utilise les méthodes natives du gestionnaire ; le stub de persistance renvoie false et ne réalise aucune écriture disque.",
+    "54 tests ciblés et leurs 287 assertions conservés. Formatage Sprintf identique avant, après et dans les copies réellement installées."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/workspace/AddWorkspaceStep_ConnectRemote.tsx",
+      "lines": 366,
+      "sha256": "08f5da74c8efede56f3ee66b5c9c8de06b084d628e935f5c21a79adacca8e059"
+    },
+    {
+      "file": "apps/webui/src/shims/ws.ts",
+      "lines": 19,
+      "sha256": "f7eb36d1a74adafa49e9faeec39b05c27cb11c0cb79f57575c047f2abe377055"
+    },
+    {
+      "file": "packages/server-core/src/sessions/adopt-task-draft.test.ts",
+      "lines": 210,
+      "sha256": "b99912c791e7504b0afe55bd173b66a11f66a794796da2ddfeaebd558f732154"
+    },
+    {
+      "file": "packages/server-core/src/sessions/legacy-acceptance-scalars.ts",
+      "lines": 139,
+      "sha256": "926033e2fc38209f2bee8cb5325cfd33f16ef6000977d4d963c03c5e5c217fc4"
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-auth-request-snapshot.test.ts",
+      "lines": 36,
+      "sha256": "dd79b58daf808c4fcfc4ae8b493e965b4c0f57785122193e3942f787c2d4417f"
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-delete-external-operations.test.ts",
+      "lines": 302,
+      "sha256": "becee2e4ca3802a630065f313dc5954e4f8204021f35edcbc223234d95f1ea0c"
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-shutdown-fences.test.ts",
+      "lines": 471,
+      "sha256": "ec7916c5f14781b7bbd4d84457c8a20ded9443c8f9e817e4018b0b78a1f35659"
+    },
+    {
+      "file": "scripts/vendor/sprintf-js/src/sprintf.js",
+      "lines": 252,
+      "sha256": "fee916f51a137a5c222b27313ee77bbf3a8ca052ada2c175dc5daf36023e206a"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 17.59,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/lint-dead-code-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 14.44,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/lint-dead-code-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/components/workspace/AddWorkspaceStep_ConnectRemote.tsx",
+        "apps/webui/src/shims/ws.ts",
+        "packages/server-core/src/sessions/adopt-task-draft.test.ts",
+        "packages/server-core/src/sessions/legacy-acceptance-scalars.ts",
+        "packages/server-core/src/sessions/session-auth-request-snapshot.test.ts",
+        "packages/server-core/src/sessions/session-delete-external-operations.test.ts",
+        "packages/server-core/src/sessions/session-shutdown-fences.test.ts",
+        "scripts/vendor/sprintf-js/src/sprintf.js",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.0,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/lint-dead-code-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/server-core/src/sessions/legacy-acceptance-scalars.test.ts",
+        "packages/server-core/src/sessions/adopt-task-draft.test.ts",
+        "packages/server-core/src/sessions/session-auth-request-snapshot.test.ts",
+        "packages/server-core/src/sessions/session-delete-external-operations.test.ts",
+        "packages/server-core/src/sessions/session-shutdown-fences.test.ts",
+        "scripts/tests/apply-minimatch-compat.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.99,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/lint-dead-code-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "webui:build"
+      ],
+      "exitCode": 0,
+      "seconds": 3.69,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/lint-dead-code-webui-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "scripts/apply-minimatch-compat.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.91,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/lint-dead-code-vendor.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 137.66,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/lint-dead-code-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "files": [
+      {
+        "file": "apps/electron/src/renderer/components/workspace/AddWorkspaceStep_ConnectRemote.tsx",
+        "lines": 366,
+        "sha256": "08f5da74c8efede56f3ee66b5c9c8de06b084d628e935f5c21a79adacca8e059",
+        "nativeSourceHash": "2b5fe09b6d6feba1c3fc70bd9ed154b4fb46f9a3514f9ea95386c746c2ceaf66"
+      },
+      {
+        "file": "apps/webui/src/shims/ws.ts",
+        "lines": 19,
+        "sha256": "f7eb36d1a74adafa49e9faeec39b05c27cb11c0cb79f57575c047f2abe377055",
+        "nativeSourceHash": "924464432191dde3418dc5a99ac7affd22feb078b6f09d2f26d4f3a35fabbf05"
+      },
+      {
+        "file": "packages/server-core/src/sessions/adopt-task-draft.test.ts",
+        "lines": 210,
+        "sha256": "b99912c791e7504b0afe55bd173b66a11f66a794796da2ddfeaebd558f732154",
+        "nativeSourceHash": "5284e80269c0e43099e8e0686a71f45e1b7451b916292f507e63249ad5da0846"
+      },
+      {
+        "file": "packages/server-core/src/sessions/legacy-acceptance-scalars.ts",
+        "lines": 139,
+        "sha256": "926033e2fc38209f2bee8cb5325cfd33f16ef6000977d4d963c03c5e5c217fc4",
+        "nativeSourceHash": "196a25e1514909b7d4eec4e8ddde39f71d7286c2119486bf26128e263e842c49"
+      },
+      {
+        "file": "packages/server-core/src/sessions/session-auth-request-snapshot.test.ts",
+        "lines": 36,
+        "sha256": "dd79b58daf808c4fcfc4ae8b493e965b4c0f57785122193e3942f787c2d4417f",
+        "nativeSourceHash": "0561375250bf25c2603f42b6eb2781102e31e74cf0097c2eeff95a60e6cc1a74"
+      },
+      {
+        "file": "packages/server-core/src/sessions/session-delete-external-operations.test.ts",
+        "lines": 302,
+        "sha256": "becee2e4ca3802a630065f313dc5954e4f8204021f35edcbc223234d95f1ea0c",
+        "nativeSourceHash": "07ce3de595391c3b655a4db424681ae1e28bd4a5829c2546780a23fd3957773b"
+      },
+      {
+        "file": "packages/server-core/src/sessions/session-shutdown-fences.test.ts",
+        "lines": 471,
+        "sha256": "ec7916c5f14781b7bbd4d84457c8a20ded9443c8f9e817e4018b0b78a1f35659",
+        "nativeSourceHash": "5c669ec081a3f1c0c337a5146cf4554c2aff1ba22a9ca0e7db087d75084f79e3"
+      },
+      {
+        "file": "scripts/vendor/sprintf-js/src/sprintf.js",
+        "lines": 252,
+        "sha256": "fee916f51a137a5c222b27313ee77bbf3a8ca052ada2c175dc5daf36023e206a",
+        "nativeSourceHash": "252c4c4871f81ad7293532f2301f221eeae4d5930b1a7a0ca75b0fb50cef1a24"
+      }
+    ],
+    "removedUnusedLintDirectives": 12,
+    "removedPairedDirectivesAfterCleanup": 1,
+    "removedObsoleteDirectivesAfterTyping": 1,
+    "typedNativeFixtureAlias": true,
+    "nativePersistenceMockReturnsFalse": true,
+    "removedExplicitAny": 2,
+    "removedUnusedPrivateBindings": 6,
+    "removedUnusedBuiltinImports": 1,
+    "callbackTypeCheckedWithoutRuntimeChange": true,
+    "remainingRuntimeBodiesUnchanged": true,
+    "removedInitializersHaveNoSideEffects": true,
+    "removedSuppressionRules": 0,
+    "newSuppressions": 0
+  },
+  "fullTestSummary": {
+    "pass": 10746,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "lint-dead-code-targeted": {
+      "pass": 54,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": {
+    "targetedPass": 54,
+    "targetedExpectCalls": 287
+  },
+  "sourceGate": {
+    "max-lines": 48,
+    "no-explicit-any": 170
+  },
+  "globalLint": {
+    "files": 3592,
+    "errors": 201,
+    "warnings": 113,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 164,
+      "max-lines": 37,
+      "react-hooks/exhaustive-deps": 92,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "48 fichiers trop longs et 170 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T03:08:39.474661+00:00",
+  "additionalProofs": {
+    "lint-dead-code-sprintf-proof.json": {
+      "status": "passed",
+      "beforeVendorAndMaterializedRuntimeMatch": true,
+      "checks": [
+        {
+          "source": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/lint-dead-code-before/scripts/vendor/sprintf-js/src/sprintf.js",
+          "values": [
+            "QA    :0007",
+            "QA=3"
+          ]
+        },
+        {
+          "source": "./scripts/vendor/sprintf-js/src/sprintf.js",
+          "values": [
+            "QA    :0007",
+            "QA=3"
+          ]
+        },
+        {
+          "source": "sprintf-js",
+          "values": [
+            "QA    :0007",
+            "QA=3"
+          ]
+        }
+      ]
+    }
+  }
+}

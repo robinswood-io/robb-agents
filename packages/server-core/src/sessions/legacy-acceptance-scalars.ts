@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import type { Message, ObjectiveAcceptanceCriterion } from '@craft-agent/core/types';
 import type { ActiveSessionObjective } from '@craft-agent/shared/sessions';
 import { parseIndependentReviewReceipt } from '@craft-agent/shared/agent';
@@ -21,7 +20,6 @@ export interface ObjectiveAcceptanceCriteriaProjection {
 const REGISTRATION = /^(?:mcp__session__|session__)?set_completion_criteria$/;
 // Match every review tool recognized by objective-outcome, including aliases.
 const REVIEW = /(?:call_llm|spawn_session|wait_sessions|reviewer|review)/i;
-const hash = (value: unknown): string => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const keysExactly = (value: Record<string, unknown>, keys: string[]): boolean =>
   Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));

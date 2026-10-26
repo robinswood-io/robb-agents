@@ -254,9 +254,6 @@ describe('session shutdown operation and runtime fences', () => {
 
   it('drains a restart recovery before the final shutdown persistence barrier', async () => {
     const { root, manager, managed } = await managedSession('Shutdown restart recovery')
-    const runtime = manager as unknown as {
-      restartRecoveriesInFlight: Map<string, Promise<void>>
-    }
     let releaseRecovery!: () => void
     const recoveryGate = new Promise<void>(resolve => { releaseRecovery = resolve })
     let notifyRecoveryStarted!: () => void
@@ -366,10 +363,6 @@ describe('session shutdown operation and runtime fences', () => {
         if (disposalCalls === 1) throw new Error('fixture first shutdown disposal failure')
       },
     } as never
-    const runtime = manager as unknown as {
-      runtimeDisposalBarriers: Map<string, Map<symbol, unknown>>
-      runtimeDisposalsInFlight: Map<string, Set<Promise<void>>>
-    }
 
     await manager.cleanup()
 
@@ -438,9 +431,6 @@ describe('session shutdown operation and runtime fences', () => {
 
   it('continues teardown when a watcher stop throws and keeps admission closed', async () => {
     const { root, manager, managed } = await managedSession('Shutdown watcher failure')
-    const runtime = manager as unknown as {
-      configWatchers: Map<string, { stop: () => void }>
-    }
     let disposalCalls = 0
     managed.agent = {
       dispose: () => undefined,
