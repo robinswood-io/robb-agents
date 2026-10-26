@@ -103,21 +103,21 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-26T04:03:57.648693+00:00",
+  "updatedAt": "2026-10-26T04:09:50.822510+00:00",
   "current": {
-    "lastEvidence": "ui-mission-remote-modules-summary.json",
+    "lastEvidence": "auth-automation-scenarios-summary.json",
     "sourceGate": {
-      "max-lines": 46,
+      "max-lines": 44,
       "no-explicit-any": 170
     },
     "globalLint": {
-      "files": 3595,
-      "errors": 199,
+      "files": 3598,
+      "errors": 197,
       "warnings": 102,
       "fatal": 0,
       "rules": {
         "@typescript-eslint/no-explicit-any": 164,
-        "max-lines": 35,
+        "max-lines": 33,
         "react-hooks/exhaustive-deps": 81,
         "craft-agent/no-localstorage": 21
       }
