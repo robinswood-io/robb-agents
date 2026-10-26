@@ -3,11 +3,15 @@ mock.module('../logger', () => ({ mainLog: { info() {}, warn() {}, error() {}, d
 const { BrowserCDP } = await import('../browser-cdp')
 const instances: InstanceType<typeof BrowserCDP>[] = []
 afterEach(() => { for (const cdp of instances.splice(0)) cdp.detach() })
-function fixture(handler?: (method: string, args: any) => unknown) {
-  const calls: Array<{ method: string; args: any }> = []
+
+type BrowserTarget = ConstructorParameters<typeof BrowserCDP>[0]
+type CDPFixtureTarget = Pick<BrowserTarget, 'getURL'> & { debugger: Pick<BrowserTarget['debugger'], 'attach' | 'detach' | 'sendCommand'> & { on(): void; isAttached?(): boolean } }
+
+function fixture(handler?: (method: string, args: Record<string, unknown>) => unknown) {
+  const calls: Array<{ method: string; args: Record<string, unknown> }> = []
   let url = 'https://rdp.example.test/'
   const wc = { getURL: () => url, debugger: { attach() {}, detach() {}, on() {},
-    async sendCommand(method: string, args: any) {
+    async sendCommand(method: string, args: Record<string, unknown>) {
       calls.push({ method, args })
       const response = handler?.(method, args)
       if (response !== undefined) return response
@@ -16,7 +20,7 @@ function fixture(handler?: (method: string, args: any) => unknown) {
       return {}
     },
   } }
-  const cdp = new BrowserCDP(wc as any); instances.push(cdp)
+  const cdp = new BrowserCDP((wc satisfies CDPFixtureTarget) as unknown as BrowserTarget); instances.push(cdp)
   return { cdp, calls, navigate: () => { url = 'https://other.example.test/' } }
 }
 const denied = { result: { type: 'object', subtype: 'error' }, exceptionDetails: { text: 'Uncaught', exception: { description: 'NotAllowedError: PRIVATE_VALUE' } } }

@@ -17,15 +17,19 @@ function receipt(): CanvasBitmapReceipt {
     sourceRect: { x: 0, y: 0, width: 1, height: 1 }, region: { x: 0, y: 0, width: 1, height: 1 }, canvasBox: { x: 0, y: 0, width: 1, height: 1 },
     viewport: { width: 100, height: 100, dpr: 2, scrollX: 0, scrollY: 0 }, capturedAt: 123 }
 }
-function transport(hook: (method: string, call: number) => any = () => undefined) {
-  const calls: Array<{ method: string; args: any }> = []
+
+type BrowserTarget = ConstructorParameters<typeof BrowserCDP>[0]
+type CDPFixtureTarget = Pick<BrowserTarget, 'getURL'> & { debugger: Pick<BrowserTarget['debugger'], 'attach' | 'detach' | 'sendCommand'> & { on(): void; isAttached?(): boolean } }
+
+function transport(hook: (method: string, call: number) => unknown = () => undefined) {
+  const calls: Array<{ method: string; args: Record<string, unknown> }> = []
   let url = 'https://fixture.invalid/'
-  const cdp = new BrowserCDP({ getURL: () => url, debugger: { isAttached: () => true, attach() {}, detach() {}, on() {}, async sendCommand(method: string, args: any) {
+  const cdp = new BrowserCDP({ getURL: () => url, debugger: { isAttached: () => true, attach() {}, detach() {}, on() {}, async sendCommand(method: string, args: Record<string, unknown>) {
     calls.push({ method, args }); const result = hook(method, calls.length); if (result !== undefined) return result
     if (method === 'Page.getFrameTree') return { frameTree: { frame: { id: 'frame', loaderId: 'document' } } }
     if (method === 'Page.createIsolatedWorld') return { executionContextId: 42 }
     return { result: { value: receipt() } }
-  } } } as any)
+  } } } satisfies CDPFixtureTarget as unknown as BrowserTarget)
   cleanups.push(() => cdp.detach())
   return { cdp, calls, navigate: () => { url += 'new' } }
 }
