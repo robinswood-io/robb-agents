@@ -3,6 +3,7 @@ import { createInterface } from "node:readline";
 import { storePiCredential } from "./authenticated-model-runtime.ts";
 import { setBedrockProviderModule } from "@earendil-works/pi-ai/api/bedrock-converse-stream.lazy";
 import { bedrockProviderModule } from "@earendil-works/pi-ai/bedrock-provider";
+import { registerBunOAuthFlows } from "@earendil-works/pi-ai/bun-oauth";
 import { applyTokenUpdate } from "./token-update.ts";
 import type { InboundMessage } from "./index/contracts.ts";
 import { PiRuntimeState } from "./index/runtime-state.ts";
@@ -14,6 +15,7 @@ import { handleAbort, handleInit, handleShutdown } from "./index/session.ts";
 import { debugLog, send } from "./index/stdio.ts";
 
 setBedrockProviderModule(bedrockProviderModule);
+registerBunOAuthFlows();
 
 const runtimeState = new PiRuntimeState();
 
