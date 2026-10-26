@@ -6,7 +6,7 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TypeAlias
 
 ROOT = Path('/srv/rbw-agents-oss')
 OPS = Path('/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops')
@@ -21,6 +21,8 @@ PYTHON = str(ROOT / '.venv/bin/python') if (ROOT / '.venv/bin/python').exists() 
 
 sys.path.insert(0, str(ROOT / 'apps/orchestrator-temporal'))
 from runtime_v2_bridge import load_manifest_entries, preflight_invocation, run_structured_invocation  # noqa: E402
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
 DEFAULT_POLICY = {
     'contractVersion': 'oss-runtime-warning-processor-policy-v1',
@@ -37,22 +39,22 @@ DEFAULT_POLICY = {
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
 
-def read_json(path: Path, default: Any) -> Any:
+def read_json(path: Path, default: JsonValue) -> JsonValue:
     try:
         return json.loads(path.read_text(encoding='utf-8'))
     except Exception:
         return default
 
-def write_json(path: Path, data: Any) -> None:
+def write_json(path: Path, data: JsonValue) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
-def append_jsonl(path: Path, row: dict[str, Any]) -> None:
+def append_jsonl(path: Path, row: dict[str, JsonValue]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open('a', encoding='utf-8') as fh:
         fh.write(json.dumps(row, ensure_ascii=False, separators=(',', ':')) + '\n')
 
-def load_policy() -> dict[str, Any]:
+def load_policy() -> dict[str, JsonValue]:
     data = read_json(POLICY, {})
     if not isinstance(data, dict) or not data:
         write_json(POLICY, {**DEFAULT_POLICY, 'generatedAt': now_iso(), 'updatedBy': 'oss-runtime-warning-processor-default'})
@@ -61,11 +63,11 @@ def load_policy() -> dict[str, Any]:
     merged.update(data)
     return merged
 
-def side_effects(entry: dict[str, Any]) -> list[str]:
+def side_effects(entry: dict[str, JsonValue]) -> list[str]:
     raw = entry.get('sideEffects')
     return [str(x) for x in raw] if isinstance(raw, list) else []
 
-def is_safe_refresh(legacy_id: str, entry: dict[str, Any], policy: dict[str, Any]) -> tuple[bool, list[str]]:
+def is_safe_refresh(legacy_id: str, entry: dict[str, JsonValue], policy: dict[str, JsonValue]) -> tuple[bool, list[str]]:
     effects = side_effects(entry)
     # Only exact prohibitions are negated. Combined/unknown claims fail closed.
     prohibitions = {
@@ -101,7 +103,7 @@ def is_safe_refresh(legacy_id: str, entry: dict[str, Any], policy: dict[str, Any
     return False, ['not_in_safe_allowlist']
 
 
-def refresh_one(legacy_id: str, entry: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
+def refresh_one(legacy_id: str, entry: dict[str, JsonValue], policy: dict[str, JsonValue]) -> dict[str, JsonValue]:
     payload = {'legacy_id': legacy_id, 'name': entry.get('name') or legacy_id, 'event': {'source': 'oss-runtime-warning-processor', 'generatedAt': now_iso()}}
     decision = preflight_invocation(payload, entry)
     if not decision.get('allowed'):
@@ -118,7 +120,7 @@ def refresh_one(legacy_id: str, entry: dict[str, Any], policy: dict[str, Any]) -
     js = result.get('jsonStatus') if isinstance(result.get('jsonStatus'), dict) else {}
     return {'legacy_id': legacy_id, 'ok': bool(result.get('ok')), 'stage': 'execution', 'exitCode': result.get('exitCode'), 'timeout': result.get('timeout'), 'status': js.get('status'), 'summary': js.get('summary'), 'blockingReasons': js.get('blockingReasons') or result.get('systemOfRecordReasons') or [], 'error': result.get('error') or result.get('stderrPreview') or ''}
 
-def refresh_freshness_guard() -> dict[str, Any]:
+def refresh_freshness_guard() -> dict[str, JsonValue]:
     proc = subprocess.run([PYTHON, str(ROOT / 'scripts/oss_runtime_freshness_guard.py')], cwd=str(ROOT), capture_output=True, text=True, timeout=180)
     parsed = None
     try:
@@ -127,7 +129,7 @@ def refresh_freshness_guard() -> dict[str, Any]:
         parsed = None
     return {'returnCode': proc.returncode, 'stdoutTail': (proc.stdout or '')[-1200:], 'stderrTail': (proc.stderr or '')[-1200:], 'parsed': parsed}
 
-def refresh_production_health_audit() -> dict[str, Any]:
+def refresh_production_health_audit() -> dict[str, JsonValue]:
     proc = subprocess.run([PYTHON, str(ROOT / 'scripts/oss_agent_production_health_audit.py')], cwd=str(ROOT), capture_output=True, text=True, timeout=240)
     parsed = None
     try:
@@ -136,11 +138,11 @@ def refresh_production_health_audit() -> dict[str, Any]:
         parsed = None
     return {'returnCode': proc.returncode, 'stdoutTail': (proc.stdout or '')[-1200:], 'stderrTail': (proc.stderr or '')[-1200:], 'parsed': parsed}
 
-def health_runtime_stale_warnings(limit: int = 80) -> list[dict[str, Any]]:
+def health_runtime_stale_warnings(limit: int = 80) -> list[dict[str, JsonValue]]:
     health = read_json(HEALTH_AUDIT, {})
     samples = health.get('samples') if isinstance(health.get('samples'), dict) else {}
     rows = samples.get('runtimeStaleOver72h') if isinstance(samples, dict) else []
-    warnings: list[dict[str, Any]] = []
+    warnings: list[dict[str, JsonValue]] = []
     seen: set[str] = set()
     for row in rows or []:
         if not isinstance(row, dict):
@@ -166,9 +168,9 @@ def main() -> int:
     codes = set(policy.get('processableWarningCodes') or [])
     manifest = load_manifest_entries()
     max_items = int(policy.get('maxRefreshPerRun') or 12)
-    processed: list[dict[str, Any]] = []
-    skipped: list[dict[str, Any]] = []
-    actions: list[dict[str, Any]] = []
+    processed: list[dict[str, JsonValue]] = []
+    skipped: list[dict[str, JsonValue]] = []
+    actions: list[dict[str, JsonValue]] = []
     for warning in warnings:
         if not isinstance(warning, dict):
             continue

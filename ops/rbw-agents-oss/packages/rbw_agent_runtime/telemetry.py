@@ -3,14 +3,17 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pydantic import JsonValue
 
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def runtime_attributes(*, legacy_id: str | None, backend: str | None, policy_mode: str, decision: str, risk_class: str | None) -> dict[str, Any]:
+def runtime_attributes(*, legacy_id: str | None, backend: str | None, policy_mode: str, decision: str, risk_class: str | None) -> dict[str, str | None]:
     """Return stable OpenTelemetry-compatible attributes without requiring an SDK import."""
     return {
         "service.name": "rbw-agents-oss",
@@ -23,7 +26,7 @@ def runtime_attributes(*, legacy_id: str | None, backend: str | None, policy_mod
     }
 
 
-def append_event(path: Path, event: str, attributes: dict[str, Any], **data: Any) -> None:
+def append_event(path: Path, event: str, attributes: dict[str, JsonValue], **data: JsonValue) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {"ts": now_iso(), "event": event, "attributes": attributes, "data": data}
     with path.open("a", encoding="utf-8") as handle:

@@ -9,7 +9,7 @@ import uuid
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from pydantic import JsonValue
 
 from .models import (
     AgentSpec,
@@ -41,14 +41,14 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def read_json(path: Path, default: Any) -> Any:
+def read_json(path: Path, default: JsonValue) -> JsonValue:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return default
 
 
-def atomic_write_json(path: Path, payload: Any) -> None:
+def atomic_write_json(path: Path, payload: JsonValue) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -56,13 +56,13 @@ def atomic_write_json(path: Path, payload: Any) -> None:
     tmp.replace(path)
 
 
-def canonical_hash(payload: Any) -> str:
+def canonical_hash(payload: JsonValue) -> str:
     raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(raw).hexdigest()
 
 
-def flatten_manifest(data: Any) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
+def flatten_manifest(data: JsonValue) -> list[dict[str, JsonValue]]:
+    rows: list[dict[str, JsonValue]] = []
     if not isinstance(data, dict):
         return rows
     for section, values in data.items():
@@ -77,7 +77,7 @@ def flatten_manifest(data: Any) -> list[dict[str, Any]]:
     return rows
 
 
-def flatten_mapping(data: Any) -> list[dict[str, Any]]:
+def flatten_mapping(data: JsonValue) -> list[dict[str, JsonValue]]:
     if isinstance(data, list):
         return [row for row in data if isinstance(row, dict)]
     if isinstance(data, dict):
@@ -85,13 +85,13 @@ def flatten_mapping(data: Any) -> list[dict[str, Any]]:
     return []
 
 
-def schedule_legacy_id(row: dict[str, Any]) -> str | None:
+def schedule_legacy_id(row: dict[str, JsonValue]) -> str | None:
     payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
     value = row.get("legacy_id") or payload.get("legacy_id") or row.get("capability_id")
     return str(value) if value else None
 
 
-def derive_lane(capability_id: str, row: dict[str, Any]) -> str:
+def derive_lane(capability_id: str, row: dict[str, JsonValue]) -> str:
     text = " ".join(str(x or "") for x in [capability_id, row.get("name"), row.get("category"), row.get("task_queue")]).lower()
     if capability_id.startswith("agent-task"):
         return "agent_tasks"
@@ -116,7 +116,7 @@ def safe_fragment_name(value: str) -> str:
     return re.sub(r"[^a-z0-9._-]+", "-", value.lower()).strip("-") or "agent"
 
 
-def policy_rows(data: Any) -> dict[str, dict[str, Any]]:
+def policy_rows(data: JsonValue) -> dict[str, dict[str, JsonValue]]:
     if not isinstance(data, dict):
         return {}
     rows = data.get("capabilities") or data.get("rows") or []
@@ -127,7 +127,7 @@ def policy_rows(data: Any) -> dict[str, dict[str, Any]]:
     }
 
 
-def ready_identities(data: Any) -> set[str]:
+def ready_identities(data: JsonValue) -> set[str]:
     out: set[str] = set()
     if not isinstance(data, dict):
         return out
@@ -144,7 +144,7 @@ def ready_identities(data: Any) -> set[str]:
     return out
 
 
-def structured_argv_from_row(row: dict[str, Any]) -> list[str] | None:
+def structured_argv_from_row(row: dict[str, JsonValue]) -> list[str] | None:
     execution = row.get("execution") if isinstance(row.get("execution"), dict) else {}
     argv = execution.get("argv")
     if isinstance(argv, list) and argv and all(isinstance(item, str) and item for item in argv):
@@ -152,7 +152,7 @@ def structured_argv_from_row(row: dict[str, Any]) -> list[str] | None:
     return None
 
 
-def execution_from_row(row: dict[str, Any]) -> ExecutionSpec:
+def execution_from_row(row: dict[str, JsonValue]) -> ExecutionSpec:
     timeout = int(row.get("timeout_seconds") or 600)
     execution = row.get("execution") if isinstance(row.get("execution"), dict) else {}
     argv = structured_argv_from_row(row)
@@ -168,7 +168,7 @@ def execution_from_row(row: dict[str, Any]) -> ExecutionSpec:
     raise ValueError(f"manifest row {row.get('legacy_id')} is missing execution.backend=argv")
 
 
-def policy_from_row(row: dict[str, Any], classified: dict[str, Any] | None) -> PolicySpec:
+def policy_from_row(row: dict[str, JsonValue], classified: dict[str, JsonValue] | None) -> PolicySpec:
     if not classified:
         return PolicySpec(
             classified=False,
@@ -213,7 +213,7 @@ class CatalogCompiler:
             raise ValueError(f"duplicate manifest ids: {sorted(duplicate_ids)}")
         mapping_by_id = {str(row.get("legacy_id")): row for row in mapping if row.get("legacy_id")}
         schedule_rows = schedules_data.get("schedules", []) if isinstance(schedules_data, dict) else []
-        schedules_by_id: dict[str, list[dict[str, Any]]] = {}
+        schedules_by_id: dict[str, list[dict[str, JsonValue]]] = {}
         for schedule in schedule_rows if isinstance(schedule_rows, list) else []:
             if not isinstance(schedule, dict):
                 continue
@@ -280,7 +280,7 @@ class CatalogCompiler:
             specs.append(spec)
         return specs
 
-    def build(self, *, write_fragments: bool = True) -> dict[str, Any]:
+    def build(self, *, write_fragments: bool = True) -> dict[str, JsonValue]:
         generated_at = now_iso()
         specs = self.build_specs()
         spec_payloads = [spec.model_dump(mode="json") for spec in specs]
@@ -371,7 +371,7 @@ class CatalogCompiler:
             },
         }
 
-    def validate(self) -> dict[str, Any]:
+    def validate(self) -> dict[str, JsonValue]:
         errors: list[str] = []
         catalog = read_json(self.agents_v2 / "catalog-v2.json", {})
         cards = read_json(self.agents_v2 / "agent-cards-v2.json", {})
@@ -430,7 +430,7 @@ class CatalogRepository:
         self.lock_path = root / "config" / "agents-v2" / "catalog-v2.lock.json"
         self._manifest_mtime: int | None = None
         self._catalog_mtime: int | None = None
-        self._manifest_entries: dict[str, dict[str, Any]] = {}
+        self._manifest_entries: dict[str, dict[str, JsonValue]] = {}
         self._specs: dict[str, AgentSpec] = {}
         self._hashes: dict[str, str] = {}
 
@@ -441,11 +441,11 @@ class CatalogRepository:
         except Exception:
             return -1
 
-    def manifest_entries(self) -> dict[str, dict[str, Any]]:
+    def manifest_entries(self) -> dict[str, dict[str, JsonValue]]:
         mtime = self._mtime(self.manifest_path)
         if mtime != self._manifest_mtime:
             rows = flatten_manifest(read_json(self.manifest_path, {}))
-            entries: dict[str, dict[str, Any]] = {}
+            entries: dict[str, dict[str, JsonValue]] = {}
             for row in rows:
                 legacy_id = str(row["legacy_id"])
                 if legacy_id in entries:
@@ -476,7 +476,7 @@ class CatalogRepository:
         self.specs()
         return self._hashes.get(str(legacy_id)) if legacy_id else None
 
-    def cache_state(self) -> dict[str, Any]:
+    def cache_state(self) -> dict[str, JsonValue]:
         return {
             "manifestMtimeNs": self._manifest_mtime,
             "catalogMtimeNs": self._catalog_mtime,

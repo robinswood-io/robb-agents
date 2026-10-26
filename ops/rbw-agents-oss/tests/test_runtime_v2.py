@@ -11,11 +11,45 @@ sys.path.insert(0, str(ROOT / "packages"))
 
 from pydantic import ValidationError
 from rbw_agent_runtime.execution import execute_argv
-from rbw_agent_runtime.models import AgentSpec, ExecutionSpec
+from rbw_agent_runtime.models import AgentSpec, ExecutionResult, ExecutionSpec, Invocation, ReportEnvelope
 from rbw_agent_runtime.policy import PolicyEngine
 
 
 class RuntimeV2ArgvOnlyTests(unittest.TestCase):
+    def test_wire_models_preserve_nested_json_values(self) -> None:
+        nested = {"items": [None, True, 3, 2.5, "texte", {"ok": False}]}
+        spec = self.base().model_dump()
+        spec["provenance"] = nested
+        models = [
+            (AgentSpec.model_validate(spec), "provenance"),
+            (Invocation(legacy_id="qa", event=nested, approval=nested), "event"),
+            (Invocation(legacy_id="qa", approval=nested), "approval"),
+            (ExecutionResult(ok=True, exitCode=0, durationSeconds=0, jsonStatus=nested), "jsonStatus"),
+        ]
+        for field in ("counts", "artifacts", "checks"):
+            models.append((ReportEnvelope(
+                generatedAt="qa", capabilityId="qa", ok=True, status="ok", summary="qa", **{field: nested},
+            ), field))
+        for model, field in models:
+            with self.subTest(model=type(model).__name__, field=field):
+                self.assertEqual(json.loads(model.model_dump_json())[field], nested)
+
+    def test_wire_models_reject_opaque_objects_before_execution(self) -> None:
+        from pydantic import TypeAdapter
+
+        spec = self.base().model_dump()
+        spec["provenance"] = {"opaque": object()}
+        with self.assertRaises(ValidationError):
+            AgentSpec.model_validate(spec)
+        for model, fields in (
+            (Invocation, ("event", "approval")),
+            (ExecutionResult, ("jsonStatus",)),
+            (ReportEnvelope, ("counts", "artifacts", "checks")),
+        ):
+            for field in fields:
+                with self.subTest(model=model.__name__, field=field), self.assertRaises(ValidationError):
+                    TypeAdapter(model.model_fields[field].annotation).validate_python({"opaque": object()})
+
     def base(self, *, env: dict[str, str] | None = None, approval_required: bool = False) -> AgentSpec:
         return AgentSpec.model_validate({
             "id": "unit-agent",

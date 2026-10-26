@@ -6,9 +6,11 @@ import hashlib
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TypeAlias
 
 from lib.wrapper_sdk import now_iso, write_report
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
 ROOT = Path('/srv/rbw-agents-oss')
 CONFIG = ROOT / 'config'
@@ -32,7 +34,7 @@ WRITE_PATTERNS = [
 ]
 
 
-def load_json(path: Path, default: Any) -> Any:
+def load_json(path: Path, default: JsonValue) -> JsonValue:
     try:
         return json.loads(path.read_text(encoding='utf-8'))
     except Exception:
@@ -66,8 +68,8 @@ def script_text(path: Path) -> str:
         return ''
 
 
-def scan_config_writers() -> list[dict[str, Any]]:
-    candidates: list[dict[str, Any]] = []
+def scan_config_writers() -> list[dict[str, JsonValue]]:
+    candidates: list[dict[str, JsonValue]] = []
     for path in sorted(SCRIPTS.rglob('*.py')):
         if '/archive/' in path.as_posix() or '/__pycache__/' in path.as_posix():
             continue
@@ -104,7 +106,7 @@ def approved_read_only_consumers(policy: dict, root: Path) -> tuple[set[str], li
     return accepted, errors
 
 
-def main() -> dict[str, Any]:
+def main() -> dict[str, JsonValue]:
     policy = load_json(POLICY, {})
     accepted = set(policy.get('acceptedLegacyConfigWriters', [])) if isinstance(policy, dict) else set()
     accepted_read_only, read_only_errors = approved_read_only_consumers(policy, ROOT)
@@ -118,8 +120,8 @@ def main() -> dict[str, Any]:
         and w['path'] not in accepted_read_only
     ]
     helper_missing = not (SCRIPTS / 'lib/config_mutation.py').exists()
-    errors: list[dict[str, Any]] = list(read_only_errors)
-    warnings: list[dict[str, Any]] = []
+    errors: list[dict[str, JsonValue]] = list(read_only_errors)
+    warnings: list[dict[str, JsonValue]] = []
     if helper_missing:
         errors.append({'code': 'config_mutation_helper_missing', 'path': 'scripts/lib/config_mutation.py'})
     if active_backups:

@@ -1,0 +1,146 @@
+{
+  "status": "passed",
+  "modules": [
+    {
+      "file": "ops/rbw-agents-oss/packages/rbw_agent_runtime/models.py",
+      "sha256": "d9604aea4b2825a617c522a01dc4bc6bce818b6d0a7ee284740788fa41749571",
+      "lines": 191,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/packages/rbw_agent_runtime/catalog.py",
+      "sha256": "58d8606d0a2b5f9b528a16565148c1eb96e2cf88d6ca763f7b57673400aa97fb",
+      "lines": 485,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/packages/rbw_agent_runtime/execution.py",
+      "sha256": "7cd9e14211e913614af1c1b7ab13ef9325cc6a4b42fb09efcf580bcd1cb28a15",
+      "lines": 111,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/packages/rbw_agent_runtime/policy.py",
+      "sha256": "44867a700f00944b82b9f3e324a97cca2e445cc3385f5db3b690d2fa47f7694c",
+      "lines": 122,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/packages/rbw_agent_runtime/telemetry.py",
+      "sha256": "16fa394b9014ec46e0a02983ddd90ce01acc532eb0fa3f85dbab92a87bfbe2e6",
+      "lines": 33,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "scripts/install-staging-retention.py",
+      "sha256": "09252abf3108c3d1c82accb62306fcedb4f369c69d93d9432ba934b7acbd0abd",
+      "lines": 1357,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_architecture_v2_install.py",
+      "sha256": "306fc5130818443bce35921e4dbc757672f5b4e545b324e357fd425b368b32a2",
+      "lines": 697,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/robinswood_media_contact_enrichment_2026.py",
+      "sha256": "4424c93c6da204861f3cab91f9428278794b08a58c8e6a7c550425b8fcdf9115",
+      "lines": 188,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/temporal_performance_slo_core.py",
+      "sha256": "4e5232fc8a6ea9cc99242707e7f340bd872997a3de7ae56bdc525e54ee38d778",
+      "lines": 199,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_infrastructure_observation.py",
+      "sha256": "e67736ff9df099d9526d76dcaee04e411269ed58e94a4beab171c3e7547e8cd0",
+      "lines": 289,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_architecture_v2_guard.py",
+      "sha256": "421a4207acce594db586236b583795df92269cd121c28820856b3db02bb833fd",
+      "lines": 235,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_config_mutation_guard.py",
+      "sha256": "f3d26a6dafb11f8028fc5e01652ecf7b5685ca490dd800d6ce4e4014245d0215",
+      "lines": 174,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_architecture_v2_debt_zero_migrate.py",
+      "sha256": "83911ce84908d27cd7169e7557380c953b9152ca54ab5e8c51b25fc67c73180b",
+      "lines": 307,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_temporal_execution_slo_guard.py",
+      "sha256": "a586a352614fe440bd631b5f4b3e93658f4728a568610598481227758cfe5198",
+      "lines": 267,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/agent_task_model_outcome_canary.py",
+      "sha256": "b2dabc4217e839601913e16f985e5796229ea11d0db18d89d1bf99d7acbc9fbb",
+      "lines": 254,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/build_temporal_schedule_manifest.py",
+      "sha256": "da9f8941db7d582a3bc1eda92aaa5ed02f1a0f8227f30159c1f761f1048bb36d",
+      "lines": 185,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_architecture_v2_debt_zero_guard.py",
+      "sha256": "56859efa28ca61864a5445582f3f3f7e7f0d3aa8e1e4f38d2b762c18c1706343",
+      "lines": 152,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_runtime_warning_processor.py",
+      "sha256": "1c3d9e763dc17ae6c6cf5dcbc486adb9039b806267cead625cd40cade3557d7a",
+      "lines": 220,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/apps/orchestrator-temporal/runtime_v2_bridge.py",
+      "sha256": "1c550006fd8b6240914eca9ddd368b5eecaa08ecf6e9dafdd1a0900befea348a",
+      "lines": 182,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/lib/agent_runtime.py",
+      "sha256": "3f9c261a2c749d6560053d07b36277d6d6e8e6a6c7e72cb0270aadb9f2cc7763",
+      "lines": 115,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/lib/config_mutation.py",
+      "sha256": "fd670d853fdf01806c9bb04dba2c99acb6e8226cbe2ae1f39ba4be2b24cca24f",
+      "lines": 167,
+      "executableBodyUnchanged": true
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/lib/wrapper_sdk.py",
+      "sha256": "d17e351f31e90d48b6e8665e73dc23ad7be1d36c7962ef353e82a2db73f3ca95",
+      "lines": 76,
+      "executableBodyUnchanged": true
+    }
+  ],
+  "wireModelValidation": "Native Pydantic JsonValue rejects opaque objects; seven fields tested with nested JSON and invalid objects.",
+  "watchdogFixture": "Extracted functions compile with the original future-annotations semantics, without injecting Any.",
+  "contracts": [
+    "recursive JSON values",
+    "native Temporal WorkflowExecution and WorkflowExecutionStatus",
+    "datetime or string timestamp",
+    "six-field numeric/string ranking tuple"
+  ],
+  "limits": "Existing oversized Python files still require decomposition. No remote Temporal connection or accounting operation executed."
+}

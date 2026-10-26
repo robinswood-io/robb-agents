@@ -6,7 +6,7 @@ import signal
 import subprocess
 import time
 from pathlib import Path
-from typing import Any
+from pydantic import JsonValue
 
 from .models import ExecutionResult, PolicyDecision
 
@@ -15,7 +15,7 @@ def _tail(value: str, limit: int = 2000) -> str:
     return value if len(value) <= limit else value[-limit:]
 
 
-def _extract_json_status(stdout: str) -> dict[str, Any]:
+def _extract_json_status(stdout: str) -> dict[str, JsonValue]:
     text = (stdout or "").strip()
     if not text:
         return {}
@@ -32,10 +32,10 @@ def _extract_json_status(stdout: str) -> dict[str, Any]:
 
 
 def execute_argv(
-    decision: PolicyDecision | dict[str, Any],
+    decision: PolicyDecision | dict[str, JsonValue],
     *,
-    extra_env: dict[str, Any] | None = None,
-) -> dict[str, Any]:
+    extra_env: dict[str, JsonValue] | None = None,
+) -> dict[str, JsonValue]:
     if isinstance(decision, dict):
         decision = PolicyDecision.model_validate(decision)
     if not decision.allowed:

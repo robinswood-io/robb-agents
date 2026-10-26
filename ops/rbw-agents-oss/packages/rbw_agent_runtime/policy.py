@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any
+from pydantic import JsonValue
 
 from .models import AgentSpec, ExecutionBackend, Invocation, PolicyDecision
 
@@ -14,18 +14,18 @@ APPROVAL_KEYS = (
 )
 
 
-def _truthy(value: Any) -> bool:
+def _truthy(value: JsonValue) -> bool:
     if isinstance(value, bool):
         return value
     return str(value or "").strip().lower() in {"1", "true", "yes", "approved", "allow"}
 
 
-def _approval_present(payload: dict[str, Any]) -> bool:
+def _approval_present(payload: dict[str, JsonValue]) -> bool:
     approval = payload.get("approval") if isinstance(payload.get("approval"), dict) else {}
     return any(_truthy(payload.get(key)) or _truthy(approval.get(key)) for key in APPROVAL_KEYS)
 
 
-def _apply_requested(payload: dict[str, Any], argv: list[str] | None, manifest_env: dict[str, str]) -> bool:
+def _apply_requested(payload: dict[str, JsonValue], argv: list[str] | None, manifest_env: dict[str, str]) -> bool:
     requested = str(payload.get("requested_effect") or payload.get("requestedEffect") or "").lower()
     if requested in {"apply", "mutation", "external_send", "send"}:
         return True
@@ -48,8 +48,8 @@ class PolicyEngine:
 
     def evaluate(
         self,
-        payload: dict[str, Any],
-        entry: dict[str, Any] | None,
+        payload: dict[str, JsonValue],
+        entry: dict[str, JsonValue] | None,
         spec: AgentSpec | None,
         *,
         spec_hash: str | None = None,

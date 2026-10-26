@@ -5,7 +5,9 @@ import json
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import TypeAlias, Callable
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
 OPS = Path('/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops')
 
@@ -14,7 +16,7 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
 
 
-def atomic_write_json(path: Path, payload: Any) -> None:
+def atomic_write_json(path: Path, payload: JsonValue) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + '.tmp')
     tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
@@ -33,7 +35,7 @@ def report_paths(slug: str) -> tuple[Path, Path]:
     return OPS / f'{slug}-last.json', OPS / f'{slug}-last.md'
 
 
-def write_report(slug: str, payload: dict[str, Any], title: str | None = None) -> dict[str, str]:
+def write_report(slug: str, payload: dict[str, JsonValue], title: str | None = None) -> dict[str, str]:
     payload.setdefault('generatedAt', now_iso())
     payload.setdefault('ok', True)
     payload.setdefault('status', 'passed' if payload.get('ok') else 'failed')
@@ -55,7 +57,7 @@ def write_report(slug: str, payload: dict[str, Any], title: str | None = None) -
     return {'reportJson': str(json_path), 'reportMd': str(md_path)}
 
 
-def safe_main(slug: str, fn: Callable[[], dict[str, Any]], title: str | None = None, fail_exit: bool = False) -> int:
+def safe_main(slug: str, fn: Callable[[], dict[str, JsonValue]], title: str | None = None, fail_exit: bool = False) -> int:
     try:
         payload = fn()
         payload.setdefault('ok', True)

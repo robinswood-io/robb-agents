@@ -9,9 +9,11 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TypeAlias
 
 from lib.config_mutation import atomic_write_json
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
 LIVE_ROOT = Path("/srv/rbw-agents-oss")
 LIVE_OPS = Path("/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops")
@@ -32,28 +34,28 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def read_json(path: Path, default: Any = None) -> Any:
+def read_json(path: Path, default: JsonValue = None) -> JsonValue:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return default
 
 
-def atomic_json(path: Path, payload: Any) -> None:
+def atomic_json(path: Path, payload: JsonValue) -> None:
     atomic_write_json(path, payload)
 
 
-def flatten(data: Any) -> list[dict[str, Any]]:
+def flatten(data: JsonValue) -> list[dict[str, JsonValue]]:
     return [row for values in data.values() if isinstance(values, list) for row in values if isinstance(row, dict) and row.get("legacy_id")] if isinstance(data, dict) else []
 
 
-def schedule_legacy(row: dict[str, Any]) -> str | None:
+def schedule_legacy(row: dict[str, JsonValue]) -> str | None:
     payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
     value = row.get("legacy_id") or payload.get("legacy_id") or row.get("capability_id")
     return str(value) if value else None
 
 
-def fingerprint(rows: list[dict[str, Any]]) -> str:
+def fingerprint(rows: list[dict[str, JsonValue]]) -> str:
     shaped = [{"schedule_id": r.get("schedule_id"), "workflow_id": r.get("workflow_id"), "task_queue": r.get("task_queue"), "cron": r.get("cron"), "timezone": r.get("timezone", "Europe/Paris"), "enabled": bool(r.get("enabled", True)), "legacy_id": schedule_legacy(r)} for r in rows]
     return hashlib.sha256(json.dumps(sorted(shaped, key=lambda x: str(x.get("schedule_id"))), sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 

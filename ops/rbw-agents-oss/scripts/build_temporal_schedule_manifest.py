@@ -5,9 +5,11 @@ import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TypeAlias
 
 from lib.config_mutation import ConfigMutation
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
 ROOT = Path('/srv/rbw-agents-oss')
 mapping_path = ROOT / 'config/automation-mapping.json'
@@ -16,7 +18,7 @@ admin_policy_path = ROOT / 'config/admin-wrapper-queue-policy.json'
 out_path.parent.mkdir(parents=True, exist_ok=True)
 
 
-def _rows(data: Any) -> list[dict]:
+def _rows(data: JsonValue) -> list[dict]:
     if isinstance(data, list):
         return [r for r in data if isinstance(r, dict)]
     if isinstance(data, dict):
@@ -28,14 +30,14 @@ def _rows(data: Any) -> list[dict]:
     return []
 
 
-def _read_json(path: Path, default: Any) -> Any:
+def _read_json(path: Path, default: JsonValue) -> JsonValue:
     try:
         return json.loads(path.read_text(encoding='utf-8'))
     except Exception:
         return default
 
 
-def _write_json(path: Path, data: Any) -> None:
+def _write_json(path: Path, data: JsonValue) -> None:
     with ConfigMutation('build-temporal-schedule-manifest') as mutation:
         mutation.write_json(path, data)
 

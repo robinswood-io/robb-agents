@@ -5,15 +5,15 @@ from unittest.mock import patch
 from contextlib import redirect_stdout
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Any
+import __future__
 SCRIPTS=Path(__file__).resolve().parents[1]/'scripts'
 
 def funcs(file,names,constants=()):
  tree=ast.parse((SCRIPTS/file).read_text())
  nodes=[n for n in tree.body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and n.name in names or
         isinstance(n,ast.Assign) and any(isinstance(x,ast.Name) and x.id in constants for x in n.targets)]
- scope={'Any':Any,'Path':Path,'str':str,'hashlib':__import__('hashlib'),'json':json}
- exec(compile(ast.Module(body=nodes,type_ignores=[]),file,'exec'),scope)
+ scope={'Path':Path,'str':str,'hashlib':__import__('hashlib'),'json':json}
+ exec(compile(ast.Module(body=nodes,type_ignores=[]),file,'exec',flags=__future__.annotations.compiler_flag),scope)
  return scope
 
 spec=importlib.util.spec_from_file_location('observation',SCRIPTS/'oss_watchdog_observation.py')

@@ -8,7 +8,9 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterator
+from typing import TypeAlias, Iterator
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
 ROOT = Path(os.getenv('OSS_ROOT', '/srv/rbw-agents-oss'))
 WS = Path(os.getenv('CRAFT_WORKSPACE', '/home/craft/.craft-agent/workspaces/my-workspace-2'))
@@ -19,14 +21,14 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
 
 
-def read_json(path: str | Path, default: Any) -> Any:
+def read_json(path: str | Path, default: JsonValue) -> JsonValue:
     try:
         return json.loads(Path(path).read_text(encoding='utf-8'))
     except Exception:
         return default
 
 
-def write_json_atomic(path: str | Path, payload: Any) -> None:
+def write_json_atomic(path: str | Path, payload: JsonValue) -> None:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_name(f'.{p.name}.{uuid.uuid4().hex}.tmp')
@@ -34,7 +36,7 @@ def write_json_atomic(path: str | Path, payload: Any) -> None:
     tmp.replace(p)
 
 
-def append_jsonl(path: str | Path, payload: dict[str, Any]) -> None:
+def append_jsonl(path: str | Path, payload: dict[str, JsonValue]) -> None:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     with p.open('a', encoding='utf-8') as f:
@@ -47,15 +49,15 @@ def standard_report(
     ok: bool = True,
     status: str = 'processed',
     summary: str = '',
-    counts: dict[str, Any] | None = None,
-    artifacts: dict[str, Any] | None = None,
+    counts: dict[str, JsonValue] | None = None,
+    artifacts: dict[str, JsonValue] | None = None,
     blocking_reasons: list[str] | None = None,
     warning_reasons: list[str] | None = None,
-    checks: dict[str, Any] | None = None,
-    data: dict[str, Any] | None = None,
+    checks: dict[str, JsonValue] | None = None,
+    data: dict[str, JsonValue] | None = None,
     contract_version: str = 'oss-agent-report-envelope-v2',
     updated_by: str | None = None,
-) -> dict[str, Any]:
+) -> dict[str, JsonValue]:
     return {
         'generatedAt': now_iso(),
         'contractVersion': contract_version,
@@ -74,7 +76,7 @@ def standard_report(
 
 
 @contextmanager
-def run_context(capability_id: str, *, budget_seconds: int | None = None) -> Iterator[dict[str, Any]]:
+def run_context(capability_id: str, *, budget_seconds: int | None = None) -> Iterator[dict[str, JsonValue]]:
     start = time.monotonic()
     ctx = {
         'capabilityId': capability_id,
@@ -92,7 +94,7 @@ def run_context(capability_id: str, *, budget_seconds: int | None = None) -> Ite
 
 
 @contextmanager
-def stage(ctx: dict[str, Any], name: str) -> Iterator[None]:
+def stage(ctx: dict[str, JsonValue], name: str) -> Iterator[None]:
     t = time.monotonic()
     try:
         yield
@@ -100,7 +102,7 @@ def stage(ctx: dict[str, Any], name: str) -> Iterator[None]:
         ctx.setdefault('stageTimings', {})[name] = round(time.monotonic() - t, 3)
 
 
-def write_report_and_history(report_path: str | Path, history_path: str | Path, report: dict[str, Any]) -> None:
+def write_report_and_history(report_path: str | Path, history_path: str | Path, report: dict[str, JsonValue]) -> None:
     write_json_atomic(report_path, report)
     append_jsonl(history_path, {
         'ts': report.get('generatedAt') or now_iso(),

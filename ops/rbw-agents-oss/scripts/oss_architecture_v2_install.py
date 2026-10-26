@@ -10,9 +10,11 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TypeAlias
 
 from lib.config_mutation import ConfigMutation, PROTECTED_CONFIG_FILES
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
 ROOT = Path("/srv/rbw-agents-oss")
 CONFIG = ROOT / "config"
@@ -80,7 +82,7 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def load_json(path: Path, default: Any) -> Any:
+def load_json(path: Path, default: JsonValue) -> JsonValue:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
@@ -97,7 +99,7 @@ def archive_copy(path: Path, label: str = "before") -> str | None:
     return str(target)
 
 
-def atomic_write(path: Path, content: str, changes: list[dict[str, Any]], *, archive_label: str = "before") -> bool:
+def atomic_write(path: Path, content: str, changes: list[dict[str, JsonValue]], *, archive_label: str = "before") -> bool:
     old = path.read_text(encoding="utf-8") if path.exists() else None
     if old == content:
         changes.append({"action": "unchanged", "path": str(path)})
@@ -117,7 +119,7 @@ def atomic_write(path: Path, content: str, changes: list[dict[str, Any]], *, arc
     return True
 
 
-def write_json(path: Path, payload: Any, changes: list[dict[str, Any]], *, archive_label: str = "before") -> bool:
+def write_json(path: Path, payload: JsonValue, changes: list[dict[str, JsonValue]], *, archive_label: str = "before") -> bool:
     return atomic_write(path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n", changes, archive_label=archive_label)
 
 
@@ -128,7 +130,7 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
-def run(command: list[str], timeout: int = 180, env: dict[str, str] | None = None) -> dict[str, Any]:
+def run(command: list[str], timeout: int = 180, env: dict[str, str] | None = None) -> dict[str, JsonValue]:
     merged = os.environ.copy()
     if env:
         merged.update(env)
@@ -139,13 +141,13 @@ def run(command: list[str], timeout: int = 180, env: dict[str, str] | None = Non
         return {"ok": False, "returnCode": None, "command": command, "stdout": "", "stderr": repr(exc)}
 
 
-def manifest_rows(data: Any) -> list[dict[str, Any]]:
+def manifest_rows(data: JsonValue) -> list[dict[str, JsonValue]]:
     if not isinstance(data, dict):
         return []
     return [row for values in data.values() if isinstance(values, list) for row in values if isinstance(row, dict) and row.get("legacy_id")]
 
 
-def mapping_rows(data: Any) -> list[dict[str, Any]]:
+def mapping_rows(data: JsonValue) -> list[dict[str, JsonValue]]:
     if isinstance(data, list):
         return [row for row in data if isinstance(row, dict)]
     if isinstance(data, dict):
@@ -153,18 +155,18 @@ def mapping_rows(data: Any) -> list[dict[str, Any]]:
     return []
 
 
-def schedule_rows(data: Any) -> list[dict[str, Any]]:
+def schedule_rows(data: JsonValue) -> list[dict[str, JsonValue]]:
     rows = data.get("schedules", []) if isinstance(data, dict) else []
     return [row for row in rows if isinstance(row, dict)]
 
 
-def schedule_legacy(row: dict[str, Any]) -> str | None:
+def schedule_legacy(row: dict[str, JsonValue]) -> str | None:
     payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
     value = row.get("legacy_id") or payload.get("legacy_id") or row.get("capability_id")
     return str(value) if value else None
 
 
-def schedule_fingerprint(rows: list[dict[str, Any]]) -> str:
+def schedule_fingerprint(rows: list[dict[str, JsonValue]]) -> str:
     shaped = [
         {
             "schedule_id": row.get("schedule_id"),
@@ -181,7 +183,7 @@ def schedule_fingerprint(rows: list[dict[str, Any]]) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
-def patch_activities(changes: list[dict[str, Any]]) -> None:
+def patch_activities(changes: list[dict[str, JsonValue]]) -> None:
     text = ACTIVITIES.read_text(encoding="utf-8")
     if "from runtime_v2_bridge import load_manifest_entries" not in text:
         text = replace_once(
@@ -212,7 +214,7 @@ def patch_activities(changes: list[dict[str, Any]]) -> None:
     atomic_write(ACTIVITIES, text, changes)
 
 
-def patch_release_gate(changes: list[dict[str, Any]]) -> None:
+def patch_release_gate(changes: list[dict[str, JsonValue]]) -> None:
     text = RELEASE_GATE.read_text(encoding="utf-8")
     if "ARCH_CATALOG=ROOT/'scripts/oss_architecture_v2_catalog.py'" not in text:
         text = replace_once(
@@ -243,7 +245,7 @@ def patch_release_gate(changes: list[dict[str, Any]]) -> None:
     atomic_write(RELEASE_GATE, text, changes)
 
 
-def patch_slo_wrapper(changes: list[dict[str, Any]]) -> None:
+def patch_slo_wrapper(changes: list[dict[str, JsonValue]]) -> None:
     text = SLO_WRAPPER.read_text(encoding="utf-8")
     old = "ORIGINAL = ROOT / 'scripts' / 'temporal_performance_slo_guard.py.bak-postdeploy-v30-20260601T190549Z'"
     new = "ORIGINAL = ROOT / 'scripts' / 'temporal_performance_slo_core.py'"
@@ -254,7 +256,7 @@ def patch_slo_wrapper(changes: list[dict[str, Any]]) -> None:
     atomic_write(SLO_WRAPPER, text, changes)
 
 
-def classify_side_effect(row: dict[str, Any], scheduled: bool) -> dict[str, Any]:
+def classify_side_effect(row: dict[str, JsonValue], scheduled: bool) -> dict[str, JsonValue]:
     legacy_id = str(row.get("legacy_id"))
     risk = str(row.get("riskClass") or "medium_unclassified")
     command = str(row.get("command") or "").lower()
@@ -300,7 +302,7 @@ def classify_side_effect(row: dict[str, Any], scheduled: bool) -> dict[str, Any]
     }
 
 
-def update_side_effect_policy(manifest: dict[str, Any], schedules: list[dict[str, Any]], changes: list[dict[str, Any]]) -> None:
+def update_side_effect_policy(manifest: dict[str, JsonValue], schedules: list[dict[str, JsonValue]], changes: list[dict[str, JsonValue]]) -> None:
     data = load_json(SIDE_EFFECTS, {})
     rows = data.get("capabilities", []) if isinstance(data, dict) else []
     if not isinstance(rows, list):
@@ -325,7 +327,7 @@ def update_side_effect_policy(manifest: dict[str, Any], schedules: list[dict[str
     write_json(SIDE_EFFECTS, data, changes)
 
 
-def update_manifest_only_policy(manifest: dict[str, Any], mapping: Any, schedules: list[dict[str, Any]], changes: list[dict[str, Any]]) -> None:
+def update_manifest_only_policy(manifest: dict[str, JsonValue], mapping: JsonValue, schedules: list[dict[str, JsonValue]], changes: list[dict[str, JsonValue]]) -> None:
     data = load_json(MANIFEST_ONLY, {})
     rows = data.get("acceptedManifestOnly", []) if isinstance(data, dict) else []
     if not isinstance(rows, list):
@@ -364,7 +366,7 @@ def update_manifest_only_policy(manifest: dict[str, Any], mapping: Any, schedule
     write_json(MANIFEST_ONLY, data, changes)
 
 
-def update_script_coverage(changes: list[dict[str, Any]]) -> None:
+def update_script_coverage(changes: list[dict[str, JsonValue]]) -> None:
     data = load_json(SCRIPT_COVERAGE, {})
     key = "acceptedOrphanScripts" if isinstance(data, dict) and isinstance(data.get("acceptedOrphanScripts"), list) else "rows"
     rows = data.get(key, []) if isinstance(data, dict) else []
@@ -417,7 +419,7 @@ def update_script_coverage(changes: list[dict[str, Any]]) -> None:
     write_json(SCRIPT_COVERAGE, data, changes)
 
 
-def patch_docs(changes: list[dict[str, Any]]) -> None:
+def patch_docs(changes: list[dict[str, JsonValue]]) -> None:
     readme = README.read_text(encoding="utf-8")
     begin, end = "<!-- ARCHITECTURE_V2_BEGIN -->", "<!-- ARCHITECTURE_V2_END -->"
     section = f'''\n{begin}\n## Architecture agents v2 — 2026-07-12\n\n- Runtime typé : `packages/rbw_agent_runtime/` (Pydantic 2).\n- Catalogue modulaire : `config/agents-v2/catalog-v2.json` et fragments par domaine.\n- CLI : `PYTHONPATH=/srv/rbw-agents-oss/packages /srv/rbw-agents-oss/.venv/bin/python -m rbw_agent_runtime doctor`.\n- Temporal : cache mtime, policy preflight, backend `argv` pour les nouvelles specs et adaptateur `legacy_shell` explicite.\n- Inconnu/non-script : fail-closed, jamais de succès skeleton.\n- Guard : `scripts/oss_architecture_v2_guard.py`, intégré au release gate.\n- Baseline migrée : 193 wrappers et 139 schedules, sans changement de cadence.\n{end}\n'''
@@ -440,7 +442,7 @@ def patch_docs(changes: list[dict[str, Any]]) -> None:
     atomic_write(MAKEFILE, makefile, changes)
 
 
-def restore_p0_bootstrap(changes: list[dict[str, Any]]) -> dict[str, Any]:
+def restore_p0_bootstrap(changes: list[dict[str, JsonValue]]) -> dict[str, JsonValue]:
     current = P0_SCRIPT.read_text(encoding="utf-8", errors="ignore") if P0_SCRIPT.exists() else ""
     if "OFFICIAL_AGENT_TASK_CRONS" in current and "patch_agent_task_cadence" in current:
         return {"ok": True, "restored": str(P0_SCRIPT), "alreadyCanonical": True}
@@ -462,7 +464,7 @@ def restore_p0_bootstrap(changes: list[dict[str, Any]]) -> dict[str, Any]:
     return {"ok": True, "restored": str(P0_SCRIPT), "bootstrapArchive": str(target)}
 
 
-def archive_active_backups(changes: list[dict[str, Any]]) -> list[str]:
+def archive_active_backups(changes: list[dict[str, JsonValue]]) -> list[str]:
     moved: list[str] = []
     for base in (ROOT / "config", ROOT / "scripts", ROOT / "apps" / "orchestrator-temporal", ROOT / "compose"):
         if not base.exists():
@@ -482,8 +484,8 @@ def archive_active_backups(changes: list[dict[str, Any]]) -> list[str]:
     return moved
 
 
-def fix_secret_permissions(changes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    fixed: list[dict[str, Any]] = []
+def fix_secret_permissions(changes: list[dict[str, JsonValue]]) -> list[dict[str, JsonValue]]:
+    fixed: list[dict[str, JsonValue]] = []
     for base in (ROOT / "secrets", ROOT / "config" / "secrets"):
         if not base.exists():
             continue
@@ -514,8 +516,8 @@ def fix_secret_permissions(changes: list[dict[str, Any]]) -> list[dict[str, Any]
 
 def _main_impl() -> None:
     ARCHIVE.mkdir(parents=True, exist_ok=True)
-    changes: list[dict[str, Any]] = []
-    steps: dict[str, Any] = {}
+    changes: list[dict[str, JsonValue]] = []
+    steps: dict[str, JsonValue] = {}
     blockers: list[str] = []
 
     manifest = load_json(MANIFEST, {})

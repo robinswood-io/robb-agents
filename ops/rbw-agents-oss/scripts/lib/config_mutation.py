@@ -10,7 +10,9 @@ import tempfile
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import TypeAlias, Callable, Iterable
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
 ROOT = Path('/srv/rbw-agents-oss')
 CONFIG = ROOT / 'config'
@@ -46,7 +48,7 @@ def month_dir(dt: datetime | None = None) -> str:
     return f'{dt.year:04d}-{dt.month:02d}'
 
 
-def load_json(path: Path, default: Any = None) -> Any:
+def load_json(path: Path, default: JsonValue = None) -> JsonValue:
     try:
         return json.loads(path.read_text(encoding='utf-8'))
     except FileNotFoundError:
@@ -74,7 +76,7 @@ def atomic_write_text(path: Path, content: str, mode: int | None = None) -> None
             tmp.unlink()
 
 
-def atomic_write_json(path: Path, data: Any, mode: int | None = None) -> None:
+def atomic_write_json(path: Path, data: JsonValue, mode: int | None = None) -> None:
     atomic_write_text(path, json.dumps(data, indent=2, ensure_ascii=False) + '\n', mode=mode)
 
 
@@ -143,10 +145,10 @@ class ConfigMutation:
             self.backups[str(path)] = str(dest) if dest else None
         return Path(self.backups[str(path)]) if self.backups[str(path)] else None
 
-    def load_json(self, path: Path, default: Any = None) -> Any:
+    def load_json(self, path: Path, default: JsonValue = None) -> JsonValue:
         return load_json(path, default)
 
-    def write_json(self, path: Path, data: Any) -> None:
+    def write_json(self, path: Path, data: JsonValue) -> None:
         self.backup(Path(path))
         atomic_write_json(Path(path), data)
 
@@ -154,7 +156,7 @@ class ConfigMutation:
         self.backup(Path(path))
         atomic_write_text(Path(path), content, mode=mode)
 
-    def validate(self, command: list[str], *, cwd: Path | None = ROOT, timeout: int = 300) -> dict[str, Any]:
+    def validate(self, command: list[str], *, cwd: Path | None = ROOT, timeout: int = 300) -> dict[str, JsonValue]:
         proc = subprocess.run(command, cwd=str(cwd) if cwd else None, text=True, capture_output=True, timeout=timeout)
         return {
             'cmd': command,

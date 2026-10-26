@@ -6,9 +6,15 @@ import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, TypeAlias
 
 from lib.wrapper_sdk import now_iso, write_report
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
+
+if TYPE_CHECKING:
+    from temporalio.client import WorkflowExecution, WorkflowExecutionStatus
+
 
 try:
     from temporalio.client import Client
@@ -34,14 +40,14 @@ STATUS_MAP = {
 BAD_STATUSES = {'FAILED', 'TERMINATED', 'TIMED_OUT'}
 
 
-def load_json(path: Path, default: Any) -> Any:
+def load_json(path: Path, default: JsonValue) -> JsonValue:
     try:
         return json.loads(path.read_text(encoding='utf-8'))
     except Exception:
         return default
 
 
-def dt_iso(value: Any) -> str | None:
+def dt_iso(value: datetime | str | None) -> str | None:
     if value is None:
         return None
     if isinstance(value, datetime):
@@ -49,20 +55,20 @@ def dt_iso(value: Any) -> str | None:
     return str(value)
 
 
-def age_minutes(value: Any, now: datetime) -> float | None:
+def age_minutes(value: datetime | None, now: datetime) -> float | None:
     if not isinstance(value, datetime):
         return None
     return round((now - value.astimezone(timezone.utc)).total_seconds() / 60, 2)
 
 
-def status_name(value: Any) -> str:
+def status_name(value: WorkflowExecutionStatus | int | str | None) -> str:
     raw = str(value)
     if raw.startswith('WorkflowExecutionStatus.'):
         return raw.split('.')[-1]
     return STATUS_MAP.get(raw, raw)
 
 
-def wf_item(wf: Any, now: datetime) -> dict[str, Any]:
+def wf_item(wf: WorkflowExecution, now: datetime) -> dict[str, JsonValue]:
     status = status_name(getattr(wf, 'status', None))
     start = getattr(wf, 'start_time', None)
     close = getattr(wf, 'close_time', None)
@@ -80,7 +86,7 @@ def wf_item(wf: Any, now: datetime) -> dict[str, Any]:
     }
 
 
-async def collect(policy: dict[str, Any]) -> dict[str, Any]:
+async def collect(policy: dict[str, JsonValue]) -> dict[str, JsonValue]:
     if Client is None:
         raise RuntimeError('temporalio client import failed')
     target_host = policy.get('targetHost', '127.0.0.1:57233')
@@ -89,12 +95,12 @@ async def collect(policy: dict[str, Any]) -> dict[str, Any]:
     max_running = int(policy.get('maxRunningWorkflows', 100))
     client = await Client.connect(target_host, namespace=namespace)
     now = datetime.now(timezone.utc)
-    running: list[dict[str, Any]] = []
+    running: list[dict[str, JsonValue]] = []
     async for wf in client.list_workflows(query='ExecutionStatus="Running"'):
         running.append(wf_item(wf, now))
         if len(running) >= max_running:
             break
-    recent: list[dict[str, Any]] = []
+    recent: list[dict[str, JsonValue]] = []
     async for wf in client.list_workflows():
         recent.append(wf_item(wf, now))
         if len(recent) >= max_recent:
@@ -102,12 +108,12 @@ async def collect(policy: dict[str, Any]) -> dict[str, Any]:
     return {'running': running, 'recent': recent, 'targetHost': target_host, 'namespace': namespace}
 
 
-def accepted_business_entries(policy: dict[str, Any]) -> dict[str, dict[str, Any]]:
+def accepted_business_entries(policy: dict[str, JsonValue]) -> dict[str, dict[str, JsonValue]]:
     entries = policy.get('acceptedNonOkReports') if isinstance(policy, dict) else []
     return {str(entry.get('legacy_id')): entry for entry in entries or [] if isinstance(entry, dict) and entry.get('legacy_id') and 'business_failed' in [str(value) for value in entry.get('statuses') or []]}
 
 
-def workflow_legacy_id(workflow_id: Any, known_ids: set[str] | None = None) -> str:
+def workflow_legacy_id(workflow_id: JsonValue, known_ids: set[str] | None = None) -> str:
     raw = str(workflow_id or '')
     if raw.startswith('rbw.'):
         raw = raw[4:]
@@ -121,8 +127,8 @@ def workflow_legacy_id(workflow_id: Any, known_ids: set[str] | None = None) -> s
     return re.sub(r'-[0-9a-f]{10,}$', '', raw)
 
 
-def runtime_evidence_candidates(legacy_id: str, runtime_dir: Path) -> list[dict[str, Any]]:
-    candidates: list[dict[str, Any]] = []
+def runtime_evidence_candidates(legacy_id: str, runtime_dir: Path) -> list[dict[str, JsonValue]]:
+    candidates: list[dict[str, JsonValue]] = []
     latest_path = runtime_dir / f'{legacy_id}-last.json'
     latest = load_json(latest_path, {})
     if isinstance(latest, dict) and latest:
@@ -141,7 +147,7 @@ def runtime_evidence_candidates(legacy_id: str, runtime_dir: Path) -> list[dict[
     return candidates
 
 
-def controlled_business_failure(item: dict[str, Any], max_evidence_distance_seconds: int = 1800, runtime_dir: Path | None = None, runtime_status_policy: dict[str, Any] | None = None) -> dict[str, Any] | None:
+def controlled_business_failure(item: dict[str, JsonValue], max_evidence_distance_seconds: int = 1800, runtime_dir: Path | None = None, runtime_status_policy: dict[str, JsonValue] | None = None) -> dict[str, JsonValue] | None:
     """Return the nearest policy-approved runtime evidence for a business failure.
 
     Manual/random workflow suffixes are mapped against exact policy IDs. Latest and
@@ -160,7 +166,7 @@ def controlled_business_failure(item: dict[str, Any], max_evidence_distance_seco
         started_at = datetime.fromisoformat(str(item.get('startTime') or '').replace('Z', '+00:00')).astimezone(timezone.utc)
     except Exception:
         return None
-    nearest: tuple[float, dict[str, Any]] | None = None
+    nearest: tuple[float, dict[str, JsonValue]] | None = None
     for report in runtime_evidence_candidates(legacy_id, runtime_dir):
         counts = report.get('counts') if isinstance(report.get('counts'), dict) else {}
         if report.get('status') != 'business_failed' or int(counts.get('businessFailures') or 0) <= 0 or int(counts.get('technicalFailures') or 0) != 0:
@@ -178,12 +184,12 @@ def controlled_business_failure(item: dict[str, Any], max_evidence_distance_seco
     return {'legacyId': legacy_id, 'runtimeEvidencePath': report.get('path'), 'runtimeEvidenceSource': report.get('source'), 'runtimeHistoryLine': report.get('historyLine'), 'runtimeGeneratedAt': report.get('generatedAt'), 'evidenceDistanceSeconds': round(distance, 3)}
 
 
-def main() -> dict[str, Any]:
+def main() -> dict[str, JsonValue]:
     policy = load_json(POLICY, {})
     now = datetime.now(timezone.utc)
-    errors: list[dict[str, Any]] = []
-    warnings: list[dict[str, Any]] = []
-    data: dict[str, Any] = {'running': [], 'recent': [], 'targetHost': None, 'namespace': None}
+    errors: list[dict[str, JsonValue]] = []
+    warnings: list[dict[str, JsonValue]] = []
+    data: dict[str, JsonValue] = {'running': [], 'recent': [], 'targetHost': None, 'namespace': None}
     try:
         data = asyncio.run(collect(policy if isinstance(policy, dict) else {}))
     except Exception as exc:
@@ -195,8 +201,8 @@ def main() -> dict[str, Any]:
         if not str(r.get('workflowId') or '').startswith('rbw.oss-temporal-execution-slo-guard')
     ]
     self_cycle_excluded = len(data.get('recent', [])) - len(recent_rate_scope)
-    controlled_business_failures: list[dict[str, Any]] = []
-    technical_rate_scope: list[dict[str, Any]] = []
+    controlled_business_failures: list[dict[str, JsonValue]] = []
+    technical_rate_scope: list[dict[str, JsonValue]] = []
     exclude_business = bool(policy.get('excludeVerifiedBusinessFailuresFromTechnicalRate', True)) if isinstance(policy, dict) else True
     runtime_status_policy = load_json(RUNTIME_STATUS_POLICY, {})
     for row in recent_rate_scope:

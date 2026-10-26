@@ -1,0 +1,30 @@
+{
+  "status": "passed",
+  "suites": [
+    {
+      "source": "scripts/tests/test_robb_local_staging.py",
+      "cases": 44,
+      "methodsUnchanged": 45,
+      "files": [
+        "scripts/tests/robb_local_staging_fixtures.py",
+        "scripts/tests/robb_local_staging_preflight_cases.py",
+        "scripts/tests/robb_local_staging_activation_cases.py",
+        "scripts/tests/robb_local_staging_recovery_cases.py",
+        "scripts/tests/robb_local_staging_checkpoints_cases.py",
+        "scripts/tests/test_robb_local_staging.py"
+      ]
+    },
+    {
+      "source": "scripts/tests/test_install_staging_retention.py",
+      "cases": 24,
+      "methodsUnchanged": 30,
+      "files": [
+        "scripts/tests/install_staging_retention_fixtures.py",
+        "scripts/tests/install_staging_retention_publication_cases.py",
+        "scripts/tests/install_staging_retention_recovery_cases.py",
+        "scripts/tests/test_install_staging_retention.py"
+      ]
+    }
+  ],
+  "fixtureOwnership": "One native fixture owner per suite, no copied mutable state; original same-folder path anchors retained."
+}

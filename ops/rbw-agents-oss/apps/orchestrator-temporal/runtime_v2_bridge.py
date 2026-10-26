@@ -6,7 +6,7 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from pydantic import JsonValue
 
 ROOT = Path("/srv/rbw-agents-oss")
 PACKAGES = ROOT / "packages"
@@ -34,7 +34,7 @@ def runtime_report_path(legacy_id: str) -> Path:
     return _RUNTIME_REPORTS / f"{safe_id or 'unknown'}-last.json"
 
 
-def _write_runtime_report(decision: dict[str, Any], result: dict[str, Any], *, stage: str) -> dict[str, Any]:
+def _write_runtime_report(decision: dict[str, JsonValue], result: dict[str, JsonValue], *, stage: str) -> dict[str, JsonValue]:
     legacy_id = str(decision.get("legacy_id") or "unknown")
     report_path = runtime_report_path(legacy_id)
     history_path = report_path.with_name(report_path.name.replace("-last.json", "-history.jsonl"))
@@ -100,12 +100,12 @@ def _write_runtime_report(decision: dict[str, Any], result: dict[str, Any], *, s
     return report
 
 
-def load_manifest_entries() -> dict[str, dict[str, Any]]:
+def load_manifest_entries() -> dict[str, dict[str, JsonValue]]:
     """Return an mtime-cached, duplicate-checked manifest index."""
     return _REPOSITORY.manifest_entries()
 
 
-def preflight_invocation(payload: dict[str, Any], entry: dict[str, Any] | None) -> dict[str, Any]:
+def preflight_invocation(payload: dict[str, JsonValue], entry: dict[str, JsonValue] | None) -> dict[str, JsonValue]:
     legacy_id = payload.get("legacy_id")
     spec = _REPOSITORY.spec(str(legacy_id)) if legacy_id else None
     decision = _POLICY.evaluate(payload, entry, spec, spec_hash=_REPOSITORY.spec_hash(str(legacy_id)) if legacy_id else None)
@@ -138,7 +138,7 @@ def preflight_invocation(payload: dict[str, Any], entry: dict[str, Any] | None) 
     return data
 
 
-def run_structured_invocation(decision: dict[str, Any], extra_env: dict[str, Any] | None = None) -> dict[str, Any]:
+def run_structured_invocation(decision: dict[str, JsonValue], extra_env: dict[str, JsonValue] | None = None) -> dict[str, JsonValue]:
     try:
         result = execute_argv(decision, extra_env=extra_env)
     except Exception as exc:

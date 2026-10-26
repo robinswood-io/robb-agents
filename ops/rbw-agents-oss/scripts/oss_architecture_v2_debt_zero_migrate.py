@@ -9,9 +9,11 @@ import shlex
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TypeAlias
 
 from lib.config_mutation import atomic_write_json
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
 LIVE_ROOT = Path("/srv/rbw-agents-oss")
 LIVE_OPS = Path("/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops")
@@ -36,29 +38,29 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def read_json(path: Path) -> Any:
+def read_json(path: Path) -> JsonValue:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def atomic_json(path: Path, payload: Any) -> None:
+def atomic_json(path: Path, payload: JsonValue) -> None:
     atomic_write_json(path, payload)
 
 
-def flatten_manifest(data: dict[str, Any]) -> list[dict[str, Any]]:
+def flatten_manifest(data: dict[str, JsonValue]) -> list[dict[str, JsonValue]]:
     return [row for values in data.values() if isinstance(values, list) for row in values if isinstance(row, dict) and row.get("legacy_id")]
 
 
-def schedule_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
+def schedule_rows(data: dict[str, JsonValue]) -> list[dict[str, JsonValue]]:
     return [row for row in data.get("schedules", []) if isinstance(row, dict)]
 
 
-def schedule_legacy(row: dict[str, Any]) -> str | None:
+def schedule_legacy(row: dict[str, JsonValue]) -> str | None:
     payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
     value = row.get("legacy_id") or payload.get("legacy_id") or row.get("capability_id")
     return str(value) if value else None
 
 
-def schedule_fingerprint(rows: list[dict[str, Any]]) -> str:
+def schedule_fingerprint(rows: list[dict[str, JsonValue]]) -> str:
     shaped = [{
         "schedule_id": row.get("schedule_id"),
         "workflow_id": row.get("workflow_id"),
@@ -76,7 +78,7 @@ def runtime_report_path(legacy_id: str) -> str:
     return str(LIVE_OPS / "runtime-v2" / f"{legacy_id}-last.json")
 
 
-def parse_direct_command(row: dict[str, Any]) -> tuple[list[str], dict[str, str], str]:
+def parse_direct_command(row: dict[str, JsonValue]) -> tuple[list[str], dict[str, str], str]:
     legacy_id = str(row["legacy_id"])
     command = str(row.get("command") or "").strip()
     if legacy_id == "drive-audio-transcription-autopilot":
@@ -133,7 +135,7 @@ def seed_pending_report(ops: Path, legacy_id: str, live_path: str) -> Path:
     return out
 
 
-def migrate(root: Path, ops: Path) -> dict[str, Any]:
+def migrate(root: Path, ops: Path) -> dict[str, JsonValue]:
     manifest_path = root / "config" / "command-manifest.json"
     schedules_path = root / "config" / "temporal" / "schedules.json"
     policy_path = root / "config" / "registry" / "report-contract-coverage-policy.json"
@@ -155,7 +157,7 @@ def migrate(root: Path, ops: Path) -> dict[str, Any]:
     converted = 0
     env_rows = 0
     report_backfilled = 0
-    parity: list[dict[str, Any]] = []
+    parity: list[dict[str, JsonValue]] = []
     for row in rows:
         legacy_id = str(row["legacy_id"])
         original = str(row.get("command") or "")

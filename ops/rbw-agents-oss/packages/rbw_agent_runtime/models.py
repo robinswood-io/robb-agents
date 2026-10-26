@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from enum import Enum
 import re
-from typing import Any, Literal
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, field_validator, model_validator
 
 
 class ExecutionBackend(str, Enum):
@@ -124,15 +124,15 @@ class AgentSpec(BaseModel):
     task_queues: list[str] = Field(default_factory=list)
     workflow_ids: list[str] = Field(default_factory=list)
     source_status: SourceStatus
-    provenance: dict[str, Any] = Field(default_factory=dict)
+    provenance: dict[str, JsonValue] = Field(default_factory=dict)
 
 
 class Invocation(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     legacy_id: str = Field(min_length=1)
-    event: dict[str, Any] = Field(default_factory=dict)
-    approval: dict[str, Any] = Field(default_factory=dict)
+    event: dict[str, JsonValue] = Field(default_factory=dict)
+    approval: dict[str, JsonValue] = Field(default_factory=dict)
     requested_effect: str | None = None
 
 
@@ -171,7 +171,7 @@ class ExecutionResult(BaseModel):
     stderrBytes: int = 0
     stdoutTruncated: bool = False
     stderrTruncated: bool = False
-    jsonStatus: dict[str, Any] = Field(default_factory=dict)
+    jsonStatus: dict[str, JsonValue] = Field(default_factory=dict)
     executionBackend: Literal["argv"] = "argv"
 
 
@@ -184,8 +184,8 @@ class ReportEnvelope(BaseModel):
     ok: bool
     status: str
     summary: str
-    counts: dict[str, Any] = Field(default_factory=dict)
+    counts: dict[str, JsonValue] = Field(default_factory=dict)
     blockingReasons: list[str] = Field(default_factory=list)
     warningReasons: list[str] = Field(default_factory=list)
-    artifacts: dict[str, Any] = Field(default_factory=dict)
-    checks: dict[str, Any] = Field(default_factory=dict)
+    artifacts: dict[str, JsonValue] = Field(default_factory=dict)
+    checks: dict[str, JsonValue] = Field(default_factory=dict)

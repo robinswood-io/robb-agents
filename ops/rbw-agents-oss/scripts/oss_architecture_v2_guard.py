@@ -6,7 +6,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import TypeAlias
 
 ROOT = Path("/srv/rbw-agents-oss")
 sys.path.insert(0, str(ROOT / "packages"))
@@ -16,6 +16,8 @@ from lib.agent_runtime import OPS, standard_report, write_report_and_history
 from lib.config_mutation import atomic_write_text
 from rbw_agent_runtime.catalog import CatalogCompiler, flatten_manifest, read_json
 from rbw_agent_runtime.policy import PolicyEngine
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
 OUT_JSON = OPS / "oss-architecture-v2-guard-last.json"
 OUT_MD = OPS / "oss-architecture-v2-guard-last.md"
@@ -42,19 +44,19 @@ CRITICAL_AGENT_TASK_CRONS = {
 }
 
 
-def schedule_rows() -> list[dict[str, Any]]:
+def schedule_rows() -> list[dict[str, JsonValue]]:
     data = read_json(SCHEDULES, {})
     rows = data.get("schedules", []) if isinstance(data, dict) else []
     return [row for row in rows if isinstance(row, dict)]
 
 
-def schedule_legacy(row: dict[str, Any]) -> str | None:
+def schedule_legacy(row: dict[str, JsonValue]) -> str | None:
     payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
     value = row.get("legacy_id") or payload.get("legacy_id") or row.get("capability_id")
     return str(value) if value else None
 
 
-def schedule_fingerprint(rows: list[dict[str, Any]]) -> str:
+def schedule_fingerprint(rows: list[dict[str, JsonValue]]) -> str:
     shaped = [
         {
             "schedule_id": row.get("schedule_id"),
@@ -85,8 +87,8 @@ def active_backup_files() -> list[str]:
     return sorted(set(out))
 
 
-def sensitive_permission_issues() -> list[dict[str, Any]]:
-    out: list[dict[str, Any]] = []
+def sensitive_permission_issues() -> list[dict[str, JsonValue]]:
+    out: list[dict[str, JsonValue]] = []
     roots = [ROOT / "secrets", ROOT / "config" / "secrets"]
     for base in roots:
         if not base.exists():
@@ -128,7 +130,7 @@ def main() -> None:
         if current_fp != expected_fp:
             errors.append("schedule_fingerprint_drift")
 
-    by_legacy: dict[str, list[dict[str, Any]]] = {}
+    by_legacy: dict[str, list[dict[str, JsonValue]]] = {}
     for row in rows:
         legacy_id = schedule_legacy(row)
         if legacy_id:

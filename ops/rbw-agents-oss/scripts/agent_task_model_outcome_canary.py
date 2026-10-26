@@ -8,13 +8,15 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TypeAlias
 
 import requests
 
 ROOT = Path('/srv/rbw-agents-oss')
 sys.path.insert(0, str(ROOT / 'scripts'))
 from lib.agent_runtime import OPS, standard_report, write_report_and_history, write_json_atomic
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
 CAPABILITY_ID = 'agent-task-model-outcome-canary'
 COMPOSE_ENV = ROOT / 'compose' / '.env'
@@ -53,7 +55,7 @@ def env_file(path: Path) -> dict[str, str]:
     return out
 
 
-def parse_json_content(content: str) -> dict[str, Any]:
+def parse_json_content(content: str) -> dict[str, JsonValue]:
     text = content.strip()
     fence = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.S | re.I)
     candidates = [text]
@@ -72,7 +74,7 @@ def parse_json_content(content: str) -> dict[str, Any]:
     raise ValueError('model_output_not_json_object')
 
 
-def check_case(kind: str, value: dict[str, Any]) -> tuple[bool, list[str]]:
+def check_case(kind: str, value: dict[str, JsonValue]) -> tuple[bool, list[str]]:
     reasons: list[str] = []
     if kind not in {'honesty', 'prepared', 'resume', 'extract'}:
         return False, ['unknown_case_contract']
@@ -113,7 +115,7 @@ def check_case(kind: str, value: dict[str, Any]) -> tuple[bool, list[str]]:
     return not reasons, reasons
 
 
-def call(model: str, prompt: str, key: str) -> tuple[dict[str, Any], dict[str, Any]]:
+def call(model: str, prompt: str, key: str) -> tuple[dict[str, JsonValue], dict[str, JsonValue]]:
     started = time.monotonic()
     response = requests.post(LITELLM_URL, headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'}, json={'model': model, 'messages': [{'role': 'system', 'content': SYSTEM_PROMPT}, {'role': 'user', 'content': prompt}], 'temperature': 0, 'max_tokens': 350}, timeout=100)
     latency = round(time.monotonic() - started, 3)
@@ -123,27 +125,27 @@ def call(model: str, prompt: str, key: str) -> tuple[dict[str, Any], dict[str, A
     return parse_json_content(content), {'latencySeconds': latency, 'finishReason': data['choices'][0].get('finish_reason'), 'responseChars': len(content)}
 
 
-def read_json(path: Path, default: Any) -> Any:
+def read_json(path: Path, default: JsonValue) -> JsonValue:
     try:
         return json.loads(path.read_text(encoding='utf-8'))
     except Exception:
         return default
 
 
-def extraction_case(row: dict[str, Any]) -> dict[str, Any]:
+def extraction_case(row: dict[str, JsonValue]) -> dict[str, JsonValue]:
     return next((case for case in row.get('cases') or [] if case.get('caseId') == 'structured_extraction'), {})
 
 
-def free_candidate_rank(model: str, model_state: dict[str, Any]) -> tuple[Any, ...]:
+def free_candidate_rank(model: str, model_state: dict[str, JsonValue]) -> tuple[int, int, float, float, int, str]:
     preferred = FREE_PREFERRED_ORDER.index(model) if model in FREE_PREFERRED_ORDER else len(FREE_PREFERRED_ORDER)
     return (-int(bool(model_state.get('currentPrepareExtractPass'))), -int(model_state.get('consecutivePrepareExtractPasses') or 0), -float(model_state.get('passRate') or 0), float(model_state.get('prepareExtractLatencySeconds') or 999999), preferred, model)
 
 
-def build_routing_state(rows: list[dict[str, Any]], previous: dict[str, Any] | None = None, checked_at: str | None = None) -> dict[str, Any]:
+def build_routing_state(rows: list[dict[str, JsonValue]], previous: dict[str, JsonValue] | None = None, checked_at: str | None = None) -> dict[str, JsonValue]:
     previous = previous or {'models': {}}
     same_contract = previous.get('evaluationContractSha256') == EVALUATION_CONTRACT_SHA256
     previous_models = previous.get('models') if same_contract and isinstance(previous.get('models'), dict) else {}
-    model_state: dict[str, Any] = {}
+    model_state: dict[str, JsonValue] = {}
     for row in rows:
         model = str(row.get('model') or '')
         old = previous_models.get(model) if isinstance(previous_models.get(model), dict) else {}
@@ -211,7 +213,7 @@ def build_routing_state(rows: list[dict[str, Any]], previous: dict[str, Any] | N
     return state
 
 
-def update_routing_state(rows: list[dict[str, Any]]) -> dict[str, Any]:
+def update_routing_state(rows: list[dict[str, JsonValue]]) -> dict[str, JsonValue]:
     state = build_routing_state(rows, read_json(ROUTING_STATE, {'models': {}}))
     write_json_atomic(ROUTING_STATE, state)
     return state
@@ -221,7 +223,7 @@ def main() -> int:
     key = env_file(COMPOSE_ENV).get('LITELLM_MASTER_KEY', '')
     if not key:
         raise SystemExit('litellm_master_key_missing')
-    rows: list[dict[str, Any]] = []
+    rows: list[dict[str, JsonValue]] = []
     for model in MODELS:
         case_rows = []
         for case in CASES:

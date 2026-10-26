@@ -15,7 +15,9 @@ import secrets
 import stat
 import subprocess
 import sys
-from typing import Any, Callable, Sequence
+from typing import TypeAlias, Callable, Sequence
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
 
 LABEL = 'io.robinswood.robbagents.staging-retention'
@@ -551,11 +553,11 @@ def unload_for_rollback(runner: Runner, target: str) -> None:
         raise RuntimeError('LaunchAgent remains loaded after bootout')
 
 
-def _is_plain_int(value: Any) -> bool:
+def _is_plain_int(value: JsonValue) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-def validate_identity_record(value: Any, *, allow_unpublished: bool) -> dict[str, Any]:
+def validate_identity_record(value: JsonValue, *, allow_unpublished: bool) -> dict[str, JsonValue]:
     if not isinstance(value, dict) or set(value) != IDENTITY_KEYS:
         raise RuntimeError('Transaction journal contains an invalid file identity')
     for key in ('owner', 'group', 'mode', 'flags', 'size'):
@@ -577,7 +579,7 @@ def validate_identity_record(value: Any, *, allow_unpublished: bool) -> dict[str
     return value
 
 
-def identity_matches(identity: FileIdentity, record: dict[str, Any], *,
+def identity_matches(identity: FileIdentity, record: dict[str, JsonValue], *,
                      require_inode: bool) -> bool:
     fields = ('owner', 'group', 'mode', 'flags', 'size', 'sha256') if require_inode else (
         'owner', 'mode', 'size', 'sha256',
@@ -591,7 +593,7 @@ def identity_matches(identity: FileIdentity, record: dict[str, Any], *,
     )
 
 
-def replacement_expectation(data: bytes, mode: int) -> dict[str, Any]:
+def replacement_expectation(data: bytes, mode: int) -> dict[str, JsonValue]:
     return {
         'device': None, 'inode': None, 'owner': os.getuid(),
         'group': os.getgid(), 'mode': mode, 'flags': 0,
@@ -617,7 +619,7 @@ def transaction_paths(support: Path, agents: Path, token: str) -> dict[str, Path
 def new_journal(*, support: Path, agents: Path, domain: str, target: str,
                 previous_loaded: bool, previous_script: FileSnapshot | None,
                 previous_plist: FileSnapshot | None, script_bytes: bytes,
-                plist_bytes: bytes) -> dict[str, Any]:
+                plist_bytes: bytes) -> dict[str, JsonValue]:
     token = secrets.token_hex(16)
     paths = transaction_paths(support, agents, token)
     return {
@@ -640,7 +642,7 @@ def new_journal(*, support: Path, agents: Path, domain: str, target: str,
     }
 
 
-def validate_journal(value: Any, *, support: Path, agents: Path) -> dict[str, Any]:
+def validate_journal(value: JsonValue, *, support: Path, agents: Path) -> dict[str, JsonValue]:
     if not isinstance(value, dict) or set(value) != JOURNAL_KEYS:
         raise RuntimeError('Retention installer transaction journal has an invalid schema')
     if value['contract'] != JOURNAL_CONTRACT or value['version'] != JOURNAL_VERSION:
@@ -675,11 +677,11 @@ def validate_journal(value: Any, *, support: Path, agents: Path) -> dict[str, An
     return value
 
 
-def journal_bytes(journal: dict[str, Any]) -> bytes:
+def journal_bytes(journal: dict[str, JsonValue]) -> bytes:
     return (json.dumps(journal, sort_keys=True, separators=(',', ':')) + '\n').encode()
 
 
-def load_journal_file(path: Path, *, support: Path, agents: Path) -> dict[str, Any]:
+def load_journal_file(path: Path, *, support: Path, agents: Path) -> dict[str, JsonValue]:
     snapshot = snapshot_regular_file(path, require_owner=True)
     if snapshot is None:
         raise FileNotFoundError(path)
@@ -692,7 +694,7 @@ def load_journal_file(path: Path, *, support: Path, agents: Path) -> dict[str, A
     return validate_journal(value, support=support, agents=agents)
 
 
-def write_journal(journal: dict[str, Any], *, support: Path, agents: Path,
+def write_journal(journal: dict[str, JsonValue], *, support: Path, agents: Path,
                   initial: bool = False) -> None:
     validate_journal(journal, support=support, agents=agents)
     journal_path = support / JOURNAL_NAME
@@ -722,7 +724,7 @@ def write_journal(journal: dict[str, Any], *, support: Path, agents: Path,
     )
 
 
-def load_pending_journal(*, support: Path, agents: Path) -> dict[str, Any] | None:
+def load_pending_journal(*, support: Path, agents: Path) -> dict[str, JsonValue] | None:
     journal_path = support / JOURNAL_NAME
     if journal_path.exists() or journal_path.is_symlink():
         return load_journal_file(journal_path, support=support, agents=agents)
@@ -734,7 +736,7 @@ def load_pending_journal(*, support: Path, agents: Path) -> dict[str, Any] | Non
     candidates = list(support.glob(f'{JOURNAL_NAME}.next-*'))
     if not candidates:
         return None
-    valid_candidates: list[tuple[Path, dict[str, Any]]] = []
+    valid_candidates: list[tuple[Path, dict[str, JsonValue]]] = []
     for candidate in candidates:
         try:
             candidate_journal = load_journal_file(
@@ -765,7 +767,7 @@ def load_pending_journal(*, support: Path, agents: Path) -> dict[str, Any] | Non
     return journal
 
 
-def create_backup(target: Path, backup: Path, expected: dict[str, Any]) -> None:
+def create_backup(target: Path, backup: Path, expected: dict[str, JsonValue]) -> None:
     if backup.exists() or backup.is_symlink():
         raise RuntimeError(f'Transaction backup already exists: {backup}')
     os.link(target, backup, follow_symlinks=False)
@@ -775,8 +777,8 @@ def create_backup(target: Path, backup: Path, expected: dict[str, Any]) -> None:
         raise RuntimeError(f'Transaction backup does not match its source: {backup}')
 
 
-def _artifact_state(artifact: dict[str, Any], *, require_restore_backup: bool,
-                    allow_partial_staged: bool = False) -> dict[str, Any]:
+def _artifact_state(artifact: dict[str, JsonValue], *, require_restore_backup: bool,
+                    allow_partial_staged: bool = False) -> dict[str, JsonValue]:
     previous = artifact['previous']
     replacement = artifact['replacement']
     replacement_has_inode = replacement['device'] is not None
@@ -843,7 +845,7 @@ def _artifact_state(artifact: dict[str, Any], *, require_restore_backup: bool,
     }
 
 
-def validate_transaction_state(journal: dict[str, Any]) -> dict[str, dict[str, Any]]:
+def validate_transaction_state(journal: dict[str, JsonValue]) -> dict[str, dict[str, JsonValue]]:
     require_restore_backup = journal['phase'] != 'committed'
     return {
         name: _artifact_state(
@@ -855,12 +857,12 @@ def validate_transaction_state(journal: dict[str, Any]) -> dict[str, dict[str, A
 
 def _unlink_known(
     path: Path,
-    expected: dict[str, Any],
+    expected: dict[str, JsonValue],
     *,
     require_inode: bool,
     quarantine: Path | None = None,
     operation: str = 'cleanup',
-    alternatives: Sequence[tuple[dict[str, Any], bool]] = (),
+    alternatives: Sequence[tuple[dict[str, JsonValue], bool]] = (),
     allow_owned_partial: bool = False,
 ) -> None:
     quarantine = quarantine or quarantine_path(path)
@@ -895,8 +897,8 @@ def _unlink_known(
 
 
 def unlink_staged_artifact(
-    artifact: dict[str, Any],
-    state: dict[str, Any],
+    artifact: dict[str, JsonValue],
+    state: dict[str, JsonValue],
 ) -> None:
     staged = Path(artifact['staged'])
     replacement = artifact['replacement']
@@ -933,7 +935,7 @@ def unlink_staged_artifact(
         )
 
 
-def publish_artifact(artifact: dict[str, Any]) -> None:
+def publish_artifact(artifact: dict[str, JsonValue]) -> None:
     state = _artifact_state(artifact, require_restore_backup=True)
     target = Path(artifact['target'])
     staged = Path(artifact['staged'])
@@ -962,7 +964,7 @@ def publish_artifact(artifact: dict[str, Any]) -> None:
         raise RuntimeError(f'Transaction publication did not install replacement: {target}')
 
 
-def restore_artifact(artifact: dict[str, Any], *, allow_partial_staged: bool) -> None:
+def restore_artifact(artifact: dict[str, JsonValue], *, allow_partial_staged: bool) -> None:
     state = _artifact_state(
         artifact,
         require_restore_backup=True,
@@ -1026,7 +1028,7 @@ def restore_artifact(artifact: dict[str, Any], *, allow_partial_staged: bool) ->
     unlink_staged_artifact(artifact, state)
 
 
-def remove_reserved_next_journal(journal: dict[str, Any]) -> None:
+def remove_reserved_next_journal(journal: dict[str, JsonValue]) -> None:
     path = Path(journal['nextJournal'])
     candidate = path if path.exists() or path.is_symlink() else quarantine_path(path)
     snapshot = snapshot_regular_file(candidate, require_owner=True)
@@ -1058,7 +1060,7 @@ def remove_reserved_next_journal(journal: dict[str, Any]) -> None:
         )
 
 
-def remove_main_journal(journal: dict[str, Any], *, support: Path, agents: Path) -> None:
+def remove_main_journal(journal: dict[str, JsonValue], *, support: Path, agents: Path) -> None:
     path = support / JOURNAL_NAME
     candidate = path if path.exists() or path.is_symlink() else quarantine_path(path)
     current = load_journal_file(candidate, support=support, agents=agents)
@@ -1077,7 +1079,7 @@ def remove_main_journal(journal: dict[str, Any], *, support: Path, agents: Path)
         )
 
 
-def cleanup_transaction_artifacts(journal: dict[str, Any], *, support: Path,
+def cleanup_transaction_artifacts(journal: dict[str, JsonValue], *, support: Path,
                                   agents: Path,
                                   checkpoint: Checkpoint | None = None) -> None:
     states = validate_transaction_state(journal)

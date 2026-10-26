@@ -8,7 +8,9 @@ from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from statistics import mean
-from typing import Any
+from typing import TypeAlias
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
 ROOT = Path("/srv/rbw-agents-oss")
 OPS = Path("/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops")
@@ -23,14 +25,14 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def parse_ts(value: Any) -> datetime | None:
+def parse_ts(value: JsonValue) -> datetime | None:
     try:
         return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
     except Exception:
         return None
 
 
-def tail_jsonl(path: Path, limit: int = 12000) -> list[dict[str, Any]]:
+def tail_jsonl(path: Path, limit: int = 12000) -> list[dict[str, JsonValue]]:
     if not path.exists():
         return []
     rows: deque[str] = deque(maxlen=limit)
@@ -38,7 +40,7 @@ def tail_jsonl(path: Path, limit: int = 12000) -> list[dict[str, Any]]:
         for line in handle:
             if line.strip():
                 rows.append(line)
-    out: list[dict[str, Any]] = []
+    out: list[dict[str, JsonValue]] = []
     for raw in rows:
         try:
             value = json.loads(raw)
@@ -83,12 +85,12 @@ def main() -> None:
             continue
         rows.append((str(legacy_id), ts, result, row))
 
-    grouped: dict[str, list[tuple[datetime, dict[str, Any], dict[str, Any]]]] = defaultdict(list)
+    grouped: dict[str, list[tuple[datetime, dict[str, JsonValue], dict[str, JsonValue]]]] = defaultdict(list)
     for legacy_id, ts, result, row in rows:
         grouped[legacy_id].append((ts, result, row))
 
-    profiles: list[dict[str, Any]] = []
-    actions: list[dict[str, Any]] = []
+    profiles: list[dict[str, JsonValue]] = []
+    actions: list[dict[str, JsonValue]] = []
     for legacy_id, values in sorted(grouped.items()):
         durations = [float(result.get("durationSeconds") or row.get("durationSeconds") or 0) for _ts, result, row in values]
         business_failures = sum(1 for _ts, result, _row in values if result.get("businessFailure"))

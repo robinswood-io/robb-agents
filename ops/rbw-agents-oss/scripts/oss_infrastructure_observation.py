@@ -3,8 +3,10 @@
 from __future__ import annotations
 import argparse, hashlib, json, os, shlex, socket, subprocess, time
 from pathlib import Path
-from typing import Any
+from typing import TypeAlias
 from lib.wrapper_sdk import atomic_write_json, now_iso, write_report
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 ROOT=Path('/srv/rbw-agents-oss')
 OPS=Path('/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops')
 SLUG='infra-exposure-autoremediation-guard'
@@ -124,7 +126,7 @@ print(json.dumps(probe, ensure_ascii=False))
 PYREMOTE
 '''
 
-def load_json(path: Path, default: Any) -> Any:
+def load_json(path: Path, default: JsonValue) -> JsonValue:
     try:
         return json.loads(path.read_text(encoding='utf-8'))
     except Exception:
@@ -132,24 +134,24 @@ def load_json(path: Path, default: Any) -> Any:
 
 
 
-def save_json(path: Path, payload: Any) -> None:
+def save_json(path: Path, payload: JsonValue) -> None:
     atomic_write_json(path, payload)
 
 
 
-def append_jsonl(path: Path, payload: dict[str, Any]) -> None:
+def append_jsonl(path: Path, payload: dict[str, JsonValue]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open('a', encoding='utf-8') as f:
         f.write(json.dumps(payload, ensure_ascii=False) + '\n')
 
 
 
-def stable_id(payload: Any) -> str:
+def stable_id(payload: JsonValue) -> str:
     return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:16]
 
 
 
-def run_local(cmd: list[str], timeout: int = 30) -> dict[str, Any]:
+def run_local(cmd: list[str], timeout: int = 30) -> dict[str, JsonValue]:
     started = time.time()
     try:
         proc = subprocess.run(cmd, text=True, capture_output=True, timeout=timeout)
@@ -159,17 +161,17 @@ def run_local(cmd: list[str], timeout: int = 30) -> dict[str, Any]:
 
 
 
-def compact_run(result: dict[str, Any], limit: int = 1200) -> dict[str, Any]:
+def compact_run(result: dict[str, JsonValue], limit: int = 1200) -> dict[str, JsonValue]:
     return {'ok': result.get('ok'), 'exitCode': result.get('exitCode'), 'durationSeconds': result.get('durationSeconds'), 'stdoutTail': str(result.get('stdout') or '')[-limit:], 'stderr': str(result.get('stderr') or '')[-limit:]}
 
 
 
-def public_server(server: dict[str, Any]) -> dict[str, Any]:
+def public_server(server: dict[str, JsonValue]) -> dict[str, JsonValue]:
     return {k: server.get(k) for k in ['alias', 'host', 'user', 'port', 'role', 'autoRemediate', 'ovhIpService', 'local']}
 
 
 
-def ssh_command(server: dict[str, Any], remote: str, timeout: int = 60) -> dict[str, Any]:
+def ssh_command(server: dict[str, JsonValue], remote: str, timeout: int = 60) -> dict[str, JsonValue]:
     if server.get('local'):
         return run_local(['bash', '-lc', remote], timeout=timeout)
     cmd = [
@@ -181,7 +183,7 @@ def ssh_command(server: dict[str, Any], remote: str, timeout: int = 60) -> dict[
 
 
 
-def probe_server(server: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
+def probe_server(server: dict[str, JsonValue], policy: dict[str, JsonValue]) -> dict[str, JsonValue]:
     env = 'UNSAFE_PROXY_PORTS=' + shlex.quote(' '.join(map(str, policy.get('unsafePublicProxyPorts') or []))) + ' MAIL_SERVICES=' + shlex.quote(' '.join((policy.get('smtp') or {}).get('mailServices') or [])) + ' '
     if server.get('alias') == 'dev':
         env += 'RBW_DEV_DIAGNOSTICS=1 '
@@ -205,7 +207,7 @@ def public_port_reachable(host: str, port: int, timeout: float = 2.0) -> bool:
 
 
 
-def classify(server: dict[str, Any], row: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
+def classify(server: dict[str, JsonValue], row: dict[str, JsonValue], policy: dict[str, JsonValue]) -> dict[str, JsonValue]:
     probe = row.get('probe')
     if not probe:
         return {'errors': [{'code': 'ssh_or_probe_failed', 'server': server.get('alias')}], 'warnings': [], 'needs': [], 'mailServiceActive': False}

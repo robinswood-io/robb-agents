@@ -3,9 +3,11 @@ from __future__ import annotations
 import argparse, csv, json, os, re, time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TypeAlias
 from urllib.parse import urlparse
 import requests
+
+JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
 ROOT=Path('/srv/rbw-agents-oss')
 WS=Path('/home/craft/.craft-agent/workspaces/my-workspace-2')
@@ -27,15 +29,15 @@ WEBMAIL={'gmail.com','hotmail.com','outlook.com','yahoo.com','icloud.com','orang
 def now(): return datetime.now(timezone.utc).isoformat().replace('+00:00','Z')
 def norm(x): return str(x or '').strip()
 def norm_email(x): return norm(x).lower()
-def read(p:Path, default:Any):
+def read(p:Path, default:JsonValue):
     try: return json.loads(p.read_text(encoding='utf-8'))
     except Exception: return default
-def write(p:Path, data:Any):
+def write(p:Path, data:JsonValue):
     p.parent.mkdir(parents=True,exist_ok=True)
     tmp=p.with_name(f'.{p.name}.tmp-{os.getpid()}')
     tmp.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     os.replace(tmp,p)
-def append_jsonl(p:Path,row:dict[str,Any]):
+def append_jsonl(p:Path,row:dict[str,JsonValue]):
     p.parent.mkdir(parents=True,exist_ok=True)
     with p.open('a',encoding='utf-8') as f: f.write(json.dumps(row,ensure_ascii=False)+'\n')
 def domain_from_url(url:str)->str:
@@ -62,7 +64,7 @@ def hunter_key()->str|None:
             if line.startswith('HUNTER_API_KEY='):
                 return line.split('=',1)[1].strip().strip('"').strip("'")
     return None
-def hunter(path:str, params:dict[str,Any], timeout:int=7)->dict[str,Any]:
+def hunter(path:str, params:dict[str,JsonValue], timeout:int=7)->dict[str,JsonValue]:
     try:
         r=requests.get('https://api.hunter.io/v2/'+path, params=params, headers={'User-Agent':UA}, timeout=timeout)
         try: body=r.json()
@@ -72,7 +74,7 @@ def hunter(path:str, params:dict[str,Any], timeout:int=7)->dict[str,Any]:
         return {'ok':False,'statusCode':None,'body':{'error':type(e).__name__,'message':str(e)[:300]}}
 def verify_email(key,email): return hunter('email-verifier',{'email':email,'api_key':key},timeout=7)
 def email_finder(key,domain,first,last): return hunter('email-finder',{'domain':domain,'first_name':first,'last_name':last,'api_key':key},timeout=8)
-def wiki_enrich(title:str)->dict[str,Any]:
+def wiki_enrich(title:str)->dict[str,JsonValue]:
     try:
         r=requests.get('https://fr.wikipedia.org/w/api.php', params={'action':'query','format':'json','prop':'extracts|extlinks','titles':title,'explaintext':'1','exintro':'1','ellimit':'20'}, headers={'User-Agent':UA}, timeout=8)
         r.raise_for_status(); data=r.json(); pages=(data.get('query') or {}).get('pages') or {}
@@ -91,7 +93,7 @@ def wiki_enrich(title:str)->dict[str,Any]:
         return {'ok':True,'extract':extract,'externalLinks':out[:8]}
     except Exception as e:
         return {'ok':False,'error':str(e)[:300],'extract':'','externalLinks':[]}
-def eligible_for_processing(r:dict[str,Any])->bool:
+def eligible_for_processing(r:dict[str,JsonValue])->bool:
     if r.get('outreachStatus') in {'not_eligible_legacy_pr_hold','not_eligible_suppressed','not_eligible_bounced','not_eligible_weak_generic'}: return False
     if r.get('recordType')=='email_contact' and r.get('email'):
         checked=(r.get('emailVerification') or {}).get('checkedAt')
@@ -101,7 +103,7 @@ def eligible_for_processing(r:dict[str,Any])->bool:
         return True
     if r.get('enrichmentStatus') in {'verified_email_found_review_required','email_verified_review_required','profile_context_enriched','no_public_email_found_yet'}: return False
     return True
-def row_outcome(row:dict[str,Any], key:str|None, hunter_left:int)->tuple[dict[str,Any],int,dict[str,Any]]:
+def row_outcome(row:dict[str,JsonValue], key:str|None, hunter_left:int)->tuple[dict[str,JsonValue],int,dict[str,JsonValue]]:
     ts=now(); work=dict(row); event={'id':row.get('id'),'recordType':row.get('recordType'),'contactName':row.get('contactName'),'startedAt':ts,'hunterCalls':0,'status':'processed'}
     work['enrichedAt']=ts; work['outreachEligible']=False  # fail-closed: enrichment never makes a row directly sendable
     if row.get('recordType')=='email_contact' and row.get('email'):
