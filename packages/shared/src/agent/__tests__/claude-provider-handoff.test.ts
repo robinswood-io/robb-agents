@@ -2,18 +2,18 @@ import { describe, expect, it } from 'bun:test';
 import { ClaudeAgent } from '../claude-agent.ts';
 
 function persistentTurnHarness(push: (prompt: unknown, onConsumed?: () => void) => void) {
-  const runtime = Object.create(ClaudeAgent.prototype) as any;
-  runtime.persistentInput = { push };
-  runtime.currentQuery = {};
-  runtime.persistentAbortController = null;
-  runtime.currentQueryAbortController = null;
-  runtime.activeTurnChannel = null;
+  const runtime = Object.create(ClaudeAgent.prototype) as ClaudeAgent;
+  runtime["persistentInput"] = ({ push } satisfies Partial<NonNullable<ClaudeAgent["persistentInput"]>>) as Partial<NonNullable<ClaudeAgent["persistentInput"]>> as ClaudeAgent["persistentInput"];
+  runtime["currentQuery"] = ({} satisfies Partial<NonNullable<ClaudeAgent["currentQuery"]>>) as Partial<NonNullable<ClaudeAgent["currentQuery"]>> as ClaudeAgent["currentQuery"];
+  runtime["persistentAbortController"] = null;
+  runtime["currentQueryAbortController"] = null;
+  runtime["activeTurnChannel"] = null;
   return runtime;
 }
 
 describe('Claude provider handoff boundary', () => {
   it('awaits the durable write-ahead before invoking a provider dispatch', async () => {
-    const runtime = Object.create(ClaudeAgent.prototype) as any;
+    const runtime = Object.create(ClaudeAgent.prototype) as ClaudeAgent;
     const order: string[] = [];
     let release!: () => void;
     const gate = new Promise<void>(resolve => { release = resolve; });
@@ -23,7 +23,7 @@ describe('Claude provider handoff boundary', () => {
       order.push('write-ahead-durable');
     };
 
-    const pending = runtime.performProviderDispatchWriteAhead(() => {
+    const pending = runtime["performProviderDispatchWriteAhead"](() => {
       order.push('provider-write');
       return 'written';
     });
@@ -43,8 +43,8 @@ describe('Claude provider handoff boundary', () => {
     });
     runtime.onProviderHandoff = () => { order.push('handoff'); };
 
-    const stream = runtime.beginPersistentTurn(
-      { type: 'user', message: { role: 'user', content: 'Continue.' } },
+    const stream = runtime["beginPersistentTurn"](
+      { parent_tool_use_id: null, type: 'user', message: { role: 'user', content: 'Continue.' } },
       {},
       { sessionId: 'session-handoff', runtimeId: 'runtime-handoff' },
     );
@@ -53,7 +53,7 @@ describe('Claude provider handoff boundary', () => {
     expect(order).toEqual(['push']);
     acknowledgeConsumed?.();
     expect(order).toEqual(['push', 'handoff']);
-    runtime.activeTurnChannel.end();
+    runtime["activeTurnChannel"]!.end();
   });
 
   it('keeps a failed persistent prompt push pre-provider', () => {
@@ -61,42 +61,41 @@ describe('Claude provider handoff boundary', () => {
     let handoffs = 0;
     runtime.onProviderHandoff = () => { handoffs += 1; };
 
-    expect(() => runtime.beginPersistentTurn(
-      { type: 'user', message: { role: 'user', content: 'Continue.' } },
+    expect(() => runtime["beginPersistentTurn"](
+      { parent_tool_use_id: null, type: 'user', message: { role: 'user', content: 'Continue.' } },
       {},
       { sessionId: 'session-handoff', runtimeId: 'runtime-handoff' },
     )).toThrow('ETIMEDOUT');
     expect(handoffs).toBe(0);
-    runtime.activeTurnChannel.end();
+    runtime["activeTurnChannel"]!.end();
   });
 
   it('correlates a synchronous persistent push rejection after the WAL', async () => {
     const runtime = persistentTurnHarness(() => { throw new Error('ETIMEDOUT'); });
-    runtime.keepBackgroundTasksAlive = true;
-    runtime.buildSDKUserMessage = () => ({
+    Object.assign(runtime, { keepBackgroundTasksAlive: true });
+    runtime["buildSDKUserMessage"] = () => ({ parent_tool_use_id: null,
       type: 'user', message: { role: 'user', content: 'Continue.' },
     });
     let rejected = 0;
     runtime.onBeforeProviderDispatch = async () => {};
     runtime.onProviderDispatchRejected = () => { rejected += 1; };
 
-    await expect(runtime.performProviderDispatchWriteAhead(
-      () => runtime.createProviderTurnMessageSource(
+    await expect(runtime["performProviderDispatchWriteAhead"](
+      () => runtime["createProviderTurnMessageSource"](
         'Continue.', undefined, {},
         { sessionId: 'session-handoff', runtimeId: 'runtime-handoff' },
       ),
     )).rejects.toThrow('ETIMEDOUT');
     expect(rejected).toBe(1);
-    expect(runtime.activeTurnChannel).toBeDefined();
-    runtime.activeTurnChannel.end();
+    expect(runtime["activeTurnChannel"]).toBeDefined();
+    runtime["activeTurnChannel"]!.end();
   });
 
   it('does not signal a one-shot attachment prompt when the first transport write rejects', async () => {
-    const runtime = Object.create(ClaudeAgent.prototype) as any;
+    const runtime = Object.create(ClaudeAgent.prototype) as ClaudeAgent;
     let handoffs = 0;
     runtime.onProviderHandoff = () => { handoffs += 1; };
-    const prompt = runtime.createOneShotProviderInput({
-      type: 'user',
+    const prompt = runtime["createOneShotProviderInput"]({ type: 'user',
       message: {
         role: 'user',
         content: [{
@@ -120,10 +119,9 @@ describe('Claude provider handoff boundary', () => {
 
   it('signals a one-shot text prompt after its first transport write resolves', async () => {
     const order: string[] = [];
-    const runtime = Object.create(ClaudeAgent.prototype) as any;
+    const runtime = Object.create(ClaudeAgent.prototype) as ClaudeAgent;
     runtime.onProviderHandoff = () => { order.push('handoff'); };
-    const prompt = runtime.createOneShotProviderInput({
-      type: 'user',
+    const prompt = runtime["createOneShotProviderInput"]({ type: 'user',
       message: { role: 'user', content: [{ type: 'text', text: 'Continue.' }] },
       parent_tool_use_id: null,
       session_id: '',

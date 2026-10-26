@@ -34,7 +34,7 @@ function createMockRegistry(
     getAll() {
       return allModels;
     },
-  } as any;
+  };
 }
 
 describe('initial Pi session model', () => {
@@ -114,7 +114,7 @@ describe('dynamic custom-endpoint model fallback', () => {
       const registry = {
         find: (candidateProvider: string, id: string) => candidateProvider === 'custom-endpoint' && registered?.id === id ? registered : undefined,
         getAll: () => registered ? [registered] : [],
-      } as any;
+      };
       const result = resolvePiModelWithCustomFallback(registry, 'pi/gpt-5.4', provider, true, id => {
         registrationCalls += 1;
         registered = { id, name: id, provider: 'custom-endpoint' };
@@ -130,7 +130,7 @@ describe('dynamic custom-endpoint model fallback', () => {
     const registry = {
       find: () => registered ? { id: 'gpt-5.4', name: 'Alias', provider: 'custom-endpoint' } : undefined,
       getAll: () => [],
-    } as any;
+    };
     expect(resolvePiModelWithCustomFallback(registry, 'Alias', 'openai-codex', true, () => { registered = true; })).toBeUndefined();
   });
 });
@@ -275,7 +275,7 @@ describe('resolvePiModel', () => {
         getAll() {
           return [];
         },
-      } as any;
+      };
 
       const result = resolvePiModel(registry, 'my-model');
       expect(result).toBeUndefined();
@@ -320,7 +320,7 @@ describe('resolvePiModel', () => {
         getAll() {
           return [{ id: 'gpt-5.4', name: 'GPT-5.4', provider: 'github-copilot' }];
         },
-      } as any;
+      };
 
       const result = resolvePiModel(registry, 'gpt-5.4', 'github-copilot');
       expect(result).toBeDefined();
@@ -357,7 +357,7 @@ describe('resolvePiModel', () => {
           return undefined;
         },
         getAll() { return []; },
-      } as any;
+      };
 
       const result = resolvePiModel(registry, 'gpt-5.4', 'github-copilot');
       expect(result).toBeUndefined();
@@ -396,7 +396,7 @@ describe('requireExplicitPiModel', () => {
         return undefined;
       },
       getAll() { return []; },
-    } as any;
+    };
 
     expect(() => requireExplicitPiModel(registry, 'gpt-5.6-sol', 'openai')).toThrow(
       'resolved to incompatible provider "anthropic"',

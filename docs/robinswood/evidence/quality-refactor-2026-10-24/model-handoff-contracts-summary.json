@@ -1,0 +1,193 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Contrats des registres de modèles et doubles de test des transitions Claude",
+  "changes": [
+    "Le résolveur de modèles dépend de ses deux opérations publiques et conserve le type concret du modèle reçu. Sept any disparaissent des registres de test sans modifier leur comportement.",
+    "Seize prototypes de test Claude utilisent les signatures natives ; les doubles partiels vérifient leurs méthodes présentes avec satisfies. Les champs obligatoires des permissions et messages SDK sont renseignés.",
+    "Les 53 scénarios et 181 assertions ciblés sont identiques avant et après. Aucun ordonnanceur ou moteur de transition ajouté."
+  ],
+  "files": [
+    {
+      "file": "packages/pi-agent-server/src/model-resolution.test.ts",
+      "lines": 464,
+      "sha256": "25a1dfef69a940068789d0d6b18a85b4259c93645a3e82bd01f0e29148511986"
+    },
+    {
+      "file": "packages/pi-agent-server/src/model-resolution.ts",
+      "lines": 151,
+      "sha256": "6b3805b1f6b0c3759beb721a091fd0e920c013a426ebd4004e1f518a640debeb"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/claude-agent-handoff.test.ts",
+      "lines": 152,
+      "sha256": "8da80f231a8632dc7925e9d2efa673306d8421b389530f41fe94313ee3d99aca"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/claude-persistent-runtime-generation.test.ts",
+      "lines": 179,
+      "sha256": "8d4a49436eafc0475f791062d548eaefd42badc07a7e1ba4b521d2afb0938bb5"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/claude-provider-handoff.test.ts",
+      "lines": 137,
+      "sha256": "9ee1405c5c5853dd10dc8df6403d8ea147e63741e99e9bc52ea55b71d7909928"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/pi-agent-server/src/model-resolution.test.ts",
+        "packages/shared/src/agent/__tests__/claude-agent-handoff.test.ts",
+        "packages/shared/src/agent/__tests__/claude-persistent-runtime-generation.test.ts",
+        "packages/shared/src/agent/__tests__/claude-provider-handoff.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.64,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/model-handoff-contracts-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 15.53,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/model-handoff-contracts-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 9.13,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/model-handoff-contracts-shared-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/pi-agent-server/tsconfig.typecheck.json"
+      ],
+      "exitCode": 0,
+      "seconds": 7.64,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/model-handoff-contracts-pi-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/run-owned-files-eslint.py",
+        "model-handoff-contracts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.15,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/model-handoff-contracts-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 137.69,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/model-handoff-contracts-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "runtimeJavaScriptPreservedOutsideNativeFixtureCompletions": true,
+    "nativeFixtureCompletions": [
+      "Required permission names and commands",
+      "SDK user message parent_tool_use_id is null",
+      "Interrupt fixture resolves undefined as required by the SDK",
+      "Readonly setup uses Object.assign with the same property assignment"
+    ],
+    "nativeLiteralPropertyAccessEquivalent": true,
+    "removedExplicitAny": 23,
+    "newExplicitAny": 0,
+    "newRuntimeStateOrWorkflow": false,
+    "files": [
+      {
+        "file": "packages/pi-agent-server/src/model-resolution.ts",
+        "lines": 151,
+        "sha256": "6b3805b1f6b0c3759beb721a091fd0e920c013a426ebd4004e1f518a640debeb"
+      },
+      {
+        "file": "packages/pi-agent-server/src/model-resolution.test.ts",
+        "lines": 464,
+        "sha256": "25a1dfef69a940068789d0d6b18a85b4259c93645a3e82bd01f0e29148511986"
+      },
+      {
+        "file": "packages/shared/src/agent/__tests__/claude-agent-handoff.test.ts",
+        "lines": 152,
+        "sha256": "8da80f231a8632dc7925e9d2efa673306d8421b389530f41fe94313ee3d99aca"
+      },
+      {
+        "file": "packages/shared/src/agent/__tests__/claude-persistent-runtime-generation.test.ts",
+        "lines": 179,
+        "sha256": "8d4a49436eafc0475f791062d548eaefd42badc07a7e1ba4b521d2afb0938bb5"
+      },
+      {
+        "file": "packages/shared/src/agent/__tests__/claude-provider-handoff.test.ts",
+        "lines": 137,
+        "sha256": "9ee1405c5c5853dd10dc8df6403d8ea147e63741e99e9bc52ea55b71d7909928"
+      }
+    ]
+  },
+  "fullTestSummary": {
+    "pass": 10746,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "model-handoff-contracts-targeted": {
+      "pass": 53,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": {
+    "targetedPass": 53,
+    "targetedExpectCalls": 181
+  },
+  "sourceGate": {
+    "max-lines": 44,
+    "no-explicit-any": 127
+  },
+  "globalLint": {
+    "files": 3598,
+    "errors": 155,
+    "warnings": 100,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 122,
+      "max-lines": 33,
+      "react-hooks/exhaustive-deps": 79,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "44 fichiers trop longs et 127 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T04:32:19.870916+00:00"
+}
