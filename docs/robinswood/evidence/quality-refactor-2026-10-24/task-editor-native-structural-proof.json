@@ -1,0 +1,66 @@
+{
+  "status": "passed",
+  "nativeDeclarationBodiesPreserved": true,
+  "reviewedStableDependencyAdditions": {
+    "finishGenerate": [
+      "setBusy"
+    ],
+    "applyGeneratedSpec": [
+      "setAcceptanceCriteria",
+      "setAutonomy",
+      "setDescription",
+      "setGoal",
+      "setMaxRepairs",
+      "setMode",
+      "setOrchConnection",
+      "setOrchModel",
+      "setPermissionMode",
+      "setSubtasks",
+      "setTitle"
+    ]
+  },
+  "reviewedDependencyRemovals": {},
+  "nativeMainJSXAndInlineCallbacksPreserved": true,
+  "nativeRootAndActionHooksReinlinedExactly": true,
+  "viewAddsNoStateOrEffects": true,
+  "nativeValuesPassedDirectly": true,
+  "nativeImportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/TaskEditor.tsx",
+      "lines": 439,
+      "sha256": "4771ec693d9a1a233915659bb012c80dc84d5fe983083c5067105d68bb66b2a4"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/task-editor-primitives.tsx",
+      "lines": 125,
+      "sha256": "41ac0879d17d25ac426cce75f17e6bb0ccf1da9622ce65205f632c5dba036646"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/task-editor-resources.tsx",
+      "lines": 174,
+      "sha256": "6bd83cd6f8e5a58c6345a7e2cdf467d86e4d8af889998df15825ca89228ac432"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/task-editor-subtask.tsx",
+      "lines": 119,
+      "sha256": "eaaab288a990caabc2cffa211f21e00a92707c2a5dad5cde36a36f77f05be5ef"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/task-editor-results.tsx",
+      "lines": 403,
+      "sha256": "93150c7268968830c6d5c593a5c187d8423703ceb333e34e4b157ce2e8da9500"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/task-editor-content.tsx",
+      "lines": 459,
+      "sha256": "3aaf07325495a15821820a1c5fd872872672915f7dd50a5c0d2bef7b387de8d0"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/use-task-editor-generation.ts",
+      "lines": 314,
+      "sha256": "d1d862bd03e808c0e62fb24cab8dbf53835f64298210e415edbb1e55e238f492"
+    }
+  ]
+}
