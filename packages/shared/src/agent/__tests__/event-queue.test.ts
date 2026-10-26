@@ -101,7 +101,7 @@ describe('EventQueue', () => {
 
       await drainPromise;
       expect(events).toHaveLength(3);
-      expect(events.map(e => (e as any).text)).toEqual(['1', '2', '3']);
+      expect(events.map(e => (e as Extract<AgentEvent, { type: 'text_delta' }>).text)).toEqual(['1', '2', '3']);
     });
   });
 

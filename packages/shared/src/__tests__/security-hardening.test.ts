@@ -1,3 +1,4 @@
+import type { LoadedSource } from '../sources/types.ts';
 import { describe, it, expect } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -128,10 +129,10 @@ describe('Shared Package Security Hardening Regressions', () => {
               state: `state-${i}`,
               codeVerifier: 'verifier',
               redirectUri: 'https://127.0.0.1/callback',
-              source: {} as any,
+              source: { config: { id: 'qa-source', slug: 'src-1', name: 'QA', enabled: true, provider: 'qa', type: 'mcp' }, guide: null, folderPath: '/tmp/qa-source', workspaceRootPath: '/tmp/qa-workspace', workspaceId: 'ws-1' } satisfies LoadedSource,
               clientId: 'client-1',
               tokenEndpoint: 'https://auth.example.com/token',
-              provider: 'mcp' as any,
+              provider: 'mcp',
               ownerClientId: 'ws-client-1',
               workspaceId: 'ws-1',
               sourceSlug: 'src-1',

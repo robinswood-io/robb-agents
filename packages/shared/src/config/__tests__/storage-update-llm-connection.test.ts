@@ -1,3 +1,4 @@
+import type { LlmConnection } from '../storage.ts'
 import { describe, expect, it } from 'bun:test'
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
@@ -10,7 +11,7 @@ const STORAGE_MODULE_PATH = pathToFileURL(join(import.meta.dir, '..', 'storage.t
  * Create isolated config dir with a root config containing the given connections.
  * Returns paths needed by tests plus a runner to call updateLlmConnection in a subprocess.
  */
-function setup(llmConnections: any[]) {
+function setup(llmConnections: LlmConnection[]) {
   const configDir = mkdtempSync(join(tmpdir(), 'craft-agent-config-'))
   const workspaceRoot = join(configDir, 'workspaces', 'my-workspace')
   mkdirSync(workspaceRoot, { recursive: true })
@@ -57,15 +58,15 @@ function setup(llmConnections: any[]) {
     return run.exitCode === 0
   }
 
-  function readConnection(slug: string): any {
-    const config = JSON.parse(readFileSync(configPath, 'utf-8'))
-    return config.llmConnections.find((c: any) => c.slug === slug)
+  function readConnection(slug: string): LlmConnection {
+    const config = JSON.parse(readFileSync(configPath, 'utf-8')) as { llmConnections: LlmConnection[] }
+    return config.llmConnections.find(c => c.slug === slug)!
   }
 
   return { configDir, configPath, runUpdate, readConnection }
 }
 
-function makeConnection(overrides: Record<string, unknown> = {}) {
+function makeConnection(overrides: Record<string, unknown> = {}): LlmConnection {
   return {
     slug: 'custom-compat',
     name: 'My Custom Endpoint',
@@ -81,7 +82,7 @@ function makeConnection(overrides: Record<string, unknown> = {}) {
 describe('updateLlmConnection – customEndpoint', () => {
   it('preserves customEndpoint when provided in updates', () => {
     const { runUpdate, readConnection } = setup([makeConnection()])
-    const customEndpoint = { api: 'anthropic-messages' }
+    const customEndpoint: NonNullable<LlmConnection['customEndpoint']> = { api: 'anthropic-messages' }
 
     const ok = runUpdate('custom-compat', { customEndpoint })
     expect(ok).toBe(true)
@@ -91,7 +92,7 @@ describe('updateLlmConnection – customEndpoint', () => {
   })
 
   it('preserves existing customEndpoint when updates do not include it', () => {
-    const customEndpoint = { api: 'openai-completions' }
+    const customEndpoint: NonNullable<LlmConnection['customEndpoint']> = { api: 'openai-completions' }
     const { runUpdate, readConnection } = setup([makeConnection({ customEndpoint })])
 
     // Update an unrelated field

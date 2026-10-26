@@ -55,15 +55,16 @@ describe('Bedrock auth env handling', () => {
     // protects is that none of the Claude-specific Bedrock routing env vars
     // — which would mis-route the Claude SDK subprocess at AWS — leak out.
     const connection = createBedrockConnection()
+    type AuthCredentialManager = Parameters<typeof resolveAuthEnvVars>[2]
     const credentialManager = {
       getLlmApiKey: async () => 'bedrock-bearer-token',
       getLlmIamCredentials: async () => null,
-    }
+    } satisfies Pick<AuthCredentialManager, 'getLlmApiKey' | 'getLlmIamCredentials'>
 
     const result = await resolveAuthEnvVars(
       connection,
       connection.slug,
-      credentialManager as any,
+      credentialManager as Partial<AuthCredentialManager> as AuthCredentialManager,
       async () => ({}),
     )
 

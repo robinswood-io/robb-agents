@@ -26,7 +26,7 @@ describe('getDefaultModelsForConnection', () => {
     // Verify they are ModelDefinition objects, not strings
     const first = models[0]!
     expect(typeof first).toBe('object')
-    expect(typeof (first as any).id).toBe('string')
+    expect(typeof (first as Exclude<typeof first, string>).id).toBe('string')
   })
 
   it('pi with piAuthProvider returns filtered models without deprecated Opus 4.6', () => {

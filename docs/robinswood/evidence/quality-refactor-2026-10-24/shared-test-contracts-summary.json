@@ -1,0 +1,221 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Contrats natifs des tests de sources, authentification et cycle de session",
+  "changes": [
+    "Quatorze any supprimés avec SessionState, UsageUpdate, AgentEvent et LlmConnection natifs.",
+    "Les objets CredentialManager partiels vérifient leurs méthodes présentes contre le contrat réel.",
+    "Les fausses LoadedSource contiennent leurs métadonnées obligatoires ; les mêmes 152 scénarios et 411 assertions sont conservés."
+  ],
+  "files": [
+    {
+      "file": "packages/shared/src/__tests__/security-hardening.test.ts",
+      "lines": 165,
+      "sha256": "73aa3e92a385947829c9455be92d469a008e5caaeac4373385cc23b704f095cc"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/event-queue.test.ts",
+      "lines": 192,
+      "sha256": "8a3221cc04d27f650c48e7852b935abfabdcc1c56100d02d4f1b51494068ccce"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/json-prop-to-zod.test.ts",
+      "lines": 197,
+      "sha256": "dd5675db22ac2dafe3f61da44aacb48dea5439d0241afef346caa947ecae7dac"
+    },
+    {
+      "file": "packages/shared/src/agent/core/__tests__/session-lifecycle.test.ts",
+      "lines": 198,
+      "sha256": "5401a035b832dffc57e15a87e7136cc6af1f9a929b7a59b8ba3150332fa4480f"
+    },
+    {
+      "file": "packages/shared/src/agent/core/__tests__/usage-tracker.test.ts",
+      "lines": 250,
+      "sha256": "75c9779a17325461ae78217780ca51823e357b0935864d7f82108d710a8de1b1"
+    },
+    {
+      "file": "packages/shared/src/auth/__tests__/exports-and-session-context.test.ts",
+      "lines": 147,
+      "sha256": "340a09de55d2702dd7c5a60825afccc129d2d0075bbc82edb72a4b7807ac7abe"
+    },
+    {
+      "file": "packages/shared/src/config/__tests__/llm-connections-auth-env.test.ts",
+      "lines": 112,
+      "sha256": "cf81417b60be1544e4438891c16ff9b402dc137f2013b2d1ed1e97e1403c14e6"
+    },
+    {
+      "file": "packages/shared/src/config/__tests__/llm-connections.test.ts",
+      "lines": 387,
+      "sha256": "931490e08cc164803d321cd66517d2707922796b5c63ae8f5cef8b662d7ec0eb"
+    },
+    {
+      "file": "packages/shared/src/config/__tests__/storage-update-llm-connection.test.ts",
+      "lines": 162,
+      "sha256": "e0d84064060bf113503ad64e6a9e308a0fbbd299c30b89a932402377a58782ff"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 15.94,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/shared-test-contracts-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 10.15,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/shared-test-contracts-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/run-owned-files-eslint.py",
+        "shared-test-contracts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.65,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/shared-test-contracts-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/shared/src/__tests__/security-hardening.test.ts",
+        "packages/shared/src/agent/__tests__/event-queue.test.ts",
+        "packages/shared/src/agent/__tests__/json-prop-to-zod.test.ts",
+        "packages/shared/src/agent/core/__tests__/session-lifecycle.test.ts",
+        "packages/shared/src/agent/core/__tests__/usage-tracker.test.ts",
+        "packages/shared/src/auth/__tests__/exports-and-session-context.test.ts",
+        "packages/shared/src/config/__tests__/llm-connections-auth-env.test.ts",
+        "packages/shared/src/config/__tests__/llm-connections.test.ts",
+        "packages/shared/src/config/__tests__/storage-update-llm-connection.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.54,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/shared-test-contracts-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 137.94,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/shared-test-contracts-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "runtimeJavaScriptPreservedOutsideNativeFixtureCompletions": true,
+    "nativeFixtureCompletions": [
+      "LoadedSource fixtures include required identity, provider, guide and folderPath metadata; no external IO added"
+    ],
+    "nativeLiteralPropertyAccessEquivalent": true,
+    "removedExplicitAny": 14,
+    "newExplicitAny": 0,
+    "newRuntimeStateOrWorkflow": false,
+    "files": [
+      {
+        "file": "packages/shared/src/__tests__/security-hardening.test.ts",
+        "lines": 165,
+        "sha256": "73aa3e92a385947829c9455be92d469a008e5caaeac4373385cc23b704f095cc"
+      },
+      {
+        "file": "packages/shared/src/agent/__tests__/event-queue.test.ts",
+        "lines": 192,
+        "sha256": "8a3221cc04d27f650c48e7852b935abfabdcc1c56100d02d4f1b51494068ccce"
+      },
+      {
+        "file": "packages/shared/src/agent/__tests__/json-prop-to-zod.test.ts",
+        "lines": 197,
+        "sha256": "dd5675db22ac2dafe3f61da44aacb48dea5439d0241afef346caa947ecae7dac"
+      },
+      {
+        "file": "packages/shared/src/agent/core/__tests__/session-lifecycle.test.ts",
+        "lines": 198,
+        "sha256": "5401a035b832dffc57e15a87e7136cc6af1f9a929b7a59b8ba3150332fa4480f"
+      },
+      {
+        "file": "packages/shared/src/agent/core/__tests__/usage-tracker.test.ts",
+        "lines": 250,
+        "sha256": "75c9779a17325461ae78217780ca51823e357b0935864d7f82108d710a8de1b1"
+      },
+      {
+        "file": "packages/shared/src/auth/__tests__/exports-and-session-context.test.ts",
+        "lines": 147,
+        "sha256": "340a09de55d2702dd7c5a60825afccc129d2d0075bbc82edb72a4b7807ac7abe"
+      },
+      {
+        "file": "packages/shared/src/config/__tests__/llm-connections-auth-env.test.ts",
+        "lines": 112,
+        "sha256": "cf81417b60be1544e4438891c16ff9b402dc137f2013b2d1ed1e97e1403c14e6"
+      },
+      {
+        "file": "packages/shared/src/config/__tests__/llm-connections.test.ts",
+        "lines": 387,
+        "sha256": "931490e08cc164803d321cd66517d2707922796b5c63ae8f5cef8b662d7ec0eb"
+      },
+      {
+        "file": "packages/shared/src/config/__tests__/storage-update-llm-connection.test.ts",
+        "lines": 162,
+        "sha256": "e0d84064060bf113503ad64e6a9e308a0fbbd299c30b89a932402377a58782ff"
+      }
+    ]
+  },
+  "fullTestSummary": {
+    "pass": 10748,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "shared-test-contracts-targeted": {
+      "pass": 152,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": {
+    "targetedPass": 152,
+    "targetedExpectCalls": 411
+  },
+  "sourceGate": {
+    "max-lines": 42,
+    "no-explicit-any": 77
+  },
+  "globalLint": {
+    "files": 3620,
+    "errors": 103,
+    "warnings": 100,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 72,
+      "max-lines": 31,
+      "react-hooks/exhaustive-deps": 79,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "42 fichiers trop longs et 77 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T06:12:23.228242+00:00"
+}

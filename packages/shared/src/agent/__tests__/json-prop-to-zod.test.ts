@@ -167,7 +167,7 @@ describe('jsonPropToZod', () => {
   describe('depth guard', () => {
     it('returns z.unknown at max depth', () => {
       // Build a deeply nested schema (6 levels of oneOf wrapping)
-      let schema: any = { type: 'string' }
+      let schema: unknown = { type: 'string' }
       for (let i = 0; i < 6; i++) {
         schema = { oneOf: [schema] }
       }
