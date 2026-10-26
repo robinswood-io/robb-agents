@@ -1,0 +1,92 @@
+{
+  "status": "passed",
+  "nativeTestDeclarations": 114,
+  "nativeBodiesScopesHooksAndModuleOrderPreserved": true,
+  "sharedMutableStateAdded": false,
+  "maximumFileLines": 430,
+  "parts": [
+    {
+      "status": "passed",
+      "fixtureRuntimeImports": [],
+      "packing": "Contiguous native cases retain their lexical scopes, file-owned state, module initializer order and lifecycle",
+      "source": "packages/shared/src/agent/core/__tests__/tool-effect-permissions.test.ts",
+      "typing": {
+        "status": "passed",
+        "typedSourceHash": "83a5e8901425d702aa8561a5f180a9345a51c319abffe92597f85150c09af2fa",
+        "nativeSourceUnchanged": true,
+        "typeEdits": 0
+      },
+      "testDeclarations": 55,
+      "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+      "nestedSuiteIdentityPreserved": true,
+      "nativeSetupAndBeforeEachRetainedPerFile": true,
+      "nativeModuleInitializersAndOwnedStatePreserved": true,
+      "nativeExternalImportOrderPreserved": true,
+      "sharedDeclarations": [],
+      "sharedMutableStateAdded": false,
+      "runtimeImportCycles": 0,
+      "maximumFileLines": 428,
+      "currentSourceHashes": {
+        "packages/shared/src/agent/core/__tests__/tool-effect-permissions.test.ts": "7449fd956d3a019094c9d2f751e8f7871bb98e7de86983e3cf03b2c5b09dfbbc",
+        "packages/shared/src/agent/core/__tests__/tool-effect-permissions-never-replays-external-browser-tools-during-terminal-reconciliati.test.ts": "6920ab3a15e81c8c8e939fff88566830ceeceddad9f733cdc5aa371ab528bbec",
+        "packages/shared/src/agent/core/__tests__/tool-effect-permissions-never-grants-structured-ssh-source-read-authority-to-system-secre.test.ts": "4e7c63ccadbfbbb200b653dfddbfe87a1379eab5e07c4bf686cc6d0204a2e337",
+        "packages/shared/src/agent/core/__tests__/tool-effect-permissions-authorizes-only-target-bound-orion-uploads-from-the-current-struc.test.ts": "2e065dc620e0095724b06bc383b02f0277a4816df6aadb0a93f66e6450190b22",
+        "packages/shared/src/agent/core/__tests__/tool-effect-permissions-expands-only-an-exact-bounded-session-data-upload-source-for-a-bo.test.ts": "17f3f43d628f41cd5434f9c89c82cba19bde26baffbf9153e3e534cd77e20254",
+        "packages/shared/src/agent/core/__tests__/tool-effect-permissions-admits-the-bounded-pns-reads-from-the-current-structured-instruct.test.ts": "e422b38a78da4e6fdb2d3c919d52089368b0a26ecb9a979d247c925614c5e1ec",
+        "packages/shared/src/agent/core/__tests__/tool-effect-permissions-keeps-an-unknown-and-compound-out-of-broad-read-pattern-authoriza.test.ts": "8f65bac8ccc62556f69d335d3c5f4904b12e6bf839002b8131a6f8c9da113094"
+      }
+    },
+    {
+      "status": "passed",
+      "fixtureRuntimeImports": [],
+      "packing": "Contiguous native cases retain their lexical scopes, file-owned state, module initializer order and lifecycle",
+      "source": "packages/shared/src/sources/__tests__/token-refresh-manager.test.ts",
+      "typing": {
+        "status": "passed",
+        "typedSourceHash": "255782844e5f9b29cdcae576651fa767c60cf5c198067ae6c8c19719b370e5a2",
+        "nativeSourceUnchanged": true,
+        "typeEdits": 0
+      },
+      "testDeclarations": 32,
+      "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+      "nestedSuiteIdentityPreserved": true,
+      "nativeSetupAndBeforeEachRetainedPerFile": true,
+      "nativeModuleInitializersAndOwnedStatePreserved": true,
+      "nativeExternalImportOrderPreserved": true,
+      "sharedDeclarations": [],
+      "sharedMutableStateAdded": false,
+      "runtimeImportCycles": 0,
+      "maximumFileLines": 415,
+      "currentSourceHashes": {
+        "packages/shared/src/sources/__tests__/token-refresh-manager.test.ts": "d096e4dd9f0e166f42d71a9e6b85c0a5d1619147cd129cca7fc2770b0f567910",
+        "packages/shared/src/sources/__tests__/token-refresh-manager-restores-isauthenticated-on-successful-refresh.test.ts": "6134de31b17b4ff46e6ec7b862f127f4ff6ecef9ec1ac500e434a66b5d2ddbfd"
+      }
+    },
+    {
+      "status": "passed",
+      "fixtureRuntimeImports": [],
+      "packing": "Contiguous native cases retain their lexical scopes, file-owned state, module initializer order and lifecycle",
+      "source": "packages/ui/src/components/chat/__tests__/turn-utils-grouping.test.ts",
+      "typing": {
+        "status": "passed",
+        "typedSourceHash": "7304283f442f2926e4ff05196c56383dd480129538d6c89b12f2c5b146624dba",
+        "nativeSourceUnchanged": true,
+        "typeEdits": 0
+      },
+      "testDeclarations": 27,
+      "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+      "nestedSuiteIdentityPreserved": true,
+      "nativeSetupAndBeforeEachRetainedPerFile": true,
+      "nativeModuleInitializersAndOwnedStatePreserved": true,
+      "nativeExternalImportOrderPreserved": true,
+      "sharedDeclarations": [],
+      "sharedMutableStateAdded": false,
+      "runtimeImportCycles": 0,
+      "maximumFileLines": 430,
+      "currentSourceHashes": {
+        "packages/ui/src/components/chat/__tests__/turn-utils-grouping.test.ts": "6161536ae7bad04a4b24dbedc5608604ea76dddcea7b9cecbd2f9ddb7f8b6702",
+        "packages/ui/src/components/chat/__tests__/turn-utils-grouping-mixed-top-level-and-nested-tools-group-into-correct-turns.test.ts": "4dc8000e5eac34a223c554b92fd4cb16111c127470a558fb22d5b54de01303dd"
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "status": "passed",
+  "fixtureRuntimeImports": [],
+  "packing": "Contiguous native cases retain their lexical scopes, file-owned state, module initializer order and lifecycle",
+  "source": "packages/ui/src/components/chat/__tests__/turn-utils-grouping.test.ts",
+  "typing": {
+    "status": "passed",
+    "typedSourceHash": "7304283f442f2926e4ff05196c56383dd480129538d6c89b12f2c5b146624dba",
+    "nativeSourceUnchanged": true,
+    "typeEdits": 0
+  },
+  "testDeclarations": 27,
+  "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+  "nestedSuiteIdentityPreserved": true,
+  "nativeSetupAndBeforeEachRetainedPerFile": true,
+  "nativeModuleInitializersAndOwnedStatePreserved": true,
+  "nativeExternalImportOrderPreserved": true,
+  "sharedDeclarations": [],
+  "sharedMutableStateAdded": false,
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 430,
+  "currentSourceHashes": {
+    "packages/ui/src/components/chat/__tests__/turn-utils-grouping.test.ts": "6161536ae7bad04a4b24dbedc5608604ea76dddcea7b9cecbd2f9ddb7f8b6702",
+    "packages/ui/src/components/chat/__tests__/turn-utils-grouping-mixed-top-level-and-nested-tools-group-into-correct-turns.test.ts": "4dc8000e5eac34a223c554b92fd4cb16111c127470a558fb22d5b54de01303dd"
+  }
+}

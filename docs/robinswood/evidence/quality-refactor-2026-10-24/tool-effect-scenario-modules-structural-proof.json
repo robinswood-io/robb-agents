@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "fixtureRuntimeImports": [],
+  "packing": "Contiguous native cases retain their lexical scopes, file-owned state, module initializer order and lifecycle",
+  "source": "packages/shared/src/agent/core/__tests__/tool-effect-permissions.test.ts",
+  "typing": {
+    "status": "passed",
+    "typedSourceHash": "83a5e8901425d702aa8561a5f180a9345a51c319abffe92597f85150c09af2fa",
+    "nativeSourceUnchanged": true,
+    "typeEdits": 0
+  },
+  "testDeclarations": 55,
+  "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+  "nestedSuiteIdentityPreserved": true,
+  "nativeSetupAndBeforeEachRetainedPerFile": true,
+  "nativeModuleInitializersAndOwnedStatePreserved": true,
+  "nativeExternalImportOrderPreserved": true,
+  "sharedDeclarations": [],
+  "sharedMutableStateAdded": false,
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 428,
+  "currentSourceHashes": {
+    "packages/shared/src/agent/core/__tests__/tool-effect-permissions.test.ts": "7449fd956d3a019094c9d2f751e8f7871bb98e7de86983e3cf03b2c5b09dfbbc",
+    "packages/shared/src/agent/core/__tests__/tool-effect-permissions-never-replays-external-browser-tools-during-terminal-reconciliati.test.ts": "6920ab3a15e81c8c8e939fff88566830ceeceddad9f733cdc5aa371ab528bbec",
+    "packages/shared/src/agent/core/__tests__/tool-effect-permissions-never-grants-structured-ssh-source-read-authority-to-system-secre.test.ts": "4e7c63ccadbfbbb200b653dfddbfe87a1379eab5e07c4bf686cc6d0204a2e337",
+    "packages/shared/src/agent/core/__tests__/tool-effect-permissions-authorizes-only-target-bound-orion-uploads-from-the-current-struc.test.ts": "2e065dc620e0095724b06bc383b02f0277a4816df6aadb0a93f66e6450190b22",
+    "packages/shared/src/agent/core/__tests__/tool-effect-permissions-expands-only-an-exact-bounded-session-data-upload-source-for-a-bo.test.ts": "17f3f43d628f41cd5434f9c89c82cba19bde26baffbf9153e3e534cd77e20254",
+    "packages/shared/src/agent/core/__tests__/tool-effect-permissions-admits-the-bounded-pns-reads-from-the-current-structured-instruct.test.ts": "e422b38a78da4e6fdb2d3c919d52089368b0a26ecb9a979d247c925614c5e1ec",
+    "packages/shared/src/agent/core/__tests__/tool-effect-permissions-keeps-an-unknown-and-compound-out-of-broad-read-pattern-authoriza.test.ts": "8f65bac8ccc62556f69d335d3c5f4904b12e6bf839002b8131a6f8c9da113094"
+  }
+}
