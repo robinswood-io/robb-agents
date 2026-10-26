@@ -1,0 +1,43 @@
+{
+  "status": "passed",
+  "nativeDeclarationBodiesPreserved": true,
+  "reviewedStableDependencyAdditions": {},
+  "reviewedStableEffectDependencyAdditions": {},
+  "reviewedEffectDependencyRemovals": {},
+  "reviewedDependencyRemovals": {},
+  "reviewedDeferredCaptures": {},
+  "nestedPlansVerified": [],
+  "nativeMainJSXAndInlineCallbacksPreserved": true,
+  "nativeRootAndActionHooksReinlinedExactly": true,
+  "viewAddsNoStateOrEffects": true,
+  "nativeValuesPassedDirectly": true,
+  "nativeImportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ShellPanelHeader.tsx",
+      "lines": 122,
+      "sha256": "72f0d3bae90d9867c4232386c7b35d3b205764b3788d9ca6cd6d82579c1ff63e"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ShellFilterSearch.tsx",
+      "lines": 105,
+      "sha256": "314d8fbbc40b5cddc5e134839af2bb09322129f9d1d1ca4352673df764554453"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ShellFilterChoices.tsx",
+      "lines": 413,
+      "sha256": "4319ef3a5ffa33e09a21d722d887d04da3867daf9695ef19c92ccf1be26a2f4f"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ShellFilterGrouping.tsx",
+      "lines": 230,
+      "sha256": "bf68bf15d3542b24657cb50036da9640268060b73774c30ca833a5df1e9511d1"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/shell-panel-header-view.tsx",
+      "lines": 257,
+      "sha256": "2c18fa80f0d3e03754ff4943ada7a8989ecc610398fbd54e78efad683913f7e4"
+    }
+  ]
+}

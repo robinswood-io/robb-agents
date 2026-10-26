@@ -103,22 +103,18 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-26T18:32:25.993093+00:00",
+  "updatedAt": "2026-10-26T18:45:40.450435+00:00",
   "current": {
-    "lastEvidence": "chat-display-native-summary.json",
+    "lastEvidence": "app-shell-native-summary.json",
     "sourceGate": {
-      "max-lines": 3,
+      "max-lines": 2,
       "no-explicit-any": 0
     },
     "globalLint": {
-      "files": 3745,
-      "errors": 3,
-      "warnings": 10,
-      "fatal": 0,
-      "rules": {
-        "max-lines": 3,
-        "react-hooks/exhaustive-deps": 10
-      }
+      "files": 3767,
+      "errors": 2,
+      "warnings": 0,
+      "fatal": 0
     },
     "globalStatus": "En cours : autres fichiers historiques, lint et missions finales à terminer",
     "typecheckTestCoverage": {
@@ -136,7 +132,7 @@
       "rerun": "Refus PreToolUse : suite globale interdite ; tests ciblés uniquement"
     },
     "targetedTests": {
-      "pass": 27,
+      "pass": 29,
       "fail": 0
     },
     "dependencyRefresh": "npm-latest-20261026-summary.json"
