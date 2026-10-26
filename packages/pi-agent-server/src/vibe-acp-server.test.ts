@@ -11,7 +11,7 @@ describe('Mistral Vibe ACP bridge host instructions', () => {
       cwd: join(import.meta.dir, '..'),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
-    const output: Array<Record<string, any>> = [];
+    const output: Array<Record<string, unknown> & { type?: string; event?: { type?: string }; requestId?: string }> = [];
     const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });
     lines.on('line', line => output.push(JSON.parse(line)));
     const exit = new Promise<void>(resolve => child.once('exit', () => resolve()));
@@ -68,7 +68,7 @@ input.on('line', (line) => {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { HOME: directory, PATH: process.env.PATH, ROBB_VIBE_ACP_COMMAND: executable },
     });
-    const output: Array<Record<string, any>> = [];
+    const output: Array<Record<string, unknown> & { type?: string; event?: { type?: string }; requestId?: string }> = [];
     const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });
     lines.on('line', line => output.push(JSON.parse(line)));
     const exit = new Promise<void>(resolve => child.once('exit', () => resolve()));
@@ -149,7 +149,7 @@ input.on('line', (line) => {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { HOME: directory, PATH: process.env.PATH, ROBB_VIBE_ACP_COMMAND: executable },
     });
-    const output: Array<Record<string, any>> = [];
+    const output: Array<Record<string, unknown> & { type?: string; event?: { type?: string }; requestId?: string }> = [];
     let stderr = '';
     child.stderr!.on('data', chunk => { stderr += chunk; });
     const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });

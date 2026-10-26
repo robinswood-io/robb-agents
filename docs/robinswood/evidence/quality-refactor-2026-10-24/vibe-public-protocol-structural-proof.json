@@ -1,0 +1,50 @@
+{
+  "status": "passed",
+  "sdkVersion": "2.0.2",
+  "removedExplicitAny": 15,
+  "nativeHelpersPreserved": [
+    "send",
+    "debug",
+    "reportVibeError",
+    "randomId",
+    "textFromContent",
+    "isExactPromptRequest",
+    "emitEvent",
+    "selectPermissionOption",
+    "waitForPermission",
+    "emitToolUpdate",
+    "handle"
+  ],
+  "nativeHostInstructionsAndLifecyclePreserved": true,
+  "nativeCorrelatedWriteAndPreWriteProofPreserved": true,
+  "noNewQueueOrRegistry": true,
+  "removedPrivateApi": "ClientContext.attachSession",
+  "removedActiveSessionUpdateQueue": true,
+  "changes": [
+    "Typed public ACP requests and notifications",
+    "Only the current session and active turn consume streamed response chunks",
+    "Context capacity uses the native usage_update.size value",
+    "Only supported client capabilities are advertised"
+  ],
+  "officialSources": [
+    "https://agentclientprotocol.com/protocol/v1/session-setup",
+    "https://agentclientprotocol.com/protocol/v1/prompt-turn"
+  ],
+  "files": [
+    {
+      "file": "packages/pi-agent-server/src/vibe-acp-server.ts",
+      "lines": 453,
+      "sha256": "d91cc890ecad20e34cc3e35ac958b1efc3767d70ab663cc947af46d57ad59af5"
+    },
+    {
+      "file": "packages/pi-agent-server/src/vibe-acp-server.test.ts",
+      "lines": 210,
+      "sha256": "759b2acc3d680f7710a3f47efc1ff9a63f70409dc871fb9ce11773d80864d7bf"
+    },
+    {
+      "file": "packages/pi-agent-server/src/vibe-acp-public-protocol.test.ts",
+      "lines": 121,
+      "sha256": "643ce2d186b2d01223388c816ce83d9af46be6062f8bb77018d05ae3e4ac5124"
+    }
+  ]
+}
