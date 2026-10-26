@@ -280,7 +280,10 @@ if (sessionOperationContext.state.shuttingDown) {
             await abandonStoppedTurn();
             return;
         }
-        const recoveryQueued = await sessionOperationContext.owner["enqueueAutomaticTurnRecovery"](managed, 'runtime_error');
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const refreshAlreadyFailed = /OAuth (?:session expired and could not be refreshed|access token has expired.*Re-authenticate to continue)/i.test(errorMessage);
+        const recoveryQueued = refreshAlreadyFailed ? false
+            : await sessionOperationContext.owner["enqueueAutomaticTurnRecovery"](managed, 'runtime_error');
         if (recoveryHandoffPaused() || managed.activeObjective !== failedObjective) {
             sendSpan.end();
             await abandonStoppedTurn();
@@ -297,7 +300,9 @@ if (sessionOperationContext.state.shuttingDown) {
                 message.isError = true;
             }
             const details = [
-                error instanceof Error ? error.message : 'Unknown runtime error',
+                refreshAlreadyFailed
+                    ? `${errorMessage}\n\nReconnect this account in Robb Settings before retrying.`
+                    : errorMessage,
                 ...(unresolved.length ? [
                     'Tool response reception was interrupted; the operation result is unknown. Inspect the existing operation and its outputs before any retry; do not repeat it solely because the response is missing.',
                 ] : []),

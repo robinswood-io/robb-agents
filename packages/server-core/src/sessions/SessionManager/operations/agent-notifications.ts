@@ -109,7 +109,8 @@ export async function handleAgentTypedError(sessionOperationContext: SessionOper
     // 3. Retrying the message
     const isAuthError = event.error.code === 'invalid_api_key' ||
         event.error.code === 'expired_oauth_token';
-    if (isAuthError && sessionOpAttemptAuthRetry(sessionOperationContext, sessionId, managed, workspaceId, event.error.code, generationKey)) {
+    const refreshAlreadyFailed = /OAuth (?:session expired and could not be refreshed|access token has expired.*Re-authenticate to continue)/i.test(typedErrorMsg);
+    if (isAuthError && !refreshAlreadyFailed && sessionOpAttemptAuthRetry(sessionOperationContext, sessionId, managed, workspaceId, event.error.code, generationKey)) {
         return;
     }
     // A transient network or provider/service failure is safe to route through the existing

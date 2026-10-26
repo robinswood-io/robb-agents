@@ -153,6 +153,19 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
       const errorEvent = await this.callbacks.mapSDKError(
         message.error,
       );
+      const sdkMessage = message.message?.content
+        .find(block => block.type === 'text')?.text ?? '';
+      if (message.error === 'authentication_failed'
+        && /OAuth (?:session expired and could not be refreshed|access token has expired.*Re-authenticate to continue)/i.test(sdkMessage)) {
+        errorEvent.error = {
+          ...errorEvent.error,
+          code: 'expired_oauth_token',
+          title: 'Session expired',
+          message: `${sdkMessage} Reconnect this account in Settings before retrying.`,
+          actions: [{ key: 'r', label: 'Re-authenticate', action: 'reauth' }],
+          canRetry: false,
+        };
+      }
       events.push(errorEvent);
       return;
     }
@@ -420,10 +433,11 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
       contextWindow: primaryModelUsage?.contextWindow,
     };
 
-    if (msg.subtype === 'success') {
+    if (msg.subtype === 'success' && !msg.is_error) {
       events.push({ type: 'complete', usage });
     } else {
-      const errorMsg = 'errors' in msg ? msg.errors.join(', ') : 'Query failed';
+      const errorMsg = 'errors' in msg ? msg.errors.join(', ')
+        : 'result' in msg && typeof msg.result === 'string' ? msg.result : 'Query failed';
 
       const windowsError = buildWindowsSkillsDirError(errorMsg);
       if (windowsError) {

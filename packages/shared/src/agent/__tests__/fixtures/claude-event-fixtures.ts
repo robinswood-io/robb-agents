@@ -23,7 +23,7 @@ type RecordedClaudeMessage = { session_id: string; parent_tool_use_id?: string |
   | { type: 'tool_progress'; tool_use_id: string; tool_name: string;
       elapsed_time_seconds: number }
   | { type: 'result'; subtype: 'success' | 'error'; usage: RecordedUsage;
-      errors?: string[]; total_cost_usd: number;
+      errors?: string[]; is_error?: boolean; result?: string; total_cost_usd: number;
       modelUsage: Record<string, { contextWindow: number }> }
   | { type: 'system'; subtype: 'init'; tools: string[] }
   | { type: 'system'; subtype: 'compact_boundary' }

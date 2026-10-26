@@ -40,6 +40,32 @@ describe('result', () => {
       });
     });
 
+    it('does not accept an SDK result marked as an error despite its success subtype', async () => {
+      const events = await adapter.adapt(recordedClaudeMessage({
+        type: 'result', subtype: 'success', is_error: true,
+        result: 'Failed to authenticate: OAuth session expired and could not be refreshed',
+        usage: { input_tokens: 0, output_tokens: 0 }, total_cost_usd: 0,
+        modelUsage: {}, session_id: 'sess-1',
+      }));
+      expect(events[0]).toMatchObject({ type: 'error', message: expect.stringContaining('OAuth session expired') });
+    });
+
+    it('marks a failed OAuth refresh as requiring re-authentication', async () => {
+      for (const text of [
+        'Failed to authenticate: OAuth session expired and could not be refreshed',
+        'Failed to authenticate. API Error: 401 OAuth access token has expired. Re-authenticate to continue.',
+      ]) {
+        const events = await adapter.adapt(recordedClaudeMessage({
+          type: 'assistant', error: 'authentication_failed', session_id: 'sess-1',
+          message: { content: [{ type: 'text', text }] },
+        }));
+        expect(events[0]).toMatchObject({ type: 'typed_error', error: {
+          code: 'expired_oauth_token', canRetry: false,
+          message: expect.stringContaining('Reconnect this account'),
+        } });
+      }
+    });
+
     it('should emit error then complete on failure', async () => {
       const events = await adapter.adapt(recordedClaudeMessage({
         type: 'result',

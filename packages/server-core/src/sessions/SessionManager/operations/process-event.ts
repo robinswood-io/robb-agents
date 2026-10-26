@@ -140,7 +140,9 @@ export async function handleAgentError(sessionOperationContext: SessionOperation
             lowerErr.includes('authentication token is expired') ||
             lowerErr.includes('please try signing in again') ||
             (lowerErr.includes('401') && (lowerErr.includes('unauthorized') || lowerErr.includes('auth')));
-        if (isPlainAuthError && sessionOpAttemptAuthRetry(sessionOperationContext, sessionId, managed, workspaceId, undefined, generationKey)) {
+        const refreshAlreadyFailed = /OAuth (?:session expired and could not be refreshed|access token has expired.*Re-authenticate to continue)/i.test(event.message);
+        if (refreshAlreadyFailed && managed.terminalErrorGeneration === generationKey) return;
+        if (isPlainAuthError && !refreshAlreadyFailed && sessionOpAttemptAuthRetry(sessionOperationContext, sessionId, managed, workspaceId, undefined, generationKey)) {
             return;
         }
         // Normalize recognizable transient failures into the bounded same-provider recovery path.

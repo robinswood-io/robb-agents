@@ -21,7 +21,7 @@ if (!CONFIG_DIR.endsWith('/.craft-agent-dev') && !(localStaging && CONFIG_DIR.en
 if (!process.argv[2]) throw new Error('An evidence directory is required.');
 const output = resolve(process.argv[2]);
 mkdirSync(output, { recursive: true });
-const connectionSlug = getDefaultLlmConnection();
+const connectionSlug = process.argv.find(arg => arg.startsWith('--connection='))?.slice('--connection='.length) ?? getDefaultLlmConnection();
 const connection = connectionSlug ? getLlmConnection(connectionSlug) : undefined;
 const workspace = getWorkspaces()[0];
 if (!connection || !workspace) throw new Error('The development profile needs an existing connection and workspace.');
