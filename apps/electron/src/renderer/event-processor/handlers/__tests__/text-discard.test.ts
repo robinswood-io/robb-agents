@@ -2,8 +2,8 @@ import { describe, expect, it } from 'bun:test';
 import { processEvent } from '../../processor';
 import type { SessionState } from '../../types';
 
-function state(messages: any[] = []): SessionState {
-  return { session: { id: 'qa', messages, lastMessageAt: 1, isProcessing: true } as any, streaming: null };
+function state(messages: SessionState['session']['messages'] = []): SessionState {
+  return { session: { id: 'qa', messages, lastMessageAt: 1, isProcessing: true } satisfies Pick<SessionState['session'], 'id' | 'messages' | 'lastMessageAt' | 'isProcessing'> as SessionState['session'], streaming: null };
 }
 
 describe('failed stream discard in the renderer', () => {

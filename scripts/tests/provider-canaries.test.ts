@@ -42,7 +42,7 @@ describe('provider contract canaries', () => {
         ROBB_CANARY_CHATGPT_MODEL: 'gpt-canary-model',
       },
       fetchImpl: async (_input, init) => {
-        const body = JSON.parse(String(init?.body)) as Record<string, any>;
+        const body = JSON.parse(String(init?.body)) as { model?: string; input?: unknown; tools?: Array<{ type?: string; strict?: boolean | null; parameters?: { additionalProperties?: boolean } }> };
         expect(body.model).toBe('gpt-canary-model');
         expect(body.input).toEqual([{
           role: 'user',
@@ -178,9 +178,9 @@ describe('provider contract canaries', () => {
   });
 
   it('keeps every runtime on the exact Pi SDK contract', async () => {
-    const root = await Bun.file('package.json').json() as any;
-    const shared = await Bun.file('packages/shared/package.json').json() as any;
-    const piServer = await Bun.file('packages/pi-agent-server/package.json').json() as any;
+    const root = await Bun.file('package.json').json() as { dependencies: Record<string, string> };
+    const shared = await Bun.file('packages/shared/package.json').json() as { dependencies: Record<string, string> };
+    const piServer = await Bun.file('packages/pi-agent-server/package.json').json() as { dependencies: Record<string, string> };
 
     expect(root.dependencies['@earendil-works/pi-ai']).toBe('1.4.0');
     expect(root.dependencies['@earendil-works/pi-coding-agent']).toBe('1.4.0');

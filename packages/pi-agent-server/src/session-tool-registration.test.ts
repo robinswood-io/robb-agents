@@ -39,7 +39,7 @@ const stubSearchProvider: WebSearchProvider = {
   },
 };
 
-function assertValidToolDefinition(tool: ToolDefinition<any, any>): void {
+function assertValidToolDefinition(tool: Pick<ToolDefinition, 'name' | 'label' | 'description' | 'parameters'> & { execute: unknown }): void {
   expect(typeof tool.name).toBe('string');
   expect(tool.name.length).toBeGreaterThan(0);
   expect(typeof tool.label).toBe('string');

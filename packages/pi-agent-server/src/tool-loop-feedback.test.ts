@@ -1,3 +1,6 @@
+import type { AgentMessage } from '@earendil-works/pi-agent-core';
+import type { ToolLoopFeedbackChannel, ToolLoopHintMessage } from './tool-loop-feedback.ts';
+type FeedbackAgent = NonNullable<ToolLoopFeedbackChannel['session']>['agent'];
 import { describe, expect, it } from 'bun:test';
 import { ToolLoopBudget } from './tool-loop-budget.ts';
 import { finishToolLoopResult, installToolLoopFeedback, TOOL_LOOP_HINT_CUSTOM_TYPE } from './tool-loop-feedback.ts';
@@ -11,10 +14,10 @@ function hint() {
 }
 const json = '{"code":0,"success":true,"stdout":"verified"}';
 function channel() {
-  const messages: unknown[] = [];
+  const messages: ToolLoopHintMessage[] = [];
   return { messages, toolCallId: 't3', isCurrentSession: () => true,
-    signal: new AbortController().signal, onHint: (message: unknown) => { messages.push(message); },
-    session: { isStreaming: true, agent: { transformContext: undefined } as any } };
+    signal: new AbortController().signal, onHint: (message: ToolLoopHintMessage) => { messages.push(message); },
+    session: { isStreaming: true, agent: ({ transformContext: undefined } satisfies Pick<FeedbackAgent, 'transformContext'>) as Partial<FeedbackAgent> as FeedbackAgent } };
 }
 
 describe('cost guidance preserves authoritative tool results', () => {
@@ -24,10 +27,10 @@ describe('cost guidance preserves authoritative tool results', () => {
     expect(done).toBe(result);
     expect(JSON.parse(done.content[0]!.text)).toEqual({ code: 0, success: true, stdout: 'verified' });
     expect(done.content).toHaveLength(1);
-    expect(ctx.messages).toEqual([{ role: 'custom', timestamp: expect.any(Number), customType: TOOL_LOOP_HINT_CUSTOM_TYPE, content: hint().message,
+    expect(ctx.messages).toEqual([{ role: 'custom', timestamp: expect.any(Number), customType: TOOL_LOOP_HINT_CUSTOM_TYPE, content: hint().message!,
       display: true, details: { schemaVersion: 1, toolCallId: 't3' } }]);
-    expect(await ctx.session.agent.transformContext([], ctx.signal)).toEqual(ctx.messages);
-    expect(await ctx.session.agent.transformContext([], new AbortController().signal)).toEqual([]);
+    expect(await ctx.session.agent.transformContext!([], ctx.signal)).toEqual(ctx.messages);
+    expect(await ctx.session.agent.transformContext!([], new AbortController().signal)).toEqual([]);
   });
   it('preserves error details, empty output, image content, summaries and literal old-looking suffixes', async () => {
     for (const result of [
@@ -67,12 +70,12 @@ describe('cost guidance preserves authoritative tool results', () => {
     const controller = new AbortController(); const ctx = { ...channel(), signal: controller.signal };
     let unblock!: () => void;
     const gate = new Promise<void>(resolve => { unblock = resolve; });
-    const originalMessages = [{ role: 'user', content: 'existing context', timestamp: 1 }];
+    const originalMessages = [{ role: 'user', content: 'existing context', timestamp: 1 }] satisfies AgentMessage[];
     let originalCalls = 0;
     ctx.session.agent.transformContext = async () => { originalCalls++; await gate; return originalMessages; };
     installToolLoopFeedback(ctx.session);
     await finishToolLoopResult({ content: [], details: {} }, hint(), ctx);
-    const pending = ctx.session.agent.transformContext([], controller.signal);
+    const pending = ctx.session.agent.transformContext!([], controller.signal);
     controller.abort(); unblock();
     expect(await pending).toBe(originalMessages); expect(originalCalls).toBe(1);
   });
@@ -81,8 +84,8 @@ describe('cost guidance preserves authoritative tool results', () => {
     await finishToolLoopResult({ content: [], details: {} }, hint(), ctx);
     await finishToolLoopResult({ content: [], details: {} }, { ...hint(), message: 'Cost guard: latest' }, ctx);
     for (let attempt = 0; attempt < 3; attempt++) {
-      const transformed = await ctx.session.agent.transformContext([], ctx.signal);
-      expect(transformed).toHaveLength(1); expect(transformed[0].content).toBe('Cost guard: latest');
+      const transformed = await ctx.session.agent.transformContext!([], ctx.signal);
+      expect(transformed).toHaveLength(1); expect((transformed[0]! as Extract<AgentMessage, { role: 'custom' }>).content).toBe('Cost guard: latest');
     }
   });
 

@@ -1,3 +1,4 @@
+import type { ToolResultMessage, TextContent } from '@earendil-works/pi-ai';
 import { describe, expect, it } from 'bun:test';
 import { isContextOverflow } from '@earendil-works/pi-ai/compat';
 import type { AgentMessage } from '@earendil-works/pi-agent-core';
@@ -51,12 +52,12 @@ describe('Pi intra-turn context checkpoint', () => {
     expect(pruned).not.toBe(messages);
     expect(estimateIntraTurnContextTokens(pruned)).toBeLessThan(totalBefore);
     // Oldest toolResult (index 1) was pruned but keeps head and tail markers
-    const firstToolText = ((pruned[1] as any).content[0].text as string);
+    const firstToolText = ((pruned[1] as ToolResultMessage).content[0] as TextContent).text;
     expect(firstToolText).toContain('HEADER_0');
     expect(firstToolText).toContain('FOOTER_0');
     expect(firstToolText).toContain('intra-turn context pruned');
     // Original message at index 1 is untouched
-    expect(((messages[1] as any).content[0].text as string)).not.toContain('intra-turn context pruned');
+    expect(((messages[1] as ToolResultMessage).content[0] as TextContent).text).not.toContain('intra-turn context pruned');
     // Latest 6 toolResults (indices 5..10) remain completely untouched
     for (let idx = 5; idx <= 10; idx++) {
       expect(pruned[idx]).toBe(messages[idx]);
