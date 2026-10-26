@@ -22,7 +22,6 @@ setupI18n([LanguageDetector, initReactI18next])
 const resolvedLanguage = i18n.resolvedLanguage
 console.info('[i18n] renderer bootstrap push', {
   resolvedLanguage: resolvedLanguage ?? null,
-  localStorageI18nextLng: typeof window !== 'undefined' ? window.localStorage?.getItem('i18nextLng') : null,
 })
 if (resolvedLanguage) {
   void window.electronAPI?.changeLanguage?.(resolvedLanguage)

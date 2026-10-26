@@ -1,3 +1,4 @@
+import * as storage from '@/lib/local-storage'
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 import type { ComponentEntry } from './registry'
@@ -12,11 +13,10 @@ const MIN_WIDTH = 100
 const MIN_HEIGHT = 100
 const DEFAULT_WIDTH = 800
 const DEFAULT_HEIGHT = 600
-const STORAGE_KEY = 'playground-preview-size'
 
 function loadSavedSize(): { width: number; height: number } {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY)
+    const saved = storage.getRaw(storage.KEYS.playgroundPreviewSize)
     if (saved) {
       const parsed = JSON.parse(saved)
       if (typeof parsed.width === 'number' && typeof parsed.height === 'number') {
@@ -86,7 +86,7 @@ export function ComponentPreview({ component, props }: ComponentPreviewProps) {
       if (isDraggingRef.current) {
         // Save size to localStorage when drag ends
         setSize(currentSize => {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(currentSize))
+          storage.setRaw(storage.KEYS.playgroundPreviewSize, JSON.stringify(currentSize))
           return currentSize
         })
       }
@@ -122,7 +122,7 @@ export function ComponentPreview({ component, props }: ComponentPreviewProps) {
             <button
               onClick={() => {
                 setSize({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT })
-                localStorage.removeItem(STORAGE_KEY)
+                storage.remove(storage.KEYS.playgroundPreviewSize)
               }}
               className="px-2 py-1 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-colors"
             >

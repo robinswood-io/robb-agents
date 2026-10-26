@@ -1,3 +1,4 @@
+import * as storage from '@/lib/local-storage'
 import * as React from 'react'
 import { PanelRight } from 'lucide-react'
 import { RobbAgentsSymbol } from '@/components/icons/RobbAgentsSymbol'
@@ -17,8 +18,6 @@ import { ComponentPreview } from './ComponentPreview'
 import { VariantsSidebar } from './VariantsSidebar'
 import { getCategories, getComponentById, type ComponentVariant } from './registry'
 
-const SELECTED_STORAGE_KEY = 'playground-selected-component'
-const VARIANTS_SIDEBAR_KEY = 'playground-variants-sidebar-open'
 
 const FALLBACK_THEME_OPTIONS = [
   { value: 'default', label: 'Default' },
@@ -52,7 +51,7 @@ export function PlaygroundApp() {
   const [selectedId, setSelectedId] = React.useState<string | null>(() => {
     // Try to restore from localStorage
     try {
-      const stored = localStorage.getItem(SELECTED_STORAGE_KEY)
+      const stored = storage.getRaw(storage.KEYS.playgroundSelectedComponent)
       if (stored) {
         // Verify the component still exists
         const component = getComponentById(stored)
@@ -69,7 +68,7 @@ export function PlaygroundApp() {
   const [selectedVariant, setSelectedVariant] = React.useState<string | null>(null)
   const [variantsSidebarOpen, setVariantsSidebarOpen] = React.useState(() => {
     try {
-      const stored = localStorage.getItem(VARIANTS_SIDEBAR_KEY)
+      const stored = storage.getRaw(storage.KEYS.playgroundVariantsSidebarOpen)
       return stored !== 'false' // Default to open
     } catch {
       return true
@@ -125,9 +124,9 @@ export function PlaygroundApp() {
   React.useEffect(() => {
     try {
       if (selectedId) {
-        localStorage.setItem(SELECTED_STORAGE_KEY, selectedId)
+        storage.setRaw(storage.KEYS.playgroundSelectedComponent, selectedId)
       } else {
-        localStorage.removeItem(SELECTED_STORAGE_KEY)
+        storage.remove(storage.KEYS.playgroundSelectedComponent)
       }
     } catch {
       // Ignore storage errors
@@ -137,7 +136,7 @@ export function PlaygroundApp() {
   // Persist variants sidebar state
   React.useEffect(() => {
     try {
-      localStorage.setItem(VARIANTS_SIDEBAR_KEY, String(variantsSidebarOpen))
+      storage.setRaw(storage.KEYS.playgroundVariantsSidebarOpen, String(variantsSidebarOpen))
     } catch {
       // Ignore storage errors
     }

@@ -25,8 +25,6 @@ export default [
       'dist/**',
       'node_modules/**',
       'release/**',
-      '*.cjs',
-      'eslint-rules/**',
     ],
   },
 

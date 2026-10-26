@@ -1,26 +1,7 @@
 /**
- * ESLint Rule: no-localstorage
- *
- * Warns against using localStorage in Craft Agent codebase.
- * All persistent user settings should be stored in file-based configs
- * (preferences.json, workspace configs) for consistency with Craft Agent
- * architecture principles.
- *
- * Bad:
- *   localStorage.getItem('key')
- *   localStorage.setItem('key', 'value')
- *   window.localStorage.getItem('key')
- *
- * Good:
- *   // Use IPC to read/write preferences
- *   window.electronAPI.readPreferences()
- *   window.electronAPI.writePreferences(content)
- *
- * Why: File-based configs are:
- *   - Portable (sync via cloud services)
- *   - Editable (users can manually modify)
- *   - Consistent (all settings in one place)
- *   - Inspectable (easy debugging)
+ * Renderer storage boundary: durable settings use file preferences; ephemeral UI
+ * caches use the existing typed local-storage utility. Raw browser access belongs
+ * only to that utility, including its Jotai adapter.
  */
 
 /** @type {import('eslint').Rule.RuleModule} */
@@ -28,73 +9,46 @@ module.exports = {
   meta: {
     type: 'suggestion',
     docs: {
-      description: 'Disallow localStorage usage. Use file-based preferences instead.',
-      category: 'Best Practices',
+      description: 'Keep raw browser storage inside the typed UI cache utility.',
       recommended: true,
     },
     messages: {
       noLocalStorage:
-        "Avoid localStorage in Craft Agent. Store settings in ~/.craft-agent/preferences.json using window.electronAPI.readPreferences/writePreferences. See packages/shared/src/config/preferences.ts for the preferences API.",
+        'Use file-based preferences for durable settings or @/lib/local-storage for UI cache. Raw localStorage access belongs to that utility.',
     },
     schema: [],
   },
 
   create(context) {
-    /**
-     * Check if a node is a localStorage access (localStorage or window.localStorage)
-     */
-    function isLocalStorageAccess(node) {
-      // Direct: localStorage.getItem
-      if (node.type === 'Identifier' && node.name === 'localStorage') {
-        return true
-      }
+    const filename = context.filename.replaceAll('\\', '/')
+    if (filename.endsWith('/apps/electron/src/renderer/lib/local-storage.ts')) return {}
 
-      // window.localStorage
-      if (
-        node.type === 'MemberExpression' &&
-        node.object.type === 'Identifier' &&
-        node.object.name === 'window' &&
-        node.property.type === 'Identifier' &&
-        node.property.name === 'localStorage'
-      ) {
-        return true
+    function isGlobal(node) {
+      let scope = context.sourceCode.getScope(node)
+      while (scope) {
+        const variable = scope.set.get(node.name)
+        if (variable) return variable.defs.length === 0
+        scope = scope.upper
       }
-
-      return false
+      return true
     }
 
     return {
-      // Catch localStorage.getItem(), localStorage.setItem(), etc.
       MemberExpression(node) {
-        if (isLocalStorageAccess(node.object)) {
-          context.report({
-            node,
-            messageId: 'noLocalStorage',
-          })
+        const property = node.computed
+          ? node.property.type === 'Literal' && node.property.value
+          : node.property.type === 'Identifier' && node.property.name
+        if (property === 'localStorage' && node.object.type === 'Identifier'
+          && ['window', 'globalThis', 'self'].includes(node.object.name)
+          && isGlobal(node.object)) {
+          context.report({ node, messageId: 'noLocalStorage' })
         }
       },
-
-      // Catch direct localStorage references (e.g., passing it as argument)
       Identifier(node) {
-        if (node.name === 'localStorage') {
-          // Only report if it's being used (not just referenced in a type)
-          const parent = node.parent
-          if (
-            parent &&
-            parent.type === 'MemberExpression' &&
-            parent.object === node
-          ) {
-            // Already handled by MemberExpression rule
-            return
-          }
-          // Report standalone localStorage references
-          if (parent && parent.type !== 'TSTypeReference') {
-            context.report({
-              node,
-              messageId: 'noLocalStorage',
-            })
-          }
-        }
+        if (node.name !== 'localStorage' || !isGlobal(node)) return
+        const scope = context.sourceCode.getScope(node)
+        if (!scope.references.some(reference => reference.identifier === node)) return
+        context.report({ node, messageId: 'noLocalStorage' })
       },
     }
   },

@@ -1,0 +1,117 @@
+{
+  "status": "tested; final integration pending",
+  "scope": "Renderer UI storage boundary, playground callers and lint rule",
+  "changes": [
+    "Native Jotai adapter moved into existing storage owner; compatibility export retained",
+    "Four playground keys retained exactly without migration",
+    "Global-reference lint detection fixes local-variable false positives and duplicate reports; only existing storage owner accepts raw browser access",
+    "Removed two historical CJS/rule lint exclusions",
+    "Removed unnecessary raw language-storage read from bootstrap debug logging"
+  ],
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/eslint-rules/no-localstorage.cjs",
+        "apps/electron/src/renderer/lib/local-storage.ts",
+        "apps/electron/src/renderer/lib/web-safe-atom-storage.ts",
+        "apps/electron/src/renderer/main.tsx",
+        "apps/electron/src/renderer/playground/ComponentPreview.tsx",
+        "apps/electron/src/renderer/playground/PlaygroundApp.tsx",
+        "apps/electron/src/renderer/playground/Sidebar.tsx",
+        "apps/electron/src/renderer/lib/local-storage.test.ts",
+        "apps/electron/src/renderer/lib/web-safe-atom-storage.test.ts",
+        "apps/electron/eslint-rules/no-localstorage.test.cjs",
+        "apps/electron/eslint.config.mjs",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 2.96,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/renderer-storage-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 10.3,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/renderer-storage-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 34.68,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/renderer-storage-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/eslint-rules/no-localstorage.test.cjs",
+        "apps/electron/src/renderer/lib/local-storage.test.ts",
+        "apps/electron/src/renderer/lib/web-safe-atom-storage.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.26,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/renderer-storage-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 13.04,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/renderer-storage-native-build.log"
+    }
+  },
+  "targetedTests": {
+    "pass": 29,
+    "fail": 0
+  },
+  "browser": {
+    "cases": 7,
+    "errors": 0,
+    "scope": "disposable localhost browser context"
+  },
+  "sourceGate": {
+    "max-lines": 17
+  },
+  "globalLint": {
+    "files": 3663,
+    "errors": 17,
+    "warnings": 71,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 17,
+      "react-hooks/exhaustive-deps": 71
+    }
+  },
+  "limits": [
+    "17 long TypeScript files and 71 React dependency warnings remain",
+    "No account, installed app or external configuration changed",
+    "Final registry refresh, real-model missions and signed local install still pending"
+  ]
+}
