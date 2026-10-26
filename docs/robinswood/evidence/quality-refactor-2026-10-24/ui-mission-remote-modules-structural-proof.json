@@ -1,0 +1,83 @@
+{
+  "status": "passed",
+  "nativeExtractions": [
+    {
+      "status": "passed",
+      "source": "apps/electron/src/renderer/pages/MissionControlRoomPage.tsx",
+      "nativeSourceHash": "a8bf06af705e50d5c9716909ee0becb09d8261c6d1485e1ba0847e9899ede567",
+      "nativeDeclarations": 14,
+      "extractedDeclarations": 9,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "lucide-react",
+        "react-i18next",
+        "@/components/ui/button",
+        "@/components/app-shell/PanelHeader",
+        "@/components/ui/PanelHeaderCenterButton",
+        "@/context/AppShellContext",
+        "@/contexts/NavigationContext",
+        "@/lib/navigate",
+        "@/lib/utils",
+        "./mission-control-model",
+        "./mission-digital-twin-panel"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 457,
+      "files": [
+        {
+          "file": "apps/electron/src/renderer/pages/MissionControlRoomPage.tsx",
+          "lines": 457,
+          "sha256": "72077516e07f9ff3df44007e06f5beaa8a400a525f0bd46fed6352cc343dbf74"
+        },
+        {
+          "file": "apps/electron/src/renderer/pages/mission-control-detail.tsx",
+          "lines": 394,
+          "sha256": "e975ef51ceecfdac165b846587e971f892a3798645046f873469d1730943908e"
+        },
+        {
+          "file": "apps/electron/src/renderer/pages/mission-control-portfolio.tsx",
+          "lines": 199,
+          "sha256": "1d0d6fa857a0e85aa2387bdfd68fc1d86c55d71112d9b9917c617b460062340f"
+        }
+      ]
+    },
+    {
+      "status": "passed",
+      "source": "apps/webui/src/components/RemoteConnectionBadge.tsx",
+      "nativeSourceHash": "702338eaa927204f5a859ae504a80090e1cefc4aaa269ee824fb08b4122a916f",
+      "nativeDeclarations": 6,
+      "extractedDeclarations": 5,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "react-i18next",
+        "lucide-react",
+        "../pwa-install",
+        "../pwa-registration",
+        "../pwa-badging",
+        "../pwa-capabilities",
+        "./PwaCapabilitiesPanel"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 495,
+      "files": [
+        {
+          "file": "apps/webui/src/components/RemoteConnectionBadge.tsx",
+          "lines": 495,
+          "sha256": "58cc4e8fbdc1877d114fa5a83144a4a88d61dfdbbd5465b8866d982323a19740"
+        },
+        {
+          "file": "apps/webui/src/components/remote-connection-dialog.ts",
+          "lines": 82,
+          "sha256": "3b1d4ad2b5d6f75a7bbd40fa4948dc7124c75868620668b86339b188a8212b43"
+        }
+      ]
+    }
+  ],
+  "newStateOrWorkflowAdded": false
+}

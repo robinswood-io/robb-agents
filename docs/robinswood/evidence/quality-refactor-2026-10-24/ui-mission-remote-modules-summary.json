@@ -1,0 +1,290 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Décomposition des composants natifs de suivi des missions et de connexion distante",
+  "changes": [
+    "La page de missions conserve son état et ses effets natifs ; composants de portefeuille et détail extraits sans changer leurs corps ni les imports externes.",
+    "Les fonctions existantes de dialogue et la présentation des statuts distants sont extraites. Aucun hook ou mécanisme de connexion ajouté.",
+    "Neuf interactions navigateur réelles passent : filtres, pause/reprise, rafraîchissement, reconnexion, focus clavier et menu mobile. API QA uniquement."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/pages/MissionControlRoomPage.tsx",
+      "lines": 456,
+      "sha256": "72077516e07f9ff3df44007e06f5beaa8a400a525f0bd46fed6352cc343dbf74"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/mission-control-detail.tsx",
+      "lines": 393,
+      "sha256": "e975ef51ceecfdac165b846587e971f892a3798645046f873469d1730943908e"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/mission-control-portfolio.tsx",
+      "lines": 198,
+      "sha256": "1d0d6fa857a0e85aa2387bdfd68fc1d86c55d71112d9b9917c617b460062340f"
+    },
+    {
+      "file": "apps/webui/src/components/RemoteConnectionBadge.tsx",
+      "lines": 494,
+      "sha256": "58cc4e8fbdc1877d114fa5a83144a4a88d61dfdbbd5465b8866d982323a19740"
+    },
+    {
+      "file": "apps/webui/src/components/remote-connection-dialog.ts",
+      "lines": 81,
+      "sha256": "3b1d4ad2b5d6f75a7bbd40fa4948dc7124c75868620668b86339b188a8212b43"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 16.92,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/ui-mission-remote-modules-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 24.43,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/ui-mission-remote-modules-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/run-owned-files-eslint.py",
+        "ui-mission-remote-modules"
+      ],
+      "exitCode": 0,
+      "seconds": 1.49,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/ui-mission-remote-modules-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/renderer/pages/__tests__/mission-control-model.test.ts",
+        "apps/electron/src/renderer/pages/__tests__/mission-digital-twin-panel.test.ts",
+        "apps/webui/src/__tests__"
+      ],
+      "exitCode": 0,
+      "seconds": 0.16,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/ui-mission-remote-modules-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 14.1,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/ui-mission-remote-modules-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "webui:build"
+      ],
+      "exitCode": 0,
+      "seconds": 4.58,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/ui-mission-remote-modules-webui-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 139.45,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/ui-mission-remote-modules-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "nativeExtractions": [
+      {
+        "status": "passed",
+        "source": "apps/electron/src/renderer/pages/MissionControlRoomPage.tsx",
+        "nativeSourceHash": "a8bf06af705e50d5c9716909ee0becb09d8261c6d1485e1ba0847e9899ede567",
+        "nativeDeclarations": 14,
+        "extractedDeclarations": 9,
+        "nativeBodiesStateAndEffectOrderPreserved": true,
+        "nativePublicExportsAndImportedBindingsPreserved": true,
+        "nativeExternalImportOrder": [
+          "react",
+          "lucide-react",
+          "react-i18next",
+          "@/components/ui/button",
+          "@/components/app-shell/PanelHeader",
+          "@/components/ui/PanelHeaderCenterButton",
+          "@/context/AppShellContext",
+          "@/contexts/NavigationContext",
+          "@/lib/navigate",
+          "@/lib/utils",
+          "./mission-control-model",
+          "./mission-digital-twin-panel"
+        ],
+        "runtimeImportCycles": 0,
+        "newStateOrWorkflowAdded": false,
+        "maximumFileLines": 457,
+        "files": [
+          {
+            "file": "apps/electron/src/renderer/pages/MissionControlRoomPage.tsx",
+            "lines": 457,
+            "sha256": "72077516e07f9ff3df44007e06f5beaa8a400a525f0bd46fed6352cc343dbf74"
+          },
+          {
+            "file": "apps/electron/src/renderer/pages/mission-control-detail.tsx",
+            "lines": 394,
+            "sha256": "e975ef51ceecfdac165b846587e971f892a3798645046f873469d1730943908e"
+          },
+          {
+            "file": "apps/electron/src/renderer/pages/mission-control-portfolio.tsx",
+            "lines": 199,
+            "sha256": "1d0d6fa857a0e85aa2387bdfd68fc1d86c55d71112d9b9917c617b460062340f"
+          }
+        ]
+      },
+      {
+        "status": "passed",
+        "source": "apps/webui/src/components/RemoteConnectionBadge.tsx",
+        "nativeSourceHash": "702338eaa927204f5a859ae504a80090e1cefc4aaa269ee824fb08b4122a916f",
+        "nativeDeclarations": 6,
+        "extractedDeclarations": 5,
+        "nativeBodiesStateAndEffectOrderPreserved": true,
+        "nativePublicExportsAndImportedBindingsPreserved": true,
+        "nativeExternalImportOrder": [
+          "react",
+          "react-i18next",
+          "lucide-react",
+          "../pwa-install",
+          "../pwa-registration",
+          "../pwa-badging",
+          "../pwa-capabilities",
+          "./PwaCapabilitiesPanel"
+        ],
+        "runtimeImportCycles": 0,
+        "newStateOrWorkflowAdded": false,
+        "maximumFileLines": 495,
+        "files": [
+          {
+            "file": "apps/webui/src/components/RemoteConnectionBadge.tsx",
+            "lines": 495,
+            "sha256": "58cc4e8fbdc1877d114fa5a83144a4a88d61dfdbbd5465b8866d982323a19740"
+          },
+          {
+            "file": "apps/webui/src/components/remote-connection-dialog.ts",
+            "lines": 82,
+            "sha256": "3b1d4ad2b5d6f75a7bbd40fa4948dc7124c75868620668b86339b188a8212b43"
+          }
+        ]
+      }
+    ],
+    "newStateOrWorkflowAdded": false
+  },
+  "fullTestSummary": {
+    "pass": 10746,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "ui-mission-remote-modules-targeted": {
+      "pass": 12,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": null,
+  "sourceGate": {
+    "max-lines": 46,
+    "no-explicit-any": 170
+  },
+  "globalLint": {
+    "files": 3595,
+    "errors": 199,
+    "warnings": 102,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 164,
+      "max-lines": 35,
+      "react-hooks/exhaustive-deps": 81,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "46 fichiers trop longs et 170 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T04:03:57.648693+00:00",
+  "additionalProofs": {
+    "ui-mission-remote-modules-browser-proof.json": {
+      "status": "passed",
+      "url": "http://127.0.0.1:6185/",
+      "browserVersion": "145.0.7632.6",
+      "headless": false,
+      "cases": [
+        {
+          "name": "portfolio, selected mission, and final-review proof requirement",
+          "status": "passed"
+        },
+        {
+          "name": "search and status filters compose",
+          "status": "passed"
+        },
+        {
+          "name": "pause and resume update native portfolio and detail",
+          "status": "passed"
+        },
+        {
+          "name": "refresh reloads the QA portfolio",
+          "status": "passed"
+        },
+        {
+          "name": "desktop reconnect observes native connection subscription",
+          "status": "passed"
+        },
+        {
+          "name": "capability dialog traps Tab and restores focus on Escape",
+          "status": "passed"
+        },
+        {
+          "name": "mobile status menu closes with Escape and restores focus",
+          "status": "passed"
+        },
+        {
+          "name": "offline workspace action closes the mobile menu",
+          "status": "passed"
+        },
+        {
+          "name": "mobile retry reconnects and closes the dialog",
+          "status": "passed"
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [],
+      "limits": [
+        "API et connexion QA en mémoire ; aucune donnée métier, comptable ou configuration de connecteur modifiée."
+      ]
+    }
+  }
+}
