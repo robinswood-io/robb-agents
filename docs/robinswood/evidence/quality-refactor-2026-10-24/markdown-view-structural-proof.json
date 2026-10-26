@@ -1,0 +1,60 @@
+{
+  "status": "passed",
+  "source": "packages/ui/src/components/markdown/Markdown.tsx",
+  "nativeSourceHash": "f3f31543bce9899d7075af9c8d5fbb3819e29a2bc0b130960bd56dd698c3f724",
+  "nativeDeclarations": 8,
+  "extractedDeclarations": 5,
+  "nativeBodiesStateAndEffectOrderPreserved": true,
+  "nativePublicExportsAndImportedBindingsPreserved": true,
+  "nativeExternalImportOrder": [
+    "react",
+    "react-markdown",
+    "rehype-katex",
+    "rehype-raw",
+    "remark-gfm",
+    "remark-math",
+    "katex/dist/katex.min.css",
+    "../../lib/utils",
+    "./CodeBlock",
+    "./MarkdownDiffBlock",
+    "./MarkdownJsonBlock",
+    "./MarkdownMermaidBlock",
+    "./MarkdownDatatableBlock",
+    "./MarkdownSpreadsheetBlock",
+    "./MarkdownHtmlBlock",
+    "./MarkdownImageBlock",
+    "./MarkdownLatexBlock",
+    "./MarkdownPdfBlock",
+    "./MarkdownDocBlock",
+    "./linkify",
+    "./link-target",
+    "./remarkCollapsibleSections",
+    "./CollapsibleSection",
+    "./CollapsibleMarkdownContext",
+    "./safe-components",
+    "./math-options",
+    "./url-transform",
+    "./CodeBlock",
+    "./CollapsibleMarkdownContext"
+  ],
+  "runtimeImportCycles": 0,
+  "newStateOrWorkflowAdded": false,
+  "maximumFileLines": 461,
+  "files": [
+    {
+      "file": "packages/ui/src/components/markdown/Markdown.tsx",
+      "lines": 215,
+      "sha256": "db9300226d1f72343c696428e399492fdaba2816e602fce5caa8d285e29f3d25"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/markdown-context.ts",
+      "lines": 79,
+      "sha256": "e07447f3d3ae0d9839076d15d8a38733aa774c901aeb4be0343e60f8a9ad0d27"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/markdown-renderers.tsx",
+      "lines": 461,
+      "sha256": "b2ce48098507f2a16df8bbf7dc885a82ae9774ef92362c79ffc4aa483c786de2"
+    }
+  ]
+}
