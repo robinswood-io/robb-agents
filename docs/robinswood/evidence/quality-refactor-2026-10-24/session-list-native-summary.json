@@ -1,0 +1,135 @@
+{
+  "status": "tested; local integration pending remaining quality work",
+  "scope": "Native SessionList decomposition; no account or app profile writes",
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/SessionList.tsx",
+      "lines": 479,
+      "sha256": "884a2627866d5eb18452c5db4e87e3b278be94621ebd291f4c6cb920251664b1"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/session-list-data.ts",
+      "lines": 355,
+      "sha256": "dd508938c22dca836718acefc48a79f70ecba51c200cdc94963ba53fa2bc76db"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-session-list-collapse.ts",
+      "lines": 70,
+      "sha256": "73f207cceb477cc6c5327bf1035f4fc19603029e3f9b35ba1c1f90c6b8bc39c4"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/session-list-view.tsx",
+      "lines": 235,
+      "sha256": "bbd7023dd60769f5af373b9036d7e882c832acb52474359a73c09c5424ba4f90"
+    }
+  ],
+  "changes": [
+    "Pure grouping and native types moved to session-list-data",
+    "Existing collapse state/effects extracted into a single domain hook",
+    "Main and empty JSX extracted into stateless views",
+    "Removed cheap scope-string useMemo and supplied stable i18n/state-setter dependencies; language refresh verified in browser"
+  ],
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/components/app-shell/SessionList.tsx",
+        "apps/electron/src/renderer/components/app-shell/session-list-data.ts",
+        "apps/electron/src/renderer/components/app-shell/use-session-list-collapse.ts",
+        "apps/electron/src/renderer/components/app-shell/session-list-view.tsx",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 4.49,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-list-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 10.79,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-list-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 41.34,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-list-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/renderer/hooks/__tests__/useSessionSearch.test.ts",
+        "apps/electron/src/renderer/utils/__tests__/session-list-collapse.test.ts",
+        "apps/electron/src/renderer/utils/__tests__/session-subagent-summary.test.ts",
+        "apps/electron/src/renderer/config/__tests__/session-status-config.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.22,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-list-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 14.67,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-list-native-build.log"
+    }
+  },
+  "focusedTests": {
+    "pass": 22,
+    "fail": 0,
+    "skip": 0
+  },
+  "browser": {
+    "before": 5,
+    "after": 6,
+    "errors": 0,
+    "added": "English/French date-header refresh"
+  },
+  "sourceGate": {
+    "max-lines": 25
+  },
+  "globalLint": {
+    "files": 3647,
+    "errors": 19,
+    "warnings": 94,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 19,
+      "react-hooks/exhaustive-deps": 73,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "limits": [
+    "Other historical files and lint findings remain",
+    "No installation or final real-model mission claim",
+    "Global suite rerun prohibited by PreToolUse; last full suite f521166: 10759 passed"
+  ]
+}
