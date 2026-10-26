@@ -77,8 +77,8 @@ if (channelMatches.length !== 1 || channelMatches[0] !== 'production') {
   console.error(`Packaged main process is not an unambiguous production-channel build: ${channelMatches}`);
   process.exit(1);
 }
-const cleanBuild = /buildChannel\s*:\s*APP_CHANNEL\s*,\s*buildDirty\s*:\s*false\s*\?\s*true\s*:\s*true\s*\?\s*false/g.test(source)
-  || /buildChannel\s*:\s*APP_CHANNEL\s*,\s*buildDirty\s*:\s*false\s*[,}]/g.test(source);
+const cleanBuild = /buildChannel\s*:\s*APP_CHANNEL\d*\s*,\s*buildDirty\s*:\s*false\s*\?\s*true\s*:\s*true\s*\?\s*false/g.test(source)
+  || /buildChannel\s*:\s*APP_CHANNEL\d*\s*,\s*buildDirty\s*:\s*false\s*[,}]/g.test(source);
 if (!cleanBuild) {
   console.error('Packaged main process does not prove buildDirty=false');
   process.exit(1);

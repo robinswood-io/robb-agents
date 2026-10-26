@@ -82,6 +82,8 @@ class LocalStagingTests(LocalStagingTestCase):
             result = probe()
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(json.loads(result.stdout)["buildChannel"], "production")
+            pack(production_source.replace("APP_CHANNEL", "APP_CHANNEL2"))
+            self.assertEqual(probe().returncode, 0)
             pack(f'const releaseNotes = "mentions {COMMIT}";')
             self.assertNotEqual(probe().returncode, 0)
             pack(production_source.replace('"production"', '"development"'))
