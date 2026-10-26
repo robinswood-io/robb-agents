@@ -34,7 +34,7 @@ const MAX_REDIRECTS = 5;
 
 export function createWebFetchTool(
   getSessionPath: () => string | null,
-): ToolDefinition<typeof schema> {
+) {
   async function saveBinary(buffer: Buffer, url: string, ext: string): Promise<string> {
     const sessionPath = getSessionPath();
     if (!sessionPath) throw new Error('No active session — cannot save file to disk');
@@ -162,5 +162,5 @@ export function createWebFetchTool(
 
       return handleText(text, finalUrl);
     },
-  };
+  } satisfies ToolDefinition<typeof schema, { isError?: boolean }>;
 }

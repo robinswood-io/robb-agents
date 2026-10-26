@@ -30,7 +30,7 @@ describe('native Pi credentials and runtime isolation', () => {
   it('awaits the real credential write before acknowledging a host update', async () => {
     const credentials = new InMemoryCredentialStore();
     const config: { piAuth?: PiAuthUpdate } = {};
-    const auth: PiAuthUpdate = { provider: 'openai', credential: { type: 'api_key', key: 'fixture-key' } };
+    const auth = { provider: 'openai', credential: { type: 'api_key', key: 'fixture-key' } } satisfies PiAuthUpdate;
     expect(await applyTokenUpdate(auth, config,
       (provider, value) => storePiCredential(credentials, provider, value))).toBe(true);
     expect(await credentials.read('openai')).toEqual(auth.credential);

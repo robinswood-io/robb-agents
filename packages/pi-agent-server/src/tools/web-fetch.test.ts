@@ -15,10 +15,10 @@ describe('web_fetch large payload handoff', () => {
   it('passes JSON above 50k intact to the central spill pipeline', async () => {
     const url = 'https://1.1.1.1/status';
     const payload = 'x'.repeat(60_000);
-    globalThis.fetch = (async () => new Response(JSON.stringify({ status: 'ready', payload }), {
+    globalThis.fetch = Object.assign(async () => new Response(JSON.stringify({ status: 'ready', payload }), {
       status: 200,
       headers: { 'content-type': 'application/json' },
-    })) as typeof fetch;
+    }), { preconnect: () => {} });
 
     const result = await createWebFetchTool(() => null).execute('web-fetch-large', { url });
     const resultText = result.content.find(item => item.type === 'text')?.text;

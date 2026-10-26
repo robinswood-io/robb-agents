@@ -25,7 +25,9 @@ it('keeps current Robb instructions across native turns and tool changes', async
   const prompts: string[] = [];
   session.agent.streamFunction = (_model, context) => {
     const system = context.messages.find(message => message.role === 'system');
-    prompts.push(system?.role === 'system' ? system.content : context.systemPrompt ?? '');
+    prompts.push(system?.role === 'system'
+      ? typeof system.content === 'string' ? system.content : system.content.map(part => part.text).join('\n')
+      : '');
     const message: AssistantMessage = {
       role: 'assistant', api: model.api, provider: model.provider, model: model.id,
       content: [{ type: 'text', text: 'fixture complete' }], stopReason: 'stop', timestamp: Date.now(),

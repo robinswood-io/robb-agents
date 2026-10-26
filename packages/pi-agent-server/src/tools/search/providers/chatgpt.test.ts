@@ -1,6 +1,17 @@
 import { afterEach, describe, expect, it } from 'bun:test';
 import { ChatGPTBackendSearchProvider, extractChatGptAccountId } from './chatgpt.ts';
 
+type CapturedSearchRequest = {
+  model: string;
+  store: boolean;
+  stream: boolean;
+  instructions: string;
+  tools: Array<{ type: string }>;
+  tool_choice: string;
+  parallel_tool_calls: boolean;
+  text: { verbosity: string };
+  input: Array<{ role: string; content: Array<{ type: string; text: string }> }>;
+};
 const originalFetch = globalThis.fetch;
 const originalKillSwitch = process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND;
 
@@ -62,12 +73,12 @@ describe('ChatGPTBackendSearchProvider', () => {
     const item = { type: 'message', content: [{ type: 'output_text', text: 'OpenAI agents guide', annotations: [
       { type: 'url_citation', url: 'https://openai.com/index/new-tools-for-building-agents/', title: 'OpenAI agents' },
     ] }] };
-    globalThis.fetch = (async () => new Response([
+    globalThis.fetch = Object.assign(async () => new Response([
       `data: ${JSON.stringify({ type: 'response.output_item.done', output_index: 0, item })}`,
       '',
       'data: {"type":"response.completed","response":{"status":"completed","output":[]}}',
       '',
-    ].join('\n'), { status: 200 })) as typeof fetch;
+    ].join('\n'), { status: 200 }), { preconnect: () => {} });
     const results = await new ChatGPTBackendSearchProvider('test-token', 'test-account', { model: 'selected-model' })
       .search('OpenAI agents guide', 2);
     expect(results[0]?.url).toBe('https://openai.com/index/new-tools-for-building-agents/');
@@ -75,10 +86,10 @@ describe('ChatGPTBackendSearchProvider', () => {
 
   it('fails closed before fetch when the contract kill switch is active', async () => {
     let fetched = false;
-    globalThis.fetch = (async () => {
+    globalThis.fetch = Object.assign(async () => {
       fetched = true;
       return new Response('{}');
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
     process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND = '1';
 
     const provider = new ChatGPTBackendSearchProvider('must-not-leak', 'acc_123');
@@ -91,9 +102,9 @@ describe('ChatGPTBackendSearchProvider', () => {
   it('calls ChatGPT backend endpoint with correct auth headers', async () => {
     let calledUrl = '';
     let calledHeaders: Record<string, string> = {};
-    let calledBody: any = null;
+    let calledBody = null as CapturedSearchRequest | null;
 
-    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = Object.assign(async (input: RequestInfo | URL, init?: RequestInit) => {
       calledUrl = typeof input === 'string' ? input : input.toString();
       calledHeaders = (init?.headers as Record<string, string>) || {};
       calledBody = init?.body ? JSON.parse(String(init.body)) : null;
@@ -117,7 +128,7 @@ describe('ChatGPTBackendSearchProvider', () => {
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       );
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ChatGPTBackendSearchProvider('my-access-token', 'acc_12345');
     const results = await provider.search('test query', 5);
@@ -126,25 +137,25 @@ describe('ChatGPTBackendSearchProvider', () => {
     expect(calledUrl).toBe('https://chatgpt.com/backend-api/codex/responses');
     expect(calledHeaders.Authorization).toBe('Bearer my-access-token');
     expect(calledHeaders['chatgpt-account-id']).toBe('acc_12345');
-    expect(calledBody.model).toBe('gpt-5.3-codex');
-    expect(calledBody.store).toBe(false);
-    expect(calledBody.stream).toBe(true);
-    expect(calledBody.instructions).toContain('web search assistant');
-    expect(calledBody.tools).toEqual([{ type: 'web_search' }]);
-    expect(calledBody.tool_choice).toBe('auto');
-    expect(calledBody.parallel_tool_calls).toBe(true);
-    expect(calledBody.text).toEqual({ verbosity: 'medium' });
-    expect(Array.isArray(calledBody.input)).toBe(true);
-    expect(calledBody.input[0]?.role).toBe('user');
-    expect(calledBody.input[0]?.content?.[0]?.type).toBe('input_text');
-    expect(calledBody.input[0]?.content?.[0]?.text).toContain('Search the web for: test query');
+    expect(calledBody!.model).toBe('gpt-5.3-codex');
+    expect(calledBody!.store).toBe(false);
+    expect(calledBody!.stream).toBe(true);
+    expect(calledBody!.instructions).toContain('web search assistant');
+    expect(calledBody!.tools).toEqual([{ type: 'web_search' }]);
+    expect(calledBody!.tool_choice).toBe('auto');
+    expect(calledBody!.parallel_tool_calls).toBe(true);
+    expect(calledBody!.text).toEqual({ verbosity: 'medium' });
+    expect(Array.isArray(calledBody!.input)).toBe(true);
+    expect(calledBody!.input[0]?.role).toBe('user');
+    expect(calledBody!.input[0]?.content?.[0]?.type).toBe('input_text');
+    expect(calledBody!.input[0]?.content?.[0]?.text).toContain('Search the web for: test query');
     expect(calledHeaders['OpenAI-Beta']).toBe('responses=experimental');
     expect(results).toHaveLength(1);
     expect(results[0]?.url).toBe('https://example.com');
   });
 
   it('parses SSE payload even when content-type is not event-stream', async () => {
-    globalThis.fetch = (async () => {
+    globalThis.fetch = Object.assign(async () => {
       const sse = [
         'event: response.created',
         'data: {"type":"response.created","response":{"id":"resp_1"}}',
@@ -158,7 +169,7 @@ describe('ChatGPTBackendSearchProvider', () => {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ChatGPTBackendSearchProvider('token', 'acc_123');
     const results = await provider.search('openai status', 3);
@@ -176,10 +187,10 @@ describe('ChatGPTBackendSearchProvider', () => {
       tool_choice: unknown;
       parallel_tool_calls: unknown;
       text: unknown;
-      input: unknown;
+      input: CapturedSearchRequest['input'] | undefined;
     }> = [];
 
-    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = Object.assign(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(String(init.body)) : null;
       attempts.push({
         tools: body?.tools,
@@ -194,7 +205,7 @@ describe('ChatGPTBackendSearchProvider', () => {
       });
 
       return new Response('Unsupported tool type: web_search_preview', { status: 400 });
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ChatGPTBackendSearchProvider('token', 'acc_123');
     let message = '';
@@ -213,8 +224,8 @@ describe('ChatGPTBackendSearchProvider', () => {
     expect(attempts[0]?.parallel_tool_calls).toBe(true);
     expect(attempts[0]?.text).toEqual({ verbosity: 'medium' });
     expect(Array.isArray(attempts[0]?.input)).toBe(true);
-    expect((attempts[0]?.input as any[])[0]?.role).toBe('user');
-    expect((attempts[0]?.input as any[])[0]?.content?.[0]?.type).toBe('input_text');
+    expect((attempts[0]?.input as CapturedSearchRequest['input'])[0]?.role).toBe('user');
+    expect((attempts[0]?.input as CapturedSearchRequest['input'])[0]?.content?.[0]?.type).toBe('input_text');
     expect(message).toContain('HTTP 400');
     expect(message).toContain('tool=web_search');
     expect(JSON.stringify(attempts)).not.toContain('web_search_preview');
@@ -223,14 +234,14 @@ describe('ChatGPTBackendSearchProvider', () => {
   it('surfaces parse failures without retrying with unsupported preview search', async () => {
     const attempts: Array<{ tools: unknown }> = [];
 
-    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = Object.assign(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(String(init.body)) : null;
       attempts.push({ tools: body?.tools });
       return new Response('Bad Request', {
         status: 200,
         headers: { 'Content-Type': 'text/plain' },
       });
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ChatGPTBackendSearchProvider('token', 'acc_123');
     let message = '';
@@ -249,7 +260,7 @@ describe('ChatGPTBackendSearchProvider', () => {
   it('does not retry invalid SSE payloads with unsupported preview search', async () => {
     const attempts: Array<{ tools: unknown }> = [];
 
-    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = Object.assign(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(String(init.body)) : null;
       attempts.push({ tools: body?.tools });
 
@@ -266,7 +277,7 @@ describe('ChatGPTBackendSearchProvider', () => {
         status: 200,
         headers: { 'Content-Type': 'text/event-stream' },
       });
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ChatGPTBackendSearchProvider('token', 'acc_123');
     let message = '';
@@ -284,14 +295,14 @@ describe('ChatGPTBackendSearchProvider', () => {
   });
 
   it('reports parse failure with request fingerprint', async () => {
-    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = Object.assign(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(String(init.body)) : null;
       const toolType = body?.tools?.[0]?.type;
       return new Response(`Bad Request from ${toolType}`, {
         status: 200,
         headers: { 'Content-Type': 'text/plain' },
       });
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ChatGPTBackendSearchProvider('token', 'acc_123');
 
@@ -311,10 +322,10 @@ describe('ChatGPTBackendSearchProvider', () => {
   it('throws immediately on non-400 errors (no retry) with request fingerprint', async () => {
     let callCount = 0;
 
-    globalThis.fetch = (async () => {
+    globalThis.fetch = Object.assign(async () => {
       callCount++;
       return new Response('Unauthorized', { status: 401 });
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ChatGPTBackendSearchProvider('bad-token', 'acc_123');
 

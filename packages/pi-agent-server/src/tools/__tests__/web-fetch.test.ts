@@ -90,21 +90,18 @@ describe('Web Fetch SSRF & Redirect Protection', () => {
 
   it('blocks HTTP redirects targeting private/loopback IPs', async () => {
     const originalFetch = globalThis.fetch;
-    globalThis.fetch = (async () => {
+    globalThis.fetch = Object.assign(async () => {
       return new Response(null, {
         status: 302,
         headers: { location: 'http://127.0.0.1:9100/internal-secret' },
       });
-    }) as unknown as typeof fetch;
+    }, { preconnect: () => {} });
 
     try {
       const tool = createWebFetchTool(() => null);
       const res = await tool.execute(
         'call-1',
         { url: 'https://93.184.216.34/start' },
-        undefined,
-        undefined,
-        undefined,
       );
       const text = (res.content[0] as { type: 'text'; text: string }).text;
       expect((res.details as { isError?: boolean })?.isError).toBe(true);

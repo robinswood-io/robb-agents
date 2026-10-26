@@ -103,20 +103,20 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-26T01:34:55.553162+00:00",
+  "updatedAt": "2026-10-26T01:47:28.034608+00:00",
   "current": {
-    "lastEvidence": "test-type-coverage-shared-summary.json",
+    "lastEvidence": "test-type-coverage-pi-summary.json",
     "sourceGate": {
       "max-lines": 53,
-      "no-explicit-any": 225
+      "no-explicit-any": 211
     },
     "globalLint": {
       "files": 3579,
-      "errors": 260,
+      "errors": 246,
       "warnings": 131,
       "fatal": 0,
       "rules": {
-        "@typescript-eslint/no-explicit-any": 218,
+        "@typescript-eslint/no-explicit-any": 204,
         "max-lines": 42,
         "react-hooks/exhaustive-deps": 92,
         "directive": 12,
@@ -131,11 +131,11 @@
       "skip": 12
     },
     "typecheckTestCoverage": {
-      "status": "en cours",
+      "status": "passed",
       "previouslyExcluded": 130,
-      "nowIncluded": 86,
-      "remaining": 44,
-      "proof": "test-type-coverage-shared-scope-proof.json"
+      "nowIncluded": 130,
+      "remaining": 0,
+      "proof": "test-type-coverage-pi-scope-proof.json"
     }
   }
 }

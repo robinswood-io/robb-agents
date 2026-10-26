@@ -6,6 +6,7 @@
  */
 
 import { Type } from '@sinclair/typebox';
+import type { AgentToolResult } from '@earendil-works/pi-agent-core';
 import type { ToolDefinition } from '@earendil-works/pi-coding-agent';
 import type { WebSearchProvider, WebSearchResult } from './types.ts';
 import { DDGSearchProvider } from './providers/ddg.ts';
@@ -26,7 +27,7 @@ function formatResults(
   providerName: string,
   results: WebSearchResult[],
   note?: string,
-) {
+): AgentToolResult<{ isError?: boolean }> {
   const formatted = results
     .map(
       (r, i) =>
@@ -56,7 +57,7 @@ function formatErrorSnippet(message: string, max = 180): string {
 export function createSearchTool(
   provider: WebSearchProvider,
   fallbackProvider: WebSearchProvider = new DDGSearchProvider(),
-): ToolDefinition<typeof schema> {
+) {
   return {
     name: 'web_search',
     label: 'Web Search',
@@ -65,7 +66,7 @@ export function createSearchTool(
     promptSnippet:
       'Use web_search for up-to-date information, documentation lookups, or fact-checking. Returns titles, URLs, and snippets. Accepts a query string and optional count (1-10).',
     parameters: schema,
-    async execute(toolCallId, params) {
+    async execute(toolCallId, params): Promise<AgentToolResult<{ isError?: boolean }>> {
       const { query } = params;
       const count = Math.max(1, Math.min(10, params.count ?? 5));
 
@@ -110,5 +111,5 @@ export function createSearchTool(
         };
       }
     },
-  };
+  } satisfies ToolDefinition<typeof schema, { isError?: boolean }>;
 }

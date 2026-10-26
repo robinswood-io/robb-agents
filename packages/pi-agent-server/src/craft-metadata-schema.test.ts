@@ -32,8 +32,8 @@ describe('Craft metadata schema compatibility for Pi tools', () => {
     expect(widened.required).toEqual(schema.required);
     expect(widened.required).not.toContain('_displayName');
     expect(widened.required).not.toContain('_intent');
-    expect(widened.properties._displayName).toBeDefined();
-    expect(widened.properties._intent).toBeDefined();
+    expect((widened.properties as Record<string, unknown>)._displayName).toBeDefined();
+    expect((widened.properties as Record<string, unknown>)._intent).toBeDefined();
     expect(widened.properties.path).toBe(schema.properties.path);
     expect(widened.properties.edits).toBe(schema.properties.edits);
   });
@@ -47,7 +47,7 @@ describe('Craft metadata schema compatibility for Pi tools', () => {
       required?: string[];
     };
 
-    expect(widenedSchema.additionalProperties).toBe(editTool.parameters.additionalProperties);
+    expect(widenedSchema.additionalProperties).toBe((editTool.parameters as { additionalProperties?: unknown }).additionalProperties);
     expect(widenedSchema.properties._displayName).toBeDefined();
     expect(widenedSchema.properties._intent).toBeDefined();
     expect(widenedSchema.required ?? []).not.toContain('_displayName');
@@ -62,7 +62,7 @@ describe('Craft metadata schema compatibility for Pi tools', () => {
   });
 
   it('normalizes the legacy Craft Edit shape for the strict Pi implementation', () => {
-    expect(normalizeForPiTool('Edit', {
+    expect(normalizeForPiTool<Record<string, unknown>>('Edit', {
       file_path: '/tmp/example.ts',
       old_string: 'before',
       new_string: 'after',
@@ -77,7 +77,7 @@ describe('Craft metadata schema compatibility for Pi tools', () => {
       { oldText: 'a', newText: 'b' },
       { oldText: 'c', newText: 'd' },
     ];
-    expect(normalizeForPiTool('Edit', {
+    expect(normalizeForPiTool<Record<string, unknown>>('Edit', {
       path: '/tmp/example.ts',
       file_path: '/tmp/example.ts',
       old_string: 'a',
@@ -102,8 +102,8 @@ describe('Craft metadata schema compatibility for Pi tools', () => {
 
     const widened = allowCraftMetadataProperties(schema);
 
-    expect(widened.properties._displayName).toBe(upstreamDisplayName);
-    expect(widened.properties._intent).toBe(upstreamIntent);
+    expect((widened.properties as Record<string, unknown>)._displayName).toBe(upstreamDisplayName);
+    expect((widened.properties as Record<string, unknown>)._intent).toBe(upstreamIntent);
   });
 
   it('returns unknown schema shapes unchanged', () => {
@@ -122,7 +122,7 @@ describe('Craft metadata schema compatibility for Pi tools', () => {
       edits: [{ oldText: 'a', newText: 'b' }],
     };
 
-    const clean = stripCraftMetadata(input);
+    const clean = stripCraftMetadata<Record<string, unknown>>(input);
 
     expect(clean).toEqual({
       path: 'random',
@@ -136,6 +136,6 @@ describe('Craft metadata schema compatibility for Pi tools', () => {
 
   it('returns the same input object when no metadata is present', () => {
     const input = { path: 'random' };
-    expect(stripCraftMetadata(input)).toBe(input);
+    expect(stripCraftMetadata<Record<string, unknown>>(input)).toBe(input);
   });
 });

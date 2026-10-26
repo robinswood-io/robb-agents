@@ -11,7 +11,7 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-function textPdf(text: string): Buffer {
+function textPdf(text: string) {
   const stream = `BT /F1 12 Tf 1 0 0 1 72 720 Tm (${text}) Tj ET`;
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',

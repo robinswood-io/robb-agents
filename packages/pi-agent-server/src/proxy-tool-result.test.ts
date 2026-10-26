@@ -46,7 +46,7 @@ it('real browser backend failure remains an error through the real Pi loop, mode
         name: toolName, label: 'Capture fixture', description: 'Read-only canvas capture fixture',
         parameters: Type.Object({ command: Type.Array(Type.String()) }),
         execute: async (_id, input) => {
-          backendResponse = await backend.executeSessionTool('browser_tool', input);
+          backendResponse = await backend.executeSessionTool('browser_tool', input as { command: string[] });
           // Exact result envelope emitted by both buildProxyTools paths.
           return { content: [{ type: 'text', text: backendResponse.content }], details: { isError: backendResponse.isError } };
         },

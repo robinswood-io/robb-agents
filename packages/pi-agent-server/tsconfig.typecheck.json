@@ -8,11 +8,30 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "rootDir": "../..",
-    "lib": ["ES2022", "DOM"],
-    "types": ["bun", "node"],
+    "lib": [
+      "ES2023",
+      "DOM"
+    ],
+    "types": [
+      "bun",
+      "node"
+    ],
     "skipLibCheck": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "paths": {
+      "@craft-agent/shared": [
+        "../shared/src/index.ts"
+      ],
+      "@craft-agent/shared/*": [
+        "../shared/src/*"
+      ]
+    }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }
