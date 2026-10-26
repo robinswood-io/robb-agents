@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
-import { resolveReactPdfWorker } from '../../scripts/pdf-worker-resolution'
+import { resolveReactPdfWorker } from '../../scripts/pdf-worker-resolution.ts'
 
 const configDir = import.meta.dirname
 

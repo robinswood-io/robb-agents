@@ -125,10 +125,12 @@ export function useEntityListInteractions<T>({
   selectedIdOverride,
 }: UseEntityListInteractionsOptions<T>): EntityListInteractions<T> {
   // ---- Search filtering ----
+  const searchQuery = search?.query ?? ''
+  const searchFilter = search?.fn
   const items = useMemo(() => {
-    if (!search || !search.query.trim()) return rawItems
-    return rawItems.filter(item => search.fn(item, search.query))
-  }, [rawItems, search?.query, search?.fn]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (!searchFilter || !searchQuery.trim()) return rawItems
+    return rawItems.filter(item => searchFilter(item, searchQuery))
+  }, [rawItems, searchQuery, searchFilter])
 
   // ---- Multi-select state ----
   // Use external store (e.g. Jotai atom) when provided, otherwise local useState
@@ -142,19 +144,19 @@ export function useEntityListInteractions<T>({
 
   const toggle = useCallback((id: string, index: number) => {
     setSelectionState(prev => MultiSelect.toggleSelect(prev, id, index))
-  }, [])
+  }, [setSelectionState])
 
   const range = useCallback((toIndex: number) => {
     setSelectionState(prev => MultiSelect.rangeSelect(prev, toIndex, allIds))
-  }, [allIds])
+  }, [allIds, setSelectionState])
 
   const selectAllItems = useCallback(() => {
     setSelectionState(MultiSelect.selectAll(allIds))
-  }, [allIds])
+  }, [allIds, setSelectionState])
 
   const clearSelection = useCallback(() => {
     setSelectionState(prev => MultiSelect.clearMultiSelect(prev))
-  }, [])
+  }, [setSelectionState])
 
   const isMultiSelectActive = MultiSelect.isMultiSelectActive(selectionState)
 
@@ -250,7 +252,7 @@ export function useEntityListInteractions<T>({
       lastClickIndexRef.current = index
       setActiveIndex(index)
     }
-  }, [getId, multiSelectEnabled, isMultiSelectActive, selectionState.selectedIds, toggle, range, setActiveIndex])
+  }, [getId, multiSelectEnabled, isMultiSelectActive, selectionState.selectedIds, toggle, range, setActiveIndex, setSelectionState])
 
   // ---- Search input keyboard forwarding ----
   // Forwards ArrowDown/ArrowUp from a search input to the roving tabindex handler.
@@ -276,15 +278,15 @@ export function useEntityListInteractions<T>({
   }, [getContainerProps])
 
   // ---- Build return values ----
-  const containerProps = getContainerProps()
+  const { role: containerRole, 'aria-activedescendant': activeDescendant } = getContainerProps()
 
   const listProps = useMemo(() => ({
     containerRef: undefined as React.Ref<HTMLDivElement> | undefined,
     containerProps: {
-      role: containerProps.role,
-      'aria-activedescendant': containerProps['aria-activedescendant'] ?? '',
+      role: containerRole,
+      'aria-activedescendant': activeDescendant ?? '',
     },
-  }), [containerProps.role, containerProps['aria-activedescendant']])
+  }), [containerRole, activeDescendant])
 
   const getRowProps = useCallback((item: T, index: number) => {
     const id = getId(item)
