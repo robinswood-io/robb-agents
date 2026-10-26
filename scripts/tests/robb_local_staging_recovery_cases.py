@@ -1,3 +1,4 @@
+from .robb_local_staging_fixtures import patch_staging
 import importlib.util
 import io
 import json
@@ -27,18 +28,14 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             installer, target, candidate, checkpoint, stage_candidate = self.make_transaction(Path(temp))
             installer.swapper = mock.Mock(side_effect=OSError("atomic swap denied"))
             with (
-                mock.patch.object(staging, "verify_clean_checkout", return_value=COMMIT),
-                mock.patch.object(staging, "validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
-                mock.patch.object(staging, "backup_current_app", return_value=checkpoint),
-                mock.patch.object(
-                    staging,
-                    "publish_checkpoint_best_effort",
+                patch_staging("verify_clean_checkout", return_value=COMMIT),
+                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
+                patch_staging("backup_current_app", return_value=checkpoint),
+                patch_staging("publish_checkpoint_best_effort",
                     return_value=(checkpoint, True, None, None, None),
                 ),
-                mock.patch.object(staging, "quit_application"),
-                mock.patch.object(
-                    staging,
-                    "launch_and_verify_runtime",
+                patch_staging("quit_application"),
+                patch_staging("launch_and_verify_runtime",
                     return_value={"pid": 321, "startedAt": 654, "command": "old"},
                 ) as launch,
                 mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
@@ -65,18 +62,14 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
 
             installer.swapper = interrupt_after_first_swap
             with (
-                mock.patch.object(staging, "verify_clean_checkout", return_value=COMMIT),
-                mock.patch.object(staging, "validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
-                mock.patch.object(staging, "backup_current_app", return_value=checkpoint),
-                mock.patch.object(
-                    staging,
-                    "publish_checkpoint_best_effort",
+                patch_staging("verify_clean_checkout", return_value=COMMIT),
+                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
+                patch_staging("backup_current_app", return_value=checkpoint),
+                patch_staging("publish_checkpoint_best_effort",
                     return_value=(checkpoint, True, None, None, None),
                 ),
-                mock.patch.object(staging, "quit_application"),
-                mock.patch.object(
-                    staging,
-                    "launch_and_verify_runtime",
+                patch_staging("quit_application"),
+                patch_staging("launch_and_verify_runtime",
                     return_value={"pid": 321, "startedAt": 654, "command": "old"},
                 ) as launch,
                 mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
@@ -104,18 +97,14 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
 
             installer.swapper = fail_second_swap
             with (
-                mock.patch.object(staging, "verify_clean_checkout", return_value=COMMIT),
-                mock.patch.object(staging, "validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
-                mock.patch.object(staging, "backup_current_app", return_value=checkpoint),
-                mock.patch.object(
-                    staging,
-                    "publish_checkpoint_best_effort",
+                patch_staging("verify_clean_checkout", return_value=COMMIT),
+                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
+                patch_staging("backup_current_app", return_value=checkpoint),
+                patch_staging("publish_checkpoint_best_effort",
                     return_value=(checkpoint, True, None, None, None),
                 ) as publish,
-                mock.patch.object(staging, "quit_application"),
-                mock.patch.object(
-                    staging,
-                    "launch_and_verify_runtime",
+                patch_staging("quit_application"),
+                patch_staging("launch_and_verify_runtime",
                     side_effect=staging.StagingError("new runtime failed"),
                 ),
                 mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
@@ -134,16 +123,14 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
         with tempfile.TemporaryDirectory() as temp:
             installer, target, candidate, checkpoint, stage_candidate = self.make_transaction(Path(temp))
             with (
-                mock.patch.object(staging, "verify_clean_checkout", return_value=COMMIT),
-                mock.patch.object(staging, "validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
-                mock.patch.object(staging, "backup_current_app", return_value=checkpoint),
-                mock.patch.object(
-                    staging,
-                    "publish_checkpoint_best_effort",
+                patch_staging("verify_clean_checkout", return_value=COMMIT),
+                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
+                patch_staging("backup_current_app", return_value=checkpoint),
+                patch_staging("publish_checkpoint_best_effort",
                     return_value=(checkpoint, True, None, None, None),
                 ),
-                mock.patch.object(staging, "quit_application"),
-                mock.patch.object(staging, "launch_and_verify_runtime", side_effect=KeyboardInterrupt()),
+                patch_staging("quit_application"),
+                patch_staging("launch_and_verify_runtime", side_effect=KeyboardInterrupt()),
                 mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
             ):
                 with self.assertRaisesRegex(staging.StagingError, "previous app was restored"):
@@ -162,7 +149,7 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
                 raise AssertionError(args)
 
             installer.runner = runner
-            with mock.patch.object(staging, "validate_bundle", side_effect=staging.StagingError("invalid staged copy")):
+            with patch_staging("validate_bundle", side_effect=staging.StagingError("invalid staged copy")):
                 with self.assertRaisesRegex(staging.StagingError, "invalid staged copy"):
                     installer._stage_candidate(candidate, COMMIT)
 
@@ -230,7 +217,7 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
                         self.fail("validation must retain the exclusion lock")
                 return fingerprint(held_app)
 
-            with mock.patch.object(staging, "validate_bundle", side_effect=validate):
+            with patch_staging("validate_bundle", side_effect=validate):
                 held, selected = staging.protect_and_validate_rollback_checkpoint(
                     Path(temp) / "repo",
                     checkpoint,
@@ -247,9 +234,7 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             root = Path(temp) / "backups"
             checkpoint = root / "20260901-old"
             (checkpoint / staging.APP_NAME).mkdir(parents=True)
-            with mock.patch.object(
-                staging,
-                "validate_bundle",
+            with patch_staging("validate_bundle",
                 side_effect=staging.StagingError("invalid fuses"),
             ):
                 with self.assertRaisesRegex(staging.StagingError, "remains protected"):
@@ -272,7 +257,7 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             app = checkpoint / staging.APP_NAME
             app.mkdir(parents=True)
             (app / "marker").write_text("old", encoding="utf-8")
-            with mock.patch.object(staging, "validate_bundle", return_value=fingerprint(app)):
+            with patch_staging("validate_bundle", return_value=fingerprint(app)):
                 with self.assertRaisesRegex(staging.StagingError, "manifest is missing or invalid"):
                     staging.protect_and_validate_rollback_checkpoint(
                         Path(temp) / "repo",
@@ -317,11 +302,9 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
                 return real_cleanup(path, parent)
 
             with (
-                mock.patch.object(staging, "validate_bundle", return_value=expected),
-                mock.patch.object(staging, "cleanup_partial_best_effort", side_effect=cleanup_while_locked),
-                mock.patch.object(
-                    staging,
-                    "prune_backups",
+                patch_staging("validate_bundle", return_value=expected),
+                patch_staging("cleanup_partial_best_effort", side_effect=cleanup_while_locked),
+                patch_staging("prune_backups",
                     side_effect=lambda *_args, **_kwargs: {
                         "apply": True,
                         "kept": [
@@ -375,13 +358,11 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             expected = fingerprint(app)
 
             with (
-                mock.patch.object(staging, "validate_bundle", return_value=expected),
-                mock.patch.object(
-                    staging,
-                    "prune_backups",
+                patch_staging("validate_bundle", return_value=expected),
+                patch_staging("prune_backups",
                     return_value={"apply": True, "kept": []},
                 ),
-                mock.patch.object(staging, "cleanup_partial_best_effort") as cleanup,
+                patch_staging("cleanup_partial_best_effort") as cleanup,
             ):
                 path, confirmed, warning, cleanup_warning, partial_state = (
                     staging.publish_checkpoint_best_effort(

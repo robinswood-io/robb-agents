@@ -1,3 +1,4 @@
+from .robb_local_staging_fixtures import patch_staging
 import importlib.util
 import io
 import json
@@ -203,7 +204,7 @@ class LocalStagingTests(LocalStagingTestCase):
                 seen.append(args)
                 return completed(json.dumps({"created": str(checkpoint)}) + "\n")
 
-            with mock.patch.object(staging, "verify_clean_checkout", return_value=COMMIT):
+            with patch_staging("verify_clean_checkout", return_value=COMMIT):
                 created = staging.backup_current_app(
                     repo,
                     root,
@@ -278,7 +279,7 @@ class LocalStagingTests(LocalStagingTestCase):
             runner = mock.Mock()
 
             with (
-                mock.patch.object(staging, "verify_clean_checkout", return_value=COMMIT),
+                patch_staging("verify_clean_checkout", return_value=COMMIT),
                 self.assertRaisesRegex(staging.StagingError, "installed retention helper is stale"),
             ):
                 staging.backup_current_app(
@@ -308,7 +309,7 @@ class LocalStagingTests(LocalStagingTestCase):
             backup.mkdir(parents=True)
             victim = backup / "must-remain"
             victim.write_text("rollback", encoding="utf-8")
-            with mock.patch.object(staging, "verify_clean_checkout", return_value=COMMIT):
+            with patch_staging("verify_clean_checkout", return_value=COMMIT):
                 staging.verify_qualified_source_state(
                     repo,
                     expected_commit=COMMIT,
@@ -320,7 +321,7 @@ class LocalStagingTests(LocalStagingTestCase):
             runner = mock.Mock()
 
             with (
-                mock.patch.object(staging, "verify_clean_checkout", return_value=COMMIT),
+                patch_staging("verify_clean_checkout", return_value=COMMIT),
                 self.assertRaisesRegex(staging.StagingError, "installed retention helper is stale"),
             ):
                 staging.prune_backups(
@@ -420,16 +421,14 @@ class LocalStagingTests(LocalStagingTestCase):
                 return checkpoint, True, None, None, "absent"
 
             with (
-                mock.patch.object(staging, "verify_clean_checkout", return_value=COMMIT),
-                mock.patch.object(staging, "validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
-                mock.patch.object(staging, "backup_current_app", return_value=checkpoint) as backup,
-                mock.patch.object(
-                    staging,
-                    "publish_checkpoint_best_effort",
+                patch_staging("verify_clean_checkout", return_value=COMMIT),
+                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
+                patch_staging("backup_current_app", return_value=checkpoint) as backup,
+                patch_staging("publish_checkpoint_best_effort",
                     side_effect=finalize,
                 ) as publish,
-                mock.patch.object(staging, "quit_application", side_effect=stop),
-                mock.patch.object(staging, "launch_and_verify_runtime", side_effect=launch),
+                patch_staging("quit_application", side_effect=stop),
+                patch_staging("launch_and_verify_runtime", side_effect=launch),
                 mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
             ):
                 result = installer.install(candidate, COMMIT)

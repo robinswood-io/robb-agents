@@ -1,3 +1,5 @@
+from contextlib import contextmanager, ExitStack
+import sys
 import importlib.util
 import io
 import json
@@ -16,7 +18,26 @@ SCRIPT = Path(__file__).parents[1] / "robb-local-staging.py"
 SPEC = importlib.util.spec_from_file_location("robb_local_staging", SCRIPT)
 staging = importlib.util.module_from_spec(SPEC)
 assert SPEC.loader is not None
-SPEC.loader.exec_module(staging)
+sys.path.insert(0, str(SCRIPT.parent))
+try:
+    SPEC.loader.exec_module(staging)
+finally:
+    sys.path.pop(0)
+
+
+@contextmanager
+def patch_staging(name: str, **mock_options):
+    """Inject the same native fault into each module that binds this function."""
+    original = getattr(staging, name)
+    owners = [sys.modules[module] for module in (
+        'robb_staging_common', 'robb_staging_bundles', 'robb_staging_checkpoints',
+        'robb_staging_publication', 'robb_staging_runtime', 'robb_staging_transaction',
+    ) if getattr(sys.modules[module], name, None) is original]
+    with ExitStack() as stack:
+        patched = stack.enter_context(mock.patch.object(staging, name, **mock_options))
+        for owner in owners:
+            stack.enter_context(mock.patch.object(owner, name, patched))
+        yield patched
 
 
 COMMIT = "a" * 40

@@ -103,11 +103,11 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-26T12:18:23.752745+00:00",
+  "updatedAt": "2026-10-26T12:23:35.362464+00:00",
   "current": {
-    "lastEvidence": "retention-native-summary.json",
+    "lastEvidence": "local-staging-native-summary.json",
     "sourceGate": {
-      "max-lines": 24,
+      "max-lines": 23,
       "no-explicit-any": 0
     },
     "globalLint": {
@@ -137,8 +137,8 @@
       "rerun": "Refus PreToolUse : suite globale interdite ; tests ciblés uniquement"
     },
     "targetedTests": {
-      "retentionInstallerBefore": 24,
-      "retentionAndInstallerAfter": 36
+      "before": 44,
+      "after": 80
     }
   }
 }

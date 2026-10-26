@@ -1,3 +1,4 @@
+from .robb_local_staging_fixtures import patch_staging
 import importlib.util
 import io
 import json
@@ -44,15 +45,11 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
                 raise KeyboardInterrupt("fixture interrupt after rename")
 
             with (
-                mock.patch.object(staging, "validate_bundle", return_value=expected),
-                mock.patch.object(
-                    staging,
-                    "republish_rollback_checkpoint_locked",
+                patch_staging("validate_bundle", return_value=expected),
+                patch_staging("republish_rollback_checkpoint_locked",
                     side_effect=interrupt_after_rename,
                 ),
-                mock.patch.object(
-                    staging,
-                    "prune_backups",
+                patch_staging("prune_backups",
                     side_effect=lambda *_args, **_kwargs: {
                         "apply": True,
                         "kept": [
@@ -93,8 +90,8 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
             (app / "marker").write_text("old", encoding="utf-8")
             expected = fingerprint(app)
             with (
-                mock.patch.object(staging, "validate_bundle", return_value=expected),
-                mock.patch.object(staging, "prune_backups") as prune,
+                patch_staging("validate_bundle", return_value=expected),
+                patch_staging("prune_backups") as prune,
             ):
                 path, confirmed, warning, _, _ = staging.publish_checkpoint_best_effort(
                     base / "repo",
@@ -127,10 +124,8 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
             selected = fingerprint(checkpoint / staging.APP_NAME)
             retention_hash = staging.sha256_file(installer.repo / "scripts/staging-retention.py")
             with (
-                mock.patch.object(staging, "verify_clean_checkout", return_value=COMMIT),
-                mock.patch.object(
-                    staging,
-                    "protect_and_validate_rollback_checkpoint",
+                patch_staging("verify_clean_checkout", return_value=COMMIT),
+                patch_staging("protect_and_validate_rollback_checkpoint",
                     return_value=(held, selected),
                 ) as protect,
                 mock.patch.object(
@@ -141,9 +136,7 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
                         "retentionHelperSha256": retention_hash,
                     },
                 ) as install,
-                mock.patch.object(
-                    staging,
-                    "publish_checkpoint_best_effort",
+                patch_staging("publish_checkpoint_best_effort",
                     return_value=(retained, True, None, None, None),
                 ),
             ):
@@ -169,11 +162,9 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
         with tempfile.TemporaryDirectory() as temp:
             installer, _target, _candidate, _checkpoint, _stage_candidate = self.make_transaction(Path(temp))
             with (
-                mock.patch.object(staging, "verify_clean_checkout", return_value=COMMIT),
-                mock.patch.object(staging, "validate_bundle", return_value={}) as validate,
-                mock.patch.object(
-                    staging,
-                    "verify_runtime",
+                patch_staging("verify_clean_checkout", return_value=COMMIT),
+                patch_staging("validate_bundle", return_value={}) as validate,
+                patch_staging("verify_runtime",
                     return_value={"pid": 1, "startedAt": 2, "command": "target"},
                 ),
             ):
@@ -198,7 +189,7 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
                 backup_root=base / "backups",
             )
             outside = base / "outside"
-            with mock.patch.object(staging, "verify_clean_checkout", return_value=COMMIT):
+            with patch_staging("verify_clean_checkout", return_value=COMMIT):
                 with self.assertRaisesRegex(staging.StagingError, "direct child"):
                     installer.rollback(
                         outside,

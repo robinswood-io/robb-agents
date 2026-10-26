@@ -1,0 +1,46 @@
+{
+  "status": "passed",
+  "nativeDeclarations": 65,
+  "nativeTestCases": 44,
+  "nativeClassAndTransactionReinlinedExactly": true,
+  "nativeFaultInjectionSemanticsPreserved": true,
+  "cliHelpPreserved": true,
+  "newInstallerStateOrWorkflow": false,
+  "files": [
+    {
+      "file": "scripts/robb_staging_common.py",
+      "lines": 277,
+      "sha256": "1385ed07597ce21653b637a527909824dd3541d01fe4eb0055c18e280f507817"
+    },
+    {
+      "file": "scripts/robb_staging_bundles.py",
+      "lines": 300,
+      "sha256": "d6a75bffbf6442f8206705e298a01d8a2ed5c92295e432687cabf4e945fd5f8c"
+    },
+    {
+      "file": "scripts/robb_staging_checkpoints.py",
+      "lines": 324,
+      "sha256": "d1277becb7f1a13ece2afaa8a19d54c48416a9ab6afeaacb0833b32de8aa0040"
+    },
+    {
+      "file": "scripts/robb_staging_publication.py",
+      "lines": 225,
+      "sha256": "fbfd0566f7ad415fd9c4eeb6c0e48facee89fc6000020d91cf0fd938aab87e77"
+    },
+    {
+      "file": "scripts/robb_staging_runtime.py",
+      "lines": 160,
+      "sha256": "a09f1c0cc2974638f86056cca54d69aab82858b450214dd801da01c02a58ddaf"
+    },
+    {
+      "file": "scripts/robb-local-staging.py",
+      "lines": 436,
+      "sha256": "c2ef137a3f48c55bac698cd697ee13db5932d6ad9c8272d0d9b4e25e52bdcf72"
+    },
+    {
+      "file": "scripts/robb_staging_transaction.py",
+      "lines": 473,
+      "sha256": "05b64fd59c361df119b2b05a374de4c728cf2c45557b8464376140709ff92bac"
+    }
+  ]
+}
