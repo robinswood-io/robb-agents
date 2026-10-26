@@ -45,7 +45,7 @@ describe('parseMarkdownPreviewSpec', () => {
       items: [{ src: '/tmp/a.md' }],
     })
     const spec = parseMarkdownPreviewSpec(code)
-    expect(spec?.items?.[0].src).toBe('/tmp/a.md')
+    expect(spec?.items?.[0]!.src).toBe('/tmp/a.md')
   })
 
   it('returns null for invalid JSON', () => {

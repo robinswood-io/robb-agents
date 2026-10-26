@@ -69,7 +69,7 @@ export function buildMcpServers(config: BuildConfig): void {
 
   execSync(
     `bun build "${join(sessionDir, 'src', 'index.ts')}" --outfile "${sessionOut}" --target node --format cjs`,
-    { cwd: rootDir, stdio: 'inherit', shell: true }
+    { cwd: rootDir, stdio: 'inherit' }
   );
 
   if (!existsSync(sessionOut)) {
@@ -85,7 +85,7 @@ export function buildMcpServers(config: BuildConfig): void {
     mkdirSync(join(piDir, 'dist'), { recursive: true });
     execSync(
       `bun build "${join(piDir, 'src', 'index.ts')}" "${join(piDir, 'src', 'antigravity-server.ts')}" "${join(piDir, 'src', 'vibe-acp-server.ts')}" --outdir "${join(piDir, 'dist')}" --target bun --format esm --external koffi`,
-      { cwd: rootDir, stdio: 'inherit', shell: true }
+      { cwd: rootDir, stdio: 'inherit' }
     );
     if (!existsSync(piOut)) {
       throw new Error(`Pi agent server output not found at ${piOut}`);
@@ -106,7 +106,7 @@ export function buildWhatsAppWorker(config: BuildConfig): void {
 
   console.log('Building WhatsApp worker...');
 
-  execSync('bun run build:wa-worker', { cwd: rootDir, stdio: 'inherit', shell: true });
+  execSync('bun run build:wa-worker', { cwd: rootDir, stdio: 'inherit' });
 
   if (!existsSync(workerOut)) {
     throw new Error(`WhatsApp worker output not found at ${workerOut}`);

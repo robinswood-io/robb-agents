@@ -103,15 +103,15 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-26T00:55:37.371884+00:00",
+  "updatedAt": "2026-10-26T01:27:21.433504+00:00",
   "current": {
-    "lastEvidence": "automation-test-modules-summary.json",
+    "lastEvidence": "test-type-coverage-ui-summary.json",
     "sourceGate": {
       "max-lines": 54,
       "no-explicit-any": 225
     },
     "globalLint": {
-      "files": 3576,
+      "files": 3577,
       "errors": 261,
       "warnings": 131,
       "fatal": 0,
@@ -126,15 +126,16 @@
     },
     "globalStatus": "en cours ; dernière grande opération des sessions, autres fichiers historiques, any, lint global et missions finales restants",
     "fullTestSummary": {
-      "pass": 10743,
+      "pass": 10745,
       "fail": 0,
       "skip": 12
     },
     "typecheckTestCoverage": {
-      "status": "audit en cours",
-      "initiallyExcludedTestFiles": 130,
-      "evidence": "typecheck-test-coverage-observation.json",
-      "requirement": "Supprimer les angles morts avant la validation finale ; configurations temporaires de diagnostic hors du code applicatif."
+      "status": "en cours",
+      "previouslyExcluded": 130,
+      "nowIncluded": 56,
+      "remaining": 74,
+      "proof": "test-type-coverage-ui-scope-proof.json"
     }
   }
 }

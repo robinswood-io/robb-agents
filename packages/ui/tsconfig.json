@@ -7,13 +7,32 @@
     "declarationDir": "./dist",
     "jsx": "react-jsx",
     "moduleResolution": "bundler",
-    "types": ["node", "vite/client"],
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": [
+      "node",
+      "vite/client",
+      "bun"
+    ],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "paths": {
-      "@craft-agent/core": ["../core/src/index.ts"],
-      "@craft-agent/core/*": ["../core/src/*"]
+      "@craft-agent/core": [
+        "../core/src/index.ts"
+      ],
+      "@craft-agent/core/*": [
+        "../core/src/*"
+      ]
     }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/**/__tests__"]
+  "include": [
+    "src/**/*",
+    "eslint-rules/**/*.ts",
+    "tests/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

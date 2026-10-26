@@ -25,6 +25,9 @@
     "validate-workspace-versions.ts",
     "robb-human-benchmark.ts",
     "robb-autonomy-acceptance.ts",
-    "test-autonomy-audit.ts"
+    "test-autonomy-audit.ts",
+    "*.test.ts",
+    "tests/**/*.ts",
+    "__tests__/**/*.ts"
   ]
 }

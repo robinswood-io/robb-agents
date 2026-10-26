@@ -1,0 +1,659 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Inclusion des tests maintenus dans les contrôles de types UI, cœur, Electron et scripts",
+  "changes": [
+    "56 tests auparavant exclus sont maintenant contrôlés par TypeScript 7 et sa compatibilité TypeScript 6.",
+    "Les tests UI utilisent le runner Bun natif ; les assertions et comportements sont conservés.",
+    "La copie du runtime détecte un dossier natif Koffi vide avant sa copie ; deux tests couvrent le chemin valide et cette erreur.",
+    "Suppression de trois options shell redondantes de execSync ; comportement vérifié sous Node et Bun."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/tsconfig.json",
+      "lines": 54,
+      "sha256": "a172ae1ff986641232948addda537b85bd41251a409e06619f23ed55f3348293"
+    },
+    {
+      "file": "packages/core/tsconfig.json",
+      "lines": 49,
+      "sha256": "1cc67e2889abfb5b8762cfd5b60805b5b7b0fbd3c766a0ada6139719d2b39545"
+    },
+    {
+      "file": "packages/ui/src/components/annotations/__tests__/interaction-state-machine.test.ts",
+      "lines": 92,
+      "sha256": "b3b3e24eea7c3560018a6521fdac05a4f5b2c642132574382fa3a38241c5e5ff"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/__tests__/markdown-preview-helpers.test.ts",
+      "lines": 127,
+      "sha256": "f83eb0c02704748599ce7371c803bf0ae7910ff1980751ac8a614fd65d6d4282"
+    },
+    {
+      "file": "packages/ui/src/components/overlay/__tests__/rich-block-parity.test.ts",
+      "lines": 15,
+      "sha256": "a4222349332935edb03b8a9a2e63e1d2e445b26d91cc42bda547d8288c5de075"
+    },
+    {
+      "file": "packages/ui/src/components/overlay/__tests__/useRichBlockInteractions.test.ts",
+      "lines": 36,
+      "sha256": "df0b0206f4e6653587b5cc33fad8b4feffa0d042ad7010642675d1f5c04f3a32"
+    },
+    {
+      "file": "packages/ui/tsconfig.json",
+      "lines": 38,
+      "sha256": "342e4fa501694844e67737ca86fe5232a44e6e427b90ebcc4c98004f7d950418"
+    },
+    {
+      "file": "scripts/build/common.ts",
+      "lines": 239,
+      "sha256": "8ea77de3a77d381cd2a4494e334df66f57f2b47400c1535c2eb6d174a806bed3"
+    },
+    {
+      "file": "scripts/build/common/runtime-assets.ts",
+      "lines": 271,
+      "sha256": "3705f45636a12aa1210aa2d83cc3eb501d8ea175bddd51a0298cfbc7ee69a877"
+    },
+    {
+      "file": "scripts/tests/build-runtime-assets.test.ts",
+      "lines": 54,
+      "sha256": "9a9ac76384e2507641f30eb4f6bf4d59c6ddb5604d12196a73bc5da6873dc72a"
+    },
+    {
+      "file": "scripts/tsconfig.json",
+      "lines": 33,
+      "sha256": "958966eae0af98007e2d32da8b2db3286090eba2d88af1a08ea913aceda53523"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 18.27,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/test-type-coverage-ui-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/ui/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 6.19,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/test-type-coverage-ui-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "scripts/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 3.23,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/test-type-coverage-ui-compat-scripts.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 27.27,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/test-type-coverage-ui-compat-electron.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 0.89,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/test-type-coverage-ui-compat-core.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/ui/src/components/annotations/__tests__/interaction-state-machine.test.ts",
+        "packages/ui/src/components/overlay/__tests__/rich-block-parity.test.ts",
+        "packages/ui/src/components/overlay/__tests__/useRichBlockInteractions.test.ts",
+        "packages/ui/src/components/markdown/__tests__/markdown-preview-helpers.test.ts",
+        "scripts/build/common.ts",
+        "scripts/build/common/runtime-assets.ts",
+        "scripts/tests/build-runtime-assets.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 2.11,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/test-type-coverage-ui-lint-all.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "scripts/tests/build-runtime-assets.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.2,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/test-type-coverage-ui-assets.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/exec-sync-default-shell-probe.cjs"
+      ],
+      "exitCode": 0,
+      "seconds": 0.12,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/test-type-coverage-ui-shell-node.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/exec-sync-default-shell-probe.cjs"
+      ],
+      "exitCode": 0,
+      "seconds": 0.11,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/test-type-coverage-ui-shell-bun.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/ui/src/components/annotations/__tests__/interaction-state-machine.test.ts",
+        "packages/ui/src/components/overlay/__tests__/rich-block-parity.test.ts",
+        "packages/ui/src/components/overlay/__tests__/useRichBlockInteractions.test.ts",
+        "packages/ui/src/components/markdown/__tests__/markdown-preview-helpers.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.06,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/test-type-coverage-ui-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 14.18,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/test-type-coverage-ui-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 137.9,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/test-type-coverage-ui-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "files": [
+      {
+        "file": "packages/ui/tsconfig.json",
+        "lines": 39,
+        "sha256": "342e4fa501694844e67737ca86fe5232a44e6e427b90ebcc4c98004f7d950418",
+        "nativeSourceHash": "6ed0cebbfbaba48045509fef11f73aa8f213aa946bb661c170807781832b88da"
+      },
+      {
+        "file": "packages/core/tsconfig.json",
+        "lines": 50,
+        "sha256": "1cc67e2889abfb5b8762cfd5b60805b5b7b0fbd3c766a0ada6139719d2b39545",
+        "nativeSourceHash": "892d6934023efd6f5c74052d9a661d29966b77bdc5e50b5c78e82cfaeb7dc5c9"
+      },
+      {
+        "file": "apps/electron/tsconfig.json",
+        "lines": 55,
+        "sha256": "a172ae1ff986641232948addda537b85bd41251a409e06619f23ed55f3348293",
+        "nativeSourceHash": "fc970b7d294101f475c445e5bdf91c6d4defec67970ae9cb28fe123df8c25596"
+      },
+      {
+        "file": "scripts/tsconfig.json",
+        "lines": 34,
+        "sha256": "958966eae0af98007e2d32da8b2db3286090eba2d88af1a08ea913aceda53523",
+        "nativeSourceHash": "6021521d3a88ad389691746091f5a9cca46d3550a1f8881d28bb0b2d90d4c933"
+      },
+      {
+        "file": "packages/ui/src/components/annotations/__tests__/interaction-state-machine.test.ts",
+        "lines": 93,
+        "sha256": "b3b3e24eea7c3560018a6521fdac05a4f5b2c642132574382fa3a38241c5e5ff",
+        "nativeSourceHash": "6b9605e0e6ddf294d01db744529c42f1dfb24cd0aa5e509ec7f92caba3f4dc85"
+      },
+      {
+        "file": "packages/ui/src/components/overlay/__tests__/rich-block-parity.test.ts",
+        "lines": 16,
+        "sha256": "a4222349332935edb03b8a9a2e63e1d2e445b26d91cc42bda547d8288c5de075",
+        "nativeSourceHash": "4b632ebb4a9ef222c05f57cd6c8f4d4d09ce6543751344df105bd7d6e0476506"
+      },
+      {
+        "file": "packages/ui/src/components/overlay/__tests__/useRichBlockInteractions.test.ts",
+        "lines": 37,
+        "sha256": "df0b0206f4e6653587b5cc33fad8b4feffa0d042ad7010642675d1f5c04f3a32",
+        "nativeSourceHash": "8f902b377304a732a663b6351ff1693e30e8394065506ceca53427afd2f90f97"
+      },
+      {
+        "file": "packages/ui/src/components/markdown/__tests__/markdown-preview-helpers.test.ts",
+        "lines": 128,
+        "sha256": "f83eb0c02704748599ce7371c803bf0ae7910ff1980751ac8a614fd65d6d4282",
+        "nativeSourceHash": "ac05e9c065e9442b91a600616d0e4d28dcec26e9e95f7b13f063b071acb1a300"
+      },
+      {
+        "file": "scripts/build/common.ts",
+        "lines": 240,
+        "sha256": "8ea77de3a77d381cd2a4494e334df66f57f2b47400c1535c2eb6d174a806bed3",
+        "nativeSourceHash": "48c667a34b3cf91923be80883a6b79e3d8468c764aff5f9c870c2b148e0459f5"
+      },
+      {
+        "file": "scripts/build/common/runtime-assets.ts",
+        "lines": 272,
+        "sha256": "3705f45636a12aa1210aa2d83cc3eb501d8ea175bddd51a0298cfbc7ee69a877",
+        "nativeSourceHash": "d0c8f081cc5bfda08ff0b6ac6cf4477a9aefac19221baf026fbf9297fa42dc65"
+      },
+      {
+        "file": "scripts/tests/build-runtime-assets.test.ts",
+        "lines": 55,
+        "sha256": "9a9ac76384e2507641f30eb4f6bf4d59c6ddb5604d12196a73bc5da6873dc72a",
+        "nativeSourceHash": null
+      }
+    ],
+    "maximumFileLines": 272,
+    "existingTestRuntimeAndAssertionsPreserved": true,
+    "existingCompilerScopesExpandedOnly": true,
+    "nonEmittingCoreCheckPreserved": true,
+    "removedRedundantShellOptions": 3,
+    "emptyNativeDirectoryRejectedBeforeCopy": true,
+    "addedFocusedRegressionTests": 2,
+    "additionalApplicationWorkflow": 0
+  },
+  "fullTestSummary": {
+    "pass": 10745,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "test-type-coverage-ui-targeted": {
+      "pass": 28,
+      "fail": 0,
+      "skip": 0
+    },
+    "test-type-coverage-ui-assets": {
+      "pass": 2,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": null,
+  "sourceGate": {
+    "max-lines": 54,
+    "no-explicit-any": 225
+  },
+  "globalLint": {
+    "files": 3577,
+    "errors": 261,
+    "warnings": 131,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 218,
+      "max-lines": 43,
+      "react-hooks/exhaustive-deps": 92,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [
+    "Dossier Koffi natif vide : reproduction avant correction, puis erreur explicite avant copie."
+  ],
+  "limits": [
+    "54 fichiers trop longs et 225 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T01:27:21.433504+00:00",
+  "additionalProofs": {
+    "test-type-coverage-ui-scope-proof.json": {
+      "status": "passed",
+      "expandedConfigs": [
+        "packages/ui/tsconfig.json",
+        "packages/core/tsconfig.json",
+        "apps/electron/tsconfig.json",
+        "scripts/tsconfig.json"
+      ],
+      "previouslyUncoveredTestsNowIncluded": 56,
+      "remainingExcludedTestFiles": 74,
+      "configs": [
+        {
+          "config": "packages/core/tsconfig.json",
+          "include": [
+            "src/**/*"
+          ],
+          "exclude": [
+            "node_modules",
+            "dist"
+          ],
+          "testFiles": 2,
+          "configuredTestFiles": 2,
+          "excludedTests": []
+        },
+        {
+          "config": "packages/shared/tsconfig.json",
+          "include": [
+            "src/**/*"
+          ],
+          "exclude": [
+            "node_modules",
+            "dist",
+            "src/automations/**/*.test.ts"
+          ],
+          "testFiles": 378,
+          "configuredTestFiles": 348,
+          "excludedTests": [
+            "packages/shared/src/automations/automation-system.test.ts",
+            "packages/shared/src/automations/conditions-should-work-with-time-conditions.test.ts",
+            "packages/shared/src/automations/conditions.test.ts",
+            "packages/shared/src/automations/cron-matcher.test.ts",
+            "packages/shared/src/automations/event-bus.test.ts",
+            "packages/shared/src/automations/execution-policy.test.ts",
+            "packages/shared/src/automations/history-store.test.ts",
+            "packages/shared/src/automations/name-utils.test.ts",
+            "packages/shared/src/automations/resolve-config-path.test.ts",
+            "packages/shared/src/automations/retry-scheduler.test.ts",
+            "packages/shared/src/automations/sdk-bridge.test.ts",
+            "packages/shared/src/automations/security.test.ts",
+            "packages/shared/src/automations/utils.test.ts",
+            "packages/shared/src/automations/validation.test.ts",
+            "packages/shared/src/automations/webhook-utils.test.ts",
+            "packages/shared/src/automations/handlers/event-log-handler.test.ts",
+            "packages/shared/src/automations/handlers/prompt-handler-should-leave-llmconnection-undefined-when-not-specified.test.ts",
+            "packages/shared/src/automations/handlers/prompt-handler.test.ts",
+            "packages/shared/tests/content-validators.test.ts",
+            "packages/shared/tests/default-reviewer-integrity-permissions.test.ts",
+            "packages/shared/tests/llm-connections.test.ts",
+            "packages/shared/tests/mcp-pool.test.ts",
+            "packages/shared/tests/mode-manager.test.ts",
+            "packages/shared/tests/models-pi.test.ts",
+            "packages/shared/tests/models.test.ts",
+            "packages/shared/tests/permissions-craft-agent-sync.test.ts",
+            "packages/shared/tests/persistence-queue-uses-one-fence-for-lexical-and-symlink-aliases-of-the-same-worksp.test.ts",
+            "packages/shared/tests/persistence-queue.test.ts",
+            "packages/shared/tests/session-validation.test.ts",
+            "packages/shared/tests/shellguard-corpus.test.ts"
+          ]
+        },
+        {
+          "config": "packages/server-core/tsconfig.json",
+          "include": [
+            "src/**/*",
+            "../shared/src/agent/bash-parser.d.ts"
+          ],
+          "exclude": [
+            "node_modules",
+            "dist"
+          ],
+          "testFiles": 279,
+          "configuredTestFiles": 279,
+          "excludedTests": []
+        },
+        {
+          "config": "packages/server/tsconfig.json",
+          "include": [
+            "src/**/*",
+            "../shared/src/agent/bash-parser.d.ts"
+          ],
+          "exclude": [
+            "node_modules",
+            "dist"
+          ],
+          "testFiles": 1,
+          "configuredTestFiles": 1,
+          "excludedTests": []
+        },
+        {
+          "config": "packages/session-tools-core/tsconfig.json",
+          "include": [
+            "src/**/*.ts"
+          ],
+          "exclude": [
+            "node_modules",
+            "dist"
+          ],
+          "testFiles": 27,
+          "configuredTestFiles": 27,
+          "excludedTests": []
+        },
+        {
+          "config": "packages/session-mcp-server/tsconfig.json",
+          "include": [
+            "src/**/*.ts"
+          ],
+          "exclude": [
+            "node_modules",
+            "dist"
+          ],
+          "testFiles": 1,
+          "configuredTestFiles": 1,
+          "excludedTests": []
+        },
+        {
+          "config": "packages/messaging-gateway/tsconfig.json",
+          "include": [
+            "src"
+          ],
+          "testFiles": 30,
+          "configuredTestFiles": 30,
+          "excludedTests": []
+        },
+        {
+          "config": "packages/messaging-whatsapp-worker/tsconfig.json",
+          "include": [
+            "src/**/*.ts"
+          ],
+          "testFiles": 3,
+          "configuredTestFiles": 3,
+          "excludedTests": []
+        },
+        {
+          "config": "packages/pi-agent-server/tsconfig.typecheck.json",
+          "include": [
+            "src/**/*"
+          ],
+          "exclude": [
+            "node_modules",
+            "dist",
+            "**/*.test.ts"
+          ],
+          "testFiles": 44,
+          "configuredTestFiles": 0,
+          "excludedTests": [
+            "packages/pi-agent-server/src/antigravity-server.test.ts",
+            "packages/pi-agent-server/src/antigravity-subprocess.test.ts",
+            "packages/pi-agent-server/src/authenticated-model-runtime.test.ts",
+            "packages/pi-agent-server/src/catalog-model-registration.test.ts",
+            "packages/pi-agent-server/src/compact-selected-model.test.ts",
+            "packages/pi-agent-server/src/craft-metadata-schema.test.ts",
+            "packages/pi-agent-server/src/custom-endpoint-models.test.ts",
+            "packages/pi-agent-server/src/google-code-assist-auth.test.ts",
+            "packages/pi-agent-server/src/google-code-assist-provider.test.ts",
+            "packages/pi-agent-server/src/google-code-assist-wire.test.ts",
+            "packages/pi-agent-server/src/incomplete-tool-tail-recovery.test.ts",
+            "packages/pi-agent-server/src/intra-turn-context-guard.test.ts",
+            "packages/pi-agent-server/src/mistral-provider-contract.test.ts",
+            "packages/pi-agent-server/src/model-resolution.test.ts",
+            "packages/pi-agent-server/src/native-settlement.test.ts",
+            "packages/pi-agent-server/src/overflow-recovery.test.ts",
+            "packages/pi-agent-server/src/provider-contract-guard.test.ts",
+            "packages/pi-agent-server/src/provider-handoff.test.ts",
+            "packages/pi-agent-server/src/proxy-tool-precheck-contract.test.ts",
+            "packages/pi-agent-server/src/proxy-tool-response-watchdog.test.ts",
+            "packages/pi-agent-server/src/proxy-tool-result.test.ts",
+            "packages/pi-agent-server/src/query-model.test.ts",
+            "packages/pi-agent-server/src/read-tool-timeout.test.ts",
+            "packages/pi-agent-server/src/selected-thinking-level.test.ts",
+            "packages/pi-agent-server/src/session-path-normalization.test.ts",
+            "packages/pi-agent-server/src/session-tool-registration.test.ts",
+            "packages/pi-agent-server/src/source-tool-activation.test.ts",
+            "packages/pi-agent-server/src/system-prompt-override.test.ts",
+            "packages/pi-agent-server/src/token-update.test.ts",
+            "packages/pi-agent-server/src/tool-approval-abort.test.ts",
+            "packages/pi-agent-server/src/tool-execution-checkpoint.test.ts",
+            "packages/pi-agent-server/src/tool-loop-budget.test.ts",
+            "packages/pi-agent-server/src/tool-loop-feedback-integration.test.ts",
+            "packages/pi-agent-server/src/tool-loop-feedback.test.ts",
+            "packages/pi-agent-server/src/turn-history.test.ts",
+            "packages/pi-agent-server/src/vibe-acp-server.test.ts",
+            "packages/pi-agent-server/src/vibe-subprocess.test.ts",
+            "packages/pi-agent-server/src/tools/web-fetch-pdf.test.ts",
+            "packages/pi-agent-server/src/tools/web-fetch.test.ts",
+            "packages/pi-agent-server/src/tools/__tests__/web-fetch.test.ts",
+            "packages/pi-agent-server/src/tools/search/create-search-tool.test.ts",
+            "packages/pi-agent-server/src/tools/search/resolve-provider.test.ts",
+            "packages/pi-agent-server/src/tools/search/providers/chatgpt.test.ts",
+            "packages/pi-agent-server/src/tools/search/providers/openai.test.ts"
+          ]
+        },
+        {
+          "config": "packages/ui/tsconfig.json",
+          "include": [
+            "src/**/*"
+          ],
+          "exclude": [
+            "node_modules",
+            "dist",
+            "src/**/__tests__"
+          ],
+          "testFiles": 45,
+          "configuredTestFiles": 45,
+          "excludedTests": []
+        },
+        {
+          "config": "apps/cli/tsconfig.json",
+          "include": [
+            "src/**/*",
+            "../../packages/shared/src/**/*.d.ts"
+          ],
+          "exclude": [
+            "node_modules",
+            "dist"
+          ],
+          "testFiles": 4,
+          "configuredTestFiles": 4,
+          "excludedTests": []
+        },
+        {
+          "config": "apps/electron/tsconfig.json",
+          "include": [
+            "src/**/*",
+            "../../packages/shared/src/**/*.d.ts",
+            "../../scripts/robb-completion-live-check.ts"
+          ],
+          "exclude": [
+            "node_modules",
+            "dist"
+          ],
+          "testFiles": 155,
+          "configuredTestFiles": 155,
+          "excludedTests": []
+        },
+        {
+          "config": "apps/viewer/tsconfig.json",
+          "include": [
+            "src"
+          ],
+          "testFiles": 0,
+          "configuredTestFiles": 0,
+          "excludedTests": []
+        },
+        {
+          "config": "apps/viewer/tsconfig.node.json",
+          "include": [
+            "vite.config.ts",
+            "../../scripts/pdf-worker-resolution.ts"
+          ],
+          "testFiles": 0,
+          "configuredTestFiles": 0,
+          "excludedTests": []
+        },
+        {
+          "config": "apps/webui/tsconfig.json",
+          "include": [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "../electron/src/renderer/**/*.ts",
+            "../electron/src/renderer/**/*.tsx",
+            "../electron/src/shared/**/*.ts",
+            "../electron/src/transport/**/*.ts",
+            "../../packages/shared/src/**/*.d.ts"
+          ],
+          "exclude": [
+            "node_modules",
+            "dist"
+          ],
+          "testFiles": 12,
+          "configuredTestFiles": 12,
+          "excludedTests": []
+        },
+        {
+          "config": "scripts/tsconfig.json",
+          "include": [
+            "apply-minimatch-compat.ts",
+            "generate-github-update-manifests.ts",
+            "robb-provider-canaries.ts",
+            "validate-electron-package-security.ts",
+            "validate-release-bundle.ts",
+            "verify-proof-passport.ts",
+            "verify-github-release-assets.ts",
+            "tests/apply-minimatch-compat.test.ts",
+            "tests/generate-github-update-manifests.test.ts",
+            "tests/provider-canaries.test.ts",
+            "tests/validate-workspace-versions.test.ts",
+            "tests/validate-release-bundle.test.ts",
+            "tests/verify-proof-passport.test.ts",
+            "tests/verify-github-release-assets.test.ts",
+            "validate-workspace-versions.ts",
+            "robb-human-benchmark.ts",
+            "robb-autonomy-acceptance.ts",
+            "test-autonomy-audit.ts"
+          ],
+          "testFiles": 16,
+          "configuredTestFiles": 16,
+          "excludedTests": []
+        }
+      ]
+    }
+  }
+}

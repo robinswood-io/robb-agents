@@ -257,9 +257,11 @@ export function copyPiAgentServer(config: BuildConfig): void {
   const nativeDest = join(koffiDest, 'build', 'koffi', targetDir);
 
   if (existsSync(nativeSrc)) {
+    const firstNativeEntry = readdirSync(nativeSrc)[0];
+    if (!firstNativeEntry) throw new Error(`Koffi native binary directory is empty: ${nativeSrc}`);
     mkdirSync(nativeDest, { recursive: true });
     cpSync(nativeSrc, nativeDest, { recursive: true });
-    const size = lstatSync(join(nativeSrc, readdirSync(nativeSrc)[0])).size;
+    const size = lstatSync(join(nativeSrc, firstNativeEntry)).size;
     console.log(`  Copied index.js + koffi/${targetDir} (${(size / 1024 / 1024).toFixed(1)}MB)`);
   } else {
     console.warn(`  Warning: koffi native binary not found for ${targetDir}`);
