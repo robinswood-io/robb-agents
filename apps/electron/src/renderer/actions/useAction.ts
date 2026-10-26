@@ -28,7 +28,7 @@ export function useAction(
   useEffect(() => {
     handlerRef.current = handler
     optionsRef.current = options
-  }, [handler, options, ...deps])
+  }, [handler, options, deps])
 
   // Register handler
   useEffect(() => {

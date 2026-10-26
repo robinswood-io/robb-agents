@@ -97,7 +97,7 @@ function CrossfadeAvatar({
 
   // Callback ref to check if image is cached immediately when element mounts
   const imgCallbackRef = React.useCallback((node: HTMLImageElement | null) => {
-    if (node && node.complete && node.naturalWidth > 0) {
+    if (node && src && node.complete && node.naturalWidth > 0) {
       // Image is already cached/loaded
       setIsLoaded(true)
     }
