@@ -1,0 +1,223 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Décomposition des scénarios de sécurité des permissions shell",
+  "changes": [
+    "Un fichier de 2 443 lignes réparti en sept fichiers de scénarios et une fixture commune ; maximum 465 lignes.",
+    "20 suites, leurs corps, hooks, ordre et dépendances conservés ; initialisation du validateur PowerShell exécutée une fois, avec le même dossier de référence.",
+    "450 tests réussis et 495 assertions ciblées inchangés ; les mêmes 11 cas PowerShell restent ignorés sur ce Mac."
+  ],
+  "files": [
+    {
+      "file": "packages/shared/tests/mode-manager-bash-allowlist.test.ts",
+      "lines": 445,
+      "sha256": "a60d97d6a54ecae73136d25b6a47eea0307f2df114e6550422cfb7c0d23cd291"
+    },
+    {
+      "file": "packages/shared/tests/mode-manager-bash-compounds.test.ts",
+      "lines": 366,
+      "sha256": "d0399185f37ef209fb4aa562e54bd01b70951cdfe4c76ea92066b044f673b525"
+    },
+    {
+      "file": "packages/shared/tests/mode-manager-bash-plan-paths.test.ts",
+      "lines": 196,
+      "sha256": "e97ab14d0df168d03c91b98997a1a5558db6794d1ac2897f57f4641ec46b2e9f"
+    },
+    {
+      "file": "packages/shared/tests/mode-manager-bash-writes.test.ts",
+      "lines": 364,
+      "sha256": "0f34da63925161da3557556059977adce3f9e648dba533fe4a9af9c0733daa0c"
+    },
+    {
+      "file": "packages/shared/tests/mode-manager-fixture.ts",
+      "lines": 201,
+      "sha256": "e63350477ed757bbf010e7215f4c3fef8815eeaad21c4c57ed65eb856db9242f"
+    },
+    {
+      "file": "packages/shared/tests/mode-manager-powershell.test.ts",
+      "lines": 465,
+      "sha256": "1cf740c6dfb14944cde0f6cd0133bda25f409074b758bb50c2053a3395cc25f5"
+    },
+    {
+      "file": "packages/shared/tests/mode-manager-windows-paths.test.ts",
+      "lines": 287,
+      "sha256": "fb8830ac4f09fa29c9eb43af6db3d1ab91e026ec9669a08bc8841172bbb412d1"
+    },
+    {
+      "file": "packages/shared/tests/mode-manager.test.ts",
+      "lines": 190,
+      "sha256": "34527f59b6acabbb0423732f0f3fbf0b46a2c75a8ca924f28036be432e53424f"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 15.25,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/mode-suite-modules-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 8.26,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/mode-suite-modules-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/shared/tests/mode-manager-fixture.ts",
+        "packages/shared/tests/mode-manager.test.ts",
+        "packages/shared/tests/mode-manager-bash-allowlist.test.ts",
+        "packages/shared/tests/mode-manager-bash-compounds.test.ts",
+        "packages/shared/tests/mode-manager-bash-writes.test.ts",
+        "packages/shared/tests/mode-manager-bash-plan-paths.test.ts",
+        "packages/shared/tests/mode-manager-powershell.test.ts",
+        "packages/shared/tests/mode-manager-windows-paths.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.49,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/mode-suite-modules-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/shared/tests/mode-manager.test.ts",
+        "packages/shared/tests/mode-manager-bash-allowlist.test.ts",
+        "packages/shared/tests/mode-manager-bash-compounds.test.ts",
+        "packages/shared/tests/mode-manager-bash-writes.test.ts",
+        "packages/shared/tests/mode-manager-bash-plan-paths.test.ts",
+        "packages/shared/tests/mode-manager-powershell.test.ts",
+        "packages/shared/tests/mode-manager-windows-paths.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.55,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/mode-suite-modules-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 138.15,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/mode-suite-modules-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "files": [
+      {
+        "file": "packages/shared/tests/mode-manager-fixture.ts",
+        "lines": 201,
+        "sha256": "e63350477ed757bbf010e7215f4c3fef8815eeaad21c4c57ed65eb856db9242f"
+      },
+      {
+        "file": "packages/shared/tests/mode-manager.test.ts",
+        "lines": 190,
+        "sha256": "34527f59b6acabbb0423732f0f3fbf0b46a2c75a8ca924f28036be432e53424f"
+      },
+      {
+        "file": "packages/shared/tests/mode-manager-bash-allowlist.test.ts",
+        "lines": 445,
+        "sha256": "a60d97d6a54ecae73136d25b6a47eea0307f2df114e6550422cfb7c0d23cd291"
+      },
+      {
+        "file": "packages/shared/tests/mode-manager-bash-compounds.test.ts",
+        "lines": 366,
+        "sha256": "d0399185f37ef209fb4aa562e54bd01b70951cdfe4c76ea92066b044f673b525"
+      },
+      {
+        "file": "packages/shared/tests/mode-manager-bash-writes.test.ts",
+        "lines": 364,
+        "sha256": "0f34da63925161da3557556059977adce3f9e648dba533fe4a9af9c0733daa0c"
+      },
+      {
+        "file": "packages/shared/tests/mode-manager-bash-plan-paths.test.ts",
+        "lines": 196,
+        "sha256": "e97ab14d0df168d03c91b98997a1a5558db6794d1ac2897f57f4641ec46b2e9f"
+      },
+      {
+        "file": "packages/shared/tests/mode-manager-powershell.test.ts",
+        "lines": 465,
+        "sha256": "1cf740c6dfb14944cde0f6cd0133bda25f409074b758bb50c2053a3395cc25f5"
+      },
+      {
+        "file": "packages/shared/tests/mode-manager-windows-paths.test.ts",
+        "lines": 287,
+        "sha256": "fb8830ac4f09fa29c9eb43af6db3d1ab91e026ec9669a08bc8841172bbb412d1"
+      }
+    ],
+    "nativeSourceHash": "816a788fe5c0dfccf70c8f24d4d0125ab6abd52bebab146e7ec37c2c1d7df50b",
+    "nativeSuites": 20,
+    "allNativeSuiteBodiesOrderAndScopedHooksPreserved": true,
+    "sharedFixtureInitializations": 1,
+    "sameDirectoryAnchors": true,
+    "nativeDependencyBindingsAndOrderPreserved": true,
+    "runtimeImportCycles": 0,
+    "newStateOrTestFramework": false
+  },
+  "fullTestSummary": {
+    "pass": 10746,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "mode-suite-modules-targeted": {
+      "pass": 450,
+      "fail": 0,
+      "skip": 11
+    }
+  },
+  "beforeAfter": {
+    "targetedPass": 450,
+    "targetedSkip": 11,
+    "targetedExpectCalls": 495
+  },
+  "sourceGate": {
+    "max-lines": 48,
+    "no-explicit-any": 172
+  },
+  "globalLint": {
+    "files": 3592,
+    "errors": 202,
+    "warnings": 131,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 165,
+      "max-lines": 37,
+      "react-hooks/exhaustive-deps": 92,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "48 fichiers trop longs et 172 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T02:44:00.392946+00:00"
+}
