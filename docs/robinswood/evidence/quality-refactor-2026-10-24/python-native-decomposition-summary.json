@@ -1,0 +1,108 @@
+{
+  "status": "tested; final integration pending",
+  "scope": "Four remaining oversized Python modules; local source only",
+  "checks": {
+    "robinswood_evergreen_france-native-before": {
+      "command": [
+        "rtk",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-runtime-venv/bin/python",
+        "ops/rbw-agents-oss/scripts/robinswood_evergreen_france_tests.py"
+      ],
+      "exitCode": 0,
+      "seconds": 9.45,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/robinswood_evergreen_france-native-before.log"
+    },
+    "robinswood_evergreen_france-native-after": {
+      "command": [
+        "rtk",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-runtime-venv/bin/python",
+        "ops/rbw-agents-oss/scripts/robinswood_evergreen_france_tests.py"
+      ],
+      "exitCode": 0,
+      "seconds": 9.53,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/robinswood_evergreen_france-native-after.log"
+    },
+    "scotland_executive_conference_october-native-before": {
+      "command": [
+        "rtk",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-runtime-venv/bin/python",
+        "ops/rbw-agents-oss/scripts/scotland_executive_conference_october_tests.py"
+      ],
+      "exitCode": 0,
+      "seconds": 0.63,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/scotland_executive_conference_october-native-before.log"
+    },
+    "scotland_executive_conference_october-native-after": {
+      "command": [
+        "rtk",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-runtime-venv/bin/python",
+        "ops/rbw-agents-oss/scripts/scotland_executive_conference_october_tests.py"
+      ],
+      "exitCode": 0,
+      "seconds": 0.62,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/scotland_executive_conference_october-native-after.log"
+    },
+    "python-native-compaction-contracts": {
+      "command": [
+        "rtk",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-runtime-venv/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ops/rbw-agents-oss/tests",
+        "-p",
+        "test_activity_compaction.py"
+      ],
+      "exitCode": 0,
+      "seconds": 0.17,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-native-compaction-contracts.log"
+    },
+    "python-native-runtime-contracts": {
+      "command": [
+        "rtk",
+        "env",
+        "RBW_OSS_ROOT=/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/ops/rbw-agents-oss",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-runtime-venv/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ops/rbw-agents-oss/tests",
+        "-p",
+        "test_runtime_v2.py"
+      ],
+      "exitCode": 0,
+      "seconds": 0.25,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-native-runtime-contracts.log"
+    },
+    "nativeActivityImport": {
+      "command": [
+        "rtk",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-runtime-venv/bin/python",
+        "-c",
+        "import sys; from pathlib import Path; root=Path('ops/rbw-agents-oss'); sys.path[:0]=[str(root/'packages'),str(root/'apps/orchestrator-temporal')]; import activities, activity_compaction; assert activities._compact_result_observation is activity_compaction._compact_result_observation; print('Native Temporal activity import passed; no worker started')"
+      ],
+      "exitCode": 0,
+      "seconds": 0.38,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-native-activity-import.log"
+    }
+  },
+  "targetedTests": {
+    "robinswood_evergreen_france-native-before": 60,
+    "robinswood_evergreen_france-native-after": 60,
+    "scotland_executive_conference_october-native-before": 59,
+    "scotland_executive_conference_october-native-after": 59,
+    "python-native-compaction-contracts": 6,
+    "python-native-runtime-contracts": 12
+  },
+  "sourceGate": {
+    "max-lines": 19
+  },
+  "proof": "python-native-decomposition-structural-proof.json",
+  "limits": [
+    "All campaign effects mocked; no message sent",
+    "No Temporal worker, server, accounting data or external configuration modified",
+    "19 TypeScript files, lint findings and final local mission QA remain"
+  ]
+}

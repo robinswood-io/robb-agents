@@ -1,0 +1,75 @@
+{
+  "status": "passed",
+  "nativeSources": [
+    {
+      "scope": "activity-compaction-native",
+      "status": "passed",
+      "nativeDeclarations": 25,
+      "files": [
+        {
+          "file": "ops/rbw-agents-oss/apps/orchestrator-temporal/activities.py",
+          "lines": 434,
+          "sha256": "06b0b6a5d602c40c99d7473b44f56d6aa65f504b20413396fc4b168580c10fc3"
+        },
+        {
+          "file": "ops/rbw-agents-oss/apps/orchestrator-temporal/activity_compaction.py",
+          "lines": 336,
+          "sha256": "4a9cc7cbc41d88a5b4518d2f58137af453121f87bc1b039622ee5ae514ca4259"
+        }
+      ]
+    },
+    {
+      "scope": "architecture-policy-native",
+      "status": "passed",
+      "nativeDeclarations": 51,
+      "files": [
+        {
+          "file": "ops/rbw-agents-oss/scripts/oss_architecture_v2_install.py",
+          "lines": 409,
+          "sha256": "bd30b3247ccb4f1b13abd5ed6c5f2acee2ea6f8fee2ecdefb8e8330841238742"
+        },
+        {
+          "file": "ops/rbw-agents-oss/scripts/oss_architecture_v2_policy.py",
+          "lines": 348,
+          "sha256": "cb916dda4a19959421dafc404357bd5a7364a8110379ee42f03d93f1c03a1fce"
+        }
+      ]
+    },
+    {
+      "scope": "scotland-transport-native",
+      "status": "passed",
+      "nativeDeclarations": 40,
+      "files": [
+        {
+          "file": "ops/rbw-agents-oss/scripts/scotland_executive_conference_october.py",
+          "lines": 471,
+          "sha256": "5806e0b302715e2d2507c22f201c81bc880537c4998ceb33edd8533dc4af8dca"
+        },
+        {
+          "file": "ops/rbw-agents-oss/scripts/scotland_conference_transport.py",
+          "lines": 129,
+          "sha256": "01d9bfb743dd20981d3b8a1066e41e2b02e9ddc8279c13d6418bfdd58c42e48a"
+        }
+      ]
+    },
+    {
+      "scope": "evergreen-data-native",
+      "status": "passed",
+      "nativeDeclarations": 56,
+      "files": [
+        {
+          "file": "ops/rbw-agents-oss/scripts/robinswood_evergreen_france.py",
+          "lines": 467,
+          "sha256": "eeef8d223db8f581b564fc4aa9fd627ae1794c1515280f0e94f6f569cfd79dd9"
+        },
+        {
+          "file": "ops/rbw-agents-oss/scripts/evergreen_campaign_data.py",
+          "lines": 370,
+          "sha256": "d3a57c8dc3bf93e8462d7f7d06bf63daa2c3f2e94b4a393c1e4dd4e61f40a63d"
+        }
+      ]
+    }
+  ],
+  "nativeTestBodiesAndAssertionsPreserved": true,
+  "newLiveEffects": false
+}

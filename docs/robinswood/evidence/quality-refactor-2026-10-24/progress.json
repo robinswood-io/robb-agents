@@ -103,11 +103,11 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-26T12:23:35.362464+00:00",
+  "updatedAt": "2026-10-26T12:31:56.480651+00:00",
   "current": {
-    "lastEvidence": "local-staging-native-summary.json",
+    "lastEvidence": "python-native-decomposition-summary.json",
     "sourceGate": {
-      "max-lines": 23,
+      "max-lines": 19,
       "no-explicit-any": 0
     },
     "globalLint": {
@@ -137,8 +137,12 @@
       "rerun": "Refus PreToolUse : suite globale interdite ; tests ciblés uniquement"
     },
     "targetedTests": {
-      "before": 44,
-      "after": 80
+      "robinswood_evergreen_france-native-before": 60,
+      "robinswood_evergreen_france-native-after": 60,
+      "scotland_executive_conference_october-native-before": 59,
+      "scotland_executive_conference_october-native-after": 59,
+      "python-native-compaction-contracts": 6,
+      "python-native-runtime-contracts": 12
     }
   }
 }

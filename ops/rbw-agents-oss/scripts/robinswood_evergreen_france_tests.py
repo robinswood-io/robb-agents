@@ -5,8 +5,19 @@ from datetime import datetime,timedelta,timezone
 from email.message import EmailMessage
 from pathlib import Path
 from unittest.mock import patch
+from contextlib import contextmanager, ExitStack
+import evergreen_campaign_data as data
 import outbound_sender_guard as guard
 import robinswood_evergreen_france as engine
+@contextmanager
+def patch_engine(name, *arguments, **options):
+ original=getattr(engine,name)
+ with ExitStack() as stack:
+  replacement=stack.enter_context(patch.object(engine,name,*arguments,**options))
+  if getattr(data,name,None) is original:
+   stack.enter_context(patch.object(data,name,replacement))
+  yield replacement
+
 T=datetime(2026,10,5,8,0,tzinfo=timezone.utc)
 def raw(op='test-op',lane='pme',email='alice@fixture.invalid',subject='Fixture'):
  m=EmailMessage();m['From']=guard.SENDER;m['To']=email;m['Subject']=subject
@@ -134,7 +145,7 @@ class EngineTests(unittest.TestCase):
   engine.put_candidate(self.db,{'email':'a@fixture.invalid','lane':'pme','company':'Fixture','domain':'fixture.invalid','sourceUrls':['https://fixture.invalid/']})
   self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'checkedAt':T.isoformat()}),))
   engine.append_legacy(self.db,{'recipientEmail':'a@fixture.invalid','status':'sent','campaignId':'old'});self.db.commit()
-  with patch.object(engine,'suppressed',return_value=set()):row,step,_=engine.next_item(self.db,'pme',T,self.c)
+  with patch_engine('suppressed',return_value=set()):row,step,_=engine.next_item(self.db,'pme',T,self.c)
   self.assertIsNone(row)
 
  def test_recovery_requires_three_fresh_independent_smtp_proofs(self):
@@ -142,7 +153,7 @@ class EngineTests(unittest.TestCase):
   for i in range(3):
    engine.put_candidate(self.db,{'email':str(i)+'@fixture.invalid','lane':'pme','name':'Fixture Person','company':'Fixture '+str(i),'domain':'fixture.invalid','sourceUrls':['https://fixture.invalid/']})
   self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'smtpVerified':False,'checkedAt':T.isoformat()}),));self.db.commit()
-  with patch.object(engine,'suppressed',return_value=set()):
+  with patch_engine('suppressed',return_value=set()):
    self.assertFalse(engine.lane_capacity(self.db,'pme',T,self.c)[0])
    self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'smtpVerified':True,'checkedAt':T.isoformat()}),));self.db.commit()
    allowed,info=engine.lane_capacity(self.db,'pme',T,self.c)
@@ -196,10 +207,10 @@ class EndToEndTests(unittest.TestCase):
   engine.put_candidate(self.db,item)
   self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'checkedAt':T.isoformat()}),));self.db.commit()
   self.g=EndGateway(self.root)
-  self.patches=[patch.object(engine,'OPS',self.root/'reports'),patch.object(engine,'import_reserves',lambda db:None),patch.object(engine,'suppressed',lambda:set()),patch.object(engine,'now',lambda:T)]
-  for p in self.patches:p.start()
+  self.patches=[patch_engine('OPS',self.root/'reports'),patch_engine('import_reserves',lambda db:None),patch_engine('suppressed',lambda:set()),patch_engine('now',lambda:T)]
+  for p in self.patches:p.__enter__()
  def tearDown(self):
-  for p in reversed(self.patches):p.stop()
+  for p in reversed(self.patches):p.__exit__(None,None,None)
   self.db.close();self.tmp.cleanup()
  def execute(self):return engine.run('pme',apply=True,root=self.root,c=self.c,gateway=self.g,t=T,research_batch=0)
  def test_dispatch_exact_effect_then_idempotence(self):
@@ -243,7 +254,7 @@ class PrimaryIdentityRegressionTests(unittest.TestCase):
   self.assertFalse(engine.owned_domain('https://other.invalid/','fixture.invalid'))
  def test_contact_links_exclude_assets_and_equipment(self):
   html='<html lang="fr"><a href="/wp-content/contact-form.css">CSS</a><a href="/les-equipements">Équipement</a><a href="/mentions-legales">Mentions</a><a href="/decouvrir-les-equipes#dirigeants">Équipe</a></html>'
-  with patch.object(engine,'fetch',return_value=(html,'https://fixture.invalid/')):
+  with patch_engine('fetch',return_value=(html,'https://fixture.invalid/')):
    page=engine.public_page('https://fixture.invalid/')
   self.assertEqual(page['contactLinks'],['https://fixture.invalid/mentions-legales','https://fixture.invalid/decouvrir-les-equipes'])
  def test_missing_siren_is_bound_to_official_publisher_not_host(self):
@@ -252,7 +263,7 @@ class PrimaryIdentityRegressionTests(unittest.TestCase):
   row={'siren':'424281392','nom_complet':'FIXTURE SERVICES','categorie_entreprise':'PME','tranche_effectif_salarie':'21','annee_tranche_effectif_salarie':'2024','statut_diffusion':'O','etat_administratif':'A','siege':{},'dirigeants':[{'nom':'MARTIN','prenoms':'ALICE','qualite':'Présidente de SAS'}]}
   def registry(url):
    return {'results':[row if url.endswith('424281392') else {**row,'siren':'424761419','nom_complet':'OVH'}]}
-  with tempfile.TemporaryDirectory() as tmp,patch.object(engine,'fetch',return_value=('{"Answer":[{"type":15,"data":"10 mail.fixture.invalid."}]}','https://dns.google/')):
+  with tempfile.TemporaryDirectory() as tmp,patch_engine('fetch',return_value=('{"Answer":[{"type":15,"data":"10 mail.fixture.invalid."}]}','https://dns.google/')):
    result=engine.refresh_proof(c,T,lambda u:page,registry,Path(tmp))
   self.assertTrue(result['ok']);self.assertEqual(c['siren'],'424281392')
  def test_redirect_does_not_prove_company_identity(self):
@@ -282,7 +293,7 @@ class ProfessionalMandateTests(unittest.TestCase):
  def test_national_reserve_query_filters_size_and_keeps_registry_separate(self):
   with tempfile.TemporaryDirectory() as tmp:
    db=engine.db_open(Path(tmp))
-   with patch.object(engine,'fetch',return_value=('{"results":[],"total_pages":1}','https://registry.invalid')) as request:
+   with patch_engine('fetch',return_value=('{"results":[],"total_pages":1}','https://registry.invalid')) as request:
     self.assertEqual(engine.reserve_national(db,T,'pme'),0)
    self.assertIn('tranche_effectif_salarie=21%2C22%2C31',request.call_args[0][0]);self.assertEqual(db.execute('select count(*) from candidates').fetchone()[0],0);db.close()
 
@@ -293,7 +304,7 @@ class AudienceReportingTests(unittest.TestCase):
    db=engine.db_open(Path(tmp));c=engine.contract(Path(__file__).parent.parent/'config/robinswood-evergreen-france.json')
    item={'email':'alice@fixture.invalid','name':'Alice Martin','company':'Fixture','domain':'fixture.invalid','lane':'presse','sourceUrls':['https://fixture.invalid/']}
    engine.put_candidate(db,item);db.execute('update candidates set proof=?',(json.dumps({'ok':True,'checkedAt':T.isoformat()}),));db.commit()
-   with patch.object(engine,'suppressed',lambda:set()):
+   with patch_engine('suppressed',lambda:set()):
     self.assertEqual(engine.audience_counts(db,'presse',T,c)['readyForInitial'],1)
     engine.append_legacy(db,{'email':item['email'],'status':'operator_legacy_hold'});db.commit()
     report=engine.audience_counts(db,'presse',T,c)
@@ -327,9 +338,9 @@ class PostScotlandRampTests(unittest.TestCase):
   self.c=engine.contract(Path(__file__).parent.parent/'config/robinswood-evergreen-france.json')
   self.t=datetime(2026,10,14,7,tzinfo=timezone.utc)
   self.old_ramp=engine.portfolio_ramp
-  self.ramp_patch=patch.object(engine,'portfolio_ramp',lambda db,t,c:self.old_ramp(db,t,c,self.prior.root));self.ramp_patch.start()
+  self.ramp_patch=patch_engine('portfolio_ramp',lambda db,t,c:self.old_ramp(db,t,c,self.prior.root));self.ramp_patch.__enter__()
  def tearDown(self):
-  self.ramp_patch.stop();self.db.close();self.tmp.cleanup();self.prior.tearDown()
+  self.ramp_patch.__exit__(None,None,None);self.db.close();self.tmp.cleanup();self.prior.tearDown()
  def effect(self,op,lane='pme',t=None,state='verified',step='initial'):
   self.db.execute('INSERT INTO touches VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
    (op,op+'@fixture.invalid',lane,step,'A',self.c['copyVersion'],engine.stamp(t or self.t),state,'raw','body','subject',op,'thread-'+op,'{}'));self.db.commit()
@@ -435,7 +446,7 @@ class PostScotlandRampTests(unittest.TestCase):
      # Eighteen morning slots, then afternoon; every effect is ten minutes apart.
      t=base+timedelta(minutes=10*i) if i<18 else base+timedelta(hours=5,minutes=10*(i-18))
      g.time=t
-     with patch.object(engine,'OPS',self.root/'reports'),patch.object(engine,'now',lambda:t),patch.object(engine,'import_reserves',lambda db:None),patch.object(engine,'suppressed',return_value=set()):
+     with patch_engine('OPS',self.root/'reports'),patch_engine('now',lambda:t),patch_engine('import_reserves',lambda db:None),patch_engine('suppressed',return_value=set()):
       report=engine.run(lane,apply=True,root=self.root,c=self.c,gateway=g,t=t,research_batch=0)
      self.assertEqual(report['status'],'sent_verified')
     self.assertEqual(g.posts,expected)

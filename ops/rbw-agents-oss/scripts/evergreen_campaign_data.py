@@ -1,0 +1,370 @@
+from __future__ import annotations
+
+import fcntl, hashlib, json, re, sqlite3, unicodedata
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from urllib import parse
+from zoneinfo import ZoneInfo
+import scotland_executive_conference_october as transport
+import evergreen_sender_pilot as sender_pilot
+import evergreen_queue_continuity as continuity
+
+WS=Path('/home/craft/.craft-agent/workspaces/my-workspace-2')
+
+OPS=WS/'campaigns/ops'
+
+ROOT=OPS/'product-campaigns/robinswood-evergreen-france'
+
+POLICY=Path('/srv/rbw-agents-oss/config/robinswood-evergreen-france.json')
+
+LANES=('presse','pme','eti')
+
+IDS={x:'robinswood-evergreen-france-'+x for x in LANES}
+
+ROLE=re.compile(r'présiden|presiden|directeur|directrice|gérant|gerant|chief|ceo|rédact|redact|journalist',re.I)
+
+EMAIL=re.compile(r'[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}',re.I)
+
+EDITORIAL=re.compile(r'^(redaction|rédaction|editorial|editor|newsroom|presse|press|tips|tribune|podcast)@',re.I)
+
+EMPLOYEES={'21':50,'22':100,'31':200,'32':250,'41':500,'42':1000,'51':2000}
+
+def now():return datetime.now(timezone.utc)
+
+def stamp(t):return t.isoformat().replace('+00:00','Z')
+
+def dt(s):return datetime.fromisoformat(s.replace('Z','+00:00'))
+
+def norm(s):return ''.join(c for c in unicodedata.normalize('NFKD',str(s or '').lower()) if not unicodedata.combining(c))
+
+def read(p,default=None):
+ try:return json.loads(Path(p).read_text())
+ except FileNotFoundError:return {} if default is None else default
+
+def save(p,obj):transport.save(p,obj)
+
+def digest(obj):return transport.digest(obj)
+
+def contract(path=POLICY):
+ c=read(path);assert c.get('authorization',{}).get('source')=='human_evergreen_campaign_request_2026-10-02','missing_human_authorization'
+ assert c['authorization']['scopeSha256']==digest({k:v for k,v in c.items() if k!='authorization'}),'contract_scope_changed'
+ assert c['sender']=='thibault@robinswood.io' and c['timezone']=='Europe/Paris'
+ assert c['paidAllowed'] is False and c['crmWriteAllowed'] is False and c['linkedinWriteAllowed'] is False
+ assert c['lanes']=={'presse':{'dailyMax':5,'weeklyMax':20},'pme':{'dailyMax':3,'weeklyMax':10},'eti':{'dailyMax':2,'weeklyMax':10}}
+ assert c['canaryDailyMax']==1 and c['maxTouchesWithoutReply']==2
+ assert c['windows']==[['09:00','12:00'],['14:00','18:00']] and c['minimumIntervalSeconds']==600
+ assert c['proofMaxAgeDays']==7 and c['copyVersion']=='2026-10-02.2'
+ assert c['autoRecovery']=={'cooldownDays':7,'minimumFreshSmtpContacts':3,'complaintRecoveryAllowed':False,'capAfterRecovery':1}
+ r=c.get('postScotlandRamp')
+ if r:
+  assert r['authorizationSource']=='human_post_scotland_daily_ramp_request_2026-10-04' and r['approvedBy']=='Thibault'
+  assert r['scope']=='combined_french_portfolio_including_replies_and_followups'
+  assert r['predecessorCampaignId']=='scotland-executive-conference-october-2026'
+  assert (r['dailyMax'],r['weeklyMax'],r['steadyDailyMax'],r['steadyWeeklyMax'])==(20,100,30,150)
+  assert r['laneDailyMax']=={'presse':4,'pme':10,'eti':6}
+  change=r.get('allocationChange')
+  expected={'presse':6,'pme':15,'eti':9}
+  if change:
+   assert change['source']=='human_post_scotland_daily30_press10_request_2026-10-04' and change['approvedBy']=='Thibault'
+   assert change['scope']=='target_30_total_press_10_prospecting_20'
+   assert change['previousSteadyLaneDailyMax']==expected
+   previous={k:v for k,v in c.items() if k not in ['authorization','senderPilot']}
+   previous['postScotlandRamp']={k:v for k,v in r.items() if k!='allocationChange'}|{'steadyLaneDailyMax':expected}
+   assert digest(previous)==change['previousScopeSha256'],'allocation_prior_scope_changed'
+   expected={'presse':10,'pme':12,'eti':8}
+  assert r['steadyLaneDailyMax']==expected
+  assert (r['healthyCompletedBusinessDays'],r['minimumVerifiedEffectsPerHealthyDay'])==(5,10)
+  assert all(r[k] is True for k in ['requireCurrentPredecessorContractExpiry','requireNoUnknownEffects','preserveRecoveryCanary'])
+ sender_pilot.verify_contract(c,digest)
+ return c
+
+def in_window(t,c):
+ x=t.astimezone(ZoneInfo(c['timezone']));h=x.strftime('%H:%M')
+ return x.weekday()<5 and any(a<=h<b for a,b in c['windows'])
+
+def db_open(root):
+ root.mkdir(parents=True,exist_ok=True);db=sqlite3.connect(root/'campaign-state.sqlite3');db.row_factory=sqlite3.Row
+ db.executescript("""
+ CREATE TABLE IF NOT EXISTS candidates(email TEXT PRIMARY KEY,lane TEXT,account TEXT,payload TEXT,proof TEXT,checked TEXT,reason TEXT);
+ CREATE TABLE IF NOT EXISTS touches(operation TEXT PRIMARY KEY,email TEXT,lane TEXT,step TEXT,variant TEXT,copy_version TEXT,created TEXT,state TEXT,raw TEXT,expected TEXT,subject TEXT,gmail_id TEXT,thread TEXT,checks TEXT);
+ CREATE UNIQUE INDEX IF NOT EXISTS touch_unique ON touches(email,step);
+ CREATE TABLE IF NOT EXISTS replies(message_id TEXT PRIMARY KEY,email TEXT,lane TEXT,kind TEXT,observed TEXT,evidence TEXT);
+ CREATE TABLE IF NOT EXISTS legacy(email TEXT PRIMARY KEY,campaign TEXT,message_id TEXT,subject TEXT,state TEXT);
+ CREATE TABLE IF NOT EXISTS research(siren TEXT PRIMARY KEY,payload TEXT,checked TEXT,reason TEXT);
+ CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT);
+ """);db.commit();sender_pilot.ensure_schema(db,root);continuity.ensure_schema(db,root);return db
+
+def suppressed(root=OPS.parent):
+ obj=read(root/'contact-suppression.json');out=set()
+ for k in ['records','blockedRecipients','items']:
+  for r in obj.get(k,[]):
+   if isinstance(r,dict) and r.get('active') is not False and (r.get('active') is True or r.get('status') in ['do_not_contact','blocked','unsubscribe','opt_out','bounced_invalid_email'] or str(r.get('status','')).startswith('cooldown_')):
+    out.add(str(r.get('email') or r.get('value','')).lower())
+ return out
+
+def suppress(email,kind,message_id,path=OPS.parent/'contact-suppression.json'):
+ with path.with_suffix('.lock').open('a') as lock:
+  fcntl.flock(lock,fcntl.LOCK_EX);obj=read(path)
+  if email not in suppressed(path.parent):
+   obj.setdefault('records',[]).append({'email':email,'active':True,'status':'do_not_contact','reason':kind,'sourceGmailMessageId':message_id,'createdAt':stamp(now()),'campaignId':'robinswood-evergreen-france'})
+   obj['updatedAt']=stamp(now());save(path,obj)
+
+def append_legacy(db,row):
+ email=str(row.get('email') or row.get('recipientEmail','')).lower()
+ if email:db.execute('INSERT OR IGNORE INTO legacy VALUES(?,?,?,?,?)',(email,row.get('campaignId','legacy'),row.get('gmailMessageId') or row.get('gmail_id'),row.get('subject'),row.get('status') or row.get('event','prior_contact')))
+
+def import_reserves(db,ops=OPS,cfg=Path('/srv/rbw-agents-oss/config')):
+ # Historical contacts and operator holds never become a new cold contact.
+ for name in ['robinswood-media-authority-2026-ledger.jsonl','robinswood-pme-hdf-audited-mailer-ledger.jsonl','robinswood-pme-hdf-audited-dispatch-ledger.jsonl','robinswood-flow-email-ledger.jsonl']:
+  p=ops/name
+  if p.exists():
+   for line in p.read_text().splitlines():
+    r=json.loads(line)
+    if r.get('status') in ['sent','sent_verified','sent_needs_manual_verification','already_sent_after_verified_lookup'] or r.get('event')=='sent':append_legacy(db,r)
+ for r in read(ops.parent/'press-campaign-database.json').get('contacts',[]):append_legacy(db,{**r,'status':'operator_legacy_hold'})
+ # The old canary lane stays paused; its reserve is requalified from primary sources.
+ seeds=read(ops/'robinswood-pme-hdf-full-seed-2026-06-18.json').get('items',[])
+ by_name={norm(x.get('companyName')):x for x in seeds}
+ for x in read(ops/'robinswood-pme-hdf-email-drafts-prepare-only-latest.json').get('drafts',[]):
+  email=str(x.get('recipientEmail','')).lower();seed=by_name.get(norm(x.get('companyName')),{})
+  if not EMAIL.fullmatch(email):continue
+  c={'email':email,'name':x.get('recipientName',''),'company':x.get('companyName',''),'siren':seed.get('siren'),'domain':email.split('@')[1],
+     'sourceUrls':['https://'+email.split('@')[1]+'/','https://'+email.split('@')[1]+'/mentions-legales/','https://'+email.split('@')[1]+'/contact/'],
+     'topic':x.get('profileControl',{}).get('contextStrength',{}).get('synthesizedAngle','')}
+  lower=EMPLOYEES.get(str(seed.get('tranche_effectif_salarie')),0)
+  c['lane']='eti' if str(seed.get('employeeRange','')).startswith(('250','500','1000','2000')) or lower>=250 else 'pme'
+  put_candidate(db,c)
+ seeds=read(cfg/'oss-media-authority-seeds.json')
+ seeds=seeds if isinstance(seeds,list) else seeds.get('items',seeds.get('seeds',[]))
+ for x in seeds:
+  if not isinstance(x,dict) or x.get('language') not in (None,'fr','fr-FR'):continue
+  email=str(x.get('email','')).lower();url=x.get('sourceUrl','')
+  if not EMAIL.fullmatch(email) or not url:continue
+  domain=email.split('@')[1];primary=url if url.startswith('https://') and (parse.urlparse(url).hostname or '').removeprefix('www.')==domain.removeprefix('www.') else 'https://'+domain+'/'
+  put_candidate(db,{'email':email,'name':x.get('contactName',''),'company':x.get('media',''),'lane':'presse','domain':domain,
+   'sourceUrls':[primary],'discoverySource':url,'topic':x.get('angle',''),'fitScore':x.get('fitScore',0),'segment':x.get('segment','')})
+ for c in read(cfg/'robinswood-evergreen-france-primary-seeds.json').get('contacts',[]):
+  if c.get('lane')=='presse' and EMAIL.fullmatch(c.get('email','')) and c.get('domain') and c.get('sourceUrls') and all(owned_domain(u,c['domain']) for u in c['sourceUrls']):put_candidate(db,c)
+ for x in read(ops/'robinswood-media-contact-base-2026-enriched.json').get('contacts',[]):
+  email=str(x.get('email') or x.get('enrichedEmail') or '').lower()
+  if x.get('country')!='FR' or x.get('countryConfidence')=='medium_francophone' or not EMAIL.fullmatch(email):continue
+  if x.get('legacyPrStatus') or x.get('suppressionStatus') or str(x.get('outreachStatus','')).startswith('not_eligible'):continue
+  domain=email.split('@')[1];url=x.get('sourceUrl') or ''
+  put_candidate(db,{'email':email,'name':x.get('contactName',''),'company':x.get('media',''),'lane':'presse','domain':domain,
+   'sourceUrls':[url if url.startswith('https://') and (parse.urlparse(url).hostname or '').removeprefix('www.')==domain.removeprefix('www.') else 'https://'+domain+'/'],'discoverySource':url,
+   'topic':'IA et décisions des dirigeants PME/ETI','fitScore':x.get('qualityScore',0),'segment':'journalist','emailVerification':x.get('emailVerification',{})})
+ db.commit()
+
+def put_candidate(db,c):
+ if c['lane'] not in LANES:return
+ account=c.get('siren') or c.get('company','').lower() or c['domain']
+ existing=db.execute('SELECT payload FROM candidates WHERE email=?',(c['email'],)).fetchone()
+ if existing:
+  old=json.loads(existing['payload'])
+  if old.get('name')!=c.get('name') or old.get('company')!=c.get('company'):return
+  repaired=bool(old.get('sourceUrls') and not old['sourceUrls'][0].startswith('https://') and c.get('sourceUrls') and c['sourceUrls'][0].startswith('https://'))
+  verification=c.get('emailVerification')
+  if repaired or (verification and verification!=old.get('emailVerification')):
+   if repaired:old['sourceUrls']=c['sourceUrls'];old['discoverySource']=c.get('discoverySource')
+   if verification:old['emailVerification']=verification
+   db.execute('UPDATE candidates SET payload=?,checked=NULL,proof=NULL,reason=? WHERE email=?',(json.dumps(old,ensure_ascii=False),'primary_source_or_delivery_evidence_refreshed',c['email']))
+ else:db.execute('INSERT INTO candidates VALUES(?,?,?,?,?,?,?)',(c['email'],c['lane'],account,json.dumps(c,ensure_ascii=False),None,None,'needs_primary_requalification'))
+
+def cached_delivery(email,t,ops=OPS):
+ obj=read(ops/'contact-quality-verification-cache.json')
+ v=obj.get('items',{}).get(hashlib.sha256(email.encode()).hexdigest(),{})
+ q=v.get('verification',{})
+ return bool(v.get('updatedAt') and 0<=(t-dt(v['updatedAt'])).total_seconds()<7*86400 and q.get('result') in ['deliverable','valid'] and q.get('smtp_check') is True and q.get('accept_all') is False and q.get('block') is False)
+
+def provider_delivery(c,t):
+ v=c.get('emailVerification',{});checked=v.get('checkedAt')
+ return bool(checked and 0<=(t-dt(checked)).total_seconds()<7*86400 and v.get('provider')=='hunter' and v.get('statusCode')==200 and v.get('result') in ['deliverable','valid'] and int(v.get('score') or 0)>=95 and v.get('smtpCheck') is True and v.get('acceptAll') is False and v.get('block') is False)
+
+def delivery_blocker(c,t,ops=OPS):
+ obj=read(ops/'contact-quality-verification-cache.json')
+ cached=obj.get('items',{}).get(hashlib.sha256(c['email'].encode()).hexdigest(),{})
+ evidence=[(cached.get('updatedAt'),cached.get('verification',{})),(c.get('emailVerification',{}).get('checkedAt'),c.get('emailVerification',{}))]
+ for checked,v in evidence:
+  if checked and 0<=(t-dt(checked)).total_seconds()<30*86400 and (v.get('result') in ['risky','undeliverable'] or (v.get('accept_all') is True or v.get('acceptAll') is True)):
+   return 'recent_adverse_delivery_evidence'
+ return None
+
+def owned_domain(url,domain):
+ host=(parse.urlparse(url).hostname or '').lower().removeprefix('www.')
+ domain=domain.lower().removeprefix('www.')
+ return host==domain or host.endswith('.'+domain)
+
+def primary_mandate(pages,name):
+ tokens=norm(name).split()
+ if len(tokens)<2:return None
+ fullname=r'\s+'.join(re.escape(x) for x in tokens)
+ role=r'(?:president(?:e)?|direct(?:eur|rice)(?:\s+general[e]?)?|ceo|chief executive officer|gerant(?:e)?)'
+ pattern=re.compile(r'(?:'+fullname+r'\W{0,12}(?:notre\s+|est\s+|le\s+|la\s+)?(?P<after>'+role+r')|(?P<before>'+role+r')\W{0,12}'+fullname+r')')
+ for p in pages:
+  path=norm(parse.urlparse(p['url']).path)
+  if not re.search(r'societe|a-propos|about|company|groupe|equipe|team|gouvernance|direction|mentions',path) or re.search(r'actualit|news|blog|article|archive|histoire',path):continue
+  for block in p.get('roleBlocks',[]):
+   text=norm(block)
+   if re.search(r'\bancien|\bancienne|\bex-|jusqu|etait|historique',text):continue
+   match=pattern.search(text)
+   if match:return {'qualite':match['after'] or match['before'],'sourceUrl':p['url'],'sourceSha256':p['sha256'],'basis':'primary_company_professional_mandate'}
+ return None
+
+def primary_sirens(pages):
+ values=[]
+ for page in pages:
+  for m in re.finditer(r'\b(?:SIREN|SIRET|RCS)\b',page['text'],re.I):
+   tail=page['text'][m.end():m.end()+80]
+   number=re.search(r'(?<!\d)(\d(?:[\s.]*\d){13}|\d(?:[\s.]*\d){8})(?!\d)',tail)
+   if number:
+    digits=re.sub(r'\D','',number[1]);siren=digits[:9]
+    if siren not in values:values.append(siren)
+ return values[:3]
+
+def business_days(a,b):
+ d=a.astimezone(ZoneInfo('Europe/Paris')).date();end=b.astimezone(ZoneInfo('Europe/Paris')).date();n=0
+ while d<end:
+  d+=timedelta(days=1);n+=d.weekday()<5
+ return n
+
+def learning(db,lane,t,c,sender=None,strategy=None):
+ out={}
+ for v in ['A','B']:
+  rows=db.execute("SELECT * FROM touches WHERE lane=? AND step='initial' AND state='verified' AND variant=? AND copy_version=?",(lane,v,c['copyVersion'])).fetchall()
+  if sender is not None:
+   matched=[]
+   for row in rows:
+    try:identity=sender_pilot.touch_identity(row)
+    except Exception:continue
+    if identity==(sender,strategy):matched.append(row)
+   rows=matched
+  matured={r['email'] for r in rows if business_days(dt(r['created']),t)>=5}
+  successes={r['email'] for r in db.execute("SELECT * FROM replies WHERE lane=? AND kind=?",(lane,'editorial_request' if lane=='presse' else 'qualified_need'))}&matured
+  out[v]={'matured':len(matured),'qualified':len(successes),'posterior':(1+len(successes))/(2+len(matured))}
+ enough=all(x['matured']>=8 for x in out.values()) and sum(x['qualified'] for x in out.values())>=3
+ winner=max(out,key=lambda v:out[v]['posterior']) if enough and abs(out['A']['posterior']-out['B']['posterior'])>=.1 else None
+ result={'copyVersion':c['copyVersion'],'variants':out,'winner':winner,'explorationFloor':.25,'technicalSendsRewarded':False,'bookingsInferred':False,'sender':sender,'senderStrategyVersion':strategy}
+ if c.get('senderPilot') and sender is None:
+  result['winner']=None
+  result['cohorts']={s:learning(db,lane,t,c,s,sender_pilot.VERSION) for s in [sender_pilot.PRIMARY,sender_pilot.ROBB]}
+ return result
+
+def choose_variant(email,learn):
+ bucket=int(hashlib.sha256(email.encode()).hexdigest(),16)%4
+ return learn['winner'] if learn['winner'] and bucket!=0 else ('A' if bucket%2==0 else 'B')
+
+def draft(c,v,step='initial',subject=None):
+ name=c.get('name','').split(' ')[0] if c.get('name') and len(c['name'].split())>=2 else ''
+ greeting='Bonjour'+(' '+name.title() if name and c['lane']!='presse' else '')+','
+ if c['lane']=='presse':
+  title='Angle PME/ETI : décider où l’IA mérite un investissement' if v=='A' else 'IA en entreprise : ce qui permet de passer à un usage maîtrisé'
+  main=("Je vous propose un angle concret pour votre rédaction : comment un dirigeant distingue un cas d’usage utile d’une démonstration séduisante, puis décide d’investir ou d’arrêter." if v=='A' else
+    "Je vous propose un angle terrain pour votre rédaction : qui possède les données, comment les équipes adoptent l’outil et comment mesurer un flux avant et après sa transformation.")
+  text=greeting+'\n\n'+main+'\n\nChez Robinswood, nous travaillons sur les flux métier, les outils IA et l’adoption. Exemple de périmètre réalisé : pour Cerfrance Picardie Nord de Seine, conception, développement et maintenance d’une application de gestion des lettres de mission.\n\nSouhaitez-vous une note d’angle courte avec les questions à poser aux dirigeants ? Aucun placement payant ni exclusivité proposés.'
+ else:
+  # Imported historical angles may be English or unproven; outgoing copy stays French.
+  topic='les validations, les documents et le passage entre équipes'
+  title=c['company']+' : quel flux mérite d’être simplifié ?' if v=='A' else c['company']+' : un usage IA que vos équipes maîtrisent'
+  main=("Un sujet possible chez "+c['company']+" : "+topic+". Où se situent le temps perdu et les reprises ? C’est une hypothèse à vérifier avec vous, sans supposer un gain déjà obtenu." if v=='A' else
+    "Un sujet possible chez "+c['company']+" : "+topic+". Quelle étape améliorer en gardant la maîtrise des données, des décisions et de l’outil ?")
+  text=greeting+'\n\n'+main+'\n\nRobinswood accompagne les PME et ETI de l’étude du flux à la mise en œuvre. Notre audit stratégique IA (5 000 € HT, dix jours) établit une situation de départ et permet de décider : arrêt, outil, accompagnement ou combinaison.\n\nQuel flux vous coûte aujourd’hui le plus de temps, et dans quel ordre de grandeur ? Une réponse de deux lignes suffit.'
+ if step=='followup':text=greeting+'\n\nJe reviens une seule fois sur ma proposition ci-dessous. '+('Une note d’angle sur les décisions IA des PME/ETI serait-elle utile à votre rédaction ?' if c['lane']=='presse' else 'Le sujet est-il pertinent pour votre entreprise, ou faut-il le laisser de côté ?')
+ if step=='reply':
+  text=greeting+'\n\nMerci pour votre retour. '+('Voici notre angle : partir d’un flux réel, établir le coût total, puis décider de poursuivre ou d’arrêter. Nous pouvons documenter la méthode et le périmètre de nos missions ; aucun gain chiffré n’est annoncé sans mesure. Pour quel format et quelle échéance préparez-vous ce sujet ?' if c['lane']=='presse' else
+    'Notre démarche commence par un flux précis, une situation de départ et un coût total. L’audit stratégique IA est proposé à 5 000 € HT sur dix jours ; sa conclusion peut recommander l’arrêt, un outil ou un accompagnement. Quel flux, quel volume et quelle échéance souhaiteriez-vous examiner ?')
+ if c.get('_sender')==sender_pilot.ROBB:
+  text=text.replace(greeting+'\n\n',greeting+'\n\n'+sender_pilot.DISCLOSURE+'\n\n',1)
+ text+='\n\nVotre adresse professionnelle provient de sources publiques en lien avec votre activité. Source : '+c['sourceUrls'][0]+'\nInformations et droits sur vos données : https://robinswood.io/confidentialite — contact : thibault@robinswood.io. Pour ne plus recevoir de message, répondez simplement « STOP » ; l’opposition est gratuite et prise en compte automatiquement.'
+ return {'subject':subject or title,'body':text}
+
+def portfolio_ramp(db,t,c,predecessor_root=None):
+ """Read current authorised expiry and durable effects; a pause is never completion."""
+ r=c.get('postScotlandRamp')
+ info={'phase':'predecessor_active','dailyCap':None,'weeklyCap':None,'reason':'no_post_scotland_authorization'}
+ if not r:return info
+ predecessor_root=predecessor_root or OPS/'product-campaigns'/r['predecessorCampaignId']
+ try:
+  sc=read(predecessor_root/'campaign-contract.json');transport.verify_contract(sc)
+  limits=sc['limits'];end=limits['lastOutboundDate'];local=t.astimezone(ZoneInfo(limits['timezone']))
+  info.update(predecessorCampaignId=sc['campaignId'],predecessorLastOutboundDate=end,
+   predecessorScopeSha256=sc['authorization']['scopeSha256'],reason='awaiting_authorized_predecessor_expiry')
+  if local.date().isoformat()<=end:return info
+  with sqlite3.connect('file:'+str(predecessor_root/'campaign-state.sqlite3')+'?mode=ro',uri=True) as prior:
+   unknown=prior.execute("SELECT count(*) FROM touches WHERE state IS NULL OR state!='sent_verified'").fetchone()[0]
+   adverse=prior.execute("SELECT count(*) FROM replies WHERE kind IN ('bounce','complaint','delivery_failure')").fetchone()[0]
+   info.update(predecessorUnknownEffects=unknown,predecessorAdverseSignals=adverse)
+   if unknown or adverse:
+    info['reason']='predecessor_unknown_effect' if unknown else 'predecessor_adverse_signal_requires_review';return info
+ except Exception as e:
+  info['reason']='predecessor_completion_unproven:'+type(e).__name__;return info
+ effects=db.execute('SELECT * FROM touches').fetchall()
+ if any(x['state']!='verified' for x in effects):
+  info.update(phase='blocked',reason='portfolio_unknown_gmail_effect');return info
+ day=t.astimezone(ZoneInfo(c['timezone'])).date();monday=day-timedelta(days=day.weekday())
+ daily_used=sum(dt(x['created']).astimezone(ZoneInfo(c['timezone'])).date()==day for x in effects)
+ weekly_used=sum(monday<=dt(x['created']).astimezone(ZoneInfo(c['timezone'])).date()<=day for x in effects)
+ days={}
+ for x in effects:
+  created=dt(x['created']);d=created.astimezone(ZoneInfo(c['timezone'])).date()
+  if created.astimezone(ZoneInfo(limits['timezone'])).date().isoformat()>end and d<day and d.weekday()<5:
+   days[d]=days.get(d,0)+1
+ healthy=sorted(d.isoformat() for d,n in days.items() if n>=r['minimumVerifiedEffectsPerHealthyDay'])
+ adverse=db.execute("SELECT count(*) FROM replies WHERE kind IN ('bounce','complaint')").fetchone()[0]
+ steady=len(healthy)>=r['healthyCompletedBusinessDays'] and not adverse
+ info.update(phase='steady_30' if steady else 'initial_20',reason='verified_predecessor_expiry',
+  dailyCap=r['steadyDailyMax'] if steady else r['dailyMax'],
+  weeklyCap=r['steadyWeeklyMax'] if steady else r['weeklyMax'],
+  laneDailyMax=r['steadyLaneDailyMax'] if steady else r['laneDailyMax'],
+  dailyUsed=daily_used,weeklyUsed=weekly_used,healthyCompletedDays=healthy,
+  adverseSignalsPreserved=adverse,countsRepliesAndFollowups=True)
+ return info
+
+def lane_capacity(db,lane,t,c):
+ effects=db.execute("SELECT * FROM touches WHERE lane=?",(lane,)).fetchall();local=t.astimezone(ZoneInfo('Europe/Paris'));day=local.date();monday=day-timedelta(days=day.weekday())
+ learn=learning(db,lane,t,c);matured=sum(x['matured'] for x in learn['variants'].values());qualified=sum(x['qualified'] for x in learn['variants'].values())
+ adverse=db.execute("SELECT count(*) n FROM replies WHERE lane=? AND kind IN ('bounce','complaint')",(lane,)).fetchone()['n']
+ bounce=db.execute("SELECT max(observed) observed FROM replies WHERE lane=? AND kind='bounce'",(lane,)).fetchone()['observed']
+ if db.execute("SELECT 1 FROM replies WHERE lane=? AND kind='complaint'",(lane,)).fetchone():return False,'complaint_pause'
+ if bounce:
+  key='recovery_epoch_'+lane;epoch=db.execute('SELECT value FROM metadata WHERE key=?',(key,)).fetchone()
+  recovered=bool(epoch and json.loads(epoch['value'])['afterBounce']==bounce)
+  if not recovered:
+   eligible=[]
+   if (t-dt(bounce)).total_seconds()>=c['autoRecovery']['cooldownDays']*86400:
+    for row in db.execute('SELECT * FROM candidates WHERE lane=? AND proof IS NOT NULL AND email NOT IN(SELECT email FROM touches) AND email NOT IN(SELECT email FROM legacy)',(lane,)):
+     proof=json.loads(row['proof'])
+     if proof.get('ok') and proof.get('smtpVerified') is True and dt(proof['checkedAt'])>dt(bounce) and 0<=(t-dt(proof['checkedAt'])).total_seconds()<7*86400 and row['email'] not in suppressed() and not delivery_blocker(json.loads(row['payload']),t):
+      eligible.append(row['email'])
+   if len(eligible)<c['autoRecovery']['minimumFreshSmtpContacts']:return False,'new_cohort_bounce_pause_awaiting_independent_smtp_proofs'
+   db.execute('INSERT OR REPLACE INTO metadata VALUES(?,?)',(key,json.dumps({'activatedAt':stamp(t),'afterBounce':bounce,'freshContactHashes':[digest(e) for e in eligible],'historicalMetricsPreserved':True})));db.commit()
+   recovered=True
+  if recovered:
+   # Keep the new recovery canary at one/day; allow only independently verified SMTP contacts.
+   for row in db.execute('SELECT email,proof FROM candidates WHERE lane=? AND proof IS NOT NULL',(lane,)):
+    proof=json.loads(row['proof'])
+    if proof.get('smtpVerified') is not True and proof.get('ok'):
+     proof['ok']=False;proof['reason']='recovery_requires_independent_smtp_proof'
+     db.execute('UPDATE candidates SET proof=?,reason=? WHERE email=?',(json.dumps(proof),proof['reason'],row['email']))
+   db.commit()
+ ramp=portfolio_ramp(db,t,c)
+ if ramp['phase']=='blocked':return False,ramp['reason']
+ active=ramp['phase'] in ['initial_20','steady_30']
+ daily=ramp['laneDailyMax'][lane] if active and not adverse else c['lanes'][lane]['dailyMax'] if matured>=10 and qualified>=1 and not adverse else c['canaryDailyMax']
+ weekly=(ramp['laneDailyMax'][lane]*5) if active else c['lanes'][lane]['weeklyMax']
+ nday=sum(dt(x['created']).astimezone(ZoneInfo('Europe/Paris')).date()==day for x in effects)
+ nweek=sum(dt(x['created']).astimezone(ZoneInfo('Europe/Paris')).date()>=monday for x in effects)
+ portfolio_ok=not active or (ramp['dailyUsed']<ramp['dailyCap'] and ramp['weeklyUsed']<ramp['weeklyCap'])
+ return nday<daily and nweek<weekly and portfolio_ok,{'dailyCap':daily,'dailyUsed':nday,'weeklyCap':weekly,'weeklyUsed':nweek,'historicalMetricsReset':False,'portfolioRamp':ramp}
+
+def audience_counts(db,lane,t,c):
+ rows=db.execute('SELECT * FROM candidates WHERE lane=?',(lane,)).fetchall()
+ legacy={r['email'] for r in db.execute('SELECT email FROM legacy')}
+ blocked=suppressed();qualified=[]
+ for r in rows:
+  if r['email'] in legacy or r['email'] in blocked or not r['proof']:continue
+  proof=json.loads(r['proof'])
+  if proof.get('ok') is True and proof.get('checkedAt') and 0<=(t-dt(proof['checkedAt'])).total_seconds()<c['proofMaxAgeDays']*86400:qualified.append(r)
+ contacted={r['email'] for r in db.execute('SELECT email FROM touches')}
+ touched_accounts={r['account'] for r in db.execute('SELECT c.account FROM candidates c JOIN touches t ON c.email=t.email')}
+ return {'reserve':len(rows),'qualified':len(qualified),'readyForInitial':sum(r['email'] not in contacted and r['account'] not in touched_accounts for r in qualified),
+  'historicalContactsExcluded':len(legacy),'laneHistoricalReserveExcluded':sum(r['email'] in legacy for r in rows)}
