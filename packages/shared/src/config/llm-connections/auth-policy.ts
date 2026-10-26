@@ -18,8 +18,8 @@ export function authTypeIsOAuth(authType: LlmAuthType): boolean {
  * @returns true if this is a valid combination
  */
 export function isValidProviderAuthCombination(
-  providerType: LlmProviderType,
-  authType: LlmAuthType
+  providerType: string,
+  authType: string
 ): boolean {
   const validCombinations: Record<LlmProviderType, LlmAuthType[]> = {
     anthropic: ['api_key', 'oauth'],
@@ -27,7 +27,8 @@ export function isValidProviderAuthCombination(
     pi_compat: ['api_key_with_endpoint', 'none'],
   };
 
-  return validCombinations[providerType]?.includes(authType) ?? false;
+  return Object.hasOwn(validCombinations, providerType)
+    && validCombinations[providerType as LlmProviderType].some(allowed => allowed === authType);
 }
 
 /**

@@ -103,20 +103,20 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-26T04:50:07.537418+00:00",
+  "updatedAt": "2026-10-26T04:59:38.930885+00:00",
   "current": {
-    "lastEvidence": "resource-bundle-scenario-modules-summary.json",
+    "lastEvidence": "native-component-contracts-summary.json",
     "sourceGate": {
       "max-lines": 43,
-      "no-explicit-any": 108
+      "no-explicit-any": 100
     },
     "globalLint": {
-      "files": 3604,
-      "errors": 135,
+      "files": 3605,
+      "errors": 127,
       "warnings": 100,
       "fatal": 0,
       "rules": {
-        "@typescript-eslint/no-explicit-any": 103,
+        "@typescript-eslint/no-explicit-any": 95,
         "max-lines": 32,
         "react-hooks/exhaustive-deps": 79,
         "craft-agent/no-localstorage": 21
@@ -124,7 +124,7 @@
     },
     "globalStatus": "en cours ; dernière grande opération des sessions, autres fichiers historiques, any, lint global et missions finales restants",
     "fullTestSummary": {
-      "pass": 10747,
+      "pass": 10748,
       "fail": 0,
       "skip": 12
     },

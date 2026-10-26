@@ -110,13 +110,13 @@ export function ShikiDiffViewer({
   const oldFile: FileContents = useMemo(() => ({
     name: filePath,
     contents: original,
-    lang: resolvedLang as any,
+    lang: resolvedLang,
   }), [filePath, original, resolvedLang])
 
   const newFile: FileContents = useMemo(() => ({
     name: filePath,
     contents: modified,
-    lang: resolvedLang as any,
+    lang: resolvedLang,
   }), [filePath, modified, resolvedLang])
 
   // Parse the diff
@@ -169,6 +169,7 @@ export function ShikiDiffViewer({
 
   useEffect(() => {
     if (!onFileHeaderClick || disableFileHeader) return
+    let removeHeaderClickListener: (() => void) | undefined
 
     // Wait briefly for pierre to render the header into the shadow DOM
     const timer = setTimeout(() => {
@@ -180,17 +181,12 @@ export function ShikiDiffViewer({
         onFileHeaderClickRef.current?.(filePath)
       }
       header.addEventListener('click', handleClick)
-      // Store cleanup ref so we can remove listener
-      ;(header as any).__craftClickCleanup = () => header.removeEventListener('click', handleClick)
+      removeHeaderClickListener = () => header.removeEventListener('click', handleClick)
     }, 150)
 
     return () => {
       clearTimeout(timer)
-      const diffsContainer = containerRef.current?.querySelector(DIFFS_TAG_NAME)
-      const header = diffsContainer?.shadowRoot?.querySelector('[data-diffs-header]')
-      if (header) {
-        ;(header as any).__craftClickCleanup?.()
-      }
+      removeHeaderClickListener?.()
     }
   }, [filePath, disableFileHeader, onFileHeaderClick])
 

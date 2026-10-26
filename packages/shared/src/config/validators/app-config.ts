@@ -89,7 +89,7 @@ export function validateConfig(): ValidationResult {
         seenSlugs.add(conn.slug);
 
         // Validate provider/auth combination
-        if (!isValidProviderAuthCombination(conn.providerType as any, conn.authType as any)) {
+        if (!isValidProviderAuthCombination(conn.providerType, conn.authType)) {
           warnings.push({
             file: 'config.json',
             path: `llmConnections[${i}]`,

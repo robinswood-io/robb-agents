@@ -15,7 +15,7 @@
  * - call_llm (backend-specific, not in registry)
  */
 
-import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
+import { createSdkMcpServer, tool, type AnyZodRawShape } from '@anthropic-ai/claude-agent-sdk';
 import { getSessionPlansPath, getSessionPath } from '../sessions/storage.ts';
 import { DOC_REFS } from '../docs/index.ts';
 import { createClaudeContext } from './claude-context.ts';
@@ -168,7 +168,8 @@ function convertResult(result: ToolResult): { content: Array<{ type: 'text'; tex
 // query(), connect() is called again — but if the previous Query's subprocess hasn't
 // fully exited yet, _transport is still set and connect() throws
 // "Already connected to a transport". Creating a fresh server wrapper per query avoids this.
-const sessionToolsCache = new Map<string, ReturnType<typeof tool>[]>();
+type SessionToolDefinitions = NonNullable<Parameters<typeof createSdkMcpServer>[0]['tools']>;
+const sessionToolsCache = new Map<string, SessionToolDefinitions>();
 
 export interface SessionScopedToolExecutionGuard {
   begin(toolName: string, args: Record<string, unknown>): string | undefined;
@@ -228,7 +229,7 @@ export function getSessionScopedTools(
   const cacheKey = `${sessionId}::${workspaceRootPath}`;
 
   // Return cached tools if available, but always create a fresh MCP server wrapper
-  let tools: any[] | undefined = sessionToolsCache.get(cacheKey);
+  let tools = sessionToolsCache.get(cacheKey);
   if (!tools) {
     // Create Claude context with full capabilities
     const ctx = createClaudeContext({
@@ -250,9 +251,8 @@ export function getSessionScopedTools(
     attachSessionSelfManagementBindings(ctx, sessionId);
 
     // Helper to create a tool from the canonical registry.
-    // The `as any` on schema bridges a Zod generic-variance issue when .shape
-    // types (ZodType<string>) flow into Record<string, ZodType<unknown>>.
-    function registryTool(name: string, schema: any) {
+    // Use the SDK's native Zod 3/4 shape contract.
+    function registryTool(name: string, schema: AnyZodRawShape) {
       const def = SESSION_TOOL_REGISTRY.get(name)!;
       return tool(name, TOOL_DESCRIPTIONS[name] || def.description, schema, async (args) => {
         const result = await def.handler!(ctx, args);
@@ -318,7 +318,7 @@ export function getSessionScopedTools(
         const originalHandler = definition.handler.bind(definition);
         return {
           ...definition,
-          handler: async (args: Record<string, unknown>, ...rest: unknown[]) => {
+          handler: async (args: Record<string, unknown>, extra: unknown) => {
             const fullToolName = `mcp__session__${definition.name}`;
             const toolUseId = executionGuard.begin(fullToolName, args);
             if (!toolUseId) {
@@ -331,7 +331,7 @@ export function getSessionScopedTools(
               };
             }
             try {
-              return await originalHandler(args, ...rest);
+              return await originalHandler(args, extra);
             } finally {
               executionGuard.settle(toolUseId);
             }
