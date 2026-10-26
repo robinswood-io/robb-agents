@@ -103,15 +103,15 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-26T11:00:47.267757+00:00",
+  "updatedAt": "2026-10-26T11:25:42.936125+00:00",
   "current": {
-    "lastEvidence": "edit-popover-native-summary.json",
+    "lastEvidence": "release-source-native-summary.json",
     "sourceGate": {
-      "max-lines": 27,
+      "max-lines": 26,
       "no-explicit-any": 0
     },
     "globalLint": {
-      "files": 3643,
+      "files": 3644,
       "errors": 20,
       "warnings": 98,
       "fatal": 0,
@@ -134,10 +134,20 @@
       "remaining": 0,
       "proof": "test-type-coverage-pi-scope-proof.json"
     },
-    "fullTests": {
+    "lastFullSuite": {
+      "commit": "f521166",
       "pass": 10759,
       "fail": 0,
-      "skip": 12
+      "skip": 12,
+      "rerun": "Refus PreToolUse : suite globale interdite ; tests ciblés uniquement"
+    },
+    "targetedTests": {
+      "bun": {
+        "pass": 34,
+        "fail": 0,
+        "skip": 0
+      },
+      "pythonInstallerTests": 10
     }
   }
 }

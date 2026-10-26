@@ -1,0 +1,127 @@
+{
+  "status": "testé localement, travail global en cours",
+  "changes": [
+    "Pré-vol Bash extrait à l’identique du workflow ; environnements, secrets, permissions et jobs inchangés",
+    "Workflow de 492 lignes, script de 59 lignes ; assertions d’intégrité existantes maintenues",
+    "Onze scénarios de pré-vol exécutés avant/après avec de faux outils et sans identifiants réels"
+  ],
+  "sourceGate": {
+    "max-lines": 26,
+    "no-explicit-any": 0
+  },
+  "globalLint": {
+    "files": 3644,
+    "errors": 20,
+    "warnings": 98,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 20,
+      "react-hooks/exhaustive-deps": 77,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "targetedTests": {
+    "pass": 34,
+    "fail": 0,
+    "skip": 0
+  },
+  "installerTests": 10,
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "env",
+        "ROBB_QA_RELEASE_SOURCE_SCRIPT=/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/release-source-native-before.sh",
+        "bun",
+        "test",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/release-source-native-preview/scripts/tests/prepare-release-source.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 7.48,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/release-source-native-before.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "scripts/tests/prepare-release-source.test.ts",
+        "scripts/tests/release-integrity.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 6.77,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/release-source-native-after.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "-m",
+        "unittest",
+        "scripts.tests.test_installers",
+        "-v"
+      ],
+      "exitCode": 0,
+      "seconds": 0.74,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/release-source-native-installers.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "scripts/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 0.47,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/release-source-native-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "scripts/tests/prepare-release-source.test.ts",
+        "scripts/tests/release-integrity.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.35,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/release-source-native-eslint-lint.log"
+    }
+  ],
+  "files": [
+    {
+      "file": ".github/workflows/release.yml",
+      "lines": 492,
+      "sha256": "1a29681ec7ace1266d0e7e850205fcb647a23849c4f3d8e10a24e2dde39224c6"
+    },
+    {
+      "file": "scripts/robinswood-prepare-release-source.sh",
+      "lines": 59,
+      "sha256": "820e7f4f36f2e26435a3429c48c61b81a7572849fe9640f89bc5d2de9d2840fd"
+    },
+    {
+      "file": "scripts/tests/prepare-release-source.test.ts",
+      "lines": 145,
+      "sha256": "2d14bf2edf0b43f6bdd398222a420f702f51e66458b860f915850fc17a7b49cc"
+    },
+    {
+      "file": "scripts/tests/release-integrity.test.ts",
+      "lines": 499,
+      "sha256": "8ff9f5d339fd46b862148e39fbf334c302c47293abae845f13c8b8ed8e46e935"
+    }
+  ],
+  "limits": [
+    "26 fichiers à découper et 98 avertissements de lint restent à corriger",
+    "La suite unitaire globale a été refusée par PreToolUse ; seuls les tests ciblés ont été exécutés pour ce lot",
+    "Dernière suite globale validée : 10 759 succès, 0 échec, 12 ignorés au candidat f521166",
+    "Aucun workflow GitHub ni aucune publication exécutés ; installation locale finale encore à réaliser"
+  ]
+}

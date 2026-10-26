@@ -334,7 +334,8 @@ describe('packaged Electron security contract', () => {
 })
 
 const root = join(import.meta.dir, '..', '..')
-const releaseWorkflow = readFileSync(join(root, '.github', 'workflows', 'release.yml'), 'utf8')
+const releaseWorkflow = ['.github/workflows/release.yml', 'scripts/robinswood-prepare-release-source.sh']
+  .map(file => readFileSync(join(root, file), 'utf8')).join('\n')
 const productionBuilder = readFileSync(
   join(root, 'apps', 'electron', 'electron-builder.yml'),
   'utf8',
