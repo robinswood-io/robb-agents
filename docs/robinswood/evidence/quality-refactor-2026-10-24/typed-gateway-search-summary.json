@@ -1,0 +1,198 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Types des tests de préservation des connecteurs et de recherche",
+  "changes": [
+    "20 any supprimés : accès typés aux trois membres privés utilisés par les fixtures de registre, et contenu textuel natif du SDK Pi pour les résultats de recherche.",
+    "Code applicatif inchangé ; assertions et comportement des tests conservés, avec comparaison du JavaScript et normalisation des seuls accès à propriété constante.",
+    "Directives ESLint devenues inutiles retirées ; lectures positives des fixtures conservées avec assertions TypeScript sans effet au runtime.",
+    "43 tests ciblés et 177 assertions identiques avant/après ; types natifs et compatibles, lint du lot, construction et 10 743 tests globaux réussis."
+  ],
+  "files": [
+    {
+      "file": "packages/messaging-gateway/src/__tests__/registry-config-preservation.test.ts",
+      "lines": 181,
+      "sha256": "3dbd34a1c1f6050b4d20a8d39dee2be4df87f3cd121d43f1d765147f136319bc"
+    },
+    {
+      "file": "packages/messaging-gateway/src/__tests__/registry.test.ts",
+      "lines": 321,
+      "sha256": "c1d63a18573265f85786b58ab1748aa0f319e1a0133933bc2c992a5267f3108f"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tools/search/create-search-tool.test.ts",
+      "lines": 103,
+      "sha256": "d7d4788c9c763ac3cd23e3a85c6dea3a64b9d0b9bd130fc908be98e3f9616639"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 14.96,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/typed-gateway-search-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/messaging-gateway/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 11.98,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/typed-gateway-search-compat-gateway.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/pi-agent-server/tsconfig.typecheck.json"
+      ],
+      "exitCode": 0,
+      "seconds": 8.07,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/typed-gateway-search-compat-pi.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/messaging-gateway/src/__tests__/registry.test.ts",
+        "packages/messaging-gateway/src/__tests__/registry-config-preservation.test.ts",
+        "packages/pi-agent-server/src/tools/search/create-search-tool.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.24,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/typed-gateway-search-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/messaging-gateway/src/__tests__/registry.test.ts",
+        "packages/messaging-gateway/src/__tests__/registry-config-preservation.test.ts",
+        "packages/pi-agent-server/src/tools/search/create-search-tool.test.ts",
+        "packages/pi-agent-server/src/tool-loop-feedback-integration.test.ts",
+        "packages/pi-agent-server/src/antigravity-server.test.ts",
+        "packages/pi-agent-server/src/tools/search/providers/chatgpt.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 2.83,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/typed-gateway-search-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 12.89,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/typed-gateway-search-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 137.31,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/typed-gateway-search-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "files": [
+      {
+        "file": "packages/messaging-gateway/src/__tests__/registry.test.ts",
+        "nativeSourceHash": "a622f013b9d15e47b4f7b8cbf3e8162ebfc0169341c35a2fe3db0507b0d8b8b5",
+        "sha256": "c1d63a18573265f85786b58ab1748aa0f319e1a0133933bc2c992a5267f3108f",
+        "lines": 322,
+        "nativeExpectCalls": 30,
+        "runtime": "identical JS AST with constant property access normalization"
+      },
+      {
+        "file": "packages/messaging-gateway/src/__tests__/registry-config-preservation.test.ts",
+        "nativeSourceHash": "51718a579fdb94e1a844ead4b0601fa80661f85ecd75a55f0ce1bf76ebd487c6",
+        "sha256": "3dbd34a1c1f6050b4d20a8d39dee2be4df87f3cd121d43f1d765147f136319bc",
+        "lines": 182,
+        "nativeExpectCalls": 17,
+        "runtime": "identical JS AST with constant property access normalization"
+      },
+      {
+        "file": "packages/pi-agent-server/src/tools/search/create-search-tool.test.ts",
+        "nativeSourceHash": "e515860c71e401c0ca817ca96cb50e7160a78d6f30dbe06744244b7a3cd4b73a",
+        "sha256": "d7d4788c9c763ac3cd23e3a85c6dea3a64b9d0b9bd130fc908be98e3f9616639",
+        "lines": 104,
+        "nativeExpectCalls": 17,
+        "runtime": "byte-identical JavaScript"
+      }
+    ],
+    "maximumFileLines": 322,
+    "explicitAnyRemoved": 20,
+    "nativeRuntimeAndAssertionsPreserved": true,
+    "nativePrivateMembersRemainPrivate": true,
+    "additionalApplicationStateOrWorkflow": 0
+  },
+  "fullTestSummary": {
+    "pass": 10743,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "typed-gateway-search-targeted": {
+      "pass": 43,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": {
+    "targetedPass": 43,
+    "targetedExpectCalls": 177
+  },
+  "sourceGate": {
+    "max-lines": 60,
+    "no-explicit-any": 225
+  },
+  "globalLint": {
+    "files": 3567,
+    "errors": 267,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 218,
+      "max-lines": 49,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "60 fichiers trop longs et 225 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T00:06:15.246848+00:00"
+}

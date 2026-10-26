@@ -132,8 +132,7 @@ async function pairSupergroup(harness: Harness, chatId = '-100123', title = 'Tes
  * indirectly; for tests we read the private map.
  */
 function injectAdapter(harness: Harness, adapter: PlatformAdapter): void {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const state = (harness.registry as any).workspaces.get(harness.workspaceId)
+  const state = harness.registry["workspaces"].get(harness.workspaceId)!
   if (!state) throw new Error('workspace state missing — call pairSupergroup first')
   state.gateway.registerAdapter(adapter)
 }
@@ -259,8 +258,7 @@ describe('MessagingGatewayRegistry.bindWorkspaceSupergroup — chat-type validat
     const h = makeRegistry()
     const { adapter } = makeFakeTelegramAdapter({ chatInfo: null })
     h.registry.getConfig(h.workspaceId)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const state = (h.registry as any).workspaces.get(h.workspaceId)
+    const state = h.registry["workspaces"].get(h.workspaceId)!
     state.gateway.registerAdapter(adapter)
 
     await expect(
@@ -274,8 +272,7 @@ describe('MessagingGatewayRegistry.bindWorkspaceSupergroup — chat-type validat
       chatInfo: { type: 'private' },
     })
     h.registry.getConfig(h.workspaceId)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const state = (h.registry as any).workspaces.get(h.workspaceId)
+    const state = h.registry["workspaces"].get(h.workspaceId)!
     state.gateway.registerAdapter(adapter)
 
     await expect(
@@ -289,8 +286,7 @@ describe('MessagingGatewayRegistry.bindWorkspaceSupergroup — chat-type validat
       chatInfo: { type: 'supergroup', isForum: false, title: 'Plain SG' },
     })
     h.registry.getConfig(h.workspaceId)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const state = (h.registry as any).workspaces.get(h.workspaceId)
+    const state = h.registry["workspaces"].get(h.workspaceId)!
     state.gateway.registerAdapter(adapter)
 
     await expect(
@@ -304,8 +300,7 @@ describe('MessagingGatewayRegistry.bindWorkspaceSupergroup — chat-type validat
       chatInfo: { type: 'supergroup', isForum: true, title: 'My Forum' },
     })
     h.registry.getConfig(h.workspaceId)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const state = (h.registry as any).workspaces.get(h.workspaceId)
+    const state = h.registry["workspaces"].get(h.workspaceId)!
     state.gateway.registerAdapter(adapter)
 
     const result = await h.registry.bindWorkspaceSupergroup(

@@ -1,0 +1,34 @@
+{
+  "status": "passed",
+  "files": [
+    {
+      "file": "packages/messaging-gateway/src/__tests__/registry.test.ts",
+      "nativeSourceHash": "a622f013b9d15e47b4f7b8cbf3e8162ebfc0169341c35a2fe3db0507b0d8b8b5",
+      "sha256": "c1d63a18573265f85786b58ab1748aa0f319e1a0133933bc2c992a5267f3108f",
+      "lines": 322,
+      "nativeExpectCalls": 30,
+      "runtime": "identical JS AST with constant property access normalization"
+    },
+    {
+      "file": "packages/messaging-gateway/src/__tests__/registry-config-preservation.test.ts",
+      "nativeSourceHash": "51718a579fdb94e1a844ead4b0601fa80661f85ecd75a55f0ce1bf76ebd487c6",
+      "sha256": "3dbd34a1c1f6050b4d20a8d39dee2be4df87f3cd121d43f1d765147f136319bc",
+      "lines": 182,
+      "nativeExpectCalls": 17,
+      "runtime": "identical JS AST with constant property access normalization"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tools/search/create-search-tool.test.ts",
+      "nativeSourceHash": "e515860c71e401c0ca817ca96cb50e7160a78d6f30dbe06744244b7a3cd4b73a",
+      "sha256": "d7d4788c9c763ac3cd23e3a85c6dea3a64b9d0b9bd130fc908be98e3f9616639",
+      "lines": 104,
+      "nativeExpectCalls": 17,
+      "runtime": "byte-identical JavaScript"
+    }
+  ],
+  "maximumFileLines": 322,
+  "explicitAnyRemoved": 20,
+  "nativeRuntimeAndAssertionsPreserved": true,
+  "nativePrivateMembersRemainPrivate": true,
+  "additionalApplicationStateOrWorkflow": 0
+}

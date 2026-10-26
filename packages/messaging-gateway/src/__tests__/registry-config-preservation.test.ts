@@ -86,8 +86,7 @@ describe('MessagingGatewayRegistry — config preservation across writes', () =>
     ])
 
     // Inject an adapter and bind a supergroup.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const state = (registry as any).workspaces.get(workspaceId)
+    const state = registry["workspaces"].get(workspaceId)!
     state.gateway.registerAdapter(makeFakeTelegramAdapter())
     await registry.bindWorkspaceSupergroup(workspaceId, 'telegram', '-100123', 'My SG')
 
@@ -104,8 +103,7 @@ describe('MessagingGatewayRegistry — config preservation across writes', () =>
     registry.setPlatformOwners(workspaceId, 'telegram', [
       { userId: 'first-owner', addedAt: Date.now() },
     ])
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const state = (registry as any).workspaces.get(workspaceId)
+    const state = registry["workspaces"].get(workspaceId)!
     state.gateway.registerAdapter(makeFakeTelegramAdapter())
     await registry.bindWorkspaceSupergroup(workspaceId, 'telegram', '-100123', 'My SG')
 
@@ -133,8 +131,7 @@ describe('MessagingGatewayRegistry — config preservation across writes', () =>
     registry.setPlatformOwners(workspaceId, 'telegram', [
       { userId: 'first', addedAt: Date.now() },
     ])
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const seeded = await (registry as any).seedFirstOwner(workspaceId, 'telegram', {
+    const seeded = await registry["seedFirstOwner"](workspaceId, 'telegram', {
       userId: 'second',
       addedAt: Date.now(),
     })
@@ -149,10 +146,8 @@ describe('MessagingGatewayRegistry — config preservation across writes', () =>
 describe('MessagingGatewayRegistry — lock-down migrates open bindings', () => {
   it('setPlatformAccessMode("owner-only") flips legacy open bindings to inherit', () => {
     const { registry, workspaceId } = makeRegistry()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const state = (registry as any).workspaces.get(workspaceId) ??
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (registry as any).bootstrapWorkspace(workspaceId)
+    const state = registry["workspaces"].get(workspaceId) ??
+      registry["bootstrapWorkspace"](workspaceId)
     const store = state.gateway.getBindingStore()
     // Persist a binding in legacy 'open' mode (mimics migration).
     const b = store.bind('ws-test', 'sess-A', 'telegram', 'chat-1', undefined, {
@@ -162,7 +157,7 @@ describe('MessagingGatewayRegistry — lock-down migrates open bindings', () => 
 
     registry.setPlatformAccessMode(workspaceId, 'telegram', 'owner-only')
 
-    const reloaded = store.getAll().find((x: { id: string }) => x.id === b.id)
+    const reloaded = store.getAll().find((x: { id: string }) => x.id === b.id)!
     expect(reloaded.config.accessMode).toBe('inherit')
     // Binding ID and createdAt must have survived the migration (no rotation).
     expect(reloaded.id).toBe(b.id)
@@ -171,10 +166,8 @@ describe('MessagingGatewayRegistry — lock-down migrates open bindings', () => 
 
   it('non-telegram bindings are not touched by the lock-down', () => {
     const { registry, workspaceId } = makeRegistry()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const state = (registry as any).workspaces.get(workspaceId) ??
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (registry as any).bootstrapWorkspace(workspaceId)
+    const state = registry["workspaces"].get(workspaceId) ??
+      registry["bootstrapWorkspace"](workspaceId)
     const store = state.gateway.getBindingStore()
     const wa = store.bind('ws-test', 'sess-A', 'whatsapp', 'chan-A', undefined, {
       accessMode: 'open',
@@ -182,7 +175,7 @@ describe('MessagingGatewayRegistry — lock-down migrates open bindings', () => 
 
     registry.setPlatformAccessMode(workspaceId, 'telegram', 'owner-only')
 
-    const reloaded = store.getAll().find((x: { id: string }) => x.id === wa.id)
+    const reloaded = store.getAll().find((x: { id: string }) => x.id === wa.id)!
     expect(reloaded.config.accessMode).toBe('open')
   })
 })
