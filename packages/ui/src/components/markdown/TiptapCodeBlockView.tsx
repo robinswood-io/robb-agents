@@ -286,7 +286,7 @@ export const tiptapCodeBlock = CodeBlockShiki.extend({
   // Official @tiptap/markdown integration for fenced code blocks.
   markdownTokenName: 'code',
 
-  parseMarkdown: (token: any, helpers: any) => {
+  parseMarkdown: (token, helpers) => {
     const lang = (token.lang ?? '').toLowerCase()
 
     // Dedicated rich block nodes handle these fenced languages.

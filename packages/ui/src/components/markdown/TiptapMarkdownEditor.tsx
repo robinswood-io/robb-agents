@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useEditor, EditorContent } from '@tiptap/react'
+import { useEditor, EditorContent, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskList from '@tiptap/extension-task-list'
@@ -32,7 +32,7 @@ function getOfficialMarkdown(editor: { getMarkdown?: () => string }): string {
   return editor.getMarkdown?.() ?? ''
 }
 
-function forceShikiDecorations(editor: any) {
+function forceShikiDecorations(editor: Editor) {
   try {
     if (editor?.isDestroyed) return
     const tr = editor.view?.state.tr.setMeta('shikiPluginForceDecoration', true)
@@ -44,7 +44,7 @@ function forceShikiDecorations(editor: any) {
   }
 }
 
-function scheduleShikiRefresh(editor: any) {
+function scheduleShikiRefresh(editor: Editor) {
   forceShikiDecorations(editor)
 
   for (const delay of [80, 220, 450]) {
@@ -272,7 +272,7 @@ export function TiptapMarkdownEditor({
               if (!e) return
               e.chain().focus().setNodeSelection(pos).run()
               // Emit after selection so BubbleMenu mounts, then the event activates the input
-              queueMicrotask(() => (e as any).emit(INLINE_MATH_EDIT_EVENT))
+              queueMicrotask(() => e.emit(INLINE_MATH_EDIT_EVENT))
             },
           },
           katexOptions: {

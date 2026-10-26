@@ -1,44 +1,23 @@
-import * as React from 'react'
-import { useTranslation } from 'react-i18next'
-import { BubbleMenu } from '@tiptap/react/menus'
-import type { Editor } from '@tiptap/react'
-import { NodeSelection } from '@tiptap/pm/state'
-import { Bold, Italic, Strikethrough, Code, Sigma } from 'lucide-react'
-import { cn } from '../../lib/utils'
-import { RICH_BLOCK_EDIT_EVENT } from './rich-block-events'
+import * as React from 'react';
+import { useTranslation } from 'react-i18next';
+import { BubbleMenu } from '@tiptap/react/menus';
+import { NodeSelection } from '@tiptap/pm/state';
+import { Bold, Italic, Strikethrough, Code, Sigma } from 'lucide-react';
+import "../../lib/utils";
+import { RICH_BLOCK_EDIT_EVENT } from './rich-block-events';
+
+import { BubbleButton, VISUAL_LANGUAGES, getEditableBlockMeta } from "./tiptap-bubble-helpers";
+
+
+
+import type { Editor } from '@tiptap/react';
+
+
+
+
 
 // Custom event name used to signal "open inline math editor"
 const INLINE_MATH_EDIT_EVENT = 'inlineMathEdit'
-
-// ============================================================================
-// Bubble menu toolbar button
-// ============================================================================
-
-function BubbleButton({
-  onClick,
-  isActive,
-  title,
-  children,
-}: {
-  onClick: () => void
-  isActive?: boolean
-  title: string
-  children: React.ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      className={cn(
-        'tiptap-bubble-btn',
-        isActive && 'is-active',
-      )}
-    >
-      {children}
-    </button>
-  )
-}
 
 // ============================================================================
 // Text formatting bubble menu — Bold, Italic, Strike, Code
@@ -94,7 +73,7 @@ function TextFormattingMenu({ editor }: { editor: Editor }) {
           const node = editor.state.doc.nodeAt(newPos)
           if (node?.type.name === 'inlineMath') {
             editor.chain().setNodeSelection(newPos).run()
-            queueMicrotask(() => (editor as any).emit(INLINE_MATH_EDIT_EVENT))
+            queueMicrotask(() => editor.emit(INLINE_MATH_EDIT_EVENT))
           }
         }}
         title={t('editor.math')}
@@ -103,71 +82,6 @@ function TextFormattingMenu({ editor }: { editor: Editor }) {
       </BubbleButton>
     </div>
   )
-}
-
-// ============================================================================
-// Code block edit bubble menu — edit popover for mermaid / latex blocks
-// ============================================================================
-
-const VISUAL_LANGUAGES = new Set(['mermaid', 'latex', 'math', 'tex', 'katex'])
-
-function getEditableBlockMeta(editor: Editor): { label: string; code: string; update: (next: string) => void } | null {
-  const { selection } = editor.state
-
-  if (selection instanceof NodeSelection) {
-    const node = selection.node
-    const pos = selection.from
-
-    if (node.type.name === 'mermaidBlock') {
-      return {
-        label: 'Mermaid',
-        code: String(node.attrs.code ?? ''),
-        update: (next) => {
-          editor.chain().focus().setNodeSelection(pos).updateAttributes('mermaidBlock', { code: next }).run()
-        },
-      }
-    }
-
-    if (node.type.name === 'latexBlock') {
-      return {
-        label: 'LaTeX',
-        code: String(node.attrs.code ?? ''),
-        update: (next) => {
-          editor.chain().focus().setNodeSelection(pos).updateAttributes('latexBlock', { code: next }).run()
-        },
-      }
-    }
-
-    return null
-  }
-
-  // Legacy fallback while old docs/code paths still contain codeBlock language variants.
-  const { $from } = selection
-  for (let depth = $from.depth; depth >= 0; depth--) {
-    const node = $from.node(depth)
-    if (node.type.name !== 'codeBlock') continue
-
-    const lang = (node.attrs.language as string | undefined)?.toLowerCase() ?? ''
-    if (!VISUAL_LANGUAGES.has(lang)) return null
-
-    const label = lang === 'mermaid' ? 'Mermaid' : 'LaTeX'
-    const pos = $from.before(depth)
-
-    return {
-      label,
-      code: node.textContent,
-      update: (next) => {
-        const tr = editor.state.tr.replaceWith(
-          pos + 1,
-          pos + node.nodeSize - 1,
-          next.length > 0 ? editor.schema.text(next) : editor.schema.text(' '),
-        )
-        editor.view.dispatch(tr)
-      },
-    }
-  }
-
-  return null
 }
 
 function RichBlockEditMenu({ editor }: { editor: Editor }) {
@@ -190,8 +104,8 @@ function RichBlockEditMenu({ editor }: { editor: Editor }) {
     const activate = () => {
       openEditor()
     }
-    ;(editor as any).on(RICH_BLOCK_EDIT_EVENT, activate)
-    return () => { (editor as any).off(RICH_BLOCK_EDIT_EVENT, activate) }
+    ;editor.on(RICH_BLOCK_EDIT_EVENT, activate)
+    return () => { editor.off(RICH_BLOCK_EDIT_EVENT, activate) }
   }, [editor, openEditor])
 
   const commitEdit = React.useCallback(() => {
@@ -332,8 +246,8 @@ function InlineMathEditMenu({ editor }: { editor: Editor }) {
         requestAnimationFrame(() => inputRef.current?.focus())
       })
     }
-    ;(editor as any).on(INLINE_MATH_EDIT_EVENT, activate)
-    return () => { (editor as any).off(INLINE_MATH_EDIT_EVENT, activate) }
+    ;editor.on(INLINE_MATH_EDIT_EVENT, activate)
+    return () => { editor.off(INLINE_MATH_EDIT_EVENT, activate) }
   }, [editor])
 
   // Also sync latex/nodePos on selectionUpdate when active (e.g. if doc changes around the node)

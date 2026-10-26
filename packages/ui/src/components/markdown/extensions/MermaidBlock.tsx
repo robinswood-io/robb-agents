@@ -31,12 +31,12 @@ export const MermaidBlock = Node.create({
 
   markdownTokenName: 'code',
 
-  parseMarkdown: (token: any, helpers: any) => {
+  parseMarkdown: (token, helpers) => {
     if ((token.lang ?? '').toLowerCase() !== 'mermaid') return []
     return helpers.createNode('mermaidBlock', { code: token.text ?? '' })
   },
 
-  renderMarkdown: (node: any) => {
+  renderMarkdown: (node) => {
     const code = (node.attrs?.code ?? '').replace(/\n$/, '')
     return `\`\`\`mermaid\n${code}\n\`\`\``
   },
@@ -51,7 +51,7 @@ export const MermaidBlock = Node.create({
 
       const handleEditClick = () => {
         selectNode()
-        queueMicrotask(() => (editor as any).emit(RICH_BLOCK_EDIT_EVENT))
+        queueMicrotask(() => editor.emit(RICH_BLOCK_EDIT_EVENT))
       }
 
       return (

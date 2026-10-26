@@ -103,21 +103,21 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-26T02:10:21.249151+00:00",
+  "updatedAt": "2026-10-26T02:33:55.928407+00:00",
   "current": {
-    "lastEvidence": "native-transport-fixture-types-summary.json",
+    "lastEvidence": "tiptap-native-types-summary.json",
     "sourceGate": {
-      "max-lines": 51,
-      "no-explicit-any": 194
+      "max-lines": 49,
+      "no-explicit-any": 172
     },
     "globalLint": {
-      "files": 3582,
-      "errors": 227,
+      "files": 3585,
+      "errors": 203,
       "warnings": 131,
       "fatal": 0,
       "rules": {
-        "@typescript-eslint/no-explicit-any": 187,
-        "max-lines": 40,
+        "@typescript-eslint/no-explicit-any": 165,
+        "max-lines": 38,
         "react-hooks/exhaustive-deps": 92,
         "directive": 12,
         "craft-agent/no-localstorage": 21,
@@ -126,7 +126,7 @@
     },
     "globalStatus": "en cours ; dernière grande opération des sessions, autres fichiers historiques, any, lint global et missions finales restants",
     "fullTestSummary": {
-      "pass": 10745,
+      "pass": 10746,
       "fail": 0,
       "skip": 12
     },
