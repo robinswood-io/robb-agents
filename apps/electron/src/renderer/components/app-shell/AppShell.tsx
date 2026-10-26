@@ -76,7 +76,8 @@ import { BoardListToggle } from "./kanban/BoardListToggle"
 import { PanelStackContainer } from "./PanelStackContainer"
 import { CompactSessionListFilter } from "./CompactSessionListFilter"
 import type { ChatDisplayHandle } from "./ChatDisplay"
-import { LeftSidebar } from "./LeftSidebar"
+import { LeftSidebar, type LinkItem } from "./LeftSidebar"
+import { decodeViewFilters, type FilterMode, type FilterEntry, type ViewFiltersMap } from "./view-filters"
 import { useSession } from "@/hooks/useSession"
 import { ensureSessionMessagesLoadedAtom } from "@/atoms/sessions"
 import { AppShellProvider, type AppShellContextType } from "@/context/AppShellContext"
@@ -174,7 +175,6 @@ interface AppShellProps {
 }
 
 /** Filter mode for tri-state filtering: include shows only matching, exclude hides matching */
-type FilterMode = 'include' | 'exclude'
 
 const altClickTooltipLabel = isMac ? '⌥ click to exclude' : 'Alt click to exclude'
 
@@ -654,8 +654,6 @@ function AppShellContent({
   // Per-view filter storage: each session list view (allSessions, flagged, state:X, label:X, view:X)
   // has its own independent set of status and label filters.
   // Each filter entry stores a mode ('include' or 'exclude') for tri-state filtering.
-  type FilterEntry = Record<string, FilterMode> // id → mode
-  type ViewFiltersMap = Record<string, { statuses: FilterEntry, labels: FilterEntry, projects?: FilterEntry, groupingMode?: ChatGroupingMode }>
 
   // Compute a stable key for the current chat filter view
   const sessionFilterKey = useMemo(() => {
@@ -671,36 +669,11 @@ function AppShellContent({
     }
   }, [sessionFilter])
 
-  const [viewFiltersMap, setViewFiltersMap] = React.useState<ViewFiltersMap>(() => {
-    const saved = storage.get<ViewFiltersMap>(storage.KEYS.viewFilters, {})
-    // Backward compat: migrate old format (arrays) into new format (Record<string, FilterMode>)
-    if (saved.allSessions && Array.isArray((saved.allSessions as any).statuses)) {
-      // Old format: { statuses: string[], labels: string[] } → new: { statuses: Record, labels: Record }
-      for (const key of Object.keys(saved)) {
-        const entry = saved[key] as any
-        if (Array.isArray(entry.statuses)) {
-          const newStatuses: FilterEntry = {}
-          for (const id of entry.statuses) newStatuses[id] = 'include'
-          const newLabels: FilterEntry = {}
-          for (const id of entry.labels) newLabels[id] = 'include'
-          saved[key] = { statuses: newStatuses, labels: newLabels }
-        }
-      }
-    }
-    // Also migrate legacy global filters if no allSessions entry exists
-    if (!saved.allSessions) {
-      const oldStatuses = storage.get<SessionStatusId[]>(storage.KEYS.listFilter, [])
-      const oldLabels = storage.get<string[]>(storage.KEYS.labelFilter, [])
-      if (oldStatuses.length > 0 || oldLabels.length > 0) {
-        const statuses: FilterEntry = {}
-        for (const id of oldStatuses) statuses[id] = 'include'
-        const labels: FilterEntry = {}
-        for (const id of oldLabels) labels[id] = 'include'
-        saved.allSessions = { statuses, labels }
-      }
-    }
-    return saved
-  })
+  const [viewFiltersMap, setViewFiltersMap] = React.useState<ViewFiltersMap>(() => decodeViewFilters(
+    storage.get<unknown>(storage.KEYS.viewFilters, {}),
+    storage.get<unknown>(storage.KEYS.listFilter, []),
+    storage.get<unknown>(storage.KEYS.labelFilter, []),
+  ))
 
   // Derive current view's status filter as a Map<SessionStatusId, FilterMode>
   const listFilter = useMemo(() => {
@@ -2302,13 +2275,13 @@ function AppShellContent({
   // Build recursive sidebar items from the shared display-sorted label tree.
   // Each node renders with condensed height (compact: true) since many labels expected.
   // Clicking any label navigates to its filter view; the chevron toggles expand/collapse.
-  const buildLabelSidebarItems = useCallback((nodes: LabelTreeNode[]): any[] => {
+  const buildLabelSidebarItems = useCallback((nodes: LabelTreeNode[]): LinkItem[] => {
     return nodes.map(node => {
       const hasChildren = node.children.length > 0
       const isActive = sessionFilter?.kind === 'label' && sessionFilter.labelId === node.fullId
       const count = labelCounts[node.fullId] || 0
 
-      const item: any = {
+      const item: LinkItem = {
         id: `nav:label:${node.fullId}`,
         title: node.label?.name || node.segment.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
         label: count > 0 ? String(count) : undefined,

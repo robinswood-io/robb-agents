@@ -103,17 +103,17 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-26T09:46:48.143468+00:00",
+  "updatedAt": "2026-10-26T10:14:53.054127+00:00",
   "current": {
-    "lastEvidence": "python-contracts-and-installer-scenarios-summary.json",
+    "lastEvidence": "native-decomposition-and-filter-contracts-summary.json",
     "sourceGate": {
-      "max-lines": 34,
-      "no-explicit-any": 4
+      "max-lines": 30,
+      "no-explicit-any": 0
     },
     "globalLint": {
       "files": 3633,
-      "errors": 29,
-      "warnings": 100,
+      "errors": 23,
+      "warnings": 99,
       "fatal": 0,
       "rules": {
         "max-lines": 25,
@@ -134,6 +134,11 @@
       "nowIncluded": 130,
       "remaining": 0,
       "proof": "test-type-coverage-pi-scope-proof.json"
+    },
+    "fullTests": {
+      "pass": 10759,
+      "fail": 0,
+      "skip": 12
     }
   }
 }
