@@ -1,0 +1,59 @@
+{
+  "status": "passed",
+  "nativeJSXAndInlineCallbacksPreserved": true,
+  "nativeStateHooksEffectsAndPublicExportsPreserved": true,
+  "nativeValuesPassedDirectly": [
+    "t",
+    "wsName",
+    "setWsNameEditing",
+    "setRenameDialogOpen",
+    "handleIconUpload",
+    "isUploadingIcon",
+    "wsIconUrl",
+    "renameDialogOpen",
+    "wsNameEditing",
+    "setWsName",
+    "updateWorkspaceSetting",
+    "onRefreshWorkspaces",
+    "permissionMode",
+    "handlePermissionModeChange",
+    "externalActionPolicy",
+    "handleTotalAutonomyChange",
+    "enabledModes",
+    "handleModeToggle",
+    "modeCyclingError",
+    "availableSources",
+    "enabledSourceSlugs",
+    "handleSourceToggle",
+    "handleSaveCostControl",
+    "isSavingCostControl",
+    "costControlText",
+    "setCostControlText",
+    "setCostControlError",
+    "costControlError",
+    "workingDirectory",
+    "handleClearWorkingDirectory",
+    "handleChangeWorkingDirectory",
+    "localMcpEnabled",
+    "handleLocalMcpEnabledChange",
+    "showWdBrowser",
+    "wdBrowserMode",
+    "confirmWdBrowser",
+    "cancelWdBrowser"
+  ],
+  "viewOwnsNoStateOrEffects": true,
+  "nativeImportBindingsAndPageEvaluationOrderPreserved": true,
+  "newWorkflowOrStateEngine": false,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/pages/settings/WorkspaceSettingsPage.tsx",
+      "lines": 457,
+      "sha256": "19fdf254b35b9b9847d56e0973e1ae779a646cabc15e897f5e374d200019edab"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/workspace-settings-content.tsx",
+      "lines": 361,
+      "sha256": "c0a40cabc5d8f7b7e311e285d78913655a0b651430f70a11bd14b5c88868e779"
+    }
+  ]
+}
