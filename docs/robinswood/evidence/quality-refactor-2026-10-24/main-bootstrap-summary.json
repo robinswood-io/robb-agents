@@ -1,0 +1,29 @@
+{
+  "status": "tested; local staging installation and mission verification pending",
+  "scope": "Electron main-process startup, embedded server handlers, and initial windows",
+  "target": "local Robb Agents on this Mac; no Orion or accounting-data changes",
+  "files": {
+    "apps/electron/src/main/index.ts": 482,
+    "apps/electron/src/main/main-ready.ts": 357,
+    "apps/electron/src/main/main-embedded-server.ts": 404,
+    "apps/electron/src/main/main-embedded-handlers.ts": 331,
+    "apps/electron/src/main/main-state.ts": 24,
+    "apps/electron/src/main/initial-windows.ts": 61
+  },
+  "checks": {
+    "lint": "bun run lint: 3986 maintained files, 0 over 500 lines, 0 explicit any, 0 ESLint warnings or errors; IPC and task-tool checks passed",
+    "typecheck": "bun run typecheck:all passed; native and compat TypeScript checks passed",
+    "build": "bun run electron:build passed",
+    "focused_tests": "38 passed, 0 failed across startup, WebAuthn, remote access, shutdown, deep links, i18n, app channel and browser permissions",
+    "diff": "git diff --check passed"
+  },
+  "structural_preservation": [
+    "Startup order and the original server and IPC statements were retained by extraction; runtime references shared with shutdown and deep-link handling use one typed state object.",
+    "The server registration helper returns the same device-disconnect callback to the outer closure.",
+    "Main startup modules load after the shell environment has been initialized."
+  ],
+  "limits": [
+    "These checks do not establish the behavior of the signed installed app or a complete mission; those remain to be verified in local staging.",
+    "The full repository test command was previously refused by the local execution guard; only the permitted focused suites were run for this extraction."
+  ]
+}
