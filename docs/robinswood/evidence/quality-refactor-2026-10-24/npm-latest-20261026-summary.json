@@ -1,0 +1,167 @@
+{
+  "status": "tested; final source-quality completion and local installation pending",
+  "registry": "official npm registry; 192 packages refreshed",
+  "changes": [
+    {
+      "file": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "i18next-browser-languagedetector",
+      "before": "^8.2.2",
+      "after": "^8.2.3"
+    },
+    {
+      "file": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "react-i18next",
+      "before": "^17.1.8",
+      "after": "^17.1.9"
+    },
+    {
+      "file": "apps/viewer/package.json",
+      "group": "dependencies",
+      "package": "react-i18next",
+      "before": "^17.1.8",
+      "after": "^17.1.9"
+    },
+    {
+      "file": "apps/webui/package.json",
+      "group": "dependencies",
+      "package": "i18next",
+      "before": "^26.5.10",
+      "after": "^26.5.11"
+    },
+    {
+      "file": "apps/webui/package.json",
+      "group": "dependencies",
+      "package": "i18next-browser-languagedetector",
+      "before": "^8.2.2",
+      "after": "^8.2.3"
+    },
+    {
+      "file": "apps/webui/package.json",
+      "group": "dependencies",
+      "package": "react-i18next",
+      "before": "^17.1.8",
+      "after": "^17.1.9"
+    },
+    {
+      "file": "package.json",
+      "group": "dependencies",
+      "package": "react-resizable-panels",
+      "before": "^4.14.8",
+      "after": "^4.15.0"
+    },
+    {
+      "file": "package.json",
+      "group": "devDependencies",
+      "package": "@rollup/rollup-win32-arm64-msvc",
+      "before": "^4.65.0",
+      "after": "^4.65.1"
+    },
+    {
+      "file": "package.json",
+      "group": "overrides",
+      "package": "follow-redirects",
+      "before": "1.16.1",
+      "after": "1.16.2"
+    },
+    {
+      "file": "package.json",
+      "group": "overrides",
+      "package": "hono",
+      "before": "4.13.13",
+      "after": "4.13.14"
+    },
+    {
+      "file": "package.json",
+      "group": "overrides",
+      "package": "ip-address",
+      "before": "10.7.4",
+      "after": "10.7.5"
+    },
+    {
+      "file": "package.json",
+      "group": "overrides",
+      "package": "music-metadata",
+      "before": "12.3.0",
+      "after": "12.3.2"
+    },
+    {
+      "file": "packages/shared/package.json",
+      "group": "dependencies",
+      "package": "i18next",
+      "before": "^26.5.10",
+      "after": "^26.5.11"
+    }
+  ],
+  "checks": {
+    "types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 17.06,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/npm-latest-20261026-types.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/shared/src/i18n/__tests__/locale-parity.test.ts",
+        "packages/shared/src/i18n/__tests__/locale-registry.test.ts",
+        "packages/server-core/src/webui/__tests__/http-server.test.ts",
+        "packages/server-core/src/webui/__tests__/node-adapter.test.ts",
+        "packages/server-core/src/webui/__tests__/remote-rpc-policy.test.ts",
+        "packages/ui/src/components/markdown/__tests__/tiptap-prosemirror-identity.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.24,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/npm-latest-20261026-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 17.0,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/npm-latest-20261026-build.log"
+    }
+  },
+  "targetedTests": 98,
+  "browser": {
+    "onboarding": {
+      "passed": 7,
+      "errors": 0
+    },
+    "chat-page": {
+      "passed": 7,
+      "errors": 0
+    },
+    "kanban": {
+      "passed": 6,
+      "errors": 0
+    },
+    "markdown-selection": {
+      "passed": 7,
+      "errors": 0
+    }
+  },
+  "lockfileSha256": "68e291df566e73275c085d06b76b34267232566065e0435dd1d48955a28971c6",
+  "install": {
+    "command": "bun 1.4.4 install --ignore-scripts",
+    "exitCode": 0,
+    "platformSkip": "Windows ARM Rollup 4.65.1 locked; unsupported platform on Mac, not installed"
+  },
+  "limits": [
+    "No final local-install or real-model mission claim",
+    "No global suite rerun; prohibited by PreToolUse",
+    "Maintained source quality backlog remains"
+  ]
+}

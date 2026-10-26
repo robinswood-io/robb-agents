@@ -16,7 +16,7 @@
     "@craft-agent/ui": "workspace:*",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-i18next": "^17.1.8"
+    "react-i18next": "^17.1.9"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.20",

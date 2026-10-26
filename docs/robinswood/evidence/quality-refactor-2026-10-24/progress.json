@@ -103,7 +103,7 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-26T14:37:52.009937+00:00",
+  "updatedAt": "2026-10-26T14:44:07.923478+00:00",
   "current": {
     "lastEvidence": "chat-page-native-summary.json",
     "sourceGate": {
@@ -138,6 +138,7 @@
     "targetedTests": {
       "pass": 47,
       "fail": 0
-    }
+    },
+    "dependencyRefresh": "npm-latest-20261026-summary.json"
   }
 }
