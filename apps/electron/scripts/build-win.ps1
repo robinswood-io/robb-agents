@@ -132,10 +132,12 @@ try {
 $SdkSource = "$RootDir\node_modules\@anthropic-ai\claude-agent-sdk"
 $SdkBinarySource = "$RootDir\node_modules\@anthropic-ai\claude-agent-sdk-win32-x64"
 $RipgrepSource = "$RootDir\node_modules\@vscode\ripgrep"
+$RipgrepBinary = "$RootDir\node_modules\@vscode\ripgrep-win32-x64\bin\rg.exe"
 Require-Path $SdkSource "Claude Agent SDK core"
 Require-Path "$RootDir\packages\shared\src\interceptor-request-utils.ts" "network interceptor request utilities"
 Require-Path "$SdkBinarySource\claude.exe" "Claude Agent SDK native binary"
-Require-Path "$RipgrepSource\bin\rg.exe" "ripgrep binary"
+Require-Path $RipgrepSource "ripgrep package"
+Require-Path $RipgrepBinary "ripgrep binary"
 
 $AnthropicDest = "$ElectronDir\node_modules\@anthropic-ai"
 New-Item -ItemType Directory -Force -Path $AnthropicDest | Out-Null
@@ -146,6 +148,8 @@ Copy-Item -Recurse -Force "$SdkBinarySource\*" $SdkAliasDest
 $VscodeDest = "$ElectronDir\node_modules\@vscode"
 New-Item -ItemType Directory -Force -Path $VscodeDest | Out-Null
 Copy-Item -Recurse -Force $RipgrepSource $VscodeDest
+New-Item -ItemType Directory -Force -Path "$VscodeDest\ripgrep\bin" | Out-Null
+Copy-Item -Force $RipgrepBinary "$VscodeDest\ripgrep\bin\rg.exe"
 
 # Use the shared build pipeline: it stages assets and Pi/Vibe subprocesses.
 Push-Location $RootDir

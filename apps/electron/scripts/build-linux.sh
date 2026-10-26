@@ -174,12 +174,15 @@ echo "  Native binary: $((BIN_SIZE / 1024 / 1024)) MB"
 
 # 5. Copy ripgrep (sourced from @vscode/ripgrep since 0.2.113).
 RG_SOURCE="$ROOT_DIR/node_modules/@vscode/ripgrep"
-require_path "$RG_SOURCE" "@vscode/ripgrep" "Run 'bun install' and 'bun pm trust @vscode/ripgrep' first."
-require_path "$RG_SOURCE/bin/rg" "ripgrep binary" "@vscode/ripgrep postinstall did not run."
+RG_BINARY="$ROOT_DIR/node_modules/@vscode/ripgrep-linux-$ARCH/bin/rg"
+require_path "$RG_SOURCE" "@vscode/ripgrep" "Run 'bun install' first."
+require_path "$RG_BINARY" "ripgrep binary" "Run 'bun install' with the target platform dependencies."
 echo "Copying @vscode/ripgrep..."
 mkdir -p "$ELECTRON_DIR/node_modules/@vscode"
 rm -rf "$ELECTRON_DIR/node_modules/@vscode/ripgrep"
 cp -r "$RG_SOURCE" "$ELECTRON_DIR/node_modules/@vscode/"
+mkdir -p "$ELECTRON_DIR/node_modules/@vscode/ripgrep/bin"
+cp "$RG_BINARY" "$ELECTRON_DIR/node_modules/@vscode/ripgrep/bin/rg"
 
 # 6. Copy network interceptor sources (for Pi subprocess; Claude no longer
 #    uses --preload — Phase 2 will move that to SDK hooks or a local proxy).

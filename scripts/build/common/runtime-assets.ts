@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, rmSync, copyFileSync, cpSync, lstatSync, readdirSync } from "fs";
+import { existsSync, mkdirSync, rmSync, copyFileSync, cpSync, lstatSync, readdirSync, chmodSync, statSync } from "fs";
 import { join, dirname } from "path";
 import type { Arch, BuildConfig, Platform } from './binary-downloads.ts';
 
@@ -100,12 +100,11 @@ export function copyRipgrep(config: BuildConfig): void {
   const { rootDir, electronDir } = config;
   const rgSource = join(rootDir, 'node_modules', '@vscode', 'ripgrep');
   const binaryName = config.platform === 'win32' ? 'rg.exe' : 'rg';
-  const rgBinary = join(rgSource, 'bin', binaryName);
+  const rgBinary = join(rootDir, 'node_modules', '@vscode', `ripgrep-${config.platform}-${config.arch}`, 'bin', binaryName);
 
   if (!existsSync(rgSource) || !existsSync(rgBinary)) {
     throw new Error(
-      `@vscode/ripgrep not installed or postinstall did not run. ` +
-      `Run 'bun install' and 'bun pm trust @vscode/ripgrep'.`,
+      `@vscode/ripgrep and its ${config.platform}-${config.arch} binary must be installed. Run 'bun install'.`,
     );
   }
 
@@ -117,6 +116,10 @@ export function copyRipgrep(config: BuildConfig): void {
     rmSync(rgDest, { recursive: true, force: true });
   }
   cpSync(rgSource, rgDest, { recursive: true, dereference: true });
+  mkdirSync(join(rgDest, 'bin'), { recursive: true });
+  const stagedBinary = join(rgDest, 'bin', binaryName);
+  copyFileSync(rgBinary, stagedBinary);
+  if (config.platform !== 'win32') chmodSync(stagedBinary, statSync(rgBinary).mode & 0o777);
 }
 
 /**

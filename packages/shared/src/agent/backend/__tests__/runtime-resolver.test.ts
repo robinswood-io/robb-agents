@@ -154,6 +154,23 @@ describe('resolveRipgrepPath', () => {
     expect(result.ripgrepPath).toBe(rgPath);
   });
 
+  it('finds the platform ripgrep binary used by current @vscode/ripgrep packages', () => {
+    const appRoot = join(tmpBase, 'platform-package');
+    const binaryName = process.platform === 'win32' ? 'rg.exe' : 'rg';
+    const rgDir = join(appRoot, 'node_modules', '@vscode', `ripgrep-${process.platform}-${process.arch}`, 'bin');
+    mkdirSync(rgDir, { recursive: true });
+    const rgPath = join(rgDir, binaryName);
+    writeFileSync(rgPath, '#!/bin/sh\n');
+    chmodSync(rgPath, 0o755);
+
+    const result = resolveBackendHostTooling({ hostRuntime: {
+      appRootPath: appRoot,
+      resourcesPath: appRoot,
+      isPackaged: false,
+    } });
+    expect(result.ripgrepPath).toBe(rgPath);
+  });
+
   it('falls back to system rg when vendored binary is missing (non-packaged)', () => {
     const appRoot = join(tmpBase, 'no-vendored');
     mkdirSync(appRoot, { recursive: true });

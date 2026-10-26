@@ -221,21 +221,28 @@ function resolveServerPath(hostRuntime: BackendHostRuntimeContext, serverName: s
 function resolveRipgrepPath(hostRuntime: BackendHostRuntimeContext): string | undefined {
   const binaryName = process.platform === 'win32' ? 'rg.exe' : 'rg';
   const ripgrepRelative = join('node_modules', '@vscode', 'ripgrep', 'bin', binaryName);
+  const platformRipgrepRelative = join('node_modules', '@vscode', `ripgrep-${process.platform}-${process.arch}`, 'bin', binaryName);
 
   if (hostRuntime.isPackaged) {
     const externalRoot = externalPackagedAppRoot(hostRuntime);
     const packaged = firstExistingPath([
       ...(externalRoot ? [join(externalRoot, ripgrepRelative)] : []),
+      ...(externalRoot ? [join(externalRoot, platformRipgrepRelative)] : []),
       join(hostRuntime.appRootPath, ripgrepRelative),
+      join(hostRuntime.appRootPath, platformRipgrepRelative),
     ]);
     if (packaged) return packaged;
   }
 
   const fromHostRoot = resolveUpwards(hostRuntime.appRootPath, ripgrepRelative, 10);
   if (fromHostRoot) return fromHostRoot;
+  const platformFromHostRoot = resolveUpwards(hostRuntime.appRootPath, platformRipgrepRelative, 10);
+  if (platformFromHostRoot) return platformFromHostRoot;
 
   const cwdFallback = join(process.cwd(), ripgrepRelative);
   if (existsSync(cwdFallback)) return cwdFallback;
+  const platformCwdFallback = join(process.cwd(), platformRipgrepRelative);
+  if (existsSync(platformCwdFallback)) return platformCwdFallback;
 
   // Non-packaged (headless server, dev mode): fall back to system rg via PATH.
   // Packaged apps must use vendored binary only — never resolve from PATH

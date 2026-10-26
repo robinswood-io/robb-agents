@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { copyPiAgentServer, type BuildConfig } from '../build/common.ts';
+import { copyPiAgentServer, copyRipgrep, type BuildConfig } from '../build/common.ts';
 
 const directories: string[] = [];
 afterEach(() => {
@@ -50,5 +50,30 @@ describe('Pi runtime packaging', () => {
     const f = fixture(false);
     expect(() => copyPiAgentServer(f.config)).toThrow('Koffi native binary directory is empty');
     expect(existsSync(join(f.copiedNative, 'darwin_arm64'))).toBe(false);
+  });
+});
+
+describe('ripgrep runtime packaging', () => {
+  it('stages the platform binary at the stable path used by packaged search', () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'robb-ripgrep-assets-'));
+    directories.push(rootDir);
+    const electronDir = join(rootDir, 'apps', 'electron');
+    const config: BuildConfig = {
+      rootDir, electronDir, platform: 'darwin', arch: 'arm64',
+      upload: false, uploadLatest: false, uploadScript: false,
+    };
+    const scope = join(rootDir, 'node_modules', '@vscode');
+    mkdirSync(join(scope, 'ripgrep'), { recursive: true });
+    mkdirSync(join(scope, 'ripgrep-darwin-arm64', 'bin'), { recursive: true });
+    writeFileSync(join(scope, 'ripgrep', 'package.json'), '{"name":"@vscode/ripgrep"}');
+    const sourceBinary = join(scope, 'ripgrep-darwin-arm64', 'bin', 'rg');
+    writeFileSync(sourceBinary, 'QA RIPGREP');
+    chmodSync(sourceBinary, 0o755);
+
+    copyRipgrep(config);
+
+    const stagedBinary = join(electronDir, 'node_modules', '@vscode', 'ripgrep', 'bin', 'rg');
+    expect(readFileSync(stagedBinary, 'utf8')).toBe('QA RIPGREP');
+    expect(statSync(stagedBinary).mode & 0o111).not.toBe(0);
   });
 });

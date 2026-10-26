@@ -179,9 +179,13 @@ cp -R "$SDK_BIN_SOURCE/." "$ALIAS_DEST/"
 chmod +x "$ALIAS_DEST/claude"
 
 RG_SOURCE="$ROOT_DIR/node_modules/@vscode/ripgrep"
-require_path "$RG_SOURCE/bin/rg" "ripgrep binary"
+RG_BINARY="$ROOT_DIR/node_modules/@vscode/ripgrep-darwin-$ARCH/bin/rg"
+require_path "$RG_SOURCE" "ripgrep package"
+require_path "$RG_BINARY" "ripgrep binary"
 mkdir -p "$ELECTRON_DIR/node_modules/@vscode"
 cp -R "$RG_SOURCE" "$ELECTRON_DIR/node_modules/@vscode/"
+mkdir -p "$ELECTRON_DIR/node_modules/@vscode/ripgrep/bin"
+cp "$RG_BINARY" "$ELECTRON_DIR/node_modules/@vscode/ripgrep/bin/rg"
 
 # Vite can exceed Node's default old-space limit on macOS runners while
 # rendering production chunks for the full desktop UI bundle.
