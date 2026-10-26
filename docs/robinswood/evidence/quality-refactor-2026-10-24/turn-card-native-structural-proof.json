@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "nativeDeclarationBodiesPreserved": true,
+  "reviewedStableDependencyAdditions": {},
+  "reviewedStableEffectDependencyAdditions": {},
+  "reviewedEffectDependencyRemovals": {},
+  "reviewedDependencyRemovals": {},
+  "reviewedDeferredCaptures": {},
+  "nestedPlansVerified": [],
+  "nativeMainJSXAndInlineCallbacksPreserved": true,
+  "nativeRootAndActionHooksReinlinedExactly": true,
+  "viewAddsNoStateOrEffects": true,
+  "nativeValuesPassedDirectly": true,
+  "nativeImportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "packages/ui/src/components/chat/TurnCard.tsx",
+      "lines": 452,
+      "sha256": "99ebcd8277c5b051ee7954308a1606026ddf072375c28f3c71ba744362fe60cf"
+    },
+    {
+      "file": "packages/ui/src/components/chat/ResponseCard.tsx",
+      "lines": 487,
+      "sha256": "c04503659c5da294e756d720e0f206373b3fbc67f1b3d2a0b9279be30083cdf3"
+    },
+    {
+      "file": "packages/ui/src/components/chat/turn-card-view.tsx",
+      "lines": 419,
+      "sha256": "55b5cd1c60b1cecb6a32bb1ed515e0a92ddf8a0030f6daa39f0a5d600448aed5"
+    }
+  ]
+}
