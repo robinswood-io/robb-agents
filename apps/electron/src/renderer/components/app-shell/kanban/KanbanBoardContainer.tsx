@@ -1,36 +1,60 @@
-import * as React from 'react'
-import { Plus } from 'lucide-react'
-import { toast } from 'sonner'
-import { useAtom, useAtomValue, useSetAtom } from 'jotai'
-import { useTranslation } from 'react-i18next'
-import { useAppShellContext } from '@/context/AppShellContext'
-import { sessionMetaMapAtom, updateSessionMetaAtom, type SessionMeta } from '@/atoms/sessions'
-import { projectsAtom } from '@/atoms/projects'
-import { kanbanProjectFilterAtom, kanbanColumnStatusAtom, kanbanEditorTargetAtom } from '@/atoms/kanban'
-import { useNavigation } from '@/contexts/NavigationContext'
-import { useProjectColorTreatment } from '@/hooks/useProjectColorTreatment'
-import { useLabels } from '@/hooks/useLabels'
-import { getSessionTitle } from '@/utils/session'
-import { routes } from '@/lib/navigate'
-import { resolveTaskScopeLabelId } from '@craft-agent/shared/labels'
-import { DEFAULT_MODEL } from '@config/models'
-import { buildModelCatalog } from './model-catalog'
-import type { SessionStatus } from '@/config/session-status-config'
-import type { KanbanColumnDef } from '@craft-agent/shared/projects/types'
-import { KanbanBoard } from './KanbanBoard'
-import { KANBAN_COLUMNS, statusToColumn } from './status-column'
-import { BoardListToggle } from './BoardListToggle'
-import { KanbanProjectFilter, type KanbanProjectFilterOption } from './KanbanProjectFilter'
-import { TaskEditor } from './TaskEditor'
-import { mergeSubtaskRows, type SpecNodeSummary, type SubtaskChildRow } from './subtask-merge'
-import type { SpecNode } from './task-spec-form'
-import type {
-  KanbanColumnId,
-  KanbanColumnMeta,
-  KanbanProject,
-  KanbanTask,
-  SubtaskRunState,
-} from './types'
+import * as React from 'react';
+import "lucide-react";
+import "sonner";
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { useTranslation } from 'react-i18next';
+import { useAppShellContext } from '@/context/AppShellContext';
+import { sessionMetaMapAtom, updateSessionMetaAtom, type SessionMeta } from '@/atoms/sessions';
+import { projectsAtom } from '@/atoms/projects';
+import { kanbanProjectFilterAtom, kanbanColumnStatusAtom, kanbanEditorTargetAtom } from '@/atoms/kanban';
+import { useNavigation } from '@/contexts/NavigationContext';
+import { useProjectColorTreatment } from '@/hooks/useProjectColorTreatment';
+import { useLabels } from '@/hooks/useLabels';
+import { getSessionTitle } from '@/utils/session';
+import "@/lib/navigate";
+import { resolveTaskScopeLabelId } from '@craft-agent/shared/labels';
+import { DEFAULT_MODEL } from '@config/models';
+import { buildModelCatalog } from './model-catalog';
+import "./KanbanBoard";
+import { KANBAN_COLUMNS, statusToColumn } from './status-column';
+import "./BoardListToggle";
+import "./KanbanProjectFilter";
+import { TaskEditor } from './TaskEditor';
+import { mergeSubtaskRows, type SpecNodeSummary, type SubtaskChildRow } from './subtask-merge';
+
+import { useKanbanBoardActions } from "./use-kanban-board-actions";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import { KanbanBoardContent } from "./kanban-board-content";
+
+import type { SessionStatus } from '@/config/session-status-config';
+
+import { type KanbanProjectFilterOption } from './KanbanProjectFilter';
+
+import type { SpecNode } from './task-spec-form';
+import type { KanbanColumnMeta, KanbanProject, KanbanTask, SubtaskRunState } from './types';
 
 /**
  * Subtask run-state from the child session. A closed status wins (done), then an
@@ -263,193 +287,35 @@ export function KanbanBoardContainer() {
 
   const defaultSubtaskModel = modelToConnection.has(DEFAULT_MODEL) ? DEFAULT_MODEL : undefined
 
-  const handleToggleSubtasks = React.useCallback((taskId: string) => {
-    setExpandedTaskIds(prev => {
-      const next = new Set(prev)
-      if (next.has(taskId)) next.delete(taskId)
-      else next.add(taskId)
-      return next
-    })
-  }, [])
-
-  const handleAddSubtask = React.useCallback(
-    async (taskId: string, title: string, model: string) => {
-      if (!activeWorkspaceId) return
-      const llmConnection = modelToConnection.get(model)
-      // Create only — the subtask lands as a pending row. The title is stored as
-      // the session `name` so it shows on the row, is recovered as the prompt when
-      // Play dispatches it, and suppresses AI title-gen. Execution is deferred.
-      // applyTaskLabel: the child inherits the parent's task::N (numbering a
-      // plain-chat parent in the same pass — it becomes a task by gaining a subtask).
-      await onCreateSession(activeWorkspaceId, {
-        parentSessionId: taskId,
-        model,
-        ...(llmConnection ? { llmConnection } : {}),
-        name: title,
-        applyTaskLabel: true,
-      })
-      setExpandedTaskIds(prev => new Set(prev).add(taskId))
-    },
-    [activeWorkspaceId, modelToConnection, onCreateSession]
-  )
-
-  // Tile Play. Spec-backed tasks start a Conductor run of the whole DAG (tasks:run —
-  // the runner drives child creation, statuses, and columns; it throws if a run is
-  // already active). Plain tiles dispatch every pending quick-add child directly: the
-  // prompt is the child's `name` (set at creation), with `isProcessing` flipped
-  // optimistically so the row spins immediately and a double-click is a no-op.
-  const handleRunSubtasks = React.useCallback(
-    (taskId: string) => {
-      const meta = metaMap.get(taskId)
-      if (activeWorkspaceId && meta?.taskSlug) {
-        window.electronAPI
-          .runTask(activeWorkspaceId, { slug: meta.taskSlug, orchestratorSessionId: taskId })
-          .catch((err: unknown) => {
-            toast.error(t('tasks.toastRunFailed'), {
-              description: err instanceof Error ? err.message : String(err),
-            })
-          })
-        return
-      }
-      for (const child of metaMap.values()) {
-        if (child.parentSessionId !== taskId) continue
-        // Skip Conductor-owned children: the TaskRunner drives their lifecycle (prompts,
-        // status, retries). Dispatching them manually would double-run and race the runner.
-        if (child.taskRunId) continue
-        if (deriveRunState(child, statusesById) !== 'pending') continue
-        const prompt = child.name?.trim()
-        if (!prompt) continue
-        onSendMessage(child.id, prompt)
-        updateSessionMeta(child.id, { isProcessing: true })
-      }
-    },
-    [metaMap, statusesById, onSendMessage, updateSessionMeta, activeWorkspaceId, t]
-  )
-
-  // Create a parent task tile in place — no navigation. It lands in ToDo (no
-  // kanbanColumn + todo status → todo column). While a project filter is active,
-  // bind the new task to the first selected project so it stays visible under the
-  // filter (an unbound task would be hidden the moment it's created).
-  const handleCreateTask = React.useCallback(
-    async (title: string) => {
-      if (!activeWorkspaceId) return
-      const boundProjectId = projectFilter[0]
-      await onCreateSession(activeWorkspaceId, {
-        name: title,
-        sessionStatus: 'todo',
-        ...(boundProjectId ? { projectId: boundProjectId } : {}),
-        applyTaskLabel: true,
-      })
-    },
-    [activeWorkspaceId, onCreateSession, projectFilter]
-  )
-
-  // Change a task's status badge directly (independent from its column). Mirrors
-  // the move handler's optimistic-then-persist shape so the badge reflows before
-  // the RPC lands.
-  const handleChangeStatus = React.useCallback(
-    (taskId: string, statusId: string) => {
-      updateSessionMeta(taskId, { sessionStatus: statusId })
-      void window.electronAPI.sessionCommand(taskId, { type: 'setSessionStatus', state: statusId })
-    },
-    [updateSessionMeta]
-  )
-
-  const handleMoveTask = React.useCallback(
-    (taskId: string, toColumn: KanbanColumnId) => {
-      // Optimistic: the column derives from `kanbanColumn` first, so writing it
-      // immediately reflows the tile before the RPC lands.
-      updateSessionMeta(taskId, { kanbanColumn: toColumn })
-      void window.electronAPI.sessionCommand(taskId, { type: 'setKanbanColumn', column: toColumn })
-      // Optionally fold the status to the column's configured target. Project
-      // columns carry their own `dropStatusId`; the default view reads the global
-      // atom. Guarded on a known status so a stale mapping is a no-op.
-      const autoStatus = activeColumns.find(c => c.id === toColumn)?.dropStatusId ?? columnStatus[toColumn]
-      if (autoStatus && statusesById.has(autoStatus)) {
-        handleChangeStatus(taskId, autoStatus)
-      }
-    },
-    [updateSessionMeta, activeColumns, columnStatus, statusesById, handleChangeStatus]
-  )
-
-  // Persist a full ordered column set onto the focused project. The `projects:changed`
-  // broadcast refreshes `projectsAtom`, so the board reflows without optimistic state.
-  const persistProjectColumns = React.useCallback(
-    (columns: KanbanColumnDef[]) => {
-      if (!activeWorkspaceId || !editingProject) return
-      void window.electronAPI.updateProject(activeWorkspaceId, editingProject.config.slug, {
-        kanbanColumns: columns,
-      })
-    },
-    [activeWorkspaceId, editingProject]
-  )
-
-  // The project's current custom set, or — on first customization — a seed
-  // materialized from the active (default) columns. The seed reuses the built-in
-  // ids so existing card placement survives, and freezes the default labels in the
-  // user's current language (thereafter user-authored, like the project name).
-  const resolveEditableColumns = React.useCallback((): KanbanColumnDef[] => {
-    const custom = editingProject?.config.kanbanColumns
-    if (custom?.length) return custom.map(c => ({ ...c }))
-    return activeColumns.map(c => ({
-      id: c.id,
-      name: c.name ?? (c.labelKey ? t(c.labelKey) : c.id),
-      color: c.color,
-      dropStatusId: c.dropStatusId,
-    }))
-  }, [editingProject, activeColumns, t])
-
-  const handleAddColumn = React.useCallback(() => {
-    const base = resolveEditableColumns()
-    const id = `col-${crypto.randomUUID().slice(0, 8)}`
-    persistProjectColumns([...base, { id, name: t('kanban.column.newColumnName') }])
-  }, [resolveEditableColumns, persistProjectColumns, t])
-
-  const handleUpdateColumn = React.useCallback(
-    (columnId: string, patch: Partial<KanbanColumnDef>) => {
-      const next = resolveEditableColumns().map(c => (c.id === columnId ? { ...c, ...patch } : c))
-      persistProjectColumns(next)
-    },
-    [resolveEditableColumns, persistProjectColumns]
-  )
-
-  const handleRemoveColumn = React.useCallback(
-    (columnId: string) => {
-      const remaining = resolveEditableColumns().filter(c => c.id !== columnId)
-      const fallbackId = remaining[0]?.id
-      // Reassign orphaned cards to the first remaining column so none disappears
-      // (optimistic per-task, mirroring handleMoveTask).
-      if (fallbackId) {
-        for (const task of visibleTasks) {
-          if (task.column !== columnId) continue
-          updateSessionMeta(task.id, { kanbanColumn: fallbackId })
-          void window.electronAPI.sessionCommand(task.id, { type: 'setKanbanColumn', column: fallbackId })
-        }
-      }
-      persistProjectColumns(remaining)
-    },
-    [resolveEditableColumns, persistProjectColumns, visibleTasks, updateSessionMeta]
-  )
-
-  // Set the status auto-applied when a task is dropped into a column (header picker).
-  // In single-project view this persists onto the project column's `dropStatusId`;
-  // the default/all view edits the global atom (shared with AppearanceSettingsPage,
-  // so board header and Settings stay in sync).
-  const handleSelectDropStatus = React.useCallback(
-    (column: KanbanColumnId, statusId: string) => {
-      if (editingProject) {
-        handleUpdateColumn(column, { dropStatusId: statusId || undefined })
-        return
-      }
-      setColumnStatus(prev => {
-        const next = { ...prev }
-        if (statusId) next[column] = statusId
-        else delete next[column]
-        return next
-      })
-    },
-    [editingProject, handleUpdateColumn, setColumnStatus]
-  )
+  const {
+    handleToggleSubtasks,
+    handleAddSubtask,
+    handleRunSubtasks,
+    handleCreateTask,
+    handleChangeStatus,
+    handleMoveTask,
+    handleAddColumn,
+    handleUpdateColumn,
+    handleRemoveColumn,
+    handleSelectDropStatus,
+  } = useKanbanBoardActions({
+    setExpandedTaskIds,
+    activeWorkspaceId,
+    modelToConnection,
+    onCreateSession,
+    metaMap,
+    t,
+    deriveRunState,
+    statusesById,
+    onSendMessage,
+    updateSessionMeta,
+    projectFilter,
+    activeColumns,
+    columnStatus,
+    editingProject,
+    visibleTasks,
+    setColumnStatus,
+  })
 
   // Board clicks land on All Sessions with the task's scope applied as the NORMAL,
   // user-clearable header-chip filters: label filter = the session's per-task item
@@ -484,7 +350,7 @@ export function KanbanBoardContainer() {
         initialTitle: meta ? getSessionTitle(meta) : undefined,
       })
     },
-    [metaMap]
+    [metaMap, setEditorTarget]
   )
 
   if (editorTarget && activeWorkspaceId) {
@@ -522,67 +388,39 @@ export function KanbanBoardContainer() {
   }
 
   return (
-    <div className="flex h-full flex-col bg-background">
-      <div className="flex items-center justify-between gap-2 border-b border-border/50 px-4 py-2.5">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="text-sm font-medium">{t('kanban.allTasks')}</span>
-          {projectOptions.length > 0 && (
-            <KanbanProjectFilter projects={projectOptions} value={projectFilter} onChange={setProjectFilter} />
-          )}
-          {usingProjectColumns && editingProject && (
-            <span className="truncate text-[11px] text-foreground/45">
-              {t('kanban.column.columnsFrom', { project: editingProject.config.name })}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setEditorTarget({ mode: 'create', initialProjectId: projectFilter[0] })}
-            disabled={!activeWorkspaceId}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-[12.5px] font-semibold text-foreground transition-colors hover:bg-foreground/[0.03] disabled:opacity-50"
-          >
-            <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> {t('kanban.newTask')}
-          </button>
-          <BoardListToggle
-            value="board"
-            onChange={view => {
-              if (view === 'list') navigate(routes.view.allSessions())
-            }}
-          />
-        </div>
-      </div>
-      <div className="min-h-0 flex-1">
-        <KanbanBoard
-          columns={activeColumns}
-          tasks={visibleTasks}
-          projectsById={projectsById}
-          statusesById={statusesById}
-          statuses={sessionStatuses ?? []}
-          onChangeStatus={handleChangeStatus}
-          treatment={treatment}
-          expandedTaskIds={expandedTaskIds}
-          onTaskClick={openSessionScoped}
-          onEditTask={handleEditTask}
-          onToggleSubtasks={handleToggleSubtasks}
-          onSubtaskClick={(taskId, subtaskId) => openSessionScoped(subtaskId, metaMap.get(taskId)?.projectId)}
-          onAddSubtask={handleAddSubtask}
-          onRunSubtasks={handleRunSubtasks}
-          subtaskModelGroups={subtaskModelGroups}
-          defaultSubtaskModel={defaultSubtaskModel}
-          onCreateTask={handleCreateTask}
-          onMoveTask={handleMoveTask}
-          columnDropStatus={columnStatus}
-          onSelectDropStatus={handleSelectDropStatus}
-          {...(editingProject
-            ? {
-                onUpdateColumn: handleUpdateColumn,
-                onRemoveColumn: handleRemoveColumn,
-                onAddColumn: handleAddColumn,
-              }
-            : {})}
-        />
-      </div>
-    </div>
+    <KanbanBoardContent
+      t={t}
+      projectOptions={projectOptions}
+      projectFilter={projectFilter}
+      setProjectFilter={setProjectFilter}
+      usingProjectColumns={usingProjectColumns}
+      editingProject={editingProject}
+      setEditorTarget={setEditorTarget}
+      activeWorkspaceId={activeWorkspaceId}
+      navigate={navigate}
+      activeColumns={activeColumns}
+      visibleTasks={visibleTasks}
+      projectsById={projectsById}
+      statusesById={statusesById}
+      sessionStatuses={sessionStatuses}
+      handleChangeStatus={handleChangeStatus}
+      treatment={treatment}
+      expandedTaskIds={expandedTaskIds}
+      openSessionScoped={openSessionScoped}
+      handleEditTask={handleEditTask}
+      handleToggleSubtasks={handleToggleSubtasks}
+      metaMap={metaMap}
+      handleAddSubtask={handleAddSubtask}
+      handleRunSubtasks={handleRunSubtasks}
+      subtaskModelGroups={subtaskModelGroups}
+      defaultSubtaskModel={defaultSubtaskModel}
+      handleCreateTask={handleCreateTask}
+      handleMoveTask={handleMoveTask}
+      columnStatus={columnStatus}
+      handleSelectDropStatus={handleSelectDropStatus}
+      handleUpdateColumn={handleUpdateColumn}
+      handleRemoveColumn={handleRemoveColumn}
+      handleAddColumn={handleAddColumn}
+    />
   )
 }
