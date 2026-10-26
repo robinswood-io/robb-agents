@@ -361,7 +361,8 @@ it('should not call onPromptsReady if no prompt actions match', async () => {
       const onPromptsReady = jest.fn();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
-          actions: [{ type: 'command', command: 'echo hello' }],
+          // Deliberately retain an unsupported legacy action at this input boundary.
+          actions: [{ type: 'command', command: 'echo hello' } as unknown as import('../types.ts').AutomationAction],
         }],
       });
 

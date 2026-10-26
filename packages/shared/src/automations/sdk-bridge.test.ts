@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'bun:test';
 import { buildEnvFromSdkInput } from './sdk-bridge.ts';
-import type { SdkAutomationEvent, SdkAutomationInput } from './types.ts';
+import type { AgentEvent, SdkAutomationInput } from './types.ts';
 
 function input(overrides: Partial<SdkAutomationInput> = {}): SdkAutomationInput {
   return { hook_event_name: 'test', ...overrides };
@@ -116,7 +116,7 @@ describe('sdk-bridge', () => {
 
     describe('unknown/default events', () => {
       it('should return minimal env for events with no specific mappings', () => {
-        const env = buildEnvFromSdkInput('Stop' as unknown as SdkAutomationEvent, input());
+        const env = buildEnvFromSdkInput('Stop', input());
         expect(env.CRAFT_EVENT).toBe('Stop');
         // Should still have process.env vars
         expect(env.PATH).toBeDefined();

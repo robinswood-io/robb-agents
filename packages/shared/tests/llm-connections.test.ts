@@ -245,11 +245,11 @@ describe('getDefaultModelsForConnection() — current OpenAI defaults', () => {
 
   it('offers Astra after Sol for regular OpenAI API auth without changing the default', () => {
     registerPiModelResolver((provider) => provider === 'openai' ? [
-      { id: 'pi/gpt-5.5', name: 'GPT 5.5', shortName: '5.5', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
-      { id: 'pi/gpt-5.6-luna', name: 'GPT-5.6 Luna', shortName: 'Luna', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
-      { id: 'pi/gpt-6-astra', name: 'GPT-6 Astra', shortName: 'Astra', provider: 'pi', contextWindow: 272000, supportsThinking: true },
-      { id: 'pi/gpt-5.6-sol', name: 'GPT-5.6 Sol', shortName: 'Sol', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
-      { id: 'pi/gpt-5.6-terra', name: 'GPT-5.6 Terra', shortName: 'Terra', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-5.5', name: 'GPT 5.5', shortName: '5.5', description: '', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-5.6-luna', name: 'GPT-5.6 Luna', shortName: 'Luna', description: '', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-6-astra', name: 'GPT-6 Astra', shortName: 'Astra', description: '', provider: 'pi', contextWindow: 272000, supportsThinking: true },
+      { id: 'pi/gpt-5.6-sol', name: 'GPT-5.6 Sol', shortName: 'Sol', description: '', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-5.6-terra', name: 'GPT-5.6 Terra', shortName: 'Terra', description: '', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
     ] : []);
 
     expect(getDefaultModelsForConnection('pi', 'openai').slice(0, 5).map(m => typeof m === 'string' ? m : m.id)).toEqual([
@@ -264,11 +264,11 @@ describe('getDefaultModelsForConnection() — current OpenAI defaults', () => {
 
   it('offers Astra after Sol for ChatGPT account / Codex auth without changing the default', () => {
     registerPiModelResolver((provider) => provider === 'openai-codex' ? [
-      { id: 'pi/gpt-5.2', name: 'GPT 5.2', shortName: '5.2', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
-      { id: 'pi/gpt-5.6-terra', name: 'GPT-5.6 Terra', shortName: 'Terra', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
-      { id: 'pi/gpt-6-astra', name: 'GPT-6 Astra', shortName: 'Astra', provider: 'pi', contextWindow: 272000, supportsThinking: true },
-      { id: 'pi/gpt-5.6-luna', name: 'GPT-5.6 Luna', shortName: 'Luna', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
-      { id: 'pi/gpt-5.6-sol', name: 'GPT-5.6 Sol', shortName: 'Sol', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-5.2', name: 'GPT 5.2', shortName: '5.2', description: '', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-5.6-terra', name: 'GPT-5.6 Terra', shortName: 'Terra', description: '', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-6-astra', name: 'GPT-6 Astra', shortName: 'Astra', description: '', provider: 'pi', contextWindow: 272000, supportsThinking: true },
+      { id: 'pi/gpt-5.6-luna', name: 'GPT-5.6 Luna', shortName: 'Luna', description: '', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-5.6-sol', name: 'GPT-5.6 Sol', shortName: 'Sol', description: '', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
     ] : []);
 
     expect(getDefaultModelsForConnection('pi', 'openai-codex').slice(0, 5).map(m => typeof m === 'string' ? m : m.id)).toEqual([
@@ -283,12 +283,12 @@ describe('getDefaultModelsForConnection() — current OpenAI defaults', () => {
 
   it('uses current agentic Mistral models before legacy catalog entries', () => {
     registerPiModelResolver((provider) => provider === 'mistral' ? [
-      { id: 'pi/codestral-latest', name: 'Codestral', shortName: 'Codestral', provider: 'pi', contextWindow: 256000, supportsThinking: false },
-      { id: 'pi/mistral-small-latest', name: 'Mistral Small 4', shortName: 'Small 4', provider: 'pi', contextWindow: 256000, supportsThinking: true },
-      { id: 'pi/ministral-3b-latest', name: 'Ministral 3B', shortName: '3B', provider: 'pi', contextWindow: 128000, supportsThinking: false },
-      { id: 'pi/mistral-medium-3.5', name: 'Mistral Medium 3.5', shortName: 'Medium 3.5', provider: 'pi', contextWindow: 262144, supportsThinking: true },
-      { id: 'pi/devstral-latest', name: 'Devstral 2', shortName: 'Devstral', provider: 'pi', contextWindow: 262144, supportsThinking: false },
-      { id: 'pi/mistral-medium-3-5', name: 'Mistral Medium 3.5', shortName: 'Medium 3.5', provider: 'pi', contextWindow: 262144, supportsThinking: true },
+      { id: 'pi/codestral-latest', name: 'Codestral', shortName: 'Codestral', description: '', provider: 'pi', contextWindow: 256000, supportsThinking: false },
+      { id: 'pi/mistral-small-latest', name: 'Mistral Small 4', shortName: 'Small 4', description: '', provider: 'pi', contextWindow: 256000, supportsThinking: true },
+      { id: 'pi/ministral-3b-latest', name: 'Ministral 3B', shortName: '3B', description: '', provider: 'pi', contextWindow: 128000, supportsThinking: false },
+      { id: 'pi/mistral-medium-3.5', name: 'Mistral Medium 3.5', shortName: 'Medium 3.5', description: '', provider: 'pi', contextWindow: 262144, supportsThinking: true },
+      { id: 'pi/devstral-latest', name: 'Devstral 2', shortName: 'Devstral', description: '', provider: 'pi', contextWindow: 262144, supportsThinking: false },
+      { id: 'pi/mistral-medium-3-5', name: 'Mistral Medium 3.5', shortName: 'Medium 3.5', description: '', provider: 'pi', contextWindow: 262144, supportsThinking: true },
     ] : []);
 
     expect(getDefaultModelsForConnection('pi', 'mistral').map(m => typeof m === 'string' ? m : m.id)).toEqual([
@@ -305,7 +305,7 @@ describe('getDefaultModelsForConnection() — current OpenAI defaults', () => {
   it.each(['anthropic', 'amazon-bedrock'])('ranks actual current Claude IDs without upgrading old IDs for %s', (provider) => {
     const prefix = provider === 'amazon-bedrock' ? 'pi/eu.anthropic.' : 'pi/';
     const ids = ['claude-opus-4-5-20251101', 'claude-opus-4-8', 'claude-fable-5', 'claude-fable-5-1', 'claude-opus-5'];
-    const models = ids.map(id => ({ id: `${prefix}${id}`, name: id, shortName: id, provider: 'pi' as const, contextWindow: 1_000_000 }));
+    const models = ids.map(id => ({ id: `${prefix}${id}`, name: id, shortName: id, description: '', provider: 'pi' as const, contextWindow: 1_000_000 }));
     registerPiModelResolver(() => models);
 
     expect(getDefaultModelForConnection('pi', provider)).toBe(`${prefix}claude-opus-5`);
@@ -319,7 +319,7 @@ describe('getDefaultModelsForConnection() — current OpenAI defaults', () => {
 
   it('prefers an available current Antigravity model at connection creation', () => {
     registerPiModelResolver(() => ['gemini-3.7-flash-high', 'gemini-3.8-flash-medium', 'gemini-3.8-flash-high'].map(id => ({
-      id: `pi/${id}`, name: id, shortName: id, provider: 'pi', contextWindow: 1_048_576,
+      id: `pi/${id}`, name: id, shortName: id, description: '', provider: 'pi', contextWindow: 1_048_576,
     })));
     expect(getDefaultModelForConnection('pi', 'google-antigravity')).toBe('pi/gemini-3.8-flash-high');
   });

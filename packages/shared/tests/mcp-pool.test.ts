@@ -38,7 +38,7 @@ function makeMockClient(
   };
 }
 
-function httpConfig(token: string, url = 'https://mcp.example.com'): SdkMcpServerConfig {
+function httpConfig(token: string, url = 'https://mcp.example.com'): Extract<SdkMcpServerConfig, { url: string }> {
   return { type: 'http', url, headers: { Authorization: `Bearer ${token}` } };
 }
 
@@ -96,7 +96,7 @@ describe('McpClientPool.sync — config change detection', () => {
 
     expect(pool.disconnectCalls).toEqual(['craft']);
     expect(pool.connectCalls).toHaveLength(1);
-    expect(pool.connectCalls[0].config.headers?.Authorization).toBe('Bearer new-token');
+    expect((pool.connectCalls[0]!.config as ReturnType<typeof httpConfig>).headers?.Authorization).toBe('Bearer new-token');
     expect(pool.isConnected('craft')).toBe(true);
   });
 
@@ -171,7 +171,7 @@ describe('McpClientPool.sync — config change detection', () => {
 
     expect(pool.disconnectCalls).toContain('linear');
     expect(pool.disconnectCalls).toContain('craft');
-    expect(pool.connectCalls.find(c => c.slug === 'craft')?.config.headers?.Authorization).toBe('Bearer new-craft-token');
+    expect((pool.connectCalls.find(c => c.slug === 'craft')?.config as ReturnType<typeof httpConfig> | undefined)?.headers?.Authorization).toBe('Bearer new-craft-token');
     expect(pool.connectCalls.find(c => c.slug === 'github')).toBeDefined();
     expect(pool.isConnected('craft')).toBe(true);
     expect(pool.isConnected('linear')).toBe(false);
@@ -224,11 +224,11 @@ describe('McpClientPool proxy tool names', () => {
     const defs = pool.getProxyToolDefs();
 
     expect(defs).toHaveLength(1);
-    expect(defs[0].name).toBe('mcp__dingtalk-ai-table__pat_batch_plan');
-    expect(defs[0].name).toMatch(/^[A-Za-z0-9_-]{1,128}$/);
+    expect(defs[0]!.name).toBe('mcp__dingtalk-ai-table__pat_batch_plan');
+    expect(defs[0]!.name).toMatch(/^[A-Za-z0-9_-]{1,128}$/);
     expect(pool.getProxyToolLocalName('dingtalk-ai-table', 'pat.batch_plan')).toBe('pat_batch_plan');
 
-    await pool.callTool(defs[0].name, { ok: true });
+    await pool.callTool(defs[0]!.name, { ok: true });
 
     expect(calledNames).toEqual(['pat.batch_plan']);
   });
@@ -256,7 +256,7 @@ describe('McpClientPool proxy tool names', () => {
 
     const [def] = pool.getProxyToolDefs();
 
-    expect(def.name.length).toBeLessThanOrEqual(128);
-    expect(def.name).toMatch(/^[A-Za-z0-9_-]{1,128}$/);
+    expect(def!.name.length).toBeLessThanOrEqual(128);
+    expect(def!.name).toMatch(/^[A-Za-z0-9_-]{1,128}$/);
   });
 });

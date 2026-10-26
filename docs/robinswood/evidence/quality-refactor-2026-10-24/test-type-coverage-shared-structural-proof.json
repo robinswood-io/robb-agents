@@ -1,0 +1,95 @@
+{
+  "status": "passed",
+  "files": [
+    {
+      "file": "packages/shared/tsconfig.json",
+      "lines": 52,
+      "sha256": "52fe39c3a09d93727606f45dc5015e76f99d57e93d9109e5c94a4f2be3be8fa7"
+    },
+    {
+      "file": "packages/shared/src/automations/handlers/prompt-handler.test.ts",
+      "lines": 438,
+      "sha256": "9cfded01b1c3f507124475ae7deafffd626f81a53bbbea834c4f3f92913c1fd4"
+    },
+    {
+      "file": "packages/shared/src/automations/sdk-bridge.test.ts",
+      "lines": 144,
+      "sha256": "210c6ea2c89538ddf179b55ccb83cb5c4619dab162487aeb747d82c3d70ba47b"
+    },
+    {
+      "file": "packages/shared/src/automations/webhook-utils.test.ts",
+      "lines": 204,
+      "sha256": "b1ffbb676a4c111ee0eaeea292bd698a86309da499a9f5e54da6ce95dd45dcfc"
+    },
+    {
+      "file": "packages/shared/tests/content-validators.test.ts",
+      "lines": 494,
+      "sha256": "f8399a9b1d29f0ea871b9e16368ee4c674b13389d400b121f8c3310cd8ca5708"
+    },
+    {
+      "file": "packages/shared/tests/llm-connections.test.ts",
+      "lines": 380,
+      "sha256": "c15b69bfa9a111d8b2eef0947c211a94f18327ea63a17a54fb971fecdb17eaad"
+    },
+    {
+      "file": "packages/shared/tests/mcp-pool.test.ts",
+      "lines": 262,
+      "sha256": "bcd4ab0fb169cb36bddc3a16dfcfac786f1358fccd8896af4db5c68a0d13a5c7"
+    },
+    {
+      "file": "packages/shared/tests/models-pi.test.ts",
+      "lines": 153,
+      "sha256": "3d26f1bb39c445e1dd7821943a916e3eecf5167b77f2955ebca578dcffabab7c"
+    },
+    {
+      "file": "packages/shared/tests/persistence-queue.test.ts",
+      "lines": 420,
+      "sha256": "9e324d18b0aeb2f4464914d32cfe1d0e6ff20033a63a2cd099e5b1ce12c93904"
+    },
+    {
+      "file": "packages/shared/tests/shellguard-corpus.test.ts",
+      "lines": 428,
+      "sha256": "64761ac895317bb43b6899948812eab8732217be97fd3389367cfdb4f53ccf6c"
+    },
+    {
+      "file": "packages/shared/tests/testing/shellguard-corpus-fixture.ts",
+      "lines": 105,
+      "sha256": "2f8a4c3611d1bc2d2ccff56f03dafd0fb68da7845867bc7f6f92e808c20d6a5a"
+    },
+    {
+      "file": "packages/shared/tests/shellguard-corpus-platforms.test.ts",
+      "lines": 388,
+      "sha256": "99eb3817daa1cf3c81c86d92b5b7ea6f94a17085b8de9bfd25493c375cb1cd77"
+    }
+  ],
+  "runtimeChanges": [
+    "Four network-free mock preconnect methods",
+    "Required model descriptions and security fixture fields"
+  ],
+  "preservedNativeTests": true,
+  "packing": {
+    "status": "passed",
+    "source": "packages/shared/tests/shellguard-corpus.test.ts",
+    "sourceHash": "39c2b8cd9c3878a098775e5784b60be67c7bc906a5629934320489b6d47063be",
+    "nativeSuites": 27,
+    "preservedSuiteBodies": 27,
+    "mutableFixtureWrites": 0,
+    "files": [
+      {
+        "file": "packages/shared/tests/testing/shellguard-corpus-fixture.ts",
+        "lines": 105,
+        "sha256": "2f8a4c3611d1bc2d2ccff56f03dafd0fb68da7845867bc7f6f92e808c20d6a5a"
+      },
+      {
+        "file": "packages/shared/tests/shellguard-corpus.test.ts",
+        "lines": 428,
+        "sha256": "64761ac895317bb43b6899948812eab8732217be97fd3389367cfdb4f53ccf6c"
+      },
+      {
+        "file": "packages/shared/tests/shellguard-corpus-platforms.test.ts",
+        "lines": 388,
+        "sha256": "99eb3817daa1cf3c81c86d92b5b7ea6f94a17085b8de9bfd25493c375cb1cd77"
+      }
+    ]
+  }
+}

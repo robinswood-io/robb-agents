@@ -28,7 +28,7 @@ describe('models-pi filtering', () => {
   });
 
   it('exposes current GPT-6 models for OpenAI API and ChatGPT account auth', () => {
-    for (const provider of ['openai', 'openai-codex']) {
+    for (const provider of ['openai', 'openai-codex'] as const) {
       const models = getPiModelsForAuthProvider(provider);
       const ids = models.map(m => m.id);
       expect(ids).toEqual(expect.arrayContaining([
