@@ -103,12 +103,12 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-26T08:45:23.420510+00:00",
+  "updatedAt": "2026-10-26T09:25:25.809592+00:00",
   "current": {
-    "lastEvidence": "remaining-session-test-contracts-summary.json",
+    "lastEvidence": "python-source-quality-summary.json",
     "sourceGate": {
       "max-lines": 36,
-      "no-explicit-any": 4
+      "no-explicit-any": 276
     },
     "globalLint": {
       "files": 3633,
@@ -124,7 +124,7 @@
     },
     "globalStatus": "en cours ; dernière grande opération des sessions, autres fichiers historiques, any, lint global et missions finales restants",
     "fullTestSummary": {
-      "pass": 10748,
+      "pass": 10754,
       "fail": 0,
       "skip": 12
     },

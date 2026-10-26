@@ -1,0 +1,162 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Contrôle des types Python dans la qualité de tout le code maintenu",
+  "changes": [
+    "Le contrôle existant inspecte aussi les annotations Python via leur AST, en une seule invocation isolée de Python par dépôt.",
+    "Les alias importés, accès qualifiés, annotations différées et imports opaques inutilisés sont détectés ; commentaires, chaînes littérales et builtin any sont conservés.",
+    "Aucun script applicatif Python n’est importé ni exécuté par cette inspection.",
+    "Six régressions couvrent cette lacune du contrôle initial ; les quatre contrôles TypeScript et le seuil physique de 500 lignes sont conservés.",
+    "Le bilan inclut désormais les 272 références Python recensées dans 23 fichiers, en plus des quatre any TypeScript restants."
+  ],
+  "files": [
+    {
+      "file": "scripts/source-quality-python.py",
+      "lines": 125,
+      "sha256": "3c5034101c82e36b3d4edc4914de051994c353f9a44bf2517693f1e21d388310"
+    },
+    {
+      "file": "scripts/source-quality.ts",
+      "lines": 86,
+      "sha256": "9b04cdfce91acdb8cd0a86c128f4711130e75c4a04cd4f363b5f8f41bb7ead43"
+    },
+    {
+      "file": "scripts/tests/source-quality.test.ts",
+      "lines": 54,
+      "sha256": "5be9bdc5bee2bbde4416870220edba7b04d0c46f749811573cb3b13fb8f73782"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 23.55,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-source-quality-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "scripts/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 5.54,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-source-quality-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/run-owned-files-eslint.py",
+        "python-source-quality-eslint"
+      ],
+      "exitCode": 0,
+      "seconds": 1.96,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-source-quality-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "scripts/tests/source-quality.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.54,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-source-quality-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 149.18,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-source-quality-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "scope": "Source validation only; no application runtime changes",
+    "existingTypeScriptGateCasesPreserved": 4,
+    "newPythonRegressionCases": 6,
+    "pythonOpaqueUsesDetected": 272,
+    "pythonFilesWithOpaqueTypes": 23,
+    "parserImportsOnlyStandardLibrary": [
+      "__future__",
+      "ast",
+      "json",
+      "sys",
+      "typing"
+    ],
+    "applicationScriptsAreParsedNeverImportedOrExecuted": true,
+    "noQualityRuleDisabled": true,
+    "files": [
+      {
+        "file": "scripts/source-quality.ts",
+        "lines": 86,
+        "sha256": "9b04cdfce91acdb8cd0a86c128f4711130e75c4a04cd4f363b5f8f41bb7ead43"
+      },
+      {
+        "file": "scripts/tests/source-quality.test.ts",
+        "lines": 54,
+        "sha256": "5be9bdc5bee2bbde4416870220edba7b04d0c46f749811573cb3b13fb8f73782"
+      },
+      {
+        "file": "scripts/source-quality-python.py",
+        "lines": 125,
+        "sha256": "3c5034101c82e36b3d4edc4914de051994c353f9a44bf2517693f1e21d388310"
+      }
+    ]
+  },
+  "fullTestSummary": {
+    "pass": 10754,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "python-source-quality-targeted": {
+      "pass": 10,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": {
+    "targetedPassBefore": 4,
+    "targetedPassAfter": 10,
+    "targetedExpectCallsAfter": 20
+  },
+  "sourceGate": {
+    "max-lines": 36,
+    "no-explicit-any": 276
+  },
+  "globalLint": {
+    "files": 3633,
+    "errors": 29,
+    "warnings": 100,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 25,
+      "react-hooks/exhaustive-deps": 79,
+      "@typescript-eslint/no-explicit-any": 4,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "36 fichiers trop longs et 276 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T09:25:25.809592+00:00"
+}

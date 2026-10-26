@@ -20,11 +20,21 @@ export const sourceArtifacts = new Map([
 const codeExtension = /\.(?:[cm]?[jt]sx?|py|sh|bash|zsh|ps1|css|scss|html|sql|ya?ml|toml)$/;
 const typedExtension = /\.[cm]?[jt]sx?$/;
 
-export function inspectSource(file: string, content: string): SourceQualityIssue[] {
+function inspectPythonSources(sources: readonly { file: string; content: string }[]): SourceQualityIssue[] {
+  if (!sources.length) return [];
+  const python = process.env.ROBB_PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3');
+  const output = execFileSync(python, ['-I', resolve(import.meta.dir, 'source-quality-python.py')], {
+    input: JSON.stringify(sources), encoding: 'utf8',
+  });
+  return JSON.parse(output) as SourceQualityIssue[];
+}
+
+export function inspectSource(file: string, content: string, inspectPythonTypes = true): SourceQualityIssue[] {
   const issues: SourceQualityIssue[] = [];
   const lines = content.split(/\r?\n/);
   if (lines.at(-1) === '') lines.pop();
   if (lines.length > 500) issues.push({ file, rule: 'max-lines', line: 501, actual: lines.length });
+  if (inspectPythonTypes && file.endsWith('.py')) issues.push(...inspectPythonSources([{ file, content }]));
   if (!typedExtension.test(file)) return issues;
 
   const source = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true);
@@ -49,9 +59,13 @@ export function inspectRepository(repo: string) {
     .filter(file => codeExtension.test(file) && !sourceArtifacts.has(file) && existsSync(resolve(repo, file)))
     .sort();
   if (!files.length) throw new Error('No maintained source files found');
+  const sources = files.map(file => ({ file, content: readFileSync(resolve(repo, file), 'utf8') }));
+  const issues = sources.flatMap(({ file, content }) => inspectSource(file, content, false));
+  issues.push(...inspectPythonSources(sources.filter(source => source.file.endsWith('.py'))));
+  issues.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
   return { files: files.length, maxLines: 500,
     sourceArtifacts: Object.fromEntries(sourceArtifacts),
-    issues: files.flatMap(file => inspectSource(file, readFileSync(resolve(repo, file), 'utf8'))) };
+    issues };
 }
 
 if (import.meta.main) {
