@@ -103,20 +103,20 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-26T14:51:23.229377+00:00",
+  "updatedAt": "2026-10-26T14:54:39.516671+00:00",
   "current": {
-    "lastEvidence": "task-editor-native-summary.json",
+    "lastEvidence": "http-native-summary.json",
     "sourceGate": {
-      "max-lines": 10,
+      "max-lines": 9,
       "no-explicit-any": 0
     },
     "globalLint": {
-      "files": 3683,
-      "errors": 10,
+      "files": 3685,
+      "errors": 9,
       "warnings": 61,
       "fatal": 0,
       "rules": {
-        "max-lines": 10,
+        "max-lines": 9,
         "react-hooks/exhaustive-deps": 61
       }
     },
@@ -136,7 +136,7 @@
       "rerun": "Refus PreToolUse : suite globale interdite ; tests ciblés uniquement"
     },
     "targetedTests": {
-      "pass": 36,
+      "pass": 37,
       "fail": 0
     },
     "dependencyRefresh": "npm-latest-20261026-summary.json"
