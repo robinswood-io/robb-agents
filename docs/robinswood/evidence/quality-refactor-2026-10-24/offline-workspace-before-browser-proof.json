@@ -1,0 +1,97 @@
+{
+  "status": "passed",
+  "cases": [
+    "private snapshot text stays hidden before explicit opt-in",
+    "search and snapshot selection preserve reader and selection callbacks",
+    "pin and unpin retain original message identity and text",
+    "offline draft can be queued without sending",
+    "review preserves send prohibition while offline",
+    "reconnection still requires explicit send",
+    "retention and export retain explicit callback values",
+    "mobile pane navigation preserves reader and tools focus",
+    "clearing requires confirmation and cancellation preserves data"
+  ],
+  "errors": [],
+  "calls": [
+    {
+      "method": "enable",
+      "args": []
+    },
+    {
+      "method": "select",
+      "args": [
+        "qa-offline-b"
+      ]
+    },
+    {
+      "method": "select",
+      "args": [
+        "qa-offline-a"
+      ]
+    },
+    {
+      "method": "pin",
+      "args": [
+        {
+          "sessionId": "qa-offline-a",
+          "sessionTitle": "QA Offline Alpha",
+          "messageId": "qa-message",
+          "role": "assistant",
+          "content": "QA offline report text"
+        }
+      ]
+    },
+    {
+      "method": "unpin",
+      "args": [
+        "qa-pin"
+      ]
+    },
+    {
+      "method": "draft",
+      "args": [
+        "qa-offline-a",
+        "QA reviewed offline message"
+      ]
+    },
+    {
+      "method": "queue",
+      "args": [
+        "qa-offline-a",
+        "QA reviewed offline message"
+      ]
+    },
+    {
+      "method": "select",
+      "args": [
+        "qa-offline-a"
+      ]
+    },
+    {
+      "method": "review",
+      "args": [
+        "qa-outbox"
+      ]
+    },
+    {
+      "method": "send",
+      "args": [
+        "qa-outbox"
+      ]
+    },
+    {
+      "method": "retention",
+      "args": [
+        14
+      ]
+    },
+    {
+      "method": "export",
+      "args": []
+    },
+    {
+      "method": "clear",
+      "args": []
+    }
+  ]
+}

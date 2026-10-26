@@ -1,0 +1,138 @@
+{
+  "status": "tested; local integration pending remaining quality work",
+  "scope": "offline-workspace-native",
+  "files": [
+    {
+      "file": "apps/webui/src/components/OfflineWorkspace.tsx",
+      "lines": 310,
+      "sha256": "3315360d19922beb138b1324c18f8a1ab45c10b8d3ad5e19b2e6d7343978d5df"
+    },
+    {
+      "file": "apps/webui/src/components/offline-workspace-model.ts",
+      "lines": 163,
+      "sha256": "2541c0b18f723637377214b64e53388660a3e763703fc03ac3ea7adbf2e4068e"
+    },
+    {
+      "file": "apps/webui/src/components/offline-workspace-tools.tsx",
+      "lines": 371,
+      "sha256": "cc5403cf0c40e9ad0792c88673398871a90b3d9a9fc4f9442d331f1d8fec5eaa"
+    },
+    {
+      "file": "apps/webui/src/components/offline-workspace-content.tsx",
+      "lines": 385,
+      "sha256": "ea24252ede7e63f3e0dc1a01acc6d823fdf35c701564d423d523ba48c3e0c842"
+    }
+  ],
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/webui/src/components/OfflineWorkspace.tsx",
+        "apps/webui/src/components/offline-workspace-model.ts",
+        "apps/webui/src/components/offline-workspace-tools.tsx",
+        "apps/webui/src/components/offline-workspace-content.tsx",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.15,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/offline-workspace-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/webui/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 3.45,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/offline-workspace-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/webui/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 16.1,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/offline-workspace-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/webui/src/offline-coordinator.test.ts",
+        "apps/webui/src/offline-vault.test.ts",
+        "apps/webui/src/offline-vault-persists-only-ciphertext-with-a-non-extractable-aes-key.test.ts",
+        "apps/webui/src/offline-vault-rejects-an-enable-commit-when-another-tab-purges-its-key-generati.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.21,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/offline-workspace-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 12.86,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/offline-workspace-native-build.log"
+    },
+    "webuiBuild": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "webui:build"
+      ],
+      "exitCode": 0,
+      "seconds": 4.15,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/offline-workspace-native-webui-build.log"
+    }
+  },
+  "targetedTests": {
+    "pass": 33,
+    "fail": 0
+  },
+  "browser": {
+    "before": 9,
+    "after": 9,
+    "nativeCallbackPayloadsEqual": true,
+    "errors": 0
+  },
+  "sourceGate": {
+    "max-lines": 8
+  },
+  "globalLint": {
+    "files": 3688,
+    "errors": 8,
+    "warnings": 61,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 8,
+      "react-hooks/exhaustive-deps": 61
+    }
+  },
+  "limits": [
+    "Other historical files and lint findings remain",
+    "No installation or final real-model mission claim",
+    "Global suite rerun prohibited by PreToolUse; last full suite f521166: 10759 passed"
+  ]
+}
