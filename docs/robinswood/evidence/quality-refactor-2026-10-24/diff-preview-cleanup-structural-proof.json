@@ -1,0 +1,28 @@
+{
+  "status": "passed",
+  "removedExplicitAny": 5,
+  "runtimePreservedOutsideReviewedCorrections": true,
+  "controlledChanges": [
+    "Exact native header listener cleanup",
+    "Native language types without assertions",
+    "QA reads actual SessionManager runtimeState.sessions for pending retries"
+  ],
+  "newRuntimeWorkflow": false,
+  "files": [
+    {
+      "file": "packages/ui/src/components/code-viewer/UnifiedDiffViewer.tsx",
+      "lines": 242,
+      "sha256": "ad4379f2dd82bc32090c8d38e81a93dde9c7ab9c6225bc01fe2beefba8553024"
+    },
+    {
+      "file": "packages/ui/src/components/overlay/MultiDiffPreviewOverlay.tsx",
+      "lines": 395,
+      "sha256": "d38e4e92736868d11070e308a4b6593859fb66fbad7c6a80229b444ad8e65fca"
+    },
+    {
+      "file": "scripts/robb-completion-live-check.ts",
+      "lines": 266,
+      "sha256": "2b407714e25bf70d337f83c42f9e0531eaaddbc0b1c8214986e14cd5ee798267"
+    }
+  ]
+}

@@ -130,8 +130,8 @@ function computeChangeStats(change: FileChange): { additions: number; deletions:
   // Handle Claude Code format: original/modified strings
   const ext = change.filePath.split('.').pop()?.toLowerCase() || ''
   const lang = LANGUAGE_MAP[ext] || 'text'
-  const oldFile: FileContents = { name: change.filePath, contents: change.original, lang: lang as any }
-  const newFile: FileContents = { name: change.filePath, contents: change.modified, lang: lang as any }
+  const oldFile: FileContents = { name: change.filePath, contents: change.original, lang }
+  const newFile: FileContents = { name: change.filePath, contents: change.modified, lang }
   const fileDiff = parseDiffFromFile(oldFile, newFile)
   return getDiffStats(fileDiff)
 }

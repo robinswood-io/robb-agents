@@ -156,6 +156,7 @@ export function UnifiedDiffViewer({
 
   useEffect(() => {
     if (!onFileHeaderClick || disableFileHeader) return
+    let removeHeaderClickListener: (() => void) | undefined
 
     // Wait briefly for pierre to render the header into the shadow DOM
     const timer = setTimeout(() => {
@@ -167,17 +168,12 @@ export function UnifiedDiffViewer({
         onFileHeaderClickRef.current?.(filePath)
       }
       header.addEventListener('click', handleClick)
-      // Store cleanup ref so we can remove listener
-      ;(header as any).__craftClickCleanup = () => header.removeEventListener('click', handleClick)
+      removeHeaderClickListener = () => header.removeEventListener('click', handleClick)
     }, 150)
 
     return () => {
       clearTimeout(timer)
-      const diffsContainer = containerRef.current?.querySelector(DIFFS_TAG_NAME)
-      const header = diffsContainer?.shadowRoot?.querySelector('[data-diffs-header]')
-      if (header) {
-        ;(header as any).__craftClickCleanup?.()
-      }
+      removeHeaderClickListener?.()
     }
   }, [filePath, disableFileHeader, onFileHeaderClick])
 

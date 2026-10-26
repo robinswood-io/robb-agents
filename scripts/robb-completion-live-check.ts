@@ -81,7 +81,7 @@ async function send(sessionId: string, prompt: string): Promise<string> {
     }, 180_000);
     release = manager.onSessionComplete(event => {
       if (event.sessionId !== sessionId) return;
-      const owned = (manager as any).sessions.get(sessionId);
+      const owned = manager['runtimeState'].sessions.get(sessionId);
       if (owned?.autoRetryPending && !owned.autoRetryPending.cancelled && !owned.autoRetryPending.committed) return;
       clearTimeout(timer); release();
       if (event.reason !== 'complete') reject(new Error(`Mission stopped: ${event.reason}`));
