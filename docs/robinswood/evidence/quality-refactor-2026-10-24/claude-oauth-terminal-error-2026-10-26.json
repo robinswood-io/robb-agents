@@ -1,5 +1,6 @@
 {
   "scope": "Local Robb Agents staging on this Mac; no accounting data writes",
+  "lintScope": "All Git-visible maintained Robb files, including tests. Nested Git worktrees, generated release-dev packages, and the separately Git-excluded commercial module are outside this checkout's maintained source set.",
   "defect": "An expired Claude Max OAuth credential produced authentication_failed, followed by a result marked success with is_error=true. A later plain error retriggered Robb's generic token refresh after the SDK had already failed to refresh, leaving the mission interrupted.",
   "change": "Treat is_error results as failures, show the SDK's expired-OAuth message with a reconnect action, and suppress further automatic refresh and continuation for that terminal failure.",
   "checks": {

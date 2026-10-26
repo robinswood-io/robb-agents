@@ -7,7 +7,8 @@ import server from './packages/server-core/eslint.config.mjs';
 import ui from './packages/ui/eslint.config.mjs';
 
 export default defineConfig([
-  { ignores: ['**/node_modules/**', '**/dist/**', '**/release/**',
+  { ignores: ['**/node_modules/**', '**/dist/**', '**/release/**', '**/release-dev/**',
+    '**/.worktrees/**', 'commercial/**',
     'apps/electron/resources/bridge-mcp-server/index.js',
     'apps/electron/src/main/__tests__/fixtures/guacamole-keyboard-1.5.5.js',
     'audit/robb-0.11.6-2026-08-18/report.html',
