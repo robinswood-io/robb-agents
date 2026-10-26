@@ -19,6 +19,11 @@ import { isLocalOnly, RPC_CHANNELS } from '@craft-agent/shared/protocol'
 // Types
 // ---------------------------------------------------------------------------
 
+/** Public transport operations used by the router and its workspace factory. */
+export type RoutedTransportClient = RpcClient & Pick<WsRpcClient,
+  'connect' | 'destroy' | 'emitReconnected' | 'getConnectionState'
+  | 'onConnectionStateChanged' | 'reconnectNow' | 'isChannelAvailable'>
+
 interface ListenerEntry {
   callback: RpcListener
   unsub: () => void
@@ -31,14 +36,14 @@ export interface WorkspaceSwitchResult {
 }
 
 /** Factory to create a new WsRpcClient for a remote workspace. */
-export type WorkspaceClientFactory = (remoteServer: RemoteServerConfig) => WsRpcClient
+export type WorkspaceClientFactory = (remoteServer: RemoteServerConfig) => RoutedTransportClient
 
 // ---------------------------------------------------------------------------
 // RoutedClient
 // ---------------------------------------------------------------------------
 
 export class RoutedClient implements RpcClient {
-  private workspaceClient: WsRpcClient
+  private workspaceClient: RoutedTransportClient
 
   /** REMOTE_ELIGIBLE listener registry — survives workspace switches. */
   private remoteListeners = new Map<string, Set<ListenerEntry>>()
@@ -61,8 +66,8 @@ export class RoutedClient implements RpcClient {
   private workspaceIdMapping: { localId: string; remoteId: string } | null = null
 
   constructor(
-    private readonly localClient: WsRpcClient,
-    initialWorkspaceClient: WsRpcClient,
+    private readonly localClient: RoutedTransportClient,
+    initialWorkspaceClient: RoutedTransportClient,
   ) {
     this.workspaceClient = initialWorkspaceClient
     this.bindConnectionState()
@@ -197,7 +202,7 @@ export class RoutedClient implements RpcClient {
     }
   }
 
-  private swapWorkspaceClient(newClient: WsRpcClient): void {
+  private swapWorkspaceClient(newClient: RoutedTransportClient): void {
     const old = this.workspaceClient
     this.workspaceClient = newClient
 

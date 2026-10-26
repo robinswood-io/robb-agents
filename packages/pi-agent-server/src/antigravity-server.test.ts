@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test';
+import type { AssistantMessage, TextContent } from '@earendil-works/pi-ai';
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -54,7 +55,7 @@ describe('Google Antigravity NDJSON bridge', () => {
       cwd: join(import.meta.dir, '..'),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
-    const output: Array<Record<string, any>> = [];
+    const output: Array<Record<string, unknown>> = [];
     const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });
     lines.on('line', line => output.push(JSON.parse(line)));
     const exit = new Promise<void>(resolve => child.once('exit', () => resolve()));
@@ -110,7 +111,7 @@ input.on('line', (line) => {
         ROBB_ANTIGRAVITY_COMMAND: executable,
       },
     });
-    const output: Array<Record<string, any>> = [];
+    const output: Array<Record<string, unknown>> = [];
     const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });
     lines.on('line', line => output.push(JSON.parse(line)));
     const exit = new Promise<void>(resolve => child.once('exit', () => resolve()));
@@ -128,7 +129,7 @@ input.on('line', (line) => {
       await waitFor(() => output.some(message => message.type === 'ready'));
       send({ type: 'prompt', id: 'written-turn', message: 'written before exit' });
       await waitFor(() => output.some(message => (
-        message.type === 'event' && message.event?.type === 'agent_end'
+        message.type === 'event' && (message.event as Record<string, unknown> | undefined)?.type === 'agent_end'
       )));
 
       expect(output).toContainEqual({ type: 'provider_handoff', id: 'written-turn' });
@@ -204,8 +205,8 @@ input.on('line', (line) => {
       && (message.event as Record<string, unknown>)?.type === 'message_end'
     ));
     expect(messageEnd).toBeDefined();
-    expect((messageEnd!.event as any).message.content[0].text).toBe('bridge-ok\n');
-    expect((messageEnd!.event as any).message.usage).toEqual({
+    expect(((messageEnd!.event as { message: AssistantMessage }).message.content[0]! as TextContent).text).toBe('bridge-ok\n');
+    expect((messageEnd!.event as { message: AssistantMessage }).message.usage).toEqual({
       input: 100,
       output: 10,
       cacheRead: 0,
@@ -325,7 +326,7 @@ input.on('line', (line) => {
         id: 'turn-cap',
         message: 'hello',
       })}\n`);
-      await waitFor(() => output.some(message => message.type === 'error' && (message as any).code === 'GOOGLE_ANTIGRAVITY_CAPACITY_LIMIT'));
+      await waitFor(() => output.some(message => message.type === 'error' && message.code === 'GOOGLE_ANTIGRAVITY_CAPACITY_LIMIT'));
 
       const errorEvent = output.find(m => m.type === 'error');
       expect(errorEvent).toEqual({
