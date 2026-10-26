@@ -1,0 +1,222 @@
+{
+  "status": "passed",
+  "cases": [
+    {
+      "name": "complete native report and link render",
+      "status": "passed"
+    },
+    {
+      "name": "real text selection opens and focuses the native follow-up editor",
+      "status": "passed"
+    },
+    {
+      "name": "cancel removes the editor without saving an annotation",
+      "status": "passed"
+    },
+    {
+      "name": "follow-up creation reaches annotation state and renders its chip",
+      "status": "passed"
+    },
+    {
+      "name": "saved annotation can reopen and enter edit mode",
+      "status": "passed"
+    },
+    {
+      "name": "edited follow-up persists through the native update callback",
+      "status": "passed"
+    },
+    {
+      "name": "delete closes the annotation and removes its chip",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "calls": [
+    {
+      "method": "url",
+      "args": [
+        "https://example.invalid/qa"
+      ]
+    },
+    {
+      "method": "add",
+      "args": [
+        "qa-markdown-message",
+        {
+          "id": "qa-annotation-1",
+          "schemaVersion": 1,
+          "createdAt": "qa-native-timestamp",
+          "intent": "comment",
+          "body": [
+            {
+              "type": "highlight"
+            },
+            {
+              "type": "note",
+              "text": "QA vérifier la conclusion",
+              "format": "plain"
+            }
+          ],
+          "target": {
+            "source": {
+              "sessionId": "qa-only-session",
+              "messageId": "qa-markdown-message"
+            },
+            "selectors": [
+              {
+                "type": "text-position",
+                "start": 19,
+                "end": 110
+              },
+              {
+                "type": "text-quote",
+                "exact": "Cette mission doit produire un rapport complet et vérifier toutes les exigences demandées.\n",
+                "prefix": "Rapport QA complet\n",
+                "suffix": "Le livrable contient une"
+              }
+            ]
+          },
+          "style": {
+            "color": "yellow"
+          },
+          "meta": {
+            "followUp": {
+              "text": "QA vérifier la conclusion",
+              "createdAt": "qa-native-timestamp"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "method": "update",
+      "args": [
+        "qa-markdown-message",
+        "qa-annotation-1",
+        {
+          "body": [
+            {
+              "type": "highlight"
+            },
+            {
+              "type": "note",
+              "text": "QA conclusion vérifiée",
+              "format": "plain"
+            }
+          ],
+          "intent": "comment",
+          "updatedAt": "qa-native-timestamp",
+          "meta": {
+            "followUp": {
+              "text": "QA conclusion vérifiée",
+              "updatedAt": "qa-native-timestamp"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "method": "remove",
+      "args": [
+        "qa-markdown-message",
+        "qa-annotation-1"
+      ]
+    }
+  ],
+  "rawCalls": [
+    {
+      "method": "url",
+      "args": [
+        "https://example.invalid/qa"
+      ]
+    },
+    {
+      "method": "add",
+      "args": [
+        "qa-markdown-message",
+        {
+          "id": "ann-1793021636096-bmie27",
+          "schemaVersion": 1,
+          "createdAt": 1793021636096,
+          "intent": "comment",
+          "body": [
+            {
+              "type": "highlight"
+            },
+            {
+              "type": "note",
+              "text": "QA vérifier la conclusion",
+              "format": "plain"
+            }
+          ],
+          "target": {
+            "source": {
+              "sessionId": "qa-only-session",
+              "messageId": "qa-markdown-message"
+            },
+            "selectors": [
+              {
+                "type": "text-position",
+                "start": 19,
+                "end": 110
+              },
+              {
+                "type": "text-quote",
+                "exact": "Cette mission doit produire un rapport complet et vérifier toutes les exigences demandées.\n",
+                "prefix": "Rapport QA complet\n",
+                "suffix": "Le livrable contient une"
+              }
+            ]
+          },
+          "style": {
+            "color": "yellow"
+          },
+          "meta": {
+            "followUp": {
+              "text": "QA vérifier la conclusion",
+              "createdAt": 1793021636096
+            }
+          }
+        }
+      ]
+    },
+    {
+      "method": "update",
+      "args": [
+        "qa-markdown-message",
+        "ann-1793021636096-bmie27",
+        {
+          "body": [
+            {
+              "type": "highlight"
+            },
+            {
+              "type": "note",
+              "text": "QA conclusion vérifiée",
+              "format": "plain"
+            }
+          ],
+          "intent": "comment",
+          "updatedAt": 1793021638345,
+          "meta": {
+            "followUp": {
+              "text": "QA conclusion vérifiée",
+              "updatedAt": 1793021638345
+            }
+          }
+        }
+      ]
+    },
+    {
+      "method": "remove",
+      "args": [
+        "qa-markdown-message",
+        "ann-1793021636096-bmie27"
+      ]
+    }
+  ],
+  "browser": "145.0.7632.6",
+  "normalization": "Only generated annotation IDs and createdAt/updatedAt timestamps; raw callbacks retained",
+  "scope": "native Markdown and selection/annotation controller; QA text, browser memory only"
+}

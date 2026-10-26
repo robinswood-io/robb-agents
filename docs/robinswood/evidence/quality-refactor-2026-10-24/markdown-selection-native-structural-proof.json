@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "nativeCallbacksEffectsAndEventRegistrationPreserved": true,
+  "nativeHookOrderAndRootJSXReinlinedExactly": true,
+  "nativeValuesPassedDirectly": true,
+  "nativeImportsAndPublicExportsPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "reviewedDependencyAdditions": {},
+  "files": [
+    {
+      "file": "packages/ui/src/components/overlay/AnnotatableMarkdownDocument.tsx",
+      "lines": 427,
+      "sha256": "b17fd92c439ddf37fa5d50f85b517d317a25a96078b590e899fdd16b513310b2"
+    },
+    {
+      "file": "packages/ui/src/components/overlay/use-markdown-selection.ts",
+      "lines": 307,
+      "sha256": "848b0d7efe2bf3f334c91b2bb68a19db6b367296acdbdaf544d0bacee3b1fd56"
+    }
+  ]
+}
