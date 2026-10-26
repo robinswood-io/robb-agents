@@ -1,0 +1,149 @@
+{
+  "status": "passed",
+  "cases": [
+    {
+      "name": "empty remote credential is rejected without saving",
+      "status": "passed"
+    },
+    {
+      "name": "new credential is tested before setup and reaches completion",
+      "status": "passed"
+    },
+    {
+      "name": "finish invokes the supplied completion callback once",
+      "status": "passed"
+    },
+    {
+      "name": "failed validation blocks saving and retry completes cleanly",
+      "status": "passed"
+    },
+    {
+      "name": "editing preserves the selected connection and can retain its credential",
+      "status": "passed"
+    },
+    {
+      "name": "keyless loopback setup reaches the native local connection path",
+      "status": "passed"
+    },
+    {
+      "name": "OAuth completion keeps the original target across an awaited method change",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "calls": [
+    {
+      "method": "testSetup",
+      "args": [
+        {
+          "provider": "anthropic",
+          "apiKey": "qa-key-not-real"
+        }
+      ]
+    },
+    {
+      "method": "setup",
+      "args": [
+        {
+          "slug": "anthropic-api-2",
+          "credential": "qa-key-not-real"
+        }
+      ]
+    },
+    {
+      "method": "configSaved",
+      "args": []
+    },
+    {
+      "method": "complete",
+      "args": []
+    },
+    {
+      "method": "testSetup",
+      "args": [
+        {
+          "provider": "anthropic",
+          "apiKey": "qa-rejected-not-real"
+        }
+      ]
+    },
+    {
+      "method": "testSetup",
+      "args": [
+        {
+          "provider": "anthropic",
+          "apiKey": "qa-retry-not-real"
+        }
+      ]
+    },
+    {
+      "method": "setup",
+      "args": [
+        {
+          "slug": "anthropic-api-2",
+          "credential": "qa-retry-not-real"
+        }
+      ]
+    },
+    {
+      "method": "configSaved",
+      "args": []
+    },
+    {
+      "method": "setup",
+      "args": [
+        {
+          "slug": "qa-existing-connection"
+        }
+      ]
+    },
+    {
+      "method": "configSaved",
+      "args": []
+    },
+    {
+      "method": "setup",
+      "args": [
+        {
+          "slug": "anthropic-api-2",
+          "baseUrl": "http://127.0.0.1:11434",
+          "defaultModel": "qa-local-model",
+          "customEndpoint": {
+            "api": "openai-completions"
+          }
+        }
+      ]
+    },
+    {
+      "method": "configSaved",
+      "args": []
+    },
+    {
+      "method": "startOAuth",
+      "args": [
+        "chatgpt-plus"
+      ]
+    },
+    {
+      "method": "setup",
+      "args": [
+        {
+          "slug": "chatgpt-plus"
+        }
+      ]
+    },
+    {
+      "method": "configSaved",
+      "args": []
+    },
+    {
+      "method": "testSaved",
+      "args": [
+        "chatgpt-plus"
+      ]
+    }
+  ],
+  "browser": "145.0.7632.6",
+  "scope": "native onboarding hook; mocked IPC, synthetic credentials, no account or external effects"
+}

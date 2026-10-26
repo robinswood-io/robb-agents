@@ -1,0 +1,54 @@
+{
+  "status": "passed",
+  "nativeDeclarationsIncludingMutableGlobalsAndDisplayNamePreserved": 8,
+  "nativeComponentAndContextIdentityPreserved": true,
+  "nativeFullIslandStateHooksEffectsAndJSXReinlinedExactly": true,
+  "nativeImportsAndPublicExportsPreserved": true,
+  "reviewedDependencyAdditions": {
+    "handleSubmitCredential": [
+      "editingSlug",
+      "setState"
+    ],
+    "saveAndValidateConnection": [
+      "setState"
+    ],
+    "handleStartOAuth": [
+      "setState"
+    ],
+    "handleSelectProvider": [
+      "setState"
+    ],
+    "handleSubmitAuthCode": [
+      "setIsWaitingForCode"
+    ],
+    "handleCancelOAuth": [
+      "setIsWaitingForCode"
+    ],
+    "reset": [
+      "setIsWaitingForCode"
+    ]
+  },
+  "reviewedDependencyRemovals": {
+    "handleContinue": [
+      "state.apiSetupMethod"
+    ]
+  },
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/hooks/useOnboarding.ts",
+      "lines": 424,
+      "sha256": "c6b2f21e304b0ea43ee73151a464f1ecdce7dcac5526683f4f1e30998a8d0d01"
+    },
+    {
+      "file": "apps/electron/src/renderer/hooks/onboarding-connection-setup.ts",
+      "lines": 225,
+      "sha256": "064f0ceef4e62cbb1a955ad230c98e04ab8b3bc5f76360fd90fad166e3fa93d3"
+    },
+    {
+      "file": "apps/electron/src/renderer/hooks/use-connection-onboarding.ts",
+      "lines": 365,
+      "sha256": "cd6a4830e8d8275a42572d3b7718c41979a29ba6b48edb7718b55ab1c2a1173f"
+    }
+  ]
+}

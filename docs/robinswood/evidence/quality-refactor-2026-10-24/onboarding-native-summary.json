@@ -1,0 +1,120 @@
+{
+  "status": "tested; local integration pending remaining quality work",
+  "scope": "onboarding-native",
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/hooks/useOnboarding.ts",
+      "lines": 424,
+      "sha256": "c6b2f21e304b0ea43ee73151a464f1ecdce7dcac5526683f4f1e30998a8d0d01"
+    },
+    {
+      "file": "apps/electron/src/renderer/hooks/onboarding-connection-setup.ts",
+      "lines": 225,
+      "sha256": "064f0ceef4e62cbb1a955ad230c98e04ab8b3bc5f76360fd90fad166e3fa93d3"
+    },
+    {
+      "file": "apps/electron/src/renderer/hooks/use-connection-onboarding.ts",
+      "lines": 365,
+      "sha256": "cd6a4830e8d8275a42572d3b7718c41979a29ba6b48edb7718b55ab1c2a1173f"
+    }
+  ],
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/hooks/useOnboarding.ts",
+        "apps/electron/src/renderer/hooks/use-connection-onboarding.ts",
+        "apps/electron/src/renderer/hooks/onboarding-connection-setup.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 0.98,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/onboarding-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 4.3,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/onboarding-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 29.8,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/onboarding-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/renderer/hooks/__tests__/useOnboarding.test.ts",
+        "apps/electron/src/main/__tests__/connection-setup-logic.test.ts",
+        "apps/electron/src/main/__tests__/connection-setup-updateOnly.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.58,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/onboarding-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 13.38,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/onboarding-native-build.log"
+    }
+  },
+  "targetedTests": {
+    "pass": 61,
+    "fail": 0
+  },
+  "browser": {
+    "before": 7,
+    "after": 7,
+    "nativeCallbackPayloadsEqual": true,
+    "errors": 0
+  },
+  "sourceGate": {
+    "max-lines": 13
+  },
+  "globalLint": {
+    "files": 3670,
+    "errors": 13,
+    "warnings": 69,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 13,
+      "react-hooks/exhaustive-deps": 69
+    }
+  },
+  "limits": [
+    "Other historical files and lint findings remain",
+    "No installation or final real-model mission claim",
+    "Global suite rerun prohibited by PreToolUse; last full suite f521166: 10759 passed"
+  ]
+}
