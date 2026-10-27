@@ -101,7 +101,7 @@
     "glob": "^13.0.6",
     "i18next": "^26.5.11",
     "incr-regex-package": "^1.0.4",
-    "shell-quote": "^1.12.0",
+    "shell-quote": "1.12.0",
     "yaml": "^2.9.1"
   },
   "peerDependencies": {

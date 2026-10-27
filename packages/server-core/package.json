@@ -32,7 +32,7 @@
     "@craft-agent/core": "workspace:*",
     "@craft-agent/session-tools-core": "workspace:*",
     "@craft-agent/shared": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "jose": "^6.2.13",
     "ws": "^8.22.0",
     "sharp": "0.35.5",

@@ -81,7 +81,7 @@
     "sharp": "0.35.5",
     "sonner": "^2.0.8",
     "strip-markdown": "^6.0.0",
-    "undici": "^8.12.3",
+    "undici": "8.12.3",
     "unist-util-visit": "^5.2.0",
     "vaul": "^1.1.2",
     "ws": "^8.22.0"
