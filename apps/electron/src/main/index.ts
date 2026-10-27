@@ -349,7 +349,7 @@ if (!gotTheLock) {
   })
 }
 app.whenReady().then(async () => {
-  const packagedOperationsPath = join(process.resourcesPath, 'app.asar.unpacked', 'dist', 'resources', 'operations', 'index.mjs')
+  const packagedOperationsPath = join(process.resourcesPath, 'app', 'resources', 'operations', 'index.mjs')
   const operations = await loadRobbOperationsModule({
     dataRoot: CONFIG_DIR,
     appVersion: app.getVersion(),
@@ -359,10 +359,13 @@ app.whenReady().then(async () => {
     modulePath: app.isPackaged && existsSync(packagedOperationsPath)
       ? packagedOperationsPath
       : undefined,
+  }).catch((error: unknown) => {
+    mainLog.error('[operations] Commercial module unavailable:', error)
+    return null
   })
   mainLog.info(operations
     ? `[operations] Loaded ${operations.id}`
-    : '[operations] Commercial module not present (OSS mode)')
+    : '[operations] Commercial module not loaded (OSS mode)')
   const { startMainProcess } = await import('./main-ready')
   const { createInitialWindows } = await import('./initial-windows')
   await startMainProcess({
