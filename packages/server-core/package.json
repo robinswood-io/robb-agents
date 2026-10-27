@@ -20,6 +20,7 @@
     "./sessions": "./src/sessions/index.ts",
     "./tasks": "./src/tasks/index.ts",
     "./missions": "./src/missions/index.ts",
+    "./operations": "./src/operations/index.ts",
     "./specialized-profiles": "./src/specialized-profiles/index.ts",
     "./webui": "./src/webui/index.ts"
   },

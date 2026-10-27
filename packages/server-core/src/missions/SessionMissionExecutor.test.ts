@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { Session } from "@craft-agent/shared/protocol";
+import { clearRobbOperationsExtension, registerRobbOperationsExtension } from '@craft-agent/shared/operations';
 import type { MissionPendingTurnRecoveryClaim } from "../sessions/SessionManager.ts";
 import type { MissionExecutionInput } from "./MissionRuntime.ts";
 import { SessionMissionExecutor, buildMissionSessionPrompt } from "./SessionMissionExecutor.ts";
@@ -36,6 +37,31 @@ describe('SessionMissionExecutor', () => {
       expect(host.sent[0]?.options).toMatchObject({
         internalOrigin: { kind: 'spawned-session', senderSessionId: 'origin-session' },
       });
+    }
+  });
+
+  it('keeps every commercial worker on the originating AI account', async () => {
+    registerRobbOperationsExtension({
+      apiVersion: 1, id: 'commercial-account-test', edition: 'commercial',
+      connectionPolicy: 'pinned-account',
+      beforeTurn: () => ({ decision: 'allow' }),
+      beforeTool: () => ({ decision: 'allow' }),
+      onRuntimeEvent: () => undefined,
+    });
+    try {
+      const host = new FakeHost();
+      const parent = await host.createSession('workspace-1', {
+        model: 'parent-model', llmConnection: 'parent-connection', thinkingLevel: 'medium',
+      });
+      parent.id = 'origin-session';
+      const assignment = input();
+      assignment.profile = { ...assignment.profile, llmConnection: 'other-account', model: 'other-model' };
+      const executor = new SessionMissionExecutor({ host, workspaceId: 'workspace-1', workspaceRoot: '/tmp' });
+      const binding = await executor.prepare(assignment);
+      await executor.execute(assignment, binding);
+      expect(host.sessions[1]).toMatchObject({ llmConnection: 'parent-connection', model: 'parent-model' });
+    } finally {
+      await clearRobbOperationsExtension();
     }
   });
 

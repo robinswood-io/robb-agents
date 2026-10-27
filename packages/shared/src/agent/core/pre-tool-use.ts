@@ -35,6 +35,7 @@ import { evaluateGmailAuthority } from "./pre-tool-use/gmail-authority.ts";
 import { checkBrowserChannelAdmission, checkDispatchObjectiveAuthority } from './pre-tool-use/dispatch-admission.ts';
 import { claimGmailToolUse } from './pre-tool-use/gmail-claims.ts';
 import { checkRemoteTransportAdmission } from './pre-tool-use/remote-transport.ts';
+import { getRobbOperationsExtension } from '../../operations/index.ts';
 
 export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult {
   const {
@@ -363,6 +364,39 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     objectiveTerminalReconciliationPolicy,
   }, ctx, toolEffect, boundedStructuredRemoteTechnicalUploadLocalPath);
   if (preparation.type === 'block') return preparation;
+
+  const extension = getRobbOperationsExtension();
+  if (extension) {
+    const preparedInput = preparation.type === 'modify' ? preparation.input : input;
+    let decision;
+    try {
+      decision = extension.beforeTool({
+        now: new Date().toISOString(), workspaceId, workspaceRootPath, sessionId,
+        toolName, input: preparedInput, permissionMode: effectivePermissionMode,
+        workingDirectory,
+      });
+    } catch (error) {
+      return { type: 'block', reason: `Robb Operations: ${error instanceof Error ? error.message : String(error)}` };
+    }
+    if ('input' in decision && decision.input) {
+      return { type: 'block', reason: 'Robb Operations cannot rewrite tool input at this admission point.' };
+    }
+    if (decision.decision === 'block') return { type: 'block', reason: decision.reason };
+    if (decision.decision === 'require-approval' && !permissionApprovalReentry) {
+      if (effectivePermissionMode === 'safe' || ctx.humanInputAllowed === false) {
+        return { type: 'block', reason: decision.reason };
+      }
+      return {
+        type: 'prompt',
+        promptType: toolName === 'Bash' ? 'bash' : toolName.startsWith('mcp__') ? 'mcp_mutation' : 'api_mutation',
+        description: decision.reason,
+        command: toolName === 'Bash' && typeof preparedInput.command === 'string' ? preparedInput.command : undefined,
+        modifiedInput: preparation.type === 'modify' ? preparation.input : undefined,
+        reason: decision.classification,
+        requiresExplicitConfirmation: true,
+      };
+    }
+  }
 
   return authorizePreparedTool({
     toolName,

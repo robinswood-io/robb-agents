@@ -102,6 +102,7 @@ import { releaseServerLock } from '@craft-agent/server-core/bootstrap';
 
 
 import { getModelRefreshService } from '@craft-agent/server-core/model-fetchers';
+import { loadRobbOperationsModule } from '@craft-agent/server-core/operations';
 
 
 
@@ -348,6 +349,20 @@ if (!gotTheLock) {
   })
 }
 app.whenReady().then(async () => {
+  const packagedOperationsPath = join(process.resourcesPath, 'app.asar.unpacked', 'dist', 'resources', 'operations', 'index.mjs')
+  const operations = await loadRobbOperationsModule({
+    dataRoot: CONFIG_DIR,
+    appVersion: app.getVersion(),
+    buildChannel: IS_DEVELOPMENT_CHANNEL ? 'development' : 'production',
+    isPackaged: app.isPackaged,
+    env: process.env,
+    modulePath: app.isPackaged && existsSync(packagedOperationsPath)
+      ? packagedOperationsPath
+      : undefined,
+  })
+  mainLog.info(operations
+    ? `[operations] Loaded ${operations.id}`
+    : '[operations] Commercial module not present (OSS mode)')
   const { startMainProcess } = await import('./main-ready')
   const { createInitialWindows } = await import('./initial-windows')
   await startMainProcess({

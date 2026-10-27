@@ -13,6 +13,7 @@ import { buildAutonomyFallbackPrompt, createAutonomyFallbackIntent } from '../..
 import { objectiveEvidenceContractSegments, objectiveReviewBinding } from '../../objective-contract';
 import type { ManagedSession } from '../managed-session.ts';
 import { sessionLog } from '../runtime-platform.ts';
+import { emitOperationsEvent } from '../../operations-events.ts';
 import { resolveToolDisplayMeta } from '../tool-display.ts';
 import { recordAutonomyEvent as sessionOpRecordAutonomyEvent } from './persist-tool-result-after-permission-expiry.ts';
 import { redirectAutomaticToolFallback as sessionOpRedirectAutomaticToolFallback } from './redirect-automatic-tool-fallback.ts';
@@ -270,6 +271,12 @@ export async function handleAgentToolResult(sessionOperationContext: SessionOper
         }
         if ((!wasAlreadyComplete || previouslyExecuted === false || !previousResult) && toolWasExecuted) {
             const completedAt = Date.now();
+            emitOperationsEvent({
+                kind: 'tool.finished', at: new Date(completedAt).toISOString(),
+                workspaceId, sessionId,
+                missionId: managed.missionId, workItemId: managed.missionWorkItemId,
+                toolCallId: event.toolUseId, toolName, isError: inferredError,
+            });
             sessionOperationContext.owner["emitExecutionTelemetry"](managed, {
                 schemaVersion: 1,
                 eventId: randomUUID(),

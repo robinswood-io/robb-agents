@@ -4,6 +4,7 @@ import { claimMessageSourceActivation } from './message-source-activation-claim.
 import { applyMessageContinuationAuthority } from './message-continuation-authority.ts';
 import { prepareSessionMessageTurn } from './prepare-session-message-turn.ts';
 import { runSessionMessageTurn } from './run-session-message-turn.ts';
+import { applyOperationsTurnPolicy } from './apply-operations-turn-policy.ts';
 
 import { enqueueSessionMessage } from './enqueue-session-message.ts';
 import type { SessionOperationContext, SessionMessageState } from '../operation-context.ts';
@@ -349,6 +350,12 @@ delegatedDispatchContinuationToken?: symbol): Promise<void> {
         sessionOperationContext.owner["persistSession"](managed);
         await sessionOperationContext.owner.flushSession(managed.id);
         throw new Error('The answer belongs to an objective that is no longer active');
+    }
+    if (!existingMessageId && !activeMessageState.options?.internalOrigin
+        && !activeMessageState.options?.automaticRecovery && !activeMessageState.options?.hidden) {
+        activeMessageState.message = await applyOperationsTurnPolicy(
+            sessionOperationContext, managed, activeMessageState.message,
+        );
     }
     const deliveryId = activeMessageState.options?.internalOrigin?.deliveryId;
     if (deliveryId && !existingMessageId) {

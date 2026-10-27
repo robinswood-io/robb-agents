@@ -194,6 +194,13 @@ export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=${ROBB_
 # The shared Electron build stages Pi/Vibe subprocesses and all bundled assets.
 bun run electron:build
 
+# Each package starts from an empty commercial slot. Stage only the explicitly
+# supplied production artifact so a prior build cannot leak into an OSS build.
+rm -rf "$ELECTRON_DIR/dist/resources/operations"
+if [[ -n "${ROBB_OPERATIONS_BUNDLE_PATH:-}" ]]; then
+  bun run scripts/stage-commercial-operations.ts --bundle "$ROBB_OPERATIONS_BUNDLE_PATH"
+fi
+
 cd "$ELECTRON_DIR"
 # Publishing is handled only by the verified GitHub Release job, never by
 # electron-builder's CI auto-detection.

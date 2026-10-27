@@ -8,6 +8,7 @@ import type { AgentEvent } from '@craft-agent/shared/agent';
 import { resolveBackendContext } from '@craft-agent/shared/agent/backend';
 import { formatPlaybookPrompt } from '@craft-agent/shared/playbooks';
 import { isWorkspaceAutomaticToolFallbackEnabled, loadWorkspaceConfig } from '@craft-agent/shared/workspaces';
+import { emitOperationsEvent } from '../../operations-events.ts';
 import { getSessionPath as getSessionStoragePath } from '@craft-agent/shared/sessions';
 import { toolMetadataStore } from '@craft-agent/shared/interceptor';
 import { filterAttachmentsForModelInput } from '../../runtime-config';
@@ -215,6 +216,13 @@ try {
         // identities at the actual provider boundary.
         assertOrdinaryMissionRouteProjection(managed);
         activeProviderState.providerHandoffArmed = true;
+        emitOperationsEvent({
+            kind: 'turn.started', at: new Date().toISOString(),
+            workspaceId: managed.workspace.id, sessionId: managed.id,
+            missionId: managed.missionId, workItemId: managed.missionWorkItemId,
+            turnId: userMessage.id, connectionSlug: messageBackendContext.connection?.slug,
+            model: agent.getModel(), thinkingLevel: managed.thinkingLevel,
+        });
         const chatIterator = agent.chat(effectiveMessage, modelInputAttachments.attachments);
         const automaticRecoveryInactivityTimeoutMs = activeMessageState.options?.automaticRecovery
             ? resolveAutomaticRecoveryInactivityTimeoutMs(process.env.CRAFT_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS)

@@ -9,12 +9,14 @@ import { join, resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { saveSourceConfig, getSourcePath } from '../packages/shared/src/sources/storage.ts';
 import { SessionManager, setSessionPlatform } from '../packages/server-core/src/sessions/SessionManager.ts';
+import { loadRobbOperationsModule } from '../packages/server-core/src/operations/module-loader.ts';
 import { createHeadlessPlatform } from '../packages/server-core/src/runtime/platform-headless.ts';
 import { getDefaultLlmConnection, getLlmConnection, getWorkspaces } from '../packages/shared/src/config/storage.ts';
 import { CONFIG_DIR } from '../packages/shared/src/config/paths.ts';
 
 const localStaging = process.argv.includes('--local-staging');
 const selectedMission = process.argv.find(arg => arg.startsWith('--mission='))?.slice('--mission='.length);
+const operationsBundle = process.argv.find(arg => arg.startsWith('--operations-bundle='))?.slice('--operations-bundle='.length);
 if (!CONFIG_DIR.endsWith('/.craft-agent-dev') && !(localStaging && CONFIG_DIR.endsWith('/.craft-agent'))) {
   throw new Error('Use the development profile, or explicitly select --local-staging for the normal profile.');
 }
@@ -34,6 +36,10 @@ platform.logger = {
   error: () => { diagnosticCounts.errors = (diagnosticCounts.errors ?? 0) + 1; },
 };
 setSessionPlatform(platform);
+const operations = operationsBundle ? await loadRobbOperationsModule({
+  dataRoot: CONFIG_DIR, appVersion: 'completion-live-check', buildChannel: 'production',
+  isPackaged: false, env: process.env, modulePath: operationsBundle,
+}) : null;
 const manager = new SessionManager();
 // Deliberately do not initialize/recover other sessions from the development profile.
 type ObservedEvent = { sessionId?: string; type?: string; toolName?: string; toolUseId?: string; isError?: boolean; executed?: boolean; a?: number; b?: number; observedAt: number };
@@ -255,12 +261,20 @@ try {
   });
 } finally {
   await manager.cleanup();
+  const snapshot = operations?.getSnapshot?.(workspace.id) as {
+    sessions?: Array<{ sessionId: string; completedTurns: number; toolCalls: number; toolErrors: number }>;
+  } | undefined;
+  const qaSessionIds = new Set(results.map(result => result.sessionId));
+  const qaOperationsSessions = snapshot?.sessions?.filter(session => qaSessionIds.has(session.sessionId)) ?? [];
+  const operationsComplete = !operations || qaOperationsSessions.length === results.length;
   if (qaSourcePath && existsSync(qaSourcePath)) renameSync(qaSourcePath, join(output, 'retired-qa-source'));
   const sourceFiles = ['packages/server-core/src/sessions/SessionManager.ts', 'packages/server-core/src/sessions/turn-completion.ts', 'packages/shared/src/prompts/result-presentation.ts'];
   writeFileSync(join(output, 'report.json'), JSON.stringify({ generatedAt: new Date().toISOString(), missionSelection: selectedMission ?? 'all-seven', environment: localStaging ? 'local-staging-profile' : 'local-development-profile',
     connection: { slug: connection.slug, provider: connection.providerType, model: connection.defaultModel },
+    operations: operations ? { available: true, extensionId: operations.id, qaSessions: qaOperationsSessions, complete: operationsComplete } : { available: false },
     sourceFiles: Object.fromEntries(sourceFiles.map(path => [path, sha(path)])), results, diagnosticCounts,
     limitations: ['Real provider calls and real file operations; headless session runtime, not an Electron UI journey.',
       'Seven synthetic local missions do not establish a general success rate; the QA connector is local and read-only.'] }, null, 2) + '\n');
+  if (!operationsComplete) process.exitCode = 1;
 }
 if (results.length !== (selectedMission ? 1 : 7) || results.some(result => !result.passed)) process.exitCode = 1;

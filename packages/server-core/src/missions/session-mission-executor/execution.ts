@@ -1,5 +1,6 @@
 import { type MissionExecutionBinding } from "@craft-agent/shared/missions";
 import { isDeepStrictEqual } from "node:util";
+import { getRobbOperationsExtension } from '@craft-agent/shared/operations';
 import { inheritMissionModelSettings } from "../mission-model-settings.ts";
 import { type MissionExecutionInput, type MissionExecutionLifecycle, type MissionExecutionResult } from "../MissionRuntime.ts";
 import { canonicalMissionWorkingDirectory } from "../mission-workspace-path.ts";
@@ -57,13 +58,26 @@ export async function executeUnmetered(transportOwner: SessionMissionExecutor, i
             const parent = input.mission.originSessionId
                 ? transportOwner["options"].host.getSessions(transportOwner["options"].workspaceId).find(candidate => candidate.id === input.mission.originSessionId)
                 : undefined;
+            const pinnedAccount = getRobbOperationsExtension()?.connectionPolicy === 'pinned-account'
+                ? parent?.llmConnection ?? transportOwner["options"].defaultLlmConnection
+                : undefined;
+            if (getRobbOperationsExtension()?.connectionPolicy === 'pinned-account' && !pinnedAccount) {
+                throw new Error('Robb Operations requires an AI account on the originating mission session');
+            }
+            if (pinnedAccount && input.ordinaryRoutePin?.connectionSlug !== undefined
+                && input.ordinaryRoutePin.connectionSlug !== pinnedAccount) {
+                throw new Error('Mission route pin differs from the selected Robb Operations account');
+            }
             session = await transportOwner["options"].host.createSession(transportOwner["options"].workspaceId, {
                 name: `${input.profile.role}: ${input.item.title}`,
                 parentSessionId: input.mission.originSessionId,
                 projectId: input.mission.projectId,
                 workingDirectory: missionWorkingDirectory,
                 permissionMode: reviewPreflight.effectivePermissionMode,
-                ...inheritMissionModelSettings(input.profile, parent, transportOwner["options"].defaultLlmConnection),
+                ...inheritMissionModelSettings(
+                    pinnedAccount ? { ...input.profile, llmConnection: pinnedAccount, model: undefined } : input.profile,
+                    parent, transportOwner["options"].defaultLlmConnection,
+                ),
                 enabledSourceSlugs: input.ordinaryRoutePin?.effectiveSourceSlugs
                     ?? reviewPreflight.enabledSourceSlugs,
                 sessionStatus: 'in-progress',

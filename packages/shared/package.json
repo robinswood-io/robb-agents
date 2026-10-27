@@ -32,6 +32,7 @@
     "./connectors": "./src/connectors/index.ts",
     "./credentials": "./src/credentials/index.ts",
     "./governance": "./src/governance/index.ts",
+    "./operations": "./src/operations/index.ts",
     "./interop": "./src/interop/index.ts",
     "./mcp": "./src/mcp/index.ts",
     "./prompts": "./src/prompts/index.ts",

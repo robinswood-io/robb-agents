@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { AgentEvent } from '@craft-agent/shared/agent';
 import { buildRoutingCostMeta, applyRoutingCostMetaToLatestAssistantMessage, resolveRoutingCostOptions } from '@craft-agent/shared/audit';
 import type { ManagedSession } from '../managed-session.ts';
+import { emitOperationsEvent } from '../../operations-events.ts';
 import { captureCompactionProviderBaseline as sessionOpCaptureCompactionProviderBaseline } from './persist-tool-result-after-permission-expiry.ts';
 
 export async function handleAgentComplete(sessionOperationContext: SessionOperationContext, managed: ManagedSession, event: Extract<AgentEvent, { type: 'complete' }>, sessionId: string, workspaceId: string, generationKey: number): Promise<void> {
@@ -37,6 +38,15 @@ export async function handleAgentComplete(sessionOperationContext: SessionOperat
         await sessionOpCaptureCompactionProviderBaseline(sessionOperationContext, managed, event.usage.contextTokens ?? event.usage.inputTokens);
         const costMeta = buildRoutingCostMeta(event.usage, resolveRoutingCostOptions(process.env));
         const updatedMessage = applyRoutingCostMetaToLatestAssistantMessage(managed.messages, costMeta);
+        emitOperationsEvent({
+            kind: 'cost.recorded', at: new Date().toISOString(), workspaceId, sessionId,
+            missionId: managed.missionId, workItemId: managed.missionWorkItemId,
+            turnId: updatedMessage?.turnId,
+            source: costMeta.costProvenance?.source ?? costMeta.tokenUsageSource ?? 'unavailable',
+            estimatedCostUsd: costMeta.estimatedCostUsd,
+            actualCostUsd: costMeta.actualCostUsd,
+            pricingCatalogVersion: costMeta.costProvenance?.pricingCatalogVersion,
+        });
         sessionOperationContext.owner["emitExecutionTelemetry"](managed, {
             schemaVersion: 1,
             eventId: randomUUID(),

@@ -104,6 +104,11 @@ export const RPC_CHANNELS = {
     CANCEL: 'missions:cancel',
     CHANGED: 'missions:changed',
   },
+  operations: {
+    GET_STATUS: 'operations:getStatus',
+    UPDATE_SETTINGS: 'operations:updateSettings',
+    RESOLVE_APPROVAL: 'operations:resolveApproval',
+  },
   workspaces: {
     GET: 'workspaces:get',
     CREATE: 'workspaces:create',

@@ -4,6 +4,10 @@ copyright: Copyright © 2026 Robinswood
 
 electronVersion: "45.0.0"
 
+# Optional commercial ESM bundle must be importable as a real signed file.
+asarUnpack:
+  - dist/resources/operations/**/*
+
 # Hook to compile macOS 26+ Liquid Glass icon after packaging
 afterPack: scripts/afterPack.cjs
 # Every production package fails closed on dirty source before packing. macOS

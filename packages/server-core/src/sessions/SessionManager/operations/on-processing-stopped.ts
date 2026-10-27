@@ -2,6 +2,7 @@ import type { SessionOperationContext } from '../operation-context.ts';
 import { isDurableProviderActivityOrHumanSupersession, persistenceRootFor } from '../policy.ts';
 import { updateSessionMetadata } from '@craft-agent/shared/sessions';
 import { sessionLog } from '../runtime-platform.ts';
+import { emitOperationsEvent } from '../../operations-events.ts';
 import { DELEGATED_TERMINAL_RESULT_PROTOCOL } from '../runtime-policy.ts';
 import { hasConsumedCleanRecoveryDispatch as sessionOpHasConsumedCleanRecoveryDispatch, cancelSupersededAutomaticRecoveries as sessionOpCancelSupersededAutomaticRecoveries, hasAcceptedHumanContinuationQueued as sessionOpHasAcceptedHumanContinuationQueued } from './create-autonomous-context-limit-handoff.ts';
 import { hasQueuedUserInput as sessionOpHasQueuedUserInput } from './perform-request-user-input.ts';
@@ -277,6 +278,17 @@ async function sessionOpOnProcessingStopped(sessionOperationContext: SessionOper
         if (!ownsStop())
             return;
     }
+    emitOperationsEvent({
+        kind: 'turn.finished', at: new Date().toISOString(),
+        workspaceId: managed.workspace.id, sessionId: managed.id,
+        missionId: managed.missionId, workItemId: managed.missionWorkItemId,
+        turnId: managed.executionTelemetryGenerations?.get(generationKey)?.turnId,
+        outcome: reason,
+        finalText: didReceiveNewFinalMessage && currentFinalMessageId
+            ? managed.messages.find(candidate => candidate.id === currentFinalMessageId)?.content
+            : undefined,
+        tokenUsage: managed.tokenUsage,
+    });
     if (reason === 'complete' && didReceiveNewFinalMessage) {
         if (isViewing) {
             // User is watching - mark as read immediately

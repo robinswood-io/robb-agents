@@ -11,6 +11,7 @@ import type { StoredAttachment as StoredAttachmentType } from "@craft-agent/core
 // Import protocol types used by ElectronAPI (they come through the `export *` above,
 // but we need them in scope for the interface definition)
 import type { Session, UnreadSummary, CreateSessionOptions, TaskValidationResultDto, TaskCreateRequest, TaskCreateResult, TaskGenerateRequest, TaskGenerateAck, TaskGenerateResult, TaskRunRequest, TaskRunSnapshotDto, TaskApprovalRequestDto, TaskApprovalDecisionRequest, TaskKillSwitchSnapshotDto, TaskKillSwitchUpdateRequest, TaskGetResult, TaskResultsDto, TaskRepairRequest, DurableTaskSnapshotDto, DurableTaskMetadataUpdateRequest, DurableTaskCockpitProjectionsDto, MissionPlanRequest, MissionPlanAck, MissionPlanResult, MissionCreateAndStartRequest, MissionPreflightRequest, MissionPreflightResult, MissionReplanPreviewDto, MissionReplanPreviewRequest, MissionReplanRequest, MissionControlRequest, MissionConnectorApprovalDecisionRequest, MissionConnectorApprovalRefreshRequest, MissionConnectorApprovalRequestDto, MissionResumeRequest, MissionSnapshotDto, MissionProofPassportDto, MissionProofPassportTrustAnchorDto, MissionProofPassportVerificationDto, FileAttachment, SendMessageOptions, PermissionResponseOptions, CredentialResponse } from "@craft-agent/shared/protocol";
+import type { OperationsStatusDto, OperationsSettingsDto } from '@craft-agent/shared/operations';
 
 export interface SessionTaskApi {
 
@@ -80,6 +81,9 @@ export interface SessionTaskApi {
   resumeMission(workspaceId: string, request: MissionResumeRequest): Promise<MissionSnapshotDto>
   cancelMission(workspaceId: string, request: MissionControlRequest): Promise<MissionSnapshotDto>
   onMissionChanged(callback: (workspaceId: string, snapshot: MissionSnapshotDto) => void): () => void
+  getOperationsStatus(workspaceId: string): Promise<OperationsStatusDto>
+  updateOperationsSettings(workspaceId: string, settings: OperationsSettingsDto): Promise<OperationsSettingsDto>
+  resolveOperationsApproval(workspaceId: string, request: { approvalId: string; approved: boolean }): Promise<{ resolved: boolean }>
 
   respondToPermission(sessionId: string, requestId: string, allowed: boolean, alwaysAllow: boolean, options?: PermissionResponseOptions): Promise<boolean>
   respondToCredential(sessionId: string, requestId: string, response: CredentialResponse): Promise<boolean>
