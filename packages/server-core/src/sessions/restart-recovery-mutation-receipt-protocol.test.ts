@@ -303,7 +303,7 @@ describe('durable restart recovery', () => {
         },
       )
       if (operationAdmitted) {
-        await expect(admission).resolves.toBeUndefined()
+        expect(await admission).toBeUndefined()
         expect(managed.messages.find(message => (
           message.toolUseId === `${label}-id-b`
         ))).toMatchObject({ toolName: nextToolName, toolStatus: 'executing' })
