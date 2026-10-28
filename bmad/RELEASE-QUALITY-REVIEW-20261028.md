@@ -243,3 +243,17 @@ ces documents historiques ne créent aucune autorisation. Cible Mac réutilisée
 aucun Orion, aucun sous-agent, aucun changement de configuration Codex.
 Les36tests ciblés du prévol et de l’intégrité de release passent après ce delta.
 Les runners de packaging utilisent explicitement Node26.12.1, comme le contrat.
+
+## Diagnostic Linux de la reprise durable
+Le run40778880825 passe typage, lint, environnement, dépendances et politique TypeScript ;
+son seul échec observé est l’assertion async du cas prior-read. Le diagnostic40781421808
+le reproduit sur le groupe complet292fichiers, alors que le cas isolé passe sur Mac.
+Bun masque la raison derrière .resolves. Le test attend désormais la même promesse
+avant la même assertion toBeUndefined ; l’assertion du reçu durable reste identique.
+Aucun contrôle produit, rejet de mutation incertaine, timeout ou résultat attendu changé.
+Le diagnostic40781794044 passe les2788tests/14643assertions avec cette seule différence.
+Cela étaye un défaut du matcher ou de sa temporisation, sans établir un correctif
+amont Bun. Son contrôle canonique a refusé la revue périmée, comme attendu.
+L’étape de diagnostic temporaire est retirée. La qualification globale de ce nouveau
+contenu reste obligatoire. Référence technique consultée :
+https://github.com/oven-sh/bun/issues/37189 (problème analogue, pas preuve de même cause).

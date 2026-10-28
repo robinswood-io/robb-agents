@@ -96,8 +96,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes xvfb libgtk-3-0 libnss3 libasound2t64 libxss1 libgbm1
-      - name: Diagnose restart recovery on Linux
-        run: xvfb-run -a bash -o pipefail -c 'find packages/server-core -name node_modules -prune -o -name "*.test.ts" ! -name "*.e2e.test.ts" ! -path "*/refresh-connection-runtime.test.ts" -print | sort | xargs bun test --timeout 10000'
       - name: Validate source, installers and canonical quality
         run: xvfb-run -a python3 scripts/robinswood_quality_ci.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

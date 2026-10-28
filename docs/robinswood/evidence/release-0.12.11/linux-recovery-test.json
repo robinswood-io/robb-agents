@@ -1,0 +1,10 @@
+{
+  "failed_global_run": 40778880825,
+  "reproduced_group_run": 40781421808,
+  "passing_group_run": 40781794044,
+  "tests_passed": 2788,
+  "assertions": 14643,
+  "files": 292,
+  "change": "Await the same admission promise before toBeUndefined; preserve persisted-receipt assertion and all rejection cases",
+  "limits": "Matcher/timing issue inferred, not an established upstream Bun diagnosis. Full canonical CI qualification still required."
+}
