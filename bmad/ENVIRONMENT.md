@@ -37,3 +37,17 @@ Le contrôleur et ses règles restent dans le dépôt privé épinglé ; aucun s
 contenu de règle privée ne doit être empaqueté ou imprimé dans les logs publics.
 Work non résolu : journal temporaire release-readiness-20261028.md hors dépôt,
 avec artefacts techniques versionnés ici ; aucun rattachement à un projet sans rapport.
+
+## Qualification après saturation du Mac
+Après le crash WindowServer, les contrôles globaux et compilations sont réalisés sur
+les runners GitHub existants. Le budget Node de 8 Gio est limité au job Linux Robb ;
+le contrôleur hérite du budget hôte et termine le processus AST avant chaque lot de lint.
+Le mode stage-signed utilise exactement --release (production, Developer ID, notarisation),
+sans création de release GitHub. Seuls les artefacts macOS sont construits pour ce mode.
+Aucun artefact development n’est relabellé ou installé dans le profil habituel.
+Le run/verify canonique CI doit passer sur le commit exact avant installation locale,
+puis le prévol desktop et les missions natives qualifient la cible Mac.
+Le module privé préservé peut être réinjecté localement avec la même identité stable ;
+il ne transite jamais par les artefacts publics ni la CI. Sa signature doit être revérifiée.
+La sortie de tests synthétiques et le journal de workers sont publiables ; le rapport
+canonique complet et les règles privées restent exclus des artefacts publics.

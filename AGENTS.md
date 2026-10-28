@@ -24,6 +24,11 @@ interchangeables.
   navigateur et MCP dans les conditions utilisateur.
 - Construire ce candidat uniquement depuis un commit propre avec :
   `CSC_NAME="<Developer ID Application du trousseau>" bash apps/electron/scripts/build-dmg.sh arm64 --local-production`.
+- Après saturation du Mac, le mode CI `stage-signed` est aussi autorisé : il
+  utilise `--release`, le même canal production et la même identité Developer ID,
+  avec notarisation, sans publier de GitHub Release. Vérifier le commit exact
+  et la qualification canonique CI avant le prévol local. Le module commercial
+  reste exclusivement local ; sa réinjection exige une nouvelle signature stable.
 - Avant remplacement, conserver une sauvegarde restaurable du bundle installé.
   Après lancement, vérifier le commit embarqué, `~/.craft-agent/robb-electron`,
   la présence des sessions/connexions et le démarrage des MCP pertinents.

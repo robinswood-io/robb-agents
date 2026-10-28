@@ -100,6 +100,19 @@ def main() -> int:
         for check in checks:
             if isinstance(check, dict):
                 summary.append({"name": check.get("name"), "exit_code": check.get("exit_code")})
+    public = temporary / "robb-public-quality"
+    public.mkdir(mode=0o700, exist_ok=True)
+    if isinstance(checks, list):
+        for check in checks:
+            if isinstance(check, dict) and check.get("name") == "tests":
+                diagnostic = check.get("summary")
+                if isinstance(diagnostic, str):
+                    (public / "tests-summary.txt").write_text(diagnostic)
+                    if check.get("exit_code") != 0:
+                        print("Synthetic test failure:\n" + diagnostic)
+    workers = root / "bmad/quality-logs/typescript-workers.jsonl"
+    if workers.is_file() and not workers.is_symlink():
+        (public / "typescript-workers.jsonl").write_bytes(workers.read_bytes())
     print(json.dumps({"state": report.get("state"), "checks": summary}))
     if result.returncode:
         print("Canonical quality run failed; publication remains blocked.")

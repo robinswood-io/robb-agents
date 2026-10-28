@@ -383,7 +383,7 @@ const macSignatureHook = readFileSync(
 
 describe('public release policy', () => {
   it('keeps release publication gated while allowing an explicit unsigned Windows policy', () => {
-    expect(releaseWorkflow).toContain('options: [test-artifacts, publish-signed]')
+    expect(releaseWorkflow).toContain('options: [test-artifacts, stage-signed, publish-signed]')
     expect(releaseWorkflow).toContain('mode="${REQUESTED_MODE:-publish-signed}"')
     expect(releaseWorkflow).toContain('if [[ "$mode" == "publish-signed" ]]')
     expect(releaseWorkflow).toContain("WINDOWS_SIGNING_MODE: ${{ vars.WINDOWS_SIGNING_MODE || 'unsigned' }}")

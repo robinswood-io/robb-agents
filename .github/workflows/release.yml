@@ -1,30 +1,26 @@
 name: Build desktop release
-
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
       release_mode:
-        description: "test-artifacts uploads unsigned CI artifacts only; publish-signed requires signed macOS and Windows artifacts"
+        description: "test-artifacts: unsigned; stage-signed: signed macOS QA only; publish-signed: public release"
         required: true
         default: test-artifacts
         type: choice
-        options: [test-artifacts, publish-signed]
+        options: [test-artifacts, stage-signed, publish-signed]
       tag:
         description: "Existing vX.Y.Z tag; required for publish modes"
         required: false
         type: string
-
 permissions:
   contents: write
   attestations: write
   id-token: write
-
 concurrency:
   group: robb-release-${{ github.ref }}
   cancel-in-progress: false
-
 jobs:
   preflight:
     timeout-minutes: 10
@@ -68,14 +64,13 @@ jobs:
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           GH_TOKEN: ${{ github.token }}
         run: bash scripts/robinswood-prepare-release-source.sh
-
   quality:
     name: Release source quality gate
     permissions: {contents: read}
     needs: preflight
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    env: {ROBB_RULEBOOK_COMMIT: "4072d2b1f56ef7f0226be20c7998ff3533fc0fd3", ROBB_EXPECTED_SOURCE_COMMIT: "${{ needs.preflight.outputs.source_commit }}"}
+    env: {NODE_OPTIONS: "--max-old-space-size=8192", ROBB_RULEBOOK_COMMIT: "109991b8a6b3967bab6c7860af4f5c0cafdff404", ROBB_EXPECTED_SOURCE_COMMIT: "${{ needs.preflight.outputs.source_commit }}"}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: {ref: "${{ needs.preflight.outputs.source_commit }}", persist-credentials: false}
@@ -103,7 +98,9 @@ jobs:
           sudo apt-get install --yes xvfb libgtk-3-0 libnss3 libasound2t64 libxss1 libgbm1
       - name: Validate source, installers and canonical quality
         run: xvfb-run -a python3 scripts/robinswood_quality_ci.py
-
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with: {name: release-quality-diagnostics, path: "${{ runner.temp }}/robb-public-quality/", if-no-files-found: ignore}
   macos:
     timeout-minutes: 90
     name: macOS ${{ matrix.arch }}
@@ -119,6 +116,8 @@ jobs:
           ref: ${{ needs.preflight.outputs.source_commit }}
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with: {python-version: "3.14.6"}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: {node-version: "26.12.1"}
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: {bun-version: "1.4.4"}
       - name: Exercise macOS installer update contract
@@ -139,14 +138,13 @@ jobs:
           ROBB_PACKAGE_LAUNCH_SMOKE: "1"
         run: |
           args=("${{ matrix.arch }}")
-          if [[ "${{ needs.preflight.outputs.publish }}" == "true" ]]; then
+          if [[ "${{ needs.preflight.outputs.release_mode }}" != "test-artifacts" ]]; then
             if [[ -n "${APPLE_API_KEY_BASE64:-}" ]]; then
               export APPLE_API_KEY="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
               python3 - <<'PY'
           import base64
           import os
           from pathlib import Path
-
           Path(os.environ["APPLE_API_KEY"]).write_bytes(
               base64.b64decode(os.environ["APPLE_API_KEY_BASE64"], validate=True)
           )
@@ -168,7 +166,7 @@ jobs:
           source_commit=${{ needs.preflight.outputs.source_commit }}
           release_tag=${{ needs.preflight.outputs.tag }}
           platform=macos-${{ matrix.arch }}
-          signing=$([[ "${{ needs.preflight.outputs.publish }}" == "true" ]] && echo verified-developer-id-and-notarized || echo unsigned-test-artifact)
+          signing=$([[ "${{ needs.preflight.outputs.release_mode }}" != "test-artifacts" ]] && echo verified-developer-id-and-notarized || echo unsigned-test-artifact)
           EOF
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -180,8 +178,8 @@ jobs:
             apps/electron/release/SHA256SUMS-macos-${{ matrix.arch }}.txt
             apps/electron/release/PROVENANCE-macos-${{ matrix.arch }}.txt
           if-no-files-found: error
-
   windows:
+    if: needs.preflight.outputs.release_mode != 'stage-signed'
     timeout-minutes: 60
     name: Windows x64
     needs: [preflight, quality]
@@ -190,6 +188,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.preflight.outputs.source_commit }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: {node-version: "26.12.1"}
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: {bun-version: "1.4.4"}
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -268,8 +268,8 @@ jobs:
             apps/electron/release/SHA256SUMS-windows-x64.txt
             apps/electron/release/PROVENANCE-windows-x64.txt
           if-no-files-found: error
-
   linux:
+    if: needs.preflight.outputs.release_mode != 'stage-signed'
     timeout-minutes: 45
     name: Linux x64
     needs: [preflight, quality]
@@ -280,6 +280,8 @@ jobs:
           ref: ${{ needs.preflight.outputs.source_commit }}
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with: {python-version: "3.14.6"}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: {node-version: "26.12.1"}
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: {bun-version: "1.4.4"}
       - name: Exercise Linux installer update contract
@@ -321,7 +323,6 @@ jobs:
             apps/electron/release/SHA256SUMS-linux-x64.txt
             apps/electron/release/PROVENANCE-linux-x64.txt
           if-no-files-found: error
-
   publish:
     timeout-minutes: 20
     name: Publish GitHub Release
@@ -438,7 +439,6 @@ jobs:
           bun run scripts/verify-github-release-assets.ts \
             --release-dir release-assets \
             --assets-json "$published_assets"
-
           published_feed="$RUNNER_TEMP/published-updater-feed"
           verified=false
           for attempt in 1 2 3 4 5 6; do
@@ -458,7 +458,6 @@ jobs:
             sleep 5
           done
           [[ "$verified" == true ]] || { echo "::error::Published updater manifests do not match the validated release bundle"; exit 1; }
-
       - name: Publish immutable latest release
         env:
           GH_TOKEN: ${{ github.token }}

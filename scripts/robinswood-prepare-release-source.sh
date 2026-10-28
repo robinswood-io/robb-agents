@@ -11,7 +11,7 @@ mode="${REQUESTED_MODE:-test-artifacts}"
 # macOS remains signed and notarized; Windows follows the explicit
 # unsigned, PFX, or Azure signing policy below.
 if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then mode="${REQUESTED_MODE:-publish-signed}"; fi
-if [[ "$mode" != "test-artifacts" && "$mode" != "publish-signed" ]]; then
+if [[ "$mode" != "test-artifacts" && "$mode" != "stage-signed" && "$mode" != "publish-signed" ]]; then
   echo "::error::Unknown release mode: $mode"; exit 1
 fi
 
@@ -48,6 +48,10 @@ if [[ "$mode" == "publish-signed" ]]; then
     echo "::error::GitHub Release $tag already exists; refusing to overwrite it"; exit 1
   fi
   publish=true
+elif [[ "$mode" == "stage-signed" ]]; then
+  python3 scripts/robinswood-signing-preflight.py --ci --strict
+  tag="stage-${source_commit::12}"
+  echo "::notice::Signed macOS staging artifacts stay in CI; no GitHub Release is created."
 else
   tag="test-${source_commit::12}"
   echo "::notice::Test artifacts will be retained in CI only; no GitHub Release will be created."

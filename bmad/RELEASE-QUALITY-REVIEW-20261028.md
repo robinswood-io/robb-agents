@@ -215,3 +215,31 @@ préservées. Aucune nouvelle couche d’orchestration, dépendance ou permissio
 Quatre tests de chemins réussis (deux nouveaux cas), lint ciblé sans avertissement et
 trois parcours du vrai composant FilePreviewRenderer dans Chromium réussis ; preuve
 ui-preview-links.json. Nouveaux gate global, build et parcours natif restent obligatoires.
+
+## Reprise après crash et qualification CI
+Le candidat natif a5 a été installé par le CLI officiel et le module privé conservé
+à l’octet. Un lien relatif d’aperçu ne routait pas vers les actions existantes :
+le correctif c9 raccorde ces callbacks et résout depuis le document. Les quatre tests
+ciblés et trois parcours Chrome du composant passent ; la nouvelle installation
+et le parcours natif complet restent requis avant tag.
+Après saturation mémoire du Mac, aucun nouveau contrôle global ni build local.
+Le contrôleur privé 109991b8a6b3967bab6c7860af4f5c0cafdff404 a réussi run puis verify
+sur ce commit CI : https://github.com/Aoleon/rulebook-ai/actions/runs/40778242059.
+Trente tests, MyPy strict14sources, Ruff/ESLint et contrats sont verts pour ce CLI.
+L’AST est un processus fini avant les lots de lint. Aucun budget8Gio n’est forcé
+par le contrôleur ; seul le job Linux de Robb fixe ce budget sur son propre runner.
+Le reçu de contrôle est exact et obligatoire ; timeout et code réel restent distincts.
+Le mode stage-signed réutilise --release, production, Developer ID et notarisation,
+avec artefacts CI uniquement et Windows/Linux ignorés. Les tests du prévol exigent
+la signature même sans tag, et vérifient que ce mode ne peut publier de release.
+Le mode public et ses exigences de signature/notarisation ne sont pas affaiblis.
+Les diagnostics publics se limitent à la sortie des tests synthétiques et aux workers.
+Les règles privées, le rapport canonique complet, les secrets et Inqom restent exclus.
+Le premier run Linux c9 a échoué dans les tests (123) ; il ne qualifie pas cette release.
+Le nouveau run/verify exact reste obligatoire, puis prévol et parcours natifs Mac.
+Mémoire enterprise indisponible par outil dans cette reprise : copie locale lue,
+enterprise/rules.md mise à jour28/10/vérifiée02/08 et security-policies31/05 ;
+ces documents historiques ne créent aucune autorisation. Cible Mac réutilisée,
+aucun Orion, aucun sous-agent, aucun changement de configuration Codex.
+Les36tests ciblés du prévol et de l’intégrité de release passent après ce delta.
+Les runners de packaging utilisent explicitement Node26.12.1, comme le contrat.
