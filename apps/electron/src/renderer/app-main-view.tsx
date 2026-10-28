@@ -242,6 +242,8 @@ return (
               onClose={linkInterceptor.closePreview}
               loadDataUrl={linkInterceptor.readFileDataUrl}
               loadPdfData={linkInterceptor.readFileBinary}
+              onOpenFile={platformActions.onOpenFile}
+              onOpenUrl={platformActions.onOpenUrl}
               isDark={isDark}
             />
           )}

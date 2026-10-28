@@ -5,6 +5,7 @@ import { useWindowCloseHandler } from '@/hooks/useWindowCloseHandler';
 
 import { ImagePreviewOverlay, PDFPreviewOverlay, CodePreviewOverlay, DocumentFormattedMarkdownOverlay, JSONPreviewOverlay } from '@craft-agent/ui';
 import { type FilePreviewState } from '@/hooks/useLinkInterceptor';
+import { resolveDocumentFilePath } from '@/lib/resolve-session-file-path';
 
 export function SessionLoadErrorScreen({
   message,
@@ -47,12 +48,16 @@ export function FilePreviewRenderer({
   onClose,
   loadDataUrl,
   loadPdfData,
+  onOpenFile,
+  onOpenUrl,
   isDark,
 }: {
   state: FilePreviewState
   onClose: () => void
   loadDataUrl: (path: string) => Promise<string>
   loadPdfData: (path: string) => Promise<Uint8Array>
+  onOpenFile: (path: string) => void
+  onOpenUrl: (url: string) => void
   isDark: boolean
 }) {
   const theme = isDark ? 'dark' : 'light' as const
@@ -107,6 +112,8 @@ export function FilePreviewRenderer({
           content={state.content ?? ''}
           filePath={state.filePath}
           variant={isPlanFile ? 'plan' : 'response'}
+          onOpenFile={(path) => onOpenFile(resolveDocumentFilePath(path, state.filePath))}
+          onOpenUrl={onOpenUrl}
           error={state.error}
         />
       )

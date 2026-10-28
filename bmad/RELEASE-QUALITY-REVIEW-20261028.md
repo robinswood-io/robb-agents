@@ -204,3 +204,14 @@ ui-components.json porte la date, les versions installées, le hash du lock et d
 Les sept missions headless antérieures portent sur le runtime Node/AWS et les sous-processus
 déjà reconstruits ; Tiptap concerne l’éditeur. La mission native finale vérifiera le paquet
 complet après cette mise à jour. Le nouveau gate global reste obligatoire.
+
+Le premier paquet natif a5a7a0c a réussi création de trois livrables, empreintes,
+ouverture Markdown/JSON absolue et nouvelle demande créant un quatrième fichier.
+Le clic relatif dans le Markdown est resté inactif : FilePreviewRenderer ne recevait
+ni onOpenFile ni onOpenUrl. Publication suspendue avant tout tag ; défaut conservé au journal.
+Correction ciblée : raccordement aux PlatformActions existantes et résolution des liens
+depuis le dossier du document via le résolveur existant ; racines locales/Windows/UNC
+préservées. Aucune nouvelle couche d’orchestration, dépendance ou permission.
+Quatre tests de chemins réussis (deux nouveaux cas), lint ciblé sans avertissement et
+trois parcours du vrai composant FilePreviewRenderer dans Chromium réussis ; preuve
+ui-preview-links.json. Nouveaux gate global, build et parcours natif restent obligatoires.

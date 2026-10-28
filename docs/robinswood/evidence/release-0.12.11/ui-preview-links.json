@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "checks": [
+    "Real FilePreviewRenderer opens the sibling JSON preview from a Markdown relative link",
+    "Relative HTML links keep the original document directory",
+    "The Markdown file preview forwards URL links to the existing URL handler"
+  ],
+  "errors": [],
+  "scope": "Real FilePreviewRenderer and overlays in Chromium; file and URL callbacks are mocks. Native packaged navigation is checked separately.",
+  "checked_at": "2026-10-28T20:48:14.005245+00:00",
+  "source_files": {
+    "apps/electron/src/renderer/app-main-view.tsx": "417471d3008d8f6f1eb3c1da5336af6dd659cfa8cf5fae5a96f7e0d95725c6ed",
+    "apps/electron/src/renderer/app-status-views.tsx": "4149e6e7dcb7e12b85f43ad1b9cfea91fe0642e122695a5fba1f2b560ed6c1ce",
+    "apps/electron/src/renderer/lib/resolve-session-file-path.ts": "9b83b946a999482586ebad5835ceed0a21cc127ebdc0c349a9e30fd5d4fdc084",
+    "apps/electron/src/renderer/lib/__tests__/resolve-session-file-path.test.ts": "7d0ee0bc852b72a807f45b1a6e5b3e202df0a9dbe9a474fb4965cdcce4b542c3"
+  },
+  "test_script_sha256": "f2023797fd80f7479b8374b23602812af23e588ada3a4da399002b65070ef64b",
+  "limitations": [
+    "Browser callbacks are mocked; native installation of this fix remains a separate required check."
+  ]
+}
