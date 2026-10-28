@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { mergeSessionScopedToolCallbacks, TERMINAL_RECONCILIATION_CAPABILITY_FIELD } from '@craft-agent/shared/agent';
 import type { SessionStatus } from '@craft-agent/shared/sessions';
@@ -102,14 +103,14 @@ export function installRuntimeSessionToolCallbacks(sessionOperationContext: Sess
                 // tasks freeze at completion. Fall back to the last progress value.
                 const anchorEnd = t.status === 'running' ? now : (t.completedAt ?? now);
                 const wallElapsed = Math.max(0, Math.round((anchorEnd - t.startTime) / 1000));
-                return {
+                return omitUndefined({
                     taskId: t.taskId,
                     intent: t.intent,
                     status: t.status,
                     startTime: t.startTime,
                     elapsedSeconds: t.elapsedSeconds ?? wallElapsed,
                     completedAt: t.completedAt,
-                };
+                });
             });
         },
         resolveLabelsFn: (labels: string[]) => {
@@ -171,7 +172,7 @@ export function installRuntimeSessionToolCallbacks(sessionOperationContext: Sess
             };
         },
         projectLearningFn: async (request) => {
-            return sessionOpHandleSessionProjectLearning(sessionOperationContext, managed, request);
+            return sessionOpHandleSessionProjectLearning(sessionOperationContext, managed, omitUndefined<Parameters<typeof sessionOpHandleSessionProjectLearning>[2]>(request));
         },
         sendAgentMessageFn: async (sessionId: string, message: string, attachments?: Array<{
             path: string;

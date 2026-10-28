@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 /**
  * AutomationSystem - Unified Facade for the Automations System
  *
@@ -29,11 +30,11 @@ import { log } from './shared.ts';
    * Read, parse, and validate automations.json. Shared pipeline for loadConfig/reloadConfig.
    * Returns the raw parsed JSON alongside validation results (avoids re-reading for backfillIds).
    */
-export function readAndValidateConfig(transportOwner: AutomationSystem, configPath: string): {
+export function readAndValidateConfig(_transportOwner: AutomationSystem, configPath: string): {
     raw: unknown;
     validation: import("../types.ts").AutomationsValidationResult;
 } {
-    const raw = JSON.parse(readFileSync(configPath, 'utf-8'));
+    const raw: unknown = JSON.parse(readFileSync(configPath, 'utf-8'));
     const validation = validateAutomationsConfig(raw);
     return { raw, validation };
 }
@@ -49,16 +50,16 @@ export function loadConfig(transportOwner: AutomationSystem): void {
         return;
     }
     try {
-        const { raw, validation } = transportOwner["readAndValidateConfig"](configPath);
+        const { raw, validation } = transportOwner.readAndValidateConfig(configPath);
         if (!validation.valid) {
             console.warn('[AutomationSystem] Invalid automations config:', validation.errors);
             transportOwner["config"] = { automations: {} };
             return;
         }
         transportOwner["config"] = validation.config;
-        transportOwner["backfillIds"](configPath, raw);
-        transportOwner["rotateHistory"]();
-        const actionCount = transportOwner["getActionCount"]();
+        transportOwner.backfillIds(configPath, raw);
+        transportOwner.rotateHistory();
+        const actionCount = transportOwner.getActionCount();
         log.debug(`[AutomationSystem] Loaded ${actionCount} actions from ${configPath}`);
     }
     catch (e) {
@@ -79,13 +80,13 @@ export function reloadConfig(transportOwner: AutomationSystem): {
         return { success: true, automationCount: 0, errors: [] };
     }
     try {
-        const { raw, validation } = transportOwner["readAndValidateConfig"](configPath);
+        const { raw, validation } = transportOwner.readAndValidateConfig(configPath);
         if (!validation.valid) {
             return { success: false, automationCount: 0, errors: validation.errors };
         }
         transportOwner["config"] = validation.config;
-        transportOwner["backfillIds"](configPath, raw);
-        const actionCount = transportOwner["getActionCount"]();
+        transportOwner.backfillIds(configPath, raw);
+        const actionCount = transportOwner.getActionCount();
         log.debug(`[AutomationSystem] Reloaded ${actionCount} actions`);
         return { success: true, automationCount: actionCount, errors: [] };
     }
@@ -100,19 +101,19 @@ export function reloadConfig(transportOwner: AutomationSystem): {
    * Operates on the already-parsed raw JSON to avoid re-reading from disk.
    * Only writes if IDs were actually missing — no-op on subsequent loads.
    */
-export function backfillIds(transportOwner: AutomationSystem, configPath: string, raw: unknown): void {
+export function backfillIds(_transportOwner: AutomationSystem, configPath: string, raw: unknown): void {
     try {
         const obj = raw as Record<string, unknown>;
-        const eventMap = (obj.automations ?? obj.tasks ?? obj.hooks) as Record<string, unknown[]> | undefined;
+        const eventMap = (obj["automations"] ?? obj["tasks"] ?? obj["hooks"]) as Record<string, unknown[]> | undefined;
         if (!eventMap)
             return;
         let changed = false;
         for (const matchers of Object.values(eventMap)) {
-            if (!Array.isArray(matchers))
+            if (!isUnknownArray(matchers))
                 continue;
             for (const m of matchers as Record<string, unknown>[]) {
-                if (!m.id) {
-                    m.id = generateShortId();
+                if (!m["id"]) {
+                    m["id"] = generateShortId();
                     changed = true;
                 }
             }

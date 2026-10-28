@@ -1,3 +1,5 @@
+import { OAuthFlowStore } from '@craft-agent/shared/auth';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { beforeEach, describe, expect, it, mock } from 'bun:test'
 import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
@@ -54,8 +56,9 @@ function createMockServer(): RpcServer {
   }
 }
 
+const { BrowserPaneManager } = await import('../../browser-pane-manager');
 function createMockDeps(): HandlerDeps {
-  return {
+  return omitUndefined<HandlerDeps>({
     sessionManager: {} as HandlerDeps['sessionManager'],
     platform: {
       appRootPath: '',
@@ -70,20 +73,9 @@ function createMockDeps(): HandlerDeps {
       },
     },
     windowManager: {} as HandlerDeps['windowManager'],
-    browserPaneManager: {
-      onStateChange: () => {},
-      onRemoved: () => {},
-      onInteracted: () => {},
-    } as unknown as NonNullable<HandlerDeps['browserPaneManager']>,
-    oauthFlowStore: {
-      store: () => {},
-      getByState: () => null,
-      remove: () => {},
-      cleanup: () => {},
-      dispose: () => {},
-      size: 0,
-    } as unknown as HandlerDeps['oauthFlowStore'],
-  }
+    browserPaneManager: new BrowserPaneManager(),
+    oauthFlowStore: new OAuthFlowStore(),
+  })
 }
 
 async function getExpectedChannels(): Promise<Set<string>> {
@@ -108,6 +100,7 @@ async function getExpectedChannels(): Promise<Set<string>> {
     tasks,
     projects,
     missions,
+    operations,
   ] = await Promise.all([
     import('@craft-agent/server-core/handlers/rpc/auth'),
     import('@craft-agent/server-core/handlers/rpc/automations'),
@@ -128,6 +121,7 @@ async function getExpectedChannels(): Promise<Set<string>> {
     import('@craft-agent/server-core/handlers/rpc/tasks'),
     import('@craft-agent/server-core/handlers/rpc/projects'),
     import('@craft-agent/server-core/handlers/rpc/missions'),
+    import('@craft-agent/server-core/handlers/rpc/operations'),
   ])
 
   // GUI handler channels (remain in electron)
@@ -158,6 +152,7 @@ async function getExpectedChannels(): Promise<Set<string>> {
     ...tasks.HANDLED_CHANNELS,
     ...projects.HANDLED_CHANNELS,
     ...missions.HANDLED_CHANNELS,
+    ...operations.HANDLED_CHANNELS,
     ...browser.HANDLED_CHANNELS,
     ...guiSystem.GUI_HANDLED_CHANNELS,
     ...guiWorkspace.GUI_HANDLED_CHANNELS,

@@ -1,3 +1,4 @@
+import { useEffectEvent } from 'react';
 import React, { useEffect } from 'react';
 
 import { navigate, routes } from './lib/navigate';
@@ -78,12 +79,13 @@ useEffect(() => {
     return cleanup
   }, [store, sessionSelection.selected, refreshSessionFromServer, refreshSessionListMetadataFromServer])
 
+const openSettingsFromMenu = useEffectEvent(handleOpenSettings);
 useEffect(() => {
     const unsubNewChat = window.electronAPI.onMenuNewChat(() => {
       setMenuNewChatTrigger(n => n + 1)
     })
     const unsubSettings = window.electronAPI.onMenuOpenSettings(() => {
-      handleOpenSettings()
+      openSettingsFromMenu()
     })
     const unsubShortcuts = window.electronAPI.onMenuKeyboardShortcuts(() => {
       navigate(routes.view.settings('shortcuts'))
@@ -95,7 +97,6 @@ useEffect(() => {
     }
   // The settings callback is declared later in App and is invoked only by the
   // installed menu listener; resubscribing on every render would lose events.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setMenuNewChatTrigger])
 return {  }
 }

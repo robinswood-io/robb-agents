@@ -87,7 +87,7 @@ it('never grants structured SSH source-read authority to system, secret, or trav
         objectiveAuthorizationSegments: [objective],
         declaredToolCapabilities: { trusted: true, readOnly: true, idempotent: true },
       }, objective)).toMatchObject({
-        type: 'block', reason: expect.stringContaining('Structured SSH read validation failed'),
+        type: 'block', reason: (expect.stringContaining('Structured SSH read validation failed') as unknown),
       });
     }
   });
@@ -106,7 +106,7 @@ it('keeps ambiguous composite source reads and source mutations blocked', () => 
       objectiveAuthorizationSegments: [objective],
     }, objective);
     expect(composite).toMatchObject({
-      type: 'block', reason: expect.stringContaining('composite remote command'),
+      type: 'block', reason: (expect.stringContaining('composite remote command') as unknown),
     });
 
     const mutation = check({
@@ -121,7 +121,7 @@ it('keeps ambiguous composite source reads and source mutations blocked', () => 
       objectiveAuthorizationSegments: [objective],
     }, objective);
     expect(mutation).toMatchObject({
-      type: 'block', reason: expect.stringContaining('Objective authority'),
+      type: 'block', reason: (expect.stringContaining('Objective authority') as unknown),
     });
   });
 
@@ -285,7 +285,7 @@ it('treats only target-bound SSH read lifecycle operations as observations', () 
         objectiveAuthorizationSegments: [objective],
         declaredToolCapabilities: { trusted: true, readOnly: true, idempotent: true },
       }, objective)).toMatchObject({
-        type: 'block', reason: expect.stringContaining('Structured SSH read validation failed'),
+        type: 'block', reason: (expect.stringContaining('Structured SSH read validation failed') as unknown),
       });
     }
 

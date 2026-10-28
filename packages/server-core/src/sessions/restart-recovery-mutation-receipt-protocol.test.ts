@@ -13,8 +13,8 @@ describe('durable restart recovery', () => {
     it(legacyContract
       ? 'blocks every mutation after an unresolved restart effect in the strict legacy contract'
       : 'continues native recovery after a read without a global legacy mutation quarantine', async () => {
-      if (legacyContract) process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
-      else delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+      if (legacyContract) process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
+      else delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]
       const h = harness(); const managed = h.make('ambiguous-effect-exactly-once')
       const allocatedAt = Date.now() - 3_000
       const startedAt = allocatedAt + 1_000
@@ -227,7 +227,7 @@ describe('durable restart recovery', () => {
   ] as const)(
     'classifies %s before admitting a later operation',
     async (label, priorToolName, priorToolInput, nextToolName, nextToolInput, operationAdmitted) => {
-      process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+      process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
       const h = harness(); const managed = h.make(`${label}-effect`)
       const allocatedAt = Date.now() - 3_000
       const startedAt = allocatedAt + 1_000
@@ -381,9 +381,9 @@ describe('durable restart recovery', () => {
 
       expect(scheduled).toBe(0)
       expect(restored.messageQueue).toEqual([])
-      expect(restored.pendingTurnRecovery).toMatchObject({
+      expect<unknown>(restored.pendingTurnRecovery).toMatchObject({
         attempts: 2,
-        exhaustedAt: expect.any(Number),
+        exhaustedAt: (expect.any(Number) as unknown),
         recoveryDispatch: {
           id: `started-after-${activity}-dispatch-2`, attempt: 2, phase: 'started',
         },

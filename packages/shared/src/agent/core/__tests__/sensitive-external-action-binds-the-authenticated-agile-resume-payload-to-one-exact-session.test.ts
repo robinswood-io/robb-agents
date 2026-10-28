@@ -29,11 +29,11 @@ function checkBash(
     activeSourceSlugs: [],
     allSourceSlugs: [],
     hasSourceActivation: false,
-    externalActionPolicy,
-    objectiveMutationAuthorized,
-    objectiveAuthorizationSegments,
+    ...(externalActionPolicy !== undefined ? { externalActionPolicy } : {}),
+    ...(objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized } : {}),
+    ...(objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 function checkMcp(
@@ -79,15 +79,15 @@ function checkMcp(
     activeSourceSlugs: [sourceSlug],
     allSourceSlugs: [sourceSlug],
     hasSourceActivation: false,
-    externalActionPolicy: options?.externalActionPolicy,
-    objectiveMutationAuthorized: options?.objectiveMutationAuthorized,
-    objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized,
-    objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments,
-    authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments,
-    dataFolderPath: options?.dataFolderPath,
-    declaredToolCapabilities: options?.declaredToolCapabilities,
+    ...(options?.externalActionPolicy !== undefined ? { externalActionPolicy: options?.externalActionPolicy } : {}),
+    ...(options?.objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized: options?.objectiveMutationAuthorized } : {}),
+    ...(options?.objectiveSensitiveActionAuthorized !== undefined ? { objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized } : {}),
+    ...(options?.objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments } : {}),
+    ...(options?.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments } : {}),
+    ...(options?.dataFolderPath !== undefined ? { dataFolderPath: options?.dataFolderPath } : {}),
+    ...(options?.declaredToolCapabilities !== undefined ? { declaredToolCapabilities: options?.declaredToolCapabilities } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 
@@ -191,7 +191,7 @@ Utilise exactement ce payload une seule fois puis vérifie par API le message en
       'allow-all', liveTool, exactInput, agileResumePrompt, options,
     )).toMatchObject({
       type: 'modify',
-      input: expect.objectContaining({ attachmentPaths: [attachmentPath] }),
+      input: (expect.objectContaining({ attachmentPaths: [attachmentPath] }) as unknown),
     });
 
     const sessionPath = '/tmp/robb-sensitive-action-test/sessions/260918-agile-woods';
@@ -208,7 +208,7 @@ Utilise exactement ce payload une seule fois puis vérifie par API le message en
       'allow-all', liveTool, expandedInput, agileResumePrompt, expandedOptions,
     )).toMatchObject({
       type: 'modify',
-      input: expect.objectContaining({ attachmentPaths: [expandedAttachmentPath] }),
+      input: (expect.objectContaining({ attachmentPaths: [expandedAttachmentPath] }) as unknown),
     });
     for (const [label, expandedPaths] of [
       ['sibling session', [expandedAttachmentPath.replace('260918-agile-woods', '260918-other')]],
@@ -347,7 +347,7 @@ Utilise exactement ce payload une seule fois puis vérifie par API le message en
           objectiveSensitiveActionAuthorized: false,
           objectiveAuthorizationSegments,
         },
-      )).toMatchObject({ type: 'block', reason: expect.stringContaining('Objective authority') });
+      )).toMatchObject({ type: 'block', reason: (expect.stringContaining('Objective authority') as unknown) });
     }
   });
 

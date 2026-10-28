@@ -5,9 +5,9 @@ interface TopBarButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement
   /** The icon or content to display inside the button */
   children: React.ReactNode
   /** Whether the button is in an active/pressed state (e.g., dropdown open) */
-  isActive?: boolean
+  isActive?: boolean | undefined
   /** Additional class names */
-  className?: string
+  className?: string | undefined
 }
 
 /**

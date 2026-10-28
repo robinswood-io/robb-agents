@@ -36,7 +36,7 @@ export interface PreviewOverlayProps {
   /** Callback when the overlay should close */
   onClose: () => void
   /** Theme mode */
-  theme?: 'light' | 'dark'
+  theme?: 'light' | 'dark' | undefined
 
   /** Type badge configuration — tool/format indicator */
   typeBadge: {
@@ -46,37 +46,37 @@ export interface PreviewOverlayProps {
   }
 
   /** File path — shows dual-trigger menu badge with "Open" + "Reveal in {file manager}" */
-  filePath?: string
+  filePath?: string | undefined
   /** Title — displayed as badge. Fallback when no file path. */
-  title?: string
+  title?: string | undefined
   /** Callback when title badge is clicked (only used when no filePath) */
-  onTitleClick?: () => void
+  onTitleClick?: (() => void) | undefined
   /** Optional subtitle (e.g., line range info) */
-  subtitle?: string
+  subtitle?: string | undefined
 
   /** Optional error state */
   error?: {
     label: string
     message: string
-  }
+  } | undefined
 
   /** Actions to show in header right side */
-  headerActions?: ReactNode
+  headerActions?: ReactNode | undefined
 
   /** Main content */
   children: ReactNode
 
   /** Render inline (no dialog/portal) — for embedding in design system playground */
-  embedded?: boolean
+  embedded?: boolean | undefined
 
   /** Custom class names for the overlay container (e.g., to override bg-background) */
-  className?: string
+  className?: string | undefined
 }
 
 export function PreviewOverlay({
   isOpen,
   onClose,
-  theme = 'light',
+  theme: _theme = 'light',
   typeBadge,
   filePath,
   title,

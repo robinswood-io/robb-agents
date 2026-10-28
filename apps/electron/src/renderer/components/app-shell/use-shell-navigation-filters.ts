@@ -83,7 +83,7 @@ const setListFilter = useCallback((updater: Map<SessionStatusId, FilterMode> | (
           statuses: Object.fromEntries(next),
           labels: existing?.labels ?? {},
           projects: existing?.projects ?? {},
-          groupingMode: existing?.groupingMode,
+          ...(existing?.groupingMode !== undefined ? { groupingMode: existing?.groupingMode } : {}),
         }
       }
     })
@@ -101,7 +101,7 @@ const setLabelFilter = useCallback((updater: Map<string, FilterMode> | ((prev: M
           statuses: existing?.statuses ?? {},
           labels: Object.fromEntries(next),
           projects: existing?.projects ?? {},
-          groupingMode: existing?.groupingMode,
+          ...(existing?.groupingMode !== undefined ? { groupingMode: existing?.groupingMode } : {}),
         }
       }
     })
@@ -131,7 +131,7 @@ const setProjectFilter = useCallback((updater: Map<string, FilterMode> | ((prev:
           statuses: existing?.statuses ?? {},
           labels: existing?.labels ?? {},
           projects: Object.fromEntries(next),
-          groupingMode: existing?.groupingMode,
+          ...(existing?.groupingMode !== undefined ? { groupingMode: existing?.groupingMode } : {}),
         }
       }
     })
@@ -146,7 +146,7 @@ const handleJumpToProjectSessions = useCallback((projectId: string) => {
           statuses: existing?.statuses ?? {},
           labels: existing?.labels ?? {},
           projects: { [projectId]: 'include' },
-          groupingMode: existing?.groupingMode,
+          ...(existing?.groupingMode !== undefined ? { groupingMode: existing?.groupingMode } : {}),
         }
       }
     })
@@ -163,7 +163,7 @@ const handleJumpToTaskSessions = useCallback(
             statuses: existing?.statuses ?? {},
             labels: { [scope.labelId]: 'include' },
             projects: scope.projectId ? { [scope.projectId]: 'include' } : {},
-            groupingMode: existing?.groupingMode,
+            ...(existing?.groupingMode !== undefined ? { groupingMode: existing?.groupingMode } : {}),
           }
         }
       })

@@ -26,8 +26,8 @@ export function FilterLabelItems({
   labelFilter: Map<string, FilterMode>
   setLabelFilter: (updater: Map<string, FilterMode> | ((prev: Map<string, FilterMode>) => Map<string, FilterMode>)) => void
   /** Label ID pinned by the current route (non-removable, shown as checked+disabled) */
-  pinnedLabelId?: string | null
-  altHeld?: boolean
+  pinnedLabelId?: string | null | undefined
+  altHeld?: boolean | undefined
 }) {
   const { t } = useTranslation()
 

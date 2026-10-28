@@ -1,3 +1,5 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
@@ -109,7 +111,7 @@ describe('cold-session metadata persistence', () => {
     const path = getSessionFilePath(tmpRoot, sessionId)
     if (!existsSync(path)) return []
     const lines = readFileSync(path, 'utf-8').trim().split('\n').slice(1)
-    return lines.map(l => JSON.parse(l)).map(m => m.id as string)
+    return lines.map(l => parseRecoveryJournalObservation(l)).map(m => m.id as string)
   }
 
   function makeUserMessage(id: string, content: string): StoredMessage {
@@ -212,7 +214,7 @@ describe('cold-session metadata persistence', () => {
       .split('\n')
     for (const line of lines) {
       expect(line.length).toBeGreaterThan(0)
-      expect(() => JSON.parse(line)).not.toThrow()
+      expect(() => { JSON.parse(line) }).not.toThrow()
     }
   })
 
@@ -226,7 +228,7 @@ describe('cold-session metadata persistence', () => {
     // by the time flushSession resolves — no debounce window.
     const managed = sessionRuntimeStateForTest(sm).sessions.get(sessionId)!
     managed.sessionStatus = 'cancelled'
-    ;(sm as unknown as { persistSession: (m: unknown) => void }).persistSession(managed)
+    ;(sessionManagerForTest(sm)).persistSession(managed)
     await sm.flushSession(sessionId)
 
     expect(readDiskHeader(sessionId).sessionStatus).toBe('cancelled')

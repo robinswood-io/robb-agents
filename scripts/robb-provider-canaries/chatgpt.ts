@@ -1,3 +1,4 @@
+import { isJsonObject, parseJsonObject } from '../../packages/shared/src/utils/json.ts';
 import { getUnstableProviderContract, getUnstableProviderContractStatus, type ProviderContractEnvironment } from "../../packages/core/src/provider-contracts.ts";
 import type { FetchLike, ProviderCanaryResult } from './contracts.ts';
 import { SECRET_ENVIRONMENT_NAMES, configuredSecret, fetchText, requestSignal, result, runProbe, unavailableResults } from './contracts.ts';
@@ -6,10 +7,7 @@ function base64UrlJson(segment: string): Record<string, unknown> | null {
   try {
     const normalized = segment.replace(/-/g, '+').replace(/_/g, '/');
     const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
-    const value = JSON.parse(atob(padded));
-    return typeof value === 'object' && value !== null && !Array.isArray(value)
-      ? value as Record<string, unknown>
-      : null;
+    return parseJsonObject(atob(padded));
   } catch {
     return null;
   }
@@ -20,13 +18,13 @@ function chatGptIdentity(accessToken: string, nowMs: number): { accountId: strin
   if (parts.length !== 3) throw new Error('ChatGPT access token is not a JWT');
   const payload = base64UrlJson(parts[1]!);
   const auth = payload?.['https://api.openai.com/auth'];
-  const accountId = typeof auth === 'object' && auth !== null
-    ? (auth as Record<string, unknown>).chatgpt_account_id
+  const accountId = isJsonObject(auth)
+    ? auth["chatgpt_account_id"]
     : undefined;
   if (typeof accountId !== 'string' || !accountId) {
     throw new Error('ChatGPT access token is missing chatgpt_account_id');
   }
-  if (typeof payload?.exp === 'number' && payload.exp * 1000 <= nowMs) {
+  if (typeof payload?.["exp"] === 'number' && payload["exp"] * 1000 <= nowMs) {
     throw new Error('ChatGPT access token is expired');
   }
   return { accountId };
@@ -75,8 +73,8 @@ export async function runChatGptCanaries(
     ];
   }
 
-  const endpoint = `${contract.endpoint.origin}${contract.endpoint.operationPaths!.search}`;
-  const model = environment.ROBB_CANARY_CHATGPT_MODEL?.trim() || contract.defaultModel;
+  const endpoint = `${contract.endpoint.origin}${contract.endpoint.operationPaths!["search"]}`;
+  const model = environment["ROBB_CANARY_CHATGPT_MODEL"]?.trim() || contract.defaultModel;
   const commonHeaders = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${accessToken}`,

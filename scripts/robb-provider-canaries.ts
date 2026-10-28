@@ -25,8 +25,8 @@ export async function runProviderCanaries(
     'not-applicable': results.filter(item => item.status === 'not-applicable').length,
     ok: false,
   };
-  const requireConfigured = environment.ROBB_PROVIDER_CANARIES_REQUIRED === '1'
-    || environment.ROBB_PROVIDER_CANARIES_REQUIRED === 'true';
+  const requireConfigured = environment["ROBB_PROVIDER_CANARIES_REQUIRED"] === '1'
+    || environment["ROBB_PROVIDER_CANARIES_REQUIRED"] === 'true';
   summary.ok = summary.failed === 0
     && (!requireConfigured || results.every(item => !item.required || item.status !== 'skipped'));
   const sdkContracts = [...new Map(
@@ -56,7 +56,7 @@ if (import.meta.main) {
     throw new Error('Provider canary report serialization contained a credential and was blocked');
   }
 
-  const reportPath = process.env.ROBB_PROVIDER_CANARY_REPORT?.trim();
+  const reportPath = process.env["ROBB_PROVIDER_CANARY_REPORT"]?.trim();
   if (reportPath) await Bun.write(reportPath, serialized);
   process.stdout.write(serialized);
   if (!report.summary.ok) process.exitCode = 1;

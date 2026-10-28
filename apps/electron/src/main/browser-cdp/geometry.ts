@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { BrowserCDP } from '../browser-cdp.ts';
 import type { SelectorGeometryReceipt } from './protocol.ts';
 import type { ElementGeometry, ViewportMetrics } from './shared.ts';
@@ -8,17 +9,17 @@ export async function getElementGeometry(transportOwner: BrowserCDP, ref: string
         throw new Error(`Element ${ref} not found. Run browser_snapshot first to get current element refs.`);
     }
     const { model } = await transportOwner["send"]('DOM.getBoxModel', { backendNodeId });
-    const content = model.content as number[];
-    const xs = [content[0], content[2], content[4], content[6]];
-    const ys = [content[1], content[3], content[5], content[7]];
+    const content = model.content;
+    const xs = content.filter((_, index) => index % 2 === 0);
+    const ys = content.filter((_, index) => index % 2 === 1);
     const minX = Math.min(...xs);
     const maxX = Math.max(...xs);
     const minY = Math.min(...ys);
     const maxY = Math.max(...ys);
-    const clickX = (content[0] + content[2] + content[4] + content[6]) / 4;
-    const clickY = (content[1] + content[3] + content[5] + content[7]) / 4;
+    const clickX = xs.reduce((sum, value) => sum + value, 0) / xs.length;
+    const clickY = ys.reduce((sum, value) => sum + value, 0) / ys.length;
     const details = transportOwner["refDetails"].get(ref);
-    return {
+    return omitUndefined<ElementGeometry>({
         ref,
         role: details?.role,
         name: details?.name,
@@ -29,7 +30,7 @@ export async function getElementGeometry(transportOwner: BrowserCDP, ref: string
             height: maxY - minY,
         },
         clickPoint: { x: clickX, y: clickY },
-    };
+    });
 }
 
 export async function getElementGeometryBySelector(transportOwner: BrowserCDP, selector: string): Promise<ElementGeometry> {

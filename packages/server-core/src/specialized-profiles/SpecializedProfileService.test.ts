@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { MissionSnapshot } from "@craft-agent/shared/missions";
 import { type SpecializedProfileRegistryDocument, SpecializedProfileRegistryStore } from "@craft-agent/shared/specialized-profiles";
-import { missionCorpusFingerprint, type SpecializedProfileCorpusLineageProvider } from "./SpecializedProfileService.ts";
+import { missionCorpusFingerprint } from "./SpecializedProfileService.ts";
 import { evaluationMission, mission, setup, temporaryRoots } from "./testing/SpecializedProfileService-fixture.ts";
 
 afterEach(() => {
@@ -55,18 +54,10 @@ describe('SpecializedProfileService', () => {
     recentJournal.updatedAt = '2026-09-17T07:30:00.000Z'
     const staleTerminal = structuredClone(recentJournal)
     staleTerminal.updatedAt = '2025-01-01T10:00:00.000Z'
-    const internal = service as unknown as {
-      options: {
-        missionEvidenceProvider: {
-          loadVerified(input: { missionId: string }): Promise<{
-            snapshot: MissionSnapshot
-            evidence: { uri: string; sha256: string }
-          }>
-        }
-      }
-    }
-    const original = internal.options.missionEvidenceProvider
-    internal.options.missionEvidenceProvider = {
+    const internal = service;
+    const original = internal['options'].missionEvidenceProvider
+    if (!original) throw new Error("Mission evidence fixture is required");
+    internal['options'].missionEvidenceProvider = {
       loadVerified: async ({ missionId }) => {
         const snapshot = missionId === recentJournal.spec.id
           ? staleTerminal
@@ -82,7 +73,7 @@ describe('SpecializedProfileService', () => {
       expect(result.analyzedMissionIds).not.toContain(recentJournal.spec.id)
       expect(result.excludedMissionCount).toBeGreaterThanOrEqual(2)
     } finally {
-      internal.options.missionEvidenceProvider = original
+      internal['options'].missionEvidenceProvider = original
     }
   })
 
@@ -155,14 +146,12 @@ describe('SpecializedProfileService', () => {
       expectedCurrentVersion: 1,
       stage: 'offline' as const,
     }
-    const internal = service as unknown as {
-      options: { corpusLineageProvider?: SpecializedProfileCorpusLineageProvider }
-    }
-    const lineageProvider = internal.options.corpusLineageProvider
-    delete internal.options.corpusLineageProvider
+    const internal = service;
+    const lineageProvider = internal['options'].corpusLineageProvider
+    delete internal['options'].corpusLineageProvider
     await expect(service.recordEvaluation('workspace-1', offlineRequest))
       .rejects.toThrow('independent host corpus-lineage attestor')
-    internal.options.corpusLineageProvider = lineageProvider!
+    internal['options'].corpusLineageProvider = lineageProvider!
     const recordAfterClose = spyOn(SpecializedProfileRegistryStore.prototype, 'recordEvaluation')
       .mockImplementationOnce(async () => {
         throw new Error('simulated crash after campaign close')

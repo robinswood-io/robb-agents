@@ -1,3 +1,5 @@
+import type { ActiveSessionObjective } from '../../../shared/src/sessions/types/objectives.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { completeSessionAgentFixture } from "./testing/scripted-session-agent.ts";
 import { projectLegacyObjectiveForUserTransition as policyProjectLegacyObjectiveForUserTransition } from "./SessionManager/policy.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -26,13 +28,13 @@ describe('host synthetic objective authority', () => {
     const classified = transitionObjectiveContract({
       messageId: root.id, text: root.content, nowMs: root.timestamp,
     })
-    managed.activeObjective = {
+    managed.activeObjective = omitUndefined<ActiveSessionObjective>({
       ...classified,
       originalText: undefined,
       requiresExecutionEvidence: undefined,
       requiresAcceptanceCriteria: undefined,
       terminalState: 'exhausted',
-    }
+    })
 
     const projected = policyProjectLegacyObjectiveForUserTransition(managed)
     expect(projected).toMatchObject({
@@ -109,9 +111,9 @@ describe('host synthetic objective authority', () => {
       tokenBaseline: 1_183_646,
       acceptanceRegisteredRevision: resume.id,
     })
-    expect(managed.activeObjective?.amendments).toEqual(expect.arrayContaining([
-      expect.objectContaining({ messageId: channelCorrection.id, text: channelCorrection.content }),
-    ]))
+    expect<unknown>(managed.activeObjective?.amendments).toEqual((expect.arrayContaining([
+      (expect.objectContaining({ messageId: channelCorrection.id, text: channelCorrection.content }) as unknown),
+    ]) as unknown))
     expect(managed.activeObjective?.amendments?.some(item => item.messageId === fallback.id)).toBe(false)
     expect(managed.pendingTurnRecovery?.userMessageId).toBe(resume.id)
 
@@ -299,7 +301,7 @@ describe('host synthetic objective authority', () => {
       async *chat(message: string) {
         providerMessage = message
         managed.stopRequested = true
-        if (false) yield { type: 'complete' as const }
+        yield* []
       },
       getModel: () => 'test/synthetic-authority',
       getSessionId: () => null,
@@ -341,7 +343,7 @@ describe('host synthetic objective authority', () => {
     const agent = completeSessionAgentFixture(managed.workspace, {
       async *chat() {
         managed.stopRequested = true
-        if (false) yield { type: 'complete' as const }
+        yield* []
       },
       getModel: () => 'test/synthetic-authority',
       getSessionId: () => null,
@@ -380,7 +382,7 @@ describe('host synthetic objective authority', () => {
       async *chat(message: string) {
         providerMessage = message
         managed.stopRequested = true
-        if (false) yield { type: 'complete' as const }
+        yield* []
       },
       getModel: () => 'test/synthetic-authority',
       getSessionId: () => null,

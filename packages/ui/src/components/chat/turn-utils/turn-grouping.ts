@@ -24,7 +24,7 @@ export interface GroupTurnsOptions {
    *
    * Mirrors the messaging-gateway/renderer.ts lastAssistantText fallback.
    */
-  isSessionProcessing?: boolean
+  isSessionProcessing?: boolean | undefined
 }
 
 /**
@@ -159,7 +159,7 @@ export function groupMessagesByTurn(messages: Message[], options: GroupTurnsOpti
         status: 'running',
         content: message.content,
         timestamp: message.timestamp,
-        statusType: message.statusType,
+        ...(message.statusType !== undefined ? { statusType: message.statusType } : {}),
         depth: 0,
       }
       currentTurn.activities.push(statusActivity)
@@ -222,7 +222,7 @@ export function groupMessagesByTurn(messages: Message[], options: GroupTurnsOpti
         status: 'completed',
         content: message.content,
         messageId: message.id,
-        annotations: message.annotations,
+        ...(message.annotations !== undefined ? { annotations: message.annotations } : {}),
         displayName: 'Plan',
         timestamp: message.timestamp,
       })
@@ -284,7 +284,7 @@ export function groupMessagesByTurn(messages: Message[], options: GroupTurnsOpti
           status: message.isPending ? 'running' : 'completed',
           content: message.content,
           timestamp: message.timestamp,
-          parentId: message.parentToolUseId,
+          ...(message.parentToolUseId !== undefined ? { parentId: message.parentToolUseId } : {}),
         }
         // Calculate depth for intermediate messages too
         if (intermediateActivity.parentId) {
@@ -324,7 +324,7 @@ export function groupMessagesByTurn(messages: Message[], options: GroupTurnsOpti
         isStreaming: !!message.isStreaming,
         streamStartTime: message.isStreaming ? message.timestamp : undefined,
         messageId: message.id,
-        annotations: message.annotations,
+        ...(message.annotations !== undefined ? { annotations: message.annotations } : {}),
       }
       currentTurn.isStreaming = !!message.isStreaming
       currentTurn.isComplete = !message.isStreaming

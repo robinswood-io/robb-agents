@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { validAllocatedRecoveryDispatch, cleanRetrySetupFailureSignal } from '../policy.ts';
 import { classifyAgentFailure } from '@craft-agent/shared/agent';
@@ -75,14 +76,14 @@ async function sessionOpRetainFailedCleanRetrySetup(sessionOperationContext: Ses
     const setupFailureAt = Date.now();
     const boundedSetupRetryDelayMs = Math.min(Math.max(0, setupRetryDelayMs), Number.MAX_SAFE_INTEGER - setupFailureAt);
     const setupRetryNotBefore = setupFailureAt + boundedSetupRetryDelayMs;
-    const recoveryDispatch: NonNullable<PendingTurnRecovery['recoveryDispatch']> = {
+    const recoveryDispatch = omitUndefined<NonNullable<PendingTurnRecovery['recoveryDispatch']>>({
         ...dispatch,
         setupFailureCount,
         lastSetupFailureClass: failure.failureClass,
         ...(blocked
             ? { setupRetryBlockedAt: setupFailureAt, setupRetryNotBefore: undefined }
             : { setupRetryBlockedAt: undefined, setupRetryNotBefore }),
-    };
+    });
     const retained: PendingTurnRecovery = { ...pending, recoveryDispatch };
     managed.pendingTurnRecovery = retained;
     managed.messageQueue = managed.messageQueue.filter(item => (item.options?.automaticRecovery?.dispatchId !== dispatch.id));

@@ -106,9 +106,9 @@ useEffect(() => {
       const geometry = computeAnnotationOverlayGeometry({
         root,
         renderedAnnotations,
-        persistedAnnotations: annotations,
+        ...(annotations !== undefined ? { persistedAnnotations: annotations } : {}),
       })
-      if (process.env.NODE_ENV !== 'production' && geometry.unresolved.length > 0) {
+      if (process.env["NODE_ENV"] !== 'production' && geometry.unresolved.length > 0) {
         console.debug('[annotations] unresolved annotations', {
           count: geometry.unresolved.length,
           ids: geometry.unresolved.map(item => item.annotation.id),

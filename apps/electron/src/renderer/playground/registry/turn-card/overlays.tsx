@@ -7,7 +7,7 @@ export function DocumentFormattedMarkdownOverlayPlayground({
   variant,
 }: {
   content: string
-  variant?: 'response' | 'plan'
+  variant?: 'response' | 'plan' | undefined
 }) {
   const [isOpen, setIsOpen] = useState(true)
 
@@ -43,11 +43,11 @@ export function CodePreviewOverlayPlayground({
 }: {
   content: string
   filePath: string
-  mode?: 'read' | 'write'
-  startLine?: number
-  totalLines?: number
-  numLines?: number
-  error?: string
+  mode?: 'read' | 'write' | undefined
+  startLine?: number | undefined
+  totalLines?: number | undefined
+  numLines?: number | undefined
+  error?: string | undefined
 }) {
   return (
     <div className="h-[500px]">
@@ -74,8 +74,8 @@ export function MultiDiffPreviewOverlayPlayground({
   focusedChangeId,
 }: {
   changes: FileChange[]
-  consolidated?: boolean
-  focusedChangeId?: string
+  consolidated?: boolean | undefined
+  focusedChangeId?: string | undefined
 }) {
   return (
     <div className="h-[500px]">
@@ -102,10 +102,10 @@ export function TerminalPreviewOverlayPlayground({
 }: {
   command: string
   output: string
-  exitCode?: number
-  toolType?: 'bash' | 'grep' | 'glob'
-  description?: string
-  error?: string
+  exitCode?: number | undefined
+  toolType?: 'bash' | 'grep' | 'glob' | undefined
+  description?: string | undefined
+  error?: string | undefined
 }) {
   return (
     <div className="h-[500px]">
@@ -131,8 +131,8 @@ export function JSONPreviewOverlayPlayground({
   error,
 }: {
   data: unknown
-  title?: string
-  error?: string
+  title?: string | undefined
+  error?: string | undefined
 }) {
   return (
     <div className="h-[500px]">
@@ -154,7 +154,7 @@ export function GenericOverlayPlayground({
   title,
 }: {
   content: string
-  title?: string
+  title?: string | undefined
 }) {
   return (
     <div className="h-[500px]">
@@ -222,7 +222,7 @@ export function DataTableOverlayPlayground({
   subtitle,
 }: {
   title: string
-  subtitle?: string
+  subtitle?: string | undefined
 }) {
   const [isOpen, setIsOpen] = useState(true)
 

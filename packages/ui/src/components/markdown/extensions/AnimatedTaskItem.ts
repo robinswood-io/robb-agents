@@ -44,7 +44,7 @@ export const AnimatedTaskItem = TaskItem.extend({
       }
 
       const applyCheckedState = (checked: boolean) => {
-        listItem.dataset.checked = String(checked)
+        listItem.dataset["checked"] = String(checked)
         checkbox.checked = checked
       }
 
@@ -96,16 +96,16 @@ export const AnimatedTaskItem = TaskItem.extend({
         checkbox.blur()
       })
 
-      Object.entries(this.options.HTMLAttributes).forEach(([key, value]) => {
+      Object.entries<unknown>(this.options.HTMLAttributes).forEach(([key, value]) => {
         listItem.setAttribute(key, String(value))
       })
 
-      applyCheckedState(node.attrs.checked)
+      applyCheckedState(node.attrs["checked"] === true)
 
       checkboxWrapper.append(checkbox, checkboxVisual)
       listItem.append(checkboxWrapper, content)
 
-      Object.entries(HTMLAttributes).forEach(([key, value]) => {
+      Object.entries<unknown>(HTMLAttributes).forEach(([key, value]) => {
         listItem.setAttribute(key, String(value))
       })
 
@@ -117,7 +117,7 @@ export const AnimatedTaskItem = TaskItem.extend({
         update: updatedNode => {
           if (updatedNode.type !== this.type) return false
 
-          applyCheckedState(updatedNode.attrs.checked)
+          applyCheckedState(updatedNode.attrs["checked"] === true)
           updateA11Y(updatedNode)
 
           const extensionAttributes = editor.extensionManager.attributes
@@ -132,7 +132,7 @@ export const AnimatedTaskItem = TaskItem.extend({
             }
           })
 
-          Object.entries(newHTMLAttributes).forEach(([key, value]) => {
+          Object.entries<unknown>(newHTMLAttributes).forEach(([key, value]) => {
             if (value == null) {
               if (key in staticAttrs) listItem.setAttribute(key, String(staticAttrs[key]))
               else listItem.removeAttribute(key)

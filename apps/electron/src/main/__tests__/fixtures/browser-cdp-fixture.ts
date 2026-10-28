@@ -35,6 +35,9 @@ function createMockWebContents(sendCommandImpl?: (method: string, params?: Recor
         listeners[event].push(cb)
       }),
     },
+    sendInputEvent: mock((_event: Parameters<WebContents['sendInputEvent']>[0]) => {
+      throw new Error('Native input unavailable in this CDP fallback fixture')
+    }),
     getURL: mock(() => 'https://example.com'),
     getTitle: mock(() => 'Example Page'),
     _debuggerListeners: listeners,
@@ -44,9 +47,9 @@ function createMockWebContents(sendCommandImpl?: (method: string, params?: Recor
   }
 }
 
-/** The only test interop boundary: this Electron webContents is simulated. */
+/** Simulate precisely the Electron capabilities consumed by BrowserCDP. */
 export function createTestBrowserCDP(contents: ReturnType<typeof createMockWebContents>) {
-  return new BrowserCDP(contents as unknown as WebContents)
+  return new BrowserCDP(contents)
 }
 
 export function requireCommandParams(params: Record<string, unknown> | undefined): Record<string, unknown> {

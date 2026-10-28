@@ -30,9 +30,9 @@ export async function getClaudeOAuthCredentials(transportOwner: CredentialManage
         return null;
     return {
         accessToken: cred.value,
-        refreshToken: cred.refreshToken,
-        expiresAt: cred.expiresAt,
-        source: cred.source as 'native' | 'cli' | undefined,
+        ...(cred.refreshToken !== undefined ? { refreshToken: cred.refreshToken } : {}),
+        ...(cred.expiresAt !== undefined ? { expiresAt: cred.expiresAt } : {}),
+        ...(cred.source === 'native' || cred.source === 'cli' ? { source: cred.source } : {}),
     };
 }
 
@@ -45,9 +45,9 @@ export async function setClaudeOAuthCredentials(transportOwner: CredentialManage
 }): Promise<void> {
     await transportOwner["set"]({ type: 'claude_oauth' }, {
         value: credentials.accessToken,
-        refreshToken: credentials.refreshToken,
-        expiresAt: credentials.expiresAt,
-        source: credentials.source,
+        ...(credentials.refreshToken !== undefined ? { refreshToken: credentials.refreshToken } : {}),
+        ...(credentials.expiresAt !== undefined ? { expiresAt: credentials.expiresAt } : {}),
+        ...(credentials.source !== undefined ? { source: credentials.source } : {}),
     });
 }
 
@@ -61,8 +61,8 @@ export async function getWorkspaceOAuth(transportOwner: CredentialManager, works
         return null;
     return {
         accessToken: cred.value,
-        tokenType: cred.tokenType,
-        clientId: cred.clientId,
+        ...(cred.tokenType !== undefined ? { tokenType: cred.tokenType } : {}),
+        ...(cred.clientId !== undefined ? { clientId: cred.clientId } : {}),
     };
 }
 
@@ -73,8 +73,8 @@ export async function setWorkspaceOAuth(transportOwner: CredentialManager, works
 }): Promise<void> {
     await transportOwner["set"]({ type: 'workspace_oauth', workspaceId }, {
         value: credentials.accessToken,
-        tokenType: credentials.tokenType,
-        clientId: credentials.clientId,
+        ...(credentials.tokenType !== undefined ? { tokenType: credentials.tokenType } : {}),
+        ...(credentials.clientId !== undefined ? { clientId: credentials.clientId } : {}),
     });
 }
 

@@ -1,7 +1,7 @@
 import { BrowserWindow, WebContentsView } from "electron";
 import { BrowserCDP, type ElementGeometry } from "../browser-cdp";
 
-export const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
+export const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 
 export const TOOLBAR_LOAD_MAX_RETRIES = 4;
 
@@ -51,7 +51,7 @@ export const EARLY_THEME_EXTRACTION_DELAY_MS = 100;
 
 export const BROWSER_EMPTY_STATE_PAGE = 'browser-empty-state.html';
 
-export const CRAFT_DEEPLINK_SCHEME_PREFIX = `${process.env.CRAFT_DEEPLINK_SCHEME || 'craftagents'}://`;
+export const CRAFT_DEEPLINK_SCHEME_PREFIX = `${process.env["CRAFT_DEEPLINK_SCHEME"] || 'craftagents'}://`;
 
 export const THEME_COLOR_EXTRACTOR_FN = String.raw `
 () => {

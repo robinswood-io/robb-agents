@@ -6,7 +6,7 @@ import { findSdkTurnAnchor } from './turn-history.ts';
 function assistant(timestamp: number, responseId?: string): AssistantMessage {
   return {
     role: 'assistant', api: 'openai-responses', provider: 'openai', model: 'offline-model',
-    timestamp, responseId, content: [{ type: 'text', text: 'Verified result' }], stopReason: 'stop',
+    timestamp, ...(responseId !== undefined ? { responseId: responseId } : {}), content: [{ type: 'text', text: 'Verified result' }], stopReason: 'stop',
     usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2,
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
   };

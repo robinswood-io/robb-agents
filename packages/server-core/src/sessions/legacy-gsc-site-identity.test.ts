@@ -1,3 +1,5 @@
+import { z } from 'zod';
+import { setOptional } from '@craft-agent/shared/utils/json';
 interface GscSiteListFixture {
   rowCount: number;
   sites: Array<{ siteUrl: string; permissionLevel: unknown } | null>;
@@ -12,6 +14,7 @@ import { objectiveReviewBinding, transitionObjectiveContract } from './objective
 import { collectObjectiveAcceptanceObservations, projectObjectiveAcceptanceCriteria,
   registerObjectiveAcceptanceCriteria, validateObjectiveAcceptanceCriteria } from './objective-acceptance-criteria.ts';
 
+const siteListObservation = z.object({ rowCount: z.number(), sites: z.array(z.object({ siteUrl: z.string(), permissionLevel: z.unknown() }).passthrough().nullable()) }).passthrough();
 const toolName = 'mcp__marketing__gsc_list_sites';
 const siteUrl = 'https://requested.example/';
 const root: Message = { id: 'root', role: 'user', content: 'Verify ownership of the requested property.', timestamp: 10 };
@@ -78,7 +81,7 @@ describe('historically attested GSC property identity', () => {
     ['count mismatch', (r: GscSiteListFixture) => { r.rowCount++; }],
     ['invalid row', (r: GscSiteListFixture) => { r.sites[0] = null; }],
   ])('rejects current result: %s', (_name, mutate) => {
-    const f = fixture(); const result: GscSiteListFixture = JSON.parse(f.current.toolResult!); mutate(result);
+    const f = fixture(); const result: GscSiteListFixture = siteListObservation.parse(JSON.parse(f.current.toolResult!)); mutate(result);
     f.current.toolResult = JSON.stringify(result);
     expect(validateObjectiveAcceptanceCriteria(f.objective, f.messages, f.declaration)).toHaveLength(1);
     expect(collectObjectiveAcceptanceObservations(f.objective, f.messages).find(x => x.criterionId === criterion.id)?.passed).not.toBe(true);
@@ -88,19 +91,19 @@ describe('historically attested GSC property identity', () => {
     for (const mutate of [
       (f: ReturnType<typeof fixture>) => { f.original.toolResult = output(2); },
       (f: ReturnType<typeof fixture>) => { f.messages.splice(1, 1); },
-      (f: ReturnType<typeof fixture>) => { f.original.toolUseId = undefined; },
+      (f: ReturnType<typeof fixture>) => { delete f.original.toolUseId; },
       (f: ReturnType<typeof fixture>) => { f.original.toolExecuted = false; },
-      (f: ReturnType<typeof fixture>) => { f.original.toolInput!.force_refresh = 'true'; },
+      (f: ReturnType<typeof fixture>) => { f.original.toolInput!["force_refresh"] = 'true'; },
       (f: ReturnType<typeof fixture>) => { f.original.timestamp = 19; },
       (f: ReturnType<typeof fixture>) => { f.messages.splice(2, 0, { ...f.original, id: 'ambiguous', toolUseId: 'ambiguous-call' }); },
-      (f: ReturnType<typeof fixture>) => { f.registration.toolUseId = undefined; },
+      (f: ReturnType<typeof fixture>) => { delete f.registration.toolUseId; },
       (f: ReturnType<typeof fixture>) => { f.registration.toolResult = 'PASS'; },
-      (f: ReturnType<typeof fixture>) => { f.registration.toolExecuted = undefined; },
+      (f: ReturnType<typeof fixture>) => { delete f.registration.toolExecuted; },
       (f: ReturnType<typeof fixture>) => { f.messages.splice(3, 1); },
-      (f: ReturnType<typeof fixture>) => { f.additive.toolResult = f.registration.toolResult; },
+      (f: ReturnType<typeof fixture>) => { setOptional(f.additive, 'toolResult', f.registration.toolResult); },
       (f: ReturnType<typeof fixture>) => { f.messages.splice(3, 0, { ...f.registration, id: 'duplicate' }); },
       (f: ReturnType<typeof fixture>) => { f.objective.acceptanceCriteria![0]!.description = 'Different contract'; },
-      (f: ReturnType<typeof fixture>) => { (f.registration.toolInput!.criteria as ObjectiveAcceptanceCriterion[])[0]!.input.force_refresh = 'true'; },
+      (f: ReturnType<typeof fixture>) => { (f.registration.toolInput!["criteria"] as ObjectiveAcceptanceCriterion[])[0]!.input["force_refresh"] = 'true'; },
     ]) {
       const f = fixture(); mutate(f);
       expect(validateObjectiveAcceptanceCriteria(f.objective, f.messages, f.declaration)).toHaveLength(1);
@@ -134,8 +137,10 @@ describe('historically attested GSC property identity', () => {
 
   it('a newer duplicate identity invalidates an earlier cited valid snapshot', () => {
     const f = fixture();
-    const result = JSON.parse(output(5));
-    result.sites[2] = { ...result.sites[5] };
+    const result = siteListObservation.parse(JSON.parse(output(5)));
+    const duplicate = result.sites[5];
+    if (!duplicate) throw new Error('Fixture site is missing');
+    result.sites[2] = { ...duplicate };
     f.messages.push({ ...f.current, id: 'newest', toolUseId: 'newest-call', timestamp: 35, toolResult: JSON.stringify(result) });
     expect(validateObjectiveAcceptanceCriteria(f.objective, f.messages, f.declaration)).toHaveLength(1);
     expect(collectObjectiveAcceptanceObservations(f.objective, f.messages).find(x => x.criterionId === criterion.id))
@@ -158,7 +163,7 @@ describe('historically attested GSC property identity', () => {
       (c: ObjectiveAcceptanceCriterion) => { c.checks.push({ path: '$.rowCount', equals: 6 }); },
     ]) {
       const f = fixture();
-      const raw = f.registration.toolInput!.criteria as ObjectiveAcceptanceCriterion[]; transform(raw[0]!);
+      const raw = f.registration.toolInput!["criteria"] as ObjectiveAcceptanceCriterion[]; transform(raw[0]!);
       const saved = stringifyScalars(raw);
       f.objective.acceptanceCriteria = [...saved, additional];
       f.registration.toolResult = JSON.stringify({ objectiveId: f.objective.objectiveId, criteria: saved });
@@ -177,7 +182,7 @@ describe('historically attested GSC property identity', () => {
       (f: ReturnType<typeof fixture>) => { f.registration.toolResult = f.registration.toolResult!.replace('"objectiveId":"root"', '"objectiveId":"wrong"'); },
       (f: ReturnType<typeof fixture>) => { f.registration.toolResult = f.registration.toolResult!.replace('"objectiveId":"root"', '"objectiveId":"wrong","objectiveId":"root"'); },
       (f: ReturnType<typeof fixture>) => { f.messages.splice(3, 0, { ...f.registration, id: 'opaque', toolUseId: 'opaque-call', toolResult: 'done' }); },
-      (f: ReturnType<typeof fixture>) => { f.objective.acceptanceRegisteredAt = undefined; },
+      (f: ReturnType<typeof fixture>) => { delete f.objective.acceptanceRegisteredAt; },
       (f: ReturnType<typeof fixture>) => { f.original.toolResult = f.original.toolResult!.replace('https://other-0.example/', siteUrl); },
     ]) {
       const f = fixture(); mutate(f);

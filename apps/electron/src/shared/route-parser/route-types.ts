@@ -62,6 +62,6 @@ const COMPOUND_ROUTE_PREFIXES = [
  * Check if a route is a compound route (new format)
  */
 export function isCompoundRoute(route: string): boolean {
-  const firstSegment = route.split('?')[0].split('/')[0]
+  const firstSegment = route.split('?', 1).join('').split('/', 1).join('')
   return COMPOUND_ROUTE_PREFIXES.includes(firstSegment)
 }

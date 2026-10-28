@@ -1,6 +1,14 @@
-import { describe, expect, it, mock } from 'bun:test';
+import type { SDKMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+import { createPushableInputStream } from '../backend/claude/persistent-input.ts';
+import { describe, expect, it, mock, spyOn } from 'bun:test';
 import { ClaudeAgent } from '../claude-agent.ts';
 
+function observedStream<T>() {
+  const stream = createPushableInputStream<T>();
+  spyOn(stream, 'push');
+  spyOn(stream, 'end');
+  return stream;
+}
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((resolver) => {
@@ -20,8 +28,8 @@ describe('Claude persistent runtime generations', () => {
     const firstAgent = Object.create(ClaudeAgent.prototype) as ClaudeAgent;
     const secondAgent = Object.create(ClaudeAgent.prototype) as ClaudeAgent;
 
-    const firstRuntimeId = firstAgent["createGmailRuntimeId"]('same-session');
-    const secondRuntimeId = secondAgent["createGmailRuntimeId"]('same-session');
+    const firstRuntimeId = firstAgent.createGmailRuntimeId('same-session');
+    const secondRuntimeId = secondAgent.createGmailRuntimeId('same-session');
 
     expect(firstRuntimeId).not.toBe(secondRuntimeId);
     expect(firstRuntimeId).toMatch(
@@ -46,22 +54,19 @@ describe('Claude persistent runtime generations', () => {
       }),
       return: mock(() => oldReturn.promise),
     };
-    const oldChannel = {
-      push: mock((_value: unknown) => {}),
-      end: mock(() => {}),
-    };
+    const oldChannel = observedStream<SDKMessage>();
 
     agent["debug"] = mock((_message: string) => {});
     agent["config"] = ({ session: { id: 'same-session' } } satisfies { session: Pick<NonNullable<ClaudeAgent['config']['session']>, 'id'> }) as ClaudeAgent["config"];
-    agent["pendingPermissions"] = (new Map() satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"];
+    agent.pendingPermissions = (new Map() satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"];
     agent["persistentQueryGeneration"] = 1;
     agent["persistentConsumerGeneration"] = null;
-    agent["persistentInput"] = ({ end: mock(() => {}) } satisfies Partial<NonNullable<ClaudeAgent["persistentInput"]>>) as Partial<NonNullable<ClaudeAgent["persistentInput"]>> as ClaudeAgent["persistentInput"];
+    agent["persistentInput"] = observedStream<SDKUserMessage>();
     agent["persistentIterator"] = (oldIterator satisfies AsyncIterator<Record<string, unknown>, void>) as ClaudeAgent["persistentIterator"];
-    agent["persistentAbortController"] = ({ abort: mock(() => {}) } satisfies Pick<AbortController, 'abort'>) as Partial<NonNullable<ClaudeAgent["persistentAbortController"]>> as ClaudeAgent["persistentAbortController"];
+    agent["persistentAbortController"] = new AbortController();
     agent["persistentGmailRuntimeId"] = 'old-runtime';
     agent["persistentGmailSessionId"] = 'same-session';
-    agent["activeTurnChannel"] = (oldChannel satisfies Partial<NonNullable<ClaudeAgent["activeTurnChannel"]>>) as Partial<NonNullable<ClaudeAgent["activeTurnChannel"]>> as ClaudeAgent["activeTurnChannel"];
+    agent["activeTurnChannel"] = oldChannel;
 
     agent["startPersistentConsumer"]();
     expect(oldIterator.next).toHaveBeenCalledTimes(1);
@@ -81,16 +86,13 @@ describe('Claude persistent runtime generations', () => {
       }),
       return: mock(async () => ({ done: true as const, value: undefined })),
     };
-    const newChannel = {
-      push: mock((_value: unknown) => {}),
-      end: mock(() => {}),
-    };
+    const newChannel = observedStream<SDKMessage>();
 
     agent["persistentQueryGeneration"] += 1;
     agent["persistentIterator"] = (newIterator satisfies AsyncIterator<Record<string, unknown>, void>) as ClaudeAgent["persistentIterator"];
     agent["persistentGmailRuntimeId"] = 'new-runtime';
     agent["persistentGmailSessionId"] = 'same-session';
-    agent["activeTurnChannel"] = (newChannel satisfies Partial<NonNullable<ClaudeAgent["activeTurnChannel"]>>) as Partial<NonNullable<ClaudeAgent["activeTurnChannel"]>> as ClaudeAgent["activeTurnChannel"];
+    agent["activeTurnChannel"] = newChannel;
     agent["startPersistentConsumer"]();
 
     // The replacement consumer is allowed to start before the old SDK iterator
@@ -116,21 +118,22 @@ describe('Claude persistent runtime generations', () => {
     const agent = Object.create(ClaudeAgent.prototype) as ClaudeAgent;
     const runtime = { sessionId: 'same-session', runtimeId: 'runtime-without-return' };
     const confirmRuntimeTeardown = mock((_runtime: typeof runtime) => true);
-    const abort = mock(() => {});
+    const abortController = new AbortController();
+    const abort = spyOn(abortController, 'abort');
 
     agent["debug"] = mock((_message: string) => {});
     agent["config"] = ({ session: { id: runtime["sessionId"] } } satisfies { session: Pick<NonNullable<ClaudeAgent['config']['session']>, 'id'> }) as ClaudeAgent["config"];
-    agent["pendingPermissions"] = (new Map() satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"];
+    agent.pendingPermissions = (new Map() satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"];
     agent["persistentQueryGeneration"] = 1;
     agent["persistentConsumerGeneration"] = null;
-    agent["persistentInput"] = ({ end: mock(() => {}) } satisfies Partial<NonNullable<ClaudeAgent["persistentInput"]>>) as Partial<NonNullable<ClaudeAgent["persistentInput"]>> as ClaudeAgent["persistentInput"];
+    agent["persistentInput"] = observedStream<SDKUserMessage>();
     agent["persistentIterator"] = ({
       next: mock(async () => ({ done: true as const, value: undefined })),
     } satisfies AsyncIterator<Record<string, unknown>, void>) as ClaudeAgent["persistentIterator"];
-    agent["persistentAbortController"] = ({ abort } satisfies Pick<AbortController, 'abort'>) as Partial<NonNullable<ClaudeAgent["persistentAbortController"]>> as ClaudeAgent["persistentAbortController"];
+    agent["persistentAbortController"] = abortController;
     agent["persistentGmailRuntimeId"] = runtime.runtimeId;
     agent["persistentGmailSessionId"] = runtime["sessionId"];
-    agent["activeTurnChannel"] = ({ push: mock(() => {}), end: mock(() => {}) } satisfies Partial<NonNullable<ClaudeAgent["activeTurnChannel"]>>) as Partial<NonNullable<ClaudeAgent["activeTurnChannel"]>> as ClaudeAgent["activeTurnChannel"];
+    agent["activeTurnChannel"] = observedStream<SDKMessage>();
     agent["confirmContextualGmailRuntimeTeardown"] = confirmRuntimeTeardown;
 
     agent["startPersistentConsumer"]();
@@ -146,25 +149,26 @@ describe('Claude persistent runtime generations', () => {
     const agent = Object.create(ClaudeAgent.prototype) as ClaudeAgent;
     const runtime = { sessionId: 'same-session', runtimeId: 'runtime-return-throws' };
     const confirmRuntimeTeardown = mock((_runtime: typeof runtime) => true);
-    const abort = mock(() => {});
+    const abortController = new AbortController();
+    const abort = spyOn(abortController, 'abort');
     const close = mock(() => {
       throw new Error('iterator close failed');
     });
 
     agent["debug"] = mock((_message: string) => {});
     agent["config"] = ({ session: { id: runtime["sessionId"] } } satisfies { session: Pick<NonNullable<ClaudeAgent['config']['session']>, 'id'> }) as ClaudeAgent["config"];
-    agent["pendingPermissions"] = (new Map() satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"];
+    agent.pendingPermissions = (new Map() satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"];
     agent["persistentQueryGeneration"] = 1;
     agent["persistentConsumerGeneration"] = null;
-    agent["persistentInput"] = ({ end: mock(() => {}) } satisfies Partial<NonNullable<ClaudeAgent["persistentInput"]>>) as Partial<NonNullable<ClaudeAgent["persistentInput"]>> as ClaudeAgent["persistentInput"];
+    agent["persistentInput"] = observedStream<SDKUserMessage>();
     agent["persistentIterator"] = ({
       next: mock(async () => ({ done: true as const, value: undefined })),
       return: close,
     } satisfies AsyncIterator<Record<string, unknown>, void>) as ClaudeAgent["persistentIterator"];
-    agent["persistentAbortController"] = ({ abort } satisfies Pick<AbortController, 'abort'>) as Partial<NonNullable<ClaudeAgent["persistentAbortController"]>> as ClaudeAgent["persistentAbortController"];
+    agent["persistentAbortController"] = abortController;
     agent["persistentGmailRuntimeId"] = runtime.runtimeId;
     agent["persistentGmailSessionId"] = runtime["sessionId"];
-    agent["activeTurnChannel"] = ({ push: mock(() => {}), end: mock(() => {}) } satisfies Partial<NonNullable<ClaudeAgent["activeTurnChannel"]>>) as Partial<NonNullable<ClaudeAgent["activeTurnChannel"]>> as ClaudeAgent["activeTurnChannel"];
+    agent["activeTurnChannel"] = observedStream<SDKMessage>();
     agent["confirmContextualGmailRuntimeTeardown"] = confirmRuntimeTeardown;
 
     agent["startPersistentConsumer"]();

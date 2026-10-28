@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ChevronDown, Clock, Flag, MessageSquare, Pencil, Play } from 'lucide-react'
+import { Clock, Flag, MessageSquare, Pencil, Play } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAtomValue } from 'jotai'
 import { formatDistanceToNowStrict, type Locale } from 'date-fns'
@@ -24,33 +24,33 @@ import type { KanbanModelProviderGroup, KanbanProject, KanbanTask } from './type
 interface TaskTileProps {
   task: KanbanTask
   /** Project the task is bound to (colors the tile). */
-  project?: KanbanProject
+  project?: KanbanProject | undefined
   /** Resolved status for the badge. */
-  status?: SessionStatus
+  status?: SessionStatus | undefined
   /** Ordered workspace statuses for the status picker. */
-  statuses?: SessionStatus[]
+  statuses?: SessionStatus[] | undefined
   /** Change this task's status. When set (with `statuses`), the badge opens a picker. */
-  onStatusChange?: (statusId: string) => void
+  onStatusChange?: ((statusId: string) => void) | undefined
   /** How the project color is drawn. Mirrors the SessionList project-color treatment. */
   treatment: ProjectColorTreatment
   /** Whether the subtask list is expanded. */
   expanded: boolean
   /** Open the task (focused chat window). */
-  onClick?: () => void
+  onClick?: (() => void) | undefined
   /** Open the full-pane editor for this task (edit mode). Enables the right-click "Edit task" item. */
-  onEdit?: () => void
+  onEdit?: (() => void) | undefined
   /** Toggle the subtask list. */
-  onToggleSubtasks?: () => void
+  onToggleSubtasks?: (() => void) | undefined
   /** Open a spawned subtask's session window. */
-  onSubtaskClick?: (subtaskId: string) => void
+  onSubtaskClick?: ((subtaskId: string) => void) | undefined
   /** Spawn a new subtask from a typed title, routed to the chosen model. */
-  onAddSubtask?: (title: string, model: string) => void
+  onAddSubtask?: ((title: string, model: string) => void) | undefined
   /** Run all pending (created-but-not-yet-dispatched) subtasks. Shows the Play button when set. */
-  onRunSubtasks?: () => void
+  onRunSubtasks?: (() => void) | undefined
   /** Provider→model catalog for the "Add subtask" composer's picker. */
-  subtaskModelGroups?: KanbanModelProviderGroup[]
+  subtaskModelGroups?: KanbanModelProviderGroup[] | undefined
   /** Model id pre-selected in the composer (defaults to the first catalog model). */
-  defaultSubtaskModel?: string
+  defaultSubtaskModel?: string | undefined
 }
 
 /**

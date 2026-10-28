@@ -1,6 +1,7 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 
 export function commandFromInput(input: Record<string, unknown>): string | undefined {
-  return [input.command, input.cmd, input.script].find(
+  return [input["command"], input["cmd"], input["script"]].find(
     (value): value is string => typeof value === 'string' && value.trim().length > 0,
   );
 }
@@ -22,9 +23,9 @@ export function normalizeUserInstructionForChannelMatch(value: string): string {
 }
 
 export function isBrowserLifecycleCommand(command: unknown): boolean {
-  if (Array.isArray(command)) {
+  if (isUnknownArray(command)) {
     if (command.length < 1 || command.length > 2
-      || !command.every((part): part is string => typeof part === 'string')) return false;
+      || !command.every((part: unknown): part is string => typeof part === 'string')) return false;
     const operation = command[0]?.trim().toLowerCase();
     if (!operation || !BROWSER_LIFECYCLE_COMMANDS.has(operation)) return false;
     return command.length === 1 || operation === 'release' || operation === 'close' || operation === 'hide';

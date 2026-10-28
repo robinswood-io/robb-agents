@@ -1,5 +1,8 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
+import type { PendingTurnRecovery } from '../../../shared/src/sessions/types/turn-recovery.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
-import { sessionManagerForTest, type SessionSentEvent } from "./testing/private-runtime-access.ts";
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -8,7 +11,7 @@ import * as config from "@craft-agent/shared/config";
 import { getSessionFilePath, listSessions } from "@craft-agent/shared/sessions/storage";
 import { SessionManager } from "./SessionManager";
 import { registerObjectiveAcceptanceCriteria } from "./objective-acceptance-criteria";
-import { cleanupRestartRecovery, type Managed, harness, managers, spies, tick } from './testing/restart-recovery-fixture.ts';
+import { cleanupRestartRecovery, harness, managers, spies, tick } from './testing/restart-recovery-fixture.ts';
 
 afterEach(cleanupRestartRecovery);
 
@@ -72,11 +75,7 @@ describe('durable restart recovery', () => {
     await h.save(managed)
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
     const restarted = withSessionOperationsForTest(new SessionManager()); managers.push(restarted)
-    const runtime = restarted as unknown as {
-      sendEvent: (event: SessionSentEvent) => void
-      loadSessionsFromDisk: () => void
-      sessions: Map<string, Managed>
-    }
+    const runtime = sessionManagerForTest(restarted)
     runtime.sendEvent = (event) => h.events.push(event)
     runtime.loadSessionsFromDisk()
     const restored = sessionRuntimeStateForTest(restarted).sessions.get(managed.id)!
@@ -87,8 +86,8 @@ describe('durable restart recovery', () => {
       ] },
     })
     await restarted.flushSession(restored.id)
-    const header = JSON.parse(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!)
-    expect(header.activeObjective.terminalState).toBe('exhausted')
+    const header = parseRecoveryJournalObservation(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!)
+    expect(requiredTestValue(header.activeObjective).terminalState).toBe('exhausted')
   })
 
   it('retires only a proven obsolete Read amendment question and resumes its reviewer', async () => {
@@ -150,12 +149,12 @@ describe('durable restart recovery', () => {
     const recovered = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(proven.id))
     const retained = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(unproven.id))
 
-    expect(requiredTestValue(recovered.userInputRequests)[0].status).toBe('cancelled')
+    expect(requiredTestValue(requiredTestValue(recovered.userInputRequests)[0]).status).toBe('cancelled')
     expect(recovered.pendingTurnRecovery).toBeDefined()
-    expect(requiredTestValue(retained.userInputRequests)[0].status).toBe('pending')
+    expect(requiredTestValue(requiredTestValue(retained.userInputRequests)[0]).status).toBe('pending')
     await restarted.flushSession(proven.id)
-    const header = JSON.parse(readFileSync(getSessionFilePath(h.rootPath, proven.id), 'utf8').split('\n')[0]!)
-    expect(header.userInputRequests[0].status).toBe('cancelled')
+    const header = parseRecoveryJournalObservation(readFileSync(getSessionFilePath(h.rootPath, proven.id), 'utf8').split('\n')[0]!)
+    expect(requiredTestValue(requiredTestValue(header.userInputRequests)[0]).status).toBe('cancelled')
     await tick(); await tick()
     expect(retained.messageQueue).toEqual([])
   })
@@ -185,15 +184,11 @@ describe('durable restart recovery', () => {
     await h.save(managed)
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
     const restarted = withSessionOperationsForTest(new SessionManager()); managers.push(restarted)
-    const runtime = restarted as unknown as {
-      sendEvent: (event: SessionSentEvent) => void
-      loadSessionsFromDisk: () => void
-      sessions: Map<string, Managed>
-    }
+    const runtime = sessionManagerForTest(restarted)
     runtime.sendEvent = (event) => h.events.push(event)
     runtime.loadSessionsFromDisk()
     const restored = sessionRuntimeStateForTest(restarted).sessions.get(managed.id)!
-    expect(restored.userInputRequests![0].status).toBe('cancelled')
+    expect(requiredTestValue(restored.userInputRequests![0]).status).toBe('cancelled')
     expect(restored.activeObjective!.terminalState).toBe('exhausted')
     expect(restored.activeObjective!.interruptedTurnRecovery?.recovery).toMatchObject({
       attempts: 6, validationExhausted: true,
@@ -201,9 +196,9 @@ describe('durable restart recovery', () => {
     })
     expect(restored.pendingTurnRecovery).toBeUndefined()
     await restarted.flushSession(restored.id)
-    const header = JSON.parse(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!)
-    expect(header.userInputRequests[0].status).toBe('cancelled')
-    expect(header.activeObjective.terminalState).toBe('exhausted')
+    const header = parseRecoveryJournalObservation(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!)
+    expect(requiredTestValue(requiredTestValue(header.userInputRequests)[0]).status).toBe('cancelled')
+    expect(requiredTestValue(header.activeObjective).terminalState).toBe('exhausted')
   })
 
   it('stops at the automatic retry ceiling without creating a generic user question', async () => {
@@ -231,7 +226,7 @@ describe('durable restart recovery', () => {
       updatedAt: 1,
       costControl: { recovery: { maxAutomaticAttempts: 4 } },
     }))
-    managed.pendingTurnRecovery = {
+    managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
       ...managed.pendingTurnRecovery!,
       attempts: 2,
       stagnantAttempts: 0,
@@ -242,7 +237,7 @@ describe('durable restart recovery', () => {
       // Exact pre-fix shape: the Retry cause was persisted, while its generated
       // attempt=3 prompt had no durable dispatch descriptor.
       recoveryDispatch: undefined,
-    }
+    })
     await h.save(managed)
     const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let directRetryReplays = 0; let scheduled = 0
@@ -267,14 +262,14 @@ describe('durable restart recovery', () => {
     const dispatch = requiredTestValue(structuredClone(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch))
     expect(dispatch.id).toBeString()
     expect(restored.messageQueue).toHaveLength(1)
-    expect(restored.messageQueue[0].message).toContain('attempt="4"')
-    expect(restored.messageQueue[0].options?.automaticRecovery).toMatchObject({
+    expect(requiredTestValue(restored.messageQueue[0]).message).toContain('attempt="4"')
+    expect(requiredTestValue(restored.messageQueue[0]).options?.automaticRecovery).toMatchObject({
       dispatchId: dispatch.id,
       dispatchAttempt: 4,
       dispatchOrigin: 'restart',
     })
-    const header = JSON.parse(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!)
-    expect(header.pendingTurnRecovery.recoveryDispatch).toEqual(dispatch)
+    const header = parseRecoveryJournalObservation(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!)
+    expect(requiredTestValue(header.pendingTurnRecovery).recoveryDispatch).toEqual(dispatch)
 
     // A second startup wake sees the same transient FIFO and must not spend a
     // second attempt or mint another identity.

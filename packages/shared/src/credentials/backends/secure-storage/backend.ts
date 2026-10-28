@@ -41,7 +41,6 @@ export class SecureStorageBackend implements CredentialBackend {
   readonly priority = 100;
 
   private cachedStore: CredentialStore | null = null;
-  private encryptionKey: Buffer | null = null;
   private salt: Buffer | null = null;
   private readonly keyCacheBySalt = new Map<string, Buffer>();
   private readonly stableMachineIdDigest: Buffer;
@@ -283,7 +282,6 @@ export class SecureStorageBackend implements CredentialBackend {
     const saltHex = salt.toString('hex');
     const cached = this.keyCacheBySalt.get(saltHex);
     if (cached) {
-      this.encryptionKey = cached;
       return cached;
     }
 
@@ -302,7 +300,6 @@ export class SecureStorageBackend implements CredentialBackend {
       }
     }
     this.keyCacheBySalt.set(saltHex, derived);
-    this.encryptionKey = derived;
 
     return derived;
   }
@@ -386,7 +383,6 @@ export class SecureStorageBackend implements CredentialBackend {
   /** Clear cached data (for testing or forced refresh) */
   clearCache(): void {
     this.cachedStore = null;
-    this.encryptionKey = null;
     this.salt = null;
   }
 }

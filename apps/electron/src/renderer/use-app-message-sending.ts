@@ -1,3 +1,5 @@
+import type { SendMessageOptions } from '../../../../packages/shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import React, { useCallback } from 'react';
 
 import type { Session, Message, FileAttachment, StoredAttachment, ContentBadge } from '../shared/types';
@@ -46,60 +48,39 @@ const handleSendMessage = useCallback(async (sessionId: string, message: string,
         )
 
         // Filter successful stores, warn about failures
-        storedAttachments = []
+        const stored: StoredAttachment[] = []
         const successfulAttachments: FileAttachment[] = []
-        storeResults.forEach((result, i) => {
+        const failedNames: string[] = []
+        for (const [index, result] of storeResults.entries()) {
+          const attachment = attachments[index]
+          if (!attachment) throw new Error(`Missing attachment at index ${index}`)
           if (result.status === 'fulfilled') {
-            storedAttachments!.push(result.value)
-            successfulAttachments.push(attachments[i])
+            stored.push(result.value)
+            successfulAttachments.push(omitUndefined({
+              ...attachment,
+              storedPath: result.value.storedPath,
+              markdownPath: result.value.markdownPath,
+              base64: result.value.resizedBase64 ?? attachment.base64,
+            }))
           } else {
-            console.warn(`Failed to store attachment "${attachments[i].name}":`, result.reason)
+            failedNames.push(attachment.name)
+            console.warn(`Failed to store attachment "${attachment.name}":`, result.reason)
           }
-        })
+        }
+        storedAttachments = stored
+        processedAttachments = successfulAttachments
 
-        // Notify user about failed attachments
-        const failedCount = storeResults.filter(r => r.status === 'rejected').length
-        if (failedCount > 0) {
-          console.warn(`${failedCount} attachment(s) failed to store`)
-          // Add warning message to session so user knows some attachments weren't included
-          const failedNames = attachments
-            .filter((_, i) => storeResults[i].status === 'rejected')
-            .map(a => a.name)
-            .join(', ')
+        if (failedNames.length > 0) {
+          console.warn(`${failedNames.length} attachment(s) failed to store`)
           updateSessionById(sessionId, (s) => ({
             messages: [...s.messages, {
               id: generateMessageId(),
               role: 'warning' as const,
-              content: `⚠️ ${failedCount} attachment(s) could not be stored and will not be sent: ${failedNames}`,
+              content: `⚠️ ${failedNames.length} attachment(s) could not be stored and will not be sent: ${failedNames.join(', ')}`,
               timestamp: Date.now()
             }]
           }))
         }
-
-        // Step 2: Create processed attachments for Claude
-        // - Office files: Convert to text with markdown content
-        // - Others: Use original FileAttachment
-        // - All: Include storedPath so agent knows where files are stored
-        // - Resized images: Use resizedBase64 instead of original large base64
-        processedAttachments = await Promise.all(
-          successfulAttachments.map(async (att, i) => {
-            const stored = storedAttachments?.[i]
-            if (!stored) {
-              console.error(`Missing stored attachment at index ${i}`)
-              return att // Fall back to original
-            }
-            // Include storedPath and markdownPath for all attachment types
-            // Agent will use Read tool to access text/office files via these paths
-            // If image was resized, use the resized base64 for Claude API
-            return {
-              ...att,
-              storedPath: stored.storedPath,
-              markdownPath: stored.markdownPath,
-              // Use resized base64 if available (for images that exceeded size limits)
-              base64: stored.resizedBase64 ?? att.base64,
-            }
-          })
-        )
       }
 
       // Step 3: Extract badges from mentions (sources/skills) with embedded icons
@@ -114,7 +95,7 @@ const handleSendMessage = useCallback(async (sessionId: string, message: string,
       // Step 4.1: Detect SDK slash commands (e.g., /compact) and create command badges
       // This makes /compact render as an inline badge rather than raw text
       const commandMatch = message.match(/^\/([a-z]+)(\s|$)/i)
-      if (commandMatch && commandMatch[1].toLowerCase() === 'compact') {
+      if (commandMatch?.[1]?.toLowerCase() === 'compact') {
         const commandText = commandMatch[0].trimEnd() // "/compact" without trailing space
         badges.unshift({
           type: 'command',
@@ -130,18 +111,18 @@ const handleSendMessage = useCallback(async (sessionId: string, message: string,
       // This is sent after compaction when accepting a plan, displays as clickable file badge
       // Only the file path is replaced with a badge - surrounding text remains visible
       const planExecuteMatch = message.match(/^(Read the plan at )(.+?)( and execute it\.?)$/i)
-      if (planExecuteMatch) {
-        const prefix = planExecuteMatch[1]      // "Read the plan at "
-        const filePath = planExecuteMatch[2]    // the actual path
+      const prefix = planExecuteMatch?.[1]
+      const filePath = planExecuteMatch?.[2]
+      if (prefix !== undefined && filePath !== undefined) {
         const fileName = filePath.split('/').pop() || 'plan.md'
-        badges.push({
+        badges.push(omitUndefined<ContentBadge>({
           type: 'file',
           label: fileName,
           rawText: filePath,
-          filePath: filePath,
+          ...(filePath !== undefined ? { filePath: filePath } : {}),
           start: prefix.length,
           end: prefix.length + filePath.length,
-        })
+        }))
       }
 
       // Step 5: Create user message with StoredAttachments (for UI display)
@@ -152,16 +133,16 @@ const handleSendMessage = useCallback(async (sessionId: string, message: string,
       // isQueued through that update) and Claude queues (server emits 'queued'
       // which confirms it). Cleared by 'processing' status or when the current
       // turn ends.
-      const userMessage: Message = {
+      const userMessage: Message = omitUndefined<Message>({
         id: generateMessageId(),
         role: 'user',
         content: message,
         timestamp: Date.now(),
-        attachments: storedAttachments,
+        ...(storedAttachments !== undefined ? { attachments: storedAttachments } : {}),
         badges: badges.length > 0 ? badges : undefined,
         isPending: true,  // Optimistic - will be confirmed by backend
         isQueued: sendingMidStream,
-      }
+      })
 
       // Optimistic UI update - add user message and set processing state
       updateSessionById(sessionId, (s) => ({
@@ -171,11 +152,11 @@ const handleSendMessage = useCallback(async (sessionId: string, message: string,
       }))
 
       // Step 6: Send to Claude with processed attachments + stored attachments for persistence
-      await window.electronAPI.sendMessage(sessionId, message, processedAttachments, storedAttachments, {
+      await window.electronAPI.sendMessage(sessionId, message, processedAttachments, storedAttachments, omitUndefined<SendMessageOptions>({
         skillSlugs,
         badges: badges.length > 0 ? badges : undefined,
         optimisticMessageId: userMessage.id,
-      })
+      }))
     } catch (error) {
       console.error('Failed to send message:', error)
       updateSessionById(sessionId, (s) => ({

@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../utils/json.ts';
 import { afterEach, describe, expect, it } from 'bun:test';
 import { CLAUDE_OAUTH_CONFIG } from './claude-oauth-config.ts';
 import { clearOAuthState, exchangeClaudeCode, prepareClaudeOAuth } from './claude-oauth.ts';
@@ -29,13 +30,13 @@ describe('Claude OAuth contract', () => {
     globalThis.fetch = (async (input, init) => {
       expect(String(input)).toBe(CLAUDE_OAUTH_CONFIG.TOKEN_URL);
       expect(new Headers(init?.headers).get('content-type')).toBe('application/json');
-      const body = JSON.parse(String(init?.body));
-      expect(body.grant_type).toBe('authorization_code');
-      expect(body.client_id).toBe(CLAUDE_OAUTH_CONFIG.CLIENT_ID);
-      expect(body.client_secret).toBeUndefined();
-      expect(body.code).toBe('authorization-code');
-      expect(body.code_verifier).toBeTruthy();
-      expect(body.state).toBeTruthy();
+      const body = parseJsonObject(String(init?.body));
+      expect(body["grant_type"]).toBe('authorization_code');
+      expect(body["client_id"]).toBe(CLAUDE_OAUTH_CONFIG.CLIENT_ID);
+      expect(body["client_secret"]).toBeUndefined();
+      expect(body["code"]).toBe('authorization-code');
+      expect(body["code_verifier"]).toBeTruthy();
+      expect(body["state"]).toBeTruthy();
       return Response.json({
         access_token: 'access-token',
         refresh_token: 'refresh-token',
@@ -60,7 +61,7 @@ describe('Claude OAuth contract', () => {
     };
     globalThis.fetch = (async (_input, init) => {
       expect(new Headers(init?.headers).get('content-type')).toBe('application/json');
-      const body = JSON.parse(String(init?.body));
+      const body = parseJsonObject(String(init?.body));
       expect(body).toEqual({
         grant_type: 'refresh_token',
         refresh_token: 'old-refresh-token',

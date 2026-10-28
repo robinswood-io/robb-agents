@@ -76,7 +76,7 @@ function useStreamingSimulation(
         return
       }
 
-      const currentChar = fullText[index]
+      const currentChar = fullText.charAt(index)
       const isPunctuation = /[.!?,;:\n]/.test(currentChar)
 
       // Send chars
@@ -107,8 +107,8 @@ function StreamingSimulationTurnCard({
   simulationSpeed = 'normal',
 }: {
   activities: ActivityItem[]
-  intent?: string
-  simulationSpeed?: 'slow' | 'normal' | 'fast'
+  intent?: string | undefined
+  simulationSpeed?: 'slow' | 'normal' | 'fast' | undefined
 }) {
   const { streamedText, isComplete } = useStreamingSimulation(
     streamingTextSample,

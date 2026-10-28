@@ -13,7 +13,7 @@ import { Btn, FieldRow, SelectButton, ModelSelect, SubtaskCard, YamlLine } from 
 // ---------------------------------------------------------------------------
 // Task Editor
 // ---------------------------------------------------------------------------
-export function TaskEditorPreview({ mode: initialMode = 'generate' }: { mode?: Mode }) {
+export function TaskEditorPreview({ mode: initialMode = 'generate' }: { mode?: Mode | undefined }) {
   const [mode, setMode] = React.useState<Mode>(initialMode)
   const [title, setTitle] = React.useState('Migrate auth to new session model')
   const [goal, setGoal] = React.useState(

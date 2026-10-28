@@ -19,18 +19,18 @@ export { SessionPersistenceRootIdentityError, captureSessionPersistenceRootPath,
  */
 class SessionPersistenceQueue {
     private pending = new Map<string, PendingWrite>();
-    private writeInProgress = new Map<string, Promise<void>>();
-    private identities = new Map<string, SessionPersistenceIdentity>();
+    /** @internal */ public writeInProgress = new Map<string, Promise<void>>();
+    /** @internal */ public identities = new Map<string, SessionPersistenceIdentity>();
     /** Exact lexical paths keep their identity even after the workspace is gone. */
-    private identityAliases = new Map<string, string>();
+    /** @internal */ public identityAliases = new Map<string, string>();
     /** Session-name folding is scoped to one exact canonical workspace root. */
-    private caseInsensitiveCanonicalAliases = new Map<string, string>();
+    /** @internal */ public caseInsensitiveCanonicalAliases = new Map<string, string>();
     /**
      * A removed case-insensitive root can only be found by lexical spelling.
      * Keep every candidate instead of allowing a lower-cased path to overwrite a
      * distinct root; ambiguous missing-root lookups fail closed.
      */
-    private caseInsensitiveFallbackAliases = new Map<string, Set<string>>();
+    /** @internal */ public caseInsensitiveFallbackAliases = new Map<string, Set<string>>();
     /**
      * A deleted session must never be recreated by a late debounced write or by
      * an asynchronous callback that still holds its old snapshot. Retirement is
@@ -38,37 +38,37 @@ class SessionPersistenceQueue {
      * the lifetime of this queue; a failed deletion may explicitly reactivate
      * the session after every in-flight writer has drained.
      */
-    private retired = new Set<string>();
-    private activeWrites = 0;
-    private waitingWriters: Array<() => void> = [];
-    private lastWrittenHeaderSignature = new Map<string, string>();
-    private nextRevision = 0;
-    private lastDurableRevision = new Map<string, number>();
-    private debounceMs: number;
+    /** @internal */ public retired = new Set<string>();
+    /** @internal */ public activeWrites = 0;
+    /** @internal */ public waitingWriters: Array<() => void> = [];
+    /** @internal */ public lastWrittenHeaderSignature = new Map<string, string>();
+    /** @internal */ public nextRevision = 0;
+    /** @internal */ public lastDurableRevision = new Map<string, number>();
+    /** @internal Shared with the extracted backend helpers. */ public debounceMs: number;
     private testHooks?: SessionPersistenceQueueTestHooks;
     constructor(debounceMs = 500, testHooks?: SessionPersistenceQueueTestHooks) {
         this.debounceMs = debounceMs;
-        this.testHooks = testHooks;
+        if (testHooks === undefined) { delete this.testHooks } else { this.testHooks = testHooks }
     }
-    private lookupIdentityAlias(workspaceRootPath: string, sessionId: string): string | undefined {
+    /** @internal */ public lookupIdentityAlias(workspaceRootPath: string, sessionId: string): string | undefined {
         return persistenceQueueIdentity.lookupIdentityAlias(this, workspaceRootPath, sessionId);
     }
-    private recordIdentityAliases(workspaceRootPath: string, canonicalRoot: string, sessionId: string, key: string, caseInsensitive: boolean): void {
+    /** @internal Shared with the extracted backend helpers. */ public recordIdentityAliases(workspaceRootPath: string, canonicalRoot: string, sessionId: string, key: string, caseInsensitive: boolean): void {
         return persistenceQueueIdentity.recordIdentityAliases(this, workspaceRootPath, canonicalRoot, sessionId, key, caseInsensitive);
     }
-    private workspaceRootIsCaseInsensitive(workspaceRootPath: string): boolean {
+    /** @internal Shared with the extracted backend helpers. */ public workspaceRootIsCaseInsensitive(workspaceRootPath: string): boolean {
         return persistenceQueueIdentity.workspaceRootIsCaseInsensitiveOperation(this, workspaceRootPath);
     }
-    private assertOrBindPersistenceHierarchy(key: string, workspaceRootPath: string, sessionId: string, persistenceRootIdentity: SessionPersistenceRootIdentity | undefined, options: {
+    /** @internal */ public assertOrBindPersistenceHierarchy(key: string, workspaceRootPath: string, sessionId: string, persistenceRootIdentity: SessionPersistenceRootIdentity | undefined, options: {
         bind: boolean;
         requireSession: boolean;
     }): void {
         return persistenceQueueIdentity.assertOrBindPersistenceHierarchy(this, key, workspaceRootPath, sessionId, persistenceRootIdentity, options);
     }
-    private registerIdentity(workspaceRootPath: string, sessionId: string): string {
+    /** @internal Shared with the extracted backend helpers. */ public registerIdentity(workspaceRootPath: string, sessionId: string): string {
         return persistenceQueueIdentity.registerIdentity(this, workspaceRootPath, sessionId);
     }
-    private resolveIdentityKey(sessionId: string, workspaceRootPath?: string): string | undefined {
+    /** @internal */ public resolveIdentityKey(sessionId: string, workspaceRootPath?: string): string | undefined {
         return persistenceQueueIdentity.resolveIdentityKey(this, sessionId, workspaceRootPath);
     }
     /**
@@ -78,13 +78,13 @@ class SessionPersistenceQueue {
     enqueue(session: StoredSession, persistenceRootPath: string = session.workspaceRootPath, persistenceRootIdentity?: SessionPersistenceRootIdentity): number {
         return persistenceQueueWriting.enqueue(this, session, persistenceRootPath, persistenceRootIdentity);
     }
-    private async write(key: string): Promise<void> {
+    /** @internal Shared with the extracted backend helpers. */ public async write(key: string): Promise<void> {
         return persistenceQueueWriting.write(this, key);
     }
-    private async writeWithGlobalLimit(key: string): Promise<void> {
+    /** @internal Shared with the extracted backend helpers. */ public async writeWithGlobalLimit(key: string): Promise<void> {
         return persistenceQueueWriting.writeWithGlobalLimit(this, key);
     }
-    private queueWrite(key: string): Promise<void> {
+    /** @internal Shared with the extracted backend helpers. */ public queueWrite(key: string): Promise<void> {
         return persistenceQueueWriting.queueWrite(this, key);
     }
     /**
@@ -95,7 +95,7 @@ class SessionPersistenceQueue {
     async flush(sessionId: string, workspaceRootPath?: string): Promise<void> {
         return persistenceQueueFlush.flush(this, sessionId, workspaceRootPath);
     }
-    private async flushKey(key: string): Promise<void> {
+    /** @internal Shared with the extracted backend helpers. */ public async flushKey(key: string): Promise<void> {
         return persistenceQueueFlush.flushKey(this, key);
     }
     /**
@@ -113,7 +113,7 @@ class SessionPersistenceQueue {
     cancel(sessionId: string, workspaceRootPath?: string): void {
         return persistenceQueueLifecycle.cancel(this, sessionId, workspaceRootPath);
     }
-    private cancelKey(key: string): void {
+    /** @internal Shared with the extracted backend helpers. */ public cancelKey(key: string): void {
         return persistenceQueueLifecycle.cancelKey(this, key);
     }
     /**

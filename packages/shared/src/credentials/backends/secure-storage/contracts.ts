@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import type { StoredCredential } from "../../types.ts";
 
 /** Internal credential store structure */
@@ -35,17 +36,17 @@ export interface SecureStorageOptions {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === 'object' && value !== null && !isUnknownArray(value);
 }
 
 export function isCredentialStore(value: unknown): value is CredentialStore {
-  if (!isRecord(value) || value.version !== 1 || !isRecord(value.credentials) || !isRecord(value.metadata)) {
+  if (!isRecord(value) || value["version"] !== 1 || !isRecord(value["credentials"]) || !isRecord(value["metadata"])) {
     return false;
   }
-  if (typeof value.metadata.createdAt !== 'number' || typeof value.metadata.updatedAt !== 'number') {
+  if (typeof value["metadata"]["createdAt"] !== 'number' || typeof value["metadata"]["updatedAt"] !== 'number') {
     return false;
   }
-  return Object.values(value.credentials).every(
-    (credential) => isRecord(credential) && typeof credential.value === 'string',
+  return Object.values(value["credentials"]).every(
+    (credential) => isRecord(credential) && typeof credential["value"] === 'string',
   );
 }

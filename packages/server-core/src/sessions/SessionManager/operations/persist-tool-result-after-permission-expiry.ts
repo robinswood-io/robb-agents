@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { randomUUID } from 'node:crypto';
 import type { AutonomyEvent } from '@craft-agent/core';
@@ -116,7 +118,7 @@ function sessionOpPersistToolResultAfterPermissionExpiry(sessionOperationContext
     if (!changed)
         return true;
     sessionOperationContext.owner["persistSession"](managed);
-    sessionOperationContext.owner["sendEvent"]({
+    sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'tool_result' }>>({
         type: 'tool_result',
         sessionId: managed.id,
         toolUseId: event.toolUseId,
@@ -128,7 +130,7 @@ function sessionOpPersistToolResultAfterPermissionExpiry(sessionOperationContext
         executed,
         ...(event.checkpoint ? { checkpoint: event.checkpoint } : {}),
         timestamp: message.timestamp,
-    }, managed.workspace.id);
+    }), managed.workspace.id);
     return true;
 }
 

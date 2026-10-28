@@ -14,7 +14,7 @@ import type { BaseAgent } from '../base-agent.ts';
    * then delegates to chatImpl. All skill logic is handled here — chatImpl
    * never sees skill paths.
    */
-export async function* chat(transportOwner: BaseAgent, message: string, attachments?: FileAttachment[], options?: ChatOptions): AsyncGenerator<AgentEvent> {
+export async function* chat(transportOwner: BaseAgent, message: string, attachments?: FileAttachment[], options?: ChatOptions): AsyncGenerator<AgentEvent, void, unknown> {
     const { skillPaths, sealedSkillContents, cleanMessage, missingSkills } = transportOwner["extractSkillPaths"](message);
     if (missingSkills.length > 0) {
         yield { type: 'error', message: `Skill(s) not found: ${missingSkills.join(', ')}` };

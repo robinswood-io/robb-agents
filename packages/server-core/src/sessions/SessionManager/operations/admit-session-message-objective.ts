@@ -1,3 +1,5 @@
+import type { PendingTurnRecovery } from '../../../../../shared/src/sessions/types/turn-recovery.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { createContextLimitAnswerRollback } from './context-limit-answer-rollback.ts';
 import { nextRecoveryDispatch, projectLegacyObjectiveForUserTransition, rehydrateObjectiveEvidence } from '../policy.ts';
 import type { UserInputRequest } from '@craft-agent/core';
@@ -122,8 +124,8 @@ export async function admitSessionMessageObjective(
             existing: projectLegacyObjectiveForUserTransition(managed),
             messageId: userMessage.id,
             text: sessionOpObjectiveContractTextFor(sessionOperationContext, managed, userMessage),
-            lifetimeCostUsd: managed.tokenUsage?.costUsd,
-            lifetimeTokens: managed.tokenUsage?.totalTokens,
+            ...(managed.tokenUsage?.costUsd !== undefined ? { lifetimeCostUsd: managed.tokenUsage?.costUsd } : {}),
+            ...(managed.tokenUsage?.totalTokens !== undefined ? { lifetimeTokens: managed.tokenUsage?.totalTokens } : {}),
             delegatedRole: delegatedObjectiveRoleForSession(managed),
         });
         const sameActiveObjective = previousObjective?.terminalState === 'active'
@@ -175,11 +177,11 @@ export async function admitSessionMessageObjective(
         }
     })();
     if (directHumanContinuation && managed.pendingTurnRecovery?.recoveryDispatch) {
-        managed.pendingTurnRecovery = {
+        managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
             ...managed.pendingTurnRecovery,
             waitingForPermission: undefined,
             recoveryDispatch: undefined,
-        };
+        });
     }
     if (managed.pendingTurnRecovery?.recoveryDispatch?.cleanContinuationId
         && !cleanRecoveryProviderReset

@@ -79,24 +79,24 @@ export function parseStoredRecord(
 ):
   | { ok: true; record: StoredMemoryJournalRecord }
   | { ok: false; code: 'invalid_record' | 'checksum_mismatch'; message: string } {
-  if (!isRecord(value) || !isRecord(value.payload) || typeof value.checksum !== 'string') {
+  if (!isRecord(value) || !isRecord(value["payload"]) || typeof value["checksum"] !== 'string') {
     return { ok: false, code: 'invalid_record', message: 'Missing payload or checksum' };
   }
 
-  const payload = value.payload;
+  const payload = value["payload"];
   if (
-    payload.schemaVersion !== MEMORY_V2_SCHEMA_VERSION ||
-    typeof payload.eventId !== 'string' ||
-    payload.eventType !== 'put' ||
-    typeof payload.recordedAt !== 'string'
+    payload["schemaVersion"] !== MEMORY_V2_SCHEMA_VERSION ||
+    typeof payload["eventId"] !== 'string' ||
+    payload["eventType"] !== 'put' ||
+    typeof payload["recordedAt"] !== 'string'
   ) {
     return { ok: false, code: 'invalid_record', message: 'Unsupported journal event shape' };
   }
 
   let entry: ProjectMemoryEntry;
   try {
-    normalizeIsoTimestamp(payload.recordedAt, 'recordedAt');
-    entry = parseProjectMemoryEntry(payload.entry);
+    normalizeIsoTimestamp(payload["recordedAt"], 'recordedAt');
+    entry = parseProjectMemoryEntry(payload["entry"]);
   } catch (error) {
     return {
       ok: false,
@@ -107,61 +107,61 @@ export function parseStoredRecord(
 
   const event: MemoryJournalEvent = {
     schemaVersion: MEMORY_V2_SCHEMA_VERSION,
-    eventId: payload.eventId,
+    eventId: payload["eventId"],
     eventType: 'put',
-    recordedAt: payload.recordedAt,
+    recordedAt: payload["recordedAt"],
     entry,
   };
-  if (checksumPayload(event) !== value.checksum) {
+  if (checksumPayload(event) !== value["checksum"]) {
     return { ok: false, code: 'checksum_mismatch', message: 'Journal checksum mismatch' };
   }
 
   return {
     ok: true,
-    record: { payload: event, checksum: value.checksum },
+    record: { payload: event, checksum: value["checksum"] },
   };
 }
 
 function parseProjectMemoryEntry(value: unknown): ProjectMemoryEntry {
   if (!isRecord(value)) throw new Error('Memory entry must be an object');
-  if (!isRecord(value.provenance)) throw new Error('Memory provenance must be an object');
+  if (!isRecord(value["provenance"])) throw new Error('Memory provenance must be an object');
 
   const provenance: MemoryProvenance = {
-    sourceType: assertMemorySourceType(value.provenance.sourceType),
-    ...(typeof value.provenance.sourceId === 'string'
-      ? { sourceId: normalizeIdentifier(value.provenance.sourceId, 'provenance.sourceId') }
+    sourceType: assertMemorySourceType(value["provenance"]["sourceType"]),
+    ...(typeof value["provenance"]["sourceId"] === 'string'
+      ? { sourceId: normalizeIdentifier(value["provenance"]["sourceId"], 'provenance.sourceId') }
       : {}),
-    ...(typeof value.provenance.uri === 'string' ? { uri: value.provenance.uri } : {}),
-    ...(typeof value.provenance.actorId === 'string'
-      ? { actorId: normalizeIdentifier(value.provenance.actorId, 'provenance.actorId') }
+    ...(typeof value["provenance"]["uri"] === 'string' ? { uri: value["provenance"]["uri"] } : {}),
+    ...(typeof value["provenance"]["actorId"] === 'string'
+      ? { actorId: normalizeIdentifier(value["provenance"]["actorId"], 'provenance.actorId') }
       : {}),
-    capturedAt: normalizeIsoTimestamp(value.provenance.capturedAt, 'provenance.capturedAt'),
+    capturedAt: normalizeIsoTimestamp(value["provenance"]["capturedAt"], 'provenance.capturedAt'),
   };
-  const validFrom = normalizeIsoTimestamp(value.validFrom, 'validFrom');
-  const validUntil = typeof value.validUntil === 'string'
-    ? normalizeIsoTimestamp(value.validUntil, 'validUntil')
+  const validFrom = normalizeIsoTimestamp(value["validFrom"], 'validFrom');
+  const validUntil = typeof value["validUntil"] === 'string'
+    ? normalizeIsoTimestamp(value["validUntil"], 'validUntil')
     : undefined;
   if (validUntil && Date.parse(validUntil) <= Date.parse(validFrom)) {
     throw new Error('validUntil must be after validFrom');
   }
 
   return {
-    id: normalizeIdentifier(value.id, 'id'),
-    kind: assertMemoryKind(value.kind),
-    content: normalizeContent(value.content),
-    tags: parseStringList(value.tags, 'tags'),
+    id: normalizeIdentifier(value["id"], 'id'),
+    kind: assertMemoryKind(value["kind"]),
+    content: normalizeContent(value["content"]),
+    tags: parseStringList(value["tags"], 'tags'),
     provenance,
-    confidence: normalizeConfidence(value.confidence),
-    createdAt: normalizeIsoTimestamp(value.createdAt, 'createdAt'),
-    updatedAt: normalizeIsoTimestamp(value.updatedAt, 'updatedAt'),
+    confidence: normalizeConfidence(value["confidence"]),
+    createdAt: normalizeIsoTimestamp(value["createdAt"], 'createdAt'),
+    updatedAt: normalizeIsoTimestamp(value["updatedAt"], 'updatedAt'),
     validFrom,
     ...(validUntil ? { validUntil } : {}),
-    ...(typeof value.expiresAt === 'string'
-      ? { expiresAt: normalizeIsoTimestamp(value.expiresAt, 'expiresAt') }
+    ...(typeof value["expiresAt"] === 'string'
+      ? { expiresAt: normalizeIsoTimestamp(value["expiresAt"], 'expiresAt') }
       : {}),
-    status: assertMemoryStatus(value.status),
-    supersedesIds: parseStringList(value.supersedesIds, 'supersedesIds'),
-    contradictsIds: parseStringList(value.contradictsIds, 'contradictsIds'),
-    ...(value.scope !== undefined ? { scope: normalizeMemoryScope(value.scope) } : {}),
+    status: assertMemoryStatus(value["status"]),
+    supersedesIds: parseStringList(value["supersedesIds"], 'supersedesIds'),
+    contradictsIds: parseStringList(value["contradictsIds"], 'contradictsIds'),
+    ...(value["scope"] !== undefined ? { scope: normalizeMemoryScope(value["scope"]) } : {}),
   };
 }

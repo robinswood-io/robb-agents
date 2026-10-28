@@ -47,10 +47,10 @@ function optionalStringArray(
 ): string[] | undefined {
   const value = record[key];
   if (value === undefined) return undefined;
-  if (!Array.isArray(value) || value.some(item => typeof item !== 'string' || !item.trim())) {
+  if (!Array.isArray(value) || value.some((item: unknown) => typeof item !== 'string' || !item.trim())) {
     throw new Error(`Eval grading ${key} must be an array of non-empty strings`);
   }
-  return value.map(item => String(item).trim());
+  return value.map((item: unknown) => String(item).trim());
 }
 
 function parseGrading(value: unknown): EvalGradingSpec | undefined {
@@ -102,12 +102,13 @@ function clientConfig(prefix: 'ROBB_EVAL_JUDGE' | 'ROBB_EVAL_TARGET'): ProviderE
         outputUsdPerMillionTokens,
       }
     : undefined;
+  const endpoint = process.env[`${prefix}_ENDPOINT`]?.trim();
   return {
     provider: providerValue,
     model: requiredEnvironment(`${prefix}_MODEL`),
     apiKey: requiredEnvironment(`${prefix}_API_KEY`),
-    ...(process.env[`${prefix}_ENDPOINT`]?.trim()
-      ? { endpoint: process.env[`${prefix}_ENDPOINT`]?.trim() }
+    ...(endpoint
+      ? { endpoint }
       : {}),
     ...(pricing ? { pricing } : {}),
   };
@@ -117,21 +118,21 @@ function parseCorpus(value: unknown): EvalCorpusDocument {
   const record = recordValue(value);
   if (
     !record
-    || typeof record.id !== 'string'
-    || typeof record.version !== 'string'
-    || record.language !== 'fr'
-    || !Array.isArray(record.cases)
+    || typeof record["id"] !== 'string'
+    || typeof record["version"] !== 'string'
+    || record["language"] !== 'fr'
+    || !Array.isArray(record["cases"])
   ) {
     throw new Error('Eval corpus does not match the expected document contract');
   }
-  const cases = record.cases.map((entry) => {
+  const cases = record["cases"].map((entry: unknown) => {
     const item = recordValue(entry);
     if (
       !item
-      || typeof item.id !== 'string'
-      || typeof item.category !== 'string'
-      || typeof item.prompt !== 'string'
-      || typeof item.expectedBehavior !== 'string'
+      || typeof item["id"] !== 'string'
+      || typeof item["category"] !== 'string'
+      || typeof item["prompt"] !== 'string'
+      || typeof item["expectedBehavior"] !== 'string'
     ) {
       throw new Error('Eval corpus contains an invalid case');
     }
@@ -143,25 +144,25 @@ function parseCorpus(value: unknown): EvalCorpusDocument {
       'destructive-action',
       'provider-error',
     ];
-    if (!allowedCategories.includes(item.category as EvalCase['category'])) {
-      throw new Error(`Unsupported eval category: ${item.category}`);
+    if (!allowedCategories.includes(item["category"] as EvalCase['category'])) {
+      throw new Error(`Unsupported eval category: ${item["category"]}`);
     }
-    const grading = parseGrading(item.grading);
+    const grading = parseGrading(item["grading"]);
     return {
-      id: item.id,
+      id: item["id"],
       language: 'fr' as const,
-      category: item.category as EvalCase['category'],
-      prompt: item.prompt,
-      expectedBehavior: item.expectedBehavior,
-      ...(typeof item.requiredTool === 'string'
-        ? { requiredTool: item.requiredTool }
+      category: item["category"] as EvalCase['category'],
+      prompt: item["prompt"],
+      expectedBehavior: item["expectedBehavior"],
+      ...(typeof item["requiredTool"] === 'string'
+        ? { requiredTool: item["requiredTool"] }
         : {}),
       ...(grading ? { grading } : {}),
     };
   });
   return {
-    id: record.id,
-    version: record.version,
+    id: record["id"],
+    version: record["version"],
     language: 'fr',
     cases,
   };
@@ -184,7 +185,7 @@ const thresholds: EvalThresholds = {
   maxPassRateRegression: 0.01,
 };
 
-const corpusPath = process.env.ROBB_EVAL_CORPUS?.trim() || 'evals/corpora/fr-core-v1.json';
+const corpusPath = process.env["ROBB_EVAL_CORPUS"]?.trim() || 'evals/corpora/fr-core-v1.json';
 const parsed: unknown = await Bun.file(corpusPath).json();
 const corpus = parseCorpus(parsed);
 const targetConfig = clientConfig('ROBB_EVAL_TARGET');
@@ -192,12 +193,12 @@ const judgeConfig = clientConfig('ROBB_EVAL_JUDGE');
 const report = await runProviderEvalCorpus({
   corpusId: corpus.id,
   corpusVersion: corpus.version,
-  runId: process.env.ROBB_EVAL_RUN_ID?.trim() || crypto.randomUUID(),
+  runId: process.env["ROBB_EVAL_RUN_ID"]?.trim() || crypto.randomUUID(),
   cases: corpus.cases,
   versions: {
     model: `target:${targetConfig.provider}/${targetConfig.model};judge:${judgeConfig.provider}/${judgeConfig.model}`,
     prompt: 'provider-eval@8',
-    router: process.env.ROBB_EVAL_ROUTER_VERSION?.trim() || 'direct@1',
+    router: process.env["ROBB_EVAL_ROUTER_VERSION"]?.trim() || 'direct@1',
     connectors: {},
   },
   target: new ProviderEvalHttpClient(targetConfig),
@@ -206,11 +207,11 @@ const report = await runProviderEvalCorpus({
 const gate = evaluateEvalGate(report, thresholds);
 const markdown = exportEvalReportMarkdown(gate);
 
-const reportJsonPath = process.env.ROBB_EVAL_REPORT_JSON?.trim();
+const reportJsonPath = process.env["ROBB_EVAL_REPORT_JSON"]?.trim();
 if (reportJsonPath) {
   await Bun.write(reportJsonPath, `${JSON.stringify(gate, null, 2)}\n`);
 }
-const reportMarkdownPath = process.env.ROBB_EVAL_REPORT_MARKDOWN?.trim();
+const reportMarkdownPath = process.env["ROBB_EVAL_REPORT_MARKDOWN"]?.trim();
 if (reportMarkdownPath) {
   await Bun.write(reportMarkdownPath, `${markdown}\n`);
 }

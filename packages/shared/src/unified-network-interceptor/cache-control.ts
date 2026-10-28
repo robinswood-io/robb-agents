@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 /**
  * Unified fetch interceptor for all AI API requests (Anthropic + OpenAI format).
  *
@@ -31,7 +32,7 @@ import type { HeadersInitType } from './configuration.ts';
  * Reads from env var (set by auth/sessions before SDK starts) with Anthropic default fallback.
  */
 export function getConfiguredBaseUrl(): string {
-  return process.env.ANTHROPIC_BASE_URL?.trim() || 'https://api.anthropic.com';
+  return process.env["ANTHROPIC_BASE_URL"]?.trim() || 'https://api.anthropic.com';
 }
 
 export const FAST_MODE_BETA = 'fast-mode-2026-02-01';
@@ -46,19 +47,19 @@ export const FAST_MODE_BETA = 'fast-mode-2026-02-01';
  * Exported for focused unit tests.
  */
 export function sanitizeEmptyTextCacheControl(body: Record<string, unknown>): number {
-  const messages = body.messages as Array<{ content?: Array<Record<string, unknown>> }> | undefined;
+  const messages = body["messages"] as Array<{ content?: Array<Record<string, unknown>> }> | undefined;
   if (!messages) return 0;
 
   let stripped = 0;
   for (const message of messages) {
-    if (!Array.isArray(message.content)) continue;
+    if (!isUnknownArray(message.content)) continue;
     for (const block of message.content) {
       if (
-        block.type === 'text' &&
-        block.cache_control &&
-        (typeof block.text !== 'string' || !block.text.trim())
+        block["type"] === 'text' &&
+        block["cache_control"] &&
+        (typeof block["text"] !== 'string' || !block["text"].trim())
       ) {
-        delete block.cache_control;
+        delete block["cache_control"];
         stripped++;
       }
     }
@@ -85,45 +86,45 @@ export function sanitizeEmptyTextCacheControl(body: Record<string, unknown>): nu
 function stripPromptCacheTtl(body: Record<string, unknown>): number {
   let stripped = 0;
 
-  const tools = body.tools as Array<Record<string, unknown>> | undefined;
-  if (Array.isArray(tools)) {
+  const tools = body["tools"] as Array<Record<string, unknown>> | undefined;
+  if (isUnknownArray(tools)) {
     for (const tool of tools) {
-      const cc = tool.cache_control as Record<string, unknown> | undefined;
-      if (cc?.type === 'ephemeral' && 'ttl' in cc) {
-        delete cc.ttl;
+      const cc = tool["cache_control"] as Record<string, unknown> | undefined;
+      if (cc?.["type"] === 'ephemeral' && 'ttl' in cc) {
+        delete cc["ttl"];
         stripped++;
       }
     }
   }
 
-  const system = body.system as Array<Record<string, unknown>> | undefined;
-  if (Array.isArray(system)) {
+  const system = body["system"] as Array<Record<string, unknown>> | undefined;
+  if (isUnknownArray(system)) {
     for (const block of system) {
-      const cc = block.cache_control as Record<string, unknown> | undefined;
-      if (cc?.type === 'ephemeral' && 'ttl' in cc) {
-        delete cc.ttl;
+      const cc = block["cache_control"] as Record<string, unknown> | undefined;
+      if (cc?.["type"] === 'ephemeral' && 'ttl' in cc) {
+        delete cc["ttl"];
         stripped++;
       }
     }
   }
 
-  const messages = body.messages as Array<{ content?: unknown }> | undefined;
+  const messages = body["messages"] as Array<{ content?: unknown }> | undefined;
   if (messages) {
     for (const message of messages) {
-      if (!Array.isArray(message.content)) continue;
+      if (!isUnknownArray(message.content)) continue;
       for (const block of message.content as Array<Record<string, unknown>>) {
-        const cc = block.cache_control as Record<string, unknown> | undefined;
-        if (cc?.type === 'ephemeral' && 'ttl' in cc) {
-          delete cc.ttl;
+        const cc = block["cache_control"] as Record<string, unknown> | undefined;
+        if (cc?.["type"] === 'ephemeral' && 'ttl' in cc) {
+          delete cc["ttl"];
           stripped++;
         }
       }
     }
   }
 
-  const topLevel = body.cache_control as Record<string, unknown> | undefined;
-  if (topLevel?.type === 'ephemeral' && 'ttl' in topLevel) {
-    delete topLevel.ttl;
+  const topLevel = body["cache_control"] as Record<string, unknown> | undefined;
+  if (topLevel?.["type"] === 'ephemeral' && 'ttl' in topLevel) {
+    delete topLevel["ttl"];
     stripped++;
   }
 
@@ -159,35 +160,35 @@ export function upgradePromptCacheTtl(body: Record<string, unknown>): number {
 
   // Upgrade tool cache_control (must run first — tools is processed before
   // system, and a stale 5m block here would invalidate any later 1h upgrade).
-  const tools = body.tools as Array<Record<string, unknown>> | undefined;
-  if (Array.isArray(tools)) {
+  const tools = body["tools"] as Array<Record<string, unknown>> | undefined;
+  if (isUnknownArray(tools)) {
     for (const tool of tools) {
-      if (tool.cache_control && (tool.cache_control as Record<string, unknown>).type === 'ephemeral') {
-        (tool.cache_control as Record<string, unknown>).ttl = '1h';
+      if (tool["cache_control"] && (tool["cache_control"] as Record<string, unknown>)["type"] === 'ephemeral') {
+        (tool["cache_control"] as Record<string, unknown>)["ttl"] = '1h';
         upgraded++;
       }
     }
   }
 
   // Upgrade system prompt cache_control
-  const system = body.system as Array<Record<string, unknown>> | undefined;
-  if (Array.isArray(system)) {
+  const system = body["system"] as Array<Record<string, unknown>> | undefined;
+  if (isUnknownArray(system)) {
     for (const block of system) {
-      if (block.cache_control && (block.cache_control as Record<string, unknown>).type === 'ephemeral') {
-        (block.cache_control as Record<string, unknown>).ttl = '1h';
+      if (block["cache_control"] && (block["cache_control"] as Record<string, unknown>)["type"] === 'ephemeral') {
+        (block["cache_control"] as Record<string, unknown>)["ttl"] = '1h';
         upgraded++;
       }
     }
   }
 
   // Upgrade message content cache_control
-  const messages = body.messages as Array<{ content?: unknown }> | undefined;
+  const messages = body["messages"] as Array<{ content?: unknown }> | undefined;
   if (messages) {
     for (const message of messages) {
-      if (!Array.isArray(message.content)) continue;
+      if (!isUnknownArray(message.content)) continue;
       for (const block of message.content as Array<Record<string, unknown>>) {
-        if (block.cache_control && (block.cache_control as Record<string, unknown>).type === 'ephemeral') {
-          (block.cache_control as Record<string, unknown>).ttl = '1h';
+        if (block["cache_control"] && (block["cache_control"] as Record<string, unknown>)["type"] === 'ephemeral') {
+          (block["cache_control"] as Record<string, unknown>)["ttl"] = '1h';
           upgraded++;
         }
       }
@@ -195,9 +196,9 @@ export function upgradePromptCacheTtl(body: Record<string, unknown>): number {
   }
 
   // Upgrade top-level cache_control (auto-caching mode)
-  const topLevel = body.cache_control as Record<string, unknown> | undefined;
-  if (topLevel?.type === 'ephemeral') {
-    topLevel.ttl = '1h';
+  const topLevel = body["cache_control"] as Record<string, unknown> | undefined;
+  if (topLevel?.["type"] === 'ephemeral') {
+    topLevel["ttl"] = '1h';
     upgraded++;
   }
 
@@ -223,7 +224,7 @@ export function appendBetaHeader(headers: HeadersInitType | undefined, beta: str
   let headerObj: Record<string, string> = {};
   if (headers instanceof Headers) {
     headers.forEach((value, key) => { headerObj[key] = value; });
-  } else if (Array.isArray(headers)) {
+  } else if (isUnknownArray(headers)) {
     for (const [key, value] of headers) {
       headerObj[key as string] = value as string;
     }
@@ -244,7 +245,7 @@ export function stripBetaHeader(headers: HeadersInitType | undefined, beta: stri
   let headerObj: Record<string, string> = {};
   if (headers instanceof Headers) {
     headers.forEach((value, key) => { headerObj[key] = value; });
-  } else if (Array.isArray(headers)) {
+  } else if (isUnknownArray(headers)) {
     for (const [key, value] of headers) {
       headerObj[key as string] = value as string;
     }

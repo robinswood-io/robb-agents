@@ -16,7 +16,7 @@ export function sanitizeSourceConfig(config: FolderSourceConfig): { config: Fold
   const warnings: string[] = []
 
   // Deep clone to avoid mutating the original
-  const sanitized: FolderSourceConfig = JSON.parse(JSON.stringify(config))
+  const sanitized: FolderSourceConfig = structuredClone(config)
 
   // --- Runtime state: always remove ---
   sanitized.isAuthenticated = false
@@ -28,7 +28,7 @@ export function sanitizeSourceConfig(config: FolderSourceConfig): { config: Fold
   if (authType && authType !== 'none') {
     sanitized.connectionStatus = 'needs_auth'
   } else {
-    sanitized.connectionStatus = undefined
+    delete sanitized.connectionStatus
   }
 
   // --- Known secret fields: always remove ---

@@ -58,15 +58,16 @@ export function extractToolResults(
       const resultStr = serializeResult(block.content);
       const isError = block.is_error ?? isToolResultError(block.content);
 
+      const optionalParentToolUseId = sdkParentToolUseId ?? undefined;
       events.push({
         type: 'tool_result',
         toolUseId,
         toolName: entry?.name,
         result: resultStr,
         isError,
-        input: entry?.input,
-        turnId,
-        parentToolUseId: sdkParentToolUseId ?? undefined,
+        ...(entry?.input !== undefined ? { input: entry?.input } : {}),
+        ...(turnId !== undefined ? { turnId } : {}),
+        parentToolUseId: optionalParentToolUseId,
       });
 
       // Detect background tasks/shells from results
@@ -101,8 +102,8 @@ export function extractToolResults(
       toolName: entry?.name,
       result: resultStr,
       isError,
-      input: entry?.input,
-      turnId,
+      ...(entry?.input !== undefined ? { input: entry?.input } : {}),
+      ...(turnId !== undefined ? { turnId } : {}),
       parentToolUseId: undefined,
     });
 

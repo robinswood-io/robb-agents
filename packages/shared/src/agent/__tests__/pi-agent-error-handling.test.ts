@@ -13,7 +13,7 @@ describe('PiAgent subprocess error handling', () => {
       enqueued.push(event)
     }
 
-    ;agent['handleLine'](JSON.stringify({
+    ;agent.handleLine(JSON.stringify({
       type: 'error',
       message: '<html><head><title>400 Bad Request</title></head><body><center><h1>400 Bad Request</h1></center><hr><center>cloudflare</center></body></html>',
     }))
@@ -37,21 +37,21 @@ describe('PiAgent subprocess error handling', () => {
     }
 
     let rejectedMessage = ''
-    ;agent['pendingMiniCompletions'].set('mini-1', {
+    ;agent.pendingMiniCompletions.set('mini-1', {
       resolve: () => {},
       reject: (error: Error) => {
         rejectedMessage = error.message
       },
     })
 
-    ;agent['handleLine'](JSON.stringify({
+    ;agent.handleLine(JSON.stringify({
       type: 'error',
       code: 'mini_completion_error',
       message: '<html><head><title>400 Bad Request</title></head><body><center><h1>400 Bad Request</h1></center><hr><center>cloudflare</center></body></html>',
     }))
 
     expect(enqueued).toHaveLength(0)
-    expect(agent['pendingMiniCompletions'].size).toBe(0)
+    expect(agent.pendingMiniCompletions.size).toBe(0)
     expect(rejectedMessage).toContain('400 Bad Request')
 
     agent.destroy()
@@ -66,7 +66,7 @@ describe('PiAgent subprocess error handling', () => {
     }
 
     for (let i = 0; i < 4; i++) {
-      ;agent['handleLine'](JSON.stringify({
+      ;agent.handleLine(JSON.stringify({
         type: 'error',
         message: 'EFAULT: broken pipe',
       }))
@@ -87,18 +87,18 @@ describe('PiAgent subprocess error handling', () => {
     }
 
     for (let i = 0; i < 3; i++) {
-      ;agent['handleLine'](JSON.stringify({
+      ;agent.handleLine(JSON.stringify({
         type: 'error',
         message: 'EFAULT: broken pipe',
       }))
     }
 
-    ;agent['handleLine'](JSON.stringify({
+    ;agent.handleLine(JSON.stringify({
       type: 'event',
       event: { type: 'agent_message_delta', delta: 'ok' },
     }))
 
-    ;agent['handleLine'](JSON.stringify({
+    ;agent.handleLine(JSON.stringify({
       type: 'error',
       message: 'EFAULT: broken pipe',
     }))

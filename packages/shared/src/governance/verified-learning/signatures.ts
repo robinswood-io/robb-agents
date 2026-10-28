@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { KeyObject, createHash, createPrivateKey, sign as signBytes } from "node:crypto";
 import type { LearningEventSigner, UnsignedLearningEvent, VerifiedLearningEvent } from './contracts.ts';
 import { VerifiedLearningEventSchema } from './contracts.ts';
@@ -40,7 +41,7 @@ export function sha256(value: string): string { return createHash('sha256').upda
 export function canonicalJson(value: unknown): string {
   if (value === undefined) return 'null';
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (isUnknownArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   return `{${Object.entries(value as Record<string, unknown>)
     .filter(([, child]) => child !== undefined)
     .sort(([left], [right]) => left.localeCompare(right))

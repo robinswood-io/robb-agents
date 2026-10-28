@@ -23,13 +23,13 @@ import { cn } from '@/lib/utils'
 
 export interface PanelProps {
   /** Panel sizing behavior */
-  variant?: 'shrink' | 'grow'
+  variant?: 'shrink' | 'grow' | undefined
   /** Fixed width in pixels (only for shrink variant) */
-  width?: number
+  width?: number | undefined
   /** Optional className for additional styling */
-  className?: string
+  className?: string | undefined
   /** Optional inline styles */
-  style?: React.CSSProperties
+  style?: React.CSSProperties | undefined
   /** Panel content */
   children: React.ReactNode
 }

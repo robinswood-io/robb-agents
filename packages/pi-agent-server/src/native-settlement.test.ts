@@ -44,15 +44,15 @@ it('closes after the real SDK settles all deferred work, retains exact anchors, 
         const frame: unknown = JSON.parse(line);
         if (!record(frame)) throw new Error('Invalid worker frame');
         frames.push(frame);
-        if (frame.type === 'event' && record(frame.event)) {
+        if (frame["type"] === 'event' && record(frame["event"])) {
           // Trusted child-process wire boundary; event-specific behavior is
           // checked by the real adapter and by the assertions below.
-          events.push(...adapter.adaptEvent(frame.event as Parameters<PiEventAdapter['adaptEvent']>[0]));
+          events.push(...adapter.adaptEvent(frame["event"] as Parameters<PiEventAdapter['adaptEvent']>[0]));
         }
         for (const observe of [...observers]) observe();
       }
     }
-  })().catch(error => { readError = error; for (const observe of [...observers]) observe(); });
+  })().catch((error: unknown) => { readError = error; for (const observe of [...observers]) observe(); });
   async function send(message: Record<string, unknown>) {
     child.stdin.write(JSON.stringify(message) + '\n');
     await child.stdin.flush();
@@ -80,20 +80,20 @@ it('closes after the real SDK settles all deferred work, retains exact anchors, 
       cwd: directory, workingDirectory: directory, workspaceRootPath: workspace,
       sessionId: 'settlement-fixture', sessionPath, plansFolderPath: join(sessionPath, 'plans'),
       agentDir: join(directory, 'agent'), thinkingLevel: 'off' });
-    await waitFor(() => frames.some(frame => frame.type === 'ready'));
+    await waitFor(() => frames.some(frame => frame["type"] === 'ready'));
     await send({ type: 'prompt', id: 'first', message: 'Complete every step', systemPrompt: 'Offline QA' });
-    await waitFor(() => frames.some(frame => frame.type === 'fixture_boundary' && frame.stage === 1));
+    await waitFor(() => frames.some(frame => frame["type"] === 'fixture_boundary' && frame["stage"] === 1));
     expect(completions()).toBe(0);
     child.send({ type: 'fixture_release', stage: 1 });
-    await waitFor(() => frames.some(frame => frame.type === 'fixture_boundary' && frame.stage === 2));
+    await waitFor(() => frames.some(frame => frame["type"] === 'fixture_boundary' && frame["stage"] === 2));
     expect(completions()).toBe(0);
     child.send({ type: 'fixture_release', stage: 2 });
     await waitFor(() => completions() === 1);
     expect(events.filter(event => event.type === 'text_complete').map(event => event.text))
       .toEqual(['FIRST_PHASE', 'DEFERRED_PHASE_DONE']);
-    const entrySnapshot = frames.findLast(frame => frame.type === 'fixture_assistant_entries');
-    const persistedAssistantEntries = Array.isArray(entrySnapshot?.ids)
-      ? entrySnapshot.ids.filter((id): id is string => typeof id === 'string') : [];
+    const entrySnapshot = frames.findLast(frame => frame["type"] === 'fixture_assistant_entries');
+    const persistedAssistantEntries = Array.isArray(entrySnapshot?.["ids"])
+      ? entrySnapshot["ids"].filter((id: unknown): id is string => typeof id === 'string') : [];
     expect(persistedAssistantEntries).toHaveLength(2);
     expect(events.filter(event => event.type === 'pi_turn_anchor').map(event => event.sdkTurnAnchor))
       .toEqual(persistedAssistantEntries);
@@ -101,7 +101,7 @@ it('closes after the real SDK settles all deferred work, retains exact anchors, 
     await send({ type: 'prompt', id: 'next', message: 'A fresh request' });
     await waitFor(() => completions() === 2);
     expect(events.some(event => event.type === 'text_complete' && event.text === 'NEXT_REQUEST_DONE')).toBe(true);
-    expect(frames.some(frame => frame.type === 'error')).toBe(false);
+    expect(frames.some(frame => frame["type"] === 'error')).toBe(false);
   } finally {
     child.send({ type: 'fixture_release_all' });
     await send({ type: 'shutdown' }).catch(() => {});

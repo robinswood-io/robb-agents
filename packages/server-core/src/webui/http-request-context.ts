@@ -240,23 +240,23 @@ export interface WebuiHandlerOptions {
   /** Secret used to sign JWTs — typically CRAFT_SERVER_TOKEN. */
   secret: string
   /** Optional separate web UI password. Falls back to `secret` for verification. */
-  password?: string
+  password?: string | undefined
   /** Explicit Secure-cookie override. When unset, infer from the request / proxy headers. */
-  secureCookies?: boolean
+  secureCookies?: boolean | undefined
   /**
    * Development/test escape hatch. Production pairing and cookie sessions are
    * rejected unless they use direct HTTPS or an explicitly configured HTTPS
    * reverse proxy with Secure cookies.
    */
-  allowInsecureSessions?: boolean
+  allowInsecureSessions?: boolean | undefined
   /** Optional browser-facing WebSocket URL override for reverse-proxy deployments. */
-  publicWsUrl?: string
+  publicWsUrl?: string | undefined
   /** Optional browser-facing Web UI URL used in Remote pairing links. */
-  publicWebuiUrl?: string
+  publicWebuiUrl?: string | undefined
   /** Gate applied before a browser can bootstrap the one-time pairing flow. */
-  remoteAuthMode?: RemoteAuthMode
+  remoteAuthMode?: RemoteAuthMode | undefined
   /** Human-readable host label shown on paired mobile devices. */
-  hostLabel?: string
+  hostLabel?: string | undefined
   /** RPC WebSocket protocol used when building a browser-facing fallback URL. */
   wsProtocol: 'ws' | 'wss'
   /** RPC WebSocket port used when building a browser-facing fallback URL. */
@@ -266,18 +266,18 @@ export interface WebuiHandlerOptions {
   /** Logger. */
   logger: PlatformServices['logger']
   /** Durable authorization store for paired Remote devices. */
-  remoteDeviceRegistry?: RemoteDeviceRegistry
+  remoteDeviceRegistry?: RemoteDeviceRegistry | undefined
   /** Workspace scope granted to a newly paired Remote device. */
-  getRemoteWorkspaceIds?: () => readonly string[]
+  getRemoteWorkspaceIds?: (() => readonly string[]) | undefined
   /** Disconnects an active Remote transport immediately after host revocation. */
-  onRemoteDeviceRevoked?: (deviceId: string) => void
+  onRemoteDeviceRevoked?: ((deviceId: string) => void) | undefined
   /** OAuth callback deps — when provided, enables /api/oauth/callback route. */
-  oauthCallbackDeps?: OAuthCallbackDeps
+  oauthCallbackDeps?: OAuthCallbackDeps | undefined
   /**
    * Exact trusted proxy IP addresses. Forwarded client IP headers are accepted
    * only when the Node transport peer matches one of these addresses.
    */
-  trustedProxies?: string[]
+  trustedProxies?: string[] | undefined
 }
 
 

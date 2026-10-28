@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { Buffer } from "node:buffer";
 import type { StoredAttachment, TokenUsage } from "@craft-agent/core/types";
 import type { CreateSessionOptions, FileAttachment, SendMessageOptions } from "@craft-agent/shared/protocol";
@@ -62,7 +63,7 @@ export class MockHost implements ConductorSessionHost {
     _storedAttachments?: StoredAttachment[],
     options?: SendMessageOptions,
   ): Promise<void> {
-    this.sent.push({ sessionId, message, options });
+    this.sent.push({ sessionId, message, ...(options !== undefined ? { options: options } : {}) });
     this.processing.add(sessionId);
   }
   async setSessionStatus(sessionId: string, status: string): Promise<void> {
@@ -81,20 +82,20 @@ export class MockHost implements ConductorSessionHost {
   }
   async cancelProcessingAndWait(sessionId: string): Promise<SessionCompletionEvent> {
     await this.cancelProcessing(sessionId, true);
-    return {
+    return omitUndefined<SessionCompletionEvent>({
       sessionId,
       workspaceId: 'ws',
       reason: 'interrupted',
       finalText: this.finalTextById.get(sessionId),
       tokenUsage: this.tokenUsageById.get(sessionId),
-    };
+    });
   }
   listTaskReviewerSessions(
     _workspaceId: string,
     taskSlug: string,
     taskRunId: string,
     parentSessionId: string,
-  ) {
+  ): ReturnType<ConductorSessionHost['listTaskReviewerSessions']> {
     return this.created
       .filter(entry => entry.options.taskSlug === taskSlug
         && entry.options.taskRunId === taskRunId
@@ -102,14 +103,14 @@ export class MockHost implements ConductorSessionHost {
         && entry.options.missionRole === 'reviewer'
         && entry.options.parentSessionId === parentSessionId
         && (this.statusById.get(entry.id) ?? entry.options.sessionStatus) === 'in-progress')
-      .map(entry => ({
+      .map(entry => (omitUndefined<ReturnType<ConductorSessionHost['listTaskReviewerSessions']>[number]>({
         id: entry.id,
         isProcessing: this.processing.has(entry.id),
         tokenUsage: this.tokenUsageById.get(entry.id),
         finalText: this.finalTextById.get(entry.id),
-      }));
+      })));
   }
-  listTaskWorkerSessions(_workspaceId: string, taskSlug: string, taskRunId: string) {
+  listTaskWorkerSessions(_workspaceId: string, taskSlug: string, taskRunId: string): ReturnType<ConductorSessionHost['listTaskWorkerSessions']> {
     return this.created
       .filter(entry => entry.options.taskSlug === taskSlug
         && entry.options.taskRunId === taskRunId
@@ -117,12 +118,12 @@ export class MockHost implements ConductorSessionHost {
         && entry.options.taskNodeId !== '__verdict__'
         && ((this.statusById.get(entry.id) ?? entry.options.sessionStatus) === 'in-progress'
           || this.processing.has(entry.id)))
-      .map(entry => ({
+      .map(entry => (omitUndefined<ReturnType<ConductorSessionHost['listTaskWorkerSessions']>[number]>({
         id: entry.id,
         isProcessing: this.processing.has(entry.id),
         tokenUsage: this.tokenUsageById.get(entry.id),
         finalText: this.finalTextById.get(entry.id),
-      }));
+      })));
   }
   onSessionComplete(listener: (evt: SessionCompletionEvent) => void): () => void {
     this.listeners.add(listener);
@@ -195,7 +196,7 @@ export class MockHost implements ConductorSessionHost {
       passed: result === 'pass'
         || (nodes.length > 0 ? !failedNodeCriteria.has(id) : id !== 'task-outcome'),
     }));
-    this.completeSession(this.reviewerSessionId(), {
+    this.completeSession(this.reviewerSessionId(), omitUndefined<NonNullable<Parameters<MockHost['completeSession']>[1]>>({
       finalText: JSON.stringify({
         objectiveId: contract.objectiveId,
         acceptanceSha256: contract.acceptanceSha256,
@@ -204,7 +205,7 @@ export class MockHost implements ConductorSessionHost {
         findings: result === 'pass' ? [] : [reason],
       }),
       tokenUsage,
-    });
+    }));
   }
   completeRawReview(finalText: string): void {
     this.completeSession(this.reviewerSessionId(), { finalText });
@@ -231,9 +232,9 @@ export class MockHost implements ConductorSessionHost {
       sessionId,
       workspaceId: 'ws',
       reason: opts.reason ?? 'complete',
-      finalText: opts.finalText,
-      tokenUsage: opts.tokenUsage,
-      executionProof: opts.executionProof,
+      ...(opts.finalText !== undefined ? { finalText: opts.finalText } : {}),
+      ...(opts.tokenUsage !== undefined ? { tokenUsage: opts.tokenUsage } : {}),
+      ...(opts.executionProof !== undefined ? { executionProof: opts.executionProof } : {}),
     };
     // SessionManager iterates its listener Set live. Tests deliberately mirror
     // that behavior so a listener added by a callback cannot consume the same

@@ -1,6 +1,7 @@
+import { useEffectEvent } from 'react';
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { useEffect, useMemo } from "react";
+import { useEffect,useMemo } from "react";
 import "lucide-react";
 import "motion/react";
 import "sonner";
@@ -9,7 +10,7 @@ import "@/lib/utils";
 import "@/lib/input-text";
 import "@/components/markdown";
 import "@/components/ui/collapsible";
-import { projectConversation, type UserInputCardProps } from "@craft-agent/ui";
+import { projectConversation,type UserInputCardProps } from "@craft-agent/ui";
 import { useFocusZone } from "@/hooks/keyboard";
 import { useTheme } from "@/hooks/useTheme";
 import "@craft-agent/ui";
@@ -17,7 +18,7 @@ import "@/components/chat/AuthRequestCard";
 import "./input";
 import "@/hooks/useTurnCardExpansion";
 import { useNavigation } from "@/contexts/NavigationContext";
-import { useAppShellContext, useActiveDescendantSessionIds, usePendingDescendantAuthRequests, useConversationPermissionRecoveries, useConversationAgentActivity } from "@/context/AppShellContext";
+import { useAppShellContext,useActiveDescendantSessionIds,usePendingDescendantAuthRequests,useConversationPermissionRecoveries,useConversationAgentActivity } from "@/context/AppShellContext";
 import "./PermissionRecoveryCard";
 import "@/lib/navigate";
 import "@/config/layout";
@@ -76,7 +77,7 @@ import { useChatSearchMatches } from "./use-chat-search-matches";
 import { useChatScrollState } from "./use-chat-scroll-state";
 
 import { ChatDisplayView } from "./chat-display-view";
-import { type ChatDisplayProps, type ChatDisplayHandle } from "./chat-display-contracts";
+import { type ChatDisplayProps,type ChatDisplayHandle } from "./chat-display-contracts";
 
 export { type ChatDisplayHandle } from "./chat-display-contracts";
 
@@ -181,7 +182,6 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   compactMode = false,
   enableCompactModelPicker = false,
   placeholder,
-  emptyStateLabel,
   // Connection unavailable
   connectionUnavailable = false,
 }, ref) {
@@ -254,11 +254,11 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   // Keep the persisted execution transcript intact for runtime and diagnostics.
   const presentation = useMemo(() => projectConversation(session?.messages ?? [], {
     isProcessing: !!session?.isProcessing,
-    sessionId: session?.id,
-    parentSessionId: session?.parentSessionId,
+    ...(session?.id !== undefined ? { sessionId: session?.id } : {}),
+    ...(session?.parentSessionId !== undefined ? { parentSessionId: session?.parentSessionId } : {}),
     hasActiveDescendants: activeDescendantIds.length > 0,
-    activeObjective: session?.activeObjective,
-    pendingTurnRecovery: session?.pendingTurnRecovery,
+    ...(session?.activeObjective !== undefined ? { activeObjective: session?.activeObjective } : {}),
+    ...(session?.pendingTurnRecovery !== undefined ? { pendingTurnRecovery: session?.pendingTurnRecovery } : {}),
     awaitingInput: !!pendingPermission || !!pendingCredential || pendingDescendantAuthRequests.length > 0 || permissionRecoveries.length > 0
       || hasPendingUserInput,
   }), [session?.id, session?.parentSessionId, session?.messages, session?.isProcessing, activeDescendantIds.length, session?.activeObjective, session?.pendingTurnRecovery, pendingPermission, pendingCredential, pendingDescendantAuthRequests.length, permissionRecoveries.length, hasPendingUserInput])
@@ -288,11 +288,12 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
 
   // Scroll to current match turn
   // Only scrolls when shouldScrollToMatchRef is true (single match auto-scroll or nav button click)
-  useEffect(() => {
+  const scrollSearchMatch = useEffectEvent(() => {
     if (!shouldScrollToMatchRef.current) return
 
     if (validMatches.length > 0 && currentMatchIndex < validMatches.length) {
       const matchData = validMatches[currentMatchIndex]
+      if (!matchData) return
       const { turnId, turnIndex } = matchData
       const totalTurns = totalTurnCountRef.current
 
@@ -317,8 +318,8 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
       shouldScrollToMatchRef.current = false
     }
   // totalTurnCountRef is stable and is declared below; the callback reads it after render.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [validMatches, currentMatchIndex, session?.id, visibleTurnCount, setVisibleTurnCount, shouldScrollToMatchRef, turnRefs])
+  });
+useEffect(() => scrollSearchMatch(), [validMatches, currentMatchIndex, session?.id, visibleTurnCount, setVisibleTurnCount, shouldScrollToMatchRef, turnRefs]);
 
   // ---------------------------------------------------------------------------
   // CSS Custom Highlight API — non-destructive text highlighting

@@ -97,6 +97,6 @@ export function nextId() { return `msg-${++idCounter}` }
 
 
 /** Extract the set of defined (non-undefined) keys from an object */
-export function definedKeys(obj: Record<string, unknown>): Set<string> {
-  return new Set(Object.entries(obj).filter(([_, v]) => v !== undefined).map(([k]) => k))
+export function definedKeys(obj: object): Set<string> {
+  return new Set(Object.keys(obj).filter(key => { const value: unknown = Reflect.get(obj, key); return value !== undefined }))
 }

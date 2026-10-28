@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 /**
  * Unified fetch interceptor for all AI API requests (Anthropic + OpenAI format).
  *
@@ -44,7 +45,7 @@ export function sanitizeOpenAiHistoryInPlace(body: Record<string, unknown>): {
   droppedToolCalls: number;
   droppedToolResults: number;
 } {
-  const messages = body.messages as Array<{
+  const messages = body["messages"] as Array<{
     role?: string;
     tool_call_id?: string;
     tool_calls?: Array<{
@@ -53,7 +54,7 @@ export function sanitizeOpenAiHistoryInPlace(body: Record<string, unknown>): {
       function?: { name?: string; arguments?: string };
     }>;
   }> | undefined;
-  if (!Array.isArray(messages)) {
+  if (!isUnknownArray(messages)) {
     return { droppedToolCalls: 0, droppedToolResults: 0 };
   }
 
@@ -61,7 +62,7 @@ export function sanitizeOpenAiHistoryInPlace(body: Record<string, unknown>): {
   const knownIds = new Set<string>();
 
   for (const message of messages) {
-    if (message.role === 'assistant' && Array.isArray(message.tool_calls)) {
+    if (message.role === 'assistant' && isUnknownArray(message.tool_calls)) {
       const cleaned = message.tool_calls.filter(tc => {
         if (typeof tc.id !== 'string' || tc.id === '') {
           droppedToolCalls++;
@@ -92,7 +93,7 @@ export function sanitizeOpenAiHistoryInPlace(body: Record<string, unknown>): {
       return true;
     });
     if (filtered.length !== messages.length) {
-      body.messages = filtered;
+      body["messages"] = filtered;
     }
     debugLog(`[OpenAI History] Sanitized poisoned history: dropped ${droppedToolCalls} empty-id tool_call(s) and ${droppedToolResults} orphan tool result(s)`);
   }
@@ -101,7 +102,7 @@ export function sanitizeOpenAiHistoryInPlace(body: Record<string, unknown>): {
 }
 
 export function validateOpenAiChatBody(body: Record<string, unknown>): void {
-  const messages = body.messages as Array<{
+  const messages = body["messages"] as Array<{
     role?: string;
     tool_call_id?: unknown;
     tool_calls?: Array<{
@@ -110,7 +111,7 @@ export function validateOpenAiChatBody(body: Record<string, unknown>): void {
       function?: { name?: unknown };
     }>;
   }> | undefined;
-  if (!Array.isArray(messages)) return;
+  if (!isUnknownArray(messages)) return;
 
   // Track every tool_call id we've seen on assistant messages. Duplicates
   // across messages are also illegal — OpenAI requires globally unique ids
@@ -121,7 +122,7 @@ export function validateOpenAiChatBody(body: Record<string, unknown>): void {
   for (let i = 0; i < messages.length; i++) {
     const msg = messages[i];
     if (!msg) continue;
-    if (msg.role === 'assistant' && Array.isArray(msg.tool_calls)) {
+    if (msg.role === 'assistant' && isUnknownArray(msg.tool_calls)) {
       for (const tc of msg.tool_calls) {
         const id = typeof tc.id === 'string' ? tc.id : '';
         if (!id) {
@@ -182,8 +183,8 @@ export function validateOpenAiChatBody(body: Record<string, unknown>): void {
  * Exported for focused unit tests.
  */
 export function validateOpenAiResponsesBody(body: Record<string, unknown>): void {
-  const input = body.input as Array<Record<string, unknown>> | undefined;
-  if (!Array.isArray(input)) return;
+  const input = body["input"] as Array<Record<string, unknown>> | undefined;
+  if (!isUnknownArray(input)) return;
 
   const seenCallIds = new Set<string>();
   const knownCallIds = new Set<string>();
@@ -191,8 +192,8 @@ export function validateOpenAiResponsesBody(body: Record<string, unknown>): void
   for (let i = 0; i < input.length; i++) {
     const entry = input[i];
     if (!entry) continue;
-    if (entry.type === 'function_call') {
-      const callId = typeof entry.call_id === 'string' ? entry.call_id : '';
+    if (entry["type"] === 'function_call') {
+      const callId = typeof entry["call_id"] === 'string' ? entry["call_id"] : '';
       if (!callId) {
         throw new MalformedBodyError({
           code: 'missing_call_id',
@@ -210,7 +211,7 @@ export function validateOpenAiResponsesBody(body: Record<string, unknown>): void
       seenCallIds.add(callId);
       knownCallIds.add(callId);
 
-      const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+      const name = typeof entry["name"] === 'string' ? entry["name"].trim() : '';
       if (!name) {
         throw new MalformedBodyError({
           code: 'empty_tool_name',
@@ -218,8 +219,8 @@ export function validateOpenAiResponsesBody(body: Record<string, unknown>): void
           adapter: 'openai-responses',
         });
       }
-    } else if (entry.type === 'function_call_output') {
-      const callId = typeof entry.call_id === 'string' ? entry.call_id : '';
+    } else if (entry["type"] === 'function_call_output') {
+      const callId = typeof entry["call_id"] === 'string' ? entry["call_id"] : '';
       if (!callId) {
         throw new MalformedBodyError({
           code: 'missing_call_id',
@@ -261,23 +262,23 @@ export function repairResponsesHistoryInPlace(input: Array<Record<string, unknow
   for (let i = 0; i < input.length; i++) {
     const entry = input[i];
     if (!entry) continue;
-    if (entry.type !== 'function_call') continue;
-    if (typeof entry.call_id === 'string' && entry.call_id.length > 0) {
-      knownCallIds.add(entry.call_id);
+    if (entry["type"] !== 'function_call') continue;
+    if (typeof entry["call_id"] === 'string' && entry["call_id"].length > 0) {
+      knownCallIds.add(entry["call_id"]);
       continue;
     }
-    const name = typeof entry.name === 'string' ? entry.name : 'unknown';
-    const argsHash = typeof entry.arguments === 'string'
-      ? hashShortString(entry.arguments)
+    const name = typeof entry["name"] === 'string' ? entry["name"] : 'unknown';
+    const argsHash = typeof entry["arguments"] === 'string'
+      ? hashShortString(entry["arguments"])
       : '0';
     const synthetic = `repaired_${i}_${name}_${argsHash}`;
-    entry.call_id = synthetic;
+    entry["call_id"] = synthetic;
     knownCallIds.add(synthetic);
     synthesizedCallIds++;
     debugLog(`[OpenAI Responses Repair] Synthesized call_id "${synthetic}" for input[${i}] (name=${name})`);
   }
 
-  if (synthesizedCallIds === 0 && input.every(e => e.type !== 'function_call_output')) {
+  if (synthesizedCallIds === 0 && input.every(e => e["type"] !== 'function_call_output')) {
     return { synthesizedCallIds, droppedOrphans };
   }
 
@@ -285,8 +286,8 @@ export function repairResponsesHistoryInPlace(input: Array<Record<string, unknow
   for (let i = input.length - 1; i >= 0; i--) {
     const entry = input[i];
     if (!entry) continue;
-    if (entry.type !== 'function_call_output') continue;
-    const callId = typeof entry.call_id === 'string' ? entry.call_id : '';
+    if (entry["type"] !== 'function_call_output') continue;
+    const callId = typeof entry["call_id"] === 'string' ? entry["call_id"] : '';
     if (!callId || !knownCallIds.has(callId)) {
       input.splice(i, 1);
       droppedOrphans++;

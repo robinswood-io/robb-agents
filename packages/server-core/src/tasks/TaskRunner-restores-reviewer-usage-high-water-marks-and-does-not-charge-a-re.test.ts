@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
@@ -36,7 +37,7 @@ describe('TaskRunner (Conductor)', () => {
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
       now: () => '2026-06-07T00:00:00.000Z',
-      nowMs,
+      ...(nowMs !== undefined ? { nowMs: nowMs } : {}),
       resolveSubagentAutonomyContext: () => autonomyContext,
       ...(executionProofIssuer ? {
         verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),
@@ -112,8 +113,8 @@ describe('TaskRunner (Conductor)', () => {
 
     const recovered = new PrefixedSessionHost('after');
     recovered.listTaskReviewerSessions = () => [
-      { id: persistedReviewer, isProcessing: false, tokenUsage: undefined, finalText: undefined },
-      { id: 'second-completed-reviewer', isProcessing: false, tokenUsage: undefined, finalText: undefined },
+      omitUndefined({ id: persistedReviewer, isProcessing: false, tokenUsage: undefined, finalText: undefined }),
+      omitUndefined({ id: 'second-completed-reviewer', isProcessing: false, tokenUsage: undefined, finalText: undefined }),
     ];
     recovered.cancelProcessingAndWait = async sessionId => ({
       sessionId, workspaceId: 'ws', reason: 'complete', finalText: '{}',
@@ -125,7 +126,7 @@ describe('TaskRunner (Conductor)', () => {
     await waitUntil(() => resumed.getRunState('review-ambiguous', 'r1')?.status === 'failed');
 
     expect(recovered.created.filter(entry => entry.options.taskNodeId === '__verdict__')).toHaveLength(0);
-    expect(readNodeOutput(root, 'review-ambiguous', 'r1', '__verdict__')?.params?.parseFailure)
+    expect(readNodeOutput(root, 'review-ambiguous', 'r1', '__verdict__')?.params?.["parseFailure"])
       .toContain('Ambiguous reviewer recovery');
   });
 
@@ -177,12 +178,12 @@ describe('TaskRunner (Conductor)', () => {
     await waitUntil(() => [...attempts.values()].some((attempt) => attempt === 2));
 
     expect(recovered.getRunState(spec.id, 'r1')?.status).toBe('verifying');
-    expect(readNodeOutput(root, spec.id, 'r1', '__verdict__')?.params?.reviewerSessionIds)
+    expect(readNodeOutput(root, spec.id, 'r1', '__verdict__')?.params?.["reviewerSessionIds"])
       .toEqual(['orphan-reviewer-1', 'orphan-reviewer-2']);
-    expect(readRunLog(root, spec.id, 'r1')).toContainEqual(expect.objectContaining({
+    expect<unknown>(readRunLog(root, spec.id, 'r1')).toContainEqual((expect.objectContaining({
       kind: 'run-draining', cause: 'reviewer',
       reviewerSessionIds: ['orphan-reviewer-1', 'orphan-reviewer-2'],
-    }));
+    }) as unknown));
     expect(readRunLog(root, spec.id, 'r1').some((entry) => entry.kind === 'run-failed')).toBe(false);
 
     releaseRetry();
@@ -328,12 +329,12 @@ describe('TaskRunner (Conductor)', () => {
 
     expect(runner.getRunState('stagnant-repair', 'r1')!.status).toBe('failed');
     expect(host.created.filter((entry) => entry.options.name === 'a')).toHaveLength(2);
-    expect(readRunLog(root, 'stagnant-repair', 'r1')).toContainEqual(expect.objectContaining({
+    expect<unknown>(readRunLog(root, 'stagnant-repair', 'r1')).toContainEqual((expect.objectContaining({
       kind: 'stagnation-detected',
       repetitions: 1,
       limit: 1,
       nodes: ['a'],
-    }));
+    }) as unknown));
   });
 
   it('restores no-progress history before evaluating a post-restart verdict', async () => {

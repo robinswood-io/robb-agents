@@ -36,7 +36,7 @@ describe('TaskRunner (Conductor)', () => {
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
       now: () => '2026-06-07T00:00:00.000Z',
-      nowMs,
+      ...(nowMs !== undefined ? { nowMs: nowMs } : {}),
       resolveSubagentAutonomyContext: () => autonomyContext,
       ...(executionProofIssuer ? {
         verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),

@@ -7,7 +7,7 @@ import { coerceInputText } from '@/lib/input-text';
 import { useEscapeInterrupt } from '@/context/EscapeInterruptContext';
 
 import { shouldHandleScopedInputEvent } from './input-event-guards';
-import { readUsableViewportHeight, subscribeToViewportHeight } from './viewport-height';
+import { readUsableViewportHeight,subscribeToViewportHeight } from './viewport-height';
 
 import { useModelVisionToggle } from './useModelVisionToggle';
 
@@ -39,11 +39,11 @@ const inputRef = React.useRef(input)
 inputRef.current = input
 
 React.useEffect(() => {
+    const pendingSync = syncTimeoutRef;
     return () => {
       // Cancel pending debounced sync
       // The latest timer must be cleared when this component unmounts.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current)
+      if (pendingSync.current) clearTimeout(pendingSync.current)
       // Immediately sync current value to parent on unmount
       // This preserves input when switching to structured input (e.g., permission request)
       if (onInputChange && inputRef.current !== prevInputValueRef.current) {
@@ -56,7 +56,7 @@ const [isDraggingOver, setIsDraggingOver] = React.useState(false)
 
 const [loadingCount, setLoadingCount] = React.useState(0)
 
-const [isFocused, setIsFocused] = React.useState(false)
+const [, setIsFocused] = React.useState(false)
 
 const [inputMaxHeight, setInputMaxHeight] = React.useState(540)
 
@@ -113,7 +113,7 @@ const lastCaretPositionRef = React.useRef<number | null>(null)
 React.useEffect(() => {
     const handleInsertText = (e: CustomEvent<{ text: string; sessionId?: string }>) => {
       const targetSessionId = e.detail?.sessionId
-      if (!shouldHandleScopedInputEvent({ sessionId, isFocusedPanel, targetSessionId })) return
+      if (!shouldHandleScopedInputEvent({ ...(sessionId !== undefined ? { sessionId: sessionId } : {}), isFocusedPanel, ...(targetSessionId !== undefined ? { targetSessionId: targetSessionId } : {}) })) return
 
       const text = coerceInputText(e.detail?.text)
       setInput(text)

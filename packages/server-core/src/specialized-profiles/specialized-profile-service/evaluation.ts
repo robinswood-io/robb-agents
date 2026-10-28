@@ -55,7 +55,7 @@ export async function recordEvaluation(transportOwner: SpecializedProfileService
             stageEntryTransitionSequence: loadedStageEntry.sequence,
             campaignId: campaign.id,
             missionIds: manifestIds,
-            caseFingerprints: campaign.caseFingerprints,
+            ...(campaign.caseFingerprints !== undefined ? { caseFingerprints: campaign.caseFingerprints } : {}),
         });
         const evaluationIdentity = evaluation && sha256(canonicalJson({
             schemaVersion: 1,
@@ -254,7 +254,7 @@ export async function recordEvaluation(transportOwner: SpecializedProfileService
         stageEntryTransitionSequence: stageEntry.sequence,
         campaignId: cohortId,
         missionIds: manifestIds,
-        caseFingerprints: campaign.caseFingerprints,
+        ...(campaign.caseFingerprints !== undefined ? { caseFingerprints: campaign.caseFingerprints } : {}),
     });
     const provenanceSha256 = sha256(canonicalJson(version.provenance));
     const lineage = await transportOwner["options"].corpusLineageProvider.attestHeldOut({

@@ -1,3 +1,4 @@
+import { parseJsonObject } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -20,9 +21,7 @@ function passingCorpus(): AutonomyAcceptanceObservation[] {
     mutations: index % 10 === 0
       ? [{ authorized: true, executionReceipt: true, verificationReceipt: true }]
       : [],
-    humanBenchmark: index < 100
-      ? { domain: 'development', agentScore: 91, humanTopQuartileScore: 90 }
-      : undefined,
+    humanBenchmark: { domain: 'development' as const, agentScore: 91, humanTopQuartileScore: 90 },
   }));
 }
 
@@ -35,12 +34,12 @@ describe('total-autonomy promotion gate', () => {
       writeFileSync(input, JSON.stringify(passingCorpus()));
       const passing = Bun.spawnSync([process.execPath, cli, input]);
       expect(passing.exitCode).toBe(1);
-      expect(JSON.parse(passing.stdout.toString()).technicalGatesPassed).toBe(true);
-      expect(JSON.parse(passing.stdout.toString()).eligibleForPromotion).toBe(false);
+      expect(parseJsonObject(passing.stdout.toString())['technicalGatesPassed']).toBe(true);
+      expect(parseJsonObject(passing.stdout.toString())['eligibleForPromotion']).toBe(false);
       writeFileSync(input, '[]');
       const failing = Bun.spawnSync([process.execPath, cli, input]);
       expect(failing.exitCode).toBe(1);
-      expect(JSON.parse(failing.stdout.toString()).eligibleForPromotion).toBe(false);
+      expect(parseJsonObject(failing.stdout.toString())['eligibleForPromotion']).toBe(false);
       writeFileSync(input, '{}');
       expect(Bun.spawnSync([process.execPath, cli, input]).exitCode).toBe(2);
       expect(Bun.spawnSync([process.execPath, cli]).exitCode).toBe(2);

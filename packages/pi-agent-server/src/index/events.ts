@@ -14,13 +14,13 @@ import { debugLog, send } from "./stdio.ts";
 export function extractToolExecutionMetadata(args: Record<string, unknown> | undefined): ToolExecutionMetadata | undefined {
     if (!args)
         return undefined;
-    const intent = typeof args._intent === 'string' ? args._intent : undefined;
-    const displayName = typeof args._displayName === 'string' ? args._displayName : undefined;
+    const intent = typeof args["_intent"] === 'string' ? args["_intent"] : undefined;
+    const displayName = typeof args["_displayName"] === 'string' ? args["_displayName"] : undefined;
     if (!intent && !displayName)
         return undefined;
     return {
-        intent,
-        displayName,
+        ...(intent !== undefined ? { intent } : {}),
+        ...(displayName !== undefined ? { displayName } : {}),
         source: 'interceptor',
     };
 }

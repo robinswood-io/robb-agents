@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { AgentEvent } from '@craft-agent/core/types';
-import { collect, recordedPiEvent, eventOfType } from './fixtures/pi-event-fixtures.ts';
+import { collect, adaptRecordedPiEvent, eventOfType } from './fixtures/pi-event-fixtures.ts';
 import { PiEventAdapter } from '../backend/pi/event-adapter.ts';
 import { toolMetadataStore } from '../../interceptor-common.ts';
 
@@ -27,16 +27,16 @@ afterEach(() => {
 
 describe('error surfacing', () => {
     function terminateAssistantError(errorMessage: string): AgentEvent[] {
-      const attemptEvents = collect(adapter.adaptEvent(recordedPiEvent({
+      const attemptEvents = collect(adaptRecordedPiEvent(adapter, {
         type: 'message_end',
         message: {
           role: 'assistant',
           stopReason: 'error',
           errorMessage,
         },
-      })));
+      }));
       expect(attemptEvents).toHaveLength(0);
-      return collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_settled', aborted: false })));
+      return collect(adaptRecordedPiEvent(adapter, { type: 'agent_settled', aborted: false }));
     }
 
     it('should emit plain error for unclassified error messages', () => {
@@ -92,8 +92,8 @@ describe('error surfacing', () => {
     });
 
     it('should not emit error without errorMessage even if stopReason is error', () => {
-      collect(adapter.adaptEvent(recordedPiEvent({ type: 'turn_start' })));
-      const events = collect(adapter.adaptEvent(recordedPiEvent({
+      collect(adaptRecordedPiEvent(adapter, { type: 'turn_start' }));
+      const events = collect(adaptRecordedPiEvent(adapter, {
         type: 'message_end',
         message: {
           role: 'assistant',
@@ -101,7 +101,7 @@ describe('error surfacing', () => {
           // No errorMessage — fall through to normal text extraction
           content: 'Some partial content',
         },
-      })));
+      }));
 
       // Should emit as text_complete, not error
       expect(events).toHaveLength(1);
@@ -114,37 +114,37 @@ describe('provider retry recovery', () => {
     const finalError = 'Codex error: An error occurred while processing your request. Please include the request ID final-request-id in your message.';
 
     it('keeps the queue open and suppresses an attempt error when a retry succeeds', () => {
-      collect(adapter.adaptEvent(recordedPiEvent({ type: 'turn_start' })));
+      collect(adaptRecordedPiEvent(adapter, { type: 'turn_start' }));
 
-      const attemptError = collect(adapter.adaptEvent(recordedPiEvent({
+      const attemptError = collect(adaptRecordedPiEvent(adapter, {
         type: 'message_end',
         message: { role: 'assistant', stopReason: 'error', errorMessage: firstError },
-      })));
+      }));
       expect(attemptError).toHaveLength(0);
 
-      const retryingAgentEnd = collect(adapter.adaptEvent(recordedPiEvent({
+      const retryingAgentEnd = collect(adaptRecordedPiEvent(adapter, {
         type: 'agent_end',
         willRetry: true,
-      })));
+      }));
       expect(retryingAgentEnd).toHaveLength(0);
 
-      const retryStatus = collect(adapter.adaptEvent(recordedPiEvent({
+      const retryStatus = collect(adaptRecordedPiEvent(adapter, {
         type: 'auto_retry_start',
         attempt: 1,
         maxAttempts: 3,
         delayMs: 2_000,
         errorMessage: firstError,
-      })));
+      }));
       expect(retryStatus).toMatchObject([{ type: 'status', message: 'Retrying (attempt 1/3)...' }]);
 
-      const recovered = collect(adapter.adaptEvent(recordedPiEvent({
+      const recovered = collect(adaptRecordedPiEvent(adapter, {
         type: 'message_end',
         message: { role: 'assistant', stopReason: 'stop', content: 'Recovered answer' },
-      })));
+      }));
       expect(recovered).toMatchObject([{ type: 'text_complete', text: 'Recovered answer' }]);
-      expect(collect(adapter.adaptEvent(recordedPiEvent({ type: 'auto_retry_end', success: true, attempt: 1 })))).toHaveLength(0);
+      expect(collect(adaptRecordedPiEvent(adapter, { type: 'auto_retry_end', success: true, attempt: 1 }))).toHaveLength(0);
 
-      const completed = collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_settled', aborted: false })));
+      const completed = collect(adaptRecordedPiEvent(adapter, { type: 'agent_settled', aborted: false }));
       expect(completed).toMatchObject([{ type: 'complete' }]);
 
       const allEvents = [...attemptError, ...retryingAgentEnd, ...retryStatus, ...recovered, ...completed];
@@ -152,19 +152,19 @@ describe('provider retry recovery', () => {
     });
 
     it('surfaces only the final Codex request ID after retries are exhausted', () => {
-      collect(adapter.adaptEvent(recordedPiEvent({ type: 'turn_start' })));
+      collect(adaptRecordedPiEvent(adapter, { type: 'turn_start' }));
 
-      collect(adapter.adaptEvent(recordedPiEvent({
+      collect(adaptRecordedPiEvent(adapter, {
         type: 'message_end',
         message: { role: 'assistant', stopReason: 'error', errorMessage: firstError },
-      })));
-      collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_end', willRetry: true })));
+      }));
+      collect(adaptRecordedPiEvent(adapter, { type: 'agent_end', willRetry: true }));
 
-      collect(adapter.adaptEvent(recordedPiEvent({
+      collect(adaptRecordedPiEvent(adapter, {
         type: 'message_end',
         message: { role: 'assistant', stopReason: 'error', errorMessage: finalError },
-      })));
-      const terminal = collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_settled', aborted: false })));
+      }));
+      const terminal = collect(adaptRecordedPiEvent(adapter, { type: 'agent_settled', aborted: false }));
 
       expect(terminal).toHaveLength(2);
       expect(terminal[0]).toMatchObject({

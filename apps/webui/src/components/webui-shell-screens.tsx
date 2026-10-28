@@ -39,7 +39,7 @@ export function ConnectionScreen({
   kind: 'offline' | 'error'
   message: string
   onRetry: () => void
-  onLogOut?: () => Promise<void>
+  onLogOut?: (() => Promise<void>) | undefined
 }) {
   const { t } = useTranslation()
   const offline = kind === 'offline'

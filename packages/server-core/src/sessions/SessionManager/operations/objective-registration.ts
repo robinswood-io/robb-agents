@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { createBackendFromConnection } from '@craft-agent/shared/agent/backend';
 import { getLlmConnection, getPersistedUiLanguage, resolveTitleLanguageName, getMiniModel } from '@craft-agent/shared/config';
@@ -36,10 +37,10 @@ async function sessionOpGenerateTitle(sessionOperationContext: SessionOperationC
     if (!agent && managed.llmConnection) {
         try {
             const connection = getLlmConnection(managed.llmConnection);
-            agent = createBackendFromConnection(managed.llmConnection, {
+            agent = createBackendFromConnection(managed.llmConnection, omitUndefined({
                 workspace: managed.workspace,
-                model: managed.model,
-                thinkingLevel: managed.thinkingLevel,
+                ...(managed.model !== undefined ? { model: managed.model } : {}),
+                ...(managed.thinkingLevel !== undefined ? { thinkingLevel: managed.thinkingLevel } : {}),
                 isModelRoutePinned: () => managed.modelRoutePinned === true,
                 miniModel: connection ? (getMiniModel(connection) ?? connection.defaultModel) : undefined,
                 session: {
@@ -50,7 +51,7 @@ async function sessionOpGenerateTitle(sessionOperationContext: SessionOperationC
                     lastUsedAt: Date.now(),
                 },
                 isHeadless: true,
-            }, buildBackendHostRuntimeContext()) as AgentInstance;
+            }), buildBackendHostRuntimeContext()) as AgentInstance;
             await agent.postInit();
             isTemporary = true;
             if (!sessionOpOwnsSessionOperation(sessionOperationContext, managed)) {
@@ -79,7 +80,7 @@ async function sessionOpGenerateTitle(sessionOperationContext: SessionOperationC
             resolvedLanguage: i18n.resolvedLanguage ?? null,
             titleLanguage: titleLanguage ?? null,
         });
-        const title = await agent.generateTitle(userMessage, { language: titleLanguage });
+        const title = await agent.generateTitle(userMessage, omitUndefined({ language: titleLanguage }));
         if (!sessionOpOwnsSessionOperation(sessionOperationContext, managed))
             return;
         if (title) {
@@ -171,7 +172,7 @@ async function sessionOpPersistRegisteredObjectiveForCurrentTurn(sessionOperatio
         if (admissionBinding && rebindChain) {
             void rebindChain.finally(() => {
                 if (admissionBinding.pendingRebind === rebindChain)
-                    admissionBinding.pendingRebind = undefined;
+                    delete admissionBinding.pendingRebind;
             });
         }
     }

@@ -27,8 +27,8 @@ interface LarkConnectDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   /** When true, treat the flow as "replace existing credentials". */
-  reconfigure?: boolean
-  onSaved?: () => void
+  reconfigure?: boolean | undefined
+  onSaved?: (() => void) | undefined
 }
 
 type TestResult =

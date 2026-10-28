@@ -58,7 +58,7 @@ export function createWebFetchTool(
     promptSnippet:
       'Use web_fetch to retrieve and extract content from a URL. Supports HTML (converted to markdown), PDF (text extraction), images (saved to disk), JSON (pretty-printed), and plain text. Pass url (required) and optional prompt to focus extraction.',
     parameters: schema,
-    async execute(toolCallId, params) {
+    async execute(_toolCallId, params) {
       const { url, prompt } = params;
 
       // SSRF protection: block non-HTTP schemes, private/reserved IPs, and pin validated DNS resolution

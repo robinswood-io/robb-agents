@@ -71,7 +71,7 @@ it('routes type command', async () => {
 
 it('returns error for type with no text', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'type' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('type requires text')
     })
 
@@ -175,7 +175,7 @@ it('returns error when select assertion flag is missing value', async () => {
       const result = await executeTool(tools, 'browser_tool', {
         command: 'select @e75 CNAME --assert-text',
       })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('select --assert-text requires a value')
     })
 
@@ -197,7 +197,7 @@ it('routes upload command with one or more file paths', async () => {
 
 it('returns error for upload with missing arguments', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'upload @e3' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('upload requires ref and file path(s)')
     })
 
@@ -230,7 +230,7 @@ it('preserves unknown escapes for set-clipboard', async () => {
 
 it('returns error for set-clipboard with no text', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'set-clipboard' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('set-clipboard requires text')
     })
 
@@ -253,7 +253,7 @@ it('does not send a paste shortcut after a rejected clipboard write', async () =
       mockFns.setClipboard = async () => { throw new Error('Clipboard write failed') }
       mockFns.sendKey = async () => { shortcuts++ }
       const result = await executeTool(tools, 'browser_tool', { command: ['paste', 'private text'] })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(shortcuts).toBe(0)
       expect(result.content[0].text).not.toContain('private text')
     })
@@ -264,7 +264,7 @@ it('routes explicit keyboard text once without clipboard, Enter, or a success cl
       mockFns.setClipboard = async () => { throw new Error('must never touch clipboard') }
       const text = 'é € a  b;[]'
       const result = await executeTool(tools, 'browser_tool', { command: ['type-keys', text] })
-      expect(result.isError).not.toBe(true)
+      expect(result["isError"]).not.toBe(true)
       expect(sent).toEqual([{ key: 'Unidentified', text }])
       expect(result.content[0].text).toContain('not verified')
       expect(result.content[0].text).not.toContain(text)
@@ -296,7 +296,7 @@ it('decodes escaped tab/newline sequences for paste', async () => {
 
 it('returns error for paste with no text', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'paste' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('paste requires text')
     })
 
@@ -336,7 +336,7 @@ it('returns canvas bytes as a full MCP image, independently of evaluate text tru
       }
       const result = await executeTool(tools, 'browser_tool', { command: ['screenshot-region', '--canvas', '--selector', '#display canvas'] })
       expect(actual).toEqual({ source: 'canvas', selector: '#display canvas', format: 'png' })
-      expect(result.isError).toBeUndefined()
+      expect(result["isError"]).toBeUndefined()
       expect(result.content[0].text).toContain('not a composited page screenshot')
       expect(result.content[1]).toEqual({ type: 'image', data: bytes.toString('base64'), mimeType: 'image/png' })
     })
@@ -346,7 +346,7 @@ it('rejects ambiguous canvas modes and does not silently fall back to a screensh
       mockFns.screenshotRegion = async () => { calls++; throw Error('should not be called') }
       for (const command of ['screenshot-region --canvas --ref @e1', 'screenshot-region --canvas 1 2 3 4', 'screenshot-region --canvas --selector canvas --padding 2', 'screenshot-region --canvas --canvas --selector canvas']) {
         const result = await executeTool(tools, 'browser_tool', { command })
-        expect(result.isError).toBe(true)
+        expect(result["isError"]).toBe(true)
       }
       expect(calls).toBe(0)
     })
@@ -360,7 +360,7 @@ it('rejects an empty, oversized or mislabeled canvas image receipt', async () =>
       ]) {
         mockFns.screenshotRegion = async () => value
         const result = await executeTool(tools, 'browser_tool', { command: ['screenshot-region', '--canvas', '--selector', 'canvas'] })
-        expect(result.isError).toBe(true)
+        expect(result["isError"]).toBe(true)
         expect(result.content.some((x) => x.type === 'image')).toBe(false)
       }
     })
@@ -368,26 +368,26 @@ it('rejects an empty, oversized or mislabeled canvas image receipt', async () =>
 it('returns error for screenshot when PNG is empty', async () => {
       mockFns.screenshot = async () => ({ imageBuffer: Buffer.alloc(0), imageFormat: 'png' as const })
       const result = await executeTool(tools, 'browser_tool', { command: 'screenshot' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('empty image data')
     })
 
 it('returns error for screenshot-region when PNG is empty', async () => {
       mockFns.screenshotRegion = async () => ({ imageBuffer: Buffer.alloc(0), imageFormat: 'png' as const })
       const result = await executeTool(tools, 'browser_tool', { command: 'screenshot-region 10 20 100 80' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('empty image data')
     })
 
 it('returns parse error for screenshot-region missing padding value', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'screenshot-region --ref @e12 --padding' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('Missing value for --padding')
     })
 
 it('returns parse error for screenshot-region non-numeric coords', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'screenshot-region 10 nope 100 80' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('coordinates must be numbers')
     })
 
@@ -402,7 +402,7 @@ it('treats --padding-like text inside quoted selectors as selector content', asy
         command: 'screenshot-region --selector "div[data-tip=\'--padding 99\';data-x=\'a;b\']" --padding 8',
       })
 
-      expect(result.isError).toBeUndefined()
+      expect(result["isError"]).toBeUndefined()
       expect(screenshotRegionArgs).toMatchObject({
         selector: "div[data-tip='--padding 99';data-x='a;b']",
         padding: 8,

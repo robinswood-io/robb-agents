@@ -1,3 +1,4 @@
+import { requiredTestValue } from '@craft-agent/shared/testing/fixture-values';
 import { describe, expect, it } from 'bun:test'
 import { createMockWebContents, createTestBrowserCDP } from './fixtures/browser-cdp-fixture'
 
@@ -26,16 +27,16 @@ describe('getAccessibilitySnapshot', () => {
       expect(snapshot.title).toBe('Example Page')
       expect(snapshot.nodes).toHaveLength(3)
 
-      expect(snapshot.nodes[0].ref).toBe('@e1')
-      expect(snapshot.nodes[0].role).toBe('button')
-      expect(snapshot.nodes[0].name).toBe('Submit')
+      expect(requiredTestValue(snapshot.nodes[0]).ref).toBe('@e1')
+      expect(requiredTestValue(snapshot.nodes[0]).role).toBe('button')
+      expect(requiredTestValue(snapshot.nodes[0]).name).toBe('Submit')
 
-      expect(snapshot.nodes[1].ref).toBe('@e2')
-      expect(snapshot.nodes[1].value).toBe('test@example.com')
-      expect(snapshot.nodes[1].focused).toBe(true)
+      expect(requiredTestValue(snapshot.nodes[1]).ref).toBe('@e2')
+      expect(requiredTestValue(snapshot.nodes[1]).value).toBe('test@example.com')
+      expect(requiredTestValue(snapshot.nodes[1]).focused).toBe(true)
 
-      expect(snapshot.nodes[2].ref).toBe('@e3')
-      expect(snapshot.nodes[2].role).toBe('link')
+      expect(requiredTestValue(snapshot.nodes[2]).ref).toBe('@e3')
+      expect(requiredTestValue(snapshot.nodes[2]).role).toBe('link')
     })
 
     it('keeps refs stable for same backend nodes across reordered snapshots', async () => {
@@ -95,8 +96,8 @@ describe('getAccessibilitySnapshot', () => {
       const snapshot = await cdp.getAccessibilitySnapshot()
 
       expect(snapshot.nodes).toHaveLength(2)
-      expect(snapshot.nodes[0].role).toBe('button')
-      expect(snapshot.nodes[1].role).toBe('heading')
+      expect(requiredTestValue(snapshot.nodes[0]).role).toBe('button')
+      expect(requiredTestValue(snapshot.nodes[1]).role).toBe('heading')
     })
 
     it('caps at 500 nodes', async () => {
@@ -117,7 +118,7 @@ describe('getAccessibilitySnapshot', () => {
       const snapshot = await cdp.getAccessibilitySnapshot()
 
       expect(snapshot.nodes).toHaveLength(500)
-      expect(snapshot.nodes[499].ref).toBe('@e500')
+      expect(requiredTestValue(snapshot.nodes[499]).ref).toBe('@e500')
     })
 
     it('normalizes role casing for primary filtering', async () => {
@@ -136,8 +137,8 @@ describe('getAccessibilitySnapshot', () => {
       const snapshot = await cdp.getAccessibilitySnapshot()
 
       expect(snapshot.nodes).toHaveLength(1)
-      expect(snapshot.nodes[0].role).toBe('button')
-      expect(snapshot.nodes[0].name).toBe('Submit')
+      expect(requiredTestValue(snapshot.nodes[0]).role).toBe('button')
+      expect(requiredTestValue(snapshot.nodes[0]).name).toBe('Submit')
     })
 
     it('uses fallback selection when primary filtering keeps zero nodes', async () => {
@@ -157,8 +158,8 @@ describe('getAccessibilitySnapshot', () => {
       const snapshot = await cdp.getAccessibilitySnapshot()
 
       expect(snapshot.nodes).toHaveLength(2)
-      expect(snapshot.nodes[0].name).toBe('Recents List')
-      expect(snapshot.nodes[1].name).toBe('Shared Files')
+      expect(requiredTestValue(snapshot.nodes[0]).name).toBe('Recents List')
+      expect(requiredTestValue(snapshot.nodes[1]).name).toBe('Shared Files')
     })
 
     it('keeps fallback nodes clickable through ref mapping', async () => {

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 import "react";
@@ -193,7 +194,6 @@ export function AppShell(props: AppShellProps) {
  */
 function AppShellContent({
   contextValue,
-  defaultLayout = [20, 32, 48],
   defaultCollapsed = false,
   menuNewChatTrigger,
   isFocusedMode = false,
@@ -212,16 +212,12 @@ function AppShellContent({
     onUnflagSession,
     onArchiveSession,
     onUnarchiveSession,
-    onMarkSessionRead,
     onMarkSessionUnread,
     onSessionStatusChange,
     onRenameSession,
     onOpenSettings,
     onOpenKeyboardShortcuts,
     onOpenStoredUserPreferences,
-    onReset,
-    onSendMessage,
-    openNewChat,
     pendingPermissions,
     pendingCredentials,
   } = contextValue
@@ -305,7 +301,7 @@ function AppShellContent({
         // handleEscapePress returns true on second press (within timeout)
         const shouldInterrupt = handleEscapePress()
         if (shouldInterrupt) {
-          window.electronAPI.cancelProcessing(effectiveSessionId, false).catch(err => {
+          window.electronAPI.cancelProcessing(effectiveSessionId, false).catch((err: unknown) => {
             console.error('[AppShell] Failed to cancel processing:', err)
           })
         }
@@ -431,7 +427,7 @@ function AppShellContent({
   })
 
   // Extend context value with local overrides (wrapped onDeleteSession, sources, skills, labels, enabledModes, rightSidebarOpenButton, effectiveSessionStatuses)
-  const appShellContextValue = React.useMemo<AppShellContextType>(() => ({
+  const appShellContextValue = React.useMemo<AppShellContextType>(() => (omitUndefined<AppShellContextType>({
     ...contextValue,
     onNewChat: handleNewChat,
     onDeleteSession: handleDeleteSession,
@@ -457,7 +453,7 @@ function AppShellContent({
     automationTestResults,
     getAutomationHistory,
     onReplayAutomation: handleReplayAutomation,
-  }), [contextValue, handleNewChat, handleDeleteSession, sources, skills, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleJumpToTaskSessions, isAutoCompact, searchActive, searchQuery, handleChatMatchInfoChange, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation, chatDisplayRef])
+  })), [contextValue, handleNewChat, handleDeleteSession, sources, skills, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleJumpToTaskSessions, isAutoCompact, searchActive, searchQuery, handleChatMatchInfoChange, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation, chatDisplayRef])
 
   return (
     <AppShellView

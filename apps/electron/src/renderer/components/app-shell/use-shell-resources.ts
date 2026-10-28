@@ -1,24 +1,24 @@
 import * as React from "react";
 
-import { useCallback, useMemo } from "react";
+import { useCallback,useMemo } from "react";
 import { useAtomValue } from "jotai";
 
 import { type ViewFiltersMap } from "./view-filters";
 
 import { useSetAtom } from "jotai";
-import type { Workspace, LoadedSource, LoadedSkill, PermissionMode } from "../../../shared/types";
+import type { Workspace,LoadedSource,LoadedSkill,PermissionMode } from "../../../shared/types";
 import { sendToWorkspaceAtom } from "@/atoms/sessions";
 import { sourcesAtom } from "@/atoms/sources";
 import { skillsAtom } from "@/atoms/skills";
 
-import { type SessionStatus, statusConfigsToSessionStatuses } from "@/config/session-status-config";
+import { type SessionStatus,statusConfigsToSessionStatuses } from "@/config/session-status-config";
 import { useStatuses } from "@/hooks/useStatuses";
 import { useLabels } from "@/hooks/useLabels";
 import { useViews } from "@/hooks/useViews";
 
 import { filterSessionStatuses as filterLabelMenuStates } from "@/components/ui/label-menu";
-import { createLabelMenuItems, filterItems as filterLabelMenuItems, type LabelMenuItem } from "@/components/ui/label-menu-utils";
-import { buildLabelTree, sortLabelsForDisplay } from "@craft-agent/shared/labels";
+import { createLabelMenuItems,filterItems as filterLabelMenuItems,type LabelMenuItem } from "@/components/ui/label-menu-utils";
+import { buildLabelTree,sortLabelsForDisplay } from "@craft-agent/shared/labels";
 
 import * as storage from "@/lib/local-storage";
 import { toast } from "sonner";
@@ -123,7 +123,7 @@ React.useEffect(() => {
           setEnabledModes(settings.cyclablePermissionModes)
         }
       }
-    }).catch((err) => {
+    }).catch((err: unknown) => {
       if (!cancelled) console.error('[Chat] Failed to load workspace settings:', err)
     })
     return () => { cancelled = true }
@@ -170,7 +170,7 @@ React.useEffect(() => {
     if (!activeWorkspaceId) return
     window.electronAPI.getSources(activeWorkspaceId).then((loaded) => {
       setSources(loaded || [])
-    }).catch(err => {
+    }).catch((err: unknown) => {
       console.error('[Chat] Failed to load sources:', err)
     })
   }, [activeWorkspaceId])
@@ -202,7 +202,7 @@ const handleSessionLabelsChange = React.useCallback(async (sessionId: string, la
     }
   }, [])
 
-const { statuses: statusConfigs, isLoading: isLoadingStatuses } = useStatuses(activeWorkspace?.id || null)
+const { statuses: statusConfigs } = useStatuses(activeWorkspace?.id || null)
 
 const [sessionStatuses, setSessionStatuses] = React.useState<SessionStatus[]>([])
 

@@ -17,15 +17,15 @@ import * as managerHealth from './manager/health.ts';
 export type { LlmCredentialBinding } from './manager/shared.ts';
 
 export class CredentialManager {
-    private backends: CredentialBackend[] = [];
-    private writeBackend: CredentialBackend | null = null;
-    private initialized = false;
-    private initPromise: Promise<void> | null = null;
-    private mutationTails = new Map<string, Promise<void>>();
-    private async serializeMutation<T>(key: string, mutation: () => Promise<T>): Promise<T> {
+    /** @internal Shared with the extracted backend helpers. */ public backends: CredentialBackend[] = [];
+    /** @internal */ public writeBackend: CredentialBackend | null = null;
+    /** @internal */ public initialized = false;
+    /** @internal */ public initPromise: Promise<void> | null = null;
+    /** @internal */ public mutationTails = new Map<string, Promise<void>>();
+    /** @internal */ public async serializeMutation<T>(key: string, mutation: () => Promise<T>): Promise<T> {
         return managerStorage.serializeMutation<T>(this, key, mutation);
     }
-    private llmMutationKey(type: CredentialType, connectionSlug: string): string {
+    /** @internal */ public llmMutationKey(type: CredentialType, connectionSlug: string): string {
         return managerStorage.llmMutationKey(this, type, connectionSlug);
     }
     /**
@@ -36,13 +36,13 @@ export class CredentialManager {
     async initialize(): Promise<void> {
         return managerStorage.initialize(this);
     }
-    private async ensureInitialized(): Promise<void> {
+    /** @internal Shared with the extracted backend helpers. */ public async ensureInitialized(): Promise<void> {
         return managerStorage.ensureInitialized(this);
     }
-    private ensureInitializedSync(): void {
+    /** @internal Shared with the extracted backend helpers. */ public ensureInitializedSync(): void {
         return managerStorage.ensureInitializedSync(this);
     }
-    private async _doInitialize(): Promise<void> {
+    /** @internal Shared with the extracted backend helpers. */ public async _doInitialize(): Promise<void> {
         return managerStorage._doInitialize(this);
     }
     /** Get the name of the active write backend */
@@ -248,8 +248,8 @@ export class CredentialManager {
     async setLlmIamCredentials(connectionSlug: string, credentials: {
         accessKeyId: string;
         secretAccessKey: string;
-        region?: string;
-        sessionToken?: string;
+        region?: string | undefined;
+        sessionToken?: string | undefined;
     }): Promise<void> {
         return managerServiceAccounts.setLlmIamCredentials(this, connectionSlug, credentials);
     }
@@ -305,16 +305,16 @@ export class CredentialManager {
     async hasLlmCredentials(connectionSlug: string, authType: LlmAuthType, providerType?: LlmProviderType): Promise<boolean> {
         return managerLlm.hasLlmCredentials(this, connectionSlug, authType, providerType);
     }
-    private async hasLlmApiKeyCredential(connectionSlug: string): Promise<boolean> {
+    /** @internal */ public async hasLlmApiKeyCredential(connectionSlug: string): Promise<boolean> {
         return managerLlm.hasLlmApiKeyCredential(this, connectionSlug);
     }
-    private async hasLlmOAuthCredential(connectionSlug: string, providerType?: LlmProviderType): Promise<boolean> {
+    /** @internal */ public async hasLlmOAuthCredential(connectionSlug: string, providerType?: LlmProviderType): Promise<boolean> {
         return managerLlm.hasLlmOAuthCredential(this, connectionSlug, providerType);
     }
-    private async hasLlmIamCredential(connectionSlug: string): Promise<boolean> {
+    /** @internal */ public async hasLlmIamCredential(connectionSlug: string): Promise<boolean> {
         return managerLlm.hasLlmIamCredential(this, connectionSlug);
     }
-    private async hasLlmServiceAccountCredential(connectionSlug: string): Promise<boolean> {
+    /** @internal */ public async hasLlmServiceAccountCredential(connectionSlug: string): Promise<boolean> {
         return managerLlm.hasLlmServiceAccountCredential(this, connectionSlug);
     }
     /**

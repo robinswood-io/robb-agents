@@ -1,5 +1,6 @@
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
 import { permissionMetadataFixture } from "./testing/permission-metadata.ts";
-import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
+import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
 import { rmSync } from "node:fs";
@@ -86,12 +87,15 @@ describe('explicit retry of an existing turn', () => {
     try {
       await expect(h.manager.retryTurn(h.managed.id, 'root-user')).resolves.toEqual({ status: 'started' })
       expect(h.managed.messages).toEqual(before.map(message => message.id === 'root-user' ? { ...message, isQueued: false } : message))
-      expect(h.managed.activeObjective).toEqual({ ...objective, terminalState: 'active', completedAt: undefined })
+      const expectedObjective = { ...objective, terminalState: 'active' as const }
+      delete expectedObjective.completedAt
+      expect(h.managed.activeObjective).toEqual(expectedObjective)
+      expect(Object.hasOwn(requiredTestValue(h.managed.activeObjective), 'completedAt')).toBe(false)
       expect(h.managed.pendingTurnRecovery).toMatchObject({ userMessageId: 'root-user', attempts: 5,
         stagnantAttempts: 2, exhaustedAt: 5, validationExhausted: true, validationGaps: ['relevant-checks-passed'] })
       expect(h.managed.lastSentMessage).toContain('original_user_message_id="root-user"')
       expect(h.managed.lastSentMessage).toContain('Do not repeat an external mutation')
-      expect(h.events.filter(event => event.type === 'user_message')).toMatchObject([
+      expect(h.events.filter(event => event["type"] === 'user_message')).toMatchObject([
         { message: { id: 'root-user', internalOrigin: { kind: 'spawned-session', senderSessionId: 'delegating-parent' } }, status: 'processing' },
       ])
     } finally { await h.finish() }
@@ -323,9 +327,9 @@ describe('explicit retry of an existing turn', () => {
     expect(h.managed.pendingTurnRecovery).toBe(recovery)
     expect(h.managed.sessionStatus).toBe('done')
     expect(h.managed.isProcessing).toBe(false)
-    expect(h.events.some(event => event.type === 'user_message')).toBe(false)
+    expect(h.events.some(event => event["type"] === 'user_message')).toBe(false)
     expect(h.events.at(-1)).toMatchObject({ type: 'session_status_changed', sessionStatus: 'done' })
-    expect(h.events.filter(event => event.type === 'session_status_changed').map(event => event.sessionStatus)).toEqual(['in-progress', 'done'])
+    expect(h.events.filter(event => event["type"] === 'session_status_changed').map(event => event["sessionStatus"])).toEqual(['in-progress', 'done'])
     expect(h.managed.messages[2]!.isQueued).toBeUndefined()
   })
 
@@ -363,10 +367,10 @@ describe('explicit retry of an existing turn', () => {
     expect(h.managed.pendingTurnRecovery!.lastCause).toBe('app_restart')
     expect(h.managed.pendingTurnRecovery!.recoveryDispatch).toBeUndefined()
     expect(h.managed.messageQueue).toEqual([])
-    expect(h.events).toContainEqual(expect.objectContaining({
+    expect<unknown>(h.events).toContainEqual((expect.objectContaining({
       type: 'error',
-      error: expect.stringContaining('retry limit was reached'),
-    }))
+      error: (expect.stringContaining('retry limit was reached') as unknown),
+    }) as unknown))
   })
 
   it('does not replay a manual attempt that has already produced a new terminal error', async () => {
@@ -382,10 +386,10 @@ describe('explicit retry of an existing turn', () => {
 
   it('never accepts the previous final when the retry stream ends without a new response', async () => {
     const h = harness()
-    h.internals.getOrCreateAgent = async () => ({
+    h.internals.getOrCreateAgent = async () => (completeSessionAgentFixture(h.managed.workspace, {
       getModel: () => 'test/retry-model', getSessionId: () => null, setAllSources: () => {},
       async *chat() { yield { type: 'complete' } },
-    })
+    }))
     await expect(h.manager.retryTurn(h.managed.id, 'latest-user')).resolves.toEqual({ status: 'started' })
     await h.finish()
     expect(h.managed.activeObjective?.terminalState).not.toBe('complete_verified')
@@ -398,7 +402,7 @@ describe('explicit retry of an existing turn', () => {
       await h.manager.sendMessage(h.managed.id, next.message, next.attachments, next.storedAttachments, next.options, next.messageId)
     }
     expect(h.managed.activeObjective?.terminalState).not.toBe('complete_verified')
-    expect(h.events.some(event => event.type === 'error')).toBe(true)
+    expect(h.events.some(event => event["type"] === 'error')).toBe(true)
     expect(h.managed.messageQueue).toHaveLength(0)
     expect(h.managed.messages.filter(message => message.role === 'user' && !message.hidden)).toHaveLength(2)
   })

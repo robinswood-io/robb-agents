@@ -199,12 +199,12 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
     await backendResponded.promise
     h.manager.flushSession = originalFlush
 
-    expect(backendResponses).toEqual([expect.objectContaining({
+    expect<unknown>(backendResponses).toEqual([(expect.objectContaining({
       type: 'pre_tool_use_response',
       requestId: 'routing-off-live-pretool-request',
       action: 'block',
-      reason: expect.stringContaining('Automatic channel fallback was disabled'),
-    })])
+      reason: (expect.stringContaining('Automatic channel fallback was disabled') as unknown),
+    }) as unknown)])
     expect(backend.beginAdmittedToolExecution({
       toolUseId: 'routing-off-live-pretool-call',
       toolName: 'mcp__browser__navigate',

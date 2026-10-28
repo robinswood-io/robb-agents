@@ -244,15 +244,15 @@ describe('specialization opportunity engine', () => {
       family: 'Family',
       signals: [],
       transcript: 'private chat body',
-    } as unknown as RootMissionSpecializationObservation;
+    } as RootMissionSpecializationObservation;
     expect(() => detectSpecializationOpportunities([withTranscript])).toThrow(
       'unsupported field "transcript"',
     );
 
     const invalidSignal = {
       observationId: 'obs-1', rootObjective: 'Objective', family: 'Family', signals: ['unknown'],
-    } as unknown as RootMissionSpecializationObservation;
-    expect(() => detectSpecializationOpportunities([invalidSignal])).toThrow('unsupported signal');
+    };
+    expect(() => { Reflect.apply(detectSpecializationOpportunities, undefined, [[invalidSignal]]); }).toThrow('unsupported signal');
 
     expect(() => detectSpecializationOpportunities([
       { observationId: 'same', rootObjective: 'One', family: 'Family', signals: [] },

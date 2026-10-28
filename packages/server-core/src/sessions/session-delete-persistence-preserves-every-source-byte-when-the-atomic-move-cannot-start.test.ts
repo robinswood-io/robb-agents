@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { ConfigWatcher } from "@craft-agent/shared/config";
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
@@ -35,11 +36,7 @@ describe('session deletion persistence retirement', () => {
       { id: 'workspace-rollback', name: 'Rollback', rootPath: root, createdAt: 1 } as never,
       { messagesLoaded: true },
     )
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      retiringSessions: WeakSet<typeof managed>
-      persistSession: (candidate: typeof managed) => boolean
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     managed.name = 'Must never be written through the unsafe live symlink'
 
@@ -94,11 +91,7 @@ describe('session deletion persistence retirement', () => {
       { messagesLoaded: true },
     )
     const processingTransitions: boolean[] = []
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      retiringSessions: WeakSet<typeof managed>
-      setProcessing: (candidate: typeof managed, processing: boolean) => void
-    }
+    const runtime = sessionManagerForTest(manager)
     const originalSetProcessing = runtime.setProcessing.bind(manager)
     runtime.setProcessing = (candidate, processing) => {
       processingTransitions.push(processing)
@@ -142,14 +135,7 @@ describe('session deletion persistence retirement', () => {
       { id: 'workspace-runtime-fence', name: 'Runtime fence', rootPath: root, createdAt: 1 } as never,
       { messagesLoaded: true },
     )
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      retiringSessions: WeakSet<typeof managed>
-      persistSession: (candidate: typeof managed) => boolean
-      processEvent: (candidate: typeof managed, event: unknown) => Promise<void>
-      getOrCreateAgent: (candidate: typeof managed) => Promise<unknown>
-      runtimeDisposalBarriers: Map<string, Map<symbol, unknown>>
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     managed.isProcessing = true
     managed.stopRequested = false
@@ -276,11 +262,7 @@ describe('session deletion persistence retirement', () => {
       { id: 'workspace-retention', name: 'Retention', rootPath: root, createdAt: 1 } as never,
       { messagesLoaded: true },
     )
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      retiringSessions: WeakSet<typeof managed>
-      persistSession: (candidate: typeof managed) => boolean
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     let callbackCount = 0
 
@@ -314,11 +296,7 @@ describe('session deletion persistence retirement', () => {
       { id: 'workspace-cleanup-flush', name: 'Cleanup flush', rootPath: root, createdAt: 1 } as never,
       { messagesLoaded: true },
     )
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      configWatchers: Map<string, { stop: () => void }>
-      disposeManagedAgentRuntime: (candidate: typeof managed, reason: string) => Promise<void>
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     managed.agent = {} as never
     let disposalCalls = 0
@@ -350,7 +328,7 @@ describe('session deletion persistence retirement', () => {
     expect(watcherStops).toBe(1)
     expect(flushCalls).toBe(2)
     expect(cleanupError).toBeInstanceOf(AggregateError)
-    expect((cleanupError as AggregateError).errors.map(error => (error as Error).message))
+    expect((cleanupError as AggregateError).errors.map((error: unknown) => (error as Error).message))
       .toEqual(['fixture cleanup flush 1', 'fixture cleanup flush 2'])
   })
 
@@ -364,9 +342,7 @@ describe('session deletion persistence retirement', () => {
       { id: 'workspace-background-flush', name: 'Background flush', rootPath: root, createdAt: 1 } as never,
       { messagesLoaded: true },
     )
-    const runtime = manager as unknown as {
-      flushSessionPersistenceInBackground: (candidate: typeof managed, reason: string) => void
-    }
+    const runtime = sessionManagerForTest(manager)
     const originalFlush = sessionPersistenceQueue.flush
     let observed: [string, string | undefined] | undefined
     sessionPersistenceQueue.flush = async (sessionId, workspaceRootPath) => {

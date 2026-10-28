@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import type { DeduplicatedRootMission, RootMissionSpecializationObservation, SpecializationOpportunityCategory } from './contracts.ts';
 import { OBSERVATION_KEYS, SIGNAL_SET } from './contracts.ts';
 import { assertNoUnknownKeys, assertPlainRecord, validateBoundedString } from './validation.ts';
@@ -5,7 +6,7 @@ import { assertNoUnknownKeys, assertPlainRecord, validateBoundedString } from '.
 export function deduplicateRootMissionObservations(
   observations: readonly RootMissionSpecializationObservation[],
 ): DeduplicatedRootMission[] {
-  if (!Array.isArray(observations)) throw new Error('observations must be an array');
+  if (!isUnknownArray(observations)) throw new Error('observations must be an array');
   const roots = new Map<string, DeduplicatedRootMission>();
   const keyByObservationId = new Map<string, string>();
   for (const [index, observation] of observations.entries()) {
@@ -49,7 +50,7 @@ function validateObservation(
   validateBoundedString(observation.observationId, `observation[${index}].observationId`, 200);
   validateBoundedString(observation.rootObjective, `observation[${index}].rootObjective`, 2_000);
   validateBoundedString(observation.family, `observation[${index}].family`, 200);
-  if (!Array.isArray(observation.signals)) {
+  if (!isUnknownArray(observation.signals)) {
     throw new Error(`observation[${index}].signals must be an array`);
   }
   for (const signal of observation.signals) {

@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../utils/json.ts';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -101,7 +102,7 @@ function reassembleToolCalls(out: string): Array<{
       }>;
     };
     try {
-      parsed = JSON.parse(payload);
+      parsed = JSON.parse(payload) as typeof parsed;
     } catch {
       continue;
     }
@@ -132,12 +133,12 @@ describe('unified-network-interceptor relay SSE quirks (#613)', () => {
   let sessionDir: string;
 
   beforeAll(async () => {
-    process.env.CRAFT_INTERCEPTOR_DISABLE_AUTO_INSTALL = '1';
+    process.env["CRAFT_INTERCEPTOR_DISABLE_AUTO_INSTALL"] = '1';
     ({ createOpenAiSseStrippingStream } = await import('../unified-network-interceptor.ts'));
   });
 
   afterAll(() => {
-    delete process.env.CRAFT_INTERCEPTOR_DISABLE_AUTO_INSTALL;
+    delete process.env["CRAFT_INTERCEPTOR_DISABLE_AUTO_INSTALL"];
   });
 
   beforeEach(() => {
@@ -222,7 +223,7 @@ describe('unified-network-interceptor relay SSE quirks (#613)', () => {
       expect(tc.function.name).not.toBe('');
     }
     // Args were merged from phase-1 metadata + phase-2 url, then stripped.
-    const argsArr = reassembled.map(tc => JSON.parse(tc.function.arguments));
+    const argsArr = reassembled.map(tc => parseJsonObject(tc.function.arguments));
     expect(argsArr[0]).toEqual({ url: 'https://daily.example/news' });
     expect(argsArr[1]).toEqual({ url: 'https://ap.example/article' });
     // No metadata leakage in output.

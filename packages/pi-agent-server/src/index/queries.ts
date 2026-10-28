@@ -126,7 +126,7 @@ export async function preExecuteCallLlm(runtimeState: PiRuntimeState, input: Rec
     const sessionPath = runtimeState.initConfig ? getSessionPath(runtimeState.initConfig.workspaceRootPath, runtimeState.initConfig.sessionId)
         : undefined;
     const { model: _ignoredModelOverride, ...requestInput } = input;
-    const request = await buildCallLlmRequest(requestInput, { backendName: 'Pi', sessionPath });
+    const request = await buildCallLlmRequest(requestInput, { backendName: 'Pi', ...(sessionPath !== undefined ? { sessionPath: sessionPath } : {}) });
     // Re-read the explicit selection after asynchronous attachment reads.
     if (runtimeState.initConfig?.model) {
         request.model = runtimeState.initConfig.model;

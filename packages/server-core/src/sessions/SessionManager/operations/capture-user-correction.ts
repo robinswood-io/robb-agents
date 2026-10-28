@@ -1,3 +1,6 @@
+import type { LoadProjectMemoryV2ContextOptions } from '../../../../../shared/src/projects/memory-v2/memory-schema.ts';
+import type { ProjectLearningRequest } from '../../project-learning.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { persistenceRootFor, isLegacyHostObjectiveContractEnabled } from '../policy.ts';
 import { getBuiltinPlaybook, loadWorkspacePlaybook } from '@craft-agent/shared/playbooks';
@@ -12,7 +15,7 @@ import { assertSessionOperationOwner as sessionOpAssertSessionOperationOwner, tr
 /** Resolve project-owned data through the same captured physical root as the
  * session transcript. The logical workspace path may be a symlink retargeted
  * to another workspace while this ManagedSession is alive. */
-function sessionOpSessionProjectLearningTarget(sessionOperationContext: SessionOperationContext, managed: ManagedSession): {
+function sessionOpSessionProjectLearningTarget(_sessionOperationContext: SessionOperationContext, managed: ManagedSession): {
     rootPath: string;
     projectId: string;
     projectSlug: string;
@@ -31,7 +34,7 @@ function sessionOpSessionProjectLearningTarget(sessionOperationContext: SessionO
 /** Resolve a session-bound playbook from the same immutable workspace root
  * as the session transcript. Built-ins remain the workspace-independent
  * fallback. */
-function sessionOpLoadSessionPlaybook(sessionOperationContext: SessionOperationContext, managed: ManagedSession): ReturnType<typeof loadWorkspacePlaybook> {
+function sessionOpLoadSessionPlaybook(_sessionOperationContext: SessionOperationContext, managed: ManagedSession): ReturnType<typeof loadWorkspacePlaybook> {
     if (!managed.playbookSlug)
         return null;
     return loadWorkspacePlaybook(persistenceRootFor(managed), managed.playbookSlug)
@@ -65,11 +68,11 @@ async function sessionOpHandleSessionProjectLearning(sessionOperationContext: Se
     if (!policy.enabled && request.action !== 'list' && request.action !== 'revoke') {
         throw new Error('Project learning is disabled by workspace policy');
     }
-    const result = await handleProjectLearning(confirmed.rootPath, confirmed.projectSlug, managed.id, managed.messages, {
+    const result = await handleProjectLearning(confirmed.rootPath, confirmed.projectSlug, managed.id, managed.messages, omitUndefined<ProjectLearningRequest>({
         ...request,
         version: managed.lastUsedByApp?.buildCommit,
         ttlDays: Math.min(request.ttlDays ?? 30, policy.retentionDays),
-    }, {
+    }), {
         legacyWorkspaceRootPath: managed.legacyProjectMemoryRootPath,
         assertTarget: () => { sessionOpAssertSessionProjectLearningTarget(sessionOperationContext, managed, confirmed); },
     });
@@ -85,7 +88,7 @@ async function sessionOpLoadSessionProjectMemoryContext(sessionOperationContext:
     const confirmed = sessionOpAssertSessionProjectLearningTarget(sessionOperationContext, managed, target);
     if (!policy.enabled)
         return null;
-    return loadProjectMemoryV2Context(confirmed.rootPath, confirmed.projectSlug, {
+    return loadProjectMemoryV2Context(confirmed.rootPath, confirmed.projectSlug, omitUndefined<LoadProjectMemoryV2ContextOptions>({
         maxAgeDays: policy.retentionDays,
         query,
         requireQueryMatch: true,
@@ -93,7 +96,7 @@ async function sessionOpLoadSessionProjectMemoryContext(sessionOperationContext:
         maxTokens: 1800,
         version: managed.lastUsedByApp?.buildCommit,
         legacyWorkspaceRootPath: managed.legacyProjectMemoryRootPath,
-    });
+    }));
 }
 
 async function sessionOpCaptureSessionTerminalLearning(sessionOperationContext: SessionOperationContext, managed: ManagedSession, state: NonNullable<ManagedSession['activeObjective']>['terminalState']): Promise<void> {
@@ -105,7 +108,7 @@ async function sessionOpCaptureSessionTerminalLearning(sessionOperationContext: 
     await captureProjectTerminalLearning(target.rootPath, target.projectSlug, managed.id, [...managed.messages], {
         objectiveId: managed.activeObjective.userMessageId,
         state,
-        version: managed.lastUsedByApp?.buildCommit,
+        ...(managed.lastUsedByApp?.buildCommit !== undefined ? { version: managed.lastUsedByApp?.buildCommit } : {}),
     }, {
         legacyWorkspaceRootPath: managed.legacyProjectMemoryRootPath,
         assertTarget: () => { sessionOpAssertSessionProjectLearningTarget(sessionOperationContext, managed, target); },
@@ -130,7 +133,7 @@ async function sessionOpCaptureUserCorrection(sessionOperationContext: SessionOp
         if (target && corrected)
             await captureProjectUserCorrection(target.rootPath, target.projectSlug, managed.id, messages, {
                 messageId: userMessage.id, correctedMessageId: corrected.id,
-                objectiveId: managed.activeObjective?.userMessageId, version: managed.lastUsedByApp?.buildCommit,
+                ...(managed.activeObjective?.userMessageId !== undefined ? { objectiveId: managed.activeObjective?.userMessageId } : {}), ...(managed.lastUsedByApp?.buildCommit !== undefined ? { version: managed.lastUsedByApp?.buildCommit } : {}),
             }, {
                 legacyWorkspaceRootPath: managed.legacyProjectMemoryRootPath,
                 assertTarget: () => { sessionOpAssertSessionProjectLearningTarget(sessionOperationContext, managed, target); },
@@ -143,7 +146,7 @@ async function sessionOpCaptureUserCorrection(sessionOperationContext: SessionOp
     }
 }
 
-function sessionOpHasExplicitStructuredObjectiveTracking(sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
+function sessionOpHasExplicitStructuredObjectiveTracking(_sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
     return isLegacyHostObjectiveContractEnabled(managed)
         || !!managed.activeObjective?.acceptanceCriteria?.length;
 }
@@ -156,7 +159,7 @@ async function sessionOpSendMessage(sessionOperationContext: SessionOperationCon
     const managed = sessionOperationContext.state.sessions.get(sessionId);
     if (!managed)
         throw new Error(`Session ${sessionId} not found`);
-    return sessionOpTrackSessionOperation(sessionOperationContext, managed, () => sessionOperationContext.owner["performSendMessage"](sessionId, message, attachments, storedAttachments, options, existingMessageId, _isAuthRetry, onAck, rpcContext, queuedDispatchToken, queuedItem, retryCancellationEpoch, explicitRetryAllowanceToken, sourceActivationDispatchToken, authenticatedInternalContinuationToken, delegatedDispatchContinuationToken));
+    return sessionOpTrackSessionOperation(sessionOperationContext, managed, () => sessionOperationContext.owner.performSendMessage(sessionId, message, attachments, storedAttachments, options, existingMessageId, _isAuthRetry, onAck, rpcContext, queuedDispatchToken, queuedItem, retryCancellationEpoch, explicitRetryAllowanceToken, sourceActivationDispatchToken, authenticatedInternalContinuationToken, delegatedDispatchContinuationToken));
 }
 
 export { sessionOpSessionProjectLearningTarget as sessionProjectLearningTarget };

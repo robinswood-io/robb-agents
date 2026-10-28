@@ -46,7 +46,7 @@ describe('PiAgent branching capability', () => {
       })
     )
 
-    ;agent['requestEnsureSessionReady'] = async () => 'pi-session-123'
+    ;agent.requestEnsureSessionReady = async () => 'pi-session-123'
 
     await expect(agent.ensureBranchReady()).resolves.toBeUndefined()
     expect(agent.getSessionId()).toBe('pi-session-123')

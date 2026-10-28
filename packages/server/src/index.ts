@@ -1,4 +1,6 @@
 #!/usr/bin/env bun
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import type { ModelFetcherCredentials } from '@craft-agent/shared/config/model-fetcher';
 /**
  * @craft-agent/server — standalone headless Craft Agent server.
  *
@@ -33,7 +35,7 @@ import { homedir } from 'node:os'
 import { readFileSync, existsSync } from 'node:fs'
 import { version as packageVersion } from '../package.json'
 import { enableDebug } from '@craft-agent/shared/utils/debug'
-import { bootstrapServer, startHealthHttpServer, generateServerToken } from '@craft-agent/server-core/bootstrap'
+import { bootstrapServer, startHealthHttpServer, generateServerToken, type ServerBootstrapOptions } from '@craft-agent/server-core/bootstrap'
 import {
   validateSession,
   createWebuiHandler,
@@ -60,7 +62,7 @@ import { initModelRefreshService, setFetcherPlatform } from '@craft-agent/server
 import { setSearchPlatform, setImageProcessor } from '@craft-agent/server-core/services'
 import type { HandlerDeps } from '@craft-agent/server-core/handlers'
 
-process.env.CRAFT_IS_PACKAGED ??= 'false'
+process.env["CRAFT_IS_PACKAGED"] ??= 'false'
 
 // Prevent unhandled rejections from crashing the server.
 // SDK subprocess abort can reject promises that propagate up unhandled;
@@ -70,7 +72,7 @@ process.on('unhandledRejection', (reason) => {
   console.error(`[server] Unhandled rejection (caught, not crashing): ${msg}`)
 })
 
-if (process.env.CRAFT_DEBUG === 'true' || process.env.CRAFT_DEBUG === '1') {
+if (process.env["CRAFT_DEBUG"] === 'true' || process.env["CRAFT_DEBUG"] === '1') {
   enableDebug()
 }
 
@@ -121,13 +123,13 @@ function parseOptionalHttpUrl(name: string, value: string | undefined): string |
 
 // In dev (monorepo), bundled assets root is the repo root (4 levels up from this file).
 // In packaged mode, use CRAFT_BUNDLED_ASSETS_ROOT env or cwd.
-const bundledAssetsRoot = process.env.CRAFT_BUNDLED_ASSETS_ROOT
+const bundledAssetsRoot = process.env["CRAFT_BUNDLED_ASSETS_ROOT"]
   ?? join(import.meta.dir, '..', '..', '..', '..')
 
 // TLS configuration — when cert + key paths are provided, server listens on wss://
 let tls: WsRpcTlsOptions | undefined
-const tlsCertPath = process.env.CRAFT_RPC_TLS_CERT
-const tlsKeyPath = process.env.CRAFT_RPC_TLS_KEY
+const tlsCertPath = process.env["CRAFT_RPC_TLS_CERT"]
+const tlsKeyPath = process.env["CRAFT_RPC_TLS_KEY"]
 if (tlsCertPath || tlsKeyPath) {
   if (!tlsCertPath || !tlsKeyPath) {
     console.error('TLS requires both CRAFT_RPC_TLS_CERT and CRAFT_RPC_TLS_KEY.')
@@ -136,17 +138,17 @@ if (tlsCertPath || tlsKeyPath) {
   tls = {
     cert: readFileSync(tlsCertPath),
     key: readFileSync(tlsKeyPath),
-    ...(process.env.CRAFT_RPC_TLS_CA ? { ca: readFileSync(process.env.CRAFT_RPC_TLS_CA) } : {}),
+    ...(process.env["CRAFT_RPC_TLS_CA"] ? { ca: readFileSync(process.env["CRAFT_RPC_TLS_CA"]) } : {}),
   }
 }
 
 // Web UI configuration
-const webuiDir = process.env.CRAFT_WEBUI_DIR || undefined
+const webuiDir = process.env["CRAFT_WEBUI_DIR"] || undefined
 const webuiEnabled = webuiDir && existsSync(webuiDir)
-const webuiSecureCookies = parseOptionalBooleanEnv('CRAFT_WEBUI_SECURE_COOKIE', process.env.CRAFT_WEBUI_SECURE_COOKIE)
-const webuiWsUrl = parseOptionalWebSocketUrl('CRAFT_WEBUI_WS_URL', process.env.CRAFT_WEBUI_WS_URL)
-const webuiPublicUrl = parseOptionalHttpUrl('CRAFT_WEBUI_PUBLIC_URL', process.env.CRAFT_WEBUI_PUBLIC_URL)
-const webuiRemoteAuthModeRaw = process.env.CRAFT_WEBUI_REMOTE_AUTH_MODE?.trim()
+const webuiSecureCookies = parseOptionalBooleanEnv('CRAFT_WEBUI_SECURE_COOKIE', process.env["CRAFT_WEBUI_SECURE_COOKIE"])
+const webuiWsUrl = parseOptionalWebSocketUrl('CRAFT_WEBUI_WS_URL', process.env["CRAFT_WEBUI_WS_URL"])
+const webuiPublicUrl = parseOptionalHttpUrl('CRAFT_WEBUI_PUBLIC_URL', process.env["CRAFT_WEBUI_PUBLIC_URL"])
+const webuiRemoteAuthModeRaw = process.env["CRAFT_WEBUI_REMOTE_AUTH_MODE"]?.trim()
 if (webuiRemoteAuthModeRaw && !REMOTE_AUTH_MODES.includes(webuiRemoteAuthModeRaw as RemoteAuthMode)) {
   console.error(`Invalid CRAFT_WEBUI_REMOTE_AUTH_MODE: ${webuiRemoteAuthModeRaw}`)
   process.exit(1)
@@ -159,7 +161,7 @@ const webuiSessionTransportSecure = webuiBrowserWebSocketSecure && (
   (Boolean(tls) && webuiSecureCookies !== false)
   || Boolean(webuiPublicUrl?.startsWith('https://') && webuiSecureCookies === true)
 )
-const serverToken = process.env.CRAFT_SERVER_TOKEN
+const serverToken = process.env["CRAFT_SERVER_TOKEN"]
 const remoteDeviceRegistry = new RemoteDeviceRegistry({
   filePath: join(CONFIG_DIR, 'remote-devices.json'),
 })
@@ -180,18 +182,18 @@ let disconnectRemoteDevice: ((deviceId: string) => void) | null = null
 let healthCheckFn: (() => { status: string }) | null = null
 
 if (webuiEnabled && serverToken) {
-  const rpcPort = parseInt(process.env.CRAFT_RPC_PORT ?? '9100', 10)
+  const rpcPort = parseInt(process.env["CRAFT_RPC_PORT"] ?? '9100', 10)
   const rpcProtocol = tls ? 'wss' as const : 'ws' as const
 
   webuiHandler = createWebuiHandler({
     webuiDir: webuiDir!,
     secret: serverToken,
-    password: process.env.CRAFT_WEBUI_PASSWORD || undefined,
+    password: process.env["CRAFT_WEBUI_PASSWORD"] || undefined,
     secureCookies: webuiSecureCookies,
     publicWsUrl: webuiWsUrl,
     publicWebuiUrl: webuiPublicUrl,
     remoteAuthMode: webuiRemoteAuthMode,
-    hostLabel: process.env.CRAFT_WEBUI_HOST_LABEL || undefined,
+    hostLabel: process.env["CRAFT_WEBUI_HOST_LABEL"] || undefined,
     wsProtocol: rpcProtocol,
     // WebUI is served on the same port as WS — wsPort matches the RPC port
     wsPort: rpcPort,
@@ -212,9 +214,9 @@ if (webuiEnabled && serverToken) {
 // The worker is a Node subprocess — Bun cannot run it directly — so we must
 // pass an explicit `nodeBin` (Electron defaults nodeBin to process.execPath
 // which is correct there but wrong under Bun).
-const waWorkerEntry = process.env.CRAFT_MESSAGING_WA_WORKER
+const waWorkerEntry = process.env["CRAFT_MESSAGING_WA_WORKER"]
   ?? join(bundledAssetsRoot, 'packages', 'messaging-whatsapp-worker', 'dist', 'worker.cjs')
-const waNodeBin = process.env.CRAFT_MESSAGING_NODE_BIN ?? 'node'
+const waNodeBin = process.env["CRAFT_MESSAGING_NODE_BIN"] ?? 'node'
 
 // Built inside createHandlerDeps (needs sessionManager), populated with the WS
 // publisher after bootstrapServer resolves.
@@ -222,7 +224,7 @@ let messagingHandle: MessagingBootstrapHandle | null = null
 
 // Block binding to a non-localhost address without TLS BEFORE listening — tokens would be sent in cleartext.
 // Override with --allow-insecure-bind for explicitly trusted networks.
-const configuredRpcHost = process.env.CRAFT_RPC_HOST ?? '127.0.0.1'
+const configuredRpcHost = process.env["CRAFT_RPC_HOST"] ?? '127.0.0.1'
 const isLocalBind = configuredRpcHost === '127.0.0.1' || configuredRpcHost === 'localhost' || configuredRpcHost === '::1'
 if (!isLocalBind && !tls) {
   if (process.argv.includes('--allow-insecure-bind')) {
@@ -245,9 +247,9 @@ if (!isLocalBind && !tls) {
 
 const instance = await (async () => {
   try {
-    return await bootstrapServer<SessionManager, HandlerDeps>({
+    return await bootstrapServer<SessionManager, HandlerDeps>(omitUndefined<ServerBootstrapOptions<SessionManager, HandlerDeps>>({
       bundledAssetsRoot,
-      serverVersion: process.env.CRAFT_VERSION ?? packageVersion,
+      serverVersion: process.env["CRAFT_VERSION"] ?? packageVersion,
       tls,
       // When web UI is enabled, accept JWT session cookies on WebSocket upgrade
       validateSessionCookie: webuiEnabled && serverToken && webuiSessionTransportSecure
@@ -303,12 +305,12 @@ const instance = await (async () => {
           manager.getLlmApiKey(slug).catch(() => null),
           manager.getLlmOAuth(slug).catch(() => null),
         ])
-        return {
+        return omitUndefined<ModelFetcherCredentials>({
           apiKey: apiKey ?? undefined,
           oauthAccessToken: oauth?.accessToken,
           oauthRefreshToken: oauth?.refreshToken,
           oauthIdToken: oauth?.idToken,
-        }
+        })
       }),
       createSessionManager: () => new SessionManager(),
       bindRpcServer: (sm, server) => sm.setRpcServer(server),
@@ -353,7 +355,7 @@ const instance = await (async () => {
         }
       },
       cleanupClientResources: cleanupSessionFileWatchForClient,
-    })
+    }))
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error))
     process.exit(1)
@@ -371,7 +373,7 @@ disconnectRemoteDevice = (deviceId) => {
 // ---------------------------------------------------------------------------
 // CRAFT_DISABLE_MESSAGING lets a dev/test server share a config dir with a live app
 // without both processes fighting over the same Telegram/WhatsApp connections (409s).
-const messagingDisabled = process.env.CRAFT_DISABLE_MESSAGING === 'true' || process.env.CRAFT_DISABLE_MESSAGING === '1'
+const messagingDisabled = process.env["CRAFT_DISABLE_MESSAGING"] === 'true' || process.env["CRAFT_DISABLE_MESSAGING"] === '1'
 if (messagingHandle !== null && !messagingDisabled) {
   const handle: MessagingBootstrapHandle = messagingHandle
   handle.setPublisher(instance.wsServer.push.bind(instance.wsServer))
@@ -411,7 +413,7 @@ if (webuiHandler) {
 }
 
 // Start HTTP health endpoint if CRAFT_HEALTH_PORT is set
-const healthPort = parseInt(process.env.CRAFT_HEALTH_PORT ?? '0', 10)
+const healthPort = parseInt(process.env["CRAFT_HEALTH_PORT"] ?? '0', 10)
 const healthServer = await startHealthHttpServer({
   port: healthPort,
   deps: { sessionManager: instance.sessionManager },

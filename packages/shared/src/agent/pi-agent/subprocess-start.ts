@@ -39,7 +39,7 @@ import type { PiSubprocessRuntimeContext } from './shared.ts';
    * Guardrail: ensure every backend-mode session tool from core is implemented here.
    * This fails fast in development/CI instead of surfacing as runtime "Unknown session tool".
    */
-export function assertBackendSessionToolParity(transportOwner: PiAgent): void {
+export function assertBackendSessionToolParity(_transportOwner: PiAgent): void {
     const missing = [...SESSION_BACKEND_TOOL_NAMES].filter((name) => !PI_BACKEND_SESSION_TOOL_NAMES.has(name));
     if (missing.length > 0) {
         throw new Error(`PiAgent missing backend session tool implementations: ${missing.join(', ')}`);
@@ -55,22 +55,22 @@ export function assertBackendSessionToolParity(transportOwner: PiAgent): void {
    * Lazy initialization -- spawns on first use.
    */
 export async function ensureSubprocess(transportOwner: PiAgent): Promise<void> {
-    if (transportOwner["subprocess"] && transportOwner["subprocessReady"]) {
-        await transportOwner["subprocessReady"];
+    if (transportOwner["subprocess"] && transportOwner.subprocessReady) {
+        await transportOwner.subprocessReady;
         return;
     }
-    if (transportOwner["subprocessSpawnInFlight"]) {
-        await transportOwner["subprocessSpawnInFlight"];
+    if (transportOwner.subprocessSpawnInFlight) {
+        await transportOwner.subprocessSpawnInFlight;
         return;
     }
-    const spawnAttempt = transportOwner["spawnSubprocess"]();
-    transportOwner["subprocessSpawnInFlight"] = spawnAttempt;
+    const spawnAttempt = transportOwner.spawnSubprocess();
+    transportOwner.subprocessSpawnInFlight = spawnAttempt;
     try {
         await spawnAttempt;
     }
     finally {
-        if (transportOwner["subprocessSpawnInFlight"] === spawnAttempt) {
-            transportOwner["subprocessSpawnInFlight"] = null;
+        if (transportOwner.subprocessSpawnInFlight === spawnAttempt) {
+            transportOwner.subprocessSpawnInFlight = null;
         }
     }
 }
@@ -81,20 +81,20 @@ export async function ensureSubprocess(transportOwner: PiAgent): Promise<void> {
 export async function spawnSubprocess(transportOwner: PiAgent, agentClass: typeof PiAgent): Promise<void> {
     // Diagnostics belong to one subprocess generation. Do not attribute a
     // previous runtime's stderr tail to a later failure after recreation.
-    transportOwner["stderrBuffer"] = [];
-    transportOwner["stderrBufferBytes"] = 0;
+    transportOwner.stderrBuffer = [];
+    transportOwner.stderrBufferBytes = 0;
     const runtime = getBackendRuntime(transportOwner["config"]);
     const piServerPath = runtime.paths?.piServer;
     if (!piServerPath) {
         throw new Error('piServerPath not configured. Cannot spawn Pi subprocess.');
     }
     const nodePath = runtime.paths?.node || process.execPath;
-    const cwd = transportOwner["resolvedCwd"]();
+    const cwd = transportOwner.resolvedCwd();
     // Node reports spawn(command) ENOENT for an invalid cwd, even when the
     // protected runtime executable exists. Surface the directory issue first.
     await assertExistingWorkingDirectory(cwd);
     transportOwner["debug"](`Spawning Pi subprocess: ${nodePath} ${piServerPath}`);
-    transportOwner["resetSubprocessErrorDedup"]();
+    transportOwner.resetSubprocessErrorDedup();
     // Build session ID and session dir path upfront (used for spawn env + init command)
     const sessionId = transportOwner["config"].session?.id || `agent-${Date.now()}`;
     const subprocessRuntimeContext: PiSubprocessRuntimeContext = {
@@ -124,20 +124,20 @@ export async function spawnSubprocess(transportOwner: PiAgent, agentClass: typeo
         if (shouldRefreshPiOAuthBeforeSpawn({
             authType: transportOwner["config"].authType,
             piAuthProvider: runtime.piAuthProvider,
-            refreshToken: stored?.refreshToken,
-            expiresAt: stored?.expiresAt,
-            refreshInFlight: agentClass["globalRefreshMutex"].has(`${slug}\u0000${expectedBindingId ?? 'unsealed'}`),
+            ...(stored?.refreshToken !== undefined ? { refreshToken: stored?.refreshToken } : {}),
+            ...(stored?.expiresAt !== undefined ? { expiresAt: stored?.expiresAt } : {}),
+            refreshInFlight: agentClass.globalRefreshMutex.has(`${slug}\u0000${expectedBindingId ?? 'unsealed'}`),
         })) {
             transportOwner["debug"](`${runtime.piAuthProvider} token expired or expiring soon — refreshing before session start`);
-            await transportOwner["refreshAndPushTokens"]();
+            await transportOwner.refreshAndPushTokens();
         }
     }
     // Retrieve auth credentials for the subprocess.
     // Custom endpoint mode must NOT fall back to global API keys — keyless local endpoints
     // are valid, and non-local endpoints should fail explicitly instead of using unrelated creds.
-    const piAuth = await transportOwner["getPiAuth"]();
+    const piAuth = await transportOwner.getPiAuth();
     const isCustomEndpointMode = !!runtime.customEndpoint;
-    const legacyApiKey = (!piAuth && !isCustomEndpointMode) ? await transportOwner["getApiKey"]() : undefined;
+    const legacyApiKey = (!piAuth && !isCustomEndpointMode) ? await transportOwner.getApiKey() : undefined;
     if (isCustomEndpointMode && !piAuth) {
         transportOwner["debug"]('Custom endpoint mode: no provider credential configured, sending empty API key');
     }
@@ -152,8 +152,8 @@ export async function spawnSubprocess(transportOwner: PiAgent, agentClass: typeo
                 return false;
             }
         })()
-        && process.env.ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS !== '1');
-    const awsEnv = isStrictLocalEndpoint ? {} : transportOwner["buildAwsEnv"](piAuth, runtime);
+        && process.env["ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS"] !== '1');
+    const awsEnv = isStrictLocalEndpoint ? {} : transportOwner.buildAwsEnv(piAuth, runtime);
     const providerEnv = isStrictLocalEndpoint
         ? {
             CRAFT_STRICT_LOCAL_ENDPOINT: '1',
@@ -166,14 +166,14 @@ export async function spawnSubprocess(transportOwner: PiAgent, agentClass: typeo
             https_proxy: '',
             all_proxy: '',
         }
-        : transportOwner["buildProviderEnv"](runtime);
+        : transportOwner.buildProviderEnv(runtime);
     const proxyEnv = isStrictLocalEndpoint ? {} : getProxyEnvVars();
     // Set up the handshake only after all pre-spawn async work succeeded. This
     // avoids leaving an unreachable pending promise when credential resolution
     // fails before a child process exists.
-    transportOwner["subprocessReady"] = new Promise<void>((resolve, reject) => {
-        transportOwner["subprocessReadyResolve"] = resolve;
-        transportOwner["subprocessReadyReject"] = reject;
+    transportOwner.subprocessReady = new Promise<void>((resolve, reject) => {
+        transportOwner.subprocessReadyResolve = resolve;
+        transportOwner.subprocessReadyReject = reject;
     });
     // Spawn the subprocess
     let child: ChildProcess;
@@ -184,48 +184,48 @@ export async function spawnSubprocess(transportOwner: PiAgent, agentClass: typeo
             stdio: ['pipe', 'pipe', 'pipe'],
             env: buildPiSubprocessEnvironment({
                 proxyEnv,
-                envOverrides: transportOwner["config"].envOverrides,
+                ...(transportOwner["config"].envOverrides !== undefined ? { envOverrides: transportOwner["config"].envOverrides } : {}),
                 providerEnv,
                 awsEnv,
                 // Pass session dir for cross-process toolMetadataStore.
-                sessionDir,
+                ...(sessionDir !== undefined ? { sessionDir } : {}),
                 // Propagate debug mode without inheriting the rest of process.env.
-                debugEnabled: process.argv.includes('--debug') || process.env.CRAFT_DEBUG === '1',
+                debugEnabled: process.argv.includes('--debug') || process.env["CRAFT_DEBUG"] === '1',
             }),
         });
     }
     catch (error) {
         // No consumer can be awaiting the private ready promise yet; discard it
         // and let spawnSubprocess's own rejection reach every deduplicated caller.
-        transportOwner["subprocessReady"] = null;
-        transportOwner["subprocessReadyResolve"] = null;
-        transportOwner["subprocessReadyReject"] = null;
+        transportOwner.subprocessReady = null;
+        transportOwner.subprocessReadyResolve = null;
+        transportOwner.subprocessReadyReject = null;
         throw error;
     }
     transportOwner["subprocess"] = child;
     transportOwner["subprocessRuntimeContext"] = subprocessRuntimeContext;
-    transportOwner["subprocessRuntimeContexts"].set(child, subprocessRuntimeContext);
-    const configuredIdleMs = Number(process.env.CRAFT_AGENT_PROCESS_IDLE_TIMEOUT_MS);
-    transportOwner["subprocessSupervisorHandle"] = registerLongRunningProcess(child, {
+    transportOwner.subprocessRuntimeContexts.set(child, subprocessRuntimeContext);
+    const configuredIdleMs = Number(process.env["CRAFT_AGENT_PROCESS_IDLE_TIMEOUT_MS"]);
+    transportOwner.subprocessSupervisorHandle = registerLongRunningProcess(child, {
         id: `pi-agent:${sessionId}:${child.pid ?? Date.now()}`,
         kind: 'agent-runtime',
         ownerId: sessionId,
         maxIdleMs: Number.isFinite(configuredIdleMs) && configuredIdleMs > 0
             ? configuredIdleMs
             : 30 * 60 * 1000,
-        isBusy: () => transportOwner["hasPendingSubprocessWork"](),
+        isBusy: () => transportOwner.hasPendingSubprocessWork(),
         metadata: {
             ...(transportOwner["config"].providerType ? { provider: transportOwner["config"].providerType } : {}),
             workspaceId: transportOwner["config"].workspace.id,
         },
     });
     // Set up readline for JSONL parsing from stdout
-    transportOwner["readline"] = createInterface({
+    transportOwner.readline = createInterface({
         input: child.stdout!,
         crlfDelay: Infinity,
     });
-    transportOwner["readline"].on('line', (line: string) => {
-        transportOwner["handleLine"](line, child, subprocessRuntimeContext);
+    transportOwner.readline.on('line', (line: string) => {
+        transportOwner.handleLine(line, child, subprocessRuntimeContext);
     });
     // Always capture stderr into a bounded ring buffer so callers (e.g. the
     // connection-test timeout path in factory.ts) can surface it on failure.
@@ -233,9 +233,9 @@ export async function spawnSubprocess(transportOwner: PiAgent, agentClass: typeo
     // diagnostics are emitted once, on unexpected exit, from the bounded tail.
     child.stderr?.on('data', (data: Buffer) => {
         const text = data.toString();
-        transportOwner["recordStderr"](text);
+        transportOwner.recordStderr(text);
         const trimmed = text.trim();
-        const debugEnabled = process.argv.includes('--debug') || process.env.CRAFT_DEBUG === '1';
+        const debugEnabled = process.argv.includes('--debug') || process.env["CRAFT_DEBUG"] === '1';
         if (trimmed && debugEnabled) {
             const safeTail = redactRuntimeDiagnosticText(trimmed).slice(-RUNTIME_DIAGNOSTIC_MAX_CHARS);
             transportOwner["debug"](`[subprocess stderr] ${safeTail}`);
@@ -252,30 +252,30 @@ export async function spawnSubprocess(transportOwner: PiAgent, agentClass: typeo
         if (terminationHandled)
             return;
         terminationHandled = true;
-        transportOwner["handleSubprocessExit"](code, signal, child, undefined, subprocessRuntimeContext);
+        transportOwner.handleSubprocessExit(code, signal, child, undefined, subprocessRuntimeContext);
     };
     child.on('exit', handleConfirmedTermination);
     child.on('close', handleConfirmedTermination);
     child.on('error', (error) => {
-        transportOwner["handleSubprocessError"](error, child, subprocessRuntimeContext);
+        transportOwner.handleSubprocessError(error, child, subprocessRuntimeContext);
     });
-    const startupTimeoutMs = resolvePiSubprocessStartupTimeoutMs(process.env.CRAFT_AGENT_PROCESS_STARTUP_TIMEOUT_MS);
-    transportOwner["subprocessReadyTimer"] = setTimeout(() => {
-        if (transportOwner["subprocess"] !== child || !transportOwner["subprocessReadyReject"])
+    const startupTimeoutMs = resolvePiSubprocessStartupTimeoutMs(process.env["CRAFT_AGENT_PROCESS_STARTUP_TIMEOUT_MS"]);
+    transportOwner.subprocessReadyTimer = setTimeout(() => {
+        if (transportOwner["subprocess"] !== child || !transportOwner.subprocessReadyReject)
             return;
         const error = new PiRuntimeInterruptedError(`Pi subprocess did not become ready within ${startupTimeoutMs} ms`, 'startup_timeout');
         transportOwner["debug"](error.message);
-        transportOwner["rejectSubprocessReady"](error);
-        transportOwner["expectedSubprocessExits"].add(child);
-        if (transportOwner["subprocessSupervisorHandle"]) {
-            transportOwner["subprocessSupervisorHandle"].terminate('Pi agent startup timeout');
+        transportOwner.rejectSubprocessReady(error);
+        transportOwner.expectedSubprocessExits.add(child);
+        if (transportOwner.subprocessSupervisorHandle) {
+            transportOwner.subprocessSupervisorHandle.terminate('Pi agent startup timeout');
         }
         else {
             child.kill('SIGTERM');
         }
-        transportOwner["scheduleSubprocessForceKill"](child, subprocessRuntimeContext);
+        transportOwner.scheduleSubprocessForceKill(child, subprocessRuntimeContext);
     }, startupTimeoutMs);
-    transportOwner["subprocessReadyTimer"].unref?.();
+    transportOwner.subprocessReadyTimer.unref?.();
     const sessionPath = transportOwner["config"].session
         ? getSessionPath(transportOwner["config"].workspace.rootPath, sessionId)
         : '';
@@ -312,12 +312,12 @@ export async function spawnSubprocess(transportOwner: PiAgent, agentClass: typeo
         branchFromSdkTurnId: transportOwner["config"].session?.branchFromSdkTurnId,
     });
     // Wait for subprocess to report ready
-    await transportOwner["subprocessReady"];
+    await transportOwner.subprocessReady;
     transportOwner["debug"]('Pi subprocess is ready');
     // Ensure auto-compaction is explicitly enabled for embedded sessions.
     // PI defaults this to enabled, but we set it proactively for clarity and resilience.
     try {
-        const enabled = await transportOwner["requestSetAutoCompaction"](true);
+        const enabled = await transportOwner.requestSetAutoCompaction(true);
         transportOwner["debug"](`PI auto-compaction enabled: ${enabled}`);
     }
     catch (error) {
@@ -326,7 +326,7 @@ export async function spawnSubprocess(transportOwner: PiAgent, agentClass: typeo
     // Register session-scoped tools as proxy tools in the subprocess.
     // These tools (SubmitPlan, config_validate, source auth, call_llm, etc.)
     // are executed in the main process when the LLM calls them.
-    transportOwner["assertBackendSessionToolParity"]();
+    transportOwner.assertBackendSessionToolParity();
     const sessionToolDefs = filterPiSessionToolDefs(
         getSessionToolProxyDefs(), getBrowserToolEnabled(), isStrictLocalEndpoint,
     );

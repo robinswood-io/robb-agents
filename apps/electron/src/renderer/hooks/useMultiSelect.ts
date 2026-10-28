@@ -56,7 +56,7 @@ export function toggleSelect(state: MultiSelectState, id: string, index: number)
       newSelectedIds.delete(id)
       // If we removed the active selection, pick another one
       const newSelected = state.selected === id
-        ? [...newSelectedIds][0]
+        ? [...newSelectedIds][0] ?? null
         : state.selected
       return {
         selected: newSelected,
@@ -115,15 +115,15 @@ export function rangeSelect(
   const endIndex = Math.max(anchorIndex, clampedToIndex)
 
   // Select all items in range
-  const newSelectedIds = new Set<string>()
-  for (let i = startIndex; i <= endIndex; i++) {
-    newSelectedIds.add(items[i])
-  }
+  const selected = items[clampedToIndex]
+  const anchorId = state.anchorId ?? items[anchorIndex]
+  if (selected === undefined || anchorId === undefined) return state
+  const newSelectedIds = new Set(items.slice(startIndex, endIndex + 1))
 
   return {
-    selected: items[clampedToIndex],
+    selected,
     selectedIds: newSelectedIds,
-    anchorId: state.anchorId ?? items[anchorIndex],
+    anchorId,
     anchorIndex: anchorIndex,
   }
 }
@@ -148,14 +148,13 @@ export function extendSelection(
  * Sets the first item as the anchor.
  */
 export function selectAll(items: string[]): MultiSelectState {
-  if (items.length === 0) {
-    return createInitialState()
-  }
+  const first = items[0]
+  if (first === undefined) return createInitialState()
 
   return {
-    selected: items[0],
+    selected: first,
     selectedIds: new Set(items),
-    anchorId: items[0],
+    anchorId: first,
     anchorIndex: 0,
   }
 }

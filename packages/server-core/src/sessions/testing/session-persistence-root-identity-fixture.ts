@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./private-runtime-access.ts";
 import { withSessionOperationsForTest } from './session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./runtime-state-access.ts";
 import { mkdtempSync, mkdirSync, symlinkSync, unlinkSync } from "node:fs";
@@ -101,7 +102,7 @@ export function register(
     { id: `workspace-${stored.id}`, name: 'Aliased workspace', rootPath: alias, createdAt: 1 } as never,
     { messagesLoaded },
   )
-  const runtime = manager as unknown as IdentityTestRuntime
+  const runtime = sessionManagerForTest(manager)
   sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
   return { managed, runtime }
 }

@@ -1,3 +1,4 @@
+import { StoredConfigSchema } from '../../../shared/src/config/validators.ts';
 import { withSessionOperationsForTest } from "./testing/session-operation-access.ts";
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, spyOn } from "bun:test";
@@ -29,6 +30,7 @@ let restoreConfig: (() => void) | undefined
 function writeTestConfig(): void {
   mkdirSync(tmpConfigRoot, { recursive: true })
   writeFileSync(join(tmpConfigRoot, 'config.json'), JSON.stringify({
+    schemaVersion: 1,
     workspaces: [],
     activeWorkspaceId: null,
     activeSessionId: null,
@@ -113,14 +115,14 @@ function injectSession(
 
 beforeAll(async () => {
   tmpConfigRoot = mkdtempSync(join(tmpdir(), 'sm-refresh-config-'))
-  process.env.CRAFT_CONFIG_DIR = tmpConfigRoot
+  process.env["CRAFT_CONFIG_DIR"] = tmpConfigRoot
   writeTestConfig()
 
   // An earlier test may have frozen CONFIG_DIR before this fixture existed.
   // Keep real backend resolution while loading only this test's temporary file.
   const storage = await import('@craft-agent/shared/config/storage')
   const configLoader = spyOn(storage, 'loadStoredConfig').mockImplementation(() =>
-    JSON.parse(readFileSync(join(tmpConfigRoot, 'config.json'), 'utf8')),
+    StoredConfigSchema.parse(JSON.parse(readFileSync(join(tmpConfigRoot, 'config.json'), 'utf8'))) as NonNullable<ReturnType<typeof storage.loadStoredConfig>>,
   )
   restoreConfig = () => configLoader.mockRestore()
 
@@ -136,9 +138,9 @@ afterAll(() => {
     rmSync(tmpConfigRoot, { recursive: true, force: true })
   }
   if (originalCraftConfigDir === undefined) {
-    delete process.env.CRAFT_CONFIG_DIR
+    delete process.env["CRAFT_CONFIG_DIR"]
   } else {
-    process.env.CRAFT_CONFIG_DIR = originalCraftConfigDir
+    process.env["CRAFT_CONFIG_DIR"] = originalCraftConfigDir
   }
 })
 
@@ -167,7 +169,7 @@ describe('restartAgentRuntime', () => {
     expect(agent.dispose).toHaveBeenCalledTimes(1)
     expect(managed.agent).toBeNull()
     expect(managed.backendRuntimeSignature).toBeUndefined()
-    expect((managed as { autonomyEvents?: Array<Record<string, unknown>> }).autonomyEvents?.at(-1)).toMatchObject({
+    expect(managed.autonomyEvents?.at(-1)).toMatchObject({
       phase: 'fallback',
       message: 'Execution runtime bridge was reconnected; retry the failed turn to recreate the runtime.',
     })

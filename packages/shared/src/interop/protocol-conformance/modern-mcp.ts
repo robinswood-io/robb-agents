@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { MCP_MODERN_PROTOCOL_VERSION, MCP_TASKS_EXTENSION } from "../../mcp/protocol-eras.ts";
 import type { McpTasksConformanceInput } from './legacy-mcp.ts';
 import { modernMcpHeaders, modernRequestMeta } from './mcp-negotiation.ts';
@@ -15,7 +16,7 @@ export async function runModernMcpTasksConformance(
     method: string,
     params: Record<string, unknown>,
   ): Promise<{ response: InteropConformanceHttpResponse; value: unknown }> => {
-    const existingMeta = recordValue(params._meta) ?? {}
+    const existingMeta = recordValue(params["_meta"]) ?? {}
     const modernParams = {
       ...params,
       _meta: {
@@ -48,7 +49,7 @@ export async function runModernMcpTasksConformance(
       checks,
       'tasks/cancel',
       isSuccessfulHttpStatus(cancelled.response.status)
-        && cancelResult?.resultType === 'complete',
+        && cancelResult?.["resultType"] === 'complete',
       'cooperative cancellation is acknowledged with an empty complete result',
     )
   }
@@ -56,14 +57,14 @@ export async function runModernMcpTasksConformance(
   try {
     const discovered = await send('server/discover', {})
     const discoverResult = jsonRpcResult(discovered.value)
-    const supportedVersions = Array.isArray(discoverResult?.supportedVersions)
-      ? discoverResult.supportedVersions
+    const supportedVersions = isUnknownArray(discoverResult?.["supportedVersions"])
+      ? discoverResult["supportedVersions"]
       : []
     check(
       checks,
       'server/discover',
       isSuccessfulHttpStatus(discovered.response.status)
-        && discoverResult?.resultType === 'complete'
+        && discoverResult?.["resultType"] === 'complete'
         && supportedVersions.includes(MCP_MODERN_PROTOCOL_VERSION),
       'server advertises MCP 2026-07-28 without an initialize session',
     )
@@ -73,8 +74,8 @@ export async function runModernMcpTasksConformance(
       hasModernCacheContract(discoverResult),
       'cacheable discovery result carries ttlMs and cacheScope',
     )
-    const capabilities = recordValue(discoverResult?.capabilities)
-    const extensions = recordValue(capabilities?.extensions)
+    const capabilities = recordValue(discoverResult?.["capabilities"])
+    const extensions = recordValue(capabilities?.["extensions"])
     check(
       checks,
       'tasks extension capability',
@@ -84,12 +85,12 @@ export async function runModernMcpTasksConformance(
 
     const listedTools = await send('tools/list', {})
     const toolsResult = jsonRpcResult(listedTools.value)
-    const toolList = Array.isArray(toolsResult?.tools) ? toolsResult.tools : []
+    const toolList = isUnknownArray(toolsResult?.["tools"]) ? toolsResult["tools"] : []
     check(
       checks,
       'tools/list',
       isSuccessfulHttpStatus(listedTools.response.status)
-        && toolsResult?.resultType === 'complete'
+        && toolsResult?.["resultType"] === 'complete'
         && toolList.length > 0,
       'server returns at least one tool using a complete result',
     )
@@ -103,7 +104,7 @@ export async function runModernMcpTasksConformance(
     if (input.toolName) {
       const configuredTool = toolList
         .map(recordValue)
-        .find((tool) => tool?.name === input.toolName)
+        .find((tool) => tool?.["name"] === input.toolName)
       check(
         checks,
         'configured task tool',
@@ -116,7 +117,7 @@ export async function runModernMcpTasksConformance(
           arguments: input.toolArguments ?? {},
         })
         const createResult = jsonRpcResult(created.value)
-        const createdTask = createResult?.resultType === 'task'
+        const createdTask = createResult?.["resultType"] === 'task'
           ? mcpTask(createResult)
           : null
         check(
@@ -126,11 +127,11 @@ export async function runModernMcpTasksConformance(
           'tools/call may return a flat io.modelcontextprotocol/tasks task result',
         )
 
-        const taskId = stringValue(createdTask?.taskId)
+        const taskId = stringValue(createdTask?.["taskId"])
         if (taskId) {
           const fetched = await send('tasks/get', { taskId })
           const fetchedResult = jsonRpcResult(fetched.value)
-          const fetchedTask = fetchedResult?.resultType === 'complete'
+          const fetchedTask = fetchedResult?.["resultType"] === 'complete'
             ? mcpTask(fetchedResult)
             : null
           check(
@@ -138,29 +139,29 @@ export async function runModernMcpTasksConformance(
             'tasks/get',
             Boolean(
               fetchedTask
-              && fetchedTask.taskId === taskId
+              && fetchedTask["taskId"] === taskId
               && hasTaskTtl(fetchedTask, 'ttlMs'),
             ),
             'tasks/get returns the same detailed task with resultType complete and ttlMs',
           )
 
-          if (fetchedTask?.status === 'completed') {
+          if (fetchedTask?.["status"] === 'completed') {
             check(
               checks,
               'completed task result',
               Reflect.has(fetchedTask, 'result'),
               'completed task embeds the original result (no tasks/result request)',
             )
-          } else if (fetchedTask?.status === 'failed') {
-            const taskError = recordValue(fetchedTask.error)
+          } else if (fetchedTask?.["status"] === 'failed') {
+            const taskError = recordValue(fetchedTask["error"])
             check(
               checks,
               'failed task error',
-              typeof taskError?.code === 'number' && Boolean(stringValue(taskError?.message)),
+              typeof taskError?.["code"] === 'number' && Boolean(stringValue(taskError?.["message"])),
               'failed task embeds a JSON-RPC error',
             )
-          } else if (fetchedTask?.status === 'input_required') {
-            const inputRequests = recordValue(fetchedTask.inputRequests)
+          } else if (fetchedTask?.["status"] === 'input_required') {
+            const inputRequests = recordValue(fetchedTask["inputRequests"])
             check(
               checks,
               'task input requests',
@@ -177,13 +178,13 @@ export async function runModernMcpTasksConformance(
                 checks,
                 'tasks/update',
                 isSuccessfulHttpStatus(updated.response.status)
-                  && updateResult?.resultType === 'complete',
+                  && updateResult?.["resultType"] === 'complete',
                 'input responses are acknowledged with an empty complete result',
               )
             } else {
               await cancelTask(taskId)
             }
-          } else if (fetchedTask?.status === 'working') {
+          } else if (fetchedTask?.["status"] === 'working') {
             await cancelTask(taskId)
           }
         }

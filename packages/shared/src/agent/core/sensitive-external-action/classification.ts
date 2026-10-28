@@ -33,23 +33,23 @@ export function classifySensitiveExternalAction(
     if (!failClosedAction) return null;
     const remoteCommand = commandFromActionInput(input);
     const uniqueBoundedRemoteCommand = boundedRemoteHostPrompt
-      && typeof input.command === 'string' && input.command === remoteCommand
+      && typeof input["command"] === 'string' && input["command"] === remoteCommand
       && !['cmd', 'script'].some(key => Object.prototype.hasOwnProperty.call(input, key))
       ? remoteCommand : undefined;
     const boundedRemoteCommandAliasAmbiguity = boundedRemoteHostPrompt
       && ['cmd', 'script'].some(key => Object.prototype.hasOwnProperty.call(input, key));
     const literalBoundedEndpoint = boundedRemoteHostPrompt
-      && typeof input.server === 'string'
-      && input.server === input.server.trim()
-      && input.server.length > 0 && input.server.length <= 256
-      && /^[A-Za-z0-9._@:-]+$/u.test(input.server)
+      && typeof input["server"] === 'string'
+      && input["server"] === input["server"].trim()
+      && input["server"].length > 0 && input["server"].length <= 256
+      && /^[A-Za-z0-9._@:-]+$/u.test(input["server"])
       && !['host', 'hostname'].some(key => Object.prototype.hasOwnProperty.call(input, key))
-      ? input.server : undefined;
+      ? input["server"] : undefined;
     const literalBoundedCwd = boundedRemoteHostPrompt
-      && typeof input.cwd === 'string'
-      && literalCanonicalAbsolutePosixPath(input.cwd)
+      && typeof input["cwd"] === 'string'
+      && literalCanonicalAbsolutePosixPath(input["cwd"])
       && !['workingDirectory', 'working_directory'].some(key => Object.prototype.hasOwnProperty.call(input, key))
-      ? input.cwd : undefined;
+      ? input["cwd"] : undefined;
     const connectorFallbackNeedsCommandPreview = failClosedAction.commandPreview === toolName;
     return {
       ...failClosedAction,

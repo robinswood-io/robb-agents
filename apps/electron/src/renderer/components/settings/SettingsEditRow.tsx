@@ -14,17 +14,17 @@ export interface SettingsEditRowProps {
   /** Row label */
   label: string
   /** Optional description below label */
-  description?: string
+  description?: string | undefined
   /** Current value display (shown on the right side) */
-  value?: React.ReactNode
+  value?: React.ReactNode | undefined
   /** Context for the edit popover - tells the agent what's being edited */
   editContext: EditContext
   /** Example text for the edit placeholder (e.g., "Change the API endpoint") */
-  editExample?: string
+  editExample?: string | undefined
   /** Whether the row is inside a card (affects padding) */
-  inCard?: boolean
+  inCard?: boolean | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
 }
 
 export function SettingsEditRow({

@@ -4,8 +4,8 @@ import type { ActionId } from '@/actions/definitions'
 
 interface ActionMenuItemProps {
   action: ActionId
-  onClick?: () => void
-  children?: React.ReactNode
+  onClick?: (() => void) | undefined
+  children?: React.ReactNode | undefined
 }
 
 export function ActionMenuItem({ action, onClick, children }: ActionMenuItemProps) {

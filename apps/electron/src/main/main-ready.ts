@@ -1,3 +1,6 @@
+import type { ElectronPlatformOptions } from './platform.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import { ConfirmDialogSpecSchema, FileDialogSpecSchema } from '@craft-agent/server-core/transport';
 import { startEmbeddedServer } from './main-embedded-server';
 
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, shell } from 'electron';
@@ -53,7 +56,7 @@ export async function startMainProcess({
 }: MainStartupInput) {
   console.error('[Robb startup] Electron ready')
   // Export packaged state as env var so logger.ts (and headless Bun) don't need 'electron'
-  process.env.CRAFT_IS_PACKAGED = app.isPackaged ? 'true' : 'false'
+  process.env["CRAFT_IS_PACKAGED"] = app.isPackaged ? 'true' : 'false'
 
   const webAuthnConfiguration = configurePlatformWebAuthn(app, {
     platform: process.platform,
@@ -134,7 +137,7 @@ export async function startMainProcess({
 
     // Multi-instance dev: show instance number badge on dock icon
     // CRAFT_INSTANCE_NUMBER is set by detect-instance.sh for numbered folders
-    const instanceNum = process.env.CRAFT_INSTANCE_NUMBER
+    const instanceNum = process.env["CRAFT_INSTANCE_NUMBER"]
     if (instanceNum) {
       const num = parseInt(instanceNum, 10)
       if (!isNaN(num) && num > 0) {
@@ -156,11 +159,11 @@ export async function startMainProcess({
     // When CRAFT_SERVER_URL is set, this Electron instance is a thin client —
     // it only creates windows whose preload connects to the remote server.
     // Skip server-side initialization (SessionManager, model refresh, platform injection).
-    const isClientOnly = !!process.env.CRAFT_SERVER_URL
-    const isHeadless = !!process.env.CRAFT_HEADLESS
+    const isClientOnly = !!process.env["CRAFT_SERVER_URL"]
+    const isHeadless = !!process.env["CRAFT_HEADLESS"]
 
     if (isClientOnly) {
-      mainLog.info(`Client-only mode: CRAFT_SERVER_URL=${process.env.CRAFT_SERVER_URL} (server initialization skipped)`)
+      mainLog.info(`Client-only mode: CRAFT_SERVER_URL=${process.env["CRAFT_SERVER_URL"]} (server initialization skipped)`)
     }
 
     // Initialize notification service (always — triggered by server push events)
@@ -173,24 +176,24 @@ export async function startMainProcess({
     mainState.browserPaneManager.registerCapabilityIpc()
 
     // Build real PlatformServices from Electron APIs
-    const platform: PlatformServices = createElectronPlatform({
+    const platform: PlatformServices = createElectronPlatform(omitUndefined<ElectronPlatformOptions>({
       app,
       nativeImage,
       shell,
       nativeTheme,
       logger: log,
       isDebugMode: IS_DEVELOPMENT_CHANNEL || isDebugMode,
-      buildCommit: process.env.ROBB_BUILD_COMMIT,
+      buildCommit: process.env["ROBB_BUILD_COMMIT"],
       buildChannel: APP_CHANNEL,
-      buildDirty: process.env.ROBB_BUILD_DIRTY === 'true'
+      buildDirty: process.env["ROBB_BUILD_DIRTY"] === 'true'
         ? true
-        : process.env.ROBB_BUILD_DIRTY === 'false'
+        : process.env["ROBB_BUILD_DIRTY"] === 'false'
           ? false
           : undefined,
       runtimeAppRoot,
       getLogFilePath,
       captureError: (err) => Sentry.captureException(err),
-    })
+    }))
 
     // Bootstrap IPC handlers — preload uses sendSync for window-local details
     ipcMain.on('__get-web-contents-id', (e) => {
@@ -237,18 +240,20 @@ export async function startMainProcess({
 
     // Dialog bridge — preload capability handlers use ipcRenderer.invoke to
     // call main-process-only dialog APIs (dialog, BrowserWindow).
-    ipcMain.handle('__dialog:showMessageBox', async (event, spec) => {
+    ipcMain.handle('__dialog:showMessageBox', async (event, input: unknown) => {
+      const spec = omitUndefined(ConfirmDialogSpecSchema.parse(input))
       const win = BrowserWindow.fromWebContents(event.sender)
         || BrowserWindow.getFocusedWindow()
         || BrowserWindow.getAllWindows()[0]
-      const result = await dialog.showMessageBox(win, spec)
+      const result = win ? await dialog.showMessageBox(win, spec) : await dialog.showMessageBox(spec)
       return { response: result.response }
     })
-    ipcMain.handle('__dialog:showOpenDialog', async (event, spec) => {
+    ipcMain.handle('__dialog:showOpenDialog', async (event, input: unknown) => {
+      const spec = omitUndefined(FileDialogSpecSchema.parse(input))
       const win = BrowserWindow.fromWebContents(event.sender)
         || BrowserWindow.getFocusedWindow()
         || BrowserWindow.getAllWindows()[0]
-      const result = await dialog.showOpenDialog(win, spec)
+      const result = win ? await dialog.showOpenDialog(win, spec) : await dialog.showOpenDialog(spec)
       return { canceled: result.canceled, filePaths: result.filePaths }
     })
 
@@ -342,14 +347,15 @@ export async function startMainProcess({
     if (BrowserWindow.getAllWindows().length === 0 && mainState.windowManager) {
       // Open first workspace or last focused
       const workspaces = getWorkspaces()
-      if (workspaces.length > 0) {
+      const firstWorkspace = workspaces[0]
+      if (firstWorkspace) {
         const savedState = loadWindowState()
-        const wsId = savedState?.lastFocusedWorkspaceId || workspaces[0].id
+        const wsId = savedState?.lastFocusedWorkspaceId || firstWorkspace.id
         // Verify workspace still exists
         if (workspaces.some(ws => ws.id === wsId)) {
           mainState.windowManager.createWindow({ workspaceId: wsId })
         } else {
-          mainState.windowManager.createWindow({ workspaceId: workspaces[0].id })
+          mainState.windowManager.createWindow({ workspaceId: firstWorkspace.id })
         }
       }
     }

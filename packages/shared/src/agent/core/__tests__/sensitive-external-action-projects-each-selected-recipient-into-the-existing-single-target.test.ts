@@ -95,7 +95,7 @@ describe('host-authenticated multi-target Gmail selection', () => {
       objectiveAuthorizationSegments: segments,
     });
     expect(run(tool, { ...input, expectedSenderEmail: 'sender@example.com' }, 'multi-preflight-extra-sender'))
-      .toMatchObject({ type: 'block', reason: expect.stringContaining('Omit expectedSenderEmail') });
+      .toMatchObject({ type: 'block', reason: (expect.stringContaining('Omit expectedSenderEmail') as unknown) });
     expect(run(tool, input, 'multi-preflight').type).toBe('allow');
     recordContextualGmailToolResult({
       sessionId,

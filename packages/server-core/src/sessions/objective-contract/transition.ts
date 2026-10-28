@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { ActiveSessionObjective } from "@craft-agent/shared/sessions";
 import { detectHighStakesEvidenceDomain, isConcreteOperationalSoftwareRestatement, isOperationalTechnicalContractLifecycleObjective } from "@craft-agent/shared/agent";
 import { objectiveAmendmentAuthorityText } from './amendment-authority.ts';
@@ -28,7 +29,7 @@ export function transitionObjectiveContract(input: ObjectiveTransitionInput): Ac
     // This is the same objective and the same host-owned contract. The user
     // turn constrains how its terminal state is reconciled; it does not become
     // an acceptance revision, target change, payload change or new authority.
-    return {
+    return omitUndefined<ActiveSessionObjective>({
       ...input.existing,
       terminalReconciliation: {
         messageId: input.messageId,
@@ -55,7 +56,7 @@ export function transitionObjectiveContract(input: ObjectiveTransitionInput): Ac
             messageId: input.messageId, text: input.text, timestamp: nowMs,
           }]
         : input.existing.amendments,
-    };
+    });
   }
   const preserveExisting = input.existing
     && !startsExplicitNewObjective(input.text)
@@ -85,7 +86,7 @@ export function transitionObjectiveContract(input: ObjectiveTransitionInput): Ac
     // the normal request classifier, but promote only evidence obligations;
     // identity, accounting, execution permissions and model settings stay put.
     const amendment = substantiveAmendment ? transitionObjectiveContract({
-      messageId: input.messageId, text: authorityText, delegatedRole: input.existing.delegatedRole,
+      messageId: input.messageId, text: authorityText, ...(input.existing.delegatedRole !== undefined ? { delegatedRole: input.existing.delegatedRole } : {}),
       nowMs,
     }) : undefined;
     // Terse amendments such as "fix the reported issues" own their mutation
@@ -194,7 +195,7 @@ export function transitionObjectiveContract(input: ObjectiveTransitionInput): Ac
           && !input.existing.completionCriteria.includes('independent-review-passed')
         ? [...input.existing.completionCriteria, 'independent-review-passed' as const]
         : input.existing.completionCriteria;
-    const continued: ActiveSessionObjective = {
+    const continued: ActiveSessionObjective = omitUndefined<ActiveSessionObjective>({
       ...input.existing,
       ...(requiresExecutionEvidence ? { requiresExecutionEvidence: true } : {}),
       ...(requiresObservationEvidence ? { requiresObservationEvidence: true } : {}),
@@ -225,7 +226,7 @@ export function transitionObjectiveContract(input: ObjectiveTransitionInput): Ac
         && !input.existing.amendments?.some(amendment => amendment.messageId === input.messageId)
         ? [...(input.existing.amendments ?? []), { messageId: input.messageId, text: input.text, timestamp: nowMs }]
         : input.existing.amendments,
-    };
+    });
     // Normalize legacy false positives while the objective is already being
     // persisted for a new turn. Keeping the stale raw flag would make callers
     // that have not yet adopted objectiveRequiresExecutionEvidence disagree.

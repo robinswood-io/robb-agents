@@ -1,3 +1,4 @@
+import { requiredTestValue } from '@craft-agent/shared/testing/fixture-values';
 import { withSessionOperationsForTest } from '../../../../../packages/server-core/src/sessions/testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "../../../../../packages/server-core/src/sessions/testing/runtime-state-access.ts";
 import { describe, expect, it, mock } from 'bun:test'
@@ -68,7 +69,7 @@ function createHarness(initialAnnotations: AnnotationV1[] = []) {
   sessionRuntimeStateForTest(manager).sessions = new Map([['session-1', managed]])
   manager['persistSession'] = () => { persistCalls += 1; return true }
   manager['sendEvent'] = (event, workspaceId) => {
-    events.push({ event, workspaceId })
+    events.push({ event, ...(workspaceId !== undefined ? { workspaceId: workspaceId } : {}) })
   }
 
   return {
@@ -88,7 +89,7 @@ describe('SessionManager annotation validation', () => {
 
     h.manager.addMessageAnnotation('session-1', 'msg-1', makeAnnotation('ann-over-limit'))
 
-    expect(h.managed.messages[0].annotations).toHaveLength(200)
+    expect(requiredTestValue(h.managed.messages[0]).annotations).toHaveLength(200)
     expect(h.persistCalls).toBe(0)
     expect(h.events).toHaveLength(0)
   })
@@ -99,7 +100,7 @@ describe('SessionManager annotation validation', () => {
 
     h.manager.addMessageAnnotation('session-1', 'msg-1', makeAnnotation('ann-big', oversizedMeta))
 
-    expect(h.managed.messages[0].annotations).toHaveLength(0)
+    expect(requiredTestValue(h.managed.messages[0]).annotations).toHaveLength(0)
     expect(h.persistCalls).toBe(0)
     expect(h.events).toHaveLength(0)
   })
@@ -115,8 +116,8 @@ describe('SessionManager annotation validation', () => {
       },
     })
 
-    expect(h.managed.messages[0].annotations).toHaveLength(1)
-    expect(h.managed.messages[0].annotations?.[0]?.id).toBe('ann-1')
+    expect(requiredTestValue(h.managed.messages[0]).annotations).toHaveLength(1)
+    expect(requiredTestValue(h.managed.messages[0]).annotations?.[0]?.id).toBe('ann-1')
     expect(h.persistCalls).toBe(0)
     expect(h.events).toHaveLength(0)
   })

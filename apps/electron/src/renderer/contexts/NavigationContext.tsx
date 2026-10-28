@@ -369,7 +369,8 @@ export function NavigationProvider({
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
       // Update sequence tracking
-      const eventSeq = event.state?.seq ?? 0
+      const state: unknown = event.state
+      const eventSeq = isJsonObject(state) && typeof state['seq'] === 'number' && Number.isFinite(state['seq']) ? state['seq'] : 0
       historySeqRef.current = eventSeq
       updateCanGoBackForward()
 
@@ -488,3 +489,4 @@ export function NavigationProvider({
     />
   )
 }
+import { isJsonObject } from '@craft-agent/shared/utils/json';

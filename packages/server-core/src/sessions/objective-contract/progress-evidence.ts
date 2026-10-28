@@ -10,7 +10,7 @@ export function isObjectiveEvidenceInvalidatingMutation(message: Message): boole
   // Limit this to the existing current-session handler shape. Other targets,
   // connector namespaces, permissions and future added operations stay guarded.
   const currentSessionStatus = /^(?:mcp__session__|session__)?set_session_status$/.test(message.toolName ?? '')
-    && typeof input?.status === 'string' && input.status.trim().length > 0
+    && typeof input?.["status"] === 'string' && input["status"].trim().length > 0
     && Object.keys(input).every(key => key === 'status' || key === '_displayName' || key === '_intent');
   if (currentSessionStatus || isObjectiveCoordinationTool(message)) return false;
   if (isObjectiveMutationTool(message)) return true;
@@ -18,7 +18,7 @@ export function isObjectiveEvidenceInvalidatingMutation(message: Message): boole
   // POST is also used by searches, validations and GraphQL queries. Method
   // alone therefore remains a conservative chronology boundary without
   // becoming positive proof that the requested mutation occurred.
-  const method = input?.method;
+  const method = input?.["method"];
   if (typeof method === 'string' && MUTATION_HTTP_METHOD_PATTERN.test(method.trim())) return true;
 
   const toolName = message.toolName ?? '';
@@ -32,21 +32,21 @@ export function isObjectiveEvidenceInvalidatingMutation(message: Message): boole
   }
 
   const semanticInput = message.toolInput ?? {};
-  const command = [semanticInput.command, semanticInput.cmd, semanticInput.script]
+  const command = [semanticInput["command"], semanticInput["cmd"], semanticInput["script"]]
     .find((value): value is string => typeof value === 'string' && value.trim().length > 0);
   if (command) {
     // Fail closed for completed shell execution unless the same AST-backed
     // policy used by Safe mode proves that every command is read-only.
     return !isProvablyReadOnlyShellCommand(command);
   }
-  const query = [semanticInput.query, semanticInput.sql, semanticInput.statement]
+  const query = [semanticInput["query"], semanticInput["sql"], semanticInput["statement"]]
     .find((value): value is string => typeof value === 'string' && value.trim().length > 0);
   // A generic SQL executor does not expose enough database semantics to prove
   // that SELECT/functions/CTEs are side-effect free. It may still count as
   // positive execution only when the mutation grammar above recognizes it,
   // but every non-empty statement invalidates older target observations.
   if (query) return true;
-  const action = [semanticInput.action, semanticInput.operation]
+  const action = [semanticInput["action"], semanticInput["operation"]]
     .find((value): value is string => typeof value === 'string' && value.trim().length > 0);
   return action ? classifyToolNameMutationSemantics(action) !== 'neutral' : false;
 }
@@ -118,7 +118,7 @@ export function hasObjectiveExecutionEvidence(messages: Message[], userMessageId
   for (const message of scoped) {
     if (message.role === 'tool' && isObjectiveToolExecutedSuccessfully(message)
       && (message.toolName === 'mcp__session__spawn_session' || message.toolName === 'spawn_session')) {
-      const role = typeof message.toolInput?.role === 'string' ? message.toolInput.role.trim().toLowerCase() : 'worker';
+      const role = typeof message.toolInput?.["role"] === 'string' ? message.toolInput["role"].trim().toLowerCase() : 'worker';
       if (role !== 'reviewer' && typeof message.toolResult === 'string') {
         try {
           const parsed = JSON.parse(message.toolResult) as { sessionId?: unknown };

@@ -132,7 +132,7 @@ async function sessionOpPerformUpdateShare(sessionOperationContext: SessionOpera
             return { success: false, error: 'Failed to update shared session' };
         }
         sessionLog.info(`Session ${sessionId} share updated at ${managed.sharedUrl}`);
-        return { success: true, url: managed.sharedUrl };
+        return { success: true, ...(managed.sharedUrl !== undefined ? { url: managed.sharedUrl } : {}) };
     }
     catch (error) {
         sessionLog.error('Update share error:', error);

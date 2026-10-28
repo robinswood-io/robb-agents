@@ -36,19 +36,19 @@ export function parsePermissionsJson(content: string): PermissionsCustomConfig {
     const data = result.data;
 
     // Normalize patterns (extract string from pattern objects, but NOT for bash - preserve comments)
-    const normalizePatterns = (patterns: Array<string | { pattern: string; comment?: string }> | undefined): string[] => {
+    const normalizePatterns = (patterns: Array<string | { pattern: string; comment?: string | undefined }> | undefined): string[] => {
       if (!patterns) return [];
       return patterns.map(p => typeof p === 'string' ? p : p.pattern);
     };
 
     // For bash patterns, preserve comments for helpful error messages
-    const normalizeBashPatterns = (patterns: Array<string | { pattern: string; comment?: string }> | undefined): PatternWithComment[] => {
+    const normalizeBashPatterns = (patterns: Array<string | { pattern: string; comment?: string | undefined }> | undefined): PatternWithComment[] => {
       if (!patterns) return [];
       return patterns.map(p => {
         if (typeof p === 'string') {
           return { pattern: p };
         }
-        return { pattern: p.pattern, comment: p.comment };
+        return { pattern: p.pattern, ...(p.comment !== undefined ? { comment: p.comment } : {}) };
       });
     };
 
@@ -93,11 +93,11 @@ export function compileBlockedCommandHint(hint: BlockedCommandHintRule): Compile
   return {
     command,
     reason: hint.reason,
-    context: hint.context,
-    tryInstead: hint.tryInstead,
-    example: hint.example,
-    whenNotMatching: hint.whenNotMatching,
-    whenNotMatchingRegex,
+    ...(hint.context !== undefined ? { context: hint.context } : {}),
+    ...(hint.tryInstead !== undefined ? { tryInstead: hint.tryInstead } : {}),
+    ...(hint.example !== undefined ? { example: hint.example } : {}),
+    ...(hint.whenNotMatching !== undefined ? { whenNotMatching: hint.whenNotMatching } : {}),
+    ...(whenNotMatchingRegex !== undefined ? { whenNotMatchingRegex } : {}),
   };
 }
 

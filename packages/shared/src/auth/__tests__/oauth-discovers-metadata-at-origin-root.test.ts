@@ -8,7 +8,7 @@ let mockFetch: ReturnType<typeof mock>;
 
 beforeEach(() => {
     mockFetch = mock(() => Promise.resolve(new Response('Not Found', { status: 404 })));
-    globalThis.fetch = mockFetch as unknown as typeof fetch;
+    globalThis.fetch = Object.assign(mockFetch, { preconnect() {} });
   });
 
 afterEach(() => {
@@ -61,7 +61,7 @@ it('falls back to path-scoped discovery', async () => {
 
 describe('error handling', () => {
 it('returns null when no metadata found', async () => {
-      mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+      mockFetch.mockImplementation((_url: string, options?: RequestInit) => {
         if (options?.method === 'HEAD') {
           return Promise.resolve(new Response(null, { status: 200 }));
         }
@@ -79,7 +79,7 @@ it('returns null for invalid URL', async () => {
     });
 
 it('returns null when metadata is missing required fields', async () => {
-      mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+      mockFetch.mockImplementation((_url: string, options?: RequestInit) => {
         if (options?.method === 'HEAD') {
           return Promise.resolve(new Response(null, { status: 200 }));
         }
@@ -104,7 +104,7 @@ it('calls onLog callback with discovery progress', async () => {
     const logs: string[] = [];
     const onLog = (msg: string) => logs.push(msg);
 
-    mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+    mockFetch.mockImplementation((_url: string, options?: RequestInit) => {
       if (options?.method === 'HEAD') {
         return Promise.resolve(new Response(null, { status: 200 }));
       }

@@ -1,3 +1,5 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
@@ -17,7 +19,7 @@ describe('source_activated auto-retry', () => {
   beforeEach(() => {
     tmpRoot = mkdtempSync(join(tmpdir(), 'sm-autoretry-'))
     sm = withSessionOperationsForTest(new SessionManager())
-    const internals = sm as unknown as { enqueuePersist: () => boolean; flushSession: () => Promise<void> }
+    const internals = sessionManagerForTest(sm)
     internals.enqueuePersist = () => true
     internals.flushSession = async () => {}
   })
@@ -69,20 +71,7 @@ describe('source_activated auto-retry', () => {
     managed: ReturnType<typeof buildSession>,
     onChat: (message: string) => void,
   ) {
-    const internals = sm as unknown as {
-      enqueuePersist: () => boolean
-      flushSession: () => Promise<void>
-      sendEvent: () => void
-      emitExecutionTelemetry: () => void
-      startGenerationTelemetry: () => void
-      finishGenerationTelemetry: () => void
-      beginAutomaticSessionStatusLifecycle: () => Promise<void>
-      finishAutomaticSessionStatusLifecycle: () => Promise<void>
-      isSessionBeingViewed: () => boolean
-      markSessionRead: () => Promise<void>
-      processNextQueuedMessage: () => void
-      getOrCreateAgent: () => Promise<unknown>
-    }
+    const internals = sessionManagerForTest(sm)
     internals.enqueuePersist = () => true
     internals.flushSession = async () => {}
     internals.sendEvent = () => {}
@@ -94,23 +83,22 @@ describe('source_activated auto-retry', () => {
     internals.isSessionBeingViewed = () => true
     internals.markSessionRead = async () => {}
     internals.processNextQueuedMessage = () => {}
-    const agent: {
+    const fixture: {
       onProviderHandoff?: () => void
-      chat(message: string): AsyncGenerator<{ type: 'complete' }>
+      chat(message: string): AsyncGenerator<{ type: 'complete' }, void, unknown>
       getModel(): string
       getSessionId(): null
       isProcessing(): boolean
       setAllSources(): void
       redirect(): boolean
     } = {
-      onProviderHandoff: undefined,
       async *chat(message: string) {
         onChat(message)
         agent.onProviderHandoff?.()
         // End this isolated replay without asking the completion gate to spend
         // another recovery attempt after the state snapshot has been captured.
         managed.stopRequested = true
-        if (false) yield { type: 'complete' as const }
+        yield* []
       },
       getModel: () => 'test/source-activation',
       getSessionId: () => null,
@@ -118,7 +106,8 @@ describe('source_activated auto-retry', () => {
       setAllSources: () => {},
       redirect: () => false,
     }
-    managed.agent = agent as never
+    const agent = completeSessionAgentFixture(managed.workspace, fixture)
+    managed.agent = agent
     internals.getOrCreateAgent = async () => agent
   }
 
@@ -138,7 +127,7 @@ describe('source_activated auto-retry', () => {
       objectiveRevision: binding.lastUserMessageId ?? binding.userMessageId,
     }
     const event: SourceActivatedEvent = { type: 'source_activated', sourceSlug, originalMessage }
-    await (sm as unknown as { processEvent: (m: unknown, e: unknown) => Promise<void> }).processEvent(managed, event)
+    await (sessionManagerForTest(sm)).processEvent(managed, event)
   }
 
   it('restores a queued source-activation continuation with durable provenance and the original objective budget', () => {
@@ -184,9 +173,9 @@ describe('source_activated auto-retry', () => {
     )
     managed.activeObjective = objective
     managed.pendingTurnRecovery = recovery
-    ;(sm as unknown as { processNextQueuedMessage: () => void }).processNextQueuedMessage = () => {}
+    ;(sessionManagerForTest(sm)).processNextQueuedMessage = () => {}
 
-    ;(sm as unknown as { restoreDurableRuntimeState: (session: typeof managed) => void })
+    ;(sessionManagerForTest(sm))
       .restoreDurableRuntimeState(managed)
 
     expect(managed.activeObjective).toEqual(objective)
@@ -225,9 +214,9 @@ describe('source_activated auto-retry', () => {
         isQueued: true,
         internalOrigin,
       })
-      ;(sm as unknown as { processNextQueuedMessage: () => void }).processNextQueuedMessage = () => {}
+      ;(sessionManagerForTest(sm)).processNextQueuedMessage = () => {}
 
-      ;(sm as unknown as { restoreDurableRuntimeState: (session: typeof managed) => void })
+      ;(sessionManagerForTest(sm))
         .restoreDurableRuntimeState(managed)
 
       expect(managed.messageQueue).toEqual([])
@@ -254,10 +243,10 @@ describe('source_activated auto-retry', () => {
     })
     let enqueued = 0
     let flushed = 0
-    ;(sm as unknown as { enqueuePersist: () => boolean; flushSession: () => Promise<void> }).enqueuePersist = () => { enqueued++; return true }
-    ;(sm as unknown as { flushSession: () => Promise<void> }).flushSession = async () => { flushed++ }
+    ;(sessionManagerForTest(sm)).enqueuePersist = () => { enqueued++; return true }
+    ;(sessionManagerForTest(sm)).flushSession = async () => { flushed++ }
 
-    ;(sm as unknown as { restoreDurableRuntimeState: (session: typeof managed) => void })
+    ;(sessionManagerForTest(sm))
       .restoreDurableRuntimeState(managed)
     await new Promise(resolve => setImmediate(resolve))
 
@@ -286,9 +275,9 @@ describe('source_activated auto-retry', () => {
         content: 'Nouvelle instruction humaine durable', isQueued: true,
       },
     )
-    ;(sm as unknown as { processNextQueuedMessage: () => void }).processNextQueuedMessage = () => {}
+    ;(sessionManagerForTest(sm)).processNextQueuedMessage = () => {}
 
-    ;(sm as unknown as { restoreDurableRuntimeState: (session: typeof managed) => void })
+    ;(sessionManagerForTest(sm))
       .restoreDurableRuntimeState(managed)
 
     expect(managed.messages.some(message => message.id === 'cold-deferred-source')).toBe(false)
@@ -326,9 +315,9 @@ describe('source_activated auto-retry', () => {
       ...managed.activeObjective!,
       lastUserMessageId: 'newer-human-revision',
     }
-    delete (sm as unknown as { processNextQueuedMessage?: unknown }).processNextQueuedMessage
+    Reflect.deleteProperty(sm, 'processNextQueuedMessage')
 
-    ;(sm as unknown as { processNextQueuedMessage: (id: string) => void }).processNextQueuedMessage(sessionId)
+    ;(sessionManagerForTest(sm)).processNextQueuedMessage(sessionId)
     await new Promise(r => setTimeout(r, 20))
 
     expect(chats).toBe(0)
@@ -374,7 +363,7 @@ describe('source_activated auto-retry', () => {
     const preparationGate = new Promise<void>(resolve => { releasePreparation = resolve })
     const entered = new Promise<void>(resolve => { preparationEntered = resolve })
     const agent = managed.agent!
-    ;(sm as unknown as { getOrCreateAgent: () => Promise<unknown>; processNextQueuedMessage: () => void }).getOrCreateAgent = async () => {
+    ;(sessionManagerForTest(sm)).getOrCreateAgent = async () => {
       preparationEntered()
       await preparationGate
       return agent
@@ -406,7 +395,7 @@ describe('source_activated auto-retry', () => {
     const firstFlushGate = new Promise<void>(resolve => { releaseFirstFlush = resolve })
     const entered = new Promise<void>(resolve => { firstFlushEntered = resolve })
     let firstFlush = true
-    ;(sm as unknown as { flushSession: () => Promise<void> }).flushSession = async () => {
+    ;(sessionManagerForTest(sm)).flushSession = async () => {
       if (!firstFlush) return
       firstFlush = false
       firstFlushEntered()

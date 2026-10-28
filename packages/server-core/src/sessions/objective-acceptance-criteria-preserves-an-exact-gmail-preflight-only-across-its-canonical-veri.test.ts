@@ -330,7 +330,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
     expectCriterionContractRejected({ ...preflightInput,
       from: `Thibault <${preflightInput.sendAsEmail}>, Other <other@example.com>` });
     const preflightWithoutBody: Record<string, unknown> = { ...preflightInput };
-    delete preflightWithoutBody.body;
+    delete preflightWithoutBody["body"];
     expectCriterionContractRejected(
       { ...preflightWithoutBody, '$.body.value': body },
       { ...preflightWithoutBody, body: { value: body } },

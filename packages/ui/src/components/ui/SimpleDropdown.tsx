@@ -28,15 +28,15 @@ export interface SimpleDropdownItemProps {
   /** Item content */
   children: React.ReactNode
   /** Optional icon (rendered before label) */
-  icon?: React.ReactNode
+  icon?: React.ReactNode | undefined
   /** Destructive variant - red text */
-  variant?: 'default' | 'destructive'
+  variant?: 'default' | 'destructive' | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
   /** Optional ref callback to access the underlying button */
-  buttonRef?: (el: HTMLButtonElement | null) => void
+  buttonRef?: ((el: HTMLButtonElement | null) => void) | undefined
   /** Optional hover callback */
-  onMouseEnter?: (e: React.MouseEvent<HTMLButtonElement>) => void
+  onMouseEnter?: ((e: React.MouseEvent<HTMLButtonElement>) => void) | undefined
 }
 
 export function SimpleDropdownItem({
@@ -102,15 +102,15 @@ export interface SimpleDropdownProps {
   /** Menu items */
   children: React.ReactNode
   /** Alignment relative to trigger */
-  align?: 'start' | 'end'
+  align?: 'start' | 'end' | undefined
   /** Additional className for the menu */
-  className?: string
+  className?: string | undefined
   /** Whether the dropdown is disabled */
-  disabled?: boolean
+  disabled?: boolean | undefined
   /** Callback when open state changes */
-  onOpenChange?: (open: boolean) => void
+  onOpenChange?: ((open: boolean) => void) | undefined
   /** Enable built-in ArrowUp/ArrowDown/Enter keyboard navigation (default: true) */
-  keyboardNavigation?: boolean
+  keyboardNavigation?: boolean | undefined
 }
 
 export function SimpleDropdown({

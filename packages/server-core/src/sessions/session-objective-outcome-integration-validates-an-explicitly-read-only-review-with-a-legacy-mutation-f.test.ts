@@ -12,10 +12,10 @@ import { activeObjective, bindLiveToolAdmission, enableAutomaticToolFallback, in
 beforeEach(() => {
   roots.length = 0
   sessionIds.length = 0
-  process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+  process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
 })
 afterEach(() => {
-  delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+  delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]
   for (const sessionId of sessionIds) clearObjectiveEvidenceGate(sessionId)
   for (const root of roots) rmSync(root, { recursive: true, force: true })
 })
@@ -49,10 +49,10 @@ describe('SessionManager objective outcome integration', () => {
     expect(harness.managed.messageQueue).toEqual([])
     const objective = harness.managed.activeObjective!
     objective.terminalState = 'active'
-    objective.completedAt = undefined
-    objective.lastOutcome = undefined
+    delete objective.completedAt;
+    delete objective.lastOutcome;
     harness.managed.pendingTurnRecovery = createPendingTurnRecovery(objective.userMessageId)
-    await (harness.manager as unknown as { resumePendingTurnAfterRestart: (id: string) => Promise<void> }).resumePendingTurnAfterRestart(harness.managed.id)
+    await (sessionManagerForTest(harness.manager)).resumePendingTurnAfterRestart(harness.managed.id)
     expect(harness.managed.activeObjective?.terminalState).toBe('complete_verified')
     expect(objective.requiresExecutionEvidence).toBe(true)
     expect(harness.managed.pendingTurnRecovery).toBeUndefined()
@@ -89,17 +89,17 @@ describe('SessionManager objective outcome integration', () => {
 
     await harness.manager.sendMessage(harness.managed.id, 'Implémente le changement puis teste-le.')
 
-    expect(harness.managed.activeObjective).toMatchObject({
+    expect<unknown>(harness.managed.activeObjective).toMatchObject({
       terminalState: 'complete_verified',
       lastOutcome: receipt,
-      completedAt: expect.any(Number),
+      completedAt: (expect.any(Number) as unknown),
     })
     expect(harness.managed.pendingTurnRecovery).toBeUndefined()
     expect(harness.managed.messageQueue).toEqual([])
     expect(harness.completions).toHaveLength(1)
     expect(harness.completions[0]).toMatchObject({ reason: 'complete', finalText: 'Implémentation vérifiée.' })
-    expect(harness.sentEvents).toContainEqual(expect.objectContaining({ type: 'complete', reason: 'complete' }))
-    const completeIndex = harness.sentEvents.findIndex(event => event.type === 'complete')
+    expect<unknown>(harness.sentEvents).toContainEqual((expect.objectContaining({ type: 'complete', reason: 'complete' }) as unknown))
+    const completeIndex = harness.sentEvents.findIndex(event => event["type"] === 'complete')
     expect(harness.sentEvents[completeIndex - 1]).toMatchObject({
       type: 'objective_changed',
       activeObjective: { terminalState: 'complete_verified', lastOutcome: receipt },
@@ -269,7 +269,7 @@ describe('SessionManager objective outcome integration', () => {
     expect(harness.managed.messageQueue).toEqual([])
     expect(harness.managed.pendingTurnRecovery).toBeUndefined()
     expect(harness.resumedSessionIds).toEqual([])
-    expect(harness.sentEvents).toContainEqual(expect.objectContaining({ type: 'complete', reason: 'complete' }))
+    expect<unknown>(harness.sentEvents).toContainEqual((expect.objectContaining({ type: 'complete', reason: 'complete' }) as unknown))
     expect(harness.completions).toHaveLength(1)
     expect(harness.completions[0]).toMatchObject({ reason: 'complete' })
   })
@@ -292,14 +292,12 @@ describe('SessionManager objective outcome integration', () => {
     harness.managed.activeObjective = activeObjective(userMessage.id)
     harness.managed.pendingTurnRecovery = createPendingTurnRecovery(userMessage.id)
 
-    await (harness.manager as unknown as {
-      resumePendingTurnAfterRestart: (sessionId: string) => Promise<void>
-    }).resumePendingTurnAfterRestart(harness.managed.id)
+    await (sessionManagerForTest(harness.manager)).resumePendingTurnAfterRestart(harness.managed.id)
 
-    expect(harness.managed.pendingTurnRecovery).toMatchObject({
+    expect<unknown>(harness.managed.pendingTurnRecovery).toMatchObject({
       attempts: 1,
       lastCause: 'objective_incomplete',
-      validationGaps: expect.arrayContaining(['malformed objective outcome receipt']),
+      validationGaps: (expect.arrayContaining(['malformed objective outcome receipt']) as unknown),
     })
     expect(harness.managed.messageQueue).toHaveLength(1)
     expect(harness.managed.messages.find(message => message.id === 'invalid-final')?.isIntermediate).toBe(true)
@@ -327,9 +325,7 @@ describe('SessionManager objective outcome integration', () => {
     harness.managed.activeObjective = activeObjective(userMessage.id)
     harness.managed.pendingTurnRecovery = createPendingTurnRecovery(userMessage.id)
 
-    await (harness.manager as unknown as {
-      resumePendingTurnAfterRestart: (sessionId: string) => Promise<void>
-    }).resumePendingTurnAfterRestart(harness.managed.id)
+    await (sessionManagerForTest(harness.manager)).resumePendingTurnAfterRestart(harness.managed.id)
 
     expect(harness.managed.pendingTurnRecovery).toMatchObject({
       attempts: 1, lastCause: 'objective_continue', validationGaps: [],
@@ -341,7 +337,7 @@ describe('SessionManager objective outcome integration', () => {
     expect(harness.managed.messageQueue[0]?.message).toContain('valid progress receipt')
     expect(harness.managed.messageQueue[0]?.message).toContain('Run the final verification')
     expect(harness.managed.messages.find(message => message.id === 'persisted-continue')?.isIntermediate).toBe(true)
-    expect(harness.sentEvents.some(event => event.type === 'typed_error')).toBe(false)
+    expect(harness.sentEvents.some(event => event["type"] === 'typed_error')).toBe(false)
     expect(harness.resumedSessionIds).toEqual([harness.managed.id])
   })
 
@@ -350,16 +346,14 @@ describe('SessionManager objective outcome integration', () => {
     harness.managed.messages.push({ id: 'user-root', role: 'user', content: 'Vérifie le résultat.', timestamp: 1 })
     harness.managed.activeObjective = activeObjective('user-root')
     harness.managed.pendingTurnRecovery = { ...createPendingTurnRecovery('user-root'), attempts: 256 }
-    const resume = (harness.manager as unknown as {
-      resumePendingTurnAfterRestart: (sessionId: string) => Promise<void>
-    }).resumePendingTurnAfterRestart.bind(harness.manager)
+    const resume = (sessionManagerForTest(harness.manager)).resumePendingTurnAfterRestart.bind(harness.manager)
     await resume(harness.managed.id)
     expect(harness.managed.activeObjective?.terminalState).toBe('exhausted')
     expect(harness.managed.pendingTurnRecovery?.exhaustedAt).toBeNumber()
-    expect(harness.managed.messages.at(-1)).toMatchObject({ role: 'error', content: expect.stringContaining('Automatic continuation stopped after restart') })
+    expect<unknown>(harness.managed.messages.at(-1)).toMatchObject({ role: 'error', content: (expect.stringContaining('Automatic continuation stopped after restart') as unknown) })
     expect(harness.resumedSessionIds).toEqual([])
     await resume(harness.managed.id)
-    expect(harness.sentEvents.filter(event => event.type === 'error')).toHaveLength(1)
+    expect(harness.sentEvents.filter(event => event["type"] === 'error')).toHaveLength(1)
   })
 
   it('normalizes blocked objectives to error for UI and conductor completion', async () => {
@@ -381,11 +375,9 @@ describe('SessionManager objective outcome integration', () => {
     }
     harness.managed.isProcessing = true
 
-    await (harness.manager as unknown as {
-      onProcessingStopped: (sessionId: string, reason: 'complete') => Promise<void>
-    }).onProcessingStopped(harness.managed.id, 'complete')
+    await (sessionManagerForTest(harness.manager)).onProcessingStopped(harness.managed.id, 'complete')
 
-    expect(harness.sentEvents).toContainEqual(expect.objectContaining({ type: 'complete', reason: 'error' }))
+    expect<unknown>(harness.sentEvents).toContainEqual((expect.objectContaining({ type: 'complete', reason: 'error' }) as unknown))
     expect(harness.completions).toHaveLength(1)
     expect(harness.completions[0]?.reason).toBe('error')
   })
@@ -424,12 +416,12 @@ describe('SessionManager objective outcome integration', () => {
       toolResult: 'Wrote result.ts',
     })
     expect(harness.managed.messages[0]?.toolCheckpoint).toBeUndefined()
-    expect(harness.sentEvents).toContainEqual(expect.objectContaining({
+    expect<unknown>(harness.sentEvents).toContainEqual((expect.objectContaining({
       type: 'tool_result',
       toolUseId: 'late-write-1',
       result: 'Wrote result.ts',
       executed: true,
-    }))
+    }) as unknown))
     expect(harness.telemetryNames).toContain('tool.completed')
   })
 });

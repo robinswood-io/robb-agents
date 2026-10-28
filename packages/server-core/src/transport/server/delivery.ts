@@ -21,24 +21,24 @@ export function push(transportOwner: WsRpcServer, channel: string, target: PushT
     if (target.to === 'client') {
         const activeClient = transportOwner["clients"].get(target.clientId);
         if (activeClient) {
-            transportOwner["bufferAndMaybeSendEvent"](activeClient, channel, args, timestamp, true);
+            transportOwner.bufferAndMaybeSendEvent(activeClient, channel, args, timestamp, true);
             return;
         }
         const disconnectedEntry = transportOwner["disconnectedClients"].get(target.clientId);
         if (disconnectedEntry) {
-            transportOwner["bufferAndMaybeSendEvent"](disconnectedEntry.client, channel, args, timestamp, false);
+            transportOwner.bufferAndMaybeSendEvent(disconnectedEntry.client, channel, args, timestamp, false);
         }
         return;
     }
     for (const client of transportOwner["clients"].values()) {
-        if (!transportOwner["matchesTarget"](client, target))
+        if (!transportOwner.matchesTarget(client, target))
             continue;
-        transportOwner["bufferAndMaybeSendEvent"](client, channel, args, timestamp, true);
+        transportOwner.bufferAndMaybeSendEvent(client, channel, args, timestamp, true);
     }
     for (const { client } of transportOwner["disconnectedClients"].values()) {
-        if (!transportOwner["matchesTarget"](client, target))
+        if (!transportOwner.matchesTarget(client, target))
             continue;
-        transportOwner["bufferAndMaybeSendEvent"](client, channel, args, timestamp, false);
+        transportOwner.bufferAndMaybeSendEvent(client, channel, args, timestamp, false);
     }
 }
 
@@ -64,7 +64,7 @@ export function setupClientHandlers(transportOwner: WsRpcServer, ws: WebSocket, 
             }
         }
         transportOwner["rejectPendingInvokesForClient"](client.id);
-        transportOwner["onClientDisconnected"]?.(client.id);
+        transportOwner.onClientDisconnected?.(client.id);
     });
     ws.on('pong', () => {
         client.alive = true;
@@ -87,7 +87,7 @@ export function bufferAndMaybeSendEvent(transportOwner: WsRpcServer, client: Cli
     const bytes = Buffer.byteLength(data, 'utf8');
     client.eventBuffer.push({ seq, data, bytes, timestamp });
     client.bufferedBytes += bytes;
-    transportOwner["evictBuffer"](client);
+    transportOwner.evictBuffer(client);
     if (shouldSend) {
         transportOwner["safeSend"](client.ws, data);
     }
@@ -116,9 +116,9 @@ export function evictBuffer(transportOwner: WsRpcServer, client: ClientConnectio
         removeCount += extra;
     }
     // Evict by byte cap (keep at least the newest event if single event exceeds cap)
-    if (transportOwner["maxEventBufferBytes"] > 0) {
+    if (transportOwner.maxEventBufferBytes > 0) {
         while (removeCount < buf.length - 1 &&
-            client.bufferedBytes - removedBytes > transportOwner["maxEventBufferBytes"]) {
+            client.bufferedBytes - removedBytes > transportOwner.maxEventBufferBytes) {
             removedBytes += buf[removeCount]!.bytes;
             removeCount++;
         }

@@ -21,31 +21,23 @@ const runtimeState = new PiRuntimeState();
 
 // Install process-level outbound fetch guard for strict local model sessions.
 {
-    const baseFetch = globalThis.fetch.bind(globalThis);
+    const baseFetch = globalThis.fetch;
     const guardedFetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
         const url = typeof input === 'string'
             ? input
             : input instanceof URL
                 ? input.toString()
                 : input.url;
-        if ((isStrictLocalEndpointMode(runtimeState) || process.env.CRAFT_STRICT_LOCAL_ENDPOINT === '1')
-            && process.env.ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS !== '1'
+        if ((isStrictLocalEndpointMode(runtimeState) || process.env["CRAFT_STRICT_LOCAL_ENDPOINT"] === '1')
+            && process.env["ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS"] !== '1'
             && !isLocalhostUrl(url)) {
             throw new Error(`[Privacy Guard] Blocked outbound network request to "${url}" in strict local model mode. Set ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS=1 to allow external network access.`);
         }
         return baseFetch(input, init);
     };
-    (globalThis as unknown as {
-        fetch: unknown;
-    }).fetch = new Proxy(guardedFetch, {
-        apply(target, thisArg, args) {
-            return Reflect.apply(target, thisArg, args);
-        },
-        get(target, prop, receiver) {
-            if (prop in baseFetch) {
-                return (baseFetch as unknown as Record<string | symbol, unknown>)[prop];
-            }
-            return Reflect.get(target, prop, receiver);
+    globalThis.fetch = new Proxy(baseFetch, {
+        apply(_target, _thisArg: unknown, args: Parameters<typeof baseFetch>) {
+            return guardedFetch(...args);
         },
     });
 }
@@ -138,7 +130,7 @@ function main(runtimeState: PiRuntimeState): void {
             return;
         try {
             const msg = JSON.parse(line) as InboundMessage;
-            processMessage(runtimeState, msg).catch((error) => {
+            processMessage(runtimeState, msg).catch((error: unknown) => {
                 const errorMsg = error instanceof Error ? error.message : String(error);
                 debugLog(`Error processing message: ${errorMsg}`);
                 send({ type: 'error', message: errorMsg });

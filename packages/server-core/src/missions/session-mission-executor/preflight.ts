@@ -128,7 +128,7 @@ export async function preflightRequiredReviewInvocations(transportOwner: Session
             workspaceRootPath: transportOwner["options"].workspaceRoot,
             workingDirectory: missionWorkingDirectory,
             isolation: executionIsolation,
-            missionCapabilityLock,
+            ...(missionCapabilityLock !== undefined ? { missionCapabilityLock: missionCapabilityLock } : {}),
         });
         if (!isolationDecision.allowed) {
             return {

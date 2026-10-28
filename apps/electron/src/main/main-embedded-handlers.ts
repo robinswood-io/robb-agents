@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { app, ipcMain } from 'electron';
 
 import { hostname, networkInterfaces } from 'os';
@@ -214,7 +215,7 @@ ipcMain.handle('workspace:remove', async (_event, workspaceId: string) => {
       })
 
       // Server config RPC handlers (LOCAL_ONLY — Electron-specific)
-      const runningServerState = {
+      const runningServerState = omitUndefined({
         host: rpcHost,
         port: instance.port,
         tls: !!tls,
@@ -226,7 +227,7 @@ ipcMain.handle('workspace:remove', async (_event, workspaceId: string) => {
         publicWsUrl: embeddedServerConfig.publicWsUrl,
         tunnelProvider: embeddedServerConfig.tunnelProvider,
         remoteAuthMode: embeddedServerConfig.remoteAuthMode,
-      }
+      })
 
       const disconnectRemoteDevice = (deviceId: string) => {
         instance.wsServer.disconnectClientsByActor(`remote-device:${deviceId}`)

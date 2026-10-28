@@ -1,13 +1,13 @@
 import * as React from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence,motion } from "motion/react";
 import "lucide-react";
 import { cn } from "@/lib/utils";
-import { ContextMenu, ContextMenuTrigger, StyledContextMenuContent } from '@/components/ui/styled-context-menu';
+import { ContextMenu,ContextMenuTrigger,StyledContextMenuContent } from '@/components/ui/styled-context-menu';
 import { ContextMenuProvider } from '@/components/ui/menu-context';
 import { SidebarMenu } from './SidebarMenu';
 import "@/components/ui/sortable-list";
 
-import { type LinkItem, isSeparatorItem, type LeftSidebarProps, containerVariants, itemVariants, SortableStatusList, SidebarButton } from "./left-sidebar-items";
+import { type LinkItem,isSeparatorItem,type LeftSidebarProps,containerVariants,itemVariants,SortableStatusList,SidebarButton } from "./left-sidebar-items";
 export { type SidebarContextMenuConfig, type SortableConfig, type LinkItem, type SeparatorItem, type SidebarItem, isSeparatorItem } from "./left-sidebar-items";
 
 
@@ -44,7 +44,7 @@ export { type SidebarContextMenuConfig, type SortableConfig, type LinkItem, type
  * - Uses @dnd-kit with DragOverlay portaled to document.body (no clipping)
  * - Two-phase drop animation: overlay fades out, ghost fades in
  */
-export function LeftSidebar({ links, isCollapsed, getItemProps, focusedItemId, isNested }: LeftSidebarProps) {
+export function LeftSidebar({ links, getItemProps, focusedItemId, isNested }: LeftSidebarProps) {
   // For nested sidebars, wrap in motion container for stagger effect
   const NavWrapper = isNested ? motion.nav : 'nav'
   const navProps = isNested ? {
@@ -84,7 +84,7 @@ export function LeftSidebar({ links, isCollapsed, getItemProps, focusedItemId, i
 
           const link = item
           const itemProps = getItemProps?.(link.id)
-          const isFocused = focusedItemId === link.id
+
 
           // Button element shared by both expandable and non-expandable items
           const buttonElement = (
@@ -180,7 +180,7 @@ function renderExpandedContent(
   link: LinkItem,
   getItemProps: LeftSidebarProps['getItemProps'],
   focusedItemId: string | null | undefined,
-  isNested: boolean | undefined
+  _isNested: boolean | undefined
 ): React.ReactNode {
   // Flat sortable (e.g., statuses): wrap items in SortableList
   if (link.sortable && link.items) {

@@ -1,20 +1,19 @@
 
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { isJsonObject,parseJsonObject } from '@craft-agent/shared/utils/json';
+import { useEffect,useState,useMemo,useCallback } from "react";
 
-import { extractOverlayData, extractOverlayCards, type DiffViewerSettings } from "@craft-agent/ui";
+import { extractOverlayData,extractOverlayCards,type DiffViewerSettings } from "@craft-agent/ui";
 
-import type { Session, Message } from "../../../shared/types";
+import type { Session } from "../../../shared/types";
 
-import { type OverlayState, isStackedActivityTool } from "./chat-display-contracts";
+import { type OverlayState,isStackedActivityTool } from "./chat-display-contracts";
 
 interface useChatOverlaysInput {
   session: Session | null
 }
 
-export function useChatOverlays({
-  session,
-}: useChatOverlaysInput) {
+export function useChatOverlays(_input: useChatOverlaysInput) {
 const [overlayState, setOverlayState] = useState<OverlayState>(null)
 
 const [diffViewerSettings, setDiffViewerSettings] = useState<Partial<DiffViewerSettings>>({})
@@ -22,9 +21,13 @@ const [diffViewerSettings, setDiffViewerSettings] = useState<Partial<DiffViewerS
 useEffect(() => {
     window.electronAPI.readPreferences().then(({ content }) => {
       try {
-        const prefs = JSON.parse(content)
-        if (prefs.diffViewer) {
-          setDiffViewerSettings(prefs.diffViewer)
+        const prefs = parseJsonObject(content)
+        const value = prefs['diffViewer']
+        if (isJsonObject(value)) {
+          const settings: Partial<DiffViewerSettings> = {}
+          if (value['diffStyle'] === 'unified' || value['diffStyle'] === 'split') settings.diffStyle = value['diffStyle']
+          if (typeof value['disableBackground'] === 'boolean') settings.disableBackground = value['disableBackground']
+          setDiffViewerSettings(settings)
         }
       } catch {
         // Ignore parse errors, use defaults
@@ -37,9 +40,9 @@ const handleDiffViewerSettingsChange = useCallback((settings: DiffViewerSettings
     // Read current preferences, merge in new settings, write back
     window.electronAPI.readPreferences().then(({ content }) => {
       try {
-        const prefs = JSON.parse(content)
-        prefs.diffViewer = settings
-        prefs.updatedAt = Date.now()
+        const prefs = parseJsonObject(content)
+        prefs['diffViewer'] = settings
+        prefs['updatedAt'] = Date.now()
         window.electronAPI.writePreferences(JSON.stringify(prefs, null, 2))
       } catch {
         // If preferences malformed, create fresh with just diffViewer
@@ -67,13 +70,6 @@ const useStackedActivityOverlay = useMemo(() => {
     return isStackedActivityTool(overlayState.activity)
   }, [overlayState])
 
-const handlePopOut = useCallback((message: Message) => {
-    if (!session) return
-    setOverlayState({
-      type: 'markdown',
-      content: message.content,
-      title: 'Message Preview',
-    })
-  }, [session])
+
 return { setOverlayState, overlayState, useStackedActivityOverlay, handleCloseOverlay, overlayCards, activityOutputOverlayData, diffViewerSettings, handleDiffViewerSettingsChange }
 }

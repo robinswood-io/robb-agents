@@ -2,14 +2,15 @@
   "compilerOptions": {
     "lib": [
       "ESNext",
-      "DOM"
+      "DOM",
+      "DOM.Iterable"
     ],
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "jsxImportSource": "react",
-    "allowJs": true,
+    "allowJs": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "moduleResolution": "bundler",
@@ -17,14 +18,14 @@
     "verbatimModuleSyntax": true,
     "noEmit": true,
     "strict": true,
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "types": [
       "node",
       "bun"
     ],
     "noFallthroughCasesInSwitch": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "rootDir": "../..",
     "paths": {
       "@/*": [
@@ -39,13 +40,24 @@
       "@craft-agent/shared/*": [
         "../../packages/shared/src/*"
       ]
-    }
+    },
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false
   },
   "include": [
     "src/**/*",
     "../../packages/shared/src/**/*.d.ts",
     "../../scripts/robb-completion-live-check.ts",
-    "eslint-rules/**/*.ts"
+    "eslint-rules/**/*.ts",
+    "scripts/**/*.ts",
+    "vite.config.ts",
+    "scripts/**/*.cts",
+    "eslint-rules/**/*.cts"
   ],
   "exclude": [
     "node_modules",

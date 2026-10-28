@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { resolvePiModelWithCustomFallback } from "../model-resolution.ts";
 import { normalizeCustomEndpointModelEntry } from "../custom-endpoint-models.ts";
 import type { CustomEndpointModelEntry } from "../custom-endpoint-models.ts";
@@ -36,8 +37,6 @@ export async function handleCompact(runtimeState: PiRuntimeState, msg: Extract<I
         if (!settled) {
             throw new Error('Previous compaction did not settle before the safety deadline');
         }
-        { }
-        { }
         const result = await compactSelectedModel(session, msg.customInstructions);
         send({
             type: 'compact_result',
@@ -47,7 +46,7 @@ export async function handleCompact(runtimeState: PiRuntimeState, msg: Extract<I
                 summary: result.summary,
                 firstKeptEntryId: result.firstKeptEntryId,
                 tokensBefore: result.tokensBefore,
-                estimatedTokensAfter: result.estimatedTokensAfter,
+                ...(result.estimatedTokensAfter !== undefined ? { estimatedTokensAfter: result.estimatedTokensAfter } : {}),
                 compactionModel: result.compactionModel,
             },
         });
@@ -102,7 +101,7 @@ export async function handleUpdateRuntimeConfig(runtimeState: PiRuntimeState, ms
         if (!runtimeState.initConfig) {
             throw new Error('Runtime config update received before init');
         }
-        runtimeState.initConfig = {
+        runtimeState.initConfig = omitUndefined<NonNullable<PiRuntimeState['initConfig']>>({
             ...runtimeState.initConfig,
             model: msg.model,
             providerType: msg.providerType ?? runtimeState.initConfig.providerType,
@@ -110,7 +109,7 @@ export async function handleUpdateRuntimeConfig(runtimeState: PiRuntimeState, ms
             baseUrl: msg.baseUrl,
             customEndpoint: msg.customEndpoint,
             customModels: msg.customModels,
-        };
+        });
         syncStrictLocalEndpointNetworkGuard(runtimeState);
         if (runtimeState.piModelRegistry && runtimeState.initConfig.baseUrl?.trim() && runtimeState.initConfig.customEndpoint) {
             const modelEntries: CustomEndpointModelEntry[] = (runtimeState.initConfig.customModels?.length

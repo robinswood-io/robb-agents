@@ -58,10 +58,10 @@ function sanitizeThemeOverride(value: unknown): ThemeOverrides {
     }
   }
   copyColors(input, output as Record<string, string>)
-  if (input.dark !== undefined) {
-    if (input.dark == null || typeof input.dark !== 'object' || Array.isArray(input.dark)) throw new Error('Dark theme override must be an object')
+  if (input["dark"] !== undefined) {
+    if (input["dark"] == null || typeof input["dark"] !== 'object' || Array.isArray(input["dark"])) throw new Error('Dark theme override must be an object')
     const dark: Record<string, string> = {}
-    copyColors(input.dark as Record<string, unknown>, dark)
+    copyColors(input["dark"] as Record<string, unknown>, dark)
     output.dark = dark
   }
   return output
@@ -234,7 +234,7 @@ export function registerWorkspaceCoreHandlers(server: RpcServer, deps: HandlerDe
   })
 
   // Broadcast theme preferences to all other windows (for cross-window sync)
-  server.handle(RPC_CHANNELS.theme.BROADCAST_PREFERENCES, async (ctx, preferences: { mode: string; colorTheme: string; font: string }) => {
+  server.handle(RPC_CHANNELS.theme.BROADCAST_PREFERENCES, async (_ctx, preferences: { mode: string; colorTheme: string; font: string }) => {
     pushTyped(server, RPC_CHANNELS.theme.PREFERENCES_CHANGED, { to: 'all' }, preferences)
   })
 
@@ -274,7 +274,7 @@ export function registerWorkspaceCoreHandlers(server: RpcServer, deps: HandlerDe
   })
 
   // Broadcast workspace theme change to all other windows (for cross-window sync)
-  server.handle(RPC_CHANNELS.theme.BROADCAST_WORKSPACE_THEME, async (ctx, workspaceId: string, themeId: string | null) => {
+  server.handle(RPC_CHANNELS.theme.BROADCAST_WORKSPACE_THEME, async (_ctx, workspaceId: string, themeId: string | null) => {
     pushTyped(server, RPC_CHANNELS.theme.WORKSPACE_THEME_CHANGED, { to: 'all' }, { workspaceId, themeId })
   })
 

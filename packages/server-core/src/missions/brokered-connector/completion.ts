@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { canonicalOperationValue, parseSignedExecutionProof, type SignedExecutionProof } from "@craft-agent/shared/governance";
 import type { MissionExecutionInput, MissionExecutionResult } from "../MissionRuntime.ts";
 import type { BrokeredMissionConnectorExecutor } from '../BrokeredMissionConnectorExecutor.ts';
@@ -37,14 +38,14 @@ export function complete(transportOwner: BrokeredMissionConnectorExecutor, input
         issuedAt: transportOwner["now"](),
     };
     const receiptUri = transportOwner["store"].writeReceipt(input.mission.id, input.item.id, receipt);
-    const completed = transportOwner["store"].update(input.mission.id, input.item.id, state.revision, (current) => ({
+    const completed = transportOwner["store"].update(input.mission.id, input.item.id, state.revision, (current) => (omitUndefined<ConnectorExecutionState>({
         ...current,
         status: 'executed',
         proof,
         receiptUri,
         failureReason: undefined,
         updatedAt: transportOwner["now"](),
-    }));
+    })));
     return transportOwner["submissionFromCompleted"](input, completed);
 }
 

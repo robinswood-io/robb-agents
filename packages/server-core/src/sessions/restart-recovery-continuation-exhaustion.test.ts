@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { ScriptedSessionAgent } from "./testing/scripted-session-agent.ts";
@@ -85,8 +86,8 @@ describe('durable restart recovery', () => {
     cold.manager.sendMessage = (...args) => { dispatch = send(...args); return dispatch }
     expect(await cold.manager.retryTurn(restored.id, `${managed.id}-user`)).toEqual({ status: 'started' })
     await dispatch
-    expect(retryBudget).toMatchObject({
-      attempts: 2, exhaustedAt: expect.any(Number), lastCause: 'user_retry',
+    expect<unknown>(retryBudget).toMatchObject({
+      attempts: 2, exhaustedAt: (expect.any(Number) as unknown), lastCause: 'user_retry',
       continuationWork: ['Run the final verification'],
       continuationOrigin: 'objective_continue',
     })
@@ -114,14 +115,14 @@ describe('durable restart recovery', () => {
       await h.runtime.onProcessingStopped(managed.id, 'error', 1)
 
       expect(managed.pendingTurnRecovery).toBeUndefined()
-      expect(managed.activeObjective).toMatchObject({
+      expect<unknown>(managed.activeObjective).toMatchObject({
         terminalState: 'exhausted',
         interruptedTurnRecovery: {
           objectiveId: `${managed.id}-user`,
           userMessageId: `${managed.id}-user`,
           recovery: {
             lastCause: cause,
-            exhaustedAt: expect.any(Number),
+            exhaustedAt: (expect.any(Number) as unknown),
             continuationWork: ['Verify the installed candidate'],
             continuationOrigin: 'objective_continue',
           },
@@ -147,13 +148,13 @@ describe('durable restart recovery', () => {
     await h.runtime.onProcessingStopped(managed.id, 'error', 1)
 
     expect(managed.pendingTurnRecovery).toBeUndefined()
-    expect(managed.activeObjective).toMatchObject({
+    expect<unknown>(managed.activeObjective).toMatchObject({
       terminalState: 'exhausted',
       interruptedTurnRecovery: {
         objectiveId: `${managed.id}-user`,
         userMessageId: `${managed.id}-user`,
         recovery: {
-          exhaustedAt: expect.any(Number),
+          exhaustedAt: (expect.any(Number) as unknown),
           continuationWork: ['Verify the automation result'],
           continuationOrigin: 'objective_continue',
         },
@@ -208,9 +209,9 @@ describe('durable restart recovery', () => {
       },
     })
     await restarted.flushSession(restored.id)
-    const header = JSON.parse(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!)
+    const header = parseRecoveryJournalObservation(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!)
     expect(header.pendingTurnRecovery).toBeUndefined()
-    expect(header.activeObjective.interruptedTurnRecovery.recovery.continuationWork)
+    expect(requiredTestValue(requiredTestValue(header.activeObjective).interruptedTurnRecovery).recovery['continuationWork'])
       .toEqual(['Verify the installed candidate'])
   })
 
@@ -270,8 +271,8 @@ describe('durable restart recovery', () => {
     expect(requiredTestValue(restored.activeObjective).interruptedTurnRecovery).toBeUndefined()
     expect(runtime.getInterruptedTurnRecovery(restored, `${managed.id}-user`)).toBeUndefined()
     await restarted.flushSession(restored.id)
-    const header = JSON.parse(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!)
+    const header = parseRecoveryJournalObservation(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!)
     expect(header.pendingTurnRecovery).toBeUndefined()
-    expect(header.activeObjective.interruptedTurnRecovery).toBeUndefined()
+    expect(requiredTestValue(header.activeObjective).interruptedTurnRecovery).toBeUndefined()
   })
 });

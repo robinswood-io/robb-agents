@@ -148,13 +148,13 @@ export function structuredAuthenticationStartReceipt(message: Message): Structur
   try { parsed = JSON.parse(message.toolResult.trim()); } catch { return undefined; }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
   const value = parsed as Record<string, unknown>;
-  if (value.ok !== undefined && typeof value.ok !== 'boolean') return undefined;
-  if (value.success !== undefined && typeof value.success !== 'boolean') return undefined;
-  if (value.pending !== undefined && typeof value.pending !== 'boolean') return undefined;
-  if ((value.ok !== true && value.success !== true)
-    || value.ok === false || value.success === false || value.pending === false) return undefined;
-  if (value.error !== undefined && value.error !== null) {
-    if (typeof value.error !== 'string' || value.error.length > 4_096 || value.error.trim().length > 0) {
+  if (value["ok"] !== undefined && typeof value["ok"] !== 'boolean') return undefined;
+  if (value["success"] !== undefined && typeof value["success"] !== 'boolean') return undefined;
+  if (value["pending"] !== undefined && typeof value["pending"] !== 'boolean') return undefined;
+  if ((value["ok"] !== true && value["success"] !== true)
+    || value["ok"] === false || value["success"] === false || value["pending"] === false) return undefined;
+  if (value["error"] !== undefined && value["error"] !== null) {
+    if (typeof value["error"] !== 'string' || value["error"].length > 4_096 || value["error"].trim().length > 0) {
       return undefined;
     }
   }
@@ -163,10 +163,10 @@ export function structuredAuthenticationStartReceipt(message: Message): Structur
     if (!boundedStringField(value[field], 64)
       || !AUTHENTICATION_PENDING_STATES.has(value[field].trim().toLowerCase())) return undefined;
   }
-  const verificationUri = value.verification_uri ?? value.verificationUri;
-  const userCode = value.user_code ?? value.userCode;
-  const pollOperationValue = value.pollAfterHumanLoginWith ?? value.poll_after_human_login_with;
-  const expiresAt = value.expiresAt ?? value.expires_at;
+  const verificationUri = value["verification_uri"] ?? value["verificationUri"];
+  const userCode = value["user_code"] ?? value["userCode"];
+  const pollOperationValue = value["pollAfterHumanLoginWith"] ?? value["poll_after_human_login_with"];
+  const expiresAt = value["expiresAt"] ?? value["expires_at"];
   if (!boundedStringField(verificationUri, 2_048)
     || !/^https:\/\/[^\s]+$/i.test(verificationUri)
     || !boundedStringField(userCode, 128)
@@ -224,12 +224,12 @@ export function successfulAuthenticationPollReceipt(message: Message): AuthCorre
   try { parsed = JSON.parse(message.toolResult.trim()); } catch { return undefined; }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
   const value = parsed as Record<string, unknown>;
-  if (value.pending !== undefined && typeof value.pending !== 'boolean') return undefined;
-  if (value.ok !== undefined && typeof value.ok !== 'boolean') return undefined;
-  if (value.success !== undefined && typeof value.success !== 'boolean') return undefined;
-  if (value.pending === true || value.ok === false || value.success === false) return undefined;
-  if (value.error !== undefined && value.error !== null) {
-    if (typeof value.error !== 'string' || value.error.length > 4_096 || value.error.trim().length > 0) {
+  if (value["pending"] !== undefined && typeof value["pending"] !== 'boolean') return undefined;
+  if (value["ok"] !== undefined && typeof value["ok"] !== 'boolean') return undefined;
+  if (value["success"] !== undefined && typeof value["success"] !== 'boolean') return undefined;
+  if (value["pending"] === true || value["ok"] === false || value["success"] === false) return undefined;
+  if (value["error"] !== undefined && value["error"] !== null) {
+    if (typeof value["error"] !== 'string' || value["error"].length > 4_096 || value["error"].trim().length > 0) {
       return undefined;
     }
   }
@@ -241,7 +241,7 @@ export function successfulAuthenticationPollReceipt(message: Message): AuthCorre
     if (!AUTHENTICATION_SUCCESS_STATES.has(normalized)) return undefined;
     states.push(normalized);
   }
-  if (value.pending !== false && states.length === 0) return undefined;
+  if (value["pending"] !== false && states.length === 0) return undefined;
   return authCorrelations(value);
 }
 
@@ -250,13 +250,13 @@ export function successfulAuthenticationPollReceipt(message: Message): AuthCorre
  * must be able to distinguish pending from terminal/fatal responses without
  * interpreting connector text. */
 function pendingAuthenticationPollReceipt(value: Record<string, unknown>): boolean {
-  if (value.pending !== undefined && typeof value.pending !== 'boolean') return false;
-  if (value.ok !== undefined && typeof value.ok !== 'boolean') return false;
-  if (value.success !== undefined && typeof value.success !== 'boolean') return false;
-  if (value.ok !== undefined && value.success !== undefined && value.ok !== value.success) return false;
-  if (value.pending === false || value.success === true) return false;
+  if (value["pending"] !== undefined && typeof value["pending"] !== 'boolean') return false;
+  if (value["ok"] !== undefined && typeof value["ok"] !== 'boolean') return false;
+  if (value["success"] !== undefined && typeof value["success"] !== 'boolean') return false;
+  if (value["ok"] !== undefined && value["success"] !== undefined && value["ok"] !== value["success"]) return false;
+  if (value["pending"] === false || value["success"] === true) return false;
 
-  let pending = value.pending === true;
+  let pending = value["pending"] === true;
   for (const field of ['status', 'state'] as const) {
     if (value[field] === undefined) continue;
     if (!boundedStringField(value[field], 64)) return false;

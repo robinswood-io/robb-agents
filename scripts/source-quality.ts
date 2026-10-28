@@ -22,7 +22,7 @@ const typedExtension = /\.[cm]?[jt]sx?$/;
 
 function inspectPythonSources(sources: readonly { file: string; content: string }[]): SourceQualityIssue[] {
   if (!sources.length) return [];
-  const python = process.env.ROBB_PYTHON ?? (process.platform === 'win32' ? 'python' : 'python3');
+  const python = process.env["ROBB_PYTHON"] ?? (process.platform === 'win32' ? 'python' : 'python3');
   const output = execFileSync(python, ['-I', resolve(import.meta.dir, 'source-quality-python.py')], {
     input: JSON.stringify(sources), encoding: 'utf8',
   });

@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { getCredentialManager } from "../../credentials/index.ts";
 import { loadWorkspaceConfig, saveWorkspaceConfig } from "../../workspaces/storage.ts";
 import { debug } from "../../utils/debug.ts";
@@ -88,36 +89,15 @@ export function updateLlmConnection(slug: string, updates: Partial<Omit<LlmConne
   const toModelIds = (models?: Array<{ id: string } | string>): string[] =>
     (models ?? []).map(m => typeof m === 'string' ? m : m.id);
 
-  connections[index] = {
-    // Preserve required fields from existing
-    slug: existing.slug,
-    name: updates.name ?? existing.name,
-    providerType: updates.providerType ?? existing.providerType,
-    type: updates.type ?? existing.type, // Legacy field
-    authType: updates.authType ?? existing.authType,
-    createdAt: updates.createdAt ?? existing.createdAt,
-    // Optional fields from updates or existing
-    baseUrl: updates.baseUrl !== undefined ? updates.baseUrl : existing.baseUrl,
-    models: updates.models !== undefined ? updates.models : existing.models,
-    defaultModel: updates.defaultModel !== undefined ? updates.defaultModel : existing.defaultModel,
-    modelSelectionMode: updates.modelSelectionMode !== undefined ? updates.modelSelectionMode : existing.modelSelectionMode,
-    // Pi auth provider
-    piAuthProvider: updates.piAuthProvider !== undefined ? updates.piAuthProvider : existing.piAuthProvider,
-    // Organization project for Gemini Code Assist OAuth
-    googleCloudProject: updates.googleCloudProject !== undefined ? updates.googleCloudProject : existing.googleCloudProject,
-    // Custom endpoint protocol (Anthropic/OpenAI compatible)
-    customEndpoint: updates.customEndpoint !== undefined ? updates.customEndpoint : existing.customEndpoint,
-    // Mid-stream send behavior (steer vs queue) — read via resolveMidStreamBehavior()
-    midStreamBehavior: updates.midStreamBehavior !== undefined ? updates.midStreamBehavior : existing.midStreamBehavior,
-    // Resolved Anthropic OAuth identity (issue #838) — preserved across unrelated saves
-    oauthAccountUuid: updates.oauthAccountUuid !== undefined ? updates.oauthAccountUuid : existing.oauthAccountUuid,
-    oauthAccountEmail: updates.oauthAccountEmail !== undefined ? updates.oauthAccountEmail : existing.oauthAccountEmail,
-    oauthOrganizationUuid: updates.oauthOrganizationUuid !== undefined ? updates.oauthOrganizationUuid : existing.oauthOrganizationUuid,
-    oauthOrganizationName: updates.oauthOrganizationName !== undefined ? updates.oauthOrganizationName : existing.oauthOrganizationName,
-    oauthProfileVerifiedAt: updates.oauthProfileVerifiedAt !== undefined ? updates.oauthProfileVerifiedAt : existing.oauthProfileVerifiedAt,
-    // Timestamps
-    lastUsedAt: updates.lastUsedAt !== undefined ? updates.lastUsedAt : existing.lastUsedAt,
-  };
+  const mutableFields = ["name","providerType","type","authType","createdAt","baseUrl","models","defaultModel","modelSelectionMode","piAuthProvider","googleCloudProject","customEndpoint","midStreamBehavior","oauthAccountUuid","oauthAccountEmail","oauthOrganizationUuid","oauthOrganizationName","oauthProfileVerifiedAt","lastUsedAt"] as const;
+  const nullishFallbackFields: readonly string[] = ['name', 'providerType', 'type', 'authType', 'createdAt'];
+  const next = { ...existing };
+  for (const field of mutableFields) {
+    const value = updates[field];
+    if (value === undefined || (value === null && nullishFallbackFields.includes(field))) continue;
+    Object.assign(next, { [field]: value });
+  }
+  connections[index] = next;
 
   const updated = connections[index]!;
   if (updated.providerType === 'pi') {
@@ -148,7 +128,7 @@ export function updateLlmConnection(slug: string, updates: Partial<Omit<LlmConne
           keys: Object.keys(updates),
           defaultModel: updates.defaultModel,
           modelSelectionMode: updates.modelSelectionMode,
-          modelsCount: Array.isArray(updates.models) ? updates.models.length : undefined,
+          modelsCount: isUnknownArray(updates.models) ? updates.models.length : undefined,
         },
         stack,
       });
@@ -181,7 +161,9 @@ export function deleteLlmConnection(slug: string): boolean {
 
   // If deleted connection was the default, reset to first remaining or clear
   if (config.defaultLlmConnection === slug) {
-    config.defaultLlmConnection = connections.length > 0 ? connections[0]!.slug : undefined;
+    const firstConnection = connections[0];
+    if (firstConnection) config.defaultLlmConnection = firstConnection.slug;
+    else delete config.defaultLlmConnection;
   }
 
   saveConfig(config);
@@ -192,7 +174,7 @@ export function deleteLlmConnection(slug: string): boolean {
     for (const ws of workspaces) {
       const wsConfig = loadWorkspaceConfig(ws.rootPath);
       if (wsConfig?.defaults?.defaultLlmConnection === slug) {
-        wsConfig.defaults.defaultLlmConnection = undefined;
+        delete wsConfig.defaults.defaultLlmConnection
         saveWorkspaceConfig(ws.rootPath, wsConfig);
       }
     }
@@ -203,10 +185,10 @@ export function deleteLlmConnection(slug: string): boolean {
   // Clean up stored credentials for this connection (API keys, OAuth tokens)
   // This is fire-and-forget but we log errors for debugging
   const credentialManager = getCredentialManager();
-  credentialManager.delete({ type: 'llm_api_key', connectionSlug: slug }).catch((error) => {
+  credentialManager.delete({ type: 'llm_api_key', connectionSlug: slug }).catch((error: unknown) => {
     console.error(`[storage] Failed to delete API key credential for connection '${slug}':`, error);
   });
-  credentialManager.delete({ type: 'llm_oauth', connectionSlug: slug }).catch((error) => {
+  credentialManager.delete({ type: 'llm_oauth', connectionSlug: slug }).catch((error: unknown) => {
     console.error(`[storage] Failed to delete OAuth credential for connection '${slug}':`, error);
   });
 

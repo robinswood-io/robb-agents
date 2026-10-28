@@ -9,9 +9,9 @@ import type { WsRpcClient, TransportConnectionState } from "../../../electron/sr
 export interface RemoteConnectionBadgeProps {
   client: WsRpcClient
   hostLabel: string
-  offlineItemCount?: number
-  onOpenOfflineWorkspace?: () => void
-  onSignOut?: () => Promise<void>
+  offlineItemCount?: number | undefined
+  onOpenOfflineWorkspace?: (() => void) | undefined
+  onSignOut?: (() => Promise<void>) | undefined
 }
 
 
@@ -51,6 +51,7 @@ export function handleDialogKeyDown(
 
   const firstElement = focusableElements[0]
   const lastElement = focusableElements[focusableElements.length - 1]
+  if (!firstElement || !lastElement) return
   const activeElement = document.activeElement
   if (!dialog.contains(activeElement) || activeElement === dialog) {
     event.preventDefault()

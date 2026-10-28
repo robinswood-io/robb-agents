@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe,it,expect } from 'bun:test'
 import type { ElectronAPI } from '../../shared/types'
 import { CHANNEL_MAP } from '../channel-map'
 
@@ -31,7 +31,7 @@ type ApiToChannelMapKeys = Exclude<
 > | BrowserPaneKeys
 type ChannelMapKeys = keyof typeof CHANNEL_MAP & string
 
-type AssertNever<T extends never> = true
+type AssertNever<T extends never> = [T] extends [never] ? true : never
 
 // Compile-time guardrails: if these fail, CHANNEL_MAP and ElectronAPI drifted.
 const _missingFromMap: AssertNever<Exclude<ApiToChannelMapKeys, ChannelMapKeys>> = true

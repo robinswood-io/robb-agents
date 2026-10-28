@@ -50,7 +50,7 @@ function sanitizeAutomationMatcher(
   warnings: string[],
 ): AutomationMatcher {
   // Deep clone to avoid mutating the original
-  const sanitized: AutomationMatcher = JSON.parse(JSON.stringify(matcher))
+  const sanitized: AutomationMatcher = structuredClone(matcher)
 
   if (!sanitized.actions) return sanitized
 
@@ -59,7 +59,7 @@ function sanitizeAutomationMatcher(
 
     // Strip auth field entirely (bearer tokens, basic auth passwords)
     if (action.auth) {
-      delete (action as unknown as Record<string, unknown>).auth
+      delete action.auth
       warnings.push(`Automation '${label}': stripped webhook auth credentials`)
     }
 
@@ -74,7 +74,7 @@ function sanitizeAutomationMatcher(
       }
       // Clean up empty headers object
       if (Object.keys(action.headers).length === 0) {
-        delete (action as unknown as Record<string, unknown>).headers
+        delete action.headers
       }
     }
   }
@@ -118,7 +118,7 @@ export function exportAutomations(
       const id = matcher.id || generateShortId()
       allEntries.push({
         id,
-        name: matcher.name,
+        ...(matcher.name !== undefined ? { name: matcher.name } : {}),
         event,
         matcher: { ...matcher, id },
       })

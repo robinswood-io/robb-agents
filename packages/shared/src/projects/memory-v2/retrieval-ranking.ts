@@ -145,11 +145,11 @@ export function conceptSimilarity(query: MemorySearchFeatures, document: MemoryS
 }
 
 export function normalizeMemoryScope(value: unknown): { projectSlug: string; workspaceKey?: string; version?: string } {
-  if (!isRecord(value) || typeof value.projectSlug !== 'string'
-    || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(value.projectSlug)) throw new Error('Invalid memory project scope');
-  if (value.version !== undefined && (typeof value.version !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,199}$/.test(value.version))) throw new Error('Invalid memory version scope');
-  if (value.workspaceKey !== undefined && (typeof value.workspaceKey !== 'string' || !/^[a-f0-9]{64}$/.test(value.workspaceKey))) throw new Error('Invalid memory workspace scope');
-  return { projectSlug: value.projectSlug, ...(typeof value.workspaceKey === 'string' ? { workspaceKey: value.workspaceKey } : {}), ...(typeof value.version === 'string' ? { version: value.version } : {}) };
+  if (!isRecord(value) || typeof value["projectSlug"] !== 'string'
+    || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(value["projectSlug"])) throw new Error('Invalid memory project scope');
+  if (value["version"] !== undefined && (typeof value["version"] !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,199}$/.test(value["version"]))) throw new Error('Invalid memory version scope');
+  if (value["workspaceKey"] !== undefined && (typeof value["workspaceKey"] !== 'string' || !/^[a-f0-9]{64}$/.test(value["workspaceKey"]))) throw new Error('Invalid memory workspace scope');
+  return { projectSlug: value["projectSlug"], ...(typeof value["workspaceKey"] === 'string' ? { workspaceKey: value["workspaceKey"] } : {}), ...(typeof value["version"] === 'string' ? { version: value["version"] } : {}) };
 }
 
 export function memoryWorkspaceIdentity(root: string, legacyWorkspaceRootPath?: string): {

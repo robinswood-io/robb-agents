@@ -30,7 +30,7 @@ export async function setSourceServers(transportOwner: BaseAgent, mcpServers: Re
             transportOwner["debug"](`Failed to sync MCP pool: ${err instanceof Error ? err.message : String(err)}`);
         }
     }
-    transportOwner["sourceServerSnapshot"] = {
+    transportOwner.sourceServerSnapshot = {
         mcpServers: { ...mcpServers },
         apiServers: { ...apiServers },
         intendedSlugs: [...(intendedSlugs ?? [...Object.keys(mcpServers), ...Object.keys(apiServers)])],
@@ -39,9 +39,9 @@ export async function setSourceServers(transportOwner: BaseAgent, mcpServers: Re
 
 export function getSourceServerSnapshot(transportOwner: BaseAgent): SourceServerSnapshot {
     return {
-        mcpServers: { ...transportOwner["sourceServerSnapshot"].mcpServers },
-        apiServers: { ...transportOwner["sourceServerSnapshot"].apiServers },
-        intendedSlugs: [...transportOwner["sourceServerSnapshot"].intendedSlugs],
+        mcpServers: { ...transportOwner.sourceServerSnapshot.mcpServers },
+        apiServers: { ...transportOwner.sourceServerSnapshot.apiServers },
+        intendedSlugs: [...transportOwner.sourceServerSnapshot.intendedSlugs],
     };
 }
 

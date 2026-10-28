@@ -12,7 +12,7 @@ import { VITE_DEV_SERVER_URL, TOOLBAR_LOAD_MAX_RETRIES, TOOLBAR_LOAD_RETRY_DELAY
 import type { BrowserInstance } from './shared.ts';
 import * as browserPaneManagerToolbarState from './toolbar-state.ts';
 
-export async function loadEmptyStatePage(transportOwner: BrowserPaneManager, moduleDirectory: string, instance: BrowserInstance): Promise<void> {
+export async function loadEmptyStatePage(_transportOwner: BrowserPaneManager, moduleDirectory: string, instance: BrowserInstance): Promise<void> {
     if (VITE_DEV_SERVER_URL) {
         await instance.pageView.webContents.loadURL(`${VITE_DEV_SERVER_URL}/${BROWSER_EMPTY_STATE_PAGE}`);
         return;
@@ -45,7 +45,7 @@ export async function loadToolbarPage(transportOwner: BrowserPaneManager, module
             const retrying = attempt < TOOLBAR_LOAD_MAX_RETRIES;
             mainLog.warn(`[browser-pane] toolbar load failed id=${instance.id} attempt=${attempt + 1}/${TOOLBAR_LOAD_MAX_RETRIES + 1}: ${error instanceof Error ? error.message : String(error)}${retrying ? ' (retrying)' : ''}`);
             if (retrying) {
-                await transportOwner["sleep"](TOOLBAR_LOAD_RETRY_DELAY_MS);
+                await transportOwner.sleep(TOOLBAR_LOAD_RETRY_DELAY_MS);
             }
         }
     }
@@ -56,7 +56,7 @@ export async function loadToolbarPage(transportOwner: BrowserPaneManager, module
 }
 
 export function isLiveToolbarInstance(transportOwner: BrowserPaneManager, instance: BrowserInstance): boolean {
-    if (!transportOwner["isLiveInstance"](instance))
+    if (!transportOwner.isLiveInstance(instance))
         return false;
     try {
         return !instance.toolbarView.webContents.isDestroyed();
@@ -66,7 +66,7 @@ export function isLiveToolbarInstance(transportOwner: BrowserPaneManager, instan
     }
 }
 
-export function sleep(transportOwner: BrowserPaneManager, ms: number): Promise<void> {
+export function sleep(_transportOwner: BrowserPaneManager, ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 

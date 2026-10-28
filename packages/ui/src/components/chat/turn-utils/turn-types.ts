@@ -36,13 +36,13 @@ export interface AssistantTurn {
   type: 'assistant'
   turnId: string
   activities: ActivityItem[]
-  response?: ResponseContent
-  intent?: string
+  response?: ResponseContent | undefined
+  intent?: string | undefined
   isStreaming: boolean
   isComplete: boolean
   timestamp: number
   /** Extracted from TodoWrite tool - latest todo state in this turn */
-  todos?: TodoItem[]
+  todos?: TodoItem[] | undefined
 }
 
 /** Represents a user message */

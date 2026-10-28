@@ -14,18 +14,18 @@ export function getInstanceByWebContentsId(transportOwner: BrowserPaneManager, w
 
 export function registerPopupWindow(transportOwner: BrowserPaneManager, parentInstance: BrowserInstance, popupWindow: BrowserWindow, sourceUrl?: string): void {
     const popupWcId = popupWindow.webContents.id;
-    const existingParent = transportOwner["popupParentByWebContentsId"].get(popupWcId);
+    const existingParent = transportOwner.popupParentByWebContentsId.get(popupWcId);
     if (existingParent && existingParent !== parentInstance.id) {
         browserPaneManagerSessionRecords.unregisterPopupWindow(transportOwner, popupWindow, 'reparented');
     }
-    let popups = transportOwner["popupWindowsByParentInstanceId"].get(parentInstance.id);
+    let popups = transportOwner.popupWindowsByParentInstanceId.get(parentInstance.id);
     if (!popups) {
         popups = new Set<BrowserWindow>();
-        transportOwner["popupWindowsByParentInstanceId"].set(parentInstance.id, popups);
+        transportOwner.popupWindowsByParentInstanceId.set(parentInstance.id, popups);
     }
     popups.add(popupWindow);
-    transportOwner["popupParentByWebContentsId"].set(popupWcId, parentInstance.id);
-    transportOwner["popupWebContentsIdByWindow"].set(popupWindow, popupWcId);
+    transportOwner.popupParentByWebContentsId.set(popupWcId, parentInstance.id);
+    transportOwner.popupWebContentsIdByWindow.set(popupWindow, popupWcId);
     const initialUrl = sourceUrl || popupWindow.webContents.getURL?.() || 'about:blank';
     mainLog.info(`[browser-pane] popup created parent=${parentInstance.id} popupWebContentsId=${popupWcId} url=${initialUrl}`);
     popupWindow.webContents.on('did-navigate', (_event, urlFromEvent) => {
@@ -48,11 +48,11 @@ export function registerPopupWindow(transportOwner: BrowserPaneManager, parentIn
 }
 
 export function closePopupsForParent(transportOwner: BrowserPaneManager, parentId: string, reason: 'parent_destroy'): void {
-    const popups = transportOwner["popupWindowsByParentInstanceId"].get(parentId);
+    const popups = transportOwner.popupWindowsByParentInstanceId.get(parentId);
     if (!popups || popups.size === 0)
         return;
     for (const popupWindow of Array.from(popups)) {
-        const popupWcId = transportOwner["popupWebContentsIdByWindow"].get(popupWindow) ?? -1;
+        const popupWcId = transportOwner.popupWebContentsIdByWindow.get(popupWindow) ?? -1;
         browserPaneManagerSessionRecords.unregisterPopupWindow(transportOwner, popupWindow, reason);
         try {
             if (!popupWindow.isDestroyed()) {

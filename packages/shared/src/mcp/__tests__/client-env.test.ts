@@ -74,19 +74,19 @@ describe('CraftMcpClient stdio environment boundary', () => {
     const runnerPath = Object.entries(runnerEnv)
       .find(([key]) => key.toUpperCase() === 'PATH')?.[1] ?? null;
 
-    expect(childEnv.PATH).toBe(runnerPath);
-    expect(childEnv.LANG).toBe('fr_FR.UTF-8');
-    expect(childEnv.LC_ALL).toBe('fr_FR.UTF-8');
-    expect(childEnv.HTTPS_PROXY).toBe('http://proxy.test:8080');
-    expect(childEnv.MCP_EXPLICIT_TOKEN).toBe('configured-source-token');
+    expect(childEnv["PATH"]).toBe(runnerPath);
+    expect(childEnv["LANG"]).toBe('fr_FR.UTF-8');
+    expect(childEnv["LC_ALL"]).toBe('fr_FR.UTF-8');
+    expect(childEnv["HTTPS_PROXY"]).toBe('http://proxy.test:8080');
+    expect(childEnv["MCP_EXPLICIT_TOKEN"]).toBe('configured-source-token');
     expect(output.era).toBe('legacy');
     expect(output.protocolVersion).toBe('2025-11-25');
 
-    expect(childEnv.ROBB_SENTINEL_SECRET).toBeNull();
-    expect(childEnv.LC_SENTINEL_SECRET).toBeNull();
-    expect(childEnv.SSH_AUTH_SOCK).toBeNull();
-    expect(childEnv.CI_JOB_TOKEN).toBeNull();
-    expect(childEnv.AWS_SECRET_ACCESS_KEY).toBeNull();
-    expect(childEnv.AZURE_CLIENT_SECRET).toBeNull();
+    expect(childEnv["ROBB_SENTINEL_SECRET"]).toBeNull();
+    expect(childEnv["LC_SENTINEL_SECRET"]).toBeNull();
+    expect(childEnv["SSH_AUTH_SOCK"]).toBeNull();
+    expect(childEnv["CI_JOB_TOKEN"]).toBeNull();
+    expect(childEnv["AWS_SECRET_ACCESS_KEY"]).toBeNull();
+    expect(childEnv["AZURE_CLIENT_SECRET"]).toBeNull();
   }, 15_000);
 });

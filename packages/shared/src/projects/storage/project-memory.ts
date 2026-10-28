@@ -34,7 +34,7 @@ export function loadProjectMemory(
 ): string | null {
   const structured = options.includeStructured === false ? null : loadProjectMemoryV2Context(workspaceRootPath, projectSlug, {
     maxTokens: Math.max(1, Math.floor(maxTokens * 0.65)),
-    query: options.query,
+    ...(options.query !== undefined ? { query: options.query } : {}),
     requireQueryMatch: !!options.query,
   });
   const legacy = loadLegacyProjectMemory(workspaceRootPath, projectSlug, maxTokens);

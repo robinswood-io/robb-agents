@@ -7,11 +7,7 @@ import { resolveReactPdfWorker } from '../../scripts/pdf-worker-resolution.ts'
 
 const configDir = import.meta.dirname
 
-// NOTE: Source map upload to Sentry is intentionally disabled.
-// To re-enable, uncomment the sentryVitePlugin below and add SENTRY_AUTH_TOKEN,
-// SENTRY_ORG, SENTRY_PROJECT to CI secrets. See CLAUDE.md "Sentry Error Tracking" section.
-// import { sentryVitePlugin } from '@sentry/vite-plugin'
-
+// Source maps are generated locally; upload to Sentry is disabled.
 export default defineConfig({
   plugins: [
     react(),
@@ -25,16 +21,6 @@ export default defineConfig({
       ],
     }),
     tailwindcss(),
-    // Sentry source map upload — intentionally disabled. See CLAUDE.md for re-enabling instructions.
-    // sentryVitePlugin({
-    //   org: process.env.SENTRY_ORG,
-    //   project: process.env.SENTRY_PROJECT,
-    //   authToken: process.env.SENTRY_AUTH_TOKEN,
-    //   disable: !process.env.SENTRY_AUTH_TOKEN,
-    //   sourcemaps: {
-    //     filesToDeleteAfterUpload: ['**/*.map'],
-    //   },
-    // }),
   ],
   root: resolve(configDir, 'src/renderer'),
   base: './',

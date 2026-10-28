@@ -237,6 +237,24 @@ describe('RemoteBrowserPaneManager — screenshot wire conversion', () => {
   })
 })
 
+describe('RemoteBrowserPaneManager — untrusted screenshot bytes', () => {
+  for (const imageBytes of [new Uint8Array([9, 8, 7]).buffer, new SharedArrayBuffer(3)]) {
+    it('accepts an ArrayBuffer wire payload', async () => {
+      const { server } = createFakeServer({ invokeImpl: () => ({ imageBytes, imageFormat: 'png' }) })
+      const bridge = new RemoteBrowserPaneManager({ sessionId: 'qa', workspaceId: 'qa', rpcServer: server, getHostClient: () => 'client-A' })
+      const result = await bridge.screenshot('qa')
+      expect(result.imageBuffer).toEqual(Buffer.from(imageBytes))
+    })
+  }
+  for (const imageBytes of [null, 'bytes', { data: [256] }, { data: [-1] }, { data: ['9'] }]) {
+    it('rejects malformed bytes instead of coercing them', async () => {
+      const { server } = createFakeServer({ invokeImpl: () => ({ imageBytes, imageFormat: 'png' }) })
+      const bridge = new RemoteBrowserPaneManager({ sessionId: 'qa', workspaceId: 'qa', rpcServer: server, getHostClient: () => 'client-A' })
+      await expect(bridge.screenshot('qa')).rejects.toThrow('Invalid screenshot image bytes')
+    })
+  }
+})
+
 describe('RemoteBrowserPaneManager — sync stubs', () => {
   it('listInstances (sync) returns []; listInstancesAsync hits the wire', async () => {
     const { server, calls } = createFakeServer({ invokeImpl: () => [] })

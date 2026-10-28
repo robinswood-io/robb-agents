@@ -26,7 +26,7 @@ export function AutomationsListPanelPlayground({
   selectedAutomationId: initialSelectedId,
 }: {
   automations: AutomationListItem[]
-  selectedAutomationId?: string | null
+  selectedAutomationId?: string | null | undefined
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null)
   const [automationList, setAutomationList] = useState(automations)
@@ -57,7 +57,7 @@ export function AutomationInfoPagePlayground({
   executions,
 }: {
   automation: AutomationListItem
-  executions?: ExecutionEntry[]
+  executions?: ExecutionEntry[] | undefined
 }) {
   const [currentAutomation, setCurrentAutomation] = useState(automation)
   const [testResult, setTestResult] = useState<TestResult>({ state: 'idle' })
@@ -90,8 +90,8 @@ export function CronBuilderPlayground({
   initialValue,
   timezone,
 }: {
-  initialValue?: string
-  timezone?: string
+  initialValue?: string | undefined
+  timezone?: string | undefined
 }) {
   const [value, setValue] = useState(initialValue ?? '0 9 * * 1-5')
 
@@ -152,7 +152,7 @@ export function AutomationCardPlayground({
   defaultExpanded,
 }: {
   automation: AutomationListItem
-  defaultExpanded?: boolean
+  defaultExpanded?: boolean | undefined
 }) {
   const [currentAutomation, setCurrentAutomation] = useState(automation)
 

@@ -23,7 +23,7 @@ describe('schema', () => {
     expect(r.success).toBe(true);
     if (!r.success) return;
     expect(r.data.nodes[0]!.kind).toBe('orchestrator');
-    expect((r.data.nodes[0] as Record<string, unknown>).type).toBeUndefined();
+    expect((r.data.nodes[0] as Record<string, unknown>)["type"]).toBeUndefined();
   });
 
   it('requires a prompt on session nodes', () => {

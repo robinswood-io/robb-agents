@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { constants, fstatSync, lstatSync, type Stats } from "node:fs";
 import { openConfinedRegularFile, unlinkConfinedRegularFile, type ConfinedRegularFile } from "../../missions/confined-file.ts";
 import { SpecializedProfileHumanApprovalReceiptSchema, specializedProfileEvaluationPassesPromotionGate, type SpecializedAgentProfileDefinition, type SpecializedProfileEvaluation, type SpecializedProfileHumanApprovalReceipt, type SpecializedProfileRecord, type SpecializedProfileRegistryAnchor, type SpecializedProfileRegistryAuthorityAttestation, type SpecializedProfileRegistryDocument, type SpecializedProfileState, type SpecializedProfileTransition, type SpecializedProfileVersion } from "../schema.ts";
@@ -185,7 +186,7 @@ export function isNodeError(error: unknown, code: string): error is NodeJS.Errno
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
+    return typeof value === 'object' && value !== null && !isUnknownArray(value);
 }
 
 export function processIsAlive(pid: number): boolean {

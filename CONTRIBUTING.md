@@ -11,7 +11,7 @@ bun install --frozen-lockfile
 bun run electron:dev
 ```
 
-Prerequisites: Bun 1.3.9+, Node.js 20+, and platform tooling appropriate to the component you are changing.
+Prerequisites: Bun 1.4.4+, Node.js 24+ (validated with Node.js 26.12.1), and platform tooling appropriate to the component you are changing.
 
 ## Development, local staging, and release promotion
 

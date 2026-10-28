@@ -49,12 +49,12 @@ export function checkRemoteTransportAdmission(
   // direct file tools a useful explanation and also covers host-side MCP handlers.
   if (toolEffect.kind !== 'read' || FILE_WRITE_TOOLS.has(toolName)) {
     const targets = [
-      input.file_path,
-      input.path,
-      input.notebook_path,
-      input.destination,
-      input.outputFile,
-      input.localPath,
+      input["file_path"],
+      input["path"],
+      input["notebook_path"],
+      input["destination"],
+      input["outputFile"],
+      input["localPath"],
     ];
     for (const target of targets) {
       if (typeof target === 'string' && isProtectedApplicationPath(resolve(workingDirectory ?? workspaceRootPath, expandPath(target)))) {

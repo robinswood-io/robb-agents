@@ -3,7 +3,7 @@ import { matcherMatchesSdk } from "../utils.ts";
 import type { AutomationSystem } from '../automation-system.ts';
 import { log } from './shared.ts';
 
-export async function executeAgentEvent(transportOwner: AutomationSystem, event: AgentEvent, input: SdkAutomationInput, signal?: AbortSignal): Promise<number> {
+export async function executeAgentEvent(transportOwner: AutomationSystem, event: AgentEvent, input: SdkAutomationInput, _signal?: AbortSignal): Promise<number> {
     if (!transportOwner["config"])
         return 0;
     const matchers = transportOwner["config"].automations[event];

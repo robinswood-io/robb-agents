@@ -43,7 +43,7 @@ export function loadSource(workspaceRootPath: string, sourceSlug: string): Loade
     folderPath,
     workspaceRootPath,
     workspaceId,
-    iconPath,
+    ...(iconPath !== undefined ? { iconPath } : {}),
   };
 }
 

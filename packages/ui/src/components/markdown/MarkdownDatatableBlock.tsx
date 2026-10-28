@@ -1,3 +1,4 @@
+import { parseDatatableSpec, parseTabularFile } from './datatable-values'
 /**
  * MarkdownDatatableBlock - Interactive data table for markdown ```datatable code blocks
  *
@@ -58,16 +59,7 @@ export function MarkdownDatatableBlock({ code, className }: MarkdownDatatableBlo
 
   // Parse the inline JSON spec (may have src field for file-backed data)
   const spec = React.useMemo<DatatableSpec | null>(() => {
-    try {
-      const raw = JSON.parse(code)
-      // Valid if it has inline data OR a src reference
-      if (raw.src || (Array.isArray(raw.columns) && Array.isArray(raw.rows))) {
-        return raw as DatatableSpec
-      }
-      return null
-    } catch {
-      return null
-    }
+    try { return parseDatatableSpec(code) } catch { return null }
   }, [code])
 
   // Load file data when src is present
@@ -82,24 +74,14 @@ export function MarkdownDatatableBlock({ code, className }: MarkdownDatatableBlo
     onReadFile(spec.src)
       .then((content) => {
         try {
-          const raw = JSON.parse(content)
-          // File can be full {title, columns, rows} or just a rows array
-          if (Array.isArray(raw)) {
-            setFileData({ rows: raw, columns: [], title: undefined })
-          } else if (raw && typeof raw === 'object') {
-            setFileData({
-              title: raw.title,
-              columns: Array.isArray(raw.columns) ? raw.columns : [],
-              rows: Array.isArray(raw.rows) ? raw.rows : [],
-            })
-          } else {
-            setFileError('File does not contain valid datatable data')
-          }
+          const parsed = parseTabularFile(content)
+          if (parsed) setFileData(parsed)
+          else setFileError('File does not contain valid datatable data')
         } catch {
           setFileError('Failed to parse data file as JSON')
         }
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         setFileError(err instanceof Error ? err.message : 'Failed to read data file')
       })
       .finally(() => setFileLoading(false))

@@ -16,7 +16,7 @@ export class CraftOAuth {
   constructor(config: OAuthConfig, callbacks: OAuthCallbacks, sessionContext?: OAuthSessionContext) {
     this.config = config;
     this.callbacks = callbacks;
-    this.sessionContext = sessionContext;
+    if (sessionContext === undefined) { delete this.sessionContext } else { this.sessionContext = sessionContext }
   }
 
   // Get OAuth server metadata using progressive discovery
@@ -106,7 +106,7 @@ export class CraftOAuth {
 
     return {
       accessToken: data.access_token,
-      refreshToken: data.refresh_token,
+      ...(data.refresh_token !== undefined ? { refreshToken: data.refresh_token } : {}),
       expiresAt: Date.now() + expiresIn * 1000,
       tokenType: data.token_type || 'Bearer',
     };
@@ -181,7 +181,7 @@ export class CraftOAuth {
     this.callbacks.onStatus('Fetching OAuth server configuration...');
 
     // 1. Get server metadata — no port dependency
-    let metadata;
+    let metadata: Awaited<ReturnType<typeof this.getServerMetadata>>;
     try {
       metadata = await this.getServerMetadata();
       this.callbacks.onStatus(`Found OAuth endpoints at ${this.config.mcpUrl}`);

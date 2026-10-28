@@ -1,3 +1,4 @@
+import type { SnapshotInput } from '@craft-agent/shared/utils/json';
 
 import { Trash2, X } from 'lucide-react';
 
@@ -28,7 +29,7 @@ export function SubtaskCard({
   fallbackModel: string
   /** model id → connection slug, so picking a model pins the connection that serves it. */
   modelToConnection: Map<string, string>
-  onChange: (patch: Partial<EditorSubtask>) => void
+  onChange: (patch: Partial<SnapshotInput<EditorSubtask>>) => void
   onRemove: () => void
 }) {
   const { t } = useTranslation()

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json'
 import { assertOAuthStart, assertOAuthResult } from '@craft-agent/shared/protocol'
 import { shell } from 'electron'
 import { createCallbackServer, type CallbackPayload, type CallbackServer } from '@craft-agent/shared/auth/callback-server'
@@ -42,12 +43,12 @@ export function configureOAuthApi(api: OAuthApi, client: RpcClient): void {
             // 4. Wait for OAuth provider to redirect to our callback server
             const callback = await callbackServer.promise;
             // 5. Check for errors from the provider
-            if (callback.query.error) {
-                const error = callback.query.error_description || callback.query.error;
+            if (callback.query["error"]) {
+                const error = callback.query["error_description"] || callback.query["error"];
                 await client.invoke('oauth:cancel', { flowId, state });
                 return { success: false, error };
             }
-            const code = callback.query.code;
+            const code = callback.query["code"];
             if (!code) {
                 await client.invoke('oauth:cancel', { flowId, state });
                 return { success: false, error: 'No authorization code received' };
@@ -55,7 +56,7 @@ export function configureOAuthApi(api: OAuthApi, client: RpcClient): void {
             // 6. Send code to server for token exchange + credential storage
             const result = await client.invoke('oauth:complete', { flowId, code, state });
             assertOAuthResult(result);
-            return { success: result.success, error: result.error, email: result.email };
+            return omitUndefined({ success: result.success, error: result.error, email: result.email });
         }
         catch (err) {
             // Clean up server-side flow on error
@@ -106,7 +107,7 @@ export function configureOAuthApi(api: OAuthApi, client: RpcClient): void {
             await openSafeExternalUrl(startResult.authUrl, (safeUrl) => shell.openExternal(safeUrl));
             const result = await client.invoke('onboarding:completeMistralVibeSetup', { flowId });
             assertOAuthResult(result);
-            return { success: result.success, error: result.error };
+            return omitUndefined({ success: result.success, error: result.error });
         }
         catch (err) {
             if (flowId) {
@@ -180,12 +181,12 @@ export function configureOAuthApi(api: OAuthApi, client: RpcClient): void {
                 clearTimeout(timeoutId);
             }
             // 5. Check for errors from the provider
-            if (callback.query.error) {
-                const error = callback.query.error_description || callback.query.error;
+            if (callback.query["error"]) {
+                const error = callback.query["error_description"] || callback.query["error"];
                 await client.invoke('chatgpt:cancelOAuth', { state });
                 return { success: false, error };
             }
-            const code = callback.query.code;
+            const code = callback.query["code"];
             if (!code) {
                 await client.invoke('chatgpt:cancelOAuth', { state });
                 return { success: false, error: 'No authorization code received' };
@@ -193,7 +194,7 @@ export function configureOAuthApi(api: OAuthApi, client: RpcClient): void {
             // 6. Send code to server for token exchange + credential storage
             const result = await client.invoke('chatgpt:completeOAuth', { flowId, code, state });
             assertOAuthResult(result);
-            return { success: result.success, error: result.error };
+            return omitUndefined({ success: result.success, error: result.error });
         }
         catch (err) {
             if (state) {
@@ -264,19 +265,19 @@ export function configureOAuthApi(api: OAuthApi, client: RpcClient): void {
             finally {
                 clearTimeout(timeoutId);
             }
-            if (callback.query.error) {
-                const error = callback.query.error_description || callback.query.error;
+            if (callback.query["error"]) {
+                const error = callback.query["error_description"] || callback.query["error"];
                 await client.invoke('gemini:cancelOAuth', { state });
                 return { success: false, error };
             }
-            const code = callback.query.code;
+            const code = callback.query["code"];
             if (!code) {
                 await client.invoke('gemini:cancelOAuth', { state });
                 return { success: false, error: 'No authorization code received' };
             }
             const result = await client.invoke('gemini:completeOAuth', { flowId, code, state });
             assertOAuthResult(result);
-            return { success: result.success, error: result.error };
+            return omitUndefined({ success: result.success, error: result.error });
         }
         catch (err) {
             if (state) {

@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { ScriptedSessionAgent, completeSessionAgentFixture } from "./testing/scripted-session-agent.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -116,7 +117,7 @@ describe('durable restart recovery', () => {
     h.runtime.processNextQueuedMessage(managed.id)
     await persistedSynthetic.promise
     const beforeRows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     expect(beforeRows.some(row => row.type === 'user' && row.hidden
       && row.content.includes('<automatic_turn_recovery '))).toBe(true)
     let humanId = ''
@@ -133,11 +134,11 @@ describe('durable restart recovery', () => {
     // The human acknowledgement owns the cleanup durability; the older
     // automatic flush remains blocked and may never resume before a crash.
     const acceptedRows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     expect(acceptedRows.some(row => row.id === humanId && !row.hidden)).toBe(true)
     expect(acceptedRows.some(row => row.type === 'user' && row.hidden
       && row.content.includes('<automatic_turn_recovery '))).toBe(false)
-    expect(acceptedRows[0].pendingTurnRecovery.recoveryDispatch).toBeUndefined()
+    expect(requiredTestValue(requiredTestValue(acceptedRows[0]).pendingTurnRecovery).recoveryDispatch).toBeUndefined()
     const coldBeforeRelease = h.cold()
     coldBeforeRelease.runtime.processNextQueuedMessage = () => {}
     const restoredBeforeRelease = requiredTestValue(sessionRuntimeStateForTest(coldBeforeRelease.runtime).sessions.get(managed.id))
@@ -160,7 +161,7 @@ describe('durable restart recovery', () => {
     expect(managed.pendingTurnRecovery?.recoveryDispatch).toBeUndefined()
     await originalFlush(managed.id)
     const afterRows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     expect(afterRows.some(row => row.type === 'user' && row.hidden
       && row.content.includes('<automatic_turn_recovery '))).toBe(false)
     releaseAgent.resolve()
@@ -205,7 +206,7 @@ describe('durable restart recovery', () => {
     h.runtime.processNextQueuedMessage(managed.id)
     await persistedSynthetic.promise
     const beforeRows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     expect(beforeRows.some(row => row.type === 'user' && row.hidden
       && row.content.includes('<automatic_turn_recovery '))).toBe(true)
 
@@ -220,7 +221,7 @@ describe('durable restart recovery', () => {
     expect(managed.messages.some(message => message.hidden
       && message.content.includes('<automatic_turn_recovery '))).toBe(false)
     const stoppedRows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     expect(stoppedRows.some(row => row.id === 'real-human-context')).toBe(true)
     expect(stoppedRows.some(row => row.id === 'real-agent-context')).toBe(true)
     expect(stoppedRows.some(row => row.type === 'user' && row.hidden
@@ -237,7 +238,7 @@ describe('durable restart recovery', () => {
     await dispatch
     await originalFlush(managed.id)
     const afterRows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     expect(afterRows.some(row => row.id === 'real-human-context')).toBe(true)
     expect(afterRows.some(row => row.id === 'real-agent-context')).toBe(true)
     expect(afterRows.some(row => row.type === 'user' && row.hidden
@@ -284,10 +285,10 @@ describe('durable restart recovery', () => {
     await cleanup
 
     const stoppedRows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     expect(stoppedRows.some(row => row.type === 'user' && row.hidden
       && row.content.includes('<automatic_turn_recovery '))).toBe(false)
-    expect(stoppedRows[0].pendingTurnRecovery.recoveryDispatch).toMatchObject({
+    expect(requiredTestValue(requiredTestValue(stoppedRows[0]).pendingTurnRecovery).recoveryDispatch).toMatchObject({
       id: dispatchId, phase: 'allocated',
     })
     const cold = h.cold(); cold.runtime.processNextQueuedMessage = () => {}
@@ -321,7 +322,7 @@ describe('durable restart recovery', () => {
       && message.content.includes('<automatic_turn_recovery '))).toBe(false)
     await h.manager.flushSession(managed.id)
     const rows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     expect(rows.some(row => row.type === 'user' && row.hidden
       && row.content.includes('<automatic_turn_recovery '))).toBe(false)
   })
@@ -365,7 +366,7 @@ describe('durable restart recovery', () => {
       .toBe(managed.pendingTurnRecovery?.recoveryDispatch?.id)
     await originalFlush(managed.id)
     const rows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     expect(rows.some(row => row.type === 'user' && row.hidden
       && row.content.includes('<automatic_turn_recovery '))).toBe(false)
     expect(rows.some(row => row.id === 'preserved-hidden-agent-message')).toBe(true)

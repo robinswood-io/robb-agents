@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 /// <reference path="../../types/incr-regex-package.d.ts" />
 import { isBrowserToolNameOrAlias, isCanonicalBrowserToolName } from "../browser-tool-names.ts";
 import { isObservationalBrowserCommand } from "../browser-tool-runtime.ts";
@@ -35,11 +36,11 @@ const OBSERVATIONAL_LEGACY_BROWSER_OPERATIONS = new Set([
 /** Explore mode is a read boundary, including inside the multiplexed browser
  * tool. Unknown, malformed and mutating browser commands fail closed. */
 export function browserSafeModeDecision(toolName: string, toolInput: unknown): ToolCheckResult | undefined {
-  const input = toolInput && typeof toolInput === 'object' && !Array.isArray(toolInput)
+  const input = toolInput && typeof toolInput === 'object' && !isUnknownArray(toolInput)
     ? toolInput as Record<string, unknown>
     : {};
   if (isCanonicalBrowserToolName(toolName)) {
-    return isObservationalBrowserCommand(input.command)
+    return isObservationalBrowserCommand(input["command"])
       ? { allowed: true }
       : { allowed: false, reason: 'Browser mutations and unknown browser commands are blocked in Explore mode.' };
   }
@@ -51,14 +52,14 @@ export function browserSafeModeDecision(toolName: string, toolInput: unknown): T
     return { allowed: false, reason: 'Browser mutations and unknown browser commands are blocked in Explore mode.' };
   }
   if (operation === 'navigate') {
-    const target = [input.url, input.href, input.target]
+    const target = [input["url"], input["href"], input["target"]]
       .find((value): value is string => typeof value === 'string' && value.trim().length > 0);
     if (!target || !isObservationalBrowserCommand(['navigate', target])) {
       return { allowed: false, reason: 'Browser mutations and unknown browser commands are blocked in Explore mode.' };
     }
   }
   if (operation === 'downloads') {
-    const action = typeof input.action === 'string' ? input.action.trim().toLowerCase() : 'list';
+    const action = typeof input["action"] === 'string' ? input["action"].trim().toLowerCase() : 'list';
     if (action !== 'list' && action !== 'wait') {
       return { allowed: false, reason: 'Browser mutations and unknown browser commands are blocked in Explore mode.' };
     }

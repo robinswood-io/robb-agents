@@ -30,7 +30,7 @@ export function publishColdProviderReconciliation(managed: ManagedSession, sessi
         const reconciliationQueue = managed.messageQueue;
         const reconciliationPending = managed.pendingTurnRecovery;
         const reconciliationAutoRetryPending = managed.autoRetryPending;
-        const persistQueued = sessionOperationContext.owner["enqueuePersist"](managed);
+        const persistQueued = sessionOperationContext.owner.enqueuePersist(managed);
         const reconciliationPersistenceEpoch = sessionOperationContext.state.sessionPersistenceEpochs.get(managed) ?? 0;
         const reconciliationStructurallyCurrent = () => (sessionOperationContext.state.sessions.get(managed.id) === managed
             && (sessionOperationContext.state.turnCancellationEpochs.get(managed) ?? 0) === reconciliationCancellationEpoch
@@ -94,7 +94,7 @@ export function publishColdProviderReconciliation(managed: ManagedSession, sessi
             else if (managed.messageQueue.length > 0) {
                 sessionOperationContext.owner["processNextQueuedMessage"](managed.id);
             }
-        }, error => {
+        }, (error: unknown) => {
             sessionOperationContext.state.coldProviderReconciliationsInFlight.delete(managed.id);
             const canRestoreColdSnapshot = reconciliationStillCurrent();
             if (canRestoreColdSnapshot && providerDispatchRollbackSnapshot) {
@@ -104,7 +104,7 @@ export function publishColdProviderReconciliation(managed: ManagedSession, sessi
                 managed.autoRetryPending = providerDispatchRollbackSnapshot.autoRetryPending;
                 managed.pendingQueuedMessageIds = providerDispatchRollbackSnapshot.pendingQueuedMessageIds;
                 managed.pendingAgentDeliveryIds = providerDispatchRollbackSnapshot.pendingAgentDeliveryIds;
-                sessionOperationContext.owner["enqueuePersist"](managed);
+                sessionOperationContext.owner.enqueuePersist(managed);
             }
             if (!canRestoreColdSnapshot) {
                 sessionLog.warn('Ignored stale cold provider reconciliation failure after a newer transition won', {
@@ -147,8 +147,8 @@ export function publishColdProviderReconciliation(managed: ManagedSession, sessi
             },
         }, managed.workspace.id);
         if (durableRuntimeStateChanged) {
-            sessionOperationContext.owner["enqueuePersist"](managed);
-            void sessionOperationContext.owner.flushSession(managed.id).catch(error => {
+            sessionOperationContext.owner.enqueuePersist(managed);
+            void sessionOperationContext.owner.flushSession(managed.id).catch((error: unknown) => {
                 sessionLog.warn('Failed to persist provider-acceptance quarantine during restore', {
                     sessionId: managed.id,
                     error: error instanceof Error ? error.message : String(error),
@@ -162,7 +162,7 @@ export function publishColdProviderReconciliation(managed: ManagedSession, sessi
         const reconcile = () => {
             if (!sessionOpHasTerminalObjectiveState(sessionOperationContext, managed))
                 return;
-            void sessionOperationContext.owner["reconcileRetainedTerminalMachineInbox"](managed.id).catch(error => {
+            void sessionOperationContext.owner.reconcileRetainedTerminalMachineInbox(managed.id).catch((error: unknown) => {
                 sessionLog.warn('Retained terminal inbox reconciliation failed', {
                     sessionId: managed.id,
                     error: error instanceof Error ? error.message : String(error),
@@ -170,8 +170,8 @@ export function publishColdProviderReconciliation(managed: ManagedSession, sessi
             });
         };
         if (durableRuntimeStateChanged) {
-            sessionOperationContext.owner["enqueuePersist"](managed);
-            void sessionOperationContext.owner.flushSession(managed.id).then(reconcile, error => {
+            sessionOperationContext.owner.enqueuePersist(managed);
+            void sessionOperationContext.owner.flushSession(managed.id).then(reconcile, (error: unknown) => {
                 sessionLog.warn('Failed to persist durable runtime recovery during restore', {
                     sessionId: managed.id,
                     error: error instanceof Error ? error.message : String(error),
@@ -198,8 +198,8 @@ export function publishColdProviderReconciliation(managed: ManagedSession, sessi
             // Queue the cleaned snapshot directly: persistSession would recurse
             // while cold hydration still owns messagesLoaded=false. Dequeue only
             // after fsync so the rejected row cannot return on another restart.
-            sessionOperationContext.owner["enqueuePersist"](managed);
-            void sessionOperationContext.owner.flushSession(managed.id).then(resumeQueue, error => {
+            sessionOperationContext.owner.enqueuePersist(managed);
+            void sessionOperationContext.owner.flushSession(managed.id).then(resumeQueue, (error: unknown) => {
                 sessionLog.warn('Failed to persist durable runtime recovery during restore', {
                     sessionId: managed.id,
                     error: error instanceof Error ? error.message : String(error),
@@ -210,12 +210,12 @@ export function publishColdProviderReconciliation(managed: ManagedSession, sessi
             setImmediate(resumeQueue);
     }
     else if (durableRuntimeStateChanged) {
-        sessionOperationContext.owner["enqueuePersist"](managed);
+        sessionOperationContext.owner.enqueuePersist(managed);
         void sessionOperationContext.owner.flushSession(managed.id).then(() => {
             if (recoveredConsumedAgentDeliveryNeedsContinuation || recoveredProviderDispatchNeedsContinuation) {
                 sessionOperationContext.owner["scheduleDeferredAutomaticSessions"]();
             }
-        }, error => {
+        }, (error: unknown) => {
             sessionLog.warn('Failed to persist durable runtime recovery during restore', {
                 sessionId: managed.id,
                 error: error instanceof Error ? error.message : String(error),

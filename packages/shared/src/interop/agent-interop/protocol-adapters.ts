@@ -147,10 +147,10 @@ function toAgUiEvent(event: AgentTaskEvent): AgUiEvent {
     return {
       type: 'RUN_ERROR',
       timestamp,
-      message: typeof event.data.message === 'string'
-        ? event.data.message
+      message: typeof event.data["message"] === 'string'
+        ? event.data["message"]
         : 'Agent run failed',
-      code: typeof event.data.code === 'string' ? event.data.code : undefined,
+      ...(typeof event.data["code"] === 'string' ? { code: event.data["code"] } : {}),
     };
   }
   if (event.type === 'output') {
@@ -162,7 +162,7 @@ function toAgUiEvent(event: AgentTaskEvent): AgUiEvent {
       result: event.data,
     };
   }
-  if (event.data.status === 'running') {
+  if (event.data["status"] === 'running') {
     return {
       type: 'RUN_STARTED',
       threadId: event.taskId,

@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { MCP_MODERN_PROTOCOL_VERSION, MCP_TASKS_EXTENSION } from "../../mcp/protocol-eras.ts";
 import type { McpTasksConformanceInput } from './legacy-mcp.ts';
 import type { InteropConformanceHttpResponse, McpConformanceEra } from './probe-types.ts';
@@ -24,9 +25,9 @@ export function modernMcpHeaders(
   authorization?: string,
 ): Record<string, string> {
   const routingName = method === 'tools/call'
-    ? stringValue(params.name)
+    ? stringValue(params["name"])
     : method.startsWith('tasks/')
-      ? stringValue(params.taskId)
+      ? stringValue(params["taskId"])
       : null
   return {
     Accept: 'application/json, text/event-stream',
@@ -87,11 +88,11 @@ export async function negotiateMcpEra(
       return 'legacy'
     }
     const result = jsonRpcResult(value)
-    const supportedVersions = Array.isArray(result?.supportedVersions)
-      ? result.supportedVersions.filter((version): version is string => typeof version === 'string')
+    const supportedVersions = isUnknownArray(result?.["supportedVersions"])
+      ? result["supportedVersions"].filter((version: unknown): version is string => typeof version === 'string')
       : []
     if (
-      result?.resultType === 'complete'
+      result?.["resultType"] === 'complete'
       && supportedVersions.includes(MCP_MODERN_PROTOCOL_VERSION)
       && hasModernCacheContract(result)
     ) {
@@ -99,11 +100,11 @@ export async function negotiateMcpEra(
     }
 
     const rpcError = jsonRpcError(value)
-    if (rpcError?.code !== -32022) return 'legacy'
+    if (rpcError?.["code"] !== -32022) return 'legacy'
 
-    const data = recordValue(rpcError.data)
-    const supported = Array.isArray(data?.supported)
-      ? data.supported.filter((version): version is string => typeof version === 'string')
+    const data = recordValue(rpcError["data"])
+    const supported = isUnknownArray(data?.["supported"])
+      ? data["supported"].filter((version: unknown): version is string => typeof version === 'string')
       : []
     if (supported.includes(MCP_MODERN_PROTOCOL_VERSION)) {
       // The 2026 negotiation contract permits one select-and-continue retry

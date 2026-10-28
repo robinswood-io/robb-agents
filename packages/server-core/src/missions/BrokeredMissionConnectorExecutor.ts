@@ -80,16 +80,16 @@ export class BrokeredMissionConnectorExecutor implements MissionWorkExecutor {
     private matchesCompletedIdentity(state: ConnectorExecutionState, input: MissionExecutionInput, key: string): boolean {
         return brokeredConnectorRecovery.matchesCompletedIdentity(this, state, input, key);
     }
-    private signApproval(value: Omit<DurableApprovalDecision, 'signature'>): string {
+    /** @internal */ public signApproval(value: Omit<DurableApprovalDecision, 'signature'>): string {
         return brokeredConnectorApproval.signApproval(this, value);
     }
     private signPendingApproval(value: Omit<DurablePendingMissionConnectorApproval, 'bindingSignature'>): string {
         return brokeredConnectorApproval.signPendingApproval(this, value);
     }
-    private verifyPendingApproval(value: DurablePendingMissionConnectorApproval): boolean {
+    /** @internal */ public verifyPendingApproval(value: DurablePendingMissionConnectorApproval): boolean {
         return brokeredConnectorApproval.verifyPendingApproval(this, value);
     }
-    private publicPendingApproval(pending: DurablePendingMissionConnectorApproval): PendingMissionConnectorApproval {
+    /** @internal */ public publicPendingApproval(pending: DurablePendingMissionConnectorApproval): PendingMissionConnectorApproval {
         return brokeredConnectorApproval.publicPendingApproval(this, pending);
     }
     private verifyApproval(value: DurableApprovalDecision): boolean {

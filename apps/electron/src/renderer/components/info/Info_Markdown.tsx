@@ -6,7 +6,7 @@
  * Supports optional fullscreen view using the shared DocumentFormattedMarkdownOverlay component.
  */
 
-import * as React from 'react'
+
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Maximize2 } from 'lucide-react'
@@ -18,12 +18,12 @@ export interface Info_MarkdownProps {
   /** Markdown content */
   children: string
   /** Optional max height with scroll */
-  maxHeight?: number
+  maxHeight?: number | undefined
   /** Markdown rendering mode */
-  mode?: 'minimal' | 'full'
-  className?: string
+  mode?: 'minimal' | 'full' | undefined
+  className?: string | undefined
   /** Enable fullscreen button (shows Maximize2 icon on hover) */
-  fullscreen?: boolean
+  fullscreen?: boolean | undefined
 }
 
 export function Info_Markdown({

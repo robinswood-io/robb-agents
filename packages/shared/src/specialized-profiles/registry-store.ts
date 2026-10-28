@@ -23,10 +23,10 @@ export class SpecializedProfileRegistryStore {
     readonly documentPath: string;
     readonly pendingDocumentPath: string;
     readonly lockPath: string;
-    private readonly lockTimeoutMs: number;
+    /** @internal Shared with the extracted backend helpers. */ public readonly lockTimeoutMs: number;
     private readonly now: () => Date;
     private readonly authority?: SpecializedProfileRegistryAuthority;
-    private readonly anchorStore?: SpecializedProfileRegistryAnchorStore;
+    /** @internal Shared with the extracted backend helpers. */ public readonly anchorStore?: SpecializedProfileRegistryAnchorStore;
     constructor(workspaceRoot: string, options: SpecializedProfileRegistryStoreOptions = {}) {
         this.workspaceRoot = canonicalConfinementRoot(workspaceRoot);
         this.documentPath = join(this.workspaceRoot, '.robb', 'specialized-agent-profiles.json');
@@ -40,8 +40,8 @@ export class SpecializedProfileRegistryStore {
         }
         this.lockTimeoutMs = lockTimeoutMs;
         this.now = options.now ?? (() => new Date());
-        this.authority = options.authority;
-        this.anchorStore = options.anchorStore;
+        if (options.authority !== undefined) this.authority = options.authority;
+        if (options.anchorStore !== undefined) this.anchorStore = options.anchorStore;
     }
     private readonly workspaceRoot: string;
     async load(): Promise<SpecializedProfileRegistryDocument | null> {
@@ -120,40 +120,40 @@ export class SpecializedProfileRegistryStore {
     private async update(expectedRevision: number, actorId: string, mutate: (document: SpecializedProfileRegistryDocument, occurredAt: string) => Promise<void> | void): Promise<SpecializedProfileRegistryDocument> {
         return registryStoreWriting.update(this, expectedRevision, actorId, mutate);
     }
-    private parseAndVerifyDocument(value: unknown): SpecializedProfileRegistryDocument {
+    /** @internal Shared with the extracted backend helpers. */ public parseAndVerifyDocument(value: unknown): SpecializedProfileRegistryDocument {
         return registryStoreDocument.parseAndVerifyDocument(this, value);
     }
     private async writeDocument(document: SpecializedProfileRegistryDocument, previous: SpecializedProfileRegistryDocument | null): Promise<void> {
         return registryStoreWriting.writeDocument(this, document, previous);
     }
-    private writeDocumentFile(document: SpecializedProfileRegistryDocument, destinationPath: string): void {
+    /** @internal Shared with the extracted backend helpers. */ public writeDocumentFile(document: SpecializedProfileRegistryDocument, destinationPath: string): void {
         return registryStoreWriting.writeDocumentFile(this, document, destinationPath);
     }
-    private promotePendingDocument(): void {
+    /** @internal Shared with the extracted backend helpers. */ public promotePendingDocument(): void {
         return registryStoreWriting.promotePendingDocument(this);
     }
     private sealDocument(value: Omit<SpecializedProfileRegistryDocument, 'head'> | SpecializedProfileRegistryDocument, previousDocumentSha256: string | null): SpecializedProfileRegistryDocument {
         return registryStoreWriting.sealDocument(this, value, previousDocumentSha256);
     }
-    private sealAnchor(value: Omit<SpecializedProfileRegistryAnchor, 'authority'>): SpecializedProfileRegistryAnchor {
+    /** @internal Shared with the extracted backend helpers. */ public sealAnchor(value: Omit<SpecializedProfileRegistryAnchor, 'authority'>): SpecializedProfileRegistryAnchor {
         return registryStoreWriting.sealAnchor(this, value);
     }
-    private requireDurableAuthority(): void {
+    /** @internal Shared with the extracted backend helpers. */ public requireDurableAuthority(): void {
         return registryStoreWriting.requireDurableAuthority(this);
     }
-    private async verifyAndRecoverAnchoredDocument(document: SpecializedProfileRegistryDocument, recover: boolean): Promise<SpecializedProfileRegistryDocument> {
+    /** @internal Shared with the extracted backend helpers. */ public async verifyAndRecoverAnchoredDocument(document: SpecializedProfileRegistryDocument, recover: boolean): Promise<SpecializedProfileRegistryDocument> {
         return registryStoreDocument.verifyAndRecoverAnchoredDocument(this, document, recover);
     }
-    private readPendingDocument(): SpecializedProfileRegistryDocument {
+    /** @internal Shared with the extracted backend helpers. */ public readPendingDocument(): SpecializedProfileRegistryDocument {
         return registryStoreDocument.readPendingDocument(this);
     }
     private async withLock<T>(operation: () => Promise<T>): Promise<T> {
         return registryStoreLocking.withLock<T>(this, operation);
     }
-    private acquireLock(): ConfinedRegularFile {
+    /** @internal Shared with the extracted backend helpers. */ public acquireLock(): ConfinedRegularFile {
         return registryStoreLocking.acquireLock(this);
     }
-    private ensureStoreDirectory(): string {
+    /** @internal Shared with the extracted backend helpers. */ public ensureStoreDirectory(): string {
         return registryStoreLocking.ensureStoreDirectory(this);
     }
 }

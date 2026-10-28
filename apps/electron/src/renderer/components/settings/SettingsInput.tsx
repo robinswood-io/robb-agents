@@ -9,37 +9,36 @@ import * as React from 'react'
 import { Eye, EyeOff } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { settingsUI } from './SettingsUIConstants'
 
 export interface SettingsInputProps {
   /** Input label */
-  label?: string
+  label?: string | undefined
   /** Optional description below label */
-  description?: string
+  description?: string | undefined
   /** Current value */
   value: string
   /** Change handler */
   onChange: (value: string) => void
   /** Placeholder text */
-  placeholder?: string
+  placeholder?: string | undefined
   /** Input type */
-  type?: 'text' | 'password' | 'email' | 'url'
+  type?: 'text' | 'password' | 'email' | 'url' | undefined
   /** Disabled state */
-  disabled?: boolean
+  disabled?: boolean | undefined
   /** Error message */
-  error?: string
+  error?: string | undefined
   /** Action button next to input */
-  action?: React.ReactNode
+  action?: React.ReactNode | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
   /** Whether inside a card */
-  inCard?: boolean
+  inCard?: boolean | undefined
   /** onBlur handler */
-  onBlur?: () => void
+  onBlur?: (() => void) | undefined
   /** onKeyDown handler */
-  onKeyDown?: (e: React.KeyboardEvent) => void
+  onKeyDown?: ((e: React.KeyboardEvent) => void) | undefined
 }
 
 /**
@@ -141,23 +140,23 @@ export interface SettingsInputRowProps {
   /** Row label */
   label: string
   /** Optional description below label */
-  description?: string
+  description?: string | undefined
   /** Current value */
   value: string
   /** Change handler */
   onChange: (value: string) => void
   /** Placeholder text */
-  placeholder?: string
+  placeholder?: string | undefined
   /** Input type */
-  type?: 'text' | 'password' | 'email' | 'url'
+  type?: 'text' | 'password' | 'email' | 'url' | undefined
   /** Disabled state */
-  disabled?: boolean
+  disabled?: boolean | undefined
   /** Error message */
-  error?: string
+  error?: string | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
   /** Whether inside a card */
-  inCard?: boolean
+  inCard?: boolean | undefined
 }
 
 export function SettingsInputRow({
@@ -217,25 +216,25 @@ export function SettingsInputRow({
  */
 export interface SettingsSecretInputProps {
   /** Input label */
-  label?: string
+  label?: string | undefined
   /** Optional description */
-  description?: string
+  description?: string | undefined
   /** Current value */
   value: string
   /** Change handler */
   onChange: (value: string) => void
   /** Placeholder text */
-  placeholder?: string
+  placeholder?: string | undefined
   /** Disabled state */
-  disabled?: boolean
+  disabled?: boolean | undefined
   /** Error message */
-  error?: string
+  error?: string | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
   /** Whether inside a card */
-  inCard?: boolean
+  inCard?: boolean | undefined
   /** onBlur handler */
-  onBlur?: () => void
+  onBlur?: (() => void) | undefined
 }
 
 export function SettingsSecretInput({

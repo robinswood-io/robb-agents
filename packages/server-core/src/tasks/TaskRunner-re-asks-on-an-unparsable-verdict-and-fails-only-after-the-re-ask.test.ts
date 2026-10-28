@@ -36,7 +36,7 @@ describe('TaskRunner (Conductor)', () => {
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
       now: () => '2026-06-07T00:00:00.000Z',
-      nowMs,
+      ...(nowMs !== undefined ? { nowMs: nowMs } : {}),
       resolveSubagentAutonomyContext: () => autonomyContext,
       ...(executionProofIssuer ? {
         verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),
@@ -180,7 +180,7 @@ describe('TaskRunner (Conductor)', () => {
     await waitUntil(() => runner.getRunState('hung-review-send', 'r1')?.status === 'failed', 500);
 
     expect(runner.getRunState('hung-review-send', 'r1')?.status).toBe('failed');
-    expect(readNodeOutput(root, 'hung-review-send', 'r1', '__verdict__')?.params?.parseFailure)
+    expect(readNodeOutput(root, 'hung-review-send', 'r1', '__verdict__')?.params?.["parseFailure"])
       .toContain('reviewer timed out after 10 ms');
   });
 
@@ -213,7 +213,7 @@ describe('TaskRunner (Conductor)', () => {
       jest.advanceTimersByTime(5_000);
       await flushMicrotasks();
       expect(runner.getRunState('long-review-timeout', 'r1')?.status).toBe('failed');
-      expect(readNodeOutput(root, 'long-review-timeout', 'r1', '__verdict__')?.params?.parseFailure)
+      expect(readNodeOutput(root, 'long-review-timeout', 'r1', '__verdict__')?.params?.["parseFailure"])
         .toContain(`reviewer timed out after ${timeoutMs} ms`);
     } finally {
       jest.useRealTimers();

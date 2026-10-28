@@ -39,7 +39,7 @@ export interface SendToWorkspaceDialogProps {
   /** Current workspace ID (excluded from picker) */
   activeWorkspaceId: string | null
   /** Called after successful transfer with target workspace ID and new session IDs */
-  onTransferComplete?: (targetWorkspaceId: string, newSessionIds: string[]) => void
+  onTransferComplete?: ((targetWorkspaceId: string, newSessionIds: string[]) => void) | undefined
 }
 
 export function SendToWorkspaceDialog({
@@ -135,8 +135,7 @@ export function SendToWorkspaceDialog({
     try {
       const newSessionIds: string[] = []
 
-      for (let i = 0; i < sessionIds.length; i++) {
-        const sessionId = sessionIds[i]
+      for (const [i, sessionId] of sessionIds.entries()) {
         // Main process handles export + summary + transport (chunked for large bundles)
         const result = await window.electronAPI.transferSessionToWorkspace(sessionId, selectedWorkspaceId, i, sessionIds.length)
         newSessionIds.push(result.sessionId)

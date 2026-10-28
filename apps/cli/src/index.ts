@@ -23,7 +23,7 @@ export async function main(argv: string[] = process.argv): Promise<void> {
 
   // Set custom CA before any WS connections
   if (args.tlsCa) {
-    process.env.NODE_EXTRA_CA_CERTS = args.tlsCa
+    process.env["NODE_EXTRA_CA_CERTS"] = args.tlsCa
   }
 
   if (args.command === 'help' || args.command === '') {

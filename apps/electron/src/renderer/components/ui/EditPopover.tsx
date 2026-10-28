@@ -8,22 +8,22 @@
  */
 
 import * as React from 'react';
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState,useRef,useEffect,useCallback,useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import "i18next";
 import { GripHorizontal } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Popover, PopoverTrigger, PopoverContent } from './popover';
+import { motion,AnimatePresence } from 'motion/react';
+import { Popover,PopoverTrigger,PopoverContent } from './popover';
 import { Button } from './button';
 import { cn } from '@/lib/utils';
 import { usePlatform } from '@craft-agent/ui';
-import { useActiveWorkspace, useAppShellContext, useSession, usePendingPermission, usePendingCredential } from '@/context/AppShellContext';
+import { useActiveWorkspace,useAppShellContext,useSession,usePendingPermission,usePendingCredential } from '@/context/AppShellContext';
 import { useEscapeInterrupt } from '@/context/EscapeInterruptContext';
 import { ChatDisplay } from '../app-shell/ChatDisplay';
 
 import { COMPACT_PLACEHOLDER_KEYS } from "./edit-configs";
+import { type EditContext,type EditPopoverProps,type EditPromptResult } from "./edit-popover-types";
 export { getEditConfig } from "./edit-configs";
-import { type EditContext, type EditPopoverProps, type EditPromptResult } from "./edit-popover-types";
 export { type EditContext, type EditContextKey, type EditConfig, type SecondaryAction, type EditPopoverProps } from "./edit-popover-types";
 
 
@@ -38,7 +38,7 @@ export { type EditContext, type EditContextKey, type EditConfig, type SecondaryA
 
 
 
-import type { ContentBadge, Session, CreateSessionOptions } from '../../../shared/types';
+import type { ContentBadge,Session,CreateSessionOptions } from '../../../shared/types';
 
 
 
@@ -102,13 +102,11 @@ export function EditPopover({
   triggerClassName,
   side = 'bottom',
   align = 'end',
-  secondaryAction,
   overridePlaceholder,
   displayLabel,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
   modal = false,
-  defaultValue = '',
   inlineExecution = false,
 }: EditPopoverProps) {
   const { t } = useTranslation()
@@ -342,7 +340,7 @@ export function EditPopover({
     let sessionId = inlineSessionId
     if (!sessionId && workspace?.id) {
       const createOptions: CreateSessionOptions = {
-        model,
+        ...(model !== undefined ? { model: model } : {}),
         systemPromptPreset: systemPromptPreset || 'mini',
         permissionMode,
         workingDirectory,

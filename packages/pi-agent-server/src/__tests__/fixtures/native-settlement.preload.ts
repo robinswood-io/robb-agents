@@ -15,13 +15,13 @@ const gates = new Map<number, () => void>();
 process.on('message', (message: unknown) => {
   if (!message || typeof message !== 'object') return;
   const control = message as Record<string, unknown>;
-  if (control.type === 'fixture_release_all') {
+  if (control["type"] === 'fixture_release_all') {
     releaseAll = true;
     for (const release of gates.values()) release();
     gates.clear();
-  } else if (control.type === 'fixture_release' && typeof control.stage === 'number') {
-    gates.get(control.stage)?.();
-    gates.delete(control.stage);
+  } else if (control["type"] === 'fixture_release' && typeof control["stage"] === 'number') {
+    gates.get(control["stage"])?.();
+    gates.delete(control["stage"]);
   }
 });
 

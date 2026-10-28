@@ -1,3 +1,7 @@
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { isJsonObject, parseJsonObject } from '../../utils/json.ts';
 import { type SDKUserMessage, type SDKAssistantMessageError } from "@anthropic-ai/claude-agent-sdk";
 import { mapClaudeSdkAssistantError, type ClaudeSdkApiError } from "../claude-sdk-error-mapper.ts";
 import type { FileAttachment } from "../../utils/files.ts";
@@ -101,7 +105,7 @@ export function buildSDKUserMessage(transportOwner: ClaudeAgent, text: string, a
 /**
    * Map file MIME types to SDK-supported image types
    */
-export function mapImageMediaType(transportOwner: ClaudeAgent, mimeType?: string): 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' | null {
+export function mapImageMediaType(_transportOwner: ClaudeAgent, mimeType?: string): 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp' | null {
     if (!mimeType)
         return null;
     const supported: Record<string, 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'> = {
@@ -124,9 +128,6 @@ export function mapImageMediaType(transportOwner: ClaudeAgent, mimeType?: string
 export async function parseApiErrorFromDebugLog(transportOwner: ClaudeAgent): Promise<ClaudeSdkApiError | null> {
     if (!transportOwner["sessionId"])
         return null;
-    const fs = require('fs');
-    const os = require('os');
-    const path = require('path');
     const debugFilePath = path.join(os.homedir(), '.claude', 'debug', `${transportOwner["sessionId"]}.txt`);
     // Helper for non-blocking delay
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -148,16 +149,18 @@ export async function parseApiErrorFromDebugLog(transportOwner: ClaudeAgent): Pr
             // Search backwards for the most recent [ERROR] line with JSON
             for (let i = lines.length - 1; i >= 0; i--) {
                 const line = lines[i];
+                if (!line) continue;
                 // Match [ERROR] lines containing JSON with error details
                 const errorMatch = line.match(/\[ERROR\].*?(\{.*\})/);
                 if (errorMatch && errorMatch[1]) {
                     try {
-                        const parsed = JSON.parse(errorMatch[1]);
-                        if (parsed?.error?.message) {
+                        const parsed = parseJsonObject(errorMatch[1]);
+                        const error = parsed["error"];
+                        if (isJsonObject(error) && typeof error["message"] === "string") {
                             return {
-                                errorType: parsed.error.type || 'error',
-                                message: parsed.error.message,
-                                requestId: parsed.request_id,
+                                errorType: typeof error["type"] === "string" ? error["type"] : 'error',
+                                message: error["message"],
+                                ...(typeof parsed["request_id"] === "string" ? { requestId: parsed["request_id"] } : {}),
                             };
                         }
                     }

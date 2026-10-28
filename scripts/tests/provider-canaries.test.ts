@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../packages/shared/src/utils/json.ts';
 import { describe, expect, it } from 'bun:test';
 import { runProviderCanaries } from '../robb-provider-canaries.ts';
 
@@ -44,9 +45,9 @@ describe('provider contract canaries', () => {
       fetchImpl: async (_input, init) => {
         const body = JSON.parse(String(init?.body)) as { model?: string; input?: unknown; tools?: Array<{ type?: string; strict?: boolean | null; parameters?: { additionalProperties?: boolean } }> };
         expect(body.model).toBe('gpt-canary-model');
-        expect(body.input).toEqual([{
+        expect<unknown>(body.input).toEqual([{
           role: 'user',
-          content: [{ type: 'input_text', text: expect.any(String) }],
+          content: [{ type: 'input_text', text: (expect.any(String) as unknown) }],
         }]);
         if (body.tools?.[0]?.type === 'web_search') {
           return new Response(JSON.stringify({
@@ -121,8 +122,8 @@ describe('provider contract canaries', () => {
           }));
         }
         if (url.includes(':streamGenerateContent')) {
-          const body = JSON.parse(String(init?.body));
-          expect(body.project).toBe('canary-project');
+          const body = parseJsonObject(String(init?.body));
+          expect(body['project']).toBe('canary-project');
           return new Response('data: {"response":{"candidates":[{"content":{"parts":[{"functionCall":{"name":"provider_contract_healthcheck","args":{}}}]}}]}}\n\n');
         }
         throw new Error(`unexpected canary URL: ${url}`);

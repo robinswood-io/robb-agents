@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { ScriptedSessionAgent } from "./testing/scripted-session-agent.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -55,9 +56,9 @@ describe('provider dispatch write-ahead recovery', () => {
     const run = h.manager.sendMessage(managed.id, 'Perform the exact durable operation.')
     await fenced.promise
     const beforeAck = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
       .find(message => message.id === dispatchedMessageId)
-    expect(beforeAck.providerDispatch).toMatchObject({
+    expect(requiredTestValue(beforeAck).providerDispatch).toMatchObject({
       state: 'acceptance-unknown', messageId: dispatchedMessageId,
       objectiveId: managed.activeObjective!.objectiveId,
       objectiveUserMessageId: managed.activeObjective!.userMessageId,
@@ -70,12 +71,12 @@ describe('provider dispatch write-ahead recovery', () => {
     allowAck.resolve(); await acknowledged.promise
     await h.manager.flushSession(managed.id)
     const afterAck = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
       .find(message => message.id === dispatchedMessageId)
-    expect(afterAck.providerDispatch).toMatchObject({
+    expect<unknown>(requiredTestValue(afterAck).providerDispatch).toMatchObject({
       state: 'accepted',
       messageId: dispatchedMessageId,
-      acceptedAt: expect.any(Number),
+      acceptedAt: (expect.any(Number) as unknown),
     })
 
     await h.manager.cancelProcessing(managed.id, true)

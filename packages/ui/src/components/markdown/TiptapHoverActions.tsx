@@ -3,8 +3,8 @@ import { cn } from '../../lib/utils'
 
 interface TiptapHoverActionsHostProps {
   children: React.ReactNode
-  className?: string
-  actionsOpen?: boolean
+  className?: string | undefined
+  actionsOpen?: boolean | undefined
 }
 
 export function TiptapHoverActionsHost({ children, className, actionsOpen = false }: TiptapHoverActionsHostProps) {
@@ -20,8 +20,8 @@ export function TiptapHoverActionsHost({ children, className, actionsOpen = fals
 
 interface TiptapHoverActionsProps {
   children: React.ReactNode
-  className?: string
-  contentEditable?: boolean
+  className?: string | undefined
+  contentEditable?: boolean | undefined
 }
 
 export function TiptapHoverActions({ children, className, contentEditable = false }: TiptapHoverActionsProps) {
@@ -33,7 +33,7 @@ export function TiptapHoverActions({ children, className, contentEditable = fals
 }
 
 interface TiptapHoverActionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  active?: boolean
+  active?: boolean | undefined
 }
 
 export function TiptapHoverActionButton({

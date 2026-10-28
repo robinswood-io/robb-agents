@@ -1,7 +1,10 @@
+import type { ServerBootstrapOptions } from '../../../../packages/server-core/src/bootstrap/headless-start/contracts.ts';
+import type { ServerConfig } from '../../../../packages/shared/src/config/server-config.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { registerEmbeddedServerHandlers } from './main-embedded-handlers';
 import { app } from 'electron';
 import { randomUUID } from 'crypto';
-import { hostname, homedir } from 'os';
+import { hostname } from 'os';
 import * as Sentry from '@sentry/electron/main';
 
 import { join } from 'path';
@@ -49,10 +52,10 @@ if (!isClientOnly) {
         if (gitBashPath) {
           const validation = await validateGitBashPath(gitBashPath)
           if (validation.valid) {
-            process.env.CLAUDE_CODE_GIT_BASH_PATH = validation.path
+            process.env["CLAUDE_CODE_GIT_BASH_PATH"] = validation.path
           } else {
             clearGitBashPath()
-            delete process.env.CLAUDE_CODE_GIT_BASH_PATH
+            delete process.env["CLAUDE_CODE_GIT_BASH_PATH"]
             mainLog.warn(`Cleared invalid persisted Git Bash path: ${gitBashPath}`)
           }
         }
@@ -65,9 +68,9 @@ if (!isClientOnly) {
         const vcCheck = checkVCRedistInstalled()
         if (!vcCheck.installed) {
           mainLog.warn('[vcredist]', vcCheck.message)
-          process.env.CRAFT_VCREDIST_MISSING = '1'
+          process.env["CRAFT_VCREDIST_MISSING"] = '1'
           if (vcCheck.downloadUrl) {
-            process.env.CRAFT_VCREDIST_URL = vcCheck.downloadUrl
+            process.env["CRAFT_VCREDIST_URL"] = vcCheck.downloadUrl
           }
         } else if (isDebugMode) {
           mainLog.info('[vcredist]', vcCheck.message)
@@ -94,12 +97,12 @@ if (!isClientOnly) {
         // A manually edited or corrupted public endpoint must never be trusted
         // at startup. Keep the local app available and require the owner to
         // correct the persisted settings before Remote can start again.
-        embeddedServerConfig = {
+        embeddedServerConfig = omitUndefined<ServerConfig>({
           ...persistedEmbeddedServerConfig,
           enabled: false,
           publicWebuiUrl: undefined,
           publicWsUrl: undefined,
-        }
+        })
         mainLog.error('[server-mode] Invalid public Remote URL configuration; Remote access is disabled')
       }
       const serverModeEnabled = embeddedServerConfig.enabled && !isClientOnly
@@ -108,10 +111,10 @@ if (!isClientOnly) {
       const serverToken = serverModeEnabled && embeddedServerConfig.token
         ? embeddedServerConfig.token
         : randomUUID()
-      let rpcHost = process.env.CRAFT_RPC_HOST
+      let rpcHost = process.env["CRAFT_RPC_HOST"]
         ?? (serverModeEnabled ? '0.0.0.0' : '127.0.0.1')
-      const rpcPort = process.env.CRAFT_RPC_PORT
-        ? parseInt(process.env.CRAFT_RPC_PORT, 10)
+      const rpcPort = process.env["CRAFT_RPC_PORT"]
+        ? parseInt(process.env["CRAFT_RPC_PORT"], 10)
         : (serverModeEnabled ? embeddedServerConfig.port : 0)
 
       // Load TLS certificates if configured
@@ -170,9 +173,9 @@ if (!isClientOnly) {
           webuiDir,
           secret: serverToken,
           secureCookies: hasSecureBrowserTransport,
-          publicWebuiUrl: embeddedServerConfig.publicWebuiUrl,
-          publicWsUrl: embeddedServerConfig.publicWsUrl,
-          remoteAuthMode: embeddedServerConfig.remoteAuthMode,
+          ...(embeddedServerConfig.publicWebuiUrl !== undefined ? { publicWebuiUrl: embeddedServerConfig.publicWebuiUrl } : {}),
+          ...(embeddedServerConfig.publicWsUrl !== undefined ? { publicWsUrl: embeddedServerConfig.publicWsUrl } : {}),
+          ...(embeddedServerConfig.remoteAuthMode !== undefined ? { remoteAuthMode: embeddedServerConfig.remoteAuthMode } : {}),
           wsProtocol: tls ? 'wss' : 'ws',
           wsPort: rpcPort,
           hostLabel: hostname(),
@@ -195,11 +198,11 @@ if (!isClientOnly) {
       }
 
       // Bootstrap the WS RPC server via shared bootstrap function.
-      const instance = await bootstrapServer<SessionManager, HandlerDeps>({
+      const instance = await bootstrapServer<SessionManager, HandlerDeps>(omitUndefined<ServerBootstrapOptions<SessionManager, HandlerDeps>>({
         serverToken,
         rpcHost,
         rpcPort,
-        tls,
+        ...(tls !== undefined ? { tls: tls } : {}),
         validateSessionCookie: mainState.embeddedWebuiHandler && hasSecureBrowserTransport
           ? async (cookieHeader) => {
               const remoteSession = await validateSession(cookieHeader, serverToken)
@@ -232,7 +235,7 @@ if (!isClientOnly) {
           embeddedServerConfig.publicWebuiUrl,
         ),
         authorizeRequest: mainState.embeddedWebuiHandler ? authorizeWebuiRpcRequest : undefined,
-        httpHandler: webuiNodeHandler,
+        ...(webuiNodeHandler !== undefined ? { httpHandler: webuiNodeHandler } : {}),
         bundledAssetsRoot: __dirname,
         serverId: 'local',
         serverVersion: app.getVersion(),
@@ -245,7 +248,7 @@ if (!isClientOnly) {
             onSessionStarted,
             onSessionStopped,
             captureException: (error, context) => {
-              if (process.env.ROBB_ENABLE_SENTRY !== '1') return
+              if (process.env["ROBB_ENABLE_SENTRY"] !== '1') return
               Sentry.captureException(error instanceof Error ? error : new Error(String(error)), {
                 tags: {
                   ...(context?.errorSource ? { errorSource: context.errorSource } : {}),
@@ -271,7 +274,7 @@ if (!isClientOnly) {
             sessionManager: sm,
             credentialManager: getCredentialManager(),
             getMessagingDir: (wsId: string) =>
-              join(homedir(), '.craft-agent', 'workspaces', wsId, 'messaging'),
+              join(CONFIG_DIR, 'workspaces', wsId, 'messaging'),
             getLegacyMessagingDir: (wsId: string) => {
               const ws = getWorkspaces().find((w) => w.id === wsId)
               return ws ? join(ws.rootPath, 'messaging') : undefined
@@ -291,14 +294,14 @@ if (!isClientOnly) {
               pairingMode: 'qr',
             },
           })
-          return {
+          return omitUndefined<HandlerDeps>({
             sessionManager: sm,
             platform: p,
             windowManager: mainState.windowManager ?? undefined,
             browserPaneManager: mainState.browserPaneManager ?? undefined,
             oauthFlowStore: ofs,
             messagingRegistry: mainState.messagingHandle.registry,
-          }
+          })
         },
         // Headless: register only core handlers (no GUI handlers for browser, settings, etc.)
         // GUI: register all handlers (core + GUI)
@@ -314,12 +317,12 @@ if (!isClientOnly) {
             manager.getLlmApiKey(slug).catch(() => null),
             manager.getLlmOAuth(slug).catch(() => null),
           ])
-          return {
+          return omitUndefined({
             apiKey: apiKey ?? undefined,
             oauthAccessToken: oauth?.accessToken,
             oauthRefreshToken: oauth?.refreshToken,
             oauthIdToken: oauth?.idToken,
-          }
+          })
         }),
         onClientConnected: ({ clientId, webContentsId }) => {
           if (webContentsId != null) clientMap.set(webContentsId, clientId)
@@ -330,7 +333,7 @@ if (!isClientOnly) {
           }
           cleanupSessionFileWatchForClient(clientId)
         },
-      })
+      }))
 
       // Capture module-level references for before-quit cleanup and deep-link handlers
       mainState.sessionManager = instance.sessionManager
@@ -340,10 +343,10 @@ if (!isClientOnly) {
         const workspaceConfig = workspace ? loadWorkspaceConfig(workspace.rootPath) : null
 
         if (!permissionMode || !workspaceConfig) return null
-        return {
+        return omitUndefined({
           permissionMode,
           externalActionPolicy: workspaceConfig.defaults?.externalActionPolicy,
-        }
+        })
       })
       mainState.oauthFlowStore = instance.oauthFlowStore
       mainState.moduleSink = instance.wsServer.push.bind(instance.wsServer)

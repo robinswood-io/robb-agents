@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
@@ -52,10 +53,7 @@ describe('session deletion external-operation fences', () => {
     } as never
 
     const events: Array<{ type: string }> = []
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      sendEvent: (event: { type: string }) => void
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     runtime.sendEvent = event => { events.push(event) }
 
@@ -107,11 +105,7 @@ describe('session deletion external-operation fences', () => {
     } as never
 
     const events: Array<{ type: string }> = []
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      sendEvent: (event: { type: string }) => void
-      scheduleTitleGeneration: (session: typeof managed, message: string) => void
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     runtime.sendEvent = event => { events.push(event) }
 
@@ -156,11 +150,7 @@ describe('session deletion external-operation fences', () => {
     let notifyRefreshStarted!: () => void
     const refreshStarted = new Promise<void>(resolve => { notifyRefreshStarted = resolve })
     const events: Array<{ type: string }> = []
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      sendEvent: (event: { type: string }) => void
-      tryRefreshAgentRuntime: (session: typeof managed, reason: string) => Promise<void>
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     runtime.sendEvent = event => { events.push(event) }
     runtime.tryRefreshAgentRuntime = async () => {
@@ -200,17 +190,7 @@ describe('session deletion external-operation fences', () => {
     const workspace = { id: 'workspace-delivery-fence', name: 'Delivery', rootPath: root, createdAt: 1 } as never
     const sender = createManagedSession(senderStored, workspace, { messagesLoaded: true })
     const target = createManagedSession(targetStored, workspace, { messagesLoaded: true })
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof target>
-      sendAgentMessageToSession: (
-        source: typeof sender,
-        recipient: typeof target,
-        message: string,
-        attachments: Array<{ path: string; name?: string }>,
-        messageType: 'progress',
-        validateAttachmentPath: (path: string, allowed?: string[]) => Promise<string>,
-      ) => Promise<unknown>
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(sender.id, sender)
     sessionRuntimeStateForTest(manager).sessions.set(target.id, target)
 
@@ -225,6 +205,7 @@ describe('session deletion external-operation fences', () => {
       [{ path: attachmentPath }],
       'progress',
       async path => {
+        if (typeof path !== 'string') throw new Error('Invalid attachment path fixture');
         notifyValidationStarted()
         await validationGate
         return path

@@ -1,3 +1,4 @@
+import { parseJsonObject } from './utils/json.ts';
 /**
  * Unified fetch interceptor for all AI API requests (Anthropic + OpenAI format).
  *
@@ -61,8 +62,8 @@ async function interceptedFetch(
         : input.url;
 
   if (
-    process.env.CRAFT_STRICT_LOCAL_ENDPOINT === '1'
-    && process.env.ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS !== '1'
+    process.env["CRAFT_STRICT_LOCAL_ENDPOINT"] === '1'
+    && process.env["ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS"] !== '1'
     && !isLoopbackFetchUrl(url)
   ) {
     throw new Error(
@@ -88,7 +89,7 @@ async function interceptedFetch(
     try {
       const { bodyStr, normalizedInit } = await resolveRequestContext(input, init);
       if (bodyStr) {
-        let parsed = JSON.parse(bodyStr);
+        let parsed = parseJsonObject(bodyStr);
 
         // Add _intent and _displayName to all tool schemas
         parsed = adapter.addMetadataToTools(parsed);
@@ -175,23 +176,15 @@ async function interceptedFetch(
 }
 
 // Create proxy to handle both function calls and static properties (e.g., fetch.preconnect in Bun)
-const fetchProxy = new Proxy(interceptedFetch, {
-  apply(target, thisArg, args) {
-    return Reflect.apply(target, thisArg, args);
-  },
-  get(target, prop, receiver) {
-    if (prop in originalFetch) {
-      return (originalFetch as unknown as Record<string | symbol, unknown>)[
-        prop
-      ];
-    }
-    return Reflect.get(target, prop, receiver);
+const fetchProxy = new Proxy(originalFetch, {
+  apply(_target, thisArg: unknown, args: unknown[]): unknown {
+    return Reflect.apply(interceptedFetch, thisArg, args);
   },
 });
 
 // Auto-install in runtime subprocesses. Tests can disable this side effect.
-if (process.env.CRAFT_INTERCEPTOR_DISABLE_AUTO_INSTALL !== '1') {
-  (globalThis as unknown as { fetch: unknown }).fetch = fetchProxy;
+if (process.env["CRAFT_INTERCEPTOR_DISABLE_AUTO_INSTALL"] !== '1') {
+  globalThis.fetch = fetchProxy;
   debugLog('Unified fetch interceptor installed');
 }
 

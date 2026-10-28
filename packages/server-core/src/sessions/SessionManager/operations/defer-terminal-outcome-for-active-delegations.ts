@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { validAllocatedRecoveryDispatch } from '../policy.ts';
 import { demoteLatestCheckpointAssistant, latestFinalAssistantId } from '../../tool-checkpoint-visibility';
@@ -52,7 +54,7 @@ async function sessionOpDeferTerminalOutcomeForActiveDelegations(sessionOperatio
         const checkpoint = demoteLatestCheckpointAssistant(managed.messages, managed.pendingTurnRecovery.userMessageId);
         if (checkpoint) {
             managed.lastFinalMessageId = latestFinalAssistantId(managed.messages);
-            sessionOperationContext.owner["sendEvent"]({
+            sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'text_complete' }>>({
                 type: 'text_complete', sessionId: managed.id,
                 text: checkpoint.content, isIntermediate: true,
                 turnId: checkpoint.turnId, parentToolUseId: checkpoint.parentToolUseId,
@@ -60,7 +62,7 @@ async function sessionOpDeferTerminalOutcomeForActiveDelegations(sessionOperatio
                 routingMeta: checkpoint.routingMeta,
                 objectiveOutcome: checkpoint.objectiveOutcome ?? null,
                 objectiveOutcomeError: checkpoint.objectiveOutcomeError ?? null,
-            }, managed.workspace.id);
+            }), managed.workspace.id);
         }
         sessionOperationContext.owner["persistSession"](managed);
         await sessionOperationContext.owner.flushSession(managed.id);

@@ -62,7 +62,7 @@ function useComponentSpecificSections(): ShortcutSection[] {
   ]
 }
 
-function Kbd({ children, className }: { children: React.ReactNode; className?: string }) {
+function Kbd({ children, className }: { children: React.ReactNode; className?: string | undefined }) {
   return (
     <kbd className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[11px] font-medium font-sans bg-muted border border-border rounded ${className || ''}`}>
       {children}

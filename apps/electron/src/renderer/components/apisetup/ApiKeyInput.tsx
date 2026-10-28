@@ -1,3 +1,5 @@
+import type { ApiKeySubmitData } from './api-key-input-config.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import "cmdk";
@@ -76,6 +78,7 @@ export function ApiKeyInput({
   // Get presets based on provider type
   const presets = getPresetsForProvider(providerType)
   const defaultPreset = presets[0]
+  if (!defaultPreset) throw new Error('Provider has no endpoint presets')
 
   // Compute initial preset: explicit (Pi piAuthProvider), derived from URL, or default.
   const initialPreset = initialValues?.activePreset
@@ -253,7 +256,7 @@ export function ApiKeyInput({
         baseUrl: undefined,
         connectionDefaultModel: bestModel,
         models,
-        piAuthProvider: effectivePiAuthProvider,
+        ...(effectivePiAuthProvider !== undefined ? { piAuthProvider: effectivePiAuthProvider } : {}),
         modelSelectionMode: 'userDefined3Tier',
       })
       return
@@ -271,9 +274,9 @@ export function ApiKeyInput({
         return
       }
       const parsedModels = parseModelList(connectionDefaultModel)
-      onSubmit({
+      onSubmit(omitUndefined<ApiKeySubmitData>({
         apiKey: '',
-        piAuthProvider: effectivePiAuthProvider,
+        ...(effectivePiAuthProvider !== undefined ? { piAuthProvider: effectivePiAuthProvider } : {}),
         bedrockAuthMethod,
         awsRegion: awsRegion.trim() || 'us-east-1',
         ...(bedrockAuthMethod === 'iam_credentials' ? {
@@ -285,7 +288,7 @@ export function ApiKeyInput({
         } : {}),
         connectionDefaultModel: parsedModels[0],
         models: parsedModels.length > 0 ? parsedModels : undefined,
-      })
+      }))
       return
     }
 
@@ -311,17 +314,17 @@ export function ApiKeyInput({
       fallbackPiAuthProvider: effectivePiAuthProvider,
     })
 
-    onSubmit({
+    onSubmit(omitUndefined<ApiKeySubmitData>({
       apiKey: apiKey.trim(),
       baseUrl: isUsingDefaultEndpoint ? undefined : effectiveBaseUrl,
       connectionDefaultModel: parsedModels[0],
       models: parsedModels.length > 0 ? parsedModels : undefined,
-      piAuthProvider: resolvedPiAuthProvider,
+      ...(resolvedPiAuthProvider !== undefined ? { piAuthProvider: resolvedPiAuthProvider } : {}),
       modelSelectionMode: isPiApiKeyFlow
         ? (parsedModels.length > 0 ? 'userDefined3Tier' : 'automaticallySyncedFromProvider')
         : undefined,
-      customEndpoint,
-    })
+      ...(customEndpoint !== undefined ? { customEndpoint: customEndpoint } : {}),
+    }))
   }
 
   const tierConfigs = [

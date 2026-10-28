@@ -32,7 +32,7 @@ it('exports sources with sanitized config', () => {
         lastTestedAt: 12345,
       })
 
-      const { bundle, warnings } = exportResources(wsDir, { sources: 'all' })
+      const { bundle } = exportResources(wsDir, { sources: 'all' })
 
       expect(bundle.version).toBe(1)
       expect(bundle.resources.sources).toHaveLength(1)

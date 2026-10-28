@@ -7,7 +7,7 @@
  * - LLM connection type mapping
  * - Available providers list
  */
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect } from 'bun:test';
 import { join } from 'node:path';
 import {
   detectProvider,
@@ -22,7 +22,6 @@ import {
   providerTypeToAgentProvider,
   resolveModelForProvider,
   resolveSetupTestConnectionHint,
-  createBackendFromConnection,
   testBackendConnection,
   validateStoredBackendConnection,
 } from '../factory.ts';
@@ -105,8 +104,8 @@ describe('createBackend / createAgent', () => {
 
   describe('Unknown provider', () => {
     it('should throw for unknown provider', () => {
-      // @ts-expect-error Deliberately unsupported provider exercises the runtime boundary.
-      const config = createTestConfig({ provider: 'unknown' });
+      const config = createTestConfig();
+      Reflect.set(config, 'provider', 'unknown');
 
       expect(() => createBackend(config)).toThrow('Unknown provider: unknown');
     });
@@ -139,7 +138,6 @@ describe('isProviderAvailable', () => {
   });
 
   it('should return false for unknown provider', () => {
-    // @ts-expect-error Deliberately unsupported provider exercises the runtime boundary.
     expect(isProviderAvailable('unknown')).toBe(false);
   });
 });
@@ -158,7 +156,6 @@ describe('connectionTypeToProvider', () => {
   });
 
   it('should default to anthropic for unknown types', () => {
-    // @ts-expect-error Deliberately unsupported provider exercises the runtime boundary.
     expect(connectionTypeToProvider('unknown')).toBe('anthropic');
   });
 });
@@ -386,7 +383,7 @@ describe('resolveModelForProvider', () => {
       providerType: 'pi',
       defaultModel: 'pi/claude-opus-4-7',
       models: ['pi/claude-opus-4-7', 'pi/claude-sonnet-4-6'],
-    } as unknown as LlmConnection;
+    } as LlmConnection;
 
     expect(() => resolveModelForProvider('pi', 'pi/claude-opus-4-6', connection)).toThrow('unavailable');
     expect(resolveModelForProvider('pi', undefined, connection)).toBe('pi/claude-opus-4-7');

@@ -1,3 +1,4 @@
+import { isJsonObject, parseJsonObject } from '@craft-agent/shared/utils/json';
 import { type Tool } from '@modelcontextprotocol/client';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
@@ -210,14 +211,14 @@ export function createCodexContext(config: SessionConfig): SessionToolContext {
       try {
         let current: Record<string, unknown> = {};
         if (existsSync(prefsPath)) {
-          current = JSON.parse(readFileSync(prefsPath, 'utf-8'));
+          current = parseJsonObject(readFileSync(prefsPath, 'utf-8'));
         }
         const merged = {
           ...current,
           ...updates,
-          location: updates.location
-            ? { ...(current.location as Record<string, unknown> || {}), ...(updates.location as Record<string, unknown>) }
-            : current.location,
+          location: isJsonObject(updates["location"])
+            ? { ...(isJsonObject(current["location"]) ? current["location"] : {}), ...updates["location"] }
+            : current["location"],
           updatedAt: Date.now(),
         };
         writeFileSync(prefsPath, JSON.stringify(merged, null, 2), { encoding: 'utf-8', mode: 0o600 });
@@ -233,7 +234,7 @@ export function createCodexContext(config: SessionConfig): SessionToolContext {
       if (!safeId || !isSafeSingleSegment(safeId)) {
         throw new Error('Invalid feedback ID');
       }
-      const configDir = process.env.CRAFT_CONFIG_DIR || join(workspaceRootPath, '..', '..');
+      const configDir = process.env["CRAFT_CONFIG_DIR"] || join(workspaceRootPath, '..', '..');
       const feedbackDir = resolve(configDir, 'feedback');
       mkdirSync(feedbackDir, { recursive: true, mode: 0o700 });
       const filePath = resolve(feedbackDir, `${safeId}.json`);

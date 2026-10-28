@@ -1,11 +1,12 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import type { ElectronAPI } from "../../../shared/types.ts";
+import { afterEach,describe,expect,it } from "bun:test";
 import { createStore } from "jotai";
-import type { Message, Session } from "../../../shared/types";
+import type { Message,Session } from "../../../shared/types";
 import { handleTextComplete } from "../../event-processor/handlers/text";
-import { getSessionProcessingRevision, markSessionProcessingState } from "../../lib/session-processing-state";
+import { getSessionProcessingRevision,markSessionProcessingState } from "../../lib/session-processing-state";
 import { projectConversation } from "../../../../../../packages/ui/src/components/chat/conversation-presentation";
-import { sessionAtomFamily, sessionMetaMapAtom, loadedSessionsAtom, ensureSessionMessagesLoadedAtom, forceSessionMessagesReloadAtom, refreshSessionsMetadataAtom, initializeSessionsAtom, replaceLoadedSessionAtom } from "../sessions";
-import { makeSession, msg } from "./testing/sessions-fixture.ts";
+import { sessionAtomFamily,sessionMetaMapAtom,loadedSessionsAtom,ensureSessionMessagesLoadedAtom,forceSessionMessagesReloadAtom,refreshSessionsMetadataAtom,initializeSessionsAtom,replaceLoadedSessionAtom } from "../sessions";
+import { makeSession,msg } from "./testing/sessions-fixture.ts";
 
 describe('session message loading atoms', () => {
   const originalWindow = globalThis.window
@@ -13,7 +14,7 @@ describe('session message loading atoms', () => {
   function deferredLoad(id: string, messages: Message[], isProcessing = true) {
     const store = createStore()
     let resolve!: (session: Session) => void
-    globalThis.window = { electronAPI: { getSessionMessages: () => new Promise<Session>(done => { resolve = done }) } } as unknown as typeof window
+    Object.defineProperty(globalThis, 'window', { configurable: true, writable: true, value: { electronAPI: ({ getSessionMessages: () => new Promise<Session>(done => { resolve = done }) } satisfies Partial<ElectronAPI>) } })
     store.set(sessionAtomFamily(id), makeSession({ id, messages, isProcessing, hasUnread: false }))
     const result = store.set(ensureSessionMessagesLoadedAtom, id)
     return { store, resolve, result }
@@ -23,8 +24,7 @@ describe('session message loading atoms', () => {
     if (originalWindow) {
       globalThis.window = originalWindow
     } else {
-      // @ts-expect-error test cleanup for window shim
-      delete globalThis.window
+      Reflect.deleteProperty(globalThis, 'window')
     }
   })
 
@@ -75,7 +75,7 @@ describe('session message loading atoms', () => {
     expect(getSessionProcessingRevision({ ...marked, hasUnread: false })).toBe(getSessionProcessingRevision(marked))
     expect(getSessionProcessingRevision(markSessionProcessingState(marked))).toBeGreaterThan(getSessionProcessingRevision(marked))
     expect(JSON.stringify(marked)).toBe(JSON.stringify(session))
-    expect(getSessionProcessingRevision(JSON.parse(JSON.stringify(marked)))).toBe(0)
+    expect(getSessionProcessingRevision(JSON.parse(JSON.stringify(marked)) as typeof marked)).toBe(0)
   })
 
   it('does not stop a newly started turn when an idle snapshot was already loading', async () => {
@@ -90,7 +90,7 @@ describe('session message loading atoms', () => {
     const id = 'processing-overlapping-loads'
     const store = createStore()
     const resolvers: Array<(session: Session) => void> = []
-    globalThis.window = { electronAPI: { getSessionMessages: () => new Promise<Session>(resolve => resolvers.push(resolve)) } } as unknown as typeof window
+    Object.defineProperty(globalThis, 'window', { configurable: true, writable: true, value: { electronAPI: ({ getSessionMessages: () => new Promise<Session>(resolve => resolvers.push(resolve)) } satisfies Partial<ElectronAPI>) } })
     store.set(sessionAtomFamily(id), makeSession({ id, isProcessing: false }))
     const older = store.set(ensureSessionMessagesLoadedAtom, id)
     const newer = store.set(forceSessionMessagesReloadAtom, id)
@@ -107,7 +107,7 @@ describe('session message loading atoms', () => {
     store.set(initializeSessionsAtom, [makeSession({ id, isProcessing: false })])
     const before = getSessionProcessingRevision(store.get(sessionAtomFamily(id)))
     let resolve!: (session: Session) => void
-    globalThis.window = { electronAPI: { getSessionMessages: () => new Promise<Session>(done => { resolve = done }) } } as unknown as typeof window
+    Object.defineProperty(globalThis, 'window', { configurable: true, writable: true, value: { electronAPI: ({ getSessionMessages: () => new Promise<Session>(done => { resolve = done }) } satisfies Partial<ElectronAPI>) } })
     const result = store.set(ensureSessionMessagesLoadedAtom, id)
     store.set(sessionAtomFamily(id), markSessionProcessingState({ ...store.get(sessionAtomFamily(id))!, isProcessing: false }))
     const fresh = makeSession({ id, isProcessing: false, messages: [msg('replacement-history')] })
@@ -152,7 +152,7 @@ describe('session message loading atoms', () => {
   it('replaces a temporary stream with the matching final without merging other parents or completed comments', async () => {
     const id = 'stream-final-race'
     const stream = { ...msg('temporary-stream', 'assistant'), turnId: 'turn-one', content: 'complete', isStreaming: true, isPending: true, timestamp: 4 }
-    const { store, resolve, result } = deferredLoad(id, [stream])
+    const { resolve, result } = deferredLoad(id, [stream])
     const final = { ...stream, id: 'canonical-final', content: 'complete response', isStreaming: false, isPending: false }
     const comment = { ...final, id: 'comment', content: 'earlier comment', isIntermediate: true, timestamp: 2 }
     const child = { ...final, id: 'child-final', parentToolUseId: 'child', timestamp: 3 }
@@ -341,7 +341,7 @@ describe('session message loading atoms', () => {
           })
         },
       },
-    } as unknown as typeof window
+    } as typeof window
 
     store.set(sessionAtomFamily(sessionId), makeSession({ id: sessionId, messages: [] }))
     store.set(loadedSessionsAtom, new Set([sessionId]))
@@ -375,7 +375,7 @@ describe('session message loading atoms', () => {
           })
         },
       },
-    } as unknown as typeof window
+    } as typeof window
 
     store.set(sessionAtomFamily(sessionId), makeSession({
       id: sessionId,

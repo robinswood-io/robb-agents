@@ -37,7 +37,7 @@ def check_windows_filenames() -> None:
 def load_json(path: pathlib.Path) -> dict[str, str]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001 - validation script
+    except Exception as exc:
         fail(f"Failed to read JSON {path.relative_to(ROOT)}: {exc}")
     if not isinstance(data, dict):
         fail(f"Expected object in {path.relative_to(ROOT)}")
@@ -47,10 +47,24 @@ def load_json(path: pathlib.Path) -> dict[str, str]:
     return data
 
 
+def load_locale(directory: pathlib.Path) -> dict[str, str]:
+    messages: dict[str, str] = {}
+    files = sorted(directory.glob("*.json"))
+    if not files:
+        fail(f"No locale domains in {directory.relative_to(ROOT)}")
+    for path in files:
+        part = load_json(path)
+        duplicates = sorted(set(messages) & set(part))
+        if duplicates:
+            fail(f"Duplicate locale keys in {path.relative_to(ROOT)}: {duplicates[:10]}")
+        messages.update(part)
+    return messages
+
+
 def check_french_locale() -> None:
     locales = ROOT / "packages" / "shared" / "src" / "i18n" / "locales"
-    en = load_json(locales / "en.json")
-    fr = load_json(locales / "fr.json")
+    en = load_locale(locales / "en")
+    fr = load_locale(locales / "fr")
     missing = sorted(set(en) - set(fr))
     extra = sorted(set(fr) - set(en))
     if missing or extra:

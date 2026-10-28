@@ -1,0 +1,41 @@
+{
+  "format": 1,
+  "sources": [
+    {
+      "output": "apps/electron/resources/permissions/default.json",
+      "source": "config-sources/default-permissions"
+    },
+    {
+      "output": "ops/rbw-agents-oss/config/automation-mapping.json",
+      "source": "config-sources/automation-mapping"
+    },
+    {
+      "output": "ops/rbw-agents-oss/config/command-manifest.json",
+      "source": "config-sources/command-manifest"
+    },
+    {
+      "output": "ops/rbw-agents-oss/config/registry/manifest-only-policy.json",
+      "source": "config-sources/manifest-only-policy"
+    },
+    {
+      "output": "ops/rbw-agents-oss/config/registry/script-coverage-policy.json",
+      "source": "config-sources/script-coverage-policy"
+    },
+    {
+      "output": "ops/rbw-agents-oss/config/registry/side-effects-policy.json",
+      "source": "config-sources/side-effects-policy"
+    },
+    {
+      "output": "ops/rbw-agents-oss/config/temporal/ready-schedules.json",
+      "source": "config-sources/ready-schedules"
+    },
+    {
+      "output": "ops/rbw-agents-oss/config/temporal/schedules.json",
+      "source": "config-sources/schedules"
+    },
+    {
+      "output": "packages/server-core/src/sessions/__fixtures__/yolo-local-evidence-20260930.json",
+      "source": "config-sources/yolo-local-evidence-20260930"
+    }
+  ]
+}

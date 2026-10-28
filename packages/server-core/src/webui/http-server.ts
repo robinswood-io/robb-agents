@@ -304,7 +304,7 @@ export interface WebuiHttpServerOptions extends WebuiHandlerOptions {
   /** Port to bind on. Use 0 for an ephemeral port in tests. */
   port: number
   /** Hostname to bind on (defaults to 127.0.0.1). */
-  host?: string
+  host?: string | undefined
 }
 
 export async function startWebuiHttpServer(

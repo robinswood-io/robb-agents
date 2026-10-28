@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import type { AgentProfileOpportunityThreshold, SpecializationCategoryThreshold, SpecializationOpportunityCategory, SpecializationOpportunityThresholdOverrides, SpecializationOpportunityThresholds } from './contracts.ts';
 import { AGENT_THRESHOLD_KEYS, BASE_THRESHOLD_KEYS, CATEGORY_SET, DEFAULT_SPECIALIZATION_OPPORTUNITY_THRESHOLDS, SPECIALIZATION_OPPORTUNITY_CATEGORIES } from './contracts.ts';
 
@@ -27,7 +28,7 @@ export function resolveSpecializationOpportunityThresholds(
     }
     resolved[category] = threshold;
   }
-  return resolved as unknown as SpecializationOpportunityThresholds;
+  return resolved as SpecializationOpportunityThresholds;
 }
 
 function validateBaseThreshold(
@@ -56,10 +57,10 @@ export function validateBoundedString(value: unknown, path: string, maximumLengt
 }
 
 export function assertPlainRecord(value: unknown, path: string): asserts value is Record<string, unknown> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+  if (typeof value !== 'object' || value === null || isUnknownArray(value)) {
     throw new Error(`${path} must be a plain object`);
   }
-  const prototype = Object.getPrototypeOf(value);
+  const prototype: unknown = Object.getPrototypeOf(value);
   if (prototype !== Object.prototype && prototype !== null) {
     throw new Error(`${path} must be a plain object`);
   }

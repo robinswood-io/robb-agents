@@ -112,10 +112,10 @@ it('routes open command with --foreground flag and reports settled visibility', 
     })
 
 it('uses focus fallback when foreground open visibility does not settle in wait loop', async () => {
-      const previousTimeout = process.env.CRAFT_BROWSER_OPEN_SETTLE_TIMEOUT_MS
-      const previousPoll = process.env.CRAFT_BROWSER_OPEN_SETTLE_POLL_MS
-      process.env.CRAFT_BROWSER_OPEN_SETTLE_TIMEOUT_MS = '120'
-      process.env.CRAFT_BROWSER_OPEN_SETTLE_POLL_MS = '20'
+      const previousTimeout = process.env["CRAFT_BROWSER_OPEN_SETTLE_TIMEOUT_MS"]
+      const previousPoll = process.env["CRAFT_BROWSER_OPEN_SETTLE_POLL_MS"]
+      process.env["CRAFT_BROWSER_OPEN_SETTLE_TIMEOUT_MS"] = '120'
+      process.env["CRAFT_BROWSER_OPEN_SETTLE_POLL_MS"] = '20'
 
       try {
         let focusCalls = 0
@@ -149,11 +149,11 @@ it('uses focus fallback when foreground open visibility does not settle in wait 
         expect(result.content[0].text).toContain('Visibility settle: timeout + focus retry')
         expect(result.content[0].text).toContain('Visible: true')
       } finally {
-        if (previousTimeout === undefined) delete process.env.CRAFT_BROWSER_OPEN_SETTLE_TIMEOUT_MS
-        else process.env.CRAFT_BROWSER_OPEN_SETTLE_TIMEOUT_MS = previousTimeout
+        if (previousTimeout === undefined) delete process.env["CRAFT_BROWSER_OPEN_SETTLE_TIMEOUT_MS"]
+        else process.env["CRAFT_BROWSER_OPEN_SETTLE_TIMEOUT_MS"] = previousTimeout
 
-        if (previousPoll === undefined) delete process.env.CRAFT_BROWSER_OPEN_SETTLE_POLL_MS
-        else process.env.CRAFT_BROWSER_OPEN_SETTLE_POLL_MS = previousPoll
+        if (previousPoll === undefined) delete process.env["CRAFT_BROWSER_OPEN_SETTLE_POLL_MS"]
+        else process.env["CRAFT_BROWSER_OPEN_SETTLE_POLL_MS"] = previousPoll
       }
     })
 
@@ -262,7 +262,7 @@ it('blocks opaque mutations only on the session Gmail window when contextual rep
       mockFns.click = async () => { clicked = true }
       const blocked = await executeTool(tools, 'browser_tool', { command: 'click @e1' })
       expect(clicked).toBe(false)
-      expect(blocked.isError).toBe(true)
+      expect(blocked["isError"]).toBe(true)
       expect(blocked.content[0].text).toContain('browser mutations on Gmail are disabled')
 
       mockFns.resolveCurrentWindow = async () => ({
@@ -272,7 +272,7 @@ it('blocks opaque mutations only on the session Gmail window when contextual rep
       })
       const allowed = await executeTool(tools, 'browser_tool', { command: 'click @e1' })
       expect(clicked).toBe(true)
-      expect(allowed.isError).not.toBe(true)
+      expect(allowed["isError"]).not.toBe(true)
 
       clicked = false
       mockFns.listWindows = async () => ([
@@ -304,7 +304,7 @@ it('blocks opaque mutations only on the session Gmail window when contextual rep
       })
       const currentCms = await executeTool(tools, 'browser_tool', { command: 'click @e1' })
       expect(clicked).toBe(true)
-      expect(currentCms.isError).not.toBe(true)
+      expect(currentCms["isError"]).not.toBe(true)
 
       clicked = false
       mockFns.listWindows = async () => ([
@@ -336,7 +336,7 @@ it('blocks opaque mutations only on the session Gmail window when contextual rep
       })
       const currentGmail = await executeTool(tools, 'browser_tool', { command: 'click @e1' })
       expect(clicked).toBe(false)
-      expect(currentGmail.isError).toBe(true)
+      expect(currentGmail["isError"]).toBe(true)
     })
 
 it('allows local window lifecycle commands while the contextual Gmail guard is active', async () => {
@@ -353,7 +353,7 @@ it('allows local window lifecycle commands while the contextual Gmail guard is a
       }])
       for (const command of ['release', 'close', 'hide', 'open', 'window-resize 1024 768']) {
         const result = await executeTool(tools, 'browser_tool', { command })
-        expect({ command, isError: result.isError }).toEqual({ command, isError: undefined })
+        expect({ command, isError: result["isError"] }).toEqual({ command, isError: undefined })
         expect(result.content[0].text).not.toContain('browser mutations on Gmail are disabled')
       }
     })
@@ -394,13 +394,13 @@ it('routes click-at command with coordinates', async () => {
 
 it('returns error for click-at with missing coordinates', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'click-at 350' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('click-at requires x and y coordinates')
     })
 
 it('returns error for click-at with non-numeric coordinates', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'click-at foo bar' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('click-at coordinates must be numbers')
     })
 
@@ -414,13 +414,13 @@ it('routes drag command with coordinates', async () => {
 
 it('returns error for drag with missing coordinates', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'drag 100 200' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('drag requires 4 coordinates')
     })
 
 it('returns error for drag with non-numeric coordinates', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'drag foo bar baz qux' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('drag coordinates must be numbers')
     })
 

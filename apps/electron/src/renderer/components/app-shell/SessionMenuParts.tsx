@@ -59,7 +59,7 @@ export function ShareMenuItems({
 
 export interface StatusMenuItemsProps {
   sessionStatuses: SessionStatus[]
-  activeStateId?: SessionStatusId | null
+  activeStateId?: SessionStatusId | null | undefined
   onSelect: (stateId: SessionStatusId) => void
   menu: Pick<MenuComponents, 'MenuItem'>
 }

@@ -25,9 +25,9 @@ export interface MissionExecutionInput {
   item: MissionWorkItem;
   profile: AgentProfile;
   /** Host-verified registry binding. Presence never grants a capability. */
-  specializedProfile?: SpecializedMissionProfileBinding;
+  specializedProfile?: SpecializedMissionProfileBinding | undefined;
   /** Exact ordinary route admitted for this dispatch; absent for specialists/connectors. */
-  ordinaryRoutePin?: OrdinaryMissionRoutePin;
+  ordinaryRoutePin?: OrdinaryMissionRoutePin | undefined;
   dispatchId: string;
   upstream: Array<{
     workItemId: string;
@@ -83,24 +83,24 @@ export interface MissionRuntimeOptions {
   workspaceRoot: string;
   controller: MissionController;
   executor: MissionWorkExecutor;
-  genDispatchId?: (missionId: string, workItemId: string, attempt: number) => string;
-  onSnapshot?: (snapshot: MissionSnapshot) => void;
-  onError?: (context: { missionId: string; workItemId?: string; error: Error }) => void;
+  genDispatchId?: ((missionId: string, workItemId: string, attempt: number) => string) | undefined;
+  onSnapshot?: ((snapshot: MissionSnapshot) => void) | undefined;
+  onError?: ((context: { missionId: string; workItemId?: string; error: Error }) => void) | undefined;
   /** Journal commit fence used by hosts to retire per-attempt reservations in O(1). */
-  onAttemptSettled?: (attempt: {
+  onAttemptSettled?: ((attempt: {
     missionId: string;
     workItemId: string;
     dispatchId: string;
-  }) => void;
+  }) => void) | undefined;
   /** Host-owned admission/continuation policy, evaluated before and between attempts. */
-  evaluateRunPolicy?: (
+  evaluateRunPolicy?: ((
     snapshot: MissionSnapshot,
     pendingTelemetry?: MissionAttemptTelemetry,
     completedAttempt?: boolean,
-  ) => MissionRuntimePolicyDecision | null;
+  ) => MissionRuntimePolicyDecision | null) | undefined;
   /** Stops live executor sessions after a policy decision becomes terminal. */
-  onPolicyHalt?: (before: MissionSnapshot, after: MissionSnapshot) => Promise<void> | void;
-  nowMs?: () => number;
+  onPolicyHalt?: ((before: MissionSnapshot, after: MissionSnapshot) => Promise<void> | void) | undefined;
+  nowMs?: (() => number) | undefined;
 }
 
 export interface MissionRuntimePolicyDecision {

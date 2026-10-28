@@ -119,59 +119,59 @@ export interface EditPopoverProps {
   /** Trigger element that opens the popover */
   trigger: React.ReactNode
   /** Example text shown in placeholder (e.g., "Allow 'make build' command") */
-  example?: string
+  example?: string | undefined
   /** Context passed to the new chat session */
   context: EditContext
   /** Permission mode for the new session (default: 'allow-all' / canonical: execute for fast execution) */
-  permissionMode?: CreateSessionOptions['permissionMode']
+  permissionMode?: CreateSessionOptions['permissionMode'] | undefined
   /**
    * Working directory for the new session:
    * - 'none' (default): No working directory (session folder only) - best for config edits
    * - 'user_default': Use workspace's configured default
    * - Absolute path string: Use this specific path
    */
-  workingDirectory?: string | 'user_default' | 'none'
+  workingDirectory?: string | 'user_default' | 'none' | undefined
   /** Explicit model ID; omitted to inherit the workspace's configured model. */
-  model?: string
+  model?: string | undefined
   /** System prompt preset for mini agent (e.g., 'mini' for focused edits) */
-  systemPromptPreset?: 'default' | 'mini'
+  systemPromptPreset?: 'default' | 'mini' | undefined
   /** Width of the popover (default: 320) */
-  width?: number
+  width?: number | undefined
   /** Additional className for the trigger */
-  triggerClassName?: string
+  triggerClassName?: string | undefined
   /** Side of the popover relative to trigger */
-  side?: 'top' | 'right' | 'bottom' | 'left'
+  side?: 'top' | 'right' | 'bottom' | 'left' | undefined
   /** Alignment of the popover */
-  align?: 'start' | 'center' | 'end'
+  align?: 'start' | 'center' | 'end' | undefined
   /** Optional secondary action button on the left (e.g., "Edit File") */
-  secondaryAction?: SecondaryAction
+  secondaryAction?: SecondaryAction | undefined
   /** Optional custom placeholder - overrides the default "Describe what you'd like to change" */
-  overridePlaceholder?: string
+  overridePlaceholder?: string | undefined
   /** Translated display label for badges and empty state (falls back to context.label) */
-  displayLabel?: string
+  displayLabel?: string | undefined
   /**
    * Controlled open state - when provided, the popover becomes controlled.
    * Use this when opening the popover programmatically (e.g., from context menus).
    */
-  open?: boolean
+  open?: boolean | undefined
   /** Callback when open state changes (for controlled mode) */
-  onOpenChange?: (open: boolean) => void
+  onOpenChange?: ((open: boolean) => void) | undefined
   /**
    * When true, prevents the popover from closing when clicking outside.
    * Useful for context menu triggered popovers where focus management is tricky.
    */
-  modal?: boolean
+  modal?: boolean | undefined
   /**
    * Default value to pre-fill the input with.
    * Useful when the user types something (e.g., "#Test") and clicks "Add new label" -
    * the input can be pre-filled with "Add new label Test".
    */
-  defaultValue?: string
+  defaultValue?: string | undefined
   /**
    * When true, executes the mini agent inline within the popover instead of
    * opening a new window. Best for quick config edits with mini agents.
    */
-  inlineExecution?: boolean
+  inlineExecution?: boolean | undefined
 }
 
 

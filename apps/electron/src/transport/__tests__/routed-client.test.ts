@@ -85,7 +85,7 @@ describe('RoutedClient', () => {
       routed.on(LOCAL_CHANNEL, cb)
 
       expect(local.on).toHaveBeenCalledWith(LOCAL_CHANNEL, cb)
-      expect(workspace.on).not.toHaveBeenCalledWith(LOCAL_CHANNEL, expect.any(Function))
+      expect<unknown>(workspace.on).not.toHaveBeenCalledWith(LOCAL_CHANNEL, (expect.any(Function) as unknown))
     })
 
     it('routes REMOTE_ELIGIBLE listeners to workspaceClient', () => {

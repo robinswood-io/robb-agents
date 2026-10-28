@@ -5,14 +5,14 @@ import { returnedVaultKey } from './persistence.ts';
 import type { OfflineVaultKey } from './persistence.ts';
 
 export async function ensureKey(transportOwner: OfflineVault): Promise<OfflineVaultKey> {
-    if (transportOwner["key"])
-        return transportOwner["key"];
+    if (transportOwner.key)
+        return transportOwner.key;
     const stored = returnedVaultKey(await transportOwner["persistence"].loadKey());
     if (stored) {
         if (stored.key.extractable || stored.key.algorithm.name !== 'AES-GCM') {
             throw new OfflineVaultUnavailableError('Stored key does not meet the vault policy');
         }
-        transportOwner["key"] = stored;
+        transportOwner.key = stored;
         return stored;
     }
     const generated = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
@@ -25,7 +25,7 @@ export async function ensureKey(transportOwner: OfflineVault): Promise<OfflineVa
     if (winner.key.extractable || winner.key.algorithm.name !== 'AES-GCM') {
         throw new OfflineVaultUnavailableError('Stored key does not meet the vault policy');
     }
-    transportOwner["key"] = winner;
+    transportOwner.key = winner;
     return winner;
 }
 
@@ -35,11 +35,11 @@ export async function loadNow(transportOwner: OfflineVault): Promise<OfflineVaul
         return cloneState(transportOwner["state"]);
     }
     if (!isOfflineVaultEnabled()) {
-        transportOwner["key"] = null;
+        transportOwner.key = null;
         transportOwner["recordRevision"] = null;
         transportOwner["state"] = emptyState();
         transportOwner["loaded"] = true;
-        transportOwner["conflicted"] = false;
+        transportOwner.conflicted = false;
         transportOwner["emit"]();
         return cloneState(transportOwner["state"]);
     }
@@ -49,7 +49,7 @@ export async function loadNow(transportOwner: OfflineVault): Promise<OfflineVaul
         transportOwner["recordRevision"] = null;
         transportOwner["state"] = emptyState();
         transportOwner["loaded"] = true;
-        transportOwner["conflicted"] = false;
+        transportOwner.conflicted = false;
         transportOwner["emit"]();
         return cloneState(transportOwner["state"]);
     }
@@ -95,7 +95,7 @@ export async function loadNow(transportOwner: OfflineVault): Promise<OfflineVaul
     }
     transportOwner["state"] = normalized;
     transportOwner["loaded"] = true;
-    transportOwner["conflicted"] = false;
+    transportOwner.conflicted = false;
     transportOwner["emit"]();
     return cloneState(transportOwner["state"]);
 }

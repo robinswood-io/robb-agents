@@ -355,7 +355,7 @@ export function bindingFor(input: MissionExecutionInput): TaskExecutionProofBind
 export function resultProof(output: Record<string, unknown>): SignedExecutionProof {
     if (!('executionProof' in output))
         throw new Error('Connector result has no execution proof');
-    return parseSignedExecutionProof(output.executionProof);
+    return parseSignedExecutionProof(output["executionProof"]);
 }
 
 /** Routes external mutations to the broker worker and all other work to sessions. */

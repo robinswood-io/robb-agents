@@ -126,12 +126,12 @@ describe('PWA service worker fetch boundary', () => {
 
       async function responseFor(url: string, method = 'GET'): Promise<Response | null> {
         let response: Promise<Response> | Response | null = null
-        registeredFetchListener({
+        registeredFetchListener(Object.assign(new Event("fetch"), {
           request: new Request(url, { method }),
           respondWith(value: Promise<Response> | Response) {
             response = value
           },
-        } as unknown as Event)
+        }))
         return response ? await response : null
       }
 
@@ -148,7 +148,7 @@ describe('PWA service worker fetch boundary', () => {
       if (!messageListener) throw new Error('Service worker did not register a message listener')
       const warm = async () => {
         let work = Promise.resolve()
-        messageListener({
+        messageListener(Object.assign(new Event("message"), {
           data: {
             type: 'WARM_SHELL',
             urls: [`${origin}/assets/main.js`, `${origin}/assets/main.css`],
@@ -157,19 +157,19 @@ describe('PWA service worker fetch boundary', () => {
           waitUntil(value: Promise<unknown>) {
             work = value.then(() => undefined)
           },
-        } as unknown as Event)
+        }))
         await work
       }
       const offlineNavigation = async () => {
         return await new Promise<Response>((resolve, reject) => {
           let intercepted = false
-          registeredFetchListener({
+          registeredFetchListener(Object.assign(new Event("fetch"), {
             request: { method: 'GET', mode: 'navigate', url: `${origin}/` },
             respondWith(value: Promise<Response> | Response) {
               intercepted = true
               Promise.resolve(value).then(resolve, reject)
             },
-          } as unknown as Event)
+          }))
           if (!intercepted) reject(new Error('Navigation was not intercepted'))
         })
       }

@@ -146,7 +146,7 @@ async function sessionOpReloadSessionSourcesWithinOperation(sessionOperationCont
     const enabledSources = allSources.filter(s => enabledSlugs.includes(s.config.slug) && isSourceUsable(s));
     // Pass session path so large API responses can be saved to session folder
     const sessionPath = getSessionStoragePath(persistenceRootFor(managed), managed.id);
-    const { mcpServers, apiServers } = await sessionOperationContext.owner["buildSessionSourceServers"](managed, enabledSources, sessionPath);
+    const { mcpServers, apiServers } = await sessionOperationContext.owner.buildSessionSourceServers(managed, enabledSources, sessionPath);
     sessionOpAssertSessionRuntimeOperationOwner(sessionOperationContext, managed, agent);
     agent.setAllSources(allSources);
     const intendedSlugs = enabledSources.map(s => s.config.slug);
@@ -177,7 +177,7 @@ function sessionOpBuildSessionSourceServers(sessionOperationContext: SessionOper
  *
  * @param connectionSlug - Optional connection slug to use (overrides default)
  */
-async function sessionOpReinitializeAuth(sessionOperationContext: SessionOperationContext, connectionSlug?: string): Promise<void> {
+async function sessionOpReinitializeAuth(_sessionOperationContext: SessionOperationContext, connectionSlug?: string): Promise<void> {
     try {
         const manager = getCredentialManager();
         // Get the connection to use (explicit parameter or default)

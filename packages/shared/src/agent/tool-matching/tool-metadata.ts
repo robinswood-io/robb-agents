@@ -36,26 +36,26 @@ export function extractToolMetadata(toolBlock: ToolUseBlock, sessionDir?: string
       intent = (toolBlock.input as { description?: string }).description;
     }
 
-    return { intent, displayName };
+    return { ...(intent !== undefined ? { intent } : {}), ...(displayName !== undefined ? { displayName } : {}) };
   }
 
   // Log when metadata store misses — helps diagnose cross-process sync issues
-  const argsHasIntent = typeof toolBlock.input._intent === 'string';
-  const argsHasDisplayName = typeof toolBlock.input._displayName === 'string';
+  const argsHasIntent = typeof toolBlock.input["_intent"] === 'string';
+  const argsHasDisplayName = typeof toolBlock.input["_displayName"] === 'string';
   log.debug(
     `extractToolMetadata: store miss for ${toolBlock.name} (${toolBlock.id}); candidates=${Array.from(idCandidates).join(' -> ')}; argsIntent=${argsHasIntent}; argsDisplayName=${argsHasDisplayName}`,
   );
 
   // 2. Fallback: read directly from tool input (Codex backend, non-streaming, etc.)
-  let intent = toolBlock.input._intent as string | undefined;
-  const displayName = toolBlock.input._displayName as string | undefined;
+  let intent = toolBlock.input["_intent"] as string | undefined;
+  const displayName = toolBlock.input["_displayName"] as string | undefined;
 
   // 3. Bash description fallback for intent
   if (!intent && toolBlock.name === 'Bash') {
     intent = (toolBlock.input as { description?: string }).description;
   }
 
-  return { intent, displayName };
+  return { ...(intent !== undefined ? { intent } : {}), ...(displayName !== undefined ? { displayName } : {}) };
 }
 
 /** Serialize a tool result value to string, handling circular references */

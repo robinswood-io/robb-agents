@@ -14,10 +14,10 @@ export function extractErrorMessages(error: unknown): string {
     }
 
     // Check for stdout/stderr (common in subprocess errors)
-    const anyError = error as unknown as Record<string, unknown>;
-    if (typeof anyError.stdout === 'string') messages.push(anyError.stdout);
-    if (typeof anyError.stderr === 'string') messages.push(anyError.stderr);
-    if (typeof anyError.output === 'string') messages.push(anyError.output);
+    for (const key of ['stdout', 'stderr', 'output']) {
+      const output: unknown = Reflect.get(error, key);
+      if (typeof output === 'string') messages.push(output);
+    }
   } else {
     messages.push(String(error));
   }

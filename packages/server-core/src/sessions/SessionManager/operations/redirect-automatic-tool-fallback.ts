@@ -1,3 +1,4 @@
+import {setOptional, omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import type { SessionEvent } from '@craft-agent/shared/protocol';
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol';
@@ -33,7 +34,7 @@ function sessionOpRedirectAutomaticToolFallback(sessionOperationContext: Session
     }
     finally {
         if (!delivered && binding.liveToolFallbackIntent === intent) {
-            binding.liveToolFallbackIntent = previousIntent;
+            setOptional(binding, "liveToolFallbackIntent", previousIntent);
         }
     }
 }
@@ -69,7 +70,7 @@ function sessionOpQueueDelta(sessionOperationContext: SessionOperationContext, s
     }
     else {
         // Start new batch
-        sessionOperationContext.state.pendingDeltas.set(sessionId, { delta, turnId });
+        sessionOperationContext.state.pendingDeltas.set(sessionId, { delta, ...(turnId !== undefined ? { turnId: turnId } : {}) });
     }
     // Schedule flush if not already scheduled
     if (!sessionOperationContext.state.deltaFlushTimers.has(sessionId)) {
@@ -94,12 +95,12 @@ function sessionOpFlushDelta(sessionOperationContext: SessionOperationContext, s
     // Send batched delta if any
     const pending = sessionOperationContext.state.pendingDeltas.get(sessionId);
     if (pending && pending.delta) {
-        sessionOperationContext.owner["sendEvent"]({
+        sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'text_delta' }>>({
             type: 'text_delta',
             sessionId,
             delta: pending.delta,
             turnId: pending.turnId
-        }, workspaceId);
+        }), workspaceId);
         sessionOperationContext.state.pendingDeltas.delete(sessionId);
     }
 }

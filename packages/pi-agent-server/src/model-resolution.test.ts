@@ -88,6 +88,7 @@ describe('initial Pi session model', () => {
         });
         await resourceLoader.reload();
         const model = resolveInitialPiModel(modelRegistry, undefined, 'openai-codex');
+        if (!model) throw new Error('The isolated registry must provide the initial Codex model');
         const { session } = await createAgentSession({
           cwd: directory, agentDir: directory, modelRuntime,
           settingsManager, sessionManager, resourceLoader, model, tools: [],

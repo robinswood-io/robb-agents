@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 /**
  * Tests for the internal `uiLanguage` preference field that backs main-process
  * i18n hydration. See packages/shared/CLAUDE.md → "Cross-process language persistence".
@@ -136,7 +137,7 @@ describe('preferences.uiLanguage', () => {
           console.log(JSON.stringify({ first, second }));
         `);
         expect(r.exitCode).toBe(0);
-        const { first, second } = JSON.parse(r.stdout);
+        const { first, second } = parseJsonObject(r.stdout);
         expect(second).toBe(first);
       } finally {
         rmSync(configDir, { recursive: true, force: true });
@@ -152,10 +153,10 @@ describe('preferences.uiLanguage', () => {
           setPersistedUiLanguage('hu');
         `);
         expect(r.exitCode).toBe(0);
-        const raw = JSON.parse(readFileSync(prefsFile, 'utf-8'));
-        expect(raw.name).toBe('Alice');
-        expect(raw.timezone).toBe('Europe/Budapest');
-        expect(raw.uiLanguage).toBe('hu');
+        const raw = parseJsonObject(readFileSync(prefsFile, 'utf-8'));
+        expect(raw["name"]).toBe('Alice');
+        expect(raw["timezone"]).toBe('Europe/Budapest');
+        expect(raw["uiLanguage"]).toBe('hu');
       } finally {
         rmSync(configDir, { recursive: true, force: true });
       }
@@ -248,9 +249,9 @@ describe('preferences.uiLanguage', () => {
           console.log(JSON.stringify(loadPreferences()));
         `);
         expect(r.exitCode).toBe(0);
-        const prefs = JSON.parse(r.stdout);
+        const prefs = parseJsonObject(r.stdout);
         expect(prefs).not.toHaveProperty('language');
-        expect(prefs.name).toBe('Alice');
+        expect(prefs["name"]).toBe('Alice');
       } finally {
         rmSync(configDir, { recursive: true, force: true });
       }
@@ -265,10 +266,10 @@ describe('preferences.uiLanguage', () => {
           setPersistedUiLanguage('hu');
         `);
         expect(r.exitCode).toBe(0);
-        const raw = JSON.parse(readFileSync(prefsFile, 'utf-8'));
+        const raw = parseJsonObject(readFileSync(prefsFile, 'utf-8'));
         expect(raw).not.toHaveProperty('language');
-        expect(raw.uiLanguage).toBe('hu');
-        expect(raw.name).toBe('Alice');
+        expect(raw["uiLanguage"]).toBe('hu');
+        expect(raw["name"]).toBe('Alice');
       } finally {
         rmSync(configDir, { recursive: true, force: true });
       }

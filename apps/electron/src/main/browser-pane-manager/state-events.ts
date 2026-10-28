@@ -2,7 +2,7 @@ import { type BrowserInstanceInfo } from "../../shared/types";
 import type { BrowserPaneManager } from '../browser-pane-manager.ts';
 import type { BrowserInstance } from './shared.ts';
 
-export function toInfo(transportOwner: BrowserPaneManager, instance: BrowserInstance): BrowserInstanceInfo {
+export function toInfo(_transportOwner: BrowserPaneManager, instance: BrowserInstance): BrowserInstanceInfo {
     return {
         id: instance.id,
         url: instance.currentUrl,
@@ -25,5 +25,5 @@ export function emitStateChange(transportOwner: BrowserPaneManager, instance: Br
     if (!transportOwner["instances"].has(instance.id)) {
         return;
     }
-    transportOwner["stateChangeCallback"]?.(transportOwner["toInfo"](instance));
+    transportOwner.stateChangeCallback?.(transportOwner["toInfo"](instance));
 }

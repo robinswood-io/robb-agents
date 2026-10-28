@@ -51,15 +51,15 @@ function checkMcp(
     activeSourceSlugs: [sourceSlug],
     allSourceSlugs: [sourceSlug],
     hasSourceActivation: false,
-    externalActionPolicy: options?.externalActionPolicy,
-    objectiveMutationAuthorized: options?.objectiveMutationAuthorized,
-    objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized,
-    objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments,
-    authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments,
-    dataFolderPath: options?.dataFolderPath,
-    declaredToolCapabilities: options?.declaredToolCapabilities,
+    ...(options?.externalActionPolicy !== undefined ? { externalActionPolicy: options?.externalActionPolicy } : {}),
+    ...(options?.objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized: options?.objectiveMutationAuthorized } : {}),
+    ...(options?.objectiveSensitiveActionAuthorized !== undefined ? { objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized } : {}),
+    ...(options?.objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments } : {}),
+    ...(options?.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments } : {}),
+    ...(options?.dataFolderPath !== undefined ? { dataFolderPath: options?.dataFolderPath } : {}),
+    ...(options?.declaredToolCapabilities !== undefined ? { declaredToolCapabilities: options?.declaredToolCapabilities } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 
@@ -112,7 +112,7 @@ describe('sensitive external action classifier', () => {
       },
     );
     expect(exactLiveDecision).toMatchObject({
-      type: 'block', reason: expect.stringContaining('recoverable command-shape issue'),
+      type: 'block', reason: (expect.stringContaining('recoverable command-shape issue') as unknown),
     });
 
     const exactOrionComposite = {
@@ -128,7 +128,7 @@ describe('sensitive external action classifier', () => {
       },
     );
     expect(exactOrionDecision).toMatchObject({
-      type: 'block', reason: expect.stringContaining('recoverable command-shape issue'),
+      type: 'block', reason: (expect.stringContaining('recoverable command-shape issue') as unknown),
     });
 
     const unguardedPnsInspection = {
@@ -183,7 +183,7 @@ describe('sensitive external action classifier', () => {
           },
         );
         expect(observationalDecision).toMatchObject({
-          type: 'block', reason: expect.stringContaining(mode === 'safe' && input === unguardedPnsInspection ? 'blocked in Explore' : expectedHint),
+          type: 'block', reason: (expect.stringContaining(mode === 'safe' && input === unguardedPnsInspection ? 'blocked in Explore' : expectedHint) as unknown),
         });
       }
     }
@@ -202,7 +202,7 @@ describe('sensitive external action classifier', () => {
       ? mutatingLoopDecision.reason
       : '';
     expect(mutatingLoopDecision).toMatchObject({
-      type: 'block', reason: expect.stringContaining('exact target'),
+      type: 'block', reason: (expect.stringContaining('exact target') as unknown),
     });
     expect(mutatingLoopReason.includes('recoverable command-shape issue')).toBeFalse();
 
@@ -218,7 +218,7 @@ describe('sensitive external action classifier', () => {
       },
     );
     expect(mutatingScriptDecision).toMatchObject({
-      type: 'block', reason: expect.stringContaining('exact target'),
+      type: 'block', reason: (expect.stringContaining('exact target') as unknown),
     });
 
     for (const command of [
@@ -242,7 +242,7 @@ describe('sensitive external action classifier', () => {
         ? unsafePostgresDecision.reason
         : '';
       expect(unsafePostgresDecision).toMatchObject({
-        type: 'block', reason: expect.stringContaining('exact target'),
+        type: 'block', reason: (expect.stringContaining('exact target') as unknown),
       });
       expect(unsafePostgresReason.includes('recoverable invocation issue')).toBeFalse();
     }
@@ -298,7 +298,7 @@ describe('sensitive external action classifier', () => {
       expect(secretTransfer).toMatchObject({
         category: 'secret_transfer',
         targetCandidates: ['evil', 'zero', 'unresolved remote scope'],
-        commandPreview: expect.stringContaining(localPath),
+        commandPreview: (expect.stringContaining(localPath) as unknown),
       });
       expect(secretTransfer && isSensitiveExternalActionAuthorizedByObjective(
         secretTransfer, ['Applique le correctif à Zero.'],
@@ -339,7 +339,7 @@ describe('sensitive external action classifier', () => {
           'Déclenche un seul test e-doc depuis PNS Gen et envoie-le à sender@example.test.',
         ],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
 
     const hiddenRecipient = {
       server: 'pns', cwd: '/srv/pnsgen',
@@ -348,7 +348,7 @@ describe('sensitive external action classifier', () => {
     expect(classifySensitiveExternalAction('mcp__rbw-servers__ssh_execute', hiddenRecipient))
       .toMatchObject({
         category: 'external_send',
-        targetCandidates: expect.arrayContaining(['unresolved external audience']),
+        targetCandidates: (expect.arrayContaining(['unresolved external audience']) as unknown),
       });
     expect(checkMcp(
       'allow-all', 'mcp__rbw-servers__ssh_execute', hiddenRecipient,
@@ -356,7 +356,7 @@ describe('sensitive external action classifier', () => {
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveAuthorizationSegments: ['Déclenche un test depuis PNS Gen.'],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
 
     const genericLoopback = {
       server: 'dev', cwd: '/srv/workspace/zero',
@@ -397,7 +397,7 @@ describe('sensitive external action classifier', () => {
       },
     );
     expect(cookiePrompt).toMatchObject({
-      type: 'prompt', command: expect.stringContaining('Cookie: [REDACTED]'),
+      type: 'prompt', command: (expect.stringContaining('Cookie: [REDACTED]') as unknown),
       requiresExplicitConfirmation: true,
     });
     expect(JSON.stringify(cookiePrompt)).not.toContain(cookieValue);
@@ -412,6 +412,6 @@ describe('sensitive external action classifier', () => {
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveAuthorizationSegments: ['Corrige Zero.'],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
   });
 });

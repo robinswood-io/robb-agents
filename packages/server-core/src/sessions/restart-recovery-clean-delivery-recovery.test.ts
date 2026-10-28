@@ -1,4 +1,4 @@
-import type { SessionHeader } from "@craft-agent/shared/sessions";
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -128,14 +128,14 @@ describe('durable restart recovery', () => {
       providerContextBaselineTokens: 120_000,
     }
     const originalFlush = h.manager.flushSession.bind(h.manager)
-    let firstStartedSnapshot: SessionHeader | undefined
+    let firstStartedSnapshot: ReturnType<typeof parseRecoveryJournalObservation> | undefined
     h.manager.flushSession = async id => {
       await originalFlush(id)
       if (!firstStartedSnapshot
         && managed.pendingTurnRecovery?.recoveryDispatch?.phase === 'started'
         && managed.messages.some(candidate => candidate.id === dispatchId)) {
         firstStartedSnapshot = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-          .trim().split('\n').map(line => JSON.parse(line))[0]
+          .trim().split('\n').map(parseRecoveryJournalObservation)[0]
       }
     }
     let contextAtFreshRuntime: number | undefined
@@ -159,14 +159,14 @@ describe('durable restart recovery', () => {
     })
 
     expect(contextAtFreshRuntime).toBe(Math.max(1, Math.ceil(prompt.length / 4)))
-    expect(firstStartedSnapshot).toMatchObject({
+    expect<unknown>(firstStartedSnapshot).toMatchObject({
       providerContextBoundaryMessageId: dispatchId,
-      tokenUsage: expect.objectContaining({
+      tokenUsage: (expect.objectContaining({
         contextTokens: Math.max(1, Math.ceil(prompt.length / 4)),
-      }),
-      pendingTurnRecovery: expect.objectContaining({
-        recoveryDispatch: expect.objectContaining({ id: dispatchId, phase: 'started' }),
-      }),
+      }) as unknown),
+      pendingTurnRecovery: (expect.objectContaining({
+        recoveryDispatch: (expect.objectContaining({ id: dispatchId, phase: 'started' }) as unknown),
+      }) as unknown),
     })
     expect(requiredTestValue(firstStartedSnapshot).sdkSessionId).toBeUndefined()
     expect(requiredTestValue(firstStartedSnapshot)).not.toHaveProperty('branchFromSdkSessionId')

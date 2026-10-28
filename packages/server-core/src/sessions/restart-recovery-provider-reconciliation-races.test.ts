@@ -248,7 +248,7 @@ describe('provider dispatch write-ahead recovery', () => {
       answers: [{ questionId: 'scope', optionIds: ['same'] }],
     }).catch(() => undefined)
     const responseMessageId = requiredTestValue(restored.userInputRequests)[0]!.responseMessageId
-    expect(responseMessageId).toEqual(expect.any(String))
+    expect<unknown>(responseMessageId).toEqual((expect.any(String) as unknown))
     release.resolve(); await tick(); await tick()
     await cold.manager.flushSession(restored.id)
 

@@ -17,7 +17,7 @@ import type { PiAgent } from '../pi-agent.ts';
 import { RUNTIME_DIAGNOSTIC_MAX_CHARS, PiRuntimeInterruptedError } from './shared.ts';
 import type { PiSubprocessRuntimeContext, PiRuntimeInterruptionCode } from './shared.ts';
 
-export function handleSubprocessError(transportOwner: PiAgent, error: Error, child: ChildProcess, runtimeContext?: PiSubprocessRuntimeContext): void {
+export function handleSubprocessError(transportOwner: PiAgent, error: Error, child: ChildProcess, _runtimeContext?: PiSubprocessRuntimeContext): void {
     if (transportOwner["subprocess"] !== child) {
         transportOwner["debug"](`Ignoring error from stale Pi subprocess: ${error.message}`);
         return;
@@ -25,30 +25,30 @@ export function handleSubprocessError(transportOwner: PiAgent, error: Error, chi
     // A process-level error is not proof that the child exited. Retain both the
     // child and its runtime identity until exit/close confirms termination, so
     // exact-once authority is neither released early nor orphaned forever.
-    transportOwner["subprocessErrorsAwaitingExit"].set(child, error);
+    transportOwner.subprocessErrorsAwaitingExit.set(child, error);
     transportOwner["debug"](`Pi subprocess error while awaiting confirmed termination: ${error.message}`);
-    transportOwner["rejectSubprocessReady"](new PiRuntimeInterruptedError(`Pi subprocess error (${error.message})`, 'process_error'));
+    transportOwner.rejectSubprocessReady(new PiRuntimeInterruptedError(`Pi subprocess error (${error.message})`, 'process_error'));
 }
 
 export function handleSubprocessExit(transportOwner: PiAgent, code: number | null, signal: string | null, child?: ChildProcess, processError?: Error, runtimeContext?: PiSubprocessRuntimeContext): void {
     if (child) {
-        const forceKillTimer = transportOwner["subprocessForceKillTimers"].get(child);
+        const forceKillTimer = transportOwner.subprocessForceKillTimers.get(child);
         if (forceKillTimer)
             clearTimeout(forceKillTimer);
-        transportOwner["subprocessForceKillTimers"].delete(child);
+        transportOwner.subprocessForceKillTimers.delete(child);
     }
     const exitingRuntime = runtimeContext
-        ?? (child ? transportOwner["subprocessRuntimeContexts"].get(child) : undefined);
+        ?? (child ? transportOwner.subprocessRuntimeContexts.get(child) : undefined);
     const confirmedProcessError = processError
-        ?? (child ? transportOwner["subprocessErrorsAwaitingExit"].get(child) : undefined);
+        ?? (child ? transportOwner.subprocessErrorsAwaitingExit.get(child) : undefined);
     if (child)
-        transportOwner["subprocessErrorsAwaitingExit"].delete(child);
+        transportOwner.subprocessErrorsAwaitingExit.delete(child);
     // A terminated generation may emit its exit after its replacement is
     // already live. Never let that late event tear down the new generation.
     if (child && transportOwner["subprocess"] !== child) {
-        transportOwner["expectedSubprocessExits"].delete(child);
+        transportOwner.expectedSubprocessExits.delete(child);
         if (exitingRuntime) {
-            transportOwner["confirmContextualGmailRuntimeTeardown"](exitingRuntime);
+            transportOwner.confirmContextualGmailRuntimeTeardown(exitingRuntime);
         }
         transportOwner["debug"]('Ignoring termination from stale Pi subprocess generation');
         return;
@@ -57,15 +57,15 @@ export function handleSubprocessExit(transportOwner: PiAgent, code: number | nul
     transportOwner["debug"](confirmedProcessError
         ? `Pi subprocess error followed by confirmed exit: ${confirmedProcessError.message}`
         : `Pi subprocess exited: code=${code}, signal=${signal}`);
-    const expectedExit = child ? transportOwner["expectedSubprocessExits"].delete(child) : false;
-    const hadPendingWork = transportOwner["hasPendingSubprocessWork"]();
+    const expectedExit = child ? transportOwner.expectedSubprocessExits.delete(child) : false;
+    const hadPendingWork = transportOwner.hasPendingSubprocessWork();
     const interruptionCode: PiRuntimeInterruptionCode = confirmedProcessError
         ? 'process_error'
         : 'process_exit';
     const exitReason = confirmedProcessError?.message
         ?? (signal ? `signal ${signal}` : `code ${code}`);
     const interruptionError = new PiRuntimeInterruptedError(`Pi subprocess exited unexpectedly (${exitReason})`, interruptionCode);
-    transportOwner["rejectSubprocessReady"](interruptionError);
+    transportOwner.rejectSubprocessReady(interruptionError);
     // A signal-only idle exit can come from the long-running-process idle
     // supervisor. Treat it as a failure only when work was active; explicit
     // non-zero exit codes remain failures even while idle.
@@ -87,12 +87,12 @@ export function handleSubprocessExit(transportOwner: PiAgent, code: number | nul
         || transportOwner["subprocessRuntimeContext"]?.runtimeId === runtimeContext.runtimeId) {
         transportOwner["subprocessRuntimeContext"] = null;
     }
-    transportOwner["subprocessSupervisorHandle"] = null;
-    transportOwner["readline"] = null;
-    transportOwner["resetSubprocessErrorDedup"]();
-    transportOwner["subprocessReady"] = null;
-    transportOwner["subprocessReadyResolve"] = null;
-    transportOwner["subprocessReadyReject"] = null;
+    transportOwner.subprocessSupervisorHandle = null;
+    transportOwner.readline = null;
+    transportOwner.resetSubprocessErrorDedup();
+    transportOwner.subprocessReady = null;
+    transportOwner.subprocessReadyResolve = null;
+    transportOwner.subprocessReadyReject = null;
     // Runtime loss is progress interruption, not a terminal provider error.
     // SessionManager owns the durable retry budget and process recreation.
     if (transportOwner["_isProcessing"] && !expectedExit) {
@@ -107,50 +107,50 @@ export function handleSubprocessExit(transportOwner: PiAgent, code: number | nul
     }
     // Reject pending mini completions with error (not null) so callers
     // get a meaningful error instead of silently returning "no response"
-    for (const [, pending] of transportOwner["pendingMiniCompletions"]) {
+    for (const [, pending] of transportOwner.pendingMiniCompletions) {
         pending.reject(new Error(`Pi subprocess exited unexpectedly (${exitReason})`));
     }
-    transportOwner["pendingMiniCompletions"].clear();
+    transportOwner.pendingMiniCompletions.clear();
     // Reject pending llm_query calls (call_llm in-flight during subprocess crash)
-    for (const [, pending] of transportOwner["pendingLlmQueries"]) {
+    for (const [, pending] of transportOwner.pendingLlmQueries) {
         pending.reject(new Error(`Pi subprocess exited unexpectedly (${exitReason})`));
     }
-    transportOwner["pendingLlmQueries"].clear();
+    transportOwner.pendingLlmQueries.clear();
     // A dead runtime can never acknowledge any prompt that it owned.
-    transportOwner["pendingProviderHandoffs"].clear();
-    transportOwner["pendingProviderDispatchRejections"].clear();
+    transportOwner.pendingProviderHandoffs.clear();
+    transportOwner.pendingProviderDispatchRejections.clear();
     // Reject pending ensure_session_ready requests
-    for (const [, pending] of transportOwner["pendingEnsureSessionReady"]) {
+    for (const [, pending] of transportOwner.pendingEnsureSessionReady) {
         pending.reject(new Error(`Pi subprocess exited unexpectedly (${exitReason})`));
     }
-    transportOwner["pendingEnsureSessionReady"].clear();
+    transportOwner.pendingEnsureSessionReady.clear();
     // Reject pending compact/toggle requests
-    for (const [, pending] of transportOwner["pendingCompactions"]) {
+    for (const [, pending] of transportOwner.pendingCompactions) {
         pending.reject(new Error(`Pi subprocess exited unexpectedly (${exitReason})`));
     }
-    transportOwner["pendingCompactions"].clear();
-    for (const [, pending] of transportOwner["pendingAutoCompactionToggles"]) {
+    transportOwner.pendingCompactions.clear();
+    for (const [, pending] of transportOwner.pendingAutoCompactionToggles) {
         pending.reject(new Error(`Pi subprocess exited unexpectedly (${exitReason})`));
     }
-    transportOwner["pendingAutoCompactionToggles"].clear();
-    for (const [, pending] of transportOwner["pendingRuntimeConfigUpdates"]) {
+    transportOwner.pendingAutoCompactionToggles.clear();
+    for (const [, pending] of transportOwner.pendingRuntimeConfigUpdates) {
         pending.reject(new Error(`Pi subprocess exited unexpectedly (${exitReason})`));
     }
-    transportOwner["pendingRuntimeConfigUpdates"].clear();
+    transportOwner.pendingRuntimeConfigUpdates.clear();
     // Reject all pending tool executions
-    for (const [, pending] of transportOwner["pendingToolExecutions"]) {
+    for (const [, pending] of transportOwner.pendingToolExecutions) {
         pending.reject(new Error('Pi subprocess exited'));
     }
-    transportOwner["pendingToolExecutions"].clear();
+    transportOwner.pendingToolExecutions.clear();
     // A permission prompt suspends handlePreToolUsePrompt. Runtime loss must
     // settle it fail-closed or the request and any sensitive-action reservation
     // remain live forever.
-    transportOwner["denyAllPendingPermissions"]();
+    transportOwner.denyAllPendingPermissions();
     // Drop any cached pre-tool metadata for the dead subprocess.
     transportOwner["preToolMetadataByCallId"].clear();
     transportOwner["adapter"].resetRuntimeState();
     if (exitingRuntime) {
-        transportOwner["confirmContextualGmailRuntimeTeardown"](exitingRuntime);
+        transportOwner.confirmContextualGmailRuntimeTeardown(exitingRuntime);
     }
 }
 
@@ -159,15 +159,15 @@ export function handleSubprocessExit(transportOwner: PiAgent, code: number | nul
    * Used before an idle runtime restart so we don't leave transient children behind.
    */
 export async function killSubprocessGracefully(transportOwner: PiAgent, timeoutMs: number): Promise<void> {
-    transportOwner["denyAllPendingPermissions"]();
-    transportOwner["invalidateContextualGmailStateForCurrentSession"]();
+    transportOwner.denyAllPendingPermissions();
+    transportOwner.invalidateContextualGmailStateForCurrentSession();
     const child = transportOwner["subprocess"];
     if (!child) {
         transportOwner["killSubprocess"]();
         return;
     }
-    const runtimeContext = transportOwner["subprocessRuntimeContext"] ?? transportOwner["subprocessRuntimeContexts"].get(child);
-    transportOwner["expectedSubprocessExits"].add(child);
+    const runtimeContext = transportOwner["subprocessRuntimeContext"] ?? transportOwner.subprocessRuntimeContexts.get(child);
+    transportOwner.expectedSubprocessExits.add(child);
     const pid = child.pid;
     const waitForExit = new Promise<{
         code: number | null;
@@ -185,8 +185,8 @@ export async function killSubprocessGracefully(transportOwner: PiAgent, timeoutM
     catch {
         // stdin may already be closed
     }
-    if (transportOwner["subprocessSupervisorHandle"]) {
-        transportOwner["subprocessSupervisorHandle"].terminate('Pi agent graceful shutdown');
+    if (transportOwner.subprocessSupervisorHandle) {
+        transportOwner.subprocessSupervisorHandle.terminate('Pi agent graceful shutdown');
     }
     else {
         child.kill('SIGTERM');
@@ -203,9 +203,9 @@ export async function killSubprocessGracefully(transportOwner: PiAgent, timeoutM
             new Promise<null>(resolve => setTimeout(() => resolve(null), 1000)),
         ]);
     }
-    if (transportOwner["readline"]) {
-        transportOwner["readline"].close();
-        transportOwner["readline"] = null;
+    if (transportOwner.readline) {
+        transportOwner.readline.close();
+        transportOwner.readline = null;
     }
     if (transportOwner["subprocess"] === child) {
         transportOwner["subprocess"] = null;
@@ -214,16 +214,15 @@ export async function killSubprocessGracefully(transportOwner: PiAgent, timeoutM
             transportOwner["subprocessRuntimeContext"] = null;
         }
     }
-    transportOwner["subprocessSupervisorHandle"] = null;
-    transportOwner["subprocessReady"] = null;
-    transportOwner["subprocessReadyResolve"] = null;
-    transportOwner["subprocessReadyReject"] = null;
-    transportOwner["clearSubprocessReadyTimer"]();
-    transportOwner["callbackPort"] = 0;
+    transportOwner.subprocessSupervisorHandle = null;
+    transportOwner.subprocessReady = null;
+    transportOwner.subprocessReadyResolve = null;
+    transportOwner.subprocessReadyReject = null;
+    transportOwner.clearSubprocessReadyTimer();
     transportOwner["preToolMetadataByCallId"].clear();
     transportOwner["adapter"].resetRuntimeState();
     if (result && runtimeContext) {
-        transportOwner["confirmContextualGmailRuntimeTeardown"](runtimeContext);
+        transportOwner.confirmContextualGmailRuntimeTeardown(runtimeContext);
     }
     if (result) {
         transportOwner["debug"](`Pi subprocess ${pid ?? '(unknown pid)'} stopped for restart: code=${result.code}, signal=${result.signal}`);
@@ -239,17 +238,17 @@ export async function killSubprocessGracefully(transportOwner: PiAgent, timeoutM
    * handleSubprocessExit and confirms teardown for this same runtime.
    */
 export function scheduleSubprocessForceKill(transportOwner: PiAgent, child: ChildProcess, delayMs: number, runtimeContext?: PiSubprocessRuntimeContext): void {
-    if (transportOwner["subprocessForceKillTimers"].has(child))
+    if (transportOwner.subprocessForceKillTimers.has(child))
         return;
     const expectedRuntimeId = runtimeContext?.runtimeId
-        ?? transportOwner["subprocessRuntimeContexts"].get(child)?.runtimeId;
+        ?? transportOwner.subprocessRuntimeContexts.get(child)?.runtimeId;
     const timer = setTimeout(() => {
-        transportOwner["subprocessForceKillTimers"].delete(child);
-        if (!transportOwner["expectedSubprocessExits"].has(child)
+        transportOwner.subprocessForceKillTimers.delete(child);
+        if (!transportOwner.expectedSubprocessExits.has(child)
             || child.exitCode !== null
             || child.signalCode !== null)
             return;
-        const registeredRuntimeId = transportOwner["subprocessRuntimeContexts"].get(child)?.runtimeId;
+        const registeredRuntimeId = transportOwner.subprocessRuntimeContexts.get(child)?.runtimeId;
         if (expectedRuntimeId && registeredRuntimeId !== expectedRuntimeId) {
             transportOwner["debug"](`Skipping SIGKILL for Pi subprocess ${child.pid ?? '(unknown pid)'} after runtime correlation changed`);
             return;
@@ -261,7 +260,7 @@ export function scheduleSubprocessForceKill(transportOwner: PiAgent, child: Chil
         catch { /* exit/close remains the teardown authority */ }
     }, Math.max(0, delayMs));
     timer.unref?.();
-    transportOwner["subprocessForceKillTimers"].set(child, timer);
+    transportOwner.subprocessForceKillTimers.set(child, timer);
 }
 
 /**
@@ -269,15 +268,15 @@ export function scheduleSubprocessForceKill(transportOwner: PiAgent, child: Chil
    */
 export function killSubprocess(transportOwner: PiAgent): void {
     transportOwner["revokeAdmittedToolExecutions"]();
-    transportOwner["denyAllPendingPermissions"]();
-    transportOwner["invalidateContextualGmailStateForCurrentSession"]();
-    if (transportOwner["readline"]) {
-        transportOwner["readline"].close();
-        transportOwner["readline"] = null;
+    transportOwner.denyAllPendingPermissions();
+    transportOwner.invalidateContextualGmailStateForCurrentSession();
+    if (transportOwner.readline) {
+        transportOwner.readline.close();
+        transportOwner.readline = null;
     }
     if (transportOwner["subprocess"]) {
         const child = transportOwner["subprocess"];
-        transportOwner["expectedSubprocessExits"].add(child);
+        transportOwner.expectedSubprocessExits.add(child);
         // Try graceful shutdown first
         try {
             transportOwner["send"]({ type: 'shutdown' });
@@ -285,28 +284,27 @@ export function killSubprocess(transportOwner: PiAgent): void {
         catch {
             // stdin may already be closed
         }
-        if (transportOwner["subprocessSupervisorHandle"]) {
-            transportOwner["subprocessSupervisorHandle"].terminate('Pi agent reset');
+        if (transportOwner.subprocessSupervisorHandle) {
+            transportOwner.subprocessSupervisorHandle.terminate('Pi agent reset');
         }
         else {
             child.kill('SIGTERM');
         }
-        transportOwner["scheduleSubprocessForceKill"](child, transportOwner["subprocessRuntimeContext"] ?? transportOwner["subprocessRuntimeContexts"].get(child));
+        transportOwner.scheduleSubprocessForceKill(child, transportOwner["subprocessRuntimeContext"] ?? transportOwner.subprocessRuntimeContexts.get(child));
         transportOwner["subprocess"] = null;
         if (transportOwner["subprocessRuntimeContext"]?.runtimeId
-            === transportOwner["subprocessRuntimeContexts"].get(child)?.runtimeId) {
+            === transportOwner.subprocessRuntimeContexts.get(child)?.runtimeId) {
             transportOwner["subprocessRuntimeContext"] = null;
         }
     }
     else {
         transportOwner["subprocessRuntimeContext"] = null;
     }
-    transportOwner["subprocessSupervisorHandle"] = null;
-    transportOwner["subprocessReady"] = null;
-    transportOwner["subprocessReadyResolve"] = null;
-    transportOwner["subprocessReadyReject"] = null;
-    transportOwner["clearSubprocessReadyTimer"]();
-    transportOwner["callbackPort"] = 0;
+    transportOwner.subprocessSupervisorHandle = null;
+    transportOwner.subprocessReady = null;
+    transportOwner.subprocessReadyResolve = null;
+    transportOwner.subprocessReadyReject = null;
+    transportOwner.clearSubprocessReadyTimer();
     transportOwner["preToolMetadataByCallId"].clear();
     // Clear any in-flight overflow-recovery state so a stale fallback timer
     // doesn't fire on a torn-down adapter.

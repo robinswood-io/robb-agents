@@ -1,3 +1,6 @@
+import type { PendingTurnRecovery } from '../../../../../shared/src/sessions/types/turn-recovery.ts';
+import type { ActiveSessionObjective } from '../../../../../shared/src/sessions/types/objectives.ts';
+import {setOptional, omitUndefined } from '@craft-agent/shared/utils/json';
 import { resolveAgentCostControlPolicy } from '@craft-agent/shared/config';
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces';
 import { generateMessageId } from '@craft-agent/shared/protocol';
@@ -91,16 +94,16 @@ const retryAnchorId = activeMessageState.options!.automaticRecovery!.originalUse
         : undefined;
     if (!previousObjective || userMessage.id !== explicitRetryIntent!.cleanBoundaryMessageId
         || userMessage.id !== activeMessageState.options!.automaticRecovery!.dispatchId
-        || activeMessageState.message !== sessionOpBuildRecoveryDispatchMessage(sessionOperationContext, managed, { ...retryRecovery, lastCause: 'user_retry' }, {
-            schemaVersion: 1,
+        || activeMessageState.message !== sessionOpBuildRecoveryDispatchMessage(sessionOperationContext, managed, { ...retryRecovery, lastCause: 'user_retry' }, omitUndefined({
+            schemaVersion: 1 as const,
             id: userMessage.id,
             attempt: activeMessageState.options!.automaticRecovery!.dispatchAttempt!,
-            cause: 'user_retry',
-            origin: 'retry',
+            cause: 'user_retry' as const,
+            origin: 'retry' as const,
             allocatedAt: activeMessageState.options!.automaticRecovery!.dispatchAllocatedAt!,
-            phase: 'allocated',
+            phase: 'allocated' as const,
             cleanContinuationId: explicitRetryIntent!.cleanContinuationId,
-        })) {
+        }))) {
         managed.messages.splice(managed.messages.indexOf(userMessage), 1);
         throw new Error('The clean Retry boundary failed its private capability binding');
     }
@@ -108,13 +111,13 @@ const retryAnchorId = activeMessageState.options!.automaticRecovery!.originalUse
         const fencedItems = new Set(previousFencedQueueItems.map(({ item }) => item));
         managed.messageQueue = managed.messageQueue.filter(item => !fencedItems.has(item));
     }
-    managed.activeObjective = {
+    managed.activeObjective = omitUndefined<ActiveSessionObjective>({
         ...previousObjective,
         interruptedTurnRecovery: undefined,
         terminalState: 'active',
         completedAt: undefined,
-    };
-    managed.pendingTurnRecovery = {
+    });
+    managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
         ...retryRecovery,
         ...(sessionOpHasValidationExhaustionMarker(sessionOperationContext, managed) ? { validationExhausted: true } : {}),
         userMessageId: recoveredCleanAnswerSourceId ?? retryAnchorId,
@@ -124,7 +127,7 @@ const retryAnchorId = activeMessageState.options!.automaticRecovery!.originalUse
         // of the earlier accepted human anchor.
         userRetryFromMessageCount: diagnosticFromMessageCount,
         continuationRequired: false,
-    };
+    });
     sessionOperationContext.state.explicitRetryAllowanceTokens.delete(explicitRetryAllowanceToken!);
     if (explicitRetryIntent!.grantNewAllowance !== false) {
         const recoveryPolicy = resolveAgentCostControlPolicy(loadWorkspaceConfig(managed.workspace.rootPath)?.costControl).recovery;
@@ -184,7 +187,7 @@ const retryAnchorId = activeMessageState.options!.automaticRecovery!.originalUse
         }
         if (explicitRetryContextLimitRequest && explicitRetryContextLimitRequestBefore) {
             explicitRetryContextLimitRequest.status = explicitRetryContextLimitRequestBefore.status;
-            explicitRetryContextLimitRequest.answeredAt = explicitRetryContextLimitRequestBefore.answeredAt;
+            setOptional(explicitRetryContextLimitRequest, "answeredAt", explicitRetryContextLimitRequestBefore.answeredAt);
         }
         managed.turnLifecycleManagedStatus = undefined;
         sessionOperationContext.owner["setProcessing"](managed, false);

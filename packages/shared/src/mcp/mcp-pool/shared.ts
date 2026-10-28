@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 /**
  * Centralized MCP Client Pool
  *
@@ -73,7 +74,7 @@ export type BeforeSourceToolExecution = (input: {
     /** Exact arguments that will be sent after this final host-owned fence. */
     args: Readonly<Record<string, unknown>>;
     /** Untrusted remote hints; authorization must never rely on them alone. */
-    capabilities?: ProxyToolCapabilities;
+    capabilities?: ProxyToolCapabilities | undefined;
 }) => Promise<void> | void;
 
 export const LLM_TOOL_NAME_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
@@ -87,7 +88,7 @@ export function normalizeInputSchema(inputSchema: Record<string, unknown> | unde
 }
 
 export function normalizeStructuredContent(value: unknown): Record<string, unknown> | undefined {
-    return value !== null && typeof value === 'object' && !Array.isArray(value)
+    return value !== null && typeof value === 'object' && !isUnknownArray(value)
         ? value as Record<string, unknown>
         : undefined;
 }
@@ -121,8 +122,8 @@ export function buildSafeProxyToolName(slug: string, originalName: string, usedN
 export const OUTPUT_BOUND_FIELD = /^(?:limit|maxResults|max_results|pageSize|page_size|count|top|fields|select|from|to|start|end|since|until)$/i;
 
 export function withOutputBudgetGuidance(description: string, toolName: string, inputSchema: Record<string, unknown>): string {
-    const properties = inputSchema.properties;
-    const controls = properties && typeof properties === 'object' && !Array.isArray(properties)
+    const properties = inputSchema["properties"];
+    const controls = properties && typeof properties === 'object' && !isUnknownArray(properties)
         ? Object.keys(properties as Record<string, unknown>).filter(key => OUTPUT_BOUND_FIELD.test(key)).slice(0, 6)
         : [];
     const guidance: string[] = [];
@@ -143,15 +144,15 @@ export function sdkConfigToClientConfig(config: SdkMcpServerConfig): McpClientCo
         return {
             transport: 'http',
             url: config.url,
-            headers: config.headers,
+            ...(config.headers !== undefined ? { headers: config.headers } : {}),
         };
     }
     if (config.type === 'stdio') {
         return {
             transport: 'stdio',
             command: config.command,
-            args: config.args,
-            env: config.env,
+            ...(config.args !== undefined ? { args: config.args } : {}),
+            ...(config.env !== undefined ? { env: config.env } : {}),
         };
     }
     return null;

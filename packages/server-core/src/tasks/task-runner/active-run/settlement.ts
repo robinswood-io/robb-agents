@@ -177,7 +177,7 @@ export function enterVerifying(transportOwner: ActiveRun): void {
     transportOwner["runStatus"] = 'verifying';
     transportOwner["log"]({ kind: 'run-verifying' });
     const generation = ++transportOwner["verificationGeneration"];
-    void transportOwner["sendVerification"](generation).catch((error) => {
+    void transportOwner["sendVerification"](generation).catch((error: unknown) => {
         transportOwner["failForUnexpectedAsyncError"]('reviewer verification dispatch', error);
     });
 }

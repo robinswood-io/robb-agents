@@ -17,7 +17,7 @@ export function sweepStalePermissions(transportOwner: MessagingGateway, event: S
     if (transportOwner["permissionMessages"].size === 0)
         return;
     const eventRequestId = event.type === 'permission_request'
-        ? ((event.request as {
+        ? ((event["request"] as {
             requestId?: string;
         } | undefined)?.requestId ?? null)
         : null;
@@ -78,7 +78,7 @@ export async function handlePermissionButton(transportOwner: MessagingGateway, a
         await adapter.clearButtons(record.channelId, record.messageId).catch(() => { });
     }
     const allowed = action === 'allow';
-    const delivered = transportOwner["sessionManager"].respondToPermission(record.sessionId, requestId, allowed, false);
+    const delivered = transportOwner.sessionManager.respondToPermission(record.sessionId, requestId, allowed, false);
     transportOwner["log"].info('perm response routed to session manager', {
         event: 'perm_response_routed',
         requestId,
@@ -97,10 +97,10 @@ export async function handlePermissionButton(transportOwner: MessagingGateway, a
 }
 
 export async function finishPendingCompactAccept(transportOwner: MessagingGateway, sessionId: string): Promise<void> {
-    const entry = transportOwner["pendingCompactAccepts"].get(sessionId);
+    const entry = transportOwner.pendingCompactAccepts.get(sessionId);
     if (!entry)
         return;
-    transportOwner["pendingCompactAccepts"].delete(sessionId);
+    transportOwner.pendingCompactAccepts.delete(sessionId);
     if (Date.now() - entry.createdAt > COMPACT_ACCEPT_TTL_MS) {
         transportOwner["log"].warn('dropping stale compact-accept entry', {
             event: 'plan_compact_stale',
@@ -111,8 +111,8 @@ export async function finishPendingCompactAccept(transportOwner: MessagingGatewa
     const adapter = transportOwner["adapters"].get(entry.platform);
     const opts = entry.threadId !== undefined ? { threadId: entry.threadId } : {};
     try {
-        await transportOwner["sessionManager"].acceptPlan(sessionId, entry.planPath);
-        await transportOwner["sessionManager"].clearPendingPlanExecution(sessionId);
+        await transportOwner.sessionManager.acceptPlan(sessionId, entry.planPath);
+        await transportOwner.sessionManager.clearPendingPlanExecution(sessionId);
         if (adapter?.isConnected()) {
             await adapter.sendText(entry.channelId, '✅ Plan executing after compaction.', opts);
         }

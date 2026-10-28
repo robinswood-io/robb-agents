@@ -50,7 +50,7 @@ describe('workspace external-action policy runtime refresh', () => {
     expect(busy.managed.pendingExternalActionPolicy).toBe('confirm')
 
     processing.value = false
-    const applied = (manager as unknown as {
+    const applied = (manager as {
       applyExternalActionPolicyToRuntime: (
         managed: typeof busy.managed,
         policy: ExternalActionPolicy,

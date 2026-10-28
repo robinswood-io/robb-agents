@@ -17,8 +17,8 @@ import { completedMessages, createSession, mockAppShellContext, sampleEditContex
 
 interface CompactChatPreviewProps {
   messages: Message[]
-  isProcessing?: boolean
-  placeholder?: string
+  isProcessing?: boolean | undefined
+  placeholder?: string | undefined
 }
 
 /**
@@ -178,9 +178,9 @@ export function CompactChatPreview({
 }
 
 interface EditPopoverPreviewProps {
-  inlineExecution?: boolean
-  example?: string
-  triggerLabel?: string
+  inlineExecution?: boolean | undefined
+  example?: string | undefined
+  triggerLabel?: string | undefined
 }
 
 /**

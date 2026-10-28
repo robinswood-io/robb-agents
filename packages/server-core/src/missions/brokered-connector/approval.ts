@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { canonicalOperationValue } from "@craft-agent/shared/governance";
 import type { MissionExecutionResult } from "../MissionRuntime.ts";
@@ -17,7 +18,7 @@ export function resolveApproval(transportOwner: BrokeredMissionConnectorExecutor
     let state = transportOwner["store"].read(input.missionId, input.workItemId);
     const pending = state?.pendingApproval;
     if (state?.approval && pending) {
-        if (!transportOwner["verifyPendingApproval"](pending)) {
+        if (!transportOwner.verifyPendingApproval(pending)) {
             throw new Error('Connector approval consent context is not bound to its durable request');
         }
         if (!transportOwner["verifyApproval"](state.approval)
@@ -27,11 +28,11 @@ export function resolveApproval(transportOwner: BrokeredMissionConnectorExecutor
             || state.approval.resolvedBy !== input.resolvedBy) {
             throw new Error('Connector approval was already resolved with another durable decision');
         }
-        return transportOwner["publicPendingApproval"](pending);
+        return transportOwner.publicPendingApproval(pending);
     }
     if (!state || state.status !== 'waiting-approval' || !pending)
         throw new Error('Connector approval is not pending');
-    if (!transportOwner["verifyPendingApproval"](pending)) {
+    if (!transportOwner.verifyPendingApproval(pending)) {
         throw new Error('Connector approval consent context is not bound to its durable request');
     }
     if (pending.approvalId !== input.approvalId || pending.requestHash !== input.requestHash) {
@@ -47,25 +48,25 @@ export function resolveApproval(transportOwner: BrokeredMissionConnectorExecutor
         resolvedAt: transportOwner["now"](),
         expiresAt: pending.expiresAt,
     } as const;
-    const approval: DurableApprovalDecision = { ...unsigned, signature: transportOwner["signApproval"](unsigned) };
-    state = transportOwner["store"].update(input.missionId, input.workItemId, state.revision, (current) => ({
+    const approval: DurableApprovalDecision = { ...unsigned, signature: transportOwner.signApproval(unsigned) };
+    state = transportOwner["store"].update(input.missionId, input.workItemId, state.revision, (current) => (omitUndefined<ConnectorExecutionState>({
         ...current,
         status: input.decision === 'approved' ? 'approved' : 'denied',
         approval,
         failureReason: input.decision === 'denied' ? `Connector approval denied by ${input.resolvedBy}` : undefined,
         updatedAt: transportOwner["now"](),
-    }));
-    return transportOwner["publicPendingApproval"](pending);
+    })));
+    return transportOwner.publicPendingApproval(pending);
 }
 
 export function pendingApproval(transportOwner: BrokeredMissionConnectorExecutor, missionId: string, workItemId: string): PendingMissionConnectorApproval | null {
     const state = transportOwner["store"].read(missionId, workItemId);
     if (state?.status !== 'waiting-approval' || !state.pendingApproval)
         return null;
-    if (!transportOwner["verifyPendingApproval"](state.pendingApproval)) {
+    if (!transportOwner.verifyPendingApproval(state.pendingApproval)) {
         throw new Error('Connector approval consent context is not bound to its durable request');
     }
-    return transportOwner["publicPendingApproval"](state.pendingApproval);
+    return transportOwner.publicPendingApproval(state.pendingApproval);
 }
 
 export function resolvedApproval(transportOwner: BrokeredMissionConnectorExecutor, missionId: string, workItemId: string): 'approved' | 'denied' | null {
@@ -76,7 +77,7 @@ export function resolvedApproval(transportOwner: BrokeredMissionConnectorExecuto
 export function approvalExpired(transportOwner: BrokeredMissionConnectorExecutor, missionId: string, workItemId: string): boolean {
     const state = transportOwner["store"].read(missionId, workItemId);
     if (state?.status === 'waiting-approval' && state.pendingApproval
-        && !transportOwner["verifyPendingApproval"](state.pendingApproval)) {
+        && !transportOwner.verifyPendingApproval(state.pendingApproval)) {
         throw new Error('Connector approval consent context is not bound to its durable request');
     }
     return state?.status === 'waiting-approval'
@@ -89,7 +90,7 @@ export function approvalResult(transportOwner: BrokeredMissionConnectorExecutor,
     const pending = state.pendingApproval;
     if (!pending)
         return transportOwner["failed"]('Durable approval request is unavailable', false);
-    if (!transportOwner["verifyPendingApproval"](pending)) {
+    if (!transportOwner.verifyPendingApproval(pending)) {
         return transportOwner["failed"]('Connector approval consent context is not bound to its durable request', false);
     }
     return {
@@ -131,6 +132,6 @@ export function publicPendingApproval(transportOwner: BrokeredMissionConnectorEx
 export function verifyApproval(transportOwner: BrokeredMissionConnectorExecutor, value: DurableApprovalDecision): boolean {
     const { signature, ...unsigned } = value;
     const actual = Buffer.from(signature, 'base64url');
-    const expected = Buffer.from(transportOwner["signApproval"](unsigned), 'base64url');
+    const expected = Buffer.from(transportOwner.signApproval(unsigned), 'base64url');
     return actual.byteLength === expected.byteLength && timingSafeEqual(actual, expected);
 }

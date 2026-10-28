@@ -12,26 +12,26 @@ import { inputContainerSampleLabels, sampleCodeAttachment, samplePermissionReque
 type InputContainerMode = 'freeform' | 'permission' | 'admin_approval'
 
 interface InputContainerPlaygroundProps {
-  disabled?: boolean
-  isProcessing?: boolean
-  placeholder?: string
-  currentModel?: string
-  permissionMode?: PermissionMode
-  workingDirectory?: string
-  inputMode?: InputContainerMode
-  compactMode?: boolean
-  showOptionBadges?: boolean
-  showTasks?: boolean
-  showLabels?: boolean
-  showStatuses?: boolean
-  labelCount?: number
-  showWorkingDirectory?: boolean
-  seedRecentDirs?: boolean
-  recentDirScenario?: RecentDirScenario
-  showAttachments?: boolean
-  attachmentCount?: number
-  showFollowUps?: boolean
-  followUpCount?: number
+  disabled?: boolean | undefined
+  isProcessing?: boolean | undefined
+  placeholder?: string | undefined
+  currentModel?: string | undefined
+  permissionMode?: PermissionMode | undefined
+  workingDirectory?: string | undefined
+  inputMode?: InputContainerMode | undefined
+  compactMode?: boolean | undefined
+  showOptionBadges?: boolean | undefined
+  showTasks?: boolean | undefined
+  showLabels?: boolean | undefined
+  showStatuses?: boolean | undefined
+  labelCount?: number | undefined
+  showWorkingDirectory?: boolean | undefined
+  seedRecentDirs?: boolean | undefined
+  recentDirScenario?: RecentDirScenario | undefined
+  showAttachments?: boolean | undefined
+  attachmentCount?: number | undefined
+  showFollowUps?: boolean | undefined
+  followUpCount?: number | undefined
 }
 
 export function InputContainerPlayground({
@@ -231,7 +231,7 @@ export function InputContainerPlayground({
             placeholder,
             disabled,
             isProcessing,
-            structuredInput,
+            ...(structuredInput !== undefined ? { structuredInput: structuredInput } : {}),
             onStructuredResponse: (response) => {
               console.log('[Playground] Structured response:', response)
             },

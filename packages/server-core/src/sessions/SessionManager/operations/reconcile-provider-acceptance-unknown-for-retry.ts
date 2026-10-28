@@ -1,3 +1,6 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import type { ProviderDispatchWriteAhead } from '../../../../../core/src/types/message/message-store.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { exactProviderDispatchAcceptanceUnknown, cancelSourceActivationPending } from '../policy.ts';
 import type { PendingTurnRecovery } from '@craft-agent/shared/sessions';
@@ -12,13 +15,13 @@ import { untrackSyntheticAutomaticMessage as sessionOpUntrackSyntheticAutomaticM
 /** Publish the verified receipt on the existing final; no extra message or turn. */
 function sessionOpApplyValidatedNativeOutcome(sessionOperationContext: SessionOperationContext, managed: ManagedSession, finalMessage: Message, declaration: NonNullable<Message['objectiveOutcome']>): void {
     finalMessage.objectiveOutcome = declaration;
-    sessionOperationContext.owner["sendEvent"]({
+    sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'text_complete' }>>({
         type: 'text_complete', sessionId: managed.id, text: finalMessage.content,
         isIntermediate: finalMessage.isIntermediate, turnId: finalMessage.turnId,
         parentToolUseId: finalMessage.parentToolUseId, timestamp: finalMessage.timestamp,
         messageId: finalMessage.id, routingMeta: finalMessage.routingMeta,
         objectiveOutcome: declaration, objectiveOutcomeError: null,
-    }, managed.workspace.id);
+    }), managed.workspace.id);
 }
 
 /** Remove a recovery from cold automatic admission while retaining its exact
@@ -42,7 +45,7 @@ function sessionOpClearPendingTurnRecovery(sessionOperationContext: SessionOpera
         && managed.activeObjective.terminalState !== 'complete_verified' && sessionOpHasValidationExhaustionMarker(sessionOperationContext, managed)) {
         if (!managed.pendingTurnRecovery
             || !sessionOpPendingRecoveryBelongsToCurrentObjective(sessionOperationContext, managed, managed.pendingTurnRecovery)) {
-            managed.activeObjective.interruptedTurnRecovery = undefined;
+            delete managed.activeObjective.interruptedTurnRecovery;
             managed.pendingTurnRecovery = undefined;
             sessionOpReleaseSettledMissionRecoveryOwnership(sessionOperationContext, managed);
             return;
@@ -64,7 +67,7 @@ function sessionOpClearPendingTurnRecovery(sessionOperationContext: SessionOpera
             && !sessionOpMovePendingRecoveryToExplicitRetrySnapshot(sessionOperationContext, managed, pending)) {
             // Never leave an unauthenticated pending marker behind merely because
             // a future refactor changes provenance between the two checks above.
-            managed.activeObjective.interruptedTurnRecovery = undefined;
+            delete managed.activeObjective.interruptedTurnRecovery;
             managed.pendingTurnRecovery = undefined;
         }
         sessionOpReleaseSettledMissionRecoveryOwnership(sessionOperationContext, managed);
@@ -75,12 +78,12 @@ function sessionOpClearPendingTurnRecovery(sessionOperationContext: SessionOpera
         // The snapshot belongs to this objective and its latest accepted anchor;
         // a later explicit Retry must authenticate both before reusing it.
         if (!sessionOpMovePendingRecoveryToExplicitRetrySnapshot(sessionOperationContext, managed, managed.pendingTurnRecovery)) {
-            managed.activeObjective.interruptedTurnRecovery = undefined;
+            delete managed.activeObjective.interruptedTurnRecovery;
             managed.pendingTurnRecovery = undefined;
         }
     }
     else if (!preserveValidationStop && managed.activeObjective) {
-        managed.activeObjective.interruptedTurnRecovery = undefined;
+        delete managed.activeObjective.interruptedTurnRecovery;
         managed.pendingTurnRecovery = undefined;
     }
     else {
@@ -160,13 +163,13 @@ async function sessionOpRetireAmbiguousProviderDispatchesForRetry(sessionOperati
             if (!marker || (marker.state !== 'acceptance-unknown'
                 && marker.state !== 'accepted' && marker.state !== 'retired-accepted'))
                 continue;
-            const tombstone: NonNullable<Message['providerDispatch']> = {
+            const tombstone: NonNullable<Message['providerDispatch']> = omitUndefined<ProviderDispatchWriteAhead>({
                 ...marker,
                 state: 'retired-uncertain',
                 acceptedAt: undefined,
                 retiredAt,
                 retirementReason: 'explicit-retry-reconciliation',
-            };
+            });
             // Keep the uncertain-effect audit receipt, but never on the exact
             // provider envelope. A stale SDK recovery reconstructs user history;
             // leaving a tombstoned hidden prompt in that history could inject the
@@ -186,10 +189,10 @@ async function sessionOpRetireAmbiguousProviderDispatchesForRetry(sessionOperati
             }
             const dispatch = managed.pendingTurnRecovery?.recoveryDispatch;
             if (dispatch?.id === message.id) {
-                managed.pendingTurnRecovery = {
+                managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
                     ...managed.pendingTurnRecovery!,
                     recoveryDispatch: undefined,
-                };
+                });
             }
             if (message.internalOrigin?.kind === 'source-activation') {
                 const sourcePending = managed.autoRetryPending;
@@ -288,10 +291,10 @@ async function sessionOpReconcileProviderAcceptanceUnknownForRetry(sessionOperat
             // and replay it after a crash between this fsync and the new generic
             // Retry allocation. Consume the identity now; Retry allocates a fresh
             // inspection continuation only after this transaction commits.
-            managed.pendingTurnRecovery = {
+            managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
                 ...managed.pendingTurnRecovery!,
                 recoveryDispatch: undefined,
-            };
+            });
         }
         if (message.internalOrigin?.kind === 'source-activation') {
             cancelSourceActivationPending(managed);
@@ -333,7 +336,7 @@ function sessionOpHasExhaustedValidation(sessionOperationContext: SessionOperati
     return managed.activeObjective?.terminalState === 'exhausted' && sessionOpHasValidationExhaustionMarker(sessionOperationContext, managed);
 }
 
-function sessionOpHasValidationExhaustionMarker(sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
+function sessionOpHasValidationExhaustionMarker(_sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
     const pending = managed.pendingTurnRecovery;
     return !!pending?.exhaustedAt && (pending.validationExhausted === true
         || pending.budgetHistoryUnavailable === true

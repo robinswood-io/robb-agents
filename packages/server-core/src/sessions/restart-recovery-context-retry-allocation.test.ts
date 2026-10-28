@@ -1,10 +1,11 @@
-import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
-import { afterEach, describe, expect, it } from "bun:test";
-import { readFileSync, writeFileSync } from "node:fs";
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
+import { sessionRuntimeStateForTest,requiredTestValue } from "./testing/runtime-state-access.ts";
+import { afterEach,describe,expect,it } from "bun:test";
+import { readFileSync,writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getSessionFilePath } from "@craft-agent/shared/sessions/storage";
 import { createAutonomyFallbackIntent } from "./autonomy-browser-fallback";
-import { cleanupRestartRecovery, type Managed, deferred, harness } from './testing/restart-recovery-fixture.ts';
+import { cleanupRestartRecovery,deferred,harness } from './testing/restart-recovery-fixture.ts';
 
 afterEach(cleanupRestartRecovery);
 
@@ -88,10 +89,10 @@ describe('durable restart recovery', () => {
       },
     }
     const preparing = deferred(); const release = deferred()
-    let preparations = 0; let persistedAtPreparation: Managed['pendingTurnRecovery']; let retryPrompt = ''; let dispatch: Promise<void> | undefined
+    let preparations = 0; let persistedAtPreparation: ReturnType<typeof parseRecoveryJournalObservation>['pendingTurnRecovery']; let retryPrompt = ''; let dispatch: Promise<void> | undefined
     h.runtime.getOrCreateAgent = async () => {
       preparations++
-      persistedAtPreparation = JSON.parse(
+      persistedAtPreparation = parseRecoveryJournalObservation(
         readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8').split('\n')[0]!,
       ).pendingTurnRecovery
       preparing.resolve(); await release.promise
@@ -109,7 +110,7 @@ describe('durable restart recovery', () => {
       await preparing.promise
       expect(preparations).toBe(1)
       expect(retryPrompt).toContain('attempt="3"')
-      expect(managed.pendingTurnRecovery).toMatchObject({
+      expect<unknown>(managed.pendingTurnRecovery).toMatchObject({
         attempts: 2,
         lastCause: 'user_retry',
         recoveryDispatch: {
@@ -118,7 +119,7 @@ describe('durable restart recovery', () => {
           cause: 'user_retry',
           origin: 'retry',
           phase: 'started',
-          startedAt: expect.any(Number),
+          startedAt: (expect.any(Number) as unknown),
         },
       })
       expect(managed.pendingTurnRecovery?.recoveryDispatch?.id).not.toBe('automatic-dispatch-2')
@@ -168,9 +169,9 @@ describe('durable restart recovery', () => {
       expect(boundary).toBe('fresh-runtime')
       expect(providerBuilds).toBe(1)
       expect(managed.userInputRequests?.filter(request => request.status === 'pending') ?? []).toEqual([])
-      expect(managed.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
+      expect<unknown>(managed.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
         cause: 'user_retry', origin: 'retry', phase: 'started',
-        cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-/),
+        cleanContinuationId: (expect.stringMatching(/^clean-continuation-v1-/) as unknown),
       })
       const cleanDispatchId = managed.pendingTurnRecovery!.recoveryDispatch!.id
       const cleanBoundary = managed.messages.find(message => message.id === cleanDispatchId)
@@ -233,13 +234,13 @@ describe('durable restart recovery', () => {
     try {
       expect(await h.manager.retryTurn(managed.id, rootId)).toEqual({ status: 'started' })
       await freshRuntimeEntered.promise
-      expect(managed.userInputRequests).toEqual([expect.objectContaining({
+      expect<unknown>(managed.userInputRequests).toEqual([(expect.objectContaining({
         id: legacyRequestId, status: 'answered', responseMessageId: legacyAnswerId,
-      })])
+      }) as unknown)])
       expect(managed.userInputRequests.some(request => request.status === 'pending')).toBe(false)
-      expect(managed.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
+      expect<unknown>(managed.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
         cause: 'user_retry', origin: 'retry', phase: 'started',
-        cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-/),
+        cleanContinuationId: (expect.stringMatching(/^clean-continuation-v1-/) as unknown),
       })
       const cleanDispatchId = managed.pendingTurnRecovery!.recoveryDispatch!.id
       const cleanBoundary = managed.messages.find(message => message.id === cleanDispatchId)

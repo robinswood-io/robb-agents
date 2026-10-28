@@ -13,7 +13,7 @@ jobs:
     name: Report upstream changes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
       - name: Fetch upstream main without changing Robb history
@@ -29,7 +29,7 @@ jobs:
             --upstream-ref upstream/main \
             --output upstream-watch-report.md
           cat upstream-watch-report.md >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: upstream-watch-report
           retention-days: 30

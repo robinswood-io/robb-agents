@@ -1,3 +1,5 @@
+import type { PendingTurnRecovery } from '../../../../../shared/src/sessions/types/turn-recovery.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import type { ManagedSession } from '../managed-session.ts';
 import { isManagedSessionYolo as sessionOpIsManagedSessionYolo, stopYoloHumanHandoff as sessionOpStopYoloHumanHandoff } from './is-managed-session-yolo.ts';
@@ -35,7 +37,7 @@ async function sessionOpRetireYoloHumanHandoffs(sessionOperationContext: Session
     const authCancelled = sessionOpCancelPendingAuthForHumanContinuation(sessionOperationContext, managed);
     if (permissionWait && managed.pendingTurnRecovery?.waitingForPermission === permissionWait) {
         sessionOpMarkPermissionToolNotExecuted(sessionOperationContext, managed, permissionWait);
-        managed.pendingTurnRecovery = { ...managed.pendingTurnRecovery, waitingForPermission: undefined };
+        managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({ ...managed.pendingTurnRecovery, waitingForPermission: undefined });
     }
     if (!cancelled && !authCancelled && !permissionWait)
         return false;
@@ -45,7 +47,7 @@ async function sessionOpRetireYoloHumanHandoffs(sessionOperationContext: Session
         && sessionOpPendingRecoveryBelongsToCurrentObjective(sessionOperationContext, managed, pending);
     if (resumable) {
         objective.terminalState = 'active';
-        objective.completedAt = undefined;
+        delete objective.completedAt;
         managed.pendingTurnRecovery = { ...pending, continuationRequired: true, lastCause: 'app_restart' };
     }
     else if (objective?.terminalState === 'blocked_human') {

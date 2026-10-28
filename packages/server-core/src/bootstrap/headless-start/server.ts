@@ -1,3 +1,5 @@
+import type { WsRpcServerOptions } from '../../transport/server/shared.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { createHash, timingSafeEqual } from "node:crypto";
 import { join } from "node:path";
 import { OAuthFlowStore } from "@craft-agent/shared/auth";
@@ -39,7 +41,7 @@ function ensureGlobalConfigExists(platform: PlatformServices): void {
 export async function bootstrapServer<TSessionManager, THandlerDeps>(
   options: ServerBootstrapOptions<TSessionManager, THandlerDeps>,
 ): Promise<ServerInstance<TSessionManager>> {
-  const serverToken = options.serverToken ?? process.env.CRAFT_SERVER_TOKEN
+  const serverToken = options.serverToken ?? process.env["CRAFT_SERVER_TOKEN"]
   if (!serverToken) {
     throw new Error('Server token is required. Pass options.serverToken or set CRAFT_SERVER_TOKEN.')
   }
@@ -49,10 +51,10 @@ export async function bootstrapServer<TSessionManager, THandlerDeps>(
     throw new Error(`Weak server token: ${entropy.error}`)
   }
 
-  const platform = options.platformFactory?.() ?? createHeadlessPlatform({ appVersion: options.serverVersion })
+  const platform = options.platformFactory?.() ?? createHeadlessPlatform(omitUndefined({ appVersion: options.serverVersion }))
 
   const bundledAssetsRoot = options.bundledAssetsRoot
-    ?? process.env.CRAFT_BUNDLED_ASSETS_ROOT
+    ?? process.env["CRAFT_BUNDLED_ASSETS_ROOT"]
     ?? process.cwd()
   setBundledAssetsRoot(bundledAssetsRoot)
 
@@ -69,8 +71,8 @@ export async function bootstrapServer<TSessionManager, THandlerDeps>(
   const modelRefreshService = options.initModelRefreshService()
   const sessionManager = options.createSessionManager()
 
-  const rpcHost = options.rpcHost ?? process.env.CRAFT_RPC_HOST ?? '127.0.0.1'
-  const rpcPortRaw = options.rpcPort ?? parseInt(process.env.CRAFT_RPC_PORT ?? '9100', 10)
+  const rpcHost = options.rpcHost ?? process.env["CRAFT_RPC_HOST"] ?? '127.0.0.1'
+  const rpcPortRaw = options.rpcPort ?? parseInt(process.env["CRAFT_RPC_PORT"] ?? '9100', 10)
   if (!Number.isFinite(rpcPortRaw) || rpcPortRaw < 0 || rpcPortRaw > 65535) {
     throw new Error(`Invalid RPC port: ${rpcPortRaw}`)
   }
@@ -84,7 +86,7 @@ export async function bootstrapServer<TSessionManager, THandlerDeps>(
   }
 
   const expectedTokenDigest = createHash('sha256').update(serverToken).digest()
-  const wsServer = new WsRpcServer({
+  const wsServer = new WsRpcServer(omitUndefined<WsRpcServerOptions>({
     host: rpcHost,
     port: rpcPort,
     requireAuth: true,
@@ -106,7 +108,7 @@ export async function bootstrapServer<TSessionManager, THandlerDeps>(
       options.cleanupClientResources?.(clientId)
       // Best-effort: notify SM so it can drop browser-host pins for this client.
       // Duck-typed because TSessionManager is generic at the bootstrap layer.
-      const smWithDisconnect = sessionManager as unknown as { onClientDisconnected?: (id: string) => void }
+      const smWithDisconnect = sessionManager as { onClientDisconnected?: (id: string) => void }
       if (typeof smWithDisconnect.onClientDisconnected === 'function') {
         try {
           smWithDisconnect.onClientDisconnected(clientId)
@@ -115,7 +117,7 @@ export async function bootstrapServer<TSessionManager, THandlerDeps>(
         }
       }
     },
-  })
+  }))
 
   try {
     await wsServer.listen()
@@ -124,7 +126,7 @@ export async function bootstrapServer<TSessionManager, THandlerDeps>(
     throw error
   }
   startLongRunningProcessSupervisor({
-    healthReportPath: process.env.CRAFT_HEALTH_REPORT_PATH
+    healthReportPath: process.env["CRAFT_HEALTH_REPORT_PATH"]
       ?? join(CONFIG_DIR, 'health', 'long-running.json'),
   })
 
@@ -244,7 +246,7 @@ export interface HealthHttpServerOptions {
 export async function startHealthHttpServer(options: HealthHttpServerOptions): Promise<{ stop: () => void } | null> {
   if (options.port <= 0) return null
 
-  const bindHost = options.host ?? process.env.CRAFT_HEALTH_HOST ?? '127.0.0.1'
+  const bindHost = options.host ?? process.env["CRAFT_HEALTH_HOST"] ?? '127.0.0.1'
 
   // Dynamic import — getHealthCheck uses HandlerDeps shape
   const { getHealthCheck } = await import("../../handlers/rpc/server")

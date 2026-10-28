@@ -1,3 +1,4 @@
+import { z } from 'zod'
 // run-workspace-tests.sh gives .isolated.ts suites a fresh process: the manager
 // suite mocks both BrowserCDP and electron, while this suite needs their real exports.
 import { afterEach, describe, expect, it, mock } from 'bun:test'
@@ -19,17 +20,16 @@ function receipt(): CanvasBitmapReceipt {
 }
 
 type BrowserTarget = ConstructorParameters<typeof BrowserCDP>[0]
-type CDPFixtureTarget = Pick<BrowserTarget, 'getURL'> & { debugger: Pick<BrowserTarget['debugger'], 'attach' | 'detach' | 'sendCommand'> & { on(): void; isAttached?(): boolean } }
 
 function transport(hook: (method: string, call: number) => unknown = () => undefined) {
   const calls: Array<{ method: string; args: Record<string, unknown> }> = []
   let url = 'https://fixture.invalid/'
-  const cdp = new BrowserCDP({ getURL: () => url, debugger: { isAttached: () => true, attach() {}, detach() {}, on() {}, async sendCommand(method: string, args: Record<string, unknown>) {
+  const cdp = new BrowserCDP({ getURL: () => url, getTitle: () => 'Fixture', sendInputEvent: () => { throw new Error('Unexpected native input'); }, debugger: { attach() {}, detach() {}, on() {}, async sendCommand(method: string, args: Record<string, unknown>) {
     calls.push({ method, args }); const result = hook(method, calls.length); if (result !== undefined) return result
     if (method === 'Page.getFrameTree') return { frameTree: { frame: { id: 'frame', loaderId: 'document' } } }
     if (method === 'Page.createIsolatedWorld') return { executionContextId: 42 }
     return { result: { value: receipt() } }
-  } } } satisfies CDPFixtureTarget as unknown as BrowserTarget)
+  } } } satisfies BrowserTarget)
   cleanups.push(() => cdp.detach())
   return { cdp, calls, navigate: () => { url += 'new' } }
 }
@@ -38,8 +38,8 @@ describe('canvas bitmap receipt and document boundaries', () => {
     const { cdp, calls } = transport()
     const result = await cdp.captureCanvasBitmap('#screen')
     expect(result.receipt.width).toBe(1)
-    expect(calls.find(c => c.method === 'Page.createIsolatedWorld')?.args.grantUniveralAccess).toBe(false)
-    expect(calls.find(c => c.method === 'Runtime.evaluate')?.args.contextId).toBe(42)
+    expect(calls.find(c => c.method === 'Page.createIsolatedWorld')?.args["grantUniveralAccess"]).toBe(false)
+    expect(calls.find(c => c.method === 'Runtime.evaluate')?.args["contextId"]).toBe(42)
     expect(calls.some(c => /Input\.|captureScreenshot|capturePage/.test(c.method))).toBe(false)
   })
   it('rejects invalid selector transport before any CDP call', async () => {
@@ -91,7 +91,7 @@ it('captures real hidden Electron canvases without capturePage, page mutation or
   const timeout = setTimeout(() => child.kill(), 35_000)
   const [exit, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()])
   clearTimeout(timeout)
-  const result = JSON.parse(readFileSync(join(dir, 'result.json'), 'utf8'))
+  const result = z.object({ checks: z.array(z.string()) }).passthrough().parse(JSON.parse(readFileSync(join(dir, 'result.json'), 'utf8')))
   expect({ exit, result, stderr: exit === 0 ? '' : stderr.slice(-1500) }).toMatchObject({ exit: 0, result: { ok: true, realProfileUsed: false } })
   expect(result.checks.length).toBeGreaterThanOrEqual(18)
   process.stdout.write(`Canvas Electron fixture receipt: ${JSON.stringify(result)}\n`)

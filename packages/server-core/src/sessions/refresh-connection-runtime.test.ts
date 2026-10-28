@@ -1,3 +1,6 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import { StoredConfigSchema } from '../../../shared/src/config/validators.ts';
 import { withSessionOperationsForTest } from "./testing/session-operation-access.ts";
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, spyOn } from "bun:test";
@@ -32,6 +35,7 @@ let restoreConfig: (() => void) | undefined
 function writeTestConfig(): void {
   mkdirSync(tmpConfigRoot, { recursive: true })
   writeFileSync(join(tmpConfigRoot, 'config.json'), JSON.stringify({
+    schemaVersion: 1,
     workspaces: [],
     activeWorkspaceId: null,
     activeSessionId: null,
@@ -116,14 +120,14 @@ function injectSession(
 
 beforeAll(async () => {
   tmpConfigRoot = mkdtempSync(join(tmpdir(), 'sm-refresh-config-'))
-  process.env.CRAFT_CONFIG_DIR = tmpConfigRoot
+  process.env["CRAFT_CONFIG_DIR"] = tmpConfigRoot
   writeTestConfig()
 
   // An earlier test may have frozen CONFIG_DIR before this fixture existed.
   // Keep real backend resolution while loading only this test's temporary file.
   const storage = await import('@craft-agent/shared/config/storage')
   const configLoader = spyOn(storage, 'loadStoredConfig').mockImplementation(() =>
-    JSON.parse(readFileSync(join(tmpConfigRoot, 'config.json'), 'utf8')),
+    StoredConfigSchema.parse(JSON.parse(readFileSync(join(tmpConfigRoot, 'config.json'), 'utf8'))) as NonNullable<ReturnType<typeof storage.loadStoredConfig>>,
   )
   restoreConfig = () => configLoader.mockRestore()
 
@@ -139,9 +143,9 @@ afterAll(() => {
     rmSync(tmpConfigRoot, { recursive: true, force: true })
   }
   if (originalCraftConfigDir === undefined) {
-    delete process.env.CRAFT_CONFIG_DIR
+    delete process.env["CRAFT_CONFIG_DIR"]
   } else {
-    process.env.CRAFT_CONFIG_DIR = originalCraftConfigDir
+    process.env["CRAFT_CONFIG_DIR"] = originalCraftConfigDir
   }
 })
 
@@ -287,7 +291,7 @@ describe('refreshConnectionRuntime', () => {
     const agent = createAgentStub()
     const managed = injectSession(sm, stored.id, tmpRoot, 'slug-A', agent)
     const refreshRuntime = jest.fn().mockResolvedValue(undefined)
-    ;(sm as unknown as {
+    ;(sm as {
       tryRefreshAgentRuntime: (session: unknown, reason: string) => Promise<void>
     }).tryRefreshAgentRuntime = refreshRuntime
 
@@ -386,29 +390,13 @@ describe('refreshConnectionRuntime', () => {
       capabilityEnvelopeSha256: specializedProfileCapabilityEnvelopeIdentity(capabilities),
       capabilities,
     }
-    const internal = sm as unknown as {
-      admitBackendToolExecution: (
-        session: unknown,
-        agent: unknown,
-        request: { toolName: string; toolInput: Record<string, unknown> },
-      ) => Promise<void>
-      assertSpecializedMissionCapabilities: (
-        session: unknown,
-        toolName: string,
-        input: Record<string, unknown>,
-      ) => Promise<void>
-      durablyRecordAutomaticRecoveryToolAdmission: (
-        session: unknown,
-        agent: unknown,
-        request: { toolName: string; toolInput: Record<string, unknown> },
-      ) => Promise<void>
-    }
+    const internal = sessionManagerForTest(sm)
     const durableAdmission = jest.fn().mockResolvedValue(undefined)
     internal.durablyRecordAutomaticRecoveryToolAdmission = durableAdmission
 
     await expect(internal.admitBackendToolExecution(
       managed,
-      {},
+      completeSessionAgentFixture(managed.workspace, {}),
       { toolName: 'Read', toolInput: { file_path: join(tmpRoot, 'input.txt') } },
     )).rejects.toThrow('drifted')
     expect(durableAdmission).not.toHaveBeenCalled()
@@ -422,7 +410,7 @@ describe('refreshConnectionRuntime', () => {
     })
     await internal.admitBackendToolExecution(
       managed,
-      {},
+      completeSessionAgentFixture(managed.workspace, {}),
       { toolName: 'mcp__external__mutate', toolInput: {} },
     )
     expect(order).toEqual(['capability', 'durable-admission'])

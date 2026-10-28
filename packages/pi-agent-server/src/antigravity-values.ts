@@ -87,22 +87,22 @@ export function numericValue(value: unknown): number {
 export function normalizeUsage(value: unknown): Required<AntigravityUsage> {
   const usage = asRecord(value);
   return {
-    input_tokens: numericValue(usage?.input_tokens),
-    output_tokens: numericValue(usage?.output_tokens),
-    thinking_tokens: numericValue(usage?.thinking_tokens),
-    cache_read_tokens: numericValue(usage?.cache_read_tokens),
-    total_tokens: numericValue(usage?.total_tokens),
+    input_tokens: numericValue(usage?.["input_tokens"]),
+    output_tokens: numericValue(usage?.["output_tokens"]),
+    thinking_tokens: numericValue(usage?.["thinking_tokens"]),
+    cache_read_tokens: numericValue(usage?.["cache_read_tokens"]),
+    total_tokens: numericValue(usage?.["total_tokens"]),
   };
 }
 
 
 export function toolOutput(toolInfo: Record<string, unknown> | undefined): unknown {
-  return toolInfo?.output ?? toolInfo?.result ?? '';
+  return toolInfo?.["output"] ?? toolInfo?.["result"] ?? '';
 }
 
 
 export function classifyResultError(result: Record<string, unknown>): { code: string; message: string } {
-  const detail = String(result.error ?? '').toLowerCase();
+  const detail = String(result["error"] ?? '').toLowerCase();
   if (detail.includes('authentication required') || detail.includes('sign in')) {
     return {
       code: 'GOOGLE_ANTIGRAVITY_AUTH_REQUIRED',

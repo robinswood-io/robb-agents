@@ -17,6 +17,16 @@ const session = (
 ): TestSession => ({ id, ...options })
 
 describe('summarizeSessionsForSidebar', () => {
+  it('retains row metadata when related sessions carry only lineage information', () => {
+    const parent = { id: 'parent', hasUnread: true, lastMessageAt: 42 };
+    const summary = summarizeSessionsForSidebar([parent], [
+      session('parent'), session('child', { parentSessionId: 'parent', isProcessing: true }),
+    ]);
+    expect(summary.topLevelSessions[0]?.hasUnread).toBe(true);
+    expect(summary.topLevelSessions[0]?.lastMessageAt).toBe(42);
+    expect(summary.subagentsBySessionId.get('parent')).toEqual({ totalCount: 1, runningCount: 1 });
+  });
+
   it('keeps only parent sessions directly accessible from the sidebar', () => {
     const summary = summarizeSessionsForSidebar([
       session('child-a', { parentSessionId: 'parent' }),

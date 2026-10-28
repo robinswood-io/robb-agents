@@ -29,12 +29,12 @@ describe('McpPoolServer dual-era HTTP compatibility', () => {
       callTool: async (name: string, args: Record<string, unknown>) => {
         calls.push({ name, args })
         return {
-          content: String(args.value ?? ''),
+          content: String(args["value"] ?? ''),
           isError: false,
-          structuredContent: { echoed: String(args.value ?? '') },
+          structuredContent: { echoed: String(args["value"] ?? '') },
         }
       },
-    } as unknown as McpClientPool
+    } satisfies Pick<McpClientPool, 'getProxyToolDefs' | 'callTool'>
 
     const server = new McpPoolServer(pool)
     const legacy = new LegacyClient(

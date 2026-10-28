@@ -89,10 +89,10 @@ export function resolveAntigravityCommand(
   platform: NodeJS.Platform = process.platform,
   pathExists: (path: string) => boolean = existsSync,
 ): string {
-  const override = environment.ROBB_ANTIGRAVITY_COMMAND?.trim();
+  const override = environment["ROBB_ANTIGRAVITY_COMMAND"]?.trim();
   if (override) return override;
 
-  const userHome = environment.HOME || environment.USERPROFILE || homedir();
+  const userHome = environment["HOME"] || environment["USERPROFILE"] || homedir();
   const executable = platform === 'win32' ? 'agy.exe' : 'agy';
   const candidates = platform === 'win32'
     ? [

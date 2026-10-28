@@ -1,3 +1,4 @@
+import { parseJsonObject } from '@craft-agent/shared/utils/json'
 /**
  * Integration test for the main-process i18n bootstrap.
  *
@@ -77,7 +78,7 @@ describe('main-process i18n bootstrap', () => {
         `,
       )
       expect(r.exitCode).toBe(0)
-      const { persisted, resolved } = JSON.parse(r.stdout)
+      const { persisted, resolved } = parseJsonObject(r.stdout)
       expect(persisted).toBeNull()
       // Robinswood fork: without LanguageDetector and without a hydration call,
       // main-process i18n sits at the French fallback.

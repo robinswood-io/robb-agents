@@ -11,9 +11,9 @@ import { sampleSessions, sampleSources, sampleSkills, SOURCE_TYPE_CONFIG, SOURCE
 // ============================================================================
 
 interface MixedEntityListPreviewProps {
-  showGroups?: boolean
-  selectedIndex?: number
-  showEmpty?: boolean
+  showGroups?: boolean | undefined
+  selectedIndex?: number | undefined
+  showEmpty?: boolean | undefined
 }
 
 type MixedEntity =
@@ -57,7 +57,7 @@ export function MixedEntityListPreview({
   const getKey = (item: MixedEntity) => `${item.kind}-${item.data.id}`
 
   let flatIndex = -1
-  const renderItem = (item: MixedEntity, index: number, isFirst: boolean) => {
+  const renderItem = (item: MixedEntity, _index: number, isFirst: boolean) => {
     flatIndex++
     const currentFlatIndex = flatIndex
     switch (item.kind) {

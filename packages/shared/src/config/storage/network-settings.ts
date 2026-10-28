@@ -12,11 +12,14 @@ function normalizeProxyString(value: string | undefined): string | undefined {
 function normalizeNetworkProxySettings(
   settings: NetworkProxySettings,
 ): NetworkProxySettings {
+  const httpProxy = normalizeProxyString(settings.httpProxy);
+  const httpsProxy = normalizeProxyString(settings.httpsProxy);
+  const noProxy = normalizeProxyString(settings.noProxy);
   return {
     enabled: Boolean(settings.enabled),
-    httpProxy: normalizeProxyString(settings.httpProxy),
-    httpsProxy: normalizeProxyString(settings.httpsProxy),
-    noProxy: normalizeProxyString(settings.noProxy),
+    ...(httpProxy !== undefined ? { httpProxy } : {}),
+    ...(httpsProxy !== undefined ? { httpsProxy } : {}),
+    ...(noProxy !== undefined ? { noProxy } : {}),
   };
 }
 

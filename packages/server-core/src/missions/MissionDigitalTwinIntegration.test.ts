@@ -1,3 +1,4 @@
+import { SessionManager as FixtureSessionManager } from "../sessions/SessionManager";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,11 +18,11 @@ describe('Mission digital twin host integration', () => {
 
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), 'mission-twin-integration-'));
-    sessionManager = {
+    sessionManager = Object.assign(new FixtureSessionManager(), ({
       waitForInit: async () => {},
       getSessions: () => [],
       cancelProcessing: async () => {},
-    } as unknown as ISessionManager;
+    } satisfies Partial<ISessionManager>));
   });
 
   afterEach(() => rmSync(root, { recursive: true, force: true }));
@@ -330,7 +331,7 @@ describe('Mission digital twin host integration', () => {
     const before = controller.recordVerdict(
       'twin-integration', 'review-objective-0', 'review-session', objectivePass('twin-integration'),
     );
-    expect(before.workItems.independent?.status).toBe('accepted');
+    expect(before.workItems["independent"]?.status).toBe('accepted');
     expect(before.workItems['final-review-0']?.status).toBe('pending');
 
     const proposed = before.spec.workItems.map((item) =>
@@ -367,10 +368,10 @@ describe('Mission digital twin host integration', () => {
     });
     expect(replanned.planVersion).toBe(2);
     expect(replanned.replans).toHaveLength(1);
-    expect(replanned.workItems.independent?.status).toBe('accepted');
-    expect(replanned.workItems.source?.status).toBe('pending');
-    expect(replanned.workItems.dependent?.status).toBe('pending');
-    expect(replanned.workItems.objective?.status).toBe('pending');
+    expect(replanned.workItems["independent"]?.status).toBe('accepted');
+    expect(replanned.workItems["source"]?.status).toBe('pending');
+    expect(replanned.workItems["dependent"]?.status).toBe('pending');
+    expect(replanned.workItems["objective"]?.status).toBe('pending');
     expect(replanned.workItems['review-objective-0']).toBeUndefined();
     expect(replanned.workItems['final-review-0']).toBeUndefined();
     expect(() => controller.replanMission('twin-integration', {
@@ -390,7 +391,7 @@ describe('Mission digital twin host integration', () => {
       dispatchId: 'connector-dispatch',
       binding: { executorKind: 'connector', executionId: 'connector-execution' },
     });
-    expect(snapshot.workItems.source?.status).toBe('reserved');
+    expect(snapshot.workItems["source"]?.status).toBe('reserved');
     expectPreviewRefusalWithoutWrites(root, controller, snapshot, snapshot.spec.workItems, /leases are active/);
     expect(() => controller.replanMission('twin-external', {
       expectedRevision: snapshot.revision,
@@ -398,7 +399,7 @@ describe('Mission digital twin host integration', () => {
       actorId: 'local-owner', reason: 'Unsafe while active',
     })).toThrow(/leases are active/);
     snapshot = controller.confirmWorkItemDispatch('twin-external', 'source', 'connector-dispatch');
-    expect(snapshot.workItems.source?.status).toBe('running');
+    expect(snapshot.workItems["source"]?.status).toBe('running');
     expectPreviewRefusalWithoutWrites(root, controller, snapshot, snapshot.spec.workItems, /leases are active/);
     expect(() => controller.replanMission('twin-external', {
       expectedRevision: snapshot.revision,
@@ -424,7 +425,7 @@ describe('Mission digital twin host integration', () => {
     controller.createMission(externalFixture('twin-ambiguous'));
     controller.startMission('twin-ambiguous');
     let snapshot = controller.dispatchWorkItem('twin-ambiguous', 'source', 'connector-dispatch');
-    snapshot = controller.failWorkItemAttempt('twin-ambiguous', 'source', snapshot.workItems.source!.dispatchId!, {
+    snapshot = controller.failWorkItemAttempt('twin-ambiguous', 'source', snapshot.workItems["source"]!.dispatchId!, {
       reason: 'Provider outcome unknown', retryable: false, ambiguousMutation: true,
     });
     expectPreviewRefusalWithoutWrites(

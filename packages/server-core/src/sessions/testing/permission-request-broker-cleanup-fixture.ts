@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./private-runtime-access.ts";
 import { withSessionOperationsForTest } from './session-operation-access.ts';
 import { ScriptedSessionAgent } from "./scripted-session-agent.ts";
 import { sessionRuntimeStateForTest } from "./runtime-state-access.ts";
@@ -98,38 +99,7 @@ export function installActivePermissionWait() {
     processingGeneration: 4,
     objectiveId: 'user-a',
   })
-  const internals = manager as unknown as {
-    enqueuePersist: () => void
-    flushSession: () => Promise<void>
-    sendEvent: (event: Record<string, unknown>) => void
-    emitExecutionTelemetry: () => void
-    finishAutomaticSessionStatusLifecycle: (session: typeof managed) => Promise<void>
-    reconcileRecoveredTerminalStatus: () => Promise<boolean>
-    onProcessingStopped: (sessionId: string, reason: string, generation: number) => Promise<void>
-    enqueueAutomaticTurnRecovery: (session: typeof managed, cause: 'runtime_error') => Promise<boolean>
-    processEvent: (session: typeof managed, event: Record<string, unknown>, generation?: number) => Promise<void>
-    rejectPermissionRequestOutsideActiveGeneration: (
-      session: typeof managed,
-      request: { requestId: string; toolUseId?: string },
-      runtimeAgent: typeof managed.agent,
-    ) => boolean
-    denyPermissionRequestDuringShutdown: (
-      session: typeof managed,
-      request: { requestId: string; toolName?: string; toolUseId?: string },
-      runtimeAgent: typeof managed.agent,
-    ) => void
-    assertRetryTurnUnblocked: (session: typeof managed, allowPermissionInbox?: boolean) => void
-    checkpointToolStarts: WeakMap<typeof managed, {
-      generation: number
-      calls: Map<string, { objectiveId: string; toolName: string }>
-    }>
-    pendingPermissionRequests: Map<string, unknown>
-    expirePendingPermissionRequest: (id: string) => void
-    closePendingPermissionRequestsForStop: (
-      session: typeof managed,
-      generation: number,
-    ) => Promise<void>
-  }
+  const internals = sessionManagerForTest(manager)
   const enqueuePersist = jest.fn()
   internals.enqueuePersist = enqueuePersist
   const flushSession = jest.fn(async () => {})

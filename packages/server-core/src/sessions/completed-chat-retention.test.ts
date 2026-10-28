@@ -1,4 +1,5 @@
-import type { SessionManagerTestView } from "./testing/private-runtime-access.ts";
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { z } from 'zod'
 import { withSessionOperationsForTest } from "./testing/session-operation-access.ts";
 import { permissionMetadataFixture } from "./testing/permission-metadata.ts";
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
@@ -21,7 +22,7 @@ afterEach(() => { rmSync(root, { recursive: true, force: true }) })
 describe('completed-chat memory and retention', () => {
   it.each(['question', 'queued-answer', 'auth-id', 'permission', 'active-objective', 'blocked-objective', 'exhausted-objective', 'stopping', 'queued-metadata'])(
     'preserves a legacy done chat with %s', async blocker => {
-      const manager = withSessionOperationsForTest(new SessionManager()); const runtime = manager as unknown as SessionManagerTestView
+      const manager = withSessionOperationsForTest(new SessionManager()); const runtime = sessionManagerForTest(manager)
       const managed = createManagedSession({ id: 'retained', name: 'Retained' },
         { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true })
       sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed); managed.sessionStatus = 'done'
@@ -44,7 +45,7 @@ describe('completed-chat memory and retention', () => {
   )
 
   it('does not let terminal or expired source-activation markers pin retention forever', async () => {
-    const manager = withSessionOperationsForTest(new SessionManager()); const runtime = manager as unknown as SessionManagerTestView
+    const manager = withSessionOperationsForTest(new SessionManager()); const runtime = sessionManagerForTest(manager)
     const managed = createManagedSession({ id: 'terminal-source-activation', name: 'Terminal marker' },
       { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true })
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
@@ -70,7 +71,7 @@ describe('completed-chat memory and retention', () => {
 
   it.each(['question', 'auth-id', 'active-objective', 'nested-auth-id'])(
     'preserves a done parent whose child still needs %s', async blocker => {
-      const manager = withSessionOperationsForTest(new SessionManager()); const runtime = manager as unknown as SessionManagerTestView
+      const manager = withSessionOperationsForTest(new SessionManager()); const runtime = sessionManagerForTest(manager)
       const workspace = { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 }
       const parent = createManagedSession({ id: 'parent', name: 'Parent' }, workspace as never, { messagesLoaded: true })
       const child = createManagedSession({ id: 'child', parentSessionId: parent.id }, workspace as never, { messagesLoaded: true })
@@ -89,7 +90,7 @@ describe('completed-chat memory and retention', () => {
   )
 
   it('yields between skipped chats instead of monopolizing the event loop', async () => {
-    const manager = withSessionOperationsForTest(new SessionManager()); const runtime = manager as unknown as SessionManagerTestView
+    const manager = withSessionOperationsForTest(new SessionManager()); const runtime = sessionManagerForTest(manager)
     for (let i = 0; i < 50; i++) sessionRuntimeStateForTest(manager).sessions.set(`active-${i}`, createManagedSession({ id: `active-${i}` },
       { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true }))
     let yielded = false; setImmediate(() => { yielded = true })
@@ -100,7 +101,7 @@ describe('completed-chat memory and retention', () => {
 
   it('allows a reopening accepted during the final flush to cancel deletion', async () => {
     const stored = await createSession(root, { name: 'Catalogue' })
-    const manager = withSessionOperationsForTest(new SessionManager()); const runtime = manager as unknown as SessionManagerTestView
+    const manager = withSessionOperationsForTest(new SessionManager()); const runtime = sessionManagerForTest(manager)
     const managed = createManagedSession(stored, { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true })
     managed.messages = messages; managed.sessionStatus = 'done'; managed.lastMessageAt = 2
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
@@ -119,7 +120,7 @@ describe('completed-chat memory and retention', () => {
 
   it('does not consume a latent retry timer or volatile admission before archival', async () => {
     const stored = await createSession(root, { name: 'Latent retry' })
-    const manager = withSessionOperationsForTest(new SessionManager()); const runtime = manager as unknown as SessionManagerTestView
+    const manager = withSessionOperationsForTest(new SessionManager()); const runtime = sessionManagerForTest(manager)
     const managed = createManagedSession(stored,
       { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never,
       { messagesLoaded: true })
@@ -245,8 +246,8 @@ describe('completed-chat memory and retention', () => {
       messages: [{ id: 'direct', role: 'user', content: `Atlas Catalogue ${'x'.repeat(2_000)}`, timestamp: 2 }],
     }, 2)
     const context = await completedChatContext(root, 'project-a', 'Atlas Catalogue', 'new-chat')
-    const [selected] = JSON.parse(context.slice(context.indexOf('\n') + 1))
-    expect(selected.excerpts.length).toBeLessThanOrEqual(800)
+    const [selected] = z.array(z.object({ excerpts: z.string() }).passthrough()).parse(JSON.parse(context.slice(context.indexOf('\n') + 1)))
+    expect(selected?.excerpts.length).toBeLessThanOrEqual(800)
   })
 
   it('keeps only the best result across a thousand receipts while yielding to the event loop', async () => {
@@ -262,7 +263,7 @@ describe('completed-chat memory and retention', () => {
     let yielded = false; setImmediate(() => { yielded = true })
     const context = await completedChatContext(root, 'project-a', 'catalogue PostgreSQL', 'new-chat')
     expect(yielded).toBe(true)
-    const selected: Array<Pick<NonNullable<ReturnType<typeof readCompletedChatMemory>>, 'sessionId'>> = JSON.parse(context.slice(context.indexOf('\n') + 1))
+    const selected = z.array(z.object({ sessionId: z.string() }).passthrough()).parse(JSON.parse(context.slice(context.indexOf('\n') + 1)))
     expect(selected.map(memory => memory.sessionId)).toEqual(['historical-999'])
   })
 
@@ -301,7 +302,7 @@ describe('completed-chat memory and retention', () => {
     managed.messages = messages
     managed.sessionStatus = 'done'
     managed.lastMessageAt = 2
-    const internal = manager as unknown as { sessions: Map<string, typeof managed>; sweepCompletedChats: (now: number) => Promise<void> }
+    const internal = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     await internal.sweepCompletedChats(1000)
     expect(existsSync(getSessionPath(root, managed.id))).toBe(true)
@@ -361,10 +362,7 @@ describe('completed-chat memory and retention', () => {
     managed.messages = messages
     managed.sessionStatus = 'done'
     managed.lastMessageAt = 2
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      sweepCompletedChats: (now: number) => Promise<void>
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     const physicalRootA = realpathSync.native(rootA)
     expect(managed.persistenceRootPath).toBe(physicalRootA)
@@ -408,10 +406,7 @@ describe('completed-chat memory and retention', () => {
     // Simulate startup of a new manager. The disk scan cannot load the moved
     // session, so reconciliation must use the workspace receipt alone.
     const restarted = withSessionOperationsForTest(new SessionManager())
-    const runtime = restarted as unknown as {
-      sessions: Map<string, ReturnType<typeof createManagedSession>>
-      loadSessionsFromDisk: () => void
-    }
+    const runtime = sessionManagerForTest(restarted)
     const workspaces = spyOn(config, 'getWorkspaces').mockReturnValue([{
       id: 'ws',
       slug: 'test',

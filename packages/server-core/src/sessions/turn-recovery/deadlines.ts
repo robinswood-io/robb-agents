@@ -18,7 +18,7 @@ export function createAutomaticRecoveryToolDeadline(
         seenStarts.add(event.toolUseId);
         // Pi's native Bash schema uses seconds. Do not guess units for other
         // providers or MCP tools that happen to expose a field named timeout.
-        const seconds = event.input?.timeout;
+        const seconds = event.input?.["timeout"];
         if (provider !== 'pi' || event.toolName !== 'Bash'
           || typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds <= 0) return;
         const allowance = Math.min(MAX_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS,

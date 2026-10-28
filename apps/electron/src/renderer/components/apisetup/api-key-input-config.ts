@@ -11,7 +11,7 @@ export type ApiKeyStatus = 'idle' | 'validating' | 'success' | 'error'
 
 export interface ApiKeySubmitData {
   apiKey: string
-  baseUrl?: string
+  baseUrl?: string | undefined
   connectionDefaultModel?: string
   models?: string[]
   piAuthProvider?: string
@@ -35,15 +35,15 @@ export interface ApiKeyInputProps {
   /** Current validation status */
   status: ApiKeyStatus
   /** Error message to display when status is 'error' */
-  errorMessage?: string
+  errorMessage?: string | undefined
   /** Called when the form is submitted with the key and optional endpoint config */
   onSubmit: (data: ApiKeySubmitData) => void
   /** Form ID for external submit button binding (default: "api-key-form") */
-  formId?: string
+  formId?: string | undefined
   /** Disable the input (e.g. during validation) */
-  disabled?: boolean
+  disabled?: boolean | undefined
   /** Provider type determines which presets and placeholders to show */
-  providerType?: 'anthropic' | 'openai' | 'pi' | 'google' | 'pi_api_key'
+  providerType?: 'anthropic' | 'openai' | 'pi' | 'google' | 'pi_api_key' | undefined
   /** Pre-fill values when editing an existing connection */
   initialValues?: {
     apiKey?: string
@@ -53,7 +53,7 @@ export interface ApiKeyInputProps {
     models?: string[]
     /** Pre-fill the protocol toggle for custom endpoints */
     customApi?: CustomEndpointApi
-  }
+  } | undefined
 }
 
 

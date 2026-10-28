@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../packages/shared/src/utils/json.ts';
 /**
  * Common build utilities shared across all platforms
  */
@@ -154,8 +155,9 @@ export async function buildElectronApp(config: BuildConfig): Promise<void> {
 export async function createManifest(config: BuildConfig): Promise<string> {
   const { rootDir, electronDir } = config;
 
-  const packageJson = await Bun.file(join(electronDir, 'package.json')).json();
-  const version = packageJson.version;
+  const packageJson = parseJsonObject(await Bun.file(join(electronDir, 'package.json')).text());
+  const version = packageJson['version'];
+  if (typeof version !== 'string' || !version) throw new Error('Electron package version is missing');
 
   const uploadDir = join(rootDir, '.build', 'upload');
   mkdirSync(uploadDir, { recursive: true });

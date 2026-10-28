@@ -45,20 +45,20 @@ function StateItemContent({ state }: { state: SessionStatus }) {
 // ============================================================================
 
 export interface SessionStatusMenuProps {
-  states?: SessionStatus[]
+  states?: SessionStatus[] | undefined
   activeState: SessionStatusId
   onSelect: (stateId: SessionStatusId) => void
   /** Whether the session is currently archived */
-  isArchived?: boolean
+  isArchived?: boolean | undefined
   /** Archive action - shows Archive item at bottom when provided and not archived */
-  onArchive?: () => void
+  onArchive?: (() => void) | undefined
   /** Unarchive action - shows Unarchive item at bottom when provided and archived */
-  onUnarchive?: () => void
+  onUnarchive?: (() => void) | undefined
   /** Clear action - shows a "clear" item at bottom (e.g. "No status change") when provided */
-  onClear?: () => void
+  onClear?: (() => void) | undefined
   /** Label for the clear item. Defaults to "Clear". */
-  clearLabel?: string
-  className?: string
+  clearLabel?: string | undefined
+  className?: string | undefined
 }
 
 export function SessionStatusMenu({
@@ -90,7 +90,7 @@ export function SessionStatusMenu({
   return (
     <CommandPrimitive
       className={cn(MENU_CONTAINER_STYLE, className)}
-      defaultValue={defaultValue}
+      {...(defaultValue !== undefined ? { defaultValue } : {})}
     >
       <div className="border-b border-border/50 px-3 py-2">
         <CommandPrimitive.Input

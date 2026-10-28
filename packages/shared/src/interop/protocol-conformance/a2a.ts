@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { randomUUID } from "node:crypto";
 import type { InteropConformanceCheck, InteropConformanceReport, InteropConformanceTransport } from './probe-types.ts';
 import { A2A_PROTOCOL_VERSION, authorizationHeaders, check, endpointUrl, parseJsonOrSse, recordValue, report, stringValue } from './probe-types.ts';
@@ -15,11 +16,11 @@ const a2aTaskStates = new Set([
 
 function a2aTask(value: unknown): Record<string, unknown> | null {
   const candidate = recordValue(value)
-  const status = recordValue(candidate?.status)
+  const status = recordValue(candidate?.["status"])
   return candidate
-    && stringValue(candidate.id)
-    && stringValue(status?.state)
-    && a2aTaskStates.has(String(status?.state))
+    && stringValue(candidate["id"])
+    && stringValue(status?.["state"])
+    && a2aTaskStates.has(String(status?.["state"]))
     ? candidate
     : null
 }
@@ -51,28 +52,28 @@ export async function runA2AConformance(input: {
     check(
       checks,
       'agent card',
-      cardResponse.status >= 200 && cardResponse.status < 300 && Boolean(stringValue(card?.name)),
+      cardResponse.status >= 200 && cardResponse.status < 300 && Boolean(stringValue(card?.["name"])),
       'well-known endpoint returns a named Agent Card',
     )
-    const interfaces = Array.isArray(card?.supportedInterfaces) ? card.supportedInterfaces : []
+    const interfaces = isUnknownArray(card?.["supportedInterfaces"]) ? card["supportedInterfaces"] : []
     const preferred = recordValue(interfaces[0])
     check(
       checks,
       'supported interface',
-      preferred?.protocolBinding === 'HTTP+JSON'
-        && preferred?.protocolVersion === A2A_PROTOCOL_VERSION
-        && Boolean(stringValue(preferred?.url)),
+      preferred?.["protocolBinding"] === 'HTTP+JSON'
+        && preferred?.["protocolVersion"] === A2A_PROTOCOL_VERSION
+        && Boolean(stringValue(preferred?.["url"])),
       'preferred interface declares HTTP+JSON version 1.0 and its URL',
     )
     check(
       checks,
       'security declaration',
-      Boolean(recordValue(card?.securitySchemes)),
+      Boolean(recordValue(card?.["securitySchemes"])),
       'Agent Card declares its security schemes without credentials',
     )
 
     if (input.message) {
-      const preferredUrl = stringValue(preferred?.url)
+      const preferredUrl = stringValue(preferred?.["url"])
       const serviceBase = endpointUrl(preferredUrl ?? base.toString())
       const sendUrl = new URL(`${serviceBase.pathname.replace(/\/+$/u, '')}/message:send`, serviceBase)
       const response = await input.transport({
@@ -95,18 +96,18 @@ export async function runA2AConformance(input: {
         timeoutMs,
       })
       const sendResult = recordValue(parseJsonOrSse(response.body))
-      const task = a2aTask(sendResult?.task ?? sendResult)
-      const message = recordValue(sendResult?.message ?? sendResult)
+      const task = a2aTask(sendResult?.["task"] ?? sendResult)
+      const message = recordValue(sendResult?.["message"] ?? sendResult)
       check(
         checks,
         'message:send',
         response.status >= 200
           && response.status < 300
-          && Boolean(task || stringValue(message?.messageId)),
+          && Boolean(task || stringValue(message?.["messageId"])),
         'message:send returns a valid task or message',
       )
       if (task) {
-        const taskId = stringValue(task.id)
+        const taskId = stringValue(task["id"])
         if (taskId) {
           const taskUrl = new URL(`${serviceBase.pathname.replace(/\/+$/u, '')}/tasks/${encodeURIComponent(taskId)}`, serviceBase)
           const taskResponse = await input.transport({

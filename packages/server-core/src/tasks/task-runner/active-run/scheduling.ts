@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { type TaskNode, type NodeOutput, nodeTitle, writeNodeOutput } from "@craft-agent/shared/tasks";
 import type { PendingTaskApproval } from "../shared.ts";
 import type { ActiveRun } from '../active-run.ts';
@@ -16,29 +17,29 @@ export function scheduleReady(transportOwner: ActiveRun): void {
         return;
     }
     for (const node of transportOwner["spec"].nodes) {
-        if (transportOwner["inFlight"] >= transportOwner["maxParallel"])
+        if (transportOwner["inFlight"] >= transportOwner.maxParallel)
             break;
         if (!transportOwner["isReady"](node))
             continue;
-        const budget = transportOwner["schedulingBudgetBreach"]();
+        const budget = transportOwner.schedulingBudgetBreach();
         if (budget) {
-            transportOwner["failForBudget"](budget.metric, budget.value, budget.limit);
+            transportOwner.failForBudget(budget.metric, budget.value, budget.limit);
             return;
         }
-        if (transportOwner["requiresApproval"](node) && !transportOwner["approvedNodes"].has(node.id)) {
-            transportOwner["requestApproval"](node);
+        if (transportOwner.requiresApproval(node) && !transportOwner.approvedNodes.has(node.id)) {
+            transportOwner.requestApproval(node);
             return;
         }
         if (node.kind === 'approval') {
-            transportOwner["completeApprovalNode"](node);
+            transportOwner.completeApprovalNode(node);
             continue;
         }
-        transportOwner["markRunning"](node);
-        void transportOwner["dispatch"](node).catch((error) => {
+        transportOwner.markRunning(node);
+        void transportOwner.dispatch(node).catch((error: unknown) => {
             transportOwner["failForUnexpectedAsyncError"](`dispatch ${node.id}`, error);
         });
     }
-    transportOwner["maybeFinish"]();
+    transportOwner.maybeFinish();
 }
 
 export function isReady(transportOwner: ActiveRun, node: TaskNode): boolean {
@@ -50,10 +51,10 @@ export function isReady(transportOwner: ActiveRun, node: TaskNode): boolean {
             transportOwner["armRetry"](node.id, st.retryAtMs);
             return false;
         }
-        st.retryAtMs = undefined;
-        transportOwner["clearRetryTimeout"](node.id);
+        delete st.retryAtMs;
+        transportOwner.clearRetryTimeout(node.id);
     }
-    for (const dep of transportOwner["edges"].get(node.id) ?? []) {
+    for (const dep of transportOwner.edges.get(node.id) ?? []) {
         if (transportOwner["state"].get(dep)?.state !== 'done')
             return false;
     }
@@ -63,8 +64,8 @@ export function isReady(transportOwner: ActiveRun, node: TaskNode): boolean {
 export function markRunning(transportOwner: ActiveRun, node: TaskNode): void {
     const st = transportOwner["state"].get(node.id)!;
     st.state = 'running';
-    st.retryAtMs = undefined;
-    transportOwner["clearRetryTimeout"](node.id);
+    delete st.retryAtMs;
+    transportOwner.clearRetryTimeout(node.id);
     st.attempt += 1;
     transportOwner["inFlight"] += 1;
     transportOwner["log"]({ kind: 'node-scheduled', nodeId: node.id });
@@ -76,16 +77,16 @@ export function markRunning(transportOwner: ActiveRun, node: TaskNode): void {
     });
 }
 
-export function requiresApproval(transportOwner: ActiveRun, node: TaskNode): boolean {
+export function requiresApproval(_transportOwner: ActiveRun, node: TaskNode): boolean {
     return node.kind === 'approval' || node.approval === true;
 }
 
 export function requestApproval(transportOwner: ActiveRun, node: TaskNode): void {
     const requestId = `${transportOwner["runId"]}:${node.id}:approval-${transportOwner["state"].get(node.id)!.attempt + 1}`;
-    if (transportOwner["pendingApprovals"].has(requestId))
+    if (transportOwner.pendingApprovals.has(requestId))
         return;
     const impact = transportOwner["spec"].mission?.policy.impact_level ?? (node.effect === 'external-mutation' ? 'high' : 'medium');
-    const request: PendingTaskApproval = {
+    const request: PendingTaskApproval = omitUndefined<PendingTaskApproval>({
         requestId,
         slug: transportOwner["slug"],
         missionId: transportOwner["spec"].id,
@@ -96,9 +97,9 @@ export function requestApproval(transportOwner: ActiveRun, node: TaskNode): void
         ...((transportOwner["spec"].mission?.policy.validator ?? transportOwner["spec"].mission?.policy.owner)
             ? { owner: transportOwner["spec"].mission?.policy.validator ?? transportOwner["spec"].mission?.policy.owner }
             : {}),
-    };
+    });
     transportOwner["state"].get(node.id)!.state = 'waiting-approval';
-    transportOwner["pendingApprovals"].set(requestId, request);
+    transportOwner.pendingApprovals.set(requestId, request);
     transportOwner["runStatus"] = 'waiting-approval';
     transportOwner["log"]({
         kind: 'approval-requested',
@@ -121,17 +122,17 @@ export function completeApprovalNode(transportOwner: ActiveRun, node: TaskNode):
 }
 
 export function pendingApprovalList(transportOwner: ActiveRun): PendingTaskApproval[] {
-    return [...transportOwner["pendingApprovals"].values()];
+    return [...transportOwner.pendingApprovals.values()];
 }
 
 export function resolveApproval(transportOwner: ActiveRun, requestId: string, decision: 'approved' | 'rejected', actor: string, comment?: string): void {
-    const request = transportOwner["pendingApprovals"].get(requestId);
+    const request = transportOwner.pendingApprovals.get(requestId);
     if (!request)
         throw new Error(`Approval request "${requestId}" is not pending`);
     const node = transportOwner["spec"].nodes.find((candidate) => candidate.id === request.nodeId);
     if (!node)
         throw new Error(`Approval node "${request.nodeId}" no longer exists`);
-    transportOwner["pendingApprovals"].delete(requestId);
+    transportOwner.pendingApprovals.delete(requestId);
     transportOwner["log"]({
         kind: 'approval-resolved',
         requestId,
@@ -147,10 +148,10 @@ export function resolveApproval(transportOwner: ActiveRun, requestId: string, de
         transportOwner["log"]({ kind: 'node-finished', nodeId: node.id, sessionId: '', state: 'failed', reason: st.lastFailure });
     }
     else {
-        transportOwner["approvedNodes"].add(node.id);
+        transportOwner.approvedNodes.add(node.id);
         st.state = 'pending';
     }
-    if (transportOwner["pendingApprovals"].size > 0)
+    if (transportOwner.pendingApprovals.size > 0)
         return;
     transportOwner["runStatus"] = 'running';
     transportOwner["scheduleReady"]();

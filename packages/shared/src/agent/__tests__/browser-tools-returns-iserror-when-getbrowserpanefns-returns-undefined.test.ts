@@ -31,14 +31,14 @@ it('returns isError when getBrowserPaneFns returns undefined', async () => {
         getBrowserPaneFns: () => undefined,
       })
       const result = await executeTool(errorTools, 'browser_tool', { command: 'navigate test.com' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('Error')
     })
 
 it('catches and wraps thrown errors', async () => {
       mockFns.navigate = async () => { throw new Error('Network error') }
       const result = await executeTool(tools, 'browser_tool', { command: 'navigate test.com' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('Network error')
     })
 });

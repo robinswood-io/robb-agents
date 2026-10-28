@@ -34,9 +34,9 @@ export function checkExecutionPrerequisites(
       toolName,
       input: isolationInput,
       workspaceRootPath,
-      workingDirectory,
+      ...(workingDirectory !== undefined ? { workingDirectory } : {}),
       isolation: executionIsolation,
-      missionCapabilityLock,
+      ...(missionCapabilityLock !== undefined ? { missionCapabilityLock } : {}),
     });
     if (!isolationDecision.allowed) {
       const reason = `Task execution isolation: ${isolationDecision.reason ?? 'blocked'}`;
@@ -95,10 +95,11 @@ export function checkExecutionPrerequisites(
 
   const oversizedCatalogGuidance = oversizedRbwOssCatalogReadGuidance(toolName, input);
   if (oversizedCatalogGuidance) {
-    onDebug?.(`Bounded connector read: blocking whole OSS catalog read for ${String(input.path)}`);
+    onDebug?.(`Bounded connector read: blocking whole OSS catalog read for ${String(input["path"])}`);
     return {
       type: 'block',
       reason: `The requested OSS file is a known oversized catalog and this connector read has no enforced offset or byte limit. ${oversizedCatalogGuidance}`,
     };
   }
+  return undefined;
 }

@@ -109,7 +109,6 @@ describe('session persistence header conflict helpers', () => {
     // This is the condition used by persistence queue at startup:
     // no previousSig yet, disk differs from local → preserve external metadata.
     const hasExternalMetadataChange = diskSig !== localSig
-      && (undefined === undefined || diskSig !== undefined)
 
     expect(hasExternalMetadataChange).toBe(true)
 

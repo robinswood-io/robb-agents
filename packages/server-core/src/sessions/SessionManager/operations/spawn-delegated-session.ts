@@ -1,3 +1,4 @@
+import { parseJsonObject } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { isLegacyHostObjectiveContractEnabled } from '../policy.ts';
 import { validateFilePath, getWorkspaceAllowedDirs } from '@craft-agent/server-core/handlers';
@@ -138,8 +139,8 @@ async function sessionOpSpawnDelegatedSession(sessionOperationContext: SessionOp
             || !!objective.terminalReconciliation);
         // A reviewer must not spawn a review of its own review, including native chats.
         if (objective) {
-            const decision = evaluateReviewDelegation({ parentSessionId: managed.parentSessionId,
-                objective, prompt, proposedRole: request.role, sourceSlugs });
+            const decision = evaluateReviewDelegation({ ...(managed.parentSessionId !== undefined ? { parentSessionId: managed.parentSessionId } : {}),
+                objective, prompt, ...(request.role !== undefined ? { proposedRole: request.role } : {}), ...(sourceSlugs !== undefined ? { sourceSlugs: sourceSlugs } : {}) });
             if (!decision.allowed)
                 throw new Error(decision.message);
         }
@@ -206,7 +207,7 @@ async function sessionOpSpawnDelegatedSession(sessionOperationContext: SessionOp
         const key = makeActiveDelegationKey({ workspaceId: managed.workspace.id,
             rootObjectiveId: root.activeObjective?.objectiveId ?? '',
             parentObjectiveId: objective?.objectiveId ?? '', prompt,
-            targetConfiguration: JSON.parse(JSON.stringify({ ...configuration, role: request.role,
+            targetConfiguration: parseJsonObject(JSON.stringify({ ...configuration, role: request.role,
                 attachmentsSha256: createHash('sha256').update(JSON.stringify({ fileAttachments, attachmentContentHashes })).digest('hex') })),
         });
         const result = await sessionOperationContext.state.activeDelegations.run(key, async () => {
@@ -263,7 +264,7 @@ async function sessionOpSpawnDelegatedSession(sessionOperationContext: SessionOp
                     sessionOperationContext.owner["scheduleDeferredAutomaticSessions"]();
                 }
                 return { sessionId: session.id, name: session.name || request.name || session.id,
-                    status: 'started' as const, connection: session.llmConnection, model: session.model };
+                    status: 'started' as const, ...(session.llmConnection !== undefined ? { connection: session.llmConnection } : {}), ...(session.model !== undefined ? { model: session.model } : {}) };
             }
             catch (error) {
                 if (child?.delegation)

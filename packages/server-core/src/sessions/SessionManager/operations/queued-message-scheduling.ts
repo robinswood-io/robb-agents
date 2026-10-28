@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { ManagedSession } from '../managed-session.ts';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { hasUnscheduledQueuedUserInput, validAllocatedRecoveryDispatch, isExactQueuedSourceActivation, isClosedColdResumeStatus, isDirectHumanContinuation } from '../policy.ts';
@@ -44,7 +46,7 @@ export function scheduleQueuedMessageDispatch(managed: ManagedSession, sessionOp
             sessionOperationContext.state.queuedMessageDispatches.delete(sessionId);
             sessionOperationContext.state.automaticAdmissionReservations.delete(sessionId);
             sessionOperationContext.owner["persistSession"](managed);
-            void sessionOperationContext.owner.flushSession(sessionId).catch(error => {
+            void sessionOperationContext.owner.flushSession(sessionId).catch((error: unknown) => {
                 sessionLog.warn('Failed to flush rejected source-activation dequeue', {
                     sessionId,
                     error: error instanceof Error ? error.message : String(error),
@@ -86,7 +88,7 @@ export function scheduleQueuedMessageDispatch(managed: ManagedSession, sessionOp
             // durable. A concurrently accepted human turn will then start from a
             // snapshot that cannot resurrect the obsolete recovery after restart.
             sessionOperationContext.owner["persistSession"](managed);
-            void sessionOperationContext.owner.flushSession(managed.id).catch(error => {
+            void sessionOperationContext.owner.flushSession(managed.id).catch((error: unknown) => {
                 sessionLog.warn('Failed to flush superseded automatic recovery cancellation', {
                     sessionId,
                     error: error instanceof Error ? error.message : String(error),
@@ -140,16 +142,16 @@ export function scheduleQueuedMessageDispatch(managed: ManagedSession, sessionOp
                 // Leave the durable queue flag until sendMessage persists its recovery
                 // marker (or the internal delivery finishes). A crash here must replay it.
                 // Question answers publish processing from sendMessage after that flush.
-                sessionOperationContext.owner["sendEvent"]({
+                sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'user_message' }>>({
                     type: 'user_message',
                     sessionId,
                     message: existingMessage,
                     status: 'processing',
                     optimisticMessageId: next.optimisticMessageId
-                }, managed.workspace.id);
+                }), managed.workspace.id);
             }
         }
-        sessionOperationContext.owner.sendMessage(sessionId, next.message, next.attachments, next.storedAttachments, next.options, next.messageId, undefined, undefined, undefined, dispatchToken, next).catch(async (err) => {
+        sessionOperationContext.owner.sendMessage(sessionId, next.message, next.attachments, next.storedAttachments, next.options, next.messageId, undefined, undefined, undefined, dispatchToken, next).catch(async (err: unknown) => {
             const restoredPreAckDeliveries = sessionOpRestorePreAckAgentDeliveryDequeues(sessionOperationContext, managed);
             if (restoredPreAckDeliveries > 0) {
                 try {
@@ -212,7 +214,7 @@ export function scheduleQueuedMessageDispatch(managed: ManagedSession, sessionOp
                 },
             }, managed.workspace.id);
             // Call onProcessingStopped to handle cleanup and check for more queued messages
-            void sessionOperationContext.owner["onProcessingStopped"](sessionId, 'error').catch(cleanupError => {
+            void sessionOperationContext.owner["onProcessingStopped"](sessionId, 'error').catch((cleanupError: unknown) => {
                 sessionLog.error('Queued message failure cleanup failed', {
                     sessionId,
                     error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),

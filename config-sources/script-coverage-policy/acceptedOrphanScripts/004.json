@@ -1,0 +1,450 @@
+[
+  {
+    "path": "scripts/inqom_rule_quality_optimizer.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287212Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_suggestion_engine.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287229Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_suggestion_safety_filter.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287245Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_unrevised_autonomy_classifier.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287261Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_user_actions_6m_analysis.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287277Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_validation_apply_workflow.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287293Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "high_risk_manual_or_retired_tool",
+    "riskClass": "high_review_required",
+    "allowedInvocation": [
+      "manual_direct_after_explicit_review"
+    ],
+    "rationale": "Potentially mutating/outbound/manual operation script; not manifest-scheduled and requires explicit review before any automation."
+  },
+  {
+    "path": "scripts/inqom_waiting_account_autonomy_classifier.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287309Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/lead_contact_context_enrichment.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287327Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_campaign_or_contact_helper",
+    "riskClass": "medium_campaign_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_campaign_pipeline"
+    ],
+    "rationale": "Campaign/contact helper or retired lane script; direct scheduling requires outbound/enrichment policy review."
+  },
+  {
+    "path": "scripts/lead_corporate_structure_enrichment.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287344Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_campaign_or_contact_helper",
+    "riskClass": "medium_campaign_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_campaign_pipeline"
+    ],
+    "rationale": "Campaign/contact helper or retired lane script; direct scheduling requires outbound/enrichment policy review."
+  },
+  {
+    "path": "scripts/lead_profile_gate.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287362Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_campaign_or_contact_helper",
+    "riskClass": "medium_campaign_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_campaign_pipeline"
+    ],
+    "rationale": "Campaign/contact helper or retired lane script; direct scheduling requires outbound/enrichment policy review."
+  },
+  {
+    "path": "scripts/lead_sellsy_context_note.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287381Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_campaign_or_contact_helper",
+    "riskClass": "medium_campaign_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_campaign_pipeline"
+    ],
+    "rationale": "Campaign/contact helper or retired lane script; direct scheduling requires outbound/enrichment policy review."
+  },
+  {
+    "path": "scripts/lib/agent_runtime.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287395Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "library_module",
+    "riskClass": "low_imported_helper",
+    "allowedInvocation": [
+      "import_only"
+    ],
+    "rationale": "Python helper/library module; not expected to appear directly in command-manifest."
+  },
+  {
+    "path": "scripts/lib/config_mutation.py",
+    "accepted": true,
+    "coverageClass": "shared_library",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-28T19:15:02.848772Z",
+    "updatedBy": "oss-p14-p16-governance",
+    "policyClass": "shared_config_mutation_library",
+    "riskClass": "low_internal_library",
+    "allowedInvocation": [
+      "imported_by_config_patchers"
+    ],
+    "rationale": "Shared helper for locked, archive-backed, atomic OSS config mutations. It is intentionally not a standalone automation entrypoint."
+  },
+  {
+    "path": "scripts/lib/safe_backup.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-28T07:37:38.298067Z",
+    "updatedBy": "oss-p9-p13-improvements",
+    "policyClass": "library_module",
+    "riskClass": "low_imported_helper",
+    "allowedInvocation": [
+      "import_only"
+    ],
+    "rationale": "Shared SDK/helper module; imported by wrappers and not expected as command-manifest entrypoint."
+  },
+  {
+    "path": "scripts/lib/slo_effective.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287414Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "library_module",
+    "riskClass": "low_imported_helper",
+    "allowedInvocation": [
+      "import_only"
+    ],
+    "rationale": "Python helper/library module; not expected to appear directly in command-manifest."
+  },
+  {
+    "path": "scripts/lib/wrapper_sdk.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-28T07:37:38.298096Z",
+    "updatedBy": "oss-p9-p13-improvements",
+    "policyClass": "library_module",
+    "riskClass": "low_imported_helper",
+    "allowedInvocation": [
+      "import_only"
+    ],
+    "rationale": "Shared SDK/helper module; imported by wrappers and not expected as command-manifest entrypoint."
+  },
+  {
+    "path": "scripts/linkedin_connection_browser_provider.py",
+    "accepted": true,
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "policyClass": "high_risk_manual_or_retired_tool",
+    "riskClass": "high_human_approval_required",
+    "allowedInvocation": [
+      "manual_direct_after_explicit_review"
+    ],
+    "updatedAt": "2026-07-12T17:46:20.481500Z",
+    "updatedBy": "oss-architecture-v2-orphan-classification",
+    "rationale": "Classified conservatively during runtime-v2 migration; LinkedIn/browser/dispatch helpers remain manual, unscheduled and review-gated."
+  },
+  {
+    "path": "scripts/linkedin_connection_browser_provider_core.py",
+    "accepted": true,
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "policyClass": "high_risk_manual_or_retired_tool",
+    "riskClass": "high_human_approval_required",
+    "allowedInvocation": [
+      "manual_direct_after_explicit_review"
+    ],
+    "updatedAt": "2026-07-12T17:46:20.481517Z",
+    "updatedBy": "oss-architecture-v2-orphan-classification",
+    "rationale": "Classified conservatively during runtime-v2 migration; LinkedIn/browser/dispatch helpers remain manual, unscheduled and review-gated."
+  },
+  {
+    "path": "scripts/linkedin_connector.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287432Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_campaign_or_contact_helper",
+    "riskClass": "medium_campaign_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_campaign_pipeline"
+    ],
+    "rationale": "Campaign/contact helper or retired lane script; direct scheduling requires outbound/enrichment policy review."
+  },
+  {
+    "path": "scripts/linkedin_connector_image.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287450Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_campaign_or_contact_helper",
+    "riskClass": "medium_campaign_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_campaign_pipeline"
+    ],
+    "rationale": "Campaign/contact helper or retired lane script; direct scheduling requires outbound/enrichment policy review."
+  },
+  {
+    "path": "scripts/linkedin_dispatch_report_finalize.py",
+    "accepted": true,
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "policyClass": "high_risk_manual_or_retired_tool",
+    "riskClass": "high_human_approval_required",
+    "allowedInvocation": [
+      "manual_direct_after_explicit_review"
+    ],
+    "updatedAt": "2026-07-12T17:46:20.481528Z",
+    "updatedBy": "oss-architecture-v2-orphan-classification",
+    "rationale": "Classified conservatively during runtime-v2 migration; LinkedIn/browser/dispatch helpers remain manual, unscheduled and review-gated."
+  },
+  {
+    "path": "scripts/linkedin_known_profile_evidence.py",
+    "accepted": true,
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "policyClass": "high_risk_manual_or_retired_tool",
+    "riskClass": "high_human_approval_required",
+    "allowedInvocation": [
+      "manual_direct_after_explicit_review"
+    ],
+    "updatedAt": "2026-07-12T17:46:20.481539Z",
+    "updatedBy": "oss-architecture-v2-orphan-classification",
+    "rationale": "Classified conservatively during runtime-v2 migration; LinkedIn/browser/dispatch helpers remain manual, unscheduled and review-gated."
+  },
+  {
+    "path": "scripts/linkedin_login_verify.py",
+    "accepted": true,
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "policyClass": "high_risk_manual_or_retired_tool",
+    "riskClass": "high_human_approval_required",
+    "allowedInvocation": [
+      "manual_direct_after_explicit_review"
+    ],
+    "updatedAt": "2026-07-12T17:46:20.481550Z",
+    "updatedBy": "oss-architecture-v2-orphan-classification",
+    "rationale": "Classified conservatively during runtime-v2 migration; LinkedIn/browser/dispatch helpers remain manual, unscheduled and review-gated."
+  },
+  {
+    "path": "scripts/linkedin_novnc_auth.py",
+    "accepted": true,
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "policyClass": "high_risk_manual_or_retired_tool",
+    "riskClass": "high_human_approval_required",
+    "allowedInvocation": [
+      "manual_direct_after_explicit_review"
+    ],
+    "updatedAt": "2026-07-12T17:46:20.481559Z",
+    "updatedBy": "oss-architecture-v2-orphan-classification",
+    "rationale": "Classified conservatively during runtime-v2 migration; LinkedIn/browser/dispatch helpers remain manual, unscheduled and review-gated."
+  },
+  {
+    "path": "scripts/linkedin_playwright_auth_link.py",
+    "accepted": true,
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "policyClass": "high_risk_manual_or_retired_tool",
+    "riskClass": "high_human_approval_required",
+    "allowedInvocation": [
+      "manual_direct_after_explicit_review"
+    ],
+    "updatedAt": "2026-07-12T17:46:20.481573Z",
+    "updatedBy": "oss-architecture-v2-orphan-classification",
+    "rationale": "Classified conservatively during runtime-v2 migration; LinkedIn/browser/dispatch helpers remain manual, unscheduled and review-gated."
+  }
+]

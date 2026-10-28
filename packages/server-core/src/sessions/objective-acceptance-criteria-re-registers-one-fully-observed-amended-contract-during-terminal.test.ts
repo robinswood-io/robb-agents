@@ -1,3 +1,5 @@
+import type { ActiveSessionObjective } from '../../../shared/src/sessions/types/objectives.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { withScopeReview } from "./__fixtures__/scope-review.ts";
 import { describe, expect, it } from "bun:test";
 import type { Message, ObjectiveOutcomeDeclaration, ObjectiveAcceptanceCriterion } from "@craft-agent/core/types";
@@ -87,11 +89,11 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
     };
     expect(bindBusinessProcedure(reconciled, 'software-change')).toBe(reconciled);
 
-    const unbound = {
+    const unbound = omitUndefined<ActiveSessionObjective>({
       ...reconciled,
       procedure: undefined,
       requiresAcceptanceCriteria: undefined,
-    };
+    });
     expect(() => bindBusinessProcedure(unbound, 'software-change'))
       .toThrow('Terminal reconciliation freezes the active business procedure');
     expect(() => bindBusinessProcedure(reconciled, 'software-deployment'))
@@ -314,7 +316,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
     const extended = registerObjectiveAcceptanceCriteria(objective, [added], 10);
     expect(extended.acceptanceRegisteredAt).toBe(10);
     expect(extended.acceptanceRegisteredAtById).toEqual({ 'timer-active': 2, 'timer-visible': 10 });
-    const loaded = JSON.parse(JSON.stringify(extended));
+    const loaded = JSON.parse(JSON.stringify(extended)) as typeof extended;
     const newObservation = { ...observation, id: 'm2', toolUseId: 't2', timestamp: 11, toolName: added.toolName,
       toolResult: '{"enabled":true,"nextRunScheduled":true,"visible":true}' };
     const extendedReceipt = { ...receipt, criteria: [...receipt.criteria,
@@ -363,7 +365,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
   });
 
   it('retains registration timestamps as provenance without turning them into duplicate-check boundaries', () => {
-    const legacy = { ...objective, acceptanceRegisteredAtById: undefined };
+    const legacy = omitUndefined<ActiveSessionObjective>({ ...objective, acceptanceRegisteredAtById: undefined });
     const added = { ...criterion, id: 'timer-visible', checks: [{ path: 'visible', equals: true }] };
     const extended = registerObjectiveAcceptanceCriteria(legacy, [added], 10);
     expect(extended.acceptanceRegisteredAtById).toEqual({ 'timer-active': 2, 'timer-visible': 10 });

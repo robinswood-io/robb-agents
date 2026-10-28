@@ -1,3 +1,5 @@
+import type { TelemetryCorrelation } from '../../../../../shared/src/telemetry/execution-telemetry/contracts.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { join } from 'path';
 import { randomUUID } from 'node:crypto';
@@ -44,7 +46,7 @@ function sessionOpEmitExecutionTelemetry(sessionOperationContext: SessionOperati
         localSink = new LocalJsonlTelemetrySink(join(managed.workspace.rootPath, 'telemetry', 'execution-quality.jsonl'), undefined, managed.workspace.rootPath);
         sessionOperationContext.state.localTelemetrySinks.set(workspaceId, localSink);
     }
-    void localSink.emit(event).catch(error => {
+    void localSink.emit(event).catch((error: unknown) => {
         sessionLog.warn('Local execution telemetry write failed', {
             workspaceId,
             eventName: event.name,
@@ -59,7 +61,7 @@ function sessionOpEmitExecutionTelemetry(sessionOperationContext: SessionOperati
         sink = new OtlpHttpTelemetrySink(config);
         sessionOperationContext.state.telemetrySinks.set(workspaceId, sink);
     }
-    void sink.emit(event).catch(error => {
+    void sink.emit(event).catch((error: unknown) => {
         sessionLog.warn('OTLP telemetry export failed', {
             workspaceId,
             eventName: event.name,
@@ -75,13 +77,13 @@ function sessionOpStartGenerationTelemetry(sessionOperationContext: SessionOpera
     model?: string;
     inputTokens?: number;
     recordRoutingOutcome?: boolean;
-}): void { const generationId = randomUUID(); const event = sessionOperationContext.state.generationTelemetryLifecycle.start({ eventId: randomUUID(), timestamp: Date.now(), correlation: { workspaceId: managed.workspace.id, sessionId: managed.id, turnId: input.turnId, generationId }, providerType: input.providerType, model: input.model, inputTokens: input.inputTokens }); const generations = managed.executionTelemetryGenerations ?? new Map(); generations.set(processingGeneration, { generationId, turnId: input.turnId }); managed.executionTelemetryGenerations = generations; sessionOperationContext.owner["emitExecutionTelemetry"](managed, event); }
+}): void { const generationId = randomUUID(); const event = sessionOperationContext.state.generationTelemetryLifecycle.start({ eventId: randomUUID(), timestamp: Date.now(), correlation: { workspaceId: managed.workspace.id, sessionId: managed.id, turnId: input.turnId, generationId }, ...(input.providerType !== undefined ? { providerType: input.providerType } : {}), ...(input.model !== undefined ? { model: input.model } : {}), ...(input.inputTokens !== undefined ? { inputTokens: input.inputTokens } : {}) }); const generations = managed.executionTelemetryGenerations ?? new Map(); generations.set(processingGeneration, { generationId, turnId: input.turnId }); managed.executionTelemetryGenerations = generations; sessionOperationContext.owner["emitExecutionTelemetry"](managed, event); }
 
 function sessionOpFinishGenerationTelemetry(sessionOperationContext: SessionOperationContext, managed: ManagedSession, processingGeneration: number, name: GenerationTerminalName, input?: {
     usage?: AgentEventUsage;
     errorCode?: string;
 }): undefined { const reference = managed.executionTelemetryGenerations?.get(processingGeneration); if (!reference)
-    return; const usage = input?.usage; const event = sessionOperationContext.state.generationTelemetryLifecycle.finish(reference.generationId, { eventId: randomUUID(), timestamp: Date.now(), name, inputTokens: usage?.inputTokens, outputTokens: usage?.outputTokens, cachedInputTokens: usage?.cacheReadTokens, cacheWriteTokens: usage?.cacheCreationTokens, cacheHit: typeof usage?.cacheReadTokens === 'number' ? usage.cacheReadTokens > 0 : undefined, errorCode: input?.errorCode }); managed.executionTelemetryGenerations?.delete(processingGeneration); if (managed.executionTelemetryGenerations?.size === 0)
+    return; const usage = input?.usage; const event = sessionOperationContext.state.generationTelemetryLifecycle.finish(reference.generationId, { eventId: randomUUID(), timestamp: Date.now(), name, ...(usage?.inputTokens !== undefined ? { inputTokens: usage?.inputTokens } : {}), ...(usage?.outputTokens !== undefined ? { outputTokens: usage?.outputTokens } : {}), ...(usage?.cacheReadTokens !== undefined ? { cachedInputTokens: usage?.cacheReadTokens } : {}), ...(usage?.cacheCreationTokens !== undefined ? { cacheWriteTokens: usage?.cacheCreationTokens } : {}), cacheHit: typeof usage?.cacheReadTokens === 'number' ? usage.cacheReadTokens > 0 : undefined, ...(input?.errorCode !== undefined ? { errorCode: input?.errorCode } : {}) }); managed.executionTelemetryGenerations?.delete(processingGeneration); if (managed.executionTelemetryGenerations?.size === 0)
     managed.executionTelemetryGenerations = undefined; if (event)
     sessionOperationContext.owner["emitExecutionTelemetry"](managed, event); }
 
@@ -102,24 +104,24 @@ function sessionOpRecordRetryTelemetry(sessionOperationContext: SessionOperation
     const generation = input.processingGeneration === undefined
         ? undefined
         : managed.executionTelemetryGenerations?.get(input.processingGeneration);
-    sessionOperationContext.owner["emitExecutionTelemetry"](managed, {
+    sessionOperationContext.owner["emitExecutionTelemetry"](managed, omitUndefined<RobbExecutionTelemetryEvent>({
         schemaVersion: 1,
         eventId: randomUUID(),
         timestamp: Date.now(),
         name: 'retry.recorded',
-        correlation: {
+        correlation: omitUndefined<TelemetryCorrelation>({
             workspaceId: managed.workspace.id,
             sessionId: managed.id,
             ...(input.turnId ?? generation?.turnId
                 ? { turnId: input.turnId ?? generation?.turnId }
                 : {}),
             ...(generation ? { generationId: generation.generationId } : {}),
-        },
+        }),
         component: input.component,
         attempt: input.attempt,
         reasonCode: input.reasonCode,
         exhausted: input.exhausted,
-    });
+    }));
 }
 
 function sessionOpFinishCompactionTelemetry(sessionOperationContext: SessionOperationContext, managed: ManagedSession, processingGeneration: number, completionMessage: string): void {
@@ -138,7 +140,7 @@ function sessionOpFinishCompactionTelemetry(sessionOperationContext: SessionOper
         && currentInputTokens < inputTokens
         ? currentInputTokens
         : undefined;
-    sessionOperationContext.owner["emitExecutionTelemetry"](managed, {
+    sessionOperationContext.owner["emitExecutionTelemetry"](managed, omitUndefined<RobbExecutionTelemetryEvent>({
         schemaVersion: 1,
         eventId: randomUUID(),
         timestamp: Date.now(),
@@ -156,7 +158,7 @@ function sessionOpFinishCompactionTelemetry(sessionOperationContext: SessionOper
             : {}),
         durationMs: Math.max(0, Date.now() - active.startedAt),
         strategy: 'provider-auto',
-    });
+    }));
 }
 
 export { sessionOpSetProcessing as setProcessing };

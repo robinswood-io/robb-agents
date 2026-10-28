@@ -1,3 +1,4 @@
+import { isJsonObject } from '@craft-agent/shared/utils/json';
 import type { Message, ObjectiveAcceptanceCriterion } from "@craft-agent/core/types";
 import { classifyToolNameMutationSemantics } from "@craft-agent/shared/agent";
 import { inspectReadOnlyReviewCommand } from "@craft-agent/shared/agent/bash-validator";
@@ -8,7 +9,7 @@ import type { DelegatedReviewRequest } from './host-scope.ts';
 import { COORDINATION, LOCAL_REVIEW_READ_TOOLS, LOCAL_REVIEW_SHELL_TOOLS, isHostReviewTargetCheckTool } from './host-scope.ts';
 
 export function shellCommand(message: Message): string | undefined {
-  return [message.toolInput?.command, message.toolInput?.cmd, message.toolInput?.script].find((value): value is string => typeof value === 'string');
+  return [message.toolInput?.["command"], message.toolInput?.["cmd"], message.toolInput?.["script"]].find((value): value is string => typeof value === 'string');
 }
 
 export function isShellTool(message: Message): boolean {
@@ -21,12 +22,12 @@ export function reviewCommand(message: Message, request: DelegatedReviewRequest)
     || (!request.remote && !LOCAL_REVIEW_SHELL_TOOLS.has(message.toolName ?? ''))
     || (request.remote && (
     message.toolName !== `mcp__${request.remote.source}__ssh_execute`
-    || message.toolInput?.server !== request.remote.server
-    || message.toolInput?.cwd !== request.target
-    || message.toolInput?.command !== command
+    || message.toolInput?.["server"] !== request.remote.server
+    || message.toolInput?.["cwd"] !== request.target
+    || message.toolInput?.["command"] !== command
   ))) return { safe: false, observesTarget: false, revisionProbe: false };
   return inspectReadOnlyReviewCommand(command, request.target,
-    typeof message.toolInput?.cwd === 'string' ? message.toolInput.cwd : undefined);
+    typeof message.toolInput?.["cwd"] === 'string' ? message.toolInput["cwd"] : undefined);
 }
 
 export function observationalTool(message: Message, request: DelegatedReviewRequest): boolean {
@@ -56,11 +57,11 @@ export function observedRevision(message: Message, request: DelegatedReviewReque
   if (!command || !reviewCommand(message, request).revisionProbe) return undefined;
   let text = message.toolResult ?? '';
   try {
-    const envelope = JSON.parse(text);
+    const envelope: unknown = JSON.parse(text);
     // The command's stdout only; echoed input/stderr/envelope metadata cannot
     // supply a requested commit that HEAD did not actually return.
-    if (typeof envelope?.stdout !== 'string') return undefined;
-    text = envelope.stdout;
+    if (!isJsonObject(envelope) || typeof envelope['stdout'] !== 'string') return undefined;
+    text = envelope['stdout'];
   } catch { /* Native Bash returns plain stdout. */ }
   const hashes = [...new Set(text.split(/\r?\n/).filter(line => /^[a-f0-9]{7,40}$/i.test(line)).map(line => line.toLowerCase()))];
   return hashes.length === 1 ? hashes[0] : undefined;
@@ -122,12 +123,12 @@ export function isBoundReadOnlyHostTargetCheck(criterion: ObjectiveAcceptanceCri
   })?.[1];
   if (cwdBinding === undefined) {
     if (!LOCAL_REVIEW_SHELL_TOOLS.has(message.toolName ?? '')
-      || message.toolInput?.cwd !== undefined) return false;
+      || message.toolInput?.["cwd"] !== undefined) return false;
     const inspection = inspectReadOnlyReviewCommand(command, '/');
     return inspection.safe && inspection.observesTarget;
   }
   if (typeof cwdBinding !== 'string' || !cwdBinding.startsWith('/')
-    || message.toolInput?.cwd !== cwdBinding) return false;
+    || message.toolInput?.["cwd"] !== cwdBinding) return false;
   const inspection = inspectReadOnlyReviewCommand(command, cwdBinding, cwdBinding);
   return inspection.safe && inspection.observesTarget;
 }

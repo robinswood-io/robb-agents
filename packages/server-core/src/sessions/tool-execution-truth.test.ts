@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
@@ -19,13 +20,11 @@ describe('tool execution truth', () => {
     manager = withSessionOperationsForTest(new SessionManager())
     sentEvents = []
     telemetry = []
-    ;(manager as unknown as { persistSession: () => void }).persistSession = () => {}
-    ;(manager as unknown as { sendEvent: (event: unknown) => void }).sendEvent = event => {
+    ;(sessionManagerForTest(manager)).persistSession = () => true
+    ;(sessionManagerForTest(manager)).sendEvent = event => {
       sentEvents.push(event)
     }
-    ;(manager as unknown as {
-      emitExecutionTelemetry: (_managed: unknown, event: RobbExecutionTelemetryEvent) => void
-    }).emitExecutionTelemetry = (_managed, event) => {
+    ;(sessionManagerForTest(manager)).emitExecutionTelemetry = (_managed, event) => {
       telemetry.push(event)
     }
   })
@@ -61,9 +60,7 @@ describe('tool execution truth', () => {
       timestamp: 1,
     })
     ;sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
-    const runtime = manager as unknown as {
-      processEvent: (session: unknown, agentEvent: AgentEvent, generation: number) => Promise<void>
-    }
+    const runtime = sessionManagerForTest(manager)
     await runtime.processEvent(managed, {
       type: 'tool_start', toolUseId: 'fetch-1', toolName: 'web_fetch', input: { url: 'https://legifrance.gouv.fr' },
     }, 1)
@@ -106,12 +103,12 @@ describe('tool execution truth', () => {
     expect(getObjectiveEvidenceCompletionGap(managed.id)).toContain('has not been inspected')
     expect(managed.autonomyEvents?.some(item => item.phase === 'verified') ?? false).toBe(false)
     expect(telemetry.some(item => item.name === 'tool.completed' || item.name === 'tool.failed')).toBe(false)
-    expect(sentEvents).toContainEqual(expect.objectContaining({
+    expect<unknown>(sentEvents).toContainEqual((expect.objectContaining({
       type: 'tool_result',
       toolUseId: 'fetch-1',
       isError: false,
       executed: false,
       checkpoint,
-    }))
+    }) as unknown))
   })
 })

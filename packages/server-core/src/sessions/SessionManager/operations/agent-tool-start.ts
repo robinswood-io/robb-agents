@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { randomUUID } from 'node:crypto';
 import type { AgentEvent } from '@craft-agent/shared/agent';
@@ -45,13 +47,13 @@ export async function handleAgentToolStart(sessionOperationContext: SessionOpera
         // Resolve call_llm model for TurnCard badge display.
         // Resolve call_llm model short names to full IDs for display.
         // Pi supplies the explicit model or the model selected in the parent session.
-        if (event.toolName === 'mcp__session__call_llm' && formattedToolInput?.model) {
-            const shortName = String(formattedToolInput.model);
+        if (event.toolName === 'mcp__session__call_llm' && formattedToolInput?.["model"]) {
+            const shortName = String(formattedToolInput["model"]);
             const modelDef = MODEL_REGISTRY.find(m => m.id === shortName)
                 || MODEL_REGISTRY.find(m => m.shortName.toLowerCase() === shortName.toLowerCase())
                 || MODEL_REGISTRY.find(m => m.name.toLowerCase() === shortName.toLowerCase());
             if (modelDef) {
-                formattedToolInput.model = modelDef.id;
+                formattedToolInput["model"] = modelDef.id;
             }
         }
         // Resolve tool display metadata (icon, displayName) for skills/sources
@@ -162,11 +164,11 @@ export async function handleAgentToolStart(sessionOperationContext: SessionOpera
                 toolUseId: event.toolUseId,
                 toolInput,
                 toolStatus: 'executing',
-                toolIntent: event.intent,
-                toolDisplayName: event.displayName,
-                toolDisplayMeta, // Includes base64 icon for viewer compatibility
-                turnId: event.turnId,
-                parentToolUseId,
+                ...(event.intent !== undefined ? { toolIntent: event.intent } : {}),
+                ...(event.displayName !== undefined ? { toolDisplayName: event.displayName } : {}),
+                ...(toolDisplayMeta !== undefined ? { toolDisplayMeta: toolDisplayMeta } : {}), // Includes base64 icon for viewer compatibility
+                ...(event.turnId !== undefined ? { turnId: event.turnId } : {}),
+                ...(parentToolUseId !== undefined ? { parentToolUseId: parentToolUseId } : {}),
             };
             managed.messages.push(toolStartMessage);
         }
@@ -200,12 +202,12 @@ export async function handleAgentToolStart(sessionOperationContext: SessionOpera
             const resolvedDisplayName = toolDisplayMeta?.displayName
                 ?? event.displayName
                 ?? event.toolName;
-            overlayBpm.setAgentControl(sessionId, { displayName: resolvedDisplayName, intent: event.intent }, { workspaceId });
+            overlayBpm.setAgentControl(sessionId, { displayName: resolvedDisplayName, ...(event.intent !== undefined ? { intent: event.intent } : {}) }, { workspaceId });
         }
         // Send event to renderer on first occurrence OR when input data is updated
         if (shouldSendEvent) {
             const timestamp = existingStartMsg?.timestamp ?? sessionOpMonotonic(sessionOperationContext);
-            sessionOperationContext.owner["sendEvent"]({
+            sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'tool_start' }>>({
                 type: 'tool_start',
                 sessionId,
                 toolName: event.toolName,
@@ -217,7 +219,7 @@ export async function handleAgentToolStart(sessionOperationContext: SessionOpera
                 turnId: event.turnId,
                 parentToolUseId,
                 timestamp,
-            }, workspaceId);
+            }), workspaceId);
         }
         return;
     }

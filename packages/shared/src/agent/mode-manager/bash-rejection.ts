@@ -134,12 +134,13 @@ export function getBashRejectionReason(command: string, config: ToolCheckConfig)
         const mismatchAnalysis = analyzePatternMismatch(reason.command, config.readOnlyBashPatterns);
         const commandHint = findBlockedCommandHint(reason.command, config);
 
+        const optionalMismatchAnalysis = mismatchAnalysis ?? undefined;
         return {
           type: 'no_safe_pattern',
           command: reason.command,
           relevantPatterns,
-          mismatchAnalysis: mismatchAnalysis ?? undefined,
-          commandHint,
+          ...(optionalMismatchAnalysis !== undefined ? { mismatchAnalysis: optionalMismatchAnalysis } : {}),
+          ...(commandHint !== undefined ? { commandHint } : {}),
         };
       }
 
@@ -164,11 +165,12 @@ export function getBashRejectionReason(command: string, config: ToolCheckConfig)
 
   // Fallback: shouldn't reach here, but return generic rejection if we do
   debug('[Mode] Unexpected: AST rejected but no reason provided');
+  const commandHint = findBlockedCommandHint(trimmedCommand, config);
   return {
     type: 'no_safe_pattern',
     command: trimmedCommand,
     relevantPatterns: [],
-    mismatchAnalysis: undefined,
-    commandHint: findBlockedCommandHint(trimmedCommand, config),
+    
+    ...(commandHint !== undefined ? { commandHint } : {}),
   };
 }

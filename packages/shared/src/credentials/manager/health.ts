@@ -2,7 +2,7 @@ import type { StoredCredential, CredentialHealthStatus, CredentialHealthIssue } 
 import { debug } from "../../utils/debug.ts";
 import type { CredentialManager } from '../manager.ts';
 
-export function isExpired(transportOwner: CredentialManager, credential: StoredCredential): boolean {
+export function isExpired(_transportOwner: CredentialManager, credential: StoredCredential): boolean {
     if (credential.expiresAt) {
         // Consider expired if within 5 minutes of expiry
         return Date.now() > credential.expiresAt - 5 * 60 * 1000;
@@ -21,7 +21,7 @@ export function isExpired(transportOwner: CredentialManager, credential: StoredC
 export async function checkHealth(transportOwner: CredentialManager): Promise<CredentialHealthStatus> {
     const issues: CredentialHealthIssue[] = [];
     try {
-        await transportOwner["ensureInitialized"]();
+        await transportOwner.ensureInitialized();
         // 1. Try to list credentials - this triggers decryption
         // If file is corrupted or can't be decrypted, this will throw
         await transportOwner["list"]({});

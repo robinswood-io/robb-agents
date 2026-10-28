@@ -313,7 +313,7 @@ delegatedDispatchContinuationToken?: symbol): Promise<void> {
         || (!ownsLiveDirectDispatch && sessionOperationContext.owner["hasPendingUserInput"](managed));
     if (ownsQueuedDispatch && (admissionBlocked || managed.stopRequested || queuedUserInputBlocked || sessionOpHasPendingDecision(sessionOperationContext, managed))) {
         if (!managed.messageQueue.some(item => existingMessageId ? item.messageId === existingMessageId : item.message === activeMessageState.message)) {
-            managed.messageQueue.unshift(queuedItem ?? { message: activeMessageState.message, attachments, storedAttachments, options: activeMessageState.options, messageId: existingMessageId });
+            managed.messageQueue.unshift(queuedItem ?? { message: activeMessageState.message, ...(attachments !== undefined ? { attachments: attachments } : {}), ...(storedAttachments !== undefined ? { storedAttachments: storedAttachments } : {}), ...(activeMessageState.options !== undefined ? { options: activeMessageState.options } : {}), ...(existingMessageId !== undefined ? { messageId: existingMessageId } : {}) });
         }
         sessionOperationContext.state.queuedMessageDispatches.delete(sessionId);
         sessionOperationContext.state.automaticAdmissionReservations.delete(sessionId);

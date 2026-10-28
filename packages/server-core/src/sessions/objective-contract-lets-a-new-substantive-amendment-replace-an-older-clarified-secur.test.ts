@@ -1,3 +1,5 @@
+import type { ActiveSessionObjective } from '../../../shared/src/sessions/types/objectives.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from "bun:test";
 import { objectiveRequiresExecutionEvidence, transitionObjectiveContract } from "./objective-contract.ts";
 
@@ -383,13 +385,14 @@ describe('durable objective contract', () => {
       evidenceRequirement: 'authoritative-sources-before-mutation',
     });
 
-    const legacyAudit = { ...audit, evidenceDomain: undefined };
+    const legacyAudit = { ...audit };
+    delete legacyAudit.evidenceDomain;
     const legacyMention = transitionObjectiveContract({
       existing: legacyAudit, messageId: 'legacy-quoted-security-finding',
       text: 'Le rapport mentionne les permissions de sécurité. Ne modifie rien.',
     });
     const legacyCorrection = transitionObjectiveContract({
-      existing: { ...legacyMention, evidenceDomain: undefined }, messageId: 'legacy-correct-legal-findings',
+      existing: omitUndefined<ActiveSessionObjective>({ ...legacyMention, evidenceDomain: undefined }), messageId: 'legacy-correct-legal-findings',
       text: 'Fais les corrections nécessaires.',
     });
     expect(legacyCorrection).toMatchObject({

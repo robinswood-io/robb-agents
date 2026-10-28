@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { BROWSER_TOOL_TIMEOUT_GRACE_MS, DEFAULT_BROWSER_TOOL_EXECUTION_TIMEOUT_MS, MAX_BROWSER_TOOL_EXECUTION_TIMEOUT_MS, MAX_BROWSER_TOOL_REQUESTED_TIMEOUT_MS } from "../browser-tool-execution-watchdog.ts";
 import { NAVIGATION_COMMANDS, splitBatchCommands, tokenizeCommand } from './command-syntax.ts';
 
@@ -58,7 +59,7 @@ export function resolveBrowserToolExecutionTimeoutMs(
     : DEFAULT_BROWSER_TOOL_EXECUTION_TIMEOUT_MS;
   let commandParts: string[][];
   try {
-    commandParts = Array.isArray(command)
+    commandParts = isUnknownArray(command)
       ? [command]
       : splitBatchCommands(command.trim()).map(tokenizeCommand);
   } catch {

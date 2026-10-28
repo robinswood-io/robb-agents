@@ -278,6 +278,6 @@ export function consumeSourceActivationRestart(
   generation: number,
 ): boolean {
   if (host.sourceActivationRestartGeneration !== generation) return false
-  host.sourceActivationRestartGeneration = undefined
+  delete host.sourceActivationRestartGeneration;
   return true
 }

@@ -8,7 +8,7 @@ const NOISE_ELEMENTS = ['script', 'style', 'nav', 'footer', 'header', 'aside', '
 const turndown = new TurndownService({
   headingStyle: 'atx',
   codeBlockStyle: 'fenced',
-}).remove(NOISE_ELEMENTS);
+}).remove(node => NOISE_ELEMENTS.includes(node.nodeName.toLowerCase()));
 
 export function handleHtml(
   html: string,

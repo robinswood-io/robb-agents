@@ -53,7 +53,7 @@ export async function transition(transportOwner: SpecializedProfileRegistryStore
                 throw new SpecializedProfileTransitionGateError(`Transition to ${input.to} requires an evaluation from the current ${from} lifecycle entry`);
             }
         }
-        let approvalReceipt;
+        let approvalReceipt: ReturnType<typeof SpecializedProfileHumanApprovalReceiptSchema.parse> | undefined;
         let transitionOccurredAt = occurredAt;
         if (promotion && HUMAN_APPROVAL_STATES.has(input.to)) {
             const value = input.approvalReceipt ?? await createApprovalReceipt?.({

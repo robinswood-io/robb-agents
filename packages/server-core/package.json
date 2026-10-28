@@ -28,7 +28,7 @@
     "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit"
   },
   "dependencies": {
-    "@agentclientprotocol/sdk": "2.0.2",
+    "@agentclientprotocol/sdk": "^2.1.0",
     "@craft-agent/core": "workspace:*",
     "@craft-agent/session-tools-core": "workspace:*",
     "@craft-agent/shared": "workspace:*",
@@ -36,10 +36,11 @@
     "jose": "^6.2.13",
     "ws": "^8.22.0",
     "sharp": "0.35.5",
-    "@earendil-works/pi-ai": "1.4.0"
+    "@earendil-works/pi-ai": "1.4.0",
+    "zod": "4.6.7"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "ajv": "^8.20.0",
     "typescript": "~7.0.2"
   }

@@ -51,15 +51,15 @@ function checkMcp(
     activeSourceSlugs: [sourceSlug],
     allSourceSlugs: [sourceSlug],
     hasSourceActivation: false,
-    externalActionPolicy: options?.externalActionPolicy,
-    objectiveMutationAuthorized: options?.objectiveMutationAuthorized,
-    objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized,
-    objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments,
-    authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments,
-    dataFolderPath: options?.dataFolderPath,
-    declaredToolCapabilities: options?.declaredToolCapabilities,
+    ...(options?.externalActionPolicy !== undefined ? { externalActionPolicy: options?.externalActionPolicy } : {}),
+    ...(options?.objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized: options?.objectiveMutationAuthorized } : {}),
+    ...(options?.objectiveSensitiveActionAuthorized !== undefined ? { objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized } : {}),
+    ...(options?.objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments } : {}),
+    ...(options?.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments } : {}),
+    ...(options?.dataFolderPath !== undefined ? { dataFolderPath: options?.dataFolderPath } : {}),
+    ...(options?.declaredToolCapabilities !== undefined ? { declaredToolCapabilities: options?.declaredToolCapabilities } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 
@@ -75,9 +75,6 @@ afterEach(() => {
 });
 
 describe('sensitive external action gate across permission modes', () => {
-  const silaeConfirmationObjective = [
-    'Reprends l’objectif explicite d’écrire à Benoît. Vérifie d’abord Sent/Brouillons pour éviter un doublon, exécute le préflight exact vers benoit@example.test, sans fallback navigateur, puis arrête-toi immédiatement avant l’envoi pour la confirmation d’action externe. Après confirmation, envoie une seule fois et vérifie le messageId.',
-  ];
 
   it('authorizes only a signed closed existing-thread Gmail reply-all from contextual human scope', () => {
     const messageId = '1a0aaa36e2769235';
@@ -144,14 +141,14 @@ describe('sensitive external action gate across permission modes', () => {
       options([`Réponds leur au message ${messageId} avec le texte exact « Bonjour ».`, 'Poursuis.']),
     )).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('does not match the exact delimited body'),
+      reason: (expect.stringContaining('does not match the exact delimited body') as unknown),
     });
     expect(checkMcp(
       'allow-all', 'mcp__google-contacts__gmail_reply', reply, 'Poursuis.',
       options([`Réponds-lui au message ${messageId}.`, 'Poursuis.']),
     )).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('gmail_reply_preflight'),
+      reason: (expect.stringContaining('gmail_reply_preflight') as unknown),
     });
 
     // Reply-all cannot be inferred from a singular instruction, while a
@@ -177,7 +174,7 @@ describe('sensitive external action gate across permission modes', () => {
     expect(checkMcp(
       'safe', 'mcp__google-contacts__gmail_reply_all', replyAll, 'Poursuis.',
       options([`Répond leur au message ${messageId} dans le fil existant.`, 'Poursuis.']),
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('Explore') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('Explore') as unknown) });
   });
 
   it.each([
@@ -226,7 +223,7 @@ describe('sensitive external action gate across permission modes', () => {
       }, acceptedObjective, options,
     )).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('does not match the exact delimited body'),
+      reason: (expect.stringContaining('does not match the exact delimited body') as unknown),
     });
     expect(checkMcp(
       'allow-all', 'mcp__google-contacts__gmail_reply_all', {
@@ -235,7 +232,7 @@ describe('sensitive external action gate across permission modes', () => {
       }, acceptedObjective, options,
     )).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('does not match the exact delimited body'),
+      reason: (expect.stringContaining('does not match the exact delimited body') as unknown),
     });
   });
 
@@ -270,7 +267,7 @@ describe('sensitive external action gate across permission modes', () => {
         }, objective, options,
       )).toMatchObject({
         type: 'block',
-        reason: expect.stringContaining('exact delimited body'),
+        reason: (expect.stringContaining('exact delimited body') as unknown),
       });
     }
   });

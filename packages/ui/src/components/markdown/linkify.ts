@@ -118,7 +118,7 @@ function findCodeRanges(text: string): CodeRange[] {
 
   // Find fenced code blocks (```...```)
   const fencedRegex = /```[\s\S]*?```/g
-  let match
+  let match: RegExpExecArray | null
   while ((match = fencedRegex.exec(text)) !== null) {
     ranges.push({ start: match.index, end: match.index + match[0].length })
   }

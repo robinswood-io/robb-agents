@@ -37,11 +37,11 @@ function boundedOssAtomicWriteLiteralPath(value: unknown): string | undefined {
 export function boundedOssAtomicWritePath(
   input: Record<string, unknown>,
 ): string | undefined {
-  const path = boundedOssAtomicWriteLiteralPath(input.path);
-  if (!path || typeof input.content !== 'string'
-    || input.content.length === 0
-    || input.content.length > 1_000_000
-    || input.content.includes('\0')
+  const path = boundedOssAtomicWriteLiteralPath(input["path"]);
+  if (!path || typeof input["content"] !== 'string'
+    || input["content"].length === 0
+    || input["content"].length > 1_000_000
+    || input["content"].includes('\0')
     || Object.keys(input).some(key => ![
       'path', 'content', '_displayName', '_intent',
     ].includes(key))) return undefined;

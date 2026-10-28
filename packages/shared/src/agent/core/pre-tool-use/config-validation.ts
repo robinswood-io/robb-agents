@@ -38,7 +38,7 @@ export function validateConfigWrite(
     return { valid: true };
   }
 
-  const filePath = input.file_path as string | undefined;
+  const filePath = input["file_path"] as string | undefined;
   if (!filePath) {
     return { valid: true };
   }
@@ -57,7 +57,7 @@ export function validateConfigWrite(
 
   if (toolName === 'Write') {
     // For Write, the full file content is in input.content
-    contentToValidate = input.content as string;
+    contentToValidate = input["content"] as string;
     try {
       previousContent = readFileSync(filePath, 'utf-8');
     } catch {
@@ -68,9 +68,9 @@ export function validateConfigWrite(
     try {
       const currentContent = readFileSync(filePath, 'utf-8');
       previousContent = currentContent;
-      const oldString = input.old_string as string;
-      const newString = input.new_string as string;
-      const replaceAll = input.replace_all as boolean | undefined;
+      const oldString = input["old_string"] as string;
+      const newString = input["new_string"] as string;
+      const replaceAll = input["replace_all"] as boolean | undefined;
       contentToValidate = replaceAll
         ? currentContent.replaceAll(oldString, newString)
         : currentContent.replace(oldString, newString);

@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { URL } from "url";
 import type { OAuthMetadata, ProtectedResourceMetadata } from './contracts.ts';
 
@@ -86,12 +87,12 @@ function isProtectedResourceMetadata(data: unknown): data is ProtectedResourceMe
   const obj = data as Record<string, unknown>;
 
   // resource is required
-  if (typeof obj.resource !== 'string') return false;
+  if (typeof obj["resource"] !== 'string') return false;
 
   // authorization_servers is optional but must be string array if present
-  if (obj.authorization_servers !== undefined) {
-    if (!Array.isArray(obj.authorization_servers)) return false;
-    if (!obj.authorization_servers.every(s => typeof s === 'string')) return false;
+  if (obj["authorization_servers"] !== undefined) {
+    if (!isUnknownArray(obj["authorization_servers"])) return false;
+    if (!obj["authorization_servers"].every((s: unknown) => typeof s === 'string')) return false;
   }
 
   return true;

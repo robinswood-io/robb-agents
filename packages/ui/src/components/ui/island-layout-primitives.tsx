@@ -22,14 +22,14 @@ export type IslandMorphTarget = {
 
 export interface IslandContentViewProps {
   id: string
-  anchorX?: AnchorX
-  anchorY?: AnchorY
-  className?: string
-  morphFrom?: IslandMorphTarget | null
+  anchorX?: AnchorX | undefined
+  anchorY?: AnchorY | undefined
+  className?: string | undefined
+  morphFrom?: IslandMorphTarget | null | undefined
   /** Locks document scrolling while this view is active and visible (dialog-like behavior). */
-  lockScroll?: boolean
+  lockScroll?: boolean | undefined
   /** Renders a full-viewport capture layer that blocks pointer interaction outside the island. Implies lockScroll. */
-  blockOutsideInteraction?: boolean
+  blockOutsideInteraction?: boolean | undefined
   children: React.ReactNode
 }
 
@@ -76,30 +76,30 @@ export interface IslandActiveViewSize {
 export interface IslandProps {
   activeViewId: string
   children: React.ReactNode
-  className?: string
-  radius?: number
-  transitionConfig?: IslandTransitionConfig
-  onActiveViewSizeChange?: (size: IslandActiveViewSize) => void
+  className?: string | undefined
+  radius?: number | undefined
+  transitionConfig?: IslandTransitionConfig | undefined
+  onActiveViewSizeChange?: ((size: IslandActiveViewSize) => void) | undefined
   /** Controls shell presence animation. Defaults to true for backward compatibility. */
-  isVisible?: boolean
+  isVisible?: boolean | undefined
   /** Called after hide animation settles. Parent can unmount safely here. */
-  onExitComplete?: () => void
+  onExitComplete?: (() => void) | undefined
   /** Calls onRequestClose when pointer-down happens outside the island shell while visible. */
-  dismissOnPointerDownOutside?: boolean
+  dismissOnPointerDownOutside?: boolean | undefined
   /** Consumer callback for close/dismiss requests (outside tap, escape, etc.). */
-  onRequestClose?: () => void
+  onRequestClose?: (() => void) | undefined
   /** Consumer callback for back navigation requests. Return true when handled. */
-  onRequestBack?: () => boolean
+  onRequestBack?: (() => boolean) | undefined
   /** Dialog semantics for Escape handling while visible. */
-  dialogBehavior?: IslandDialogBehavior
+  dialogBehavior?: IslandDialogBehavior | undefined
   /** Locks document scrolling while the island is visible, regardless of active view-level lockScroll flags. */
-  lockScrollWhileVisible?: boolean
+  lockScrollWhileVisible?: boolean | undefined
   /** Force entry animation replay when this value changes (show(animated:true)-style control). */
-  replayEntryKey?: string | number
+  replayEntryKey?: string | number | undefined
   /** Controls whether visible transitions always run through an internal priming frame for deterministic entry replay. */
-  replayOnVisible?: 'auto' | 'always'
+  replayOnVisible?: 'auto' | 'always' | undefined
   /** z-index for the blockOutsideInteraction overlay (portaled to body). Set to containerZIndex − 1. */
-  overlayZIndex?: React.CSSProperties['zIndex']
+  overlayZIndex?: React.CSSProperties['zIndex'] | undefined
 }
 
 

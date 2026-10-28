@@ -20,29 +20,29 @@ export type View = 'root' | 'labels' | 'share' | 'messaging'
 
 export interface CompactSessionMenuProps {
   /** Title text shown in the trigger button + drawer header. */
-  title?: string
+  title?: string | undefined
   /** Optional badge element rendered next to the title (e.g. agent badge). */
-  badge?: React.ReactNode
+  badge?: React.ReactNode | undefined
   /** Shimmer animation while the title is being regenerated. */
-  isRegeneratingTitle?: boolean
+  isRegeneratingTitle?: boolean | undefined
 
   // Session data — same as SessionMenu
   item: SessionMeta
-  sessionStatuses?: SessionStatus[]
-  labels?: LabelConfig[]
-  hasRemoteWorkspaces?: boolean
+  sessionStatuses?: SessionStatus[] | undefined
+  labels?: LabelConfig[] | undefined
+  hasRemoteWorkspaces?: boolean | undefined
 
   // Callbacks — same as SessionMenu
-  onLabelsChange?: (labels: string[]) => void
+  onLabelsChange?: ((labels: string[]) => void) | undefined
   onRename: () => void
   onFlag: () => void
   onUnflag: () => void
   onArchive: () => void
   onUnarchive: () => void
   onMarkUnread: () => void
-  onSessionStatusChange?: (state: SessionStatusId) => void
+  onSessionStatusChange?: ((state: SessionStatusId) => void) | undefined
   onOpenInNewWindow: () => void
-  onSendToWorkspace?: () => void
+  onSendToWorkspace?: (() => void) | undefined
   onDelete: () => void
 
   // ---------------------------------------------------------------------------
@@ -52,13 +52,13 @@ export interface CompactSessionMenuProps {
   // chat-header callsite, unchanged). Matches the Radix Dialog convention.
   // ---------------------------------------------------------------------------
   /** Controlled open state. When omitted, the component owns its own state. */
-  open?: boolean
+  open?: boolean | undefined
   /** Notifies the consumer when the controlled open state should change. */
-  onOpenChange?: (open: boolean) => void
+  onOpenChange?: ((open: boolean) => void) | undefined
   /** Custom trigger node. `null` opts out of rendering ANY trigger (the row
    *  provides its own). When omitted, renders the title-pill trigger used
    *  by the chat header. */
-  trigger?: React.ReactNode | null
+  trigger?: React.ReactNode | null | undefined
 }
 
 
@@ -67,31 +67,31 @@ export interface CompactSessionMenuProps {
 // ---------------------------------------------------------------------------
 
 export interface RootPaneProps {
-  sharedUrl?: string
+  sharedUrl?: string | undefined
   labelsCount: number
   hasLabels: boolean
   isFlagged: boolean
   isArchived: boolean
   hasMessages: boolean
   hasUnread: boolean
-  hasRemoteWorkspaces?: boolean
-  onShare?: () => void
+  hasRemoteWorkspaces?: boolean | undefined
+  onShare?: (() => void) | undefined
   onOpenShareSub: () => void
-  onSendToWorkspace?: () => void
+  onSendToWorkspace?: (() => void) | undefined
   onOpenMessagingSub: () => void
   onOpenLabelsSub: () => void
-  onFlag?: () => void
-  onUnflag?: () => void
-  onArchive?: () => void
-  onUnarchive?: () => void
-  onMarkUnread?: () => void
-  onRename?: () => void
-  onRefreshTitle?: () => void
-  onOpenInNewPanel?: () => void
-  onOpenInNewWindow?: () => void
-  onShowInFinder?: () => void
-  onCopyPath?: () => void
-  onDelete?: () => void
+  onFlag?: (() => void) | undefined
+  onUnflag?: (() => void) | undefined
+  onArchive?: (() => void) | undefined
+  onUnarchive?: (() => void) | undefined
+  onMarkUnread?: (() => void) | undefined
+  onRename?: (() => void) | undefined
+  onRefreshTitle?: (() => void) | undefined
+  onOpenInNewPanel?: (() => void) | undefined
+  onOpenInNewWindow?: (() => void) | undefined
+  onShowInFinder?: (() => void) | undefined
+  onCopyPath?: (() => void) | undefined
+  onDelete?: (() => void) | undefined
 }
 
 
@@ -287,11 +287,11 @@ export function MessagingPane({ onConnect }: { onConnect: (platform: MessagingPl
 export interface RowProps {
   icon: React.ReactNode
   label: React.ReactNode
-  trailing?: React.ReactNode
-  chevron?: boolean
-  radioSelected?: boolean
-  destructive?: boolean
-  onTap?: () => void
+  trailing?: React.ReactNode | undefined
+  chevron?: boolean | undefined
+  radioSelected?: boolean | undefined
+  destructive?: boolean | undefined
+  onTap?: (() => void) | undefined
 }
 
 

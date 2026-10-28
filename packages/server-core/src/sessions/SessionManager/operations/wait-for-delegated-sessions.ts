@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { waitForSessionChange } from '../../session-wait';
 import { buildSessionWaitDiagnostic } from '../../session-wait-diagnostic';
@@ -108,10 +109,10 @@ async function sessionOpWaitForDelegatedSessions(sessionOperationContext: Sessio
             const finalText = verifiedFinalState ? event?.finalText ?? (finalMessageId ? target.messages.find(m => m.id === finalMessageId && m.role === 'assistant' && !m.isIntermediate)?.content : undefined) : undefined;
             const diagnostic = !active && terminal && !verifiedFinalState
                 && !sessionOperationContext.owner["hasPendingUserInput"](target) && !sessionOpHasPendingDecision(sessionOperationContext, target)
-                ? buildSessionWaitDiagnostic({ objective: target.activeObjective, messages: target.messages,
-                    pending: target.pendingTurnRecovery, processingGeneration: target.processingGeneration,
-                    boundary: target.waitDiagnosticBoundary, lastFinalMessageId: target.lastFinalMessageId }) : undefined;
-            return {
+                ? buildSessionWaitDiagnostic({ ...(target.activeObjective !== undefined ? { objective: target.activeObjective } : {}), messages: target.messages,
+                    ...(target.pendingTurnRecovery !== undefined ? { pending: target.pendingTurnRecovery } : {}), processingGeneration: target.processingGeneration,
+                    ...(target.waitDiagnosticBoundary !== undefined ? { boundary: target.waitDiagnosticBoundary } : {}), ...(target.lastFinalMessageId !== undefined ? { lastFinalMessageId: target.lastFinalMessageId } : {}) }) : undefined;
+            return omitUndefined({
                 sessionId, state: active && !needsAttention ? 'active' as const : 'idle' as const,
                 status: target.sessionStatus ?? 'todo', processingGeneration: target.processingGeneration, objectiveState,
                 ...(needsAttention ? { needsAttention: true } : {}),
@@ -121,7 +122,7 @@ async function sessionOpWaitForDelegatedSessions(sessionOperationContext: Sessio
                     finalMessageId,
                     ...(finalText !== undefined ? { finalText: finalText.slice(0, 32000), ...(finalText.length > 32000 ? { finalTextTruncated: true } : {}) } : {}),
                 } : {}),
-            };
+            });
         }),
         subscribe: wake => {
             const listener = (id: string) => { if (ids.includes(id))
@@ -158,7 +159,7 @@ async function sessionOpWaitForDelegatedSessions(sessionOperationContext: Sessio
                 accumulated.set(snapshot.sessionId, sameDeliveredCursor ? {
                     ...snapshot,
                     ...(snapshot.finalText === undefined && prior.finalText !== undefined
-                        ? { finalText: prior.finalText, finalTextTruncated: prior.finalTextTruncated }
+                        ? { finalText: prior.finalText, ...(prior.finalTextTruncated !== undefined ? { finalTextTruncated: prior.finalTextTruncated } : {}) }
                         : {}),
                     ...(prior.diagnostic !== undefined
                         ? { diagnostic: prior.diagnostic }

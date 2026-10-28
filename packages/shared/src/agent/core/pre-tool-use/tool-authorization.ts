@@ -134,12 +134,13 @@ let wasModified = preparation.type === 'modify';
             reason: `YOLO cannot admit this exact external action: its target is unresolved or the accepted objective expressly withholds execution pending confirmation. No permission request was opened. ${YOLO_AUTONOMY_GUIDANCE}` };
         }
         onDebug?.(`Sensitive external action: confirmation required for ${sensitiveAction.category}`);
+        const optionalModifiedInput = wasModified ? currentInput : undefined;
         return {
           type: 'prompt',
           promptType: sensitiveAction.promptType,
           description: sensitiveAction.description,
           command: sensitiveAction.commandPreview,
-          modifiedInput: wasModified ? currentInput : undefined,
+          ...(optionalModifiedInput !== undefined ? { modifiedInput: optionalModifiedInput } : {}),
           reason: sensitiveAction.reason,
           impact: sensitiveAction.impact,
           sensitiveActionCategory: sensitiveAction.category,
@@ -181,7 +182,7 @@ let wasModified = preparation.type === 'modify';
       operationHash: hashSensitiveExternalActionOperation(toolName, currentInput),
       poisoned: false,
       possiblyExecuted: false,
-      runtimeId,
+      ...(runtimeId !== undefined ? { runtimeId } : {}),
       toolName,
       toolUseId,
     });
@@ -207,24 +208,25 @@ let wasModified = preparation.type === 'modify';
       const adminWrappedInput =
         promptInfo.promptType === 'admin_approval' &&
         promptInfo.command &&
-        typeof currentInput.command === 'string' &&
+        typeof currentInput["command"] === 'string' &&
         process.platform === 'darwin'
           ? { ...currentInput, command: wrapCommandForMacAdminPrompt(promptInfo.command) }
           : undefined;
 
+      const optionalModifiedInput2 = adminWrappedInput ?? (wasModified ? currentInput : undefined);
       return {
         type: 'prompt',
         promptType: promptInfo.promptType,
         description: promptInfo.description,
-        command: promptInfo.command,
-        modifiedInput: adminWrappedInput ?? (wasModified ? currentInput : undefined),
-        appName: promptInfo.appName,
-        reason: promptInfo.reason,
-        impact: promptInfo.impact,
-        requiresSystemPrompt: promptInfo.requiresSystemPrompt,
-        rememberForMinutes: promptInfo.rememberForMinutes,
-        commandHash: promptInfo.commandHash,
-        approvalTtlSeconds: promptInfo.approvalTtlSeconds,
+        ...(promptInfo.command !== undefined ? { command: promptInfo.command } : {}),
+        ...(optionalModifiedInput2 !== undefined ? { modifiedInput: optionalModifiedInput2 } : {}),
+        ...(promptInfo.appName !== undefined ? { appName: promptInfo.appName } : {}),
+        ...(promptInfo.reason !== undefined ? { reason: promptInfo.reason } : {}),
+        ...(promptInfo.impact !== undefined ? { impact: promptInfo.impact } : {}),
+        ...(promptInfo.requiresSystemPrompt !== undefined ? { requiresSystemPrompt: promptInfo.requiresSystemPrompt } : {}),
+        ...(promptInfo.rememberForMinutes !== undefined ? { rememberForMinutes: promptInfo.rememberForMinutes } : {}),
+        ...(promptInfo.commandHash !== undefined ? { commandHash: promptInfo.commandHash } : {}),
+        ...(promptInfo.approvalTtlSeconds !== undefined ? { approvalTtlSeconds: promptInfo.approvalTtlSeconds } : {}),
       };
     }
   }

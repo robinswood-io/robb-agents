@@ -1,3 +1,7 @@
+import type { RobbExecutionTelemetryEvent } from '@craft-agent/shared/telemetry';
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import type { OperationsRuntimeEvent } from '../../../../../shared/src/operations/index.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { randomUUID } from 'node:crypto';
 import type { AgentEvent } from '@craft-agent/shared/agent';
@@ -38,16 +42,16 @@ export async function handleAgentComplete(sessionOperationContext: SessionOperat
         await sessionOpCaptureCompactionProviderBaseline(sessionOperationContext, managed, event.usage.contextTokens ?? event.usage.inputTokens);
         const costMeta = buildRoutingCostMeta(event.usage, resolveRoutingCostOptions(process.env));
         const updatedMessage = applyRoutingCostMetaToLatestAssistantMessage(managed.messages, costMeta);
-        emitOperationsEvent({
+        emitOperationsEvent(omitUndefined<Extract<OperationsRuntimeEvent, { kind: 'cost.recorded' }>>({
             kind: 'cost.recorded', at: new Date().toISOString(), workspaceId, sessionId,
-            missionId: managed.missionId, workItemId: managed.missionWorkItemId,
+            ...(managed.missionId !== undefined ? { missionId: managed.missionId } : {}), ...(managed.missionWorkItemId !== undefined ? { workItemId: managed.missionWorkItemId } : {}),
             turnId: updatedMessage?.turnId,
             source: costMeta.costProvenance?.source ?? costMeta.tokenUsageSource ?? 'unavailable',
             estimatedCostUsd: costMeta.estimatedCostUsd,
             actualCostUsd: costMeta.actualCostUsd,
             pricingCatalogVersion: costMeta.costProvenance?.pricingCatalogVersion,
-        });
-        sessionOperationContext.owner["emitExecutionTelemetry"](managed, {
+        }));
+        sessionOperationContext.owner["emitExecutionTelemetry"](managed, omitUndefined<RobbExecutionTelemetryEvent>({
             schemaVersion: 1,
             eventId: randomUUID(),
             timestamp: Date.now(),
@@ -65,9 +69,9 @@ export async function handleAgentComplete(sessionOperationContext: SessionOperat
             pricingCatalogVersion: costMeta.costProvenance?.pricingCatalogVersion,
             exchangeRateAsOf: costMeta.costProvenance?.exchangeRateAsOf,
             exchangeRateSource: costMeta.costProvenance?.exchangeRateSource,
-        });
+        }));
         if (updatedMessage?.routingMeta) {
-            sessionOperationContext.owner["sendEvent"]({
+            sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'text_complete' }>>({
                 type: 'text_complete',
                 sessionId,
                 text: updatedMessage.content,
@@ -79,10 +83,10 @@ export async function handleAgentComplete(sessionOperationContext: SessionOperat
                 routingMeta: updatedMessage.routingMeta,
                 objectiveOutcome: updatedMessage.objectiveOutcome ?? null,
                 objectiveOutcomeError: updatedMessage.objectiveOutcomeError ?? null,
-            }, workspaceId);
+            }), workspaceId);
         }
     }
-    sessionOperationContext.owner["finishGenerationTelemetry"](managed, generationKey, 'generation.completed', { usage: event.usage });
+    sessionOperationContext.owner["finishGenerationTelemetry"](managed, generationKey, 'generation.completed', omitUndefined({ usage: event.usage }));
     return;
 }
 
@@ -113,7 +117,7 @@ export async function handleAgentUsageUpdate(sessionOperationContext: SessionOpe
             sessionId: managed.id,
             tokenUsage: {
                 inputTokens: event.usage.inputTokens,
-                contextWindow: event.usage.contextWindow,
+                ...(event.usage.contextWindow !== undefined ? { contextWindow: event.usage.contextWindow } : {}),
             },
         }, workspaceId);
     }

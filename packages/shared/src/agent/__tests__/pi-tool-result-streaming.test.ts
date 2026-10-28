@@ -17,19 +17,20 @@ describe('Pi Bash authoritative final output', () => {
   ])('preserves real SDK output for %s', async (command, expected) => {
     const adapter = new PiEventAdapter();
     adapter.startTurn();
-    const transport = (event: unknown) => [...adapter.adaptEvent(JSON.parse(JSON.stringify(event)))];
+    type WireEvent = Extract<Parameters<PiEventAdapter['adaptEvent']>[0], { type: 'tool_execution_start' | 'tool_execution_update' | 'tool_execution_end' }>;
+    const transport = (event: WireEvent) => [...adapter.adaptEvent(JSON.parse(JSON.stringify(event)) as WireEvent)];
     transport({ type: 'tool_execution_start', toolCallId: 'live-local', toolName: 'bash', args: { command } });
     const snapshots: string[] = [];
     const result = await createBashToolDefinition(cwd).execute('live-local', { command },
       new AbortController().signal, partialResult => {
         snapshots.push(partialResult.content.filter(part => part.type === 'text').map(part => part.text).join(''));
-        transport({ type: 'tool_execution_update', toolCallId: 'live-local', partialResult });
+        transport({ type: 'tool_execution_update', toolCallId: 'live-local', toolName: 'bash', args: { command }, partialResult });
       }, undefined as never);
     const rawFinal = result.content.filter(part => part.type === 'text').map(part => part.text).join('');
     expect(snapshots.filter(Boolean).length).toBeGreaterThanOrEqual(2);
     expect(snapshots.at(-1)).toBe(expected);
     expect(rawFinal).toBe(expected);
-    const events = transport({ type: 'tool_execution_end', toolCallId: 'live-local', result, isError: false });
+    const events = transport({ type: 'tool_execution_end', toolCallId: 'live-local', toolName: 'bash', result, isError: false });
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ type: 'tool_result', toolUseId: 'live-local', result: expected, isError: false });
   });

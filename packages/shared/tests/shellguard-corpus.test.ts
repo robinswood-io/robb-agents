@@ -12,7 +12,6 @@
 import { describe, it, expect } from 'bun:test';
 import {
   isReadOnlyBashCommandWithConfig,
-  getBashRejectionReason,
 } from '../src/agent/mode-manager.ts';
 import { TEST_MODE_CONFIG, SAFE_GIT } from './testing/shellguard-corpus-fixture.ts';
 

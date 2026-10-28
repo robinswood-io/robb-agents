@@ -21,7 +21,7 @@ export function err(msg: string): void {
 // ANSI colors (disabled when NO_COLOR is set or stdout is not a TTY)
 // ---------------------------------------------------------------------------
 
-export const _useColor = !process.env.NO_COLOR && process.stdout.isTTY !== false
+export const _useColor = !process.env["NO_COLOR"] && process.stdout.isTTY !== false
 
 export const c = {
   dim: (s: string) => _useColor ? `\x1b[2m${s}\x1b[22m` : s,
@@ -37,15 +37,15 @@ export const c = {
 // Spinner (TTY only — skipped when piped or NO_COLOR)
 // ---------------------------------------------------------------------------
 
-const _spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+const _spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'] as const
 
 export function createSpinner(text: string): { stop(): void } {
   let i = 0
   let stopped = false
   // Render first frame immediately — setInterval alone misses fast steps
-  process.stdout.write(`${text} ${c.dim(_spinnerFrames[i++ % _spinnerFrames.length])}`)
+  process.stdout.write(`${text} ${c.dim(_spinnerFrames[i++ % _spinnerFrames.length] ?? _spinnerFrames[0])}`)
   const timer = setInterval(() => {
-    process.stdout.write(`\r\x1b[2K${text} ${c.dim(_spinnerFrames[i++ % _spinnerFrames.length])}`)
+    process.stdout.write(`\r\x1b[2K${text} ${c.dim(_spinnerFrames[i++ % _spinnerFrames.length] ?? _spinnerFrames[0])}`)
   }, 80)
   return {
     stop() {

@@ -93,7 +93,7 @@ export function isWebEphemeralStorageKey(key: StorageKey): boolean {
 
 function shouldUsePersistentStorage(key: StorageKey): boolean {
   const isRemoteWeb = typeof document !== 'undefined'
-    && document.documentElement.dataset.robbRuntime === 'web'
+    && document.documentElement.dataset["robbRuntime"] === 'web'
   return !isRemoteWeb || !isWebEphemeralStorageKey(key)
 }
 
@@ -180,7 +180,7 @@ const volatileStringStorage: SyncStringStorage = {
 export function createWebSafeAtomStorage<Value>(): SyncStorage<Value> {
   return createJSONStorage<Value>(() : SyncStringStorage => {
     const remoteWeb = typeof document !== 'undefined'
-      && document.documentElement.dataset.robbRuntime === 'web'
+      && document.documentElement.dataset["robbRuntime"] === 'web'
     return remoteWeb ? volatileStringStorage : window.localStorage
   })
 }

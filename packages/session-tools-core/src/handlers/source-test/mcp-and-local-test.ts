@@ -44,7 +44,7 @@ export async function testMcpConnection(
           const result = await ctx.validateStdioMcpConnection({
             command: expandedCommand,
             args: expandedArgs,
-            env: expandedEnv,
+            ...(expandedEnv !== undefined ? { env: expandedEnv } : {}),
             cwd: getSourcePath(ctx.workspacePath, sourceSlug),
           });
           if (result.success) {
@@ -129,10 +129,10 @@ export async function testMcpConnection(
         }
         const result = await ctx.validateMcpConnection({
           url: source.mcp.url,
-          transport: source.mcp.transport,
-          authType: source.mcp.authType,
-          headers,
-          accessToken,
+          ...(source.mcp.transport !== undefined ? { transport: source.mcp.transport } : {}),
+          ...(source.mcp.authType !== undefined ? { authType: source.mcp.authType } : {}),
+          ...(headers !== undefined ? { headers } : {}),
+          ...(accessToken !== undefined ? { accessToken } : {}),
         });
         if (result.success) {
           success = true;
@@ -171,7 +171,7 @@ export async function testMcpConnection(
     lines.push('✗ No MCP URL or command configured');
   }
 
-  return { lines, success, hasError, error };
+  return { lines, success, hasError, ...(error !== undefined ? { error } : {}) };
 }
 
 export function testLocalConnection(
@@ -202,5 +202,5 @@ export function testLocalConnection(
     lines.push('  Verify the path exists and is accessible');
   }
 
-  return { lines, success, hasError, error };
+  return { lines, success, hasError, ...(error !== undefined ? { error } : {}) };
 }

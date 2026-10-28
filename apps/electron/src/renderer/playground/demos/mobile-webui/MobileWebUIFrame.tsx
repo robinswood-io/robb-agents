@@ -5,13 +5,13 @@ export type MobileDevice = 'iphone-15' | 'iphone-se' | 'pixel-8' | 'custom'
 
 export interface MobileWebUIFrameProps {
   /** Preset phone width × height. iPhone 15 is the default. */
-  device?: MobileDevice
+  device?: MobileDevice | undefined
   /** Override width/height when device='custom'. */
-  width?: number
-  height?: number
+  width?: number | undefined
+  height?: number | undefined
   /** Adds a thin bezel + status-bar strip for visual context. */
-  showBezel?: boolean
-  className?: string
+  showBezel?: boolean | undefined
+  className?: string | undefined
   children: React.ReactNode
 }
 

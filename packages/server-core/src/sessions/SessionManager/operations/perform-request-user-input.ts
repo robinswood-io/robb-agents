@@ -33,14 +33,14 @@ function sessionOpGetUserInputRequests(sessionOperationContext: SessionOperation
             cursor = cursor.parentSessionId ? sessionOperationContext.state.sessions?.get(cursor.parentSessionId) : undefined;
         }
     }
-    return JSON.parse(JSON.stringify(requests.sort((a, b) => a.createdAt - b.createdAt)));
+    return structuredClone(requests.sort((a, b) => a.createdAt - b.createdAt));
 }
 
 function sessionOpHasPendingUserInput(sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
     return sessionOpGetUserInputRequests(sessionOperationContext, managed).some(request => request.status === 'pending');
 }
 
-function sessionOpHasQueuedUserInput(sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
+function sessionOpHasQueuedUserInput(_sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
     return managed.messages.some(message => message.isQueued && message.internalOrigin?.kind === 'user-input'
         && managed.userInputRequests?.some(request => request.status === 'answered' && request.responseMessageId === message.id));
 }
@@ -70,7 +70,7 @@ function sessionOpEnqueueUnscheduledQueuedUserInputAnswers(sessionOperationConte
         enqueueRecoveredMessageInTranscriptOrder(managed, {
             message: row.content,
             messageId: row.id,
-            storedAttachments: row.attachments,
+            ...(row.attachments !== undefined ? { storedAttachments: row.attachments } : {}),
             options: { hidden: true, internalOrigin: { kind: 'user-input' } },
         });
         queued++;
@@ -224,7 +224,7 @@ async function sessionOpPerformRequestUserInput(sessionOperationContext: Session
     })();
     const request: UserInputRequest = {
         id: `input-${randomUUID()}`, sessionId: managed.id, originWorkspaceId: managed.workspace.id,
-        questions, status: 'pending', createdAt: Date.now(), objectiveUserMessageId: objective?.userMessageId,
+        questions, status: 'pending', createdAt: Date.now(), ...(objective?.userMessageId !== undefined ? { objectiveUserMessageId: objective?.userMessageId } : {}),
         ...(hostPrompt ? { hostPrompt } : {}),
     };
     managed.userInputRequests = [...(managed.userInputRequests ?? []), request];
@@ -267,7 +267,7 @@ function sessionOpWakeDeferredDelegatedTerminalResultRetries(sessionOperationCon
         void sessionOpEnsureDelegatedTerminalResultDelivery(sessionOperationContext, child).then(delivered => {
             if (!delivered)
                 sessionOpScheduleDelegatedTerminalResultRetry(sessionOperationContext, child.id);
-        }, error => {
+        }, (error: unknown) => {
             sessionLog.warn('Deferred delegated terminal result question reconciliation failed', {
                 childSessionId: child.id,
                 error: error instanceof Error ? error.message : String(error),

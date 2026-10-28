@@ -14,13 +14,13 @@
  * - Delete
  */
 
-import * as React from 'react'
+
 import { useTranslation } from "react-i18next"
 import {
-  Trash2,
-  FolderOpen,
-  AppWindow,
-  Send,
+Trash2,
+FolderOpen,
+AppWindow,
+Send,
 } from 'lucide-react'
 import { useMenuComponents } from '@/components/ui/menu-context'
 import { getFileManagerName } from '@/lib/platform'
@@ -33,12 +33,12 @@ export interface SkillMenuProps {
   /** Callbacks */
   onOpenInNewWindow: () => void
   onShowInFinder: () => void | Promise<void>
-  onDelete?: () => void
-  canShowInFinder?: boolean
-  canDelete?: boolean
-  deleteLabel?: string
+  onDelete?: (() => void) | undefined
+  canShowInFinder?: boolean | undefined
+  canDelete?: boolean | undefined
+  deleteLabel?: string | undefined
   /** Send to another workspace (omit to hide the option) */
-  onSendToWorkspace?: () => void
+  onSendToWorkspace?: (() => void) | undefined
 }
 
 /**
@@ -46,8 +46,6 @@ export interface SkillMenuProps {
  * This is the content only, not wrapped in a DropdownMenu or ContextMenu
  */
 export function SkillMenu({
-  skillSlug,
-  skillName,
   onOpenInNewWindow,
   onShowInFinder,
   onDelete,

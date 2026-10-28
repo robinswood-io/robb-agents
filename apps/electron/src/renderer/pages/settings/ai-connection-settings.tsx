@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -35,12 +36,12 @@ export function getModelOptionsForConnection(
   if (!connection) return []
 
   const models = getSelectableConnectionModels(
-    { ...connection, models: connection.models?.length ? connection.models : undefined },
+    omitUndefined({ ...connection, models: connection.models?.length ? connection.models : undefined }),
     getModelsForProviderType(connection.providerType, connection.piAuthProvider),
   )
   return models.map((model) => typeof model === 'string'
     ? { value: model, label: getModelShortName(model), description: '' }
-    : { value: model.id, label: model.name, description: model.description, descriptionKey: model.descriptionKey },
+    : omitUndefined({ value: model.id, label: model.name, description: model.description, descriptionKey: model.descriptionKey }),
   )
 }
 
@@ -64,7 +65,8 @@ export interface CredentialHealthBannerProps {
 
 export function CredentialHealthBanner({ issues, onReauthenticate }: CredentialHealthBannerProps) {
   const { t } = useTranslation()
-  if (issues.length === 0) return null
+  const firstIssue = issues[0]
+  if (!firstIssue) return null
 
   return (
     <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 mb-6">
@@ -75,7 +77,7 @@ export function CredentialHealthBanner({ issues, onReauthenticate }: CredentialH
             {t("settings.ai.credentialIssue")}
           </h4>
           <p className="mt-1 text-sm text-amber-600 dark:text-amber-300/80">
-            {getHealthIssueMessage(issues[0], t)}
+            {getHealthIssueMessage(firstIssue, t)}
           </p>
         </div>
         <Button
@@ -124,9 +126,9 @@ export interface ConnectionRowProps {
   onEdit: () => void
   onSetMidStreamBehavior: (behavior: MidStreamBehavior) => void
   validationState: ValidationState
-  validationError?: string
+  validationError?: string | undefined
   /** True when another OAuth connection resolves to the same Anthropic account (issue #838) */
-  isDuplicateAccount?: boolean
+  isDuplicateAccount?: boolean | undefined
 }
 
 export function ConnectionRow({ connection, isLastConnection, onRenameClick, onDelete, onSetDefault, onValidate, onReauthenticate, onEdit, onSetMidStreamBehavior, validationState, validationError, isDuplicateAccount }: ConnectionRowProps) {

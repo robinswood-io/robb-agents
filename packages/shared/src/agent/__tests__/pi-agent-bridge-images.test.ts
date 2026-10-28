@@ -13,7 +13,7 @@ function agentFor(provider: string) {
   const agent = new PiAgent(createPiAgentTestConfig({ runtime: { piAuthProvider: provider } }));
   agents.push(agent);
   agent["emitAutomationEvent"] = mock(async () => {});
-  agent["ensureSubprocess"] = mock(async () => { throw new Error('offline-subprocess-boundary'); });
+  agent.ensureSubprocess = mock(async () => { throw new Error('offline-subprocess-boundary'); });
   agent["send"] = mock(() => true);
   agent["debug"] = mock(() => {});
   return agent;
@@ -30,17 +30,19 @@ const image: FileAttachment = {
   type: 'image', mimeType: 'image/png', base64: 'b2ZmbGluZQ==',
   name: 'example.png', path: '/offline/example.png', size: 7,
 };
+const opaqueImage: FileAttachment = { ...image, mimeType: 'application/octet-stream' };
+delete opaqueImage.base64;
 
 describe('external agent bridge image input', () => {
   for (const [provider, name] of [['google-antigravity', 'Antigravity'], ['mistral-vibe', 'Mistral Vibe']] as const) {
     for (const attachment of [
       image,
       { ...image, type: 'unknown' as const },
-      { ...image, mimeType: 'application/octet-stream', base64: undefined },
+      opaqueImage,
     ]) {
       it(`rejects ${provider} images identified by ${attachment.type}/${attachment.mimeType} before subprocess creation`, async () => {
         const { agent, events } = await runChat(provider, [attachment]);
-        expect(agent["ensureSubprocess"]).not.toHaveBeenCalled();
+        expect(agent.ensureSubprocess).not.toHaveBeenCalled();
         expect(agent["send"]).not.toHaveBeenCalled();
         expect(agent["_isProcessing"]).toBe(false);
         expect(events).toEqual([
@@ -54,14 +56,14 @@ describe('external agent bridge image input', () => {
       const { agent, events } = await runChat(provider, [{
         type: 'text', mimeType: 'text/plain', path: '/offline/example.txt', name: 'example.txt', size: 7,
       }]);
-      expect(agent["ensureSubprocess"]).toHaveBeenCalledTimes(1);
+      expect(agent.ensureSubprocess).toHaveBeenCalledTimes(1);
       expect(events).toContainEqual({ type: 'error', message: 'offline-subprocess-boundary' });
     });
   }
 
   it('preserves native Pi image delivery', async () => {
     const { agent, events } = await runChat('openai', [image]);
-    expect(agent["ensureSubprocess"]).toHaveBeenCalledTimes(1);
+    expect(agent.ensureSubprocess).toHaveBeenCalledTimes(1);
     expect(events).toContainEqual({ type: 'error', message: 'offline-subprocess-boundary' });
   });
 });

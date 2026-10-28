@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { beforeEach, describe, expect, it } from 'bun:test'
 import type { AgentEvent } from '@craft-agent/shared/agent'
@@ -8,9 +9,9 @@ describe('runtime interruption recovery seam', () => {
 
   beforeEach(() => {
     sessionManager = withSessionOperationsForTest(new SessionManager())
-    ;(sessionManager as unknown as { persistSession: () => void }).persistSession = () => {}
-    ;(sessionManager as unknown as { sendEvent: () => void }).sendEvent = () => {}
-    ;(sessionManager as unknown as { emitExecutionTelemetry: () => void }).emitExecutionTelemetry = () => {}
+    ;(sessionManagerForTest(sessionManager)).persistSession = () => true
+    ;(sessionManagerForTest(sessionManager)).sendEvent = () => {}
+    ;(sessionManagerForTest(sessionManager)).emitExecutionTelemetry = () => {}
   })
 
   it('keeps a process crash non-terminal so the bounded recovery path can resume it', async () => {
@@ -37,9 +38,7 @@ describe('runtime interruption recovery seam', () => {
       code: 'process_exit',
       signal: 'SIGSEGV',
     }
-    await (sessionManager as unknown as {
-      processEvent: (session: unknown, agentEvent: AgentEvent) => Promise<void>
-    }).processEvent(managed, event)
+    await (sessionManagerForTest(sessionManager)).processEvent(managed, event)
 
     expect(managed.messages).toHaveLength(1)
     expect(managed.messages.some(message => message.role === 'error')).toBe(false)

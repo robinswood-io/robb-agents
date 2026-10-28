@@ -41,17 +41,17 @@ import { type AnnotationIslandMode } from '../annotations/interaction-state-mach
 export interface AnnotatableMarkdownDocumentProps {
   content: string
   messageId: string
-  sessionId?: string
-  annotations?: AnnotationV1[]
-  onAddAnnotation?: (messageId: string, annotation: AnnotationV1) => void
-  onRemoveAnnotation?: (messageId: string, annotationId: string) => void
-  onUpdateAnnotation?: (messageId: string, annotationId: string, patch: Partial<AnnotationV1>) => void
-  onOpenUrl?: (url: string) => void
-  onOpenFile?: (path: string) => void
-  sendMessageKey?: 'enter' | 'cmd-enter'
-  islandZIndex?: React.CSSProperties['zIndex']
-  openAnnotationRequest?: ExternalOpenAnnotationRequest | null
-  isStreaming?: boolean
+  sessionId?: string | undefined
+  annotations?: AnnotationV1[] | undefined
+  onAddAnnotation?: ((messageId: string, annotation: AnnotationV1) => void) | undefined
+  onRemoveAnnotation?: ((messageId: string, annotationId: string) => void) | undefined
+  onUpdateAnnotation?: ((messageId: string, annotationId: string, patch: Partial<AnnotationV1>) => void) | undefined
+  onOpenUrl?: ((url: string) => void) | undefined
+  onOpenFile?: ((path: string) => void) | undefined
+  sendMessageKey?: 'enter' | 'cmd-enter' | undefined
+  islandZIndex?: React.CSSProperties['zIndex'] | undefined
+  openAnnotationRequest?: ExternalOpenAnnotationRequest | null | undefined
+  isStreaming?: boolean | undefined
 }
 
 export function AnnotatableMarkdownDocument({
@@ -170,7 +170,7 @@ export function AnnotatableMarkdownDocument({
       const geometry = computeAnnotationOverlayGeometry({
         root,
         renderedAnnotations,
-        persistedAnnotations: annotations,
+        ...(annotations !== undefined ? { persistedAnnotations: annotations } : {}),
       })
       return { rects: geometry.rects, chips: geometry.chips }
     }
@@ -253,7 +253,7 @@ export function AnnotatableMarkdownDocument({
       ]
 
       const nextMeta = { ...(activeAnnotation.meta ?? {}) }
-      delete nextMeta.followUp
+      delete nextMeta["followUp"]
 
       onUpdateAnnotation(messageId, activeAnnotationDetail.annotationId, {
         body: nextBody,
@@ -267,7 +267,7 @@ export function AnnotatableMarkdownDocument({
                 updatedAt: Date.now(),
               },
             }
-          : (Object.keys(nextMeta).length > 0 ? nextMeta : undefined),
+          : nextMeta,
       })
 
       markSubmitSuccess()
@@ -321,7 +321,7 @@ export function AnnotatableMarkdownDocument({
 
     const consumed = consumeExternalOpenRequest(openAnnotationRequest, {
       messageId,
-      annotations,
+      ...(annotations !== undefined ? { annotations: annotations } : {}),
       getNoteText: getAnnotationNoteText,
       fallbackAnchor,
     })

@@ -1,17 +1,19 @@
+import type { UseEntityListInteractionsOptions } from '../../../hooks/useEntityListInteractions.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { useState } from "react";
-import { Flag, Zap, Search } from "lucide-react";
+import { Flag,Zap,Search } from "lucide-react";
 import { EntityRow } from "@/components/ui/entity-row";
 import { EntityList } from "@/components/ui/entity-list";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
+import { Empty,EmptyHeader,EmptyMedia,EmptyTitle,EmptyDescription } from "@/components/ui/empty";
 import { useEntityListInteractions } from "@/hooks/useEntityListInteractions";
-import { formatRelativeTime, MockMenuItems, MockAvatar, TypeBadge, StatusBadge } from "./primitives";
+import { formatRelativeTime,MockMenuItems,MockAvatar,TypeBadge,StatusBadge } from "./primitives";
 import type { AnyMockEntity } from "./fixtures";
-import { interactiveItems, SOURCE_TYPE_CONFIG, SOURCE_STATUS_CONFIG } from "./fixtures";
+import { interactiveItems,SOURCE_TYPE_CONFIG,SOURCE_STATUS_CONFIG } from "./fixtures";
 
 interface InteractiveEntityListPreviewProps {
-  enableSearch?: boolean
-  enableMultiSelect?: boolean
-  enableKeyboard?: boolean
+  enableSearch?: boolean | undefined
+  enableMultiSelect?: boolean | undefined
+  enableKeyboard?: boolean | undefined
 }
 
 export function InteractiveEntityListPreview({
@@ -22,7 +24,7 @@ export function InteractiveEntityListPreview({
   const [query, setQuery] = useState('')
   const [activatedItem, setActivatedItem] = useState<string | null>(null)
 
-  const { items, listProps, getRowProps, searchInputProps, keyboard, selection } = useEntityListInteractions({
+  const { items, listProps, getRowProps, searchInputProps, selection } = useEntityListInteractions(omitUndefined<UseEntityListInteractionsOptions<(typeof interactiveItems)[number]>>({
     items: interactiveItems,
     getId: (item) => item.id,
     keyboard: enableKeyboard ? {
@@ -37,7 +39,7 @@ export function InteractiveEntityListPreview({
       query,
       fn: (item, q) => item.name.toLowerCase().includes(q.toLowerCase()),
     } : undefined,
-  })
+  }))
 
   const renderEntityRow = (item: AnyMockEntity, index: number, isFirst: boolean) => {
     const rowProps = getRowProps(item, index)

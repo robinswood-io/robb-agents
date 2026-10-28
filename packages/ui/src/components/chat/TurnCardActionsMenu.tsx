@@ -6,13 +6,13 @@ import { cn } from '../../lib/utils'
 
 export interface TurnCardActionsMenuProps {
   /** Callback to open turn details in a new window */
-  onOpenDetails?: () => void
+  onOpenDetails?: (() => void) | undefined
   /** Callback to open all edits/writes in multi-file diff view */
-  onOpenMultiFileDiff?: () => void
+  onOpenMultiFileDiff?: (() => void) | undefined
   /** Whether this turn has any Edit or Write activities */
-  hasEditOrWriteActivities?: boolean
+  hasEditOrWriteActivities?: boolean | undefined
   /** Additional className for the trigger button */
-  className?: string
+  className?: string | undefined
 }
 
 /**

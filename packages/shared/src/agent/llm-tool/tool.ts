@@ -198,13 +198,14 @@ For large files (>2000 lines), use {path, startLine, endLine} to select a portio
       const schema = args.outputSchema || (args.outputFormat ? OUTPUT_FORMATS[args.outputFormat] : null);
 
       try {
+        const optionalSystemPrompt = args.systemPrompt || undefined;
         const result = await queryFn({
           prompt: textParts.join('\n\n'),
-          systemPrompt: args.systemPrompt || undefined,
-          model,
-          maxTokens: args.maxTokens,
-          temperature: args.temperature,
-          outputSchema: schema ? (schema as Record<string, unknown>) : undefined,
+          ...(optionalSystemPrompt !== undefined ? { systemPrompt: optionalSystemPrompt } : {}),
+          ...(model !== undefined ? { model } : {}),
+          ...(args.maxTokens !== undefined ? { maxTokens: args.maxTokens } : {}),
+          ...(args.temperature !== undefined ? { temperature: args.temperature } : {}),
+          ...(schema ? { outputSchema: (schema as Record<string, unknown>) } : {}),
         });
 
         if (!result.text && !result.warning) {

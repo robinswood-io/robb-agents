@@ -179,29 +179,29 @@ export function apiSetupMethodToConnectionSetup(
     case 'anthropic_api_key':
       return {
         slug,
-        credential: options.credential,
-        baseUrl: options.baseUrl,
-        defaultModel: options.connectionDefaultModel,
-        models: options.models,
-        customEndpoint: options.customEndpoint,
+        ...(options.credential !== undefined ? { credential: options.credential } : {}),
+        ...(options.baseUrl !== undefined ? { baseUrl: options.baseUrl } : {}),
+        ...(options.connectionDefaultModel !== undefined ? { defaultModel: options.connectionDefaultModel } : {}),
+        ...(options.models !== undefined ? { models: options.models } : {}),
+        ...(options.customEndpoint !== undefined ? { customEndpoint: options.customEndpoint } : {}),
       }
     case 'claude_oauth':
       return {
         slug,
-        credential: options.credential,
-        oauthIdentity: options.oauthIdentity,
+        ...(options.credential !== undefined ? { credential: options.credential } : {}),
+        ...(options.oauthIdentity !== undefined ? { oauthIdentity: options.oauthIdentity } : {}),
       }
     case 'pi_chatgpt_oauth':
     case 'pi_copilot_oauth':
       return {
         slug,
-        credential: options.credential,
+        ...(options.credential !== undefined ? { credential: options.credential } : {}),
       }
     case 'pi_gemini_oauth':
       return {
         slug,
-        credential: options.credential,
-        googleCloudProject: options.googleCloudProject,
+        ...(options.credential !== undefined ? { credential: options.credential } : {}),
+        ...(options.googleCloudProject !== undefined ? { googleCloudProject: options.googleCloudProject } : {}),
       }
     case 'pi_google_antigravity_subscription':
       return { slug }
@@ -210,16 +210,16 @@ export function apiSetupMethodToConnectionSetup(
     case 'pi_api_key':
       return {
         slug,
-        credential: options.credential,
-        baseUrl: options.baseUrl,
-        defaultModel: options.connectionDefaultModel,
-        models: options.models,
-        piAuthProvider: options.piAuthProvider,
-        modelSelectionMode: options.modelSelectionMode,
-        customEndpoint: options.customEndpoint,
-        iamCredentials: options.iamCredentials,
-        awsRegion: options.awsRegion,
-        bedrockAuthMethod: options.bedrockAuthMethod,
+        ...(options.credential !== undefined ? { credential: options.credential } : {}),
+        ...(options.baseUrl !== undefined ? { baseUrl: options.baseUrl } : {}),
+        ...(options.connectionDefaultModel !== undefined ? { defaultModel: options.connectionDefaultModel } : {}),
+        ...(options.models !== undefined ? { models: options.models } : {}),
+        ...(options.piAuthProvider !== undefined ? { piAuthProvider: options.piAuthProvider } : {}),
+        ...(options.modelSelectionMode !== undefined ? { modelSelectionMode: options.modelSelectionMode } : {}),
+        ...(options.customEndpoint !== undefined ? { customEndpoint: options.customEndpoint } : {}),
+        ...(options.iamCredentials !== undefined ? { iamCredentials: options.iamCredentials } : {}),
+        ...(options.awsRegion !== undefined ? { awsRegion: options.awsRegion } : {}),
+        ...(options.bedrockAuthMethod !== undefined ? { bedrockAuthMethod: options.bedrockAuthMethod } : {}),
       }
   }
 }

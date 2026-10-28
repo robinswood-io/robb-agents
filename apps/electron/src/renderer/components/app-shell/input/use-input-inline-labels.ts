@@ -38,7 +38,7 @@ const inlineLabel = useInlineLabelMenu({
     sessionLabels,
     onSelect: handleLabelSelect,
     sessionStatuses,
-    activeStateId: currentSessionStatus,
+    ...(currentSessionStatus !== undefined ? { activeStateId: currentSessionStatus } : {}),
   })
 
 const [addLabelPopoverOpen, setAddLabelPopoverOpen] = React.useState(false)

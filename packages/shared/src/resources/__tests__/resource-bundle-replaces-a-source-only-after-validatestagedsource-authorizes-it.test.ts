@@ -1,3 +1,4 @@
+import { AutomationsConfigSchema } from '../../automations/schemas.ts';
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
@@ -5,7 +6,6 @@ import { tmpdir } from 'os';
 import { importResources } from '../resource-bundle';
 
 import type { ResourceBundle } from '../types';
-import type { AutomationMatcher } from '../../automations/types';
 import { createTestWorkspace, createTestSource, makeBundleFile, createTestAutomations, makeAutomationEntry, noopDeps } from "./testing/resource-bundle-fixture.ts";
 
 
@@ -128,10 +128,10 @@ it('imports automations into workspace with no existing file', async () => {
       const result = await importResources(wsDir, bundle, 'skip', noopDeps)
 
       expect(result.automations.imported).toEqual(['Auto 1'])
-      const config = JSON.parse(readFileSync(join(wsDir, 'automations.json'), 'utf-8'))
-      expect(config.version).toBe(2)
-      expect(config.automations.UserPromptSubmit).toHaveLength(1)
-      expect(config.automations.UserPromptSubmit[0].id).toBe('aaa111')
+      const config = AutomationsConfigSchema.parse(JSON.parse(readFileSync(join(wsDir, 'automations.json'), 'utf-8')))
+      expect(config["version"]).toBe(2)
+      expect(config.automations["UserPromptSubmit"]).toHaveLength(1)
+      expect(config.automations["UserPromptSubmit"]?.[0]?.id).toBe('aaa111')
     })
 
 it('merges automations into existing config', async () => {
@@ -155,13 +155,13 @@ it('merges automations into existing config', async () => {
       const result = await importResources(wsDir, bundle, 'skip', noopDeps)
 
       expect(result.automations.imported).toEqual(['New Auto'])
-      const config = JSON.parse(readFileSync(join(wsDir, 'automations.json'), 'utf-8'))
+      const config = AutomationsConfigSchema.parse(JSON.parse(readFileSync(join(wsDir, 'automations.json'), 'utf-8')))
       // Existing automation should be preserved
-      expect(config.automations.UserPromptSubmit).toHaveLength(1)
-      expect(config.automations.UserPromptSubmit[0].id).toBe('existing1')
+      expect(config.automations["UserPromptSubmit"]).toHaveLength(1)
+      expect(config.automations["UserPromptSubmit"]?.[0]?.id).toBe('existing1')
       // New automation should be added
-      expect(config.automations.SessionStart).toHaveLength(1)
-      expect(config.automations.SessionStart[0].id).toBe('new1')
+      expect(config.automations["SessionStart"]).toHaveLength(1)
+      expect(config.automations["SessionStart"]?.[0]?.id).toBe('new1')
     })
 
 it('skips automations with existing ID in skip mode', async () => {
@@ -186,8 +186,8 @@ it('skips automations with existing ID in skip mode', async () => {
 
       expect(result.automations.skipped).toEqual(['Updated'])
       // Original should be preserved
-      const config = JSON.parse(readFileSync(join(wsDir, 'automations.json'), 'utf-8'))
-      expect(config.automations.UserPromptSubmit[0].name).toBe('Original')
+      const config = AutomationsConfigSchema.parse(JSON.parse(readFileSync(join(wsDir, 'automations.json'), 'utf-8')))
+      expect(config.automations["UserPromptSubmit"]?.[0]?.name).toBe('Original')
     })
 
 it('overwrites automation by ID in overwrite mode', async () => {
@@ -212,9 +212,9 @@ it('overwrites automation by ID in overwrite mode', async () => {
       const result = await importResources(wsDir, bundle, 'overwrite', noopDeps)
 
       expect(result.automations.imported).toEqual(['Replaced'])
-      const config = JSON.parse(readFileSync(join(wsDir, 'automations.json'), 'utf-8'))
+      const config = AutomationsConfigSchema.parse(JSON.parse(readFileSync(join(wsDir, 'automations.json'), 'utf-8')))
       // Replaced automation
-      const names = config.automations.UserPromptSubmit.map((m: AutomationMatcher) => m.name)
+      const names = (config.automations["UserPromptSubmit"] ?? []).map((m) => m.name)
       expect(names).toContain('Replaced')
       // Untouched automation should survive
       expect(names).toContain('Untouched')
@@ -240,8 +240,8 @@ it('preserves existing version field on import', async () => {
 
       await importResources(wsDir, bundle, 'skip', noopDeps)
 
-      const config = JSON.parse(readFileSync(join(wsDir, 'automations.json'), 'utf-8'))
-      expect(config.version).toBe(2)
+      const config = AutomationsConfigSchema.parse(JSON.parse(readFileSync(join(wsDir, 'automations.json'), 'utf-8')))
+      expect(config["version"]).toBe(2)
     })
 
 it('selectively clears history and retry queue for overwritten IDs', async () => {
@@ -328,9 +328,9 @@ it('starts fresh when existing automations.json is invalid in overwrite mode', a
       const result = await importResources(wsDir, bundle, 'overwrite', noopDeps)
 
       expect(result.automations.imported).toEqual(['Fresh Start'])
-      const config = JSON.parse(readFileSync(join(wsDir, 'automations.json'), 'utf-8'))
-      expect(config.version).toBe(2)
-      expect(config.automations.UserPromptSubmit[0].id).toBe('aaa111')
+      const config = AutomationsConfigSchema.parse(JSON.parse(readFileSync(join(wsDir, 'automations.json'), 'utf-8')))
+      expect(config["version"]).toBe(2)
+      expect(config.automations["UserPromptSubmit"]?.[0]?.id).toBe('aaa111')
     })
 
 it('rejects import when merged config has invalid regex', async () => {
@@ -360,7 +360,9 @@ it('rejects import when merged config has invalid regex', async () => {
 
 it('rejects invalid bundle with error in result', async () => {
       const wsDir = createTestWorkspace(tmpDir)
-      const result = await importResources(wsDir, { version: 99 } as unknown as ResourceBundle, 'skip', noopDeps)
+      const invalidBundle: ResourceBundle = { version: 1, exportedAt: Date.now(), resources: {} }
+      Reflect.set(invalidBundle, 'version', 99)
+      const result = await importResources(wsDir, invalidBundle, 'skip', noopDeps)
 
       expect(result.sources.failed).toHaveLength(1)
       expect(result.sources.failed[0]!.error).toContain('Invalid bundle')

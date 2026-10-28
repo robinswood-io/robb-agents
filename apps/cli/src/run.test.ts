@@ -23,7 +23,7 @@ interface MockServer {
   /** Channels invoked by the client, in order */
   invokedChannels: string[]
   /** Arguments passed to sessions:create */
-  createSessionArgs?: unknown[]
+  createSessionArgs?: unknown[] | undefined
   /** All invocation args, keyed by channel */
   invokeArgs: Record<string, unknown[][]>
 }
@@ -231,7 +231,9 @@ describe('run command', () => {
     const workspaces = await client.invoke('workspaces:get') as CliWorkspace[]
     expect(workspaces).toHaveLength(1)
 
-    await client.invoke('window:switchWorkspace', workspaces[0].id)
+    const first = workspaces[0]
+    if (!first) throw new Error('The fixture must return one workspace')
+    await client.invoke('window:switchWorkspace', first.id)
 
     const session = await client.invoke('sessions:create', 'ws-1', {
       permissionMode: 'allow-all',

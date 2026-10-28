@@ -14,7 +14,7 @@ const adapters: ApiAdapter[] = [anthropicAdapter, openAiResponsesAdapter, openAi
  * Example values: anthropic-messages, openai-completions, openai-responses.
  */
 function getPiApiHint(): string | undefined {
-  const hint = process.env.CRAFT_PI_MODEL_API?.trim();
+  const hint = process.env["CRAFT_PI_MODEL_API"]?.trim();
   return hint || undefined;
 }
 

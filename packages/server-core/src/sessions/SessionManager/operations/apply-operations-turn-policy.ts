@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { getDefaultLlmConnection, getLlmConnections, getMiniModel } from '@craft-agent/shared/config';
 import { getRobbOperationsExtension } from '@craft-agent/shared/operations';
 import { CodedError } from '@craft-agent/shared/protocol';
@@ -25,16 +26,16 @@ export async function applyOperationsTurnPolicy(
     throw new CodedError('OPERATIONS_POLICY_BLOCKED', 'Le compte IA sélectionné est indisponible.');
   }
 
-  let decision;
+  let decision: Awaited<ReturnType<typeof extension.beforeTurn>>;
   try {
     decision = await extension.beforeTurn({
       now: new Date().toISOString(),
       workspaceId: managed.workspace.id,
       workspaceRootPath: managed.workspace.rootPath,
       sessionId: managed.id,
-      missionId: managed.missionId,
-      workItemId: managed.missionWorkItemId,
-      missionRole: managed.missionRole,
+      ...(managed.missionId !== undefined ? { missionId: managed.missionId } : {}),
+      ...(managed.missionWorkItemId !== undefined ? { workItemId: managed.missionWorkItemId } : {}),
+      ...(managed.missionRole !== undefined ? { missionRole: managed.missionRole } : {}),
       turnKind: 'new-request',
       message,
       hidden: false,
@@ -44,12 +45,12 @@ export async function applyOperationsTurnPolicy(
       ).length,
       recentUserMessages: managed.messages.filter(candidate => candidate.role === 'user' && !candidate.hidden)
         .slice(-3).map(candidate => candidate.content.slice(0, 2_000)),
-      tokenUsage: managed.tokenUsage,
-      currentConnectionSlug: accountSlug,
-      currentModel: managed.model,
-      currentThinkingLevel: managed.thinkingLevel,
+      ...(managed.tokenUsage !== undefined ? { tokenUsage: managed.tokenUsage } : {}),
+      ...(accountSlug !== undefined ? { currentConnectionSlug: accountSlug } : {}),
+      ...(managed.model !== undefined ? { currentModel: managed.model } : {}),
+      ...(managed.thinkingLevel !== undefined ? { currentThinkingLevel: managed.thinkingLevel } : {}),
       enabledSourceSlugs: managed.enabledSourceSlugs ?? [],
-      connections: candidates.map(connection => ({
+      connections: candidates.map(connection => omitUndefined({
         slug: connection.slug,
         providerType: connection.providerType,
         defaultModel: connection.defaultModel,

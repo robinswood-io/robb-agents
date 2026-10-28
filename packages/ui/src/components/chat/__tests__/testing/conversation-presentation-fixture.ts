@@ -4,8 +4,19 @@ import { projectConversation } from "../../conversation-presentation";
 
 
 
-export function message(id: string, role: Message['role'], extra: Partial<Message> = {}): Message {
-  return { id, role, content: id, timestamp: Number(id.replace(/\D/g, '')) || 1, ...extra }
+type MessageOverrides = Omit<Partial<Message>, 'toolResult' | 'toolExecuted'> & {
+  toolResult?: string | undefined
+  toolExecuted?: boolean | undefined
+}
+
+export function message(id: string, role: Message['role'], extra: MessageOverrides = {}): Message {
+  const result: Message = { id, role, content: id, timestamp: Number(id.replace(/\D/g, '')) || 1 }
+  const entries: Array<[string, unknown]> = Object.entries(extra)
+  for (const [key, value] of entries) {
+    if (value === undefined) Reflect.deleteProperty(result, key)
+    else Reflect.set(result, key, value)
+  }
+  return result
 }
 
 
@@ -20,7 +31,7 @@ export function objective(extra: Partial<ActiveSessionObjective> = {}): ActiveSe
 }
 
 
-export function plan(id: string, toolName = 'TodoWrite', extra: Partial<Message> = {}): Message {
+export function plan(id: string, toolName = 'TodoWrite', extra: MessageOverrides = {}): Message {
   const rows = [
     { content: 'Préparer le rapport', status: 'completed' },
     { content: 'Vérifier le rendu', status: 'in_progress', activeForm: 'Vérification du rendu' },

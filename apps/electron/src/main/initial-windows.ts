@@ -41,8 +41,8 @@ export async function createInitialWindows(): Promise<void> {
       mainLog.info(`Restoring window: workspaceId=${saved.workspaceId}, focused=${saved.focused ?? false}, url=${saved.url ?? 'none'}`)
       const win = mainState.windowManager.createWindow({
         workspaceId: saved.workspaceId,
-        focused: saved.focused,
-        restoreUrl: saved.url,
+        ...(saved.focused !== undefined ? { focused: saved.focused } : {}),
+        ...(saved.url !== undefined ? { restoreUrl: saved.url } : {}),
       })
       win.setBounds(saved.bounds)
 
@@ -56,6 +56,8 @@ export async function createInitialWindows(): Promise<void> {
   }
 
   // Default: open window for first workspace
-  mainState.windowManager.createWindow({ workspaceId: workspaces[0].id })
-  mainLog.info(`Created window for first workspace: ${workspaces[0].name}`)
+  const firstWorkspace = workspaces[0]
+  if (!firstWorkspace) return
+  mainState.windowManager.createWindow({ workspaceId: firstWorkspace.id })
+  mainLog.info(`Created window for first workspace: ${firstWorkspace.name}`)
 }

@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { getBundledAssetsDir } from "../../utils/paths.ts";
@@ -67,7 +68,7 @@ export function loadConfigDefaults(): ConfigDefaults {
       ? 'allow-in-execute'
       : 'confirm';
 
-  const rawCyclable = Array.isArray(defaults.workspaceDefaults?.cyclablePermissionModes)
+  const rawCyclable = isUnknownArray(defaults.workspaceDefaults?.cyclablePermissionModes)
     ? defaults.workspaceDefaults.cyclablePermissionModes
     : [];
 

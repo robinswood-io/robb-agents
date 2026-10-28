@@ -5,14 +5,14 @@ import type { BrowserPaneManager } from '../browser-pane-manager.ts';
 import { BROWSER_EMPTY_STATE_PAGE, CRAFT_DEEPLINK_SCHEME_PREFIX } from './shared.ts';
 import type { BrowserInstance } from './shared.ts';
 
-export function mutationUrlAllowed(transportOwner: BrowserPaneManager, instance: BrowserInstance, policy?: BrowserMutationUrlPolicy): boolean {
+export function mutationUrlAllowed(_transportOwner: BrowserPaneManager, instance: BrowserInstance, policy?: BrowserMutationUrlPolicy): boolean {
     if (!policy)
         return true;
     if (policy.reason !== 'contextual-gmail-reply'
         || !Array.isArray(policy.blockedHosts)
         || policy.blockedHosts.length === 0
         || policy.blockedHosts.length > 16
-        || policy.blockedHosts.some(host => typeof host !== 'string'
+        || policy.blockedHosts.some((host: unknown) => typeof host !== 'string'
             || host !== host.trim().toLowerCase()
             || !/^[a-z0-9.-]+$/u.test(host))) {
         throw new Error('Invalid browser mutation URL policy received by the desktop host.');
@@ -29,31 +29,31 @@ export function mutationUrlAllowed(transportOwner: BrowserPaneManager, instance:
         return false;
     }
     const targetHostname = target.hostname.toLowerCase().replace(/\.+$/u, '');
-    return !policy.blockedHosts.some(host => targetHostname === host
+    return !policy.blockedHosts.some((host: unknown) => targetHostname === host
         || policy.matchSubdomains === true && targetHostname.endsWith(`.${host}`));
 }
 
 export function resolveLaunchWorkspaceId(transportOwner: BrowserPaneManager): string | null {
-    if (!transportOwner["windowManager"])
+    if (!transportOwner.windowManager)
         return null;
-    const focusedWindow = transportOwner["windowManager"].getFocusedWindow();
+    const focusedWindow = transportOwner.windowManager.getFocusedWindow();
     if (focusedWindow) {
-        const focusedWorkspaceId = transportOwner["windowManager"].getWorkspaceForWindow(focusedWindow.webContents.id);
+        const focusedWorkspaceId = transportOwner.windowManager.getWorkspaceForWindow(focusedWindow.webContents.id);
         if (focusedWorkspaceId) {
             return focusedWorkspaceId;
         }
     }
-    const managedWindows = transportOwner["windowManager"].getAllWindows();
+    const managedWindows = transportOwner.windowManager.getAllWindows();
     return managedWindows[0]?.workspaceId ?? null;
 }
 
-export function isBrowserEmptyStateUrl(transportOwner: BrowserPaneManager, url: string): boolean {
+export function isBrowserEmptyStateUrl(_transportOwner: BrowserPaneManager, url: string): boolean {
     if (!url)
         return false;
     return url.includes(`/${BROWSER_EMPTY_STATE_PAGE}`) || url.includes(`\\${BROWSER_EMPTY_STATE_PAGE}`);
 }
 
-export function isAbortedNavigationError(transportOwner: BrowserPaneManager, error: unknown): boolean {
+export function isAbortedNavigationError(_transportOwner: BrowserPaneManager, error: unknown): boolean {
     if (typeof error === 'object' && error !== null) {
         const candidate = error as {
             code?: unknown;
@@ -69,15 +69,15 @@ export async function handleDeepLinkUrl(transportOwner: BrowserPaneManager, url:
     if (!url.startsWith(CRAFT_DEEPLINK_SCHEME_PREFIX))
         return;
     try {
-        if (!transportOwner["windowManager"]) {
+        if (!transportOwner.windowManager) {
             mainLog.warn('[browser-pane] window manager unavailable for deep-link handling, falling back to shell.openExternal');
             await shell.openExternal(url);
             return;
         }
         const { handleDeepLink } = await import("../deep-link");
-        const sink = transportOwner["windowManager"].getRpcEventSink() ?? undefined;
-        const resolver = (wcId: number) => transportOwner["windowManager"]?.getClientIdForWindow(wcId);
-        const result = await handleDeepLink(url, transportOwner["windowManager"], sink, resolver);
+        const sink = transportOwner.windowManager.getRpcEventSink() ?? undefined;
+        const resolver = (wcId: number) => transportOwner.windowManager?.getClientIdForWindow(wcId);
+        const result = await handleDeepLink(url, transportOwner.windowManager, sink, resolver);
         if (!result.success) {
             mainLog.warn(`[browser-pane] deep-link handling failed: ${result.error ?? 'unknown error'} url=${url}`);
         }
@@ -88,7 +88,7 @@ export async function handleDeepLinkUrl(transportOwner: BrowserPaneManager, url:
     }
 }
 
-export function isToolbarUiDocumentUrl(transportOwner: BrowserPaneManager, url: string): boolean {
+export function isToolbarUiDocumentUrl(_transportOwner: BrowserPaneManager, url: string): boolean {
     if (!url)
         return false;
     if (url.startsWith('data:text/html'))

@@ -11,7 +11,7 @@ export async function getRegistry(transportOwner: SpecializedProfileService, wor
 export async function createDraft(transportOwner: SpecializedProfileService, workspaceId: string, actorId: string, request: CreateSpecializedProfileDraftRequest): Promise<SpecializedProfileRegistryMutationResult> {
     const workspace = transportOwner["requireWorkspace"](workspaceId);
     const snapshots = await transportOwner["options"].listMissions(workspaceId);
-    const window = await transportOwner["verifiedAnalysisWindow"](workspaceId, snapshots);
+    const window = await transportOwner.verifiedAnalysisWindow(workspaceId, snapshots);
     const observations = buildMissionSpecializationObservations(window.included);
     const report = detectSpecializationOpportunities(observations.observations);
     const proposal = report.proposals.find((candidate) => candidate.proposalId === request.proposalId);

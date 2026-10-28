@@ -1,3 +1,5 @@
+import type { ActiveSessionObjective } from '../../../shared/src/sessions/types/objectives.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from "bun:test";
 import { DEFAULT_AUTOMATIC_TURN_RECOVERY_LEASE_MS, MAX_AUTOMATIC_TURN_RECOVERY_ATTEMPTS, advancePendingTurnRecovery, buildAutomaticTurnRecoveryPrompt, buildCleanRecoveryContinuationPrompt, createCleanRecoveryContinuationHandoff, createPendingTurnRecovery, pendingRecoveryRequiresContinuation, planAutomaticTurnRecovery, turnStillNeedsRecovery, turnRecoveryValidationFingerprint } from "./turn-recovery.ts";
 import { activeSafeContinuationObjective, message, terminalReconciliationObjective } from "./testing/turn-recovery-fixture.ts";
@@ -357,14 +359,14 @@ describe('durable turn recovery', () => {
       cause,
       'REGISTRATION_CONTEXT',
       1,
-      {
+      omitUndefined<ActiveSessionObjective>({
         ...terminalReconciliationObjective,
         acceptanceCriteria: undefined,
         terminalReconciliation: {
           ...terminalReconciliationObjective.terminalReconciliation!,
           initialAcceptanceRegistrationRequired: true,
         },
-      },
+      }),
     );
     expect(prompt).toContain('host has locked this terminal reconciliation');
     expect(prompt).toContain('This pass remains strictly read-only');
@@ -413,11 +415,11 @@ describe('durable turn recovery', () => {
       'premature_final',
       undefined,
       1,
-      {
+      omitUndefined<ActiveSessionObjective>({
         ...terminalReconciliationObjective,
         requiresAcceptanceCriteria: undefined,
         acceptanceCriteria: undefined,
-      },
+      }),
     );
     expect(prompt).toContain('host has locked this terminal reconciliation');
     expect(prompt).toContain('Repair only the completion receipt and its references');

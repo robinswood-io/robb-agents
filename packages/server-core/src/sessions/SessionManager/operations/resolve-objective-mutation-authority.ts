@@ -1,3 +1,7 @@
+import type { PendingTurnRecovery } from '../../../../../shared/src/sessions/types/turn-recovery.ts';
+import type { SessionCompletionEvent } from '../runtime-types.ts';
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { isLegacyHostObjectiveContractEnabled } from '../policy.ts';
 import type { ActiveSessionObjective } from '@craft-agent/shared/sessions';
@@ -200,7 +204,10 @@ function sessionOpResolveObjectiveMutationAuthority(sessionOperationContext: Ses
 /** Resolve the live tool capability frontier. A durable queued closure and
  * every accepted steer revoke the previous provider turn immediately; only
  * a call correlated to the new accepted request may use its new objective. */
-function sessionOpResolveRuntimeObjectiveMutationAuthority(sessionOperationContext: SessionOperationContext, managed: ManagedSession, currentUserRequest?: string): ReturnType<SessionOperations['resolveObjectiveMutationAuthority']> {
+function sessionOpResolveRuntimeObjectiveMutationAuthority(sessionOperationContext: SessionOperationContext, managed: ManagedSession, currentUserRequest?: string): Omit<ReturnType<SessionOperations['resolveObjectiveMutationAuthority']>, 'authorized' | 'sensitiveActionAuthorized'> & {
+    authorized: boolean | undefined;
+    sensitiveActionAuthorized: boolean | undefined;
+} {
     const denyAll = (kind: TerminalReconciliationPolicy['kind']) => ({
         authorized: false,
         sensitiveActionAuthorized: false,
@@ -242,8 +249,8 @@ function sessionOpResolveRuntimeObjectiveMutationAuthority(sessionOperationConte
         return authority;
     }
     return {
-        authorized: undefined as unknown as boolean,
-        sensitiveActionAuthorized: undefined as unknown as boolean,
+        authorized: undefined,
+        sensitiveActionAuthorized: undefined,
         authorizationSegments: authority.authorizationSegments ?? [],
         ...('authenticatedUserAuthorizationSegments' in authority && authority.authenticatedUserAuthorizationSegments ? {
             authenticatedUserAuthorizationSegments: authority.authenticatedUserAuthorizationSegments,
@@ -260,7 +267,7 @@ async function sessionOpReconcileRetainedTerminalMachineInbox(sessionOperationCo
     sessionOperationContext.state.deferredAutomaticSessions.delete(sessionId);
     sessionOperationContext.state.automaticAdmissionReservations.delete(sessionId);
     const reason: SessionLifecycleStopReason = objective.terminalState === 'complete_verified' ? 'complete' : 'error';
-    const reconciled = await sessionOperationContext.owner["reconcileRecoveredTerminalStatus"](managed, reason);
+    const reconciled = await sessionOperationContext.owner.reconcileRecoveredTerminalStatus(managed, reason);
     // The retained machine inbox intentionally survives restart. Publish the
     // reconstructed completion only when this hydration actually repaired a
     // stale lifecycle status; subsequent cold loads are idempotent.
@@ -270,17 +277,17 @@ async function sessionOpReconcileRetainedTerminalMachineInbox(sessionOperationCo
         || managed.activeObjective?.terminalState === 'active' || managed.isProcessing
         || !sessionOpHasOnlyMachineInbox(sessionOperationContext, managed))
         return;
-    sessionOperationContext.owner["emitObjectiveChanged"](managed);
-    sessionOperationContext.owner["sendEvent"]({
+    sessionOperationContext.owner.emitObjectiveChanged(managed);
+    sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'complete' }>>({
         type: 'complete', sessionId, reason, tokenUsage: managed.tokenUsage,
         hasUnread: managed.hasUnread, backgroundTasksAlive: sessionOperationContext.state.keepBackgroundTasksAlive,
-    }, managed.workspace.id);
+    }), managed.workspace.id);
     const finalMessageId = sessionOpGetLastFinalAssistantMessageId(sessionOperationContext, managed.messages);
-    sessionOperationContext.owner["emitSessionComplete"]({
-        sessionId, workspaceId: managed.workspace.id, reason, finalMessageId,
+    sessionOperationContext.owner.emitSessionComplete(omitUndefined<SessionCompletionEvent>({
+        sessionId, workspaceId: managed.workspace.id, reason, ...(finalMessageId !== undefined ? { finalMessageId: finalMessageId } : {}),
         finalText: finalMessageId ? managed.messages.find(message => message.id === finalMessageId)?.content : undefined,
-        tokenUsage: managed.tokenUsage,
-    });
+        ...(managed.tokenUsage !== undefined ? { tokenUsage: managed.tokenUsage } : {}),
+    }));
 }
 
 /** A direct chat continuation closes obsolete human handoffs fail-closed. It
@@ -309,16 +316,16 @@ function sessionOpSupersedeHumanHandoffsForDirectContinuation(sessionOperationCo
     const pendingPermissionCount = pendingPermissions.length;
     if (pendingPermissionCount) {
         for (const generation of new Set(pendingPermissions.map(request => request.processingGeneration))) {
-            void sessionOperationContext.owner["closePendingPermissionRequestsForStop"](managed, generation);
+            void sessionOperationContext.owner.closePendingPermissionRequestsForStop(managed, generation);
         }
         changed = true;
     }
     if (managed.pendingTurnRecovery?.waitingForPermission || managed.pendingTurnRecovery?.recoveryDispatch) {
-        managed.pendingTurnRecovery = {
+        managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
             ...managed.pendingTurnRecovery,
             waitingForPermission: undefined,
             recoveryDispatch: undefined,
-        };
+        });
         changed = true;
     }
     if (sessionOpCancelPendingAuthForHumanContinuation(sessionOperationContext, managed))
@@ -373,13 +380,13 @@ function sessionOpSupersedeHumanHandoffsForDirectContinuation(sessionOperationCo
                 restored = true;
             }
             if (previousPermissionWait && !managed.pendingTurnRecovery?.waitingForPermission) {
-                managed.pendingTurnRecovery = {
+                managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
                     ...(managed.pendingTurnRecovery ?? previousRecovery!),
                     waitingForPermission: { ...previousPermissionWait, recoveryRequired: true },
                     // The old provider/tool capability was denied above. Its dispatch
                     // must never be revived by an in-memory or later durable rollback.
                     recoveryDispatch: undefined,
-                };
+                });
                 restored = true;
             }
             return restored;

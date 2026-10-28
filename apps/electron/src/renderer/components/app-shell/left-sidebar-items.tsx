@@ -3,10 +3,10 @@ import * as React from "react";
 import { type Variants } from "motion/react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ContextMenu, ContextMenuTrigger, StyledContextMenuContent } from '@/components/ui/styled-context-menu';
+import { ContextMenu,ContextMenuTrigger,StyledContextMenuContent } from '@/components/ui/styled-context-menu';
 import { ContextMenuProvider } from '@/components/ui/menu-context';
-import { SidebarMenu, type SidebarMenuType } from "./SidebarMenu";
-import { SortableList, type SortableItemData } from '@/components/ui/sortable-list';
+import { SidebarMenu,type SidebarMenuType } from "./SidebarMenu";
+import { SortableList,type SortableItemData } from '@/components/ui/sortable-list';
 
 
 /** Context menu configuration for sidebar items */
@@ -60,7 +60,7 @@ export interface LinkItem {
   id: string            // Unique ID for navigation (e.g., 'nav:allSessions')
   title: string
   label?: string        // Optional badge (e.g., count)
-  icon: LucideIcon | React.ReactNode  // LucideIcon or custom React element
+  icon?: LucideIcon | React.ReactNode  // LucideIcon or custom React element
   iconColor?: string    // Optional color class for the icon
   /** Whether the icon responds to color (uses currentColor). Default true for Lucide icons. */
   iconColorable?: boolean
@@ -101,15 +101,15 @@ export interface LeftSidebarProps {
   isCollapsed: boolean
   links: SidebarItem[]
   /** Get props for each item (from unified sidebar navigation) */
-  getItemProps?: (id: string) => {
+  getItemProps?: ((id: string) => {
     tabIndex: number
     'data-focused': boolean
     ref: (el: HTMLElement | null) => void
-  }
+  }) | undefined
   /** Currently focused item ID */
-  focusedItemId?: string | null
+  focusedItemId?: string | null | undefined
   /** Whether this is a nested sidebar (child of expandable item) */
-  isNested?: boolean
+  isNested?: boolean | undefined
 }
 
 
@@ -158,11 +158,11 @@ export interface SortableStatusListProps {
   getItemProps: LeftSidebarProps['getItemProps']
   focusedItemId: string | null | undefined
   /** Non-sortable items rendered after the sortable list (e.g., Flagged, Archived) */
-  trailingItems?: LinkItem[]
+  trailingItems?: LinkItem[] | undefined
 }
 
 
-export function SortableStatusList({ items, onReorder, getItemProps, focusedItemId, trailingItems }: SortableStatusListProps) {
+export function SortableStatusList({ items, onReorder, getItemProps, trailingItems }: SortableStatusListProps) {
   // Filter to LinkItems only (separators don't participate in DnD)
   const linkItems = items.filter((item): item is LinkItem => !isSeparatorItem(item))
 
@@ -177,7 +177,7 @@ export function SortableStatusList({ items, onReorder, getItemProps, focusedItem
     const orderedIds = newItems.map(item => {
       // Strip navigation prefix to get the actual status/label ID
       const parts = item.id.split(':')
-      return parts[parts.length - 1]
+      return parts.at(-1) ?? item.id
     })
     onReorder(orderedIds)
   }, [onReorder])
@@ -275,9 +275,9 @@ export interface SidebarButtonProps {
     tabIndex: number
     'data-focused': boolean
     ref: (el: HTMLElement | null) => void
-  }
+  } | undefined
   /** True when rendering inside the DragOverlay (floating clone) */
-  isOverlay?: boolean
+  isOverlay?: boolean | undefined
 }
 
 
@@ -380,7 +380,7 @@ export function renderIcon(link: LinkItem) {
   const colorStyle = applyColor ? { color: link.iconColor || defaultColor } : undefined
 
   if (isComponent) {
-    const Icon = link.icon as React.ComponentType<{ className?: string; style?: React.CSSProperties }>
+    const Icon = link.icon as React.ComponentType<{ className?: string | undefined; style?: React.CSSProperties | undefined }>
     return (
       <Icon
         className="h-3.5 w-3.5 shrink-0"

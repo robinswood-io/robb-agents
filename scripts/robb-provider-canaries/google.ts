@@ -4,9 +4,9 @@ import { SECRET_ENVIRONMENT_NAMES, configuredSecret, fetchText, requestSignal, r
 
 function googleCurrentProject(text: string): string | undefined {
   const parsed = JSON.parse(text) as Record<string, unknown>;
-  if (!parsed.currentTier) {
-    const reasons = (Array.isArray(parsed.ineligibleTiers) ? parsed.ineligibleTiers : [])
-      .map((tier: unknown) => (tier && typeof tier === 'object' ? (tier as Record<string, unknown>).reasonMessage : undefined))
+  if (!parsed["currentTier"]) {
+    const reasons = (Array.isArray(parsed["ineligibleTiers"]) ? parsed["ineligibleTiers"] : [])
+      .map((tier: unknown) => (tier && typeof tier === 'object' ? (tier as Record<string, unknown>)["reasonMessage"] : undefined))
       .filter((reason: unknown): reason is string => typeof reason === 'string' && reason.trim().length > 0);
     if (reasons.some(reason => /no longer supported for Gemini Code Assist for individuals|Antigravity suite of products/i.test(reason))) {
       throw new Error(
@@ -15,10 +15,10 @@ function googleCurrentProject(text: string): string | undefined {
     }
     throw new Error(`Code Assist account has no active tier; canary will not perform onboarding mutations${reasons.length ? `: ${reasons.join(', ')}` : ''}`);
   }
-  const project = parsed.cloudaicompanionProject;
+  const project = parsed["cloudaicompanionProject"];
   if (typeof project === 'string') return project;
   if (project && typeof project === 'object') {
-    const id = (project as Record<string, unknown>).id;
+    const id = (project as Record<string, unknown>)["id"];
     return typeof id === 'string' ? id : undefined;
   }
   return undefined;
@@ -46,7 +46,7 @@ export async function runGoogleCanaries(
   const auth = await runProbe(provider, 'auth', now, secrets, async () => {
     const text = await fetchText(
       fetchImpl,
-      `${contract.endpoint.origin}${contract.endpoint.operationPaths!.auth}`,
+      `${contract.endpoint.origin}${contract.endpoint.operationPaths!["auth"]}`,
       {
         method: 'POST',
         headers,
@@ -72,10 +72,10 @@ export async function runGoogleCanaries(
 
   const toolCall = await runProbe(provider, 'tool-call', now, secrets, async () => {
     const toolName = 'provider_contract_healthcheck';
-    const model = environment.ROBB_CANARY_GOOGLE_CODE_ASSIST_MODEL?.trim() || 'gemini-2.5-flash';
+    const model = environment["ROBB_CANARY_GOOGLE_CODE_ASSIST_MODEL"]?.trim() || 'gemini-2.5-flash';
     const text = await fetchText(
       fetchImpl,
-      `${contract.endpoint.origin}${contract.endpoint.operationPaths!.toolCall}`,
+      `${contract.endpoint.origin}${contract.endpoint.operationPaths!["toolCall"]}`,
       {
         method: 'POST',
         headers,

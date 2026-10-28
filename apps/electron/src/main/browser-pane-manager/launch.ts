@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { mainLog } from "../logger";
 import { type BrowserEmptyStateLaunchPayload, type BrowserEmptyStateLaunchResult } from "../../shared/types";
 import type { BrowserPaneManager } from '../browser-pane-manager.ts';
@@ -18,12 +19,12 @@ export async function handleEmptyStateLaunchFromRenderer(transportOwner: Browser
         return { ok: false, handled: false, reason: 'missing_route' };
     }
     const token = payload.token ?? null;
-    const handled = await transportOwner["triggerEmptyStateRouteLaunch"](instance, route, token, 'ipc');
-    return {
+    const handled = await transportOwner.triggerEmptyStateRouteLaunch(instance, route, token, 'ipc');
+    return omitUndefined<BrowserEmptyStateLaunchResult>({
         ok: true,
         handled,
         reason: handled ? undefined : 'duplicate',
-    };
+    });
 }
 
 export function buildDeepLinkFromRoute(transportOwner: BrowserPaneManager, route: string): string {
@@ -45,7 +46,7 @@ export async function triggerEmptyStateRouteLaunch(transportOwner: BrowserPaneMa
         return false;
     }
     instance.lastLaunchToken = dedupeToken;
-    const deepLink = transportOwner["buildDeepLinkFromRoute"](route);
+    const deepLink = transportOwner.buildDeepLinkFromRoute(route);
     mainLog.info(`[browser-pane] handling empty-state launch id=${instance.id} source=${source} route=${route} deepLink=${deepLink}`);
     await browserPaneManagerNavigationRules.handleDeepLinkUrl(transportOwner, deepLink);
     return true;
@@ -73,7 +74,7 @@ export async function maybeHandleEmptyStateLaunch(transportOwner: BrowserPaneMan
         mainLog.warn(`[browser-pane] empty-state launch missing route id=${instance.id}`);
         return false;
     }
-    const handled = await transportOwner["triggerEmptyStateRouteLaunch"](instance, route, token, 'hash');
+    const handled = await transportOwner.triggerEmptyStateRouteLaunch(instance, route, token, 'hash');
     try {
         await instance.pageView.webContents.executeJavaScript("if (window.location.hash.includes('launch=')) history.replaceState(null, '', window.location.pathname + window.location.search);");
     }

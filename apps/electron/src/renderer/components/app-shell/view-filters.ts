@@ -1,3 +1,4 @@
+import { isUnknownArray } from "../../../../../../packages/shared/src/utils/json.ts";
 import type { ChatGroupingMode } from './SessionList'
 
 export type FilterMode = 'include' | 'exclude'
@@ -10,12 +11,12 @@ export type ViewFiltersMap = Record<string, {
 }>
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
+  return typeof value === 'object' && value !== null && !isUnknownArray(value)
 }
 
 function readFilter(value: unknown): FilterEntry {
   const entries: Array<[string, FilterMode]> = []
-  if (Array.isArray(value)) {
+  if (isUnknownArray(value)) {
     for (const id of value) {
       if (typeof id === 'string') entries.push([id, 'include'])
     }
@@ -34,21 +35,21 @@ export function decodeViewFilters(value: unknown, oldStatuses: unknown = [], old
     for (const [key, entry] of Object.entries(value)) {
       if (!isRecord(entry)) continue
       const filters: ViewFiltersMap[string] = {
-        statuses: readFilter(entry.statuses),
-        labels: readFilter(entry.labels),
+        statuses: readFilter(entry["statuses"]),
+        labels: readFilter(entry["labels"]),
       }
-      if (isRecord(entry.projects)) filters.projects = readFilter(entry.projects)
-      const grouping = entry.groupingMode
+      if (isRecord(entry["projects"])) filters.projects = readFilter(entry["projects"])
+      const grouping = entry["groupingMode"]
       if (grouping === 'date' || grouping === 'status' || grouping === 'unread' || grouping === 'project') {
         filters.groupingMode = grouping
       }
       Object.defineProperty(saved, key, { value: filters, enumerable: true, writable: true, configurable: true })
     }
   }
-  if (!saved.allSessions) {
+  if (!saved["allSessions"]) {
     const statuses = readFilter(oldStatuses)
     const labels = readFilter(oldLabels)
-    if (Object.keys(statuses).length || Object.keys(labels).length) saved.allSessions = { statuses, labels }
+    if (Object.keys(statuses).length || Object.keys(labels).length) saved["allSessions"] = { statuses, labels }
   }
   return saved
 }

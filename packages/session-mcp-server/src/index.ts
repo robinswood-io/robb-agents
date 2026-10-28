@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { isJsonObject, isUnknownArray, parseJsonObject } from '@craft-agent/shared/utils/json';
 /**
  * Session MCP Server
  *
@@ -49,7 +50,7 @@ let docsTools: Tool[] = [];
  * Falls back gracefully if the server is unreachable (tools will just be empty).
  */
 async function connectDocsUpstream(): Promise<void> {
-  if (process.env.ROBB_ENABLE_CRAFT_DOCS_MCP !== '1' || process.env.CRAFT_DISABLE_DOCS === '1') {
+  if (process.env["ROBB_ENABLE_CRAFT_DOCS_MCP"] !== '1' || process.env["CRAFT_DISABLE_DOCS"] === '1') {
     docsClient = null;
     docsTools = [];
     return;
@@ -94,13 +95,16 @@ async function callDocsUpstream(
   try {
     const result = await docsClient.callTool({ name, arguments: args });
     // Convert MCP result to our format
-    const textContent = (result.content as Array<{ type: string; text?: string }> || [])
-      .filter(c => c.type === 'text' && c.text)
-      .map(c => ({ type: 'text' as const, text: c.text! }));
+    const rawContent: unknown = result.content;
+    const textContent = isUnknownArray(rawContent) ? rawContent.flatMap(item => {
+      if (!isJsonObject(item) || item['type'] !== 'text') return [];
+      const text = item['text'];
+      return typeof text === 'string' && text.length > 0 ? [{ type: 'text' as const, text }] : [];
+    }) : [];
 
     return {
       content: textContent.length > 0 ? textContent : [{ type: 'text', text: '(No response from docs server)' }],
-      isError: result.isError as boolean | undefined,
+      ...(typeof result.isError === 'boolean' ? { isError: result.isError } : {}),
     };
   } catch (err) {
     return errorResponse(`Docs tool '${name}' failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -121,17 +125,17 @@ async function handleCallLlm(
   config: SessionConfig,
 ): Promise<{ content: Array<{ type: 'text'; text: string }>; isError?: boolean }> {
   // Primary path: PreToolUse intercept injects _precomputedResult (works on Codex).
-  const precomputed = args?._precomputedResult as string | undefined;
+  const precomputed = typeof args?.["_precomputedResult"] === 'string' ? args["_precomputedResult"] : undefined;
 
   if (precomputed) {
     try {
-      const parsed = JSON.parse(precomputed);
-      if (parsed.error) {
-        return errorResponse(`call_llm failed: ${parsed.error}`);
+      const parsed = parseJsonObject(precomputed);
+      if (typeof parsed["error"] === 'string' && parsed["error"]) {
+        return errorResponse(`call_llm failed: ${parsed["error"]}`);
       }
-      if (parsed.text !== undefined) {
+      if (typeof parsed["text"] === 'string') {
         return {
-          content: [{ type: 'text' as const, text: parsed.text || '(Model returned empty response)' }],
+          content: [{ type: 'text' as const, text: parsed["text"] || '(Model returned empty response)' }],
         };
       }
       return errorResponse('call_llm: _precomputedResult has unexpected format (missing text field).');
@@ -177,13 +181,13 @@ async function handleSpawnSession(
   config: SessionConfig,
 ): Promise<{ content: Array<{ type: 'text'; text: string }>; isError?: boolean }> {
   // Primary path: PreToolUse intercept injects _precomputedResult (works on Codex).
-  const precomputed = args?._precomputedResult as string | undefined;
+  const precomputed = typeof args?.["_precomputedResult"] === 'string' ? args["_precomputedResult"] : undefined;
 
   if (precomputed) {
     try {
-      const parsed = JSON.parse(precomputed);
-      if (parsed.error) {
-        return errorResponse(`spawn_session failed: ${parsed.error}`);
+      const parsed = parseJsonObject(precomputed);
+      if (typeof parsed["error"] === 'string' && parsed["error"]) {
+        return errorResponse(`spawn_session failed: ${parsed["error"]}`);
       }
       // Return the full result (could be help info or spawn result)
       return {
@@ -204,8 +208,8 @@ async function handleSpawnSession(
         signal: AbortSignal.timeout(CALLBACK_TOOL_TIMEOUT_MS),
       });
       const result = await resp.json() as Record<string, unknown>;
-      if (result.error) {
-        return errorResponse(`spawn_session failed: ${result.error}`);
+      if (result["error"]) {
+        return errorResponse(`spawn_session failed: ${result["error"]}`);
       }
       return {
         content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
@@ -275,7 +279,7 @@ async function main() {
     process.exit(1);
   }
 
-  const rawCallbackPort = callbackPort || process.env.CRAFT_LLM_CALLBACK_PORT;
+  const rawCallbackPort = callbackPort || process.env["CRAFT_LLM_CALLBACK_PORT"];
   let validatedCallbackPort: string | undefined;
   if (rawCallbackPort !== undefined && rawCallbackPort !== '') {
     const portNum = Number(rawCallbackPort);
@@ -291,7 +295,7 @@ async function main() {
     workspaceRootPath,
     plansFolderPath,
     // CLI arg takes priority, env var as fallback (Copilot CLI may not forward env to subprocesses)
-    callbackPort: validatedCallbackPort,
+    ...(validatedCallbackPort !== undefined ? { callbackPort: validatedCallbackPort } : {}),
   };
 
   // Create the Codex context
@@ -368,7 +372,7 @@ async function main() {
   console.error(`Session MCP Server started for session ${sessionId} (MCP 2025/2026, developerFeedback=${includeDeveloperFeedback})`);
 }
 
-main().catch((error) => {
+main().catch((error: unknown) => {
   console.error('Fatal error:', error);
   process.exit(1);
 });

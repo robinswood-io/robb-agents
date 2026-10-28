@@ -133,14 +133,14 @@ describe('durable restart recovery', () => {
         terminalState: 'active',
       })
       expect(restored.pendingTurnRecovery).toMatchObject({ userMessageId: 'queued-human', attempts: 0 })
-      expect(h.events).toContainEqual(expect.objectContaining({
+      expect<unknown>(h.events).toContainEqual((expect.objectContaining({
         type: 'auth_completed', sessionId: managed.id, requestId: 'stale-auth',
         success: false, cancelled: true,
-      }))
-      expect(h.events).toContainEqual(expect.objectContaining({
+      }) as unknown))
+      expect<unknown>(h.events).toContainEqual((expect.objectContaining({
         type: 'permission_mode_changed', sessionId: managed.id, permissionMode: 'ask',
         previousPermissionMode: 'allow-all', changedBy: 'system',
-      }))
+      }) as unknown))
       expect(listSessions(h.rootPath).find(meta => meta.id === managed.id)).toMatchObject({
         permissionMode: 'ask',
         pendingQueuedMessageIds: [],
@@ -246,10 +246,10 @@ describe('durable restart recovery', () => {
         attempts: 1,
       })
       expect(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).toBeUndefined()
-      expect(h.events).toContainEqual(expect.objectContaining({
+      expect<unknown>(h.events).toContainEqual((expect.objectContaining({
         type: 'auth_completed', sessionId: managed.id, requestId: 'stale-auth-behind-recovery',
         success: false, cancelled: true,
-      }))
+      }) as unknown))
       expect(listSessions(h.rootPath).find(meta => meta.id === managed.id)).toMatchObject({
         permissionMode: 'ask',
         pendingQueuedMessageIds: [],
@@ -344,7 +344,7 @@ describe('durable restart recovery', () => {
 
       const blockerId = blocker.id as string
       expect(providerStarts).toBe(0)
-      expect(restored.messageQueue.map((item: { messageId?: string }) => item.messageId)).toEqual([
+      expect(restored.messageQueue.map(item => item.messageId)).toEqual([
         blockerId,
         'queued-human-after-blocker',
       ])

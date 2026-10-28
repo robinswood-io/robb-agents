@@ -1,17 +1,13 @@
-import type { SessionToolContext, WaitSessionsMode } from '../context.ts';
+import type { z } from 'zod';
+import type { WaitSessionsSchema } from '../tool-defs/schemas.ts';
+import type { SessionToolContext } from '../context.ts';
 import type { ToolResult } from '../types.ts';
 import { errorResponse, successResponse } from '../response.ts';
 
-export interface WaitSessionsArgs {
-  _hostTerminalReconciliationCapability?: string;
-  sessionIds: string[];
-  timeoutMs?: number;
-  afterCursors?: Record<string, string>;
-  mode?: WaitSessionsMode;
-}
+export type WaitSessionsArgs = z.infer<typeof WaitSessionsSchema>;
 
 export async function handleWaitSessions(
-  ctx: SessionToolContext,
+  ctx: Pick<SessionToolContext, 'sessionId' | 'waitForSessions'>,
   args: WaitSessionsArgs,
 ): Promise<ToolResult> {
   if (!ctx.waitForSessions) {

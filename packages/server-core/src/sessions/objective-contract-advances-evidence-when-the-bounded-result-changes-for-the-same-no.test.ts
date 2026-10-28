@@ -1,3 +1,4 @@
+import { parseJsonObject } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from "bun:test";
 import type { Message } from "@craft-agent/core/types";
 import { OBJECTIVE_OUTCOME_CONTINUE_EXAMPLE, buildObjectiveContractPrompt, hasObjectiveExecutionEvidence, hasObjectiveSubstantiveToolResult, transitionObjectiveContract, turnProgressFingerprint, turnProgressFingerprints } from "./objective-contract.ts";
@@ -153,8 +154,8 @@ describe('durable objective contract', () => {
     expect(prompt).toContain('any concrete next action or input needed');
     expect(prompt).toContain('Keep the machine-readable receipt separate');
     const reviewLine = prompt.split('\n').find(line => line.startsWith('When asking an independent reviewer'))!;
-    const review = JSON.parse(reviewLine.slice(reviewLine.indexOf('{')));
-    expect(review.criteria).toEqual(objective.completionCriteria
+    const review = parseJsonObject(reviewLine.slice(reviewLine.indexOf('{')));
+    expect(review['criteria']).toEqual(objective.completionCriteria
       .filter(id => id !== 'independent-review-passed').map(id => ({ id, passed: true })));
     expect(prompt).not.toContain('a substantive content review may certify relevant-checks-passed alone');
     const reviewerPrompt = buildObjectiveContractPrompt({ ...objective, delegatedRole: 'reviewer' });

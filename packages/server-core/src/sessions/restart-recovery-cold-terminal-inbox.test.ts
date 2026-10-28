@@ -40,7 +40,7 @@ describe('durable restart recovery', () => {
     expect(modelDispatches).toBe(0)
     expect(managed.messageQueue).toEqual([])
     expect(managed.pendingTurnRecovery).toMatchObject({ userMessageId: 'retargeted-root', attempts: 0 })
-    expect(h.events).toContainEqual(expect.objectContaining({ type: 'complete', sessionId: managed.id }))
+    expect<unknown>(h.events).toContainEqual((expect.objectContaining({ type: 'complete', sessionId: managed.id }) as unknown))
   })
 
   it('keeps a reserved ID-less restart paused if a human decision appears during hydration', async () => {
@@ -127,7 +127,7 @@ describe('durable restart recovery', () => {
       await tick(); await tick()
 
       expect(dequeues).toEqual([])
-      expect(restored.messageQueue.map((item: { messageId?: string }) => item.messageId)).toEqual(['queued-human'])
+      expect(restored.messageQueue.map(item => item.messageId)).toEqual(['queued-human'])
       expect(restored.messages.find((message: { id: string; isQueued?: boolean }) => message.id === 'queued-human')?.isQueued).toBe(true)
     },
   )
@@ -147,7 +147,7 @@ describe('durable restart recovery', () => {
       await tick(); await tick()
 
       expect(dequeues).toEqual([])
-      expect(managed.messageQueue.map((item: { messageId?: string }) => item.messageId)).toEqual(['queued-human'])
+      expect(managed.messageQueue.map(item => item.messageId)).toEqual(['queued-human'])
     },
   )
 
@@ -213,7 +213,7 @@ describe('durable restart recovery', () => {
       await tick(); await tick()
 
       expect(dequeues).toEqual([managed.id])
-      expect(restored.messageQueue.map((item: { messageId?: string }) => item.messageId)).toEqual(['queued-human'])
+      expect(restored.messageQueue.map(item => item.messageId)).toEqual(['queued-human'])
       expect(restored.messages.find((message: { id: string; isQueued?: boolean }) => message.id === 'queued-human')?.isQueued).toBe(true)
     },
   )
@@ -237,7 +237,7 @@ describe('durable restart recovery', () => {
     await tick(); await tick()
 
     expect(dequeues).toEqual([])
-    expect(restored.messageQueue.map((item: { messageId?: string }) => item.messageId)).toEqual(['queued-machine'])
+    expect(restored.messageQueue.map(item => item.messageId)).toEqual(['queued-machine'])
   })
 
   it.each([undefined, null])('does not treat legacy terminalState=%s as terminal', async terminalState => {

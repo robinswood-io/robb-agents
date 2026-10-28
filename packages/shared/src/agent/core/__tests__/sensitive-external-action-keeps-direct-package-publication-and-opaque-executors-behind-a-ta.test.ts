@@ -51,15 +51,15 @@ function checkMcp(
     activeSourceSlugs: [sourceSlug],
     allSourceSlugs: [sourceSlug],
     hasSourceActivation: false,
-    externalActionPolicy: options?.externalActionPolicy,
-    objectiveMutationAuthorized: options?.objectiveMutationAuthorized,
-    objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized,
-    objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments,
-    authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments,
-    dataFolderPath: options?.dataFolderPath,
-    declaredToolCapabilities: options?.declaredToolCapabilities,
+    ...(options?.externalActionPolicy !== undefined ? { externalActionPolicy: options?.externalActionPolicy } : {}),
+    ...(options?.objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized: options?.objectiveMutationAuthorized } : {}),
+    ...(options?.objectiveSensitiveActionAuthorized !== undefined ? { objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized } : {}),
+    ...(options?.objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments } : {}),
+    ...(options?.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments } : {}),
+    ...(options?.dataFolderPath !== undefined ? { dataFolderPath: options?.dataFolderPath } : {}),
+    ...(options?.declaredToolCapabilities !== undefined ? { declaredToolCapabilities: options?.declaredToolCapabilities } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 
@@ -227,7 +227,7 @@ describe('sensitive external action classifier', () => {
       const action = classifySensitiveExternalAction('mcp__rbw-servers__ssh_execute', {
         server: 'dev', cwd: '/srv/workspace/zero', command,
       });
-      expect(action?.targetCandidates).toEqual(expect.arrayContaining(['zero', 'other']));
+      expect<unknown>(action?.targetCandidates).toEqual(expect.arrayContaining(['zero', 'other']));
       expect(action && isSensitiveExternalActionExplicitlyAuthorized(action, 'Corrige Zero.')).toBeFalse();
     }
 
@@ -279,7 +279,7 @@ describe('sensitive external action classifier', () => {
   it('fails closed on target overflow, deep unknown targets and dynamic HTTP destinations', () => {
     const recipients = Array.from({ length: 65 }, (_, index) => `user${index}@example.com`);
     expect(classifySensitiveExternalAction('mcp__gmail__send_email', { recipients }))
-      .toMatchObject({ targetCandidates: expect.arrayContaining(['additional unresolved targets']) });
+      .toMatchObject({ targetCandidates: (expect.arrayContaining(['additional unresolved targets']) as unknown) });
     expect(classifySensitiveExternalAction('mcp__gmail__send_email', {
       recipients: [{ email: 'alice@example.com' }],
     })).toMatchObject({ targetCandidates: ['alice@example.com'] });
@@ -287,10 +287,10 @@ describe('sensitive external action classifier', () => {
       envelope: { nested: { nested: { nested: { nested: { nested: { nested: { nested: { nested: {
         bcc: 'deep@example.com',
       } } } } } } } } },
-    })).toMatchObject({ targetCandidates: expect.arrayContaining(['additional unresolved targets']) });
+    })).toMatchObject({ targetCandidates: (expect.arrayContaining(['additional unresolved targets']) as unknown) });
     expect(classifySensitiveExternalAction('Bash', {
       command: "curl -X POST \"$TARGET_URL\" -d '{\"email\":\"alice@example.com\"}'",
-    })).toMatchObject({ targetCandidates: expect.arrayContaining(['unresolved external target']) });
+    })).toMatchObject({ targetCandidates: (expect.arrayContaining(['unresolved external target']) as unknown) });
 
     const unresolvedOnly = classifySensitiveExternalAction('mcp__mailer__send_email', {
       to: [{}],
@@ -448,7 +448,7 @@ describe('sensitive external action classifier', () => {
     })).toMatchObject({ category: 'service_restart' });
     expect(classifySensitiveExternalAction('api_broker', {
       method: 'POST', path: '/orders/preview', operation: 'execute_trade', account_id: 'acct-1', amount: 10,
-    })).toMatchObject({ category: 'payment', targetCandidates: expect.arrayContaining(['acct-1', '10']) });
+    })).toMatchObject({ category: 'payment', targetCandidates: (expect.arrayContaining(['acct-1', '10']) as unknown) });
     expect(classifySensitiveExternalAction('api_vault', {
       method: 'POST', path: '/service/status', operation: 'set_secret', project: 'zero',
     })).toMatchObject({ category: 'secret_transfer' });

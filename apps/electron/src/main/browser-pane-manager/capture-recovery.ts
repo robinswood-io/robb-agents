@@ -1,3 +1,5 @@
+import type { BrowserPaneCapturePageImageOptionsPayload } from './protocol.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { mainLog } from "../logger";
 import type { BrowserPaneManager } from '../browser-pane-manager.ts';
 import { SCREENSHOT_HIDDEN_CAPTURE_ATTEMPTS, SCREENSHOT_RESCUE_PAINT_DELAY_MS } from './shared.ts';
@@ -16,11 +18,11 @@ export async function capturePageWithRecovery(transportOwner: BrowserPaneManager
             format: 'png' | 'jpeg';
         } | null = null;
         try {
-            result = await browserPaneManagerCapturePage.capturePageImage(transportOwner, instance, {
-                rect: options.rect,
+            result = await browserPaneManagerCapturePage.capturePageImage(transportOwner, instance, omitUndefined<BrowserPaneCapturePageImageOptionsPayload>({
+                ...(options.rect !== undefined ? { rect: options.rect } : {}),
                 useHiddenCaptureOptions: true,
                 ...imageOpts,
-            });
+            }));
         }
         catch (error) {
             if (browserPaneManagerCapturePage.isDisplaySurfaceUnavailableError(transportOwner, error)) {
@@ -39,7 +41,7 @@ export async function capturePageWithRecovery(transportOwner: BrowserPaneManager
         }
         mainLog.warn(`[browser-pane] ${options.errorPrefix} empty capture attempt instance=${instance.id} mode=${options.mode} attempt=${attempt}/${SCREENSHOT_HIDDEN_CAPTURE_ATTEMPTS} visible=${instance.isVisible} isLoading=${instance.isLoading} url=${instance.currentUrl}`);
         if (attempt < SCREENSHOT_HIDDEN_CAPTURE_ATTEMPTS) {
-            await transportOwner["waitForScreenshotReadiness"](instance.id);
+            await transportOwner.waitForScreenshotReadiness(instance.id);
         }
     }
     const window = instance.window;
@@ -54,19 +56,19 @@ export async function capturePageWithRecovery(transportOwner: BrowserPaneManager
                 instance.isVisible = true;
                 transportOwner["emitStateChange"](instance);
                 rescueUsed = true;
-                await transportOwner["sleep"](SCREENSHOT_RESCUE_PAINT_DELAY_MS);
-                await transportOwner["waitForScreenshotReadiness"](instance.id);
+                await transportOwner.sleep(SCREENSHOT_RESCUE_PAINT_DELAY_MS);
+                await transportOwner.waitForScreenshotReadiness(instance.id);
             }
             let rescueResult: {
                 buffer: Buffer;
                 format: 'png' | 'jpeg';
             } | null = null;
             try {
-                rescueResult = await browserPaneManagerCapturePage.capturePageImage(transportOwner, instance, {
-                    rect: options.rect,
+                rescueResult = await browserPaneManagerCapturePage.capturePageImage(transportOwner, instance, omitUndefined<BrowserPaneCapturePageImageOptionsPayload>({
+                    ...(options.rect !== undefined ? { rect: options.rect } : {}),
                     useHiddenCaptureOptions: false,
                     ...imageOpts,
-                });
+                }));
             }
             catch (error) {
                 if (browserPaneManagerCapturePage.isDisplaySurfaceUnavailableError(transportOwner, error)) {

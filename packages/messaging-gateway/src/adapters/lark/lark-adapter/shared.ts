@@ -71,80 +71,13 @@ export function resolveLarkDomain(domain: 'lark' | 'feishu'): lark.Domain {
     return domain === 'feishu' ? lark.Domain.Feishu : lark.Domain.Lark;
 }
 
-/**
- * Strip a leading `<at user_id="...">…</at> ` prefix from a Lark text message
- * content. Lark prepends the @mention as a literal in the content, but the
- * agent only cares about what comes after.
- */
 export function stripMentionPrefix(text: string): string {
     return text.replace(/^<at[^>]*>[^<]*<\/at>\s*/, '').trim();
 }
 
-/**
- * Narrow projection over the SDK's `Client` for the methods we actually call.
- * The SDK's full type union is enormous (~250k lines) and changes shape between
- * minor versions; pinning a hand-rolled interface keeps our adapter loosely
- * coupled and the ts-checker happy.
- */
-export interface LarkClient {
-    im: {
-        message: {
-            create: (args: {
-                params: {
-                    receive_id_type: 'chat_id' | 'open_id' | 'union_id';
-                };
-                data: {
-                    receive_id: string;
-                    msg_type: string;
-                    content: string;
-                    uuid?: string;
-                };
-            }) => Promise<{
-                data?: {
-                    message_id?: string;
-                };
-            } | null>;
-            update: (args: {
-                path: {
-                    message_id: string;
-                };
-                data: {
-                    msg_type: string;
-                    content: string;
-                };
-            }) => Promise<unknown>;
-            patch: (args: {
-                path: {
-                    message_id: string;
-                };
-                data: {
-                    content: string;
-                };
-            }) => Promise<unknown>;
-        };
-        file: {
-            create: (args: {
-                data: {
-                    file_type: string;
-                    file_name: string;
-                    file: Buffer;
-                };
-            }) => Promise<{
-                file_key?: string;
-            } | null>;
-        };
-        image: {
-            create: (args: {
-                data: {
-                    image_type: 'message' | 'avatar';
-                    image: Buffer;
-                };
-            }) => Promise<{
-                image_key?: string;
-            } | null>;
-        };
-    };
-}
+
+/** Use the installed SDK contract for REST calls, including resource downloads. */
+export type LarkClient = Pick<lark.Client, 'im' | 'request'>;
 
 /**
  * Flat shape after the SDK's `EventDispatcher.parse()` unwraps the v2 envelope.

@@ -3,7 +3,7 @@ import type { BrowserPaneManager } from '../browser-pane-manager.ts';
 import { TOOLBAR_CHANNELS } from './shared.ts';
 import type { BrowserInstance } from './shared.ts';
 
-export async function loadToolbarFallback(transportOwner: BrowserPaneManager, instance: BrowserInstance, reason: string): Promise<void> {
+export async function loadToolbarFallback(_transportOwner: BrowserPaneManager, instance: BrowserInstance, reason: string): Promise<void> {
     const safeReason = reason.replace(/[<>&]/g, (ch) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[ch] || ch));
     const html = `<!doctype html>
 <html>
@@ -39,7 +39,7 @@ export async function loadToolbarFallback(transportOwner: BrowserPaneManager, in
     }
 }
 
-export function pushToolbarState(transportOwner: BrowserPaneManager, instance: BrowserInstance): void {
+export function pushToolbarState(_transportOwner: BrowserPaneManager, instance: BrowserInstance): void {
     if (instance.window.isDestroyed() || instance.toolbarView.webContents.isDestroyed())
         return;
     const state = {

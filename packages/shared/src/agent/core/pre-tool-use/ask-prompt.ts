@@ -132,7 +132,7 @@ export function shouldPromptInAskMode(
       onDebug?.(`Auto-allowing "${toolName}" (previously approved)`);
       return null;
     }
-    const filePath = (input.file_path as string) || (input.notebook_path as string) || 'unknown';
+    const filePath = (input["file_path"] as string) || (input["notebook_path"] as string) || 'unknown';
     return {
       promptType: 'file_write',
       description: `${toolName}: ${filePath}`,
@@ -142,7 +142,7 @@ export function shouldPromptInAskMode(
 
   // --- Bash commands ---
   if (toolName === 'Bash') {
-    const command = typeof input.command === 'string' ? input.command : '';
+    const command = typeof input["command"] === 'string' ? input["command"] : '';
     const baseCommand = permissionManager.getBaseCommand(command);
 
     const adminPrompt = classifyAdminApproval(command);
@@ -185,7 +185,7 @@ export function shouldPromptInAskMode(
   if (toolName.startsWith('mcp__')) {
     // Check if it would be blocked in safe mode (= it's a mutation)
     const safeModeResult = shouldAllowToolInMode(
-      toolName, input, 'safe', { plansFolderPath }
+      toolName, input, 'safe', { ...(plansFolderPath !== undefined ? { plansFolderPath } : {}) }
     );
     if (!safeModeResult.allowed) {
       // It's a mutation — check whitelist
@@ -206,8 +206,8 @@ export function shouldPromptInAskMode(
 
   // --- API mutations ---
   if (toolName.startsWith('api_')) {
-    const method = ((input?.method as string) || 'GET').toUpperCase();
-    const path = input?.path as string | undefined;
+    const method = ((input?.["method"] as string) || 'GET').toUpperCase();
+    const path = input?.["path"] as string | undefined;
 
     if (method !== 'GET') {
       const apiDescription = `${method} ${path || ''}`;

@@ -153,7 +153,7 @@ export function createInstance(transportOwner: BrowserPaneManager, moduleDirecto
             transportOwner["markToolbarReady"](instance, 'toolbar-load-finalized');
         }
     });
-    void transportOwner["loadEmptyStatePage"](instance).catch((error) => {
+    void transportOwner["loadEmptyStatePage"](instance).catch((error: unknown) => {
         if (browserPaneManagerNavigationRules.isAbortedNavigationError(transportOwner, error)) {
             mainLog.info(`[browser-pane] empty-state load superseded by navigation id=${instance.id}`);
             return;

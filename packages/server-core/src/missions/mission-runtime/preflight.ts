@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel } from "@craft-agent/shared/config";
 import { MissionSpecSchema, loadMissionSnapshot, simulateMissionDigitalTwin, type MissionConnectorPreflight, type MissionDigitalTwinReport } from "@craft-agent/shared/missions";
 import { loadWorkspaceConfig } from "@craft-agent/shared/workspaces";
@@ -10,7 +11,7 @@ import { normalizedError, maxMissionDifficulty, measuredMissionCostUsd, remainin
 import type { MissionPreflightTarget } from './shared.ts';
 
 export async function preflightMission(transportOwner: MissionRuntimeService, workspaceId: string, target: MissionPreflightTarget): Promise<MissionDigitalTwinReport> {
-    return transportOwner["preflightMissionInternal"](workspaceId, target, false);
+    return transportOwner.preflightMissionInternal(workspaceId, target, false);
 }
 
 export async function preflightMissionInternal(transportOwner: MissionRuntimeService, workspaceId: string, target: MissionPreflightTarget,
@@ -27,7 +28,7 @@ trustedBoundSpec: boolean): Promise<MissionDigitalTwinReport> {
     }
     const snapshot = persistedSnapshot;
     const parsedSpec = MissionSpecSchema.parse(persistedSnapshot?.spec ?? target.spec);
-    const specializedProfiles = transportOwner["createSpecializedProfileResolver"](workspace);
+    const specializedProfiles = transportOwner.createSpecializedProfileResolver(workspace);
     const spec = persistedSnapshot || trustedBoundSpec
         ? await specializedProfiles.revalidateMissionSpec(parsedSpec)
         : await specializedProfiles.bindMissionSpec(parsedSpec);
@@ -72,12 +73,12 @@ trustedBoundSpec: boolean): Promise<MissionDigitalTwinReport> {
             ? getSourcesBySlugs(workspace.rootPath, sourceSlugs)
             : [];
         const classification = { difficulty: undefined, requiredCapabilities: [] };
-        return {
+        return omitUndefined<MissionSelectionContext>({
             sensitivity: maxSourceSensitivity(sources.map(source => source.config.routingSensitivity)),
             sourceSlugs,
-            difficulty: classification.difficulty,
+            ...(classification.difficulty !== undefined ? { difficulty: classification.difficulty } : {}),
             requiredCapabilities: classification.requiredCapabilities,
-        };
+        });
     };
     const routingContextByWorkItemId = new Map(executing.map(item => {
         const profileId = item.agentProfileId ?? spec.defaultWorkerProfileId;
@@ -98,12 +99,12 @@ trustedBoundSpec: boolean): Promise<MissionDigitalTwinReport> {
             : [routingContextFor(profileId, roleAssignment)];
         return [profileId, {
                 assignment: assignedPrompts.length > 0 ? assignedPrompts.join('\n') : roleAssignment,
-                context: {
+                context: omitUndefined<MissionSelectionContext>({
                     sensitivity: maxSourceSensitivity(contexts.map(context => context.sensitivity)),
                     sourceSlugs: Array.from(new Set(contexts.flatMap(context => context.sourceSlugs ?? []))),
                     difficulty: maxMissionDifficulty(contexts.map(context => context.difficulty)),
                     requiredCapabilities: Array.from(new Set(contexts.flatMap(context => context.requiredCapabilities ?? []))) as string[],
-                } satisfies MissionSelectionContext,
+                }),
             }] as const;
     }));
     const resolveRoute = (profileId: string, context: MissionSelectionContext, assignment: string, projectedMissionUsd?: number) => {
@@ -114,8 +115,8 @@ trustedBoundSpec: boolean): Promise<MissionDigitalTwinReport> {
             ?? getDefaultLlmConnection() ?? undefined;
         return resolveExplicitMissionModel({
             profile,
-            origin,
-            defaultConnectionSlug: defaultConnection,
+            ...(origin !== undefined ? { origin: origin } : {}),
+            ...(defaultConnection !== undefined ? { defaultConnectionSlug: defaultConnection } : {}),
             defaultThinkingLevel: config.defaults?.thinkingLevel ?? getDefaultThinkingLevel(),
             connections,
             routingContext: context,
@@ -123,7 +124,7 @@ trustedBoundSpec: boolean): Promise<MissionDigitalTwinReport> {
             assignment,
             reviewOnly: profile.role === 'reviewer' || profile.role === 'supervisor',
             measuredMissionUsd: snapshot ? measuredMissionCostUsd(snapshot) : 0,
-            projectedMissionUsd,
+            ...(projectedMissionUsd !== undefined ? { projectedMissionUsd: projectedMissionUsd } : {}),
         });
     };
     const resolveRoutes = (projectedMissionUsd?: number) => {
@@ -148,7 +149,7 @@ trustedBoundSpec: boolean): Promise<MissionDigitalTwinReport> {
     resolveRoutes();
     const pathPolicyAllowedByWorkItemId = Object.fromEntries(executing.map((item) => [
         item.id,
-        transportOwner["workItemPathsAreAuthorized"](workspace, spec, item),
+        transportOwner.workItemPathsAreAuthorized(workspace, spec, item),
     ]));
     const connectorByWorkItemId: Record<string, MissionConnectorPreflight> = {};
     for (const item of executing.filter((candidate) => candidate.effect === 'external-mutation')) {

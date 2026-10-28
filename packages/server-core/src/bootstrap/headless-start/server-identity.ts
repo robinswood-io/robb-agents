@@ -54,7 +54,7 @@ export function generateServerToken(): string {
  * side-by-side without duplicating workspaces, sessions or credentials.
  */
 function getLockFile(): string {
-  return join(process.env.CRAFT_SERVER_LOCK_DIR || CONFIG_DIR, '.server.lock')
+  return join(process.env["CRAFT_SERVER_LOCK_DIR"] || CONFIG_DIR, '.server.lock')
 }
 
 interface LockPayload {
@@ -82,8 +82,8 @@ function parseLockContent(raw: string): LockPayload | null {
   if (trimmed.startsWith('{')) {
     try {
       const parsed = JSON.parse(trimmed) as Record<string, unknown>
-      const pid = typeof parsed.pid === 'number' ? parsed.pid : NaN
-      const startedAt = typeof parsed.startedAt === 'number' ? parsed.startedAt : 0
+      const pid = typeof parsed["pid"] === 'number' ? parsed["pid"] : NaN
+      const startedAt = typeof parsed["startedAt"] === 'number' ? parsed["startedAt"] : 0
       if (!isNaN(pid)) return { pid, startedAt }
     } catch { /* fall through to legacy parse */ }
   }

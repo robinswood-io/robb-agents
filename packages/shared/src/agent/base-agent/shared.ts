@@ -1,5 +1,4 @@
-import { SPAWN_SESSION_ROLE_HELP } from "@craft-agent/session-tools-core";
-import type { PermissionMode } from "../mode-manager.ts";
+import { SPAWN_SESSION_ROLE_HELP, type parseSpawnSessionInput } from "@craft-agent/session-tools-core";
 
 // ============================================================
 // Mini Agent Configuration
@@ -22,23 +21,10 @@ export interface MiniAgentConfig {
 // ============================================================
 // Spawn Session Types
 // ============================================================
-export interface SpawnSessionRequest {
-    /** One-shot host capability injected after PreToolUse; never model authority. */
-    _hostTerminalReconciliationCapability?: string;
+/** Validated tool input shared by both backends; prompt is required after help dispatch. */
+export type SpawnSessionRequest = Omit<ReturnType<typeof parseSpawnSessionInput>, 'prompt'> & {
     prompt: string;
-    name?: string;
-    enabledSourceSlugs?: string[];
-    permissionMode?: PermissionMode;
-    labels?: string[];
-    workingDirectory?: string;
-    /** Workspace project id to bind the spawned session to */
-    projectId?: string;
-    role?: 'worker' | 'reviewer';
-    attachments?: Array<{
-        path: string;
-        name?: string;
-    }>;
-}
+};
 
 export interface SpawnSessionResult {
     sessionId: string;

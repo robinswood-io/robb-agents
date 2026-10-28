@@ -17,21 +17,21 @@ export interface IslandFollowUpContentViewProps {
   onValueChange: (next: string) => void
   onCancel: () => void
   onSubmit: (value: string) => void
-  onSubmitAndSend?: (value: string) => void
-  onDelete?: () => void
-  title?: string
-  placeholder?: string
-  submitLabel?: string
-  submitAndSendLabel?: string
-  editLabel?: string
-  deleteLabel?: string
-  maxInputHeight?: number
-  sendMessageKey?: 'enter' | 'cmd-enter'
-  morphFrom?: IslandMorphTarget | null
-  lockScroll?: boolean
-  blockOutsideInteraction?: boolean
-  mode?: IslandFollowUpMode
-  onRequestEdit?: () => void
+  onSubmitAndSend?: ((value: string) => void) | undefined
+  onDelete?: (() => void) | undefined
+  title?: string | undefined
+  placeholder?: string | undefined
+  submitLabel?: string | undefined
+  submitAndSendLabel?: string | undefined
+  editLabel?: string | undefined
+  deleteLabel?: string | undefined
+  maxInputHeight?: number | undefined
+  sendMessageKey?: 'enter' | 'cmd-enter' | undefined
+  morphFrom?: IslandMorphTarget | null | undefined
+  lockScroll?: boolean | undefined
+  blockOutsideInteraction?: boolean | undefined
+  mode?: IslandFollowUpMode | undefined
+  onRequestEdit?: (() => void) | undefined
 }
 
 /**

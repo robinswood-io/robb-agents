@@ -1,3 +1,4 @@
+import { parseJsonObject } from '@craft-agent/shared/utils/json';
 /**
  * LarkAdapter — Lark / Feishu in-process adapter.
  *
@@ -9,7 +10,7 @@
  * text replies, support `/pair`-style commands. Phase 2 layers on edits,
  * interactive cards, attachments, and Markdown→post rich-text formatting.
  */
-import { writeFileSync } from "node:fs";
+import { statSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
 import { randomBytes } from "node:crypto";
@@ -22,7 +23,7 @@ import type { LarkMessageEvent, LarkCardActionEvent } from './shared.ts';
   // Inbound — message + card events
   // -------------------------------------------------------------------------
 export async function handleIncomingMessage(transportOwner: LarkAdapter, data: LarkMessageEvent): Promise<void> {
-    if (!transportOwner["messageHandler"])
+    if (!transportOwner.messageHandler)
         return;
     const { sender, message } = data;
     // Visibility log: if this never fires, the bot isn't getting the event
@@ -60,11 +61,11 @@ export async function handleIncomingMessage(transportOwner: LarkAdapter, data: L
             timestamp: parseInt(message.create_time, 10) || Date.now(),
             raw: message,
         };
-        await transportOwner["messageHandler"](msg);
+        await transportOwner.messageHandler(msg);
         return;
     }
     if (message.message_type === 'image' || message.message_type === 'file') {
-        await transportOwner["handleAttachmentMessage"](data);
+        await transportOwner.handleAttachmentMessage(data);
         return;
     }
     // Unhandled type — log and drop.
@@ -77,17 +78,13 @@ export async function handleIncomingMessage(transportOwner: LarkAdapter, data: L
 }
 
 export async function handleAttachmentMessage(transportOwner: LarkAdapter, data: LarkMessageEvent): Promise<void> {
-    if (!transportOwner["client"] || !transportOwner["messageHandler"])
+    if (!transportOwner["client"] || !transportOwner.messageHandler)
         return;
     const { sender, message } = data;
     const senderId = sender.sender_id?.user_id ?? sender.sender_id?.open_id ?? sender.sender_id?.union_id ?? '';
-    let parsedContent: {
-        image_key?: string;
-        file_key?: string;
-        file_name?: string;
-    };
+    let parsedContent: Record<string, unknown>;
     try {
-        parsedContent = JSON.parse(message.content);
+        parsedContent = parseJsonObject(message.content);
     }
     catch {
         transportOwner["log"].warn('[lark] could not parse attachment content', {
@@ -97,7 +94,8 @@ export async function handleAttachmentMessage(transportOwner: LarkAdapter, data:
         return;
     }
     const isImage = message.message_type === 'image';
-    const fileKey = isImage ? parsedContent.image_key : parsedContent.file_key;
+    const candidateKey = isImage ? parsedContent['image_key'] : parsedContent['file_key'];
+    const fileKey = typeof candidateKey === 'string' ? candidateKey : undefined;
     if (!fileKey) {
         transportOwner["log"].warn('[lark] attachment missing key', {
             event: 'lark_attachment_no_key',
@@ -107,8 +105,8 @@ export async function handleAttachmentMessage(transportOwner: LarkAdapter, data:
     }
     const fallbackName = isImage
         ? `image-${randomBytes(4).toString('hex')}.jpg`
-        : parsedContent.file_name ?? `file-${randomBytes(4).toString('hex')}.bin`;
-    const localPath = await transportOwner["downloadResource"]({
+        : (typeof parsedContent['file_name'] === 'string' ? parsedContent['file_name'] : undefined) ?? `file-${randomBytes(4).toString('hex')}.bin`;
+    const localPath = await transportOwner.downloadResource({
         messageId: message.message_id,
         fileKey,
         filename: fallbackName,
@@ -132,7 +130,7 @@ export async function handleAttachmentMessage(transportOwner: LarkAdapter, data:
         timestamp: parseInt(message.create_time, 10) || Date.now(),
         raw: message,
     };
-    await transportOwner["messageHandler"](msg);
+    await transportOwner.messageHandler(msg);
 }
 
 /**
@@ -151,46 +149,16 @@ export async function downloadResource(transportOwner: LarkAdapter, args: {
     if (!transportOwner["client"])
         return null;
     try {
-        // The SDK's `im.message.resource.get` returns a Node stream-like object
-        // with a `writeFile` helper for the common case. We use that for size+brevity.
-        const sdkResource = await ((transportOwner["client"] as unknown as {
-            im: {
-                message: {
-                    resource: {
-                        get: (args: {
-                            path: {
-                                message_id: string;
-                                file_key: string;
-                            };
-                            params: {
-                                type: 'image' | 'file';
-                            };
-                        }) => Promise<{
-                            writeFile: (path: string) => Promise<void>;
-                        } & Record<string, unknown>>;
-                    };
-                };
-            };
-        }).im.message.resource.get)({
+        const sdkResource = await transportOwner["client"].im.messageResource.get({
             path: { message_id: args.messageId, file_key: args.fileKey },
             params: { type: args.isImage ? 'image' : 'file' },
         });
         const ext = extname(args.filename) || (args.isImage ? '.jpg' : '.bin');
         const localPath = join(tmpdir(), `lark-${randomBytes(8).toString('hex')}${ext}`);
-        // Different SDK versions expose either `writeFile`, `file` (Buffer), or
-        // a plain Node Readable. Handle the common shapes.
-        if (typeof sdkResource.writeFile === 'function') {
-            await sdkResource.writeFile(localPath);
-        }
-        else if (sdkResource.file instanceof Buffer) {
-            const buf = sdkResource.file;
-            if (buf.length > MAX_ATTACHMENT_BYTES) {
-                throw new Error(`attachment exceeds ${MAX_ATTACHMENT_BYTES} bytes`);
-            }
-            writeFileSync(localPath, buf);
-        }
-        else {
-            throw new Error('Lark resource SDK returned an unsupported shape');
+        await sdkResource.writeFile(localPath);
+        if (statSync(localPath).size > MAX_ATTACHMENT_BYTES) {
+            unlinkSync(localPath);
+            throw new Error('Lark attachment exceeds size limit');
         }
         return localPath;
     }
@@ -218,7 +186,7 @@ export async function handleCardAction(transportOwner: LarkAdapter, data: LarkCa
         tag: data.action?.tag,
         hasValue: data.action?.value !== undefined,
     });
-    if (!transportOwner["buttonHandler"])
+    if (!transportOwner.buttonHandler)
         return;
     const value = data.action?.value as {
         buttonId?: string;
@@ -242,5 +210,5 @@ export async function handleCardAction(transportOwner: LarkAdapter, data: LarkCa
         senderId,
         ...(value.data !== undefined ? { data: value.data } : {}),
     };
-    await transportOwner["buttonHandler"](press);
+    await transportOwner.buttonHandler(press);
 }

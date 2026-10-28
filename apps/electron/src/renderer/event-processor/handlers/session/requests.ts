@@ -1,10 +1,13 @@
+import type { Message } from '@craft-agent/core/types';
+import type { Session } from '../../../../../../../packages/shared/src/protocol/dto/sessions.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Session Event Handlers
  *
  * Handles complete, error, sources_changed, etc.
  * Pure functions that return new state - no side effects.
  */
-import type { SessionState, ProcessResult, PermissionRequestEvent, CredentialRequestEvent, PlanSubmittedEvent, SessionSharedEvent, SessionUnsharedEvent, AuthRequestEvent, AuthCompletedEvent } from "../../types";
+import type { SessionState,ProcessResult,PermissionRequestEvent,CredentialRequestEvent,PlanSubmittedEvent,SessionSharedEvent,SessionUnsharedEvent,AuthRequestEvent,AuthCompletedEvent } from "../../types";
 import { appendMessage } from "../../helpers";
 import { markSessionProcessingState } from "../../../lib/session-processing-state";
 
@@ -90,11 +93,11 @@ export function handleSessionUnshared(
 
   return {
     state: {
-      session: {
+      session: omitUndefined<Session>({
         ...session,
         sharedUrl: undefined,
         sharedId: undefined,
-      },
+      }),
       streaming,
     },
     effects: [],
@@ -109,7 +112,7 @@ export function handleAuthRequest(
   state: SessionState,
   event: AuthRequestEvent
 ): ProcessResult {
-  const { session, streaming } = state
+  const { session } = state
 
   // Add auth-request message to session
   return {
@@ -142,7 +145,7 @@ export function handleAuthCompleted(
       m.authRequestId === event.requestId &&
       m.authStatus === 'pending'
     ) {
-      return {
+      return omitUndefined<Message>({
         ...m,
         authStatus: event.success
           ? ('completed' as const)
@@ -150,19 +153,19 @@ export function handleAuthCompleted(
             ? ('cancelled' as const)
             : ('failed' as const),
         authError: event.error,
-      }
+      })
     }
     return m
   })
 
   return {
     state: {
-      session: {
+      session: omitUndefined<Session>({
         ...session,
         messages: updatedMessages,
         pendingAuthRequestMessage: session.pendingAuthRequestMessage?.authRequestId === event.requestId
           ? undefined : session.pendingAuthRequestMessage,
-      },
+      }),
       streaming,
     },
     effects: [],

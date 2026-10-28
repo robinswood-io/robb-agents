@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
@@ -36,7 +37,7 @@ describe('TaskRunner (Conductor)', () => {
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
       now: () => '2026-06-07T00:00:00.000Z',
-      nowMs,
+      ...(nowMs !== undefined ? { nowMs: nowMs } : {}),
       resolveSubagentAutonomyContext: () => autonomyContext,
       ...(executionProofIssuer ? {
         verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),
@@ -189,14 +190,14 @@ describe('TaskRunner (Conductor)', () => {
         // runner must request A and must not combine B's model with A.
         return { llmConnection: 'provider-b', model: 'model-b', thinkingLevel: 'low' };
       },
-      resolveNodeRoute: (context) => context.attempt === 1
+      resolveNodeRoute: (context) => omitUndefined(context.attempt === 1
         ? {
             profile,
             llmConnection: 'provider-a',
             model: 'model-a',
-            thinkingLevel: 'low',
+            thinkingLevel: 'low' as const,
             connectionRoutePinned: true,
-            strategy: 'pinned',
+            strategy: 'pinned' as const,
           }
         : {
             profile,
@@ -204,8 +205,8 @@ describe('TaskRunner (Conductor)', () => {
             model: context.defaults?.model,
             thinkingLevel: context.defaults?.thinkingLevel ?? 'low',
             connectionRoutePinned: context.defaults?.connectionRoutePinned,
-            strategy: 'pinned',
-          },
+            strategy: 'pinned' as const,
+          }),
     });
 
     runner.run('pinned-connection-retry', { runId: 'r1', verifyOnComplete: false });

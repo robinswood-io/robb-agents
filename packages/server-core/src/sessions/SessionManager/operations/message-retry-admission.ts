@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { assertRetryTurnAnchor } from '../policy.ts';
 import type { UserInputRequest } from '@craft-agent/core';
 import { RetryTurnAlreadyRunningError } from '../runtime-policy.ts';
@@ -45,10 +46,10 @@ const explicitRetry = activeMessageState.options?.automaticRecovery?.cause === '
                     throw new Error('The context-limit Retry prompt no longer owns this objective');
                 }
                 explicitRetryContextLimitRequest = candidate;
-                explicitRetryContextLimitRequestBefore = {
+                explicitRetryContextLimitRequestBefore = omitUndefined({
                     status: candidate.status,
                     answeredAt: candidate.answeredAt,
-                };
+                });
                 sessionOpAssertRetryTurnUnblocked(sessionOperationContext, managed, false, candidate.id);
             }
             else {

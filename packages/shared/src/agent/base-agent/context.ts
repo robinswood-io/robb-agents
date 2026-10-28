@@ -50,7 +50,7 @@ export function getMiniSystemPrompt(transportOwner: BaseAgent): string {
    * @param allowedKeys - Keys to include (from getMiniAgentConfig().mcpServerKeys)
    * @returns Filtered servers object
    */
-export function filterMcpServersForMiniAgent<T>(transportOwner: BaseAgent, servers: Record<string, T>, allowedKeys: readonly string[]): Record<string, T> {
+export function filterMcpServersForMiniAgent<T>(_transportOwner: BaseAgent, servers: Record<string, T>, allowedKeys: readonly string[]): Record<string, T> {
     const filtered: Record<string, T> = {};
     for (const key of allowedKeys) {
         if (servers[key]) {
@@ -102,7 +102,7 @@ Please continue the conversation naturally from where we left off.
    * Build one-time branch seed context for sessions branched from an earlier message.
    * Ensures the first turn in the new branch only sees transcript up to the selected branch point.
    */
-export function buildBranchSeedContext(transportOwner: BaseAgent, messages?: RecoveryMessage[]): string | null {
+export function buildBranchSeedContext(_transportOwner: BaseAgent, messages?: RecoveryMessage[]): string | null {
     if (!messages || messages.length === 0)
         return null;
     // Keep seed payload bounded to avoid oversized first-turn prompts.

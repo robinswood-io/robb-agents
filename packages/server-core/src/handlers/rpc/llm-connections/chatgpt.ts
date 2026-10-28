@@ -90,8 +90,8 @@ export function registerChatGptAuthHandlers(server: RpcServer, deps: HandlerDeps
       await credentialManager.setLlmOAuth(flow.connectionSlug, {
         accessToken: tokens.accessToken,
         idToken: tokens.idToken,
-        refreshToken: tokens.refreshToken,
-        expiresAt: tokens.expiresAt,
+        ...(tokens.refreshToken !== undefined ? { refreshToken: tokens.refreshToken } : {}),
+        ...(tokens.expiresAt !== undefined ? { expiresAt: tokens.expiresAt } : {}),
       })
 
       pendingChatGptFlows.delete(state)
@@ -148,7 +148,7 @@ export function registerChatGptAuthHandlers(server: RpcServer, deps: HandlerDeps
 
       return {
         authenticated: !isExpired || !!creds.refreshToken, // Can refresh if has refresh token
-        expiresAt: creds.expiresAt,
+        ...(creds.expiresAt !== undefined ? { expiresAt: creds.expiresAt } : {}),
         hasRefreshToken: !!creds.refreshToken,
       }
     } catch (error) {

@@ -8,7 +8,7 @@
  * Sizing/shape is fully controlled by `className` (e.g. `h-4 w-4 rounded-full`).
  */
 
-import * as React from 'react'
+
 import { useAtomValue } from 'jotai'
 import { CrossfadeAvatar } from './avatar'
 import { cn } from '@/lib/utils'
@@ -28,12 +28,12 @@ function getWorkspaceHue(id: string): number {
 
 interface WorkspaceAvatarProps {
   /** Workspace id. If omitted, the fallback uses a neutral muted background. */
-  workspaceId?: string
-  workspaceName?: string
-  src?: string | null
-  className?: string
+  workspaceId?: string | undefined
+  workspaceName?: string | undefined
+  src?: string | null | undefined
+  className?: string | undefined
   /** Override font size for the initial letter (default `text-[10px]`). */
-  fallbackClassName?: string
+  fallbackClassName?: string | undefined
 }
 
 export function WorkspaceAvatar({

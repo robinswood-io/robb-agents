@@ -223,7 +223,7 @@ function sessionOpLoadSessionsFromDisk(sessionOperationContext: SessionOperation
                         if (!sessionOpPreserveInterruptedObjectiveContinuation(sessionOperationContext, managed)) {
                             const recoveryUserMessageId = managed.pendingTurnRecovery?.userMessageId;
                             managed.pendingTurnRecovery = undefined;
-                            managed.activeObjective.interruptedTurnRecovery = undefined;
+                            delete managed.activeObjective.interruptedTurnRecovery;
                             sessionLog.warn('Revoked exhausted recovery with stale objective provenance', {
                                 sessionId: managed.id,
                                 objectiveId: managed.activeObjective.objectiveId ?? managed.activeObjective.userMessageId,
@@ -252,11 +252,11 @@ function sessionOpLoadSessionsFromDisk(sessionOperationContext: SessionOperation
                 const automationSystem = sessionOperationContext.state.automationSystems.get(workspaceRootPath);
                 if (automationSystem) {
                     automationSystem.setInitialSessionMetadata(meta.id, {
-                        permissionMode: meta.permissionMode,
-                        labels: managed.labels,
-                        isFlagged: meta.isFlagged,
-                        sessionStatus: meta.sessionStatus,
-                        sessionName: managed.name,
+                        ...(meta.permissionMode !== undefined ? { permissionMode: meta.permissionMode } : {}),
+                        ...(managed.labels !== undefined ? { labels: managed.labels } : {}),
+                        ...(meta.isFlagged !== undefined ? { isFlagged: meta.isFlagged } : {}),
+                        ...(meta.sessionStatus !== undefined ? { sessionStatus: meta.sessionStatus } : {}),
+                        ...(managed.name !== undefined ? { sessionName: managed.name } : {}),
                     });
                 }
                 totalSessions++;
@@ -277,7 +277,7 @@ function sessionOpLoadSessionsFromDisk(sessionOperationContext: SessionOperation
                         await sessionOpRetireYoloHumanHandoffs(sessionOperationContext, managed);
                     }
                 }
-                await sessionOperationContext.owner["resumePendingTurnsAfterRestart"](pendingRecoverySessionIds);
+                await sessionOperationContext.owner.resumePendingTurnsAfterRestart(pendingRecoverySessionIds);
                 for (const id of orphanedContextAnswerSessionIds) {
                     try {
                         await sessionOpResumeOrphanedContextAnswerAfterRestart(sessionOperationContext, id);
@@ -321,7 +321,7 @@ function sessionOpLoadSessionsFromDisk(sessionOperationContext: SessionOperation
                 if (sessionOperationContext.state.deferredAutomaticSessions.size > 0) {
                     await sessionOpDrainDeferredAutomaticSessions(sessionOperationContext);
                 }
-            })().catch(error => sessionLog.error('Durable inbox recovery failed', error));
+            })().catch((error: unknown) => sessionLog.error('Durable inbox recovery failed', error));
         });
     }
     catch (error) {

@@ -207,14 +207,14 @@ export function cleanRetrySetupFailureSignal(error: unknown): Parameters<typeof 
       const record = value as Record<string, unknown>
       records.push(record)
       if (depth >= 3) continue
-      queue.push({ value: record.cause, depth: depth + 1 })
-      queue.push({ value: record.response, depth: depth + 1 })
+      queue.push({ value: record["cause"], depth: depth + 1 })
+      queue.push({ value: record["response"], depth: depth + 1 })
     }
     const messages = [error instanceof Error ? error.message : String(error)]
     for (const record of records) {
-      if (typeof record.message === 'string' && !messages.includes(record.message)) messages.push(record.message)
+      if (typeof record["message"] === 'string' && !messages.includes(record["message"])) messages.push(record["message"])
     }
-    const rawStatus = records.map(record => record.httpStatus ?? record.status ?? record.statusCode)
+    const rawStatus = records.map(record => record["httpStatus"] ?? record["status"] ?? record["statusCode"])
       .find(status => (
         typeof status === 'number'
           ? Number.isFinite(status) && status >= 400 && status <= 599
@@ -229,15 +229,15 @@ export function cleanRetrySetupFailureSignal(error: unknown): Parameters<typeof 
       const match = messages.join(' ').match(/\bstatus(?:\s+code)?\s*[:=]?\s*([45]\d\d)\b/i)
       if (match?.[1]) httpStatus = Number(match[1])
     }
-    const rawCode = records.map(record => record.code).find(code => (
+    const rawCode = records.map(record => record["code"]).find(code => (
       typeof code === 'string' || typeof code === 'number'
     ))
-    let retryAfterMs = records.map(record => record.retryAfterMs).find(value => (
+    let retryAfterMs = records.map(record => record["retryAfterMs"]).find(value => (
       typeof value === 'number' && Number.isFinite(value) && value >= 0
     )) as number | undefined
     if (retryAfterMs === undefined) {
       for (const record of records) {
-        const headers = record.headers
+        const headers = record["headers"]
         let retryAfter: unknown
         try {
           retryAfter = headers && typeof headers === 'object' && 'get' in headers

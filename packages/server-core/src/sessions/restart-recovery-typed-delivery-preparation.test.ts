@@ -232,12 +232,12 @@ describe('bounded automatic admission', () => {
     await dispatch
 
     expect(chatCalls).toBe(1)
-    expect(receipt).toMatchObject({
+    expect<unknown>(receipt).toMatchObject({
       isQueued: true,
       agentDelivery: {
         id: item.messageId, status: 'queued', attempts: 0,
         setupFailureCount: 4, lastSetupFailureClass: 'timeout',
-        setupRetryBlockedAt: expect.any(Number),
+        setupRetryBlockedAt: (expect.any(Number) as unknown),
       },
     })
     expect(receipt.agentDelivery?.setupRetryNotBefore).toBeUndefined()

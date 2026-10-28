@@ -214,7 +214,6 @@ describe('loadAllSkills', () => {
   });
 
   it('should correctly assign source for workspace and project tiers', () => {
-    const baselineGlobal = getExistingGlobalSlugs();
     const wsDir = getWorkspaceSkillsDir();
     const projDir = getProjectSkillsDir();
     mkdirSync(projDir, { recursive: true });
@@ -237,7 +236,6 @@ describe('loadAllSkills', () => {
   });
 
   it('should deduplicate by slug across workspace and project tiers', () => {
-    const baselineGlobal = getExistingGlobalSlugs();
     const wsDir = getWorkspaceSkillsDir();
     const projDir = getProjectSkillsDir();
     mkdirSync(projDir, { recursive: true });

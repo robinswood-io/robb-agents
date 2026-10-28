@@ -1,3 +1,5 @@
+import type { OperationsRuntimeEvent } from '../../../../../shared/src/operations/index.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { installProviderTurnHooks } from './provider-turn-hooks.ts';
 import { handleProviderTurnEvent } from './provider-turn-events.ts';
 import { handleProviderTurnError } from './provider-turn-error.ts';
@@ -114,9 +116,9 @@ try {
         }
         assertActivePreparation();
         const messageBackendContext = resolveBackendContext({
-            sessionConnectionSlug: managed.llmConnection,
+            ...(managed.llmConnection !== undefined ? { sessionConnectionSlug: managed.llmConnection } : {}),
             workspaceDefaultConnectionSlug: loadWorkspaceConfig(providerTurnInput.workspaceRootPath)?.defaults?.defaultLlmConnection,
-            managedModel: managed.model,
+            ...(managed.model !== undefined ? { managedModel: managed.model } : {}),
         });
         const modelInputAttachments = filterAttachmentsForModelInput(providerTurnInput.attachments, messageBackendContext.connection, messageBackendContext.resolvedModel);
         if (modelInputAttachments.omittedImages.length > 0) {
@@ -175,12 +177,12 @@ try {
                 ...sourceTurnBinding,
             };
         }
-        sessionOperationContext.owner["startGenerationTelemetry"](managed, providerTurnInput.myGeneration, {
+        sessionOperationContext.owner.startGenerationTelemetry(managed, providerTurnInput.myGeneration, {
             turnId: userMessage.id,
-            connectionSlug: messageBackendContext.connection?.slug,
-            providerType: messageBackendContext.connection?.providerType,
+            ...(messageBackendContext.connection?.slug !== undefined ? { connectionSlug: messageBackendContext.connection?.slug } : {}),
+            ...(messageBackendContext.connection?.providerType !== undefined ? { providerType: messageBackendContext.connection?.providerType } : {}),
             model: agent.getModel(),
-            inputTokens: managed.tokenUsage?.inputTokens,
+            ...(managed.tokenUsage?.inputTokens !== undefined ? { inputTokens: managed.tokenUsage?.inputTokens } : {}),
             recordRoutingOutcome: !providerTurnInput.localCompactCommand,
         });
         // Consume immediately before the synchronous provider handoff. No await
@@ -216,16 +218,16 @@ try {
         // identities at the actual provider boundary.
         assertOrdinaryMissionRouteProjection(managed);
         activeProviderState.providerHandoffArmed = true;
-        emitOperationsEvent({
+        emitOperationsEvent(omitUndefined<Extract<OperationsRuntimeEvent, { kind: 'turn.started' }>>({
             kind: 'turn.started', at: new Date().toISOString(),
             workspaceId: managed.workspace.id, sessionId: managed.id,
-            missionId: managed.missionId, workItemId: managed.missionWorkItemId,
+            ...(managed.missionId !== undefined ? { missionId: managed.missionId } : {}), ...(managed.missionWorkItemId !== undefined ? { workItemId: managed.missionWorkItemId } : {}),
             turnId: userMessage.id, connectionSlug: messageBackendContext.connection?.slug,
             model: agent.getModel(), thinkingLevel: managed.thinkingLevel,
-        });
+        }));
         const chatIterator = agent.chat(effectiveMessage, modelInputAttachments.attachments);
         const automaticRecoveryInactivityTimeoutMs = activeMessageState.options?.automaticRecovery
-            ? resolveAutomaticRecoveryInactivityTimeoutMs(process.env.CRAFT_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS)
+            ? resolveAutomaticRecoveryInactivityTimeoutMs(process.env["CRAFT_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS"])
             : 0;
         const toolDeadline = createAutomaticRecoveryToolDeadline(messageBackendContext.provider, automaticRecoveryInactivityTimeoutMs);
         const chatEvents = activeMessageState.options?.automaticRecovery

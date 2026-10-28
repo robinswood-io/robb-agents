@@ -77,54 +77,52 @@ export class PiAgent extends BaseAgent {
     /** Exact host runtime generation owning the current subprocess. */
     private subprocessRuntimeContext: PiSubprocessRuntimeContext | null = null;
     /** Retains the generation identity until a late, confirmed child exit arrives. */
-    private subprocessRuntimeContexts = new WeakMap<ChildProcess, PiSubprocessRuntimeContext>();
+    /** @internal */ public subprocessRuntimeContexts = new WeakMap<ChildProcess, PiSubprocessRuntimeContext>();
     /** Diagnostic retained until exit/close proves that the matching child stopped. */
-    private subprocessErrorsAwaitingExit = new WeakMap<ChildProcess, Error>();
-    private subprocessSupervisorHandle: LongRunningProcessHandle | null = null;
+    /** @internal */ public subprocessErrorsAwaitingExit = new WeakMap<ChildProcess, Error>();
+    /** @internal */ public subprocessSupervisorHandle: LongRunningProcessHandle | null = null;
     /** Deduplicates concurrent cold-start callers into one process generation. */
-    private subprocessSpawnInFlight: Promise<void> | null = null;
+    /** @internal */ public subprocessSpawnInFlight: Promise<void> | null = null;
     /** Child processes whose next exit is owner-requested, not a runtime failure. */
-    private expectedSubprocessExits = new WeakSet<ChildProcess>();
+    /** @internal */ public expectedSubprocessExits = new WeakSet<ChildProcess>();
     /** One bounded SIGKILL escalation per retiring subprocess generation. */
-    private subprocessForceKillTimers = new WeakMap<ChildProcess, ReturnType<typeof setTimeout>>();
-    private readline: ReadlineInterface | null = null;
-    private subprocessReady: Promise<void> | null = null;
-    private subprocessReadyResolve: (() => void) | null = null;
-    private subprocessReadyReject: ((error: Error) => void) | null = null;
-    private subprocessReadyTimer: ReturnType<typeof setTimeout> | null = null;
+    /** @internal */ public subprocessForceKillTimers = new WeakMap<ChildProcess, ReturnType<typeof setTimeout>>();
+    /** @internal */ public readline: ReadlineInterface | null = null;
+    /** @internal */ public subprocessReady: Promise<void> | null = null;
+    /** @internal */ public subprocessReadyResolve: (() => void) | null = null;
+    /** @internal */ public subprocessReadyReject: ((error: Error) => void) | null = null;
+    /** @internal */ public subprocessReadyTimer: ReturnType<typeof setTimeout> | null = null;
     // Pi session ID (managed by subprocess, reported back)
     private piSessionId: string | null = null;
-    // Callback server port (managed by subprocess)
-    private callbackPort: number = 0;
     // State
     private _isProcessing: boolean = false;
-    private abortReason?: AbortReason;
+    /** @internal */ public abortReason?: AbortReason;
     private promptPreparationRevision = 0;
     // Event adapter
     private adapter: PiEventAdapter;
     // Event queue for streaming (AsyncGenerator pattern over subprocess JSONL)
     private eventQueue = new EventQueue();
     /** Provider-start acknowledgements keyed by the exact child prompt id. */
-    private pendingProviderHandoffs = new Map<string, () => void>();
-    private pendingProviderDispatchRejections = new Map<string, () => void>();
+    /** @internal */ public pendingProviderHandoffs = new Map<string, () => void>();
+    /** @internal */ public pendingProviderDispatchRejections = new Map<string, () => void>();
     // Error deduplication — suppress identical consecutive errors after a threshold
     // to prevent a broken subprocess from flooding the user's session.
-    private lastSubprocessError: string | null = null;
-    private subprocessErrorRepeatCount = 0;
-    private static readonly MAX_IDENTICAL_SUBPROCESS_ERRORS = 3;
-    private resolveProjectContext(): ProjectPromptContext | null {
+    /** @internal */ public lastSubprocessError: string | null = null;
+    /** @internal */ public subprocessErrorRepeatCount = 0;
+    /** @internal */ public static readonly MAX_IDENTICAL_SUBPROCESS_ERRORS = 3;
+    /** @internal */ public resolveProjectContext(): ProjectPromptContext | null {
         return piAgentContext.resolveProjectContext(this);
     }
-    private resetSubprocessErrorDedup(): void {
+    /** @internal */ public resetSubprocessErrorDedup(): void {
         return piAgentIo.resetSubprocessErrorDedup(this);
     }
     // Ring buffer of recent subprocess stderr. Always on (independent of CRAFT_DEBUG)
     // so that connection-test and other failures can surface what the subprocess
     // actually said, instead of a bare "timed out" with no context.
-    private stderrBuffer: string[] = [];
-    private stderrBufferBytes = 0;
-    private static readonly STDERR_BUFFER_MAX_BYTES = 8 * 1024;
-    private recordStderr(chunk: string): void {
+    /** @internal */ public stderrBuffer: string[] = [];
+    /** @internal */ public stderrBufferBytes = 0;
+    /** @internal */ public static readonly STDERR_BUFFER_MAX_BYTES = 8 * 1024;
+    /** @internal */ public recordStderr(chunk: string): void {
         return piAgentIo.recordStderr(this, PiAgent, chunk);
     }
     /** Returns redacted recent subprocess stderr (up to ~8KB). Empty string if nothing captured. */
@@ -132,34 +130,32 @@ export class PiAgent extends BaseAgent {
         return piAgentIo.getRecentStderr(this);
     }
     // Pending permission requests (used by handlePreToolUseRequest for ask-mode prompting)
-    private pendingPermissions: Map<string, PiPendingPermissions> = new Map();
+    /** @internal */ public pendingPermissions: Map<string, PiPendingPermissions> = new Map();
     // Pending tool executions (correlation map for subprocess tool_execute_request -> main process -> tool_execute_response)
-    private pendingToolExecutions: Map<string, PiPendingToolExecutions> = new Map();
+    /** @internal */ public pendingToolExecutions: Map<string, PiPendingToolExecutions> = new Map();
     // Pending mini completions (correlation map for subprocess mini_completion_result)
-    private pendingMiniCompletions: Map<string, PiPendingMiniCompletions> = new Map();
+    /** @internal */ public pendingMiniCompletions: Map<string, PiPendingMiniCompletions> = new Map();
     // Pending llm_query calls (correlation map for subprocess llm_query_result).
     // Separate from pendingMiniCompletions because the payload shape differs:
     // queryLlm returns a full LLMQueryResult, not just text.
-    private pendingLlmQueries: Map<string, PiPendingLlmQueries> = new Map();
+    /** @internal */ public pendingLlmQueries: Map<string, PiPendingLlmQueries> = new Map();
     // Pending ensure_session_ready requests (branch preflight handshake)
-    private pendingEnsureSessionReady: Map<string, PiPendingEnsureSessionReady> = new Map();
+    /** @internal */ public pendingEnsureSessionReady: Map<string, PiPendingEnsureSessionReady> = new Map();
     // Pending compact requests (manual compaction RPC)
-    private pendingCompactions: Map<string, PiPendingCompactions> = new Map();
+    /** @internal */ public pendingCompactions: Map<string, PiPendingCompactions> = new Map();
     // Pending auto-compaction toggle requests
-    private pendingAutoCompactionToggles: Map<string, PiPendingAutoCompactionToggles> = new Map();
+    /** @internal */ public pendingAutoCompactionToggles: Map<string, PiPendingAutoCompactionToggles> = new Map();
     // Pending runtime config updates (custom endpoint model capability refresh)
-    private pendingRuntimeConfigUpdates: Map<string, PiPendingRuntimeConfigUpdates> = new Map();
+    /** @internal */ public pendingRuntimeConfigUpdates: Map<string, PiPendingRuntimeConfigUpdates> = new Map();
     // Metadata captured before PreToolUse stripping, keyed by toolCallId.
     // This provides a deterministic bridge when side-channel metadata store misses.
     private preToolMetadataByCallId: Map<string, PiPreToolMetadataByCallId> = new Map();
-    // Current user message (for context in summarization)
-    private currentUserMessage: string = '';
     // Pool reference for convenience (from this.config.mcpPool)
-    private get mcpPool(): McpClientPool | undefined { return this.config.mcpPool; }
+    /** @internal */ public get mcpPool(): McpClientPool | undefined { return this.config.mcpPool; }
     // Cached session tool context (lazy-created on first session tool call)
-    private _sessionToolContext: SessionToolContext | null = null;
+    /** @internal */ public _sessionToolContext: SessionToolContext | null = null;
     // RPC request counter for unique IDs
-    private rpcIdCounter: number = 0;
+    /** @internal */ public rpcIdCounter: number = 0;
     // OAuth token refresh (ChatGPT Plus)
     /**
      * @deprecated Use onBackendAuthRequired (inherited from BaseAgent) instead.
@@ -171,10 +167,9 @@ export class PiAgent extends BaseAgent {
     set onChatGptAuthRequired(cb: ((reason: string) => void) | null) {
         this.onBackendAuthRequired = cb;
     }
-    private tokenRefreshInProgress: Promise<TokenRefreshOutcome> | null = null;
     // Global mutex: keyed by connectionSlug so multiple PiAgent instances
     // sharing the same connection don't race concurrent token refreshes.
-    private static globalRefreshMutex: Map<string, Promise<TokenRefreshOutcome>> = new Map();
+    /** @internal */ public static globalRefreshMutex: Map<string, Promise<TokenRefreshOutcome>> = new Map();
     // ============================================================
     // Constructor
     // ============================================================
@@ -197,131 +192,131 @@ export class PiAgent extends BaseAgent {
             this.startConfigWatcher();
         }
     }
-    private assertBackendSessionToolParity(): void {
+    /** @internal */ public assertBackendSessionToolParity(): void {
         return piAgentSubprocessStart.assertBackendSessionToolParity(this);
     }
-    private async ensureSubprocess(): Promise<void> {
+    /** @internal */ public async ensureSubprocess(): Promise<void> {
         return piAgentSubprocessStart.ensureSubprocess(this);
     }
-    private async spawnSubprocess(): Promise<void> {
+    /** @internal */ public async spawnSubprocess(): Promise<void> {
         return piAgentSubprocessStart.spawnSubprocess(this, PiAgent);
     }
     private registerPoolToolsWithSubprocess(): void {
         return piAgentSubprocessStart.registerPoolToolsWithSubprocess(this);
     }
-    private async getPiAuth(): Promise<PiAuthPayload | null> {
+    /** @internal */ public async getPiAuth(): Promise<PiAuthPayload | null> {
         return piAgentAuth.getPiAuth(this);
     }
-    private buildAwsEnv(piAuth: Awaited<ReturnType<PiAgent['getPiAuth']>>, runtime: PiBuildAwsEnvRuntimePayload): Record<string, string> {
+    /** @internal */ public buildAwsEnv(piAuth: Awaited<ReturnType<PiAgent['getPiAuth']>>, runtime: PiBuildAwsEnvRuntimePayload): Record<string, string> {
         return piAgentAuth.buildAwsEnv(this, piAuth, runtime);
     }
-    private buildProviderEnv(runtime: PiBuildProviderEnvRuntimePayload): Record<string, string> {
+    /** @internal */ public buildProviderEnv(runtime: PiBuildProviderEnvRuntimePayload): Record<string, string> {
         return piAgentAuth.buildProviderEnv(this, runtime);
     }
-    private async refreshAndPushTokens(): Promise<void> {
+    /** @internal */ public async refreshAndPushTokens(): Promise<void> {
         return piAgentAuth.refreshAndPushTokens(this, PiAgent);
     }
-    private async getApiKey(): Promise<string | null> {
+    /** @internal */ public async getApiKey(): Promise<string | null> {
         return piAgentAuth.getApiKey(this);
     }
     private send(cmd: Record<string, unknown>): boolean {
         return piAgentIo.send(this, cmd);
     }
-    private sendForRuntime(cmd: Record<string, unknown>, runtimeContext?: PiSubprocessRuntimeContext): boolean {
+    /** @internal */ public sendForRuntime(cmd: Record<string, unknown>, runtimeContext?: PiSubprocessRuntimeContext): boolean {
         return piAgentIo.sendForRuntime(this, cmd, runtimeContext);
     }
-    private isRuntimeCurrent(runtimeContext?: PiSubprocessRuntimeContext): boolean {
+    /** @internal */ public isRuntimeCurrent(runtimeContext?: PiSubprocessRuntimeContext): boolean {
         return piAgentIo.isRuntimeCurrent(this, runtimeContext);
     }
-    private handleLine(line: string, child?: ChildProcess, runtimeContext?: PiSubprocessRuntimeContext): void {
+    /** @internal */ public handleLine(line: string, child?: ChildProcess, runtimeContext?: PiSubprocessRuntimeContext): void {
         return piAgentEvents.handleLine(this, PiAgent, line, child, runtimeContext);
     }
-    private handleSubprocessEvent(event: Record<string, unknown>): void {
+    /** @internal */ public handleSubprocessEvent(event: Record<string, unknown>): void {
         return piAgentEvents.handleSubprocessEvent(this, event);
     }
-    private async handlePreToolUseRequest(req: PiPreToolUseRequest, runtimeContext?: PiSubprocessRuntimeContext): Promise<void> {
+    /** @internal */ public async handlePreToolUseRequest(req: PiPreToolUseRequest, runtimeContext?: PiSubprocessRuntimeContext): Promise<void> {
         return piAgentPretool.handlePreToolUseRequest(this, req, runtimeContext);
     }
-    private async handlePreToolUsePrompt(requestId: string, toolName: string, toolInput: Record<string, unknown>, sessionId: string, checkResult: Extract<PreToolUseCheckResult, PiPreToolUsePrompt>, toolUseId?: string, runtimeContext?: PiSubprocessRuntimeContext, authorizationEpoch = this.promptPreparationRevision): Promise<void> {
+    /** @internal */ public async handlePreToolUsePrompt(requestId: string, toolName: string, toolInput: Record<string, unknown>, sessionId: string, checkResult: Extract<PreToolUseCheckResult, PiPreToolUsePrompt>, toolUseId?: string, runtimeContext?: PiSubprocessRuntimeContext, authorizationEpoch = this.promptPreparationRevision): Promise<void> {
         return piAgentPermissionPrompts.handlePreToolUsePrompt(this, requestId, toolName, toolInput, sessionId, checkResult, authorizationEpoch, toolUseId, runtimeContext);
     }
-    private resolveContextualGmailPromptDecision(sessionId: string, toolName: string, toolInput: Record<string, unknown>, toolUseId: string | undefined, approved: boolean) {
+    /** @internal */ public resolveContextualGmailPromptDecision(sessionId: string, toolName: string, toolInput: Record<string, unknown>, toolUseId: string | undefined, approved: boolean) {
         return piAgentPretool.resolveContextualGmailPromptDecision(this, sessionId, toolName, toolInput, toolUseId, approved);
     }
-    private sendPreToolUseDecision(request: PiSendPreToolUseDecisionRequestPayload, decision: Record<string, unknown>): void {
+    /** @internal */ public sendPreToolUseDecision(request: PiSendPreToolUseDecisionRequestPayload, decision: Record<string, unknown>): void {
         return piAgentPermissionPrompts.sendPreToolUseDecision(this, request, decision);
     }
-    private async handleToolExecuteRequest(request: PiToolExecuteRequest, runtimeContext?: PiSubprocessRuntimeContext): Promise<void> {
+    /** @internal */ public async handleToolExecuteRequest(request: PiToolExecuteRequest, runtimeContext?: PiSubprocessRuntimeContext): Promise<void> {
         return piAgentSessionTools.handleToolExecuteRequest(this, request, runtimeContext);
     }
-    private async routeToolCall(toolName: string, args: Record<string, unknown>, toolUseId?: string, runtimeContext?: PiSubprocessRuntimeContext, hostExecutionClaimed = false): Promise<McpToolResult> {
+    /** @internal */ public async routeToolCall(toolName: string, args: Record<string, unknown>, toolUseId?: string, runtimeContext?: PiSubprocessRuntimeContext, hostExecutionClaimed = false): Promise<McpToolResult> {
         return piAgentSessionTools.routeToolCall(this, toolName, args, hostExecutionClaimed, toolUseId, runtimeContext);
     }
-    private beginContextualGmailHostExecution(input: Parameters<typeof beginContextualGmailHostExecution>[0]): ReturnType<typeof beginContextualGmailHostExecution> {
+    /** @internal */ public beginContextualGmailHostExecution(input: Parameters<typeof beginContextualGmailHostExecution>[0]): ReturnType<typeof beginContextualGmailHostExecution> {
         return piAgentPretool.beginContextualGmailHostExecutionOperation(this, input);
     }
-    private settleContextualGmailHostExecution(ticket: Parameters<typeof settleContextualGmailHostExecution>[0]): boolean {
+    /** @internal */ public settleContextualGmailHostExecution(ticket: Parameters<typeof settleContextualGmailHostExecution>[0]): boolean {
         return piAgentPretool.settleContextualGmailHostExecutionOperation(this, ticket);
     }
-    private confirmContextualGmailRuntimeTeardown(runtimeContext: Parameters<typeof confirmContextualGmailRuntimeTeardown>[0]): boolean {
+    /** @internal */ public confirmContextualGmailRuntimeTeardown(runtimeContext: Parameters<typeof confirmContextualGmailRuntimeTeardown>[0]): boolean {
         return piAgentPretool.confirmContextualGmailRuntimeTeardownOperation(this, runtimeContext);
     }
-    private getSessionToolContext(): SessionToolContext {
+    /** @internal */ public getSessionToolContext(): SessionToolContext {
         return piAgentSessionTools.getSessionToolContext(this);
     }
-    private async executeSessionTool(toolName: string, args: Record<string, unknown>): Promise<PiSessionToolResult> {
+    /** @internal */ public async executeSessionTool(toolName: string, args: Record<string, unknown>): Promise<PiSessionToolResult> {
         return piAgentSessionTools.executeSessionTool(this, toolName, args);
     }
-    private handleSessionToolCompleted(msg: Record<string, unknown>): void {
+    /** @internal */ public handleSessionToolCompleted(msg: Record<string, unknown>): void {
         return piAgentSessionTools.handleSessionToolCompleted(this, msg);
     }
-    private handleMiniCompletionResult(msg: Record<string, unknown>): void {
+    /** @internal */ public handleMiniCompletionResult(msg: Record<string, unknown>): void {
         return piAgentSessionTools.handleMiniCompletionResult(this, msg);
     }
-    private handleEnsureSessionReadyResult(msg: Record<string, unknown>): void {
+    /** @internal */ public handleEnsureSessionReadyResult(msg: Record<string, unknown>): void {
         return piAgentRuntime.handleEnsureSessionReadyResult(this, msg);
     }
-    private handleCompactResult(msg: Record<string, unknown>): void {
+    /** @internal */ public handleCompactResult(msg: Record<string, unknown>): void {
         return piAgentRuntime.handleCompactResult(this, msg);
     }
-    private handleSetAutoCompactionResult(msg: Record<string, unknown>): void {
+    /** @internal */ public handleSetAutoCompactionResult(msg: Record<string, unknown>): void {
         return piAgentRuntime.handleSetAutoCompactionResult(this, msg);
     }
-    private handleRuntimeConfigUpdateResult(msg: Record<string, unknown>): void {
+    /** @internal */ public handleRuntimeConfigUpdateResult(msg: Record<string, unknown>): void {
         return piAgentRuntime.handleRuntimeConfigUpdateResult(this, msg);
     }
-    private hasPendingSubprocessWork(): boolean {
+    /** @internal */ public hasPendingSubprocessWork(): boolean {
         return piAgentIo.hasPendingSubprocessWork(this);
     }
-    private clearSubprocessReadyTimer(): void {
+    /** @internal */ public clearSubprocessReadyTimer(): void {
         return piAgentIo.clearSubprocessReadyTimer(this);
     }
-    private resolveSubprocessReady(): void {
+    /** @internal */ public resolveSubprocessReady(): void {
         return piAgentIo.resolveSubprocessReady(this);
     }
-    private rejectSubprocessReady(error: Error): void {
+    /** @internal */ public rejectSubprocessReady(error: Error): void {
         return piAgentIo.rejectSubprocessReady(this, error);
     }
-    private handleSubprocessError(error: Error, child: ChildProcess, runtimeContext?: PiSubprocessRuntimeContext): void {
+    /** @internal */ public handleSubprocessError(error: Error, child: ChildProcess, runtimeContext?: PiSubprocessRuntimeContext): void {
         return piAgentSubprocessStop.handleSubprocessError(this, error, child, runtimeContext);
     }
-    private handleSubprocessExit(code: number | null, signal: string | null, child?: ChildProcess, processError?: Error, runtimeContext?: PiSubprocessRuntimeContext): void {
+    /** @internal */ public handleSubprocessExit(code: number | null, signal: string | null, child?: ChildProcess, processError?: Error, runtimeContext?: PiSubprocessRuntimeContext): void {
         return piAgentSubprocessStop.handleSubprocessExit(this, code, signal, child, processError, runtimeContext);
     }
-    private async requestEnsureSessionReady(): Promise<string | null> {
+    /** @internal */ public async requestEnsureSessionReady(): Promise<string | null> {
         return piAgentRuntime.requestEnsureSessionReady(this);
     }
-    private async requestCompact(customInstructions?: string): Promise<PiCompactionResult | null> {
+    /** @internal */ public async requestCompact(customInstructions?: string): Promise<PiCompactionResult | null> {
         return piAgentRuntime.requestCompact(this, customInstructions);
     }
     /** Host-triggered bounded-context compaction used by the session cost controller. */
     async compactContext(customInstructions?: string): Promise<PiCompactionResult | null> {
         return piAgentRuntime.compactContext(this, customInstructions);
     }
-    private async requestSetAutoCompaction(enabled: boolean): Promise<boolean> {
+    /** @internal */ public async requestSetAutoCompaction(enabled: boolean): Promise<boolean> {
         return piAgentRuntime.requestSetAutoCompaction(this, enabled);
     }
-    private async requestRuntimeConfigUpdate(update: BackendRuntimeUpdate): Promise<boolean> {
+    /** @internal */ public async requestRuntimeConfigUpdate(update: BackendRuntimeUpdate): Promise<boolean> {
         return piAgentRuntime.requestRuntimeConfigUpdate(this, update);
     }
     /**
@@ -332,7 +327,7 @@ export class PiAgent extends BaseAgent {
     override async ensureBranchReady(): Promise<void> {
         return piAgentRuntime.ensureBranchReady(this);
     }
-    protected async *chatImpl(messageParam: string, attachments?: FileAttachment[], options?: ChatOptions): AsyncGenerator<AgentEvent> {
+    protected async *chatImpl(messageParam: string, attachments?: FileAttachment[], options?: ChatOptions): AsyncGenerator<AgentEvent, void, unknown> {
         return yield* piAgentChat.chatImpl(this, PiAgent, messageParam, attachments, options);
     }
     // ============================================================
@@ -387,13 +382,13 @@ export class PiAgent extends BaseAgent {
         // Register pool's proxy tool defs with subprocess so the model can call them.
         this.registerPoolToolsWithSubprocess();
     }
-    private invalidateContextualGmailStateForCurrentSession(): void {
+    /** @internal */ public invalidateContextualGmailStateForCurrentSession(): void {
         return piAgentPretool.invalidateContextualGmailStateForCurrentSession(this);
     }
-    private hasContextualGmailInFlightForCurrentRuntime(): boolean {
+    /** @internal */ public hasContextualGmailInFlightForCurrentRuntime(): boolean {
         return piAgentPretool.hasContextualGmailInFlightForCurrentRuntime(this);
     }
-    private denyAllPendingPermissions(): void {
+    /** @internal */ public denyAllPendingPermissions(): void {
         return piAgentPermissionPrompts.denyAllPendingPermissions(this);
     }
     isProcessing(): boolean {
@@ -435,7 +430,7 @@ export class PiAgent extends BaseAgent {
         super.clearHistory();
         this.debug('History cleared - next chat will start new subprocess');
     }
-    destroy(): void {
+    override destroy(): void {
         return piAgentLifecycle.destroy(this);
     }
     async disposeForRestart(): Promise<void> {
@@ -447,10 +442,10 @@ export class PiAgent extends BaseAgent {
     async reconnect(): Promise<void> {
         return piAgentLifecycle.reconnect(this);
     }
-    private async killSubprocessGracefully(timeoutMs = 2000): Promise<void> {
+    /** @internal */ public async killSubprocessGracefully(timeoutMs = 2000): Promise<void> {
         return piAgentSubprocessStop.killSubprocessGracefully(this, timeoutMs);
     }
-    private scheduleSubprocessForceKill(child: ChildProcess, runtimeContext?: PiSubprocessRuntimeContext, delayMs = PI_SUBPROCESS_FORCE_KILL_DELAY_MS): void {
+    /** @internal */ public scheduleSubprocessForceKill(child: ChildProcess, runtimeContext?: PiSubprocessRuntimeContext, delayMs = PI_SUBPROCESS_FORCE_KILL_DELAY_MS): void {
         return piAgentSubprocessStop.scheduleSubprocessForceKill(this, child, delayMs, runtimeContext);
     }
     private killSubprocess(): void {
@@ -479,10 +474,10 @@ export class PiAgent extends BaseAgent {
     async queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
         return piAgentMiniCompletion.queryLlm(this, request);
     }
-    private resolvedCwd(): string {
+    /** @internal */ public resolvedCwd(): string {
         return piAgentContext.resolvedCwd(this);
     }
-    private parsePiError(error: Error): AgentError {
+    /** @internal */ public parsePiError(error: Error): AgentError {
         return piAgentContext.parsePiError(this, error);
     }
     protected override debug(message: string): void {

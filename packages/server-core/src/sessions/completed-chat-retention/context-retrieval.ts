@@ -70,7 +70,7 @@ export async function completedChatContext(root: string, projectId: string | und
   if (!terms.size || !normalizedQuery) return ''
   const candidates: { memory: CompletedChatMemory; score: number }[] = []
   const rank = (a: typeof candidates[number], b: typeof candidates[number]) => b.score - a.score || b.memory.completedAt - a.memory.completedAt
-  let entries
+  let entries: Awaited<ReturnType<typeof opendir>>
   try { entries = await opendir(directory(root)) } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return ''
     throw error

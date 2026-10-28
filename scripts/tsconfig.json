@@ -5,29 +5,29 @@
     "rootDir": "..",
     "types": [
       "bun"
-    ]
+    ],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": false,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "paths": {
+      "@/*": [
+        "../apps/electron/src/renderer/*"
+      ],
+      "@craft-agent/shared/*": [
+        "../packages/shared/src/*"
+      ]
+    }
   },
   "include": [
-    "apply-minimatch-compat.ts",
-    "generate-github-update-manifests.ts",
-    "robb-provider-canaries.ts",
-    "validate-electron-package-security.ts",
-    "validate-release-bundle.ts",
-    "verify-proof-passport.ts",
-    "verify-github-release-assets.ts",
-    "tests/apply-minimatch-compat.test.ts",
-    "tests/generate-github-update-manifests.test.ts",
-    "tests/provider-canaries.test.ts",
-    "tests/validate-workspace-versions.test.ts",
-    "tests/validate-release-bundle.test.ts",
-    "tests/verify-proof-passport.test.ts",
-    "tests/verify-github-release-assets.test.ts",
-    "validate-workspace-versions.ts",
-    "robb-human-benchmark.ts",
-    "robb-autonomy-acceptance.ts",
-    "test-autonomy-audit.ts",
-    "*.test.ts",
-    "tests/**/*.ts",
-    "__tests__/**/*.ts"
+    "**/*.ts"
   ]
 }

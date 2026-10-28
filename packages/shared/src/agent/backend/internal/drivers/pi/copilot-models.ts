@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../../../utils/json.ts';
 import type { ModelDefinition } from "../../../../../config/models.ts";
 import { getPiModelsForAuthProvider, isDeprecatedClaudeOpus46Model } from "../../../../../config/models-pi.ts";
 import { deriveGitHubCopilotApiBaseUrl, getUnstableProviderContract, getUnstableProviderContractStatus, redactProviderDiagnostic } from "@craft-agent/core";
@@ -10,6 +11,9 @@ type RawCopilotModel = {
   policy?: { state: string };
   contextWindow?: number;
 };
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !isUnknownArray(value);
+}
 
 // ── Direct HTTP approach ─────────────────────────────────────────────
 
@@ -51,7 +55,7 @@ async function listModelsViaHttp(
 
   try {
     const res = await fetch(
-      `${baseUrl}${COPILOT_PROVIDER_CONTRACT.endpoint.operationPaths!.listModels}`,
+      `${baseUrl}${COPILOT_PROVIDER_CONTRACT.endpoint.operationPaths!["listModels"]}`,
       {
         method: 'GET',
         signal: controller.signal,
@@ -69,21 +73,30 @@ async function listModelsViaHttp(
       );
     }
 
-    const data = await res.json() as Record<string, unknown>;
-    // Handle both { models: [...] } and { data: [...] } response formats
-    const models = (data.models || data.data || []) as Record<string, unknown>[];
-
+    const data: unknown = await res.json();
+    if (!isRecord(data)) throw new Error('Copilot models API returned an invalid envelope');
+    // Handle both { models: [...] } and { data: [...] } response formats.
+    const rawModels: unknown = data["models"] || data["data"] || [];
+    if (!isUnknownArray(rawModels)) throw new Error('Copilot models API returned an invalid model list');
+    const models = rawModels.flatMap((model: unknown): RawCopilotModel[] => {
+      if (!isRecord(model) || typeof model["id"] !== 'string') return [];
+      const reasoning = model["supportedReasoningEfforts"] || model["supported_reasoning_efforts"];
+      const policy = model["policy"];
+      const capabilities = model["capabilities"];
+      const limits = isRecord(capabilities) ? capabilities["limits"] : undefined;
+      const contextWindow = isRecord(limits) ? limits["max_context_window_tokens"] : undefined;
+      return [{
+        id: model["id"],
+        name: typeof model["name"] === 'string' && model["name"] ? model["name"] : model["id"],
+        ...(isUnknownArray(reasoning) && reasoning.every((entry: unknown): entry is string => typeof entry === 'string') ? { supportedReasoningEfforts: reasoning } : {}),
+        ...(isRecord(policy) && typeof policy["state"] === 'string' ? { policy: { state: policy["state"] } } : {}),
+        ...(typeof contextWindow === 'number' && Number.isFinite(contextWindow) && contextWindow > 0 ? { contextWindow } : {}),
+      }];
+    });
     console.warn(`[listModelsViaHttp] GET /models returned ${models.length} models`);
-
-    return models.map(m => ({
-      id: m.id as string,
-      name: (m.name || m.id) as string,
-      supportedReasoningEfforts: (m.supportedReasoningEfforts || m.supported_reasoning_efforts) as string[] | undefined,
-      policy: m.policy as { state: string } | undefined,
-      contextWindow: ((m.capabilities as Record<string, unknown>)?.limits as Record<string, unknown>)?.max_context_window_tokens as number | undefined,
-    }));
+    return models;
   } catch (err) {
-    if ((err as Error).name === 'AbortError') {
+    if (err instanceof Error && err.name === 'AbortError') {
       throw new Error('Copilot models API timed out');
     }
     throw err;

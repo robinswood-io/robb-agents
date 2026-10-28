@@ -59,7 +59,7 @@ export interface CommandGroup {
 
 export interface PermissionModeIconProps {
   mode: PermissionMode
-  className?: string
+  className?: string | undefined
 }
 
 
@@ -211,14 +211,14 @@ export function CommandItemContent({ command, isActive }: { command: SlashComman
 
 export interface SlashCommandMenuProps {
   /** Flat list of commands (use this OR commandGroups, not both) */
-  commands?: SlashCommand[]
+  commands?: SlashCommand[] | undefined
   /** Grouped commands with separators between groups */
-  commandGroups?: CommandGroup[]
-  activeCommands?: SlashCommandId[]
+  commandGroups?: CommandGroup[] | undefined
+  activeCommands?: SlashCommandId[] | undefined
   onSelect: (commandId: SlashCommandId) => void
-  showFilter?: boolean
-  filterPlaceholder?: string
-  className?: string
+  showFilter?: boolean | undefined
+  filterPlaceholder?: string | undefined
+  className?: string | undefined
 }
 
 
@@ -296,7 +296,7 @@ export function SlashCommandMenu({
     <CommandPrimitive
       className={cn(MENU_CONTAINER_STYLE, className)}
       shouldFilter={false}
-      defaultValue={defaultValue}
+      {...(defaultValue !== undefined ? { defaultValue } : {})}
     >
       {showFilter && (
         <div className="border-b border-border/50 px-3 py-2">
@@ -343,12 +343,12 @@ export interface InlineSlashCommandProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   sections: SlashSection[]
-  activeCommands?: SlashCommandId[]
+  activeCommands?: SlashCommandId[] | undefined
   onSelectCommand: (commandId: SlashCommandId) => void
   onSelectFolder: (path: string) => void
-  filter?: string
+  filter?: string | undefined
   position: { x: number; y: number }
-  className?: string
+  className?: string | undefined
 }
 
 

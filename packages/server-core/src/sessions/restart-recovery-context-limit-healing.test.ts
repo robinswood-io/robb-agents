@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { completeSessionAgentFixture } from "./testing/scripted-session-agent.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -158,15 +159,15 @@ describe('durable restart recovery', () => {
     cold.runtime.processNextQueuedMessage = () => {}
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
 
-    expect(restored.userInputRequests).toEqual([expect.objectContaining({
+    expect<unknown>(restored.userInputRequests).toEqual([(expect.objectContaining({
       id: request.requestId, status: 'cancelled',
-    })])
-    expect(restored.pendingTurnRecovery).toMatchObject({
+    }) as unknown)])
+    expect<unknown>(restored.pendingTurnRecovery).toMatchObject({
       attempts: 2,
       recoveryDispatch: {
         id: dispatchId, attempt: 3, phase: 'allocated',
         cause: 'objective_incomplete', origin: 'automatic',
-        cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-/),
+        cleanContinuationId: (expect.stringMatching(/^clean-continuation-v1-/) as unknown),
       },
       cleanContextBoundaryMessageId: dispatchId,
     })
@@ -181,15 +182,15 @@ describe('durable restart recovery', () => {
     expect(restored.branchFromSdkTurnId).toBeUndefined()
     expect(restored.transferredSessionSummary).toBeUndefined()
     expect(restored.providerContextBoundaryMessageId).toBe(dispatchId)
-    const header = JSON.parse(
+    const header = parseRecoveryJournalObservation(
       readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!,
     )
-    expect(header.userInputRequests).toEqual([expect.objectContaining({
+    expect<unknown>(header.userInputRequests).toEqual([(expect.objectContaining({
       id: request.requestId, status: 'cancelled',
-    })])
-    expect(header.pendingTurnRecovery.recoveryDispatch).toMatchObject({
+    }) as unknown)])
+    expect<unknown>(requiredTestValue(header.pendingTurnRecovery).recoveryDispatch).toMatchObject({
       id: dispatchId, phase: 'allocated',
-      cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-/),
+      cleanContinuationId: (expect.stringMatching(/^clean-continuation-v1-/) as unknown),
     })
     expect(header.sdkSessionId).toBeUndefined()
     expect(header.branchFromSdkSessionId).toBeUndefined()
@@ -230,7 +231,7 @@ describe('durable restart recovery', () => {
     managed.messages.push(retainedDelivery)
     managed.messageQueue.push({ messageId: retainedDelivery.id,
       message: retainedDelivery.content,
-      options: { hidden: true, internalOrigin: retainedDelivery.internalOrigin } })
+      options: { hidden: true, ...(retainedDelivery.internalOrigin !== undefined ? { internalOrigin: retainedDelivery.internalOrigin } : {}) } })
     managed.pendingTurnRecovery = {
       ...createPendingTurnRecovery(visibleRevisionId, 1), attempts: 2, stagnantAttempts: 0,
       recoveryStrategy: { schemaVersion: 1, phase: 'replan', attemptBaseline: 1,
@@ -264,13 +265,13 @@ describe('durable restart recovery', () => {
     sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.add(restored.id)
     await cold.runtime.drainDeferredAutomaticSessions()
 
-    expect(restored.userInputRequests).toEqual([expect.objectContaining({
+    expect<unknown>(restored.userInputRequests).toEqual([(expect.objectContaining({
       id: request.requestId, status: 'cancelled',
-    })])
+    }) as unknown)])
     expect(restored.pendingTurnRecovery?.attempts).toBe(3)
-    expect(restored.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
+    expect<unknown>(restored.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
       attempt: 3, phase: 'allocated', cause: 'objective_continue',
-      cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-/),
+      cleanContinuationId: (expect.stringMatching(/^clean-continuation-v1-/) as unknown),
     })
     expect(restored.pendingTurnRecovery?.recoveryDispatch?.id).not.toBe(dispatchId)
     expect(restored.messages.some((message: { id: string }) => message.id === dispatchId)).toBe(true)
@@ -309,6 +310,7 @@ describe('durable restart recovery', () => {
     managed.pendingTurnRecovery = createPendingTurnRecovery(activationId)
     const activation = managed.messages[1]!
     const authenticatedOrigin = activation.internalOrigin
+    if (!authenticatedOrigin) throw new Error('Expected authenticated source activation origin')
     activation.internalOrigin = {
       kind: 'source-activation', objectiveId: rootId, objectiveRevision: 'other-revision',
       sourceSlug: 'atria', sourceActivationId: 'activation-1',
@@ -339,9 +341,9 @@ describe('durable restart recovery', () => {
       await entered.promise
       expect(managed.messages[0]!.content).toBe(objectiveText)
       expect(managed.userInputRequests?.filter(request => request.status === 'pending') ?? []).toEqual([])
-      expect(managed.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
+      expect<unknown>(managed.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
         cause: 'user_retry', origin: 'retry', phase: 'started',
-        cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-/),
+        cleanContinuationId: (expect.stringMatching(/^clean-continuation-v1-/) as unknown),
       })
       const boundaryId = managed.pendingTurnRecovery!.recoveryDispatch!.id
       expect(managed.messages.find(message => message.id === boundaryId)?.content)
@@ -400,12 +402,12 @@ describe('durable restart recovery', () => {
     try {
       await cold.runtime.resumePendingTurnAfterRestart(restored.id)
       await entered.promise
-      expect(restored.userInputRequests).toEqual([expect.objectContaining({
+      expect<unknown>(restored.userInputRequests).toEqual([(expect.objectContaining({
         id: request.requestId, status: 'cancelled',
-      })])
-      expect(restored.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
+      }) as unknown)])
+      expect<unknown>(restored.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
         id: dispatchId, phase: 'started',
-        cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-/),
+        cleanContinuationId: (expect.stringMatching(/^clean-continuation-v1-/) as unknown),
       })
       expect(restored.messages.find((message: Managed['messages'][number]) => message.id === dispatchId)?.content)
         .toContain('<host_clean_recovery_continuation')

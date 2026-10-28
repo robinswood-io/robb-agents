@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { createStore, Provider } from 'jotai'
-import * as React from 'react'
+
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Message, Session } from '../../../shared/types'
 import { initializeSessionsAtom, refreshSessionsMetadataAtom, loadedSessionsAtom, sessionAtomFamily } from '../sessions'

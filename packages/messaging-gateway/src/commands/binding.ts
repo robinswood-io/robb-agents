@@ -14,7 +14,7 @@ export async function handleNew(transportOwner: Commands, adapter: PlatformAdapt
         transportOwner["bindingStore"].bind(transportOwner["workspaceId"], session.id, adapter.platform, msg.channelId, msg.senderName, undefined, msg.threadId);
         const displayName = session.name || session.id;
         await adapter.sendText(msg.channelId, `Created "${displayName}" — you're connected. Just type to start.`, replyOpts);
-        transportOwner["log"].info('session created and bound from chat', {
+        transportOwner.log.info('session created and bound from chat', {
             event: 'session_created_from_chat',
             workspaceId: transportOwner["workspaceId"],
             sessionId: session.id,
@@ -25,7 +25,7 @@ export async function handleNew(transportOwner: Commands, adapter: PlatformAdapt
     }
     catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-        transportOwner["log"].error('failed to create session from chat', {
+        transportOwner.log.error('failed to create session from chat', {
             event: 'session_create_failed',
             workspaceId: transportOwner["workspaceId"],
             platform: adapter.platform,
@@ -38,16 +38,16 @@ export async function handleNew(transportOwner: Commands, adapter: PlatformAdapt
 
 export async function handleBind(transportOwner: Commands, adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
     const bindArg = parseCommand(msg.text).args;
-    const recent = transportOwner["getRecentSessions"]();
+    const recent = transportOwner.getRecentSessions();
     const replyOpts = msg.threadId !== undefined ? { threadId: msg.threadId } : {};
     if (bindArg) {
-        const session = await transportOwner["resolveBindTarget"](bindArg, recent);
+        const session = await transportOwner.resolveBindTarget(bindArg, recent);
         if (!session) {
             await adapter.sendText(msg.channelId, `Session not found: ${bindArg}`, replyOpts);
             return;
         }
         transportOwner["bindingStore"].bind(transportOwner["workspaceId"], session.id, adapter.platform, msg.channelId, msg.senderName, undefined, msg.threadId);
-        transportOwner["log"].info('chat bound to existing session', {
+        transportOwner.log.info('chat bound to existing session', {
             event: 'chat_bound',
             workspaceId: transportOwner["workspaceId"],
             sessionId: session.id,
@@ -89,7 +89,7 @@ export async function handlePair(transportOwner: Commands, adapter: PlatformAdap
     // unlimited "is this a valid format" feedback that's almost as useful
     // as a code check. Every `/pair` attempt counts against the budget.
     if (!transportOwner["pairingConsumer"].canConsume(adapter.platform, msg.senderId)) {
-        transportOwner["log"].warn('pairing consume rate limit hit', {
+        transportOwner.log.warn('pairing consume rate limit hit', {
             event: 'pairing_consume_rate_limited',
             workspaceId: transportOwner["workspaceId"],
             platform: adapter.platform,
@@ -113,13 +113,13 @@ export async function handlePair(transportOwner: Commands, adapter: PlatformAdap
     // typed `/pair`). Once owners exist, only existing owners may redeem
     // further codes — without this, an attacker who steals or guesses a
     // code becomes an owner.
-    const wsConfig = transportOwner["access"].getWorkspaceConfig();
+    const wsConfig = transportOwner.access.getWorkspaceConfig();
     const wsMode = readPlatformAccessMode(wsConfig, adapter.platform);
     const owners = readPlatformOwners(wsConfig, adapter.platform);
     if (wsMode === 'owner-only' &&
         owners.length > 0 &&
         !owners.some((o) => o.userId === msg.senderId)) {
-        transportOwner["log"].info('pairing redeem blocked: sender is not an owner', {
+        transportOwner.log.info('pairing redeem blocked: sender is not an owner', {
             event: 'pairing_redeem_not_owner',
             workspaceId: transportOwner["workspaceId"],
             platform: adapter.platform,
@@ -138,7 +138,7 @@ export async function handlePair(transportOwner: Commands, adapter: PlatformAdap
     // redeem. Failures are logged but never block the pair itself — losing
     // the seed only means the operator has to add the user manually later.
     try {
-        await transportOwner["access"].seedOwnerOnFirstPair(adapter.platform, {
+        await transportOwner.access.seedOwnerOnFirstPair(adapter.platform, {
             userId: msg.senderId,
             ...(msg.senderName ? { displayName: msg.senderName } : {}),
             ...(msg.senderUsername ? { username: msg.senderUsername } : {}),
@@ -146,7 +146,7 @@ export async function handlePair(transportOwner: Commands, adapter: PlatformAdap
         });
     }
     catch (err) {
-        transportOwner["log"].warn('seedOwnerOnFirstPair failed (non-fatal)', {
+        transportOwner.log.warn('seedOwnerOnFirstPair failed (non-fatal)', {
             event: 'pairing_owner_seed_failed',
             workspaceId: transportOwner["workspaceId"],
             platform: adapter.platform,
@@ -155,7 +155,7 @@ export async function handlePair(transportOwner: Commands, adapter: PlatformAdap
         });
     }
     if (entry.kind === 'workspace-supergroup') {
-        await transportOwner["handleSupergroupPair"](adapter, msg, entry, replyOpts);
+        await transportOwner.handleSupergroupPair(adapter, msg, entry, replyOpts);
         return;
     }
     // entry.kind === 'session'
@@ -165,7 +165,7 @@ export async function handlePair(transportOwner: Commands, adapter: PlatformAdap
         return;
     }
     transportOwner["bindingStore"].bind(entry.workspaceId, entry.sessionId, adapter.platform, msg.channelId, msg.senderName, undefined, msg.threadId);
-    transportOwner["log"].info('pairing code redeemed', {
+    transportOwner.log.info('pairing code redeemed', {
         event: 'pairing_redeemed',
         kind: 'session',
         workspaceId: entry.workspaceId,
@@ -203,9 +203,9 @@ export async function handleSupergroupPair(transportOwner: Commands, adapter: Pl
         const result = await transportOwner["pairingConsumer"].bindWorkspaceSupergroup({
             platform: adapter.platform,
             chatId: msg.channelId,
-            fallbackTitle: msg.senderName,
+            ...(msg.senderName !== undefined ? { fallbackTitle: msg.senderName } : {}),
         });
-        transportOwner["log"].info('pairing code redeemed', {
+        transportOwner.log.info('pairing code redeemed', {
             event: 'pairing_redeemed',
             kind: 'workspace-supergroup',
             workspaceId: entry.workspaceId,
@@ -217,7 +217,7 @@ export async function handleSupergroupPair(transportOwner: Commands, adapter: Pl
     }
     catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
-        transportOwner["log"].error('workspace supergroup bind failed', {
+        transportOwner.log.error('workspace supergroup bind failed', {
             event: 'workspace_supergroup_bind_failed',
             workspaceId: entry.workspaceId,
             platform: adapter.platform,

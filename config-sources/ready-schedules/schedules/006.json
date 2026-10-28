@@ -1,0 +1,66 @@
+[
+  {
+    "schedule_id": "sched.robinswood-media-authority-2026",
+    "legacy_id": "robinswood-media-authority-2026",
+    "name": "Robinswood Media Authority 2026",
+    "workflow_id": "rbw.robinswood-media-authority-2026",
+    "cron": "35 9 * * 1-5",
+    "timezone": "Europe/Paris",
+    "task_queue": "campaigns",
+    "payload": {
+      "legacy_id": "robinswood-media-authority-2026",
+      "name": "Robinswood Media Authority 2026",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "schedule_id": "sched.robinswood-media-authority-2026-replenisher",
+    "legacy_id": "robinswood-media-authority-2026-replenisher",
+    "name": "Robinswood Media Authority 2026 Replenisher",
+    "workflow_id": "rbw.robinswood-media-authority-2026-replenisher",
+    "cron": "20 9 * * 1-5",
+    "timezone": "Europe/Paris",
+    "task_queue": "campaigns",
+    "payload": {
+      "legacy_id": "robinswood-media-authority-2026-replenisher",
+      "name": "Robinswood Media Authority 2026 Replenisher",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "schedule_id": "sched.robinswood-media-authority-2026-reply-scan",
+    "legacy_id": "robinswood-media-authority-2026-reply-scan",
+    "name": "Robinswood Media Authority 2026 Reply/Bounce Scan",
+    "workflow_id": "rbw.robinswood-media-authority-2026-reply-scan",
+    "cron": "20 12,16 * * 1-5",
+    "timezone": "Europe/Paris",
+    "task_queue": "campaigns",
+    "payload": {
+      "legacy_id": "robinswood-media-authority-2026-reply-scan",
+      "name": "Robinswood Media Authority 2026 Reply/Bounce Scan",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "schedule_id": "sched.robinswood-media-contact-enrichment-2026",
+    "legacy_id": "robinswood-media-contact-enrichment-2026",
+    "name": "Robinswood Media Contact Enrichment 2026",
+    "workflow_id": "rbw.robinswood-media-contact-enrichment-2026",
+    "cron": "15 9-18/2 * * 1-5",
+    "timezone": "Europe/Paris",
+    "task_queue": "campaigns",
+    "payload": {
+      "legacy_id": "robinswood-media-contact-enrichment-2026",
+      "name": "Robinswood Media Contact Enrichment 2026",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  }
+]

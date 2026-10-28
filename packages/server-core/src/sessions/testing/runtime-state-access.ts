@@ -11,7 +11,4 @@ export function sessionRuntimeStateForTest(owner: object): MutableSessionRuntime
   return state as MutableSessionRuntimeState;
 }
 
-export function requiredTestValue<Value>(value: Value | null | undefined): Value {
-  if (value === null || value === undefined) throw new Error('Expected an existing fixture value');
-  return value;
-}
+export { requiredTestValue } from '../../../../shared/src/testing/fixture-values.ts';

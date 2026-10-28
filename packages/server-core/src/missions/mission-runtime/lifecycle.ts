@@ -35,7 +35,7 @@ export async function resumeMission(transportOwner: MissionRuntimeService, works
     const context = await transportOwner["contextFor"](workspaceId);
     const before = context.controller.getMission(missionId);
     const revalidated = await context.specializedProfiles.revalidateMissionSpec(before.spec);
-    transportOwner["assertAdmissible"](context.workspace, revalidated);
+    transportOwner.assertAdmissible(context.workspace, revalidated);
     return context.runtime.startMission(missionId);
 }
 
@@ -47,7 +47,7 @@ export async function cancelMission(transportOwner: MissionRuntimeService, works
         .filter((runtime) => runtime.status === 'reserved' || runtime.status === 'running')
         .flatMap((runtime) => runtime.externalSessionId ? [runtime.externalSessionId] : []);
     const snapshot = context.controller.cancelMission(missionId, reason);
-    transportOwner["ordinaryRouteEstimates"].delete(transportOwner["ordinaryRouteKey"](workspaceId, missionId));
+    transportOwner.ordinaryRouteEstimates.delete(transportOwner.ordinaryRouteKey(workspaceId, missionId));
     transportOwner["options"].onSnapshot?.(workspaceId, snapshot);
     await Promise.allSettled(activeSessionIds.map((sessionId) => transportOwner["options"].sessionManager.cancelProcessing(sessionId, true)));
     return snapshot;
@@ -56,7 +56,7 @@ export async function cancelMission(transportOwner: MissionRuntimeService, works
 export async function enforceRuntimePolicies(transportOwner: MissionRuntimeService): Promise<number> {
     await transportOwner["start"]();
     let halted = 0;
-    for (const workspace of transportOwner["listWorkspaces"]()) {
+    for (const workspace of transportOwner.listWorkspaces()) {
         const context = await transportOwner["contextFor"](workspace.id);
         for (const missionId of listMissionIds(workspace.rootPath)) {
             const before = context.controller.getMission(missionId);
@@ -71,16 +71,16 @@ export async function enforceRuntimePolicies(transportOwner: MissionRuntimeServi
 }
 
 export async function contextFor(transportOwner: MissionRuntimeService, workspaceId: string): Promise<WorkspaceMissionRuntime> {
-    const existing = transportOwner["contexts"].get(workspaceId);
+    const existing = transportOwner.contexts.get(workspaceId);
     if (existing)
         return existing;
-    const pending = transportOwner["createContext"](workspaceId);
-    transportOwner["contexts"].set(workspaceId, pending);
+    const pending = transportOwner.createContext(workspaceId);
+    transportOwner.contexts.set(workspaceId, pending);
     try {
         return await pending;
     }
     catch (error) {
-        transportOwner["contexts"].delete(workspaceId);
+        transportOwner.contexts.delete(workspaceId);
         throw error;
     }
 }
@@ -99,15 +99,15 @@ export async function createContext(transportOwner: MissionRuntimeService, works
     });
     const ordinaryExecutor = transportOwner["options"].executorFactory
         ? await transportOwner["options"].executorFactory(workspace)
-        : await transportOwner["createProductionExecutor"](workspace);
-    const routeBoundOrdinaryExecutor = new OrdinaryMissionRouteBindingExecutor(ordinaryExecutor, (input) => transportOwner["prepareOrdinaryMissionDispatchRoute"](workspace.id, input), (input, route) => transportOwner["revalidateOrdinaryMissionDispatchRoute"](workspace.id, input, route));
+        : await transportOwner.createProductionExecutor(workspace);
+    const routeBoundOrdinaryExecutor = new OrdinaryMissionRouteBindingExecutor(ordinaryExecutor, (input) => transportOwner.prepareOrdinaryMissionDispatchRoute(workspace.id, input), (input, route) => transportOwner.revalidateOrdinaryMissionDispatchRoute(workspace.id, input, route));
     const connectorExecutor = transportOwner["options"].connectorExecutorFactory
         ? await transportOwner["options"].connectorExecutorFactory(workspace)
         : undefined;
     const effectExecutor = connectorExecutor
         ? new EffectRoutingMissionExecutor(routeBoundOrdinaryExecutor, connectorExecutor)
         : routeBoundOrdinaryExecutor;
-    const specializedProfiles = transportOwner["createSpecializedProfileResolver"](workspace);
+    const specializedProfiles = transportOwner.createSpecializedProfileResolver(workspace);
     const executor = new SpecializedProfileMissionExecutor(effectExecutor, specializedProfiles);
     const proofPassports = transportOwner["options"].proofPassportFactory
         ? await transportOwner["options"].proofPassportFactory(workspace) ?? undefined
@@ -123,8 +123,8 @@ export async function createContext(transportOwner: MissionRuntimeService, works
         evaluateRunPolicy: (snapshot, pendingTelemetry, completedAttempt) => evaluateMissionRuntimePolicy({
             workspace,
             snapshot,
-            pendingTelemetry,
-            completedAttempt,
+            ...(pendingTelemetry !== undefined ? { pendingTelemetry: pendingTelemetry } : {}),
+            ...(completedAttempt !== undefined ? { completedAttempt: completedAttempt } : {}),
             killSwitch: transportOwner["options"].getKillSwitch?.(),
             nowMs: transportOwner["options"].nowMs?.() ?? Date.now(),
         }),
@@ -135,18 +135,18 @@ export async function createContext(transportOwner: MissionRuntimeService, works
             await Promise.allSettled(activeSessionIds.map((sessionId) => transportOwner["options"].sessionManager.cancelProcessing(sessionId, true)));
         },
         onAttemptSettled: ({ missionId, workItemId }) => {
-            transportOwner["releaseOrdinaryMissionEstimate"](workspace.id, missionId, workItemId);
+            transportOwner.releaseOrdinaryMissionEstimate(workspace.id, missionId, workItemId);
         },
         onSnapshot: (snapshot) => {
             transportOwner["options"].onSnapshot?.(workspace.id, snapshot);
             if (['completed', 'failed', 'cancelled'].includes(snapshot.status)) {
-                transportOwner["ordinaryRouteEstimates"].delete(transportOwner["ordinaryRouteKey"](workspace.id, snapshot.spec.id));
+                transportOwner.ordinaryRouteEstimates.delete(transportOwner.ordinaryRouteKey(workspace.id, snapshot.spec.id));
             }
-            if (transportOwner["ensureCompletionPassport"](context, snapshot))
-                transportOwner["scheduleReport"](context, snapshot);
+            if (transportOwner.ensureCompletionPassport(context, snapshot))
+                transportOwner.scheduleReport(context, snapshot);
         },
-        onError: ({ missionId, workItemId, error }) => transportOwner["reportError"]({ workspaceId: workspace.id, missionId, workItemId, error }),
+        onError: ({ missionId, workItemId, error }) => transportOwner["reportError"]({ workspaceId: workspace.id, missionId, ...(workItemId !== undefined ? { workItemId: workItemId } : {}), error }),
     });
-    context = { workspace, controller, runtime, proofPassports, connectorExecutor, specializedProfiles };
+    context = { workspace, controller, runtime, ...(proofPassports !== undefined ? { proofPassports: proofPassports } : {}), ...(connectorExecutor !== undefined ? { connectorExecutor: connectorExecutor } : {}), specializedProfiles };
     return context;
 }

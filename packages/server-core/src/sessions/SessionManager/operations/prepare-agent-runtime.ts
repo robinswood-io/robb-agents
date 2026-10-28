@@ -1,3 +1,5 @@
+import type { CostControlledTurnContext } from '../runtime-types.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { compactPreparedAgentContext } from './runtime-context-compaction.ts';
 import { handleRuntimePreparationError } from './runtime-preparation-error.ts';
 import { queuedCostLimitContinuationForAgentDelivery, persistenceRootFor, assertSpecializedMissionSourceSelection, captureSpecializedMissionSourceSnapshot, ordinaryMissionSourceBuildOptions } from '../policy.ts';
@@ -142,7 +144,7 @@ try {
         while (true) {
             assertActivePreparation();
             try {
-                agent = await sessionOperationContext.owner["getOrCreateAgent"](managed, { message: activeMessageState.message, messageId: userMessage.id, options: activeMessageState.options }, assertActivePreparation);
+                agent = await sessionOperationContext.owner["getOrCreateAgent"](managed, omitUndefined<CostControlledTurnContext>({ message: activeMessageState.message, messageId: userMessage.id, options: activeMessageState.options }), assertActivePreparation);
                 assertActivePreparation();
                 break;
             }
@@ -203,11 +205,11 @@ try {
                     && dispatch.phase === 'started' && dispatch.id === userMessage.id
                     && !dispatch.cleanContinuationId;
                 const cleanPending: PendingTurnRecovery | undefined = canOpenCleanContinuation
-                    ? {
+                    ? omitUndefined<PendingTurnRecovery>({
                         ...pending,
                         cleanContinuationCount: (pending.cleanContinuationCount ?? 0) + 1,
                         recoveryDispatch: undefined,
-                    }
+                    })
                     : undefined;
                 const provisionalHandoff = objective && cleanPending
                     ? sessionOperationContext.owner["createAutonomousContextLimitHandoff"](managed, cleanPending)
@@ -254,7 +256,7 @@ try {
                     await sessionOperationContext.owner.flushSession(managed.id);
                     assertActivePreparation();
                     cleanRecoveryProviderReset = true;
-                    agent = await sessionOperationContext.owner["getOrCreateAgent"](managed, { message: activeMessageState.message, messageId: userMessage.id, options: activeMessageState.options }, assertActivePreparation);
+                    agent = await sessionOperationContext.owner["getOrCreateAgent"](managed, omitUndefined<CostControlledTurnContext>({ message: activeMessageState.message, messageId: userMessage.id, options: activeMessageState.options }), assertActivePreparation);
                     assertActivePreparation();
                 }
                 else if (!provisionalHandoff) {
@@ -312,7 +314,7 @@ try {
                         await sessionOperationContext.owner.flushSession(managed.id);
                         assertActivePreparation();
                         cleanRecoveryProviderReset = true;
-                        agent = await sessionOperationContext.owner["getOrCreateAgent"](managed, { message: activeMessageState.message, messageId: userMessage.id, options: activeMessageState.options }, assertActivePreparation);
+                        agent = await sessionOperationContext.owner["getOrCreateAgent"](managed, omitUndefined<CostControlledTurnContext>({ message: activeMessageState.message, messageId: userMessage.id, options: activeMessageState.options }), assertActivePreparation);
                         assertActivePreparation();
                     }
                     else {
@@ -346,7 +348,7 @@ try {
                         await sessionOperationContext.owner.flushSession(managed.id);
                         assertActivePreparation();
                         cleanRecoveryProviderReset = true;
-                        agent = await sessionOperationContext.owner["getOrCreateAgent"](managed, { message: activeMessageState.message, messageId: userMessage.id, options: activeMessageState.options }, assertActivePreparation);
+                        agent = await sessionOperationContext.owner["getOrCreateAgent"](managed, omitUndefined<CostControlledTurnContext>({ message: activeMessageState.message, messageId: userMessage.id, options: activeMessageState.options }), assertActivePreparation);
                         assertActivePreparation();
                     }
                 }
@@ -423,7 +425,7 @@ try {
                     assertActivePreparation();
                     cleanRecoveryProviderReset = true;
                     cleanRecoveryHandoffPrompt = true;
-                    agent = await sessionOperationContext.owner["getOrCreateAgent"](managed, { message: cleanPrompt, messageId: userMessage.id, options: activeMessageState.options }, assertActivePreparation);
+                    agent = await sessionOperationContext.owner["getOrCreateAgent"](managed, omitUndefined<CostControlledTurnContext>({ message: cleanPrompt, messageId: userMessage.id, options: activeMessageState.options }), assertActivePreparation);
                     assertActivePreparation();
                 }
             }

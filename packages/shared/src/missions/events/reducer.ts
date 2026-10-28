@@ -109,7 +109,7 @@ export function reduceMissionEvents(events: readonly MissionEvent[]): MissionSna
       }
       case 'mission-status-changed':
         snapshot.status = event.status;
-        snapshot.statusReason = event.reason;
+        if (event.reason === undefined) { delete snapshot.statusReason } else { snapshot.statusReason = event.reason }
         break;
       case 'work-item-added':
         if (snapshot.workItems[event.item.id]) throw new Error(`Duplicate work item "${event.item.id}" in mission journal`);
@@ -125,14 +125,14 @@ export function reduceMissionEvents(events: readonly MissionEvent[]): MissionSna
       case 'work-item-status-changed': {
         const item = requireItem(snapshot, event.workItemId);
         item.status = event.status;
-        item.statusReason = event.reason;
+        if (event.reason === undefined) { delete item.statusReason } else { item.statusReason = event.reason }
         if (event.status === 'pending') {
-          item.dispatchId = undefined;
-          item.executionBinding = undefined;
-          item.sessionId = undefined;
-          item.agentProfileId = undefined;
-          item.externalSessionId = undefined;
-          item.acceptedMessageId = undefined;
+          delete item.dispatchId
+          delete item.executionBinding
+          delete item.sessionId
+          delete item.agentProfileId
+          delete item.externalSessionId
+          delete item.acceptedMessageId
         }
         break;
       }
@@ -244,7 +244,7 @@ export function reduceMissionEvents(events: readonly MissionEvent[]): MissionSna
         }
         snapshot.report.status = 'accepted';
         snapshot.report.messageId = event.messageId;
-        snapshot.report.reason = undefined;
+        delete snapshot.report.reason
         break;
       case 'mission-report-delivered':
         if (!snapshot.report || snapshot.report.reportId !== event.reportId ||
@@ -253,7 +253,7 @@ export function reduceMissionEvents(events: readonly MissionEvent[]): MissionSna
         }
         snapshot.report.status = 'delivered';
         snapshot.report.finalMessageId = event.finalMessageId;
-        snapshot.report.reason = undefined;
+        delete snapshot.report.reason
         break;
       case 'mission-report-failed':
         if (!snapshot.report || snapshot.report.reportId !== event.reportId ||
@@ -272,6 +272,7 @@ function resetRuntimeForReplan(
   definition: MissionWorkItem,
   current?: MissionWorkItemRuntime,
 ): MissionWorkItemRuntime {
+  const optionalStatusReason = current ? 'Invalidated by a journaled Mission replan' : undefined;
   return {
     definition,
     status: 'pending',
@@ -279,7 +280,7 @@ function resetRuntimeForReplan(
     executionHistory: current?.executionHistory ?? [],
     externalSessionHistory: current?.externalSessionHistory ?? [],
     attemptTelemetry: current?.attemptTelemetry ?? [],
-    statusReason: current ? 'Invalidated by a journaled Mission replan' : undefined,
-    lastAttemptAmbiguousMutation: undefined,
+    ...(optionalStatusReason !== undefined ? { statusReason: optionalStatusReason } : {}),
+    
   };
 }

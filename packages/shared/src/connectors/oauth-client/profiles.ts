@@ -117,8 +117,6 @@ export function createConnectorOAuthProfile(
     authorizationEndpoint,
     tokenEndpoint,
     scopes: builtIn.scopes.map((scope) => ({ ...scope })),
-    authorizationParameters: builtIn.authorizationParameters
-      ? { ...builtIn.authorizationParameters }
-      : undefined,
+    ...(builtIn.authorizationParameters ? { authorizationParameters: { ...builtIn.authorizationParameters } } : {}),
   }
 }

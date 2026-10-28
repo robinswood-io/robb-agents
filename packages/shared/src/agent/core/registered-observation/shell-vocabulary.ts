@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import type { CompiledBashPattern } from "../../mode-types.ts";
 
 const OBJECTIVE_SHELL_EXECUTOR_TOOL_NAME = /(?:^|[_:.])(?:bash|shell|exec_command|ssh_execute)$/i;
@@ -80,17 +81,17 @@ export function isTrustedCurlExecutable(name: string): boolean {
 export function literalCommand(value: unknown, allowDevNull: boolean): { name: string; args: string[] } | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const node = value as Record<string, unknown>;
-  if (node.type !== 'Command' || node.async || (Array.isArray(node.prefix) && node.prefix.length > 0)) return undefined;
+  if (node["type"] !== 'Command' || node["async"] || (isUnknownArray(node["prefix"]) && node["prefix"].length > 0)) return undefined;
   const literal = (value: unknown): string | undefined => {
     if (!value || typeof value !== 'object') return undefined;
     const word = value as { type?: string; text?: string; expansion?: unknown[] };
     return word.type === 'Word' && typeof word.text === 'string' && !word.expansion?.length
       ? word.text : undefined;
   };
-  const name = literal(node.name);
+  const name = literal(node["name"]);
   if (!name) return undefined;
   const args: string[] = [];
-  for (const suffix of Array.isArray(node.suffix) ? node.suffix : []) {
+  for (const suffix of isUnknownArray(node["suffix"]) ? node["suffix"] : []) {
     const arg = literal(suffix);
     if (arg !== undefined) { args.push(arg); continue; }
     const redirect = suffix as { type?: string; file?: unknown; op?: { text?: string } };

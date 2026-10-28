@@ -39,7 +39,7 @@ export function prepareToolInput(
   // upload has passed every authority and local realpath check above, hand the
   // connector the canonical absolute source path rather than a literal token.
   if (boundedStructuredRemoteTechnicalUploadLocalPath !== undefined
-    && currentInput.localPath !== boundedStructuredRemoteTechnicalUploadLocalPath) {
+    && currentInput["localPath"] !== boundedStructuredRemoteTechnicalUploadLocalPath) {
     currentInput = {
       ...currentInput,
       localPath: boundedStructuredRemoteTechnicalUploadLocalPath,
@@ -103,7 +103,7 @@ export function prepareToolInput(
       ctx.rtkContext.path,
       ctx.rtkContext.exclude,
       onDebug,
-      { dataFolderPath: ctx.dataFolderPath, workingDirectory },
+      { ...(ctx.dataFolderPath !== undefined ? { dataFolderPath: ctx.dataFolderPath } : {}), ...(workingDirectory !== undefined ? { workingDirectory } : {}) },
     );
     if (rtkResult.modified) {
       currentInput = rtkResult.input;

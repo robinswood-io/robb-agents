@@ -6,8 +6,7 @@ import type { SessionEvent as ProtocolSessionEvent } from '@craft-agent/shared/p
  * All agent events flow through a single pure function for consistent state transitions.
  */
 
-import type { Session, PermissionRequest, CredentialRequest, PermissionMode, ToolDisplayMeta } from '../../shared/types'
-import type { ToolExecutionCheckpoint } from '@craft-agent/core/types'
+import type { Session, PermissionRequest, CredentialRequest, PermissionMode } from '../../shared/types'
 
 /**
  * Streaming state for a session - replaces streamingTextRef
@@ -42,40 +41,12 @@ export type TextCompleteEvent = Extract<ProtocolSessionEvent, { type: 'text_comp
  * Tool start event - begins tool execution
  * Field names match SessionEvent from shared/types.ts
  */
-export interface ToolStartEvent {
-  type: 'tool_start'
-  sessionId: string
-  toolUseId: string
-  toolName: string
-  toolInput?: Record<string, unknown>
-  /** Timestamp from main process for consistent ordering */
-  timestamp?: number
-  turnId?: string
-  parentToolUseId?: string
-  toolIntent?: string
-  toolDisplayName?: string
-  /** Tool display metadata with base64-encoded icon for viewer compatibility */
-  toolDisplayMeta?: ToolDisplayMeta
-}
+export type ToolStartEvent = Extract<ProtocolSessionEvent, { type: 'tool_start' }>
 
 /**
  * Tool result event - completes tool execution
  */
-export interface ToolResultEvent {
-  type: 'tool_result'
-  sessionId: string
-  toolUseId: string
-  toolName?: string
-  result: string
-  isError?: boolean
-  /** False when the host checkpointed before invoking the tool. */
-  executed?: boolean
-  checkpoint?: ToolExecutionCheckpoint
-  turnId?: string
-  parentToolUseId?: string
-  /** Timestamp from main process for consistent ordering */
-  timestamp?: number
-}
+export type ToolResultEvent = Extract<ProtocolSessionEvent, { type: 'tool_result' }>
 
 /**
  * Complete event - agent loop finished
@@ -85,17 +56,7 @@ export type CompleteEvent = Extract<ProtocolSessionEvent, { type: 'complete' }>
 /**
  * Error event - agent error occurred
  */
-export interface ErrorEvent {
-  type: 'error'
-  sessionId: string
-  error: string
-  code?: string
-  title?: string
-  details?: string
-  original?: string
-  /** Timestamp from main process for consistent ordering */
-  timestamp?: number
-}
+export type ErrorEvent = Extract<ProtocolSessionEvent, { type: 'error' }>
 
 /**
  * Permission request event
@@ -121,11 +82,7 @@ export type ProjectIdChangedEvent = Extract<ProtocolSessionEvent, { type: 'proje
 /**
  * Todo state changed event (external metadata change or agent tool)
  */
-export interface SessionStatusChangedEvent {
-  type: 'session_status_changed'
-  sessionId: string
-  sessionStatus?: string
-}
+export type SessionStatusChangedEvent = Extract<ProtocolSessionEvent, { type: 'session_status_changed' }>
 
 /**
  * Session metadata changed event — generic live push for programmatic metadata writes
@@ -167,14 +124,7 @@ export type TypedErrorEvent = Extract<ProtocolSessionEvent, { type: 'typed_error
 /**
  * Status event
  */
-export interface StatusEvent {
-  type: 'status'
-  sessionId: string
-  message: string
-  statusType?: 'compacting'
-  /** Timestamp from main process for consistent ordering */
-  timestamp?: number
-}
+export type StatusEvent = Extract<ProtocolSessionEvent, { type: 'status' }>
 
 /**
  * Info event
@@ -189,12 +139,7 @@ export type InterruptedEvent = Extract<ProtocolSessionEvent, { type: 'interrupte
 /**
  * Title generated event
  */
-export interface TitleGeneratedEvent {
-  type: 'title_generated'
-  sessionId: string
-  title: string
-  preview?: string  // First user message preview for sidebar fallback
-}
+export type TitleGeneratedEvent = Extract<ProtocolSessionEvent, { type: 'title_generated' }>
 
 /**
  * Title regenerating event - indicates title regeneration has started/finished
@@ -253,14 +198,7 @@ export type WorkflowAgentCompletedEvent = Extract<ProtocolSessionEvent, { type: 
 /**
  * Shell backgrounded event - background bash shell started
  */
-export interface ShellBackgroundedEvent {
-  type: 'shell_backgrounded'
-  sessionId: string
-  toolUseId: string
-  shellId: string
-  intent?: string
-  turnId?: string
-}
+export type ShellBackgroundedEvent = Extract<ProtocolSessionEvent, { type: 'shell_backgrounded' }>
 
 /**
  * Task progress event - live progress updates for background tasks
@@ -326,56 +264,7 @@ export type UsageUpdateEvent = Extract<ProtocolSessionEvent, { type: 'usage_upda
 /**
  * Union of all agent events
  */
-export type AgentEvent =
-  | TextDeltaEvent
-  | TextDiscardEvent
-  | TextCompleteEvent
-  | ToolStartEvent
-  | ToolResultEvent
-  | CompleteEvent
-  | ErrorEvent
-  | TypedErrorEvent
-  | PermissionRequestEvent
-  | CredentialRequestEvent
-  | SourcesChangedEvent
-  | LabelsChangedEvent
-  | ProjectIdChangedEvent
-  | SessionStatusChangedEvent
-  | SessionMetadataChangedEvent
-  | ObjectiveChangedEvent
-  | SessionFlaggedEvent
-  | SessionUnflaggedEvent
-  | SessionArchivedEvent
-  | SessionUnarchivedEvent
-  | NameChangedEvent
-  | PlanSubmittedEvent
-  | StatusEvent
-  | InfoEvent
-  | InterruptedEvent
-  | TitleGeneratedEvent
-  | TitleRegeneratingEvent
-  | AsyncOperationEvent
-  | WorkingDirectoryChangedEvent
-  | WorkingDirectoryErrorEvent
-  | PermissionModeChangedEvent
-  | SessionModelChangedEvent
-  | LLMConnectionChangedEvent
-  | TaskBackgroundedEvent
-  | ShellBackgroundedEvent
-  | TaskProgressEvent
-  | TaskCompletedEvent
-  | WorkflowAgentCompletedEvent
-  | UserMessageEvent
-  | MessageAnnotationsUpdatedEvent
-  | SessionSharedEvent
-  | SessionUnsharedEvent
-  | UserInputChangedEvent
-  | AuthRequestEvent
-  | AuthCompletedEvent
-  | SourceActivatedEvent
-  | UsageUpdateEvent
-  | AutonomyEventUpdate
-
+export type AgentEvent = Exclude<ProtocolSessionEvent, { type: 'session_created' | 'session_deleted' }>
 /**
  * Side effects that need to be handled outside the pure processor
  */

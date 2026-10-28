@@ -1,15 +1,16 @@
+import type { AgentBackend } from '@craft-agent/shared/agent';
 import { ScriptedSessionAgent } from "./scripted-session-agent.ts";
 import { jest } from "bun:test";
 
 
-export const originalCraftConfigDir = process.env.CRAFT_CONFIG_DIR
+export const originalCraftConfigDir = process.env["CRAFT_CONFIG_DIR"]
 
 
   export type AgentStub = ScriptedSessionAgent & {
     isProcessing: () => boolean
-    updateRuntimeConfig: jest.Mock
-    setModel: jest.Mock
-    dispose: jest.Mock
+    updateRuntimeConfig: jest.Mock<NonNullable<AgentBackend['updateRuntimeConfig']>>
+    setModel: jest.Mock<ScriptedSessionAgent['setModel']>
+    dispose: jest.Mock<ScriptedSessionAgent['dispose']>
     disposeForRestart?: () => Promise<void>
   }
 
@@ -23,11 +24,11 @@ export function createAgentStub(opts: {
   const result = opts.refreshSucceeds ?? true
   return Object.assign(new ScriptedSessionAgent({ id: 'refresh-fixture', slug: 'refresh-fixture', name: 'Fixture', rootPath: '/tmp/refresh-fixture', createdAt: 1 }), {
     isProcessing: () => opts.isProcessing ?? false,
-    updateRuntimeConfig: jest.fn().mockImplementation(async () => {
+    updateRuntimeConfig: jest.fn<NonNullable<AgentBackend['updateRuntimeConfig']>>().mockImplementation(async () => {
       if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay))
       return result
       }),
-    setModel: jest.fn(),
-    dispose: jest.fn(),
+    setModel: jest.fn<ScriptedSessionAgent['setModel']>(),
+    dispose: jest.fn<ScriptedSessionAgent['dispose']>(),
   })
 }

@@ -8,7 +8,7 @@ interface OfflineWorkspaceToolsProps {
   mobilePane: MobilePane
   t: import("i18next").TFunction<"translation", undefined>
   drafts: readonly OfflineDraftView[]
-  effectiveSelectedId: string
+  effectiveSelectedId: string | null
   online: boolean
   selectableTargets: { sessionId: string; title: string; }[]
   selectSnapshot: (sessionId: string, openReader?: boolean) => void

@@ -20,7 +20,7 @@ function stableHandoffJson(value: unknown): string | undefined {
     if (Array.isArray(candidate)) {
       if (ancestors.has(candidate)) throw new TypeError('Circular continuation value');
       const nestedAncestors = new Set(ancestors).add(candidate);
-      return candidate.map(item => normalize(item, nestedAncestors));
+      return candidate.map((item: unknown) => normalize(item, nestedAncestors));
     }
     if (typeof candidate === 'object') {
       const record = candidate as Record<string, unknown>;

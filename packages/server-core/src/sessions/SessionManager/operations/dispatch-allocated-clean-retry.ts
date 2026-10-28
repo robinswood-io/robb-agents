@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { getQueuedPendingUserInputResponse, assertRetryTurnAnchor, validAllocatedRecoveryDispatch, cleanSetupRetryDelayMs, isImmutableAutomaticRecoveryBlock } from '../policy.ts';
 import { acknowledgeDurableDelivery } from '../../agent-delivery.ts';
@@ -103,7 +104,7 @@ function sessionOpDispatchAllocatedCleanRetry(sessionOperationContext: SessionOp
                 dispatchAttempt: dispatch.attempt,
                 dispatchOrigin: dispatch.origin,
                 dispatchAllocatedAt: dispatch.allocatedAt,
-                cleanContinuationId: dispatch.cleanContinuationId,
+                ...(dispatch.cleanContinuationId !== undefined ? { cleanContinuationId: dispatch.cleanContinuationId } : {}),
             } }, undefined, false, ack, undefined, undefined, undefined, retryCancellationEpoch, allowanceToken), error => sessionLog.error('Accepted recovered clean Retry failed', {
             sessionId: managed.id,
             dispatchId: dispatch.id,
@@ -115,7 +116,7 @@ function sessionOpDispatchAllocatedCleanRetry(sessionOperationContext: SessionOp
     // admission gate requires this exact in-flight operation as well as the
     // one-use capability above.
     sessionOperationContext.state.retryTurnsInFlight.set(managed.id, operation);
-    void operation.catch(async (error) => {
+    void operation.catch(async (error: unknown) => {
         sessionLog.error('Recovered clean Retry admission failed', {
             sessionId: managed.id,
             dispatchId: dispatch.id,
@@ -224,11 +225,11 @@ async function sessionOpQuarantineExpiredColdAutomaticRecovery(sessionOperationC
     if (sessionOperationContext.state.sessions.get(managed.id) !== managed || managed.activeObjective !== objective
         || managed.pendingTurnRecovery)
         return true;
-    await sessionOperationContext.owner["reconcileRecoveredTerminalStatus"](managed, 'interrupted');
+    await sessionOperationContext.owner.reconcileRecoveredTerminalStatus(managed, 'interrupted');
     if (sessionOperationContext.state.sessions.get(managed.id) !== managed || managed.activeObjective !== objective
         || managed.pendingTurnRecovery)
         return true;
-    sessionOperationContext.owner["emitObjectiveChanged"](managed);
+    sessionOperationContext.owner.emitObjectiveChanged(managed);
     sessionOperationContext.owner["sendEvent"]({
         type: 'info', sessionId: managed.id, level: 'warning', timestamp: sessionOpMonotonic(sessionOperationContext),
         message: 'Automatic continuation was not restarted because its cold recovery lease had expired. Completed work, tool receipts and the exact continuation state were preserved; use Retry to resume explicitly.',
@@ -275,12 +276,12 @@ async function sessionOpContinueObservedContextLimitQuestionAfterRestart(session
             && message.timestamp >= dispatch.startedAt!
             && message.timestamp <= request.createdAt)))
         return false;
-    const nextPending: PendingTurnRecovery = {
+    const nextPending: PendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
         ...pending,
         recoveryDispatch: undefined,
         cleanContextBoundaryMessageId: undefined,
         continuationRequired: true,
-    };
+    });
     const handoff = sessionOperationContext.owner["createAutonomousContextLimitHandoff"](managed, nextPending);
     if (!handoff || !buildCleanRecoveryContinuationPrompt(handoff))
         return false;
@@ -316,7 +317,7 @@ async function sessionOpContinueObservedContextLimitQuestionAfterRestart(session
         if (managed.pendingTurnRecovery === nextPending) {
             managed.pendingTurnRecovery = pending;
             request.status = 'pending';
-            request.answeredAt = undefined;
+            delete request.answeredAt;
         }
         throw error;
     }
@@ -356,7 +357,7 @@ async function sessionOpTerminalizeImmutableAutomaticRecoveryBlock(sessionOperat
         // Never launder a stale objective's budget/work into the current Retry.
         // There is no runnable quarantine slot: revoking the pending authority
         // while retaining transcript evidence is the fail-closed handoff.
-        objective.interruptedTurnRecovery = undefined;
+        delete objective.interruptedTurnRecovery;
         sessionLog.warn('Revoked automatic recovery with stale objective provenance', {
             sessionId: managed.id,
             objectiveId: objective.objectiveId ?? objective.userMessageId,

@@ -6,7 +6,7 @@
  * - Setup needs derivation from auth state
  * - Migration detection for legacy CLI tokens
  */
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach } from 'bun:test';
 import { getSetupNeeds, performTokenRefresh, getValidClaudeOAuthToken, _resetRefreshMutex, type AuthState, type TokenResult, type MigrationInfo } from '../state.ts';
 import { CredentialManager, setCredentialManagerForTesting } from '../../credentials/index.ts';
 
@@ -14,27 +14,6 @@ import { CredentialManager, setCredentialManagerForTesting } from '../../credent
 // Mock credential manager
 // ============================================
 
-function createMockCredentialManager(initialCreds?: {
-  accessToken: string;
-  refreshToken?: string;
-  expiresAt?: number;
-  source?: 'native' | 'cli';
-}) {
-  let storedCreds = initialCreds;
-
-  return {
-    getClaudeOAuthCredentials: async () => storedCreds ?? null,
-    setClaudeOAuthCredentials: async (creds: {
-      accessToken: string;
-      refreshToken?: string;
-      expiresAt?: number;
-      source?: 'native' | 'cli';
-    }) => {
-      storedCreds = creds;
-    },
-    getApiKey: async () => null,
-  };
-}
 
 // ============================================
 // performTokenRefresh tests
@@ -48,15 +27,9 @@ describe('performTokenRefresh', () => {
   describe('successful refresh', () => {
     it('should return accessToken on successful refresh', async () => {
       // Mock the refreshClaudeToken import
-      const mockRefresh = mock(async () => ({
-        accessToken: 'new-access-token',
-        refreshToken: 'new-refresh-token',
-        expiresAt: Date.now() + 3600000,
-      }));
 
       // We need to test with a real-ish scenario
       // Since we can't easily mock the import, test the interface
-      const manager = createMockCredentialManager();
 
       // For this test, we'll verify the TokenResult structure
       const successResult: TokenResult = {
@@ -165,7 +138,7 @@ describe('migration info flow', () => {
         hasCredentials: false,
         apiKey: null,
         claudeOAuthToken: tokenResult.accessToken,
-        migrationRequired: tokenResult.migrationRequired,
+        ...(tokenResult.migrationRequired !== undefined ? { migrationRequired: tokenResult.migrationRequired } : {}),
       },
       workspace: { hasWorkspace: true, active: null },
     };
@@ -194,7 +167,7 @@ describe('migration info flow', () => {
         hasCredentials: true,
         apiKey: null,
         claudeOAuthToken: tokenResult.accessToken,
-        migrationRequired: tokenResult.migrationRequired, // undefined
+        ...(tokenResult.migrationRequired !== undefined ? { migrationRequired: tokenResult.migrationRequired } : {}), // undefined
       },
       workspace: { hasWorkspace: true, active: null },
     };

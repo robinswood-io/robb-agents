@@ -192,7 +192,7 @@ describe('runPreToolUseChecks', () => {
         }));
         expect(mutation).toMatchObject({
           type: 'block',
-          reason: expect.stringContaining('not for operational work'),
+          reason: (expect.stringContaining('not for operational work') as unknown),
         });
       }
     });
@@ -219,7 +219,7 @@ describe('runPreToolUseChecks', () => {
           externalActionPolicy: 'allow-in-execute',
         }))).toMatchObject({
           type: 'block',
-          reason: expect.stringContaining('do not use the browser as an API or connector fallback'),
+          reason: (expect.stringContaining('do not use the browser as an API or connector fallback') as unknown),
         });
       }
     });

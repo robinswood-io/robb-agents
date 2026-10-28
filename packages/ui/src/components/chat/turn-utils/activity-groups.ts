@@ -1,3 +1,4 @@
+import { isJsonObject, parseJsonObject } from '@craft-agent/shared/utils/json'
 import { isParentTaskTool } from "@craft-agent/shared/utils/toolNames";
 import type { ActivityItem } from "../TurnCard";
 
@@ -22,7 +23,7 @@ export interface ActivityGroup {
   parent: ActivityItem
   children: ActivityItem[]
   /** Data from TaskOutput result (duration, tokens) */
-  taskOutputData?: TaskOutputData
+  taskOutputData?: TaskOutputData | undefined
 }
 
 /**
@@ -40,19 +41,20 @@ function extractTaskOutputData(activity: ActivityItem): TaskOutputData | undefin
   if (!activity.content) return undefined
 
   try {
-    const parsed = JSON.parse(activity.content)
+    const parsed = parseJsonObject(activity.content)
     const data: TaskOutputData = {}
 
-    if (typeof parsed.duration_ms === 'number') {
-      data.durationMs = parsed.duration_ms
+    if (typeof parsed['duration_ms'] === 'number') {
+      data.durationMs = parsed['duration_ms']
     }
 
-    if (parsed.usage) {
-      if (typeof parsed.usage.input_tokens === 'number') {
-        data.inputTokens = parsed.usage.input_tokens
+    const usage = parsed['usage']
+    if (isJsonObject(usage)) {
+      if (typeof usage['input_tokens'] === 'number') {
+        data.inputTokens = usage['input_tokens']
       }
-      if (typeof parsed.usage.output_tokens === 'number') {
-        data.outputTokens = parsed.usage.output_tokens
+      if (typeof usage['output_tokens'] === 'number') {
+        data.outputTokens = usage['output_tokens']
       }
     }
 
@@ -116,7 +118,7 @@ export function groupActivitiesByParent(
   const taskOutputByAgentId = new Map<string, TaskOutputData>()
   for (const activity of activities) {
     if (activity.toolName === 'TaskOutput' && activity.status === 'completed') {
-      const taskId = activity.toolInput?.task_id as string | undefined
+      const taskId = activity.toolInput?.["task_id"] as string | undefined
       if (taskId) {
         const data = extractTaskOutputData(activity)
         if (data) {

@@ -9,7 +9,7 @@
  */
 
 import { existsSync, readFileSync, writeFileSync, readdirSync, statSync, mkdirSync } from 'fs';
-import { join, basename } from 'path';
+import { join } from 'path';
 import { CONFIG_DIR } from '../config/paths.ts';
 import type {
   SessionToolContext,
@@ -22,7 +22,6 @@ import type {
   StdioValidationResult,
   HttpMcpConfig,
   McpValidationResult,
-  ApiTestResult,
   SourceConfig,
   DeveloperFeedback,
 } from '@craft-agent/session-tools-core';
@@ -34,7 +33,6 @@ import {
   validatePreferences,
   validateAll,
   validateSkill,
-  validateWorkspacePermissions,
   validateSourcePermissions,
   validateAllPermissions,
   validateToolIcons,
@@ -47,7 +45,6 @@ import {
 import {
   loadSourceConfig as loadSourceConfigImpl,
   saveSourceConfig as saveSourceConfigImpl,
-  getSourcePath,
 } from '../sources/storage.ts';
 import type { FolderSourceConfig, LoadedSource as SharedLoadedSource } from '../sources/types.ts';
 import { getSourceCredentialManager } from '../sources/index.ts';
@@ -89,7 +86,7 @@ export interface ClaudeContextOptions {
  * - Icon management
  */
 export function createClaudeContext(options: ClaudeContextOptions): SessionToolContext {
-  const { sessionId, workspacePath, workspaceId, onPlanSubmitted, onAuthRequest } = options;
+  const { sessionId, workspacePath, onPlanSubmitted, onAuthRequest } = options;
 
   // File system implementation
   const fs: FileSystemInterface = {
@@ -139,7 +136,7 @@ export function createClaudeContext(options: ClaudeContextOptions): SessionToolC
       const mgr = getSourceCredentialManager();
       // Convert to shared type (guide not needed for credential operations)
       const sharedSource: SharedLoadedSource = {
-        config: source.config as unknown as FolderSourceConfig,
+        config: source.config as FolderSourceConfig,
         guide: null,
         folderPath: source.folderPath,
         workspaceRootPath: source.workspaceRootPath,
@@ -151,7 +148,7 @@ export function createClaudeContext(options: ClaudeContextOptions): SessionToolC
     getToken: async (source: LoadedSource): Promise<string | null> => {
       const mgr = getSourceCredentialManager();
       const sharedSource: SharedLoadedSource = {
-        config: source.config as unknown as FolderSourceConfig,
+        config: source.config as FolderSourceConfig,
         guide: null,
         folderPath: source.folderPath,
         workspaceRootPath: source.workspaceRootPath,
@@ -162,7 +159,7 @@ export function createClaudeContext(options: ClaudeContextOptions): SessionToolC
     refresh: async (source: LoadedSource): Promise<string | null> => {
       const mgr = getSourceCredentialManager();
       const sharedSource: SharedLoadedSource = {
-        config: source.config as unknown as FolderSourceConfig,
+        config: source.config as FolderSourceConfig,
         guide: null,
         folderPath: source.folderPath,
         workspaceRootPath: source.workspaceRootPath,
@@ -178,11 +175,11 @@ export function createClaudeContext(options: ClaudeContextOptions): SessionToolC
       const result = await validateStdioMcpConnectionImpl(config);
       return {
         success: result.success,
-        error: result.error,
-        toolCount: result.tools?.length,
-        toolNames: result.tools,
-        serverName: result.serverInfo?.name,
-        serverVersion: result.serverInfo?.version,
+        ...(result.error !== undefined ? { error: result.error } : {}),
+        ...(result.tools?.length !== undefined ? { toolCount: result.tools?.length } : {}),
+        ...(result.tools !== undefined ? { toolNames: result.tools } : {}),
+        ...(result.serverInfo?.name !== undefined ? { serverName: result.serverInfo?.name } : {}),
+        ...(result.serverInfo?.version !== undefined ? { serverVersion: result.serverInfo?.version } : {}),
       };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Validation failed' };
@@ -193,18 +190,18 @@ export function createClaudeContext(options: ClaudeContextOptions): SessionToolC
     try {
       const result = await validateMcpConnectionImpl({
         mcpUrl: config.url,
-        mcpTransport: config.transport,
-        mcpHeaders: config.headers,
-        mcpAccessToken: config.accessToken,
+        ...(config.transport !== undefined ? { mcpTransport: config.transport } : {}),
+        ...(config.headers !== undefined ? { mcpHeaders: config.headers } : {}),
+        ...(config.accessToken !== undefined ? { mcpAccessToken: config.accessToken } : {}),
       });
       return {
         success: result.success,
-        error: result.error,
+        ...(result.error !== undefined ? { error: result.error } : {}),
         needsAuth: result.errorType === 'needs-auth',
-        toolCount: result.tools?.length,
-        toolNames: result.tools,
-        serverName: result.serverInfo?.name,
-        serverVersion: result.serverInfo?.version,
+        ...(result.tools?.length !== undefined ? { toolCount: result.tools?.length } : {}),
+        ...(result.tools !== undefined ? { toolNames: result.tools } : {}),
+        ...(result.serverInfo?.name !== undefined ? { serverName: result.serverInfo?.name } : {}),
+        ...(result.serverInfo?.version !== undefined ? { serverVersion: result.serverInfo?.version } : {}),
       };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Validation failed' };
@@ -237,10 +234,10 @@ export function createClaudeContext(options: ClaudeContextOptions): SessionToolC
     // Source management
     loadSourceConfig: (sourceSlug: string): SourceConfig | null => {
       const config = loadSourceConfigImpl(workspacePath, sourceSlug);
-      return config as unknown as SourceConfig | null;
+      return config as SourceConfig | null;
     },
     saveSourceConfig: (source: SourceConfig) => {
-      saveSourceConfigImpl(workspacePath, source as unknown as FolderSourceConfig);
+      saveSourceConfigImpl(workspacePath, source as FolderSourceConfig);
     },
 
     // Service inference

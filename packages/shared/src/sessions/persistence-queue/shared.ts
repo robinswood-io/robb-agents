@@ -165,8 +165,7 @@ export function captureSessionPersistenceRootIdentity(workspaceRootPath: string)
             workspaceRootPath: canonicalRoot,
             device: root.dev.toString(),
             inode: root.ino.toString(),
-            sessionsDevice: sessions?.dev.toString(),
-            sessionsInode: sessions?.ino.toString(),
+            ...(sessions ? { sessionsDevice: sessions.dev.toString(), sessionsInode: sessions.ino.toString() } : {}),
         };
     }
     catch (error) {
@@ -378,27 +377,35 @@ export interface HeaderMetadataSignature {
 
 export function getHeaderMetadataSignature(header: SessionHeader): string {
     const signature: HeaderMetadataSignature = {
-        name: header.name,
-        labels: header.labels,
-        isFlagged: header.isFlagged,
-        sessionStatus: header.sessionStatus,
-        permissionMode: header.permissionMode,
-        hasUnread: header.hasUnread,
-        lastReadMessageId: header.lastReadMessageId,
+        ...(header.name !== undefined ? { name: header.name } : {}),
+        ...(header.labels !== undefined ? { labels: header.labels } : {}),
+        ...(header.isFlagged !== undefined ? { isFlagged: header.isFlagged } : {}),
+        ...(header.sessionStatus !== undefined ? { sessionStatus: header.sessionStatus } : {}),
+        ...(header.permissionMode !== undefined ? { permissionMode: header.permissionMode } : {}),
+        ...(header.hasUnread !== undefined ? { hasUnread: header.hasUnread } : {}),
+        ...(header.lastReadMessageId !== undefined ? { lastReadMessageId: header.lastReadMessageId } : {}),
     };
     return JSON.stringify(signature);
 }
 
 export function mergeHeaderWithExternalMetadata(localHeader: SessionHeader, diskHeader: SessionHeader): SessionHeader {
+    const localHeaderWithoutOverrides = { ...localHeader };
+    delete localHeaderWithoutOverrides.name;
+    delete localHeaderWithoutOverrides.labels;
+    delete localHeaderWithoutOverrides.isFlagged;
+    delete localHeaderWithoutOverrides.sessionStatus;
+    delete localHeaderWithoutOverrides.permissionMode;
+    delete localHeaderWithoutOverrides.hasUnread;
+    delete localHeaderWithoutOverrides.lastReadMessageId;
     return {
-        ...localHeader,
-        name: diskHeader.name,
-        labels: diskHeader.labels,
-        isFlagged: diskHeader.isFlagged,
-        sessionStatus: diskHeader.sessionStatus,
-        permissionMode: diskHeader.permissionMode,
-        hasUnread: diskHeader.hasUnread,
-        lastReadMessageId: diskHeader.lastReadMessageId,
+        ...localHeaderWithoutOverrides,
+        ...(diskHeader.name !== undefined ? { name: diskHeader.name } : {}),
+        ...(diskHeader.labels !== undefined ? { labels: diskHeader.labels } : {}),
+        ...(diskHeader.isFlagged !== undefined ? { isFlagged: diskHeader.isFlagged } : {}),
+        ...(diskHeader.sessionStatus !== undefined ? { sessionStatus: diskHeader.sessionStatus } : {}),
+        ...(diskHeader.permissionMode !== undefined ? { permissionMode: diskHeader.permissionMode } : {}),
+        ...(diskHeader.hasUnread !== undefined ? { hasUnread: diskHeader.hasUnread } : {}),
+        ...(diskHeader.lastReadMessageId !== undefined ? { lastReadMessageId: diskHeader.lastReadMessageId } : {}),
     };
 }
 

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { PendingTurnRecovery } from "@craft-agent/shared/sessions";
 import { automaticRecoveryLimitReason, automaticRecoveryProgressState, hasAvailableExplicitRetryAllowance, latestExplicitRetryAllowance } from './budget.ts';
 import { validRecoveryStrategy } from './clean-continuation.ts';
@@ -31,17 +32,17 @@ export function advancePendingTurnRecovery(
     const advanced = advancePendingTurnRecovery({
       userMessageId: pending.userMessageId, startedAt: grant.authorizedAt,
       attempts: grant.attempts, leaseExpiresAt: grant.leaseExpiresAt,
-      lastProgressFingerprint: grant.lastProgressFingerprint, stagnantAttempts: grant.stagnantAttempts,
+      ...(grant.lastProgressFingerprint !== undefined ? { lastProgressFingerprint: grant.lastProgressFingerprint } : {}), stagnantAttempts: grant.stagnantAttempts,
     }, cause, nowMs, Math.min(configuredAttemptLimit, grant.maxAttempts), progressFingerprint,
     maxStagnantAttempts, leaseDurationMs, absoluteAttemptLimit);
     if (!advanced) return null;
     return {
       ...pending, attempts: pending.attempts + 1, lastAttemptAt: nowMs, lastCause: cause,
-      explicitRetryAllowances: [...pending.explicitRetryAllowances.slice(0, -1), {
+      explicitRetryAllowances: [...pending.explicitRetryAllowances.slice(0, -1), omitUndefined<NonNullable<PendingTurnRecovery['explicitRetryAllowances']>[number]>({
         ...grant, attempts: advanced.attempts, stagnantAttempts: advanced.stagnantAttempts ?? 0,
         lastProgressFingerprint: advanced.lastProgressFingerprint, lastProgressAt: advanced.lastProgressAt ?? grant.lastProgressAt,
         semanticProgressFingerprint: explicitContext!.semanticProgressFingerprint,
-      }],
+      })],
       ...(pending.continuationRequired ? { continuationRequired: false } : {}),
     };
   }
@@ -63,7 +64,7 @@ export function advancePendingTurnRecovery(
   }
 
   const progress = automaticRecoveryProgressState(pending, progressFingerprint);
-  return {
+  return omitUndefined<PendingTurnRecovery>({
     ...pending,
     leaseExpiresAt,
     attempts: pending.attempts + 1,
@@ -75,7 +76,7 @@ export function advancePendingTurnRecovery(
       stagnantAttempts: progress.stagnantAttempts,
     } : {}),
     ...(pending.continuationRequired ? { continuationRequired: false } : {}),
-  };
+  });
 }
 
 /**
@@ -145,7 +146,7 @@ export function planAutomaticTurnRecovery(
   const currentPhase = validRecoveryStrategy(input.pending)?.phase ?? 'resume';
   if (strategyBoundary && currentPhase !== 'escalate') {
     const nextPhase = currentPhase === 'resume' ? 'replan' as const : 'escalate' as const;
-    const transitioned: PendingTurnRecovery = {
+    const transitioned: PendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
       ...pendingWithLease,
       lastCause: input.cause,
       stagnantAttempts: 0,
@@ -159,7 +160,7 @@ export function planAutomaticTurnRecovery(
         transitionedAt: nowMs,
         reason: reason === 'strategy-stagnation' ? 'stagnation' : 'attempt-limit',
       },
-    };
+    });
     return { action: nextPhase, recovery: transitioned, reason };
   }
 
@@ -168,7 +169,7 @@ export function planAutomaticTurnRecovery(
     && input.progressFingerprint !== input.pending.lastProgressFingerprint;
   if (reason === 'absolute-attempt-limit' && verifiedNewProgress
     && (input.pending.cleanContinuationCount ?? 0) < 1) {
-    const cleanContinuation: PendingTurnRecovery = {
+    const cleanContinuation: PendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
       ...input.pending,
       startedAt: nowMs,
       attempts: 0,
@@ -184,7 +185,7 @@ export function planAutomaticTurnRecovery(
       recoveryStrategy: undefined,
       exhaustedAt: undefined,
       validationExhausted: undefined,
-    };
+    });
     return {
       action: 'clean-continuation',
       recovery: cleanContinuation,

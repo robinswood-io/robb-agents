@@ -9,7 +9,7 @@
  * all autoRules into a single list.
  */
 
-import * as React from 'react'
+
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
@@ -39,14 +39,14 @@ interface AutoRulesDataTableProps {
   /** Label tree (root-level nodes with nested children) */
   data: LabelConfig[]
   /** Show search input */
-  searchable?: boolean
+  searchable?: boolean | undefined
   /** Max height with scroll */
-  maxHeight?: number
+  maxHeight?: number | undefined
   /** Enable fullscreen button */
-  fullscreen?: boolean
+  fullscreen?: boolean | undefined
   /** Title for fullscreen overlay */
-  fullscreenTitle?: string
-  className?: string
+  fullscreenTitle?: string | undefined
+  className?: string | undefined
 }
 
 /**

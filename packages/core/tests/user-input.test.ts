@@ -37,7 +37,7 @@ describe('structured user input validation', () => {
   });
 
   it('does not mutate inputs or retain nested request references', () => {
-    const input = JSON.parse(JSON.stringify(questions));
+    const input = JSON.parse(JSON.stringify(questions)) as typeof questions;
     const normalized = normalizeUserInputQuestions(input);
     normalized[0]!.options![0]!.label = 'changed';
     expect(input).toEqual(questions);

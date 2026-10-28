@@ -1,3 +1,5 @@
+import type { WsRpcClientOptions } from '../../../../packages/server-core/src/transport/client/shared.ts';
+import {isJsonObject, omitUndefined } from '@craft-agent/shared/utils/json';
 import { assertOAuthStart, assertOAuthResult } from '@craft-agent/shared/protocol'
 /**
  * Web API adapter — browser-compatible ElectronAPI implementation.
@@ -79,12 +81,12 @@ export function createWebApi(options: WebApiOptions): {
   let activeWorkspaceId = workspaceId
   const sessionWorkspaceIds = new Map<string, string>()
 
-  const client = new WsRpcClient(serverUrl, {
+  const client = new WsRpcClient(serverUrl, omitUndefined<WsRpcClientOptions>({
     workspaceId,
     autoReconnect: true,
     mode: 'remote',
     // No token — auth is via session cookie sent on WebSocket upgrade
-  })
+  }))
 
   // Build the API proxy from the same channel map the Electron app uses
   const baseApi = buildClientApi(
@@ -192,7 +194,10 @@ export function createWebApi(options: WebApiOptions): {
     getVersions: () => ({ node: 'n/a', chrome: navigator.userAgent, electron: 'web' }),
     getRuntimeEnvironment: () => 'web',
     getSystemWarnings: () => Promise.resolve({ vcredistMissing: false }),
-    isDebugMode: () => Promise.resolve(import.meta.env.DEV),
+    isDebugMode: () => {
+      const environment: unknown = import.meta.env
+      return Promise.resolve(isJsonObject(environment) && environment['DEV'] === true)
+    },
 
     // Theme
     getSystemTheme: () => Promise.resolve(getSystemTheme()),

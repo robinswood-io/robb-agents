@@ -1,3 +1,5 @@
+import { sessionManagerForTest } from "./private-runtime-access.ts";
+import { completeSessionAgentFixture } from './scripted-session-agent.ts';
 import { withSessionOperationsForTest } from './session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./runtime-state-access.ts";
 import { scopeReviewFixture } from "../__fixtures__/scope-review.ts";
@@ -57,21 +59,7 @@ export function makeHarness(id: string): Harness {
   const telemetryNames: string[] = []
   const resumedSessionIds: string[] = []
   const completions: CompletionEvent[] = []
-  const internals = manager as unknown as {
-    sessions: Map<string, Managed>
-    enqueuePersist: (session: Managed) => boolean
-    flushSession: (sessionId: string) => Promise<void>
-    sendEvent: (event: Record<string, unknown>) => void
-    emitExecutionTelemetry: (_session: Managed, event: { name: string }) => void
-    startGenerationTelemetry: () => void
-    finishGenerationTelemetry: () => void
-    beginAutomaticSessionStatusLifecycle: () => Promise<void>
-    finishAutomaticSessionStatusLifecycle: () => Promise<void>
-    isSessionBeingViewed: () => boolean
-    markSessionRead: () => Promise<void>
-    processNextQueuedMessage: (sessionId: string) => void
-    disposeManagedAgentRuntime: () => Promise<void>
-  }
+  const internals = sessionManagerForTest(manager)
   sessionRuntimeStateForTest(manager).sessions.set(id, managed)
   // Exercise the real persistence boundary's UI publication without disk writes.
   internals.enqueuePersist = () => true
@@ -95,8 +83,8 @@ export function makeHarness(id: string): Harness {
 
 export function installAgent(harness: Harness, events: AgentEvent[], beforeChat?: () => void, reviewed = false): string[] {
   const redirected: string[] = []
-  const agent = {
-    async *chat(): AsyncGenerator<AgentEvent> {
+  const agent = completeSessionAgentFixture(harness.managed.workspace, {
+    async *chat(): AsyncGenerator<AgentEvent, void, unknown> {
       beforeChat?.()
       for (const event of events) {
         if (reviewed && event.type === 'text_complete' && harness.managed.activeObjective?.acceptanceCriteria?.length) {
@@ -115,12 +103,10 @@ export function installAgent(harness: Harness, events: AgentEvent[], beforeChat?
       redirected.push(message)
       return true
     },
-  }
-  harness.managed.agent = agent as never
-  ;(harness.manager as unknown as {
-    getOrCreateAgent: (session: Managed) => Promise<typeof agent>
-  }).getOrCreateAgent = async session => {
-    session.agent = agent as never
+  })
+  harness.managed.agent = agent
+  ;(sessionManagerForTest(harness.manager)).getOrCreateAgent = async session => {
+    session.agent = agent
     return agent
   }
   return redirected
@@ -136,11 +122,7 @@ export function bindLiveToolAdmission(harness: Harness): void {
   const agent = harness.managed.agent
   const userMessage = harness.managed.messages.findLast(message => message.role === 'user')
   if (!agent || !userMessage) throw new Error('Live tool admission requires an agent and user boundary')
-  const runtime = harness.manager as unknown as {
-    runtimeProcessingGenerations: WeakMap<object, number>
-    runtimeToolAdmissionBindings: WeakMap<object, Record<string, unknown>>
-    objectiveAuthorityEpochs: WeakMap<Managed, number>
-  }
+  const runtime = sessionManagerForTest(harness.manager)
   sessionRuntimeStateForTest(runtime).runtimeProcessingGenerations.set(agent, harness.managed.processingGeneration)
   sessionRuntimeStateForTest(runtime).runtimeToolAdmissionBindings.set(agent, {
     managed: harness.managed,
@@ -160,9 +142,7 @@ export function bindLiveToolAdmission(harness: Harness): void {
 
 
 export async function processEvent(harness: Harness, event: AgentEvent): Promise<void> {
-  await (harness.manager as unknown as {
-    processEvent: (session: Managed, event: AgentEvent, generation?: number) => Promise<void>
-  }).processEvent(harness.managed, event, harness.managed.processingGeneration)
+  await (sessionManagerForTest(harness.manager)).processEvent(harness.managed, event, harness.managed.processingGeneration)
 }
 
 

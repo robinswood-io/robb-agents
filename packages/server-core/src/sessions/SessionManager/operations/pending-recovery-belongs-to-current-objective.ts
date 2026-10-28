@@ -4,7 +4,7 @@ import type { ManagedSession } from '../managed-session.ts';
 import { canonicalUserInputAnswerContents } from '../user-input-authority.ts';
 import { boundCleanUserInputRequest as sessionOpBoundCleanUserInputRequest } from './context-limit-authenticated-answer-evidence.ts';
 
-function sessionOpIsCleanSetupRetryBlocked(sessionOperationContext: SessionOperationContext, dispatch: PendingTurnRecovery['recoveryDispatch'] | undefined): boolean {
+function sessionOpIsCleanSetupRetryBlocked(_sessionOperationContext: SessionOperationContext, dispatch: PendingTurnRecovery['recoveryDispatch'] | undefined): boolean {
     return !!dispatch?.cleanContinuationId
         && Number.isFinite(dispatch.setupRetryBlockedAt)
         && dispatch.setupRetryBlockedAt! > 0;

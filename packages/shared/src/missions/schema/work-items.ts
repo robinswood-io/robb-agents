@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { THINKING_LEVEL_IDS } from "../../agent/thinking-levels.ts";
 import { z } from "zod";
 import type { PermissionMode } from "../../agent/mode-types.ts";
@@ -79,15 +80,15 @@ function validateStructuredConnectorPayload(
     }
     return;
   }
-  if (Array.isArray(value)) {
-    value.forEach((child, index) => validateStructuredConnectorPayload(child, ctx, [...path, index], depth + 1, counter));
+  if (isUnknownArray(value)) {
+    value.forEach((child: unknown, index) => validateStructuredConnectorPayload(child, ctx, [...path, index], depth + 1, counter));
     return;
   }
   if (!value || typeof value !== 'object' || Object.getPrototypeOf(value) !== Object.prototype) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: 'Connector payload must contain JSON values only' });
     return;
   }
-  for (const [key, child] of Object.entries(value)) {
+  for (const [key, child] of Object.entries<unknown>((value as Record<string, unknown>))) {
     counter.fields += 1;
     if (counter.fields > MAX_CONNECTOR_PAYLOAD_FIELDS) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: `Connector payload exceeds ${MAX_CONNECTOR_PAYLOAD_FIELDS} fields` });

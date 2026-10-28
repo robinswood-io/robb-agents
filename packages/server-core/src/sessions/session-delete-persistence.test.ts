@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -25,10 +26,7 @@ describe('session deletion persistence retirement', () => {
       { id: 'workspace-delete', name: 'Delete', rootPath: root, createdAt: 1 } as never,
       { messagesLoaded: true },
     )
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      persistSession: (candidate: typeof managed) => boolean
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 
     let releaseDisposal!: () => void
@@ -87,10 +85,7 @@ describe('session deletion persistence retirement', () => {
       { id: 'workspace-direct-write', name: 'Direct write', rootPath: root, createdAt: 1 } as never,
       { messagesLoaded: true },
     )
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      trackSessionOperation: <T>(candidate: typeof managed, operation: () => Promise<T>) => Promise<T>
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 
     let releaseWrite!: () => void
@@ -178,11 +173,7 @@ describe('session deletion persistence retirement', () => {
       { id: 'workspace-abort', name: 'Abort', rootPath: root, createdAt: 1 } as never,
       { messagesLoaded: true },
     )
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      retiringSessions: WeakSet<typeof managed>
-      persistSession: (candidate: typeof managed) => boolean
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     managed.isProcessing = true
     managed.agent = {
@@ -308,10 +299,7 @@ describe('session deletion persistence retirement', () => {
       { id: 'workspace-retarget', name: 'Retarget', rootPath: alias, createdAt: 1 } as never,
       { messagesLoaded: true },
     )
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      persistSession: (candidate: typeof managed) => boolean
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(id, managed)
     managed.name = 'Pending write for target A'
     expect(runtime.persistSession(managed)).toBe(true)

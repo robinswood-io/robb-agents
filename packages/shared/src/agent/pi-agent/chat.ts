@@ -24,16 +24,15 @@ import { PiRuntimeInterruptedError, shouldRefreshPiOAuthBeforeSpawn } from './sh
 // ============================================================
   // Chat (AsyncGenerator backed by the subprocess event queue)
   // ============================================================
-export async function* chatImpl(transportOwner: PiAgent, agentClass: typeof PiAgent, messageParam: string, attachments?: FileAttachment[], options?: ChatOptions): AsyncGenerator<AgentEvent> {
+export async function* chatImpl(transportOwner: PiAgent, agentClass: typeof PiAgent, messageParam: string, attachments?: FileAttachment[], options?: ChatOptions): AsyncGenerator<AgentEvent, void, unknown> {
     let message = messageParam;
     let providerHandoffTurnId: string | undefined;
     const preparationRevision = transportOwner["promptPreparationRevision"];
     transportOwner["revokeAdmittedToolExecutions"]();
     // Reset state for new turn
     transportOwner["_isProcessing"] = true;
-    transportOwner["abortReason"] = undefined;
+    delete transportOwner.abortReason;
     transportOwner["eventQueue"].reset();
-    transportOwner["currentUserMessage"] = message;
     transportOwner["adapter"].startTurn();
     // Fire UserPromptSubmit hook event (fire-and-forget)
     transportOwner["emitAutomationEvent"]('UserPromptSubmit', {
@@ -78,17 +77,17 @@ export async function* chatImpl(transportOwner: PiAgent, agentClass: typeof PiAg
             if (shouldRefreshPiOAuthBeforeSpawn({
                 authType: transportOwner["config"].authType,
                 piAuthProvider: runtime.piAuthProvider,
-                refreshToken: stored?.refreshToken,
-                expiresAt: stored?.expiresAt,
-                refreshInFlight: agentClass["globalRefreshMutex"].has(`${slug}\u0000${expectedBindingId ?? 'unsealed'}`),
+                ...(stored?.refreshToken !== undefined ? { refreshToken: stored?.refreshToken } : {}),
+                ...(stored?.expiresAt !== undefined ? { expiresAt: stored?.expiresAt } : {}),
+                refreshInFlight: agentClass.globalRefreshMutex.has(`${slug}\u0000${expectedBindingId ?? 'unsealed'}`),
             })) {
                 transportOwner["debug"](`${runtime.piAuthProvider} token expired or expiring soon — proactively refreshing before chat turn`);
-                await transportOwner["refreshAndPushTokens"]();
+                await transportOwner.refreshAndPushTokens();
             }
         }
         // Ensure subprocess is spawned and ready
         try {
-            await transportOwner["ensureSubprocess"]();
+            await transportOwner.ensureSubprocess();
         }
         catch (subprocessError) {
             const errorMsg = subprocessError instanceof Error ? subprocessError.message : String(subprocessError);
@@ -103,7 +102,7 @@ export async function* chatImpl(transportOwner: PiAgent, agentClass: typeof PiAg
                     message = recoveryContext + message;
                     transportOwner["debug"]('Injected recovery context into message');
                 }
-                await transportOwner["ensureSubprocess"]();
+                await transportOwner.ensureSubprocess();
             }
             else {
                 throw subprocessError;
@@ -113,7 +112,7 @@ export async function* chatImpl(transportOwner: PiAgent, agentClass: typeof PiAg
         const compactCommand = parseCompactCommand(trimmedMessage);
         if (compactCommand && !attachments?.length) {
             const { customInstructions } = compactCommand;
-            const compactResult = await transportOwner["requestCompact"](customInstructions);
+            const compactResult = await transportOwner.requestCompact(customInstructions);
             if (compactResult) {
                 yield {
                     type: 'info',
@@ -127,7 +126,7 @@ export async function* chatImpl(transportOwner: PiAgent, agentClass: typeof PiAg
             return;
         }
         // Build system prompt
-        const projectContext = transportOwner["resolveProjectContext"]();
+        const projectContext = transportOwner.resolveProjectContext();
         const systemPrompt = await getSystemPromptAsync(undefined, // pinnedPreferencesPrompt
         transportOwner["config"].debugMode, transportOwner["config"].workspace.rootPath, transportOwner["config"].session?.workingDirectory, transportOwner["config"].systemPromptPreset, ROBINSWOOD_BACKEND_NAME, // backendName
         getCoAuthorPreference(), // respect user's includeCoAuthoredBy preference (#576)
@@ -198,10 +197,10 @@ export async function* chatImpl(transportOwner: PiAgent, agentClass: typeof PiAg
         if (preparationRevision !== transportOwner["promptPreparationRevision"])
             return;
         // Send prompt to subprocess
-        const turnId = `turn-${++transportOwner["rpcIdCounter"]}`;
+        const turnId = `turn-${++transportOwner.rpcIdCounter}`;
         providerHandoffTurnId = turnId;
-        transportOwner["pendingProviderHandoffs"].set(turnId, transportOwner["captureProviderHandoffAcknowledgement"]());
-        transportOwner["pendingProviderDispatchRejections"].set(turnId, transportOwner["captureProviderDispatchRejection"]());
+        transportOwner.pendingProviderHandoffs.set(turnId, transportOwner["captureProviderHandoffAcknowledgement"]());
+        transportOwner.pendingProviderDispatchRejections.set(turnId, transportOwner["captureProviderDispatchRejection"]());
         const acknowledgeUncertainDispatch = transportOwner["captureProviderDispatchUncertainAcknowledgement"]();
         try {
             const accepted = await transportOwner["performProviderDispatchWriteAhead"](() => {
@@ -228,8 +227,8 @@ export async function* chatImpl(transportOwner: PiAgent, agentClass: typeof PiAg
             acknowledgeUncertainDispatch();
         }
         catch (error) {
-            transportOwner["pendingProviderHandoffs"].delete(turnId);
-            transportOwner["pendingProviderDispatchRejections"].delete(turnId);
+            transportOwner.pendingProviderHandoffs.delete(turnId);
+            transportOwner.pendingProviderDispatchRejections.delete(turnId);
             throw error;
         }
         // Yield events as they arrive. The source-activation drain controller
@@ -270,10 +269,10 @@ export async function* chatImpl(transportOwner: PiAgent, agentClass: typeof PiAg
     }
     catch (error) {
         if (error instanceof Error && !(error instanceof InvalidWorkingDirectoryError) && error.message.includes('abort')) {
-            if (transportOwner["abortReason"] === AbortReason.PlanSubmitted) {
+            if (transportOwner.abortReason === AbortReason.PlanSubmitted) {
                 return;
             }
-            if (transportOwner["abortReason"] === AbortReason.AuthRequest) {
+            if (transportOwner.abortReason === AbortReason.AuthRequest) {
                 return;
             }
             return;
@@ -288,7 +287,7 @@ export async function* chatImpl(transportOwner: PiAgent, agentClass: typeof PiAg
             yield { type: 'complete' };
             return;
         }
-        const typedError = transportOwner["parsePiError"](errorObj);
+        const typedError = transportOwner.parsePiError(errorObj);
         if (typedError.code !== 'unknown_error') {
             yield { type: 'typed_error', error: typedError };
         }
@@ -299,8 +298,8 @@ export async function* chatImpl(transportOwner: PiAgent, agentClass: typeof PiAg
     }
     finally {
         if (providerHandoffTurnId) {
-            transportOwner["pendingProviderHandoffs"].delete(providerHandoffTurnId);
-            transportOwner["pendingProviderDispatchRejections"].delete(providerHandoffTurnId);
+            transportOwner.pendingProviderHandoffs.delete(providerHandoffTurnId);
+            transportOwner.pendingProviderDispatchRejections.delete(providerHandoffTurnId);
         }
         transportOwner["_isProcessing"] = false;
     }

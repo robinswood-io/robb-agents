@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { providerDispatchesAwaitingColdReconciliation, exactProviderDispatchAcceptanceUnknown } from '../policy.ts';
 import { AbortReason } from '@craft-agent/shared/agent';
@@ -39,7 +40,7 @@ async function sessionOpPerformCancelProcessing(sessionOperationContext: Session
         // Fence a scheduled inbox dispatch before the first asynchronous save.
         managed.stopRequested = true;
         sessionOpRestorePreAckAgentDeliveryDequeues(sessionOperationContext, managed, true);
-        await sessionOperationContext.owner["closePendingPermissionRequestsForStop"](managed, managed.processingGeneration);
+        await sessionOperationContext.owner.closePendingPermissionRequestsForStop(managed, managed.processingGeneration);
         await sessionOperationContext.owner["ensureMessagesLoaded"](managed);
         const providerReconciliation = sessionOperationContext.state.providerRetryReconciliationTransactions.get(sessionId);
         if (providerReconciliation) {
@@ -248,7 +249,7 @@ async function sessionOpPerformCancelProcessing(sessionOperationContext: Session
     setTimeout(() => {
         if (managed.stopRequested && managed.isProcessing) {
             sessionLog.warn('Generator did not complete after stop request, forcing cleanup');
-            void sessionOperationContext.owner["onProcessingStopped"](sessionId, 'timeout').catch(error => {
+            void sessionOperationContext.owner["onProcessingStopped"](sessionId, 'timeout').catch((error: unknown) => {
                 sessionLog.error('Forced stop cleanup failed', {
                     sessionId,
                     error: error instanceof Error ? error.message : String(error),
@@ -347,13 +348,13 @@ function sessionOpAttemptAuthRetry(sessionOperationContext: SessionOperationCont
                 sessionLog.info(`[auth-retry] Abandoned retry without a current authenticated objective for session ${sessionId}`);
                 return;
             }
-            await sessionOperationContext.owner["sendAuthenticatedInternalContinuation"](managed, retryMessage, 'auth-retry', continuationToken, {
+            await sessionOperationContext.owner.sendAuthenticatedInternalContinuation(managed, retryMessage, 'auth-retry', continuationToken, omitUndefined({
                 attachments: retryAttachments,
                 storedAttachments: retryStoredAttachments,
                 options: retryOptions,
                 existingMessageId: retryUserMessage.id,
                 isAuthRetry: true,
-            });
+            }));
             sessionLog.info(`[auth-retry] Retry completed for session ${sessionId}`);
         }
         catch (retryError) {
@@ -369,7 +370,7 @@ function sessionOpAttemptAuthRetry(sessionOperationContext: SessionOperationCont
                 role: 'error',
                 content: 'Authentication failed. Please check your credentials.',
                 timestamp: sessionOpMonotonic(sessionOperationContext),
-                errorCode: failureErrorCode,
+                ...(failureErrorCode !== undefined ? { errorCode: failureErrorCode } : {}),
             };
             managed.messages.push(failedMessage);
             sessionOperationContext.owner["sendEvent"]({

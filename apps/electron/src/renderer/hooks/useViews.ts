@@ -90,20 +90,20 @@ export function useViews(workspaceId: string | null): UseViewsResult {
     // Build the evaluation context from session metadata.
     // This maps SessionMeta fields to the flat context object expected by expressions.
     const context: ViewEvaluationContext = buildViewContext({
-      name: meta.name,
-      preview: meta.preview,
-      sessionStatus: meta.sessionStatus,
-      permissionMode: meta.permissionMode,
-      model: meta.model,
-      lastMessageRole: meta.lastMessageRole,
-      lastMessageAt: meta.lastMessageAt,
-      createdAt: meta.createdAt,
-      messageCount: meta.messageCount,
-      isFlagged: meta.isFlagged,
-      hasUnread: meta.hasUnread,
-      isProcessing: meta.isProcessing,
-      labels: meta.labels,
-      tokenUsage: meta.tokenUsage,
+      ...(meta.name !== undefined ? { name: meta.name } : {}),
+      ...(meta.preview !== undefined ? { preview: meta.preview } : {}),
+      ...(meta.sessionStatus !== undefined ? { sessionStatus: meta.sessionStatus } : {}),
+      ...(meta.permissionMode !== undefined ? { permissionMode: meta.permissionMode } : {}),
+      ...(meta.model !== undefined ? { model: meta.model } : {}),
+      ...(meta.lastMessageRole !== undefined ? { lastMessageRole: meta.lastMessageRole } : {}),
+      ...(meta.lastMessageAt !== undefined ? { lastMessageAt: meta.lastMessageAt } : {}),
+      ...(meta.createdAt !== undefined ? { createdAt: meta.createdAt } : {}),
+      ...(meta.messageCount !== undefined ? { messageCount: meta.messageCount } : {}),
+      ...(meta.isFlagged !== undefined ? { isFlagged: meta.isFlagged } : {}),
+      ...(meta.hasUnread !== undefined ? { hasUnread: meta.hasUnread } : {}),
+      ...(meta.isProcessing !== undefined ? { isProcessing: meta.isProcessing } : {}),
+      ...(meta.labels !== undefined ? { labels: meta.labels } : {}),
+      ...(meta.tokenUsage !== undefined ? { tokenUsage: meta.tokenUsage } : {}),
     })
 
     return evaluateViews(context, compiled)

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import * as React from 'react';
 
 import { type RichTextInputHandle } from '@/components/ui/rich-text-input';
@@ -133,7 +134,7 @@ const readFileAsAttachment = async (file: File, overrideName?: string): Promise<
           }
         }
 
-        resolve({
+        resolve(omitUndefined<FileAttachment>({
           type,
           path: realPath ?? fileName,
           name: fileName,
@@ -142,7 +143,7 @@ const readFileAsAttachment = async (file: File, overrideName?: string): Promise<
           text,
           size: file.size,
           thumbnailBase64,
-        })
+        }))
       }
       reader.onerror = () => resolve(null)
       reader.readAsArrayBuffer(file)
@@ -171,8 +172,8 @@ const handlePaste = async (e: React.ClipboardEvent) => {
       return file.name
     })
 
-    for (let i = 0; i < files.length; i++) {
-      await processFileAttachment(files[i], fileNames[i])
+    for (const [i, file] of files.entries()) {
+      await processFileAttachment(file, fileNames[i])
     }
   }
 

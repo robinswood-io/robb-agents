@@ -1,3 +1,4 @@
+import { setOptional } from '@craft-agent/shared/utils/json';
 import { scheduleQueuedMessageDispatch } from './queued-message-scheduling.ts';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { hasUnscheduledQueuedUserInput, queuedDirectHumanContinuationIndex, queuedDirectHumanContinuationIndexForId, validAllocatedRecoveryDispatch, cleanSetupRetryDelayMs, isClosedColdResumeStatus } from '../policy.ts';
@@ -30,7 +31,7 @@ function sessionOpProcessNextQueuedMessage(sessionOperationContext: SessionOpera
     const queuedHumanSupersedesSourceActivation = queuedDirectHumanContinuationIndex(managed) >= 0;
     if (sessionOpDropDeferredSourceActivations(sessionOperationContext, managed, queuedHumanSupersedesSourceActivation)) {
         sessionOperationContext.owner["persistSession"](managed);
-        void sessionOperationContext.owner.flushSession(sessionId).catch(error => {
+        void sessionOperationContext.owner.flushSession(sessionId).catch((error: unknown) => {
             sessionLog.warn('Failed to flush stale source-activation cancellation', {
                 sessionId,
                 error: error instanceof Error ? error.message : String(error),
@@ -104,7 +105,7 @@ function sessionOpProcessNextQueuedMessage(sessionOperationContext: SessionOpera
                 sessionOperationContext.state.cleanRetrySetupPersistenceFences.delete(sessionId);
             }
             sessionOperationContext.owner["processNextQueuedMessage"](sessionId);
-        }).catch(error => {
+        }).catch((error: unknown) => {
             sessionOpFenceCleanSetupPersistence(sessionOperationContext, managed, cleanRetryDispatch.id);
             sessionLog.warn('Failed to persist stale clean-boundary FIFO quarantine', {
                 sessionId,
@@ -204,7 +205,7 @@ function sessionOpProcessNextQueuedMessage(sessionOperationContext: SessionOpera
         sessionOperationContext.owner["persistSession"](managed);
         if (managed.messageQueue.length === 0) {
             const cancellationGeneration = managed.processingGeneration;
-            void sessionOperationContext.owner.flushSession(sessionId).catch(error => {
+            void sessionOperationContext.owner.flushSession(sessionId).catch((error: unknown) => {
                 sessionLog.warn('Failed to flush stale automatic recovery cancellation', {
                     sessionId,
                     error: error instanceof Error ? error.message : String(error),
@@ -274,9 +275,9 @@ function sessionOpProcessNextQueuedMessage(sessionOperationContext: SessionOpera
         if (shouldBeBlocked && !Number.isFinite(selectedDeliverySetup.setupRetryBlockedAt)) {
             selectedDeliverySetup.setupFailureCount = Math.min(MAX_CLEAN_RETRY_SAFE_SETUP_FAILURES, Math.max(1, Number.isSafeInteger(selectedDeliverySetup.setupFailureCount)
                 ? selectedDeliverySetup.setupFailureCount : setupFailureLimit));
-            selectedDeliverySetup.lastSetupFailureClass = CLEAN_RETRY_SETUP_FAILURE_CLASSES.has(selectedDeliverySetup.lastSetupFailureClass ?? '') ? selectedDeliverySetup.lastSetupFailureClass : 'unknown';
+            setOptional(selectedDeliverySetup, "lastSetupFailureClass", CLEAN_RETRY_SETUP_FAILURE_CLASSES.has(selectedDeliverySetup.lastSetupFailureClass ?? '') ? selectedDeliverySetup.lastSetupFailureClass : 'unknown');
             selectedDeliverySetup.setupRetryBlockedAt = Date.now();
-            selectedDeliverySetup.setupRetryNotBefore = undefined;
+            delete selectedDeliverySetup.setupRetryNotBefore;
             sessionOperationContext.owner["persistSession"](managed);
         }
         if (Number.isFinite(selectedDeliverySetup.setupRetryBlockedAt)) {

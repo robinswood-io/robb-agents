@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 /**
  * Task + run-state persistence.
  *
@@ -35,9 +36,9 @@ export interface RunContextSnapshot {
 function isJsonValue(value: unknown): boolean {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return true;
   if (typeof value === 'number') return Number.isFinite(value);
-  if (Array.isArray(value)) return value.every(isJsonValue);
+  if (isUnknownArray(value)) return value.every(isJsonValue);
   if (!isRecord(value)) return false;
-  const prototype = Object.getPrototypeOf(value);
+  const prototype: unknown = Object.getPrototypeOf(value);
   if (prototype !== Object.prototype && prototype !== null) return false;
   return Object.values(value).every(isJsonValue);
 }
@@ -45,15 +46,15 @@ function isJsonValue(value: unknown): boolean {
 function parseRunContext(raw: unknown, slug: string, runId: string): RunContextSnapshot {
   if (
     !isRecord(raw) ||
-    !isRecord(raw.params) ||
-    !Object.values(raw.params).every(isJsonValue) ||
-    typeof raw.verifyOnComplete !== 'boolean'
+    !isRecord(raw["params"]) ||
+    !Object.values(raw["params"]).every(isJsonValue) ||
+    typeof raw["verifyOnComplete"] !== 'boolean'
   ) {
     throw new Error(`Run context snapshot is corrupt: ${slug}/${runId}`);
   }
   return {
-    params: raw.params,
-    verifyOnComplete: raw.verifyOnComplete,
+    params: raw["params"],
+    verifyOnComplete: raw["verifyOnComplete"],
   };
 }
 

@@ -67,12 +67,7 @@ const consumeInputDraftSnapshot = React.useCallback((): string => {
     return snapshot
   }, [input, clearInputDraft])
 
-type PlanApprovalEventDetail = {
-    sessionId?: string
-    planPath?: string
-    includeDraftInput?: boolean
-    source?: string
-  }
+type PlanApprovalEventDetail = WindowEventMap['craft:approve-plan']['detail']
 
 React.useEffect(() => {
     const handleApprovePlan = (e: CustomEvent<PlanApprovalEventDetail>) => {
@@ -96,8 +91,8 @@ React.useEffect(() => {
       onSubmit(text, undefined)
     }
 
-    window.addEventListener('craft:approve-plan', handleApprovePlan as EventListener)
-    return () => window.removeEventListener('craft:approve-plan', handleApprovePlan as EventListener)
+    window.addEventListener('craft:approve-plan', handleApprovePlan)
+    return () => window.removeEventListener('craft:approve-plan', handleApprovePlan)
   }, [sessionId, permissionMode, onPermissionModeChange, onSubmit, consumeInputDraftSnapshot])
 
 React.useEffect(() => {
@@ -138,7 +133,7 @@ React.useEffect(() => {
         }
 
         // Remove the listener (one-time use)
-        window.removeEventListener('craft:compaction-complete', handleCompactionComplete as unknown as EventListener)
+        window.removeEventListener('craft:compaction-complete', handleCompactionComplete)
 
         const executionMessage = buildPlanApprovalMessage({
           planPath,
@@ -154,11 +149,11 @@ React.useEffect(() => {
         }
       }
 
-      window.addEventListener('craft:compaction-complete', handleCompactionComplete as unknown as EventListener)
+      window.addEventListener('craft:compaction-complete', handleCompactionComplete)
     }
 
-    window.addEventListener('craft:approve-plan-with-compact', handleApprovePlanWithCompact as unknown as EventListener)
-    return () => window.removeEventListener('craft:approve-plan-with-compact', handleApprovePlanWithCompact as unknown as EventListener)
+    window.addEventListener('craft:approve-plan-with-compact', handleApprovePlanWithCompact)
+    return () => window.removeEventListener('craft:approve-plan-with-compact', handleApprovePlanWithCompact)
   }, [sessionId, permissionMode, onPermissionModeChange, onSubmit, consumeInputDraftSnapshot])
 
 React.useEffect(() => {
@@ -219,9 +214,9 @@ React.useEffect(() => {
       executePendingPlan()
     }
 
-    window.addEventListener('craft:compaction-complete', handleCompactionComplete as unknown as EventListener)
+    window.addEventListener('craft:compaction-complete', handleCompactionComplete)
     return () => {
-      window.removeEventListener('craft:compaction-complete', handleCompactionComplete as unknown as EventListener)
+      window.removeEventListener('craft:compaction-complete', handleCompactionComplete)
     }
   }, [sessionId, onSubmit])
 
@@ -229,7 +224,7 @@ React.useEffect(() => {
     const handleFocusInput = (e: Event) => {
       const detail = (e as CustomEvent<{ sessionId?: string }>).detail
       const targetSessionId = detail?.sessionId
-      if (!shouldHandleScopedInputEvent({ sessionId, isFocusedPanel, targetSessionId })) return
+      if (!shouldHandleScopedInputEvent({ ...(sessionId !== undefined ? { sessionId: sessionId } : {}), isFocusedPanel, ...(targetSessionId !== undefined ? { targetSessionId: targetSessionId } : {}) })) return
 
       if (targetSessionId) {
         clearPendingFocusForSession(targetSessionId)
@@ -266,7 +261,7 @@ const getNextPastedNumber = (
     let maxNum = 0
     for (const att of existingAttachments) {
       const match = att.name.match(pattern)
-      if (match) {
+      if (match?.[1]) {
         maxNum = Math.max(maxNum, parseInt(match[1], 10))
       }
     }
@@ -274,11 +269,11 @@ const getNextPastedNumber = (
   }
 
 React.useEffect(() => {
-    const handlePasteFiles = async (e: CustomEvent<{ files: File[]; sessionId?: string }>) => {
+    const handlePasteFiles = async (e: WindowEventMap['craft:paste-files']) => {
       if (disabled) return
 
       const targetSessionId = e.detail?.sessionId
-      if (!shouldHandleScopedInputEvent({ sessionId, isFocusedPanel, targetSessionId })) return
+      if (!shouldHandleScopedInputEvent({ ...(sessionId !== undefined ? { sessionId: sessionId } : {}), isFocusedPanel, ...(targetSessionId !== undefined ? { targetSessionId: targetSessionId } : {}) })) return
 
       const { files } = e.detail
       if (!files || files.length === 0) return
@@ -295,9 +290,9 @@ React.useEffect(() => {
         return file.name
       })
 
-      for (let i = 0; i < files.length; i++) {
+      for (const [i, file] of files.entries()) {
         try {
-          const attachment = await readFileAsAttachment(files[i], fileNames[i])
+          const attachment = await readFileAsAttachment(file, fileNames[i])
           if (attachment) {
             setAttachments(prev => [...prev, attachment])
           }
@@ -311,8 +306,8 @@ React.useEffect(() => {
       richInputRef.current?.focus()
     }
 
-    window.addEventListener('craft:paste-files', handlePasteFiles as unknown as EventListener)
-    return () => window.removeEventListener('craft:paste-files', handlePasteFiles as unknown as EventListener)
+    window.addEventListener('craft:paste-files', handlePasteFiles)
+    return () => window.removeEventListener('craft:paste-files', handlePasteFiles)
   }, [disabled, sessionId, isFocusedPanel, richInputRef, attachmentsRef, readFileAsAttachment, setAttachments, setLoadingCount])
 
 const activeCommands = React.useMemo(() => {
@@ -364,10 +359,10 @@ const inlineMention = useInlineMention({
     inputRef: richInputRef,
     skills,
     sources: [],
-    basePath: workingDirectory,
+    ...(workingDirectory !== undefined ? { basePath: workingDirectory } : {}),
     onSelect: handleInlineMentionSideEffect,
     // Use workspace slug (not UUID) for SDK skill qualification
-    workspaceId: workspaceSlug,
+    ...(workspaceSlug !== undefined ? { workspaceId: workspaceSlug } : {}),
   })
 
 const handleLabelSelect = React.useCallback((labelId: string) => {

@@ -66,7 +66,7 @@ describe('buildToolDescription', () => {
     // Old code branched on !config.documentation to print a "cached with an
     // older format" warning. The new stub doesn't read documentation at all,
     // so missing-documentation must not change the output.
-    const a = buildToolDescription(baseConfig({ documentation: undefined }));
+    const a = buildToolDescription(baseConfig({  }));
     const b = buildToolDescription(baseConfig({ documentation: 'whatever' }));
     expect(a).toBe(b);
     expect(a).not.toContain('older format');

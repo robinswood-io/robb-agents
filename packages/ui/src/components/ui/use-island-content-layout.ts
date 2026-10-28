@@ -45,12 +45,12 @@ const contentViews = React.useMemo(() => {
         const props = child.props as IslandContentViewProps
         entries.push({
           id: props.id,
-          anchorX: props.anchorX,
-          anchorY: props.anchorY,
-          className: props.className,
-          morphFrom: props.morphFrom,
-          lockScroll: props.lockScroll,
-          blockOutsideInteraction: props.blockOutsideInteraction,
+          ...(props.anchorX !== undefined ? { anchorX: props.anchorX } : {}),
+          ...(props.anchorY !== undefined ? { anchorY: props.anchorY } : {}),
+          ...(props.className !== undefined ? { className: props.className } : {}),
+          ...(props.morphFrom !== undefined ? { morphFrom: props.morphFrom } : {}),
+          ...(props.lockScroll !== undefined ? { lockScroll: props.lockScroll } : {}),
+          ...(props.blockOutsideInteraction !== undefined ? { blockOutsideInteraction: props.blockOutsideInteraction } : {}),
           node: props.children,
         })
         return
@@ -61,12 +61,12 @@ const contentViews = React.useMemo(() => {
       if (typeof props.id === 'string') {
         entries.push({
           id: props.id,
-          anchorX: props.anchorX,
-          anchorY: props.anchorY,
-          className: props.className,
-          morphFrom: props.morphFrom,
-          lockScroll: props.lockScroll,
-          blockOutsideInteraction: props.blockOutsideInteraction,
+          ...(props.anchorX !== undefined ? { anchorX: props.anchorX } : {}),
+          ...(props.anchorY !== undefined ? { anchorY: props.anchorY } : {}),
+          ...(props.className !== undefined ? { className: props.className } : {}),
+          ...(props.morphFrom !== undefined ? { morphFrom: props.morphFrom } : {}),
+          ...(props.lockScroll !== undefined ? { lockScroll: props.lockScroll } : {}),
+          ...(props.blockOutsideInteraction !== undefined ? { blockOutsideInteraction: props.blockOutsideInteraction } : {}),
           node: child,
         })
       }

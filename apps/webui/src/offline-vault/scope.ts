@@ -48,7 +48,7 @@ export function configureScope(transportOwner: OfflineVault, scope: OfflineVault
             throw error;
         }
         transportOwner["state"] = next;
-        transportOwner["conflicted"] = false;
+        transportOwner.conflicted = false;
         if (identityChanged)
             transportOwner["generation"] += 1;
         transportOwner["emit"]();

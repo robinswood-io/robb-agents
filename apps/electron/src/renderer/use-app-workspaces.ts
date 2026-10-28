@@ -1,14 +1,14 @@
-import React, { useCallback } from 'react';
+import React,{ useCallback } from 'react';
 
-import type { Session, Workspace, PermissionRequest, SetupNeeds } from '../shared/types';
+import type { Session,Workspace,PermissionRequest,SetupNeeds } from '../shared/types';
 import type { SessionDraft } from '@craft-agent/shared/config';
 import type { SessionOptions } from './hooks/useSessionOptions';
 
 import { useOnboarding } from '@/hooks/useOnboarding';
 
-import { navigate, routes } from './lib/navigate';
+import { navigate,routes } from './lib/navigate';
 
-import { sessionMetaMapAtom, sessionIdsAtom } from '@/atoms/sessions';
+import { sessionMetaMapAtom,sessionIdsAtom } from '@/atoms/sessions';
 import { sourcesAtom } from '@/atoms/sources';
 import { skillsAtom } from '@/atoms/skills';
 
@@ -71,7 +71,7 @@ const handleOpenStoredUserPreferences = useCallback(() => {
   }, [])
 
 const handleReset = useCallback(() => {
-    if (document.documentElement.dataset.robbRuntime === 'web') {
+    if (document.documentElement.dataset["robbRuntime"] === 'web') {
       toast.error(t('webui.hostResetDesktopOnly'))
       return
     }
@@ -163,8 +163,6 @@ const handleRefreshWorkspaces = useCallback(() => {
     window.electronAPI.getWorkspaces().then(setWorkspaces)
   }, [setWorkspaces])
 
-const handleOnboardingCancel = useCallback(() => {
-    onboarding.handleCancel()
-  }, [onboarding])
+
 return { handleOpenSettings, handleOpenUrl, handleSelectWorkspace, handleRefreshWorkspaces, handleOpenKeyboardShortcuts, handleOpenStoredUserPreferences, handleReset, executeReset, handleSwitchWorkspaceBySlug }
 }

@@ -139,12 +139,14 @@ export function parseError(
 
   // For proxy_error, prefer safe user-facing text over raw HTML payloads.
   if (code === 'proxy_error') {
+    const definitionWithoutOverrides = { ...definition };
+    delete definitionWithoutOverrides.providerInfo;
     return {
       code,
-      ...definition,
+      ...definitionWithoutOverrides,
       message: buildProxyErrorMessage(errorMessage, fullErrorText),
       originalError: errorMessage,
-      providerInfo,
+      ...(providerInfo !== undefined ? { providerInfo } : {}),
     };
   }
 
@@ -155,21 +157,25 @@ export function parseError(
     const modelMatch = fullErrorText.match(/model[:\s]+["']?([a-zA-Z0-9\-_/:.]+)["']?/i) ||
                        fullErrorText.match(/["']([a-zA-Z0-9\-_/:.]+)["']\s+does not support/i);
     if (modelMatch?.[1]) {
+      const definitionWithoutOverrides2 = { ...definition };
+      delete definitionWithoutOverrides2.providerInfo;
       return {
         code,
-        ...definition,
+        ...definitionWithoutOverrides2,
         message: `Model "${modelMatch[1]}" does not support tool/function calling, which is required for Robb Agents. Please choose a different model with tool support in Settings.`,
         originalError: errorMessage,
-        providerInfo,
+        ...(providerInfo !== undefined ? { providerInfo } : {}),
       };
     }
   }
 
+  const definitionWithoutOverrides3 = { ...definition };
+  delete definitionWithoutOverrides3.providerInfo;
   return {
     code,
-    ...definition,
+    ...definitionWithoutOverrides3,
     originalError: errorMessage,
-    providerInfo,
+    ...(providerInfo !== undefined ? { providerInfo } : {}),
   };
 }
 

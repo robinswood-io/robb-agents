@@ -28,7 +28,7 @@ export function registerTaskExecutionHandlers(server: RpcServer, authorizeTaskAc
     return (await runnerFor(workspaceId)).repair(req.slug, req.sourceRunId, req.nodeIds, {
       runId: req.runId,
       orchestratorSessionId: req.orchestratorSessionId,
-      approveExternalMutations: req.approveExternalMutations,
+      ...(req.approveExternalMutations !== undefined ? { approveExternalMutations: req.approveExternalMutations } : {}),
     })
   })
 

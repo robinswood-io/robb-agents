@@ -85,7 +85,7 @@ describe('small scope reminders instead of a second orchestration layer', () => 
     expect(prompt).not.toContain('host_objective_contract');
     expect(prompt).not.toContain('robb_objective_outcome');
     expect(buildObjectiveScopePrompt(initial, [root], root.id)).toBe('');
-    expect(buildObjectiveScopePrompt(JSON.parse(JSON.stringify(amended)), messages, 'retry', ['archive'])).toBe(prompt);
+    expect(buildObjectiveScopePrompt(JSON.parse(JSON.stringify(amended)) as typeof amended, messages, 'retry', ['archive'])).toBe(prompt);
   });
 
   it('binds a structured review to the request as well as its chosen checks', () => {

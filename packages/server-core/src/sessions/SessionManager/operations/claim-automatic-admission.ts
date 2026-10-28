@@ -99,11 +99,11 @@ function sessionOpScheduleDeferredAutomaticSessions(sessionOperationContext: Ses
 
 // Suppress fs.watch metadata-revert events for the window in which our own
 // atomic write completes. See onSessionMetadataChange.
-function sessionOpSetMetadataWriteGuard(sessionOperationContext: SessionOperationContext, managed: ManagedSession): void {
+function sessionOpSetMetadataWriteGuard(_sessionOperationContext: SessionOperationContext, managed: ManagedSession): void {
     managed._metadataWriteGuardUntil = Date.now() + METADATA_WRITE_GUARD_MS;
 }
 
-function sessionOpAssertPersistenceSessionPath(sessionOperationContext: SessionOperationContext, managed: ManagedSession, sessionPath: string): void {
+function sessionOpAssertPersistenceSessionPath(_sessionOperationContext: SessionOperationContext, managed: ManagedSession, sessionPath: string): void {
     const expectedPath = getSessionStoragePath(persistenceRootFor(managed), managed.id);
     if (expectedPath !== sessionPath) {
         throw new SessionPersistenceRootIdentityError(`Session persistence path changed: ${managed.id}`);
@@ -128,8 +128,8 @@ function sessionOpPersistSession(sessionOperationContext: SessionOperationContex
     if (!managed.messagesLoaded) {
         sessionOpHydrateMessagesForColdPersist(sessionOperationContext, managed);
     }
-    const enqueued = sessionOperationContext.owner["enqueuePersist"](managed);
-    sessionOperationContext.owner["emitObjectiveChanged"](managed);
+    const enqueued = sessionOperationContext.owner.enqueuePersist(managed);
+    sessionOperationContext.owner.emitObjectiveChanged(managed);
     return enqueued;
 }
 

@@ -58,7 +58,7 @@ function sessionOpSetupConfigWatcher(sessionOperationContext: SessionOperationCo
             // Emit LabelConfigChange event via AutomationSystem
             const automationSystem = sessionOperationContext.state.automationSystems.get(workspaceRootPath);
             if (automationSystem) {
-                automationSystem.emitLabelConfigChange().catch((error) => {
+                automationSystem.emitLabelConfigChange().catch((error: unknown) => {
                     sessionLog.error(`[Automations] Failed to emit LabelConfigChange:`, error);
                 });
             }
@@ -153,12 +153,12 @@ function sessionOpSetupConfigWatcher(sessionOperationContext: SessionOperationCo
             const automationSystem = sessionOperationContext.state.automationSystems.get(managed.workspace.rootPath);
             if (automationSystem) {
                 automationSystem.updateSessionMetadata(sessionId, {
-                    permissionMode: header.permissionMode,
-                    labels: header.labels,
-                    isFlagged: header.isFlagged,
-                    sessionStatus: header.sessionStatus,
-                    sessionName: header.name,
-                }).catch((error) => {
+                    ...(header.permissionMode !== undefined ? { permissionMode: header.permissionMode } : {}),
+                    ...(header.labels !== undefined ? { labels: header.labels } : {}),
+                    ...(header.isFlagged !== undefined ? { isFlagged: header.isFlagged } : {}),
+                    ...(header.sessionStatus !== undefined ? { sessionStatus: header.sessionStatus } : {}),
+                    ...(header.name !== undefined ? { sessionName: header.name } : {}),
+                }).catch((error: unknown) => {
                     sessionLog.error(`[Automations] Failed to update session metadata:`, error);
                 });
             }
@@ -179,18 +179,19 @@ function sessionOpSetupConfigWatcher(sessionOperationContext: SessionOperationCo
                     workspaceId,
                     workspaceRootPath,
                     prompt: pending.prompt,
-                    labels: pending.labels,
-                    permissionMode: pending.permissionMode,
+                    ...(pending.labels !== undefined ? { labels: pending.labels } : {}),
+                    ...(pending.permissionMode !== undefined ? { permissionMode: pending.permissionMode } : {}),
                     mentions: pending.mentions,
-                    llmConnection: pending.llmConnection,
-                    model: pending.model,
-                    thinkingLevel: pending.thinkingLevel,
-                    automationName: pending.automationName,
-                    telegramTopic: pending.telegramTopic,
+                    ...(pending.llmConnection !== undefined ? { llmConnection: pending.llmConnection } : {}),
+                    ...(pending.model !== undefined ? { model: pending.model } : {}),
+                    ...(pending.thinkingLevel !== undefined ? { thinkingLevel: pending.thinkingLevel } : {}),
+                    ...(pending.automationName !== undefined ? { automationName: pending.automationName } : {}),
+                    ...(pending.telegramTopic !== undefined ? { telegramTopic: pending.telegramTopic } : {}),
                 })));
                 // Write enriched history entries (with session IDs and prompt summaries)
                 for (const [idx, result] of settled.entries()) {
                     const pending = prompts[idx];
+                    if (!pending) throw new Error(`Missing automation prompt for result ${idx}`);
                     if (!pending.matcherId)
                         continue;
                     const entry = createPromptHistoryEntry({
@@ -200,7 +201,7 @@ function sessionOpSetupConfigWatcher(sessionOperationContext: SessionOperationCo
                         prompt: pending.prompt,
                         error: result.status === 'rejected' ? String(result.reason) : undefined,
                     });
-                    appendAutomationHistoryEntry(workspaceRootPath, entry).catch(e => sessionLog.warn('[Automations] Failed to write history:', e));
+                    appendAutomationHistoryEntry(workspaceRootPath, entry).catch((e: unknown) => sessionLog.warn('[Automations] Failed to write history:', e));
                     if (result.status === 'rejected') {
                         sessionLog.error(`[Automations] Failed to execute prompt action ${idx + 1}:`, result.reason);
                     }

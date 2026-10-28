@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import { posix } from "node:path";
 import { uniqueTargets } from './action-targets.ts';
 import { hasDynamicOrGlobTargetSyntax } from './host-authorization.ts';
@@ -84,15 +85,15 @@ export function pathReferences(value: string): string[] {
 }
 
 export function commandFromActionInput(input: Record<string, unknown>): string {
-  return [input.command, input.cmd, input.script]
+  return [input["command"], input["cmd"], input["script"]]
     .find((value): value is string => typeof value === 'string')?.trim() ?? '';
 }
 
 export function hasUnsupportedRemoteScopeNode(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
-  if (Array.isArray(value)) return value.some(hasUnsupportedRemoteScopeNode);
+  if (isUnknownArray(value)) return value.some(hasUnsupportedRemoteScopeNode);
   const node = value as Record<string, unknown>;
-  if (node.async === true) return true;
+  if (node["async"] === true) return true;
   // The bounded remote grammar only reasons about top-level simple commands,
   // lists and logical expressions. Shell compound bodies can mutate the
   // caller's cwd/state while collectSimpleCommands sees only a later command
@@ -101,44 +102,44 @@ export function hasUnsupportedRemoteScopeNode(value: unknown): boolean {
   if ([
     'Case', 'CaseItem', 'CompoundList', 'For', 'Function', 'If', 'Pipeline',
     'Subshell', 'Until', 'While',
-  ].includes(String(node.type ?? ''))) return true;
+  ].includes(String(node["type"] ?? ''))) return true;
   return Object.values(node).some(hasUnsupportedRemoteScopeNode);
 }
 
 export function remoteCdTransitionsAreSafelyChained(ast: unknown): boolean {
   const containsCd = (value: unknown): boolean => {
     if (!value || typeof value !== 'object') return false;
-    if (Array.isArray(value)) return value.some(containsCd);
+    if (isUnknownArray(value)) return value.some(containsCd);
     const node = value as Record<string, unknown>;
-    if (node.type === 'Command') {
-      const name = (node.name as { text?: string } | undefined)?.text;
-      const suffix = Array.isArray(node.suffix)
-        ? node.suffix.map(item => (item as { text?: string }).text).filter((word): word is string => !!word)
+    if (node["type"] === 'Command') {
+      const name = (node["name"] as { text?: string } | undefined)?.text;
+      const suffix = isUnknownArray(node["suffix"])
+        ? node["suffix"].map((item: unknown) => (item as { text?: string }).text).filter((word): word is string => !!word)
         : [];
       if (name && basename(unwrapCommand([name, ...suffix])[0] ?? '') === 'cd') return true;
     }
     return Object.values(node).some(containsCd);
   };
   if (!containsCd(ast)) return true;
-  if (!ast || typeof ast !== 'object' || Array.isArray(ast)) return false;
+  if (!ast || typeof ast !== 'object' || isUnknownArray(ast)) return false;
   const script = ast as { type?: string; commands?: unknown[] };
   if (script.type !== 'Script' || script.commands?.length !== 1) return false;
 
   const flattenAndChain = (value: unknown): Array<Record<string, unknown>> | undefined => {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    if (!value || typeof value !== 'object' || isUnknownArray(value)) return undefined;
     const node = value as Record<string, unknown>;
-    if (node.type === 'Command') return [node];
-    if (node.type !== 'LogicalExpression' || node.op !== 'and') return undefined;
-    const left = flattenAndChain(node.left);
-    const right = flattenAndChain(node.right);
+    if (node["type"] === 'Command') return [node];
+    if (node["type"] !== 'LogicalExpression' || node["op"] !== 'and') return undefined;
+    const left = flattenAndChain(node["left"]);
+    const right = flattenAndChain(node["right"]);
     return left && right ? [...left, ...right] : undefined;
   };
   const chain = flattenAndChain(script.commands[0]);
   if (!chain || chain.length < 2) return false;
   return chain.every((node, index) => {
-    const name = (node.name as { text?: string } | undefined)?.text;
-    const suffix = Array.isArray(node.suffix)
-      ? node.suffix.map(item => (item as { text?: string }).text).filter((word): word is string => !!word)
+    const name = (node["name"] as { text?: string } | undefined)?.text;
+    const suffix = isUnknownArray(node["suffix"])
+      ? node["suffix"].map((item: unknown) => (item as { text?: string }).text).filter((word): word is string => !!word)
       : [];
     const command = name ? unwrapCommand([name, ...suffix]) : [];
     return basename(command[0] ?? '') !== 'cd' || index < chain.length - 1;
@@ -147,25 +148,25 @@ export function remoteCdTransitionsAreSafelyChained(ast: unknown): boolean {
 
 export function hasDynamicShellExpansion(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
-  if (Array.isArray(value)) return value.some(hasDynamicShellExpansion);
+  if (isUnknownArray(value)) return value.some(hasDynamicShellExpansion);
   const node = value as Record<string, unknown>;
-  if (Array.isArray(node.expansion) && node.expansion.length > 0) return true;
+  if (isUnknownArray(node["expansion"]) && node["expansion"].length > 0) return true;
   return Object.values(node).some(hasDynamicShellExpansion);
 }
 
 export function hasUnsafeRemoteInvocationMetadata(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
-  if (Array.isArray(value)) return value.some(hasUnsafeRemoteInvocationMetadata);
+  if (isUnknownArray(value)) return value.some(hasUnsafeRemoteInvocationMetadata);
   const node = value as Record<string, unknown>;
-  if (node.type === 'Command') {
+  if (node["type"] === 'Command') {
     // Shell assignments and `env` can transparently retarget Git, Docker,
     // interpreters and other project commands. The narrow remote recovery
     // cannot prove their scope, so never discard them while unwrapping.
-    if (Array.isArray(node.prefix) && node.prefix.length > 0) return true;
-    const name = node.name as { text?: string } | undefined;
+    if (isUnknownArray(node["prefix"]) && node["prefix"].length > 0) return true;
+    const name = node["name"] as { text?: string } | undefined;
     const executable = basename(name?.text ?? '');
-    const suffix = Array.isArray(node.suffix)
-      ? node.suffix.map(item => (item as { text?: string }).text).filter((item): item is string => !!item)
+    const suffix = isUnknownArray(node["suffix"])
+      ? node["suffix"].map((item: unknown) => (item as { text?: string }).text).filter((item): item is string => !!item)
       : [];
     if (executable === 'env') return true;
     if (executable === 'time' && suffix[0]?.startsWith('-')) {

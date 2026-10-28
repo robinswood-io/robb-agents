@@ -88,7 +88,7 @@ function sessionOpFlushSessionPersistenceInBackground(_sessionOperationContext: 
         sessionLog.error(`Failed to resolve session ${managed.id} persistence root after ${reason}:`, error);
         return;
     }
-    void sessionPersistenceQueue.flush(managed.id, persistenceRootPath).catch(error => {
+    void sessionPersistenceQueue.flush(managed.id, persistenceRootPath).catch((error: unknown) => {
         sessionLog.error(`Failed to flush session ${managed.id} after ${reason}:`, error);
     });
 }

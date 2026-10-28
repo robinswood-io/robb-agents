@@ -11,7 +11,7 @@ import type { BaseAgent } from '../base-agent.ts';
    * Default: no-op (auth already handled for Claude/Pi API-key).
    * Override in backends that need post-construction auth injection.
    */
-export async function postInit(transportOwner: BaseAgent): Promise<PostInitResult> {
+export async function postInit(_transportOwner: BaseAgent): Promise<PostInitResult> {
     return { authInjected: true };
 }
 
@@ -19,7 +19,7 @@ export async function postInit(transportOwner: BaseAgent): Promise<PostInitResul
    * Ensure branch sessions are backend-ready before first user message.
    * Default implementation is a no-op.
    */
-export async function ensureBranchReady(transportOwner: BaseAgent): Promise<void> {
+export async function ensureBranchReady(_transportOwner: BaseAgent): Promise<void> {
     // No-op by default
 }
 
@@ -45,7 +45,7 @@ export function destroy(transportOwner: BaseAgent): void {
     transportOwner["usageTracker"].reset();
     // Disconnect MCP pool to avoid connection leaks
     if (transportOwner["config"].mcpPool) {
-        transportOwner["config"].mcpPool.disconnectAll().catch(err => {
+        transportOwner["config"].mcpPool.disconnectAll().catch((err: unknown) => {
             transportOwner["debug"](`Failed to disconnect MCP pool: ${err instanceof Error ? err.message : String(err)}`);
         });
     }

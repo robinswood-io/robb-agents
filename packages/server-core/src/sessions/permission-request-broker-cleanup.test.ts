@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from "bun:test";
 import { deferred, harness, installActivePermissionWait, tick } from "./testing/permission-request-broker-cleanup-fixture.ts";
@@ -6,7 +7,7 @@ describe('privileged permission lifecycle cleanup', () => {
   it('denies and removes the broker request when the UI permission expires', () => {
     const { manager, respondToPermission, resolveApproval } = harness()
 
-    ;(manager as unknown as { expirePendingPermissionRequest: (id: string) => void })
+    ;(sessionManagerForTest(manager))
       .expirePendingPermissionRequest('request-a')
 
     expect(resolveApproval).toHaveBeenCalledWith('request-a', false, {
@@ -19,7 +20,7 @@ describe('privileged permission lifecycle cleanup', () => {
   it('denies and removes the broker request when its session is cleared', () => {
     const { manager, respondToPermission, resolveApproval } = harness()
 
-    ;(manager as unknown as { clearPendingPermissionRequestsForSession: (id: string) => void })
+    ;(sessionManagerForTest(manager))
       .clearPendingPermissionRequestsForSession('session-a')
 
     expect(resolveApproval).toHaveBeenCalledWith('request-a', false, {
@@ -37,9 +38,9 @@ describe('privileged permission lifecycle cleanup', () => {
     })).toBe(true)
 
     const approvals = sessionRuntimeStateForTest(h.manager).adminRememberApprovals
-    expect([...approvals.values()]).toEqual([{
-      createdAt: expect.any(Number),
-      expiresAt: expect.any(Number),
+    expect<unknown>([...approvals.values()]).toEqual([{
+      createdAt: (expect.any(Number) as unknown),
+      expiresAt: (expect.any(Number) as unknown),
       sourceRequestId: 'request-a',
     }])
     const approval = [...approvals.values()][0]!
@@ -66,19 +67,19 @@ describe('privileged permission lifecycle cleanup', () => {
       toolUseId: 'gmail-call-a',
       recoveryRequired: true,
     })
-    expect(h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')).toMatchObject({
+    expect<unknown>(h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')).toMatchObject({
       toolStatus: 'error',
       toolExecuted: false,
       isError: true,
-      toolResult: expect.stringContaining('not executed'),
+      toolResult: (expect.stringContaining('not executed') as unknown),
     })
     expect(h.managed.messages.find(message => message.toolUseId === 'gmail-call-other')?.toolStatus).toBe('executing')
-    expect(h.events).toContainEqual(expect.objectContaining({
+    expect<unknown>(h.events).toContainEqual((expect.objectContaining({
       type: 'tool_result',
       toolUseId: 'gmail-call-a',
       executed: false,
       isError: true,
-    }))
+    }) as unknown))
     expect(h.cleanupCalls()).toBe(1)
     expect(await h.internals.enqueueAutomaticTurnRecovery(h.managed, 'runtime_error')).toBe(false)
 
@@ -103,14 +104,14 @@ describe('privileged permission lifecycle cleanup', () => {
       executed: true,
     }, 4)
 
-    expect(h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')).toMatchObject({
+    expect<unknown>(h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')).toMatchObject({
       toolStatus: 'error',
       toolExecuted: false,
       isError: true,
-      toolResult: expect.stringContaining('not executed'),
+      toolResult: (expect.stringContaining('not executed') as unknown),
     })
-    expect(h.events.filter(event => event.type === 'tool_result'
-      && event.toolUseId === 'gmail-call-a')).toHaveLength(1)
+    expect(h.events.filter(event => event["type"] === 'tool_result'
+      && event["toolUseId"] === 'gmail-call-a')).toHaveLength(1)
   })
 
   it('drops a late tool start from the generation closed by permission expiry', async () => {
@@ -125,8 +126,8 @@ describe('privileged permission lifecycle cleanup', () => {
     }, 4)
 
     expect(h.managed.messages.some(message => message.toolUseId === 'gmail-call-late')).toBe(false)
-    expect(h.events.some(event => event.type === 'tool_start'
-      && event.toolUseId === 'gmail-call-late')).toBe(false)
+    expect(h.events.some(event => event["type"] === 'tool_start'
+      && event["toolUseId"] === 'gmail-call-late')).toBe(false)
   })
 
   it('denies a late permission callback without replacing the explicit Retry handoff', async () => {
@@ -184,14 +185,14 @@ describe('privileged permission lifecycle cleanup', () => {
       executed: true,
     }, 4)
 
-    expect(h.managed.messages.find(message => message.toolUseId === 'late-call-x')).toMatchObject({
+    expect<unknown>(h.managed.messages.find(message => message.toolUseId === 'late-call-x')).toMatchObject({
       toolStatus: 'error',
       toolExecuted: false,
       isError: true,
-      toolResult: expect.stringContaining('not executed'),
+      toolResult: (expect.stringContaining('not executed') as unknown),
     })
-    expect(h.events.filter(event => event.type === 'tool_result'
-      && event.toolUseId === 'late-call-x')).toHaveLength(1)
+    expect(h.events.filter(event => event["type"] === 'tool_result'
+      && event["toolUseId"] === 'late-call-x')).toHaveLength(1)
     expect(h.managed.activeObjective?.terminalState).toBe('blocked_human')
   })
 

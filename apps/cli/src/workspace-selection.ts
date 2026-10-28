@@ -1,5 +1,5 @@
 import { CliRpcClient } from './client.ts';
-import type { CliWorkspace } from './rpc-shapes.ts';
+import { requireWorkspaceList } from './rpc-shapes.ts';
 
 // ---------------------------------------------------------------------------
 // Auto workspace resolution
@@ -15,9 +15,10 @@ export async function resolveWorkspace(
     return explicit
   }
   try {
-    const workspaces = (await client.invoke('workspaces:get')) as CliWorkspace[]
-    if (workspaces?.length > 0) {
-      const id = workspaces[0].id
+    const workspaces = requireWorkspaceList(await client.invoke('workspaces:get'))
+    const first = workspaces[0]
+    if (first) {
+      const id = first.id
       await client.invoke('window:switchWorkspace', id).catch(() => {})
       return id
     }

@@ -23,9 +23,9 @@ interface PairingCodeDialogProps {
   code: string | null
   expiresAt: number | null
   /** Bot username (without @) — enables the "Open bot" deep link. */
-  botUsername?: string
+  botUsername?: string | undefined
   /** Error text to show in place of the code (e.g., rate limit, adapter down). */
-  error?: string
+  error?: string | undefined
 }
 
 export function PairingCodeDialog({

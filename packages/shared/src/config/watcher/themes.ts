@@ -45,16 +45,16 @@ export function watchAppThemesDir(transportOwner: ConfigWatcher): void {
         mkdirSync(themesDir, { recursive: true });
     }
     try {
-        const watcher = watch(themesDir, (eventType, filename) => {
+        const watcher = watch(themesDir, (_eventType, filename) => {
             if (!filename)
                 return;
             // Only handle .json files
             if (filename.endsWith('.json')) {
                 const themeId = filename.replace('.json', '');
-                transportOwner["debounce"](`preset-theme:${themeId}`, () => transportOwner["handlePresetThemeChange"](themeId));
+                transportOwner.debounce(`preset-theme:${themeId}`, () => transportOwner.handlePresetThemeChange(themeId));
             }
         });
-        transportOwner["watchers"].push(watcher);
+        transportOwner.watchers.push(watcher);
         debug('[ConfigWatcher] Watching app themes directory:', themesDir);
     }
     catch (error) {
@@ -73,15 +73,15 @@ export function watchAppPermissionsDir(transportOwner: ConfigWatcher): void {
         mkdirSync(permissionsDir, { recursive: true });
     }
     try {
-        const watcher = watch(permissionsDir, (eventType, filename) => {
+        const watcher = watch(permissionsDir, (_eventType, filename) => {
             if (!filename)
                 return;
             // Only watch default.json - this is where the default patterns live
             if (filename === 'default.json') {
-                transportOwner["debounce"]('default-permissions', () => transportOwner["handleDefaultPermissionsChange"]());
+                transportOwner.debounce('default-permissions', () => transportOwner.handleDefaultPermissionsChange());
             }
         });
-        transportOwner["watchers"].push(watcher);
+        transportOwner.watchers.push(watcher);
         debug('[ConfigWatcher] Watching app permissions directory:', permissionsDir);
     }
     catch (error) {
@@ -112,9 +112,9 @@ export function scanAppThemes(transportOwner: ConfigWatcher): void {
         const files = readdirSync(themesDir).filter(f => f.endsWith('.json'));
         for (const file of files) {
             const themeId = file.replace('.json', '');
-            transportOwner["knownThemes"].add(themeId);
+            transportOwner.knownThemes.add(themeId);
         }
-        debug('[ConfigWatcher] Known themes:', Array.from(transportOwner["knownThemes"]));
+        debug('[ConfigWatcher] Known themes:', Array.from(transportOwner.knownThemes));
     }
     catch (error) {
         debug('[ConfigWatcher] Error scanning themes:', error);
@@ -130,8 +130,8 @@ export function handlePresetThemeChange(transportOwner: ConfigWatcher, themeId: 
     const themePath = join(themesDir, `${themeId}.json`);
     if (!existsSync(themePath)) {
         // Theme was deleted
-        if (transportOwner["knownThemes"].has(themeId)) {
-            transportOwner["knownThemes"].delete(themeId);
+        if (transportOwner.knownThemes.has(themeId)) {
+            transportOwner.knownThemes.delete(themeId);
             transportOwner["callbacks"].onPresetThemeChange?.(themeId, null);
             // Also notify list change
             const allThemes = loadPresetThemes();
@@ -140,8 +140,8 @@ export function handlePresetThemeChange(transportOwner: ConfigWatcher, themeId: 
         return;
     }
     // Theme was added or modified
-    if (!transportOwner["knownThemes"].has(themeId)) {
-        transportOwner["knownThemes"].add(themeId);
+    if (!transportOwner.knownThemes.has(themeId)) {
+        transportOwner.knownThemes.add(themeId);
     }
     const theme = loadPresetTheme(themeId);
     transportOwner["callbacks"].onPresetThemeChange?.(themeId, theme);

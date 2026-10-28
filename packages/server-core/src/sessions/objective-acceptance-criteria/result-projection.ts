@@ -1,3 +1,4 @@
+import { isJsonObject, isUnknownArray } from '@craft-agent/shared/utils/json';
 import type { Message } from "@craft-agent/core/types";
 import { createHash } from "crypto";
 import { lstatSync, readFileSync, realpathSync } from "fs";
@@ -10,17 +11,24 @@ import { withoutFinalLineTerminator } from './result-checks.ts';
 
 export function resultJson(text: string): unknown {
   try {
-    const value = JSON.parse(text);
+    const value: unknown = JSON.parse(text);
     // MCP envelopes are transport, not the business result. Unwrap only one
     // unambiguous text block; never extract arbitrary JSON from prose.
-    if (Array.isArray(value?.content) && value.content.length === 1
-      && value.content[0]?.type === 'text') return JSON.parse(value.content[0].text);
+    if (isJsonObject(value)) {
+      const content = value['content'];
+      const block = isUnknownArray(content) && content.length === 1 ? content[0] : undefined;
+      if (isJsonObject(block) && block['type'] === 'text') {
+        if (typeof block['text'] !== 'string') return undefined;
+        const result: unknown = JSON.parse(block['text']);
+        return result;
+      }
+    }
     return value;
   } catch { return undefined; }
 }
 
 function browserCommandVerb(input: Record<string, unknown> | undefined): string | undefined {
-  const command = input?.command;
+  const command = input?.["command"];
   const source = typeof command === 'string'
     ? command
     : Array.isArray(command) && typeof command[0] === 'string' ? command[0] : undefined;
@@ -123,7 +131,7 @@ function authenticatedLargeResponseText(
     );
     if (fullText === undefined) return undefined;
     const recomputedMetadata = extractLargeResultMetadataJson(fullText, {
-      toolName: message.toolName ?? '', input: message.toolInput,
+      toolName: message.toolName ?? '', ...(message.toolInput !== undefined ? { input: message.toolInput } : {}),
     });
     if (statedMetadata !== recomputedMetadata) return undefined;
     return fullText;
@@ -147,12 +155,12 @@ function attachRbwSshExitCode(message: Message, projection: unknown): unknown {
     || !projection || typeof projection !== 'object' || Array.isArray(projection)) return projection;
   const result = projection as Record<string, unknown>;
   const input = message.toolInput;
-  if (typeof input?.server !== 'string' || typeof input.cwd !== 'string'
-    || typeof input.command !== 'string' || result.server !== input.server
-    || result.command !== `cd ${input.cwd} && ${input.command}`
-    || !Number.isSafeInteger(result.code) || typeof result.success !== 'boolean'
-    || typeof result.stderr !== 'string' || typeof result.stdout !== 'string') return projection;
-  return { ...result, exitCode: result.code };
+  if (typeof input?.["server"] !== 'string' || typeof input["cwd"] !== 'string'
+    || typeof input["command"] !== 'string' || result["server"] !== input["server"]
+    || result["command"] !== `cd ${input["cwd"]} && ${input["command"]}`
+    || !Number.isSafeInteger(result["code"]) || typeof result["success"] !== 'boolean'
+    || typeof result["stderr"] !== 'string' || typeof result["stdout"] !== 'string') return projection;
+  return { ...result, exitCode: result["code"] };
 }
 
 /**
@@ -174,7 +182,7 @@ export function resultProjection(
   const bashTransport = message.toolExecuted === true
     && isObjectiveToolExecutedSuccessfully(message) && canonicalToolName(toolName) === 'bash'
     ? (() => {
-      const command = [message.toolInput?.command, message.toolInput?.cmd, message.toolInput?.script]
+      const command = [message.toolInput?.["command"], message.toolInput?.["cmd"], message.toolInput?.["script"]]
         .find((value): value is string => typeof value === 'string');
       return command && objectiveShellExitZeroProvesSuccess(command)
         ? { success: true, code: 0 }
@@ -195,9 +203,9 @@ export function resultProjection(
 
   if (canonicalToolName(toolName) === 'web_fetch') {
     const match = /^JSON from (https?:\/\/[^\r\n]+):\r?\n\r?\n([\s\S]+)$/.exec(withoutFinalLineTerminator(text));
-    if (!match || typeof message.toolInput?.url !== 'string') return undefined;
+    if (!match || typeof message.toolInput?.["url"] !== 'string') return undefined;
     try {
-      if (!safeWebFetchRedirect(message.toolInput.url, match[1]!)) return undefined;
+      if (!safeWebFetchRedirect(message.toolInput["url"], match[1]!)) return undefined;
       return JSON.parse(match[2]!);
     } catch { return undefined; }
   }
@@ -228,7 +236,7 @@ export function resultProjection(
       for (const [key, value] of Object.entries(record)) {
         if (key === 'labelIds') {
           if (!Array.isArray(value) || value.length > 32
-            || value.some(label => typeof label !== 'string' || label.length > 128)) return undefined;
+            || value.some((label: unknown) => typeof label !== 'string' || label.length > 128)) return undefined;
         } else if (typeof value !== 'string' || value.length > 2_048) return undefined;
       }
       return record;

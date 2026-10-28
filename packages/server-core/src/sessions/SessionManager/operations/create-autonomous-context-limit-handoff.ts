@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { boundObjectiveForCleanHandoff, queuedDirectHumanContinuationIndex, queuedDirectHumanContinuationIndexForId, validAllocatedRecoveryDispatch, hasAuthenticatedObjectiveRoot } from '../policy.ts';
 import type { PendingTurnRecovery, ActiveSessionObjective } from '@craft-agent/shared/sessions';
@@ -23,7 +24,7 @@ function sessionOpCreateAutonomousContextLimitHandoff(sessionOperationContext: S
     const storedObjective = managed.activeObjective;
     const objective = storedObjective?.terminalState === 'blocked_human'
         && sessionOpIsCleanSetupRetryBlocked(sessionOperationContext, pending.recoveryDispatch)
-        ? { ...storedObjective, terminalState: 'active' as const, completedAt: undefined }
+        ? omitUndefined<ActiveSessionObjective>({ ...storedObjective, terminalState: 'active', completedAt: undefined })
         : storedObjective;
     if (!objective || objective.terminalState !== 'active'
         || !hasAuthenticatedObjectiveRoot(managed, objective))
@@ -286,10 +287,10 @@ function sessionOpCancelSupersededAutomaticRecoveries(sessionOperationContext: S
         // Keep its bounded counters, gaps and validated remaining work until the
         // normal objective transition classifies that message. Only the obsolete
         // synthetic dispatch capability is revoked here.
-        managed.pendingTurnRecovery = {
+        managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
             ...managed.pendingTurnRecovery,
             recoveryDispatch: undefined,
-        };
+        });
     }
     sessionLog.info('Cancelled superseded automatic turn recovery', {
         sessionId: managed.id,
@@ -304,7 +305,7 @@ function sessionOpCancelSupersededAutomaticRecoveries(sessionOperationContext: S
 /** A clean dispatch is spent once its unique host prompt and subsequent
  * provider output are durable. Queued child receipts may then cross that
  * boundary without impersonating the clean dispatch itself. */
-function sessionOpHasConsumedCleanRecoveryDispatch(sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
+function sessionOpHasConsumedCleanRecoveryDispatch(_sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
     const dispatch = managed.pendingTurnRecovery?.recoveryDispatch;
     if (dispatch?.phase !== 'started' || !dispatch.cleanContinuationId
         || !Number.isFinite(dispatch.startedAt))
@@ -330,7 +331,7 @@ function sessionOpHasConsumedCleanRecoveryDispatch(sessionOperationContext: Sess
  * This covers a process restart after the prompt flush but before the provider
  * produced anything. Any assistant/tool/message row or autonomy event keeps
  * the dispatch spent, so a possibly executed mutation is never replayed. */
-function sessionOpReclaimableUnobservedStartedRecoveryDispatch(sessionOperationContext: SessionOperationContext, managed: ManagedSession, pending: PendingTurnRecovery): {
+function sessionOpReclaimableUnobservedStartedRecoveryDispatch(_sessionOperationContext: SessionOperationContext, managed: ManagedSession, pending: PendingTurnRecovery): {
     messageIndex: number;
     allocatedDispatch: NonNullable<PendingTurnRecovery['recoveryDispatch']>;
 } | undefined {

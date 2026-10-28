@@ -24,21 +24,21 @@ export class AutomationSystem implements AutomationsConfigProvider {
     private eventLogHandler: EventLogHandler | null = null;
     private scheduler: SchedulerService | null = null;
     private disposed = false;
-    private disposePromise: Promise<void> | null = null;
+    /** @internal */ public disposePromise: Promise<void> | null = null;
     // Session metadata tracking (moved from SessionManager)
     private readonly lastKnownMetadata: Map<string, SessionMetadataSnapshot> = new Map();
     /** fs.watch may report the same atomic header replacement several times
      * while the first automation emission is still awaiting its handlers. Keep
      * one per-session diff lane so every later snapshot observes the committed
      * predecessor instead of emitting the same transition again. */
-    private readonly sessionMetadataUpdateTails = new Map<string, Promise<void>>();
+    /** @internal */ public readonly sessionMetadataUpdateTails = new Map<string, Promise<void>>();
     /**
      * Synchronous invalidation tokens for metadata mutations that bypass the
      * async diff lane. A delete/reload/dispose must win immediately over both a
      * running emission and snapshots already queued behind it.
      */
-    private readonly sessionMetadataTokens = new Map<string, object>();
-    private metadataLifecycleToken: object = {};
+    /** @internal */ public readonly sessionMetadataTokens = new Map<string, object>();
+    /** @internal Shared with the extracted backend helpers. */ public metadataLifecycleToken: object = {};
     constructor(options: AutomationSystemOptions) {
         this.options = options;
         this.eventBus = new WorkspaceEventBus(options.workspaceId);
@@ -52,7 +52,7 @@ export class AutomationSystem implements AutomationsConfigProvider {
         }
         log.debug(`[AutomationSystem] Created for workspace: ${options.workspaceId}`);
     }
-    private readAndValidateConfig(configPath: string): {
+    /** @internal */ public readAndValidateConfig(configPath: string): {
         raw: unknown;
         validation: import('./types.ts').AutomationsValidationResult;
     } {
@@ -72,13 +72,13 @@ export class AutomationSystem implements AutomationsConfigProvider {
     } {
         return automationSystemConfiguration.reloadConfig(this);
     }
-    private backfillIds(configPath: string, raw: unknown): void {
+    /** @internal Shared with the extracted backend helpers. */ public backfillIds(configPath: string, raw: unknown): void {
         return automationSystemConfiguration.backfillIds(this, configPath, raw);
     }
-    private rotateHistory(): void {
+    /** @internal Shared with the extracted backend helpers. */ public rotateHistory(): void {
         return automationSystemConfiguration.rotateHistory(this);
     }
-    private getActionCount(): number {
+    /** @internal Shared with the extracted backend helpers. */ public getActionCount(): number {
         return automationSystemConfiguration.getActionCount(this);
     }
     // ============================================================================
@@ -118,7 +118,7 @@ export class AutomationSystem implements AutomationsConfigProvider {
     async updateSessionMetadata(sessionId: string, next: SessionMetadataSnapshot): Promise<AppEvent[]> {
         return automationSystemMetadata.updateSessionMetadata(this, sessionId, next);
     }
-    private async updateSessionMetadataNow(sessionId: string, next: SessionMetadataSnapshot, sessionToken: object, lifecycleToken: object): Promise<AppEvent[]> {
+    /** @internal Shared with the extracted backend helpers. */ public async updateSessionMetadataNow(sessionId: string, next: SessionMetadataSnapshot, sessionToken: object, lifecycleToken: object): Promise<AppEvent[]> {
         return automationSystemMetadata.updateSessionMetadataNow(this, sessionId, next, sessionToken, lifecycleToken);
     }
     /**
@@ -141,7 +141,7 @@ export class AutomationSystem implements AutomationsConfigProvider {
     setInitialSessionMetadata(sessionId: string, metadata: SessionMetadataSnapshot): void {
         return automationSystemMetadata.setInitialSessionMetadata(this, sessionId, metadata);
     }
-    private getOrCreateSessionMetadataToken(sessionId: string): object {
+    /** @internal Shared with the extracted backend helpers. */ public getOrCreateSessionMetadataToken(sessionId: string): object {
         return automationSystemMetadata.getOrCreateSessionMetadataToken(this, sessionId);
     }
     // ============================================================================
@@ -207,7 +207,7 @@ export class AutomationSystem implements AutomationsConfigProvider {
     dispose(): Promise<void> {
         return automationSystemLifecycle.dispose(this);
     }
-    private async disposeResources(): Promise<void> {
+    /** @internal Shared with the extracted backend helpers. */ public async disposeResources(): Promise<void> {
         return automationSystemLifecycle.disposeResources(this);
     }
 }

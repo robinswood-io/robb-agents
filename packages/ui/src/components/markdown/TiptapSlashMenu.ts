@@ -58,7 +58,7 @@ function findLastCodeLanguageInDoc(editor: Editor): string | null {
 
   doc.nodesBetween(0, selection.from, (node) => {
     if (node.type.name !== 'codeBlock') return
-    const lang = String(node.attrs.language ?? '').trim().toLowerCase()
+    const lang = String(node.attrs["language"] ?? '').trim().toLowerCase()
     if (!lang || VISUAL_LANGUAGES.has(lang)) return
     last = lang
   })
@@ -71,7 +71,7 @@ function resolvePreferredCodeLanguage(editor: Editor): string {
   if (remembered) return remembered
 
   if (editor.isActive('codeBlock')) {
-    const current = String(editor.getAttributes('codeBlock').language ?? '').trim().toLowerCase()
+    const current = String(editor.getAttributes('codeBlock')["language"] ?? '').trim().toLowerCase()
     if (current && !VISUAL_LANGUAGES.has(current)) return current
   }
 
@@ -290,7 +290,7 @@ function renderMenuItems(container: HTMLElement, items: SlashCommandItem[], sele
       const row = document.createElement('button')
       row.type = 'button'
       row.className = `tiptap-slash-item${itemIndex === selectedIndex ? ' is-selected' : ''}`
-      row.dataset.index = String(itemIndex)
+      row.dataset["index"] = String(itemIndex)
 
       const icon = document.createElement('div')
       icon.className = 'tiptap-slash-item-icon'
@@ -382,7 +382,7 @@ export const TiptapSlashMenu = Extension.create({
 
   addProseMirrorPlugins() {
     return [
-      Suggestion<SlashCommandItem>({
+      Suggestion<SlashCommandItem, SlashCommandItem>({
         editor: this.editor,
         pluginKey: SlashCommandPluginKey,
         char: '/',

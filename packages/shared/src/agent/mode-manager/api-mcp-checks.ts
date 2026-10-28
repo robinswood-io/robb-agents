@@ -52,7 +52,7 @@ export function isApiEndpointAllowed(
 
   if (permissionsContext) {
     // Lazy import to avoid circular dependency
-    const { permissionsConfigCache } = require("../permissions-config.ts");
+    const { permissionsConfigCache } = require("../permissions-config.ts") as typeof import("../permissions-config.ts");
     config = permissionsConfigCache.getMergedConfig(permissionsContext);
   } else {
     config = SAFE_MODE_CONFIG;

@@ -105,7 +105,6 @@ function isNonAuthoritativeMutation(text: string, index: number, length: number)
     || frenchNominalOrPronounSubject || namedFrenchSubject || namedEnglishSubject;
   const nominalReadOnlyObject = /^(?:fix|change|update|review|release|rollback)$/u.test(mutation)
     && /\b(?:audit|inspect|review|analyse|analyze|explain|summari[sz]e|verify|check|read)\s+(?:(?:the|this|that|a|an)\s+)?(?:[\p{L}\p{N}'’_-]+\s+){0,4}$/iu.test(before);
-  const contextualMedicalMutation = /^(?:adjust|prescribe|reduce|start|give|gave|adapt(?:er|e(?:s|z)?|ons?)|prescri(?:re|s|t|vez|vons)|r[ée]dui(?:re|s|t|sez|sons)|commenc(?:er|e(?:s|z)?|ons?)|donn(?:er|e(?:s|z)?|ons?))$/iu.test(mutation);
   // Mutation candidates are already from a closed action vocabulary. Apply
   // the subject-description guard to every French infinitive in that set, not
   // only the medical/reactivation compatibility additions.

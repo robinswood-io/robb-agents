@@ -68,32 +68,32 @@ interface DataTableProps<TData extends object> {
   columns: ColumnDef<TData>[]
   data: TData[]
   /** Global filter value (searches across all columns) */
-  globalFilter?: string
+  globalFilter?: string | undefined
   /** Column ID to apply column-specific filter to */
-  filterColumn?: string
+  filterColumn?: string | undefined
   /** Column-specific filter value */
-  filterValue?: string
+  filterValue?: string | undefined
   /** Custom class for the table container */
-  className?: string
+  className?: string | undefined
   /** Empty state content */
-  emptyContent?: React.ReactNode
+  emptyContent?: React.ReactNode | undefined
   /** Callback to get table instance for external control */
-  onTableReady?: (table: TableInstance<TData>) => void
+  onTableReady?: ((table: TableInstance<TData>) => void) | undefined
   /** Skip the border wrapper (when parent provides it) */
-  noBorder?: boolean
+  noBorder?: boolean | undefined
   /** Skip the table overflow wrapper (required for sticky headers) */
-  noWrapper?: boolean
+  noWrapper?: boolean | undefined
   /** Enable pagination */
-  pagination?: boolean
+  pagination?: boolean | undefined
   /** Page size when pagination is enabled (default: 50) */
-  pageSize?: number
+  pageSize?: number | undefined
   /**
    * Enable tree/hierarchical rows. Provide a function that returns child rows.
    * When set, rows can be expanded/collapsed. All rows start expanded by default.
    */
-  getSubRows?: (row: TData) => TData[] | undefined
+  getSubRows?: ((row: TData) => TData[] | undefined) | undefined
   /** Initial expanded state (default: all expanded when getSubRows is provided) */
-  defaultExpanded?: boolean
+  defaultExpanded?: boolean | undefined
 }
 
 export function DataTable<TData extends object>({
@@ -329,7 +329,7 @@ export function DataTable<TData extends object>({
 interface SortableHeaderProps<TData extends object, TValue> {
   column: Column<TData, TValue>
   title: string
-  className?: string
+  className?: string | undefined
 }
 
 export function SortableHeader<TData extends object, TValue>({

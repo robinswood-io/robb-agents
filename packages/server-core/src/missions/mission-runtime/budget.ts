@@ -8,7 +8,7 @@ import type { MissionRuntimeService } from '../MissionRuntimeService.ts';
 import { missionProfileForItem, isActiveProviderMissionWork } from './shared.ts';
 import type { MissionWorkspace, MissionPreflightConnection, OrdinaryMissionRouteEstimateCache } from './shared.ts';
 
-export function missionEstimateEnvironmentIdentity(transportOwner: MissionRuntimeService, workspace: MissionWorkspace, snapshot: MissionSnapshot, config: ReturnType<typeof loadWorkspaceConfig>, connections: readonly MissionPreflightConnection[], origin: Session | undefined): string {
+export function missionEstimateEnvironmentIdentity(_transportOwner: MissionRuntimeService, workspace: MissionWorkspace, snapshot: MissionSnapshot, config: ReturnType<typeof loadWorkspaceConfig>, connections: readonly MissionPreflightConnection[], origin: Session | undefined): string {
     const sourceSlugs = [...new Set([
             ...(config?.defaults?.enabledSourceSlugs ?? []),
             ...snapshot.spec.agentProfiles.flatMap(profile => profile.sources),
@@ -63,8 +63,8 @@ export async function projectedRemainingMissionCostUsd(transportOwner: MissionRu
 }): Promise<number | undefined> {
     if (!transportOwner["options"].preflightCostEstimator)
         return undefined;
-    const key = transportOwner["ordinaryRouteKey"](input.workspace.id, input.snapshot.spec.id);
-    let cache = transportOwner["ordinaryRouteEstimates"].get(key);
+    const key = transportOwner.ordinaryRouteKey(input.workspace.id, input.snapshot.spec.id);
+    let cache = transportOwner.ordinaryRouteEstimates.get(key);
     if (!cache
         || cache.planVersion !== input.snapshot.planVersion
         || cache.environmentSha256 !== input.environmentSha256) {
@@ -75,11 +75,11 @@ export async function projectedRemainingMissionCostUsd(transportOwner: MissionRu
             estimatesByWorkItemId: new Map(),
             unknownEstimateCount: 0,
         };
-        transportOwner["ordinaryRouteEstimates"].set(key, cache);
+        transportOwner.ordinaryRouteEstimates.set(key, cache);
         for (const runtime of Object.values(input.snapshot.workItems)) {
             if (!isActiveProviderMissionWork(runtime.status, runtime.definition))
                 continue;
-            await transportOwner["addOrdinaryMissionEstimate"](cache, {
+            await transportOwner.addOrdinaryMissionEstimate(cache, {
                 ...input,
                 item: runtime.definition,
             });
@@ -87,7 +87,7 @@ export async function projectedRemainingMissionCostUsd(transportOwner: MissionRu
     }
     else {
         if (!cache.estimatesByWorkItemId.has(input.currentItem.id)) {
-            await transportOwner["addOrdinaryMissionEstimate"](cache, { ...input, item: input.currentItem });
+            await transportOwner.addOrdinaryMissionEstimate(cache, { ...input, item: input.currentItem });
         }
     }
     return cache.unknownEstimateCount === 0
@@ -97,7 +97,7 @@ export async function projectedRemainingMissionCostUsd(transportOwner: MissionRu
 
 /** O(1) retirement after an actual provider attempt; retries are re-estimated on their next prepare. */
 export function releaseOrdinaryMissionEstimate(transportOwner: MissionRuntimeService, workspaceId: string, missionId: string, workItemId: string): void {
-    const cache = transportOwner["ordinaryRouteEstimates"].get(transportOwner["ordinaryRouteKey"](workspaceId, missionId));
+    const cache = transportOwner.ordinaryRouteEstimates.get(transportOwner.ordinaryRouteKey(workspaceId, missionId));
     if (!cache || !cache.estimatesByWorkItemId.has(workItemId))
         return;
     const estimate = cache.estimatesByWorkItemId.get(workItemId);
@@ -123,7 +123,7 @@ export async function addOrdinaryMissionEstimate(transportOwner: MissionRuntimeS
     const profile = missionProfileForItem(input.snapshot.spec, input.item);
     if (parseSpecializedMissionProfileReference(profile.systemPrompt))
         return;
-    const route = transportOwner["resolveOrdinaryRouteForItem"]({
+    const route = transportOwner.resolveOrdinaryRouteForItem({
         workspace: input.workspace,
         spec: input.snapshot.spec,
         item: input.item,

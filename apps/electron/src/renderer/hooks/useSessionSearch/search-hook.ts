@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { searchLog } from "@/lib/logger";
 import { fuzzyScore } from "@craft-agent/shared/search";
@@ -125,7 +126,7 @@ export function useSessionSearch({
   const searchFilteredItems = useMemo(() => {
     if (!isSearchMode) {
       return sortedItems.filter(item =>
-        sessionMatchesCurrentFilter(item, currentFilter, { evaluateViews, statusFilter, labelFilterMap, labelConfigs })
+        sessionMatchesCurrentFilter(item, currentFilter, omitUndefined({ evaluateViews, statusFilter, labelFilterMap, labelConfigs }))
       )
     }
 
@@ -178,7 +179,7 @@ export function useSessionSearch({
     for (const item of searchFilteredItems) {
       if (matching.length + others.length >= MAX_SEARCH_RESULTS) break
 
-      const matches = sessionMatchesCurrentFilter(item, currentFilter, { evaluateViews, statusFilter, labelFilterMap, labelConfigs })
+      const matches = sessionMatchesCurrentFilter(item, currentFilter, omitUndefined({ evaluateViews, statusFilter, labelFilterMap, labelConfigs }))
       if (matches) {
         matching.push(item)
       } else {

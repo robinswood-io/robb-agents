@@ -1,3 +1,5 @@
+import type { PermissionResponseOptions } from '../../../../../../packages/shared/src/protocol/dto/files-and-permissions.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import * as React from "react";
 
 import { useCallback } from "react";
@@ -81,7 +83,7 @@ const handleSubmit = (message: string, attachments?: FileAttachment[], skillSlug
       const sentAt = Date.now()
       void Promise.all(pendingFollowUpAnnotations.map((followUp) => {
         const currentMeta = followUp.meta ?? {}
-        const currentFollowUpMeta = asRecord(currentMeta.followUp) ?? {}
+        const currentFollowUpMeta = asRecord(currentMeta["followUp"]) ?? {}
 
         return window.electronAPI.sessionCommand(session.id, {
           type: 'updateAnnotation',
@@ -99,7 +101,7 @@ const handleSubmit = (message: string, attachments?: FileAttachment[], skillSlug
             },
           },
         })
-      })).catch((error) => {
+      })).catch((error: unknown) => {
         console.error('[ChatDisplay] Failed to mark follow-up annotations as sent:', error)
       })
     }
@@ -150,7 +152,7 @@ const handleStop = (silent = false) => {
     }
 
     stopConversation(session.id, activeDescendantIds, silent,
-      (id, quiet) => window.electronAPI.cancelProcessing(id, quiet)).catch(error => {
+      (id, quiet) => window.electronAPI.cancelProcessing(id, quiet)).catch((error: unknown) => {
       console.error('[ChatDisplay] Failed to cancel processing:', error)
     })
   }
@@ -181,7 +183,7 @@ const handleStructuredResponse = (response: StructuredResponse) => {
         adminResponse.request.requestId,
         adminResponse.approved,
         false,
-        { rememberForMinutes: adminResponse.rememberForMinutes }
+        omitUndefined<PermissionResponseOptions>({ rememberForMinutes: adminResponse.rememberForMinutes })
       )
     } else if (response.type === 'credential' && onRespondToCredential) {
       const credResponse = response as StructuredCredentialResponse
@@ -203,7 +205,7 @@ const structuredInput: StructuredInputState | undefined = React.useMemo(() => {
           data: {
             appName: pendingPermission.appName || pendingPermission.toolName || 'System action',
             reason: pendingPermission.reason || pendingPermission.description,
-            impact: pendingPermission.impact,
+            ...(pendingPermission.impact !== undefined ? { impact: pendingPermission.impact } : {}),
             command: pendingPermission.command || '',
             requiresSystemPrompt: pendingPermission.requiresSystemPrompt ?? true,
             rememberForMinutes: pendingPermission.rememberForMinutes ?? 10,

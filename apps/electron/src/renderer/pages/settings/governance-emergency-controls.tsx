@@ -15,7 +15,7 @@ interface GovernanceEmergencyControlsProps {
   isKillSwitchSaving: boolean
   setKillSwitchReason: React.Dispatch<React.SetStateAction<string>>
   updateKillSwitch: (scope: "global" | "workspace" | "mission" | "connector", id: string | undefined, active: boolean) => Promise<void>
-  workspaceId: string
+  workspaceId: string | null
   missionKillSwitchId: string
   setMissionKillSwitchId: React.Dispatch<React.SetStateAction<string>>
   connectorKillSwitchId: string

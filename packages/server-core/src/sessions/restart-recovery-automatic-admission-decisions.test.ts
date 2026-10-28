@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { ScriptedSessionAgent, completeSessionAgentFixture } from "./testing/scripted-session-agent.ts";
 import { permissionMetadataFixture } from "./testing/permission-metadata.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
@@ -10,7 +11,7 @@ afterEach(cleanupRestartRecovery);
 
 describe('bounded automatic admission', () => {
   it('surfaces an exhausted invalid final after restart as a durable typed validation failure', async () => {
-    process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+    process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
     const h = harness(); const managed = h.make('restart-invalid-final-exhausted')
     managed.activeObjective!.requiresExecutionEvidence = true
     managed.pendingTurnRecovery = {
@@ -29,28 +30,28 @@ describe('bounded automatic admission', () => {
 
     const diagnostic = 'missing structured objective outcome receipt'
     expect(requiredTestValue(restored.activeObjective).terminalState).toBe('exhausted')
-    expect(restored.pendingTurnRecovery).toMatchObject({
-      exhaustedAt: expect.any(Number), validationExhausted: true,
-      lastCause: 'objective_incomplete', validationGaps: expect.arrayContaining([diagnostic]),
+    expect<unknown>(restored.pendingTurnRecovery).toMatchObject({
+      exhaustedAt: (expect.any(Number) as unknown), validationExhausted: true,
+      lastCause: 'objective_incomplete', validationGaps: (expect.arrayContaining([diagnostic]) as unknown),
     })
-    expect(restored.messages.at(-1)).toMatchObject({
+    expect<unknown>(restored.messages.at(-1)).toMatchObject({
       role: 'error', errorCode: 'objective_validation_failed',
       errorTitle: 'Completion could not be verified', errorCanRetry: true,
-      errorDetails: expect.arrayContaining([diagnostic]),
+      errorDetails: (expect.arrayContaining([diagnostic]) as unknown),
     })
-    expect(h.events.findLast(event => event.type === 'typed_error')).toMatchObject({
+    expect<unknown>(h.events.findLast(event => event.type === 'typed_error')).toMatchObject({
       sessionId: managed.id,
       error: {
         code: 'objective_validation_failed', canRetry: true,
-        details: expect.arrayContaining([diagnostic]),
+        details: (expect.arrayContaining([diagnostic]) as unknown),
       },
     })
     expect(h.events.some(event => event.type === 'error')).toBe(false)
 
-    const persisted = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8').trim().split('\n').map(line => JSON.parse(line))
-    expect(persisted.at(-1)).toMatchObject({
+    const persisted = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8').trim().split('\n').map(parseRecoveryJournalObservation)
+    expect<unknown>(persisted.at(-1)).toMatchObject({
       type: 'error', errorCode: 'objective_validation_failed',
-      errorDetails: expect.arrayContaining([diagnostic]), errorCanRetry: true,
+      errorDetails: (expect.arrayContaining([diagnostic]) as unknown), errorCanRetry: true,
     })
   })
 
@@ -82,7 +83,7 @@ describe('bounded automatic admission', () => {
   })
 
   it('retains a rejected final behind a new ancestor decision without declaring exhaustion, then wakes once', async () => {
-    process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+    process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
     const h = harness(); const parent = h.make('final-parent'); const child = h.make('final-child', parent.id)
     child.activeObjective!.requiresExecutionEvidence = true
     Object.assign(child.pendingTurnRecovery!, { attempts: 0, stagnantAttempts: 0 })
@@ -176,7 +177,7 @@ describe('bounded automatic admission', () => {
     const entered = deferred(), release = deferred(); let hydrations = 0, preparations = 0
     h.runtime.ensureMessagesLoaded = async () => { if (++hydrations === 2) { entered.resolve(); await release.promise } }
     h.runtime.getOrCreateAgent = async () => { preparations++; throw new Error('Must not prepare after Stop') }
-    const retry = h.manager.retryTurn(managed.id, `${managed.id}-user`).then(() => undefined, error => error)
+    const retry = h.manager.retryTurn(managed.id, `${managed.id}-user`).then(() => undefined, (error: unknown) => error)
     await entered.promise
     await h.manager.cancelProcessing(managed.id)
     const stoppedGeneration = managed.processingGeneration
@@ -199,14 +200,16 @@ describe('bounded automatic admission', () => {
     if (kind === 'permission') {
       const requestedAt = Date.now()
       parent.pendingTurnRecovery!.waitingForPermission = { requestId: 'decision', requestedAt, toolName: 'Bash' }
-      parent.agent = { respondToPermission: (_id: string, allowed: boolean) => responses.push(allowed) } as never
+      parent.agent = completeSessionAgentFixture(parent.workspace, {
+        respondToPermission: (_id: string, allowed: boolean) => { responses.push(allowed) },
+      })
       sessionRuntimeStateForTest(h.runtime).pendingPermissionRequests.set('decision', {
         sessionId: parent.id,
         requestedAt,
         expiresAt: requestedAt + 60_000,
         toolName: 'Bash',
         processingGeneration: parent.processingGeneration,
-        objectiveId: parent.activeObjective?.objectiveId ?? parent.activeObjective?.userMessageId,
+        objectiveId: requiredTestValue(parent.activeObjective?.objectiveId ?? parent.activeObjective?.userMessageId),
         runtimeAgent: parent.agent ?? undefined,
         request: { requestId: 'decision', sessionId: parent.id, toolName: 'Bash', description: 'Offline decision' },
         timeout: permissionMetadataFixture(parent.id).timeout,

@@ -72,7 +72,7 @@ export function streamGoogleCodeAssist(model: Model<Api>, context: Context, opti
       };
 
       for await (const chunk of parseSse(res)) {
-        output.responseId ||= chunk.traceId;
+        if (!output.responseId && chunk.traceId !== undefined) output.responseId = chunk.traceId;
         const response = chunk.response;
         const candidate = response?.candidates?.[0];
         for (const part of candidate?.content?.parts ?? []) {

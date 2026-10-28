@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { refreshInheritedWorkspaceSources } from '../policy.ts';
 import { isDeepStrictEqual } from 'node:util';
@@ -67,7 +68,7 @@ function sessionOpGetActiveSessionsInfo(sessionOperationContext: SessionOperatio
         let status: SessionProcessingStatus = 'processing';
         if (managed.stopRequested)
             status = 'idle';
-        result.push({
+        result.push(omitUndefined<ActiveSessionInfo>({
             sessionId: managed.id,
             workspaceId: managed.workspace.id,
             workspaceName: managed.workspace.name,
@@ -77,7 +78,7 @@ function sessionOpGetActiveSessionsInfo(sessionOperationContext: SessionOperatio
                 ? { automationName: managed.triggeredBy.automationName ?? 'Unknown', timestamp: managed.triggeredBy.timestamp ?? 0 }
                 : undefined,
             createdAt: managed.lastMessageAt,
-        });
+        }));
     }
     return result;
 }

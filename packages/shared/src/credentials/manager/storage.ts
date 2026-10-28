@@ -11,28 +11,28 @@ import { debug } from "../../utils/debug.ts";
 import type { CredentialManager } from '../manager.ts';
 
 export async function serializeMutation<T>(transportOwner: CredentialManager, key: string, mutation: () => Promise<T>): Promise<T> {
-    const previous = transportOwner["mutationTails"].get(key) ?? Promise.resolve();
+    const previous = transportOwner.mutationTails.get(key) ?? Promise.resolve();
     let release!: () => void;
     const gate = new Promise<void>((resolve) => { release = resolve; });
     const tail = previous.catch(() => undefined).then(() => gate);
-    transportOwner["mutationTails"].set(key, tail);
+    transportOwner.mutationTails.set(key, tail);
     await previous.catch(() => undefined);
     try {
         return await mutation();
     }
     finally {
         release();
-        if (transportOwner["mutationTails"].get(key) === tail)
-            transportOwner["mutationTails"].delete(key);
+        if (transportOwner.mutationTails.get(key) === tail)
+            transportOwner.mutationTails.delete(key);
     }
 }
 
-export function llmMutationKey(transportOwner: CredentialManager, type: CredentialType, connectionSlug: string): string {
+export function llmMutationKey(_transportOwner: CredentialManager, type: CredentialType, connectionSlug: string): string {
     return `${type}\u0000${connectionSlug}`;
 }
 
 export async function initialize(transportOwner: CredentialManager): Promise<void> {
-    await transportOwner["ensureInitialized"]();
+    await transportOwner.ensureInitialized();
 }
 
 /**
@@ -40,33 +40,33 @@ export async function initialize(transportOwner: CredentialManager): Promise<voi
    * Called automatically by all public methods.
    */
 export async function ensureInitialized(transportOwner: CredentialManager): Promise<void> {
-    if (transportOwner["initialized"]) {
+    if (transportOwner.initialized) {
         return;
     }
     // Prevent race condition with concurrent initialization
-    if (transportOwner["initPromise"]) {
-        return transportOwner["initPromise"];
+    if (transportOwner.initPromise) {
+        return transportOwner.initPromise;
     }
     // Clear promise on failure so initialization can be retried
-    transportOwner["initPromise"] = transportOwner["_doInitialize"]().catch((err) => {
-        transportOwner["initPromise"] = null;
+    transportOwner.initPromise = transportOwner._doInitialize().catch((err: unknown) => {
+        transportOwner.initPromise = null;
         throw err;
     });
-    await transportOwner["initPromise"];
+    await transportOwner.initPromise;
 }
 
 export function ensureInitializedSync(transportOwner: CredentialManager): void {
-    if (transportOwner["initialized"]) {
+    if (transportOwner.initialized) {
         return;
     }
     // SecureStorageBackend is always available and is currently the only
     // credential backend. This sync path exists for sync callers such as
     // saveSourceConfig(), where fire-and-forget cleanup can race immediate reloads.
     const backend = new SecureStorageBackend();
-    transportOwner["backends"] = [backend];
-    transportOwner["writeBackend"] = backend;
-    transportOwner["initialized"] = true;
-    transportOwner["initPromise"] = null;
+    transportOwner.backends = [backend];
+    transportOwner.writeBackend = backend;
+    transportOwner.initialized = true;
+    transportOwner.initPromise = null;
     debug(`[CredentialManager] Backend available: ${backend.name} (priority ${backend.priority})`);
     debug(`[CredentialManager] Using backend: ${backend.name}`);
 }
@@ -86,30 +86,30 @@ export async function _doInitialize(transportOwner: CredentialManager): Promise<
     // A synchronous caller may have initialized the singleton while the async
     // availability checks above were in flight. In that case, keep the sync state
     // instead of appending duplicate backends.
-    if (transportOwner["initialized"])
+    if (transportOwner.initialized)
         return;
     // Sort by priority (highest first)
     availableBackends.sort((a, b) => b.priority - a.priority);
-    transportOwner["backends"] = availableBackends;
+    transportOwner.backends = availableBackends;
     // Use the first available backend for writing
-    transportOwner["writeBackend"] = transportOwner["backends"][0] || null;
-    if (transportOwner["writeBackend"]) {
-        debug(`[CredentialManager] Using backend: ${transportOwner["writeBackend"].name}`);
+    transportOwner.writeBackend = transportOwner.backends[0] || null;
+    if (transportOwner.writeBackend) {
+        debug(`[CredentialManager] Using backend: ${transportOwner.writeBackend.name}`);
     }
     else {
         debug(`[CredentialManager] WARNING: No backend available.`);
     }
-    transportOwner["initialized"] = true;
+    transportOwner.initialized = true;
 }
 
 export function getActiveBackendName(transportOwner: CredentialManager): string | null {
-    return transportOwner["writeBackend"]?.name || null;
+    return transportOwner.writeBackend?.name || null;
 }
 
 export async function get(transportOwner: CredentialManager, id: CredentialId): Promise<StoredCredential | null> {
-    await transportOwner["ensureInitialized"]();
+    await transportOwner.ensureInitialized();
     let firstError: unknown;
-    for (const backend of transportOwner["backends"]) {
+    for (const backend of transportOwner.backends) {
         try {
             const cred = await backend.get(id);
             if (cred) {
@@ -128,35 +128,35 @@ export async function get(transportOwner: CredentialManager, id: CredentialId): 
 }
 
 export async function set(transportOwner: CredentialManager, id: CredentialId, credential: StoredCredential): Promise<void> {
-    await transportOwner["ensureInitialized"]();
-    if (!transportOwner["writeBackend"]) {
+    await transportOwner.ensureInitialized();
+    if (!transportOwner.writeBackend) {
         throw new Error('No writable credential backend available');
     }
-    await transportOwner["writeBackend"].set(id, credential);
-    debug(`[CredentialManager] Saved ${id.type} to ${transportOwner["writeBackend"].name}`);
+    await transportOwner.writeBackend.set(id, credential);
+    debug(`[CredentialManager] Saved ${id.type} to ${transportOwner.writeBackend.name}`);
 }
 
 export async function getOrCreate(transportOwner: CredentialManager, id: CredentialId, create: () => StoredCredential): Promise<StoredCredential> {
-    await transportOwner["ensureInitialized"]();
-    if (!transportOwner["writeBackend"]) {
+    await transportOwner.ensureInitialized();
+    if (!transportOwner.writeBackend) {
         throw new Error('No writable credential backend available');
     }
-    if (transportOwner["writeBackend"].getOrCreate) {
-        return transportOwner["writeBackend"].getOrCreate(id, create);
+    if (transportOwner.writeBackend.getOrCreate) {
+        return transportOwner.writeBackend.getOrCreate(id, create);
     }
     const existing = await transportOwner["get"](id);
     if (existing)
         return existing;
     const credential = create();
-    await transportOwner["writeBackend"].set(id, credential);
+    await transportOwner.writeBackend.set(id, credential);
     return credential;
 }
 
 export async function deleteOperation(transportOwner: CredentialManager, id: CredentialId): Promise<boolean> {
-    await transportOwner["ensureInitialized"]();
+    await transportOwner.ensureInitialized();
     let deleted = false;
     let firstError: unknown;
-    for (const backend of transportOwner["backends"]) {
+    for (const backend of transportOwner.backends) {
         try {
             if (await backend.delete(id)) {
                 deleted = true;
@@ -174,10 +174,10 @@ export async function deleteOperation(transportOwner: CredentialManager, id: Cre
 }
 
 export function deleteSync(transportOwner: CredentialManager, id: CredentialId): boolean {
-    transportOwner["ensureInitializedSync"]();
+    transportOwner.ensureInitializedSync();
     let deleted = false;
     let firstError: unknown;
-    for (const backend of transportOwner["backends"]) {
+    for (const backend of transportOwner.backends) {
         if (!backend.deleteSync) {
             debug(`[CredentialManager] Backend ${backend.name} does not support synchronous delete`);
             continue;
@@ -199,11 +199,11 @@ export function deleteSync(transportOwner: CredentialManager, id: CredentialId):
 }
 
 export async function list(transportOwner: CredentialManager, filter?: Partial<CredentialId>): Promise<CredentialId[]> {
-    await transportOwner["ensureInitialized"]();
+    await transportOwner.ensureInitialized();
     const seen = new Set<string>();
     const results: CredentialId[] = [];
     let firstError: unknown;
-    for (const backend of transportOwner["backends"]) {
+    for (const backend of transportOwner.backends) {
         try {
             const ids = await backend.list(filter);
             for (const id of ids) {

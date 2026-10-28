@@ -43,7 +43,7 @@ export async function resumeColdRecoveryQueue(managed: ManagedSession, sessionOp
             ...(invalidFinal ? {
                 errorCode: 'objective_validation_failed',
                 errorTitle: 'Completion could not be verified',
-                errorDetails: validationDetails,
+                ...(validationDetails !== undefined ? { errorDetails: validationDetails } : {}),
                 errorCanRetry: true,
             } : {}),
         };
@@ -64,7 +64,7 @@ export async function resumeColdRecoveryQueue(managed: ManagedSession, sessionOp
                     code: 'objective_validation_failed',
                     title: error.errorTitle!,
                     message: errorMessage,
-                    details: validationDetails,
+                    ...(validationDetails !== undefined ? { details: validationDetails } : {}),
                     actions: [], canRetry: true,
                 },
                 timestamp: error.timestamp,

@@ -1,3 +1,6 @@
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
@@ -11,7 +14,7 @@ import { SessionManager, createManagedSession } from './SessionManager.ts';
 
 import type { AgentBackend } from '@craft-agent/shared/agent/backend/types.ts';
 import type { SessionEvent } from '@craft-agent/shared/protocol';
-import type { SessionOperations } from './SessionManager/operation-types.ts';
+
 
 
 
@@ -38,7 +41,7 @@ function harness(stallAnswer = false) {
   const rootPath = mkdtempSync(join(tmpdir(), 'native-question-retry-')); roots.push(rootPath)
   const workspace = { id: 'native-fixture', slug: 'native-fixture', name: 'Native fixture', rootPath, createdAt: 1 }
   const manager = withSessionOperationsForTest(new SessionManager()); managers.push(manager)
-  const runtime = manager as unknown as SessionOperations
+  const runtime = sessionManagerForTest(manager)
   let managed = createManagedSession({ id: 'native-question' }, workspace, { messagesLoaded: true })
   sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
   const events: SessionEvent[] = []
@@ -50,7 +53,7 @@ function harness(stallAnswer = false) {
   const chatPrompts: string[] = []
   let answerWasStopped = false
   let chats = 0, requestId = '', dispatch: Promise<void> | undefined
-  const agent = ({
+  const agent = completeSessionAgentFixture(managed.workspace, ({
     getModel: () => 'fixture', getSessionId: () => null, setAllSources: () => {},
     isProcessing: () => managed.isProcessing, forceAbort: () => {
       if (chats === 1) release.resolve()
@@ -73,11 +76,11 @@ function harness(stallAnswer = false) {
       else throw new Error('Unexpected extra model continuation in a conversational fixture')
       yield { type: 'complete' }
     },
-  } satisfies Partial<AgentBackend> & { dispose?: () => void }) as Partial<AgentBackend> as AgentBackend
+  } satisfies Partial<AgentBackend> & { dispose?: () => void }))
   runtime.getOrCreateAgent = async () => { managed.agent = agent as never; return agent }
   const send = manager.sendMessage.bind(manager)
   manager.sendMessage = (...args) => { dispatch = send(...args); return dispatch }
-  const readHeader = () => JSON.parse(readFileSync(getSessionFilePath(rootPath, managed.id), 'utf8').split('\n')[0]!)
+  const readHeader = () => parseRecoveryJournalObservation(readFileSync(getSessionFilePath(rootPath, managed.id), 'utf8').split('\n')[0]!)
   const restore = () => {
     const saved = loadSession(rootPath, managed.id)!
     const { messages, ...metadata } = saved
@@ -118,14 +121,14 @@ it('keeps a non-Retry legacy hidden-answer snapshot until hydration can authenti
     const interrupted = structuredClone(h.managed.activeObjective!.interruptedTurnRecovery!.recovery)
     interrupted.lastCause = 'tool_checkpoint'
     h.managed.pendingTurnRecovery = interrupted
-    h.managed.activeObjective!.interruptedTurnRecovery = undefined
+    delete h.managed.activeObjective!.interruptedTurnRecovery;
     h.runtime.persistSession(h.managed)
     await h.manager.flushSession(h.managed.id)
 
     const getWorkspaces = spyOn(config, 'getWorkspaces').mockReturnValue([h.managed.workspace] as never)
     try {
       const restarted = withSessionOperationsForTest(new SessionManager()); managers.push(restarted)
-      const runtime = restarted as unknown as SessionOperations
+      const runtime = sessionManagerForTest(restarted)
       let scheduled: string[] = []
       runtime.resumePendingTurnsAfterRestart = async (ids: string[]) => { scheduled = ids }
       runtime.getOrCreateAgent = async () => { throw new Error('Consumed answer must not start a provider') }
@@ -181,7 +184,7 @@ for (const corruption of ['duplicate-answer', 'mismatched-request'] as const) {
       expect(h.managed.pendingTurnRecovery).toBeUndefined()
       expect(h.managed.activeObjective?.interruptedTurnRecovery).toBeUndefined()
       expect(h.readHeader().pendingTurnRecovery).toBeUndefined()
-      expect(h.readHeader().activeObjective.interruptedTurnRecovery).toBeUndefined()
+      expect(requiredTestValue(h.readHeader().activeObjective).interruptedTurnRecovery).toBeUndefined()
     })
   }
 
@@ -205,7 +208,7 @@ it('lets Stop supersede a restart migration while message hydration is suspended
     await h.dispatch()
     const interrupted = structuredClone(h.managed.activeObjective!.interruptedTurnRecovery!.recovery)
     h.managed.pendingTurnRecovery = interrupted
-    h.managed.activeObjective!.interruptedTurnRecovery = undefined
+    delete h.managed.activeObjective!.interruptedTurnRecovery;
     h.runtime.persistSession(h.managed)
     await h.manager.flushSession(h.managed.id)
     h.restore()
@@ -226,7 +229,7 @@ it('lets Stop supersede a restart migration while message hydration is suspended
 
     expect(h.chats()).toBe(before)
     expect(h.managed.pendingTurnRecovery).toBeUndefined()
-    expect(h.readHeader().activeObjective.interruptedTurnRecovery.recovery.explicitRetryAllowances).toEqual([grant])
+    expect(requiredTestValue(requiredTestValue(h.readHeader().activeObjective).interruptedTurnRecovery).recovery.explicitRetryAllowances).toEqual([grant])
   })
 
 it('revokes an ambiguous legacy hidden-answer snapshot instead of admitting or preserving its Retry reserve', async () => {
@@ -257,7 +260,7 @@ it('revokes an ambiguous legacy hidden-answer snapshot instead of admitting or p
     // automatic recovery or retain the prospective grant for explicit Retry.
     h.managed.messages.push(structuredClone(answer))
     h.managed.pendingTurnRecovery = structuredClone(interrupted)
-    h.managed.activeObjective!.interruptedTurnRecovery = undefined
+    delete h.managed.activeObjective!.interruptedTurnRecovery;
     h.runtime.persistSession(h.managed)
     await h.manager.flushSession(h.managed.id)
     h.restore()
@@ -267,7 +270,7 @@ it('revokes an ambiguous legacy hidden-answer snapshot instead of admitting or p
     expect(h.managed.pendingTurnRecovery).toBeUndefined()
     expect(h.managed.activeObjective?.interruptedTurnRecovery).toBeUndefined()
     expect(h.readHeader().pendingTurnRecovery).toBeUndefined()
-    expect(h.readHeader().activeObjective.interruptedTurnRecovery).toBeUndefined()
+    expect(requiredTestValue(h.readHeader().activeObjective).interruptedTurnRecovery).toBeUndefined()
   })
 
 it('retries the public anchor after Stop interrupts an answered hidden question turn, without asking again', async () => {

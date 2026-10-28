@@ -1,3 +1,4 @@
+import { isUnknownArray } from "../../../../shared/src/utils/json.ts";
 import type { Message, ObjectiveOutcomeBlockerKind, ObjectiveOutcomeDeclaration, ObjectiveOutcomeState } from "@craft-agent/core/types";
 import { type HostNativeQuestionOutcome } from "../native-question-completion.ts";
 
@@ -147,7 +148,7 @@ function isBoundedString(value: unknown): value is string {
 }
 
 function boundedStringArray(value: unknown, maxItems: number): value is string[] {
-  return Array.isArray(value)
+  return isUnknownArray(value)
     && value.length <= maxItems
     && value.every(isBoundedString);
 }
@@ -221,43 +222,43 @@ function parseDeclaration(raw: string): { declaration?: ObjectiveOutcomeDeclarat
   if (raw.length > MAX_DECLARATION_CHARS) return invalid('receipt exceeds the size limit');
   let parsed: unknown;
   try { parsed = JSON.parse(raw); } catch { return {}; }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return invalid('receipt must be a JSON object');
+  if (!parsed || typeof parsed !== 'object' || isUnknownArray(parsed)) return invalid('receipt must be a JSON object');
   const value = parsed as Record<string, unknown>;
-  if (!STATES.has(value.state as DeclaredObjectiveState)) return invalid(`state must be one of: ${[...STATES].join(', ')}`);
-  if (!Array.isArray(value.criteria) || value.criteria.length > MAX_CRITERIA) return invalid('criteria must be a bounded array');
+  if (!STATES.has(value["state"] as DeclaredObjectiveState)) return invalid(`state must be one of: ${[...STATES].join(', ')}`);
+  if (!isUnknownArray(value["criteria"]) || value["criteria"].length > MAX_CRITERIA) return invalid('criteria must be a bounded array');
   const criteria: ObjectiveOutcomeDeclaration['criteria'] = [];
-  for (const [index, candidate] of value.criteria.entries()) {
+  for (const [index, candidate] of value["criteria"].entries()) {
     const path = `criteria[${index}]`;
-    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) return invalid(`${path} must be an object`);
+    if (!candidate || typeof candidate !== 'object' || isUnknownArray(candidate)) return invalid(`${path} must be an object`);
     const item = candidate as Record<string, unknown>;
-    if (!isBoundedString(item.id)) return invalid(`${path}.id must be a non-empty bounded string`);
+    if (!isBoundedString(item["id"])) return invalid(`${path}.id must be a non-empty bounded string`);
     // Review receipts use "passed". Accept that equivalent boolean spelling only
     // when unambiguous, then subject the canonical receipt to all host evidence
     // checks. This does not turn a reviewer PASS into a successful objective.
     const hasSatisfied = Object.hasOwn(item, 'satisfied');
     const hasPassed = Object.hasOwn(item, 'passed');
-    const satisfied = hasSatisfied ? item.satisfied : item.passed;
-    if (typeof satisfied !== 'boolean' || (hasPassed && typeof item.passed !== 'boolean')) {
+    const satisfied = hasSatisfied ? item["satisfied"] : item["passed"];
+    if (typeof satisfied !== 'boolean' || (hasPassed && typeof item["passed"] !== 'boolean')) {
       return invalid(`${path}.satisfied must be a boolean`);
     }
-    if (hasSatisfied && hasPassed && item.satisfied !== item.passed) return invalid(`${path} has conflicting satisfied and passed values`);
-    if (!boundedStringArray(item.evidence, MAX_EVIDENCE_PER_ITEM)) return invalid(`${path}.evidence must be a bounded array of observed tool/message IDs or host-resolved tool aliases`);
-    criteria.push({ id: item.id, satisfied, evidence: item.evidence });
+    if (hasSatisfied && hasPassed && item["satisfied"] !== item["passed"]) return invalid(`${path} has conflicting satisfied and passed values`);
+    if (!boundedStringArray(item["evidence"], MAX_EVIDENCE_PER_ITEM)) return invalid(`${path}.evidence must be a bounded array of observed tool/message IDs or host-resolved tool aliases`);
+    criteria.push({ id: item["id"], satisfied, evidence: item["evidence"] });
   }
-  if (!boundedStringArray(value.remainingWork, MAX_REMAINING_WORK)) return invalid('remainingWork must be an array of concrete remaining steps (or [])');
+  if (!boundedStringArray(value["remainingWork"], MAX_REMAINING_WORK)) return invalid('remainingWork must be an array of concrete remaining steps (or [])');
   let blocker: ObjectiveOutcomeDeclaration['blocker'] = null;
-  if (value.blocker !== null) {
-    if (!value.blocker || typeof value.blocker !== 'object' || Array.isArray(value.blocker)) return invalid('blocker must be null or an object with kind, description and evidence');
-    const item = value.blocker as Record<string, unknown>;
-    if (!BLOCKER_KINDS.has(item.kind as ObjectiveBlockerKind)) return invalid(`blocker.kind must be one of: ${[...BLOCKER_KINDS].join(', ')}; only use a kind supported by observed blocker evidence`);
-    if (!isBoundedString(item.description)) return invalid('blocker.description must be a non-empty bounded string');
-    if (!boundedStringArray(item.evidence, MAX_EVIDENCE_PER_ITEM)) return invalid('blocker.evidence must be a bounded array of observed tool/message IDs or host-resolved tool aliases');
-    blocker = { kind: item.kind as ObjectiveBlockerKind, description: item.description, evidence: item.evidence };
+  if (value["blocker"] !== null) {
+    if (!value["blocker"] || typeof value["blocker"] !== 'object' || isUnknownArray(value["blocker"])) return invalid('blocker must be null or an object with kind, description and evidence');
+    const item = value["blocker"] as Record<string, unknown>;
+    if (!BLOCKER_KINDS.has(item["kind"] as ObjectiveBlockerKind)) return invalid(`blocker.kind must be one of: ${[...BLOCKER_KINDS].join(', ')}; only use a kind supported by observed blocker evidence`);
+    if (!isBoundedString(item["description"])) return invalid('blocker.description must be a non-empty bounded string');
+    if (!boundedStringArray(item["evidence"], MAX_EVIDENCE_PER_ITEM)) return invalid('blocker.evidence must be a bounded array of observed tool/message IDs or host-resolved tool aliases');
+    blocker = { kind: item["kind"] as ObjectiveBlockerKind, description: item["description"], evidence: item["evidence"] };
   }
   return { declaration: {
-    state: value.state as DeclaredObjectiveState,
+    state: value["state"] as DeclaredObjectiveState,
     criteria,
-    remainingWork: value.remainingWork,
+    remainingWork: value["remainingWork"],
     blocker,
   } };
 }

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from 'bun:test'
 import {
   remoteServerNeedsRestart,
@@ -55,7 +56,7 @@ describe('resolveRemoteServerUrls', () => {
   })
 
   it('falls back to direct runtime URLs and omits an unavailable WebUI', () => {
-    const direct = { ...RUNNING_SERVER, tls: true, publicWebuiUrl: undefined, publicWsUrl: undefined }
+    const direct = omitUndefined({ ...RUNNING_SERVER, tls: true, publicWebuiUrl: undefined, publicWsUrl: undefined })
     expect(resolveRemoteServerUrls(direct, '192.0.2.10', true)).toEqual({
       url: 'wss://192.0.2.10:9100',
       webUrl: 'https://192.0.2.10:9100',

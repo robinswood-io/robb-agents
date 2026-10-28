@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import * as storage from "@/lib/local-storage";
 import { KEYS } from "@/lib/local-storage";
 
-import { buildCollapsedGroupsScopeSuffix } from "@/utils/session-list-collapse";
+import { buildCollapsedGroupsScopeSuffix, parseCollapsedGroups } from "@/utils/session-list-collapse";
 
 import type { ChatGroupingMode } from "./session-list-data";
 
@@ -19,8 +19,8 @@ export function useSessionListCollapse({
   groupingMode,
 }: SessionListCollapseInput) {
   const collapseScopeSuffix = buildCollapsedGroupsScopeSuffix({
-    workspaceId,
-    currentFilter,
+    ...(workspaceId !== undefined ? { workspaceId: workspaceId } : {}),
+    ...(currentFilter !== undefined ? { currentFilter: currentFilter } : {}),
     groupingMode,
   })
 
@@ -28,8 +28,8 @@ export function useSessionListCollapse({
     const scopedRaw = storage.getRaw(KEYS.collapsedSessionGroups, scopeSuffix)
     if (scopedRaw !== null) {
       try {
-        const parsed = JSON.parse(scopedRaw)
-        return new Set(Array.isArray(parsed) ? parsed : [])
+        const parsed: unknown = JSON.parse(scopedRaw)
+        return parseCollapsedGroups(parsed)
       } catch {
         return new Set()
       }
@@ -37,8 +37,8 @@ export function useSessionListCollapse({
 
     // Legacy fallback: previous versions used a single global key with no scope suffix.
     // Use as migration source only when this scope has never been written.
-    const legacy = storage.get<string[]>(KEYS.collapsedSessionGroups, [])
-    return new Set(legacy)
+    const legacy = storage.get<unknown>(KEYS.collapsedSessionGroups, [])
+    return parseCollapsedGroups(legacy)
   }, [])
 
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => readCollapsedGroupsForScope(collapseScopeSuffix))

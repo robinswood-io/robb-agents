@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { PiEventAdapter } from '../backend/pi/event-adapter.ts';
-import { collect, recordedPiEvent, eventErrorText, type RecordedPiEvent } from './fixtures/pi-event-fixtures.ts';
+import { collect, adaptRecordedPiEvent, eventErrorText, type RecordedPiEvent } from './fixtures/pi-event-fixtures.ts';
 
 describe('PiEventAdapter native settlement', () => {
   let adapter: PiEventAdapter;
   const overflow = { role: 'assistant', stopReason: 'error',
     errorMessage: 'Codex error: The input exceeds the context window of this model.' } as const;
-  const feed = (event: RecordedPiEvent) => collect(adapter.adaptEvent(recordedPiEvent(event)));
+  const feed = (event: RecordedPiEvent) => collect(adaptRecordedPiEvent(adapter, event));
   const finish = (aborted = false) => feed({ type: 'agent_settled', aborted });
   const failOverflow = () => feed({ type: 'message_end', message: overflow });
   const errorText = (events: ReturnType<typeof collect>) => events.map(eventErrorText).join(' ');
@@ -50,7 +50,7 @@ describe('PiEventAdapter native settlement', () => {
     feed({ type: 'compaction_end', result: {}, aborted: false, willRetry: true });
     const output = feed({ type: 'message_end', message: { role: 'assistant', stopReason: 'stop',
       content: [{ type: 'text', text: 'Recovered answer' }] } });
-    expect(output).toContainEqual(expect.objectContaining({ type: 'text_complete', text: 'Recovered answer' }));
+    expect<unknown>(output).toContainEqual(expect.objectContaining({ type: 'text_complete', text: 'Recovered answer' }));
     expect(feed({ type: 'agent_end', willRetry: false })).toEqual([]);
     expect(finish()).toEqual([{ type: 'complete' }]);
   });

@@ -9,16 +9,16 @@ export type HeadersInitType = Headers | Record<string, string> | string[][];
  * Independent of the broader DEBUG flag — opt-in only because raw chunks are
  * verbose and may contain user prompts/tool args.
  */
-export const DEBUG_SSE_RAW = process.env.CRAFT_DEBUG_SSE_RAW === '1';
+export const DEBUG_SSE_RAW = process.env["CRAFT_DEBUG_SSE_RAW"] === '1';
 
 // ============================================================================
 // PROXY CONFIGURATION (from env vars injected by parent process)
 // ============================================================================
 
-export const PROXY_URL = process.env.HTTPS_PROXY || process.env.https_proxy
-  || process.env.HTTP_PROXY || process.env.http_proxy || '';
+export const PROXY_URL = process.env["HTTPS_PROXY"] || process.env["https_proxy"]
+  || process.env["HTTP_PROXY"] || process.env["http_proxy"] || '';
 
-export const NO_PROXY = process.env.NO_PROXY || process.env.no_proxy || '';
+export const NO_PROXY = process.env["NO_PROXY"] || process.env["no_proxy"] || '';
 
 /** Strip credentials from a proxy URL, returning only scheme://host:port */
 export function redactProxyUrl(proxyUrl: string): string {
@@ -57,8 +57,8 @@ function shouldBypassProxy(url: string): boolean {
 /** Get the proxy URL for a given request URL, or undefined to go direct. */
 export function getProxyForUrl(url: string): string | undefined {
   if (
-    process.env.CRAFT_STRICT_LOCAL_ENDPOINT === '1' &&
-    process.env.ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS !== '1'
+    process.env["CRAFT_STRICT_LOCAL_ENDPOINT"] === '1' &&
+    process.env["ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS"] !== '1'
   ) {
     return undefined;
   }

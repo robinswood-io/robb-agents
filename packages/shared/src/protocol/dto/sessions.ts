@@ -141,75 +141,75 @@ export interface Session {
 }
 
 export interface CreateSessionOptions {
-  name?: string
-  permissionMode?: PermissionMode
+  name?: string | undefined
+  permissionMode?: PermissionMode | undefined
   /**
    * Reasoning/thinking level override. When set, takes precedence over workspace
    * and global defaults. Silently ignored by the underlying SDK on non-reasoning
    * models (e.g. gpt-4o) — provider drivers don't attach the reasoning param to
    * the API request for models with `reasoning: false` in the Pi SDK catalog.
    */
-  thinkingLevel?: ThinkingLevel
+  thinkingLevel?: ThinkingLevel | undefined
   /**
    * Working directory for the session:
    * - 'user_default' or undefined: Use workspace's configured default working directory
    * - 'none': No working directory (session folder only)
    * - Absolute path string: Use this specific path
    */
-  workingDirectory?: string | 'user_default' | 'none'
-  model?: string
+  workingDirectory?: string | 'user_default' | 'none' | undefined
+  model?: string | undefined
   /** Preserve this caller-selected model across automatic cost routing. */
-  modelRoutePinned?: boolean
-  llmConnection?: string
+  modelRoutePinned?: boolean | undefined
+  llmConnection?: string | undefined
   /** Preserve this caller-selected connection across automatic policy routing. */
-  connectionRoutePinned?: boolean
+  connectionRoutePinned?: boolean | undefined
   /** Preserve this caller-selected reasoning level across automatic cost routing. */
-  thinkingLevelPinned?: boolean
-  systemPromptPreset?: 'default' | 'mini' | string
-  hidden?: boolean
-  sessionStatus?: SessionStatus
-  labels?: string[]
-  isFlagged?: boolean
-  enabledSourceSlugs?: string[]
+  thinkingLevelPinned?: boolean | undefined
+  systemPromptPreset?: 'default' | 'mini' | string | undefined
+  hidden?: boolean | undefined
+  sessionStatus?: SessionStatus | undefined
+  labels?: string[] | undefined
+  isFlagged?: boolean | undefined
+  enabledSourceSlugs?: string[] | undefined
   /** Operational playbook to bind to this session. */
-  playbookSlug?: string
+  playbookSlug?: string | undefined
   /**
    * Message ID to branch from. This is a hard context cutoff:
    * the new session must not include model context from later parent messages.
    */
-  branchFromMessageId?: string
+  branchFromMessageId?: string | undefined
   /** Parent session ID used together with branchFromMessageId. */
-  branchFromSessionId?: string
+  branchFromSessionId?: string | undefined
   /** Bind the new session to a workspace project (inherits project's workingDirectory). */
-  projectId?: string
+  projectId?: string | undefined
   /** Mark the new session as a subtask of this parent session (undefined = top-level task). */
-  parentSessionId?: string
+  parentSessionId?: string | undefined
   /** Tasks Conductor: slug of the task spec this session belongs to (orchestrator + child nodes). */
-  taskSlug?: string
+  taskSlug?: string | undefined
   /** Tasks Conductor: id of the run that spawned this child session (child nodes only). */
-  taskRunId?: string
+  taskRunId?: string | undefined
   /** Tasks Conductor: id of the DAG node this child session executes (child nodes only). */
-  taskNodeId?: string
+  taskNodeId?: string | undefined
   /** Tasks Conductor: mark the orchestrator as a generate-time draft (hidden until adopted by createTask). */
-  taskDraft?: boolean
+  taskDraft?: boolean | undefined
   /** Host-enforced tool isolation envelope for a Conductor child session. */
-  executionIsolation?: SessionExecutionIsolation
+  executionIsolation?: SessionExecutionIsolation | undefined
   /** Mission v2 owning this specialist session. */
-  missionId?: string
+  missionId?: string | undefined
   /** Mission v2 work item executed by this session. */
-  missionWorkItemId?: string
+  missionWorkItemId?: string | undefined
   /** Stable dispatch identity used for crash-safe session recovery. */
-  missionDispatchId?: string
+  missionDispatchId?: string | undefined
   /** Mission role assigned to this session. */
-  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor'
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor' | undefined
   /** Immutable evaluated route identity for a specialized Mission session. */
-  missionRouteLockSha256?: string
+  missionRouteLockSha256?: string | undefined
   /**
    * Apply the reserved "Task" label (valueType 'number') after creation. Top-level sessions
    * allocate the next task number; sessions with a `parentSessionId` inherit the parent's
    * number (labeling a plain-chat parent in the same pass). Task flows opt in; plain chats don't.
    */
-  applyTaskLabel?: boolean
+  applyTaskLabel?: boolean | undefined
 }
 
 export interface RemoteSessionTransferPayload {

@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 /**
  * Workspace Storage
  *
@@ -28,16 +29,16 @@ export function loadWorkspaceConfig(rootPath: string): WorkspaceConfig | null {
 
   try {
     const raw = readJsonFileSync<unknown>(configPath);
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    if (!raw || typeof raw !== 'object' || isUnknownArray(raw)) return null;
     const record = raw as Record<string, unknown>;
-    if (record.schemaVersion !== undefined && record.schemaVersion !== WORKSPACE_CONFIG_SCHEMA_VERSION) {
-      throw new UnsupportedWorkspaceConfigVersionError(record.schemaVersion);
+    if (record["schemaVersion"] !== undefined && record["schemaVersion"] !== WORKSPACE_CONFIG_SCHEMA_VERSION) {
+      throw new UnsupportedWorkspaceConfigVersionError(record["schemaVersion"]);
     }
-    const migrated = record.schemaVersion === undefined;
-    let normalizedDefaults: unknown = record.defaults;
-    if (record.defaults && typeof record.defaults === 'object' && !Array.isArray(record.defaults)) {
+    const migrated = record["schemaVersion"] === undefined;
+    let normalizedDefaults: unknown = record["defaults"];
+    if (record["defaults"] && typeof record["defaults"] === 'object' && !isUnknownArray(record["defaults"])) {
       const defaultsRecord: Record<string, unknown> = {
-        ...(record.defaults as Record<string, unknown>),
+        ...(record["defaults"] as Record<string, unknown>),
       };
       // Pre-schema configs used JSON null for optional settings. Preserve the
       // strict v1 write contract while accepting and removing those legacy
@@ -62,7 +63,7 @@ export function loadWorkspaceConfig(rootPath: string): WorkspaceConfig | null {
     // Compatibility: accept canonical or legacy permission mode names on read
     if (config.defaults?.permissionMode && typeof config.defaults.permissionMode === 'string') {
       const parsed = parsePermissionMode(config.defaults.permissionMode);
-      config.defaults.permissionMode = parsed ?? undefined;
+      if (parsed === undefined || parsed === null) { delete config.defaults.permissionMode } else { config.defaults.permissionMode = parsed }
     }
 
     if (config.defaults) {
@@ -71,7 +72,7 @@ export function loadWorkspaceConfig(rootPath: string): WorkspaceConfig | null {
         : 'confirm';
     }
 
-    if (Array.isArray(config.defaults?.cyclablePermissionModes)) {
+    if (isUnknownArray(config.defaults?.cyclablePermissionModes)) {
       const normalized = config.defaults.cyclablePermissionModes
         .map(mode => (typeof mode === 'string' ? parsePermissionMode(mode) : null))
         .filter((mode): mode is NonNullable<typeof mode> => !!mode)
@@ -85,7 +86,9 @@ export function loadWorkspaceConfig(rootPath: string): WorkspaceConfig | null {
     if (config.defaults && 'thinkingLevel' in config.defaults) {
       // TODO: Remove legacy 'think' normalization after old persisted workspace configs
       // have realistically aged out across upgrades.
-      config.defaults.thinkingLevel = normalizeThinkingLevel(config.defaults.thinkingLevel);
+      const thinkingLevel = normalizeThinkingLevel(config.defaults.thinkingLevel);
+      if (thinkingLevel === undefined) delete config.defaults.thinkingLevel;
+      else config.defaults.thinkingLevel = thinkingLevel;
     }
 
     const parsed = WorkspaceConfigStorageSchema.parse(config) as WorkspaceConfig;

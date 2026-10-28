@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { inferTaskNodeProfile, resolveTaskModelSettings, type TaskNodeExecutionRoute } from "../../task-node-execution";
 import { type TaskNode, authorizeWorkspacePath, validateExecutionIsolationPolicy, type ExecutionIsolationPolicy } from "@craft-agent/shared/tasks";
 import { RUNNING_STATUS, FAILED_STATUS, resolveIsolationPolicy } from "../shared.ts";
@@ -13,20 +14,20 @@ export async function sendVerification(transportOwner: ActiveRun, generation: nu
         return;
     }
     try {
-        const recoveredResultReusable = transportOwner["recoveredReviewerResultReusable"];
-        transportOwner["recoveredReviewerResultReusable"] = true;
-        const recoveredReviewer = await transportOwner["retirePendingReviewer"]();
+        const recoveredResultReusable = transportOwner.recoveredReviewerResultReusable;
+        transportOwner.recoveredReviewerResultReusable = true;
+        const recoveredReviewer = await transportOwner.retirePendingReviewer();
         if (!transportOwner["isCurrentVerification"](generation))
             return;
         if (recoveredReviewer?.reason === 'complete' && recoveredResultReusable) {
             const recoveredText = recoveredReviewer.finalText
                 ?? transportOwner["deps"].host.getSessionFinalText(recoveredReviewer.sessionId)
                 ?? '';
-            const recoveredContract = transportOwner["createReviewerContract"](recoveredReviewer.sessionId);
+            const recoveredContract = transportOwner.createReviewerContract(recoveredReviewer.sessionId);
             if (parseReviewerVerdict(recoveredText, recoveredContract).result !== 'unparsed') {
                 transportOwner["reviewerSessionId"] = recoveredReviewer.sessionId;
-                transportOwner["reviewerContract"] = recoveredContract;
-                transportOwner["handleVerdict"](recoveredText, recoveredReviewer.sessionId);
+                transportOwner.reviewerContract = recoveredContract;
+                transportOwner.handleVerdict(recoveredText, recoveredReviewer.sessionId);
                 return;
             }
             // A completed but unbound/malformed recovered result is not eligible
@@ -39,9 +40,9 @@ export async function sendVerification(transportOwner: ActiveRun, generation: nu
             await transportOwner["deps"].host.setSessionStatus(recoveredReviewer.sessionId, FAILED_STATUS);
             await transportOwner["deps"].host.setKanbanColumn(recoveredReviewer.sessionId, 'todo');
         }
-        const budget = transportOwner["schedulingBudgetBreach"]();
+        const budget = transportOwner.schedulingBudgetBreach();
         if (budget) {
-            transportOwner["failForBudget"](budget.metric, budget.value, budget.limit);
+            transportOwner.failForBudget(budget.metric, budget.value, budget.limit);
             return;
         }
         const cwd = transportOwner["deps"].host.getSessionWorkingDirectory(orchestrator) ?? transportOwner["spec"].cwd;
@@ -72,7 +73,7 @@ export async function sendVerification(transportOwner: ActiveRun, generation: nu
             kind: 'judge',
             effect: 'read',
         };
-        const attempt = transportOwner["unparsedReAsks"] + 1;
+        const attempt = transportOwner.unparsedReAsks + 1;
         const defaults = await transportOwner["deps"].getModelDefaults?.(orchestrator);
         if (!transportOwner["isCurrentVerification"](generation))
             return;
@@ -83,14 +84,14 @@ export async function sendVerification(transportOwner: ActiveRun, generation: nu
                 node: reviewerNode,
                 spec: transportOwner["spec"],
                 attempt,
-                defaults,
+                ...(defaults !== undefined ? { defaults: defaults } : {}),
             })
-            : {
+            : omitUndefined<TaskNodeExecutionRoute>({
                 profile: inferredProfile,
                 ...explicitSettings,
                 thinkingLevel: explicitSettings.thinkingLevel ?? 'medium',
                 strategy: 'pinned' as const,
-            };
+            });
         if (!transportOwner["isCurrentVerification"](generation))
             return;
         if (route.blockedReason) {
@@ -104,7 +105,7 @@ export async function sendVerification(transportOwner: ActiveRun, generation: nu
             runId: transportOwner["runId"],
             nodeId: reviewerNode.id,
             idempotencyKey,
-            workingDirectory: cwd,
+            ...(cwd !== undefined ? { workingDirectory: cwd } : {}),
             policy: reviewerPolicy,
             effect: 'read',
             permissionMode: 'safe',
@@ -129,9 +130,9 @@ export async function sendVerification(transportOwner: ActiveRun, generation: nu
             missionRole: 'reviewer',
             executionIsolation: { effect: 'read', policy: reviewerPolicy },
             name: `Independent review: ${transportOwner["spec"].title}`,
-            model: route.model,
+            ...(route.model !== undefined ? { model: route.model } : {}),
             modelRoutePinned: route.modelRoutePinned === true,
-            llmConnection: route.llmConnection,
+            ...(route.llmConnection !== undefined ? { llmConnection: route.llmConnection } : {}),
             connectionRoutePinned: route.connectionRoutePinned === true,
             thinkingLevel: route.thinkingLevel,
             thinkingLevelPinned: route.thinkingLevelPinned === true,
@@ -151,7 +152,7 @@ export async function sendVerification(transportOwner: ActiveRun, generation: nu
             return reviewer;
         });
         transportOwner["activeCreations"].add(reviewerCreation);
-        void reviewerCreation.then(() => transportOwner["activeCreations"].delete(reviewerCreation), () => transportOwner["activeCreations"].delete(reviewerCreation)).catch((error) => {
+        void reviewerCreation.then(() => transportOwner["activeCreations"].delete(reviewerCreation), () => transportOwner["activeCreations"].delete(reviewerCreation)).catch((error: unknown) => {
             transportOwner["failForUnexpectedAsyncError"]('reviewer creation bookkeeping', error);
         });
         const reviewer = await reviewerCreation;
@@ -169,20 +170,20 @@ export async function sendVerification(transportOwner: ActiveRun, generation: nu
         // checks the durable node-spawned binding when accepting internalOrigin.
         transportOwner["reviewerSessionId"] = reviewer.id;
         transportOwner["reviewerPending"] = true;
-        const reviewerContract = transportOwner["createReviewerContract"](reviewer.id);
-        transportOwner["reviewerContract"] = reviewerContract;
+        const reviewerContract = transportOwner.createReviewerContract(reviewer.id);
+        transportOwner.reviewerContract = reviewerContract;
         transportOwner["persistReviewerOutput"](reviewer.id, 'pending', '', undefined, reviewerContract.evidenceText);
-        transportOwner["attachVerdictListener"](reviewer.id, generation);
+        transportOwner.attachVerdictListener(reviewer.id, generation);
         await transportOwner["deps"].host.setKanbanColumn(reviewer.id, 'in-progress');
         if (!transportOwner["isCurrentReviewer"](reviewer.id, generation))
             return;
-        const authenticatedTaskText = transportOwner["buildReviewerPrompt"](reviewerContract);
+        const authenticatedTaskText = transportOwner.buildReviewerPrompt(reviewerContract);
         // The SessionManager host-review contract requires the authenticated
         // spawned root message to equal the objective text byte-for-byte. The
         // isolation policy, route and reviewer role are already host metadata;
         // prepending generic specialist prose would make the root unverifiable.
         const message = authenticatedTaskText;
-        await transportOwner["sendToReviewer"](reviewer.id, message, generation, reviewerPolicy.timeoutMs, authenticatedTaskText);
+        await transportOwner.sendToReviewer(reviewer.id, message, generation, reviewerPolicy.timeoutMs, authenticatedTaskText);
     }
     catch (error) {
         if (transportOwner["isCurrentVerification"](generation)) {
@@ -218,12 +219,12 @@ export function attachVerdictListener(transportOwner: ActiveRun, reviewerSession
             return;
         }
         const text = evt.finalText ?? transportOwner["deps"].host.getSessionFinalText(reviewerSessionId) ?? '';
-        transportOwner["handleVerdict"](text, reviewerSessionId);
+        transportOwner.handleVerdict(text, reviewerSessionId);
     });
 }
 
 export async function sendToReviewer(transportOwner: ActiveRun, reviewerSessionId: string, message: string, generation: number, timeoutMs: number, authenticatedTaskText?: string): Promise<void> {
-    const priorSend = transportOwner["reviewerSend"];
+    const priorSend = transportOwner.reviewerSend;
     const dispatch = (async () => {
         if (priorSend) {
             try {
@@ -236,7 +237,7 @@ export async function sendToReviewer(transportOwner: ActiveRun, reviewerSessionI
         // sendMessage resolves only after the provider turn has stopped in the
         // production SessionManager. Arm before awaiting it so a hung first byte,
         // provider stream or completion path is still bounded.
-        transportOwner["armReviewerTimeout"](reviewerSessionId, generation, timeoutMs);
+        transportOwner.armReviewerTimeout(reviewerSessionId, generation, timeoutMs);
         await transportOwner["deps"].host.sendMessage(reviewerSessionId, message, undefined, undefined, authenticatedTaskText && transportOwner["opts"].orchestratorSessionId
             ? {
                 internalOrigin: {
@@ -247,7 +248,7 @@ export async function sendToReviewer(transportOwner: ActiveRun, reviewerSessionI
             }
             : undefined);
     })();
-    transportOwner["reviewerSend"] = dispatch;
+    transportOwner.reviewerSend = dispatch;
     try {
         await dispatch;
     }
@@ -257,7 +258,7 @@ export async function sendToReviewer(transportOwner: ActiveRun, reviewerSessionI
         }
     }
     finally {
-        if (transportOwner["reviewerSend"] === dispatch)
-            transportOwner["reviewerSend"] = undefined;
+        if (transportOwner.reviewerSend === dispatch)
+            delete transportOwner.reviewerSend;
     }
 }

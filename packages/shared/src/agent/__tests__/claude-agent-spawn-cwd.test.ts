@@ -65,14 +65,12 @@ describe('resolveSpawnCwd (simulated)', () => {
   let tempDir: string;
   let workspaceRoot: string;
   let parentCwd: string;
-  let sessionPath: string;
   let sdkCwd: string;
 
   beforeEach(() => {
     tempDir = mkdtempSync(join(tmpdir(), 'craft-resolve-cwd-'));
     workspaceRoot = join(tempDir, 'ws');
     parentCwd = join(tempDir, 'parent');
-    sessionPath = join(tempDir, 'session');
     sdkCwd = join(tempDir, 'sdk-cwd');
   });
   afterEach(() => {
@@ -327,15 +325,15 @@ describe('onBranchForkInvalidated callback', () => {
     const flush = mock((_id: string) => {});
     const sessionLog = { info: mock((_msg: string) => {}) };
     const onBranchForkInvalidated = () => {
-      managed.sdkSessionId = undefined;
-      managed.branchFromSdkSessionId = undefined;
-      managed.branchFromSdkCwd = undefined;
-      managed.branchFromSdkTurnId = undefined;
+      managed["sdkSessionId"] = undefined;
+      managed["branchFromSdkSessionId"] = undefined;
+      managed["branchFromSdkCwd"] = undefined;
+      managed["branchFromSdkTurnId"] = undefined;
       sessionLog.info(
-        `Branch fork invalidated for ${managed.id}: cleared all fork metadata`,
+        `Branch fork invalidated for ${managed["id"]}: cleared all fork metadata`,
       );
       persistSession(managed);
-      flush(managed.id as string);
+      flush(managed["id"] as string);
     };
     return { onBranchForkInvalidated, persistSession, flush, sessionLog };
   }
@@ -352,10 +350,10 @@ describe('onBranchForkInvalidated callback', () => {
 
     onBranchForkInvalidated();
 
-    expect(managed.sdkSessionId).toBeUndefined();
-    expect(managed.branchFromSdkSessionId).toBeUndefined();
-    expect(managed.branchFromSdkCwd).toBeUndefined();
-    expect(managed.branchFromSdkTurnId).toBeUndefined();
+    expect(managed["sdkSessionId"]).toBeUndefined();
+    expect(managed["branchFromSdkSessionId"]).toBeUndefined();
+    expect(managed["branchFromSdkCwd"]).toBeUndefined();
+    expect(managed["branchFromSdkTurnId"]).toBeUndefined();
     expect(persistSession).toHaveBeenCalledTimes(1);
     expect(flush).toHaveBeenCalledTimes(1);
   });
@@ -372,7 +370,7 @@ describe('onBranchForkInvalidated callback', () => {
 
     onBranchForkInvalidated();
 
-    const firstLog = sessionLog.info.mock.calls[0] as unknown as string[];
+    const firstLog = sessionLog.info.mock.calls[0] as string[];
     expect(firstLog[0]).toContain('Branch fork invalidated');
     expect(firstLog[0]).toContain('session-456');
   });

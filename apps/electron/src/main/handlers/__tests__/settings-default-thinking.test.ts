@@ -1,3 +1,4 @@
+import { OAuthFlowStore } from '@craft-agent/shared/auth';
 import { beforeEach, describe, expect, it, mock } from 'bun:test'
 import { RPC_CHANNELS } from '../../../shared/types'
 import type { RpcServer } from '@craft-agent/server-core/transport'
@@ -47,14 +48,7 @@ describe('settings default thinking RPC handlers', () => {
           process: async () => Buffer.from(''),
         },
       },
-      oauthFlowStore: {
-        store: () => {},
-        getByState: () => null,
-        remove: () => {},
-        cleanup: () => {},
-        dispose: () => {},
-        get size() { return 0 },
-      } as unknown as HandlerDeps['oauthFlowStore'],
+      oauthFlowStore: new OAuthFlowStore(),
       defaultThinkingLevelStore: {
         get: getDefaultThinkingLevelMock,
         set: setDefaultThinkingLevelMock,

@@ -31,12 +31,12 @@ const groupHeaderVariants = cva(
 export interface Info_GroupedListProps {
   children: React.ReactNode
   /** Show loading spinner */
-  loading?: boolean
+  loading?: boolean | undefined
   /** Show error message */
-  error?: string
+  error?: string | undefined
   /** Show empty message when no groups have items */
-  empty?: string
-  className?: string
+  empty?: string | undefined
+  className?: string | undefined
 }
 
 export interface Info_GroupedListGroupProps {
@@ -46,13 +46,13 @@ export interface Info_GroupedListGroupProps {
   /** Header color variant */
   variant: 'success' | 'info' | 'warning' | 'muted'
   /** Optional item count */
-  count?: number
-  className?: string
+  count?: number | undefined
+  className?: string | undefined
 }
 
 export interface Info_GroupedListItemProps {
   children: React.ReactNode
-  className?: string
+  className?: string | undefined
 }
 
 function Info_GroupedListRoot({

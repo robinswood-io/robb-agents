@@ -96,7 +96,7 @@ internal?: {
     /** Host-owned only; deliberately excluded from the renderer CreateSessionOptions DTO. */
     missionOrdinaryRouteLock?: MissionOrdinaryRouteLock;
 }): Promise<Session> {
-    return sessionOpTrackManagerOperation(sessionOperationContext, () => sessionOperationContext.owner["performCreateSession"](workspaceId, options, internal));
+    return sessionOpTrackManagerOperation(sessionOperationContext, () => sessionOperationContext.owner.performCreateSession(workspaceId, options, internal));
 }
 
 /**
@@ -139,14 +139,15 @@ function sessionOpListTaskReviewerSessions(sessionOperationContext: SessionOpera
         // restart could create a second reviewer beside it.
         && (session.sessionStatus === 'in-progress' || session.isProcessing))
         .sort((left, right) => (left.createdAt ?? 0) - (right.createdAt ?? 0))
-        .map(session => ({
-        id: session.id,
-        isProcessing: session.isProcessing,
-        ...(session.tokenUsage ? { tokenUsage: { ...session.tokenUsage } } : {}),
-        ...(sessionOperationContext.owner.getSessionFinalText(session.id) !== undefined
-            ? { finalText: sessionOperationContext.owner.getSessionFinalText(session.id) }
-            : {}),
-    }));
+        .map(session => {
+            const finalText = sessionOperationContext.owner.getSessionFinalText(session.id);
+            return {
+                id: session.id,
+                isProcessing: session.isProcessing,
+                ...(session.tokenUsage ? { tokenUsage: { ...session.tokenUsage } } : {}),
+                ...(finalText !== undefined ? { finalText } : {}),
+            };
+        });
 }
 
 /** Durable Tasks-Conductor worker lookup. Task linkage is written in the
@@ -166,14 +167,15 @@ function sessionOpListTaskWorkerSessions(sessionOperationContext: SessionOperati
         && session.taskNodeId !== '__verdict__'
         && (session.sessionStatus === 'in-progress' || session.isProcessing))
         .sort((left, right) => (left.createdAt ?? 0) - (right.createdAt ?? 0))
-        .map(session => ({
-        id: session.id,
-        isProcessing: session.isProcessing,
-        ...(session.tokenUsage ? { tokenUsage: { ...session.tokenUsage } } : {}),
-        ...(sessionOperationContext.owner.getSessionFinalText(session.id) !== undefined
-            ? { finalText: sessionOperationContext.owner.getSessionFinalText(session.id) }
-            : {}),
-    }));
+        .map(session => {
+            const finalText = sessionOperationContext.owner.getSessionFinalText(session.id);
+            return {
+                id: session.id,
+                isProcessing: session.isProcessing,
+                ...(session.tokenUsage ? { tokenUsage: { ...session.tokenUsage } } : {}),
+                ...(finalText !== undefined ? { finalText } : {}),
+            };
+        });
 }
 
 export { sessionOpEnsureMessagesLoaded as ensureMessagesLoaded };

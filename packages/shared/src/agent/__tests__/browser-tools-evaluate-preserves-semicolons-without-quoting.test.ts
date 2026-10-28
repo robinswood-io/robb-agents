@@ -73,7 +73,7 @@ it('empty array returns error', async () => {
       const result = await executeTool(tools, 'browser_tool', {
         command: [],
       })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('Missing command')
     })
 

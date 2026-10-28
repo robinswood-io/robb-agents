@@ -1,4 +1,4 @@
-import * as React from 'react'
+
 import { Check, ChevronRight, Square, LoaderCircle, Minus, RotateCcw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { projectConversation } from './conversation-presentation'
@@ -16,9 +16,9 @@ type JourneyProgressAgents = {
 
 export interface JourneyProgressProps {
   progress: Progress
-  agents?: JourneyProgressAgents
+  agents?: JourneyProgressAgents | undefined
   /** Opt-in low-chrome disclosure used by the Codex-like conversation view. */
-  presentation?: 'default' | 'codex'
+  presentation?: 'default' | 'codex' | undefined
 }
 
 function JourneyPlan({ steps }: { steps: TodoItem[] }) {
@@ -157,8 +157,8 @@ export function JourneyProgress({ progress, agents, presentation = 'default' }: 
 /** A truthful closing summary, also available when an interrupted provider sends no final. */
 export function JourneyOutcome({ outcome, onRetry, retrying = false }: {
   outcome: Outcome
-  onRetry?: () => void
-  retrying?: boolean
+  onRetry?: (() => void) | undefined
+  retrying?: boolean | undefined
 }) {
   const { t } = useTranslation()
   return (

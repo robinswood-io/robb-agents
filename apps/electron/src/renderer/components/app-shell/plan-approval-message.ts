@@ -3,8 +3,8 @@ import { coerceInputText } from '@/lib/input-text'
 
 export interface BuildPlanApprovalMessageOptions {
   /** Optional accepted plan path (kept for call-site compatibility; message remains path-agnostic). */
-  planPath?: string
-  draftInput?: string
+  planPath?: string | undefined
+  draftInput?: string | undefined
 }
 
 function normalizeDraftInput(input?: string): string {

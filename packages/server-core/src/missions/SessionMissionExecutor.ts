@@ -16,7 +16,7 @@ export { buildMissionSessionPrompt } from './session-mission-executor/shared.ts'
  * executor and is recovered by its persisted missionDispatchId.
  */
 export class SessionMissionExecutor implements MissionWorkExecutor {
-    private readonly timeoutMs: number;
+    /** @internal */ public readonly timeoutMs: number;
     constructor(private readonly options: SessionMissionExecutorOptions) {
         this.timeoutMs = options.completionTimeoutMs ?? DEFAULT_TIMEOUT_MS;
     }
@@ -28,7 +28,7 @@ export class SessionMissionExecutor implements MissionWorkExecutor {
         const result = await this.executeUnmetered(input, binding, lifecycle, startedAt);
         return result.telemetry ? result : withTelemetry(result, startedAt);
     }
-    private async preflightRequiredReviewInvocations(input: MissionExecutionInput, missionWorkingDirectory: string): Promise<{
+    /** @internal */ public async preflightRequiredReviewInvocations(input: MissionExecutionInput, missionWorkingDirectory: string): Promise<{
         allowed: true;
         effectivePermissionMode: PermissionMode;
         grantsFullToolAndNetworkAccess: boolean;
@@ -44,10 +44,10 @@ export class SessionMissionExecutor implements MissionWorkExecutor {
     private async executeUnmetered(input: MissionExecutionInput, binding: MissionExecutionBinding, lifecycle: MissionExecutionLifecycle | undefined, startedAt: number): Promise<MissionExecutionResult> {
         return sessionMissionExecutorExecution.executeUnmetered(this, input, binding, lifecycle, startedAt);
     }
-    private async runOrRecover(input: MissionExecutionInput, sessionId: string, lifecycle?: MissionExecutionLifecycle, startedAt = Date.now(), reviewInvocations: readonly RequiredReviewInvocation[] = [], terminalReviewBoundary?: TerminalReviewSessionBoundary): Promise<MissionExecutionResult> {
+    /** @internal */ public async runOrRecover(input: MissionExecutionInput, sessionId: string, lifecycle?: MissionExecutionLifecycle, startedAt = Date.now(), reviewInvocations: readonly RequiredReviewInvocation[] = [], terminalReviewBoundary?: TerminalReviewSessionBoundary): Promise<MissionExecutionResult> {
         return sessionMissionExecutorExecution.runOrRecover(this, input, sessionId, startedAt, reviewInvocations, lifecycle, terminalReviewBoundary);
     }
-    private waitForCompletion(sessionId: string, timeoutMs: number): {
+    /** @internal */ public waitForCompletion(sessionId: string, timeoutMs: number): {
         promise: Promise<SessionCompletionEvent>;
         cancel: () => void;
     } {

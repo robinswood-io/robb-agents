@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { persistenceRootFor } from '../policy.ts';
 import { agentDeliveryId, acknowledgeDurableDelivery, persistAgentDeliveryAttachments } from '../../agent-delivery.ts';
@@ -36,10 +37,10 @@ async function sessionOpPerformUpdateSessionModel(sessionOperationContext: Sessi
         modelRoutePinned?: boolean;
         llmConnection?: string;
         connectionRoutePinned?: boolean;
-    } = {
+    } = omitUndefined({
         model: model ?? undefined,
         modelRoutePinned: model !== null,
-    };
+    });
     if (connection && !managed.connectionLocked) {
         updates.llmConnection = connection;
     }
@@ -52,7 +53,7 @@ async function sessionOpPerformUpdateSessionModel(sessionOperationContext: Sessi
     // Calling agent.setModel() directly is fire-and-forget for Pi and can leave
     // the persisted/UI model ahead of the subprocess's effective model.
     if (managed.agent) {
-        await sessionOperationContext.owner["tryRefreshAgentRuntime"](managed, 'session model changed');
+        await sessionOperationContext.owner.tryRefreshAgentRuntime(managed, 'session model changed');
         sessionOpAssertSessionOperationOwner(sessionOperationContext, managed);
     }
     else {
@@ -266,7 +267,7 @@ function sessionOpSendAgentMessageToSession(sessionOperationContext: SessionOper
                 kind: 'agent-message',
                 senderSessionId: sender.id,
                 deliveryId,
-                attachmentsSha256,
+                ...(attachmentsSha256 !== undefined ? { attachmentsSha256: attachmentsSha256 } : {}),
                 agentMessageType: messageType,
             },
         }, undefined, undefined, ack), error => sessionLog.error('Agent delivery processing failed', {

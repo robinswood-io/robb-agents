@@ -1,15 +1,12 @@
-import type { ActiveSessionObjective, SessionDelegation } from '@craft-agent/shared/sessions';
+import type { ManagedSession } from './SessionManager/managed-session.ts';
+import type { SessionDelegation } from '@craft-agent/shared/sessions';
 import { assertCanonicalPermissionMode, type PermissionMode } from '@craft-agent/shared/agent/mode-manager';
 
 /** Host-only limits shared by the entire objective, including restored children. */
 export const DELEGATION_LIMITS = Object.freeze({ maxDepth: 2, maxChildren: 8, maxConcurrent: 4 });
-export interface DelegationSession {
-  id: string;
-  parentSessionId?: string;
-  delegation?: SessionDelegation;
-  activeObjective?: ActiveSessionObjective;
-  isProcessing: boolean;
-}
+export type DelegationSession = Pick<ManagedSession,
+  'id' | 'parentSessionId' | 'delegation' | 'activeObjective' | 'isProcessing'
+>;
 export class DelegationBudgetError extends Error {
   readonly code = 'delegation_budget_exceeded';
   readonly retryable = false;

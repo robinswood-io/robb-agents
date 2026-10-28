@@ -1,3 +1,6 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import type { ActiveSessionObjective } from '../../../shared/src/sessions/types/objectives.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { deriveTerminalReconciliationInvocationCapability, TERMINAL_RECONCILIATION_CAPABILITY_FIELD } from "@craft-agent/shared/agent";
@@ -6,19 +9,19 @@ import { createSession as createStoredSession, loadSession, listSessions } from 
 import { createManagedSession, SessionManager } from "./SessionManager.ts";
 import { objectiveReviewBinding, transitionObjectiveContract } from "./objective-contract.ts";
 import { HOST_DELEGATED_REVIEWER_PREFIX } from "./delegated-review-outcome.ts";
-import { type Managed, cleanup, harness, makeInitialTerminalReviewReady } from "./testing/delegation-host-fixture.ts";
+import { cleanup, harness, makeInitialTerminalReviewReady } from "./testing/delegation-host-fixture.ts";
 
 // These fixtures exercise the opt-in historical host contract.
 let previousLegacyContract: string | undefined;
 
 afterEach(() => { for (const dispose of cleanup.splice(0)) dispose(); });
 beforeEach(() => {
-  previousLegacyContract = process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
-  process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1';
+  previousLegacyContract = process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"];
+  process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1';
 });
 afterEach(() => {
-  if (previousLegacyContract === undefined) delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
-  else process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = previousLegacyContract;
+  if (previousLegacyContract === undefined) delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"];
+  else process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = previousLegacyContract;
 });
 
 describe('real host delegated-session dispatch', () => {
@@ -119,11 +122,7 @@ describe('real host delegated-session dispatch', () => {
     let markHydrationEntered!: () => void;
     const hydrationEntered = new Promise<void>(resolve => { markHydrationEntered = resolve; });
     const hydrationGate = new Promise<void>(resolve => { releaseHydration = resolve; });
-    const host = h.manager as unknown as {
-      ensureMessagesLoaded: (managed: Managed) => Promise<void>;
-      getOrCreateAgent: () => Promise<never>;
-      sendMessage: SessionManager['sendMessage'];
-    };
+    const host = sessionManagerForTest(h.manager);
     host.sendMessage = SessionManager.prototype.sendMessage.bind(h.manager);
     host.ensureMessagesLoaded = async managed => {
       if (managed.id === 'child-1') {
@@ -165,7 +164,7 @@ describe('real host delegated-session dispatch', () => {
     expect(child.isProcessing).toBe(false);
     expect(child.delegation?.finishedAt).toBeNumber();
     expect(childFlushes).toBeGreaterThanOrEqual(2);
-    expect(h.persisted.at(-1)?.delegation?.finishedAt).toBeNumber();
+    expect<unknown>(h.persisted.at(-1)?.delegation).toMatchObject({ finishedAt: (expect.any(Number) as unknown) });
   });
 
   it('rejects one-shot terminal coordination capabilities after an objective amendment', async () => {
@@ -197,7 +196,7 @@ describe('real host delegated-session dispatch', () => {
 
     const registration = harness();
     const registrationObjective = registration.parent.activeObjective!;
-    registration.parent.activeObjective = {
+    registration.parent.activeObjective = omitUndefined<ActiveSessionObjective>({
       ...registrationObjective,
       requiresAcceptanceCriteria: true,
       acceptanceCriteria: undefined,
@@ -206,7 +205,7 @@ describe('real host delegated-session dispatch', () => {
         timestamp: 2,
         initialAcceptanceRegistrationRequired: true,
       },
-    };
+    });
     const criteriaPolicy = registration.internals.resolveObjectiveMutationAuthority(
       registration.parent,
       registration.parent.activeObjective,
@@ -348,13 +347,16 @@ describe('real host delegated-session dispatch', () => {
   it('writes lineage in the first real storage record before dispatch or a later metadata save', async () => {
     const h = harness();
     h.internals.createSession = async (_workspaceId, options, internal) => {
+      if (!internal?.delegation) throw new Error('Storage fixture requires the host lineage');
       const stored = await createStoredSession(h.parent.workspace.rootPath, { ...options, delegation: internal.delegation } as never);
       // Read the real JSONL immediately after creation: no host persist/flush has occurred.
       expect(loadSession(h.parent.workspace.rootPath, stored.id)?.delegation).toEqual(internal.delegation);
       expect(listSessions(h.parent.workspace.rootPath).find(item => item.id === stored.id)?.delegation).toEqual(internal.delegation);
       const child = createManagedSession(stored, h.parent.workspace);
       sessionRuntimeStateForTest(h.internals).sessions.set(child.id, child);
-      return child;
+      const session = await h.manager.getSession(child.id);
+      if (!session) throw new Error('Created fixture session is unavailable');
+      return session;
     };
     const result = await h.spawn({ prompt: 'Examine le document cible /srv/document.', role: 'reviewer' });
     expect(h.persisted).toHaveLength(0);
@@ -403,7 +405,7 @@ describe('real host delegated-session dispatch', () => {
     h.internals.flushSession = async () => { throw new Error('Persistence unavailable'); };
     await expect(h.spawn()).rejects.toThrow('Persistence unavailable');
     expect(h.sent).toHaveLength(0);
-    expect(h.persisted.at(-1)?.delegation?.finishedAt).toBeNumber();
+    expect<unknown>(h.persisted.at(-1)?.delegation).toMatchObject({ finishedAt: (expect.any(Number) as unknown) });
     h.internals.flushSession = async () => {};
     await expect(h.spawn()).resolves.toMatchObject({ status: 'started' });
   });
@@ -415,14 +417,14 @@ describe('real host delegated-session dispatch', () => {
     };
     await expect(h.spawn()).rejects.toThrow('no longer current');
     expect(h.sent).toHaveLength(0);
-    expect(h.persisted.at(-1)?.delegation?.finishedAt).toBeNumber();
+    expect<unknown>(h.persisted.at(-1)?.delegation).toMatchObject({ finishedAt: (expect.any(Number) as unknown) });
   });
 
   it('never acknowledges started when dispatch fails and persists a consumable child failure', async () => {
     const h = harness();
     h.internals.sendMessage = async () => { throw new Error('Transport unavailable'); };
     await expect(h.spawn()).rejects.toThrow('Transport unavailable');
-    expect(h.persisted.at(-1)?.delegation?.finishedAt).toBeNumber();
+    expect<unknown>(h.persisted.at(-1)?.delegation).toMatchObject({ finishedAt: (expect.any(Number) as unknown) });
     expect(sessionRuntimeStateForTest(h.internals).sessions.get('child-1')?.messages.find(message => (
       message.role === 'error'
       && message.errorCode === 'delegated_dispatch_failed'

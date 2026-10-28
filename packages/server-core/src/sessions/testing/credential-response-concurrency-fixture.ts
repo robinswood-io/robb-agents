@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./private-runtime-access.ts";
 import { withSessionOperationsForTest } from './session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./runtime-state-access.ts";
 import { SessionManager, createManagedSession } from "../SessionManager";
@@ -53,32 +54,7 @@ export function harness(id: string) {
     authStatus: 'pending',
   }]
   const events: Array<Record<string, unknown>> = []
-  const runtime = manager as unknown as {
-    sessions: Map<string, typeof managed>
-    sendEvent: (event: Record<string, unknown>) => void
-    handleCredentialInput: (...args: unknown[]) => Promise<boolean>
-    credentialResponsesInFlight: Map<string, unknown>
-    oauthResponsesInFlight: Map<string, unknown>
-    cancelPendingAuthForHumanContinuation: (session: typeof managed) => boolean
-    persistSession: () => boolean
-    scheduleDeferredAutomaticSessions: () => void
-    pendingCredentialResolvers: Map<string, (response: unknown) => void>
-    ensureMessagesLoaded: (session: typeof managed) => Promise<void>
-    mintAuthenticatedInternalContinuation: (
-      session: typeof managed,
-      kind: 'auth-result' | 'auth-retry',
-    ) => symbol | undefined
-    sendAuthenticatedInternalContinuation: (
-      session: typeof managed,
-      message: string,
-      kind: 'auth-result' | 'auth-retry',
-      token: symbol,
-      input?: { existingMessageId?: string; isAuthRetry?: boolean },
-    ) => Promise<void>
-    flushSession: (sessionId: string) => Promise<void>
-    processNextQueuedMessage: (sessionId: string) => void
-    deferredAutomaticSessions: Set<string>
-  }
+  const runtime = sessionManagerForTest(manager)
   sessionRuntimeStateForTest(manager).sessions.set(id, managed)
   runtime.sendEvent = (event: Record<string, unknown>) => events.push(event)
   return { manager, managed, request, runtime, events }

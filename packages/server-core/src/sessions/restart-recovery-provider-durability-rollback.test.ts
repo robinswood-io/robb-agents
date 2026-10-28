@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { ScriptedSessionAgent } from "./testing/scripted-session-agent.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -135,9 +136,9 @@ describe('provider dispatch write-ahead recovery', () => {
     await h.manager.sendMessage(managed.id, 'Reject this exact preflight fixture.')
     await h.manager.flushSession(managed.id)
     const stored = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
       .find(message => message.id === dispatchedMessageId)
-    expect(stored.providerDispatch).toBeUndefined()
+    expect(requiredTestValue(stored).providerDispatch).toBeUndefined()
   })
 
   it('retires an uncorrelated post-write error and continues generically without exact replay', async () => {
@@ -189,9 +190,9 @@ describe('provider dispatch write-ahead recovery', () => {
     const preserved = managed.messages.find(message => message.id === dispatchedMessageId)
     expect(preserved?.providerDispatch).toBeUndefined()
     const stored = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
       .find(message => message.id === dispatchedMessageId)
-    expect(stored.providerDispatch).toBeUndefined()
+    expect(requiredTestValue(stored).providerDispatch).toBeUndefined()
     expect(managed.messageQueue).toEqual([])
     expect(h.events.some(event => (
       event.type === 'typed_error'

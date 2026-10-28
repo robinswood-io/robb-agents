@@ -19,7 +19,7 @@ export function BubbleButton({
   children,
 }: {
   onClick: () => void
-  isActive?: boolean
+  isActive?: boolean | undefined
   title: string
   children: React.ReactNode
 }) {
@@ -56,7 +56,7 @@ export function getEditableBlockMeta(editor: Editor): { label: string; code: str
     if (node.type.name === 'mermaidBlock') {
       return {
         label: 'Mermaid',
-        code: String(node.attrs.code ?? ''),
+        code: String(node.attrs["code"] ?? ''),
         update: (next) => {
           editor.chain().focus().setNodeSelection(pos).updateAttributes('mermaidBlock', { code: next }).run()
         },
@@ -66,7 +66,7 @@ export function getEditableBlockMeta(editor: Editor): { label: string; code: str
     if (node.type.name === 'latexBlock') {
       return {
         label: 'LaTeX',
-        code: String(node.attrs.code ?? ''),
+        code: String(node.attrs["code"] ?? ''),
         update: (next) => {
           editor.chain().focus().setNodeSelection(pos).updateAttributes('latexBlock', { code: next }).run()
         },
@@ -82,7 +82,7 @@ export function getEditableBlockMeta(editor: Editor): { label: string; code: str
     const node = $from.node(depth)
     if (node.type.name !== 'codeBlock') continue
 
-    const lang = (node.attrs.language as string | undefined)?.toLowerCase() ?? ''
+    const lang = (node.attrs["language"] as string | undefined)?.toLowerCase() ?? ''
     if (!VISUAL_LANGUAGES.has(lang)) return null
 
     const label = lang === 'mermaid' ? 'Mermaid' : 'LaTeX'

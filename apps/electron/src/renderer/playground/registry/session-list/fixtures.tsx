@@ -38,7 +38,7 @@ const mockSessionStatuses: SessionStatus[] = [
 // Sample Session Data
 // ============================================================================
 
-export const sampleSessions: SessionMeta[] = [
+export const sampleSessions: [SessionMeta, ...SessionMeta[]] = [
   {
     id: 'session-1',
     name: 'Fix authentication bug in login flow',

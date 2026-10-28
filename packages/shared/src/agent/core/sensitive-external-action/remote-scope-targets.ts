@@ -26,7 +26,7 @@ export function extractRemoteCommandScopeTargets(input: Record<string, unknown>)
   };
   const command = commandFromActionInput(input);
   try {
-    const ast = bashParser(command);
+    const ast: unknown = bashParser(command);
     if (hasUnsupportedRemoteScopeNode(ast) || hasDynamicShellExpansion(ast)
       || hasUnsafeRemoteInvocationMetadata(ast)
       || !remoteCdTransitionsAreSafelyChained(ast)) {

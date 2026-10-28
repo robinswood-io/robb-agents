@@ -167,7 +167,7 @@ export function InlineFileBadge({
   onFileClick
 }: {
   badge: ContentBadge
-  onFileClick?: (path: string) => void
+  onFileClick?: ((path: string) => void) | undefined
 }) {
   // Strip .craft-agent workspace/session path prefix for cleaner tooltip display
   // e.g. "/Users/.../workspaces/{id}/sessions/{id}/plans/foo.md" → "plans/foo.md"
@@ -222,7 +222,7 @@ export function renderContentWithBadges(
   content: string,
   badges: ContentBadge[],
   onUrlClick?: (url: string) => void,
-  onFileClick?: (path: string) => void
+  onFileClick?: ((path: string) => void) | undefined
 ): ReactNode {
   if (badges.length === 0) {
     return (
@@ -307,21 +307,21 @@ export interface UserMessageBubbleProps {
   /** Message content (markdown supported) */
   content: string
   /** Additional className for the outer container */
-  className?: string
+  className?: string | undefined
   /** Callback when a URL is clicked */
-  onUrlClick?: (url: string) => void
+  onUrlClick?: ((url: string) => void) | undefined
   /** Callback when a file path is clicked */
-  onFileClick?: (path: string) => void
+  onFileClick?: ((path: string) => void) | undefined
   /** Stored attachments (images, documents) */
-  attachments?: StoredAttachment[]
+  attachments?: StoredAttachment[] | undefined
   /** Content badges for inline display (sources, skills) */
-  badges?: ContentBadge[]
+  badges?: ContentBadge[] | undefined
   /** Whether the message is awaiting backend confirmation. User bubbles stay visually stable. */
-  isPending?: boolean
+  isPending?: boolean | undefined
   /** Whether the message is queued (badge shown) */
-  isQueued?: boolean
+  isQueued?: boolean | undefined
   /** Compact mode - reduces padding for popover embedding */
-  compactMode?: boolean
+  compactMode?: boolean | undefined
 }
 
 

@@ -47,7 +47,7 @@ export async function resolveConnectorApproval(transportOwner: MissionRuntimeSer
         throw new Error('Mission connector broker is unavailable');
     const before = context.controller.getMission(input.missionId);
     const revalidated = await context.specializedProfiles.revalidateMissionSpec(before.spec);
-    transportOwner["assertAdmissible"](context.workspace, revalidated);
+    transportOwner.assertAdmissible(context.workspace, revalidated);
     const workItem = before.workItems[input.workItemId];
     if (!workItem || workItem.definition.effect !== 'external-mutation') {
         throw new Error(`Unknown external-mutation work item "${input.workItemId}"`);
@@ -67,7 +67,7 @@ export async function refreshExpiredConnectorApproval(transportOwner: MissionRun
     const context = await transportOwner["contextFor"](workspaceId);
     const before = context.controller.getMission(missionId);
     const revalidated = await context.specializedProfiles.revalidateMissionSpec(before.spec);
-    transportOwner["assertAdmissible"](context.workspace, revalidated);
+    transportOwner.assertAdmissible(context.workspace, revalidated);
     const workItem = before.workItems[workItemId];
     if (!workItem || workItem.definition.effect !== 'external-mutation') {
         throw new Error(`Unknown external-mutation work item "${workItemId}"`);

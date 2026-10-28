@@ -1,5 +1,4 @@
 import { validateSessionExecutionIsolation, type SessionExecutionIsolation } from "@craft-agent/shared/tasks";
-import { type PendingTurnRecovery } from "@craft-agent/shared/sessions";
 import type { ManagedSession } from './managed-session.ts';
 
 export type SessionReviewRole = Pick<ManagedSession, 'delegation' | 'missionRole'>
@@ -13,12 +12,9 @@ export function isTerminalReviewSession(session: SessionReviewRole): boolean {
     || session.missionRole === 'supervisor'
 }
 
-type MissionRecoveryOwnership = SessionReviewRole & {
-  missionId?: string
-  missionWorkItemId?: string
-  missionDispatchId?: string
-  pendingTurnRecovery?: PendingTurnRecovery
-}
+type MissionRecoveryOwnership = SessionReviewRole & Pick<ManagedSession,
+  'missionId' | 'missionWorkItemId' | 'missionDispatchId' | 'pendingTurnRecovery'
+>;
 
 /** MissionRuntime, not the generic cold-session scheduler, owns recovery of
  * every durably identified Mission turn. Only MissionRuntime can bind the

@@ -42,7 +42,7 @@ export function registerToolbarIpc(transportOwner: BrowserPaneManager): void {
         const normalizedOpen = !!open;
         const normalizedHeight = Math.max(0, Math.ceil(Number(height ?? 0)));
         if (!normalizedOpen) {
-            transportOwner["forceCloseToolbarMenu"](inst, 'renderer-close');
+            transportOwner.forceCloseToolbarMenu(inst, 'renderer-close');
             return;
         }
         const changed = !inst.toolbarMenuOpen
@@ -83,7 +83,7 @@ export function registerToolbarIpc(transportOwner: BrowserPaneManager): void {
   /** Register the `__browser:invoke` IPC handler. Call once at app startup. */
 export function registerCapabilityIpc(transportOwner: BrowserPaneManager): void {
     ipcMain.handle('__browser:invoke', async (_event, req: BrowserCapabilityRequest) => {
-        return await transportOwner["dispatchCapability"](req);
+        return await transportOwner.dispatchCapability(req);
     });
     mainLog.info('[browser-pane] Capability IPC handler registered');
 }

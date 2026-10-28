@@ -1,3 +1,5 @@
+import type { ActiveSessionObjective } from '../../../../../shared/src/sessions/types/objectives.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { exactProviderDispatchAcceptanceUnknown, assertRetryTurnAnchor, nextRecoveryDispatch, validAllocatedRecoveryDispatch, isLegacyHostObjectiveContractEnabled } from '../policy.ts';
 import { acknowledgeDurableDelivery } from '../../agent-delivery.ts';
@@ -99,11 +101,11 @@ async function sessionOpRetryTurnInternal(sessionOperationContext: SessionOperat
             };
             const hadRuntimeFence = sessionOperationContext.state.agentDeliverySetupPersistenceFences.get(managed.id)
                 === blockedReceipt.agentDelivery!.id;
-            blockedReceipt.agentDelivery!.setupFailureCount = undefined;
-            blockedReceipt.agentDelivery!.lastSetupFailureClass = undefined;
-            blockedReceipt.agentDelivery!.setupRetryNotBefore = undefined;
-            blockedReceipt.agentDelivery!.setupRetryBlockedAt = undefined;
-            blockedReceipt.agentDelivery!.setupPersistenceFencedAt = undefined;
+            delete blockedReceipt.agentDelivery!.setupFailureCount;
+            delete blockedReceipt.agentDelivery!.lastSetupFailureClass;
+            delete blockedReceipt.agentDelivery!.setupRetryNotBefore;
+            delete blockedReceipt.agentDelivery!.setupRetryBlockedAt;
+            delete blockedReceipt.agentDelivery!.setupPersistenceFencedAt;
             if (hadRuntimeFence)
                 sessionOperationContext.state.agentDeliverySetupPersistenceFences.delete(managed.id);
             sessionOpClearDeferredAutomaticRetry(sessionOperationContext, managed.id);
@@ -181,8 +183,8 @@ async function sessionOpRetryTurnInternal(sessionOperationContext: SessionOperat
             const generation = managed.processingGeneration + 1;
             const cancellationEpoch = sessionOperationContext.state.turnCancellationEpochs.get(managed) ?? 0;
             if (previousObjective)
-                managed.activeObjective = { ...previousObjective, terminalState: 'active', completedAt: undefined };
-            managed.pendingTurnRecovery = { ...previousRecovery!, waitingForPermission: undefined };
+                managed.activeObjective = omitUndefined<ActiveSessionObjective>({ ...previousObjective, terminalState: 'active', completedAt: undefined });
+            managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({ ...previousRecovery!, waitingForPermission: undefined });
             const dispatchToken = Symbol('permission-inbox-retry');
             sessionOperationContext.state.queuedMessageDispatches.set(managed.id, dispatchToken);
             sessionOperationContext.state.permissionInboxRetryDispatches.add(dispatchToken);

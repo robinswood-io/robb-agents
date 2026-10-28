@@ -1,4 +1,4 @@
-import type { StoredMessage } from "@craft-agent/shared/sessions";
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { piAgentForTest, type PiAgentTestView } from "./testing/private-runtime-access.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -134,7 +134,7 @@ describe('durable restart recovery', () => {
     })).toBe(true)
 
     const persistedJsonl = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-    const persistedBeforeMutation = persistedJsonl.trim().split('\n').slice(1).map((line): StoredMessage => JSON.parse(line))
+    const persistedBeforeMutation = persistedJsonl.trim().split('\n').slice(1).map(parseRecoveryJournalObservation)
     const receipt = persistedBeforeMutation.find((message) => (
       message.toolUseId === 'mutation-before-tool-start'
     ))
@@ -169,9 +169,9 @@ describe('durable restart recovery', () => {
     ))).toMatchObject({
       role: 'tool', toolName: 'Edit', toolStatus: 'executing', toolInput: safeInput,
     })
-    expect(restored.pendingTurnRecovery).toMatchObject({
+    expect<unknown>(restored.pendingTurnRecovery).toMatchObject({
       attempts: 2,
-      exhaustedAt: expect.any(Number),
+      exhaustedAt: (expect.any(Number) as unknown),
       recoveryDispatch: { id: dispatchId, attempt: 2, phase: 'started' },
     })
   })
@@ -331,9 +331,9 @@ describe('durable restart recovery', () => {
     expect(restored.messageQueue).toEqual([])
     expect(restored.messages.filter((message) => message.toolUseId === toolUseId)).toHaveLength(1)
     expect(restored.messages.some((message: { id: string }) => message.id === dispatchId)).toBe(true)
-    expect(restored.pendingTurnRecovery).toMatchObject({
+    expect<unknown>(restored.pendingTurnRecovery).toMatchObject({
       attempts: 2,
-      exhaustedAt: expect.any(Number),
+      exhaustedAt: (expect.any(Number) as unknown),
       recoveryDispatch: { id: dispatchId, attempt: 2, phase: 'started' },
     })
   })

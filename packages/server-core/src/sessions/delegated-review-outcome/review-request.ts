@@ -82,30 +82,30 @@ export function getDelegatedReviewRequest(
   if (containsReservedHostReviewerArtifact(text)) return undefined;
   if (!isBoundReadOnlyReviewScope(text)) return undefined;
   const objects = requestObjects(text);
-  const bindings = objects.filter(value => typeof value.objectiveId === 'string' && /^[a-f0-9]{64}$/i.test(String(value.acceptanceSha256)));
-  const uniqueBindings = new Set(bindings.map(value => JSON.stringify([value.objectiveId, value.acceptanceSha256])));
+  const bindings = objects.filter(value => typeof value["objectiveId"] === 'string' && /^[a-f0-9]{64}$/i.test(String(value["acceptanceSha256"])));
+  const uniqueBindings = new Set(bindings.map(value => JSON.stringify([value["objectiveId"], value["acceptanceSha256"]])));
   if (uniqueBindings.size !== 1) return undefined;
-  const templates = bindings.filter(value => ['PASS', 'FAIL', 'PASS|FAIL'].includes(String(value.verdict)) && Array.isArray(value.criteria));
+  const templates = bindings.filter(value => ['PASS', 'FAIL', 'PASS|FAIL'].includes(String(value["verdict"])) && Array.isArray(value["criteria"]));
   if (!templates.length) return undefined;
-  const criteria = (templates[0]!.criteria as unknown[]).map(item => (item as { id?: unknown })?.id);
+  const criteria = (templates[0]!["criteria"] as unknown[]).map(item => (item as { id?: unknown })?.id);
   if (!criteria.length || criteria.length > 32 || criteria.some(id => typeof id !== 'string' || !/^[a-z][a-z0-9_-]{0,127}$/.test(id))
     || new Set(criteria).size !== criteria.length
-    || templates.some(value => JSON.stringify((value.criteria as Array<{ id: string }>).map(item => item?.id)) !== JSON.stringify(criteria))) return undefined;
+    || templates.some(value => JSON.stringify((value["criteria"] as Array<{ id: string }>).map(item => item?.id)) !== JSON.stringify(criteria))) return undefined;
   // A concrete target must be part of the task itself. A binding/hash alone
   // cannot turn an arbitrary tool invocation into an audit of a real resource.
   const target = reviewTarget(text, sourceSlugs);
   if (!target) return undefined;
   const folded = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   const revision = /\b(?:commit|HEAD(?:\s+(?:attendu|exactement|vaut|doit\s+valoir))?)\s*[:=]?\s*(?:[A-Z][A-Z0-9_-]*\s+)?([a-f0-9]{7,40})\b/i.exec(folded)?.[1];
-  return { objectiveId: String(bindings[0]!.objectiveId), acceptanceSha256: String(bindings[0]!.acceptanceSha256), criteria: criteria as string[], ...target, ...(revision ? { revision } : {}) };
+  return { objectiveId: String(bindings[0]!["objectiveId"]), acceptanceSha256: String(bindings[0]!["acceptanceSha256"]), criteria: criteria as string[], ...target, ...(revision ? { revision } : {}) };
 }
 
 /** Replace only the objective-contract paragraph for this qualified child task. */
 export function buildDelegatedReviewPrompt(input: {
-  parentSessionId?: string;
+  parentSessionId?: string | undefined;
   objective: ActiveSessionObjective;
-  sourceSlugs?: readonly string[];
-  messages?: readonly Message[];
+  sourceSlugs?: readonly string[] | undefined;
+  messages?: readonly Message[] | undefined;
 }): string | undefined {
   const request = input.parentSessionId && input.objective.originalText
     ? getDelegatedReviewRequest(input.objective.originalText, input.sourceSlugs, input.objective.delegatedRole) : undefined;

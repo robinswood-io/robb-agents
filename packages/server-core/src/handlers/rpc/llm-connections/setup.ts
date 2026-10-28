@@ -1,3 +1,4 @@
+import { setOptional } from '@craft-agent/shared/utils/json';
 import { RPC_CHANNELS, type LlmConnectionSetup } from '@craft-agent/shared/protocol';
 import { getLlmConnection, addLlmConnection, updateLlmConnection, getDefaultLlmConnection, setDefaultLlmConnection, isCompatProvider, isAnthropicProvider, getDefaultModelsForConnection, getDefaultModelForConnection, type LlmConnection, toBedrockNativeId, deriveBedrockRegionPrefix } from '@craft-agent/shared/config';
 import { getCredentialManager } from '@craft-agent/shared/credentials';
@@ -38,7 +39,7 @@ export function registerLlmSetupHandlers(server: RpcServer, deps: HandlerDeps, s
       const updates: Partial<LlmConnection> = {}
       const hasConfiguredBaseUrl = !!setup.baseUrl?.trim()
       if (setup.baseUrl !== undefined) {
-        updates.baseUrl = setup.baseUrl?.trim() || undefined
+        setOptional(updates, "baseUrl", setup.baseUrl?.trim() || undefined)
 
         // Only mutate providerType for API key connections (not OAuth connections)
         if (isAnthropicProvider(connection.providerType) && connection.authType !== 'oauth') {
@@ -60,10 +61,10 @@ export function registerLlmSetupHandlers(server: RpcServer, deps: HandlerDeps, s
       }
 
       if (setup.defaultModel !== undefined) {
-        updates.defaultModel = setup.defaultModel ?? undefined
+        setOptional(updates, "defaultModel", setup.defaultModel ?? undefined)
       }
       if (setup.models !== undefined) {
-        updates.models = setup.models ?? undefined
+        setOptional(updates, "models", setup.models ?? undefined)
       }
       if (setup.modelSelectionMode !== undefined) {
         updates.modelSelectionMode = setup.modelSelectionMode
@@ -73,7 +74,7 @@ export function registerLlmSetupHandlers(server: RpcServer, deps: HandlerDeps, s
         if (projectId && !/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(projectId)) {
           return { success: false, error: 'Google Cloud project ID must be 6-30 lowercase letters, digits, or hyphens, starting with a letter.' }
         }
-        updates.googleCloudProject = projectId || undefined
+        setOptional(updates, "googleCloudProject", projectId || undefined)
       }
 
       const customEndpoint = hasConfiguredBaseUrl ? setup.customEndpoint : undefined
@@ -99,7 +100,7 @@ export function registerLlmSetupHandlers(server: RpcServer, deps: HandlerDeps, s
         // Treat this as non-custom mode and clear stale custom endpoint metadata.
         // Only downgrade existing connections — new ones already have the correct
         // providerType from createBuiltInConnection().
-        updates.customEndpoint = undefined
+        delete updates.customEndpoint;
         if (connection.providerType === 'pi_compat' && connection.authType !== 'oauth' && !isNewConnection) {
           updates.providerType = 'pi'
           updates.authType = 'api_key'
@@ -196,7 +197,7 @@ export function registerLlmSetupHandlers(server: RpcServer, deps: HandlerDeps, s
       if (updates.models && updates.models.length > 0) {
         const validation = validateModelList(updates.models, pendingConnection.defaultModel)
         if (!validation.valid) {
-          return { success: false, error: validation.error }
+          return { success: false, ...(validation.error !== undefined ? { error: validation.error } : {}) }
         }
         if (validation.resolvedDefaultModel) {
           pendingConnection.defaultModel = validation.resolvedDefaultModel
@@ -299,12 +300,12 @@ export function registerLlmSetupHandlers(server: RpcServer, deps: HandlerDeps, s
       return { success: false, error: 'API key is required' }
     }
 
-    const setupValidation = validateSetupTestInput({ provider, baseUrl, piAuthProvider })
+    const setupValidation = validateSetupTestInput({ provider, ...(baseUrl !== undefined ? { baseUrl: baseUrl } : {}), ...(piAuthProvider !== undefined ? { piAuthProvider: piAuthProvider } : {}) })
     if (!setupValidation.valid) {
       return { success: false, error: setupValidation.error }
     }
 
-    const hint = resolveSetupTestConnectionHint({ provider, baseUrl, piAuthProvider, customEndpoint })
+    const hint = resolveSetupTestConnectionHint({ provider, ...(baseUrl !== undefined ? { baseUrl: baseUrl } : {}), ...(piAuthProvider !== undefined ? { piAuthProvider: piAuthProvider } : {}), ...(customEndpoint !== undefined ? { customEndpoint: customEndpoint } : {}) })
     deps.platform.logger?.info(`[testLlmConnectionSetup] Testing: provider=${provider}${piAuthProvider ? ` piAuth=${piAuthProvider}` : ''}${baseUrl ? ` baseUrl=${baseUrl}` : ''} hasCustomEndpoint=${!!customEndpoint} hintProvider=${hint.providerType}`)
 
     const startedAt = Date.now()
@@ -316,7 +317,7 @@ export function registerLlmSetupHandlers(server: RpcServer, deps: HandlerDeps, s
         apiKey: trimmedKey,
         allowEmptyApiKey,
         model: testModel,
-        baseUrl,
+        ...(baseUrl !== undefined ? { baseUrl: baseUrl } : {}),
         timeoutMs: 45000,
         hostRuntime: buildBackendHostRuntimeContext(deps.platform),
         connection: hint,

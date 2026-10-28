@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { randomUUID } from 'node:crypto';
 import { getPermissionModeDiagnostics } from '@craft-agent/shared/agent';
@@ -58,9 +60,9 @@ export function installRuntimePermissionCallbacks(sessionOperationContext: Sessi
                 requestId: request.requestId,
                 sessionId: managed.id,
                 command: request.command,
-                reason: request.reason,
-                impact: request.impact,
-                approvalTtlSeconds: request.approvalTtlSeconds,
+                ...(request.reason !== undefined ? { reason: request.reason } : {}),
+                ...(request.impact !== undefined ? { impact: request.impact } : {}),
+                ...(request.approvalTtlSeconds !== undefined ? { approvalTtlSeconds: request.approvalTtlSeconds } : {}),
             });
             brokerMetadata = {
                 commandHash: brokerRequest.commandHash,
@@ -93,10 +95,10 @@ export function installRuntimePermissionCallbacks(sessionOperationContext: Sessi
             sessionOperationContext.owner["persistSession"](managed);
         }
         if (hasMatchingExternalActionAuthorization(activeExternalAuthorizations, {
-            category: request.sensitiveActionCategory,
-            targetCandidates: request.sensitiveActionTargets,
+            ...(request.sensitiveActionCategory !== undefined ? { category: request.sensitiveActionCategory } : {}),
+            ...(request.sensitiveActionTargets !== undefined ? { targetCandidates: request.sensitiveActionTargets } : {}),
             toolName: request.toolName,
-            operationHash: request.sensitiveActionOperationHash,
+            ...(request.sensitiveActionOperationHash !== undefined ? { operationHash: request.sensitiveActionOperationHash } : {}),
         }, requestedAt)) {
             sessionOperationContext.owner["emitExecutionTelemetry"](managed, {
                 schemaVersion: 1,
@@ -159,20 +161,20 @@ export function installRuntimePermissionCallbacks(sessionOperationContext: Sessi
         timeout.unref?.();
         sessionOperationContext.state.pendingPermissionRequests.set(request.requestId, {
             sessionId: managed.id,
-            type: request.type,
-            commandHash: effectiveCommandHash,
+            ...(request.type !== undefined ? { type: request.type } : {}),
+            ...(effectiveCommandHash !== undefined ? { commandHash: effectiveCommandHash } : {}),
             toolName: request.toolName,
-            toolUseId: request.toolUseId,
+            ...(request.toolUseId !== undefined ? { toolUseId: request.toolUseId } : {}),
             processingGeneration: permissionGeneration,
-            objectiveId: permissionObjectiveId,
+            ...(permissionObjectiveId !== undefined ? { objectiveId: permissionObjectiveId } : {}),
             runtimeAgent: createdAgent!,
             requestedAt,
             expiresAt,
             request: fullRequest,
             timeout,
-            sensitiveActionCategory: request.sensitiveActionCategory,
-            sensitiveActionTargets: request.sensitiveActionTargets,
-            sensitiveActionOperationHash: request.sensitiveActionOperationHash,
+            ...(request.sensitiveActionCategory !== undefined ? { sensitiveActionCategory: request.sensitiveActionCategory } : {}),
+            ...(request.sensitiveActionTargets !== undefined ? { sensitiveActionTargets: request.sensitiveActionTargets } : {}),
+            ...(request.sensitiveActionOperationHash !== undefined ? { sensitiveActionOperationHash: request.sensitiveActionOperationHash } : {}),
         });
         if (managed.pendingTurnRecovery) {
             managed.pendingTurnRecovery = { ...managed.pendingTurnRecovery,
@@ -210,7 +212,7 @@ export function installRuntimePermissionCallbacks(sessionOperationContext: Sessi
             changedBy: diagnostics.lastChangedBy,
             changedAt: diagnostics.lastChangedAt,
         });
-        sessionOperationContext.owner["sendEvent"]({
+        sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'permission_mode_changed' }>>({
             type: 'permission_mode_changed',
             sessionId: managed.id,
             permissionMode: managed.permissionMode,
@@ -219,7 +221,7 @@ export function installRuntimePermissionCallbacks(sessionOperationContext: Sessi
             changedAt: diagnostics.lastChangedAt,
             previousPermissionMode: diagnostics.previousPermissionMode,
             transitionDisplay: diagnostics.transitionDisplay,
-        }, managed.workspace.id);
+        }), managed.workspace.id);
     };
 }
 

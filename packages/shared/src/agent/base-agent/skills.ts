@@ -97,7 +97,7 @@ export function extractSkillPaths(transportOwner: BaseAgent, message: string): B
    * Format a directive telling the model to read skill SKILL.md files before proceeding.
    * Called from chat() — all agents get the same directive prepended to their message.
    */
-export function formatSkillDirective(transportOwner: BaseAgent, skillPaths: Map<string, string>): string {
+export function formatSkillDirective(_transportOwner: BaseAgent, skillPaths: Map<string, string>): string {
     if (skillPaths.size === 0)
         return '';
     const pathList = [...skillPaths.entries()]
@@ -106,7 +106,7 @@ export function formatSkillDirective(transportOwner: BaseAgent, skillPaths: Map<
     return `Before proceeding with the user's request, you MUST read the following skill instruction files using the Read tool or \`cat\` via Bash:\n${pathList}\n\nDo not take any other action until you have read these files.`;
 }
 
-export function formatSealedSkillDirective(transportOwner: BaseAgent, skills: Map<string, string>): string {
+export function formatSealedSkillDirective(_transportOwner: BaseAgent, skills: Map<string, string>): string {
     if (skills.size === 0)
         return '';
     return [...skills.entries()].map(([slug, content]) => `<host_sealed_skill_package slug=${JSON.stringify(slug)}>\n${content}\n</host_sealed_skill_package>`).join('\n\n')

@@ -7,7 +7,7 @@
  * when no Shiki theme is configured.
  */
 
-import * as React from 'react'
+
 import { ShikiDiffViewer as BaseShikiDiffViewer, type ShikiDiffViewerProps as BaseProps } from '@craft-agent/ui'
 import { useTheme } from '@/hooks/useTheme'
 

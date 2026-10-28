@@ -70,11 +70,11 @@ export function ActiveOptionBadges({
     if (sessionLabels.length === 0 || labels.length === 0) return []
     const flat = flattenLabels(labels)
     const result: ResolvedLabelEntry[] = []
-    for (let i = 0; i < sessionLabels.length; i++) {
-      const parsed = parseLabelEntry(sessionLabels[i])
+    for (const [i, entry] of sessionLabels.entries()) {
+      const parsed = parseLabelEntry(entry)
       const config = flat.find(l => l.id === parsed.id)
       if (config) {
-        result.push({ config, rawValue: parsed.rawValue, index: i })
+        result.push({ config, ...(parsed.rawValue !== undefined ? { rawValue: parsed.rawValue } : {}), index: i })
       }
     }
     return result

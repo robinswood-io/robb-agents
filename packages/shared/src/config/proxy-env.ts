@@ -10,16 +10,16 @@ export function getProxyEnvVars(): Record<string, string> {
 
   const env: Record<string, string> = {};
   if (settings.httpProxy) {
-    env.HTTP_PROXY = settings.httpProxy;
-    env.http_proxy = settings.httpProxy;
+    env["HTTP_PROXY"] = settings.httpProxy;
+    env["http_proxy"] = settings.httpProxy;
   }
   if (settings.httpsProxy) {
-    env.HTTPS_PROXY = settings.httpsProxy;
-    env.https_proxy = settings.httpsProxy;
+    env["HTTPS_PROXY"] = settings.httpsProxy;
+    env["https_proxy"] = settings.httpsProxy;
   }
   if (settings.noProxy) {
-    env.NO_PROXY = settings.noProxy;
-    env.no_proxy = settings.noProxy;
+    env["NO_PROXY"] = settings.noProxy;
+    env["no_proxy"] = settings.noProxy;
   }
   return env;
 }

@@ -100,7 +100,7 @@ export interface ValidatedUrlTarget {
  */
 export async function validateUrl(
   url: string,
-  dnsLookup: DnsLookupFn = lookup as unknown as DnsLookupFn,
+  dnsLookup: DnsLookupFn = lookup as DnsLookupFn,
 ): Promise<ValidatedUrlTarget> {
   const parsed = new URL(url);
 

@@ -58,12 +58,12 @@ export async function prepareOAuth(transportOwner: SourceCredentialManager, sour
                 }
             }
             prepared = prepareGoogleOAuth({
-                service,
-                scopes,
-                callbackPort,
-                callbackUrl: providerCallbackUrl,
-                clientId: api?.googleOAuthClientId,
-                clientSecret: api?.googleOAuthClientSecret,
+                ...(service !== undefined ? { service } : {}),
+                ...(scopes !== undefined ? { scopes } : {}),
+                ...(callbackPort !== undefined ? { callbackPort } : {}),
+                ...(providerCallbackUrl !== undefined ? { callbackUrl: providerCallbackUrl } : {}),
+                ...(api?.googleOAuthClientId !== undefined ? { clientId: api?.googleOAuthClientId } : {}),
+                ...(api?.googleOAuthClientSecret !== undefined ? { clientSecret: api?.googleOAuthClientSecret } : {}),
             });
             break;
         }
@@ -80,7 +80,7 @@ export async function prepareOAuth(transportOwner: SourceCredentialManager, sour
             else {
                 service = inferSlackServiceFromUrl(api?.baseUrl) || 'full';
             }
-            prepared = prepareSlackOAuth({ service, userScopes, callbackPort, callbackUrl: providerCallbackUrl });
+            prepared = prepareSlackOAuth({ ...(service !== undefined ? { service } : {}), ...(userScopes !== undefined ? { userScopes } : {}), ...(callbackPort !== undefined ? { callbackPort } : {}), ...(providerCallbackUrl !== undefined ? { callbackUrl: providerCallbackUrl } : {}) });
             break;
         }
         case 'microsoft': {
@@ -100,14 +100,14 @@ export async function prepareOAuth(transportOwner: SourceCredentialManager, sour
                         `Set microsoftService in api config.`);
                 }
             }
-            prepared = prepareMicrosoftOAuth({ service, scopes, callbackPort, callbackUrl: providerCallbackUrl });
+            prepared = prepareMicrosoftOAuth({ ...(service !== undefined ? { service } : {}), ...(scopes !== undefined ? { scopes } : {}), ...(callbackPort !== undefined ? { callbackPort } : {}), ...(providerCallbackUrl !== undefined ? { callbackUrl: providerCallbackUrl } : {}) });
             break;
         }
         case 'generic': {
             const oauthConfig = source.config.api?.oauth;
             if (oauthConfig) {
                 // Static config: endpoints provided in config.json
-                prepared = prepareGenericOAuth({ oauthConfig, callbackPort, callbackUrl: providerCallbackUrl });
+                prepared = prepareGenericOAuth({ oauthConfig, ...(callbackPort !== undefined ? { callbackPort } : {}), ...(providerCallbackUrl !== undefined ? { callbackUrl: providerCallbackUrl } : {}) });
             }
             else {
                 // Auto-discovery: hit baseUrl, discover OAuth metadata via RFC 9728/8414,
@@ -116,7 +116,7 @@ export async function prepareOAuth(transportOwner: SourceCredentialManager, sour
                 if (!baseUrl) {
                     throw new Error(`Source '${source.config.slug}' missing api.baseUrl for OAuth discovery`);
                 }
-                prepared = await prepareMcpOAuth(baseUrl, { callbackPort, callbackUrl: providerCallbackUrl });
+                prepared = await prepareMcpOAuth(baseUrl, { ...(callbackPort !== undefined ? { callbackPort } : {}), ...(providerCallbackUrl !== undefined ? { callbackUrl: providerCallbackUrl } : {}) });
                 // Relabel as generic (discovery used MCP internals but this is an API source)
                 prepared = { ...prepared, provider: 'generic' };
             }
@@ -126,7 +126,7 @@ export async function prepareOAuth(transportOwner: SourceCredentialManager, sour
             if (!source.config.mcp?.url) {
                 throw new Error('MCP URL not configured');
             }
-            prepared = await prepareMcpOAuth(source.config.mcp.url, { callbackPort, callbackUrl: providerCallbackUrl });
+            prepared = await prepareMcpOAuth(source.config.mcp.url, { ...(callbackPort !== undefined ? { callbackPort } : {}), ...(providerCallbackUrl !== undefined ? { callbackUrl: providerCallbackUrl } : {}) });
             break;
         }
     }
@@ -155,20 +155,20 @@ export async function exchangeAndStore(transportOwner: SourceCredentialManager, 
             break;
     }
     if (!result.success) {
-        return { success: false, error: result.error };
+        return { success: false, ...(result.error !== undefined ? { error: result.error } : {}) };
     }
     // Save credentials
     await transportOwner["save"](source, {
         value: result.accessToken!,
-        refreshToken: result.refreshToken,
-        expiresAt: result.expiresAt,
-        clientId: result.oauthClientId,
-        clientSecret: result.oauthClientSecret,
+        ...(result.refreshToken !== undefined ? { refreshToken: result.refreshToken } : {}),
+        ...(result.expiresAt !== undefined ? { expiresAt: result.expiresAt } : {}),
+        ...(result.oauthClientId !== undefined ? { clientId: result.oauthClientId } : {}),
+        ...(result.oauthClientSecret !== undefined ? { clientSecret: result.oauthClientSecret } : {}),
     });
     // Mark source as authenticated in config.json
     markSourceAuthenticated(source.workspaceRootPath, source.config.slug);
     debug(`[SourceCredentialManager] OAuth exchange+store complete for ${source.config.slug}`);
-    return { success: true, email: result.email };
+    return { success: true, ...(result.email !== undefined ? { email: result.email } : {}) };
 }
 
 export async function authenticate(transportOwner: SourceCredentialManager, source: LoadedSource, callbacks?: OAuthCallbacks, sessionContext?: OAuthSessionContext): Promise<AuthResult> {
@@ -179,23 +179,23 @@ export async function authenticate(transportOwner: SourceCredentialManager, sour
     const cb = callbacks || defaultCallbacks;
     // Google APIs use Google OAuth
     if (source.config.provider === 'google') {
-        return transportOwner["authenticateGoogle"](source, cb, sessionContext);
+        return transportOwner.authenticateGoogle(source, cb, sessionContext);
     }
     // Slack APIs use Slack OAuth
     if (source.config.provider === 'slack') {
-        return transportOwner["authenticateSlack"](source, cb, sessionContext);
+        return transportOwner.authenticateSlack(source, cb, sessionContext);
     }
     // Microsoft APIs use Microsoft OAuth
     if (source.config.provider === 'microsoft') {
-        return transportOwner["authenticateMicrosoft"](source, cb, sessionContext);
+        return transportOwner.authenticateMicrosoft(source, cb, sessionContext);
     }
     // Generic OAuth (explicit config or auto-discovery from baseUrl)
     if (source.config.api?.authType === 'oauth') {
-        return transportOwner["authenticateGeneric"](source, cb, sessionContext);
+        return transportOwner.authenticateGeneric(source, cb, sessionContext);
     }
     // MCP OAuth flow
     if (source.config.type === 'mcp' && source.config.mcp?.authType === 'oauth') {
-        return transportOwner["authenticateMcp"](source, cb, sessionContext);
+        return transportOwner.authenticateMcp(source, cb, sessionContext);
     }
     return {
         success: false,
@@ -216,8 +216,8 @@ export async function authenticateMcp(transportOwner: SourceCredentialManager, s
         // Save the credentials
         await transportOwner["save"](source, {
             value: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
-            expiresAt: tokens.expiresAt,
+            ...(tokens.refreshToken !== undefined ? { refreshToken: tokens.refreshToken } : {}),
+            ...(tokens.expiresAt !== undefined ? { expiresAt: tokens.expiresAt } : {}),
             clientId,
             tokenType: tokens.tokenType,
         });

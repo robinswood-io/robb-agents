@@ -33,7 +33,7 @@ export function findRelevantPatterns(command: string, patterns: CompiledBashPatt
     ) {
       relevant.push({
         source: pattern.source,
-        comment: pattern.comment,
+        ...(pattern.comment !== undefined ? { comment: pattern.comment } : {}),
       });
     }
   }
@@ -159,9 +159,9 @@ export function analyzePatternMismatch(command: string, patterns: CompiledBashPa
     failedToken,
     bestMatchPattern: {
       source: bestMatch.pattern.source,
-      comment: bestMatch.pattern.comment,
+      ...(bestMatch.pattern.comment !== undefined ? { comment: bestMatch.pattern.comment } : {}),
     },
-    suggestion,
+    ...(suggestion !== undefined ? { suggestion } : {}),
   };
 }
 
@@ -171,7 +171,7 @@ export function analyzePatternMismatch(command: string, patterns: CompiledBashPa
  */
 function generateMismatchSuggestion(
   command: string,
-  matchedPrefix: string,
+  _matchedPrefix: string,
   failedToken: string,
   pattern: CompiledBashPattern
 ): string | undefined {

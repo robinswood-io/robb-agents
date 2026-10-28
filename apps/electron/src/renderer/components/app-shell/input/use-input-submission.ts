@@ -10,7 +10,7 @@ import { coerceInputText } from '@/lib/input-text';
 
 import { applySmartTypography } from '@/lib/smart-typography';
 
-import type { FileAttachment, LoadedSkill } from '../../../../shared/types';
+import type { FileAttachment,LoadedSkill } from '../../../../shared/types';
 
 import { hasOpenOverlay } from '@/lib/overlay-detection';
 
@@ -63,8 +63,6 @@ export function useInputSubmission({
   onAttachmentsChange,
   prevInputValueRef,
   richInputRef,
-  onWorkingDirectoryChange,
-  homeDir,
   sessionId,
   isFocusedPanel,
   onStop,
@@ -72,7 +70,6 @@ export function useInputSubmission({
   inlineSlash,
   inlineLabel,
   sendMessageKey,
-  inputRef,
   syncToParent,
   autoCapitalisation,
   onSessionStatusChange,
@@ -115,7 +112,7 @@ const submitMessage = React.useCallback(() => {
 React.useEffect(() => {
     const handleSubmitInput = (e: CustomEvent<{ sessionId?: string }>) => {
       const targetSessionId = e.detail?.sessionId
-      if (!shouldHandleScopedInputEvent({ sessionId, isFocusedPanel, targetSessionId })) return
+      if (!shouldHandleScopedInputEvent({ ...(sessionId !== undefined ? { sessionId: sessionId } : {}), isFocusedPanel, ...(targetSessionId !== undefined ? { targetSessionId: targetSessionId } : {}) })) return
       submitMessage()
     }
 
@@ -214,13 +211,11 @@ const handleKeyDown = (e: React.KeyboardEvent) => {
 
 const handleInputChange = React.useCallback((value: string) => {
     const nextValue = coerceInputText(value)
-    // Get previous input value before updating state
-    const prevValue = inputRef.current
 
     setInput(nextValue)
     syncToParent(nextValue) // Debounced sync to parent for draft persistence
 
-  }, [syncToParent, inputRef, setInput])
+  }, [syncToParent, setInput])
 
 const handleRichInput = React.useCallback((value: string, cursorPosition: number) => {
     const nextValue = coerceInputText(value)

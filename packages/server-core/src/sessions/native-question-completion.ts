@@ -4,30 +4,35 @@ import {
 } from '@craft-agent/core';
 import type { Message, ObjectiveOutcomeDeclaration } from '@craft-agent/core/types';
 import type { ActiveSessionObjective } from '@craft-agent/shared/sessions';
+import { parseJsonObject } from '@craft-agent/shared/utils/json';
+import { z } from 'zod';
 
-type Question = { id: string; question: string; options?: Array<{ id: string; label: string }>; multiSelect: boolean };
+const NativeQuestionSchema = z.object({
+  id: z.string().min(1), question: z.string().min(1),
+  options: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) }))
+    .min(2).max(20).refine(options => new Set(options.map(option => option.id)).size === options.length).optional(),
+  multiSelect: z.boolean().default(false),
+});
+type Question = z.output<typeof NativeQuestionSchema>;
+const NativeQuestionsSchema = z.tuple([NativeQuestionSchema, NativeQuestionSchema, NativeQuestionSchema])
+  .refine(([first, second, third]) => new Set([first.id, second.id, third.id]).size === 3
+    && !!first.options && !first.multiSelect && !!second.options && second.multiSelect
+    && !third.options && !third.multiSelect);
+const NativeRequestReceiptSchema = z.object({ status: z.literal('pending'), requestId: z.string().min(1) });
+const NativeAnswerPayloadSchema = z.object({
+  requestId: z.unknown().optional(), questions: z.unknown().optional(),
+  answers: z.array(z.object({
+    questionId: z.unknown().optional(), optionIds: z.array(z.unknown()).optional(), text: z.unknown().optional(),
+  })).optional(),
+});
 const ANSWER_PREFIXES = [
   USER_INPUT_ANSWER_MESSAGE_PREFIX,
   LEGACY_USER_INPUT_ANSWER_MESSAGE_PREFIX,
 ] as const;
 
 function questions(value: unknown): Question[] | undefined {
-  if (!Array.isArray(value) || value.length !== 3) return;
-  const result: Question[] = [];
-  for (const item of value) {
-    if (!item || typeof item.id !== 'string' || !item.id || typeof item.question !== 'string' || !item.question
-      || (item.multiSelect !== undefined && typeof item.multiSelect !== 'boolean')) return;
-    const rawOptions = item.options as Array<{ id?: unknown; label?: unknown }> | undefined;
-    if (rawOptions !== undefined && (!Array.isArray(rawOptions) || rawOptions.length < 2 || rawOptions.length > 20
-      || rawOptions.some(option => !option || typeof option.id !== 'string' || !option.id || typeof option.label !== 'string' || !option.label)
-      || new Set(rawOptions.map(option => option.id)).size !== rawOptions.length)) return;
-    result.push({ id: item.id, question: item.question,
-      ...(rawOptions ? { options: rawOptions.map(option => ({ id: String(option.id), label: String(option.label) })) } : {}),
-      multiSelect: item.multiSelect === true });
-  }
-  if (new Set(result.map(question => question.id)).size !== 3 || !result[0]!.options || result[0]!.multiSelect
-    || !result[1]!.options || !result[1]!.multiSelect || result[2]!.options || result[2]!.multiSelect) return;
-  return result;
+  const parsed = NativeQuestionsSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
 }
 
 /** Consume the complete, explicitly bounded native-card recipe, including its
@@ -50,9 +55,9 @@ function recipe(text: string): Question[] | undefined {
   ];
   if (clauses.length !== allowed.length || !allowed.every((pattern, index) => pattern.test(clauses[index]!))) return;
   try {
-    const data = JSON.parse(text.slice(boundary));
-    if (!data || Object.keys(data).length !== 1 || !Object.hasOwn(data, 'questions')) return;
-    return questions(data.questions);
+    const data = parseJsonObject(text.slice(boundary));
+    if (Object.keys(data).length !== 1 || !Object.hasOwn(data, 'questions')) return;
+    return questions(data['questions']);
   } catch { return; }
 }
 
@@ -67,8 +72,8 @@ export function nativeQuestionCompletionRefs(objective: ActiveSessionObjective, 
   const start = messages.findIndex(message => message.id === objective.userMessageId && message.role === 'user'
     && !message.hidden && !message.internalOrigin && !message.agentDelivery && !message.isQueued && !message.isPending);
   if (start < 0 || messages.filter(message => message.id === objective.userMessageId).length !== 1) return empty;
-  const original = messages[start]!;
-  if (original.content !== objective.originalText) return empty;
+  const original = messages[start];
+  if (!original || original.content !== objective.originalText) return empty;
   const expected = recipe(original.content);
   if (!expected) return empty;
   const scoped = messages.slice(start + 1);
@@ -76,29 +81,25 @@ export function nativeQuestionCompletionRefs(objective: ActiveSessionObjective, 
   if (scoped.some(message => message.role === 'user' && !message.hidden)) return empty;
   const tools = scoped.filter(message => message.role === 'tool');
   if (tools.length !== 1) return empty;
-  const tool = tools[0]!;
-  if (!/^(?:mcp__session__|session__)?request_user_input$/.test(tool.toolName ?? '')
+  const tool = tools[0];
+  if (!tool || !/^(?:mcp__session__|session__)?request_user_input$/.test(tool.toolName ?? '')
     || tool.toolExecuted !== true || tool.isError || tool.toolStatus !== 'completed' || !tool.toolUseId
     || messages.filter(message => message.toolUseId === tool.toolUseId).length !== 1
-    || JSON.stringify(questions(tool.toolInput?.questions)) !== JSON.stringify(expected)) return empty;
-  let request: { status?: unknown; requestId?: unknown } | null = null;
-  try { request = JSON.parse(tool.toolResult ?? ''); } catch { return empty; }
-  if (!request || request.status !== 'pending' || typeof request.requestId !== 'string' || !request.requestId) return empty;
+    || JSON.stringify(questions(tool.toolInput?.["questions"])) !== JSON.stringify(expected)) return empty;
+  let request: z.output<typeof NativeRequestReceiptSchema> | null = null;
+  try { request = NativeRequestReceiptSchema.parse(JSON.parse(tool.toolResult ?? '')); } catch { return empty; }
+  if (!request) return empty;
   const answers = scoped.filter(message => message.role === 'user' && message.hidden
     && message.internalOrigin?.kind === 'user-input'
     && ANSWER_PREFIXES.some(prefix => message.content.startsWith(prefix)));
   if (answers.length !== 1) return empty;
-  const answer = answers[0]!;
-  if (answer.isQueued || answer.isPending || answer.agentDelivery) return empty;
+  const answer = answers[0];
+  if (!answer || answer.isQueued || answer.isPending || answer.agentDelivery) return empty;
   if (answer.timestamp < tool.timestamp || scoped.indexOf(answer) <= scoped.indexOf(tool)) return empty;
   const answerPrefix = ANSWER_PREFIXES.find(prefix => answer.content.startsWith(prefix));
   if (!answerPrefix) return empty;
-  let payload: {
-    requestId?: unknown;
-    questions?: unknown;
-    answers?: Array<{ questionId?: unknown; optionIds?: unknown; text?: unknown }>;
-  } | null = null;
-  try { payload = JSON.parse(answer.content.slice(answerPrefix.length)); } catch { return empty; }
+  let payload: z.output<typeof NativeAnswerPayloadSchema> | null = null;
+  try { payload = NativeAnswerPayloadSchema.parse(JSON.parse(answer.content.slice(answerPrefix.length))); } catch { return empty; }
   if (!payload || payload.requestId !== request.requestId || JSON.stringify(questions(payload.questions)) !== JSON.stringify(expected)
     || !Array.isArray(payload.answers) || payload.answers.length !== 3
     || new Set(payload.answers.map(item => item?.questionId)).size !== 3) return empty;
@@ -106,10 +107,11 @@ export function nativeQuestionCompletionRefs(objective: ActiveSessionObjective, 
   for (const question of expected) {
     const response = payload.answers.find(item => item?.questionId === question.id);
     if (!response || !Array.isArray(response.optionIds)) return empty;
-    if (question.options) {
+    const options = question.options;
+    if (options) {
       if (response.text || response.optionIds.length < 1 || (!question.multiSelect && response.optionIds.length !== 1)
         || new Set(response.optionIds).size !== response.optionIds.length) return empty;
-      const selected = response.optionIds.map((id: unknown) => question.options!.find(option => option.id === id)?.label);
+      const selected = response.optionIds.map((id: unknown) => options.find(option => option.id === id)?.label);
       if (selected.some((label: unknown) => typeof label !== 'string')) return empty;
       values.push(selected.join(', '));
     } else {

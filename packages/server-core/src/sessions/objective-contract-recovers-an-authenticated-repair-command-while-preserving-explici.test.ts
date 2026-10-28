@@ -1,3 +1,5 @@
+import type { ActiveSessionObjective } from '../../../shared/src/sessions/types/objectives.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from "bun:test";
 import type { Message } from "@craft-agent/core/types";
 import { hasObjectiveExecutionEvidence, objectiveRequiresExecutionEvidence, transitionObjectiveContract } from "./objective-contract.ts";
@@ -7,7 +9,7 @@ describe('legacy direct repair authority', () => {
     const text = 'Solutionne et relance, tu dois y accéder par API';
     const current = transitionObjectiveContract({ messageId: 'repair', text });
     expect(current.requiresExecutionEvidence).toBe(true);
-    const legacy = { ...current, requiresExecutionEvidence: undefined };
+    const legacy = omitUndefined<ActiveSessionObjective>({ ...current, requiresExecutionEvidence: undefined });
     expect(objectiveRequiresExecutionEvidence(legacy)).toBe(true);
     expect(objectiveRequiresExecutionEvidence({ ...legacy, requiresExecutionEvidence: false })).toBe(false);
     expect(objectiveRequiresExecutionEvidence({

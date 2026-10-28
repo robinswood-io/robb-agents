@@ -1,3 +1,4 @@
+import { SessionManager as FixtureSessionManager } from "../../../server-core/src/sessions/SessionManager";
 /**
  * Registry.allowPendingSender — branches on the pending entry's `reason`.
  * Regression for PR #348 review item "Block #5: pending requests conflate
@@ -32,15 +33,15 @@ afterEach(() => {
 })
 
 function stubSessionManager(): ISessionManager {
-  return { setAutomationBinder: () => {} } as unknown as ISessionManager
+  return Object.assign(new FixtureSessionManager(), ({ setAutomationBinder: () => {} } satisfies Partial<ISessionManager>))
 }
 
-function stubCredentialManager(): CredentialManager {
+function stubCredentialManager(): Pick<CredentialManager, 'get' | 'set' | 'delete'> {
   return {
     get: async () => null,
     set: async () => {},
-    delete: async () => {},
-  } as unknown as CredentialManager
+    delete: async () => true,
+  } satisfies Pick<CredentialManager, 'get' | 'set' | 'delete'>
 }
 
 function makeRegistry() {

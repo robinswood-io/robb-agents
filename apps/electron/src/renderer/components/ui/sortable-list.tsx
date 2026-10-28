@@ -43,14 +43,14 @@ import { CSS } from '@dnd-kit/utilities'
 
 function hasNoDndAncestor(element: HTMLElement | null): boolean {
   while (element) {
-    if (element.dataset?.noDnd === 'true') return true
+    if (element.dataset?.["noDnd"] === 'true') return true
     element = element.parentElement
   }
   return false
 }
 
 export class SmartPointerSensor extends PointerSensor {
-  static activators = [
+  static override activators = [
     {
       eventName: 'onPointerDown' as const,
       handler: ({ nativeEvent }: { nativeEvent: PointerEvent }) => {
@@ -114,11 +114,11 @@ interface SortableListProps<T extends SortableItemData> {
   /** Render function for each item. `isDragging` is true when this item is the ghost. */
   renderItem: (item: T, isDragging: boolean) => React.ReactNode
   /** Render the drag overlay content (floating clone). Falls back to renderItem. */
-  renderOverlay?: (item: T) => React.ReactNode
+  renderOverlay?: ((item: T) => React.ReactNode) | undefined
   /** Show DragOverlay clone while dragging (default: true) */
-  showOverlay?: boolean
+  showOverlay?: boolean | undefined
   /** Additional className for the list container */
-  className?: string
+  className?: string | undefined
 }
 
 // ============================================================

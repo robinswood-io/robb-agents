@@ -11,17 +11,17 @@ describe.skipIf(process.platform !== 'darwin')('protected Claude process', () =>
     mkdirSync(resources, { recursive: true });
     const archive = join(resources, 'app.asar');
     writeFileSync(archive, 'INTACT');
-    const host = process as unknown as { resourcesPath?: string };
+    const host = (process) as { resourcesPath?: string };
     const previous = host.resourcesPath;
     try {
       host.resourcesPath = resources;
       let stderr = '';
-      const child = createProtectedClaudeSpawner(data => { stderr += data; })({
+      const child = createProtectedClaudeSpawner((data: unknown) => { stderr += data; })({
         command: '/bin/sh', args: ['-c', 'printf ready; printf diagnostic >&2; printf BROKEN > "$1"', 'probe', archive],
         env: {}, signal: new AbortController().signal,
       });
       let stdout = '';
-      child.stdout.on('data', data => { stdout += data.toString(); });
+      child.stdout.on('data', (data: Buffer | string) => { stdout += data.toString(); });
       const code = await new Promise<number | null>((resolve, reject) => {
         child.on('error', reject);
         child.on('exit', resolve);

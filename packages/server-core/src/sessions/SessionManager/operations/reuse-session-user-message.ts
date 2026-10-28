@@ -1,3 +1,6 @@
+import type { ActiveSessionObjective } from '../../../../../shared/src/sessions/types/objectives.ts';
+import type { PendingTurnRecovery } from '../../../../../shared/src/sessions/types/turn-recovery.ts';
+import {setOptional, omitUndefined } from '@craft-agent/shared/utils/json';
 import { resolveAgentCostControlPolicy } from '@craft-agent/shared/config';
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces';
 import { generateMessageId } from '@craft-agent/shared/protocol';
@@ -53,12 +56,12 @@ export function reuseSessionUserMessage(
                     ? reconstructLegacyTurnRecoveryBudget(managed.messages, userMessage.id)
                     : undefined);
             managed.activeObjective = previousObjective
-                ? { ...previousObjective, interruptedTurnRecovery: undefined, terminalState: 'active', completedAt: undefined }
+                ? omitUndefined<ActiveSessionObjective>({ ...previousObjective, interruptedTurnRecovery: undefined, terminalState: 'active', completedAt: undefined })
                 : transitionObjectiveContract({
                     messageId: userMessage.id,
                     text: sessionOpObjectiveContractTextFor(sessionOperationContext, managed, userMessage),
                 });
-            managed.pendingTurnRecovery = {
+            managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
                 ...(retryRecovery ?? createPendingTurnRecovery(userMessage.id)),
                 // A human can retry an old objective, but a missing historical
                 // marker cannot grant that objective a new automatic allowance.
@@ -73,7 +76,7 @@ export function reuseSessionUserMessage(
                 waitingForPermission: undefined,
                 userRetryFromMessageCount: managed.messages.length,
                 continuationRequired: false,
-            };
+            });
             if (explicitRetryAllowanceToken && previousObjective) {
                 // No await separates capability consumption from the state update.
                 // Failed durability rolls back both through existingTurnRollback.
@@ -96,7 +99,7 @@ export function reuseSessionUserMessage(
             managed.activeObjective = previousObjective;
             managed.pendingTurnRecovery = previousRecovery;
             managed.sessionStatus = previousStatus;
-            userMessage.isQueued = trustedUserInput ? true : previousQueued;
+            setOptional(userMessage, "isQueued", trustedUserInput ? true : previousQueued);
             managed.turnLifecycleManagedStatus = undefined;
             sessionOperationContext.owner["setProcessing"](managed, false);
             sessionOperationContext.owner["persistSession"](managed);

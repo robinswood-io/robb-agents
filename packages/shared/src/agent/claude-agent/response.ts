@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { type Options } from "@anthropic-ai/claude-agent-sdk";
 // Plan types are used by UI components; not needed in craft-agent.ts since Safe Mode is user-controlled
 // Plan types are used by UI components; not needed in craft-agent.ts since Safe Mode is user-controlled
@@ -25,25 +26,25 @@ import { AbortReason } from "../core/index.ts";
 import type { ClaudeAgent } from '../claude-agent.ts';
 import { CONVERTIBLE_FILE_HINTS } from './shared.ts';
 
-export async function* chatImpl(transportOwner: ClaudeAgent, userMessage: string, attachments?: FileAttachment[], options?: ChatOptions): AsyncGenerator<AgentEvent> {
+export async function* chatImpl(transportOwner: ClaudeAgent, userMessage: string, attachments?: FileAttachment[], options?: ChatOptions): AsyncGenerator<AgentEvent, void, unknown> {
     // Extract options (ChatOptions interface from AgentBackend)
     const _isRetry = options?.isRetry ?? false;
-    const preparationRevision = transportOwner["promptPreparationRevision"];
+    const preparationRevision = transportOwner.promptPreparationRevision;
     transportOwner["revokeAdmittedToolExecutions"]();
     const sessionId = transportOwner["config"].session?.id || `temp-${Date.now()}`;
     const slashCommandRunsOutsidePersistentRuntime = parseCompactCommand(userMessage.trim()) !== null
         && !attachments?.length;
     const usesPersistentGmailRuntime = transportOwner["keepBackgroundTasksAlive"] && !slashCommandRunsOutsidePersistentRuntime;
     const gmailRuntimeId = usesPersistentGmailRuntime && transportOwner["persistentGmailRuntimeId"]
-        ? transportOwner["persistentGmailRuntimeId"] : transportOwner["createGmailRuntimeId"](sessionId);
+        ? transportOwner["persistentGmailRuntimeId"] : transportOwner.createGmailRuntimeId(sessionId);
     const gmailRuntimeContext = { sessionId, runtimeId: gmailRuntimeId };
-    transportOwner["activeTurnGmailRuntime"] = gmailRuntimeContext;
+    transportOwner.activeTurnGmailRuntime = gmailRuntimeContext;
     try {
-        const prepared = yield* transportOwner["prepareClaudeQueryRuntime"](userMessage, attachments, sessionId, _isRetry, gmailRuntimeId, gmailRuntimeContext);
+        const prepared = yield* transportOwner.prepareClaudeQueryRuntime(userMessage, attachments, sessionId, _isRetry, gmailRuntimeId, gmailRuntimeContext);
         if (!prepared)
             return;
         const { resolvedCwd } = prepared;
-        const options: Options = await transportOwner["buildClaudeQueryOptions"](sessionId, gmailRuntimeId, _isRetry, prepared);
+        const options: Options = await transportOwner.buildClaudeQueryOptions(sessionId, gmailRuntimeId, _isRetry, prepared);
         // Capture the binary path the SDK will actually use (Electron-bundled custom
         // path, CLI/dev-runtime path from getDefaultOptions, or undefined for SDK
         // auto-discovery via node_modules). Used by the ENOENT classifier to tell
@@ -66,9 +67,9 @@ export async function* chatImpl(transportOwner: ClaudeAgent, userMessage: string
             debug(`[ClaudeAgent] Starting fresh SDK session (no resume)`);
         }
         // Stop can be handled while asynchronous filesystem discovery is pending.
-        if (preparationRevision !== transportOwner["promptPreparationRevision"])
+        if (preparationRevision !== transportOwner.promptPreparationRevision)
             return;
-        const turnMessageSource = await transportOwner["createClaudeTurnMessageSource"](userMessage, attachments, options, slashCommandRunsOutsidePersistentRuntime, _isRetry, gmailRuntimeContext);
+        const turnMessageSource = await transportOwner.createClaudeTurnMessageSource(userMessage, attachments, options, slashCommandRunsOutsidePersistentRuntime, _isRetry, gmailRuntimeContext);
         // Initialize event adapter for this turn
         // Session directory prevents race condition when concurrent sessions clobber toolMetadataStore.
         const metadataSessionDir = getSessionPath(transportOwner["workspaceRootPath"], sessionId);
@@ -97,7 +98,7 @@ export async function* chatImpl(transportOwner: ClaudeAgent, userMessage: string
                     const assistantMsg = message.message as {
                         content?: unknown[];
                     };
-                    if (assistantMsg.content && Array.isArray(assistantMsg.content) && assistantMsg.content.length > 0) {
+                    if (assistantMsg.content && isUnknownArray(assistantMsg.content) && assistantMsg.content.length > 0) {
                         receivedAssistantContent = true;
                     }
                 }
@@ -133,11 +134,11 @@ export async function* chatImpl(transportOwner: ClaudeAgent, userMessage: string
                         recordContextualGmailToolResult({
                             sessionId,
                             toolUseId: event.toolUseId,
-                            toolName: event.toolName,
-                            toolInput: event.input,
+                            ...(event.toolName !== undefined ? { toolName: event.toolName } : {}),
+                            ...(event.input !== undefined ? { toolInput: event.input } : {}),
                             result: event.result,
                             isError: event.isError,
-                            executed: event.executed,
+                            ...(event.executed !== undefined ? { executed: event.executed } : {}),
                             objectiveAuthorizationSegments: typeof currentAuthority === 'object'
                                 ? currentAuthority.authorizationSegments
                                 : currentRequest ? [currentRequest] : [],
@@ -156,9 +157,9 @@ export async function* chatImpl(transportOwner: ClaudeAgent, userMessage: string
                         continue;
                     }
                     // Check for tool-not-found errors on inactive sources and attempt auto-activation
-                    const inactiveSourceError = transportOwner["detectInactiveSourceToolError"](event, transportOwner["eventAdapter"].getToolIndex());
+                    const inactiveSourceError = transportOwner.detectInactiveSourceToolError(event, transportOwner["eventAdapter"].getToolIndex());
                     if (inactiveSourceError && transportOwner["onSourceActivationRequest"]) {
-                        const { sourceSlug, toolName } = inactiveSourceError;
+                        const { sourceSlug } = inactiveSourceError;
                         transportOwner["onDebug"]?.(`Detected tool call to inactive source "${sourceSlug}", attempting activation...`);
                         try {
                             const activated = await transportOwner["onSourceActivationRequest"](sourceSlug);
@@ -182,14 +183,9 @@ export async function* chatImpl(transportOwner: ClaudeAgent, userMessage: string
                                     type: 'tool_result';
                                 }>;
                                 yield {
-                                    type: 'tool_result' as const,
-                                    toolUseId: toolResultEvent.toolUseId,
-                                    toolName: toolResultEvent.toolName,
+                                    ...toolResultEvent,
                                     result: `Source "${sourceSlug}" could not be activated. It may require authentication. Please check the source status in the sources panel.`,
                                     isError: true,
-                                    input: toolResultEvent.input,
-                                    turnId: toolResultEvent.turnId,
-                                    parentToolUseId: toolResultEvent.parentToolUseId,
                                 };
                                 continue;
                             }
@@ -206,12 +202,13 @@ export async function* chatImpl(transportOwner: ClaudeAgent, userMessage: string
                     // Intercept large/binary/media-rich tool results — save assets to disk,
                     // preserve original JSON when needed, and/or summarize oversized text.
                     if (event.type === 'tool_result' && !event.isError && event.result) {
+                        const contextWindow = transportOwner["usageTracker"].getContextWindow();
                         const guarded = await guardLargeResult(event.result, {
                             sessionPath: metadataSessionDir,
                             toolName: event.toolName || 'unknown',
-                            input: event.input,
+                            ...(event.input !== undefined ? { input: event.input } : {}),
                             summarize: summarizeCallback,
-                            contextWindow: transportOwner["usageTracker"].getContextWindow(),
+                            ...(contextWindow !== undefined ? { contextWindow } : {}),
                         });
                         if (guarded) {
                             yield { ...event, result: guarded };
@@ -220,7 +217,7 @@ export async function* chatImpl(transportOwner: ClaudeAgent, userMessage: string
                     }
                     // Suggest CLI tools when Read fails on convertible file types
                     if (event.type === 'tool_result' && event.toolName === 'Read' && event.isError && event.result) {
-                        const filePath = typeof event.input?.file_path === 'string' ? event.input.file_path : undefined;
+                        const filePath = typeof event.input?.["file_path"] === 'string' ? event.input["file_path"] : undefined;
                         if (filePath) {
                             const ext = filePath.split('.').pop()?.toLowerCase();
                             const hint = ext ? CONVERTIBLE_FILE_HINTS[ext] : undefined;
@@ -311,7 +308,7 @@ export async function* chatImpl(transportOwner: ClaudeAgent, userMessage: string
                     // Branch-fork failure: route through the shared helper so all four
                     // fork fields are persisted atomically (sdkSessionId + branchFromSdk*),
                     // and the parent conversation summary is injected into the retry.
-                    yield* transportOwner["recoverFromStaleBranchFork"](userMessage, attachments, /* isPreSpawn */ false);
+                    yield* transportOwner.recoverFromStaleBranchFork(userMessage, attachments, /* isPreSpawn */ false);
                     return;
                 }
                 // Regular resume failure (no branch fork): clear the session and retry
@@ -322,7 +319,7 @@ export async function* chatImpl(transportOwner: ClaudeAgent, userMessage: string
                 transportOwner["pinnedPreferencesPrompt"] = null;
                 transportOwner["pinnedIncludeCoAuthoredBy"] = null;
                 transportOwner["pinnedProjectContext"] = null;
-                transportOwner["preferencesDriftNotified"] = false;
+                transportOwner.preferencesDriftNotified = false;
                 let retryMessage = userMessage;
                 const recoveryContext = transportOwner["buildRecoveryContext"]();
                 if (recoveryContext)
@@ -344,8 +341,8 @@ export async function* chatImpl(transportOwner: ClaudeAgent, userMessage: string
             }
         }
         catch (sdkError) {
-            return yield* transportOwner["recoverClaudeQueryError"](sdkError, {
-                receivedAssistantContent, wasResuming, _isRetry, userMessage, attachments, suppressedSessionExpiredError, suppressedBranchCutoffError, resolvedBinaryPath, resolvedCwd,
+            return yield* transportOwner.recoverClaudeQueryError(sdkError, {
+                receivedAssistantContent, wasResuming, _isRetry, userMessage, ...(attachments !== undefined ? { attachments } : {}), suppressedSessionExpiredError, suppressedBranchCutoffError, resolvedBinaryPath, resolvedCwd,
             });
         }
     }
@@ -378,8 +375,8 @@ export async function* chatImpl(transportOwner: ClaudeAgent, userMessage: string
                 runtimeId: gmailRuntimeId,
             });
         }
-        if (transportOwner["activeTurnGmailRuntime"]?.runtimeId === gmailRuntimeId) {
-            transportOwner["activeTurnGmailRuntime"] = null;
+        if (transportOwner.activeTurnGmailRuntime?.runtimeId === gmailRuntimeId) {
+            transportOwner.activeTurnGmailRuntime = null;
         }
         // [bg-lifecycle] Nulling currentQuery closes the SDK query iterator, which
         // tears down the per-turn subprocess and any background sub-agents it

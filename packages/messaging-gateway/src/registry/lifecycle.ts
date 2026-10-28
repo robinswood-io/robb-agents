@@ -1,3 +1,5 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import type { PlatformRuntimePatch } from './shared.ts';
 import { RPC_CHANNELS } from "@craft-agent/shared/protocol";
 import { MessagingGateway } from "../gateway";
 import { ConfigStore } from "../config-store";
@@ -26,7 +28,7 @@ export async function initializeWorkspace(transportOwner: MessagingGatewayRegist
             state: 'connecting',
             lastError: undefined,
         });
-        void transportOwner["tryConnectTelegram"](workspaceId, state).catch((err) => {
+        void transportOwner["tryConnectTelegram"](workspaceId, state).catch((err: unknown) => {
             transportOwner["log"].error('background Telegram connect failed', {
                 event: 'telegram_connect_failed',
                 workspaceId,
@@ -41,7 +43,7 @@ export async function initializeWorkspace(transportOwner: MessagingGatewayRegist
             state: 'connecting',
             lastError: undefined,
         });
-        void transportOwner["tryConnectLark"](workspaceId, state).catch((err) => {
+        void transportOwner["tryConnectLark"](workspaceId, state).catch((err: unknown) => {
             transportOwner["log"].error('background Lark connect failed', {
                 event: 'lark_connect_failed',
                 workspaceId,
@@ -50,14 +52,14 @@ export async function initializeWorkspace(transportOwner: MessagingGatewayRegist
         });
     }
     if (isPlatformConfigured(config, 'whatsapp')) {
-        if (transportOwner["hasWhatsAppAuthState"](workspaceId)) {
+        if (transportOwner.hasWhatsAppAuthState(workspaceId)) {
             transportOwner["setPlatformRuntime"](workspaceId, state, 'whatsapp', {
                 configured: true,
                 connected: false,
                 state: 'connecting',
                 lastError: undefined,
             });
-            void transportOwner["startWhatsAppAdapter"](workspaceId, state, { persistConfig: false, reason: 'restore' }).catch((err) => {
+            void transportOwner.startWhatsAppAdapter(workspaceId, state, { persistConfig: false, reason: 'restore' }).catch((err: unknown) => {
                 transportOwner["log"].error('background WhatsApp restore failed', {
                     event: 'whatsapp_restore_failed',
                     workspaceId,
@@ -113,7 +115,7 @@ export function bootstrapWorkspace(transportOwner: MessagingGatewayRegistry, wor
         sessionManager: transportOwner["opts"].sessionManager,
         workspaceId,
         storageDir,
-        legacyStorageDir,
+        ...(legacyStorageDir !== undefined ? { legacyStorageDir: legacyStorageDir } : {}),
         logger: baseLog,
         pairingConsumer: {
             canConsume: (platform, senderId) => transportOwner["pairing"].canConsume(workspaceId, platform, senderId),
@@ -138,9 +140,9 @@ export function bootstrapWorkspace(transportOwner: MessagingGatewayRegistry, wor
         },
         // Read live config so accessMode/owner toggles take effect immediately.
         getWorkspaceConfig: () => configStore.get(),
-        seedOwnerOnFirstPair: async (platform, candidate) => transportOwner["seedFirstOwner"](workspaceId, platform, candidate),
-        onBindingChanged: () => transportOwner["emitBindingChanged"](workspaceId),
-        onPendingChanged: () => transportOwner["emitPendingChanged"](workspaceId),
+        seedOwnerOnFirstPair: async (platform, candidate) => transportOwner.seedFirstOwner(workspaceId, platform, candidate),
+        onBindingChanged: () => transportOwner.emitBindingChanged(workspaceId),
+        onPendingChanged: () => transportOwner.emitPendingChanged(workspaceId),
     });
     const topicRegistry = new TopicRegistry(storageDir, baseLog.child({ component: 'topic-registry' }));
     const state: WorkspaceState = {
@@ -159,16 +161,16 @@ export function bootstrapWorkspace(transportOwner: MessagingGatewayRegistry, wor
     return state;
 }
 
-export function setPlatformRuntime(transportOwner: MessagingGatewayRegistry, workspaceId: string, state: WorkspaceState, platform: PlatformType, patch: Partial<MessagingPlatformRuntimeInfo>): void {
+export function setPlatformRuntime(transportOwner: MessagingGatewayRegistry, workspaceId: string, state: WorkspaceState, platform: PlatformType, patch: PlatformRuntimePatch): void {
     const previous = state.runtime[platform] ?? createRuntime(platform, false);
-    const next: MessagingPlatformRuntimeInfo = {
+    const next = omitUndefined<MessagingPlatformRuntimeInfo>({
         ...previous,
         ...patch,
         platform,
         updatedAt: Date.now(),
-    };
+    });
     state.runtime[platform] = next;
-    transportOwner["emitPlatformStatus"](workspaceId, platform, next);
+    transportOwner.emitPlatformStatus(workspaceId, platform, next);
 }
 
 export function emitPlatformStatus(transportOwner: MessagingGatewayRegistry, workspaceId: string, platform: PlatformType, status: MessagingPlatformRuntimeInfo): void {

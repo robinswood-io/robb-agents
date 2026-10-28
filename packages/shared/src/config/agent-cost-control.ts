@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 export type CostControlledTurnKind =
   | 'direct'
   | 'agent-message'
@@ -144,7 +145,7 @@ function booleanOr(value: unknown, fallback: boolean): boolean {
 }
 
 function stringArrayOr(value: unknown, fallback: string[]): string[] {
-  return Array.isArray(value) && value.every(item => typeof item === 'string')
+  return isUnknownArray(value) && value.every((item: unknown) => typeof item === 'string')
     ? value
     : fallback;
 }

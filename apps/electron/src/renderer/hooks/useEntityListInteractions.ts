@@ -161,6 +161,8 @@ export function useEntityListInteractions<T>({
   const isMultiSelectActive = MultiSelect.isMultiSelectActive(selectionState)
 
   // ---- Keyboard navigation ----
+  const keyboardNavigate = keyboardOpts?.onNavigate
+  const keyboardActivate = keyboardOpts?.onActivate
   const handleNavigate = useCallback((item: T, index: number) => {
     // Scroll into view
     const id = getId(item)
@@ -177,16 +179,16 @@ export function useEntityListInteractions<T>({
     // Update selection to follow the keyboard cursor
     setSelectionState(MultiSelect.singleSelect(id, index))
 
-    keyboardOpts?.onNavigate?.(item, index)
-  }, [getId, multiSelectEnabled, isMultiSelectActive, clearSelection, keyboardOpts?.onNavigate]) // eslint-disable-line react-hooks/exhaustive-deps
+    keyboardNavigate?.(item, index)
+  }, [getId, multiSelectEnabled, isMultiSelectActive, clearSelection, keyboardNavigate, setSelectionState])
 
   const handleActivate = useCallback((item: T, index: number) => {
     if (multiSelectEnabled && !isMultiSelectActive) {
       // Single-select on Enter
       setSelectionState(MultiSelect.singleSelect(getId(item), index))
     }
-    keyboardOpts?.onActivate?.(item, index)
-  }, [multiSelectEnabled, isMultiSelectActive, getId, keyboardOpts?.onActivate]) // eslint-disable-line react-hooks/exhaustive-deps
+    keyboardActivate?.(item, index)
+  }, [multiSelectEnabled, isMultiSelectActive, getId, keyboardActivate, setSelectionState])
 
   const handleExtendSelection = useCallback((toIndex: number) => {
     if (multiSelectEnabled) {
@@ -261,7 +263,7 @@ export function useEntityListInteractions<T>({
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault()
       // Forward to the roving tabindex container handler
-      getContainerProps().onKeyDown(e as unknown as React.KeyboardEvent)
+      getContainerProps().onKeyDown((e) as React.KeyboardEvent)
       return
     }
     if (e.key === 'Escape') {
@@ -272,7 +274,7 @@ export function useEntityListInteractions<T>({
     if (e.key === 'Enter') {
       // Forward Enter to activate the focused item
       e.preventDefault()
-      getContainerProps().onKeyDown(e as unknown as React.KeyboardEvent)
+      getContainerProps().onKeyDown((e) as React.KeyboardEvent)
       return
     }
   }, [getContainerProps])
@@ -281,7 +283,6 @@ export function useEntityListInteractions<T>({
   const { role: containerRole, 'aria-activedescendant': activeDescendant } = getContainerProps()
 
   const listProps = useMemo(() => ({
-    containerRef: undefined as React.Ref<HTMLDivElement> | undefined,
     containerProps: {
       role: containerRole,
       'aria-activedescendant': activeDescendant ?? '',

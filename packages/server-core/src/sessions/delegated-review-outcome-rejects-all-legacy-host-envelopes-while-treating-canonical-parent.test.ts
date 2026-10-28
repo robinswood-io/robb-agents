@@ -1,3 +1,4 @@
+import { parseJsonObject } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from "bun:test";
 import type { ObjectiveAcceptanceCriterion } from "@craft-agent/core/types";
 import { buildDelegatedReviewPrompt, getDelegatedReviewRequest, HOST_PARENT_REVIEW_INSTRUCTION, prependHostDelegatedReviewerScope, validateDelegatedReviewCompletion } from "./delegated-review-outcome.ts";
@@ -143,9 +144,9 @@ describe('completion of a delegated read-only review', () => {
     });
     const validation = validateDelegatedReviewCompletion(f);
     expect(validation).toMatchObject({ valid: true, state: 'complete_verified' });
-    expect(validation?.declaration?.criteria[0]?.evidence).toEqual(expect.arrayContaining([
+    expect<unknown>(validation?.declaration?.criteria[0]?.evidence).toEqual((expect.arrayContaining([
       'blocked-remote-call', 'revision-call', 'access-call', 'health-call', f.finalMessage.id,
-    ]));
+    ]) as unknown));
   });
 
   it('treats an exact Explore read-only allowlist denial as a failed check, not a target mutation', () => {
@@ -179,8 +180,8 @@ describe('completion of a delegated read-only review', () => {
     const command = 'shasum -a 256 dist/app.js';
     safe.objective.originalText = safe.objective.originalText!.replace('bun run test:orion-contract', command);
     safe.messages[0]!.content = safe.objective.originalText;
-    safe.targetChecks[3]!.input.command = command;
-    safe.objective.acceptanceCriteria![3]!.input.command = command;
+    safe.targetChecks[3]!.input["command"] = command;
+    safe.objective.acceptanceCriteria![3]!.input["command"] = command;
     Object.assign(safe.observations[0]!, {
       toolStatus: 'completed', isError: false,
       toolInput: { ...safe.observations[0]!.toolInput, command },
@@ -195,7 +196,7 @@ describe('completion of a delegated read-only review', () => {
       (f: ReturnType<typeof multiTargetHostFixture>) => { f.messages[0]!.internalOrigin = { kind: 'agent-message', senderSessionId: 'parent-session' }; },
       (f: ReturnType<typeof multiTargetHostFixture>) => { f.messages[0]!.content += ' altered'; },
       (f: ReturnType<typeof multiTargetHostFixture>) => { f.messages.splice(1, 0, { ...f.messages[0]! }); },
-      (f: ReturnType<typeof multiTargetHostFixture>) => { f.objective.delegatedRole = undefined; },
+      (f: ReturnType<typeof multiTargetHostFixture>) => { delete f.objective.delegatedRole; },
     ]) {
       const f = multiTargetHostFixture(); mutate(f);
       expect(validateDelegatedReviewCompletion(f)?.valid ?? false).toBe(false);
@@ -277,7 +278,7 @@ describe('completion of a delegated read-only review', () => {
       'python3 -c "import subprocess; print(subprocess.check_output([\'git\', \'rev-parse\', \'HEAD\']))"',
       'git reset --hard', 'git status && git push', `printf '${revision}'`,
     ]) {
-      const f = remoteFixture(); f.observation.toolInput!.command = command;
+      const f = remoteFixture(); f.observation.toolInput!["command"] = command;
       f.objective.acceptanceCriteria[0]!.input.command = command;
       expect(validateDelegatedReviewCompletion(f)?.valid).toBe(false);
     }
@@ -301,7 +302,7 @@ describe('completion of a delegated read-only review', () => {
     expect(result).toMatchObject({ valid: true, state: 'complete_verified', declaration: { criteria: [{ id: 'delegated-review-delivered', satisfied: true, evidence: ['observation', 'actual-call', 'final'] }] } });
     expect(f).toEqual(before);
     expect(result?.declaration?.criteria.some(item => item.id === 'independent-review-passed')).toBe(false);
-    expect(validateDelegatedReviewCompletion(JSON.parse(JSON.stringify(f)))).toEqual(result);
+    expect(validateDelegatedReviewCompletion(JSON.parse(JSON.stringify(f)) as typeof f)).toEqual(result);
   });
 
   it('gives only qualified child reviews the exact JSON contract, without recursive review or mutation requirements', () => {
@@ -327,8 +328,8 @@ describe('completion of a delegated read-only review', () => {
     const failLine = prompt.split('\n').find(line => line.startsWith(failPrefix));
     expect(passLine).toBeDefined();
     expect(failLine).toBeDefined();
-    const passReceipt = JSON.parse(passLine!.slice(passPrefix.length));
-    const failReceipt = JSON.parse(failLine!.slice(failPrefix.length, failLine!.indexOf(' Before returning it')));
+    const passReceipt = parseJsonObject(passLine!.slice(passPrefix.length));
+    const failReceipt = parseJsonObject(failLine!.slice(failPrefix.length, failLine!.indexOf(' Before returning it')));
     expect(passReceipt).toEqual({
       ...binding,
       verdict: 'PASS',
@@ -374,8 +375,8 @@ describe('completion of a delegated read-only review', () => {
       'EXAMPLE_ONLY: criterion failed',
     ]) {
       f.finalMessage.content = JSON.stringify({ ...f.receipt, findings: [finding] });
-      expect(validateDelegatedReviewCompletion(f)).toMatchObject({ valid: false,
-        gaps: [expect.stringContaining('example placeholder')] });
+      expect<unknown>(validateDelegatedReviewCompletion(f)).toMatchObject({ valid: false,
+        gaps: [(expect.stringContaining('example placeholder') as unknown)] });
     }
   });
 

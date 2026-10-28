@@ -21,17 +21,17 @@ function requireCommercialExtension() {
 function isOperationsSettingsDto(value: unknown): value is OperationsSettingsDto {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const root = value as Record<string, unknown>;
-  if (Object.keys(root).length !== 1 || !root.budgets || typeof root.budgets !== 'object' || Array.isArray(root.budgets)) {
+  if (Object.keys(root).length !== 1 || !root["budgets"] || typeof root["budgets"] !== 'object' || Array.isArray(root["budgets"])) {
     return false;
   }
-  const budgets = root.budgets as Record<string, unknown>;
+  const budgets = root["budgets"] as Record<string, unknown>;
   const keys = [
     'warningAction', 'hardLimitAction', 'sessionWarningUsd', 'sessionHardUsd',
     'missionWarningUsd', 'missionHardUsd', 'workspaceDailyWarningUsd', 'workspaceDailyHardUsd',
   ];
   return Object.keys(budgets).length === keys.length && keys.every(key => key in budgets) &&
-    (budgets.warningAction === 'notify' || budgets.warningAction === 'require-approval') &&
-    (budgets.hardLimitAction === 'notify' || budgets.hardLimitAction === 'require-approval' || budgets.hardLimitAction === 'block') &&
+    (budgets["warningAction"] === 'notify' || budgets["warningAction"] === 'require-approval') &&
+    (budgets["hardLimitAction"] === 'notify' || budgets["hardLimitAction"] === 'require-approval' || budgets["hardLimitAction"] === 'block') &&
     keys.slice(2).every(key => typeof budgets[key] === 'number' && Number.isFinite(budgets[key]) && (budgets[key] as number) > 0);
 }
 

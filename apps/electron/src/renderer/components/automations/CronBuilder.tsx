@@ -9,12 +9,12 @@
  * Plus human-readable summary and next-run preview.
  */
 
-import * as React from 'react'
-import { useState, useCallback, useMemo, useEffect } from 'react'
+
+import { useState,useCallback,useMemo,useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Clock, AlertCircle } from 'lucide-react'
+import { Clock,AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { describeCron as describeCronExpression, computeNextRuns } from './utils'
+import { describeCron as describeCronExpression,computeNextRuns } from './utils'
 
 // ============================================================================
 // Presets
@@ -72,9 +72,7 @@ function validateCron(cron: string): string | null {
   const parts = cron.trim().split(/\s+/)
   if (parts.length !== 5) return 'Schedule needs 5 parts: minute, hour, day, month, and weekday'
   // Basic validation per field
-  const ranges = [[0, 59], [0, 23], [1, 31], [1, 12], [0, 7]]
-  for (let i = 0; i < 5; i++) {
-    const part = parts[i]
+  for (const [i, part] of parts.entries()) {
     if (part === '*') continue
     if (/^\*\/\d+$/.test(part)) continue
     if (/^[\d,\-\/]+$/.test(part)) continue
@@ -118,18 +116,17 @@ function CronField({ field, value, onChange }: CronFieldProps) {
 // ============================================================================
 
 export interface CronBuilderProps {
-  value?: string
-  onChange?: (cron: string) => void
-  timezone?: string
-  onTimezoneChange?: (tz: string) => void
-  className?: string
+  value?: string | undefined
+  onChange?: ((cron: string) => void) | undefined
+  timezone?: string | undefined
+  onTimezoneChange?: ((tz: string) => void) | undefined
+  className?: string | undefined
 }
 
 export function CronBuilder({
   value = '0 9 * * 1-5',
   onChange,
   timezone,
-  onTimezoneChange,
   className,
 }: CronBuilderProps) {
   const { t } = useTranslation()
@@ -255,7 +252,7 @@ export function CronBuilder({
             <span className="text-xs text-muted-foreground">Next runs:</span>
             <div className="flex flex-col gap-0.5">
               {(() => {
-                const spansYears = nextRuns.length > 1 && nextRuns[0].getFullYear() !== nextRuns[nextRuns.length - 1].getFullYear()
+                const spansYears = nextRuns.length > 1 && nextRuns[0]?.getFullYear() !== nextRuns.at(-1)?.getFullYear()
                 return nextRuns.map((date, i) => (
                   <span key={i} className="text-xs text-foreground/70 tabular-nums">
                     {date.toLocaleDateString('en-US', {

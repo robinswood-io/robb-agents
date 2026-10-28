@@ -23,13 +23,13 @@ function modelFixture(id: string, overrides: Partial<Omit<ModelDefinition, 'id'>
   };
 }
 
-const originalCopilotKillSwitch = process.env.ROBB_DISABLE_GITHUB_COPILOT_PROXY;
+const originalCopilotKillSwitch = process.env["ROBB_DISABLE_GITHUB_COPILOT_PROXY"];
 
 afterEach(() => {
   if (originalCopilotKillSwitch === undefined) {
-    delete process.env.ROBB_DISABLE_GITHUB_COPILOT_PROXY;
+    delete process.env["ROBB_DISABLE_GITHUB_COPILOT_PROXY"];
   } else {
-    process.env.ROBB_DISABLE_GITHUB_COPILOT_PROXY = originalCopilotKillSwitch;
+    process.env["ROBB_DISABLE_GITHUB_COPILOT_PROXY"] = originalCopilotKillSwitch;
   }
 });
 
@@ -139,7 +139,7 @@ describe('piDriver external subscription bridges', () => {
 
 describe('piDriver GitHub Copilot contract', () => {
   it('uses the exact SDK static catalog without network when the proxy is disabled', async () => {
-    process.env.ROBB_DISABLE_GITHUB_COPILOT_PROXY = '1';
+    process.env["ROBB_DISABLE_GITHUB_COPILOT_PROXY"] = '1';
     const result = await piDriver.fetchModels!({
       connection: {
         slug: 'github-copilot',
@@ -168,7 +168,7 @@ describe('piDriver GitHub Copilot contract', () => {
 describe('piDriver local & custom endpoint model discovery', () => {
   it('discovers local models via /v1/models or Ollama /api/tags fallback, infers capabilities, and preserves user models', async () => {
     const originalFetch = globalThis.fetch;
-    globalThis.fetch = mock(async (input: Parameters<typeof originalFetch>[0]) => {
+    globalThis.fetch = Object.assign(mock(async (input: Parameters<typeof originalFetch>[0]) => {
       const url = String(input);
       if (url === 'http://localhost:11434/v1/models') {
         return new Response('Not Found', { status: 404 });
@@ -183,7 +183,7 @@ describe('piDriver local & custom endpoint model discovery', () => {
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
       throw new Error(`Unexpected URL: ${url}`);
-    }) as unknown as typeof fetch;
+    }), { preconnect() {} });
 
     try {
       const result = await piDriver.fetchModels!({

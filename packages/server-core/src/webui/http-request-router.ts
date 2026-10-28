@@ -178,7 +178,7 @@ async function routeRequest(req: Request): Promise<Response> {
         return Response.json({ error: 'A pairing ticket or code is required' }, { status: 400 })
       }
 
-      const result = pairingManager.consume({ ticket, code })
+      const result = pairingManager.consume({ ...(ticket !== undefined ? { ticket: ticket } : {}), ...(code !== undefined ? { code: code } : {}) })
       if (!result.ok) {
         const status = result.reason === 'used' ? 409 : result.reason === 'expired' ? 410 : 401
         return Response.json({ error: `Pairing ${result.reason}` }, { status })
@@ -378,7 +378,7 @@ async function routeRequest(req: Request): Promise<Response> {
             headers: { 'Content-Type': 'text/html; charset=utf-8' },
           })
         } else {
-          return new Response(generateCallbackPage({ title: 'Authorization Failed', isSuccess: false, errorDetail: result.error }), {
+          return new Response(generateCallbackPage({ title: 'Authorization Failed', isSuccess: false, ...(result.error !== undefined ? { errorDetail: result.error } : {}) }), {
             status: 200,
             headers: { 'Content-Type': 'text/html; charset=utf-8' },
           })
@@ -404,7 +404,7 @@ async function routeRequest(req: Request): Promise<Response> {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
         return Response.json({
-          wsUrl: resolveWebSocketUrl(req, { publicWsUrl, wsProtocol, wsPort, trustedProxy: isTrustedProxyRequest(req) }),
+          wsUrl: resolveWebSocketUrl(req, { ...(publicWsUrl !== undefined ? { publicWsUrl: publicWsUrl } : {}), wsProtocol, wsPort, trustedProxy: isTrustedProxyRequest(req) }),
           session: {
             kind: 'pairing',
             deviceId: null,
@@ -416,7 +416,7 @@ async function routeRequest(req: Request): Promise<Response> {
         })
       }
       return Response.json({
-        wsUrl: resolveWebSocketUrl(req, { publicWsUrl, wsProtocol, wsPort, trustedProxy: isTrustedProxyRequest(req) }),
+        wsUrl: resolveWebSocketUrl(req, { ...(publicWsUrl !== undefined ? { publicWsUrl: publicWsUrl } : {}), wsProtocol, wsPort, trustedProxy: isTrustedProxyRequest(req) }),
         session: {
           kind: configSession.kind,
           deviceId: configSession.deviceId ?? null,

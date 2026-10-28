@@ -142,8 +142,8 @@ describe('reliable delivery', () => {
     expect(reconnectStates).toEqual([false])
     expect(receivedA).toEqual(['before-a', 'missed-a'])
     expect(receivedB).toEqual(['only-b'])
-    expect(clientA['lastSeenSeq']).toBe(2)
-    expect(clientB['lastSeenSeq']).toBe(1)
+    expect(clientA.lastSeenSeq).toBe(2)
+    expect(clientB.lastSeenSeq).toBe(1)
   })
 
   test('marks reconnect stale when the retained buffer evicts missed events', async () => {
@@ -188,7 +188,7 @@ describe('reliable delivery', () => {
     server.push('stream', { to: 'workspace', workspaceId: 'test-workspace' }, 'one')
     server.push('stream', { to: 'workspace', workspaceId: 'test-workspace' }, 'two')
 
-    await waitUntil(() => client['lastSeenSeq'] === 2)
+    await waitUntil(() => client.lastSeenSeq === 2)
 
     const ack: MessageEnvelope = {
       id: randomUUID(),

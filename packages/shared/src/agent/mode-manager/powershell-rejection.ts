@@ -95,12 +95,13 @@ export function getPowerShellRejectionReason(command: string, config: ToolCheckC
         const mismatchAnalysis = analyzePatternMismatch(reason.command, config.readOnlyBashPatterns);
         const commandHint = findBlockedCommandHint(reason.command, config);
 
+        const optionalMismatchAnalysis = mismatchAnalysis ?? undefined;
         return {
           type: 'no_safe_pattern',
           command: reason.command,
           relevantPatterns,
-          mismatchAnalysis: mismatchAnalysis ?? undefined,
-          commandHint,
+          ...(optionalMismatchAnalysis !== undefined ? { mismatchAnalysis: optionalMismatchAnalysis } : {}),
+          ...(commandHint !== undefined ? { commandHint } : {}),
         };
       }
     }
@@ -108,11 +109,12 @@ export function getPowerShellRejectionReason(command: string, config: ToolCheckC
 
   // Fallback
   debug('[Mode] Unexpected: PowerShell AST rejected but no reason provided');
+  const commandHint = findBlockedCommandHint(command, config);
   return {
     type: 'no_safe_pattern',
     command: command,
     relevantPatterns: [],
-    mismatchAnalysis: undefined,
-    commandHint: findBlockedCommandHint(command, config),
+    
+    ...(commandHint !== undefined ? { commandHint } : {}),
   };
 }

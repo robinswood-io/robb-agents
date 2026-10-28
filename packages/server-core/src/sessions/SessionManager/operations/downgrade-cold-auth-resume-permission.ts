@@ -1,3 +1,6 @@
+import type { PendingTurnRecovery } from '../../../../../shared/src/sessions/types/turn-recovery.ts';
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { setPermissionMode, getPermissionModeDiagnostics } from '@craft-agent/shared/agent';
 import type { PermissionMode } from '@craft-agent/shared/agent';
@@ -53,7 +56,7 @@ function sessionOpDowngradeColdAuthResumePermission(sessionOperationContext: Ses
     const diagnostics = getPermissionModeDiagnostics(managed.id);
     managed.previousPermissionMode = diagnostics.previousPermissionMode;
     managed.agent?.setPermissionMode(permissionMode);
-    sessionOperationContext.owner["sendEvent"]({
+    sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'permission_mode_changed' }>>({
         type: 'permission_mode_changed',
         sessionId: managed.id,
         permissionMode,
@@ -62,7 +65,7 @@ function sessionOpDowngradeColdAuthResumePermission(sessionOperationContext: Ses
         changedAt: diagnostics.lastChangedAt,
         previousPermissionMode: diagnostics.previousPermissionMode,
         transitionDisplay: diagnostics.transitionDisplay,
-    }, managed.workspace.id);
+    }), managed.workspace.id);
     sessionLog.warn('Downgraded cold auth continuation permission before generation', {
         sessionId: managed.id,
         previousPermissionMode: 'allow-all',
@@ -73,7 +76,7 @@ function sessionOpDowngradeColdAuthResumePermission(sessionOperationContext: Ses
 
 function sessionOpClearPermissionWait(sessionOperationContext: SessionOperationContext, managed: ManagedSession, requestId: string): void {
     if (!sessionOperationContext.state.shuttingDown && managed.pendingTurnRecovery?.waitingForPermission?.requestId === requestId) {
-        managed.pendingTurnRecovery = { ...managed.pendingTurnRecovery, waitingForPermission: undefined };
+        managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({ ...managed.pendingTurnRecovery, waitingForPermission: undefined });
         sessionOperationContext.owner["persistSession"](managed);
         sessionOperationContext.owner["scheduleDeferredAutomaticSessions"]();
     }

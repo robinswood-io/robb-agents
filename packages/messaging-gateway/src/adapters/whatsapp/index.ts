@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { NOOP_LOGGER, DEFAULT_SEND_TIMEOUT_MS, isSafeWorkerDiagnostic, type PendingEntry, type WhatsAppConfig, type WhatsAppEvent, type EventHandler } from "./protocol";
 export { type WhatsAppConfig, type WhatsAppEvent } from "./protocol";
 /**
@@ -63,7 +64,6 @@ export class WhatsAppAdapter implements PlatformAdapter {
   private started = false
   private log: MessagingLogger = NOOP_LOGGER
   private messageHandler: ((msg: IncomingMessage) => Promise<void>) | null = null
-  private buttonHandler: ((press: ButtonPress) => Promise<void>) | null = null
   private eventHandlers = new Set<EventHandler>()
   private pending = new Map<string, PendingEntry>()
   private nextCmdId = 1
@@ -153,13 +153,13 @@ export class WhatsAppAdapter implements PlatformAdapter {
       }
     })
 
-    const startCmd: WorkerCommand = {
+    const startCmd: WorkerCommand = omitUndefined<Extract<WorkerCommand, { type: 'start' }>>({
       type: 'start',
       authStateDir: cfg.authStateDir,
       pairingMode: cfg.pairingMode ?? 'qr',
       selfChatMode: cfg.selfChatMode ?? false,
       responsePrefix: cfg.responsePrefix,
-    }
+    })
     this.sendCommand(startCmd)
     this.started = true
   }
@@ -210,8 +210,8 @@ export class WhatsAppAdapter implements PlatformAdapter {
     this.messageHandler = handler
   }
 
-  onButtonPress(handler: (press: ButtonPress) => Promise<void>): void {
-    this.buttonHandler = handler
+  onButtonPress(_handler: (press: ButtonPress) => Promise<void>): void {
+    // WhatsApp does not support inline buttons.
   }
 
   /** Subscribe to adapter-level events (QR, pairing code, unavailable, errors). */
@@ -276,14 +276,14 @@ export class WhatsAppAdapter implements PlatformAdapter {
     _opts?: SendOptions,
   ): Promise<SentMessage> {
     const id = String(this.nextCmdId++)
-    const result = await this.sendWithResult({
+    const result = await this.sendWithResult(omitUndefined<Extract<WorkerCommand, { type: 'send_file' }>>({
       id,
       type: 'send_file',
       channelId,
       dataBase64: file.toString('base64'),
       filename,
       caption,
-    })
+    }))
     if (!result.ok) throw new Error(result.error ?? 'Send failed')
     return {
       platform: 'whatsapp',
@@ -392,7 +392,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
           jid: ev.jid,
           name: ev.name,
         })
-        this.fireEvent({ type: 'connected', jid: ev.jid, name: ev.name })
+        this.fireEvent(omitUndefined<Extract<WhatsAppEvent, { type: 'connected' }>>({ type: 'connected', jid: ev.jid, name: ev.name }))
         return
       case 'disconnected':
         this.connected = false
@@ -401,7 +401,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
           loggedOut: ev.loggedOut,
           reason: ev.reason,
         })
-        this.fireEvent({ type: 'disconnected', loggedOut: ev.loggedOut, reason: ev.reason })
+        this.fireEvent(omitUndefined<Extract<WhatsAppEvent, { type: 'disconnected' }>>({ type: 'disconnected', loggedOut: ev.loggedOut, reason: ev.reason }))
         return
       case 'incoming':
         if (this.messageHandler) {
@@ -409,7 +409,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
           // for traceability. The worker has already written the bytes to
           // `localPath`, so the router can wrap each attachment via
           // `readFileAttachment()` directly.
-          const attachments: IncomingAttachment[] | undefined = ev.attachments?.map((a) => ({
+          const attachments: IncomingAttachment[] | undefined = ev.attachments?.map((a) => omitUndefined<IncomingAttachment>({
             type: a.type,
             fileId: ev.messageId,
             fileName: a.fileName,
@@ -422,9 +422,9 @@ export class WhatsAppAdapter implements PlatformAdapter {
             channelId: ev.channelId,
             messageId: ev.messageId,
             senderId: ev.senderId,
-            senderName: ev.senderName,
+            ...(ev.senderName !== undefined ? { senderName: ev.senderName } : {}),
             text: ev.text,
-            attachments,
+            ...(attachments !== undefined ? { attachments: attachments } : {}),
             timestamp: ev.timestamp,
             raw: ev,
           }
@@ -436,7 +436,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
         if (entry) {
           clearTimeout(entry.timer)
           this.pending.delete(ev.id)
-          entry.resolve({ ok: ev.ok, messageId: ev.messageId, error: ev.error })
+          entry.resolve({ ok: ev.ok, ...(ev.messageId !== undefined ? { messageId: ev.messageId } : {}), ...(ev.error !== undefined ? { error: ev.error } : {}) })
         }
         if (!ev.ok) {
           this.log.error('WhatsApp send failed', {

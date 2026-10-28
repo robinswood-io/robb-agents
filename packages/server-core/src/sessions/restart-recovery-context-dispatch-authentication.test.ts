@@ -176,13 +176,13 @@ describe('durable restart recovery', () => {
     try {
       expect(await h.manager.retryTurn(managed.id, rootId)).toEqual({ status: 'started' })
       await preparing.promise
-      expect(managed.userInputRequests).toEqual([
-        expect.objectContaining({ id: 'first-context-limit-question', status: 'cancelled' }),
-        expect.objectContaining({ id: created.requestId, status: 'cancelled' }),
+      expect<unknown>(managed.userInputRequests).toEqual([
+        (expect.objectContaining({ id: 'first-context-limit-question', status: 'cancelled' }) as unknown),
+        (expect.objectContaining({ id: created.requestId, status: 'cancelled' }) as unknown),
       ])
-      expect(managed.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
+      expect<unknown>(managed.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
         cause: 'user_retry', origin: 'retry', phase: 'started',
-        cleanContinuationId: expect.any(String),
+        cleanContinuationId: (expect.any(String) as unknown),
       })
     } finally {
       release.resolve()

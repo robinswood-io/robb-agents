@@ -37,8 +37,8 @@ function removeStaleRunLogLock(lockPath: string): boolean {
   let ownerIsDead = false;
   try {
     const raw: unknown = JSON.parse(readFileSync(lockPath, 'utf-8'));
-    if (isRecord(raw) && typeof raw.pid === 'number') {
-      ownerIsDead = !processIsAlive(raw.pid);
+    if (isRecord(raw) && typeof raw["pid"] === 'number') {
+      ownerIsDead = !processIsAlive(raw["pid"]);
     }
   } catch {
     // A writer may be between open("wx") and writing metadata. Only age can

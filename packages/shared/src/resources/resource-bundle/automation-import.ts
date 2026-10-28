@@ -1,3 +1,4 @@
+import { isJsonObject, parseJsonObject } from '../../utils/json.ts';
 /**
  * Resource Bundle — Export/Import Logic
  *
@@ -62,10 +63,10 @@ function filterJsonlByMatcherIds(filePath: string, idsToRemove: Set<string>): vo
     for (const line of lines) {
       if (!line.trim()) continue
       try {
-        const entry = JSON.parse(line)
-        if (entry.matcherId && idsToRemove.has(entry.matcherId)) continue
+        const entry = parseJsonObject(line)
+        if (typeof entry["matcherId"] === "string" && idsToRemove.has(entry["matcherId"])) continue
         // History entries use automationId
-        if (entry.automationId && idsToRemove.has(entry.automationId)) continue
+        if (typeof entry["automationId"] === "string" && idsToRemove.has(entry["automationId"])) continue
         kept.push(line)
       } catch {
         // Keep unparseable lines (don't silently drop data)
@@ -92,11 +93,12 @@ export function importAutomations(
 
   if (existsSync(configPath)) {
     try {
-      const raw = JSON.parse(readFileSync(configPath, 'utf-8'))
+      const raw: unknown = JSON.parse(readFileSync(configPath, 'utf-8'))
       const validation = validateAutomationsConfig(raw)
       if (validation.valid && validation.config) {
+        const version = isJsonObject(raw) ? raw["version"] : undefined;
         existingConfig = {
-          version: (raw as Record<string, unknown>).version as number | undefined,
+          ...(typeof version === "number" ? { version } : {}),
           automations: validation.config.automations as Record<string, AutomationMatcher[]>,
         }
       } else if (mode === 'overwrite') {

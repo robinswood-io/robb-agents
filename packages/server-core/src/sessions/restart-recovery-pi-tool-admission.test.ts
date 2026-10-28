@@ -1,3 +1,6 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
+import type { PendingTurnRecovery } from '../../../shared/src/sessions/types/turn-recovery.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -35,12 +38,12 @@ describe('durable restart recovery', () => {
       toolDisplayName: 'Read target',
     })
     const stored = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
-    expect(stored.filter(message => message.toolUseId === 'pi-prestarted-read')).toEqual([
-      expect.objectContaining({
+      .trim().split('\n').map(parseRecoveryJournalObservation)
+    expect<unknown>(stored.filter(message => message.toolUseId === 'pi-prestarted-read')).toEqual([
+      (expect.objectContaining({
         type: 'tool', toolName: 'Read', toolStatus: 'executing',
         toolInput: { file_path: '/fixture/approved-path.txt' },
-      }),
+      }) as unknown),
     ])
   })
 
@@ -71,15 +74,15 @@ describe('durable restart recovery', () => {
     await h.runtime.processEvent(managed, result, 22)
     await h.save(managed)
     const receipts = managed.messages.filter(message => message.toolUseId === toolUseId)
-    expect(receipts).toEqual([expect.objectContaining({
+    expect<unknown>(receipts).toEqual([(expect.objectContaining({
       toolName: 'Bash', toolInput: input, toolResult: 'month,value\n1,1',
       toolStatus: 'completed', toolExecuted: true, toolDisplayName: 'Read File',
-    })])
+    }) as unknown)])
     const stored = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
-    expect(stored.filter(message => message.toolUseId === toolUseId)).toEqual([
-      expect.objectContaining({ type: 'tool', toolName: 'Bash', toolInput: input,
-        toolResult: 'month,value\n1,1', toolExecuted: true }),
+      .trim().split('\n').map(parseRecoveryJournalObservation)
+    expect<unknown>(stored.filter(message => message.toolUseId === toolUseId)).toEqual([
+      (expect.objectContaining({ type: 'tool', toolName: 'Bash', toolInput: input,
+        toolResult: 'month,value\n1,1', toolExecuted: true }) as unknown),
     ])
   })
 
@@ -130,22 +133,22 @@ describe('durable restart recovery', () => {
       intent: 'Inspect the target.', displayName: 'Read target',
     }, 26)
 
-    expect(managed.messages.filter(message => message.toolUseId === toolUseId)).toEqual([
-      expect.objectContaining({
+    expect<unknown>(managed.messages.filter(message => message.toolUseId === toolUseId)).toEqual([
+      (expect.objectContaining({
         toolStatus: 'executing',
         toolInput: { file_path: '/fixture/approved-late.txt' },
         toolIntent: 'Inspect the target.',
         toolDisplayName: 'Read target',
-      }),
+      }) as unknown),
     ])
     await h.manager.flushSession(managed.id)
     const stored = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
-    expect(stored.filter(message => message.toolUseId === toolUseId)).toEqual([
-      expect.objectContaining({
+      .trim().split('\n').map(parseRecoveryJournalObservation)
+    expect<unknown>(stored.filter(message => message.toolUseId === toolUseId)).toEqual([
+      (expect.objectContaining({
         type: 'tool', toolStatus: 'executing',
         toolInput: { file_path: '/fixture/approved-late.txt' },
-      }),
+      }) as unknown),
     ])
   })
 
@@ -169,7 +172,7 @@ describe('durable restart recovery', () => {
     h.runtime.flushSession = async (sessionId: string) => {
       if (!held && managed.messages.some(message => (
         message.toolUseId === request.toolUseId
-        && message.toolInput?.file_path === '/fixture/concurrent-approved.txt'
+        && message.toolInput?.["file_path"] === '/fixture/concurrent-approved.txt'
       ))) {
         held = true
         entered.resolve()
@@ -230,10 +233,10 @@ describe('durable restart recovery', () => {
     )).rejects.toThrow('identity already belongs')
 
     const receipts = managed.messages.filter(message => message.toolUseId === request.toolUseId)
-    expect(receipts).toEqual([expect.objectContaining({
+    expect<unknown>(receipts).toEqual([(expect.objectContaining({
       toolStatus: 'executing',
       toolInput: { file_path: '/fixture/failed-flush-approved.txt' },
-    })])
+    }) as unknown)])
     expect(receipts[0]).not.toHaveProperty('toolExecuted')
   })
 
@@ -276,16 +279,16 @@ describe('durable restart recovery', () => {
     await expect(h.runtime.durablyRecordAutomaticRecoveryToolAdmission(
       managed, runtimeAgent, request,
     )).rejects.toThrow('identity already belongs')
-    expect(managed.messages.filter(message => message.toolUseId === request.toolUseId)).toEqual([
-      expect.objectContaining({
+    expect<unknown>(managed.messages.filter(message => message.toolUseId === request.toolUseId)).toEqual([
+      (expect.objectContaining({
         toolStatus: 'executing',
         toolInput: { file_path: '/fixture/approved-before-row.txt' },
-      }),
+      }) as unknown),
     ])
   })
 
   it('serializes concurrent recovery mutation admissions so exactly one external effect can start', async () => {
-    process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+    process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
     const h = harness()
     const { managed, runtimeAgent } = await prepareStartedRecoveryAdmission(h, 'concurrent-mutation-admission', 17)
     const entered = deferred(); const release = deferred()
@@ -364,14 +367,14 @@ describe('durable restart recovery', () => {
     await expect(h.runtime.durablyRecordAutomaticRecoveryToolAdmission(managed, runtimeAgent, {
       toolUseId: 'read-after-approval', toolName: 'Read', toolInput: { file_path: '/fixture/after.txt' },
     })).resolves.toBeUndefined()
-    managed.pendingTurnRecovery = { ...managed.pendingTurnRecovery!, recoveryDispatch: undefined }
+    managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({ ...managed.pendingTurnRecovery!, recoveryDispatch: undefined })
     await expect(h.runtime.durablyRecordAutomaticRecoveryToolAdmission(managed, runtimeAgent, {
       toolUseId: 'read-after-revocation', toolName: 'Read', toolInput: { file_path: '/fixture/later.txt' },
     })).rejects.toThrow('no longer owns its started dispatch')
   })
 
   it('reuses bounded Orion reads and retries only a test that never launched its missing runner', async () => {
-    process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+    process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
     const h = harness()
     const { managed, runtimeAgent } = await prepareStartedRecoveryAdmission(h, 'orion-read-and-test-retry', 22)
     const cwd = '/opt/ia-webdev/agent-dev/worktrees/orion/scotland-ai-executive-day-20260930'

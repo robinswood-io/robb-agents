@@ -44,7 +44,7 @@ const finishDeferredPreparation = async () => {
         }
         if (!managed.messageQueue.some(item => item.messageId === userMessage.id)) {
             managed.messageQueue.unshift(queuedItem?.messageId === userMessage.id ? queuedItem
-                : { message: activeMessageState.message, attachments, storedAttachments, options: activeMessageState.options, messageId: userMessage.id });
+                : { message: activeMessageState.message, ...(attachments !== undefined ? { attachments: attachments } : {}), ...(storedAttachments !== undefined ? { storedAttachments: storedAttachments } : {}), ...(activeMessageState.options !== undefined ? { options: activeMessageState.options } : {}), messageId: userMessage.id });
         }
         sessionOperationContext.owner["persistSession"](managed);
         await sessionOperationContext.owner.flushSession(sessionId);

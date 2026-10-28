@@ -57,7 +57,7 @@ export const NOOP_LOGGER: MessagingLogger = {
 export function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
     return new Promise<T>((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error(`[telegram] ${label} timed out after ${ms}ms`)), ms);
-        p.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
+        p.then((v) => { clearTimeout(timer); resolve(v); }, (e: unknown) => { clearTimeout(timer); reject(e); });
     });
 }
 
@@ -79,19 +79,19 @@ export function describeError(err: unknown, depth = 0): Record<string, unknown> 
             code?: unknown;
         }).code;
         if (code !== undefined)
-            out.code = code;
+            out["code"] = code;
         const grammyInner = (err as {
             error?: unknown;
         }).error;
         if (grammyInner !== undefined)
-            out.error = describeError(grammyInner, depth + 1);
+            out["error"] = describeError(grammyInner, depth + 1);
         const cause = (err as {
             cause?: unknown;
         }).cause;
         if (cause !== undefined)
-            out.cause = describeError(cause, depth + 1);
+            out["cause"] = describeError(cause, depth + 1);
         if (err.stack)
-            out.stack = err.stack.split('\n').slice(0, 4).join('\n');
+            out["stack"] = err.stack.split('\n').slice(0, 4).join('\n');
         return out;
     }
     if (err && typeof err === 'object')

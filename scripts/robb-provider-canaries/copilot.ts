@@ -5,10 +5,10 @@ import { SECRET_ENVIRONMENT_NAMES, configuredSecret, fetchText, requestSignal, r
 
 function parseModelIds(text: string): string[] {
   const parsed = JSON.parse(text) as Record<string, unknown>;
-  const values = Array.isArray(parsed.models) ? parsed.models : Array.isArray(parsed.data) ? parsed.data : [];
-  return values.flatMap((entry) => {
+  const values = Array.isArray(parsed["models"]) ? parsed["models"] : Array.isArray(parsed["data"]) ? parsed["data"] : [];
+  return values.flatMap((entry: unknown) => {
     if (!entry || typeof entry !== 'object') return [];
-    const id = (entry as Record<string, unknown>).id;
+    const id = (entry as Record<string, unknown>)["id"];
     return typeof id === 'string' && id ? [id] : [];
   });
 }
@@ -62,7 +62,7 @@ export async function runCopilotCanaries(
   const listModels = await runProbe(provider, 'list-models', now, secrets, async () => {
     const text = await fetchText(
       fetchImpl,
-      `${baseUrl}${contract.endpoint.operationPaths!.listModels}`,
+      `${baseUrl}${contract.endpoint.operationPaths!["listModels"]}`,
       { headers, signal: requestSignal() },
       secrets,
     );
@@ -76,10 +76,10 @@ export async function runCopilotCanaries(
   }
 
   const toolCall = await runProbe(provider, 'tool-call', now, secrets, async () => {
-    const model = environment.ROBB_CANARY_COPILOT_MODEL?.trim() || 'gpt-5-mini';
+    const model = environment["ROBB_CANARY_COPILOT_MODEL"]?.trim() || 'gpt-5-mini';
     if (!modelIds.includes(model)) throw new Error(`configured canary model is unavailable: ${model}`);
     const toolName = 'provider_contract_healthcheck';
-    const text = await fetchText(fetchImpl, `${baseUrl}${contract.endpoint.operationPaths!.toolCall}`, {
+    const text = await fetchText(fetchImpl, `${baseUrl}${contract.endpoint.operationPaths!["toolCall"]}`, {
       method: 'POST',
       headers: {
         ...headers,

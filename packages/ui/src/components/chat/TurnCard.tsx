@@ -215,7 +215,7 @@ export const TurnCard = React.memo(function TurnCard({
     // Construct a minimal turn-like object for deriveTurnPhase
     const turnData: Pick<AssistantTurn, 'isComplete' | 'response' | 'activities'> = {
       isComplete,
-      response,
+      ...(response !== undefined ? { response: response } : {}),
       activities,
     }
     return deriveTurnPhase(turnData as AssistantTurn)
@@ -268,6 +268,8 @@ export const TurnCard = React.memo(function TurnCard({
       }, 260)
       return () => clearTimeout(timer)
     }
+  
+    return undefined;
   }, [isExpanded])
 
   // Use local state for activity groups if no controlled state provided

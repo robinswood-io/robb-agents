@@ -15,7 +15,6 @@
  */
 import type { AgentProvider, LlmProviderType, LlmAuthType } from "../types.ts";
 // Import deprecated type for legacy migration function only
-import type { LlmConnectionType } from "../../../config/llm-connections.ts";
 
 /**
  * Get list of currently available providers.
@@ -32,8 +31,8 @@ export function getAvailableProviders(): AgentProvider[] {
  * @param provider - Provider to check
  * @returns true if the provider has a working implementation
  */
-export function isProviderAvailable(provider: AgentProvider): boolean {
-  return getAvailableProviders().includes(provider);
+export function isProviderAvailable(provider: unknown): boolean {
+  return getAvailableProviders().some(available => available === provider);
 }
 
 // ============================================================
@@ -63,7 +62,6 @@ export function providerTypeToAgentProvider(providerType: LlmProviderType): Agen
 
     default:
       // Exhaustive check
-      const _exhaustive: never = providerType;
       return 'anthropic';
   }
 }
@@ -75,7 +73,7 @@ export function providerTypeToAgentProvider(providerType: LlmProviderType): Agen
  * @param connectionType - The legacy LLM connection type
  * @returns The corresponding agent provider
  */
-export function connectionTypeToProvider(connectionType: LlmConnectionType): AgentProvider {
+export function connectionTypeToProvider(connectionType: unknown): AgentProvider {
   switch (connectionType) {
     case 'anthropic':
       return 'anthropic';

@@ -1,3 +1,5 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
@@ -17,7 +19,7 @@ describe('source_activated auto-retry', () => {
   beforeEach(() => {
     tmpRoot = mkdtempSync(join(tmpdir(), 'sm-autoretry-'))
     sm = withSessionOperationsForTest(new SessionManager())
-    const internals = sm as unknown as { enqueuePersist: () => boolean; flushSession: () => Promise<void> }
+    const internals = sessionManagerForTest(sm)
     internals.enqueuePersist = () => true
     internals.flushSession = async () => {}
   })
@@ -69,20 +71,7 @@ describe('source_activated auto-retry', () => {
     managed: ReturnType<typeof buildSession>,
     onChat: (message: string) => void,
   ) {
-    const internals = sm as unknown as {
-      enqueuePersist: () => boolean
-      flushSession: () => Promise<void>
-      sendEvent: () => void
-      emitExecutionTelemetry: () => void
-      startGenerationTelemetry: () => void
-      finishGenerationTelemetry: () => void
-      beginAutomaticSessionStatusLifecycle: () => Promise<void>
-      finishAutomaticSessionStatusLifecycle: () => Promise<void>
-      isSessionBeingViewed: () => boolean
-      markSessionRead: () => Promise<void>
-      processNextQueuedMessage: () => void
-      getOrCreateAgent: () => Promise<unknown>
-    }
+    const internals = sessionManagerForTest(sm)
     internals.enqueuePersist = () => true
     internals.flushSession = async () => {}
     internals.sendEvent = () => {}
@@ -94,23 +83,22 @@ describe('source_activated auto-retry', () => {
     internals.isSessionBeingViewed = () => true
     internals.markSessionRead = async () => {}
     internals.processNextQueuedMessage = () => {}
-    const agent: {
+    const fixture: {
       onProviderHandoff?: () => void
-      chat(message: string): AsyncGenerator<{ type: 'complete' }>
+      chat(message: string): AsyncGenerator<{ type: 'complete' }, void, unknown>
       getModel(): string
       getSessionId(): null
       isProcessing(): boolean
       setAllSources(): void
       redirect(): boolean
     } = {
-      onProviderHandoff: undefined,
       async *chat(message: string) {
         onChat(message)
         agent.onProviderHandoff?.()
         // End this isolated replay without asking the completion gate to spend
         // another recovery attempt after the state snapshot has been captured.
         managed.stopRequested = true
-        if (false) yield { type: 'complete' as const }
+        yield* []
       },
       getModel: () => 'test/source-activation',
       getSessionId: () => null,
@@ -118,7 +106,8 @@ describe('source_activated auto-retry', () => {
       setAllSources: () => {},
       redirect: () => false,
     }
-    managed.agent = agent as never
+    const agent = completeSessionAgentFixture(managed.workspace, fixture)
+    managed.agent = agent
     internals.getOrCreateAgent = async () => agent
   }
 
@@ -132,7 +121,7 @@ describe('source_activated auto-retry', () => {
   function spyOnSendMessage(sessionId: string) {
     const calls: string[] = []
     const managed = sessionRuntimeStateForTest(sm).sessions.get(sessionId)!
-    ;(sm as unknown as { sendMessage: (id: string, msg: string, ...args: unknown[]) => Promise<void> }).sendMessage = async (id, msg, ...args) => {
+    ;(sm as { sendMessage: (id: string, msg: string, ...args: unknown[]) => Promise<void> }).sendMessage = async (id, msg, ...args) => {
       const m = sessionRuntimeStateForTest(sm).sessions.get(id)!
       const dispatchToken = args[11] as symbol | undefined
       const claim = claimAutoRetryPending(m, msg, Date.now(), dispatchToken)
@@ -159,7 +148,7 @@ describe('source_activated auto-retry', () => {
       objectiveRevision: binding.lastUserMessageId ?? binding.userMessageId,
     }
     const event: SourceActivatedEvent = { type: 'source_activated', sourceSlug, originalMessage }
-    await (sm as unknown as { processEvent: (m: unknown, e: unknown) => Promise<void> }).processEvent(managed, event)
+    await (sessionManagerForTest(sm)).processEvent(managed, event)
   }
 
   it('basic re-send — fires sendMessage with "[<slug> activated]" suffix', async () => {
@@ -179,7 +168,7 @@ describe('source_activated auto-retry', () => {
     buildSession(sessionId)
     const calls = spyOnSendMessage(sessionId)
     const emitted: unknown[] = []
-    ;(sm as unknown as { sendEvent: (event: unknown) => void }).sendEvent = event => { emitted.push(event) }
+    ;(sessionManagerForTest(sm)).sendEvent = event => { emitted.push(event) }
 
     await fireSourceActivated(
       sessionId,
@@ -190,10 +179,10 @@ describe('source_activated auto-retry', () => {
     await new Promise(r => setTimeout(r, 150))
 
     expect(calls).toEqual(['list my repos\n\n[github activated]'])
-    expect(emitted).toContainEqual(expect.objectContaining({
+    expect<unknown>(emitted).toContainEqual((expect.objectContaining({
       type: 'source_activated',
       originalMessage: 'list my repos',
-    }))
+    }) as unknown))
   })
 
   it('Stop cancels the timer and rejects a late source event from the stopped generation', async () => {
@@ -201,7 +190,7 @@ describe('source_activated auto-retry', () => {
     const managed = buildSession(sessionId)
     const calls = spyOnSendMessage(sessionId)
     const emitted: unknown[] = []
-    ;(sm as unknown as { sendEvent: (event: unknown) => void }).sendEvent = event => { emitted.push(event) }
+    ;(sessionManagerForTest(sm)).sendEvent = event => { emitted.push(event) }
 
     await fireSourceActivated(sessionId, 'github', 'inspect the repository')
     expect(managed.autoRetryTimer).toBeDefined()
@@ -212,7 +201,7 @@ describe('source_activated auto-retry', () => {
     expect(managed.autoRetryTimer).toBeUndefined()
     expect(managed.autoRetryPending).toMatchObject({ committed: true, cancelled: true })
     const eventCountAfterStop = emitted.length
-    await (sm as unknown as { processEvent: (m: unknown, e: unknown, generation: number) => Promise<void> })
+    await (sessionManagerForTest(sm))
       .processEvent(managed, {
         type: 'source_activated', sourceSlug: 'linear', originalMessage: 'late provider text',
       }, managed.processingGeneration - 1)
@@ -233,9 +222,9 @@ describe('source_activated auto-retry', () => {
       objectiveRevision: objective.lastUserMessageId!,
     }
     const emitted: unknown[] = []
-    ;(sm as unknown as { sendEvent: (event: unknown) => void }).sendEvent = event => { emitted.push(event) }
+    ;(sessionManagerForTest(sm)).sendEvent = event => { emitted.push(event) }
 
-    await (sm as unknown as { processEvent: (m: unknown, e: unknown) => Promise<void> })
+    await (sessionManagerForTest(sm))
       .processEvent(managed, { type: 'source_activated', sourceSlug: 'github', originalMessage: 'inspect' })
 
     expect(emitted).toEqual([])

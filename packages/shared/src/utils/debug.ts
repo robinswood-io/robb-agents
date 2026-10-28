@@ -1,9 +1,9 @@
 // Check CRAFT_DEBUG env var at module load (for SDK subprocess)
 // Guard against browser/renderer contexts where process is undefined
-let debugEnabled = typeof process !== 'undefined' && process.env?.CRAFT_DEBUG === '1';
+let debugEnabled = typeof process !== 'undefined' && process.env?.["CRAFT_DEBUG"] === '1';
 
 function isCliJsonOnlyMode(): boolean {
-  return typeof process !== 'undefined' && process.env?.CRAFT_CLI_JSON_ONLY === '1';
+  return typeof process !== 'undefined' && process.env?.["CRAFT_CLI_JSON_ONLY"] === '1';
 }
 
 /**
@@ -28,22 +28,27 @@ function detectEnvironment(): Environment {
   return 'cli';
 }
 
-let electronLog: unknown | null = null;
+type DebugSink = { info: (message: string) => void };
+function isDebugSink(value: unknown): value is DebugSink {
+  return value !== null && typeof value === 'object' && 'info' in value && typeof value.info === 'function';
+}
+let electronLog: DebugSink | null = null;
 let electronLogChecked = false;
 
-function getElectronLog(): { info?: (message: string) => void } | null {
+function getElectronLog(): DebugSink | null {
   if (electronLogChecked) {
-    return (electronLog as { info?: (message: string) => void } | null) ?? null;
+    return electronLog;
   }
   electronLogChecked = true;
   try {
     // Optional dependency - only available in Electron main process.
-    const loaded = require('electron-log/main');
-    electronLog = loaded?.default ?? loaded ?? null;
+    const loaded: unknown = require('electron-log/main');
+    const candidate = loaded !== null && typeof loaded === 'object' && 'default' in loaded && loaded.default != null ? loaded.default : loaded;
+    electronLog = isDebugSink(candidate) ? candidate : null;
   } catch {
     electronLog = null;
   }
-  return (electronLog as { info?: (message: string) => void } | null) ?? null;
+  return electronLog;
 }
 
 /**
@@ -70,7 +75,7 @@ function safeStringify(obj: unknown): string {
   } catch {
     // Handle circular references by using a replacer that tracks seen objects
     const seen = new WeakSet();
-    return JSON.stringify(obj, (_key, value) => {
+    return JSON.stringify(obj, (_key, value: unknown) => {
       if (typeof value === 'object' && value !== null) {
         if (seen.has(value)) {
           return '[Circular]';

@@ -76,13 +76,13 @@ export class SpecializedProfileService {
             throw new Error(`Workspace ${workspaceId} not found`);
         return workspace;
     }
-    private analysisWindow(snapshots: readonly MissionSnapshot[]): {
+    /** @internal */ public analysisWindow(snapshots: readonly MissionSnapshot[]): {
         included: MissionSnapshot[];
         excludedCount: number;
     } {
         return specializedProfileServiceAnalysis.analysisWindow(this, snapshots);
     }
-    private async verifiedAnalysisWindow(workspaceId: string, snapshots: readonly MissionSnapshot[]): Promise<{
+    /** @internal */ public async verifiedAnalysisWindow(workspaceId: string, snapshots: readonly MissionSnapshot[]): Promise<{
         included: MissionSnapshot[];
         excludedCount: number;
     }> {

@@ -54,12 +54,12 @@ function AvatarFallback({
  * Both elements are layered so the transition is smooth.
  */
 interface CrossfadeAvatarProps {
-  src?: string | null
-  alt?: string
+  src?: string | null | undefined
+  alt?: string | undefined
   fallback: React.ReactNode
-  className?: string
-  fallbackClassName?: string
-  imageClassName?: string
+  className?: string | undefined
+  fallbackClassName?: string | undefined
+  imageClassName?: string | undefined
 }
 
 function CrossfadeAvatar({

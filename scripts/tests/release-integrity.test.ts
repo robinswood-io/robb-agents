@@ -20,8 +20,8 @@ import {
   serializeRuntimeIntegrityManifest,
 } from '../../packages/shared/src/agent/backend/internal/runtime-integrity'
 
-const sourceIntegrity = require('../../apps/electron/scripts/releaseIntegrity.cjs')
-const signatureIntegrity = require('../../apps/electron/scripts/afterSign.cjs')
+import sourceIntegrity from '../../apps/electron/scripts/releaseIntegrity.cjs'
+import signatureIntegrity from '../../apps/electron/scripts/afterSign.cjs'
 
 let fixtureDirectory: string | undefined
 
@@ -432,7 +432,7 @@ describe('public release policy', () => {
 
   it('pins every downstream checkout and embedded build commit to preflight source', () => {
     const pinnedCheckouts = releaseWorkflow.match(
-      /ref: \$\{\{ needs\.preflight\.outputs\.source_commit \}\}/g,
+      /ref: ["']?\$\{\{ needs\.preflight\.outputs\.source_commit \}\}["']?/g,
     ) ?? []
     expect(pinnedCheckouts).toHaveLength(5)
     expect(releaseWorkflow).not.toContain("needs.preflight.outputs.publish == 'true' && needs.preflight.outputs.tag || github.sha")

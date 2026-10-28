@@ -12,10 +12,10 @@ export function handleAgentTaskBackgrounded(sessionOperationContext: SessionOper
         managed.backgroundTaskRegistry.set(event.taskId, {
             taskId: event.taskId,
             toolUseId: event.toolUseId,
-            intent: event.intent,
+            ...(event.intent !== undefined ? { intent: event.intent } : {}),
             startTime: Date.now(),
             status: 'running',
-            turnId: event.turnId,
+            ...(event.turnId !== undefined ? { turnId: event.turnId } : {}),
             // Workflow launches carry a wf_ id + a live sub-agent completion count.
             ...(event.workflowId ? { workflowId: event.workflowId } : {}),
             ...(event.kind === 'workflow' ? { agentsCompleted: 0 } : {}),
@@ -170,7 +170,7 @@ export function handleAgentTaskCompleted(sessionOperationContext: SessionOperati
             void sessionOperationContext.owner.sendMessage(sessionId, nudge, [], [], {
                 hidden: true,
                 internalOrigin: { kind: 'agent-message' },
-            }).catch((err) => {
+            }).catch((err: unknown) => {
                 sessionLog.error(`[bg-lifecycle] failed to surface completed task ${event.taskId}:`, err);
             });
         }

@@ -49,7 +49,7 @@ export function themeSvgContent(
   // This catches SVGs that rely on default black fill
   processed = processed.replace(
     /<svg([^>]*)>/i,
-    (match, attrs) => {
+    (match, attrs: string) => {
       // Don't add fill if already has fill attribute (even fill="none")
       if (/\bfill\s*=/i.test(attrs)) {
         return match

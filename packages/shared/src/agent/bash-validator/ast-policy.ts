@@ -63,7 +63,7 @@ export function validateBashCommand(
 
   return {
     ...result,
-    subcommandResults: subcommandResults.length > 0 ? subcommandResults : undefined,
+    ...(subcommandResults.length > 0 ? { subcommandResults: subcommandResults } : {}),
   };
 }
 
@@ -318,12 +318,13 @@ function validateCommand(
       && configuredGitAllowance
     : patterns.some(pattern => pattern.regex.test(commandStr));
 
+  const optionalReason = matchesPattern ? undefined : gitLikeExecutable
+      ? 'Git observation is missing the exact read-only hardening prefix, uses an unsafe option, or is not granted by the configured allowlist'
+      : 'Not in read-only allowlist';
   const subResult: SubcommandResult = {
     command: commandStr,
     allowed: matchesPattern,
-    reason: matchesPattern ? undefined : gitLikeExecutable
-      ? 'Git observation is missing the exact read-only hardening prefix, uses an unsafe option, or is not granted by the configured allowlist'
-      : 'Not in read-only allowlist',
+    ...(optionalReason !== undefined ? { reason: optionalReason } : {}),
   };
   results.push(subResult);
 

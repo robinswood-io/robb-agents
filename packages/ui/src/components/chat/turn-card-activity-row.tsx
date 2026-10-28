@@ -126,7 +126,7 @@ export function ActivityRow({ activity, onOpenDetails, isLastChild, sessionFolde
   const displayedName: string = isMcpOrApiTool ? sourceName : fullDisplayName
 
   // Intent for MCP tools, description for Bash commands
-  const intentOrDescription = activity.intent || (activity.toolInput?.description as string | undefined)
+  const intentOrDescription = activity.intent || (activity.toolInput?.["description"] as string | undefined)
   const inputSummary = formatToolInput(activity.toolInput, activity.toolName, sessionFolderPath)
   const diffStats = computeEditWriteDiffStats(activity.toolName, activity.toolInput)
   const isCheckpoint = activity.status === 'checkpoint'
@@ -184,9 +184,9 @@ export function ActivityRow({ activity, onOpenDetails, isLastChild, sessionFolde
               </Tooltip>
             )}
             {/* Model badge for LLM Query */}
-            {activity.toolName === 'mcp__session__call_llm' && activity.toolInput?.model && (
+            {activity.toolName === 'mcp__session__call_llm' && activity.toolInput?.["model"] && (
               <span className="px-1.5 py-0.5 bg-background shadow-minimal rounded-[4px] text-[10px] text-foreground/60 shrink-0">
-                {String(activity.toolInput.model)}
+                {String(activity.toolInput["model"])}
               </span>
             )}
             {(intentOrDescription || (displayMode === 'detailed' && (toolSlug || inputSummary))) && (
@@ -235,16 +235,16 @@ export function ActivityRow({ activity, onOpenDetails, isLastChild, sessionFolde
             {/* Filename badge - supports both Claude Code and Codex formats */}
             {(() => {
               // Claude Code format: file_path
-              if (typeof activity.toolInput?.file_path === 'string') {
+              if (typeof activity.toolInput?.["file_path"] === 'string') {
                 return (
                   <span className="px-1.5 py-0.5 bg-background shadow-minimal rounded-[4px] text-[11px] text-foreground/70">
-                    {normalizePath(activity.toolInput.file_path).split('/').pop()}
+                    {normalizePath(activity.toolInput["file_path"]).split('/').pop()}
                   </span>
                 )
               }
               // Codex format: changes[0].path
-              if (Array.isArray(activity.toolInput?.changes)) {
-                const firstChange = activity.toolInput.changes[0] as { path?: string } | undefined
+              if (Array.isArray(activity.toolInput?.["changes"])) {
+                const firstChange = activity.toolInput["changes"][0] as { path?: string } | undefined
                 if (firstChange?.path) {
                   return (
                     <span className="px-1.5 py-0.5 bg-background shadow-minimal rounded-[4px] text-[11px] text-foreground/70">
@@ -258,10 +258,10 @@ export function ActivityRow({ activity, onOpenDetails, isLastChild, sessionFolde
           </span>
         )}
         {/* Filename badge for Read tool (no diff stats) */}
-        {!isMcpOrApiTool && !isBackgrounded && !visibleDiffStats && activity.toolName === 'Read' && typeof activity.toolInput?.file_path === 'string' && (
+        {!isMcpOrApiTool && !isBackgrounded && !visibleDiffStats && activity.toolName === 'Read' && typeof activity.toolInput?.["file_path"] === 'string' && (
           <span className="flex items-center gap-1.5 text-[10px] shrink-0">
             <span className="px-1.5 py-0.5 bg-background shadow-minimal rounded-[4px] text-[11px] text-foreground/70">
-              {normalizePath(activity.toolInput.file_path).split('/').pop()}
+              {normalizePath(activity.toolInput["file_path"]).split('/').pop()}
             </span>
           </span>
         )}

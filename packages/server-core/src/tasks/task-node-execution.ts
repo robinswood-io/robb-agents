@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { ThinkingLevel } from '@craft-agent/shared/agent';
 import type { TaskNode, TaskSpec } from '@craft-agent/shared/tasks';
 
@@ -21,12 +22,12 @@ export interface TaskNodeProfile {
 
 /** Settings explicitly selected on the node, task, parent session or workspace. */
 export interface TaskModelSettings {
-  connectionRoutePinned?:boolean;
-  modelRoutePinned?:boolean;
-  thinkingLevelPinned?:boolean;
-  model?: string;
-  llmConnection?: string;
-  thinkingLevel?: ThinkingLevel;
+  connectionRoutePinned?: boolean | undefined;
+  modelRoutePinned?: boolean | undefined;
+  thinkingLevelPinned?: boolean | undefined;
+  model?: string | undefined;
+  llmConnection?: string | undefined;
+  thinkingLevel?: ThinkingLevel | undefined;
 }
 
 export function resolveTaskModelSettings(
@@ -55,9 +56,9 @@ export function resolveTaskModelSettings(
     || spec.defaults?.llmConnection !== undefined
     || (llmConnection !== undefined && (modelRoutePinned || defaults.connectionRoutePinned === true));
   return {
-    llmConnection,
-    model,
-    thinkingLevel,
+    ...(llmConnection !== undefined ? { llmConnection: llmConnection } : {}),
+    ...(model !== undefined ? { model: model } : {}),
+    ...(thinkingLevel !== undefined ? { thinkingLevel: thinkingLevel } : {}),
     ...(connectionRoutePinned ? { connectionRoutePinned: true } : {}),
     ...(modelRoutePinned ? { modelRoutePinned: true } : {}),
     ...(thinkingLevelPinned ? { thinkingLevelPinned: true } : {}),
@@ -221,7 +222,7 @@ export function isReadOnlyTaskReviewNode(node: TaskNode): boolean {
 
 import type {LlmConnection} from '@craft-agent/shared/config';
 export interface TaskNodeExecutionRoute { profile:TaskNodeProfile;model?:string;llmConnection?:string;thinkingLevel:ThinkingLevel;connectionRoutePinned?:boolean;modelRoutePinned?:boolean;thinkingLevelPinned?:boolean;strategy:'primary'|'pinned';blockedReason?:string; }
-export interface ResolveTaskNodeExecutionRouteInput {routingSensitivity?:import('@craft-agent/shared/config').SourceSensitivity;node:TaskNode;spec:TaskSpec;attempt:number;lastFailure?:string;defaults?:TaskModelSettings;previousRoute?:TaskModelSettings;sourceSlugs?:string[];connections:LlmConnection[];defaultConnectionSlug?:string;costControlPolicy?:import('@craft-agent/shared/config').AgentCostControlPolicy;}
-export function resolveTaskNodeExecutionRoute(input:ResolveTaskNodeExecutionRouteInput):TaskNodeExecutionRoute {const settings=resolveTaskModelSettings(input.node,input.spec,input.defaults);const connection=settings.llmConnection??input.defaultConnectionSlug;const pinned=Boolean(settings.model||settings.llmConnection);return {...settings,llmConnection:connection,thinkingLevel:settings.thinkingLevel??'medium',profile:inferTaskNodeProfile(input.node),strategy:pinned?'pinned':'primary',connectionRoutePinned:connection!==undefined,modelRoutePinned:settings.model!==undefined,thinkingLevelPinned:settings.thinkingLevel!==undefined,...(connection&&!input.connections.some(c=>c.slug===connection)?{blockedReason:'The selected task connection is unavailable.'}:{})};}
+export interface ResolveTaskNodeExecutionRouteInput {routingSensitivity?:import('@craft-agent/shared/config').SourceSensitivity | undefined;node:TaskNode;spec:TaskSpec;attempt:number;lastFailure?:string | undefined;defaults?:TaskModelSettings | undefined;previousRoute?:TaskModelSettings | undefined;sourceSlugs?:string[] | undefined;connections:LlmConnection[];defaultConnectionSlug?:string | undefined;costControlPolicy?:import('@craft-agent/shared/config').AgentCostControlPolicy | undefined;}
+export function resolveTaskNodeExecutionRoute(input:ResolveTaskNodeExecutionRouteInput):TaskNodeExecutionRoute {const settings=resolveTaskModelSettings(input.node,input.spec,input.defaults);const connection=settings.llmConnection??input.defaultConnectionSlug;const pinned=Boolean(settings.model||settings.llmConnection);return omitUndefined<TaskNodeExecutionRoute>({...settings,llmConnection:connection,thinkingLevel:settings.thinkingLevel??'medium',profile:inferTaskNodeProfile(input.node),strategy:pinned?'pinned':'primary',connectionRoutePinned:connection!==undefined,modelRoutePinned:settings.model!==undefined,thinkingLevelPinned:settings.thinkingLevel!==undefined,...(connection&&!input.connections.some(c=>c.slug===connection)?{blockedReason:'The selected task connection is unavailable.'}:{})});}
 
 export interface TaskNodeRouteContext {node:TaskNode;spec:TaskSpec;attempt:number;lastFailure?:string;defaults?:TaskModelSettings;previousRoute?:TaskModelSettings;routingSensitivity?:import('@craft-agent/shared/config').SourceSensitivity;sourceSlugs?:string[];}

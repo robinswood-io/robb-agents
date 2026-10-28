@@ -18,52 +18,52 @@ export interface ResponseCardProps {
   /** Whether the content is still streaming */
   isStreaming: boolean
   /** When streaming started - used for buffering timeout calculation */
-  streamStartTime?: number
+  streamStartTime?: number | undefined
   /** Callback to open file in editor */
-  onOpenFile?: (path: string) => void
+  onOpenFile?: ((path: string) => void) | undefined
   /** Callback to open URL */
-  onOpenUrl?: (url: string) => void
+  onOpenUrl?: ((url: string) => void) | undefined
   /** Callback to open response in Monaco editor */
-  onPopOut?: () => void
+  onPopOut?: (() => void) | undefined
   /** Card variant - 'response' for AI messages, 'plan' for plan messages */
-  variant?: 'response' | 'plan'
+  variant?: 'response' | 'plan' | undefined
   /** Optional presentation variant for ordinary assistant responses. Plans stay card-based. */
-  presentation?: 'default' | 'codex'
+  presentation?: 'default' | 'codex' | undefined
   /** Parent session ID (used to reset local annotation/island UI state on session switches) */
-  sessionId?: string
+  sessionId?: string | undefined
   /** Underlying message ID for annotation actions */
-  messageId?: string
+  messageId?: string | undefined
   /** Persisted annotations for this response */
-  annotations?: AnnotationV1[]
+  annotations?: AnnotationV1[] | undefined
   /** Callback when user accepts the plan (plan variant only) */
-  onAccept?: () => void
+  onAccept?: (() => void) | undefined
   /** Callback when user accepts the plan with compaction (compact first, then execute) */
-  onAcceptWithCompact?: () => void
+  onAcceptWithCompact?: (() => void) | undefined
   /** Whether this is the last response in the session (shows Accept Plan button only for last response) */
-  isLastResponse?: boolean
+  isLastResponse?: boolean | undefined
   /** Whether to show the Accept Plan button (default: true) */
-  showAcceptPlan?: boolean
+  showAcceptPlan?: boolean | undefined
   /** Compact-footer layout. Hides Copy / Markdown / Branch in the response footer;
    *  keeps the Accept Plan dropdown when a plan is the last response. */
-  compactMode?: boolean
+  compactMode?: boolean | undefined
   /** Callback to branch the session from this response */
-  onBranch?: (options?: { newPanel?: boolean }) => void
+  onBranch?: ((options?: { newPanel?: boolean }) => void) | undefined
   /** Callback to add annotation from selected text */
-  onAddAnnotation?: (messageId: string, annotation: AnnotationV1) => void
+  onAddAnnotation?: ((messageId: string, annotation: AnnotationV1) => void) | undefined
   /** Callback to remove persisted annotation */
-  onRemoveAnnotation?: (messageId: string, annotationId: string) => void
+  onRemoveAnnotation?: ((messageId: string, annotationId: string) => void) | undefined
   /** Callback to update persisted annotation */
-  onUpdateAnnotation?: (messageId: string, annotationId: string, patch: Partial<AnnotationV1>) => void
+  onUpdateAnnotation?: ((messageId: string, annotationId: string, patch: Partial<AnnotationV1>) => void) | undefined
   /** Input send key behavior used by follow-up editor */
-  sendMessageKey?: 'enter' | 'cmd-enter'
+  sendMessageKey?: 'enter' | 'cmd-enter' | undefined
   /** Callback when follow-up is saved via "Save & Send" action */
-  onSaveAndSendFollowUp?: (target: { messageId: string; annotationId: string; note: string; selectedText: string }) => void
+  onSaveAndSendFollowUp?: ((target: { messageId: string; annotationId: string; note: string; selectedText: string }) => void) | undefined
   /** Whether there are active pending follow-up annotations in the session */
-  hasActiveFollowUpAnnotations?: boolean
+  hasActiveFollowUpAnnotations?: boolean | undefined
   /** External request to open a specific annotation in this response */
-  openAnnotationRequest?: OpenAnnotationRequest | null
+  openAnnotationRequest?: OpenAnnotationRequest | null | undefined
   /** Annotation interaction mode (viewer uses tooltip-only to suppress the island) */
-  annotationInteractionMode?: AnnotationInteractionMode
+  annotationInteractionMode?: AnnotationInteractionMode | undefined
 }
 
 export interface BranchDropdownProps {

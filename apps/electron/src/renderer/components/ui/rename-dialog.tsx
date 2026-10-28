@@ -18,7 +18,7 @@ interface RenameDialogProps {
   value: string
   onValueChange: (value: string) => void
   onSubmit: () => void
-  placeholder?: string
+  placeholder?: string | undefined
 }
 
 export function RenameDialog({
@@ -45,6 +45,8 @@ export function RenameDialog({
       }, 0)
       return () => clearTimeout(timer)
     }
+  
+    return undefined;
   }, [open])
 
   const handleSubmit = () => {

@@ -49,8 +49,8 @@ export async function getAccessibilitySnapshot(transportOwner: BrowserCDP): Prom
             role: entry.role,
             name: entry.name,
             pageUrl: snapshotUrl,
-            value: entry.value,
-            description: entry.description,
+            ...(entry.value !== undefined ? { value: entry.value } : {}),
+            ...(entry.description !== undefined ? { description: entry.description } : {}),
         });
         const accessNode: AccessibilityNode = {
             ref,
@@ -109,11 +109,11 @@ export async function getAccessibilitySnapshot(transportOwner: BrowserCDP): Prom
         const shouldKeepPrimary = hasPrimarySignal && !isGenericWithoutName;
         if (shouldKeepPrimary) {
             pushAccessNode({
-                backendDOMNodeId,
+                ...(backendDOMNodeId !== undefined ? { backendDOMNodeId: backendDOMNodeId } : {}),
                 role,
                 name,
-                value,
-                description,
+                ...(value !== undefined ? { value: value } : {}),
+                ...(description !== undefined ? { description: description } : {}),
                 focused,
                 checked,
                 disabled,
@@ -130,8 +130,8 @@ export async function getAccessibilitySnapshot(transportOwner: BrowserCDP): Prom
                 backendDOMNodeId,
                 role,
                 name,
-                value,
-                description,
+                ...(value !== undefined ? { value: value } : {}),
+                ...(description !== undefined ? { description: description } : {}),
                 focused,
                 checked,
                 disabled,

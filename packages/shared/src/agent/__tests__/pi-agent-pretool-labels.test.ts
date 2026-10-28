@@ -5,15 +5,15 @@ import type { BackendConfig } from '../backend/types.ts'
 let origFlag: string | undefined
 
 beforeAll(() => {
-  origFlag = process.env.CRAFT_FEATURE_CRAFT_AGENTS_CLI
-  process.env.CRAFT_FEATURE_CRAFT_AGENTS_CLI = '1'
+  origFlag = process.env["CRAFT_FEATURE_CRAFT_AGENTS_CLI"]
+  process.env["CRAFT_FEATURE_CRAFT_AGENTS_CLI"] = '1'
 })
 
 afterAll(() => {
   if (origFlag === undefined) {
-    delete process.env.CRAFT_FEATURE_CRAFT_AGENTS_CLI
+    delete process.env["CRAFT_FEATURE_CRAFT_AGENTS_CLI"]
   } else {
-    process.env.CRAFT_FEATURE_CRAFT_AGENTS_CLI = origFlag
+    process.env["CRAFT_FEATURE_CRAFT_AGENTS_CLI"] = origFlag
   }
 })
 
@@ -55,7 +55,7 @@ describe('PiAgent pre-tool labels guard', () => {
 }
     ;agent['emitAutomationEvent'] = async () => {}
 
-    await agent['handlePreToolUseRequest']({
+    await agent.handlePreToolUseRequest({
       requestId: 'req-1',
       toolName: 'Read',
       input: { file_path: `${workspaceRootPath}/labels/config.json` },
@@ -64,9 +64,9 @@ describe('PiAgent pre-tool labels guard', () => {
     expect(sent.length).toBeGreaterThan(0)
 
     const response = sent.at(-1)
-    expect(response?.type).toBe('pre_tool_use_response')
-    expect(response?.action).toBe('block')
-    expect(String(response?.reason ?? '')).toContain('craft-agent label --help')
+    expect(response?.["type"]).toBe('pre_tool_use_response')
+    expect(response?.["action"]).toBe('block')
+    expect(String(response?.["reason"] ?? '')).toContain('craft-agent label --help')
 
     agent.destroy()
   })

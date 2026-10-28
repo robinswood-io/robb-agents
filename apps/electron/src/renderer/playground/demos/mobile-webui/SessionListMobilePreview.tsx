@@ -14,16 +14,16 @@ const log = (label: string) => (...args: unknown[]) => {
 }
 
 interface SessionListMobilePreviewProps {
-  device?: MobileDevice
-  showBezel?: boolean
+  device?: MobileDevice | undefined
+  showBezel?: boolean | undefined
   /** How sessions are grouped in the list. */
-  groupingMode?: ChatGroupingMode
+  groupingMode?: ChatGroupingMode | undefined
   /** Activate the search header. */
-  searchActive?: boolean
+  searchActive?: boolean | undefined
   /** Initial search query for the header. */
-  searchQuery?: string
+  searchQuery?: string | undefined
   /** When true, render an empty session list (exercises the empty state). */
-  empty?: boolean
+  empty?: boolean | undefined
 }
 
 /**

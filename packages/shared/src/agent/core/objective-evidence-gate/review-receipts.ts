@@ -1,3 +1,4 @@
+import { isJsonObject, parseJsonObject, isUnknownArray } from '../../../utils/json.ts';
 
 export interface IndependentReviewReceipt {
   objectiveId?: string;
@@ -38,7 +39,7 @@ function parseDirectReviewReceipt(result: string): IndependentReviewReceipt | un
     try {
       const value = JSON.parse(candidate) as Partial<IndependentReviewReceipt>;
       if (value.verdict !== 'PASS' && value.verdict !== 'FAIL') continue;
-      if (!Array.isArray(value.criteria) || value.criteria.length === 0 || !Array.isArray(value.findings)) continue;
+      if (!isUnknownArray(value.criteria) || value.criteria.length === 0 || !isUnknownArray(value.findings)) continue;
       const criteria = value.criteria.filter(item => (
         !!item && typeof item.id === 'string' && typeof item.passed === 'boolean'
       ));
@@ -65,31 +66,31 @@ export function parseIndependentReviewReceipt(
   if (!context.sessionIds?.length || context.sessionIds.length > 8
     || !context.objectiveId || !context.acceptanceSha256 || result.length > 256_000) return undefined;
   try {
-    const envelope = JSON.parse(result);
-    if (!envelope || envelope.outcome !== 'completed' || !Array.isArray(envelope.sessions)
-      || envelope.sessions.length > 8) return undefined;
+    const envelope = parseJsonObject(result);
+    if (!envelope || envelope["outcome"] !== 'completed' || !isUnknownArray(envelope["sessions"])
+      || envelope["sessions"].length > 8) return undefined;
     const requested = new Set(context.sessionIds);
     const seen = new Set<string>();
     const matches: IndependentReviewReceipt[] = [];
-    for (const snapshot of envelope.sessions) {
-      if (!snapshot || typeof snapshot.sessionId !== 'string' || !requested.has(snapshot.sessionId)) continue;
-      if (seen.has(snapshot.sessionId)) return undefined;
-      seen.add(snapshot.sessionId);
-      if (snapshot.state !== 'idle' || snapshot.reason !== 'complete'
-        || snapshot.finalTextTruncated || snapshot.needsAttention || snapshot.changed === false
-        || typeof snapshot.finalText !== 'string' || snapshot.finalText.length > 32_000) continue;
+    for (const snapshot of envelope["sessions"] as unknown[]) {
+      if (!isJsonObject(snapshot) || typeof snapshot["sessionId"] !== 'string' || !requested.has(snapshot["sessionId"])) continue;
+      if (seen.has(snapshot["sessionId"])) return undefined;
+      seen.add(snapshot["sessionId"]);
+      if (snapshot["state"] !== 'idle' || snapshot["reason"] !== 'complete'
+        || snapshot["finalTextTruncated"] || snapshot["needsAttention"] || snapshot["changed"] === false
+        || typeof snapshot["finalText"] !== 'string' || snapshot["finalText"].length > 32_000) continue;
       // A review example followed by a conflicting verdict is ambiguous even
       // within one session. Do not prefer the first parseable fenced receipt.
       // Only the delegated envelope uses this stricter unambiguous spelling;
       // legacy standalone review parsing remains backward compatible.
-      const verdictCount = [...snapshot.finalText.matchAll(/"verdict"\s*:/g)].length;
+      const verdictCount = [...snapshot["finalText"].matchAll(/"verdict"\s*:/g)].length;
       if (verdictCount > 1) return undefined;
       if (verdictCount !== 1) continue;
-      const receipt = parseDirectReviewReceipt(snapshot.finalText);
+      const receipt = parseDirectReviewReceipt(snapshot["finalText"]);
       if (receipt?.objectiveId === context.objectiveId && receipt.acceptanceSha256 === context.acceptanceSha256) {
-        const reviewMessageId = typeof snapshot.finalMessageId === 'string'
-          && /^msg-[1-9]\d{0,19}-[a-z0-9]{16,64}$/.test(snapshot.finalMessageId)
-          ? snapshot.finalMessageId
+        const reviewMessageId = typeof snapshot["finalMessageId"] === 'string'
+          && /^msg-[1-9]\d{0,19}-[a-z0-9]{16,64}$/.test(snapshot["finalMessageId"])
+          ? snapshot["finalMessageId"]
           : undefined;
         matches.push({ ...receipt, ...(reviewMessageId ? { reviewMessageId } : {}) });
       }

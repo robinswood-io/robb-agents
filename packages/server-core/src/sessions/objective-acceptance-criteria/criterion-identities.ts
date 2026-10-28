@@ -146,11 +146,9 @@ export function criterionIdentity(criterion: ObjectiveAcceptanceCriterion): stri
  * meaning after observing the result. Human amendments use the separate full
  * acceptance-revision path. */
 export function criterionSupersessionIdentity(criterion: ObjectiveAcceptanceCriterion): string {
-  return criterionIdentity({
-    ...criterion,
-    id: 'versioned-criterion',
-    supersedes: undefined,
-  });
+  const versioned = { ...criterion, id: 'versioned-criterion' };
+  delete versioned.supersedes;
+  return criterionIdentity(versioned);
 }
 
 export const TERMINAL_RECONCILIATION_ACCEPTANCE_ERROR = 'Terminal reconciliation freezes the registered acceptance contract; set_completion_criteria may only repeat the complete existing criteria and procedure exactly';

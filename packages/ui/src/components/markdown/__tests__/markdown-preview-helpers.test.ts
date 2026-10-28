@@ -125,3 +125,15 @@ describe('normalizePreviewItems', () => {
     expect(normalizePreviewItems({ items: [] })).toEqual([])
   })
 })
+
+it('validates image metadata while preserving valid previews in a mixed item list', () => {
+  const parsed = parseMarkdownPreviewSpec(JSON.stringify({ items: [
+    { src: '/qa/report.png', label: 'Report', ratio: 1.5 },
+    { src: '/qa/fallback.png', label: 42, ratio: -1 },
+    { src: 42, label: 'Invalid' },
+  ] }))
+  expect(parsed?.items).toEqual([
+    { src: '/qa/report.png', label: 'Report', ratio: 1.5 },
+    { src: '/qa/fallback.png' },
+  ])
+})

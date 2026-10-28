@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * TelegramAdapter — in-process adapter using grammY.
  *
@@ -46,7 +47,7 @@ export async function emitAttachmentMessage(transportOwner: TelegramAdapter, ctx
         fileSize: number;
     };
     try {
-        downloaded = await transportOwner["downloadToTemp"](meta.fileId, meta.fileName ?? `${meta.type}-${Date.now()}`, meta.mimeType);
+        downloaded = await transportOwner.downloadToTemp(meta.fileId, meta.fileName ?? `${meta.type}-${Date.now()}`, meta.mimeType);
     }
     catch (err) {
         transportOwner["log"].error('[telegram] attachment download failed:', describeError(err));
@@ -57,13 +58,13 @@ export async function emitAttachmentMessage(transportOwner: TelegramAdapter, ctx
         type: meta.type,
         fileId: meta.fileId,
         fileName: downloaded.fileName,
-        mimeType: meta.mimeType,
+        ...(meta.mimeType !== undefined ? { mimeType: meta.mimeType } : {}),
         fileSize: downloaded.fileSize,
         localPath: downloaded.localPath,
     };
     const threadId = transportOwner["extractThreadId"](ctx);
-    const msg: IncomingMessage = {
-        platform: 'telegram',
+    const msg: IncomingMessage = omitUndefined({
+        platform: 'telegram' as const,
         channelId: String(ctx.chat.id),
         ...(threadId !== undefined ? { threadId } : {}),
         messageId: String(ctx.message.message_id),
@@ -75,7 +76,7 @@ export async function emitAttachmentMessage(transportOwner: TelegramAdapter, ctx
         attachments: [attachment],
         timestamp: ctx.message.date * 1000,
         raw: ctx.message,
-    };
+    });
     await transportOwner["messageHandler"](msg);
 }
 
@@ -145,7 +146,7 @@ export function logRejectedChat(transportOwner: TelegramAdapter, handler: string
    * an inbound update. Returns undefined for DMs and for the General topic
    * (Telegram omits the field there).
    */
-export function extractThreadId(transportOwner: TelegramAdapter, ctx: Context): number | undefined {
+export function extractThreadId(_transportOwner: TelegramAdapter, ctx: Context): number | undefined {
     const tid = ctx.message?.message_thread_id;
     return typeof tid === 'number' ? tid : undefined;
 }

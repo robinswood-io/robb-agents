@@ -32,6 +32,7 @@ export function describeCron(cron: string): string {
   if (parts.length !== 5) return 'Invalid schedule'
 
   const [minute, hour, dom, month, dow] = parts
+  if (minute === undefined || hour === undefined || dom === undefined || month === undefined || dow === undefined) return 'Invalid schedule'
 
   if (cron.trim() === '* * * * *') return 'Every minute'
   if (minute.startsWith('*/')) return `Every ${minute.slice(2)} minutes`

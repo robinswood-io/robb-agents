@@ -72,7 +72,7 @@ export function setWorkspaceColorTheme(rootPath: string, themeId: string | undef
  */
 export function isLocalMcpEnabled(rootPath: string): boolean {
   // 1. Environment variable override (highest priority)
-  const envValue = process.env.CRAFT_LOCAL_MCP_ENABLED;
+  const envValue = process.env["CRAFT_LOCAL_MCP_ENABLED"];
   if (envValue !== undefined) {
     return envValue.toLowerCase() === 'true';
   }

@@ -191,8 +191,8 @@ export async function executeRejection(
     ctx.pendingStore?.recordRejection({
       platform: sender.platform,
       senderId: sender.senderId,
-      senderName: sender.senderName,
-      senderUsername: sender.senderUsername,
+      ...(sender.senderName !== undefined ? { senderName: sender.senderName } : {}),
+      ...(sender.senderUsername !== undefined ? { senderUsername: sender.senderUsername } : {}),
       reason: pendingReason,
       ...(extra.bindingId ? { bindingId: extra.bindingId } : {}),
       ...(extra.sessionId ? { sessionId: extra.sessionId } : {}),

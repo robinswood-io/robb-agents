@@ -25,9 +25,9 @@ export interface SettingsSegmentedControlProps<T extends string = string> {
   /** Available options */
   options: SettingsSegmentedOption<T>[]
   /** Size variant */
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
 }
 
 /**
@@ -114,8 +114,8 @@ export interface SettingsSegmentedControlCardProps<T extends string = string> {
   onValueChange: (value: T) => void
   options: SettingsSegmentedCardOption<T>[]
   /** Number of columns */
-  columns?: 2 | 3 | 4
-  className?: string
+  columns?: 2 | 3 | 4 | undefined
+  className?: string | undefined
 }
 
 export function SettingsSegmentedControlCard<T extends string = string>({

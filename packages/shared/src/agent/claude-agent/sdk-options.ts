@@ -103,6 +103,7 @@ export function buildClaudeHooks(transportOwner: ClaudeAgent, sessionId: string,
 
 export async function buildClaudeQueryOptions(transportOwner: ClaudeAgent, sessionId: string, gmailRuntimeId: string, _isRetry: boolean, prepared: ClaudeQueryPreparation): Promise<Options> {
     const { effectiveModel, thinkingOptions, miniConfig, resolvedCwd, mcpServers, disallowedTools } = prepared;
+    const hooks = transportOwner["buildClaudeHooks"](sessionId, gmailRuntimeId);
     return {
         ...getDefaultOptions({ ...transportOwner["config"].envOverrides, ANTHROPIC_DEFAULT_HAIKU_MODEL: transportOwner["getModel"]() }),
         model: effectiveModel,
@@ -180,7 +181,7 @@ export async function buildClaudeQueryOptions(transportOwner: ClaudeAgent, sessi
         permissionMode: 'bypassPermissions',
         allowDangerouslySkipPermissions: true,
         // User hooks from automations.json are merged with internal hooks
-        hooks: transportOwner["buildClaudeHooks"](sessionId, gmailRuntimeId),
+        ...(hooks !== undefined ? { hooks } : {}),
         // Continue from previous session if we have one (enables conversation history & auto compaction)
         // Skip resume on retry (after session expiry) to start fresh
         // For branched sessions: fork the parent session so the agent has full conversation context
@@ -195,7 +196,7 @@ export async function buildClaudeQueryOptions(transportOwner: ClaudeAgent, sessi
                     ...(transportOwner["branchFromSdkTurnId"] ? { resumeSessionAt: transportOwner["branchFromSdkTurnId"] } : {}),
                 }
                 : {}),
-        mcpServers,
+        ...(mcpServers !== undefined ? { mcpServers } : {}),
         // NOTE: This callback is NOT called by the SDK because we set `permissionMode: 'bypassPermissions'` above.
         // All permission logic is handled via the PreToolUse hook instead (see hooks.PreToolUse above).
         // Bash permission logic is in PreToolUse where it actually executes.

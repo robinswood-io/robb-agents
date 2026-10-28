@@ -1,3 +1,4 @@
+import { parseOAuthError } from './oauth-error.ts';
 import { CLAUDE_OAUTH_CONFIG } from './claude-oauth-config';
 import { APP_VERSION } from '../version/index.ts';
 import { debug } from '../utils/debug.ts';
@@ -45,11 +46,11 @@ export async function refreshClaudeToken(refreshToken: string): Promise<{
 
     let errorMessage: string;
     try {
-      const errorJson = JSON.parse(errorText);
-      if (errorJson.error && errorJson.error_description) {
-        errorMessage = `${errorJson.error} - ${errorJson.error_description}`;
+      const errorJson = parseOAuthError(errorText);
+      if (errorJson["error"] && errorJson["error_description"]) {
+        errorMessage = `${errorJson["error"]} - ${errorJson["error_description"]}`;
       } else {
-        errorMessage = errorJson.error_description || errorJson.error || errorText;
+        errorMessage = errorJson["error_description"] || errorJson["error"] || errorText;
       }
     } catch {
       errorMessage = errorText;
@@ -76,7 +77,7 @@ export async function refreshClaudeToken(refreshToken: string): Promise<{
   return {
     accessToken: data.access_token,
     refreshToken: data.refresh_token || refreshToken,
-    expiresAt,
+    ...(expiresAt !== undefined ? { expiresAt } : {}),
   };
 }
 

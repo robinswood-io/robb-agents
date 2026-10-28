@@ -1,3 +1,5 @@
+import type { ActionHandler } from './types.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { useEffect, useRef } from 'react'
 import { useActionRegistry } from './registry'
 import type { ActionId } from './definitions'
@@ -32,10 +34,10 @@ export function useAction(
 
   // Register handler
   useEffect(() => {
-    return register({
+    return register(omitUndefined<ActionHandler>({
       actionId,
       handler: () => handlerRef.current(),
       enabled: optionsRef.current?.enabled ? () => optionsRef.current?.enabled?.() ?? false : undefined,
-    })
+    }))
   }, [actionId, register])
 }

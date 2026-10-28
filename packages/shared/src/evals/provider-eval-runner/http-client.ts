@@ -80,43 +80,43 @@ function requestBody(
 }
 
 function anthropicText(body: Record<string, unknown>): string {
-  return arrayValue(body.content)
+  return arrayValue(body["content"])
     .flatMap((item) => {
       const record = recordValue(item);
-      return record?.type === 'text' ? [stringValue(record.text) ?? ''] : [];
+      return record?.["type"] === 'text' ? [stringValue(record["text"]) ?? ''] : [];
     })
     .join('');
 }
 
 function geminiText(body: Record<string, unknown>): string {
-  const candidate = recordValue(arrayValue(body.candidates)[0]);
-  const content = recordValue(candidate?.content);
-  return arrayValue(content?.parts)
+  const candidate = recordValue(arrayValue(body["candidates"])[0]);
+  const content = recordValue(candidate?.["content"]);
+  return arrayValue(content?.["parts"])
     .flatMap((part) => {
       const record = recordValue(part);
-      const text = record ? stringValue(record.text) : null;
+      const text = record ? stringValue(record["text"]) : null;
       return text ? [text] : [];
     })
     .join('');
 }
 
 function openAiChatText(body: Record<string, unknown>): string {
-  const choice = recordValue(arrayValue(body.choices)[0]);
-  const message = recordValue(choice?.message);
-  return stringValue(message?.content) ?? '';
+  const choice = recordValue(arrayValue(body["choices"])[0]);
+  const message = recordValue(choice?.["message"]);
+  return stringValue(message?.["content"]) ?? '';
 }
 
 function openAiResponsesText(body: Record<string, unknown>): string {
-  const direct = stringValue(body.output_text);
+  const direct = stringValue(body["output_text"]);
   if (direct) return direct;
-  return arrayValue(body.output)
+  return arrayValue(body["output"])
     .flatMap((item) => {
       const record = recordValue(item);
-      return arrayValue(record?.content);
+      return arrayValue(record?.["content"]);
     })
     .flatMap((item) => {
       const record = recordValue(item);
-      return record?.type === 'output_text' ? [stringValue(record.text) ?? ''] : [];
+      return record?.["type"] === 'output_text' ? [stringValue(record["text"]) ?? ''] : [];
     })
     .join('');
 }
@@ -142,19 +142,19 @@ function responseUsage(
   body: Record<string, unknown>,
 ): { inputTokens: number | null; outputTokens: number | null } {
   if (provider === 'google-gemini') {
-    const usage = recordValue(body.usageMetadata);
+    const usage = recordValue(body["usageMetadata"]);
     return {
-      inputTokens: finiteNumber(usage?.promptTokenCount),
-      outputTokens: finiteNumber(usage?.candidatesTokenCount),
+      inputTokens: finiteNumber(usage?.["promptTokenCount"]),
+      outputTokens: finiteNumber(usage?.["candidatesTokenCount"]),
     };
   }
-  const usage = recordValue(body.usage);
+  const usage = recordValue(body["usage"]);
   return {
     inputTokens: finiteNumber(
-      provider === 'openai-chat' ? usage?.prompt_tokens : usage?.input_tokens,
+      provider === 'openai-chat' ? usage?.["prompt_tokens"] : usage?.["input_tokens"],
     ),
     outputTokens: finiteNumber(
-      provider === 'openai-chat' ? usage?.completion_tokens : usage?.output_tokens,
+      provider === 'openai-chat' ? usage?.["completion_tokens"] : usage?.["output_tokens"],
     ),
   };
 }
@@ -177,7 +177,7 @@ function responseRequestId(
 ): string | undefined {
   const value = response.headers.get('request-id')
     ?? response.headers.get('x-request-id')
-    ?? stringValue(body.id);
+    ?? stringValue(body["id"]);
   return value?.trim() || undefined;
 }
 
@@ -222,12 +222,11 @@ export class ProviderEvalHttpClient {
       const outputText = responseText(this.config.provider, body).trim();
       if (!outputText) throw new Error('Provider eval response did not contain text');
       const usage = responseUsage(this.config.provider, body);
+      const requestId = responseRequestId(response, body);
       return {
         provider: this.config.provider,
         model: this.config.model,
-        ...(responseRequestId(response, body)
-          ? { requestId: responseRequestId(response, body) }
-          : {}),
+        ...(requestId ? { requestId } : {}),
         outputText,
         outputDigest: digest(outputText),
         inputTokens: usage.inputTokens,

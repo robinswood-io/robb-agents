@@ -126,9 +126,9 @@ function sessionOpStartCompletedChatRetention(sessionOperationContext: SessionOp
 function sessionOpScheduleCompletedChatRetention(sessionOperationContext: SessionOperationContext): void {
     if (sessionOperationContext.state.retentionStopping || sessionOperationContext.state.completedChatRetentionSweep)
         return;
-    sessionOperationContext.state.completedChatRetentionSweep = sessionOpSweepCompletedChats(sessionOperationContext).catch(error => {
+    sessionOperationContext.state.completedChatRetentionSweep = sessionOpSweepCompletedChats(sessionOperationContext).catch((error: unknown) => {
         sessionLog.warn('Completed-chat retention failed; chats preserved', { error: String(error) });
-    }).finally(() => { sessionOperationContext.state.completedChatRetentionSweep = undefined; });
+    }).finally(() => { delete sessionOperationContext.state.completedChatRetentionSweep; });
 }
 
 function sessionOpCanRetainCompletedChat(sessionOperationContext: SessionOperationContext, managed: ManagedSession, detachedForDeletion = false): boolean {
@@ -254,7 +254,7 @@ async function sessionOpSweepCompletedChats(sessionOperationContext: SessionOper
             if (!managed.messagesLoaded && !stored)
                 throw new Error('Transcript unavailable; retention blocked');
             const memory = captureCompletedChatMemory(root, {
-                id: managed.id, name: managed.name, projectId: managed.projectId,
+                id: managed.id, ...(managed.name !== undefined ? { name: managed.name } : {}), ...(managed.projectId !== undefined ? { projectId: managed.projectId } : {}),
                 lastMessageAt: managed.lastMessageAt,
                 messages: managed.messagesLoaded ? managed.messages : stored!.messages.map(storedToMessage),
             }, now);
@@ -278,7 +278,7 @@ async function sessionOpSweepCompletedChats(sessionOperationContext: SessionOper
                 // Re-read and verify the durable receipt immediately before deletion.
                 assertRoot();
                 const confirmed = captureCompletedChatMemory(root, {
-                    id: managed.id, name: managed.name, projectId: managed.projectId,
+                    id: managed.id, ...(managed.name !== undefined ? { name: managed.name } : {}), ...(managed.projectId !== undefined ? { projectId: managed.projectId } : {}),
                     lastMessageAt: managed.lastMessageAt,
                     messages: managed.messagesLoaded ? managed.messages : loadStoredSession(root, managed.id)!.messages.map(storedToMessage),
                 }, now);

@@ -237,7 +237,7 @@ describe('encrypted offline vault', () => {
     await vault.storeDraft('first', 'committed', true, scopeToken(vault))
     persistence.failNextSave = true
     await expect(vault.storeDraft('ghost', 'must never commit', true, scopeToken(vault))).rejects.toThrow('disk full')
-    expect(vault.getSnapshot().drafts.ghost).toBeUndefined()
+    expect(vault.getSnapshot().drafts["ghost"]).toBeUndefined()
     await vault.storeDraft('later', 'committed later', true, scopeToken(vault))
     expect(JSON.stringify(await decryptRecord(persistence))).not.toContain('must never commit')
   })
@@ -378,7 +378,7 @@ describe('encrypted offline vault', () => {
     expect((await reopened.load()).drafts).toMatchObject({
       newer: { text: 'from the first tab' },
     })
-    expect(reopened.getSnapshot().drafts.stale).toBeUndefined()
+    expect(reopened.getSnapshot().drafts["stale"]).toBeUndefined()
   })
 
   it('converges simultaneous first-time tabs on one encryption key', async () => {
@@ -389,7 +389,9 @@ describe('encrypted offline vault', () => {
         return new Promise((resolve) => {
           this.candidates.push({ key, resolve })
           if (this.candidates.length !== 2) return
-          this.key = this.candidates[0].key
+          const firstCandidate = this.candidates[0]
+          if (!firstCandidate) throw new Error('Expected the first concurrent key candidate')
+          this.key = firstCandidate.key
           this.keyGeneration = crypto.randomUUID()
           const winner = { key: this.key, generation: this.keyGeneration }
           for (const candidate of this.candidates) candidate.resolve(winner)

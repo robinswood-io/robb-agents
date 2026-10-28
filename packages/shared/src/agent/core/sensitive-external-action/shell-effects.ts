@@ -115,7 +115,6 @@ export function classifyRestart(words: string[]): { actionIndex: number; targets
   const command = basename(words[0] ?? '');
   const lowerWords = words.map(word => word.toLowerCase());
   let actionIndex = -1;
-  let targetStart = -1;
 
   const systemctlActionIndex = command === 'systemctl'
     ? firstCliActionIndex(words, 1, new Set(['-H', '--host', '-M', '--machine', '--root', '--image']))
@@ -129,29 +128,21 @@ export function classifyRestart(words: string[]): { actionIndex: number; targets
 
   if (command === 'systemctl' && ['start', 'restart', 'try-restart'].includes(lowerWords[systemctlActionIndex] ?? '')) {
     actionIndex = systemctlActionIndex;
-    targetStart = actionIndex + 1;
   } else if (command === 'service' && ['start', 'restart'].includes(lowerWords[2] ?? '')) {
     actionIndex = 2;
-    targetStart = 1;
   } else if (command === 'docker' && ['start', 'restart'].includes(lowerWords[dockerActionIndex] ?? '')) {
     actionIndex = dockerActionIndex;
-    targetStart = actionIndex + 1;
   } else if (command === 'docker' && lowerWords[dockerActionIndex] === 'compose') {
     actionIndex = lowerWords.findIndex((word, index) => index > dockerActionIndex && word === 'restart');
-    targetStart = actionIndex + 1;
   } else if (['pm2', 'supervisorctl'].includes(command) && ['restart', 'reload'].includes(lowerWords[1] ?? '')) {
     actionIndex = 1;
-    targetStart = 2;
   } else if (command === 'kubectl' && lowerWords[kubectlActionIndex] === 'rollout'
     && lowerWords[kubectlActionIndex + 1] === 'restart') {
     actionIndex = kubectlActionIndex + 1;
-    targetStart = actionIndex + 1;
   } else if (command === 'brew' && lowerWords[1] === 'services' && lowerWords[2] === 'restart') {
     actionIndex = 2;
-    targetStart = 3;
   } else if (command === 'launchctl' && lowerWords[1] === 'kickstart') {
     actionIndex = 1;
-    targetStart = 2;
   }
   if (actionIndex < 0) return null;
   return {
@@ -265,7 +256,7 @@ export function classifyHttpMutation(words: string[]): HttpMutationDetails | nul
   const host = safeHttpHost(destination);
   return {
     method: method ?? (command === 'wget' || words.some(word => /^(?:-d|--data|--json|--form|--post-)/i.test(word)) ? 'POST' : 'PUT'),
-    host,
+    ...(host !== undefined ? { host } : {}),
     path: parsed?.pathname ?? '',
     targets: uniqueTargets([host ?? UNRESOLVED_EXTERNAL_TARGET]),
   };

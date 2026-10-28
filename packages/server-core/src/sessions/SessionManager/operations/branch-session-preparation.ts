@@ -1,3 +1,4 @@
+import { setOptional } from '@craft-agent/shared/utils/json';
 import type { ManagedSession } from '../managed-session.ts';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { destroyContextualGmailSessionState } from '@craft-agent/shared/agent';
@@ -54,23 +55,23 @@ export async function copySessionBranchStorage(validatedBranch: ValidatedSession
         else {
             branchedStored.messages = sourceMessages;
         }
-        branchedStored.userInputRequests = undefined;
+        delete branchedStored.userInputRequests;
         branchedStored.messages = branchedStored.messages.map(message => message.internalOrigin?.kind === 'user-input'
             ? { ...message, isQueued: false } : message);
-        branchedStored.activeObjective = reconstructObjectiveForBranch({
+        setOptional(branchedStored, "activeObjective", reconstructObjectiveForBranch({
             messages: branchedStored.messages.map(storedToMessage),
-            sourceObjective: validatedBranch.sourceSession.activeObjective,
+            ...(validatedBranch.sourceSession.activeObjective !== undefined ? { sourceObjective: validatedBranch.sourceSession.activeObjective } : {}),
             completeSourceHistory: validatedBranch.branchIdx === validatedBranch.sourceSession.messages.length - 1,
-        });
+        }));
         // The managed session below is created from this original header object;
         // message hydration separately reloads the saved branch JSONL.
-        storedSession.activeObjective = branchedStored.activeObjective;
+        setOptional(storedSession, "activeObjective", branchedStored.activeObjective);
         branchedStored.branchFromMessageId = validatedBranch.sourceMessageId;
         if (validatedBranch.branchContextStrategy === 'sdk-fork') {
-            branchedStored.branchFromSdkSessionId = validatedBranch.branchFromSdkSessionId;
-            branchedStored.branchFromSessionPath = validatedBranch.branchFromSessionPath;
-            branchedStored.branchFromSdkCwd = validatedBranch.branchFromSdkCwd;
-            branchedStored.branchFromSdkTurnId = validatedBranch.branchFromSdkTurnId;
+            setOptional(branchedStored, "branchFromSdkSessionId", validatedBranch.branchFromSdkSessionId);
+            setOptional(branchedStored, "branchFromSessionPath", validatedBranch.branchFromSessionPath);
+            setOptional(branchedStored, "branchFromSdkCwd", validatedBranch.branchFromSdkCwd);
+            setOptional(branchedStored, "branchFromSdkTurnId", validatedBranch.branchFromSdkTurnId);
         }
         else {
             delete branchedStored.branchFromSdkSessionId;

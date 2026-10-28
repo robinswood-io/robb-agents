@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * The Conductor — an in-process DAG runner for Tasks.
  *
@@ -79,7 +80,7 @@ export async function dispatch(transportOwner: ActiveRun, node: TaskNode): Promi
             runId: transportOwner["runId"],
             nodeId: node.id,
             idempotencyKey,
-            workingDirectory: cwd,
+            ...(cwd !== undefined ? { workingDirectory: cwd } : {}),
             policy: sessionPolicy,
             effect: node.effect,
             permissionMode,
@@ -97,7 +98,7 @@ export async function dispatch(transportOwner: ActiveRun, node: TaskNode): Promi
         // Resolve interpolation before routing. Classifying the template could
         // otherwise miss sensitive work supplied through ${inputs.*}. Recovery
         // evidence stays in dispatchText and cannot impersonate user authority.
-        const resolvedPrompt = await transportOwner["buildPrompt"](node);
+        const resolvedPrompt = await transportOwner.buildPrompt(node);
         if (!stillActive())
             return;
         const routingNode = { ...node, prompt: resolvedPrompt.routingText };
@@ -140,16 +141,16 @@ export async function dispatch(transportOwner: ActiveRun, node: TaskNode): Promi
                 node: routingNode,
                 spec: transportOwner["spec"],
                 attempt: st.attempt,
-                lastFailure: st.lastFailure,
+                ...(st.lastFailure !== undefined ? { lastFailure: st.lastFailure } : {}),
                 defaults,
-                previousRoute: st.lastRoute,
+                ...(st.lastRoute !== undefined ? { previousRoute: st.lastRoute } : {}),
             })
-            : {
+            : omitUndefined<TaskNodeExecutionRoute>({
                 profile: inferredProfile,
                 ...explicitSettings,
                 thinkingLevel: explicitSettings.thinkingLevel ?? 'medium',
                 strategy: 'pinned' as const,
-            };
+            });
         if (!stillActive())
             return;
         if (route.blockedReason) {
@@ -238,7 +239,7 @@ export async function dispatch(transportOwner: ActiveRun, node: TaskNode): Promi
             return child;
         });
         transportOwner["activeCreations"].add(creation);
-        void creation.then(() => transportOwner["activeCreations"].delete(creation), () => transportOwner["activeCreations"].delete(creation)).catch((error) => {
+        void creation.then(() => transportOwner["activeCreations"].delete(creation), () => transportOwner["activeCreations"].delete(creation)).catch((error: unknown) => {
             transportOwner["failForUnexpectedAsyncError"](`worker creation bookkeeping ${node.id}`, error);
         });
         const child = await creation;
@@ -271,14 +272,14 @@ export async function dispatch(transportOwner: ActiveRun, node: TaskNode): Promi
         // SessionManager resolves sendMessage only when the provider turn has
         // unwound. Arm before awaiting it, otherwise a hung stream never obtains
         // a watchdog at all.
-        transportOwner["armNodeTimeout"](node.id, child.id, st.attempt, node.timeout ?? policy.timeoutMs);
+        transportOwner.armNodeTimeout(node.id, child.id, st.attempt, node.timeout ?? policy.timeoutMs);
         await transportOwner["deps"].host.sendMessage(child.id, prompt, undefined, undefined, {
-            internalOrigin: {
-                kind: 'spawned-session',
+            internalOrigin: omitUndefined({
+                kind: 'spawned-session' as const,
                 senderSessionId: transportOwner["opts"].orchestratorSessionId,
                 // Keep policy/retry scaffolding out of the child's objective contract.
                 authenticatedTaskText: resolvedPrompt.routingText,
-            },
+            }),
         });
         if (!stillActive())
             return;
@@ -309,7 +310,7 @@ export async function buildPrompt(transportOwner: ActiveRun, node: TaskNode): Pr
     if (st.attempt > 1 && st.lastFailure) {
         dispatchText = `${st.lastFailure}\n\n${dispatchText}`;
     }
-    const reflectionMemory = transportOwner["buildReflectionMemory"](node.id);
+    const reflectionMemory = transportOwner.buildReflectionMemory(node.id);
     if (reflectionMemory)
         dispatchText = `${reflectionMemory}\n\n${dispatchText}`;
     return { routingText, dispatchText };
@@ -325,7 +326,7 @@ export function buildReflectionMemory(transportOwner: ActiveRun, nodeId: string)
         ?? DEFAULT_REFLECTION_MEMORY_ENTRIES;
     if (entryLimit <= 0)
         return '';
-    const relevant = transportOwner["reflectionHistory"].filter((entry) => entry.frontier.includes(nodeId))
+    const relevant = transportOwner.reflectionHistory.filter((entry) => entry.frontier.includes(nodeId))
         .slice(-entryLimit);
     if (relevant.length === 0)
         return '';

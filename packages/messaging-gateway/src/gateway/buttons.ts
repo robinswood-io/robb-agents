@@ -18,17 +18,17 @@ export async function handleButtonPress(transportOwner: MessagingGateway, platfo
     // text path is locked but callbacks would not be — that's exactly
     // the "looks locked but isn't" UX the access control is meant to
     // prevent.
-    const allowed = await transportOwner["gateButtonPress"](adapter, press);
+    const allowed = await transportOwner.gateButtonPress(adapter, press);
     if (!allowed)
         return;
     if (press.buttonId.startsWith('bind:')) {
         const sessionId = press.buttonId.slice('bind:'.length);
-        const session = await transportOwner["sessionManager"].getSession(sessionId);
+        const session = await transportOwner.sessionManager.getSession(sessionId);
         if (!session) {
             await adapter.sendText(press.channelId, 'Session not found.', pressOpts);
             return;
         }
-        transportOwner["bindingStore"].bind(transportOwner["workspaceId"], session.id, platform, press.channelId, undefined, undefined, press.threadId);
+        transportOwner["bindingStore"].bind(transportOwner.workspaceId, session.id, platform, press.channelId, undefined, undefined, press.threadId);
         await adapter.sendText(press.channelId, `Bound to "${session.name || session.id}"`, pressOpts);
         return;
     }
@@ -42,11 +42,11 @@ export async function handleButtonPress(transportOwner: MessagingGateway, platfo
             await adapter.sendText(press.channelId, '⏸ Permission required. Approve it in the desktop app to continue.', pressOpts);
             return;
         }
-        await transportOwner["handlePermissionButton"](adapter, press);
+        await transportOwner.handlePermissionButton(adapter, press);
         return;
     }
     if (press.buttonId.startsWith('plan:')) {
-        await transportOwner["handlePlanButton"](platform, adapter, press);
+        await transportOwner.handlePlanButton(platform, adapter, press);
         return;
     }
 }
@@ -72,7 +72,7 @@ export async function handlePlanButton(transportOwner: MessagingGateway, platfor
     transportOwner["planMessages"].delete(token);
     if (action === 'accept') {
         try {
-            await transportOwner["sessionManager"].acceptPlan(entry.sessionId, entry.planPath);
+            await transportOwner.sessionManager.acceptPlan(entry.sessionId, entry.planPath);
             await adapter.sendText(press.channelId, '✅ Plan accepted. Agent resuming.', pressOpts);
         }
         catch (err) {
@@ -91,7 +91,7 @@ export async function handlePlanButton(transportOwner: MessagingGateway, platfor
     const binding = transportOwner["bindingStore"].findByChannel(platform, press.channelId, press.threadId);
     if (!binding)
         return;
-    transportOwner["pendingCompactAccepts"].set(entry.sessionId, {
+    transportOwner.pendingCompactAccepts.set(entry.sessionId, {
         token,
         sessionId: entry.sessionId,
         bindingId: binding.id,
@@ -103,12 +103,12 @@ export async function handlePlanButton(transportOwner: MessagingGateway, platfor
         createdAt: Date.now(),
     });
     try {
-        await transportOwner["sessionManager"].setPendingPlanExecution(entry.sessionId, entry.planPath);
-        await transportOwner["sessionManager"].sendMessage(entry.sessionId, '/compact');
+        await transportOwner.sessionManager.setPendingPlanExecution(entry.sessionId, entry.planPath);
+        await transportOwner.sessionManager.sendMessage(entry.sessionId, '/compact');
         await adapter.sendText(press.channelId, '♻️ Compacting conversation, then executing the plan…', pressOpts);
     }
     catch (err) {
-        transportOwner["pendingCompactAccepts"].delete(entry.sessionId);
+        transportOwner.pendingCompactAccepts.delete(entry.sessionId);
         transportOwner["log"].error('compact dispatch failed', {
             event: 'plan_compact_failed',
             sessionId: entry.sessionId,
@@ -147,7 +147,7 @@ export async function gateButtonPress(transportOwner: MessagingGateway, adapter:
         // operator who emitted the keyboard is offering session-binding
         // privileges, but only owners may take them.
         verdict = evaluatePreBindingAccess({
-            msg: transportOwner["synthesizeMsgForGate"](press),
+            msg: transportOwner.synthesizeMsgForGate(press),
             workspaceConfig: transportOwner["accessDeps"].getWorkspaceConfig(),
         });
     }
@@ -164,7 +164,7 @@ export async function gateButtonPress(transportOwner: MessagingGateway, adapter:
         }
         extra = { bindingId: binding.id, sessionId: binding.sessionId };
         verdict = evaluateBindingAccess({
-            msg: transportOwner["synthesizeMsgForGate"](press),
+            msg: transportOwner.synthesizeMsgForGate(press),
             workspaceConfig: transportOwner["accessDeps"].getWorkspaceConfig(),
             binding,
         });
@@ -176,7 +176,7 @@ export async function gateButtonPress(transportOwner: MessagingGateway, adapter:
     if (verdict.allow)
         return true;
     await executeRejection(adapter, senderShape, verdict.reason, {
-        recentRejectReplies: transportOwner["buttonRecentRejectReplies"],
+        recentRejectReplies: transportOwner.buttonRecentRejectReplies,
         pendingStore: transportOwner["pendingStore"],
     }, transportOwner["log"], extra);
     return false;
@@ -187,7 +187,7 @@ export async function gateButtonPress(transportOwner: MessagingGateway, adapter:
    * The evaluators only consult `platform`, `senderId`, `senderIsBot` —
    * everything else is dummy/empty for the button-press path.
    */
-export function synthesizeMsgForGate(transportOwner: MessagingGateway, press: ButtonPress): IncomingMessage {
+export function synthesizeMsgForGate(_transportOwner: MessagingGateway, press: ButtonPress): IncomingMessage {
     return {
         platform: press.platform,
         channelId: press.channelId,

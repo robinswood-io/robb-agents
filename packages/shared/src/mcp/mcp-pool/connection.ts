@@ -34,16 +34,16 @@ export async function registerClient(transportOwner: McpClientPool, slug: string
     const tools = await client.listTools();
     transportOwner["clients"].set(slug, client);
     transportOwner["toolCache"].set(slug, tools);
-    const usedProxyNames = new Set(transportOwner["proxyTools"].keys());
+    const usedProxyNames = new Set(transportOwner.proxyTools.keys());
     const sourceProxyNames = new Map<string, string>();
     for (const tool of tools) {
         const proxyName = buildSafeProxyToolName(slug, tool.name, usedProxyNames);
         usedProxyNames.add(proxyName);
         sourceProxyNames.set(tool.name, proxyName);
-        transportOwner["proxyTools"].set(proxyName, { slug, originalName: tool.name });
+        transportOwner.proxyTools.set(proxyName, { slug, originalName: tool.name });
     }
-    transportOwner["sourceToolProxyNames"].set(slug, sourceProxyNames);
-    transportOwner["debug"](`Connected source ${slug}: ${tools.length} tools`);
+    transportOwner.sourceToolProxyNames.set(slug, sourceProxyNames);
+    transportOwner.debug(`Connected source ${slug}: ${tools.length} tools`);
 }
 
 export async function connect(transportOwner: McpClientPool, slug: string, config: SdkMcpServerConfig): Promise<void> {
@@ -51,7 +51,7 @@ export async function connect(transportOwner: McpClientPool, slug: string, confi
         return;
     const clientConfig = sdkConfigToClientConfig(config);
     if (!clientConfig) {
-        transportOwner["debug"](`Unknown MCP server type for ${slug}: ${(config as {
+        transportOwner.debug(`Unknown MCP server type for ${slug}: ${(config as {
             type: string;
         }).type}`);
         return;
@@ -73,17 +73,17 @@ export async function disconnect(transportOwner: McpClientPool, slug: string): P
         transportOwner["clients"].delete(slug);
     }
     // Remove proxy tool entries for this slug
-    for (const [proxyName, info] of transportOwner["proxyTools"]) {
+    for (const [proxyName, info] of transportOwner.proxyTools) {
         if (info.slug === slug) {
-            transportOwner["proxyTools"].delete(proxyName);
-            transportOwner["toolInputValidators"].delete(proxyName);
-            transportOwner["toolOutputValidators"].delete(proxyName);
+            transportOwner.proxyTools.delete(proxyName);
+            transportOwner.toolInputValidators.delete(proxyName);
+            transportOwner.toolOutputValidators.delete(proxyName);
         }
     }
-    transportOwner["sourceToolProxyNames"].delete(slug);
+    transportOwner.sourceToolProxyNames.delete(slug);
     transportOwner["toolCache"].delete(slug);
     transportOwner["activeConfigs"].delete(slug);
-    transportOwner["debug"](`Disconnected source: ${slug}`);
+    transportOwner.debug(`Disconnected source: ${slug}`);
 }
 
 export async function disconnectAll(transportOwner: McpClientPool): Promise<void> {
@@ -91,12 +91,12 @@ export async function disconnectAll(transportOwner: McpClientPool): Promise<void
     await Promise.all(closePromises);
     transportOwner["clients"].clear();
     transportOwner["toolCache"].clear();
-    transportOwner["proxyTools"].clear();
-    transportOwner["sourceToolProxyNames"].clear();
+    transportOwner.proxyTools.clear();
+    transportOwner.sourceToolProxyNames.clear();
     transportOwner["activeConfigs"].clear();
-    transportOwner["toolInputValidators"].clear();
-    transportOwner["toolOutputValidators"].clear();
-    transportOwner["debug"]('Disconnected all MCP clients');
+    transportOwner.toolInputValidators.clear();
+    transportOwner.toolOutputValidators.clear();
+    transportOwner.debug('Disconnected all MCP clients');
 }
 
 export async function sync(transportOwner: McpClientPool, mcpServers: Record<string, SdkMcpServerConfig>, apiServers: Record<string, ApiServerConfig>): Promise<string[]> {
@@ -105,7 +105,7 @@ export async function sync(transportOwner: McpClientPool, mcpServers: Record<str
     const filteredMcp: Record<string, SdkMcpServerConfig> = {};
     for (const [slug, config] of Object.entries(mcpServers)) {
         if (config.type === 'stdio' && !localEnabled) {
-            transportOwner["debug"](`Filtering out stdio source "${slug}" (local MCP disabled)`);
+            transportOwner.debug(`Filtering out stdio source "${slug}" (local MCP disabled)`);
             continue;
         }
         filteredMcp[slug] = config;
@@ -133,20 +133,20 @@ export async function sync(transportOwner: McpClientPool, mcpServers: Record<str
                 await transportOwner["connect"](slug, config);
             }
             catch (err) {
-                transportOwner["debug"](`Failed to connect MCP source ${slug}: ${err instanceof Error ? err.message : String(err)}`);
+                transportOwner.debug(`Failed to connect MCP source ${slug}: ${err instanceof Error ? err.message : String(err)}`);
                 failures.push(slug);
             }
         }
         else {
             const oldConfig = transportOwner["activeConfigs"].get(slug);
             if (oldConfig && mcpConfigChanged(oldConfig, config)) {
-                transportOwner["debug"](`Config changed for ${slug}, reconnecting with fresh credentials`);
+                transportOwner.debug(`Config changed for ${slug}, reconnecting with fresh credentials`);
                 await transportOwner["disconnect"](slug);
                 try {
                     await transportOwner["connect"](slug, config);
                 }
                 catch (err) {
-                    transportOwner["debug"](`Failed to reconnect MCP source ${slug}: ${err instanceof Error ? err.message : String(err)}`);
+                    transportOwner.debug(`Failed to reconnect MCP source ${slug}: ${err instanceof Error ? err.message : String(err)}`);
                     failures.push(slug);
                 }
             }
@@ -159,7 +159,7 @@ export async function sync(transportOwner: McpClientPool, mcpServers: Record<str
                 await transportOwner["connectInProcess"](slug, server);
             }
             catch (err) {
-                transportOwner["debug"](`Failed to connect API source ${slug}: ${err instanceof Error ? err.message : String(err)}`);
+                transportOwner.debug(`Failed to connect API source ${slug}: ${err instanceof Error ? err.message : String(err)}`);
                 failures.push(slug);
             }
         }

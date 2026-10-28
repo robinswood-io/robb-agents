@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { getQueuedPendingUserInputResponse as policyGetQueuedPendingUserInputResponse } from "./SessionManager/policy.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -86,10 +87,10 @@ describe('durable restart recovery', () => {
     expect(requiredTestValue(restored.userInputRequests)[0]).toMatchObject({
       id: 'business-target-question', status: 'pending', objectiveUserMessageId: originalId,
     })
-    const repairedHeader = JSON.parse(
+    const repairedHeader = parseRecoveryJournalObservation(
       readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!,
     )
-    expect(repairedHeader.userInputRequests[0].objectiveUserMessageId).toBe(originalId)
+    expect(requiredTestValue(requiredTestValue(repairedHeader.userInputRequests)[0]).objectiveUserMessageId).toBe(originalId)
 
     restored.isProcessing = true
     const accepted = await cold.manager.respondToUserInput(restored.id, {
@@ -101,7 +102,7 @@ describe('durable restart recovery', () => {
       status: 'answered', objectiveUserMessageId: originalId,
     })
     expect(restored.messages.find((message) => (
-      message.id === requiredTestValue(restored.userInputRequests)[0].responseMessageId
+      message.id === requiredTestValue(requiredTestValue(restored.userInputRequests)[0]).responseMessageId
     ))).toMatchObject({ role: 'user', hidden: true, isQueued: true,
       internalOrigin: { kind: 'user-input' } })
   })
@@ -178,11 +179,11 @@ describe('durable restart recovery', () => {
       })
       expect(policyGetQueuedPendingUserInputResponse(restored)?.id).toBe(requestId)
       expect(cold.runtime.queuedHumanIndex(restored)).toBeGreaterThanOrEqual(0)
-      const repairedHeader = JSON.parse(
+      const repairedHeader = parseRecoveryJournalObservation(
         readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!,
       )
-      expect(repairedHeader.userInputRequests[0].objectiveUserMessageId).toBe(originalId)
-      expect(repairedHeader.userInputRequests[1].objectiveUserMessageId).toBe(contextualId)
+      expect(requiredTestValue(requiredTestValue(repairedHeader.userInputRequests)[0]).objectiveUserMessageId).toBe(originalId)
+      expect(requiredTestValue(requiredTestValue(repairedHeader.userInputRequests)[1]).objectiveUserMessageId).toBe(contextualId)
 
       const response = restored.messages.find((message) => message.id === responseId)!
       response.isQueued = false
@@ -255,14 +256,15 @@ describe('durable restart recovery', () => {
     expect(managed.activeObjective).toEqual(previousObjective)
     expect(managed.pendingTurnRecovery).toEqual(previousRecovery)
     expect(managed.providerContextBoundaryMessageId).toBe(rootId)
-    expect(managed.userInputRequests).toEqual([expect.objectContaining({
-      id: 'context-question', status: 'pending', answeredAt: undefined,
-    })])
+    expect(managed.userInputRequests).toHaveLength(1)
+    expect(managed.userInputRequests).toMatchObject([{ id: 'context-question', status: 'pending' }])
+    expect(Object.hasOwn(requiredTestValue(managed.userInputRequests?.[0]), 'answeredAt')).toBe(false)
+    expect(managed.userInputRequests?.[0]?.answeredAt).toBeUndefined()
     expect(managed.messages.some(message => message.content.includes('<host_clean_recovery_continuation'))).toBe(false)
     const rows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
-    expect(rows[0].providerContextBoundaryMessageId).toBe(rootId)
-    expect(rows[0].userInputRequests[0]).toMatchObject({ id: 'context-question', status: 'pending' })
+      .trim().split('\n').map(parseRecoveryJournalObservation)
+    expect(requiredTestValue(rows[0]).providerContextBoundaryMessageId).toBe(rootId)
+    expect(requiredTestValue(requiredTestValue(rows[0]).userInputRequests)[0]).toMatchObject({ id: 'context-question', status: 'pending' })
     expect(rows.some(row => row.type === 'user'
       && row.content?.includes('<host_clean_recovery_continuation'))).toBe(false)
   })

@@ -57,7 +57,7 @@ export function enable(transportOwner: OfflineVault, scope: OfflineVaultScope): 
             setOfflineVaultConsent(true);
         }
         catch (error) {
-            transportOwner["key"] = null;
+            transportOwner.key = null;
             transportOwner["state"] = emptyState();
             transportOwner["loaded"] = true;
             transportOwner["generation"] += 1;
@@ -66,7 +66,7 @@ export function enable(transportOwner: OfflineVault, scope: OfflineVaultScope): 
         }
         transportOwner["state"] = next;
         transportOwner["loaded"] = true;
-        transportOwner["conflicted"] = false;
+        transportOwner.conflicted = false;
         transportOwner["generation"] += 1;
         transportOwner["emit"]();
     });
@@ -119,10 +119,10 @@ export async function purgeNow(transportOwner: OfflineVault): Promise<void> {
     catch (error) {
         persistenceFailure = error;
     }
-    transportOwner["key"] = null;
+    transportOwner.key = null;
     transportOwner["recordRevision"] = null;
     transportOwner["loaded"] = true;
-    transportOwner["conflicted"] = false;
+    transportOwner.conflicted = false;
     transportOwner["state"] = emptyState();
     transportOwner["generation"] += 1;
     transportOwner["emit"]();

@@ -14,7 +14,7 @@ import type { ManagedSession } from '../managed-session.ts';
 import { freezeRuntimeSnapshot, specializedRuntimeIdentitySha256 } from '../mission-route.ts';
 import { managedToSession } from '../session-presentation.ts';
 
-async function sessionOpAssertSpecializedMissionCapabilities(sessionOperationContext: SessionOperationContext, managed: ManagedSession, toolName?: string, input: Readonly<Record<string, unknown>> = {}): Promise<void> {
+async function sessionOpAssertSpecializedMissionCapabilities(_sessionOperationContext: SessionOperationContext, managed: ManagedSession, toolName?: string, input: Readonly<Record<string, unknown>> = {}): Promise<void> {
     const lock = managed.missionCapabilityLock;
     if (!lock) {
         if (managed.missionRouteLockSha256) {
@@ -50,7 +50,7 @@ async function sessionOpAssertSpecializedMissionCapabilities(sessionOperationCon
         }
     }
     if (toolName === 'Skill') {
-        const raw = typeof input.skill === 'string' ? input.skill : '';
+        const raw = typeof input["skill"] === 'string' ? input["skill"] : '';
         const slug = raw.split(':').at(-1) ?? '';
         if (!declaredSkills.has(slug)) {
             throw new Error(`Specialized Mission skill "${slug || '(missing)'}" is not declared`);
@@ -73,7 +73,7 @@ async function sessionOpAssertSpecializedMissionCapabilities(sessionOperationCon
         if (capability.kind === 'skill') {
             actual = resolveSpecializedSkillCapabilityIdentity({
                 workspaceRoot: managed.workspace.rootPath,
-                workingDirectory: managed.workingDirectory,
+                ...(managed.workingDirectory !== undefined ? { workingDirectory: managed.workingDirectory } : {}),
                 slug: capability.name,
             });
         }
@@ -93,7 +93,7 @@ async function sessionOpAssertSpecializedMissionCapabilities(sessionOperationCon
 }
 
 /** Resolve, authenticate, and freeze the exact route consumed by one governed turn. */
-async function sessionOpResolveSpecializedMissionRouteSnapshot(sessionOperationContext: SessionOperationContext, managed: ManagedSession): Promise<{
+async function sessionOpResolveSpecializedMissionRouteSnapshot(_sessionOperationContext: SessionOperationContext, managed: ManagedSession): Promise<{
     context: ReturnType<typeof resolveBackendContext>;
     connection: LlmConnection;
     credentialBinding: LlmCredentialBinding;
@@ -109,9 +109,9 @@ async function sessionOpResolveSpecializedMissionRouteSnapshot(sessionOperationC
     }
     const workspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath);
     const resolved = resolveBackendContext({
-        sessionConnectionSlug: managed.llmConnection,
-        workspaceDefaultConnectionSlug: workspaceConfig?.defaults?.defaultLlmConnection,
-        managedModel: managed.model,
+        ...(managed.llmConnection !== undefined ? { sessionConnectionSlug: managed.llmConnection } : {}),
+        ...(workspaceConfig?.defaults?.defaultLlmConnection !== undefined ? { workspaceDefaultConnectionSlug: workspaceConfig?.defaults?.defaultLlmConnection } : {}),
+        ...(managed.model !== undefined ? { managedModel: managed.model } : {}),
     });
     const liveConnection = resolved.connection;
     if (!liveConnection
@@ -155,7 +155,7 @@ async function sessionOpResolveSpecializedMissionRouteSnapshot(sessionOperationC
 
 /** Final source/config/credential-generation fence called by McpClientPool
  * immediately before the API or MCP source client transport. */
-async function sessionOpAssertOrdinaryMissionSourceBindingAtTransport(sessionOperationContext: SessionOperationContext, managed: ManagedSession, sourceSlug: string): Promise<void> {
+async function sessionOpAssertOrdinaryMissionSourceBindingAtTransport(_sessionOperationContext: SessionOperationContext, managed: ManagedSession, sourceSlug: string): Promise<void> {
     const lock = managed.missionOrdinaryRouteLock;
     if (!lock)
         return;
@@ -216,7 +216,7 @@ async function sessionOpResolveOrdinaryMissionRouteSnapshot(sessionOperationCont
     if (ordinaryMissionRouteConfigIdentity({
         profile,
         config: workspaceConfig,
-        origin,
+        ...(origin !== undefined ? { origin: origin } : {}),
         defaults: {
             defaultLlmConnection: getDefaultLlmConnection(),
             defaultThinkingLevel: getDefaultThinkingLevel(),
@@ -243,7 +243,7 @@ async function sessionOpResolveOrdinaryMissionRouteSnapshot(sessionOperationCont
     }
     const resolved = resolveBackendContext({
         sessionConnectionSlug: lock.connectionSlug,
-        workspaceDefaultConnectionSlug: workspaceConfig.defaults?.defaultLlmConnection,
+        ...(workspaceConfig.defaults?.defaultLlmConnection !== undefined ? { workspaceDefaultConnectionSlug: workspaceConfig.defaults?.defaultLlmConnection } : {}),
         managedModel: lock.model,
     });
     if (!resolved.connection
@@ -258,7 +258,7 @@ async function sessionOpResolveOrdinaryMissionRouteSnapshot(sessionOperationCont
         connectionSlug: lock.connectionSlug,
         model: lock.model,
         thinkingLevel: lock.thinkingLevel,
-        runtimeIdentitySha256: lock.runtimeIdentitySha256,
+        ...(lock.runtimeIdentitySha256 !== undefined ? { runtimeIdentitySha256: lock.runtimeIdentitySha256 } : {}),
         credentialBindingResolver: async (connection) => {
             credentialBinding = connection.authType
                 ? await getCredentialManager().getLlmCredentialBinding(connection.slug, connection.authType)

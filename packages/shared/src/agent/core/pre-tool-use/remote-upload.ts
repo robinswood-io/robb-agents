@@ -21,18 +21,18 @@ export function isBoundedStructuredRemoteTechnicalUpload(
   input: Record<string, unknown>,
   dataFolderPath: string | undefined,
   objectiveSegments: readonly string[],
-  authenticatedUserAuthorizationSegments: readonly string[] = [],
+  _authenticatedUserAuthorizationSegments: readonly string[] = [],
 ): string | undefined {
   if (toolName !== 'mcp__rbw-servers__ssh_upload' || !dataFolderPath
     || Object.keys(input).some(key => ![
       'server', 'localPath', 'remotePath', '_displayName', '_intent',
     ].includes(key))) return undefined;
-  const server = typeof input.server === 'string' ? input.server.trim() : '';
-  const requestedLocalPath = typeof input.localPath === 'string' ? input.localPath.trim() : '';
-  const remotePath = typeof input.remotePath === 'string' ? input.remotePath.trim() : '';
-  if (!server || server !== input.server || !isCanonicalRemoteEndpoint(server)
-    || !requestedLocalPath || requestedLocalPath !== input.localPath
-    || !remotePath || remotePath !== input.remotePath
+  const server = typeof input["server"] === 'string' ? input["server"].trim() : '';
+  const requestedLocalPath = typeof input["localPath"] === 'string' ? input["localPath"].trim() : '';
+  const remotePath = typeof input["remotePath"] === 'string' ? input["remotePath"].trim() : '';
+  if (!server || server !== input["server"] || !isCanonicalRemoteEndpoint(server)
+    || !requestedLocalPath || requestedLocalPath !== input["localPath"]
+    || !remotePath || remotePath !== input["remotePath"]
     || remotePath.length > 2_048
     || !remotePath.startsWith('/srv/')
       && !(server === 'dev' && managedDevOrionPath(remotePath, true))

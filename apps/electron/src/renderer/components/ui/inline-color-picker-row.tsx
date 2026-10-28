@@ -11,7 +11,7 @@
  *   ColorPicker popover; selection auto-saves live during drag (no submit button).
  */
 
-import * as React from 'react'
+
 import { Button } from '@/components/ui/button'
 import { ColorPicker } from '@/components/ui/color-picker'
 
@@ -19,9 +19,9 @@ interface InlineColorPickerRowProps {
   value: string
   onChange: (hex: string) => void
   presets: readonly string[]
-  onClear?: () => void
-  clearLabel?: string
-  customAriaLabel?: string
+  onClear?: (() => void) | undefined
+  clearLabel?: string | undefined
+  customAriaLabel?: string | undefined
 }
 
 const RAINBOW_GRADIENT =

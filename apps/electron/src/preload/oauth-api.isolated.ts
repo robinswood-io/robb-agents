@@ -5,7 +5,7 @@ import type { RpcClient } from '@craft-agent/server-core/transport'
 // The official runner executes this file in its own Bun process so native
 // Electron and callback-server replacements cannot affect other suites.
 const openedUrls: string[] = []
-const callbackServers: Array<{ closes: number; options?: CreateCallbackServerOptions }> = []
+const callbackServers: Array<{ closes: number; options?: CreateCallbackServerOptions | undefined }> = []
 let callbackQuery: CallbackPayload['query'] = {}
 let bindFailure: unknown
 let pendingCallback = false
@@ -18,7 +18,7 @@ mock.module('electron', () => ({
 
 const callbackModule = await import('@craft-agent/shared/auth/callback-server')
 const callbackSpy = spyOn(callbackModule, 'createCallbackServer').mockImplementation(
-  async (options?: CreateCallbackServerOptions): Promise<CallbackServer> => {
+  async (options?: CreateCallbackServerOptions | undefined): Promise<CallbackServer> => {
     if (bindFailure !== undefined) throw bindFailure
     const record = { closes: 0, options }
     callbackServers.push(record)
@@ -191,7 +191,7 @@ describe('other configured OAuth entry points', () => {
   it('keeps source and authentication-request correlation through completion', async () => {
     const { api, calls } = fixture()
     const result = await api.performOAuth({ sourceSlug: 'source-a', sessionId: 'session-a', authRequestId: 'request-a' })
-    expect(result).toEqual({ success: true, email: 'fixture@example.test', error: undefined })
+    expect<unknown>(result).toEqual({error: undefined,  success: true, email: 'fixture@example.test' })
     expect(calls.find(call => call.channel === 'oauth:start')?.args).toEqual([{
       sourceSlug: 'source-a', sessionId: 'session-a', authRequestId: 'request-a',
       callbackUrl: 'http://127.0.0.1:1455/callback',

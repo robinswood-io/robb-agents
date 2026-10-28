@@ -3,7 +3,7 @@ import { OFFLINE_VAULT_MAX_MESSAGE_CHARS, OFFLINE_VAULT_MAX_PINS, OfflineVaultCa
 import type { OfflineVaultScopeToken, OfflineSessionSnapshot, OfflinePin } from './shared.ts';
 
 export async function replaceSnapshots(transportOwner: OfflineVault, snapshots: readonly OfflineSessionSnapshot[], expectedScope?: OfflineVaultScopeToken): Promise<void> {
-    await transportOwner["mutate"]((state, now) => {
+    await transportOwner.mutate((state, now) => {
         const scoped = snapshots
             .filter((snapshot) => snapshot.workspaceId === state.scope?.workspaceId)
             .map((snapshot) => ({ ...snapshot, capturedAt: finiteTimestamp(snapshot.capturedAt, now) }));
@@ -13,7 +13,7 @@ export async function replaceSnapshots(transportOwner: OfflineVault, snapshots: 
 }
 
 export async function upsertSnapshot(transportOwner: OfflineVault, snapshot: OfflineSessionSnapshot, expectedScope?: OfflineVaultScopeToken): Promise<void> {
-    await transportOwner["mutate"]((state, now) => {
+    await transportOwner.mutate((state, now) => {
         if (snapshot.workspaceId !== state.scope?.workspaceId)
             return;
         const next = { ...snapshot, capturedAt: now };
@@ -24,7 +24,7 @@ export async function upsertSnapshot(transportOwner: OfflineVault, snapshot: Off
 
 export async function pruneExpired(transportOwner: OfflineVault): Promise<void> {
     // mutate() normalizes against the current clock before persisting.
-    await transportOwner["mutate"](() => { });
+    await transportOwner.mutate(() => { });
 }
 
 export function estimatePlaintextBytes(transportOwner: OfflineVault): number {
@@ -32,7 +32,7 @@ export function estimatePlaintextBytes(transportOwner: OfflineVault): number {
 }
 
 export async function togglePin(transportOwner: OfflineVault, input: Omit<OfflinePin, 'id' | 'createdAt'>, expectedScope: OfflineVaultScopeToken): Promise<void> {
-    const committed = await transportOwner["mutate"]((state, now) => {
+    const committed = await transportOwner.mutate((state, now) => {
         const existing = state.pins.find((pin) => pin.sessionId === input.sessionId && pin.messageId === input.messageId);
         if (existing) {
             state.pins = state.pins.filter((pin) => pin.id !== existing.id);
@@ -49,5 +49,5 @@ export async function togglePin(transportOwner: OfflineVault, input: Omit<Offlin
                 }];
         }
     }, expectedScope);
-    transportOwner["assertUserMutationCommitted"](committed);
+    transportOwner.assertUserMutationCommitted(committed);
 }

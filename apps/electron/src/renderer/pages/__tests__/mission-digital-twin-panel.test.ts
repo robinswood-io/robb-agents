@@ -54,10 +54,10 @@ describe('Mission digital twin panel model', () => {
   })
 
   it('locally prevents apply for terminal Missions and reserved or running leases', () => {
-    const snapshot = (status: string, itemStatus: string) => ({
+    const snapshot = (status: MissionSnapshotDto['status'], itemStatus: MissionSnapshotDto['workItems'][string]['status']) => ({
       status,
       workItems: { source: { status: itemStatus } },
-    }) as unknown as MissionSnapshotDto
+    }) satisfies Parameters<typeof missionDigitalTwinPanelInternals.missionCanReplan>[0]
 
     expect(missionDigitalTwinPanelInternals.missionCanReplan(snapshot('paused', 'pending'))).toBe(true)
     expect(missionDigitalTwinPanelInternals.missionCanReplan(snapshot('completed', 'pending'))).toBe(false)

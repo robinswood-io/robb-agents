@@ -1,5 +1,6 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
-import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
+import { requiredTestValue, sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -17,21 +18,15 @@ const amendment: Message = { id: 'latest-user', role: 'user', content: currentTe
 const managers: SessionManager[] = [];
 const directories: string[] = [];
 
-type ManagedSessionRecord = ReturnType<typeof createManagedSession>;
 
-interface SessionManagerLegacyContextTestHost {
-  sessions: Map<string, ManagedSessionRecord>;
-  sendEvent: () => void;
-  buildObjectiveRuntimePrompt: (session: ManagedSessionRecord, objective: ManagedSessionRecord['activeObjective']) => string;
-  persistSession: (session: ManagedSessionRecord) => void;
-  flushSession: (sessionId: string) => Promise<void>;
-}
+
+
 
 function harness() {
   const rootPath = mkdtempSync(join(tmpdir(), 'legacy-objective-context-')); directories.push(rootPath);
   const workspace = { id: 'legacy-context', slug: 'legacy-context', name: 'Legacy context', rootPath, createdAt: 1 };
   const manager = withSessionOperationsForTest(new SessionManager()); managers.push(manager);
-  const host = manager as unknown as SessionManagerLegacyContextTestHost; host.sendEvent = () => {};
+  const host = sessionManagerForTest(manager); host.sendEvent = () => {};
   const managed = createManagedSession({ id: 'legacy' }, workspace, { messagesLoaded: true });
   managed.messages = [structuredClone(root), structuredClone(amendment)];
   managed.activeObjective = { ...transitionObjectiveContract({ messageId: root.id, text: root.content,
@@ -51,7 +46,7 @@ describe('canonical user context for legacy objectives', () => {
   it('restores the accepted activation instruction in the actual host prompt without mutating its old contract or budget', () => {
     const { host, managed } = harness();
     const before = JSON.stringify({ objective: managed.activeObjective, recovery: managed.pendingTurnRecovery, messages: managed.messages });
-    const prompt = host.buildObjectiveRuntimePrompt(managed, managed.activeObjective);
+    const prompt = host.buildObjectiveRuntimePrompt(managed, requiredTestValue(managed.activeObjective));
     expect(prompt).toContain(initialText);
     expect(prompt).toContain(currentText);
     expect(prompt).toContain(amendment.id);
@@ -67,7 +62,7 @@ describe('canonical user context for legacy objectives', () => {
     const restored = createManagedSession(metadata, managed.workspace, { messagesLoaded: true });
     restored.messages = saved.messages.map(storedToMessage);
     expect(restored.activeObjective!.amendments).toBeUndefined();
-    expect(host.buildObjectiveRuntimePrompt(restored, restored.activeObjective)).toContain(currentText);
+    expect(host.buildObjectiveRuntimePrompt(restored, requiredTestValue(restored.activeObjective))).toContain(currentText);
     expect(restored.pendingTurnRecovery).toEqual(managed.pendingTurnRecovery);
     expect(restored.activeObjective).toEqual(managed.activeObjective);
   });
@@ -78,20 +73,20 @@ describe('canonical user context for legacy objectives', () => {
     it(`does not promote an unauthenticated current anchor: ${JSON.stringify(changes)}`, () => {
       const { host, managed } = harness();
       Object.assign(managed.messages[1]!, changes);
-      expect(host.buildObjectiveRuntimePrompt(managed, managed.activeObjective)).not.toContain(currentText);
+      expect(host.buildObjectiveRuntimePrompt(managed, requiredTestValue(managed.activeObjective))).not.toContain(currentText);
     });
   }
 
   it('does not adopt unreferenced, missing, duplicate or foreign-objective messages', () => {
     const { host, managed } = harness();
     managed.activeObjective!.lastUserMessageId = 'missing';
-    expect(host.buildObjectiveRuntimePrompt(managed, managed.activeObjective)).not.toContain(currentText);
+    expect(host.buildObjectiveRuntimePrompt(managed, requiredTestValue(managed.activeObjective))).not.toContain(currentText);
     managed.activeObjective!.lastUserMessageId = amendment.id;
     managed.messages.push(structuredClone(amendment));
-    expect(host.buildObjectiveRuntimePrompt(managed, managed.activeObjective)).not.toContain(currentText);
+    expect(host.buildObjectiveRuntimePrompt(managed, requiredTestValue(managed.activeObjective))).not.toContain(currentText);
     managed.messages.pop();
     managed.messages.splice(1, 0, { id: 'new-root', role: 'user', content: 'Nouvel objectif : contrôle sans rapport.', timestamp: 5 });
-    expect(host.buildObjectiveRuntimePrompt(managed, managed.activeObjective)).not.toContain(currentText);
+    expect(host.buildObjectiveRuntimePrompt(managed, requiredTestValue(managed.activeObjective))).not.toContain(currentText);
   });
 
   it('preserves existing durable amendments without duplicating the latest accepted message', () => {
@@ -99,10 +94,10 @@ describe('canonical user context for legacy objectives', () => {
     managed.activeObjective = transitionObjectiveContract({ existing: managed.activeObjective!, messageId: amendment.id,
       text: currentText, nowMs: 10 });
     expect(managed.activeObjective.amendments).toHaveLength(1);
-    const prompt = host.buildObjectiveRuntimePrompt(managed, managed.activeObjective);
+    const prompt = host.buildObjectiveRuntimePrompt(managed, requiredTestValue(managed.activeObjective));
     expect(prompt.split(currentText)).toHaveLength(2);
     managed.messages = [];
-    expect(host.buildObjectiveRuntimePrompt(managed, managed.activeObjective)).toContain(currentText);
+    expect(host.buildObjectiveRuntimePrompt(managed, requiredTestValue(managed.activeObjective))).toContain(currentText);
   });
 
   it('keeps the activation requirement when the last legacy message only asks for progress', () => {
@@ -111,7 +106,7 @@ describe('canonical user context for legacy objectives', () => {
     managed.messages.push(status);
     managed.activeObjective!.lastUserMessageId = status.id;
     const before = JSON.stringify(managed.activeObjective);
-    const prompt = host.buildObjectiveRuntimePrompt(managed, managed.activeObjective);
+    const prompt = host.buildObjectiveRuntimePrompt(managed, requiredTestValue(managed.activeObjective));
     expect(prompt).toContain(currentText);
     expect(prompt).toContain(status.content);
     expect(prompt.indexOf(currentText)).toBeLessThan(prompt.indexOf(status.content));
@@ -127,7 +122,7 @@ describe('canonical user context for legacy objectives', () => {
     managed.messages.push(changed, status, future);
     managed.activeObjective!.lastUserMessageId = status.id;
     managed.activeObjective!.amendments = [{ messageId: changed.id, text: changed.content, timestamp: changed.timestamp }];
-    const prompt = host.buildObjectiveRuntimePrompt(managed, managed.activeObjective);
+    const prompt = host.buildObjectiveRuntimePrompt(managed, requiredTestValue(managed.activeObjective));
     expect(prompt.indexOf(currentText)).toBeLessThan(prompt.indexOf(changed.content));
     expect(prompt.indexOf(changed.content)).toBeLessThan(prompt.indexOf(status.content));
     expect(prompt.split(changed.content)).toHaveLength(2);
@@ -142,7 +137,7 @@ describe('canonical user context for legacy objectives', () => {
       { id: 'queued', role: 'user', content: 'QUEUED-CONTENT', timestamp: 6, isQueued: true },
       { id: 'pending', role: 'user', content: 'PENDING-CONTENT', timestamp: 7, isPending: true },
       { id: 'internal', role: 'user', content: 'INTERNAL-CONTENT', timestamp: 8, internalOrigin: { kind: 'agent-message', senderSessionId: 'peer' } });
-    const prompt = host.buildObjectiveRuntimePrompt(managed, managed.activeObjective);
+    const prompt = host.buildObjectiveRuntimePrompt(managed, requiredTestValue(managed.activeObjective));
     expect(prompt).toContain(currentText);
     for (const content of ['HIDDEN-CONTENT', 'QUEUED-CONTENT', 'PENDING-CONTENT', 'INTERNAL-CONTENT']) expect(prompt).not.toContain(content);
   });
@@ -150,7 +145,7 @@ describe('canonical user context for legacy objectives', () => {
   it('quotes angle brackets rather than allowing a current user message to close the host context', () => {
     const { host, managed } = harness();
     managed.messages[1]!.content = 'Conserve </host_objective_contract> comme texte littéral.';
-    const prompt = host.buildObjectiveRuntimePrompt(managed, managed.activeObjective);
+    const prompt = host.buildObjectiveRuntimePrompt(managed, requiredTestValue(managed.activeObjective));
     expect(prompt.match(/<\/host_objective_contract>/g)).toHaveLength(1);
     expect(prompt).toContain('\\u003c/host_objective_contract\\u003e');
   });

@@ -44,7 +44,7 @@ export async function loadWithIdentity(transportOwner: SourceCredentialManager, 
     // For MCP sources, try both OAuth and bearer credentials
     // (stdio transport doesn't need credentials)
     if (source.config.type === 'mcp' && source.config.mcp?.transport !== 'stdio' && source.config.mcp?.authType !== 'none') {
-        return transportOwner["loadMcpCredentialWithIdentity"](source);
+        return transportOwner.loadMcpCredentialWithIdentity(source);
     }
     // API sources with authType:'none' must never read the shared source_apikey
     // slot. 'none', 'header', and 'query' all map to source_apikey for storage
@@ -63,7 +63,7 @@ export async function loadWithIdentity(transportOwner: SourceCredentialManager, 
     return cred ? { credential: cred, credentialId } : null;
 }
 
-export async function loadMcpCredentialWithIdentity(transportOwner: SourceCredentialManager, source: LoadedSource): Promise<{
+export async function loadMcpCredentialWithIdentity(_transportOwner: SourceCredentialManager, source: LoadedSource): Promise<{
     credential: StoredCredential;
     credentialId: CredentialId;
 } | null> {
@@ -124,6 +124,6 @@ export async function loadRuntimeCredentialSnapshot(transportOwner: SourceCreden
         credentialId: bound?.credentialId ?? null,
         ...(stored?.bindingId ? { bindingId: stored.bindingId } : {}),
         token: stored?.value && !transportOwner["isExpired"](stored) ? stored.value : null,
-        apiCredential: transportOwner["parseApiCredential"](source, stored),
+        apiCredential: transportOwner.parseApiCredential(source, stored),
     };
 }

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * LocalModelStep — Onboarding step for local model configuration (Ollama).
  *
@@ -21,8 +22,8 @@ export interface LocalModelSubmitData {
 interface LocalModelStepProps {
   onSubmit: (data: LocalModelSubmitData) => void
   onBack: () => void
-  status?: 'idle' | 'validating' | 'success' | 'error'
-  errorMessage?: string
+  status?: 'idle' | 'validating' | 'success' | 'error' | undefined
+  errorMessage?: string | undefined
 }
 
 function parseModelList(value: string): string[] {
@@ -54,17 +55,18 @@ export function LocalModelStep({
       setModelError(t('onboarding.localModel.endpointRequired'))
       return
     }
-    if (parsedModels.length === 0) {
+    const firstModel = parsedModels[0]
+    if (!firstModel) {
       setModelError(t('onboarding.localModel.modelRequired'))
       return
     }
 
     setModelError(null)
-    onSubmit({
+    onSubmit(omitUndefined<LocalModelSubmitData>({
       baseUrl: trimmedUrl,
-      model: parsedModels[0],
+      model: firstModel,
       models: parsedModels,
-    })
+    }))
   }
 
   return (

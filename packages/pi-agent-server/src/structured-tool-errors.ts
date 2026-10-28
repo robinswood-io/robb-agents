@@ -1,13 +1,14 @@
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
 
-const installedAgents = new WeakSet<AgentSession['agent']>();
+type StructuredErrorAgent = Pick<AgentSession['agent'], 'afterToolCall'>;
+const installedAgents = new WeakSet<StructuredErrorAgent>();
 function hasErrorFlag(details: unknown): boolean {
-  return !!details && typeof details === 'object' && (details as { isError?: unknown }).isError === true;
+  return !!details && typeof details === 'object' && 'isError' in details && details.isError === true;
 }
 
 /** Pi's normal execute() return path ignores details.isError. Preserve the
  * complete result while promoting that explicit flag before history/events. */
-export function installStructuredToolErrors(session: Pick<AgentSession, 'agent'>): void {
+export function installStructuredToolErrors(session: { agent: StructuredErrorAgent }): void {
   const agent = session.agent;
   if (installedAgents.has(agent)) return;
   installedAgents.add(agent);

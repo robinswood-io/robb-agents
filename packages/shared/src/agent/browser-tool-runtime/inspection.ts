@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import type { BrowserConsoleArgs, BrowserDownloadsArgs, BrowserNetworkArgs, BrowserPaneFns, BrowserWaitArgs } from "../browser-tools.ts";
 import type { BrowserCommandImage, BrowserCommandResult } from './contracts.ts';
 import { boundedBrowserCommandTimeout } from './execution-timeout.ts';
@@ -71,7 +72,7 @@ export async function executeSnapshotBrowserCommand(fns: BrowserPaneFns): Promis
         return {
           output: challengeLines.join('\n'),
           appendReleaseHint: false,
-          image: screenshotImage,
+          ...(screenshotImage !== undefined ? { image: screenshotImage } : {}),
         };
       }
 
@@ -143,14 +144,14 @@ export async function executeConsoleBrowserCommand(parts: string[], fns: Browser
       throw new Error(`Invalid console level "${String(levelRaw)}". Use one of: all, log, info, warn, error.`);
     }
 
-    const entries = await fns.getConsoleLogs({ limit, level });
+    const entries = await fns.getConsoleLogs({ ...(limit !== undefined ? { limit } : {}), level });
     const levelCounts = entries.reduce<Record<string, number>>((acc, entry) => {
       acc[entry.level] = (acc[entry.level] ?? 0) + 1;
       return acc;
     }, {});
 
     const lines: string[] = [
-      `Console entries (${entries.length}) for level=${level}: log=${levelCounts.log ?? 0}, info=${levelCounts.info ?? 0}, warn=${levelCounts.warn ?? 0}, error=${levelCounts.error ?? 0}`,
+      `Console entries (${entries.length}) for level=${level}: log=${levelCounts["log"] ?? 0}, info=${levelCounts["info"] ?? 0}, warn=${levelCounts["warn"] ?? 0}, error=${levelCounts["error"] ?? 0}`,
     ];
 
     if (entries.length > 0) {
@@ -174,7 +175,7 @@ export async function executeNetworkBrowserCommand(parts: string[], fns: Browser
     if (!['all', 'failed', '2xx', '3xx', '4xx', '5xx'].includes(status)) {
       throw new Error(`Invalid network status "${String(statusRaw)}". Use one of: all, failed, 2xx, 3xx, 4xx, 5xx.`);
     }
-    const entries = await fns.getNetworkLogs({ limit, status });
+    const entries = await fns.getNetworkLogs({ ...(limit !== undefined ? { limit } : {}), status });
     const buckets = { '2xx': 0, '3xx': 0, '4xx': 0, '5xx': 0, other: 0 };
     const hostCounts = new Map<string, number>();
 
@@ -225,7 +226,7 @@ export async function executeWaitBrowserCommand(parts: string[], fns: BrowserPan
     }
 
     const started = Date.now();
-    const result = await fns.waitFor({ kind, value, timeoutMs });
+    const result = await fns.waitFor({ kind, ...(value !== undefined ? { value } : {}), ...(timeoutMs !== undefined ? { timeoutMs } : {}) });
     const totalElapsed = Date.now() - started;
 
     return {
@@ -252,7 +253,7 @@ export async function executeDownloadsBrowserCommand(parts: string[], fns: Brows
 
     const entries = await fns.getDownloads({
       action,
-      ...(action === 'wait' ? { timeoutMs: valueNum } : { limit: valueNum }),
+      ...(valueNum !== undefined ? (action === 'wait' ? { timeoutMs: valueNum } : { limit: valueNum }) : {}),
     });
 
     const states = entries.reduce<Record<string, number>>((acc, entry) => {
@@ -261,7 +262,7 @@ export async function executeDownloadsBrowserCommand(parts: string[], fns: Brows
     }, {});
 
     const lines: string[] = [
-      `Downloads (${entries.length}) action=${action}: started=${states.started ?? 0}, completed=${states.completed ?? 0}, interrupted=${states.interrupted ?? 0}, cancelled=${states.cancelled ?? 0}`,
+      `Downloads (${entries.length}) action=${action}: started=${states["started"] ?? 0}, completed=${states["completed"] ?? 0}, interrupted=${states["interrupted"] ?? 0}, cancelled=${states["cancelled"] ?? 0}`,
     ];
 
     for (const entry of entries) {
@@ -277,7 +278,7 @@ export async function executeEvaluateBrowserCommand(parts: string[], fns: Browse
     const expression = parts.slice(1).join(' ').trim();
     if (!expression) throw new Error('evaluate requires an expression. Example: evaluate document.title');
     const result = await fns.evaluate(expression);
-    const type = Array.isArray(result) ? 'array' : (result === null ? 'null' : typeof result);
+    const type = isUnknownArray(result) ? 'array' : (result === null ? 'null' : typeof result);
 
     let rendered: string;
     if (typeof result === 'string') {

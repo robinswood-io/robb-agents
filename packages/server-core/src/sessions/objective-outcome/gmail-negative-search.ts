@@ -48,8 +48,8 @@ function stronglyMatchingGmailIdentity(leftText: string, rightText: string): boo
 
 function gmailTargetInputText(message: Message): string {
   const input = message.toolInput ?? {};
-  return [input.to, input.cc, input.bcc, input.subject, input.body,
-    input.expectedTo, input.expectedCc, input.expectedSubject]
+  return [input["to"], input["cc"], input["bcc"], input["subject"], input["body"],
+    input["expectedTo"], input["expectedCc"], input["expectedSubject"]]
     .filter((value): value is string => typeof value === 'string' && value.length <= 16_000)
     .join('\n');
 }
@@ -58,7 +58,7 @@ export function gmailNegativeSearchBoundToObjective(
   message: Message, objective: ActiveSessionObjective, messages: readonly Message[],
 ): boolean {
   if (message.toolName !== 'mcp__google-contacts__gmail_search_exact') return false;
-  const query = message.toolInput?.query;
+  const query = message.toolInput?.["query"];
   if (typeof query !== 'string' || query.length === 0 || query.length > 2_048
     || message.toolResult?.trim() !== `Aucun message Gmail trouvé pour : « ${query} »`) return false;
   const objectiveText = [

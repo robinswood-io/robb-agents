@@ -7,7 +7,7 @@ export function targetBoundOperationalTechnicalReadAuthoritySegment(
   input: Record<string, unknown>,
   objectiveSegments: readonly string[],
 ): string | undefined {
-  const server = typeof input.server === 'string' ? input.server.trim() : '';
+  const server = typeof input["server"] === 'string' ? input["server"].trim() : '';
   if (!server) return undefined;
   // The newest substantive human segment is an authority boundary. It must
   // fully restate the endpoint and audited channel; never search past a stop,

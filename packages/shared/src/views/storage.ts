@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 /**
  * Views Storage
  *
@@ -8,7 +9,7 @@
  * They are never persisted on sessions — purely runtime-evaluated.
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import type { ViewConfig } from './types.ts';
 import { getDefaultViews } from './defaults.ts';
@@ -110,7 +111,7 @@ function migrateFromSmartLabels(workspaceRootPath: string): ViewsConfig | null {
 
   try {
     const labelsConfig = readJsonFileSync<Record<string, unknown> & { smartLabels?: ViewConfig[] }>(labelsConfigPath);
-    if (!labelsConfig.smartLabels || !Array.isArray(labelsConfig.smartLabels)) return null;
+    if (!labelsConfig.smartLabels || !isUnknownArray(labelsConfig.smartLabels)) return null;
 
     // Migrate: rename IDs from smart-* to view-*
     const views: ViewConfig[] = labelsConfig.smartLabels.map((sl) => ({

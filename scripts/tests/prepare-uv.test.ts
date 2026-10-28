@@ -36,7 +36,7 @@ it('accepts fresh checksum-verified cross-target bytes without executing them', 
   expect(validateUvBinary(binary, 'linux', '0.10.6', false)).toBe(false);
 });
 
-it('removes an ignored cached artifact before the packaging download', async () => {
+it('refreshes a cross-target cache whose version cannot be checked', async () => {
   const electronDir = mkdtempSync(join(tmpdir(), 'robb-uv-refresh-'));
   scratch.push(electronDir);
   // Keep the injected fixture cross-target on every CI host: the production
@@ -47,7 +47,6 @@ it('removes an ignored cached artifact before the packaging download', async () 
   writeFileSync(target, 'stale ignored artifact');
 
   const prepared = await prepareUv(targetPlatform, 'x64', {
-    refresh: true,
     electronDir,
     rootDir: electronDir,
     download: async () => {

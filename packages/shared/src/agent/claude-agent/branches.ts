@@ -63,7 +63,7 @@ export async function runMiniCompletion(transportOwner: ClaudeAgent, prompt: str
    * SDK runs) and post-failure (anything that broke the fork attempt
    * after spawn).
    */
-export async function* recoverFromStaleBranchFork(transportOwner: ClaudeAgent, userMessage: string, attachments: FileAttachment[] | undefined, isPreSpawn: boolean): AsyncGenerator<AgentEvent> {
+export async function* recoverFromStaleBranchFork(transportOwner: ClaudeAgent, userMessage: string, attachments: FileAttachment[] | undefined, isPreSpawn: boolean): AsyncGenerator<AgentEvent, void, unknown> {
     debug('[ClaudeAgent] Recovering from stale branch fork', {
         isPreSpawn,
         sessionId: transportOwner["config"].session?.id,
@@ -77,13 +77,13 @@ export async function* recoverFromStaleBranchFork(transportOwner: ClaudeAgent, u
     transportOwner["pinnedPreferencesPrompt"] = null;
     transportOwner["pinnedIncludeCoAuthoredBy"] = null;
     transportOwner["pinnedProjectContext"] = null;
-    transportOwner["preferencesDriftNotified"] = false;
+    transportOwner.preferencesDriftNotified = false;
     // Atomic on-disk persistence: clears all four fork fields at once. This
     // supersedes onSdkSessionIdCleared, which only persists sdkSessionId and
     // would leave the branchFromSdk* fields on disk to reload next launch.
     transportOwner["config"].onBranchForkInvalidated?.();
     let retryMessage = userMessage;
-    const summary = await transportOwner["generateBranchFallbackContext"]();
+    const summary = await transportOwner.generateBranchFallbackContext();
     if (summary) {
         retryMessage = `<branch_context_summary>\nThis is a branched conversation. The SDK-level fork is unavailable on this machine; here is a summary of the parent conversation:\n\n${summary}\n</branch_context_summary>\n\n${userMessage}`;
     }
@@ -124,7 +124,7 @@ export async function queryLlm(transportOwner: ClaudeAgent, request: LLMQueryReq
     await transportOwner["config"].beforeProviderExecution?.();
     const model = resolveClaudeNestedQueryModel({
         activeModel: transportOwner["getModel"](),
-        requestedModel: request.model,
+        ...(request.model !== undefined ? { requestedModel: request.model } : {}),
     });
     const options = {
         ...getDefaultOptions({ ...transportOwner["config"].envOverrides, ANTHROPIC_DEFAULT_HAIKU_MODEL: transportOwner["getModel"]() }),
@@ -168,7 +168,7 @@ export async function queryLlm(transportOwner: ClaudeAgent, request: LLMQueryReq
    * - Session-expired detection checks errorMsg, rawErrorMsg, and stderr
    * - branchFromSdkSessionId is cleared on recovery to prevent retry loops
    */
-export async function ensureBranchReady(transportOwner: ClaudeAgent): Promise<void> {
+export async function ensureBranchReady(_transportOwner: ClaudeAgent): Promise<void> {
     // No preflight needed — fork happens on first chat() call via
     // resume: branchFromSdkSessionId + forkSession: true
 }

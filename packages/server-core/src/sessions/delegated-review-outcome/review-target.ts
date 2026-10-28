@@ -1,3 +1,4 @@
+import { parseJsonObject } from '@craft-agent/shared/utils/json';
 import { isExplicitReadOnlyReview } from "../objective-contract.ts";
 import type { DelegatedReviewRequest, HostParentReviewContract } from './host-scope.ts';
 
@@ -19,9 +20,9 @@ export function requestObjects(text: string): Record<string, unknown>[] {
       try {
         // User templates commonly spell a boolean as true|false or bool. Only
         // these non-JSON tokens in a value position are normalized.
-        const value = JSON.parse(text.slice(start, index + 1)
+        const value = parseJsonObject(text.slice(start, index + 1)
           .replace(/:\s*(?:true\s*\|\s*false|bool(?:ean)?)(?=\s*[,}])/gi, ':false'));
-        if (value && typeof value === 'object' && !Array.isArray(value)) objects.push(value);
+        objects.push(value);
       } catch { /* Other prose/braces are not review contracts. */ }
     }
   }

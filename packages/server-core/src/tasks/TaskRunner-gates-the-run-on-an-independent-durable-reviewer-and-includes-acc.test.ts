@@ -41,7 +41,7 @@ describe('TaskRunner (Conductor)', () => {
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
       now: () => '2026-06-07T00:00:00.000Z',
-      nowMs,
+      ...(nowMs !== undefined ? { nowMs: nowMs } : {}),
       resolveSubagentAutonomyContext: () => autonomyContext,
       ...(executionProofIssuer ? {
         verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),
@@ -74,11 +74,11 @@ describe('TaskRunner (Conductor)', () => {
       reviewerSessionId: reviewerId,
       reviewerState: 'pending',
     });
-    expect(readRunLog(root, 'vp', 'r1')).toContainEqual(expect.objectContaining({
+    expect<unknown>(readRunLog(root, 'vp', 'r1')).toContainEqual((expect.objectContaining({
       kind: 'node-spawned',
       nodeId: '__verdict__',
       sessionId: reviewerId,
-    }));
+    }) as unknown));
 
     // A parent completion is not a reviewer verdict and must be ignored.
     host.completeSession('orch', { finalText: 'VERDICT: PASS' });

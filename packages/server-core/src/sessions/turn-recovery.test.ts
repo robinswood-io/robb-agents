@@ -1,3 +1,5 @@
+import type { PendingTurnRecovery } from '../../../shared/src/sessions/types/turn-recovery.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from "bun:test";
 import { DEFAULT_AUTOMATIC_TURN_RECOVERY_ATTEMPTS, DEFAULT_AUTOMATIC_TURN_RECOVERY_LEASE_MS, MAX_OBJECTIVE_CONTINUATION_ATTEMPTS, MAX_AUTOMATIC_TURN_RECOVERY_ATTEMPTS, MAX_AUTOMATIC_TURN_RECOVERY_STAGNANT_ATTEMPTS, advancePendingTurnRecovery, buildAutomaticTurnRecoveryPrompt, buildCleanRecoveryContinuationPrompt, createCleanRecoveryContinuationHandoff, createPendingTurnRecovery, exhaustPendingTurnRecovery, hasObjectiveContinuationProvenance, pendingRecoveryRequiresContinuation, planAutomaticTurnRecovery, reconstructLegacyTurnRecoveryBudget, turnStillNeedsRecovery } from "./turn-recovery.ts";
 import { activeSafeContinuationObjective, legacyRecovery, legacyTerminal, message } from "./testing/turn-recovery-fixture.ts";
@@ -337,7 +339,7 @@ describe('durable turn recovery', () => {
       progressFingerprint: 'proof-before-final-pass',
     })).toMatchObject({ action: 'halt', reason: 'absolute-attempt-limit' });
     expect(planAutomaticTurnRecovery({
-      pending: { ...atAbsoluteCeiling, lastProgressFingerprint: undefined },
+      pending: omitUndefined<PendingTurnRecovery>({ ...atAbsoluteCeiling, lastProgressFingerprint: undefined }),
       cause: 'objective_continue',
       objective,
       nowMs: 20,

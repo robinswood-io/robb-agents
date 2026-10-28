@@ -48,13 +48,13 @@ export const { BrowserPaneManager } = await import('../../browser-pane-manager')
 
 export type NativeBrowserInstance = NonNullable<ReturnType<InstanceType<typeof BrowserPaneManager>['instances']['get']>>
 
-export type TestWebContents = Omit<WebContents,keyof ReturnType<typeof createMockWebContents>> & ReturnType<typeof createMockWebContents>
+export type TestWebContents = WebContents & ReturnType<typeof createMockWebContents>
 
-export type TestView = Omit<WebContentsView,'webContents'> & Omit<ReturnType<typeof createMockWebContentsView>,'webContents'> & {webContents:TestWebContents}
+export type TestView = WebContentsView & ReturnType<typeof createMockWebContentsView> & {webContents:TestWebContents}
 
-export type TestWindow = Omit<BrowserWindow,keyof ReturnType<typeof createMockWindow>> & Omit<ReturnType<typeof createMockWindow>,'webContents'> & {webContents:TestWebContents}
+export type TestWindow = BrowserWindow & ReturnType<typeof createMockWindow> & {webContents:TestWebContents}
 
-export type TestBrowserInstance = Omit<NativeBrowserInstance,'window'|'pageView'|'toolbarView'|'nativeOverlayView'> & {
+export type TestBrowserInstance = NativeBrowserInstance & {
  window:TestWindow;pageView:TestView;toolbarView:TestView;nativeOverlayView:TestView
 }
 
@@ -62,7 +62,7 @@ export function getTestBrowserInstance(manager:InstanceType<typeof BrowserPaneMa
  const instance=manager['instances'].get(id)
  if(!instance)throw new Error('Missing test browser instance: '+id)
  // Only the Electron module is simulated; native manager and CDP contracts stay typed.
- return instance as unknown as TestBrowserInstance
+ return instance as TestBrowserInstance
 }
 
 export /** Deliberately malformed wire inputs must reach the production runtime guard. */

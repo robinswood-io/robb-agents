@@ -9,10 +9,10 @@ export async function runMiniCompletion(transportOwner: PiAgent, prompt: string)
         throw new ProviderDispatchRejectedError('Auxiliary mini-model completion is disabled for a specialized Mission');
     }
     // If subprocess isn't running, spawn it
-    await transportOwner["ensureSubprocess"]();
-    const id = `mini-${++transportOwner["rpcIdCounter"]}`;
+    await transportOwner.ensureSubprocess();
+    const id = `mini-${++transportOwner.rpcIdCounter}`;
     const resultPromise = new Promise<string | null>((resolve, reject) => {
-        transportOwner["pendingMiniCompletions"].set(id, { resolve, reject });
+        transportOwner.pendingMiniCompletions.set(id, { resolve, reject });
     });
     transportOwner["send"]({
         type: 'mini_completion',
@@ -23,8 +23,8 @@ export async function runMiniCompletion(transportOwner: PiAgent, prompt: string)
     // Keep this aligned with the subprocess-side queryLlm timeout.
     const timeout = new Promise<string | null>((resolve) => {
         setTimeout(() => {
-            if (transportOwner["pendingMiniCompletions"].has(id)) {
-                transportOwner["pendingMiniCompletions"].delete(id);
+            if (transportOwner.pendingMiniCompletions.has(id)) {
+                transportOwner.pendingMiniCompletions.delete(id);
                 transportOwner["debug"](`[runMiniCompletion] Timed out after ${LLM_QUERY_TIMEOUT_MS / 1000}s`);
                 resolve(null);
             }
@@ -38,10 +38,10 @@ export async function runMiniCompletion(transportOwner: PiAgent, prompt: string)
 export async function queryLlm(transportOwner: PiAgent, request: LLMQueryRequest): Promise<LLMQueryResult> {
     transportOwner["debug"]('[PiAgent.queryLlm] Starting');
     await transportOwner["config"].beforeProviderExecution?.();
-    await transportOwner["ensureSubprocess"]();
-    const id = `llm-${++transportOwner["rpcIdCounter"]}`;
+    await transportOwner.ensureSubprocess();
+    const id = `llm-${++transportOwner.rpcIdCounter}`;
     const resultPromise = new Promise<LLMQueryResult>((resolve, reject) => {
-        transportOwner["pendingLlmQueries"].set(id, { resolve, reject });
+        transportOwner.pendingLlmQueries.set(id, { resolve, reject });
     });
     const model = transportOwner["getModel"]();
     transportOwner["send"]({
@@ -53,8 +53,8 @@ export async function queryLlm(transportOwner: PiAgent, request: LLMQueryRequest
     // Keep this aligned with the subprocess-side queryLlm timeout.
     const timeout = new Promise<LLMQueryResult>((_, reject) => {
         setTimeout(() => {
-            if (transportOwner["pendingLlmQueries"].has(id)) {
-                transportOwner["pendingLlmQueries"].delete(id);
+            if (transportOwner.pendingLlmQueries.has(id)) {
+                transportOwner.pendingLlmQueries.delete(id);
                 reject(new Error(`queryLlm timed out after ${LLM_QUERY_TIMEOUT_MS / 1000}s`));
             }
         }, LLM_QUERY_TIMEOUT_MS);

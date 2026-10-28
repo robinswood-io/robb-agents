@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { createHash } from "node:crypto";
 import type { SpecializedProfileHumanApprovalReceipt } from './approval.ts';
 import type { SpecializedAgentProfileDefinition, SpecializedProfileState } from './profile-definition.ts';
@@ -52,23 +53,23 @@ export function canonicalSpecializedProfileVersionHash(value: unknown): string {
 
 export function canonicalSpecializedProfileRegistryPayloadHash(value: unknown): string {
   const candidate = value && typeof value === 'object'
-    ? Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'head'))
+    ? Object.fromEntries(Object.entries<unknown>((value as Record<string, unknown>)).filter(([key]) => key !== 'head'))
     : value;
   return sha256(canonicalJson(SpecializedProfileRegistryPayloadSchema.parse(candidate)));
 }
 
 export function canonicalSpecializedProfileRegistryAnchorPayloadHash(value: unknown): string {
   const candidate = value && typeof value === 'object'
-    ? Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'authority'))
+    ? Object.fromEntries(Object.entries<unknown>((value as Record<string, unknown>)).filter(([key]) => key !== 'authority'))
     : value;
   const parsed = SpecializedProfileRegistryAnchorPayloadSchema.parse(candidate);
   return sha256(canonicalJson(parsed));
 }
 
 function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (isUnknownArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   if (value && typeof value === 'object') {
-    return `{${Object.entries(value)
+    return `{${Object.entries<unknown>((value as Record<string, unknown>))
       .filter(([, child]) => child !== undefined)
       .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
       .map(([key, child]) => `${JSON.stringify(key)}:${canonicalJson(child)}`)

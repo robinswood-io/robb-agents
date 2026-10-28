@@ -13,7 +13,7 @@ import { sampleBackgroundTasks, veryLongPermissionRequest, samplePermissionReque
  * Contextual wrapper for ActiveTasksBar showing it with messages and input
  */
 interface ActiveTasksBarContextProps {
-  tasks?: BackgroundTask[]
+  tasks?: BackgroundTask[] | undefined
 }
 
 export function ActiveTasksBarContext({ tasks = sampleBackgroundTasks }: ActiveTasksBarContextProps) {
@@ -82,9 +82,9 @@ export function ActiveTasksBarContext({ tasks = sampleBackgroundTasks }: ActiveT
  * Allows toggling between states to inspect the animate in/out behavior
  */
 interface PermissionInputToggleProps {
-  autoToggle?: boolean
-  autoToggleInterval?: number
-  useLongCommand?: boolean
+  autoToggle?: boolean | undefined
+  autoToggleInterval?: number | undefined
+  useLongCommand?: boolean | undefined
 }
 
 export function PermissionInputToggle({ autoToggle = false, autoToggleInterval = 3000, useLongCommand = false }: PermissionInputToggleProps) {

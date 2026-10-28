@@ -16,10 +16,10 @@ export async function handle(transportOwner: Commands, adapter: PlatformAdapter,
     if (!skipsGate) {
         const verdict = evaluatePreBindingAccess({
             msg,
-            workspaceConfig: transportOwner["access"].getWorkspaceConfig(),
+            workspaceConfig: transportOwner.access.getWorkspaceConfig(),
         });
         if (!verdict.allow) {
-            await transportOwner["sendRejection"](adapter, msg, verdict.reason);
+            await transportOwner.sendRejection(adapter, msg, verdict.reason);
             return;
         }
     }
@@ -27,19 +27,19 @@ export async function handle(transportOwner: Commands, adapter: PlatformAdapter,
     // `text.startsWith('/new')` bug where `/newuser` would also dispatch
     // to handleNew.
     if (cmd === '/new') {
-        await transportOwner["handleNew"](adapter, msg);
+        await transportOwner.handleNew(adapter, msg);
     }
     else if (cmd === '/bind') {
-        await transportOwner["handleBind"](adapter, msg);
+        await transportOwner.handleBind(adapter, msg);
     }
     else if (cmd === '/pair') {
-        await transportOwner["handlePair"](adapter, msg);
+        await transportOwner.handlePair(adapter, msg);
     }
     else if (cmd === '/unbind') {
-        await transportOwner["handleUnbind"](adapter, msg);
+        await transportOwner.handleUnbind(adapter, msg);
     }
     else if (cmd === '/help') {
-        await transportOwner["handleHelp"](adapter, msg);
+        await transportOwner.handleHelp(adapter, msg);
     }
     else {
         // Sender passed the access gate (owner or open workspace) and typed
@@ -62,7 +62,7 @@ export async function handleCommand(transportOwner: Commands, adapter: PlatformA
     const { cmd } = parseCommand(text);
     if (!cmd)
         return false;
-    transportOwner["log"].info('handling chat command', {
+    transportOwner.log.info('handling chat command', {
         event: 'command_received',
         workspaceId: transportOwner["workspaceId"],
         platform: adapter.platform,
@@ -76,34 +76,34 @@ export async function handleCommand(transportOwner: Commands, adapter: PlatformA
     if (!ALWAYS_ALLOWED_COMMANDS.has(cmd)) {
         const verdict = evaluatePreBindingAccess({
             msg,
-            workspaceConfig: transportOwner["access"].getWorkspaceConfig(),
+            workspaceConfig: transportOwner.access.getWorkspaceConfig(),
         });
         if (!verdict.allow) {
-            await transportOwner["sendRejection"](adapter, msg, verdict.reason);
+            await transportOwner.sendRejection(adapter, msg, verdict.reason);
             return true;
         }
     }
     switch (cmd) {
         case '/new':
-            await transportOwner["handleNew"](adapter, msg);
+            await transportOwner.handleNew(adapter, msg);
             return true;
         case '/bind':
-            await transportOwner["handleBind"](adapter, msg);
+            await transportOwner.handleBind(adapter, msg);
             return true;
         case '/pair':
-            await transportOwner["handlePair"](adapter, msg);
+            await transportOwner.handlePair(adapter, msg);
             return true;
         case '/unbind':
-            await transportOwner["handleUnbind"](adapter, msg);
+            await transportOwner.handleUnbind(adapter, msg);
             return true;
         case '/help':
-            await transportOwner["handleHelp"](adapter, msg);
+            await transportOwner.handleHelp(adapter, msg);
             return true;
         case '/status':
-            await transportOwner["handleStatus"](adapter, msg);
+            await transportOwner.handleStatus(adapter, msg);
             return true;
         case '/stop':
-            await transportOwner["handleStop"](adapter, msg);
+            await transportOwner.handleStop(adapter, msg);
             return true;
         default:
             return false;
@@ -116,7 +116,7 @@ export async function handleCommand(transportOwner: Commands, adapter: PlatformA
    */
 export async function sendRejection(transportOwner: Commands, adapter: PlatformAdapter, msg: IncomingMessage, reason: AccessRejectReason): Promise<void> {
     await executeRejection(adapter, msg, reason, {
-        recentRejectReplies: transportOwner["recentRejectReplies"],
-        ...(transportOwner["access"].pendingStore ? { pendingStore: transportOwner["access"].pendingStore } : {}),
-    }, transportOwner["log"]);
+        recentRejectReplies: transportOwner.recentRejectReplies,
+        ...(transportOwner.access.pendingStore ? { pendingStore: transportOwner.access.pendingStore } : {}),
+    }, transportOwner.log);
 }

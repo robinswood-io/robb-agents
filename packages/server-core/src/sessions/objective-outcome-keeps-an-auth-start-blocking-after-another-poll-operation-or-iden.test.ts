@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from "bun:test";
 import type { Message } from "@craft-agent/core/types";
 import type { ActiveSessionObjective } from "@craft-agent/shared/sessions";
@@ -375,14 +376,14 @@ describe('objective outcome receipt', () => {
     expectRejected({ ...blocked, remainingWork: ['Déployer prod après autorisation explicite'] }, [root, boundary, preflight]);
     expectRejected({ ...blocked, blocker: { ...authorityBlocker, evidence: ['u1'] } }, [root, boundary, preflight]);
     expectRejected({ ...blocked, blocker: { ...authorityBlocker, kind: 'irreversible_authority' } }, [root, boundary, preflight]);
-    expectRejected(blocked, [boundary, preflight], {
+    expectRejected(blocked, [boundary, preflight], omitUndefined<ActiveSessionObjective>({
       ...restrictedObjective,
       userMessageId: boundary.id,
       originalText: restriction,
       lastUserMessageId: boundary.id,
       requiresExecutionEvidence: false,
       amendments: undefined,
-    });
+    }));
     const priorMutation: Message = {
       id: 'authorized-mutation', role: 'tool', content: '', timestamp: 3,
       toolName: 'Write', toolUseId: 'authorized-mutation-call', toolStatus: 'completed', toolExecuted: true,
@@ -394,9 +395,9 @@ describe('objective outcome receipt', () => {
     })).toEqual({ state: 'blocked_human', valid: true, gaps: [] });
     expectRejected(blocked, [root, boundary, { ...priorMutation, timestamp: 4.5 }, preflight]);
     expectRejected(blocked, [root, boundary, { ...preflight, toolInput: { server: 'other' } }]);
-    expectRejected(blocked, [root, boundary, preflight], {
+    expectRejected(blocked, [root, boundary, preflight], omitUndefined<ActiveSessionObjective>({
       ...restrictedObjective, acceptanceCriteria: undefined, requiresAcceptanceCriteria: undefined,
-    });
+    }));
   });
 
   it('never accepts the user objective itself as blocker evidence', () => {

@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 /**
  * Config Validators
  *
@@ -61,7 +62,7 @@ const BaseLabelConfigSchema = z.object({
 // Recursive schema: LabelConfig can have children which are also LabelConfigs.
 // Zod supports lazy() for recursive types.
 interface LabelConfigSchemaValue extends z.infer<typeof BaseLabelConfigSchema> {
-  children?: LabelConfigSchemaValue[];
+  children?: LabelConfigSchemaValue[] | undefined;
 }
 
 const LabelConfigSchema: z.ZodType<LabelConfigSchemaValue> = BaseLabelConfigSchema.extend({
@@ -200,7 +201,7 @@ export function validateLabelsContent(jsonString: string): ValidationResult {
   function checkAutoRules(labels: LabelConfigSchemaValue[], path: string): void {
     for (let i = 0; i < labels.length; i++) {
       const label = labels[i]!;
-      if (label.autoRules && Array.isArray(label.autoRules)) {
+      if (label.autoRules && isUnknownArray(label.autoRules)) {
         for (let j = 0; j < label.autoRules.length; j++) {
           const rule = label.autoRules[j]!;
           if (rule.pattern) {

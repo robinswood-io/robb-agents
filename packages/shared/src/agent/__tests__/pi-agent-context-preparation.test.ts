@@ -12,9 +12,9 @@ function harness() {
   const agent = new PiAgent(config);
   const runtime = agent;
   const sent: Array<{ type: string }> = [];
-  runtime["ensureSubprocess"] = async () => {};
+  runtime.ensureSubprocess = async () => {};
   runtime["emitAutomationEvent"] = async () => {};
-  runtime["resolveProjectContext"] = () => null;
+  runtime.resolveProjectContext = () => null;
   runtime["send"] = (message: { type: string }) => { sent.push(message); runtime["eventQueue"].complete(); return true; };
   return { agent, runtime, sent };
 }
@@ -57,7 +57,7 @@ describe('Pi prompt preparation cancellation', () => {
     h.runtime["send"] = (message: { type: string; id?: string }) => {
       h.sent.push(message);
       if (message.type === 'prompt') {
-        h.runtime["handleLine"](JSON.stringify({ type: 'provider_handoff', id: message.id }));
+        h.runtime.handleLine(JSON.stringify({ type: 'provider_handoff', id: message.id }));
         h.runtime["eventQueue"].complete();
       }
     return true; };
@@ -84,7 +84,7 @@ describe('Pi prompt preparation cancellation', () => {
       order.push(`send:${message.type}`);
       h.sent.push(message);
       if (message.type === 'prompt') {
-        h.runtime["handleLine"](JSON.stringify({ type: 'provider_handoff', id: message.id }));
+        h.runtime.handleLine(JSON.stringify({ type: 'provider_handoff', id: message.id }));
         h.runtime["eventQueue"].complete();
       }
       return true;
@@ -121,7 +121,7 @@ describe('Pi prompt preparation cancellation', () => {
     expect(promptId).toBeDefined();
     expect(uncertainDispatches).toBe(1);
     expect(handoffs).toBe(0);
-    h.runtime["handleLine"](JSON.stringify({ type: 'provider_handoff', id: promptId }));
+    h.runtime.handleLine(JSON.stringify({ type: 'provider_handoff', id: promptId }));
     h.runtime["eventQueue"].complete();
     await pending;
     expect(handoffs).toBe(1);
@@ -154,7 +154,7 @@ describe('Pi prompt preparation cancellation', () => {
     h.runtime["send"] = (message: { type: string; id?: string }) => {
       h.sent.push(message);
       if (message.type === 'prompt') {
-        h.runtime["handleLine"](JSON.stringify({
+        h.runtime.handleLine(JSON.stringify({
           type: 'error',
           id: message.id,
           code: 'prompt_error',
@@ -173,7 +173,7 @@ describe('Pi prompt preparation cancellation', () => {
     });
     expect(handoffs).toBe(0);
     expect(correlatedRejections).toBe(1);
-    expect(h.runtime["pendingProviderHandoffs"].size).toBe(0);
+    expect(h.runtime.pendingProviderHandoffs.size).toBe(0);
     h.agent.destroy();
   });
 
@@ -184,10 +184,10 @@ describe('Pi prompt preparation cancellation', () => {
     h.runtime["send"] = (message: { type: string; id?: string }) => {
       h.sent.push(message);
       if (message.type === 'prompt') {
-        h.runtime["handleLine"](JSON.stringify({
+        h.runtime.handleLine(JSON.stringify({
           type: 'error', id: 'different-turn', code: 'prompt_error', message: 'stale rejection',
         }));
-        h.runtime["handleLine"](JSON.stringify({
+        h.runtime.handleLine(JSON.stringify({
           type: 'error', id: message.id, code: 'model_error', message: 'post-write failure',
         }));
         h.runtime["eventQueue"].complete();
@@ -207,9 +207,9 @@ describe('Pi prompt preparation cancellation', () => {
     h.runtime["send"] = (message: { type: string; id?: string }) => {
       h.sent.push(message);
       if (message.type === 'prompt') {
-        h.runtime["handleLine"](JSON.stringify({ type: 'provider_handoff', id: 'wrong-turn' }));
-        h.runtime["handleLine"](JSON.stringify({ type: 'provider_handoff', id: message.id }));
-        h.runtime["handleLine"](JSON.stringify({ type: 'provider_handoff', id: message.id }));
+        h.runtime.handleLine(JSON.stringify({ type: 'provider_handoff', id: 'wrong-turn' }));
+        h.runtime.handleLine(JSON.stringify({ type: 'provider_handoff', id: message.id }));
+        h.runtime.handleLine(JSON.stringify({ type: 'provider_handoff', id: message.id }));
         h.runtime["eventQueue"].complete();
       }
     return true; };

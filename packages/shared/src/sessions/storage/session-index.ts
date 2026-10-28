@@ -100,7 +100,7 @@ export function listSessions(workspaceRootPath: string): SessionMetadata[] {
 function headerToMetadata(header: SessionHeader, workspaceRootPath: string): SessionMetadata | null {
   try {
     // Migration: accept old 'todoState' field from pre-rename session files
-    const rawStatus = header.sessionStatus ?? (header as unknown as { todoState?: string }).todoState;
+    const rawStatus = header.sessionStatus ?? (header as { todoState?: string }).todoState;
     // Validate sessionStatus against workspace status config
     const validatedStatus = validateSessionStatus(workspaceRootPath, rawStatus);
 

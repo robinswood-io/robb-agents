@@ -30,7 +30,7 @@ import { bindingOpts, DEFAULT_EDIT_INTERVAL_MS, BACKOFF_RESET_MS, resolveRespons
 import type { SessionEvent, RenderState } from './shared.ts';
 
 export function getState(transportOwner: Renderer, bindingId: string): RenderState {
-    let state = transportOwner["states"].get(bindingId);
+    let state = transportOwner.states.get(bindingId);
     if (!state) {
         state = {
             textBuffer: '',
@@ -44,7 +44,7 @@ export function getState(transportOwner: Renderer, bindingId: string): RenderSta
             progressMessageId: null,
             progressStatus: null,
         };
-        transportOwner["states"].set(bindingId, state);
+        transportOwner.states.set(bindingId, state);
     }
     return state;
 }
@@ -53,29 +53,29 @@ export async function handle(transportOwner: Renderer, event: SessionEvent, bind
     // Permission / error prompts are mode-agnostic — handle first so they
     // can't be swallowed by mode state.
     if (event.type === 'permission_request') {
-        await transportOwner["handlePermissionRequest"](event, binding, adapter, transportOwner["getState"](binding.id));
+        await transportOwner.handlePermissionRequest(event, binding, adapter, transportOwner.getState(binding.id));
         return;
     }
     if (event.type === 'credential_request') {
-        await transportOwner["handleCredentialRequest"](binding, adapter);
+        await transportOwner.handleCredentialRequest(binding, adapter);
         return;
     }
     if (event.type === 'plan_submitted') {
-        await transportOwner["handlePlanSubmitted"](event, binding, adapter);
+        await transportOwner.handlePlanSubmitted(event, binding, adapter);
         return;
     }
     if (event.type === 'error' || event.type === 'typed_error') {
-        await transportOwner["handleError"](event, binding, adapter, transportOwner["getState"](binding.id));
+        await transportOwner.handleError(event, binding, adapter, transportOwner.getState(binding.id));
         return;
     }
     const mode = resolveResponseMode(binding.config.responseMode, binding.config.streamResponses);
     switch (mode) {
         case 'streaming':
-            return transportOwner["handleStreaming"](event, binding, adapter);
+            return transportOwner.handleStreaming(event, binding, adapter);
         case 'progress':
-            return transportOwner["handleProgress"](event, binding, adapter);
+            return transportOwner.handleProgress(event, binding, adapter);
         case 'final_only':
-            return transportOwner["handleFinalOnly"](event, binding, adapter);
+            return transportOwner.handleFinalOnly(event, binding, adapter);
     }
 }
 
@@ -83,29 +83,29 @@ export async function handle(transportOwner: Renderer, event: SessionEvent, bind
   // Mode: streaming (legacy behaviour — unchanged)
   // ---------------------------------------------------------------------------
 export async function handleStreaming(transportOwner: Renderer, event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
-    const state = transportOwner["getState"](binding.id);
+    const state = transportOwner.getState(binding.id);
     switch (event.type) {
         case 'text_delta': {
-            const delta = typeof event.delta === 'string' ? event.delta : '';
+            const delta = typeof event["delta"] === 'string' ? event["delta"] : '';
             if (!delta)
                 break;
             state.textBuffer += delta;
             state.processing = true;
             if (adapter.capabilities.messageEditing) {
-                await transportOwner["handleStreamingDelta"](state, binding, adapter);
+                await transportOwner.handleStreamingDelta(state, binding, adapter);
             }
             break;
         }
         case 'text_complete': {
-            const text = typeof event.text === 'string' ? event.text : state.textBuffer;
-            transportOwner["cancelEditTimer"](state);
+            const text = typeof event["text"] === 'string' ? event["text"] : state.textBuffer;
+            transportOwner.cancelEditTimer(state);
             if (state.streamingMessageId && adapter.capabilities.messageEditing) {
                 if (text.trim()) {
-                    await transportOwner["tryEditMessage"](adapter, binding, state.streamingMessageId, text.trim(), state);
+                    await transportOwner.tryEditMessage(adapter, binding, state.streamingMessageId, text.trim(), state);
                 }
             }
             else if (text.trim()) {
-                await transportOwner["sendText"](adapter, binding, text.trim());
+                await transportOwner.sendText(adapter, binding, text.trim());
             }
             state.textBuffer = '';
             state.streamingMessageId = null;
@@ -113,20 +113,20 @@ export async function handleStreaming(transportOwner: Renderer, event: SessionEv
             break;
         }
         case 'complete': {
-            transportOwner["cancelEditTimer"](state);
+            transportOwner.cancelEditTimer(state);
             if (state.textBuffer.trim() && !state.streamingMessageId) {
-                await transportOwner["sendText"](adapter, binding, state.textBuffer.trim());
+                await transportOwner.sendText(adapter, binding, state.textBuffer.trim());
             }
-            transportOwner["resetRun"](state);
+            transportOwner.resetRun(state);
             break;
         }
         case 'tool_start': {
             if (binding.config.showToolActivity) {
-                const toolName = typeof event.toolName === 'string' ? event.toolName : 'tool';
-                const displayName = typeof event.toolDisplayName === 'string' ? event.toolDisplayName : toolName;
+                const toolName = typeof event["toolName"] === 'string' ? event["toolName"] : 'tool';
+                const displayName = typeof event["toolDisplayName"] === 'string' ? event["toolDisplayName"] : toolName;
                 if (state.streamingMessageId && state.textBuffer.trim()) {
-                    transportOwner["cancelEditTimer"](state);
-                    await transportOwner["tryEditMessage"](adapter, binding, state.streamingMessageId, state.textBuffer.trim(), state);
+                    transportOwner.cancelEditTimer(state);
+                    await transportOwner.tryEditMessage(adapter, binding, state.streamingMessageId, state.textBuffer.trim(), state);
                     state.streamingMessageId = null;
                     state.textBuffer = '';
                     state.lastEditedLength = 0;
@@ -147,7 +147,7 @@ export async function handleStreamingDelta(transportOwner: Renderer, state: Rend
             const sent = await adapter.sendText(binding.channelId, state.textBuffer, bindingOpts(binding));
             state.streamingMessageId = sent.messageId;
             state.lastEditedLength = state.textBuffer.length;
-            transportOwner["scheduleEdit"](state, binding, adapter);
+            transportOwner.scheduleEdit(state, binding, adapter);
         }
         catch {
             // If posting fails, accumulate and try on complete
@@ -170,10 +170,10 @@ export function scheduleEdit(transportOwner: Renderer, state: RenderState, bindi
         const text = state.textBuffer.trim();
         if (!text)
             return;
-        await transportOwner["tryEditMessage"](adapter, binding, state.streamingMessageId, text, state);
+        await transportOwner.tryEditMessage(adapter, binding, state.streamingMessageId, text, state);
         state.lastEditedLength = state.textBuffer.length;
         if (state.processing) {
-            transportOwner["scheduleEdit"](state, binding, adapter);
+            transportOwner.scheduleEdit(state, binding, adapter);
         }
     }, intervalMs);
 }
@@ -181,7 +181,7 @@ export function scheduleEdit(transportOwner: Renderer, state: RenderState, bindi
 // ---------------------------------------------------------------------------
   // Adapter helpers
   // ---------------------------------------------------------------------------
-export async function tryEditMessage(transportOwner: Renderer, adapter: PlatformAdapter, binding: ChannelBinding, messageId: string, text: string, state: RenderState): Promise<void> {
+export async function tryEditMessage(_transportOwner: Renderer, adapter: PlatformAdapter, binding: ChannelBinding, messageId: string, text: string, state: RenderState): Promise<void> {
     const truncated = truncateForAdapter(text, adapter);
     try {
         // editMessage on Telegram is keyed by (chat_id, message_id) and ignores
@@ -202,7 +202,7 @@ export async function tryEditMessage(transportOwner: Renderer, adapter: Platform
     }
 }
 
-export function cancelEditTimer(transportOwner: Renderer, state: RenderState): void {
+export function cancelEditTimer(_transportOwner: Renderer, state: RenderState): void {
     if (state.editTimer) {
         clearTimeout(state.editTimer);
         state.editTimer = null;

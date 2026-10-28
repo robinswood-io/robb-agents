@@ -42,7 +42,7 @@ describe('checkVCRedistInstalled', () => {
     if (process.platform !== 'win32') return
 
     const { checkVCRedistInstalled } = await import('./vcredist.ts')
-    const sysRoot = process.env.SystemRoot ?? 'C:\\Windows'
+    const sysRoot = process.env["SystemRoot"] ?? 'C:\\Windows'
     const dllPath = join(sysRoot, 'System32', 'vcruntime140.dll')
 
     // If the DLL exists on this machine, checkVCRedistInstalled should find it
@@ -58,21 +58,21 @@ describe('checkVCRedistInstalled', () => {
     if (process.platform !== 'win32') return
 
     // Point SystemRoot to a non-existent path so no DLL is found
-    const origSystemRoot = process.env.SystemRoot
-    process.env.SystemRoot = join(process.cwd(), '__nonexistent_sysroot__')
+    const origSystemRoot = process.env["SystemRoot"]
+    process.env["SystemRoot"] = join(process.cwd(), '__nonexistent_sysroot__')
     setArch('x64')
 
     try {
       // Fresh import to pick up env changes
       delete require.cache[require.resolve('./vcredist.ts')]
-      const { checkVCRedistInstalled } = require('./vcredist.ts')
+      const { checkVCRedistInstalled } = require('./vcredist.ts') as typeof import('./vcredist.ts')
       const result = checkVCRedistInstalled()
       expect(result.installed).toBe(false)
       expect(result.downloadUrl).toBe('https://aka.ms/vs/17/release/vc_redist.x64.exe')
       expect(result.message).toContain('not installed')
     } finally {
       if (origSystemRoot) {
-        process.env.SystemRoot = origSystemRoot
+        process.env["SystemRoot"] = origSystemRoot
       }
     }
   })
@@ -80,19 +80,19 @@ describe('checkVCRedistInstalled', () => {
   it('returns correct ARM64 download URL on ARM64 architecture', async () => {
     if (process.platform !== 'win32') return
 
-    const origSystemRoot = process.env.SystemRoot
-    process.env.SystemRoot = join(process.cwd(), '__nonexistent_sysroot__')
+    const origSystemRoot = process.env["SystemRoot"]
+    process.env["SystemRoot"] = join(process.cwd(), '__nonexistent_sysroot__')
     setArch('arm64')
 
     try {
       delete require.cache[require.resolve('./vcredist.ts')]
-      const { checkVCRedistInstalled } = require('./vcredist.ts')
+      const { checkVCRedistInstalled } = require('./vcredist.ts') as typeof import('./vcredist.ts')
       const result = checkVCRedistInstalled()
       expect(result.installed).toBe(false)
       expect(result.downloadUrl).toBe('https://aka.ms/vs/17/release/vc_redist.arm64.exe')
     } finally {
       if (origSystemRoot) {
-        process.env.SystemRoot = origSystemRoot
+        process.env["SystemRoot"] = origSystemRoot
       }
     }
   })

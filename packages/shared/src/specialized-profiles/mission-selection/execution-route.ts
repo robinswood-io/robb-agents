@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { createHash } from "node:crypto";
 import type { AgentProfile } from "../../missions/index.ts";
 import { SpecializedMissionProfileSelectionError } from './contracts.ts';
@@ -23,35 +24,35 @@ export function specializedProfileExecutionRouteIdentity(
 }
 
 function canonicalExecutionConnection(value: unknown): unknown {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  if (!value || typeof value !== 'object' || isUnknownArray(value)) return value;
   const connection = value as Record<string, unknown>;
-  const models = Array.isArray(connection.models)
-    ? [...connection.models]
-      .map((model) => canonicalRouteValue(model))
+  const models = isUnknownArray(connection["models"])
+    ? [...connection["models"]]
+      .map((model: unknown) => canonicalRouteValue(model))
       .sort((left, right) => routeStableJson(left).localeCompare(routeStableJson(right)))
     : [];
   return canonicalRouteValue({
-    slug: connection.slug ?? null,
-    providerType: connection.providerType ?? null,
-    type: connection.type ?? null,
-    baseUrl: connection.baseUrl ?? null,
-    authType: connection.authType ?? null,
+    slug: connection["slug"] ?? null,
+    providerType: connection["providerType"] ?? null,
+    type: connection["type"] ?? null,
+    baseUrl: connection["baseUrl"] ?? null,
+    authType: connection["authType"] ?? null,
     models,
-    defaultModel: connection.defaultModel ?? null,
-    modelSelectionMode: connection.modelSelectionMode ?? null,
-    piAuthProvider: connection.piAuthProvider ?? null,
-    googleCloudProject: connection.googleCloudProject ?? null,
-    customEndpoint: connection.customEndpoint ?? null,
-    oauthAccountUuid: connection.oauthAccountUuid ?? null,
-    oauthAccountEmail: connection.oauthAccountEmail ?? null,
-    oauthOrganizationUuid: connection.oauthOrganizationUuid ?? null,
-    credentialBinding: connection.credentialBinding ?? null,
-    runtimeIdentitySha256: connection.runtimeIdentitySha256 ?? null,
+    defaultModel: connection["defaultModel"] ?? null,
+    modelSelectionMode: connection["modelSelectionMode"] ?? null,
+    piAuthProvider: connection["piAuthProvider"] ?? null,
+    googleCloudProject: connection["googleCloudProject"] ?? null,
+    customEndpoint: connection["customEndpoint"] ?? null,
+    oauthAccountUuid: connection["oauthAccountUuid"] ?? null,
+    oauthAccountEmail: connection["oauthAccountEmail"] ?? null,
+    oauthOrganizationUuid: connection["oauthOrganizationUuid"] ?? null,
+    credentialBinding: connection["credentialBinding"] ?? null,
+    runtimeIdentitySha256: connection["runtimeIdentitySha256"] ?? null,
   });
 }
 
 function canonicalRouteValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalRouteValue);
+  if (isUnknownArray(value)) return value.map(canonicalRouteValue);
   if (!value || typeof value !== 'object') return value;
   return Object.fromEntries(Object.entries(value as Record<string, unknown>)
     .filter(([, entry]) => entry !== undefined)
@@ -62,7 +63,7 @@ function canonicalRouteValue(value: unknown): unknown {
 function routeStableJson(value: unknown): string {
   if (value === undefined) return '"__undefined__"';
   if (value === null || typeof value !== 'object') return JSON.stringify(value) ?? 'null';
-  if (Array.isArray(value)) return `[${value.map(routeStableJson).join(',')}]`;
+  if (isUnknownArray(value)) return `[${value.map(routeStableJson).join(',')}]`;
   const record = value as Record<string, unknown>;
   return `{${Object.keys(record).sort().map((key) =>
     `${JSON.stringify(key)}:${routeStableJson(record[key])}`).join(',')}}`;

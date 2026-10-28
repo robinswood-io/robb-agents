@@ -31,8 +31,8 @@ const platformFallback: Record<MessagingPlatform, { bg: string; initial: string 
 interface MessagingPlatformIconProps {
   platform: MessagingPlatform
   /** Size in pixels (default: 16). */
-  size?: number
-  className?: string
+  size?: number | undefined
+  className?: string | undefined
 }
 
 export function MessagingPlatformIcon({

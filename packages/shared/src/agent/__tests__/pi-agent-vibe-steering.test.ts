@@ -15,7 +15,7 @@ function agentFor(provider: string) {
   agent["send"] = mock(() => true);
   agent.forceAbort = mock(() => {});
   agent["debug"] = mock(() => {});
-  agent["pendingPermissions"] = new Map();
+  agent.pendingPermissions = new Map();
   return agent;
 }
 

@@ -5,7 +5,7 @@ import { TERMINAL_MISSION_STATUSES, runtimeItems, isExecution, isReview, current
 export function preservePause(transportOwner: MissionController, missionId: string, before: MissionSnapshot, events: MissionEvent[]): void {
     if (before.status !== 'paused')
         return;
-    const projected = transportOwner["preview"](missionId, events);
+    const projected = transportOwner.preview(missionId, events);
     if (TERMINAL_MISSION_STATUSES.has(projected.status) ||
         projected.status === 'blocked' || projected.status === 'waiting-approval')
         return;
@@ -16,7 +16,7 @@ export function preservePause(transportOwner: MissionController, missionId: stri
     }));
 }
 
-export function assertIndependentSession(transportOwner: MissionController, snapshot: MissionSnapshot, item: MissionWorkItem, sessionId: string, external: boolean): void {
+export function assertIndependentSession(_transportOwner: MissionController, snapshot: MissionSnapshot, item: MissionWorkItem, sessionId: string, external: boolean): void {
     if (!isReview(item))
         return;
     const forbidden = new Set<string>();
@@ -39,7 +39,7 @@ export function assertIndependentSession(transportOwner: MissionController, snap
     }
 }
 
-export function assertVerdictContract(transportOwner: MissionController, snapshot: MissionSnapshot, review: MissionWorkItem, verdict: StructuredMissionVerdict): void {
+export function assertVerdictContract(_transportOwner: MissionController, snapshot: MissionSnapshot, review: MissionWorkItem, verdict: StructuredMissionVerdict): void {
     const final = review.kind === 'final-review';
     const expectedType = final ? 'mission' : 'objective';
     const expectedTarget = final ? snapshot.spec.id : review.reviewTargetId;
@@ -80,11 +80,12 @@ export function assertVerdictContract(transportOwner: MissionController, snapsho
 }
 
 export function addReadyReviews(transportOwner: MissionController, missionId: string, events: MissionEvent[]): void {
-    let snapshot = transportOwner["preview"](missionId, events);
+    let snapshot = transportOwner.preview(missionId, events);
     const reserved = new Set<string>();
     let addedObjectiveReview = false;
     for (const objectiveId of objectiveIds(snapshot)) {
         const objective = snapshot.workItems[objectiveId];
+        if (!objective) throw new Error(`Missing mission objective: ${objectiveId}`);
         if (objective.status === 'accepted' || objective.status === 'blocked')
             continue;
         const frontier = currentObjectiveExecution(snapshot, objectiveId);
@@ -117,7 +118,7 @@ export function addReadyReviews(transportOwner: MissionController, missionId: st
         };
         events.push(transportOwner["event"]({ kind: 'work-item-added', item }));
         addedObjectiveReview = true;
-        snapshot = transportOwner["preview"](missionId, events);
+        snapshot = transportOwner.preview(missionId, events);
     }
     if (addedObjectiveReview) {
         events.push(transportOwner["event"]({ kind: 'mission-status-changed', status: 'objective-review' }));
@@ -137,9 +138,9 @@ export function applyPass(transportOwner: MissionController, missionId: string, 
         }
     }
     events.push(transportOwner["event"]({ kind: 'work-item-status-changed', workItemId: objectiveId, status: 'accepted' }));
-    const snapshot = transportOwner["preview"](missionId, events);
+    const snapshot = transportOwner.preview(missionId, events);
     if (objectiveIds(snapshot).every((id) => snapshot.workItems[id]?.status === 'accepted')) {
-        transportOwner["addFinalReview"](missionId, events);
+        transportOwner.addFinalReview(missionId, events);
     }
     else {
         events.push(transportOwner["event"]({ kind: 'mission-status-changed', status: 'running' }));
@@ -147,7 +148,7 @@ export function applyPass(transportOwner: MissionController, missionId: string, 
 }
 
 export function addFinalReview(transportOwner: MissionController, missionId: string, events: MissionEvent[]): void {
-    const snapshot = transportOwner["preview"](missionId, events);
+    const snapshot = transportOwner.preview(missionId, events);
     if (runtimeItems(snapshot).length + 1 > snapshot.spec.policy.maxWorkItems) {
         events.push(transportOwner["event"]({
             kind: 'mission-status-changed', status: 'failed',
@@ -172,11 +173,11 @@ export function addFinalReview(transportOwner: MissionController, missionId: str
     events.push(transportOwner["event"]({ kind: 'mission-status-changed', status: 'final-review' }));
 }
 
-export function applyFailure(transportOwner: MissionController, missionId: string, before: MissionSnapshot, review: MissionWorkItem, verdict: StructuredMissionVerdict, events: MissionEvent[]): void {
+export function applyFailure(transportOwner: MissionController, _missionId: string, before: MissionSnapshot, review: MissionWorkItem, verdict: StructuredMissionVerdict, events: MissionEvent[]): void {
     events.push(transportOwner["event"]({
         kind: 'work-item-status-changed', workItemId: review.id, status: 'rejected', reason: verdict.summary,
     }));
-    const affected = transportOwner["expandAffectedFrontier"](before, verdict.affectedWorkItemIds);
+    const affected = transportOwner.expandAffectedFrontier(before, verdict.affectedWorkItemIds);
     const affectedObjectives = new Set(affected.map((id) => objectiveForWork(before, id)));
     const cycles = new Map<string, number>();
     for (const objectiveId of affectedObjectives) {
@@ -224,7 +225,7 @@ export function applyFailure(transportOwner: MissionController, missionId: strin
     events.push(transportOwner["event"]({ kind: 'mission-status-changed', status: 'correcting', reason: verdict.summary }));
 }
 
-export function expandAffectedFrontier(transportOwner: MissionController, snapshot: MissionSnapshot, initial: readonly string[]): string[] {
+export function expandAffectedFrontier(_transportOwner: MissionController, snapshot: MissionSnapshot, initial: readonly string[]): string[] {
     const affected = new Set(initial);
     let changed = true;
     while (changed) {

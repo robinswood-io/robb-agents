@@ -1,3 +1,6 @@
+import type { RunLogEntryInput } from '../shared.ts';
+import type { RunContextSnapshot } from '../../../../../shared/src/tasks/storage/run-context.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { writeNodeOutput, readNodeOutput, writeRunContextSnapshot, writeRunSpecSnapshot } from "@craft-agent/shared/tasks";
 import { RUNNING_STATUS } from "../shared.ts";
 import type { RunSnapshot } from "../shared.ts";
@@ -8,12 +11,12 @@ export function start(transportOwner: ActiveRun): void {
     // The immutable run snapshot is part of the durability contract. Starting
     // without it would make recovery depend on a later-edited task.yaml.
     writeRunSpecSnapshot(transportOwner["deps"].workspaceRoot, transportOwner["slug"], transportOwner["runId"], transportOwner["spec"]);
-    writeRunContextSnapshot(transportOwner["deps"].workspaceRoot, transportOwner["slug"], transportOwner["runId"], {
+    writeRunContextSnapshot(transportOwner["deps"].workspaceRoot, transportOwner["slug"], transportOwner["runId"], omitUndefined<RunContextSnapshot>({
         params: transportOwner["opts"].params ?? {},
         verifyOnComplete: transportOwner["opts"].verifyOnComplete,
-    });
+    }));
     transportOwner["unsubscribe"] = transportOwner["deps"].host.onSessionComplete((evt) => transportOwner["onSessionComplete"](evt));
-    transportOwner["log"]({ kind: 'run-started', taskId: transportOwner["spec"].id, runId: transportOwner["runId"], orchestratorSessionId: transportOwner["opts"].orchestratorSessionId });
+    transportOwner["log"](omitUndefined<Extract<RunLogEntryInput, { kind: 'run-started' }>>({ kind: 'run-started', taskId: transportOwner["spec"].id, runId: transportOwner["runId"], orchestratorSessionId: transportOwner["opts"].orchestratorSessionId }));
     if (transportOwner["opts"].replay) {
         transportOwner["log"]({
             kind: 'run-replayed',
@@ -28,12 +31,12 @@ export function start(transportOwner: ActiveRun): void {
             state.state = 'done';
             transportOwner["outputs"][reused.nodeId] = output;
             writeNodeOutput(transportOwner["deps"].workspaceRoot, transportOwner["slug"], transportOwner["runId"], reused.nodeId, output);
-            transportOwner["log"]({
+            transportOwner["log"](omitUndefined<Extract<RunLogEntryInput, { kind: 'node-reused' }>>({
                 kind: 'node-reused',
                 nodeId: reused.nodeId,
                 sourceRunId: transportOwner["opts"].replay.sourceRunId,
                 proofHash: reused.proofHash,
-            });
+            }));
         }
     }
     transportOwner["runStatus"] = 'running';
@@ -92,7 +95,7 @@ export function resume(transportOwner: ActiveRun): void {
     transportOwner["resumeRequested"] = true;
     if (transportOwner["pauseDrain"] || transportOwner["pausedSessionIds"].length > 0) {
         const drain = transportOwner["beginPauseDrain"]();
-        void drain.then(() => transportOwner["resumeAfterPauseDrain"](), () => { }).catch((error) => {
+        void drain.then(() => transportOwner["resumeAfterPauseDrain"](), () => { }).catch((error: unknown) => {
             transportOwner["failForUnexpectedAsyncError"]('resume after pause drain', error);
         });
         return;
@@ -175,7 +178,7 @@ export function waitUntilSettled(transportOwner: ActiveRun): Promise<RunSnapshot
 }
 
 export function snapshot(transportOwner: ActiveRun): RunSnapshot {
-    return {
+    return omitUndefined<RunSnapshot>({
         slug: transportOwner["slug"],
         runId: transportOwner["runId"],
         taskId: transportOwner["spec"].id,
@@ -185,9 +188,9 @@ export function snapshot(transportOwner: ActiveRun): RunSnapshot {
         costUsed: transportOwner["costUsed"],
         nodes: transportOwner["spec"].nodes.map((n) => {
             const st = transportOwner["state"].get(n.id)!;
-            return { id: n.id, state: st.state, sessionId: st.sessionId, attempt: st.attempt };
+            return omitUndefined({ id: n.id, state: st.state, sessionId: st.sessionId, attempt: st.attempt });
         }),
-    };
+    });
 }
 
 /** Apply a newly published kill switch immediately to this active run. */

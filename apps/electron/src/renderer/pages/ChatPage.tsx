@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import "jotai";
@@ -13,7 +14,7 @@ import "sonner";
 import "@/components/ui/PanelHeaderCenterButton";
 import "@/components/ui/dropdown-menu";
 import "@/components/ui/styled-dropdown";
-import { useAppShellContext, useSessionOptionsFor, useSession as useSessionData } from '@/context/AppShellContext';
+import { useAppShellContext,useSessionOptionsFor,useSession as useSessionData } from '@/context/AppShellContext';
 import { rendererPerf } from '@/lib/perf';
 import "@/lib/navigate";
 import "@/lib/input-text";
@@ -21,7 +22,7 @@ import "@/lib/resolve-session-file-path";
 import "@/lib/session-load";
 import "@/atoms/sessions";
 import "@/atoms/kanban";
-import { getSessionStatus, getSessionTitle } from '@/utils/session';
+import { getSessionTitle } from '@/utils/session';
 import "@config/llm-connections";
 
 import { useChatSessionHeader } from "./use-chat-session-header";
@@ -88,7 +89,6 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     workspaces,
     onRespondToPermission,
     onRespondToCredential,
-    onMarkSessionRead,
     onMarkSessionUnread,
     onSetActiveViewingSession,
     getDraft,
@@ -182,19 +182,18 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
       })
       return () => cancelAnimationFrame(rafId)
     }
+  
+    return undefined;
   }, [sessionId, session])
 
   // Get display title for header - use getSessionTitle for consistent fallback logic with SessionList
   // Priority: name > first user message > preview > "New chat"
   const displayTitle = session ? getSessionTitle(session) : (sessionMeta ? getSessionTitle(sessionMeta) : t('chat.session'))
-  const isFlagged = session?.isFlagged || sessionMeta?.isFlagged || false
-  const isArchived = session?.isArchived || sessionMeta?.isArchived || false
+
+
   const sharedUrl = session?.sharedUrl || sessionMeta?.sharedUrl || null
-  const currentSessionStatus = getSessionStatus(session ?? sessionMeta ?? {})
-  const hasMessages = !!(session?.messages?.length || sessionMeta?.lastFinalMessageId)
-  const hasUnreadMessages = sessionMeta
-    ? !!(sessionMeta.lastFinalMessageId && sessionMeta.lastFinalMessageId !== sessionMeta.lastReadMessageId)
-    : false
+
+
   // Use isAsyncOperationOngoing for shimmer effect (sharing, updating share, revoking, title regeneration)
   const isAsyncOperationOngoing = session?.isAsyncOperationOngoing || sessionMeta?.isAsyncOperationOngoing || false
 
@@ -235,10 +234,10 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
   if (!session) {
     if (sessionMeta) {
       // Session exists in metadata but not loaded yet - show loading state
-      const skeletonSession = {
+      const skeletonSession = omitUndefined({
         id: sessionMeta.id,
         workspaceId: sessionMeta.workspaceId,
-        workspaceName: '',
+        workspaceName: '' as const,
         name: sessionMeta.name,
         preview: sessionMeta.preview,
         lastMessageAt: sessionMeta.lastMessageAt || 0,
@@ -250,7 +249,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
         model: sessionMeta.model,
         modelRoutePinned: sessionMeta.modelRoutePinned,
         llmConnection: sessionMeta.llmConnection,
-      }
+      })
 
       return (
         <>

@@ -16,13 +16,13 @@ export const VARIANT_STYLES: Record<AuthCardVariant, { bg: string; textClass: st
 }
 
 export interface AuthCardHeaderProps {
-  icon?: LucideIcon
-  iconClassName?: string
+  icon?: LucideIcon | undefined
+  iconClassName?: string | undefined
   title: string
-  titleSuffix?: string
-  subtitle?: string
-  subtitleSecondary?: string
-  description?: string
+  titleSuffix?: string | undefined
+  subtitle?: string | undefined
+  subtitleSecondary?: string | undefined
+  description?: string | undefined
 }
 
 export function AuthCardHeader({
@@ -79,8 +79,8 @@ export interface AuthCardActionsProps {
     icon?: LucideIcon
     onClick: () => void
     disabled?: boolean
-  }
-  hint?: string
+  } | undefined
+  hint?: string | undefined
 }
 
 export function AuthCardActions({ primary, secondary, hint }: AuthCardActionsProps) {

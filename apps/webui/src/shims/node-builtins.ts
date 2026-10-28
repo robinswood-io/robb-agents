@@ -47,7 +47,7 @@ export const resolve = (...parts: string[]) => parts.filter(Boolean).join('/')
 export const basename = (p: string) => p.split('/').pop() ?? ''
 export const dirname = (p: string) => p.split('/').slice(0, -1).join('/')
 export const extname = (p: string) => { const m = p.match(/\.[^.]+$/); return m ? m[0] : '' }
-export const relative = (from: string, to: string) => to
+export const relative = (_from: string, to: string) => to
 export const sep = '/'
 export const isAbsolute = (p: string) => p.startsWith('/')
 export const normalize = (p: string) => p
@@ -86,7 +86,11 @@ export const createHmac = (): BrowserHashShim => ({
 export const timingSafeEqual = (a: Uint8Array, b: Uint8Array) => {
   if (a.length !== b.length) return false
   let result = 0
-  for (let i = 0; i < a.length; i++) result |= a[i] ^ b[i]
+  for (const [index, byte] of a.entries()) {
+    const other = b[index]
+    if (other === undefined) return false
+    result |= byte ^ other
+  }
   return result === 0
 }
 
@@ -126,13 +130,13 @@ export const on = () => {}
 
 // Events — WebSocketServer imports EventEmitter
 export class EventEmitter {
-  private _events: Record<string, Function[]> = {}
-  on(event: string, fn: Function) { (this._events[event] ??= []).push(fn); return this }
-  off(event: string, fn: Function) { this._events[event] = (this._events[event] ?? []).filter(f => f !== fn); return this }
+  private _events: Record<string, Array<(...args: unknown[]) => void>> = {}
+  on(event: string, fn: (...args: unknown[]) => void) { (this._events[event] ??= []).push(fn); return this }
+  off(event: string, fn: (...args: unknown[]) => void) { this._events[event] = (this._events[event] ?? []).filter(f => f !== fn); return this }
   emit(event: string, ...args: unknown[]) { (this._events[event] ?? []).forEach(fn => fn(...args)); return true }
   removeAllListeners() { this._events = {}; return this }
-  addListener(event: string, fn: Function) { return this.on(event, fn) }
-  removeListener(event: string, fn: Function) { return this.off(event, fn) }
+  addListener(event: string, fn: (...args: unknown[]) => void) { return this.on(event, fn) }
+  removeListener(event: string, fn: (...args: unknown[]) => void) { return this.off(event, fn) }
   listeners(event: string) { return this._events[event] ?? [] }
 }
 

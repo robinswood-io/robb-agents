@@ -7,7 +7,7 @@ describe('handlePermissionModeChanged', () => {
     const state = {
       session: { id: 's1' },
       streaming: null,
-    } as unknown as SessionState;
+    } as SessionState;
 
     const event: PermissionModeChangedEvent = {
       type: 'permission_mode_changed',

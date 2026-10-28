@@ -12,12 +12,12 @@ import { useFocusZone } from "@/hooks/keyboard";
 import { useFocusContext } from "@/context/FocusContext";
 
 import { useSetAtom } from "jotai";
-import type { LoadedSource, LoadedSkill, PermissionMode } from "../../../shared/types";
+import type { LoadedSource,LoadedSkill,PermissionMode } from "../../../shared/types";
 
-import { focusNextPanelAtom, focusPrevPanelAtom } from "@/atoms/panel-stack";
+import { focusNextPanelAtom,focusPrevPanelAtom } from "@/atoms/panel-stack";
 
-import { navigate, routes } from "@/lib/navigate";
-import { isAutomationsNavigation, type NavigationState } from "@/contexts/NavigationContext";
+import { navigate,routes } from "@/lib/navigate";
+import { isAutomationsNavigation,type NavigationState } from "@/contexts/NavigationContext";
 
 import { dispatchFocusInputEvent } from "./input/focus-input-events";
 
@@ -79,10 +79,10 @@ const handleSkillSelect = React.useCallback((skill: LoadedSkill) => {
 const handleAutomationSelect = React.useCallback((automationId: string) => {
     // Preserve current automation filter when selecting an automation
     const type = isAutomationsNavigation(navState) ? navState.filter?.automationType : undefined
-    navigate(routes.view.automations({ automationId, type }))
+    navigate(routes.view.automations({ automationId, ...(type !== undefined ? { type } : {}) }))
   }, [navState])
 
-const { focusZone, focusNextZone, focusPreviousZone } = useFocusContext()
+const { focusZone, focusNextZone } = useFocusContext()
 
 const { zoneRef: sidebarRef, isFocused: sidebarFocused } = useFocusZone({ zoneId: 'sidebar' })
 
@@ -113,7 +113,7 @@ useAction('chat.cyclePermissionMode', () => {
       // If current mode not in enabled list, jump to first enabled mode
       const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % modes.length
       const nextMode = modes[nextIndex]
-      contextValue.onSessionOptionsChange(effectiveSessionId, { permissionMode: nextMode })
+      if (nextMode) contextValue.onSessionOptionsChange(effectiveSessionId, { permissionMode: nextMode })
     }
   })
 

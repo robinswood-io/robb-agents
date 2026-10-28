@@ -52,7 +52,7 @@ export async function resolveConfiguredMissionCapabilities(
   for (const name of input.profile.skills) {
     const identitySha256 = resolveSpecializedSkillCapabilityIdentity({
       workspaceRoot: input.workspace.rootPath,
-      workingDirectory: input.spec.cwd,
+      ...(input.spec.cwd !== undefined ? { workingDirectory: input.spec.cwd } : {}),
       slug: name,
     });
     if (identitySha256) {

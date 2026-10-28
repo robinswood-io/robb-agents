@@ -25,7 +25,7 @@ export function extractOverlayData(activity: ActivityItem): OverlayData | null {
   const toolName = activity.toolName?.toLowerCase() || ''
 
   // Get file path from various input formats
-  const filePath = (input?.file_path as string) || (input?.path as string) || 'file'
+  const filePath = (input?.["file_path"] as string) || (input?.["path"] as string) || 'file'
 
   // Read tool → Code overlay (read mode)
   if (toolName === 'read') {
@@ -40,13 +40,13 @@ export function extractOverlayData(activity: ActivityItem): OverlayData | null {
       numLines: parsed.numLines,
       error: activity.error,
       // Pass through command if present (Codex reads via shell commands)
-      command: input?._command as string | undefined,
+      command: input?.["_command"] as string | undefined,
     }
   }
 
   // Write tool → Document overlay for .md/.txt (rendered markdown), Code overlay for everything else
   if (toolName === 'write') {
-    const content = (input?.content as string) || rawContent
+    const content = (input?.["content"] as string) || rawContent
     const ext = filePath.split('.').pop()?.toLowerCase()
     if (ext === 'md' || ext === 'txt') {
       return {
@@ -74,10 +74,10 @@ export function extractOverlayData(activity: ActivityItem): OverlayData | null {
     const parsed = parseBashResult(rawContent)
     return {
       type: 'terminal',
-      command: (input?.command as string) || '',
+      command: (input?.["command"] as string) || '',
       output: parsed.output,
       exitCode: parsed.exitCode,
-      description: (input?.description as string) || activity.displayName || '',
+      description: (input?.["description"] as string) || activity.displayName || '',
       toolType: 'bash',
       error: activity.error,
     }
@@ -85,9 +85,9 @@ export function extractOverlayData(activity: ActivityItem): OverlayData | null {
 
   // Grep tool → Terminal overlay
   if (toolName === 'grep') {
-    const pattern = (input?.pattern as string) || ''
-    const searchPath = (input?.path as string) || '.'
-    const outputMode = (input?.output_mode as string) || 'files_with_matches'
+    const pattern = (input?.["pattern"] as string) || ''
+    const searchPath = (input?.["path"] as string) || '.'
+    const outputMode = (input?.["output_mode"] as string) || 'files_with_matches'
     const parsed = parseGrepResult(rawContent, pattern, searchPath, outputMode)
     return {
       type: 'terminal',
@@ -101,8 +101,8 @@ export function extractOverlayData(activity: ActivityItem): OverlayData | null {
 
   // Glob tool → Terminal overlay
   if (toolName === 'glob') {
-    const pattern = (input?.pattern as string) || '*'
-    const searchPath = (input?.path as string) || '.'
+    const pattern = (input?.["pattern"] as string) || '*'
+    const searchPath = (input?.["path"] as string) || '.'
     const parsed = parseGlobResult(rawContent, pattern, searchPath)
     return {
       type: 'terminal',
@@ -128,12 +128,12 @@ export function extractOverlayData(activity: ActivityItem): OverlayData | null {
 
   // LLM Query tool (call_llm) → Document overlay with input prompt + output response
   if (toolName === 'mcp__session__call_llm') {
-    const prompt = (input?.prompt as string) || ''
-    const model = input?.model as string | undefined
-    const systemPrompt = input?.systemPrompt as string | undefined
-    const attachments = input?.attachments as unknown[] | undefined
-    const outputFormat = input?.outputFormat as string | undefined
-    const outputSchema = input?.outputSchema as Record<string, unknown> | undefined
+    const prompt = (input?.["prompt"] as string) || ''
+    const model = input?.["model"] as string | undefined
+    const systemPrompt = input?.["systemPrompt"] as string | undefined
+    const attachments = input?.["attachments"] as unknown[] | undefined
+    const outputFormat = input?.["outputFormat"] as string | undefined
+    const outputSchema = input?.["outputSchema"] as Record<string, unknown> | undefined
 
     const sections: string[] = []
 
@@ -180,7 +180,7 @@ export function extractOverlayData(activity: ActivityItem): OverlayData | null {
   if ((trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) ||
       (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))) {
     try {
-      const parsed = JSON.parse(trimmedContent)
+      const parsed: unknown = JSON.parse(trimmedContent)
       return {
         type: 'json',
         data: parsed,
@@ -228,7 +228,7 @@ export function extractOverlayCards(activity: ActivityItem): OverlayCard[] {
       cards.push({
         id: 'input',
         label: 'Input',
-        commandPreview,
+        ...(commandPreview !== undefined ? { commandPreview: commandPreview } : {}),
         data: {
           type: 'json',
           data: input,
@@ -240,7 +240,7 @@ export function extractOverlayCards(activity: ActivityItem): OverlayCard[] {
       cards.push({
         id: 'input',
         label: 'Input',
-        commandPreview,
+        ...(commandPreview !== undefined ? { commandPreview: commandPreview } : {}),
         data: {
           type: 'generic',
           content: String(input),
@@ -265,13 +265,13 @@ export function extractOverlayCards(activity: ActivityItem): OverlayCard[] {
         type: 'generic',
         content: 'No output captured for this tool call.',
         title: `${activity.displayName || activity.toolName || 'Tool'} Output`,
-        error: activity.error,
+        ...(activity.error !== undefined ? { error: activity.error } : {}),
       }
     : (output || {
       type: 'generic',
       content: rawContent || 'No output captured for this tool call.',
       title: `${activity.displayName || activity.toolName || 'Tool'} Output`,
-      error: activity.error,
+      ...(activity.error !== undefined ? { error: activity.error } : {}),
     })
 
   cards.push({
@@ -289,7 +289,7 @@ export function extractOverlayCards(activity: ActivityItem): OverlayCard[] {
         type: 'generic',
         content: 'No output captured for this tool call.',
         title: activity.displayName || activity.toolName || 'Activity',
-        error: activity.error,
+        ...(activity.error !== undefined ? { error: activity.error } : {}),
       },
     })
   }

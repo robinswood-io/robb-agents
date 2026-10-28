@@ -4,9 +4,7 @@ import { projectConversation } from "../conversation-presentation";
 import { finals, message, objective, plan, user } from "./testing/conversation-presentation-fixture.ts";
 
 describe('quiet conversation presentation', () => {
-  const legacyUserId = 'msg-1788800000000-abc123'
 
-  const legacyContract = `<host_objective_contract objective_user_message_id="${legacyUserId}" orchestration="mission" risk="standard">\nCompletion criteria: requested-outcome-delivered, relevant-checks-passed, no-safe-work-remaining.\nContinue through every safe in-scope step. A progress report, proposed next action, or partially created deliverable is not a terminal result.\nBefore ending, evaluate the objective as exactly one of: complete_verified, blocked_human, blocked_policy, continue.\n</host_objective_contract>`
 
   it('extracts only the latest successful parent TodoWrite or update_plan', () => {
     const result = projectConversation([user, plan('t2'), plan('t3', 'functions.update_plan'),

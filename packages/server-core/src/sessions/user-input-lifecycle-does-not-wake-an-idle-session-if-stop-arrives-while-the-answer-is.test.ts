@@ -1,3 +1,6 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import { parseJsonObject } from '@craft-agent/shared/utils/json';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { ScriptedSessionAgent } from './testing/scripted-session-agent.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
@@ -56,20 +59,9 @@ function harness() {
   const manager = withSessionOperationsForTest(new SessionManager())
   const events: Array<Record<string, unknown>> = []
   const snapshots: Array<Record<string, unknown>> = []
-  const internals = manager as unknown as {
-    sessions: Map<string, Managed>; enqueuePersist: (m: Managed) => void; flushSession: (id: string) => Promise<void>
-    sendEvent: (e: Record<string, unknown>) => void; enqueueAutomaticTurnRecovery: (m: Managed, cause: 'objective_incomplete') => Promise<boolean>
-    resumePendingTurnAfterRestart: (id: string) => Promise<void>; onProcessingStopped: (id: string, reason: 'interrupted') => Promise<void>
-    emitExecutionTelemetry: () => void; startGenerationTelemetry: () => void; finishGenerationTelemetry: () => void
-    beginAutomaticSessionStatusLifecycle: () => Promise<void>; finishAutomaticSessionStatusLifecycle: () => Promise<void>
-    isSessionBeingViewed: () => boolean; markSessionRead: () => Promise<void>; processNextQueuedMessage: (id: string) => void
-    disposeManagedAgentRuntime: () => Promise<void>; getOrCreateAgent: (m: Managed) => Promise<unknown>
-    ensureMessagesLoaded: (m: Managed) => Promise<void>
-    ensureDelegatedTerminalResultDelivery: (child: Managed, deferRecipientDispatch?: boolean) => Promise<boolean>
-    queuedMessageDispatches: Map<string, symbol>
-  }
+  const internals = sessionManagerForTest(manager)
   sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
-  internals.enqueuePersist = m => snapshots.push(JSON.parse(JSON.stringify({ ...pickSessionFields(m), messages: m.messages })))
+  internals.enqueuePersist = m => { snapshots.push(parseJsonObject(JSON.stringify({ ...pickSessionFields(m), messages: m.messages }))); return true }
   internals.flushSession = async () => {}
   internals.sendEvent = e => events.push(e)
   internals.emitExecutionTelemetry = () => {}; internals.startGenerationTelemetry = () => {}; internals.finishGenerationTelemetry = () => {}
@@ -79,8 +71,8 @@ function harness() {
   internals.processNextQueuedMessage = () => {}; internals.disposeManagedAgentRuntime = async () => { managed.agent = null }
   const redirects: string[] = []
   const installAgent = (steer = true, stream: AgentEvent[] = [], beforeChat?: () => void) => {
-    const agent = { redirect: (text: string) => { redirects.push(text); return steer }, getModel: () => 'test', getSessionId: () => null, setAllSources: () => {}, async *chat() { beforeChat?.(); for (const e of stream) yield e } }
-    managed.agent = agent as never; internals.getOrCreateAgent = async m => { m.agent = agent as never; return agent }
+    const agent = completeSessionAgentFixture(managed.workspace, { redirect: (text: string) => { redirects.push(text); return steer }, getModel: () => 'test', getSessionId: () => null, setAllSources: () => {}, async *chat() { beforeChat?.(); for (const e of stream) yield e } })
+    managed.agent = agent; internals.getOrCreateAgent = async m => { m.agent = agent; return agent }
   }
   const restoreQueueProcessing = () => { internals.processNextQueuedMessage = realProcessNextQueuedMessage }
   return { manager, managed, internals, events, snapshots, redirects, installAgent, restoreQueueProcessing }
@@ -124,15 +116,9 @@ it('finishes a pure text objective after a durable answer without classifying th
     })
     // Exercise the real getOrCreateAgent cost classifier; only external runtime
     // services are adapted. Mocking getOrCreateAgent would hide this regression.
-    const routing = h.manager as unknown as {
-      applyRoutingPolicyForNextTurn: () => Promise<void>
-      applyExternalActionPolicyToRuntime: () => void
-      tryRefreshAgentRuntime: () => Promise<void>
-    }
-    routing.applyRoutingPolicyForNextTurn = async () => {}
-    routing.applyExternalActionPolicyToRuntime = () => {}
+    const routing = sessionManagerForTest(h.manager)
     routing.tryRefreshAgentRuntime = async () => {}
-    h.internals.getOrCreateAgent = Object.getPrototypeOf(h.manager).getOrCreateAgent.bind(h.manager)
+    h.internals.getOrCreateAgent = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'getOrCreateAgent'>).getOrCreateAgent.bind(h.manager)
     const dispatchFinished = nextDispatchCompletion(h.manager)
     const result = await h.manager.respondToUserInput(h.managed.id, { requestId, answers })
     expect(result.delivery).toBe('started')
@@ -157,10 +143,10 @@ it('keeps the initial direct contract when routing risk comes from an old conver
     const original = structuredClone(h.managed.activeObjective)
     expect(original).toMatchObject({ orchestrationMode: 'direct', risk: 'standard' })
     h.installAgent()
-    const runtime = h.manager as unknown as SessionOperations
+    const runtime = sessionManagerForTest(h.manager)
     runtime.applyExternalActionPolicyToRuntime = () => false
     runtime.tryRefreshAgentRuntime = async () => {}
-    runtime.getOrCreateAgent = Object.getPrototypeOf(h.manager).getOrCreateAgent.bind(h.manager)
+    runtime.getOrCreateAgent = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'getOrCreateAgent'>).getOrCreateAgent.bind(h.manager)
     await runtime.getOrCreateAgent(h.managed, { message: text, messageId: 'objective-root' })
     // The real cost classifier may choose a different model or reasoning level;
     // no other objective field belongs to that routing decision.
@@ -176,10 +162,10 @@ it.each(['user_retry', 'app_restart', 'objective_incomplete'] as const)('preserv
       lifetimeCostUsd: 12, lifetimeTokens: 300 })
     const original = structuredClone(h.managed.activeObjective)
     h.installAgent()
-    const runtime = h.manager as unknown as SessionOperations
+    const runtime = sessionManagerForTest(h.manager)
     runtime.applyExternalActionPolicyToRuntime = () => false
     runtime.tryRefreshAgentRuntime = async () => {}
-    runtime.getOrCreateAgent = Object.getPrototypeOf(h.manager).getOrCreateAgent.bind(h.manager)
+    runtime.getOrCreateAgent = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'getOrCreateAgent'>).getOrCreateAgent.bind(h.manager)
     const message = buildAutomaticTurnRecoveryPrompt(h.managed.pendingTurnRecovery!, cause)
     await runtime.getOrCreateAgent(h.managed, { message, messageId: 'objective-root',
       options: { hidden: true, automaticRecovery: { originalUserMessageId: 'objective-root', cause } } })
@@ -203,10 +189,10 @@ it('keeps a high-risk mission and its registered acceptance checks through runti
       requiresObservationEvidence: true, requiresAcceptanceCriteria: true })
     expect(original.completionCriteria).toContain('independent-review-passed')
     h.installAgent()
-    const runtime = h.manager as unknown as SessionOperations
+    const runtime = sessionManagerForTest(h.manager)
     runtime.applyExternalActionPolicyToRuntime = () => false
     runtime.tryRefreshAgentRuntime = async () => {}
-    runtime.getOrCreateAgent = Object.getPrototypeOf(h.manager).getOrCreateAgent.bind(h.manager)
+    runtime.getOrCreateAgent = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'getOrCreateAgent'>).getOrCreateAgent.bind(h.manager)
     await runtime.getOrCreateAgent(h.managed, { message: 'Continue', messageId: 'objective-root', options: { hidden: true,
       automaticRecovery: { originalUserMessageId: 'objective-root', cause: 'user_retry' } } })
     const { model: _model, thinkingLevel: _thinking, ...after } = h.managed.activeObjective!
@@ -244,7 +230,7 @@ for (const sessionStatus of ['blocked', 'done'] as const) {
         runtimeAgent: permissionAgent, requestedAt: 2, expiresAt: Date.now() + 60_000,
         request: { requestId: 'expired-permission', sessionId: h.managed.id, toolName: 'Bash', description: 'Offline permission fixture' }, timeout: setTimeout(() => {}, 60_000),
       })
-      h.internals.processNextQueuedMessage = Object.getPrototypeOf(h.manager).processNextQueuedMessage.bind(h.manager)
+      h.internals.processNextQueuedMessage = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'processNextQueuedMessage'>).processNextQueuedMessage.bind(h.manager)
       const send = h.manager.sendMessage.bind(h.manager)
       const replayed: string[] = []
       h.manager.sendMessage = (...args) => {
@@ -279,7 +265,7 @@ for (const sessionStatus of ['blocked', 'done'] as const) {
 it('cancels only the obsolete local pending question before dispatching a direct continuation', async () => {
     const h = harness()
     const { requestId } = await h.manager.requestUserInput(h.managed.id, questions)
-    h.internals.processNextQueuedMessage = Object.getPrototypeOf(h.manager).processNextQueuedMessage.bind(h.manager)
+    h.internals.processNextQueuedMessage = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'processNextQueuedMessage'>).processNextQueuedMessage.bind(h.manager)
     const send = h.manager.sendMessage.bind(h.manager)
     const replayed: string[] = []
     h.manager.sendMessage = (...args) => {
@@ -295,9 +281,9 @@ it('cancels only the obsolete local pending question before dispatching a direct
     expect(h.managed.userInputRequests?.[0]?.answers).toBeUndefined()
     expect(h.managed.userInputRequests?.[0]?.responseMessageId).toBeUndefined()
     expect(h.managed.messages.some(message => message.internalOrigin?.kind === 'user-input')).toBe(false)
-    expect((h.internals as unknown as Pick<SessionOperations, 'autonomousAdmissionBlock'>).autonomousAdmissionBlock(h.managed, true, false)).toBeUndefined()
-    expect(h.events.some(event => event.type === 'user_input_changed'
-      && (event.requests as Array<{ status: string }>)[0]?.status === 'cancelled')).toBe(true)
+    expect(h.internals.autonomousAdmissionBlock(h.managed, true, false)).toBeUndefined()
+    expect(h.events.some(event => event["type"] === 'user_input_changed'
+      && (event["requests"] as Array<{ status: string }>)[0]?.status === 'cancelled')).toBe(true)
   })
 
 it('keeps an answered structured response ahead of a simultaneous direct continuation', async () => {
@@ -307,7 +293,7 @@ it('keeps an answered structured response ahead of a simultaneous direct continu
     const answerFlush = new Promise<void>(resolve => { releaseAnswerFlush = resolve })
     let flushes = 0
     h.internals.flushSession = async () => { if (++flushes === 1) await answerFlush }
-    h.internals.processNextQueuedMessage = Object.getPrototypeOf(h.manager).processNextQueuedMessage.bind(h.manager)
+    h.internals.processNextQueuedMessage = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'processNextQueuedMessage'>).processNextQueuedMessage.bind(h.manager)
     const send = h.manager.sendMessage.bind(h.manager)
     const replayed: string[] = []
     h.manager.sendMessage = (...args) => {
@@ -344,7 +330,7 @@ it('keeps cold terminal and duplicate identities fail-closed, but releases no li
     h.managed.pendingTurnRecovery!.waitingForPermission = {
       requestId: 'expired', requestedAt: 2, toolName: 'Bash', recoveryRequired: true,
     }
-    h.internals.processNextQueuedMessage = Object.getPrototypeOf(h.manager).processNextQueuedMessage.bind(h.manager)
+    h.internals.processNextQueuedMessage = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'processNextQueuedMessage'>).processNextQueuedMessage.bind(h.manager)
     const send = h.manager.sendMessage.bind(h.manager)
     const replayed: string[] = []
     h.manager.sendMessage = (...args) => {
@@ -388,7 +374,7 @@ it('keeps cold terminal and duplicate identities fail-closed, but releases no li
 it('does not dispatch an open-session continuation whose durability fence fails', async () => {
     const h = harness()
     await h.manager.requestUserInput(h.managed.id, questions)
-    h.internals.processNextQueuedMessage = Object.getPrototypeOf(h.manager).processNextQueuedMessage.bind(h.manager)
+    h.internals.processNextQueuedMessage = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'processNextQueuedMessage'>).processNextQueuedMessage.bind(h.manager)
     const send = h.manager.sendMessage.bind(h.manager)
     const replayed: string[] = []
     h.manager.sendMessage = (...args) => {
@@ -406,6 +392,6 @@ it('does not dispatch an open-session continuation whose durability fence fails'
     expect(h.managed.userInputRequests).toMatchObject([{ status: 'pending' }])
     expect(h.managed.userInputRequests?.[0]?.answers).toBeUndefined()
     expect(h.managed.userInputRequests?.[0]?.responseMessageId).toBeUndefined()
-    expect((h.internals as unknown as Pick<SessionOperations, 'autonomousAdmissionBlock'>).autonomousAdmissionBlock(h.managed, true, false)).toBeDefined()
+    expect(h.internals.autonomousAdmissionBlock(h.managed, true, false)).toBeDefined()
   })
 });

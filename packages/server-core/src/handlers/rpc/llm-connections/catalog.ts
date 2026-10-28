@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol';
 import { getLlmConnections, getLlmConnection, addLlmConnection, updateLlmConnection, deleteLlmConnection, getDefaultLlmConnection, setDefaultLlmConnection, touchLlmConnection, type LlmConnection, type LlmConnectionWithStatus } from '@craft-agent/shared/config';
 import { getCredentialManager } from '@craft-agent/shared/credentials';
@@ -129,7 +130,7 @@ export function registerLlmCatalogHandlers(server: RpcServer, deps: HandlerDeps,
       // wedged. SessionManager serializes the refresh with the next send via
       // its per-session mutex, and the lazy `getOrCreateAgent` refresh remains
       // the correctness backstop if the detached push fails.
-      sessionManager.refreshConnectionRuntime(connection.slug).catch(error => {
+      sessionManager.refreshConnectionRuntime(connection.slug).catch((error: unknown) => {
         deps.platform.logger?.warn(
           `Detached runtime push failed for ${connection.slug}: ${error instanceof Error ? error.message : error}`,
         )
@@ -180,13 +181,13 @@ export function registerLlmCatalogHandlers(server: RpcServer, deps: HandlerDeps,
       })
 
       if (!result.success) {
-        return { success: false, error: result.error }
+        return { success: false, ...(result.error !== undefined ? { error: result.error } : {}) }
       }
 
       touchLlmConnection(slug)
 
       if (result.shouldRefreshModels) {
-        getModelRefreshService().refreshNow(slug).catch(err => {
+        getModelRefreshService().refreshNow(slug).catch((err: unknown) => {
           deps.platform.logger?.warn(`Model refresh failed during validation: ${err instanceof Error ? err.message : err}`)
         })
       }
@@ -210,7 +211,7 @@ export function registerLlmCatalogHandlers(server: RpcServer, deps: HandlerDeps,
         // Reinitialize auth so env vars and summarization model override match the new default
         await sessionManager.reinitializeAuth()
       }
-      return { success, error: success ? undefined : 'Connection not found' }
+      return omitUndefined({ success, error: success ? undefined : 'Connection not found' })
     } catch (error) {
       deps.platform.logger?.error('Failed to set default LLM connection:', error)
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }

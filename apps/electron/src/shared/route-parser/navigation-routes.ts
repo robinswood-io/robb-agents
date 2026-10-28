@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Route Parser
  *
@@ -27,11 +28,11 @@ function navigationStateToCompoundRoute(state: NavigationState): ParsedCompoundR
   }
 
   if (state.navigator === 'sources') {
-    return {
+    return omitUndefined<ParsedCompoundRoute>({
       navigator: 'sources',
       sourceFilter: state.filter ?? undefined,
       details: state.details ? { type: 'source', id: state.details.sourceSlug } : null,
-    }
+    })
   }
 
   if (state.navigator === 'skills') {
@@ -42,11 +43,11 @@ function navigationStateToCompoundRoute(state: NavigationState): ParsedCompoundR
   }
 
   if (state.navigator === 'automations') {
-    return {
+    return omitUndefined<ParsedCompoundRoute>({
       navigator: 'automations',
       automationFilter: state.filter ?? undefined,
       details: state.details ? { type: 'automation', id: state.details.automationId } : null,
-    }
+    })
   }
 
   if (state.navigator === 'projects') {
@@ -67,7 +68,7 @@ function navigationStateToCompoundRoute(state: NavigationState): ParsedCompoundR
   return {
     navigator: 'sessions',
     sessionFilter: state.filter,
-    viewMode: state.viewMode,
+    ...(state.viewMode !== undefined ? { viewMode: state.viewMode } : {}),
     details: state.details ? { type: 'session', id: state.details.sessionId } : null,
   }
 }

@@ -1,3 +1,4 @@
+import { isUnknownArray, omitUndefined } from '../utils/json.ts';
 /**
  * Session Bundle — Serialization Format for Session Export/Import
  *
@@ -9,8 +10,7 @@
 
 import { existsSync, readFileSync } from 'fs'
 import { basename, extname } from 'path'
-import type { SessionHeader, StoredMessage, SessionConfig } from './types.ts'
-import type { StoredSession } from './types.ts'
+import type { SessionHeader, StoredMessage } from './types.ts'
 import type { SessionExecutionIsolation } from '../tasks/durable-execution.ts'
 import { readSessionJsonl } from './jsonl.ts'
 import { getSessionPath, getSessionFilePath } from './storage.ts'
@@ -227,7 +227,8 @@ export function serializeSession(
     ...JSON.parse(firstLine) as SessionHeader,
     // workspaceRootPath will be set by the importing server
   }
-  const header = redactStructuredSecrets<SessionHeader>({
+  // Clear host paths, execution rights and mission capabilities before export.
+  const header = redactStructuredSecrets<SessionHeader>(omitUndefined<SessionHeader>({
     ...rawHeader,
     workspaceRootPath: '',
     workingDirectory: undefined,
@@ -235,11 +236,7 @@ export function serializeSession(
     sharedUrl: undefined,
     sharedId: undefined,
     pendingPlanExecution: undefined,
-    // Host-bound execution rights are never portable. The importer recreates
-    // a deny-by-default quarantine envelope for task sessions.
     executionIsolation: undefined,
-    // Mission dispatch identities are local control-plane capabilities and
-    // must never attach an imported session to a mission on the target host.
     missionId: undefined,
     missionWorkItemId: undefined,
     missionDispatchId: undefined,
@@ -247,7 +244,7 @@ export function serializeSession(
     missionRouteLockSha256: undefined,
     missionOrdinaryRouteLock: undefined,
     missionCapabilityLock: undefined,
-  })
+  }))
 
   return {
     version: 1,
@@ -273,31 +270,31 @@ export function validateBundle(bundle: unknown): bundle is SessionBundle {
   if (!bundle || typeof bundle !== 'object') return false
   const b = bundle as Record<string, unknown>
 
-  if (b.version !== 1) return false
-  if (!b.session || typeof b.session !== 'object') return false
+  if (b["version"] !== 1) return false
+  if (!b["session"] || typeof b["session"] !== 'object') return false
 
-  const session = b.session as Record<string, unknown>
-  if (!session.header || typeof session.header !== 'object') return false
-  if (!Array.isArray(session.messages)) return false
+  const session = b["session"] as Record<string, unknown>
+  if (!session["header"] || typeof session["header"] !== 'object') return false
+  if (!isUnknownArray(session["messages"])) return false
 
-  const header = session.header as Record<string, unknown>
-  if (typeof header.id !== 'string') return false
-  if (typeof header.createdAt !== 'number') return false
+  const header = session["header"] as Record<string, unknown>
+  if (typeof header["id"] !== 'string') return false
+  if (typeof header["createdAt"] !== 'number') return false
   try {
-    validateSessionId(header.id)
+    validateSessionId(header["id"])
   } catch {
     return false
   }
 
-  if (!Array.isArray(b.files)) return false
+  if (!isUnknownArray(b["files"])) return false
 
-  if (b.security !== undefined) {
-    if (!b.security || typeof b.security !== 'object') return false
-    const security = b.security as Record<string, unknown>
-    if (security.trust !== 'portable-redacted' || security.secretLikeTextRedacted !== true) return false
-    if (!Array.isArray(security.excludedSensitiveFiles) || !Array.isArray(security.binaryFilesUninspected)) return false
-    if (!security.excludedSensitiveFiles.every((path) => typeof path === 'string')) return false
-    if (!security.binaryFilesUninspected.every((path) => typeof path === 'string')) return false
+  if (b["security"] !== undefined) {
+    if (!b["security"] || typeof b["security"] !== 'object') return false
+    const security = b["security"] as Record<string, unknown>
+    if (security["trust"] !== 'portable-redacted' || security["secretLikeTextRedacted"] !== true) return false
+    if (!isUnknownArray(security["excludedSensitiveFiles"]) || !isUnknownArray(security["binaryFilesUninspected"])) return false
+    if (!security["excludedSensitiveFiles"].every((path: unknown) => typeof path === 'string')) return false
+    if (!security["binaryFilesUninspected"].every((path: unknown) => typeof path === 'string')) return false
   }
 
   return true

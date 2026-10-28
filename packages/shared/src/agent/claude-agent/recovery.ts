@@ -22,14 +22,14 @@ import type { ClaudeAgent } from '../claude-agent.ts';
 import { shouldAutomaticallyRecoverClaudeProcessInterruption, buildWindowsSkillsDirError } from './shared.ts';
 import type { ClaudeQueryFailureContext } from './shared.ts';
 
-export async function* recoverClaudeQueryError(transportOwner: ClaudeAgent, sdkError: unknown, context: ClaudeQueryFailureContext): AsyncGenerator<AgentEvent> {
+export async function* recoverClaudeQueryError(transportOwner: ClaudeAgent, sdkError: unknown, context: ClaudeQueryFailureContext): AsyncGenerator<AgentEvent, void, unknown> {
     const { receivedAssistantContent, wasResuming, _isRetry, userMessage, attachments, suppressedSessionExpiredError, suppressedBranchCutoffError, resolvedBinaryPath, resolvedCwd } = context;
     // Debug: log inner catch trigger (stderr to avoid SDK JSON pollution)
     console.error(`[ClaudeAgent] INNER CATCH triggered: ${sdkError instanceof Error ? sdkError.message : String(sdkError)}`);
     // Handle user interruption
     if (sdkError instanceof AbortError) {
-        const reason = transportOwner["lastAbortReason"];
-        transportOwner["lastAbortReason"] = null; // Clear for next time
+        const reason = transportOwner.lastAbortReason;
+        transportOwner.lastAbortReason = null; // Clear for next time
         // If interrupted before receiving any assistant content AND this was the first message,
         // clear session ID to prevent broken resume state where SDK session file is empty/invalid.
         // For later messages (messageCount > 0), keep the session ID to preserve conversation history.
@@ -166,7 +166,7 @@ export async function* recoverClaudeQueryError(transportOwner: ClaudeAgent, sdkE
             // Branch-fork failure: route through the shared helper so the
             // four fork fields are persisted atomically (avoids next launch
             // reloading the dead parent and re-failing).
-            yield* transportOwner["recoverFromStaleBranchFork"](userMessage, attachments, /* isPreSpawn */ false);
+            yield* transportOwner.recoverFromStaleBranchFork(userMessage, attachments, /* isPreSpawn */ false);
             return;
         }
         // Regular resume failure: clear sessionId and retry with raw recovery context.
@@ -175,7 +175,7 @@ export async function* recoverClaudeQueryError(transportOwner: ClaudeAgent, sdkE
         transportOwner["pinnedPreferencesPrompt"] = null;
         transportOwner["pinnedIncludeCoAuthoredBy"] = null;
         transportOwner["pinnedProjectContext"] = null;
-        transportOwner["preferencesDriftNotified"] = false;
+        transportOwner.preferencesDriftNotified = false;
         let retryMessage = userMessage;
         const recoveryContext = transportOwner["buildRecoveryContext"]();
         if (recoveryContext)
@@ -194,10 +194,10 @@ export async function* recoverClaudeQueryError(transportOwner: ClaudeAgent, sdkE
     // ─────────────────────────────────────────────────────────────────
     const spawnError = sdkError as NodeJS.ErrnoException;
     const isSpawnEnoent = detectSpawnEnoent({
-        errorCode: spawnError.code,
-        errorSyscall: spawnError.syscall,
+        ...(spawnError.code !== undefined ? { errorCode: spawnError.code } : {}),
+        ...(spawnError.syscall !== undefined ? { errorSyscall: spawnError.syscall } : {}),
         rawErrorMsg,
-        stderr: stderrContext,
+        ...(stderrContext !== undefined ? { stderr: stderrContext } : {}),
     });
     if (isSpawnEnoent) {
         const reportedBinaryPath = extractSdkReportedBinaryPath(rawErrorMsg || '');
@@ -215,7 +215,7 @@ export async function* recoverClaudeQueryError(transportOwner: ClaudeAgent, sdkE
         // rare race where the pre-spawn guard didn't catch a cwd that
         // vanished between check and spawn).
         if (!cwdExists && !_isRetry && transportOwner["branchFromSdkSessionId"]) {
-            yield* transportOwner["recoverFromStaleBranchFork"](userMessage, attachments, /* isPreSpawn */ false);
+            yield* transportOwner.recoverFromStaleBranchFork(userMessage, attachments, /* isPreSpawn */ false);
             return;
         }
         // First attempt: retry once after 2s. Covers transient causes
@@ -300,12 +300,13 @@ export async function* recoverClaudeQueryError(transportOwner: ClaudeAgent, sdkE
                 diagnosticAuthType = 'oauth_token';
             }
         }
+        const optionalProviderType = transportOwner["config"].providerType || connection?.providerType;
         const diagnostics = await runErrorDiagnostics({
-            authType: diagnosticAuthType,
+            ...(diagnosticAuthType !== undefined ? { authType: diagnosticAuthType } : {}),
             workspaceId: transportOwner["config"].workspace?.id,
             rawError: stderrContext || rawErrorMsg,
-            providerType: transportOwner["config"].providerType || connection?.providerType,
-            baseUrl: connection?.baseUrl,
+            ...(optionalProviderType !== undefined ? { providerType: optionalProviderType } : {}),
+            ...(connection?.baseUrl !== undefined ? { baseUrl: connection?.baseUrl } : {}),
         });
         debug('[SESSION_DEBUG] diagnostics.code:', diagnostics.code);
         debug('[SESSION_DEBUG] diagnostics.title:', diagnostics.title);
@@ -363,7 +364,7 @@ export async function* recoverClaudeQueryError(transportOwner: ClaudeAgent, sdkE
             // Generic error during a fork attempt: route through the shared
             // helper so all four fork fields are persisted atomically and
             // the parent summary is injected into the retry.
-            yield* transportOwner["recoverFromStaleBranchFork"](userMessage, attachments, /* isPreSpawn */ false);
+            yield* transportOwner.recoverFromStaleBranchFork(userMessage, attachments, /* isPreSpawn */ false);
             return;
         }
         // Regular resume failure (no branch fork): clear sessionId only.
@@ -372,7 +373,7 @@ export async function* recoverClaudeQueryError(transportOwner: ClaudeAgent, sdkE
         transportOwner["pinnedPreferencesPrompt"] = null;
         transportOwner["pinnedIncludeCoAuthoredBy"] = null;
         transportOwner["pinnedProjectContext"] = null;
-        transportOwner["preferencesDriftNotified"] = false;
+        transportOwner.preferencesDriftNotified = false;
         let retryMessage = userMessage;
         const recoveryContext = transportOwner["buildRecoveryContext"]();
         if (recoveryContext)

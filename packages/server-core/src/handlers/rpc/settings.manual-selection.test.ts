@@ -24,7 +24,7 @@ function createHarness(updateError?: Error) {
         modelUpdates.push(args)
         if (updateError) throw updateError
       },
-    } as unknown as HandlerDeps['sessionManager'],
+    } as HandlerDeps['sessionManager'],
     oauthFlowStore: {} as HandlerDeps['oauthFlowStore'],
     platform: {
       appRootPath: '/',

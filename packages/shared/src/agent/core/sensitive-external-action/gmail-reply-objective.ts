@@ -27,10 +27,10 @@ export function contextualGmailTargetScopedAuthorizationSegments(
     CONTEXTUAL_GMAIL_REPLY_TOOL,
     CONTEXTUAL_GMAIL_REPLY_ALL_TOOL,
   ].includes(toolName)) return objectiveSegments;
-  const messageId = typeof input.messageId === 'string'
-    ? input.messageId.trim().toLowerCase() : '';
-  const recipient = typeof input.expectedRecipientEmail === 'string'
-    ? input.expectedRecipientEmail.trim().toLowerCase() : '';
+  const messageId = typeof input["messageId"] === 'string'
+    ? input["messageId"].trim().toLowerCase() : '';
+  const recipient = typeof input["expectedRecipientEmail"] === 'string'
+    ? input["expectedRecipientEmail"].trim().toLowerCase() : '';
   if (!/^[0-9a-f]{12,32}$/u.test(messageId)
     || !hasSingleMailboxShape(recipient)) return objectiveSegments;
   const latest = authenticatedUserAuthorizationSegments.at(-1);

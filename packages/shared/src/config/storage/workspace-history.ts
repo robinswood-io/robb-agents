@@ -43,7 +43,7 @@ export function saveWorkspaceConversation(
     console.error(`[storage] Message count: ${messages.length}, message types: ${messages.map(m => m.type).join(', ')}`);
     // Try to save with sanitized messages
     try {
-      const sanitizedMessages = messages.map((m, i) => {
+      const sanitizedMessages = messages.map((m, i): StoredMessage => {
         let safeToolInput = m.toolInput;
         if (m.toolInput) {
           try {
@@ -53,7 +53,7 @@ export function saveWorkspaceConversation(
             safeToolInput = { error: '[non-serializable input]' };
           }
         }
-        return { ...m, toolInput: safeToolInput };
+        return { ...m, ...(safeToolInput !== undefined ? { toolInput: safeToolInput } : {}) };
       });
       const sanitizedConversation: WorkspaceConversation = {
         messages: sanitizedMessages,

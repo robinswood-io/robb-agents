@@ -1,3 +1,6 @@
+import type { PendingTurnRecovery } from '../../../../../shared/src/sessions/types/turn-recovery.ts';
+import type { ProviderDispatchWriteAhead } from '../../../../../core/src/types/message/message-store.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { publishColdProviderReconciliation } from './cold-provider-reconciliation-publication.ts';
 import type { ColdProviderRollbackSnapshot } from './cold-provider-reconciliation-publication.ts';
 import type { SessionOperationContext } from '../operation-context.ts';
@@ -39,11 +42,11 @@ function sessionOpRestoreDurableRuntimeState(sessionOperationContext: SessionOpe
     if (auth?.authRequestId && auth.authRequestType && auth.authSourceSlug && auth.authSourceName) {
         const base = { requestId: auth.authRequestId, sessionId: managed.id, sourceSlug: auth.authSourceSlug, sourceName: auth.authSourceName };
         managed.pendingAuthRequestId = auth.authRequestId;
-        managed.pendingAuthRequest = auth.authRequestType === 'credential'
+        managed.pendingAuthRequest = omitUndefined<NonNullable<ManagedSession['pendingAuthRequest']>>(auth.authRequestType === 'credential'
             ? { ...base, type: 'credential', mode: auth.authCredentialMode ?? 'bearer', labels: auth.authLabels,
                 description: auth.authDescription, hint: auth.authHint, headerName: auth.authHeaderName,
                 headerNames: auth.authHeaderNames, sourceUrl: auth.authSourceUrl, passwordRequired: auth.authPasswordRequired }
-            : { ...base, type: auth.authRequestType };
+            : { ...base, type: auth.authRequestType });
     }
     if (managed.pendingTurnRecovery?.waitingForPermission) {
         managed.pendingTurnRecovery.waitingForPermission = { ...managed.pendingTurnRecovery.waitingForPermission, recoveryRequired: true };
@@ -157,13 +160,13 @@ function sessionOpRestoreDurableRuntimeState(sessionOperationContext: SessionOpe
         };
         const retireUncertainDispatch = (retired: Message) => {
             const marker = retired.providerDispatch!;
-            retired.providerDispatch = {
+            retired.providerDispatch = omitUndefined<ProviderDispatchWriteAhead>({
                 ...marker,
                 state: 'retired-uncertain',
                 acceptedAt: undefined,
                 retiredAt: Date.now(),
                 retirementReason: 'superseded-by-new-human-objective',
-            };
+            });
             retired.isQueued = false;
             managed.messageQueue = managed.messageQueue.filter(item => item.messageId !== retired.id);
             if (retired.agentDelivery) {
@@ -186,12 +189,12 @@ function sessionOpRestoreDurableRuntimeState(sessionOperationContext: SessionOpe
             managed.pendingTurnRecovery = alreadyAllocatedContinuation
                 && alreadyAllocatedContinuation.id !== exactBoundProviderDispatch!.id
                 ? providerDispatchPending
-                : {
+                : omitUndefined<PendingTurnRecovery>({
                     ...providerDispatchPending!,
                     lastCause: 'app_restart',
                     continuationRequired: true,
                     recoveryDispatch: undefined,
-                };
+                });
             recoveredProviderDispatchNeedsContinuation = true;
         }
     }
@@ -305,8 +308,8 @@ function sessionOpRestoreDurableRuntimeState(sessionOperationContext: SessionOpe
         enqueueRecoveredMessageInTranscriptOrder(managed, {
             message: message.content,
             messageId: message.id,
-            storedAttachments: message.attachments,
-            options,
+            ...(message.attachments !== undefined ? { storedAttachments: message.attachments } : {}),
+            ...(options !== undefined ? { options: options } : {}),
         });
     }
     const closedColdResumeStatus = isClosedColdResumeStatus(managed);

@@ -62,10 +62,6 @@ export function explicitlyAuthorizesStructuredRemoteReadChannel(segment: string)
     || /\b(?:sur|via|on|through)\s+(?:(?:le|the)\s+)?(?:serveurs?|servers?)\b/u.test(normalized);
 }
 
-function explicitlyRestrictsStructuredRemoteReadChannel(segment: string): boolean {
-  const { excludesSsh, apiOnly } = structuredRemoteReadChannelSignals(segment);
-  return excludesSsh || apiOnly;
-}
 
 function normalizedRemoteProjectIdentity(value: string): string {
   const withoutDigestOrTag = value.split('@', 1)[0]!.replace(/:[^/:]+$/, '');
@@ -131,7 +127,7 @@ export function boundedStructuredRemoteExecutionInput(input: Record<string, unkn
   if (Object.keys(input).some(key => ![
     'server', 'command', 'cwd', 'timeout', '_displayName', '_intent',
   ].includes(key))) return false;
-  return input.timeout === undefined
-    || (typeof input.timeout === 'number' && Number.isInteger(input.timeout)
-      && input.timeout >= 1 && input.timeout <= 300_000);
+  return input["timeout"] === undefined
+    || (typeof input["timeout"] === 'number' && Number.isInteger(input["timeout"])
+      && input["timeout"] >= 1 && input["timeout"] <= 300_000);
 }

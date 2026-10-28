@@ -1,5 +1,6 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import type { SessionEvent } from '@craft-agent/shared/protocol';
-import type { SessionOperations } from './SessionManager/operation-types.ts';
+
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test';
@@ -24,7 +25,7 @@ function harness(mode: 'safe' | 'ask' | 'allow-all' = 'allow-all') {
   writeFileSync(join(rootPath, 'config.json'), JSON.stringify({ ...workspace, schemaVersion: 1, updatedAt: 1,
     defaults: { permissionMode: mode, externalActionPolicy: 'allow-in-execute' } }));
   const manager = withSessionOperationsForTest(new SessionManager()); managers.push(manager);
-  const host = manager as unknown as SessionOperations, events: SessionEvent[] = [];
+  const host = sessionManagerForTest(manager), events: SessionEvent[] = [];
   host.sendEvent = (event: SessionEvent) => events.push(event);
   const managed = createManagedSession({ id: 'root', permissionMode: mode }, workspace, { messagesLoaded: true });
   managed.messages = [{ id: 'request', role: 'user', content: 'Recherche et livre un rapport vérifié.', timestamp: 1 }];

@@ -1,3 +1,4 @@
+import { isJsonObject } from '@craft-agent/shared/utils/json';
 import { OfflineVaultUnavailableError, OfflineVaultConflictError } from './shared.ts';
 
 export const DB_NAME = 'robb-agents-remote-offline-v1';
@@ -24,6 +25,18 @@ export interface EncryptedVaultRecord {
     keyGeneration?: string;
 }
 
+/** Older vaults predate the compare-and-swap revision; writes still require one. */
+export type PersistedVaultRecord = Omit<EncryptedVaultRecord, 'revision'> & { revision?: string };
+
+export function isPersistedVaultRecord(value: unknown): value is PersistedVaultRecord {
+    if (!isJsonObject(value)) return false;
+    return value['id'] === VAULT_RECORD_ID && value['algorithm'] === 'AES-GCM'
+        && value['iv'] instanceof ArrayBuffer && value['ciphertext'] instanceof ArrayBuffer
+        && typeof value['updatedAt'] === 'number' && Number.isFinite(value['updatedAt'])
+        && (value['revision'] === undefined || typeof value['revision'] === 'string')
+        && (value['keyGeneration'] === undefined || typeof value['keyGeneration'] === 'string');
+}
+
 export interface OfflineVaultKey {
     key: CryptoKey;
     generation: string;
@@ -36,7 +49,7 @@ export interface OfflineVaultPersistence {
     loadKey(): Promise<OfflineVaultKey | CryptoKey | null>;
     /** Atomically keep an existing key or store and return this candidate. */
     saveKey(key: CryptoKey): Promise<OfflineVaultKey | CryptoKey>;
-    loadRecord(): Promise<EncryptedVaultRecord | null>;
+    loadRecord(): Promise<PersistedVaultRecord | null>;
     /** Commit only while both the key generation and record revision still match. */
     saveRecord(record: EncryptedVaultRecord, expectedKeyGeneration: string, expectedRevision?: string | null): Promise<void>;
     clear(): Promise<void>;
@@ -122,7 +135,7 @@ export class IndexedDbOfflineVaultPersistence implements OfflineVaultPersistence
         try {
             const transaction = database.transaction(KEY_STORE, 'readwrite');
             const store = transaction.objectStore(KEY_STORE);
-            const result = await requestResult(store.get(CONTENT_KEY_ID));
+            const result: unknown = await requestResult(store.get(CONTENT_KEY_ID));
             const migrated = migratePersistedVaultKey(result);
             if (migrated.migrated)
                 store.put(migrated.value, CONTENT_KEY_ID);
@@ -143,7 +156,7 @@ export class IndexedDbOfflineVaultPersistence implements OfflineVaultPersistence
             // Read and conditional write in the same readwrite transaction. IndexedDB
             // serializes competing writers, so simultaneous tabs converge on one key
             // instead of overwriting the key used by the winning ciphertext record.
-            const rawCurrent = await requestResult(store.get(CONTENT_KEY_ID));
+            const rawCurrent: unknown = await requestResult(store.get(CONTENT_KEY_ID));
             const current = migratePersistedVaultKey(rawCurrent);
             const winner = current.value ?? { key, generation: crypto.randomUUID() };
             if (!current.value || current.migrated)
@@ -158,13 +171,15 @@ export class IndexedDbOfflineVaultPersistence implements OfflineVaultPersistence
             database.close();
         }
     }
-    async loadRecord(): Promise<EncryptedVaultRecord | null> {
+    async loadRecord(): Promise<PersistedVaultRecord | null> {
         const database = await openDatabase();
         try {
             const transaction = database.transaction(DATA_STORE, 'readonly');
-            const result = await requestResult(transaction.objectStore(DATA_STORE).get(VAULT_RECORD_ID));
+            const result: unknown = await requestResult(transaction.objectStore(DATA_STORE).get(VAULT_RECORD_ID));
             await transactionDone(transaction);
-            return result && typeof result === 'object' ? result as EncryptedVaultRecord : null;
+            if (result === undefined || result === null) return null;
+            if (!isPersistedVaultRecord(result)) throw new OfflineVaultUnavailableError('Encrypted offline record is malformed');
+            return result;
         }
         finally {
             database.close();
@@ -183,8 +198,8 @@ export class IndexedDbOfflineVaultPersistence implements OfflineVaultPersistence
                 throw new OfflineVaultConflictError();
             }
             const store = transaction.objectStore(DATA_STORE);
-            const current = await requestResult(store.get(VAULT_RECORD_ID)) as EncryptedVaultRecord | undefined;
-            const currentRevision = typeof current?.revision === 'string' ? current.revision : null;
+            const current: unknown = await requestResult(store.get(VAULT_RECORD_ID));
+            const currentRevision = isJsonObject(current) && typeof current['revision'] === 'string' ? current['revision'] : null;
             if (expectedRevision !== undefined && currentRevision !== expectedRevision) {
                 transaction.abort();
                 throw new OfflineVaultConflictError();

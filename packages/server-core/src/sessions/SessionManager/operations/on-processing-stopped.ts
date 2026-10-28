@@ -1,3 +1,8 @@
+import type { PendingTurnRecovery } from '../../../../../shared/src/sessions/types/turn-recovery.ts';
+import type { SessionCompletionEvent } from '../runtime-types.ts';
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import type { OperationsRuntimeEvent } from '../../../../../shared/src/operations/index.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { isDurableProviderActivityOrHumanSupersession, persistenceRootFor } from '../policy.ts';
 import { updateSessionMetadata } from '@craft-agent/shared/sessions';
@@ -57,7 +62,7 @@ async function sessionOpOnProcessingStopped(sessionOperationContext: SessionOper
     // machine receipts. Its attempt counters remain available for recovery.
     if (sessionOpHasConsumedCleanRecoveryDispatch(sessionOperationContext, managed) && managed.pendingTurnRecovery) {
         const pending = managed.pendingTurnRecovery;
-        managed.pendingTurnRecovery = { ...pending, recoveryDispatch: undefined };
+        managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({ ...pending, recoveryDispatch: undefined });
         try {
             if (!sessionOperationContext.owner["persistSession"](managed))
                 throw new Error('Clean dispatch retirement could not be queued');
@@ -147,7 +152,7 @@ async function sessionOpOnProcessingStopped(sessionOperationContext: SessionOper
         : undefined;
     if (stoppedAdmissionBinding?.managed === managed
         && stoppedAdmissionBinding.generation === generationKey) {
-        stoppedAdmissionBinding.liveToolFallbackIntent = undefined;
+        delete stoppedAdmissionBinding.liveToolFallbackIntent;
     }
     managed.stopRequested = false; // Reset for next turn
     managed.pendingUserSteers?.clear();
@@ -165,7 +170,7 @@ async function sessionOpOnProcessingStopped(sessionOperationContext: SessionOper
     // subprocess is torn down. Flip those registry entries to `orphaned` so a
     // later "status?" query never reports a dead task as running. Suppressed
     // when WS2 keep-alive keeps the query alive across turns.
-    sessionOperationContext.owner["markOrphanedBackgroundTasks"](sessionId);
+    sessionOperationContext.owner.markOrphanedBackgroundTasks(sessionId);
     // A terminal runtime error can leave a provider subprocess or its MCP
     // transport unusable even though the session state itself is recoverable.
     // Recycle the complete runtime now so retrying starts cleanly. Preserve it
@@ -198,7 +203,7 @@ async function sessionOpOnProcessingStopped(sessionOperationContext: SessionOper
     //    - If user is viewing: mark as read (they saw it complete)
     //    - If user is NOT viewing: mark as unread (they have new content)
     //    IMPORTANT: only apply this when the turn produced a NEW final assistant message.
-    const isViewing = sessionOperationContext.owner["isSessionBeingViewed"](sessionId, managed.workspace.id);
+    const isViewing = sessionOperationContext.owner.isSessionBeingViewed(sessionId, managed.workspace.id);
     const currentFinalMessageId = sessionOpGetLastFinalAssistantMessageId(sessionOperationContext, managed.messages);
     const didReceiveNewFinalMessage = !!currentFinalMessageId && currentFinalMessageId !== turnStartFinalMessageId;
     const activeDeliveryId = managed.activeAgentDelivery?.generation === generationKey
@@ -278,17 +283,17 @@ async function sessionOpOnProcessingStopped(sessionOperationContext: SessionOper
         if (!ownsStop())
             return;
     }
-    emitOperationsEvent({
+    emitOperationsEvent(omitUndefined<Extract<OperationsRuntimeEvent, { kind: 'turn.finished' }>>({
         kind: 'turn.finished', at: new Date().toISOString(),
         workspaceId: managed.workspace.id, sessionId: managed.id,
-        missionId: managed.missionId, workItemId: managed.missionWorkItemId,
+        ...(managed.missionId !== undefined ? { missionId: managed.missionId } : {}), ...(managed.missionWorkItemId !== undefined ? { workItemId: managed.missionWorkItemId } : {}),
         turnId: managed.executionTelemetryGenerations?.get(generationKey)?.turnId,
         outcome: reason,
         finalText: didReceiveNewFinalMessage && currentFinalMessageId
             ? managed.messages.find(candidate => candidate.id === currentFinalMessageId)?.content
             : undefined,
         tokenUsage: managed.tokenUsage,
-    });
+    }));
     if (reason === 'complete' && didReceiveNewFinalMessage) {
         if (isViewing) {
             // User is watching - mark as read immediately
@@ -401,9 +406,9 @@ async function sessionOpOnProcessingStopped(sessionOperationContext: SessionOper
             return;
         // Publish the validated outcome and cleared recovery before the renderer
         // handles the terminal signal. A final text event alone proves neither.
-        sessionOperationContext.owner["emitObjectiveChanged"](managed);
+        sessionOperationContext.owner.emitObjectiveChanged(managed);
         // No queue - emit complete to UI (include tokenUsage and hasUnread for state updates)
-        sessionOperationContext.owner["sendEvent"]({
+        sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'complete' }>>({
             type: 'complete',
             sessionId,
             reason,
@@ -414,24 +419,24 @@ async function sessionOpOnProcessingStopped(sessionOperationContext: SessionOper
             // chip orphan-backstop does not falsely flip live tasks to `orphaned`; a
             // real `task_completed` will arrive when the agent actually finishes.
             backgroundTasksAlive: sessionOperationContext.state.keepBackgroundTasksAlive,
-        }, managed.workspace.id);
+        }), managed.workspace.id);
         // Tasks Conductor seam: signal true completion (queue empty) with the stop
         // reason + this turn's final assistant message, so the Conductor can advance
         // the corresponding node. In-process only; never sent to the renderer/agents.
         if (!setupAttentionRequired && !sessionOperationContext.owner["hasPendingUserInput"](managed)
             && !sessionOpHasQueuedUserInput(sessionOperationContext, managed) && !sessionOperationContext.state.deferredAutomaticSessions?.has(sessionId)) {
             const executionProof = sessionOperationContext.state.executionProofCollector.take(sessionId);
-            sessionOperationContext.owner["emitSessionComplete"]({
+            sessionOperationContext.owner.emitSessionComplete(omitUndefined<SessionCompletionEvent>({
                 sessionId,
                 workspaceId: managed.workspace.id,
                 reason,
-                finalMessageId: currentFinalMessageId,
+                ...(currentFinalMessageId !== undefined ? { finalMessageId: currentFinalMessageId } : {}),
                 finalText: currentFinalMessageId
                     ? managed.messages.find(m => m.id === currentFinalMessageId)?.content
                     : undefined,
-                tokenUsage: managed.tokenUsage,
+                ...(managed.tokenUsage !== undefined ? { tokenUsage: managed.tokenUsage } : {}),
                 ...(reason === 'complete' && executionProof ? { executionProof } : {}),
-            });
+            }));
         }
     }
     // 6. Persist only while this stopped turn still owns the session.
@@ -449,7 +454,7 @@ async function sessionOpOnProcessingStopped(sessionOperationContext: SessionOper
                 || managed.stopRequested || managed.isProcessing
                 || managed.processingGeneration !== generationKey)
                 return;
-            void sessionOperationContext.owner["resumePendingTurnAfterRestart"](sessionId).catch(error => {
+            void sessionOperationContext.owner.resumePendingTurnAfterRestart(sessionId).catch((error: unknown) => {
                 sessionLog.error('Live context-limit recovery failed', {
                     sessionId, error: error instanceof Error ? error.message : String(error),
                 });

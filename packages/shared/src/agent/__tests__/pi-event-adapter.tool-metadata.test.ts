@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { collect, recordedPiEvent, eventOfType } from './fixtures/pi-event-fixtures.ts';
+import { collect, adaptRecordedPiEvent, eventOfType } from './fixtures/pi-event-fixtures.ts';
 import { PiEventAdapter } from '../backend/pi/event-adapter.ts';
 import { toolMetadataStore } from '../../interceptor-common.ts';
 
@@ -26,13 +26,13 @@ afterEach(() => {
 
 describe('tool events', () => {
 it('should emit tool_start for tool_execution_start', () => {
-      collect(adapter.adaptEvent(recordedPiEvent({ type: 'turn_start' })));
-      const events = collect(adapter.adaptEvent(recordedPiEvent({
+      collect(adaptRecordedPiEvent(adapter, { type: 'turn_start' }));
+      const events = collect(adaptRecordedPiEvent(adapter, {
         type: 'tool_execution_start',
         toolCallId: 'call_123',
         toolName: 'bash',
         args: { command: 'ls -la', description: 'List files' },
-      })));
+      }));
 
       expect(events).toHaveLength(1);
       expect(events[0]).toMatchObject({
@@ -45,8 +45,8 @@ it('should emit tool_start for tool_execution_start', () => {
     });
 
 it('should fallback to args metadata when store has no entry', () => {
-      collect(adapter.adaptEvent(recordedPiEvent({ type: 'turn_start' })));
-      const events = collect(adapter.adaptEvent(recordedPiEvent({
+      collect(adaptRecordedPiEvent(adapter, { type: 'turn_start' }));
+      const events = collect(adaptRecordedPiEvent(adapter, {
         type: 'tool_execution_start',
         toolCallId: 'call_no_store',
         toolName: 'bash',
@@ -55,7 +55,7 @@ it('should fallback to args metadata when store has no entry', () => {
           _intent: 'Run unit tests',
           _displayName: 'Run Tests',
         },
-      })));
+      }));
 
       expect(events).toHaveLength(1);
       expect(events[0]).toMatchObject({
@@ -68,8 +68,8 @@ it('should fallback to args metadata when store has no entry', () => {
     });
 
 it('should preserve edits[] for Pi edit tools while deriving legacy diff fields', () => {
-      collect(adapter.adaptEvent(recordedPiEvent({ type: 'turn_start' })));
-      const events = collect(adapter.adaptEvent(recordedPiEvent({
+      collect(adaptRecordedPiEvent(adapter, { type: 'turn_start' }));
+      const events = collect(adaptRecordedPiEvent(adapter, {
         type: 'tool_execution_start',
         toolCallId: 'call_edit',
         toolName: 'edit',
@@ -80,7 +80,7 @@ it('should preserve edits[] for Pi edit tools while deriving legacy diff fields'
             { oldText: 'const b = 1', newText: 'const b = 2' },
           ],
         },
-      })));
+      }));
 
       expect(events).toHaveLength(1);
       expect(events[0]).toMatchObject({
@@ -100,7 +100,7 @@ it('should preserve edits[] for Pi edit tools while deriving legacy diff fields'
     });
 
 it('should prefer store metadata over args metadata when both exist', () => {
-      collect(adapter.adaptEvent(recordedPiEvent({ type: 'turn_start' })));
+      collect(adaptRecordedPiEvent(adapter, { type: 'turn_start' }));
 
       toolMetadataStore.set('call_store_wins', {
         intent: 'Stored intent',
@@ -108,7 +108,7 @@ it('should prefer store metadata over args metadata when both exist', () => {
         timestamp: Date.now(),
       });
 
-      const events = collect(adapter.adaptEvent(recordedPiEvent({
+      const events = collect(adaptRecordedPiEvent(adapter, {
         type: 'tool_execution_start',
         toolCallId: 'call_store_wins',
         toolName: 'bash',
@@ -117,7 +117,7 @@ it('should prefer store metadata over args metadata when both exist', () => {
           _intent: 'Args intent',
           _displayName: 'Args name',
         },
-      })));
+      }));
 
       expect(events).toHaveLength(1);
       expect(events[0]).toMatchObject({
@@ -129,9 +129,9 @@ it('should prefer store metadata over args metadata when both exist', () => {
     });
 
 it('should use canonical metadata from event payload', () => {
-      collect(adapter.adaptEvent(recordedPiEvent({ type: 'turn_start' })));
+      collect(adaptRecordedPiEvent(adapter, { type: 'turn_start' }));
 
-      const events = collect(adapter.adaptEvent(recordedPiEvent({
+      const events = collect(adaptRecordedPiEvent(adapter, {
         type: 'tool_execution_start',
         toolCallId: 'call_canonical',
         toolName: 'bash',
@@ -141,7 +141,7 @@ it('should use canonical metadata from event payload', () => {
           displayName: 'Canonical name',
           source: 'interceptor',
         },
-      })));
+      }));
 
       expect(events).toHaveLength(1);
       expect(events[0]).toMatchObject({
@@ -153,7 +153,7 @@ it('should use canonical metadata from event payload', () => {
     });
 
 it('should fallback to base id metadata when toolCallId includes a pipe suffix', () => {
-      collect(adapter.adaptEvent(recordedPiEvent({ type: 'turn_start' })));
+      collect(adaptRecordedPiEvent(adapter, { type: 'turn_start' }));
 
       toolMetadataStore.set('call_base_id', {
         intent: 'Stored base intent',
@@ -161,12 +161,12 @@ it('should fallback to base id metadata when toolCallId includes a pipe suffix',
         timestamp: Date.now(),
       });
 
-      const events = collect(adapter.adaptEvent(recordedPiEvent({
+      const events = collect(adaptRecordedPiEvent(adapter, {
         type: 'tool_execution_start',
         toolCallId: 'call_base_id|fc_123',
         toolName: 'bash',
         args: { command: 'npm test' },
-      })));
+      }));
 
       expect(events).toHaveLength(1);
       expect(events[0]).toMatchObject({
@@ -178,7 +178,7 @@ it('should fallback to base id metadata when toolCallId includes a pipe suffix',
     });
 
 it('should prefer canonical metadata over store and args', () => {
-      collect(adapter.adaptEvent(recordedPiEvent({ type: 'turn_start' })));
+      collect(adaptRecordedPiEvent(adapter, { type: 'turn_start' }));
 
       toolMetadataStore.set('call_canonical_wins', {
         intent: 'Stored intent',
@@ -186,7 +186,7 @@ it('should prefer canonical metadata over store and args', () => {
         timestamp: Date.now(),
       });
 
-      const events = collect(adapter.adaptEvent(recordedPiEvent({
+      const events = collect(adaptRecordedPiEvent(adapter, {
         type: 'tool_execution_start',
         toolCallId: 'call_canonical_wins',
         toolName: 'bash',
@@ -200,7 +200,7 @@ it('should prefer canonical metadata over store and args', () => {
           displayName: 'Canonical name',
           source: 'interceptor',
         },
-      })));
+      }));
 
       expect(events).toHaveLength(1);
       expect(events[0]).toMatchObject({
@@ -212,7 +212,7 @@ it('should prefer canonical metadata over store and args', () => {
     });
 
 it('should resolve Pi lowercase tool names to PascalCase', () => {
-      collect(adapter.adaptEvent(recordedPiEvent({ type: 'turn_start' })));
+      collect(adaptRecordedPiEvent(adapter, { type: 'turn_start' }));
 
       const toolTests = [
         { piName: 'read', expected: 'Read' },
@@ -224,48 +224,48 @@ it('should resolve Pi lowercase tool names to PascalCase', () => {
       ];
 
       for (const { piName, expected } of toolTests) {
-        const events = collect(adapter.adaptEvent(recordedPiEvent({
+        const events = collect(adaptRecordedPiEvent(adapter, {
           type: 'tool_execution_start',
           toolCallId: `call_${piName}`,
           toolName: piName,
           args: {},
-        })));
+        }));
 
         expect(eventOfType(events[0], 'tool_start').toolName).toBe(expected);
       }
     });
 
 it('should use description as intent for bash tools', () => {
-      collect(adapter.adaptEvent(recordedPiEvent({ type: 'turn_start' })));
-      const events = collect(adapter.adaptEvent(recordedPiEvent({
+      collect(adaptRecordedPiEvent(adapter, { type: 'turn_start' }));
+      const events = collect(adaptRecordedPiEvent(adapter, {
         type: 'tool_execution_start',
         toolCallId: 'call_1',
         toolName: 'bash',
         args: { command: 'npm test', description: 'Run unit tests' },
-      })));
+      }));
 
       expect(eventOfType(events[0], 'tool_start').intent).toBe('Run unit tests');
     });
 
 it('keeps the Bash identity and command for read-like starts and results', () => {
-      collect(adapter.adaptEvent(recordedPiEvent({ type: 'turn_start' })));
-      const events = collect(adapter.adaptEvent(recordedPiEvent({
+      collect(adaptRecordedPiEvent(adapter, { type: 'turn_start' }));
+      const events = collect(adaptRecordedPiEvent(adapter, {
         type: 'tool_execution_start',
         toolCallId: 'call_1',
         toolName: 'bash',
         args: { command: 'cat /path/to/file.ts' },
-      })));
+      }));
 
       expect(events).toHaveLength(1);
       expect(eventOfType(events[0], 'tool_start').toolName).toBe('Bash');
       expect(eventOfType(events[0], 'tool_start').input).toEqual({ command: 'cat /path/to/file.ts' });
       expect(eventOfType(events[0], 'tool_start').displayName).toBe('Read File');
 
-      const results = collect(adapter.adaptEvent(recordedPiEvent({
+      const results = collect(adaptRecordedPiEvent(adapter, {
         type: 'tool_execution_end', toolCallId: 'call_1',
         result: { content: [{ type: 'text', text: 'file contents' }], details: { executed: true } },
         isError: false,
-      })));
+      }));
       expect(results[0]).toMatchObject({ toolName: 'Bash', result: 'file contents',
         input: { command: 'cat /path/to/file.ts' }, executed: true });
     });

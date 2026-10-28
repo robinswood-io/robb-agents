@@ -1,3 +1,5 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it, spyOn } from 'bun:test';
@@ -126,13 +128,7 @@ describe('ordinary Mission route provider fence', () => {
     controller.confirmWorkItemDispatch(spec.id, 'task', 'dispatch-one');
 
     const host = withSessionOperationsForTest(new SessionManager());
-    const harness = host as unknown as {
-      sessions: Map<string, unknown>;
-      sendEvent: () => void;
-      emitUnreadSummaryChanged: () => void;
-      notifySessionCreated: () => void;
-      resolveOrdinaryMissionRouteSnapshot: (managed: unknown) => Promise<unknown>;
-    };
+    const harness = sessionManagerForTest(host);
     harness.sendEvent = () => {};
     harness.emitUnreadSummaryChanged = () => {};
     harness.notifySessionCreated = () => {};
@@ -246,18 +242,7 @@ describe('ordinary Mission route provider fence', () => {
       controller.confirmWorkItemDispatch(spec.id, 'task', 'cwd-dispatch');
 
       const host = withSessionOperationsForTest(new SessionManager());
-      const harness = host as unknown as {
-        sessions: Map<string, unknown>;
-        sendEvent: () => void;
-        emitUnreadSummaryChanged: () => void;
-        notifySessionCreated: () => void;
-        assertMissionProviderExecution: (managed: unknown) => Promise<void>;
-        admitBackendToolExecution: (
-          managed: unknown,
-          runtime: unknown,
-          request: { toolUseId: string; toolName: string; toolInput: Record<string, unknown> },
-        ) => Promise<void>;
-      };
+      const harness = sessionManagerForTest(host);
       harness.sendEvent = () => {};
       harness.emitUnreadSummaryChanged = () => {};
       harness.notifySessionCreated = () => {};
@@ -297,7 +282,7 @@ describe('ordinary Mission route provider fence', () => {
 
         let toolCalls = 0;
         await expect((async () => {
-          await harness.admitBackendToolExecution(managed, {}, {
+          await harness.admitBackendToolExecution(managed, completeSessionAgentFixture(managed.workspace, {}), {
             toolUseId: 'cwd-tool', toolName: 'Read', toolInput: { file_path: 'result.txt' },
           });
           toolCalls += 1;

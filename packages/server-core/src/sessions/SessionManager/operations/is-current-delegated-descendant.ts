@@ -2,7 +2,7 @@ import type { SessionOperationContext } from '../operation-context.ts';
 import type { SendMessageOptions } from '@craft-agent/shared/protocol';
 import type { ManagedSession } from '../managed-session.ts';
 
-function sessionOpIsAutonomousMessage(sessionOperationContext: SessionOperationContext, options?: SendMessageOptions): boolean {
+function sessionOpIsAutonomousMessage(_sessionOperationContext: SessionOperationContext, options?: SendMessageOptions): boolean {
     if (options?.automaticRecovery?.cause === 'user_retry' || options?.internalOrigin?.kind === 'user-input')
         return false;
     return !!options?.automaticRecovery || !!options?.internalOrigin || !!options?.hidden;

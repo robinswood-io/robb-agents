@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -137,9 +138,9 @@ describe('durable restart recovery', () => {
       await cold.runtime.resumePendingTurnAfterRestart(restored.id)
       await providerEntered.promise
 
-      expect(restored.userInputRequests).toEqual([
-        expect.objectContaining({ id: answerRequestId, status: 'answered', responseMessageId: answerId }),
-        expect.objectContaining({ id: contextRequest.requestId, status: 'cancelled' }),
+      expect<unknown>(restored.userInputRequests).toEqual([
+        (expect.objectContaining({ id: answerRequestId, status: 'answered', responseMessageId: answerId }) as unknown),
+        (expect.objectContaining({ id: contextRequest.requestId, status: 'cancelled' }) as unknown),
       ])
       expect(restored.messages.find((message: Managed['messages'][number]) => message.id === answerId))
         .toMatchObject({ hidden: true, isQueued: false, internalOrigin: { kind: 'user-input' } })
@@ -174,8 +175,8 @@ describe('durable restart recovery', () => {
     })
     expect(restored.messageQueue.map((item: Managed['messageQueue'][number]) => item.messageId))
       .toEqual([undefined, deliveryId])
-    expect(restored.messageQueue[0]?.options?.automaticRecovery).toMatchObject({
-      dispatchId, cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-/),
+    expect<unknown>(restored.messageQueue[0]?.options?.automaticRecovery).toMatchObject({
+      dispatchId, cleanContinuationId: (expect.stringMatching(/^clean-continuation-v1-/) as unknown),
     })
     expect(restored.messages.find((message: Managed['messages'][number]) => message.id === deliveryId))
       .toMatchObject({
@@ -333,7 +334,7 @@ describe('durable restart recovery', () => {
       isQueued: true, agentDelivery: { status: 'queued', attempts: 1 },
     })
     const stored = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
-    expect(stored[0].pendingTurnRecovery.recoveryDispatch).toBeUndefined()
+      .trim().split('\n').map(parseRecoveryJournalObservation)
+    expect(requiredTestValue(requiredTestValue(stored[0]).pendingTurnRecovery).recoveryDispatch).toBeUndefined()
   })
 });

@@ -1,12 +1,12 @@
+import { useEffectEvent } from 'react';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { coerceInputText } from '@/lib/input-text';
 import { cn } from '@/lib/utils';
-import { parseMentions } from '@/lib/mentions';
-import { loadSourceIcon, loadSkillIcon } from '@/lib/icon-cache';
+import { loadSourceIcon,loadSkillIcon } from '@/lib/icon-cache';
 
-import { textToHTML, getMentionSignature } from "./rich-text-html";
-import { isEscapeDuringComposition, getTextFromElement, getCursorPosition, setCursorPosition } from "./rich-text-dom";
+import { textToHTML,getMentionSignature } from "./rich-text-html";
+import { isEscapeDuringComposition,getTextFromElement,getCursorPosition,setCursorPosition } from "./rich-text-dom";
 export { type EscapeCompositionEventLike, isEscapeDuringComposition } from "./rich-text-dom";
 
 
@@ -14,7 +14,7 @@ export { type EscapeCompositionEventLike, isEscapeDuringComposition } from "./ri
 
 
 
-import type { LoadedSkill, LoadedSource } from '../../../shared/types';
+import type { LoadedSkill,LoadedSource } from '../../../shared/types';
 
 
 // ============================================================================
@@ -30,21 +30,21 @@ export interface RichTextInputProps extends Omit<React.HTMLAttributes<HTMLDivEle
   /** Called when text changes */
   onChange: (value: string) => void
   /** Placeholder text(s) when empty - can be a single string or array for rotation */
-  placeholder?: string | string[]
+  placeholder?: string | string[] | undefined
   /** Available skills for mention parsing */
-  skills?: LoadedSkill[]
+  skills?: LoadedSkill[] | undefined
   /** Available sources for mention parsing */
-  sources?: LoadedSource[]
+  sources?: LoadedSource[] | undefined
   /** Workspace ID for avatars */
-  workspaceId?: string
+  workspaceId?: string | undefined
   /** Whether the input is disabled */
-  disabled?: boolean
+  disabled?: boolean | undefined
   /** Called when input changes (provides value and cursor position for mention detection) */
-  onInput?: (value: string, cursorPosition: number) => void
+  onInput?: ((value: string, cursorPosition: number) => void) | undefined
   /** Called on paste */
-  onPaste?: (e: React.ClipboardEvent) => void
+  onPaste?: ((e: React.ClipboardEvent) => void) | undefined
   /** Called when pasted text exceeds line threshold - should create file attachment */
-  onLongTextPaste?: (text: string) => void
+  onLongTextPaste?: ((text: string) => void) | undefined
 }
 
 export interface RichTextInputHandle {
@@ -76,9 +76,9 @@ interface RotatingPlaceholderProps {
   /** Array of placeholder strings to rotate through */
   placeholders: string[]
   /** Interval in ms between rotations (default: 5000) */
-  intervalMs?: number
+  intervalMs?: number | undefined
   /** Additional className for styling */
-  className?: string
+  className?: string | undefined
 }
 
 function RotatingPlaceholder({
@@ -146,7 +146,7 @@ export const RichTextInput = React.forwardRef<RichTextInputHandle, RichTextInput
     const { t } = useTranslation()
     const safeValue = React.useMemo(() => coerceInputText(value), [value])
     const divRef = React.useRef<HTMLDivElement>(null)
-    const [isFocused, setIsFocused] = React.useState(false)
+    const [, setIsFocused] = React.useState(false)
     const isComposing = React.useRef(false)
     const lastValueRef = React.useRef(safeValue)
     const cursorPositionRef = React.useRef(0)
@@ -335,13 +335,14 @@ export const RichTextInput = React.forwardRef<RichTextInputHandle, RichTextInput
     }, [safeValue, skills, sources, skillSlugs, sourceSlugs, workspaceId])
 
     // Initialize content on mount
-    React.useEffect(() => {
+    const initializeRichTextInput = useEffectEvent(() => {
       if (!divRef.current) return
       lastMentionSignatureRef.current = getMentionSignature(safeValue, skillSlugs, sourceSlugs)
       const html = textToHTML(safeValue, skills, sources, workspaceId)
       divRef.current.innerHTML = html || '<br>'
       lastValueRef.current = safeValue
-    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    });
+React.useEffect(() => initializeRichTextInput(), []);
 
     // Handle selection changes to highlight badges when selected
     React.useEffect(() => {
@@ -396,10 +397,7 @@ export const RichTextInput = React.forwardRef<RichTextInputHandle, RichTextInput
     }, [placeholder, t])
 
     // Check if value contains any mentions (badges) to adjust line height
-    const hasMentions = React.useMemo(() => {
-      const mentions = parseMentions(safeValue, skillSlugs, sourceSlugs)
-      return mentions.skills.length > 0 || mentions.sources.length > 0 || mentions.files.length > 0 || mentions.folders.length > 0
-    }, [safeValue, skillSlugs, sourceSlugs])
+    
 
     return (
       <div className="relative">

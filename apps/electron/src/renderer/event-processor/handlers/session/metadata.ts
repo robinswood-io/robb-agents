@@ -1,3 +1,5 @@
+import type { Session } from '../../../../../../../packages/shared/src/protocol/dto/sessions.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Session Event Handlers
  *
@@ -60,10 +62,10 @@ export function handleProjectIdChanged(
 
   return {
     state: {
-      session: {
+      session: omitUndefined<Session>({
         ...session,
         projectId: event.projectId ?? undefined,
-      },
+      }),
       streaming,
     },
     effects: [],
@@ -97,12 +99,18 @@ export function handleSessionMetadataChanged(
   event: SessionMetadataChangedEvent
 ): ProcessResult {
   const { session, streaming } = state
+  const { kanbanColumn, ...changes } = event.changes
+  const updated = {
+    ...(typeof changes.isProcessing === 'boolean' ? markSessionProcessingState(session) : session),
+    ...changes,
+  }
+  if ('kanbanColumn' in event.changes) {
+    if (kanbanColumn === null || kanbanColumn === undefined) delete updated.kanbanColumn
+    else updated.kanbanColumn = kanbanColumn
+  }
   return {
     state: {
-      session: {
-        ...(typeof event.changes.isProcessing === 'boolean' ? markSessionProcessingState(session) : session),
-        ...event.changes,
-      },
+      session: updated,
       streaming,
     },
     effects: [],
@@ -170,7 +178,7 @@ export function handleSessionUnarchived(
   const { session, streaming } = state
   return {
     state: {
-      session: { ...session, isArchived: false, archivedAt: undefined },
+      session: omitUndefined<Session>({ ...session, isArchived: false, archivedAt: undefined }),
       streaming,
     },
     effects: [],
@@ -187,7 +195,7 @@ export function handleNameChanged(
   const { session, streaming } = state
   return {
     state: {
-      session: { ...session, name: event.name },
+      session: omitUndefined<Session>({ ...session, name: event.name }),
       streaming,
     },
     effects: [],
@@ -236,11 +244,11 @@ export function handleObjectiveChanged(
   return {
     state: {
       ...state,
-      session: {
+      session: omitUndefined<Session>({
         ...state.session,
         activeObjective: event.activeObjective ?? undefined,
         pendingTurnRecovery: event.pendingTurnRecovery ?? undefined,
-      },
+      }),
     },
     effects: [],
   }

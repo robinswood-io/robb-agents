@@ -51,15 +51,15 @@ function checkMcp(
     activeSourceSlugs: [sourceSlug],
     allSourceSlugs: [sourceSlug],
     hasSourceActivation: false,
-    externalActionPolicy: options?.externalActionPolicy,
-    objectiveMutationAuthorized: options?.objectiveMutationAuthorized,
-    objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized,
-    objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments,
-    authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments,
-    dataFolderPath: options?.dataFolderPath,
-    declaredToolCapabilities: options?.declaredToolCapabilities,
+    ...(options?.externalActionPolicy !== undefined ? { externalActionPolicy: options?.externalActionPolicy } : {}),
+    ...(options?.objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized: options?.objectiveMutationAuthorized } : {}),
+    ...(options?.objectiveSensitiveActionAuthorized !== undefined ? { objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized } : {}),
+    ...(options?.objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments } : {}),
+    ...(options?.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments } : {}),
+    ...(options?.dataFolderPath !== undefined ? { dataFolderPath: options?.dataFolderPath } : {}),
+    ...(options?.declaredToolCapabilities !== undefined ? { declaredToolCapabilities: options?.declaredToolCapabilities } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 
@@ -75,9 +75,6 @@ afterEach(() => {
 });
 
 describe('sensitive external action gate across permission modes', () => {
-  const silaeConfirmationObjective = [
-    'Reprends l’objectif explicite d’écrire à Benoît. Vérifie d’abord Sent/Brouillons pour éviter un doublon, exécute le préflight exact vers benoit@example.test, sans fallback navigateur, puis arrête-toi immédiatement avant l’envoi pour la confirmation d’action externe. Après confirmation, envoie une seule fois et vérifie le messageId.',
-  ];
 
   it('authorizes the Agile invoice PDF resend only to the explicit requester', () => {
     const liveObjective = [
@@ -129,10 +126,10 @@ describe('sensitive external action gate across permission modes', () => {
       },
     )).toMatchObject({
       type: 'modify',
-      input: expect.not.objectContaining({
-        _displayName: expect.anything(),
-        _intent: expect.anything(),
-      }),
+      input: (expect.not.objectContaining({
+        _displayName: (expect.anything() as unknown),
+        _intent: (expect.anything() as unknown),
+      }) as unknown),
     });
 
     for (const objective of [
@@ -272,7 +269,7 @@ Lis d’abord son hash, écris uniquement ce fichier, exécute les tests hors r�
       sessionId: 'test-copied-session',
     })).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('belongs to another durable session'),
+      reason: (expect.stringContaining('belongs to another durable session') as unknown),
     });
     expect(checkMcp('allow-all', toolName, input, objective, {
       externalActionPolicy: 'allow-in-execute',
@@ -287,7 +284,7 @@ Lis d’abord son hash, écris uniquement ce fichier, exécute les tests hors r�
       },
     })).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('belongs to another durable session'),
+      reason: (expect.stringContaining('belongs to another durable session') as unknown),
     });
 
     for (const [label, candidateTool, candidateInput] of [

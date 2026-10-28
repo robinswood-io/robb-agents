@@ -78,6 +78,6 @@ export function releaseSourceActivationClaim(
     const pending = managed.autoRetryPending
     if (pending && pending.dispatchToken === dispatchToken && !pending.committed && !pending.cancelled) {
       pending.dispatchInFlight = false
-      pending.messageId = undefined
+      delete pending.messageId;
     }
   }

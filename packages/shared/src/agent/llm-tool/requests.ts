@@ -12,7 +12,7 @@ export interface BuildCallLlmOptions {
   /** Backend name for error messages (e.g., "Codex", "Copilot") */
   backendName: string;
   /** Optional model validation hook — return undefined to reject, or a validated model ID */
-  validateModel?: (resolvedModelId: string) => string | undefined;
+  validateModel?: ((resolvedModelId: string) => string | undefined) | undefined;
   /** Session directory for resolving relative attachment paths */
   sessionPath?: string;
 }
@@ -28,14 +28,14 @@ export async function buildCallLlmRequest(
   input: Record<string, unknown>,
   options: BuildCallLlmOptions
 ): Promise<LLMQueryRequest> {
-  const prompt = input.prompt as string;
+  const prompt = input["prompt"] as string;
   if (!prompt?.trim()) {
     throw new Error('Prompt is required and cannot be empty.');
   }
 
   // Process attachments
   const textParts: string[] = [];
-  const attachments = input.attachments as Array<string | { path: string; startLine?: number; endLine?: number }> | undefined;
+  const attachments = input["attachments"] as Array<string | { path: string; startLine?: number; endLine?: number }> | undefined;
 
   if (attachments?.length) {
     for (let i = 0; i < attachments.length; i++) {
@@ -57,7 +57,7 @@ export async function buildCallLlmRequest(
   textParts.push(prompt);
 
   // Resolve model against registry, with optional backend-specific validation
-  let model = input.model as string | undefined;
+  let model = input["model"] as string | undefined;
   if (model) {
     const modelDef = MODEL_REGISTRY.find(m => m.id === model)
       || MODEL_REGISTRY.find(m => m.shortName.toLowerCase() === model!.toLowerCase())
@@ -75,9 +75,9 @@ export async function buildCallLlmRequest(
   }
 
   // Build system prompt with structured output injection if needed
-  let systemPrompt = (input.systemPrompt as string) || '';
-  const outputFormat = input.outputFormat as string | undefined;
-  const outputSchema = input.outputSchema as Record<string, unknown> | undefined;
+  let systemPrompt = (input["systemPrompt"] as string) || '';
+  const outputFormat = input["outputFormat"] as string | undefined;
+  const outputSchema = input["outputSchema"] as Record<string, unknown> | undefined;
 
   let schema: Record<string, unknown> | null = null;
   if (outputSchema) {
@@ -91,13 +91,14 @@ export async function buildCallLlmRequest(
     systemPrompt += `${systemPrompt ? '\n\n' : ''}You MUST respond with valid JSON matching this schema:\n${schemaJson}\n\nRespond with ONLY the JSON object, no other text or markdown formatting.`;
   }
 
+  const optionalSystemPrompt = systemPrompt || undefined;
   return {
     prompt: textParts.join('\n\n'),
-    systemPrompt: systemPrompt || undefined,
-    model,
-    maxTokens: input.maxTokens as number | undefined,
-    temperature: input.temperature as number | undefined,
-    outputSchema: schema ?? undefined,
+    ...(optionalSystemPrompt !== undefined ? { systemPrompt: optionalSystemPrompt } : {}),
+    ...(model !== undefined ? { model } : {}),
+    ...(typeof input["maxTokens"] === "number" ? { maxTokens: input["maxTokens"] } : {}),
+    ...(typeof input["temperature"] === "number" ? { temperature: input["temperature"] } : {}),
+    ...(schema != null ? { outputSchema: schema } : {}),
   };
 }
 

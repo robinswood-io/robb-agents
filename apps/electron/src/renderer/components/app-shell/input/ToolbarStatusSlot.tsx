@@ -13,7 +13,7 @@
  */
 
 import * as React from 'react'
-import { motion, AnimatePresence } from 'motion/react'
+import { motion, AnimatePresence, type MotionStyle } from 'motion/react'
 import { Globe } from 'lucide-react'
 import { useAtomValue } from 'jotai'
 import { useTranslation, Trans } from 'react-i18next'
@@ -25,11 +25,17 @@ import { browserInstancesAtom, filterInstancesForWorkspace } from '@/atoms/brows
 import { useAppShellContext } from '@/context/AppShellContext'
 import type { BrowserInstanceInfo } from '../../../../shared/types'
 
+const escapeOverlayStyle: MotionStyle & { '--shadow-color': string } = {
+  '--shadow-color': 'var(--info-rgb)',
+  backgroundColor: 'color-mix(in srgb, var(--info) 10%, var(--background))',
+  color: 'color-mix(in oklab, var(--info) 30%, var(--foreground))',
+}
+
 interface ToolbarStatusSlotProps {
   /** Whether the escape interrupt overlay should be visible (highest priority) */
   showEscapeOverlay: boolean
   /** Session ID to find the bound browser instance */
-  sessionId?: string
+  sessionId?: string | undefined
 }
 
 export function ToolbarStatusSlot({
@@ -85,11 +91,7 @@ export function ToolbarStatusSlot({
             "flex items-center justify-center",
             "pointer-events-auto",
           )}
-          style={{
-            '--shadow-color': 'var(--info-rgb)',
-            backgroundColor: 'color-mix(in srgb, var(--info) 10%, var(--background))',
-            color: 'color-mix(in oklab, var(--info) 30%, var(--foreground))',
-          } as React.CSSProperties}
+          style={escapeOverlayStyle}
         >
           <span className="text-sm font-medium flex items-center gap-1.5">
             <Trans
@@ -158,9 +160,7 @@ function BrowserStatusBar({
         "transition-[background-color] duration-200",
         textColorClass,
       )}
-      style={{
-        ...backgroundStyle,
-      } as React.CSSProperties}
+      style={backgroundStyle}
       onClick={onClick}
     >
       {/* Accent gradient loading line at top of banner */}

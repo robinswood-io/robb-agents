@@ -48,7 +48,7 @@ function foldApprovals(spec: TaskSpec, log: RunLogEntry[]): MissionApproval[] {
       if (!approval) continue;
       approval.status = entry.decision;
       approval.actor = entry.actor;
-      approval.comment = entry.comment;
+      if (entry.comment === undefined) { delete approval.comment } else { approval.comment = entry.comment }
       approval.resolvedAt = entry.t;
     }
   }
@@ -240,6 +240,7 @@ export function buildMissionControlSnapshot(
   const maxCost = spec.mission?.budget?.max_cost ?? telemetry.maxCost;
   const currency = spec.mission?.budget?.currency ?? telemetry.currency ?? (maxCost != null ? 'USD' : undefined);
   const warningPercent = telemetry.warningPercent ?? 80;
+  const latestEventAt = log.at(-1)?.t;
 
   return {
     schemaVersion: 1,
@@ -257,20 +258,20 @@ export function buildMissionControlSnapshot(
       percent: total === 0 ? 0 : Math.round((completed / total) * 100),
     },
     budget: {
-      maxTokens,
-      maxCost,
-      currency,
-      tokensUsed: telemetry.tokensUsed,
-      costUsed: telemetry.costUsed,
+      ...(maxTokens !== undefined ? { maxTokens } : {}),
+      ...(maxCost !== undefined ? { maxCost } : {}),
+      ...(currency !== undefined ? { currency } : {}),
+      ...(telemetry.tokensUsed !== undefined ? { tokensUsed: telemetry.tokensUsed } : {}),
+      ...(telemetry.costUsed !== undefined ? { costUsed: telemetry.costUsed } : {}),
     },
     evaluation: buildMissionEvaluation(states, log),
     cost: buildMissionCostReport(currency, telemetry.costUsed, maxCost, warningPercent),
-    deadline: spec.mission?.deadline,
+    ...(spec.mission?.deadline !== undefined ? { deadline: spec.mission?.deadline } : {}),
     approvals,
     blockers,
     nextActions,
     eventCount: log.length,
-    latestEventAt: log.at(-1)?.t,
+    ...(latestEventAt !== undefined ? { latestEventAt } : {}),
   };
 }
 

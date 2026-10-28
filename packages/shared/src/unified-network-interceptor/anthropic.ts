@@ -1,3 +1,4 @@
+import { parseJsonObject, isUnknownArray } from '../utils/json.ts';
 /**
  * Unified fetch interceptor for all AI API requests (Anthropic + OpenAI format).
  *
@@ -55,16 +56,16 @@ export function createAnthropicSseStrippingStream(): TransformStream<Uint8Array,
     eventCount++;
     let data: Record<string, unknown>;
     try {
-      data = JSON.parse(dataStr);
+      data = parseJsonObject(dataStr);
     } catch {
       emitSseEvent(eventType, dataStr, controller);
       return;
     }
 
     if (eventType === 'content_block_start') {
-      const contentBlock = data.content_block as { type?: string; id?: string; name?: string } | undefined;
+      const contentBlock = data["content_block"] as { type?: string; id?: string; name?: string } | undefined;
       if (contentBlock?.type === 'tool_use' && contentBlock.id && contentBlock.name != null) {
-        const index = data.index as number;
+        const index = data["index"] as number;
         trackedBlocks.set(index, {
           id: contentBlock.id,
           name: contentBlock.name,
@@ -77,8 +78,8 @@ export function createAnthropicSseStrippingStream(): TransformStream<Uint8Array,
     }
 
     if (eventType === 'content_block_delta') {
-      const index = data.index as number;
-      const delta = data.delta as { type?: string; partial_json?: string } | undefined;
+      const index = data["index"] as number;
+      const delta = data["delta"] as { type?: string; partial_json?: string } | undefined;
 
       if (delta?.type === 'input_json_delta' && trackedBlocks.has(index)) {
         const block = trackedBlocks.get(index)!;
@@ -90,7 +91,7 @@ export function createAnthropicSseStrippingStream(): TransformStream<Uint8Array,
     }
 
     if (eventType === 'content_block_stop') {
-      const index = data.index as number;
+      const index = data["index"] as number;
       const block = trackedBlocks.get(index);
 
       if (block) {
@@ -116,11 +117,11 @@ export function createAnthropicSseStrippingStream(): TransformStream<Uint8Array,
     }
 
     try {
-      const parsed = JSON.parse(block.bufferedJson);
+      const parsed = parseJsonObject(block.bufferedJson);
 
       captureMetadataFromInput(block.id, block.name, parsed);
-      delete parsed._intent;
-      delete parsed._displayName;
+      delete parsed["_intent"];
+      delete parsed["_displayName"];
 
       const cleanJson = JSON.stringify(parsed);
 
@@ -238,7 +239,7 @@ export const anthropicAdapter: ApiAdapter = {
   },
 
   addMetadataToTools(body: Record<string, unknown>): Record<string, unknown> {
-    const tools = body.tools as Array<{
+    const tools = body["tools"] as Array<{
       name?: string;
       input_schema?: {
         properties?: Record<string, unknown>;
@@ -246,7 +247,7 @@ export const anthropicAdapter: ApiAdapter = {
       };
     }> | undefined;
 
-    if (!tools || !Array.isArray(tools)) {
+    if (!tools || !isUnknownArray(tools)) {
       return body;
     }
 
@@ -270,8 +271,8 @@ export const anthropicAdapter: ApiAdapter = {
       tool.input_schema.required = updatedSchema.required;
       // External MCP servers may set additionalProperties: false which would
       // cause the API to reject _intent/_displayName in tool inputs.
-      if ((tool.input_schema as Record<string, unknown>).additionalProperties === false) {
-        delete (tool.input_schema as Record<string, unknown>).additionalProperties;
+      if ((tool.input_schema as Record<string, unknown>)["additionalProperties"] === false) {
+        delete (tool.input_schema as Record<string, unknown>)["additionalProperties"];
       }
       modifiedCount++;
     }
@@ -284,7 +285,7 @@ export const anthropicAdapter: ApiAdapter = {
   },
 
   injectMetadataIntoHistory(body: Record<string, unknown>): Record<string, unknown> {
-    const messages = body.messages as Array<{
+    const messages = body["messages"] as Array<{
       role?: string;
       content?: Array<{
         type?: string;
@@ -298,7 +299,7 @@ export const anthropicAdapter: ApiAdapter = {
     let injectedCount = 0;
 
     for (const message of messages) {
-      if (message.role !== 'assistant' || !Array.isArray(message.content)) continue;
+      if (message.role !== 'assistant' || !isUnknownArray(message.content)) continue;
 
       for (const block of message.content) {
         if (block.type !== 'tool_use' || !block.id || !block.input) continue;
@@ -310,8 +311,8 @@ export const anthropicAdapter: ApiAdapter = {
         const stored = toolMetadataStore.get(block.id);
         if (stored) {
           const newInput: Record<string, unknown> = {};
-          if (!hasDisplayName && stored.displayName) newInput._displayName = stored.displayName;
-          if (!hasIntent && stored.intent) newInput._intent = stored.intent;
+          if (!hasDisplayName && stored.displayName) newInput["_displayName"] = stored.displayName;
+          if (!hasIntent && stored.intent) newInput["_intent"] = stored.intent;
           if (Object.keys(newInput).length > 0) {
             Object.assign(newInput, block.input);
             block.input = newInput;
@@ -349,10 +350,10 @@ export const anthropicAdapter: ApiAdapter = {
       };
     }
 
-    const fastMode = shouldEnableFastMode(body.model);
+    const fastMode = shouldEnableFastMode(body["model"]);
     if (fastMode) {
-      body.speed = 'fast';
-      debugLog(`[Fast Mode] Enabled for model=${body.model}`);
+      body["speed"] = 'fast';
+      debugLog(`[Fast Mode] Enabled for model=${body["model"]}`);
       return {
         init: {
           ...init,

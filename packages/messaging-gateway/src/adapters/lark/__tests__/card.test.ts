@@ -24,7 +24,7 @@ describe('buildLarkCard', () => {
     const card = buildLarkCard('hi', [{ id: 'a', label: 'A' }], { messageId })
     expect(card.body).toBeTruthy()
     expect(Array.isArray(card.body.elements)).toBe(true)
-    expect((card as unknown as { elements?: unknown }).elements).toBeUndefined()
+    expect((card as { elements?: unknown }).elements).toBeUndefined()
   })
 
   it('produces schema 2.0 with text body + button elements (no `action` wrapper)', () => {
@@ -100,7 +100,7 @@ describe('buildClearedCard', () => {
     const card = buildClearedCard('Done.')
     expect(card.body.elements.length).toBe(1)
     expect(card.body.elements[0]!.tag).toBe('div')
-    expect((card as unknown as { elements?: unknown }).elements).toBeUndefined()
+    expect((card as { elements?: unknown }).elements).toBeUndefined()
   })
 })
 

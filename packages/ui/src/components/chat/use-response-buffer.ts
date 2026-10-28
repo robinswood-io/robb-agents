@@ -26,7 +26,7 @@ useEffect(() => {
     if (!isStreaming) {
       // Streaming ended - show final content immediately
       setDisplayedText(text)
-      return
+      return undefined;
     }
 
     const now = Date.now()
@@ -44,6 +44,8 @@ useEffect(() => {
       }, BUFFER_CONFIG.CONTENT_THROTTLE_MS - elapsed)
       return () => clearTimeout(timeout)
     }
+  
+    return undefined;
   }, [text, isStreaming])
 
 const bufferDecision = useMemo(() => {

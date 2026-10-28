@@ -23,18 +23,18 @@ export async function createWorkspaceConnectorExecutionRuntime(
     policy: { ...input.policy, authorizationGeneration: generation },
     signingKey: capabilityKey,
     nowMs,
-    generateId: input.generateId,
+    ...(input.generateId !== undefined ? { generateId: input.generateId } : {}),
   })
   const secretLeaseBroker = new SecretLeaseBroker({
     signingKey: leaseKey,
     currentAuthorizationGeneration: () => input.registry.snapshot().generation,
     nowMs,
-    generateId: input.generateId,
+    ...(input.generateId !== undefined ? { generateId: input.generateId } : {}),
   })
   const proofIssuer = new ExecutionProofIssuer({
     signingKey: proofKey,
     now: () => new Date(nowMs()).toISOString(),
-    generateId: input.generateId,
+    ...(input.generateId !== undefined ? { generateId: input.generateId } : {}),
   })
   return new ConnectorExecutionRuntime({
     workspaceId: input.workspaceId,
@@ -54,11 +54,11 @@ export async function createWorkspaceConnectorExecutionRuntime(
     egressFirewall: new StructuredEgressFirewall({
       signingKey: egressKey,
       now: () => new Date(nowMs()).toISOString(),
-      generateId: input.generateId,
+      ...(input.generateId !== undefined ? { generateId: input.generateId } : {}),
     }),
-    recordPrivacyReceipt: input.recordPrivacyReceipt,
-    storeEgressVaultEntries: input.storeEgressVaultEntries,
+    ...(input.recordPrivacyReceipt !== undefined ? { recordPrivacyReceipt: input.recordPrivacyReceipt } : {}),
+    ...(input.storeEgressVaultEntries !== undefined ? { storeEgressVaultEntries: input.storeEgressVaultEntries } : {}),
     nowMs,
-    generateId: input.generateId,
+    ...(input.generateId !== undefined ? { generateId: input.generateId } : {}),
   })
 }

@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { randomUUID } from 'node:crypto';
 import { sessionPersistenceQueue } from '@craft-agent/shared/sessions';
@@ -202,7 +204,7 @@ function sessionOpApplyExternalSessionMetadata(sessionOperationContext: SessionO
     // Name
     if (managed.name !== header.name) {
         managed.name = header.name;
-        sessionOperationContext.owner["sendEvent"]({ type: 'name_changed', sessionId, name: header.name }, managed.workspace.id);
+        sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'name_changed' }>>({ type: 'name_changed', sessionId, name: header.name }), managed.workspace.id);
         changed = true;
     }
     // Project binding (no dedicated event today — handled via metaChanged broadcast)

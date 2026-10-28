@@ -4,8 +4,8 @@ import type { SpecializedProfileRegistryStore } from '../registry-store.ts';
 import { STORE_DIRECTORY_MODE, STORE_FILE_MODE, SpecializedProfileRegistryBusyError, isNodeError, isRecord, processIsAlive } from './shared.ts';
 
 export async function withLock<T>(transportOwner: SpecializedProfileRegistryStore, operation: () => Promise<T>): Promise<T> {
-    transportOwner["ensureStoreDirectory"]();
-    const handle = transportOwner["acquireLock"]();
+    transportOwner.ensureStoreDirectory();
+    const handle = transportOwner.acquireLock();
     try {
         return await operation();
     }
@@ -45,14 +45,14 @@ export function acquireLock(transportOwner: SpecializedProfileRegistryStore): Co
         let ownerPid: number | undefined;
         try {
             const metadata: unknown = JSON.parse(readFileSync(existing.descriptor, 'utf8'));
-            if (isRecord(metadata) && Number.isSafeInteger(metadata.pid) && Number(metadata.pid) > 0) {
-                ownerPid = Number(metadata.pid);
+            if (isRecord(metadata) && Number.isSafeInteger(metadata["pid"]) && Number(metadata["pid"]) > 0) {
+                ownerPid = Number(metadata["pid"]);
             }
         }
         catch { /* age remains the fallback for malformed abandoned locks */ }
         existing.assertStillBound();
         if ((ownerPid !== undefined && processIsAlive(ownerPid))
-            || transportOwner["now"]().getTime() - lockStat.mtimeMs <= transportOwner["lockTimeoutMs"]) {
+            || transportOwner["now"]().getTime() - lockStat.mtimeMs <= transportOwner.lockTimeoutMs) {
             existing.close();
             throw new SpecializedProfileRegistryBusyError(transportOwner["lockPath"]);
         }

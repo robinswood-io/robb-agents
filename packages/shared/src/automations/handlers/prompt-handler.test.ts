@@ -21,7 +21,7 @@ afterEach(() => {
 
 describe('matcher matching for app events', () => {
 it('should process prompt actions for matching LabelAdd event', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           matcher: 'bug',
@@ -48,7 +48,7 @@ it('should process prompt actions for matching LabelAdd event', async () => {
     });
 
 it('should process prompt actions for PermissionModeChange', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         PermissionModeChange: [{
           matcher: 'safe',
@@ -72,7 +72,7 @@ it('should process prompt actions for PermissionModeChange', async () => {
     });
 
 it('should not call onPromptsReady for non-matching events', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           matcher: 'bug',
@@ -95,7 +95,7 @@ it('should not call onPromptsReady for non-matching events', async () => {
     });
 
 it('should propagate thinkingLevel from PromptAction to PendingPrompt', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           matcher: 'review',
@@ -130,7 +130,7 @@ it('should propagate thinkingLevel from PromptAction to PendingPrompt', async ()
     });
 
 it('should leave thinkingLevel undefined when omitted (workspace default applies downstream)', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           matcher: 'bug',
@@ -156,7 +156,7 @@ it('should leave thinkingLevel undefined when omitted (workspace default applies
 
 describe('agent events are ignored', () => {
 it('should not process prompts for PreToolUse (agent event)', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         PreToolUse: [{
           actions: [{ type: 'prompt', prompt: 'Should not fire' }],
@@ -178,7 +178,7 @@ it('should not process prompts for PreToolUse (agent event)', async () => {
     });
 
 it('should not process prompts for SessionStart (agent event)', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         SessionStart: [{
           actions: [{ type: 'prompt', prompt: 'Should not fire' }],
@@ -200,7 +200,7 @@ it('should not process prompts for SessionStart (agent event)', async () => {
     });
 
 it('should not process prompts for PostToolUse (agent event)', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         PostToolUse: [{
           actions: [{ type: 'prompt', prompt: 'Should not fire' }],
@@ -224,7 +224,7 @@ it('should not process prompts for PostToolUse (agent event)', async () => {
 
 describe('environment variable expansion', () => {
 it('should expand $VAR syntax in prompt text', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           actions: [{ type: 'prompt', prompt: 'Label $CRAFT_LABEL was added' }],
@@ -248,7 +248,7 @@ it('should expand $VAR syntax in prompt text', async () => {
     });
 
 it('should expand ${VAR} syntax in prompt text', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           actions: [{ type: 'prompt', prompt: 'Label ${CRAFT_LABEL} was added to ${CRAFT_WORKSPACE_ID}' }],
@@ -275,7 +275,7 @@ it('should expand ${VAR} syntax in prompt text', async () => {
 
 describe('@mention parsing and deduplication', () => {
 it('should parse @mentions from prompt text', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           actions: [{ type: 'prompt', prompt: 'Please @linear check for issues and @github create a PR' }],
@@ -300,7 +300,7 @@ it('should parse @mentions from prompt text', async () => {
     });
 
 it('should deduplicate @mentions', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           actions: [{ type: 'prompt', prompt: '@linear do X then @linear do Y' }],
@@ -327,7 +327,7 @@ it('should deduplicate @mentions', async () => {
 
 describe('onPromptsReady callback', () => {
 it('should deliver multiple prompts from a single event', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [
           {
@@ -358,11 +358,13 @@ it('should deliver multiple prompts from a single event', async () => {
     });
 
 it('should not call onPromptsReady if no prompt actions match', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
+      const actions: import('../types.ts').AutomationAction[] = [];
+      // Inject an unsupported persisted action to exercise the runtime boundary.
+      Reflect.apply(actions.push, actions, [{ type: 'command', command: 'echo hello' }]);
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
-          // Deliberately retain an unsupported legacy action at this input boundary.
-          actions: [{ type: 'command', command: 'echo hello' } as unknown as import('../types.ts').AutomationAction],
+          actions,
         }],
       });
 
@@ -381,7 +383,7 @@ it('should not call onPromptsReady if no prompt actions match', async () => {
     });
 
 it('should pass labels from matcher to pending prompts', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           labels: ['auto-created', 'from-automation'],
@@ -408,7 +410,7 @@ it('should pass labels from matcher to pending prompts', async () => {
 
 describe('llmConnection passthrough', () => {
 it('should pass llmConnection from prompt action to pending prompt', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           actions: [{

@@ -1,3 +1,4 @@
+import { isUnknownArray } from '@craft-agent/shared/utils/json';
 import { createHash } from 'node:crypto';
 import type { Message, ObjectiveAcceptanceCriterion } from '@craft-agent/core/types';
 import type { ActiveSessionObjective } from '@craft-agent/shared/sessions';
@@ -5,10 +6,10 @@ import { isObjectiveToolExecutedSuccessfully } from './objective-contract.ts';
 
 const GSC = 'mcp__marketing__gsc_list_sites';
 const REGISTRATION = /^(?:mcp__session__|session__)?set_completion_criteria$/;
-const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
+const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !isUnknownArray(value);
 const exactKeys = (value: Record<string, unknown>, keys: string[]) =>
   Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
-const canonical = (value: unknown): string => JSON.stringify(value, (_key, item) => record(item)
+const canonical = (value: unknown): string => JSON.stringify(value, (_key: string, item: unknown): unknown => record(item)
   ? Object.fromEntries(Object.keys(item).sort().map(key => [key, item[key]])) : item);
 const hash = (value: unknown): string => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
@@ -32,12 +33,13 @@ export interface LegacyGscSiteIdentity {
 function hostAck(text: string | undefined): Record<string, unknown> | undefined {
   if (!text || text.length > 256_000) return undefined;
   try {
-    let value = JSON.parse(text);
+    let value: unknown = JSON.parse(text);
     if (JSON.stringify(value) !== text.trim()) return undefined;
-    if (record(value) && Array.isArray(value.content)) {
-      if (value.isError || value.content.length !== 1 || value.content[0]?.type !== 'text'
-        || typeof value.content[0]?.text !== 'string') return undefined;
-      const inner = value.content[0].text;
+    if (record(value) && isUnknownArray(value["content"])) {
+      const block = value["content"][0];
+      if (value["isError"] || value["content"].length !== 1 || !record(block) || block["type"] !== 'text'
+        || typeof block["text"] !== 'string') return undefined;
+      const inner = block["text"];
       value = JSON.parse(inner);
       if (JSON.stringify(value) !== inner.trim()) return undefined;
     }
@@ -46,9 +48,9 @@ function hostAck(text: string | undefined): Record<string, unknown> | undefined 
 }
 
 function rawShape(value: unknown): value is ObjectiveAcceptanceCriterion[] {
-  return Array.isArray(value) && value.length > 0 && value.length <= 16 && value.every(item => record(item)
-    && exactKeys(item, ['id', 'description', 'toolName', 'input', 'checks']) && record(item.input)
-    && Array.isArray(item.checks) && item.checks.every(check => record(check) && exactKeys(check, ['path', 'equals'])));
+  return isUnknownArray(value) && value.length > 0 && value.length <= 16 && value.every(item => record(item)
+    && exactKeys(item, ['id', 'description', 'toolName', 'input', 'checks']) && record(item["input"])
+    && isUnknownArray(item["checks"]) && item["checks"].every(check => record(check) && exactKeys(check, ['path', 'equals'])));
 }
 
 /** Used only to attest the original registration ledger, never to coerce results. */
@@ -60,7 +62,7 @@ function historicalScalars(criteria: ObjectiveAcceptanceCriterion[]): ObjectiveA
 }
 
 function gscInput(input: unknown): input is ObjectiveAcceptanceCriterion['input'] {
-  return record(input) && typeof input.force_refresh === 'boolean'
+  return record(input) && typeof input["force_refresh"] === 'boolean'
     && Object.keys(input).every(key => key === 'force_refresh'
       || (['_intent', '_displayName'].includes(key) && typeof input[key] === 'string'));
 }
@@ -78,25 +80,26 @@ function propertyPair(criterion: ObjectiveAcceptanceCriterion): { index: number;
 
 /** Exact connector result shape; all rows must be well-formed. */
 function sitesResult(value: unknown): Array<{ siteUrl: string; permissionLevel: string }> | undefined {
-  if (!record(value) || !exactKeys(value, ['rowCount', 'sites']) || !Array.isArray(value.sites)
-    || value.sites.length > 1000 || value.rowCount !== value.sites.length
-    || !value.sites.every(site => record(site) && exactKeys(site, ['siteUrl', 'permissionLevel'])
-      && typeof site.siteUrl === 'string' && site.siteUrl.length > 0 && site.siteUrl.length <= 2048
-      && typeof site.permissionLevel === 'string' && site.permissionLevel.length > 0 && site.permissionLevel.length <= 128)) return undefined;
-  return value.sites;
+  if (!record(value) || !exactKeys(value, ['rowCount', 'sites']) || !isUnknownArray(value["sites"])
+    || value["sites"].length > 1000 || value["rowCount"] !== value["sites"].length
+    || !value["sites"].every((site): site is { siteUrl: string; permissionLevel: string } => record(site) && exactKeys(site, ['siteUrl', 'permissionLevel'])
+      && typeof site["siteUrl"] === 'string' && site["siteUrl"].length > 0 && site["siteUrl"].length <= 2048
+      && typeof site["permissionLevel"] === 'string' && site["permissionLevel"].length > 0 && site["permissionLevel"].length <= 128)) return undefined;
+  return value["sites"];
 }
 
 function originalResult(text: string | undefined): unknown {
   if (!text || text.length > 256_000) return undefined;
   try {
-    let value = JSON.parse(text);
+    let value: unknown = JSON.parse(text);
     // Ignore formatting only; duplicate keys and non-canonical scalar spellings
     // cannot establish an unambiguous historical or current result.
     const compact = (json: string) => json.replace(/"(?:\\.|[^"\\])*"|\s+/g, token => token.startsWith('"') ? token : '');
     if (JSON.stringify(value) !== compact(text)) return undefined;
-    if (record(value) && Array.isArray(value.content)) {
-      if (value.isError || value.content.length !== 1 || value.content[0]?.type !== 'text') return undefined;
-      const inner = value.content[0].text;
+    if (record(value) && isUnknownArray(value["content"])) {
+      const block = value["content"][0];
+      if (value["isError"] || value["content"].length !== 1 || !record(block) || block["type"] !== 'text') return undefined;
+      const inner = block["text"];
       if (typeof inner !== 'string' || inner.length > 256_000) return undefined;
       value = JSON.parse(inner);
       if (JSON.stringify(value) !== compact(inner)) return undefined;
@@ -148,10 +151,10 @@ export function recoverLegacyGscSiteIdentity(
       || (message as Message & { continuationRequired?: boolean }).continuationRequired) return undefined;
     const ack = hostAck(message.toolResult);
     const input = message.toolInput;
-    if (!ack || ack.objectiveId !== objective.objectiveId || !record(input)
+    if (!ack || ack["objectiveId"] !== objective.objectiveId || !record(input)
       || Object.keys(input).some(key => !['criteria', '_intent', '_displayName'].includes(key))
-      || !rawShape(input.criteria) || !validateOriginal(input.criteria)) return undefined;
-    const converted = historicalScalars(input.criteria);
+      || !rawShape(input["criteria"]) || !validateOriginal(input["criteria"])) return undefined;
+    const converted = historicalScalars(input["criteria"]);
     for (let j = 0; j < converted.length; j++) {
       const item = converted[j]!;
       const previous = ledger.get(item.id);
@@ -160,13 +163,13 @@ export function recoverLegacyGscSiteIdentity(
         ledger.set(item.id, item);
         if (item.toolName === GSC) {
           if (original) return undefined;
-          original = input.criteria[j]!;
+          original = input["criteria"][j]!;
           introductionIndex = i;
           introductionTimestamp = message.timestamp;
         }
       }
     }
-    if (ledger.size > 16 || canonical([...ledger.values()]) !== canonical(ack.criteria)) return undefined;
+    if (ledger.size > 16 || canonical([...ledger.values()]) !== canonical(ack["criteria"])) return undefined;
     registrations.push(message);
     lastTimestamp = message.timestamp;
   }
@@ -176,10 +179,10 @@ export function recoverLegacyGscSiteIdentity(
   // Only this field's originally boolean value is recovered. The saved string
   // alone never authorizes a type conversion or identity reinterpretation.
   const persisted = saved.find(item => item.id === original!.id);
-  if (persisted?.input.force_refresh !== String(original.input.force_refresh)) return undefined;
+  if (persisted?.input["force_refresh"] !== String(original.input["force_refresh"])) return undefined;
   const before = scoped.slice(0, introductionIndex).filter(message => message.role === 'tool'
     && message.toolName === GSC && gscInput(message.toolInput)
-    && message.toolInput.force_refresh === original!.input.force_refresh);
+    && message.toolInput["force_refresh"] === original!.input["force_refresh"]);
   if (before.length !== 1) return undefined;
   const witness = before[0]!;
   if (!hasUniqueReceipt(witness) || !isObjectiveToolExecutedSuccessfully(witness) || witness.toolExecuted !== true

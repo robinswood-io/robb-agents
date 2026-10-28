@@ -1,7 +1,8 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import { createHash } from "node:crypto";
 
 function canonicalExternalActionInput(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalExternalActionInput);
+  if (isUnknownArray(value)) return value.map(canonicalExternalActionInput);
   if (!value || typeof value !== 'object') return value;
   return Object.fromEntries(Object.entries(value as Record<string, unknown>)
     .filter(([key, entry]) => entry !== undefined && key !== '_intent' && key !== '_displayName')

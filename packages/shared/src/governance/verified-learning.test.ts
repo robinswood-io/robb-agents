@@ -169,9 +169,9 @@ describe('verified organizational learning', () => {
       valid: true, projection: { state: 'rolled-back' },
     });
     const tampered = structuredClone(proposed);
-    (tampered.payload as Record<string, unknown>).extra = true;
+    (tampered.payload as Record<string, unknown>)["extra"] = true;
     expect(verifyVerifiedLearningHistory([tampered], authority)).toMatchObject({
-      valid: false, reason: expect.stringContaining('shape'),
+      valid: false, reason: (expect.stringContaining('shape') as unknown),
     });
     expect(() => createVerifiedLearningProposal({
       proposalId: 'bad', workspaceId: 'workspace-1',
@@ -214,7 +214,7 @@ describe('verified organizational learning', () => {
     expect(verifyVerifiedLearningHistory([proposed], {
       resolveKey,
       resolveIdentity: () => null,
-    })).toMatchObject({ valid: false, reason: expect.stringContaining('unavailable') });
+    })).toMatchObject({ valid: false, reason: (expect.stringContaining('unavailable') as unknown) });
 
     const expiredAuthority: VerifiedLearningAuthority = {
       resolveKey,
@@ -234,12 +234,18 @@ describe('verified organizational learning', () => {
 
     const servicePretendingToReview: VerifiedLearningAuthority = {
       resolveKey,
-      resolveIdentity: (actorId, keyId) => actorId === reviewer.actorId && keyId === reviewer.keyId
-        ? ({
-          verificationStatus: 'host-resolved', kind: 'service', actorId, workspaceId: 'workspace-1',
-          role: 'reviewer', active: true, keyIds: [keyId],
-        } as unknown as HostVerifiedLearningIdentity)
-        : authority.resolveIdentity(actorId, keyId),
+      resolveIdentity: (actorId, keyId) => {
+        if (actorId === reviewer.actorId && keyId === reviewer.keyId) {
+          const service = {
+            verificationStatus: 'host-resolved', kind: 'service', actorId, workspaceId: 'workspace-1',
+            role: 'evaluator', active: true, keyIds: [keyId],
+          } satisfies HostVerifiedLearningIdentity;
+          // Deliberately inject a human-only role through this hostile resolver.
+          Reflect.set(service, 'role', 'reviewer');
+          return service;
+        }
+        return authority.resolveIdentity(actorId, keyId);
+      },
     };
     expect(() => approveVerifiedLearningProposal({
       history: [proposed, evaluated], authority: servicePretendingToReview,

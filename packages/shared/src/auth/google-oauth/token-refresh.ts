@@ -32,7 +32,7 @@ export async function refreshGoogleToken(
     client_id: id,
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
-    client_secret: secret,
+    ...(secret !== undefined ? { client_secret: secret } : {}),
   });
 
   const response = await fetch(GOOGLE_TOKEN_URL, {
@@ -52,7 +52,7 @@ export async function refreshGoogleToken(
 
   return {
     accessToken: data.access_token,
-    expiresAt: data.expires_in ? Date.now() + data.expires_in * 1000 : undefined,
+    ...(data.expires_in ? { expiresAt: Date.now() + data.expires_in * 1000 } : {}),
   };
 }
 

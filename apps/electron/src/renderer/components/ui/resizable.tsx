@@ -26,7 +26,7 @@ function ResizableHandle({
   className,
   ...props
 }: React.ComponentProps<typeof ResizablePrimitive.Separator> & {
-  withHandle?: boolean
+  withHandle?: boolean | undefined
 }) {
   return (
     <ResizablePrimitive.Separator

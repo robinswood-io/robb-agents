@@ -45,7 +45,7 @@ function harness(name: string) {
       return { content: '{"ok":true}', isError: false };
     },
   });
-  internals["beginContextualGmailHostExecution"] = () => ({ applies: false, allowed: true });
+  internals.beginContextualGmailHostExecution = () => ({ applies: false, allowed: true });
   const admit = (toolUseId: string, args: Record<string, unknown>) => internals["admitToolExecution"]({
     toolUseId,
     toolName: 'mcp__fixture__read_exact',
@@ -54,7 +54,7 @@ function harness(name: string) {
     runtimeId: runtime.runtimeId,
     authorizationEpoch: internals["promptPreparationRevision"],
   });
-  const execute = (toolUseId: string, args: Record<string, unknown>) => internals["handleToolExecuteRequest"]({
+  const execute = (toolUseId: string, args: Record<string, unknown>) => internals.handleToolExecuteRequest({
     requestId: `request-${toolUseId}`,
     toolName: 'mcp__fixture__read_exact',
     toolCallId: toolUseId,
@@ -75,7 +75,7 @@ describe('Pi exact PreToolUse execution admission', () => {
       await release.promise;
     };
 
-    h.internals["sendPreToolUseDecision"]({
+    h.internals.sendPreToolUseDecision({
       requestId: 'pretool-durable',
       toolName: 'mcp__fixture__read_exact',
       toolCallId: 'tool-durable',
@@ -108,7 +108,7 @@ describe('Pi exact PreToolUse execution admission', () => {
     h.internals["config"].beforeToolExecution = async () => {
       throw new Error('Synthetic disk failure');
     };
-    h.internals["sendPreToolUseDecision"]({
+    h.internals.sendPreToolUseDecision({
       requestId: 'pretool-failed-durable',
       toolName: 'mcp__fixture__read_exact',
       toolCallId: 'tool-failed-durable',
@@ -122,8 +122,8 @@ describe('Pi exact PreToolUse execution admission', () => {
     expect(h.sent.at(-1)).toMatchObject({
       type: 'pre_tool_use_response', requestId: 'pretool-failed-durable', action: 'block',
     });
-    expect(String(h.sent.at(-1)?.reason)).toContain('durably record');
-    expect(String(h.sent.at(-1)?.reason)).not.toContain('Synthetic disk failure');
+    expect(String(h.sent.at(-1)?.["reason"])).toContain('durably record');
+    expect(String(h.sent.at(-1)?.["reason"])).not.toContain('Synthetic disk failure');
     await h.execute('tool-failed-durable', { query: 'blocked' });
     expect(h.poolCalls()).toBe(0);
     h.agent.destroy();
@@ -136,7 +136,7 @@ describe('Pi exact PreToolUse execution admission', () => {
         'Automatic recovery exactly-once fence: reuse the persisted receipt; do not retry or request permission.',
       );
     };
-    h.internals["sendPreToolUseDecision"]({
+    h.internals.sendPreToolUseDecision({
       requestId: 'pretool-safe-recovery',
       toolName: 'mcp__fixture__read_exact',
       toolCallId: 'tool-safe-recovery',
@@ -164,7 +164,7 @@ describe('Pi exact PreToolUse execution admission', () => {
 
     await h.execute('tool-exact', { query: 'A' });
     expect(h.poolCalls()).toBe(1);
-    expect((h.sent.at(-1)?.result as { content: string }).content).toContain('exact current PreToolUse admission');
+    expect((h.sent.at(-1)?.["result"] as { content: string }).content).toContain('exact current PreToolUse admission');
 
     expect(h.admit('tool-altered', { query: 'A' })).toBe(true);
     await h.execute('tool-altered', { query: 'B' });
@@ -187,7 +187,7 @@ describe('Pi exact PreToolUse execution admission', () => {
     expect(killed).toBe(1);
     await h.execute('tool-a', { query: 'A' });
     expect(h.poolCalls()).toBe(0);
-    expect((h.sent.at(-1)?.result as { content: string }).content).toContain('exact current PreToolUse admission');
+    expect((h.sent.at(-1)?.["result"] as { content: string }).content).toContain('exact current PreToolUse admission');
     h.agent.destroy();
   });
 });

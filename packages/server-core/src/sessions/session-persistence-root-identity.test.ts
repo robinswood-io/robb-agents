@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { ScriptedSessionAgent } from "./testing/scripted-session-agent.ts";
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
@@ -118,16 +119,7 @@ describe('managed session physical persistence root', () => {
       _isAuthRetry: unknown,
       onAck?: (messageId: string) => void,
     ) => { onAck?.('captured-delivery') }) as typeof manager.sendMessage
-    const runtime = manager as unknown as {
-      sendAgentMessageToSession: (
-        source: typeof sender,
-        recipient: typeof target,
-        message: string,
-        attachments: Array<{ path: string }>,
-        messageType: 'progress',
-        validateAttachmentPath: (path: string) => Promise<string>,
-      ) => Promise<unknown>
-    }
+    const runtime = sessionManagerForTest(manager)
 
     await runtime.sendAgentMessageToSession(
       sender,
@@ -135,7 +127,7 @@ describe('managed session physical persistence root', () => {
       'deliver captured proof',
       [{ path: attachment }],
       'progress',
-      async path => path,
+      async path => { if (typeof path !== 'string') throw new Error('Invalid attachment path fixture'); return path },
     )
 
     const capturedAttachments = join(getSessionPath(fixture.rootA, target.id), 'attachments')
@@ -372,8 +364,8 @@ describe('managed session physical persistence root', () => {
     expect(listed.map(entry => entry.id)).toContain(proposal.id)
     await runtime.handleSessionProjectLearning(managed, { action: 'revoke', id: proposal.id })
 
-    expect(loadProjectMemoryJournal(fixture.rootA, capturedProject.slug, { strict: true }).entries)
-      .toContainEqual(expect.objectContaining({ id: proposal.id, status: 'forgotten' }))
+    expect<unknown>(loadProjectMemoryJournal(fixture.rootA, capturedProject.slug, { strict: true }).entries)
+      .toContainEqual((expect.objectContaining({ id: proposal.id, status: 'forgotten' }) as unknown))
   })
 
   it('retrieves project memory only from the captured root after alias retargeting', async () => {

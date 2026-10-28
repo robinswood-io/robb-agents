@@ -13,7 +13,6 @@ import { tmpdir } from 'node:os'
 import { Router } from '../router'
 import { BindingStore } from '../binding-store'
 import { PendingSendersStore } from '../pending-senders'
-import type { Commands } from '../commands'
 import type { IncomingMessage, MessagingConfig, PlatformAdapter } from '../types'
 
 let storeDir: string
@@ -47,9 +46,9 @@ function makeFakeAdapter() {
   const noop = async () => {
     throw new Error('unused')
   }
-  const adapter = {
-    platform: 'telegram',
-    capabilities: {
+  const adapter = ({sent,
+platform: 'telegram' as const,
+capabilities: {
       messageEditing: true,
       inlineButtons: true,
       maxButtons: 10,
@@ -57,22 +56,21 @@ function makeFakeAdapter() {
       markdown: 'v2',
       webhookSupport: false,
     },
-    initialize: noop,
-    destroy: noop,
-    isConnected: () => true,
-    onMessage: () => {},
-    onButtonPress: () => {},
-    sendText: mock(async (_channelId: string, text: string) => {
+initialize: noop,
+destroy: noop,
+isConnected: () => true,
+onMessage: () => {},
+onButtonPress: () => {},
+sendText: mock(async (_channelId: string, text: string) => {
       sent.push(text)
-      return { platform: 'telegram', channelId: 'chat-1', messageId: 'm' }
+      return { platform: 'telegram' as const, channelId: 'chat-1', messageId: 'm' }
     }),
-    editMessage: noop,
-    sendButtons: noop,
-    sendTyping: async () => {},
-    sendFile: noop,
-  } as unknown as PlatformAdapter & { sendText: ReturnType<typeof mock>; sent: string[] }
+editMessage: noop,
+sendButtons: noop,
+sendTyping: async () => {},
+sendFile: noop} satisfies PlatformAdapter & { sent: string[] })
   // Attach sent for assertions
-  ;(adapter as unknown as { sent: string[] }).sent = sent
+  ;(adapter as { sent: string[] }).sent = sent
   return adapter as PlatformAdapter & {
     sendText: ReturnType<typeof mock>
     sent: string[]
@@ -104,13 +102,9 @@ function makeHarness(args: {
   const sessionManager = { sendMessage: mock(async () => {}) }
   const commands = { handle: mock(async () => {}) }
   const router = new Router(
-    sessionManager as unknown as Parameters<Router['route']>[0] extends PlatformAdapter
-      ? never
-      : never extends never
-        ? never
-        : never,
+    sessionManager,
     store,
-    commands as unknown as Commands,
+    commands,
     undefined,
     {
       getWorkspaceConfig: () => args.workspaceConfig,

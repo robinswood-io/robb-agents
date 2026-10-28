@@ -23,13 +23,13 @@ export function redactUrl(url: string): string {
 export function createWebhookHistoryEntry(opts: {
   matcherId: string;
   ok: boolean;
-  method?: string;
+  method?: string | undefined;
   url: string;
   statusCode: number;
   durationMs: number;
-  attempts?: number;
-  error?: string;
-  responseBody?: string;
+  attempts?: number | undefined;
+  error?: string | undefined;
+  responseBody?: string | undefined;
 }): Record<string, unknown> {
   return {
     id: opts.matcherId,
@@ -53,9 +53,9 @@ export function createWebhookHistoryEntry(opts: {
 export function createPromptHistoryEntry(opts: {
   matcherId: string;
   ok: boolean;
-  sessionId?: string;
-  prompt?: string;
-  error?: string;
+  sessionId?: string | undefined;
+  prompt?: string | undefined;
+  error?: string | undefined;
 }): Record<string, unknown> {
   return {
     id: opts.matcherId,

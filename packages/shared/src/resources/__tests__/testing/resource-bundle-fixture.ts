@@ -89,7 +89,7 @@ export function makeAutomationEntry(overrides: Partial<AutomationBundleEntry> & 
   return {
     matcher: {
       id: overrides.id,
-      name: overrides.name,
+      ...(overrides.name !== undefined ? { name: overrides.name } : {}),
       actions: [{ type: 'prompt', prompt: 'test' }],
     },
     ...overrides,

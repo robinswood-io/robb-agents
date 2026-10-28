@@ -65,33 +65,33 @@ export interface MarkdownProps {
    * Render mode controlling formatting level
    * @default 'minimal'
    */
-  mode?: RenderMode
-  className?: string
+  mode?: RenderMode | undefined
+  className?: string | undefined
   /**
    * Message ID for memoization (optional)
    * When provided, memoizes parsed blocks to avoid re-parsing during streaming
    */
-  id?: string
+  id?: string | undefined
   /**
    * Callback when a URL is clicked
    */
-  onUrlClick?: (url: string) => void
+  onUrlClick?: ((url: string) => void) | undefined
   /**
    * Callback when a file path is clicked
    */
-  onFileClick?: (path: string) => void
+  onFileClick?: ((path: string) => void) | undefined
   /**
    * Enable collapsible headings
    * Requires wrapping in CollapsibleMarkdownProvider
    * @default false
    */
-  collapsible?: boolean
+  collapsible?: boolean | undefined
   /**
    * Hide expand button on first mermaid block (when message starts with mermaid)
    * Used in chat to avoid overlap with TurnCard's fullscreen button
    * @default true
    */
-  hideFirstMermaidExpand?: boolean
+  hideFirstMermaidExpand?: boolean | undefined
   /**
    * Disable specific preview-block handlers for nested rendering.
    *
@@ -102,7 +102,7 @@ export interface MarkdownProps {
    *
    * Default behavior (prop omitted): all preview blocks are registered.
    */
-  disablePreviewBlocks?: ReadonlySet<DisablablePreviewBlock>
+  disablePreviewBlocks?: ReadonlySet<DisablablePreviewBlock> | undefined
 }
 
 /**
@@ -119,7 +119,7 @@ export function Markdown({
   children,
   mode = 'minimal',
   className,
-  id,
+  id: _id,
   onUrlClick,
   onFileClick,
   collapsible = false,

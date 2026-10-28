@@ -1,6 +1,7 @@
+import { parseJsonObject } from '../utils/json.ts';
 import type { CacheControlEphemeral, TextBlockParam } from '@anthropic-ai/sdk/resources/messages';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
-import { writeFileSync, unlinkSync, mkdirSync } from 'node:fs';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
+import { readFileSync, writeFileSync, unlinkSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
@@ -11,7 +12,7 @@ let _resetConfigCacheForTesting: typeof import('../interceptor-common.ts')._rese
 
 describe('unified-network-interceptor schema metadata injection', () => {
   beforeAll(async () => {
-    process.env.CRAFT_INTERCEPTOR_DISABLE_AUTO_INSTALL = '1';
+    process.env["CRAFT_INTERCEPTOR_DISABLE_AUTO_INSTALL"] = '1';
     ({ injectMetadataIntoToolSchema, sanitizeEmptyTextCacheControl, upgradePromptCacheTtl } = await import('../unified-network-interceptor.ts'));
     ({ _resetConfigCacheForTesting } = await import('../interceptor-common.ts'));
   });
@@ -20,8 +21,8 @@ describe('unified-network-interceptor schema metadata injection', () => {
     const schema = { type: 'object' };
     const result = injectMetadataIntoToolSchema(schema);
 
-    expect(result.properties._displayName).toBeDefined();
-    expect(result.properties._intent).toBeDefined();
+    expect(result.properties["_displayName"]).toBeDefined();
+    expect(result.properties["_intent"]).toBeDefined();
     expect(result.required).toContain('_displayName');
     expect(result.required).toContain('_intent');
   });
@@ -130,7 +131,7 @@ describe('upgradePromptCacheTtl', () => {
   beforeEach(() => {
     // Save original config if it exists
     try {
-      originalConfig = require('node:fs').readFileSync(configFile, 'utf-8');
+      originalConfig = readFileSync(configFile, 'utf-8');
     } catch {
       originalConfig = null;
     }
@@ -149,7 +150,7 @@ describe('upgradePromptCacheTtl', () => {
   function enableExtendedCache() {
     const dir = join(homedir(), '.craft-agent');
     mkdirSync(dir, { recursive: true });
-    const existing = originalConfig ? JSON.parse(originalConfig) : {};
+    const existing = originalConfig ? parseJsonObject(originalConfig) : {};
     writeFileSync(configFile, JSON.stringify({ ...existing, extendedPromptCache: true }));
     _resetConfigCacheForTesting();
   }
@@ -157,7 +158,7 @@ describe('upgradePromptCacheTtl', () => {
   function disableExtendedCache() {
     const dir = join(homedir(), '.craft-agent');
     mkdirSync(dir, { recursive: true });
-    const existing = originalConfig ? JSON.parse(originalConfig) : {};
+    const existing = originalConfig ? parseJsonObject(originalConfig) : {};
     writeFileSync(configFile, JSON.stringify({ ...existing, extendedPromptCache: false }));
     _resetConfigCacheForTesting();
   }

@@ -21,7 +21,7 @@ describe('source_test API connection branches', () => {
   });
 
   it('200 → connected, source auto-enabled, activation called', async () => {
-    writeApiSource(tempDir, 'good-api');
+    writeApiSource(tempDir, 'good-api', { connectionError: 'Previous authentication failure' });
     ({ restore: restoreFetch } = installFetchStub(() => new Response(null, { status: 200 })));
 
     let activated: string | null = null as string | null;
@@ -39,11 +39,11 @@ describe('source_test API connection branches', () => {
     expect(text).not.toContain('Skipping activation');
     expect(activated).toBe('good-api');
 
-    const persisted = JSON.parse(
+    const persisted: unknown = JSON.parse(
       readFileSync(join(tempDir, 'sources', 'good-api', 'config.json'), 'utf-8')
-    ) as SourceConfig;
-    expect(persisted.enabled).toBe(true);
-    expect(persisted.connectionStatus).toBe('connected');
+    );
+    expect(persisted).toMatchObject({ enabled: true, connectionStatus: 'connected' });
+    expect(persisted).not.toHaveProperty('connectionError');
   });
 
   it('500 → disconnected, NOT auto-enabled, activation NOT called', async () => {

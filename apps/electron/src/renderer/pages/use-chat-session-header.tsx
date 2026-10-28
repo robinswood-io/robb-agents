@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import * as React from 'react';
 
 import { useSetAtom } from 'jotai';
@@ -113,12 +114,12 @@ const setKanbanEditorTarget = useSetAtom(kanbanEditorTargetAtom)
 
 const handleEditTask = React.useCallback(() => {
     if (!taskSlug) return
-    setKanbanEditorTarget({
-      mode: 'edit',
+    setKanbanEditorTarget(omitUndefined({
+      mode: 'edit' as const,
       sessionId,
       taskSlug,
       initialTitle: sessionMeta ? getSessionTitle(sessionMeta) : undefined,
-    })
+    }))
     navigate(routes.view.board())
   }, [taskSlug, sessionId, sessionMeta, setKanbanEditorTarget])
 

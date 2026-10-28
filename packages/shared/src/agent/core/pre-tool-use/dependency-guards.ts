@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import { REQUEST_USER_INPUT_TOOL_NAMES } from './autonomy-request-guards.ts';
 import { contextualGmailToolReceipt } from './gmail-evidence.ts';
 import { normalizeAutonomyGuardText } from './tool-names.ts';
@@ -136,20 +137,20 @@ export function hostObservedThirdPartyDependencies(
   if (!isTrustedThirdPartyDependencyReceiptTool(toolName)) return [];
   const receipt = contextualGmailToolReceipt(result);
   if (!receipt) return [];
-  const pending = receipt.pending === true
+  const pending = receipt["pending"] === true
     || ['pending', 'awaiting_external', 'waiting_on_vendor', 'waiting_on_provider']
-      .includes(String(receipt.status ?? receipt.state ?? '').toLowerCase());
+      .includes(String(receipt["status"] ?? receipt["state"] ?? '').toLowerCase());
   if (!pending) return [];
-  const rawParty = [receipt.party, receipt.provider, receipt.vendor, receipt.externalParty]
+  const rawParty = [receipt["party"], receipt["provider"], receipt["vendor"], receipt["externalParty"]]
     .find((value): value is string => typeof value === 'string' && value.trim().length > 1);
   if (!rawParty) return [];
   const party = canonicalThirdPartyName(rawParty);
   if (!party || NON_PARTY_NAME_TOKENS.has(rawParty.trim().toUpperCase())) return [];
   const dependencyText = [
-    receipt.kind,
-    receipt.dependencyKind,
-    receipt.item,
-    receipt.message,
+    receipt["kind"],
+    receipt["dependencyKind"],
+    receipt["item"],
+    receipt["message"],
   ].filter((value): value is string => typeof value === 'string').join(' ');
   const kinds = extractPendingDependencyKinds(
     normalizeAutonomyGuardText(dependencyText).replace(/[_-]+/gu, ' '),
@@ -165,18 +166,18 @@ export function hostObservedResolvedThirdPartyDependencies(
   if (!isTrustedThirdPartyDependencyReceiptTool(toolName)) return [];
   const receipt = contextualGmailToolReceipt(result);
   if (!receipt) return [];
-  const resolved = receipt.pending === false
+  const resolved = receipt["pending"] === false
     || ['received', 'resolved', 'ready', 'complete', 'completed', 'available']
-      .includes(String(receipt.status ?? receipt.state ?? '').toLowerCase());
+      .includes(String(receipt["status"] ?? receipt["state"] ?? '').toLowerCase());
   if (!resolved) return [];
-  const rawParty = [receipt.party, receipt.provider, receipt.vendor, receipt.externalParty]
+  const rawParty = [receipt["party"], receipt["provider"], receipt["vendor"], receipt["externalParty"]]
     .find((value): value is string => typeof value === 'string' && value.trim().length > 1);
   if (!rawParty || NON_PARTY_NAME_TOKENS.has(rawParty.trim().toUpperCase())) return [];
   const dependencyText = [
-    receipt.kind,
-    receipt.dependencyKind,
-    receipt.item,
-    receipt.message,
+    receipt["kind"],
+    receipt["dependencyKind"],
+    receipt["item"],
+    receipt["message"],
   ].filter((value): value is string => typeof value === 'string').join(' ');
   const kinds = extractPendingDependencyKinds(
     normalizeAutonomyGuardText(dependencyText).replace(/[_-]+/gu, ' '),
@@ -190,20 +191,20 @@ function questionAndDecisionTexts(input: Record<string, unknown>): Array<{
   question: string;
   decisions: string;
 }> {
-  const questions = Array.isArray(input.questions) ? input.questions : [];
+  const questions = isUnknownArray(input["questions"]) ? input["questions"] : [];
   const result: Array<{ question: string; decisions: string }> = [];
   for (const rawQuestion of questions) {
     if (!rawQuestion || typeof rawQuestion !== 'object') continue;
     const question = rawQuestion as Record<string, unknown>;
     const decisions: string[] = [];
-    for (const rawOption of Array.isArray(question.options) ? question.options : []) {
+    for (const rawOption of isUnknownArray(question["options"]) ? question["options"] : []) {
       if (!rawOption || typeof rawOption !== 'object') continue;
       const option = rawOption as Record<string, unknown>;
-      if (typeof option.label === 'string') decisions.push(option.label);
-      if (typeof option.description === 'string') decisions.push(option.description);
+      if (typeof option["label"] === 'string') decisions.push(option["label"]);
+      if (typeof option["description"] === 'string') decisions.push(option["description"]);
     }
     result.push({
-      question: typeof question.question === 'string' ? question.question : '',
+      question: typeof question["question"] === 'string' ? question["question"] : '',
       decisions: decisions.join(' '),
     });
   }

@@ -17,8 +17,8 @@ export function enqueue(transportOwner: SessionPersistenceQueue, session: Stored
     // Check registered aliases before touching disk. Once deletion tombstones a
     // session, a late callback using the old root must not recreate even the
     // workspace/sessions directory after it has been removed.
-    const registeredAlias = transportOwner["lookupIdentityAlias"](persistenceRootPath, session.id);
-    if (registeredAlias && transportOwner["retired"].has(registeredAlias)) {
+    const registeredAlias = transportOwner.lookupIdentityAlias(persistenceRootPath, session.id);
+    if (registeredAlias && transportOwner.retired.has(registeredAlias)) {
         throw new Error(`Session persistence is retired: ${session.id}`);
     }
     // Establish the real lookup directory before deriving identity. Otherwise
@@ -34,28 +34,29 @@ export function enqueue(transportOwner: SessionPersistenceQueue, session: Stored
         persistenceRootIdentity.device ??= root.dev.toString();
         persistenceRootIdentity.inode ??= root.ino.toString();
     }
-    const key = transportOwner["registerIdentity"](persistenceRootPath, session.id);
-    if (transportOwner["retired"].has(key)) {
+    const key = transportOwner.registerIdentity(persistenceRootPath, session.id);
+    if (transportOwner.retired.has(key)) {
         throw new Error(`Session persistence is retired: ${session.id}`);
     }
-    const canonicalPersistenceRootPath = transportOwner["identities"].get(key)?.workspaceRootPath
+    const canonicalPersistenceRootPath = transportOwner.identities.get(key)?.workspaceRootPath
         ?? canonicalWorkspaceRoot(persistenceRootPath);
-    transportOwner["assertOrBindPersistenceHierarchy"](key, canonicalPersistenceRootPath, session.id, persistenceRootIdentity, { bind: true, requireSession: false });
+    transportOwner.assertOrBindPersistenceHierarchy(key, canonicalPersistenceRootPath, session.id, persistenceRootIdentity, { bind: true, requireSession: false });
     const existing = transportOwner["pending"].get(key);
     if (existing) {
         clearTimeout(existing.timer);
     }
-    const revision = ++transportOwner["nextRevision"];
+    const revision = ++transportOwner.nextRevision;
     const timer = setTimeout(() => {
         // Debounced background writes have no caller to receive a rejection;
         // `write` already logs the failure. Explicit flush callers still await
         // and receive the same rejection from their own queueWrite promise.
-        void transportOwner["queueWrite"](key).catch(() => { });
-    }, transportOwner["debounceMs"]);
+        void transportOwner.queueWrite(key).catch(() => { });
+    }, transportOwner.debounceMs);
+    const optionalPersistenceRootIdentity = persistenceRootIdentity ?? existing?.persistenceRootIdentity;
     transportOwner["pending"].set(key, {
         data: session,
         workspaceRootPath: canonicalPersistenceRootPath,
-        persistenceRootIdentity: persistenceRootIdentity ?? existing?.persistenceRootIdentity,
+        ...(optionalPersistenceRootIdentity !== undefined ? { persistenceRootIdentity: optionalPersistenceRootIdentity } : {}),
         timer,
         revision,
         // Once a caller has requested a durable barrier, coalescing may advance
@@ -76,8 +77,8 @@ export async function write(transportOwner: SessionPersistenceQueue, key: string
     transportOwner["pending"].delete(key);
     let filePath: string | undefined;
     let activeWriteKey: string | undefined;
-    const previousHeaderSignature = transportOwner["lastWrittenHeaderSignature"].get(key);
-    const hadPreviousHeaderSignature = transportOwner["lastWrittenHeaderSignature"].has(key);
+    const previousHeaderSignature = transportOwner.lastWrittenHeaderSignature.get(key);
+    const hadPreviousHeaderSignature = transportOwner.lastWrittenHeaderSignature.has(key);
     let headerSignatureUpdated = false;
     try {
         const { data, workspaceRootPath, persistenceRootIdentity } = entry;
@@ -89,13 +90,13 @@ export async function write(transportOwner: SessionPersistenceQueue, key: string
                     throw new SessionPersistenceRootIdentityError(`Session persistence destination changed before write: ${data.id}`);
                 }
             }
-            transportOwner["assertOrBindPersistenceHierarchy"](key, workspaceRootPath, data.id, persistenceRootIdentity, { bind: false, requireSession: requireSessionDirectory });
+            transportOwner.assertOrBindPersistenceHierarchy(key, workspaceRootPath, data.id, persistenceRootIdentity, { bind: false, requireSession: requireSessionDirectory });
         };
         await transportOwner["testHooks"]?.beforeWrite?.(data.id);
         assertDestination();
         ensureSessionsDir(workspaceRootPath);
         ensureSessionDir(workspaceRootPath, data.id);
-        transportOwner["assertOrBindPersistenceHierarchy"](key, workspaceRootPath, data.id, persistenceRootIdentity, { bind: true, requireSession: true });
+        transportOwner.assertOrBindPersistenceHierarchy(key, workspaceRootPath, data.id, persistenceRootIdentity, { bind: true, requireSession: true });
         requireSessionDirectory = true;
         assertDestination();
         filePath = getSessionFilePath(workspaceRootPath, data.id);
@@ -104,8 +105,8 @@ export async function write(transportOwner: SessionPersistenceQueue, key: string
         const storageSession: StoredSession = {
             ...data,
             workspaceRootPath: toPortablePath(data.workspaceRootPath),
-            workingDirectory: data.workingDirectory ? toPortablePath(data.workingDirectory) : undefined,
-            sdkCwd: data.sdkCwd ? toPortablePath(data.sdkCwd) : undefined,
+            ...(data.workingDirectory ? { workingDirectory: toPortablePath(data.workingDirectory) } : {}),
+            ...(data.sdkCwd ? { sdkCwd: toPortablePath(data.sdkCwd) } : {}),
             lastUsedAt: Date.now(),
         };
         // Create JSONL content: header + messages (one per line)
@@ -113,7 +114,7 @@ export async function write(transportOwner: SessionPersistenceQueue, key: string
         const localHeader = createSessionHeader(storageSession);
         const localSig = getHeaderMetadataSignature(localHeader);
         const diskHeader = readSessionHeader(filePath);
-        const previousSig = transportOwner["lastWrittenHeaderSignature"].get(key);
+        const previousSig = transportOwner.lastWrittenHeaderSignature.get(key);
         const diskSig = diskHeader ? getHeaderMetadataSignature(diskHeader) : undefined;
         // Queue writes should never clobber session metadata changed externally
         // (watcher edits, direct header edits, other instances), but they must
@@ -142,7 +143,7 @@ export async function write(transportOwner: SessionPersistenceQueue, key: string
         // Without this, onSessionMetadataChange sees the stale signature
         // and reverts in-memory metadata on idle sessions.
         const finalSignature = getHeaderMetadataSignature(header);
-        transportOwner["lastWrittenHeaderSignature"].set(key, finalSignature);
+        transportOwner.lastWrittenHeaderSignature.set(key, finalSignature);
         headerSignatureUpdated = true;
         const tmpFile = filePath + '.tmp';
         assertDestination();
@@ -151,7 +152,7 @@ export async function write(transportOwner: SessionPersistenceQueue, key: string
         assertDestination();
         if (entry.durable) {
             await commitDurableSessionFile(data.id, tmpFile, filePath, transportOwner["testHooks"], assertDestination);
-            transportOwner["lastDurableRevision"].set(key, entry.revision);
+            transportOwner.lastDurableRevision.set(key, entry.revision);
         }
         else {
             assertDestination();
@@ -163,11 +164,11 @@ export async function write(transportOwner: SessionPersistenceQueue, key: string
     catch (error) {
         if (headerSignatureUpdated) {
             if (hadPreviousHeaderSignature)
-                transportOwner["lastWrittenHeaderSignature"].set(key, previousHeaderSignature!);
+                transportOwner.lastWrittenHeaderSignature.set(key, previousHeaderSignature!);
             else
-                transportOwner["lastWrittenHeaderSignature"].delete(key);
+                transportOwner.lastWrittenHeaderSignature.delete(key);
         }
-        const identity = transportOwner["identities"].get(key);
+        const identity = transportOwner.identities.get(key);
         console.error(`[PersistenceQueue] Failed to write session ${identity?.sessionId ?? '<unknown>'}:`, error);
         throw error;
     }
@@ -179,23 +180,23 @@ export async function write(transportOwner: SessionPersistenceQueue, key: string
 
 /** Bound allocations across sessions, including flushAll during restart/quit. */
 export async function writeWithGlobalLimit(transportOwner: SessionPersistenceQueue, key: string): Promise<void> {
-    if (transportOwner["activeWrites"] < 2) {
-        transportOwner["activeWrites"]++;
+    if (transportOwner.activeWrites < 2) {
+        transportOwner.activeWrites++;
     }
     else {
-        await new Promise<void>(resolve => { transportOwner["waitingWriters"].push(resolve); });
+        await new Promise<void>(resolve => { transportOwner.waitingWriters.push(resolve); });
     }
     try {
         // Read pending only after admission so newer snapshots can coalesce and
         // cancellation can still remove work while both slots are occupied.
-        await transportOwner["write"](key);
+        await transportOwner.write(key);
     }
     finally {
-        const next = transportOwner["waitingWriters"].shift();
+        const next = transportOwner.waitingWriters.shift();
         if (next)
             next(); // Transfer this slot without admitting a third writer.
         else
-            transportOwner["activeWrites"]--;
+            transportOwner.activeWrites--;
     }
 }
 
@@ -205,14 +206,14 @@ export async function writeWithGlobalLimit(transportOwner: SessionPersistenceQue
    * write can race a flush and both processes can rename the same .tmp file.
    */
 export function queueWrite(transportOwner: SessionPersistenceQueue, key: string): Promise<void> {
-    const previous = transportOwner["writeInProgress"].get(key) ?? Promise.resolve();
+    const previous = transportOwner.writeInProgress.get(key) ?? Promise.resolve();
     const writePromise = previous
         .catch(() => { })
-        .then(() => transportOwner["writeWithGlobalLimit"](key));
-    transportOwner["writeInProgress"].set(key, writePromise);
+        .then(() => transportOwner.writeWithGlobalLimit(key));
+    transportOwner.writeInProgress.set(key, writePromise);
     const clearCompletedWrite = () => {
-        if (transportOwner["writeInProgress"].get(key) === writePromise) {
-            transportOwner["writeInProgress"].delete(key);
+        if (transportOwner.writeInProgress.get(key) === writePromise) {
+            transportOwner.writeInProgress.delete(key);
         }
     };
     void writePromise.then(clearCompletedWrite, clearCompletedWrite);

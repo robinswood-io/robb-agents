@@ -127,7 +127,7 @@ export function textToHTML(
   let lastIndex = 0
 
   // If first match starts at position 0, prepend zero-width space for contenteditable cursor fix
-  if (matches[0].startIndex === 0) {
+  if (matches[0]?.startIndex === 0) {
     html += '\u200B'
   }
 

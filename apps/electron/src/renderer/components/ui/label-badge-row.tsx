@@ -29,9 +29,9 @@ export interface LabelBadgeRowProps {
   /** Full label config tree (for resolving colors, names, valueTypes) */
   labels: LabelConfig[]
   /** Called when a label value is changed — receives the updated full sessionLabels array */
-  onLabelsChange?: (updatedLabels: string[]) => void
+  onLabelsChange?: ((updatedLabels: string[]) => void) | undefined
   /** Additional className for the container */
-  className?: string
+  className?: string | undefined
 }
 
 /**

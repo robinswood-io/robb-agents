@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "script-coverage-policy-v1",
+  "updatedAt": "2026-07-12T20:45:02.586027Z",
+  "updatedBy": "oss-architecture-v2-debt-zero-migrate",
+  "description": "Explicit allowlist/classification for active Python scripts under /srv/rbw-agents-oss/scripts that are intentionally not direct command-manifest entrypoints. The structural guard warns on any new unclassified orphan script.",
+  "defaults": {
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true
+  },
+  "counts": {
+    "activePyScripts": 329,
+    "manifestReferencedPyScripts": 145,
+    "currentOrphanScripts": 185,
+    "acceptedOrphanScripts": 226,
+    "staleRetainedForAudit": 0
+  },
+  "acceptedOrphanScripts": []
+}

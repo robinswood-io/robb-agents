@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { type EditContextKey, type EditConfig } from "./edit-popover-types";
 
 
@@ -469,10 +470,10 @@ export function getEditConfig(key: EditContextKey, location: string): EditConfig
 
   // Resolve i18n keys to translated strings for UI display
   // context.label remains in English for agent prompts; displayLabel is used in UI
-  return {
+  return omitUndefined<EditConfig>({
     ...config,
     displayLabel: config.displayLabelKey ? i18n.t(config.displayLabelKey) : config.context.label,
     example: config.exampleKey ? i18n.t(config.exampleKey) : config.example,
     overridePlaceholder: config.overridePlaceholderKey ? i18n.t(config.overridePlaceholderKey) : config.overridePlaceholder,
-  }
+  })
 }

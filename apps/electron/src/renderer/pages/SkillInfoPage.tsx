@@ -6,7 +6,7 @@
  * Uses the Info_ component system for consistent styling with SourceInfoPage.
  */
 
-import * as React from 'react'
+
 import { useTranslation } from 'react-i18next'
 import { useEffect, useState, useCallback } from 'react'
 import { Check, X, Minus } from 'lucide-react'
@@ -28,7 +28,7 @@ import type { LoadedSkill } from '../../shared/types'
 interface SkillInfoPageProps {
   skillSlug: string
   workspaceId: string
-  workingDirectory?: string
+  workingDirectory?: string | undefined
 }
 
 export default function SkillInfoPage({ skillSlug, workspaceId, workingDirectory }: SkillInfoPageProps) {

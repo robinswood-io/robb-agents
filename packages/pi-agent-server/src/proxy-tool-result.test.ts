@@ -1,3 +1,5 @@
+import { createMockFns } from "../../shared/src/agent/__tests__/testing/browser-tools-fixture.ts";
+import type { AfterToolCallContext, AgentToolResult } from '@earendil-works/pi-agent-core';
 import { InMemoryCredentialStore } from '@earendil-works/pi-ai';
 import { createAuthenticatedModelRuntime } from './authenticated-model-runtime.ts';
 import { expect, it } from 'bun:test';
@@ -15,6 +17,19 @@ import { PiEventAdapter } from '../../shared/src/agent/backend/pi/event-adapter.
 import { hasObjectiveSubstantiveToolResult, isObjectiveToolExecutedSuccessfully } from '../../server-core/src/sessions/objective-contract.ts';
 import { installStructuredToolErrors } from './structured-tool-errors.ts';
 
+type ErrorHookAgent = Parameters<typeof installStructuredToolErrors>[0]['agent'];
+function hookContext<TResult extends AgentToolResult<unknown>>(
+  value: { isError: boolean; result: TResult },
+): Omit<AfterToolCallContext, 'result'> & { result: TResult } {
+  const toolCall = { type: 'toolCall' as const, id: 'qa-call', name: 'qa-tool', arguments: {} };
+  const assistantMessage: AssistantMessage = {
+    role: 'assistant', api: 'openai-responses', provider: 'openai', model: 'fixture',
+    content: [toolCall], stopReason: 'toolUse', timestamp: 1,
+    usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0,
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+  };
+  return { ...value, assistantMessage, toolCall, args: {}, context: { messages: [], tools: [] } };
+}
 const captureError = 'Canvas capture unavailable: selector, visibility, transform, clipping, origin or bitmap limit was not satisfied. No page screenshot was substituted.';
 
 it('real browser backend failure remains an error through the real Pi loop, model context and host adapter', async () => {
@@ -28,9 +43,7 @@ it('real browser backend failure remains an error through the real Pi loop, mode
     const backend = Object.assign(Object.create(PiAgent.prototype), { _sessionId: sessionId }) as {
       executeSessionTool(name: string, args: Record<string, unknown>): Promise<{ content: string; isError: boolean }>;
     };
-    registerSessionScopedToolCallbacks(sessionId, { browserPaneFns: {
-      screenshotRegion: async () => { captures++; throw new Error(captureError); },
-    } as unknown as BrowserPaneFns });
+    registerSessionScopedToolCallbacks(sessionId, { browserPaneFns: Object.assign(createMockFns(), ({screenshotRegion: async () => { captures++; throw new Error(captureError); }} satisfies Partial<BrowserPaneFns>)) });
     const { modelRuntime, modelRegistry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), { provider: 'openai', credential: { type: 'api_key', key: 'fixture-no-network' } });
     const settingsManager = SettingsManager.inMemory({ compaction: { enabled: false } });
     const sessionManager = SessionManager.inMemory(directory);
@@ -93,46 +106,46 @@ it('preserves prior hook payloads and only promotes explicit boolean errors', as
   for (const marker of [undefined, false, 'true', 1, true]) {
     let calls = 0;
     const prior = { ...payload, isError: false };
-    const agent = { afterToolCall: async () => { calls++; return prior; } };
-    installStructuredToolErrors({ agent } as unknown as Pick<AgentSession, 'agent'>);
-    installStructuredToolErrors({ agent } as unknown as Pick<AgentSession, 'agent'>);
-    const context = { isError: false, result: { content: [{ type: 'text', text: captureError }], details: { isError: marker } } };
-    const result = await (agent.afterToolCall as Function)(context);
+    const agent: ErrorHookAgent = { afterToolCall: async () => { calls++; return prior; } };
+    installStructuredToolErrors({ agent });
+    installStructuredToolErrors({ agent });
+    const context = hookContext({ isError: false, result: { content: [{ type: 'text', text: captureError }], details: { isError: marker } } });
+    const result = await agent.afterToolCall?.(context);
     expect(calls).toBe(1);
     expect(result).toEqual({ ...prior, isError: marker === true });
-    expect(result.content).toBe(payload.content); expect(result.details).toBe(payload.details);
+    expect(result?.content).toBe(payload.content); expect(result?.details).toBe(payload.details);
     expect(context.result.details.isError).toBe(marker);
   }
 });
 
 it('never clears SDK errors and preserves a non-error checkpoint without interpreting its text', async () => {
   for (const context of [
-    { isError: true, result: { content: [{ type: 'text', text: '' }], details: {} } },
-    { isError: false, result: { content: [{ type: 'text', text: captureError }], details: { executed: false, continuationRequired: true, checkpoint: { kind: 'tool-call-budget' } } } },
+    hookContext({ isError: true, result: { content: [{ type: 'text', text: '' }], details: {} } }),
+    hookContext({ isError: false, result: { content: [{ type: 'text', text: captureError }], details: { executed: false, continuationRequired: true, checkpoint: { kind: 'tool-call-budget' } } } }),
   ]) {
-    const agent = { afterToolCall: async () => undefined };
-    installStructuredToolErrors({ agent } as unknown as Pick<AgentSession, 'agent'>);
-    expect(await (agent.afterToolCall as Function)(context)).toEqual(context.isError ? { isError: true } : undefined);
+    const agent: ErrorHookAgent = { afterToolCall: async () => undefined };
+    installStructuredToolErrors({ agent });
+    expect(await agent.afterToolCall?.(context)).toEqual(context.isError ? { isError: true } : undefined);
   }
 });
 
 it('preserves the original failure even if the previous hook mutates its details', async () => {
-  const context = { isError: false, result: { content: [], details: { isError: true } } };
-  const agent = { afterToolCall: async () => { context.result.details.isError = false; return { isError: false }; } };
-  installStructuredToolErrors({ agent } as unknown as Pick<AgentSession, 'agent'>);
-  expect(await (agent.afterToolCall as Function)(context)).toEqual({ isError: true });
+  const context = hookContext({ isError: false, result: { content: [], details: { isError: true } } });
+  const agent: ErrorHookAgent = { afterToolCall: async () => { context.result.details.isError = false; return { isError: false }; } };
+  installStructuredToolErrors({ agent });
+  expect(await agent.afterToolCall?.(context)).toEqual({ isError: true });
 });
 
 it('propagates a failure added in place by the previous hook even without a returned override', async () => {
   for (const field of ['details', 'isError']) {
-    const context = { isError: false, result: { content: [], details: { isError: false } } };
-    const agent = { afterToolCall: async () => {
+    const context = hookContext({ isError: false, result: { content: [], details: { isError: false } } });
+    const agent: ErrorHookAgent = { afterToolCall: async () => {
       if (field === 'details') context.result.details.isError = true;
       else context.isError = true;
       return undefined;
     } };
-    installStructuredToolErrors({ agent } as unknown as Pick<AgentSession, 'agent'>);
-    expect(await (agent.afterToolCall as Function)(context)).toEqual({ isError: true });
+    installStructuredToolErrors({ agent });
+    expect(await agent.afterToolCall?.(context)).toEqual({ isError: true });
   }
 });
 

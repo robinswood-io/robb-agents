@@ -202,7 +202,7 @@ export function EntityRow({
           (isSelected || isInMultiSelect)
             ? "bg-foreground/[0.055]"
             : "hover:bg-foreground/[0.035]",
-          (buttonProps as Record<string, unknown>)?.className as string | undefined,
+          (buttonProps as Record<string, unknown>)?.["className"] as string | undefined,
         )}
         onMouseDown={wrappedOnMouseDown}
         onClick={!onMouseDown ? wrappedOnClick : undefined}

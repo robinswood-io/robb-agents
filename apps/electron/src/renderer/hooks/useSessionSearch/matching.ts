@@ -1,5 +1,5 @@
-import { isToday, isYesterday, format, startOfDay } from "date-fns";
-import { parseLabelEntry, matchesLabelFilter } from "@craft-agent/shared/labels";
+import { isToday,isYesterday,format,startOfDay } from "date-fns";
+import { parseLabelEntry,matchesLabelFilter } from "@craft-agent/shared/labels";
 import type { LabelConfig } from "@craft-agent/shared/labels";
 import { getSessionStatus } from "@/utils/session";
 import type { SessionMeta } from "@/atoms/sessions";
@@ -44,19 +44,19 @@ export interface UseSessionSearchOptions {
   items: SessionMeta[]
   searchActive: boolean
   searchQuery: string
-  workspaceId?: string
-  currentFilter?: SessionFilter
-  evaluateViews?: (meta: SessionMeta) => ViewConfig[]
-  statusFilter?: Map<string, FilterMode>
-  labelFilterMap?: Map<string, FilterMode>
+  workspaceId?: string | undefined
+  currentFilter?: SessionFilter | undefined
+  evaluateViews?: ((meta: SessionMeta) => ViewConfig[]) | undefined
+  statusFilter?: Map<string, FilterMode> | undefined
+  labelFilterMap?: Map<string, FilterMode> | undefined
   /** Workspace label tree — label filters match descendants through it (shared matchesLabelFilter). */
-  labelConfigs?: LabelConfig[]
+  labelConfigs?: LabelConfig[] | undefined
   /** Collapsed group keys — collapsed items are excluded from pagination and flatItems */
-  collapsedGroups?: Set<string>
+  collapsedGroups?: Set<string> | undefined
   /** Grouping mode — needed to compute group keys for collapse-aware pagination */
-  groupingMode?: 'date' | 'status' | 'unread' | 'project'
+  groupingMode?: 'date' | 'status' | 'unread' | 'project' | undefined
   /** Ref to the ScrollArea viewport element — used for scroll-based pagination */
-  scrollViewportRef?: React.RefObject<HTMLDivElement | null>
+  scrollViewportRef?: React.RefObject<HTMLDivElement | null> | undefined
 }
 
 export interface UseSessionSearchResult {
@@ -295,7 +295,7 @@ export function sessionMatchesCurrentFilter(
       return matched.some(v => v.id === currentFilter.viewId)
 
     default:
-      const _exhaustive: never = currentFilter
+      void (currentFilter satisfies never)
       return true
   }
 }

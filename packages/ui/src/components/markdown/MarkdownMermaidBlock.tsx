@@ -46,16 +46,16 @@ function parseSvgDimensions(svgString: string): { width: number; height: number 
 
 interface MarkdownMermaidBlockProps {
   code: string
-  className?: string
+  className?: string | undefined
   /** Whether to show the inline expand button. Default true.
    *  Set to false when the mermaid block is the first block in a message,
    *  where the TurnCard's own fullscreen button already occupies the same position. */
-  showExpandButton?: boolean
+  showExpandButton?: boolean | undefined
   /** Whether clicking/tapping the inline diagram should open fullscreen.
    *  Enabled by default for chat parity with image blocks; editor node-views can disable it. */
-  tapToOpen?: boolean
+  tapToOpen?: boolean | undefined
   /** Optional minimum block height to reserve space before responsive sizing settles. */
-  minHeight?: number
+  minHeight?: number | undefined
 }
 
 export function MarkdownMermaidBlock({ code, className, showExpandButton = true, tapToOpen = true, minHeight }: MarkdownMermaidBlockProps) {

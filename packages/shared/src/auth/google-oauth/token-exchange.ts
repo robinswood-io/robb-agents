@@ -33,7 +33,7 @@ export async function exchangeCodeForTokens(
     code_verifier: codeVerifier,
     grant_type: 'authorization_code',
     redirect_uri: redirectUri,
-    client_secret: clientSecret,
+    ...(clientSecret !== undefined ? { client_secret: clientSecret } : {}),
   });
 
   const response = await fetch(GOOGLE_TOKEN_URL, {
@@ -55,8 +55,8 @@ export async function exchangeCodeForTokens(
 
   return {
     accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-    expiresIn: data.expires_in,
+    ...(data.refresh_token !== undefined ? { refreshToken: data.refresh_token } : {}),
+    ...(data.expires_in !== undefined ? { expiresIn: data.expires_in } : {}),
   };
 }
 

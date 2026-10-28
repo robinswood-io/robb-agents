@@ -39,23 +39,23 @@ export async function packageDarwin(config: BuildConfig): Promise<string> {
   console.log('Packaging app with electron-builder...');
 
   // Set up environment for electron-builder
-  process.env.CSC_IDENTITY_AUTO_DISCOVERY = 'true';
+  process.env["CSC_IDENTITY_AUTO_DISCOVERY"] = 'true';
 
   // Build electron-builder arguments
   const builderArgs = ['--mac', `--${arch}`];
 
   // Add code signing if identity is available
-  if (process.env.APPLE_SIGNING_IDENTITY) {
+  if (process.env["APPLE_SIGNING_IDENTITY"]) {
     // Strip "Developer ID Application: " prefix if present (electron-builder adds it automatically)
-    const cscName = process.env.APPLE_SIGNING_IDENTITY.replace('Developer ID Application: ', '');
+    const cscName = process.env["APPLE_SIGNING_IDENTITY"].replace('Developer ID Application: ', '');
     console.log(`  Using signing identity: ${cscName}`);
-    process.env.CSC_NAME = cscName;
+    process.env["CSC_NAME"] = cscName;
   }
 
   // Add notarization if all credentials are available
-  if (process.env.APPLE_ID && process.env.APPLE_TEAM_ID && process.env.APPLE_APP_SPECIFIC_PASSWORD) {
+  if (process.env["APPLE_ID"] && process.env["APPLE_TEAM_ID"] && process.env["APPLE_APP_SPECIFIC_PASSWORD"]) {
     console.log('  Notarization enabled');
-    process.env.NOTARIZE = 'true';
+    process.env["NOTARIZE"] = 'true';
   }
 
   // Run electron-builder

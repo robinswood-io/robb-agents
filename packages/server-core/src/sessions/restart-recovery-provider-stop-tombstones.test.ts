@@ -23,10 +23,10 @@ describe('provider dispatch write-ahead recovery', () => {
     await h.save(managed)
 
     await h.manager.cancelProcessing(managed.id, false)
-    expect(anchor.providerDispatch).toMatchObject({
+    expect<unknown>(anchor.providerDispatch).toMatchObject({
       state: 'retired-accepted',
       retirementReason: 'user-stop-after-provider-ack',
-      userStoppedAt: expect.any(Number),
+      userStoppedAt: (expect.any(Number) as unknown),
     })
 
     const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
@@ -127,9 +127,9 @@ describe('provider dispatch write-ahead recovery', () => {
 
     await h.manager.cancelProcessing(managed.id, false)
 
-    expect(anchor.providerDispatch).toMatchObject({
+    expect<unknown>(anchor.providerDispatch).toMatchObject({
       state: 'accepted',
-      userStoppedAt: expect.any(Number),
+      userStoppedAt: (expect.any(Number) as unknown),
     })
     expect(h.runtime.providerDispatchAdmissionBarrier(managed)).toBe(anchor)
     await expect(h.manager.sendMessage(managed.id, 'This must remain blocked.'))

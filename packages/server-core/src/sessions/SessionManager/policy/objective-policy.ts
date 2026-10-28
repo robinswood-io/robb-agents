@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { type ActiveSessionObjective } from "@craft-agent/shared/sessions";
 import { type Message } from "@craft-agent/core/types";
 import {
@@ -44,11 +45,11 @@ export function boundObjectiveForCleanHandoff(
       }
     })
     return {
-      objective: {
+      objective: omitUndefined<ActiveSessionObjective>({
         ...objective,
         originalText: boundedObjectiveText || objective.originalText,
         ...(objective.amendments ? { amendments: boundedAmendments } : {}),
-      },
+      }),
       objectiveText: boundedObjectiveText,
     }
   }
@@ -340,5 +341,5 @@ export function repairLegacyContextualObjectiveAuthority(managed: ManagedSession
   }
 
 export function isLegacyHostObjectiveContractEnabled(_managed: ManagedSession): boolean {
-    return process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT === '1'
+    return process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] === '1'
   }

@@ -4,6 +4,7 @@ import { tmpdir } from "os";
 import { createHash } from "crypto";
 import { join, resolve } from "path";
 import { appendProjectMemoryEntry, forgetProjectMemoryEntry, getProjectMemoryJournalPath, loadProjectMemoryJournal, loadProjectMemoryV2Context, retrieveProjectMemories } from "../memory-v2.ts";
+import { omitUndefined } from "../../utils/json.ts";
 import { createProject } from "../storage.ts";
 
 let tempDir: string;
@@ -107,7 +108,7 @@ describe('Memory v2 journal', () => {
     expect(retrieveProjectMemories([entry], options)).toHaveLength(1);
     expect(retrieveProjectMemories([entry], { ...options, projectSlug: 'other' })).toEqual([]);
     expect(retrieveProjectMemories([entry], { ...options, version: 'build-124' })).toEqual([]);
-    expect(retrieveProjectMemories([entry], { ...options, version: undefined })).toEqual([]);
+    expect(retrieveProjectMemories([entry], omitUndefined({ ...options, version: undefined }))).toEqual([]);
     expect(retrieveProjectMemories([entry], { ...options, now: new Date(now.getTime() + 86400000) })).toEqual([]);
     expect(retrieveProjectMemories([{ ...entry, status: 'proposed' }], options)).toEqual([]);
   });

@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 /// <reference path="../../bash-parser.d.ts" />
 import bashParser from "bash-parser";
 import { isHardenableGitRead, isReadOnlyRegisteredShellObservation, isUnsupportedGitObservationCandidate } from './git-observations.ts';
@@ -192,11 +193,11 @@ export function containsLocalSshTransportInvocation(command: string): boolean {
     !!value && (value === 'ssh' || /^(?:\/[^\u0000-\u001f\u007f]+)+\/ssh$/.test(value))
   );
   const commandHead = (node: Record<string, unknown>): { name: string; args: string[] } | undefined => {
-    if (node.type !== 'Command') return undefined;
-    const name = literalWord(node.name);
+    if (node["type"] !== 'Command') return undefined;
+    const name = literalWord(node["name"]);
     if (!name) return undefined;
     const args: string[] = [];
-    for (const item of Array.isArray(node.suffix) ? node.suffix : []) {
+    for (const item of isUnknownArray(node["suffix"]) ? node["suffix"] : []) {
       const value = literalWord(item);
       if (value !== undefined) args.push(value);
     }
@@ -318,15 +319,15 @@ export function containsLocalSshTransportInvocation(command: string): boolean {
   };
   const inspect = (value: unknown, depth = 0): boolean => {
     if (depth > 16 || !value || typeof value !== 'object') return false;
-    if (Array.isArray(value)) return value.some(item => inspect(item, depth));
+    if (isUnknownArray(value)) return value.some((item: unknown) => inspect(item, depth));
     const node = value as Record<string, unknown>;
-    if (node.type === 'Command') {
+    if (node["type"] === 'Command') {
       const invocation = commandHead(node);
       if (invocation && wrappedExecutable(invocation)) return true;
       const nested = invocation && nestedLiteralShell(invocation);
       if (nested && containsLocalSshTransportInvocation(nested)) return true;
     }
-    return Object.values(node).some(item => inspect(item, depth + 1));
+    return Object.values(node).some((item: unknown) => inspect(item, depth + 1));
   };
   return inspect(ast);
 }

@@ -1,5 +1,7 @@
+import type { z } from 'zod';
+import type { MissionControlSnapshotDtoSchema, MissionReplayPlanDtoSchema, TaskResultsDtoSchema, DurableTaskSnapshotDtoSchema } from '../dto-contracts.ts';
 import type { MissionDigitalTwinReport, MissionReplanPreview, MissionSnapshot, MissionSpec, MissionWorkItem, ProofPassportTrustAnchor, SignedProofPassport } from "../../missions";
-import type { DurableTaskCockpitProjections, DurableTaskExternalRefs, DurableTaskSnapshot } from "../../tasks";
+import type { DurableTaskCockpitProjections, DurableTaskExternalRefs } from "../../tasks";
 import type { OperationApprovalContext, OperationRiskLevel } from "../../governance/capability-broker";
 
 // ---------------------------------------------------------------------------
@@ -104,7 +106,7 @@ export interface MissionConnectorApprovalRefreshRequest {
   workItemId: string
 }
 
-export type DurableTaskSnapshotDto = DurableTaskSnapshot
+export type DurableTaskSnapshotDto = z.infer<typeof DurableTaskSnapshotDtoSchema>
 
 export type DurableTaskCockpitProjectionsDto = DurableTaskCockpitProjections
 
@@ -117,21 +119,7 @@ export interface DurableTaskMetadataUpdateRequest {
 }
 
 /** One subtask's outcome in a completed/persisted run, for the editor's Results tab. */
-export interface TaskResultNodeDto {
-  id: string
-  title: string
-  /** pending | running | done | failed | cancelled | skipped */
-  state: string
-  /** The child session that ran this node, recovered from the run log (drill-in link). */
-  sessionId?: string
-  /** The node's recorded final output text (from nodes/<id>.json), when present. */
-  output?: string
-  dependsOn?: string[]
-  attempt?: number
-  proofHash?: string
-  evidenceRefs?: string[]
-  repair?: { allowed: boolean; reason: string }
-}
+export type TaskResultNodeDto = z.infer<typeof TaskResultsDtoSchema>['nodes'][number]
 
 export interface MissionBlockerDto {
   id: string
@@ -155,104 +143,13 @@ export interface MissionApprovalDto {
   resolvedAt?: string
 }
 
-export interface MissionControlSnapshotDto {
-  schemaVersion: 1
-  missionId: string
-  runId: string
-  title: string
-  objective: string
-  status: 'not-started' | 'running' | 'paused' | 'waiting-approval' | 'verifying' | 'completed' | 'failed' | 'stopped'
-  progress: {
-    total: number
-    completed: number
-    failed: number
-    running: number
-    pending: number
-    percent: number
-  }
-  budget: {
-    maxTokens?: number
-    maxCost?: number
-    currency?: 'USD' | 'EUR'
-    tokensUsed?: number
-    costUsed?: number
-  }
-  evaluation: {
-    status: 'not-evaluated' | 'pending' | 'passing' | 'failing'
-    acceptance: 'not-evaluated' | 'pass' | 'fail' | 'unparsed'
-    evaluatedNodes: number
-    successfulNodes: number
-    failedNodes: number
-    nodeSuccessRate?: number
-    safetyIssueCount: number
-    evidenceCount: number
-    failures: string[]
-  }
-  cost: {
-    status: 'untracked' | 'tracking' | 'within-budget' | 'warning' | 'exceeded'
-    currency: 'USD' | 'EUR'
-    used?: number
-    limit?: number
-    remaining?: number
-    percentUsed?: number
-    warningPercent: number
-  }
-  deadline?: string
-  approvals: MissionApprovalDto[]
-  blockers: MissionBlockerDto[]
-  nextActions: string[]
-  eventCount: number
-  latestEventAt?: string
-}
+export type MissionControlSnapshotDto = z.infer<typeof MissionControlSnapshotDtoSchema>
 
-export interface MissionReplayPlanDto {
-  sourceRunId: string
-  safeByDefault: boolean
-  nodes: Array<{
-    nodeId: string
-    action: 'reuse' | 'retry' | 'block'
-    reason: string
-    effect: 'read' | 'workspace-write' | 'external-mutation'
-  }>
-  requiresApproval: boolean
-  blockedNodeIds: string[]
-}
+export type MissionReplayPlanDto = z.infer<typeof MissionReplayPlanDtoSchema>
 
 /**
  * Storage-backed read of a task run's outcome — verdict + per-node final output, recovered from
  * the persisted run artifacts (run-log.jsonl, nodes/<id>.json, per-run spec.json snapshot). Unlike
  * `TaskRunSnapshotDto` this survives restart and does not require an active in-memory run.
  */
-export interface TaskResultsDto {
-  slug: string
-  /** The run inspected; null when the task has never been run. */
-  runId: string | null
-  /** All run ids for this task (newest last), for a run picker. */
-  runIds: string[]
-  /** The most recent verdict (kept for back-compat with single-verdict consumers). */
-  verdict?: { result: 'pass' | 'fail' | 'unparsed'; reason?: string; nodes?: string[] }
-  /** Every verdict in order (a FAIL→repair loop produces several), for the Results history view. */
-  verdicts?: { result: 'pass' | 'fail' | 'unparsed'; reason?: string; nodes?: string[] }[]
-  /** Repair-loop accounting: attempts consumed (= count of FAIL verdicts) and the resolved cap. */
-  repair?: { used: number; max: number }
-  /** Terminal run status recovered from the run-log (completed | failed | stopped | …). */
-  runStatus?: string
-  /** The run's acceptance criteria (from the per-run spec snapshot), shown above the verdict. */
-  acceptanceCriteria?: string
-  /** Mission-level operational projection, durable across application restarts. */
-  controlRoom?: MissionControlSnapshotDto
-  /** Fail-safe checkpoint replay plan; external mutations are blocked by default. */
-  replayPlan?: MissionReplayPlanDto
-  /** Portable, auditable Markdown report generated from the same durable projection. */
-  reportMarkdown?: string
-  /** Canonical durable work object rendered above the run-level evidence. */
-  task?: DurableTaskSnapshotDto
-  userEvidence?: {
-    actionRequested: string
-    actionAttempted: string[]
-    mutationsApplied: string[]
-    userVerification: string
-    remainingLimitations: string[]
-  }
-  nodes: TaskResultNodeDto[]
-}
+export type TaskResultsDto = z.infer<typeof TaskResultsDtoSchema>

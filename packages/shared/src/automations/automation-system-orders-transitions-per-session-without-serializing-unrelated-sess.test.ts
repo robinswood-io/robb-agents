@@ -233,7 +233,7 @@ it('should remove stored metadata', async () => {
       system.removeSessionMetadata('session-1');
 
       expect(system.getSessionMetadata('session-1')).toBeUndefined();
-      expect((system as unknown as {
+      expect(((system) as {
         sessionMetadataTokens: Map<string, object>;
       }).sessionMetadataTokens.size).toBe(0);
 
@@ -252,9 +252,9 @@ it('should emit LabelConfigChange event', async () => {
 
       await system.emitLabelConfigChange();
 
-      expect(emitSpy).toHaveBeenCalledWith('LabelConfigChange', expect.objectContaining({
+      expect<unknown>(emitSpy).toHaveBeenCalledWith('LabelConfigChange', (expect.objectContaining({
         workspaceId: 'test-workspace',
-      }));
+      }) as unknown));
 
       await system.dispose();
     });
@@ -372,9 +372,7 @@ it('makes concurrent dispose calls join the same teardown', async () => {
         workspaceRootPath: tempDir,
         workspaceId: 'test-workspace',
       });
-      const eventLogHandler = (system as unknown as {
-        eventLogHandler: { dispose(): Promise<void> } | null;
-      }).eventLogHandler;
+      const eventLogHandler = (system)["eventLogHandler"];
       expect(eventLogHandler).not.toBeNull();
       const originalDispose = eventLogHandler!.dispose.bind(eventLogHandler);
       let releaseDispose!: () => void;

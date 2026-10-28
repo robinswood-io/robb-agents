@@ -14,7 +14,8 @@ it('keeps the live MCP checklist through composing, failed updates and transcrip
     { step: 'Livrer le rapport', status: 'in_progress' },
   ], explanation: 'Le rendu est vérifié. Je prépare la livraison.' } })
   messages.push(next, plan('t5', 'mcp__session__update_plan', { isError: true, toolInput: { plan: [] } }))
-  const reloaded = projectConversation(JSON.parse(JSON.stringify(messages)), { isProcessing: true })
+  const serialized: unknown = JSON.parse(JSON.stringify(messages)) as typeof messages
+  const reloaded = projectConversation(serialized as typeof messages, { isProcessing: true })
   expect(reloaded.progress?.steps.map(step => step.status)).toEqual(['completed', 'completed', 'in_progress'])
   expect(reloaded.progress?.activity?.title).toBe('Le rendu est vérifié. Je prépare la livraison.')
   expect(reloaded.outcome).toBeUndefined()

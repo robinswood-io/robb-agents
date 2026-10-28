@@ -26,8 +26,8 @@ export async function migrateLegacyCredentials(): Promise<void> {
     if (!existingLlmOAuth) {
       await manager.setLlmOAuth('claude-max', {
         accessToken: legacyClaudeOAuth.accessToken,
-        refreshToken: legacyClaudeOAuth.refreshToken,
-        expiresAt: legacyClaudeOAuth.expiresAt,
+        ...(legacyClaudeOAuth.refreshToken !== undefined ? { refreshToken: legacyClaudeOAuth.refreshToken } : {}),
+        ...(legacyClaudeOAuth.expiresAt !== undefined ? { expiresAt: legacyClaudeOAuth.expiresAt } : {}),
       });
       debug('[storage] Migrated legacy Claude OAuth to llm_oauth::claude-max');
 

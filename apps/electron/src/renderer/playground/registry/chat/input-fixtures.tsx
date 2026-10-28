@@ -3,7 +3,7 @@ import type { BackgroundTask } from "@/components/app-shell/ActiveTasksBar";
 import { Circle } from "lucide-react";
 import type { LabelConfig } from "@craft-agent/shared/labels";
 import type { SessionStatus } from "@/config/session-status-config";
-import type { FileAttachment, PermissionRequest } from "../../../../shared/types";
+import type { FileAttachment,PermissionRequest } from "../../../../shared/types";
 
 export const sampleCodeAttachment: FileAttachment = {
   type: 'text',
@@ -21,13 +21,6 @@ export const samplePermissionRequest: PermissionRequest = {
   command: 'npm install --save-dev typescript @types/react',
 }
 
-const longPermissionRequest: PermissionRequest = {
-  requestId: 'perm-2',
-  sessionId: 'session-1',
-  toolName: 'bash',
-  description: 'Run shell command',
-  command: 'find /Users/test/project -type f -name "*.ts" | xargs grep -l "deprecated" | head -20',
-}
 
 export const veryLongPermissionRequest: PermissionRequest = {
   requestId: 'perm-3',
@@ -157,7 +150,7 @@ export const playgroundAppShellContext: AppShellContextType = {
   activeWorkspaceId: 'playground-workspace',
   activeWorkspaceSlug: 'playground-workspace',
   llmConnections: [],
-  workspaceDefaultLlmConnection: undefined,
+
   refreshLlmConnections: async () => {},
   pendingPermissions: new Map(),
   pendingCredentials: new Map(),

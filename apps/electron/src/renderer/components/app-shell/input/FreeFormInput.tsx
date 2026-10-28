@@ -180,7 +180,6 @@ export function FreeFormInput({
   onThinkingLevelChange,
   permissionMode = 'ask',
   onPermissionModeChange,
-  enabledModes = ['safe', 'ask', 'allow-all'],
   inputValue,
   onInputChange,
   attachmentsValue,

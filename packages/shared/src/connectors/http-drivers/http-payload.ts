@@ -1,21 +1,22 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { parseCapabilityOperationRequest, parseOperationCapability } from "../../governance/capability-broker";
 import type { ConnectorCapabilityAuthorization, ConnectorHttpRequest, InvocationEnvelope } from './contracts.ts';
 import { ConnectorDriverError } from './contracts.ts';
 
 export function readInvocationEnvelope(input: Record<string, unknown>): InvocationEnvelope {
-  const rawPayload = input.payload
-  const payload = rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)
+  const rawPayload = input["payload"]
+  const payload = rawPayload && typeof rawPayload === 'object' && !isUnknownArray(rawPayload)
     ? { ...rawPayload } as Record<string, unknown>
     : {}
-  const resourceId = typeof input.resourceId === 'string' && input.resourceId.trim()
-    ? input.resourceId.trim()
+  const resourceId = typeof input["resourceId"] === 'string' && input["resourceId"].trim()
+    ? input["resourceId"].trim()
     : undefined
-  const idempotencyKey = typeof input.idempotencyKey === 'string' && input.idempotencyKey.trim()
-    ? input.idempotencyKey.trim()
+  const idempotencyKey = typeof input["idempotencyKey"] === 'string' && input["idempotencyKey"].trim()
+    ? input["idempotencyKey"].trim()
     : undefined
-  const rawAuthorization = input.authorization
+  const rawAuthorization = input["authorization"]
   let authorization: ConnectorCapabilityAuthorization | undefined
-  if (rawAuthorization && typeof rawAuthorization === 'object' && !Array.isArray(rawAuthorization)) {
+  if (rawAuthorization && typeof rawAuthorization === 'object' && !isUnknownArray(rawAuthorization)) {
     try {
       authorization = {
         request: parseCapabilityOperationRequest(Reflect.get(rawAuthorization, 'request')),
@@ -25,7 +26,7 @@ export function readInvocationEnvelope(input: Record<string, unknown>): Invocati
       authorization = undefined
     }
   }
-  return { payload, resourceId, idempotencyKey, authorization }
+  return { payload, ...(resourceId !== undefined ? { resourceId } : {}), ...(idempotencyKey !== undefined ? { idempotencyKey } : {}), ...(authorization !== undefined ? { authorization } : {}) }
 }
 
 /**

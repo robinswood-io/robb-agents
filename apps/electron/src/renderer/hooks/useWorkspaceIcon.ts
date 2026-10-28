@@ -73,7 +73,7 @@ export function useWorkspaceIcon(workspace: Workspace | undefined): string | und
 
     // Extract icon filename from file:// URL
     // e.g., "file:///path/to/icon.png?t=123" -> "icon.png"
-    const urlWithoutQuery = workspaceIconUrl.split('?')[0]
+    const urlWithoutQuery = workspaceIconUrl.split('?', 1).join('')
     const iconFilename = urlWithoutQuery.split('/').pop()
     if (!iconFilename) {
       setIconUrl(undefined)
@@ -173,7 +173,7 @@ export function useWorkspaceIcons(workspaces: Workspace[]): Map<string, string> 
         }
 
         // Extract icon filename
-        const urlWithoutQuery = workspace.iconUrl.split('?')[0]
+        const urlWithoutQuery = workspace.iconUrl.split('?', 1).join('')
         const iconFilename = urlWithoutQuery.split('/').pop()
         if (!iconFilename) continue
 

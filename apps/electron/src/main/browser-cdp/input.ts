@@ -116,7 +116,7 @@ export async function getClipboard(transportOwner: BrowserCDP): Promise<string> 
 
 export async function clickElement(transportOwner: BrowserCDP, ref: string): Promise<ElementGeometry> {
     try {
-        const resolved = await transportOwner["resolveElementRef"](ref);
+        const resolved = await transportOwner.resolveElementRef(ref);
         // Scroll element into view first
         await transportOwner["send"]('Runtime.callFunctionOn', {
             objectId: resolved.objectId,
@@ -138,7 +138,7 @@ export async function clickElement(transportOwner: BrowserCDP, ref: string): Pro
 
 export async function fillElement(transportOwner: BrowserCDP, ref: string, value: string): Promise<ElementGeometry> {
     try {
-        const resolved = await transportOwner["resolveElementRef"](ref);
+        const resolved = await transportOwner.resolveElementRef(ref);
         // Focus the element first
         await transportOwner["send"]('DOM.focus', { backendNodeId: resolved.backendNodeId });
         // Clear existing content
@@ -170,7 +170,7 @@ export async function fillElement(transportOwner: BrowserCDP, ref: string, value
 
 export async function selectOption(transportOwner: BrowserCDP, ref: string, value: string): Promise<ElementGeometry> {
     try {
-        const resolved = await transportOwner["resolveElementRef"](ref);
+        const resolved = await transportOwner.resolveElementRef(ref);
         const result = await transportOwner["send"]('Runtime.callFunctionOn', {
             objectId: resolved.objectId,
             returnByValue: true,
@@ -349,7 +349,7 @@ export async function selectOption(transportOwner: BrowserCDP, ref: string, valu
 
 export async function setFileInputFiles(transportOwner: BrowserCDP, ref: string, filePaths: string[]): Promise<ElementGeometry> {
     try {
-        const resolved = await transportOwner["resolveElementRef"](ref);
+        const resolved = await transportOwner.resolveElementRef(ref);
         const inputObject = await transportOwner["send"]('Runtime.callFunctionOn', {
             objectId: resolved.objectId,
             functionDeclaration: `function() {

@@ -66,7 +66,6 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     permissionManager,
     prerequisiteManager,
     preloadedSourceGuidePaths,
-    backendMetadata,
     currentUserRequest,
     onDebug,
   } = ctx;
@@ -86,7 +85,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     : currentUserRequest ? [currentUserRequest] : [];
   const isProviderDrivenAutonomy = objectiveMutationAuthorized === undefined
     && objectiveAuthorizationSegments !== undefined
-    && process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT !== '1';
+    && process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] !== '1';
   // Closed structured Gmail bodies are payload data. Preserve the raw view
   // only for exact Gmail payload/fingerprint checks; every other authority,
   // channel and remote-scope classifier consumes this policy-safe view.
@@ -106,7 +105,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   const gmailClaims = claimGmailToolUse({
     toolName,
     sessionId,
-    toolUseId,
+    ...(toolUseId !== undefined ? { toolUseId } : {}),
     input,
     sourceActivationReentry,
     permissionApprovalReentry,
@@ -122,9 +121,9 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   const toolAuthority = classifyToolAuthority({
     input,
     toolName,
-    dataFolderPath,
-    authenticatedUserAuthorizationSegments,
-    objectiveTerminalReconciliationPolicy,
+    ...(dataFolderPath !== undefined ? { dataFolderPath } : {}),
+    ...(authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments } : {}),
+    ...(objectiveTerminalReconciliationPolicy !== undefined ? { objectiveTerminalReconciliationPolicy } : {}),
     sessionId,
   }, ctx, permissionsContext, policyAuthorizationSegments);
   if ('type' in toolAuthority) return toolAuthority;
@@ -140,10 +139,10 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   } = toolAuthority;
 
   const browserAdmission = checkBrowserChannelAdmission({
-    objectiveAuthorizationSegments,
+    ...(objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments } : {}),
     toolName,
     input,
-    onDebug,
+    ...(onDebug !== undefined ? { onDebug } : {}),
   }, {
     policyCurrentUserRequest,
     policyAuthorizationSegments,
@@ -154,7 +153,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     sessionId,
     toolName,
     input,
-    dataFolderPath,
+    ...(dataFolderPath !== undefined ? { dataFolderPath } : {}),
   }, {
     acceptedAuthorizationSegments,
     targetScopedContextualGmailSegments,
@@ -209,7 +208,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   // session-bound URL, so unrelated form/CMS mutations remain available.
   if (browserObjectiveAuthority === 'mutation-or-unknown'
     && contextualGmailReplyMentioned
-    && explicitlyNamesGmailBrowserMutation(input.command)) {
+    && explicitlyNamesGmailBrowserMutation(input["command"])) {
     return {
       type: 'block',
       reason: 'Validation failed: this accepted objective contains a contextual Gmail reply, so an explicit Gmail/send/reply browser mutation cannot be used as a fallback. Continue with read-only browser inspection if needed, then use only gmail_reply_preflight + gmail_reply_bound or gmail_reply_all_preflight + gmail_reply_all with their signed closed payload.',
@@ -227,7 +226,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   const remoteTransport = checkRemoteTransportAdmission({
     toolName,
     input,
-    workingDirectory,
+    ...(workingDirectory !== undefined ? { workingDirectory } : {}),
     workspaceRootPath,
   }, {
     toolEffect,
@@ -267,7 +266,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
       toolName,
       input,
       effectivePermissionMode,
-      { plansFolderPath, dataFolderPath, permissionsContext }
+      { ...(plansFolderPath !== undefined ? { plansFolderPath } : {}), ...(dataFolderPath !== undefined ? { dataFolderPath } : {}), permissionsContext }
     );
 
   if (!modeResult.allowed) {
@@ -280,32 +279,32 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   }
 
   const prerequisiteDecision = checkExecutionPrerequisites({
-    executionIsolation,
+    ...(executionIsolation !== undefined ? { executionIsolation } : {}),
     toolName,
     input,
-    onDebug,
+    ...(onDebug !== undefined ? { onDebug } : {}),
     workspaceRootPath,
-    workingDirectory,
-    missionCapabilityLock,
+    ...(workingDirectory !== undefined ? { workingDirectory } : {}),
+    ...(missionCapabilityLock !== undefined ? { missionCapabilityLock } : {}),
     activeSourceSlugs,
     allSourceSlugs,
-    objectiveTerminalReconciliationPolicy,
+    ...(objectiveTerminalReconciliationPolicy !== undefined ? { objectiveTerminalReconciliationPolicy } : {}),
     hasSourceActivation,
-    prerequisiteManager,
-    preloadedSourceGuidePaths,
+    ...(prerequisiteManager !== undefined ? { prerequisiteManager } : {}),
+    ...(preloadedSourceGuidePaths !== undefined ? { preloadedSourceGuidePaths } : {}),
   }, contextualGmailToolUseClaim);
   if (prerequisiteDecision) return prerequisiteDecision;
 
   const objectiveAdmission = checkDispatchObjectiveAuthority({
     toolName,
     input,
-    objectiveMutationAuthorized,
-    objectiveSensitiveActionAuthorized,
-    objectiveAuthorizationSegments,
-    plansFolderPath,
-    dataFolderPath,
+    ...(objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized } : {}),
+    ...(objectiveSensitiveActionAuthorized !== undefined ? { objectiveSensitiveActionAuthorized } : {}),
+    ...(objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments } : {}),
+    ...(plansFolderPath !== undefined ? { plansFolderPath } : {}),
+    ...(dataFolderPath !== undefined ? { dataFolderPath } : {}),
     sessionId,
-    onDebug,
+    ...(onDebug !== undefined ? { onDebug } : {}),
   }, {
     toolEffect,
     sensitiveAction,
@@ -357,23 +356,23 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   const preparation = prepareToolInput({
     input,
     toolName,
-    onDebug,
+    ...(onDebug !== undefined ? { onDebug } : {}),
     workspaceRootPath,
-    workingDirectory,
+    ...(workingDirectory !== undefined ? { workingDirectory } : {}),
     workspaceId,
-    objectiveTerminalReconciliationPolicy,
+    ...(objectiveTerminalReconciliationPolicy !== undefined ? { objectiveTerminalReconciliationPolicy } : {}),
   }, ctx, toolEffect, boundedStructuredRemoteTechnicalUploadLocalPath);
   if (preparation.type === 'block') return preparation;
 
   const extension = getRobbOperationsExtension();
   if (extension) {
     const preparedInput = preparation.type === 'modify' ? preparation.input : input;
-    let decision;
+    let decision: ReturnType<typeof extension.beforeTool>;
     try {
       decision = extension.beforeTool({
         now: new Date().toISOString(), workspaceId, workspaceRootPath, sessionId,
         toolName, input: preparedInput, permissionMode: effectivePermissionMode,
-        workingDirectory,
+        ...(workingDirectory !== undefined ? { workingDirectory } : {}),
       });
     } catch (error) {
       return { type: 'block', reason: `Robb Operations: ${error instanceof Error ? error.message : String(error)}` };
@@ -386,13 +385,14 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
       if (effectivePermissionMode === 'safe' || ctx.humanInputAllowed === false) {
         return { type: 'block', reason: decision.reason };
       }
+      const optionalModifiedInput = preparation.type === 'modify' ? preparation.input : undefined;
       return {
         type: 'prompt',
         promptType: toolName === 'Bash' ? 'bash' : toolName.startsWith('mcp__') ? 'mcp_mutation' : 'api_mutation',
         description: decision.reason,
-        command: toolName === 'Bash' && typeof preparedInput.command === 'string' ? preparedInput.command : undefined,
-        modifiedInput: preparation.type === 'modify' ? preparation.input : undefined,
-        reason: decision.classification,
+        ...(toolName === 'Bash' && typeof preparedInput["command"] === 'string' ? { command: preparedInput["command"] } : {}),
+        ...(optionalModifiedInput !== undefined ? { modifiedInput: optionalModifiedInput } : {}),
+        ...(decision.classification !== undefined ? { reason: decision.classification } : {}),
         requiresExplicitConfirmation: true,
       };
     }
@@ -403,15 +403,15 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     input,
     externalActionPolicy,
     sessionId,
-    onDebug,
-    objectiveAuthorizationSegments,
-    currentUserRequest,
+    ...(onDebug !== undefined ? { onDebug } : {}),
+    ...(objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments } : {}),
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
     permissionApprovalReentry,
-    toolUseId,
-    runtimeId,
+    ...(toolUseId !== undefined ? { toolUseId } : {}),
+    ...(runtimeId !== undefined ? { runtimeId } : {}),
     permissionManager,
-    plansFolderPath,
-    objectiveTerminalReconciliationPolicy,
+    ...(plansFolderPath !== undefined ? { plansFolderPath } : {}),
+    ...(objectiveTerminalReconciliationPolicy !== undefined ? { objectiveTerminalReconciliationPolicy } : {}),
   }, ctx, preparation, {
     effectivePermissionMode,
     sensitiveAction,

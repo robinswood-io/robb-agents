@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 import { describe, expect, it } from 'bun:test'
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
@@ -93,8 +94,8 @@ describe('default thinking level storage', () => {
 
     runEval(configDir, "setDefaultThinkingLevel('max'); console.log(String(getDefaultThinkingLevel()))")
 
-    const config = JSON.parse(readFileSync(configPath, 'utf-8'))
-    expect(config.defaultThinkingLevel).toBe('max')
+    const config = parseJsonObject(readFileSync(configPath, 'utf-8'))
+    expect(config["defaultThinkingLevel"]).toBe('max')
   })
 
   it('round-trips persisted value across processes', () => {
@@ -116,8 +117,8 @@ describe('default thinking level storage', () => {
   it('migrates legacy "think" value to "medium"', () => {
     const { configDir, configPath } = setupWorkspaceConfigDir()
     // Manually write the legacy 'think' value to config
-    const config = JSON.parse(readFileSync(configPath, 'utf-8'))
-    config.defaultThinkingLevel = 'think'
+    const config = parseJsonObject(readFileSync(configPath, 'utf-8'))
+    config["defaultThinkingLevel"] = 'think'
     writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8')
 
     const output = runEval(configDir, "console.log(String(getDefaultThinkingLevel()))")

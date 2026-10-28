@@ -1,8 +1,8 @@
 import type { ActiveSessionObjective } from '@craft-agent/shared/sessions'
 
 export interface ObjectiveSessionStatusInput {
-  sessionStatus?: string
-  activeObjective?: Pick<ActiveSessionObjective, 'terminalState'>
+  sessionStatus?: string | undefined
+  activeObjective?: Pick<ActiveSessionObjective, 'terminalState'> | undefined
 }
 
 /**

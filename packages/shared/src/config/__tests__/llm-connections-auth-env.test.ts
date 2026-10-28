@@ -58,20 +58,20 @@ describe('Bedrock auth env handling', () => {
     type AuthCredentialManager = Parameters<typeof resolveAuthEnvVars>[2]
     const credentialManager = {
       getLlmApiKey: async () => 'bedrock-bearer-token',
-      getLlmIamCredentials: async () => null,
-    } satisfies Pick<AuthCredentialManager, 'getLlmApiKey' | 'getLlmIamCredentials'>
+      getLlmOAuth: async () => null,
+    } satisfies Pick<AuthCredentialManager, 'getLlmApiKey' | 'getLlmOAuth'>
 
     const result = await resolveAuthEnvVars(
       connection,
       connection.slug,
-      credentialManager as Partial<AuthCredentialManager> as AuthCredentialManager,
+      credentialManager,
       async () => ({}),
     )
 
     expect(result.success).toBe(true)
-    expect(result.envVars.CLAUDE_CODE_USE_BEDROCK).toBeUndefined()
-    expect(result.envVars.AWS_BEARER_TOKEN_BEDROCK).toBeUndefined()
-    expect(result.envVars.ANTHROPIC_BEDROCK_BASE_URL).toBeUndefined()
+    expect(result.envVars["CLAUDE_CODE_USE_BEDROCK"]).toBeUndefined()
+    expect(result.envVars["AWS_BEARER_TOKEN_BEDROCK"]).toBeUndefined()
+    expect(result.envVars["ANTHROPIC_BEDROCK_BASE_URL"]).toBeUndefined()
   })
 
   it('clearClaudeBedrockRoutingEnvVars removes only Claude-specific Bedrock routing vars', () => {
@@ -84,29 +84,29 @@ describe('Bedrock auth env handling', () => {
 
     clearClaudeBedrockRoutingEnvVars(env)
 
-    expect(env.CLAUDE_CODE_USE_BEDROCK).toBeUndefined()
-    expect(env.AWS_BEARER_TOKEN_BEDROCK).toBeUndefined()
-    expect(env.ANTHROPIC_BEDROCK_BASE_URL).toBeUndefined()
-    expect(env.AWS_REGION).toBe('us-east-1')
+    expect(env["CLAUDE_CODE_USE_BEDROCK"]).toBeUndefined()
+    expect(env["AWS_BEARER_TOKEN_BEDROCK"]).toBeUndefined()
+    expect(env["ANTHROPIC_BEDROCK_BASE_URL"]).toBeUndefined()
+    expect(env["AWS_REGION"]).toBe('us-east-1')
   })
 
   it('resetManagedAnthropicAuthEnvVars clears Bedrock routing vars from process env', () => {
-    process.env.CLAUDE_CODE_USE_BEDROCK = '1'
-    process.env.AWS_BEARER_TOKEN_BEDROCK = 'token'
-    process.env.ANTHROPIC_BEDROCK_BASE_URL = 'https://bedrock.example.com'
-    process.env.AWS_REGION = 'us-east-1'
+    process.env["CLAUDE_CODE_USE_BEDROCK"] = '1'
+    process.env["AWS_BEARER_TOKEN_BEDROCK"] = 'token'
+    process.env["ANTHROPIC_BEDROCK_BASE_URL"] = 'https://bedrock.example.com'
+    process.env["AWS_REGION"] = 'us-east-1'
 
     resetManagedAnthropicAuthEnvVars()
 
-    expect(process.env.CLAUDE_CODE_USE_BEDROCK).toBeUndefined()
-    expect(process.env.AWS_BEARER_TOKEN_BEDROCK).toBeUndefined()
-    expect(process.env.ANTHROPIC_BEDROCK_BASE_URL).toBeUndefined()
+    expect(process.env["CLAUDE_CODE_USE_BEDROCK"]).toBeUndefined()
+    expect(process.env["AWS_BEARER_TOKEN_BEDROCK"]).toBeUndefined()
+    expect(process.env["ANTHROPIC_BEDROCK_BASE_URL"]).toBeUndefined()
 
     const originalRegion = originalEnv.get('AWS_REGION')
     if (originalRegion === undefined) {
-      expect(process.env.AWS_REGION).toBeUndefined()
+      expect(process.env["AWS_REGION"]).toBeUndefined()
     } else {
-      expect(process.env.AWS_REGION).toBe(originalRegion)
+      expect(process.env["AWS_REGION"]).toBe(originalRegion)
     }
   })
 })

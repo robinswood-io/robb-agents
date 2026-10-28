@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "arrays": {
+    "schedules": [
+      "schedules/001.json",
+      "schedules/002.json",
+      "schedules/003.json",
+      "schedules/004.json",
+      "schedules/005.json",
+      "schedules/006.json"
+    ],
+    "items": [
+      "items/001.json",
+      "items/002.json",
+      "items/003.json",
+      "items/004.json",
+      "items/005.json"
+    ]
+  }
+}

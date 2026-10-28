@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { existsSync, writeFileSync } from "fs";
 import { readJsonFileSync } from "../../utils/files.ts";
 import { ensureConfigDir } from './config-file.ts';
@@ -68,7 +69,7 @@ function isSessionDraft(value: unknown): value is SessionDraft {
   const candidate = value as SessionDraft;
   if (typeof candidate.text !== 'string') return false;
   if (candidate.attachments !== undefined) {
-    if (!Array.isArray(candidate.attachments)) return false;
+    if (!isUnknownArray(candidate.attachments)) return false;
     if (!candidate.attachments.every(isDraftAttachmentRef)) return false;
   }
   return true;

@@ -32,12 +32,14 @@ export const MermaidBlock = Node.create({
   markdownTokenName: 'code',
 
   parseMarkdown: (token, helpers) => {
-    if ((token.lang ?? '').toLowerCase() !== 'mermaid') return []
+    const language: unknown = token["lang"]
+    if ((typeof language === 'string' ? language : '').toLowerCase() !== 'mermaid') return []
     return helpers.createNode('mermaidBlock', { code: token.text ?? '' })
   },
 
   renderMarkdown: (node) => {
-    const code = (node.attrs?.code ?? '').replace(/\n$/, '')
+    const rawCode: unknown = node.attrs?.["code"]
+    const code = (typeof rawCode === 'string' ? rawCode : '').replace(/\n$/, '')
     return `\`\`\`mermaid\n${code}\n\`\`\``
   },
 
@@ -69,7 +71,7 @@ export const MermaidBlock = Node.create({
           }}
         >
           <RichBlockShell onEdit={handleEditClick} editTitle="Edit Mermaid">
-            <MarkdownMermaidBlock code={(node.attrs.code as string) ?? ''} showExpandButton={false} tapToOpen={false} minHeight={140} />
+            <MarkdownMermaidBlock code={(node.attrs["code"] as string) ?? ''} showExpandButton={false} tapToOpen={false} minHeight={140} />
           </RichBlockShell>
         </NodeViewWrapper>
       )

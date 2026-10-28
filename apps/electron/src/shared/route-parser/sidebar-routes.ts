@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Route Parser
  *
@@ -31,7 +32,7 @@ export function parseRightSidebarParam(sidebarStr?: string): RightSidebarPanel |
   }
   if (sidebarStr.startsWith('files')) {
     const path = sidebarStr.substring(6) // Remove 'files/' prefix
-    return { type: 'files', path: path || undefined }
+    return omitUndefined<Extract<RightSidebarPanel, { type: 'files' }>>({ type: 'files', path: path || undefined })
   }
   if (sidebarStr === 'none') {
     return { type: 'none' }

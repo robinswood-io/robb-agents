@@ -17,7 +17,7 @@ import {
 const DEFAULT_PLANNER_TIMEOUT_MS = 10 * 60 * 1000;
 
 export interface MissionPlannerOptions {
-  host: ISessionManager;
+  host: Pick<ISessionManager, 'getSessions' | 'createSession' | 'getSession' | 'getSessionFinalText' | 'sendMessage' | 'onSessionComplete'>;
   workspaceId: string;
   workspaceRoot: string;
   timeoutMs?: number;

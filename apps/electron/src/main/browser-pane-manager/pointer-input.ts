@@ -4,13 +4,13 @@ import { DEFAULT_WAIT_TIMEOUT_MS } from './shared.ts';
 import type { BrowserPaneClickElementOptionsPayload } from './protocol.ts';
 
 export async function clickAtCoordinates(transportOwner: BrowserPaneManager, id: string, x: number, y: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
-    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner["clickAtCoordinatesAtCurrentUrl"](id, x, y, mutationPolicy));
+    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner.clickAtCoordinatesAtCurrentUrl(id, x, y, mutationPolicy));
 }
 
 export async function clickAtCoordinatesAtCurrentUrl(transportOwner: BrowserPaneManager, id: string, x: number, y: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
     const instance = transportOwner["requireAliveInstance"](id);
     try {
-        transportOwner["assertMutationUrlAllowed"](instance, mutationPolicy);
+        transportOwner.assertMutationUrlAllowed(instance, mutationPolicy);
         await instance.cdp.clickAtCoordinates(x, y);
         instance.lastAction = {
             tool: 'browser_click_at',
@@ -29,13 +29,13 @@ export async function clickAtCoordinatesAtCurrentUrl(transportOwner: BrowserPane
 }
 
 export async function drag(transportOwner: BrowserPaneManager, id: string, x1: number, y1: number, x2: number, y2: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
-    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner["dragAtCurrentUrl"](id, x1, y1, x2, y2, mutationPolicy));
+    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner.dragAtCurrentUrl(id, x1, y1, x2, y2, mutationPolicy));
 }
 
 export async function dragAtCurrentUrl(transportOwner: BrowserPaneManager, id: string, x1: number, y1: number, x2: number, y2: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
     const instance = transportOwner["requireAliveInstance"](id);
     try {
-        transportOwner["assertMutationUrlAllowed"](instance, mutationPolicy);
+        transportOwner.assertMutationUrlAllowed(instance, mutationPolicy);
         await instance.cdp.drag(x1, y1, x2, y2);
         instance.lastAction = {
             tool: 'browser_drag',
@@ -54,7 +54,7 @@ export async function dragAtCurrentUrl(transportOwner: BrowserPaneManager, id: s
 }
 
 export async function clickElement(transportOwner: BrowserPaneManager, id: string, ref: string, options?: BrowserPaneClickElementOptionsPayload, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
-    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner["clickElementAtCurrentUrl"](id, ref, options, mutationPolicy));
+    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner.clickElementAtCurrentUrl(id, ref, options, mutationPolicy));
 }
 
 export async function clickElementAtCurrentUrl(transportOwner: BrowserPaneManager, id: string, ref: string, options?: BrowserPaneClickElementOptionsPayload, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
@@ -94,7 +94,7 @@ export async function clickElementAtCurrentUrl(transportOwner: BrowserPaneManage
         });
     }
     try {
-        transportOwner["assertMutationUrlAllowed"](instance, mutationPolicy);
+        transportOwner.assertMutationUrlAllowed(instance, mutationPolicy);
         const clickPromise = instance.cdp.clickElement(ref);
         const geometry = navigationWait
             ? (await Promise.all([clickPromise, navigationWait]))[0]
@@ -107,7 +107,7 @@ export async function clickElementAtCurrentUrl(transportOwner: BrowserPaneManage
             timestamp: Date.now(),
         };
         if (waitFor === 'network-idle') {
-            await transportOwner["waitFor"](id, { kind: 'network-idle', timeoutMs: options?.timeoutMs });
+            await transportOwner["waitFor"](id, { kind: 'network-idle', ...(options?.timeoutMs !== undefined ? { timeoutMs: options?.timeoutMs } : {}) });
         }
     }
     catch (error) {

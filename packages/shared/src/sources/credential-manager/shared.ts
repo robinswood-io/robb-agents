@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 
 
 /**
@@ -49,8 +50,8 @@ export function substituteTokenInBody(obj: Record<string, unknown>, token: strin
         if (typeof value === 'string') {
             result[key] = value.replace(/\{\{token\}\}/g, token);
         }
-        else if (Array.isArray(value)) {
-            result[key] = value.map(item => typeof item === 'string' ? item.replace(/\{\{token\}\}/g, token) :
+        else if (isUnknownArray(value)) {
+            result[key] = value.map((item: unknown) => typeof item === 'string' ? item.replace(/\{\{token\}\}/g, token) :
                 (item && typeof item === 'object' ? substituteTokenInBody(item as Record<string, unknown>, token) : item));
         }
         else if (value && typeof value === 'object') {

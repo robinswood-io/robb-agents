@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionManagerForTest, type SessionSendArguments } from "./testing/private-runtime-access.ts";
 import { permissionMetadataFixture } from "./testing/permission-metadata.ts";
@@ -106,12 +107,16 @@ describe('durable restart recovery', () => {
       expect(await h.runtime.enqueueAutomaticTurnRecovery(managed, cause, gaps)).toBe(true)
       expect(await h.runtime.enqueueAutomaticTurnRecovery(managed, cause, gaps)).toBe(true)
       expect(managed.messageQueue.map(item => item.messageId)).toEqual(['first', 'second'])
-      expect(managed.pendingTurnRecovery).toEqual({ ...before, validationGaps: gaps ?? before.validationGaps })
+      const expectedRecovery = { ...before }
+      const expectedGaps = gaps ?? before.validationGaps
+      if (expectedGaps === undefined) delete expectedRecovery.validationGaps
+      else expectedRecovery.validationGaps = expectedGaps
+      expect(managed.pendingTurnRecovery).toEqual(expectedRecovery)
       expect(managed.activeObjective).toEqual(objective)
       expect(managed.messages).toEqual(messages)
       expect(h.events.every(event => event.type === 'objective_changed')).toBe(true)
-      const stored = JSON.parse(readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8').split('\n')[0]!)
-      expect(stored.pendingTurnRecovery).toEqual(managed.pendingTurnRecovery)
+      const stored = parseRecoveryJournalObservation(readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8').split('\n')[0]!)
+      expect<unknown>(stored.pendingTurnRecovery).toEqual(managed.pendingTurnRecovery)
       expect(stored.pendingQueuedMessageIds).toEqual(['first', 'second'])
     },
   )
@@ -181,9 +186,9 @@ describe('durable restart recovery', () => {
         expect(managed.activeObjective?.userMessageId).toBe(human.id)
         expect(managed.pendingTurnRecovery).toMatchObject({ userMessageId: human.id, attempts: 0 })
         expect(managed.pendingTurnRecovery?.recoveryDispatch).toBeUndefined()
-        const header = JSON.parse(readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8').split('\n')[0]!)
+        const header = parseRecoveryJournalObservation(readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8').split('\n')[0]!)
         expect(header.pendingTurnRecovery).toMatchObject({ userMessageId: human.id, attempts: 0 })
-        expect(header.pendingTurnRecovery.recoveryDispatch).toBeUndefined()
+        expect(requiredTestValue(header.pendingTurnRecovery).recoveryDispatch).toBeUndefined()
       } finally {
         releaseAgent.resolve()
         await dispatch?.catch(() => {})

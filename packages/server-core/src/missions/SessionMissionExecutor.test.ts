@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from "bun:test";
 import type { Session } from "@craft-agent/shared/protocol";
 import { clearRobbOperationsExtension, registerRobbOperationsExtension } from '@craft-agent/shared/operations';
@@ -122,7 +123,7 @@ describe('SessionMissionExecutor', () => {
     });
 
     const recovered = new FakeHost();
-    recovered.sessions.push({ ...host.sessions[0]!, missionRouteLockSha256: undefined });
+    recovered.sessions.push(omitUndefined<Session>({ ...host.sessions[0]!, missionRouteLockSha256: undefined }));
     const recoveryExecutor = new SessionMissionExecutor({
       host: recovered, workspaceId: 'workspace-1', workspaceRoot: '/tmp',
     });
@@ -296,10 +297,10 @@ describe('SessionMissionExecutor', () => {
       missionRole: 'worker' as const,
       permissionMode: 'safe' as const,
       enabledSourceSlugs: route?.effectiveSourceSlugs ?? [],
-      workingDirectory: route?.cwd,
-      llmConnection: assignment.profile.llmConnection,
-      model: assignment.profile.model,
-      thinkingLevel: assignment.profile.thinkingLevel,
+      ...(route?.cwd !== undefined ? { workingDirectory: route?.cwd } : {}),
+      ...(assignment.profile.llmConnection !== undefined ? { llmConnection: assignment.profile.llmConnection } : {}),
+      ...(assignment.profile.model !== undefined ? { model: assignment.profile.model } : {}),
+      ...(assignment.profile.thinkingLevel !== undefined ? { thinkingLevel: assignment.profile.thinkingLevel } : {}),
       ...(route ? {
         missionOrdinaryRouteLock: structuredClone(route),
         connectionRoutePinned: true,

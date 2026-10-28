@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { InputFile } from "grammy";
 import type { SendOptions, SentMessage, InlineButton } from "../../../types";
 import { formatForTelegram } from "../format";
@@ -19,10 +20,10 @@ export async function getChatInfo(transportOwner: TelegramAdapter, chatId: strin
                 title: chat.title ?? `Group ${chatId}`,
             };
         }
-        return {
+        return omitUndefined({
             type: chat.type,
             title: 'title' in chat && typeof chat.title === 'string' ? chat.title : undefined,
-        };
+        });
     }
     catch {
         return null;
@@ -83,7 +84,7 @@ export async function sendFile(transportOwner: TelegramAdapter, channelId: strin
     if (!transportOwner["bot"])
         throw new Error('Telegram adapter not initialized');
     const inputFile = new InputFile(file, filename);
-    const sent = await transportOwner["bot"].api.sendDocument(Number(channelId), inputFile, { caption, ...threadParams(opts) });
+    const sent = await transportOwner["bot"].api.sendDocument(Number(channelId), inputFile, omitUndefined({ caption, ...threadParams(opts) }));
     return {
         platform: 'telegram',
         channelId,

@@ -61,7 +61,7 @@ export function validatePowerShellCommand(
 
   return {
     ...result,
-    subcommandResults: subcommandResults.length > 0 ? subcommandResults : undefined,
+    ...(subcommandResults.length > 0 ? { subcommandResults: subcommandResults } : {}),
   };
 }
 
@@ -303,10 +303,11 @@ function validateCommand(
     return false;
   });
 
+  const optionalReason = matchesPattern ? undefined : 'Not in read-only allowlist';
   const subResult: SubcommandResult = {
     command: commandStr,
     allowed: matchesPattern,
-    reason: matchesPattern ? undefined : 'Not in read-only allowlist',
+    ...(optionalReason !== undefined ? { reason: optionalReason } : {}),
   };
   results.push(subResult);
 

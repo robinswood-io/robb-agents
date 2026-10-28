@@ -9,29 +9,29 @@ export interface CodeOverlayData {
   filePath: string
   content: string
   mode: 'read' | 'write'
-  startLine?: number
-  totalLines?: number
-  numLines?: number
-  error?: string
+  startLine?: number | undefined
+  totalLines?: number | undefined
+  numLines?: number | undefined
+  error?: string | undefined
   /** Original shell command (for Codex reads) - displayed in overlay */
-  command?: string
+  command?: string | undefined
 }
 
 export interface TerminalOverlayData {
   type: 'terminal'
   command: string
   output: string
-  exitCode?: number
+  exitCode?: number | undefined
   toolType: ToolType
   description: string
-  error?: string
+  error?: string | undefined
 }
 
 export interface GenericOverlayData {
   type: 'generic'
   content: string
   title: string
-  error?: string
+  error?: string | undefined
 }
 
 export interface JSONOverlayData {
@@ -39,7 +39,7 @@ export interface JSONOverlayData {
   data: unknown
   rawContent: string
   title: string
-  error?: string
+  error?: string | undefined
 }
 
 /** Rendered markdown document — used for Write tool results on .md/.txt files */
@@ -49,7 +49,7 @@ export interface DocumentOverlayData {
   filePath: string
   /** Tool that produced this content (e.g. "Write") — used for the header type badge */
   toolName: string
-  error?: string
+  error?: string | undefined
 }
 
 export type OverlayData = CodeOverlayData | TerminalOverlayData | GenericOverlayData | JSONOverlayData | DocumentOverlayData

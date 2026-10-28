@@ -47,8 +47,8 @@ export function rehydrateObjectiveEvidence(managed: ManagedSession): void {
     }
     beginObjectiveEvidenceGate(managed.id, objective.userMessageId, objectiveText, {
       risk: objective.risk,
-      evidenceRequirement: objective.evidenceRequirement,
-      domain,
+      ...(objective.evidenceRequirement !== undefined ? { evidenceRequirement: objective.evidenceRequirement } : {}),
+      ...(domain !== undefined ? { domain: domain } : {}),
     })
     const domainAnchorMatches = managed.messages
       .map((candidate, index) => ({ candidate, index }))
@@ -80,10 +80,10 @@ export function rehydrateObjectiveEvidence(managed: ManagedSession): void {
         checkObjectiveEvidenceBeforeMutation(managed.id, prior.toolName ?? 'tool')
       }
       if (!hasObjectiveSubstantiveToolResult(prior)) continue
-      const sessionIds = prior.toolInput?.sessionIds
+      const sessionIds = prior.toolInput?.["sessionIds"]
       recordObjectiveEvidence(managed.id, prior.toolName ?? 'tool', prior.toolResult!, false, {
         ...objectiveReviewBinding(objective),
-        ...(Array.isArray(sessionIds) && sessionIds.every(id => typeof id === 'string') ? { sessionIds } : {}),
+        ...(Array.isArray(sessionIds) && sessionIds.every((id: unknown) => typeof id === 'string') ? { sessionIds } : {}),
       }, prior.toolInput)
     }
   }

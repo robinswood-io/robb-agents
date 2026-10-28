@@ -9,7 +9,7 @@ import { sessionLog } from '../runtime-platform.ts';
 import { MAX_CLEAN_RETRY_SETUP_BACKOFF_MS } from '../user-input-authority.ts';
 import { buildRecoveryDispatchMessage as sessionOpBuildRecoveryDispatchMessage } from './user-input-recovery.ts';
 
-function sessionOpStartRecoveryDispatch(sessionOperationContext: SessionOperationContext, pending: PendingTurnRecovery, provenance: NonNullable<SendMessageOptions['automaticRecovery']>, nowMs = Date.now()): PendingTurnRecovery {
+function sessionOpStartRecoveryDispatch(_sessionOperationContext: SessionOperationContext, pending: PendingTurnRecovery, provenance: NonNullable<SendMessageOptions['automaticRecovery']>, nowMs = Date.now()): PendingTurnRecovery {
     const expectedOrigin = provenance.cause === 'app_restart'
         ? 'restart' as const
         : provenance.cause === 'user_retry'
@@ -223,7 +223,7 @@ function sessionOpRequeueAllocatedRecoveryDispatch(sessionOperationContext: Sess
  * because the host restarted long after the original work. A recent durable
  * allocation is different: it proves the host accepted one exact dispatch
  * immediately before the crash and may therefore be rebuilt once. */
-function sessionOpColdAutomaticRecoveryLeaseExpired(sessionOperationContext: SessionOperationContext, pending: PendingTurnRecovery, nowMs = Date.now()): boolean {
+function sessionOpColdAutomaticRecoveryLeaseExpired(_sessionOperationContext: SessionOperationContext, pending: PendingTurnRecovery, nowMs = Date.now()): boolean {
     const allocated = validAllocatedRecoveryDispatch(pending);
     if (allocated && allocated.allocatedAt <= nowMs
         && nowMs - allocated.allocatedAt < DEFAULT_AUTOMATIC_TURN_RECOVERY_LEASE_MS)

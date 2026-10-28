@@ -51,8 +51,7 @@ function getNavigator(): BadgeNavigator | null {
 function supportsWebAssemblyMemory64(): boolean {
   if (typeof WebAssembly === 'undefined' || typeof WebAssembly.Memory !== 'function') return false
   try {
-    const Memory = WebAssembly.Memory as unknown as new (descriptor: Record<string, unknown>) => WebAssembly.Memory
-    new Memory({ initial: 1, maximum: 1, index: 'i64' })
+    Reflect.construct(WebAssembly.Memory, [{ initial: 1n, maximum: 1n, address: 'i64' }])
     return true
   } catch {
     return false

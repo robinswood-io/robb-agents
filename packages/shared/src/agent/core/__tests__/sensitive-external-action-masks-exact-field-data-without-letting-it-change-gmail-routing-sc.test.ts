@@ -58,7 +58,7 @@ function createClosedExactGmailPreflightScenario(options: {
     input,
     sessionId,
     toolUseId,
-    runtimeId: invocationRuntimeId,
+    ...(invocationRuntimeId !== undefined ? { runtimeId: invocationRuntimeId } : {}),
     sourceActivationReentry,
     permissionMode,
     workspaceRootPath: '/tmp/robb-sensitive-action-test',
@@ -211,15 +211,15 @@ function checkMcp(
     activeSourceSlugs: [sourceSlug],
     allSourceSlugs: [sourceSlug],
     hasSourceActivation: false,
-    externalActionPolicy: options?.externalActionPolicy,
-    objectiveMutationAuthorized: options?.objectiveMutationAuthorized,
-    objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized,
-    objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments,
-    authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments,
-    dataFolderPath: options?.dataFolderPath,
-    declaredToolCapabilities: options?.declaredToolCapabilities,
+    ...(options?.externalActionPolicy !== undefined ? { externalActionPolicy: options?.externalActionPolicy } : {}),
+    ...(options?.objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized: options?.objectiveMutationAuthorized } : {}),
+    ...(options?.objectiveSensitiveActionAuthorized !== undefined ? { objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized } : {}),
+    ...(options?.objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments } : {}),
+    ...(options?.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments } : {}),
+    ...(options?.dataFolderPath !== undefined ? { dataFolderPath: options?.dataFolderPath } : {}),
+    ...(options?.declaredToolCapabilities !== undefined ? { declaredToolCapabilities: options?.declaredToolCapabilities } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 
@@ -235,9 +235,6 @@ afterEach(() => {
 });
 
 describe('sensitive external action gate across permission modes', () => {
-  const silaeConfirmationObjective = [
-    'Reprends l’objectif explicite d’écrire à Benoît. Vérifie d’abord Sent/Brouillons pour éviter un doublon, exécute le préflight exact vers benoit@example.test, sans fallback navigateur, puis arrête-toi immédiatement avant l’envoi pour la confirmation d’action externe. Après confirmation, envoie une seule fois et vérifie le messageId.',
-  ];
 
   it('masks exact-field data without letting it change Gmail routing scope', () => {
     const messageId = '1a0a917ea946a540';
@@ -397,7 +394,7 @@ describe('sensitive external action gate across permission modes', () => {
       }, 'Poursuis.', explicitRecipientOptions,
     )).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('does not match the exact recipient'),
+      reason: (expect.stringContaining('does not match the exact recipient') as unknown),
     });
 
     for (const input of [

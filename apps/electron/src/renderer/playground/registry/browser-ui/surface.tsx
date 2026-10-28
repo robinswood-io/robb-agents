@@ -1,11 +1,11 @@
-import { useCallback, useState } from "react";
-import { BrowserControls, BrowserEmptyStateCard, TurnCard } from "@craft-agent/ui";
-import { AnimatePresence, motion } from "motion/react";
+import { useCallback,useState } from "react";
+import { BrowserControls,BrowserEmptyStateCard } from "@craft-agent/ui";
+import { AnimatePresence,motion } from "motion/react";
 import { EMPTY_STATE_PROMPT_SAMPLES } from "@/components/browser/empty-state-prompts";
 import { BROWSER_LIVE_FX_BORDER } from "../../../../shared/browser-live-fx";
 import { routes } from "../../../../shared/routes";
-import type { BrowserSurfaceMode, BrowserTraceSidebarSampleProps, AgentVisualState, Scenario } from "./scenarios";
-import { PLAYGROUND_LIVE_FX_CORNERS, getScenarioTurns, applyRunState, getScenarioResponse, getLiveFxPayloadFromAgentState } from "./scenarios";
+import type { BrowserSurfaceMode,AgentVisualState,Scenario } from "./scenarios";
+import { PLAYGROUND_LIVE_FX_CORNERS,getLiveFxPayloadFromAgentState } from "./scenarios";
 
 function BrowserAgentEmptyState({
   title,
@@ -57,12 +57,12 @@ function BrowserMockPageSurface({
   showExamplePrompts = true,
   showSafetyHint = true,
 }: {
-  className?: string
-  mode?: BrowserSurfaceMode
-  emptyStateTitle?: string
-  emptyStateDescription?: string
-  showExamplePrompts?: boolean
-  showSafetyHint?: boolean
+  className?: string | undefined
+  mode?: BrowserSurfaceMode | undefined
+  emptyStateTitle?: string | undefined
+  emptyStateDescription?: string | undefined
+  showExamplePrompts?: boolean | undefined
+  showSafetyHint?: boolean | undefined
 }) {
   if (mode === 'empty-state') {
     return (
@@ -94,7 +94,7 @@ function BrowserMockPageSurface({
   )
 }
 
-function BrowserEdgeShaderFx({ className = 'absolute inset-0 pointer-events-none z-20', rounded = false }: { className?: string; rounded?: boolean }) {
+function BrowserEdgeShaderFx({ className = 'absolute inset-0 pointer-events-none z-20', rounded = false }: { className?: string | undefined; rounded?: boolean | undefined }) {
   return (
     <div
       className={className}
@@ -112,78 +112,6 @@ function BrowserEdgeShaderFx({ className = 'absolute inset-0 pointer-events-none
   )
 }
 
-function BrowserTraceSidebarSample({ scenario, runState, sidebarWidth, hdrEffect, cursorPulse }: BrowserTraceSidebarSampleProps) {
-  const turns = getScenarioTurns(scenario).map((items, index) => applyRunState(items, runState))
-
-  return (
-    <div className="w-full h-[700px] rounded-xl border border-border overflow-hidden bg-background shadow-sm flex">
-      <div className="flex-1 relative overflow-hidden">
-        {/* Base placeholder browser content */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900" />
-
-        {/* Shared edge shader effect (same visual as Browser Frame overlay) */}
-        {hdrEffect && <BrowserEdgeShaderFx className="absolute inset-0 pointer-events-none z-20" />}
-
-        {/* Cursor pulse simulation */}
-        {cursorPulse && (
-          <>
-            <motion.div
-              className="absolute h-6 w-5 z-30 [will-change:transform]"
-              style={{ transform: 'translateZ(0)' }}
-              initial={false}
-              animate={{ x: [220, 300, 430, 330, 220], y: [180, 260, 240, 350, 180], rotate: [0, 2, -3, 1, 0] }}
-              transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <div
-                className="h-full w-full bg-black shadow-[0_0_12px_rgba(0,0,0,0.35)]"
-                style={{
-                  clipPath: 'polygon(0% 0%, 0% 100%, 34% 73%, 51% 100%, 66% 94%, 48% 67%, 100% 67%)',
-                  borderRadius: '2px',
-                  outline: '1px solid rgba(255,255,255,0.75)',
-                }}
-              />
-            </motion.div>
-            <motion.div
-              className="absolute h-10 w-10 rounded-full border-2 border-cyan-400/65 z-30 [will-change:transform,opacity]"
-              style={{ transform: 'translateZ(0)' }}
-              initial={{ x: 213, y: 173, opacity: 0.75, scale: 0.55 }}
-              animate={{ x: [213, 293, 423, 323, 213], y: [173, 253, 233, 343, 173], opacity: [0.68, 0.16, 0.68, 0.16, 0.68], scale: [0.6, 1.5, 0.6, 1.5, 0.6] }}
-              transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
-            />
-          </>
-        )}
-
-        <BrowserMockPageSurface />
-      </div>
-
-      <div
-        className="h-full border-l border-border bg-background/95 backdrop-blur-sm overflow-y-auto p-3 space-y-3"
-        style={{ width: `${sidebarWidth}px` }}
-      >
-        {turns.map((activities, index) => {
-          const isRunning = runState === 'running' && index === turns.length - 1
-          const response = getScenarioResponse(scenario, runState)
-
-          return (
-            <TurnCard
-              key={`browser-trace-turn-${index + 1}`}
-              sessionId="playground-browser-session"
-              turnId={`browser-trace-turn-${index + 1}`}
-              activities={activities}
-              response={response}
-              intent={index === 0 ? 'Tool execution trace' : 'Wrapper command trace'}
-              isStreaming={isRunning}
-              isComplete={!isRunning}
-              onOpenFile={(path) => console.log('[Playground] Open file:', path)}
-              onOpenUrl={(url) => console.log('[Playground] Open URL:', url)}
-              compactMode={true}
-            />
-          )
-        })}
-      </div>
-    </div>
-  )
-}
 
 export function BrowserFramePlayground({
   initialUrl,

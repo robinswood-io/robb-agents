@@ -27,7 +27,7 @@ describe('handleTextComplete messageId synchronization', () => {
     const created = handleTextComplete(makeState([]), event)
     expect(created.session.messages[0]?.objectiveOutcome).toEqual(event.objectiveOutcome!)
     // An old sender or a partial cost update must not erase known receipt data.
-    const legacy = { type: event.type, sessionId: event.sessionId, messageId: event.messageId, text: event.text, isIntermediate: true } as const
+    const legacy = { type: event.type, sessionId: event.sessionId, ...(event.messageId !== undefined ? { messageId: event.messageId } : {}), text: event.text, isIntermediate: true } as const
     const updated = handleTextComplete(created, legacy)
     expect(updated.session.messages).toHaveLength(1)
     expect(updated.session.messages[0]).toMatchObject({ objectiveOutcome: event.objectiveOutcome, isIntermediate: true })

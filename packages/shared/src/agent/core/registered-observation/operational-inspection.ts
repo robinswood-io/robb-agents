@@ -220,10 +220,6 @@ function isBoundedDockerInspection(sourceArgs: string[]): boolean {
 // Official PostgreSQL images install the client under /usr/local/bin, while
 // some distribution images use /usr/bin. Keep both exact absolute tuples and
 // never fall back to PATH or a shell intermediary.
-const POSTGRES_EXECUTABLES = new Set([
-  '/usr/bin/psql',
-  '/usr/local/bin/psql',
-]);
 
 function isBoundedGitHubPullRequestInspection(args: string[]): boolean {
   if (args[0] !== 'pr' || args[1] !== 'view' || !/^[1-9]\d{0,9}$/.test(args[2] ?? '')) return false;
@@ -318,9 +314,9 @@ export function isRemoteValidation(sourceArgs: string[]): boolean {
   try { remote = bashParser(args[1]!) as typeof remote; } catch { return false; }
   if (remote.commands?.length !== 1) return false;
   const sequence = remote.commands[0]!;
-  if (sequence.type !== 'LogicalExpression' || sequence.op !== 'and' || sequence.async) return false;
-  const cwd = literalCommand(sequence.left, false);
-  const validator = literalCommand(sequence.right, false);
+  if (sequence["type"] !== 'LogicalExpression' || sequence["op"] !== 'and' || sequence["async"]) return false;
+  const cwd = literalCommand(sequence["left"], false);
+  const validator = literalCommand(sequence["right"], false);
   return cwd?.name === 'cd' && cwd.args.length === 1 && staticPath(cwd.args[0])
     && !!validator && isValidationScript(validator);
 }

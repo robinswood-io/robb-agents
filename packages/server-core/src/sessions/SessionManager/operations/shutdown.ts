@@ -102,7 +102,7 @@ async function sessionOpCleanupResources(sessionOperationContext: SessionOperati
             .filter(request => request.sessionId === managed.id)
             .map(request => request.processingGeneration));
         for (const generation of permissionGenerations) {
-            await sessionOperationContext.owner["closePendingPermissionRequestsForStop"](managed, generation);
+            await sessionOperationContext.owner.closePendingPermissionRequestsForStop(managed, generation);
         }
         if (sessionOpRestorePreAckAgentDeliveryDequeues(sessionOperationContext, managed, true) > 0) {
             sessionOperationContext.owner["persistSession"](managed);
@@ -134,7 +134,7 @@ async function sessionOpCleanupResources(sessionOperationContext: SessionOperati
             managed.autoRetryTimer = undefined;
         }
         managed.autoRetryPending = undefined;
-        sessionOperationContext.owner["finishAllGenerationTelemetry"](managed, 'session_manager_shutdown');
+        sessionOperationContext.owner.finishAllGenerationTelemetry(managed, 'session_manager_shutdown');
     }
     const disposeAttachedRuntimes = async (reason: string): Promise<void> => {
         // Run in parallel so shutdown remains bounded even with many historical

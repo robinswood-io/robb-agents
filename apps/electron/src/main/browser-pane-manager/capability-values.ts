@@ -5,11 +5,11 @@ import type { BrowserPaneManager } from '../browser-pane-manager.ts';
 import type { BrowserInstance, BrowserScreenshotResult } from './shared.ts';
 
 /** Owner-key namespacing: remote sessions can't collide with local sessions. */
-export function toOwnerKey(transportOwner: BrowserPaneManager, workspaceId: string, sessionId: string): string {
+export function toOwnerKey(_transportOwner: BrowserPaneManager, workspaceId: string, sessionId: string): string {
     return `remote:${workspaceId}:${sessionId}`;
 }
 
-export function isRemoteOwnerKey(transportOwner: BrowserPaneManager, value: string | null | undefined): value is string {
+export function isRemoteOwnerKey(_transportOwner: BrowserPaneManager, value: string | null | undefined): value is string {
     return typeof value === 'string' && value.startsWith('remote:');
 }
 
@@ -39,7 +39,7 @@ export function requireOwnedInstance(transportOwner: BrowserPaneManager, instanc
    * bridge path. Always pass the live instance through this helper before
    * returning over IPC.
    */
-export function toSnapshot(transportOwner: BrowserPaneManager, instance: BrowserInstance): BrowserInstanceSnapshot {
+export function toSnapshot(_transportOwner: BrowserPaneManager, instance: BrowserInstance): BrowserInstanceSnapshot {
     return {
         ownerType: instance.ownerType,
         ownerSessionId: instance.ownerSessionId,
@@ -49,11 +49,11 @@ export function toSnapshot(transportOwner: BrowserPaneManager, instance: Browser
     };
 }
 
-export function toScreenshotWire(transportOwner: BrowserPaneManager, result: BrowserScreenshotResult): ScreenshotResultWire {
+export function toScreenshotWire(_transportOwner: BrowserPaneManager, result: BrowserScreenshotResult): ScreenshotResultWire {
     const buf = result.imageBuffer;
     return {
         imageFormat: result.imageFormat,
         imageBytes: new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength),
-        metadata: result.metadata,
+        ...(result.metadata !== undefined ? { metadata: result.metadata } : {}),
     };
 }

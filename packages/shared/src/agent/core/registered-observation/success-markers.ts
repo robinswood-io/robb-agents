@@ -49,13 +49,13 @@ export function hasLiteralSuccessMarker(
 function literalAndSequence(value: unknown): Array<{ name: string; args: string[] }> | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const node = value as Record<string, unknown>;
-  if (node.type === 'Command') {
+  if (node["type"] === 'Command') {
     const invocation = literalCommand(node, true);
     return invocation ? [invocation] : undefined;
   }
-  if (node.type !== 'LogicalExpression' || node.op !== 'and' || node.async) return undefined;
-  const left = literalAndSequence(node.left);
-  const right = literalAndSequence(node.right);
+  if (node["type"] !== 'LogicalExpression' || node["op"] !== 'and' || node["async"]) return undefined;
+  const left = literalAndSequence(node["left"]);
+  const right = literalAndSequence(node["right"]);
   return left && right ? [...left, ...right] : undefined;
 }
 

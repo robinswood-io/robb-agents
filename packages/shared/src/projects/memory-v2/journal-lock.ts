@@ -88,8 +88,8 @@ function removeStaleMemoryJournalLock(lockPath: string): boolean {
   let ownerIsDead = false;
   try {
     const raw: unknown = JSON.parse(readFileSync(lockPath, 'utf8'));
-    if (isRecord(raw) && typeof raw.pid === 'number') {
-      ownerIsDead = !processIsAlive(raw.pid);
+    if (isRecord(raw) && typeof raw["pid"] === 'number') {
+      ownerIsDead = !processIsAlive(raw["pid"]);
     }
   } catch {
     // An unreadable lock is only stale once its age exceeds the limit.

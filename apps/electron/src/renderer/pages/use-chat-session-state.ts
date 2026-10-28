@@ -153,12 +153,12 @@ React.useEffect(() => {
     return cleanup
   }, [])
 
+const viewingSessionId = session?.id
 React.useEffect(() => {
-    if (session && isWindowFocused && isFocusedPanel !== false) {
-      onSetActiveViewingSession(session.id)
+    if (viewingSessionId !== undefined && isWindowFocused && isFocusedPanel !== false) {
+      onSetActiveViewingSession(viewingSessionId)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.id, isWindowFocused, isFocusedPanel, onSetActiveViewingSession])
+  }, [viewingSessionId, isWindowFocused, isFocusedPanel, onSetActiveViewingSession])
 
 const pendingPermission = usePendingPermission(sessionId)
 
@@ -194,7 +194,10 @@ React.useEffect(() => {
 
 React.useEffect(() => {
     const handler = (e: Event) => {
-      const { sessionId: targetId, text } = (e as CustomEvent).detail ?? {}
+      const detail: unknown = e instanceof CustomEvent ? e.detail : undefined
+      if (!isJsonObject(detail)) return
+      const targetId = detail['sessionId']
+      const text = detail['text']
       if (targetId === sessionId) {
         const nextText = coerceInputText(text)
         setInputValue(nextText)
@@ -297,9 +300,10 @@ const handleOpenFile = React.useCallback(
               return
             }
 
-            if (files.length === 1) {
-              onOpenFile(files[0].path)
-              toast.info(t('chat.openedClosestMatch', { path: files[0].relativePath }))
+            const firstFile = files[0]
+            if (files.length === 1 && firstFile) {
+              onOpenFile(firstFile.path)
+              toast.info(t('chat.openedClosestMatch', { path: firstFile.relativePath }))
               return
             }
           } catch {
@@ -321,3 +325,4 @@ const handleOpenUrl = React.useCallback(
   )
 return { messageLoadState, sessionMeta, handleOpenFile, handleOpenUrl, effectiveModel, handleModelChange, handleConnectionChange, inputValue, handleInputChange, attachmentsValue, handleAttachmentsChange, handleWorkingDirectoryChange, messagesRetrying, handleRetryMessagesLoad, connectionUnavailable, pendingPermission, pendingCredential, workingDirectory }
 }
+import { isJsonObject } from '@craft-agent/shared/utils/json';

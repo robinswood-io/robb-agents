@@ -18,7 +18,7 @@ import { isSourceUsable } from './storage.ts';
 import { createApiServer, type SummarizeCallback } from './api-tools.ts';
 import { createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk';
 import { debug } from '../utils/debug.ts';
-import { expandVars, resolveStdioConfig } from '../utils/paths.ts';
+import { resolveStdioConfig } from '../utils/paths.ts';
 
 /**
  * Standard error messages for server build failures.
@@ -112,7 +112,7 @@ export class SourceServerBuilder {
       return {
         type: 'stdio',
         ...protectApplicationCommand(resolved.command, resolved.args),
-        env: resolved.env,
+        ...(resolved.env !== undefined ? { env: resolved.env } : {}),
         cwd: source.folderPath,
       };
     }
@@ -284,7 +284,7 @@ export class SourceServerBuilder {
       // documentation is no longer inlined into the tool description (see #683
       // and api-tools.ts:buildToolDescription). The model reads guide.md via
       // the prerequisite-manager-enforced Read instead.
-      defaultHeaders: api.defaultHeaders,
+      ...(api.defaultHeaders !== undefined ? { defaultHeaders: api.defaultHeaders } : {}),
     };
 
     // Map auth type

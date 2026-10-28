@@ -75,17 +75,17 @@ class RootErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { error: unknown; hasError: boolean }
 > {
-  state = { error: undefined as unknown, hasError: false }
+  override state = { error: undefined as unknown, hasError: false }
 
   static getDerivedStateFromError(error: unknown) {
     return { error, hasError: true }
   }
 
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
+  override componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('[RootErrorBoundary] Renderer crashed:', error, info.componentStack)
   }
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       return <CrashFallback error={this.state.error} />
     }

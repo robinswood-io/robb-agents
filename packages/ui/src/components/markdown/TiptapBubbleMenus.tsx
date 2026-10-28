@@ -239,7 +239,7 @@ function InlineMathEditMenu({ editor }: { editor: Editor }) {
       // Sync latex value from the current selection
       const { selection } = editor.state
       if (selection instanceof NodeSelection && selection.node.type.name === 'inlineMath') {
-        setLatex(selection.node.attrs.latex as string)
+        setLatex(selection.node.attrs["latex"] as string)
         setNodePos(selection.from)
       }
       requestAnimationFrame(() => {
@@ -414,7 +414,7 @@ export function TiptapBubbleMenus({ editor }: { editor: Editor }) {
           }
 
           if (!e.isActive('codeBlock')) return false
-          const lang = (e.getAttributes('codeBlock').language as string | undefined)?.toLowerCase()
+          const lang = (e.getAttributes('codeBlock')["language"] as string | undefined)?.toLowerCase()
           return lang != null && VISUAL_LANGUAGES.has(lang)
         }}
         getReferencedVirtualElement={getRichBlockEditAnchor}

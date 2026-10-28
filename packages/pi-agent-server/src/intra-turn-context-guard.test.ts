@@ -20,7 +20,7 @@ const toolResult = (id: string, value: string): AgentMessage => ({
   content: [{ type: 'text', text: value }],
   isError: false,
   timestamp: 1,
-} as unknown as AgentMessage);
+} as AgentMessage);
 
 describe('Pi intra-turn context checkpoint', () => {
   it('checks accumulated messages before the next model call', () => {

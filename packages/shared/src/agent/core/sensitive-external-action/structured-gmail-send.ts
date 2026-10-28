@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import { hasGlobalExternalActionRevocation, requestClauses } from './request-authorization.ts';
 import { GENERIC_CONTINUATIONS, isBoundedSessionPdfAttachmentPath, isCanonicalEmailAddress, normalizeForMatch } from './target-syntax.ts';
 
@@ -174,18 +175,18 @@ export function canonicalGmailSendInputMismatchCategories(
   if (Object.hasOwn(input, 'replyTo')) mismatches.push('unexpected-replyTo');
   if (Object.keys(input).some(key => !STRUCTURED_GMAIL_SEND_ALLOWED_INPUT_KEYS.has(key)
     && key !== 'from' && key !== 'replyTo')) mismatches.push('unknown-fields');
-  if (input.to !== payload.to) mismatches.push('to');
-  if (input.sendAsEmail !== payload.from) mismatches.push('sendAsEmail');
-  if (input.subject !== payload.subject) mismatches.push('subject');
-  if (input.body !== payload.body) mismatches.push('body');
-  if (input.isHtml !== false) mismatches.push('isHtml');
-  if (!Array.isArray(input.attachmentPaths)
-    || input.attachmentPaths.length !== payload.attachmentPaths.length
-    || input.attachmentPaths.some((path, index) => path !== payload.attachmentPaths[index])) {
+  if (input["to"] !== payload.to) mismatches.push('to');
+  if (input["sendAsEmail"] !== payload.from) mismatches.push('sendAsEmail');
+  if (input["subject"] !== payload.subject) mismatches.push('subject');
+  if (input["body"] !== payload.body) mismatches.push('body');
+  if (input["isHtml"] !== false) mismatches.push('isHtml');
+  if (!isUnknownArray(input["attachmentPaths"])
+    || input["attachmentPaths"].length !== payload.attachmentPaths.length
+    || input["attachmentPaths"].some((path: unknown, index) => path !== payload.attachmentPaths[index])) {
     mismatches.push('attachmentPaths');
   }
-  if (Object.hasOwn(input, 'cc') && input.cc !== '') mismatches.push('cc');
-  if (Object.hasOwn(input, 'bcc') && input.bcc !== '') mismatches.push('bcc');
+  if (Object.hasOwn(input, 'cc') && input["cc"] !== '') mismatches.push('cc');
+  if (Object.hasOwn(input, 'bcc') && input["bcc"] !== '') mismatches.push('bcc');
   if (['requireKnownContacts', 'allowExternal', 'checkContacts'].some(key => (
     Object.hasOwn(input, key) && typeof input[key] !== 'boolean'
   ))) mismatches.push('optional-guard-types');

@@ -42,7 +42,7 @@ export async function ensureCodeAssistUser(accessToken: string, signal?: AbortSi
   const cached = userDataCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached;
 
-  const envProject = process.env.GOOGLE_CLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT_ID || undefined;
+  const envProject = process.env["GOOGLE_CLOUD_PROJECT"] || process.env["GOOGLE_CLOUD_PROJECT_ID"] || undefined;
   if (envProject && /^\d+$/.test(envProject)) {
     throw new Error('GOOGLE_CLOUD_PROJECT must be the string project ID, not a numeric project number.');
   }
@@ -110,7 +110,7 @@ export async function ensureCodeAssistUser(accessToken: string, signal?: AbortSi
       'Google Gemini Code Assist requires GOOGLE_CLOUD_PROJECT for this organization tier. Individual accounts should use a Google AI Studio API key in Robb Agents.',
     );
   }
-  const data = { projectId, expiresAt: Date.now() + 30_000 };
+  const data = { ...(projectId !== undefined ? { projectId } : {}), expiresAt: Date.now() + 30_000 };
   userDataCache.set(cacheKey, data);
   return data;
 }

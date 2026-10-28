@@ -22,10 +22,10 @@ export type { PairingConsumeResult, PairingCodeConsumer, AccessControlDeps } fro
 export { parseCommand } from './commands/shared.ts';
 
 export class Commands {
-    private readonly log: MessagingLogger;
-    private readonly access: AccessControlDeps;
-    private readonly recentRejectReplies = new Map<string, number>();
-    constructor(private readonly sessionManager: ISessionManager, private readonly bindingStore: BindingStore, private readonly workspaceId: string, private readonly pairingConsumer?: PairingCodeConsumer, logger: MessagingLogger = NOOP_LOGGER, access: AccessControlDeps = {
+    /** @internal */ public readonly log: MessagingLogger;
+    /** @internal */ public readonly access: AccessControlDeps;
+    /** @internal */ public readonly recentRejectReplies = new Map<string, number>();
+    constructor(public readonly sessionManager: Pick<ISessionManager, 'getSessions' | 'getSession' | 'createSession' | 'cancelProcessing'>, public readonly bindingStore: BindingStore, public readonly workspaceId: string, public readonly pairingConsumer?: PairingCodeConsumer, logger: MessagingLogger = NOOP_LOGGER, access: AccessControlDeps = {
         getWorkspaceConfig: () => ({ enabled: false, platforms: {} }),
         seedOwnerOnFirstPair: async () => [],
     }) {
@@ -38,41 +38,41 @@ export class Commands {
     async handleCommand(adapter: PlatformAdapter, msg: IncomingMessage): Promise<boolean> {
         return commandsAdmission.handleCommand(this, adapter, msg);
     }
-    private async sendRejection(adapter: PlatformAdapter, msg: IncomingMessage, reason: AccessRejectReason): Promise<void> {
+    /** @internal */ public async sendRejection(adapter: PlatformAdapter, msg: IncomingMessage, reason: AccessRejectReason): Promise<void> {
         return commandsAdmission.sendRejection(this, adapter, msg, reason);
     }
-    private async handleNew(adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
+    /** @internal */ public async handleNew(adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
         return commandsBinding.handleNew(this, adapter, msg);
     }
-    private async handleBind(adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
+    /** @internal */ public async handleBind(adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
         return commandsBinding.handleBind(this, adapter, msg);
     }
-    private async handlePair(adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
+    /** @internal */ public async handlePair(adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
         return commandsBinding.handlePair(this, adapter, msg);
     }
-    private async handleSupergroupPair(adapter: PlatformAdapter, msg: IncomingMessage, entry: {
+    /** @internal */ public async handleSupergroupPair(adapter: PlatformAdapter, msg: IncomingMessage, entry: {
         workspaceId: string;
     }, replyOpts: {
         threadId?: number;
     }): Promise<void> {
         return commandsBinding.handleSupergroupPair(this, adapter, msg, entry, replyOpts);
     }
-    private async handleUnbind(adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
+    /** @internal */ public async handleUnbind(adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
         return commandsBinding.handleUnbind(this, adapter, msg);
     }
-    private async handleStatus(adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
+    /** @internal */ public async handleStatus(adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
         return commandsControl.handleStatus(this, adapter, msg);
     }
-    private async handleStop(adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
+    /** @internal */ public async handleStop(adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
         return commandsControl.handleStop(this, adapter, msg);
     }
-    private async handleHelp(adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
+    /** @internal */ public async handleHelp(adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
         return commandsControl.handleHelp(this, adapter, msg);
     }
-    private getRecentSessions(): ReturnType<ISessionManager['getSessions']> {
+    /** @internal */ public getRecentSessions(): ReturnType<ISessionManager['getSessions']> {
         return commandsControl.getRecentSessions(this);
     }
-    private async resolveBindTarget(bindArg: string, recent: ReturnType<ISessionManager['getSessions']>): Promise<Awaited<ReturnType<ISessionManager['getSession']>> | undefined> {
+    /** @internal */ public async resolveBindTarget(bindArg: string, recent: ReturnType<ISessionManager['getSessions']>): Promise<Awaited<ReturnType<ISessionManager['getSession']>> | undefined> {
         return commandsControl.resolveBindTarget(this, bindArg, recent);
     }
 }

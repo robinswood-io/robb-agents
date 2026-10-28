@@ -27,7 +27,7 @@ export async function waitForSendEvents(
 
     seen.add(ev.type)
     if (ev.type === 'text_delta') textChunks++
-    if (ev.type === 'tool_start') toolName = String(ev.toolName ?? '')
+    if (ev.type === 'tool_start') toolName = String(ev["toolName"] ?? '')
     if (ev.type === 'complete' || ev.type === 'error' || ev.type === 'interrupted') {
       finished = true
     }

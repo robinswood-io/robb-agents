@@ -69,7 +69,7 @@ describe('ToolLoopBudget', () => {
 
   test('blocks a low-novelty loop at the structural checkpoint', () => {
     const budget = new ToolLoopBudget();
-    let decision;
+    let decision: ReturnType<ToolLoopBudget["observe"]> | undefined;
     for (let index = 1; index <= 24; index += 1) {
       decision = budget.observe(index % 2 === 0 ? 'Read' : 'Grep', { target: index % 2 });
     }

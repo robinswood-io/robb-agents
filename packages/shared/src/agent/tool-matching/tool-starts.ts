@@ -90,7 +90,7 @@ export function extractToolStarts(
           input: stripInternalFields(toolBlock.input),
           intent,
           displayName,
-          turnId,
+          ...(turnId !== undefined ? { turnId } : {}),
           parentToolUseId,
         });
       }
@@ -108,7 +108,7 @@ export function extractToolStarts(
       input: stripInternalFields(toolBlock.input),
       intent,
       displayName,
-      turnId,
+      ...(turnId !== undefined ? { turnId } : {}),
       parentToolUseId,
     });
   }

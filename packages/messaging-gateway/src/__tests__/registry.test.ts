@@ -1,3 +1,6 @@
+import type { TelegramAdapter } from '../adapters/telegram/index';
+type TelegramFixture = PlatformAdapter & Pick<TelegramAdapter, 'getChatInfo' | 'setAcceptedSupergroupChatId' | 'createForumTopic'>;
+import { SessionManager as FixtureSessionManager } from "../../../server-core/src/sessions/SessionManager";
 /**
  * MessagingGatewayRegistry.bindAutomationSession tests
  *
@@ -33,17 +36,17 @@ afterEach(() => {
 })
 
 function makeStubSessionManager(): ISessionManager {
-  return {
+  return Object.assign(new FixtureSessionManager(), ({
     setAutomationBinder: () => {},
-  } as unknown as ISessionManager
+  } satisfies Partial<ISessionManager>))
 }
 
-function makeStubCredentialManager(): CredentialManager {
+function makeStubCredentialManager(): Pick<CredentialManager, 'get' | 'set' | 'delete'> {
   return {
     get: async () => null,
     set: async () => {},
-    delete: async () => {},
-  } as unknown as CredentialManager
+    delete: async () => true,
+  } satisfies Pick<CredentialManager, 'get' | 'set' | 'delete'>
 }
 
 interface FakeAdapterOptions {
@@ -66,30 +69,28 @@ function makeFakeTelegramAdapter(opts: FakeAdapterOptions = {}): {
     title: 'Test Forum SG',
   }
 
-  const adapter: PlatformAdapter = {
-    platform: 'telegram' as PlatformType,
-    capabilities: {} as PlatformAdapter['capabilities'],
-    initialize: async () => {},
-    destroy: async () => {},
-    isConnected: () => true,
-    onMessage: () => {},
-    onButtonPress: () => {},
-    sendText: async () => ({ messageId: '1' }),
-    editMessage: async () => {},
-    sendButtons: async () => ({ messageId: '1' }),
-    sendTyping: async () => {},
-    sendFile: async () => ({ messageId: '1' }),
-    createForumTopic: async (chatId: string, name: string) => {
+  const adapter: TelegramFixture = ({platform: 'telegram' as PlatformType,
+capabilities: {messageEditing: false, inlineButtons: false, maxButtons: 0, maxMessageLength: 4096, markdown: 'v2', webhookSupport: false},
+initialize: async () => {},
+destroy: async () => {},
+isConnected: () => true,
+onMessage: () => {},
+onButtonPress: () => {},
+sendText: async () => ({ platform: 'telegram', channelId: 'fixture', messageId: '1' }),
+editMessage: async () => {},
+sendButtons: async () => ({ platform: 'telegram', channelId: 'fixture', messageId: '1' }),
+sendTyping: async () => {},
+sendFile: async () => ({ platform: 'telegram', channelId: 'fixture', messageId: '1' }),
+createForumTopic: async (chatId: string, name: string) => {
       createCalls.push({ chatId, name })
       if (opts.shouldFailCreate) {
         throw new Error(opts.failMessage ?? 'permission denied')
       }
       return { threadId: nextThreadId++, name }
     },
-    getChatInfo: async () =>
+getChatInfo: async () =>
       opts.chatInfo === null ? null : opts.chatInfo ?? defaultChatInfo,
-    setAcceptedSupergroupChatId: () => {},
-  } as unknown as PlatformAdapter
+setAcceptedSupergroupChatId: () => {}} satisfies TelegramFixture)
 
   return { adapter, createCalls }
 }
@@ -312,10 +313,12 @@ describe('MessagingGatewayRegistry.bindWorkspaceSupergroup — chat-type validat
     expect(result.title).toBe('My Forum')
 
     const sg = h.registry.getWorkspaceSupergroup(h.workspaceId)
-    expect(sg).toEqual({
+    if (!sg) throw new Error('Expected the bound supergroup')
+    const { capturedAt, ...identity } = sg
+    expect(capturedAt).toBeNumber()
+    expect(identity).toEqual({
       chatId: '-100999',
       title: 'My Forum',
-      capturedAt: expect.any(Number),
     })
   })
 })

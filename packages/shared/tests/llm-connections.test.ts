@@ -20,7 +20,7 @@ import type { LlmProviderType } from '../src/config/llm-connections.ts';
 // ============================================================
 
 function makeConnection(providerType: LlmProviderType, models: string[], piAuthProvider?: string) {
-  return { providerType, models, piAuthProvider };
+  return { providerType, models, ...(piAuthProvider !== undefined ? { piAuthProvider } : {}) };
 }
 
 afterEach(() => {
@@ -117,7 +117,7 @@ describe('getMiniModel()', () => {
   });
 
   it('returns undefined for undefined models', () => {
-    const conn = { providerType: 'anthropic' as LlmProviderType, models: undefined };
+    const conn = { providerType: 'anthropic' as LlmProviderType };
     expect(getMiniModel(conn)).toBeUndefined();
   });
 

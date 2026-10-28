@@ -56,11 +56,11 @@ const VARIANTS: VariantSpec[] = [
  * after download are skipped (logged, never thrown).
  */
 export async function extractAttachments(
-  baileys: BaileysModule,
+  baileys: Pick<BaileysModule, 'downloadMediaMessage'>,
   msg: Record<string, unknown>,
   log: (...args: unknown[]) => void,
 ): Promise<WorkerIncomingAttachment[]> {
-  const m = msg.message as Record<string, unknown> | undefined
+  const m = msg["message"] as Record<string, unknown> | undefined
   if (!m) return []
 
   const out: WorkerIncomingAttachment[] = []
@@ -71,9 +71,9 @@ export async function extractAttachments(
     // audioMessage with ptt=true is a push-to-talk voice note. Without ptt
     // it's an audio file (forwarded music, recording from another app).
     let type = v.type
-    if (v.key === 'audioMessage' && node.ptt !== true) type = 'audio'
+    if (v.key === 'audioMessage' && node["ptt"] !== true) type = 'audio'
 
-    const declaredSize = Number(node.fileLength ?? 0)
+    const declaredSize = Number(node["fileLength"] ?? 0)
     if (declaredSize > MAX_ATTACHMENT_BYTES) {
       log(`media skip: ${v.key} declared ${declaredSize} bytes exceeds cap`)
       continue
@@ -96,10 +96,10 @@ export async function extractAttachments(
       continue
     }
 
-    const mimeType = (node.mimetype as string | undefined) ?? v.defaultMime
+    const mimeType = (node["mimetype"] as string | undefined) ?? v.defaultMime
     const ext = pickExtension(mimeType)
     const fileName =
-      (node.fileName as string | undefined) ?? `${type}-${Date.now()}${ext}`
+      (node["fileName"] as string | undefined) ?? `${type}-${Date.now()}${ext}`
     const localPath = join(tmpdir(), `craft-wa-${randomUUID()}${ext}`)
 
     try {

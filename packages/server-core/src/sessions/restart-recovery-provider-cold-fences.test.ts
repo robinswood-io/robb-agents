@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { ScriptedSessionAgent, completeSessionAgentFixture } from "./testing/scripted-session-agent.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -118,7 +119,7 @@ describe('provider dispatch write-ahead recovery', () => {
         && event.error?.title === 'Provider dispatch requires reconciliation'
       ))).toBe(false)
       const storedRows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-        .trim().split('\n').map(line => JSON.parse(line))
+        .trim().split('\n').map(parseRecoveryJournalObservation)
       expect(storedRows.some(row => row.providerDispatch?.state === state)).toBe(false)
       })
     }
@@ -190,11 +191,11 @@ describe('provider dispatch write-ahead recovery', () => {
     if (!continuations) await cold.runtime.resumePendingTurnAfterRestart(restored.id)
 
     expect(continuations).toBe(1)
-    expect(restored.messages.find((message: Managed['messages'][number]) => message.id === old.id)?.providerDispatch)
+    expect<unknown>(restored.messages.find((message: Managed['messages'][number]) => message.id === old.id)?.providerDispatch)
       .toMatchObject({
         state: 'retired-uncertain',
         retirementReason: 'superseded-by-new-human-objective',
-        retiredAt: expect.any(Number),
+        retiredAt: (expect.any(Number) as unknown),
       })
   })
 

@@ -24,11 +24,11 @@ import type { ConfigWatcher } from '../watcher.ts';
 import { activeWatchers } from './shared.ts';
 
 export function start(transportOwner: ConfigWatcher): void {
-    if (transportOwner["isRunning"]) {
+    if (transportOwner.isRunning) {
         return;
     }
     const span = perf.span('configWatcher.start', { workspaceId: transportOwner["workspaceId"] });
-    transportOwner["isRunning"] = true;
+    transportOwner.isRunning = true;
     // Detect duplicate recursive watchers on the same directory tree
     const existingOwner = activeWatchers.get(transportOwner["workspaceDir"]);
     if (existingOwner) {
@@ -42,26 +42,26 @@ export function start(transportOwner: ConfigWatcher): void {
     }
     span.mark('ensureDir');
     // Watch global config files
-    transportOwner["watchGlobalConfigs"]();
+    transportOwner.watchGlobalConfigs();
     span.mark('watchGlobalConfigs');
     // Watch workspace directory recursively
-    transportOwner["watchWorkspaceDir"]();
+    transportOwner.watchWorkspaceDir();
     span.mark('watchWorkspaceDir');
     // Watch app-level themes directory
-    transportOwner["watchAppThemesDir"]();
+    transportOwner.watchAppThemesDir();
     span.mark('watchAppThemesDir');
     // Watch app-level permissions directory
-    transportOwner["watchAppPermissionsDir"]();
+    transportOwner.watchAppPermissionsDir();
     span.mark('watchAppPermissionsDir');
     // Initial scan to populate known sources, skills, and themes
-    transportOwner["scanSources"]();
+    transportOwner.scanSources();
     span.mark('scanSources');
-    transportOwner["scanSkills"]();
+    transportOwner.scanSkills();
     span.mark('scanSkills');
-    transportOwner["scanAppThemes"]();
+    transportOwner.scanAppThemes();
     span.mark('scanAppThemes');
     // Initialize LLM connections hash for change detection
-    transportOwner["initLlmConnectionsHash"]();
+    transportOwner.initLlmConnectionsHash();
     span.mark('initLlmConnectionsHash');
     debug('[ConfigWatcher] Started watching files');
     span.end();
@@ -74,35 +74,35 @@ export function initLlmConnectionsHash(transportOwner: ConfigWatcher): void {
     const config = loadStoredConfig();
     if (config) {
         const connections = config.llmConnections || [];
-        transportOwner["lastLlmConnectionsHash"] = JSON.stringify(connections);
+        transportOwner.lastLlmConnectionsHash = JSON.stringify(connections);
     }
 }
 
 export function notifyFileChange(transportOwner: ConfigWatcher, relativePath: string): void {
-    if (!transportOwner["isRunning"])
+    if (!transportOwner.isRunning)
         return;
-    transportOwner["handleWorkspaceFileChange"](relativePath, 'change');
+    transportOwner.handleWorkspaceFileChange(relativePath, 'change');
 }
 
 export function stop(transportOwner: ConfigWatcher): void {
-    if (!transportOwner["isRunning"]) {
+    if (!transportOwner.isRunning) {
         return;
     }
-    transportOwner["isRunning"] = false;
+    transportOwner.isRunning = false;
     activeWatchers.delete(transportOwner["workspaceDir"]);
     // Clear all debounce timers
-    for (const timer of transportOwner["debounceTimers"].values()) {
+    for (const timer of transportOwner.debounceTimers.values()) {
         clearTimeout(timer);
     }
-    transportOwner["debounceTimers"].clear();
+    transportOwner.debounceTimers.clear();
     // Close all watchers
-    for (const watcher of transportOwner["watchers"]) {
+    for (const watcher of transportOwner.watchers) {
         watcher.close();
     }
-    transportOwner["watchers"] = [];
+    transportOwner.watchers = [];
     transportOwner["knownSources"].clear();
-    transportOwner["knownSkills"].clear();
-    transportOwner["knownThemes"].clear();
+    transportOwner.knownSkills.clear();
+    transportOwner.knownThemes.clear();
     debug('[ConfigWatcher] Stopped');
 }
 
@@ -116,20 +116,20 @@ export function watchGlobalConfigs(transportOwner: ConfigWatcher): void {
     }
     try {
         // Watch the config directory for changes to config.json, preferences.json, and theme.json
-        const watcher = watch(CONFIG_DIR, (eventType, filename) => {
+        const watcher = watch(CONFIG_DIR, (_eventType, filename) => {
             if (!filename)
                 return;
             if (filename === 'config.json') {
-                transportOwner["debounce"]('config.json', () => transportOwner["handleConfigChange"]());
+                transportOwner.debounce('config.json', () => transportOwner.handleConfigChange());
             }
             else if (filename === 'preferences.json') {
-                transportOwner["debounce"]('preferences.json', () => transportOwner["handlePreferencesChange"]());
+                transportOwner.debounce('preferences.json', () => transportOwner.handlePreferencesChange());
             }
             else if (filename === 'theme.json') {
-                transportOwner["debounce"]('app-theme', () => transportOwner["handleAppThemeChange"]());
+                transportOwner.debounce('app-theme', () => transportOwner.handleAppThemeChange());
             }
         });
-        transportOwner["watchers"].push(watcher);
+        transportOwner.watchers.push(watcher);
         debug('[ConfigWatcher] Watching global configs:', CONFIG_DIR);
     }
     catch (error) {
@@ -148,9 +148,9 @@ export function watchWorkspaceDir(transportOwner: ConfigWatcher): void {
                 return;
             // Normalize path separators
             const normalizedPath = filename.replace(/\\/g, '/');
-            transportOwner["handleWorkspaceFileChange"](normalizedPath, eventType);
+            transportOwner.handleWorkspaceFileChange(normalizedPath, eventType);
         });
-        transportOwner["watchers"].push(watcher);
+        transportOwner.watchers.push(watcher);
         debug('[ConfigWatcher] Watching workspace recursively:', transportOwner["workspaceDir"]);
     }
     catch (error) {
@@ -162,13 +162,13 @@ export function watchWorkspaceDir(transportOwner: ConfigWatcher): void {
    * Debounce a handler by key
    */
 export function debounce(transportOwner: ConfigWatcher, key: string, handler: () => void, delayMs: number): void {
-    const existing = transportOwner["debounceTimers"].get(key);
+    const existing = transportOwner.debounceTimers.get(key);
     if (existing) {
         clearTimeout(existing);
     }
     const timer = setTimeout(() => {
-        transportOwner["debounceTimers"].delete(key);
+        transportOwner.debounceTimers.delete(key);
         handler();
     }, delayMs);
-    transportOwner["debounceTimers"].set(key, timer);
+    transportOwner.debounceTimers.set(key, timer);
 }

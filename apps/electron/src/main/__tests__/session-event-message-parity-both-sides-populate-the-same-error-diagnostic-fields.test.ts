@@ -32,8 +32,8 @@ describe('typed_error → error Message field parity', () => {
       content: `${event.error.title}: ${event.error.message}`,
       errorCode: event.error.code,
       errorTitle: event.error.title,
-      errorDetails: event.error.details,
-      errorOriginal: event.error.originalError,
+      ...(event.error.details !== undefined ? { errorDetails: event.error.details } : {}),
+      ...(event.error.originalError !== undefined ? { errorOriginal: event.error.originalError } : {}),
       errorCanRetry: event.error.canRetry,
     }
 
@@ -43,8 +43,8 @@ describe('typed_error → error Message field parity', () => {
       content: `${event.error.title}: ${event.error.message}`,
       errorCode: event.error.code,
       errorTitle: event.error.title,
-      errorDetails: event.error.details,
-      errorOriginal: event.error.originalError,
+      ...(event.error.details !== undefined ? { errorDetails: event.error.details } : {}),
+      ...(event.error.originalError !== undefined ? { errorOriginal: event.error.originalError } : {}),
       errorCanRetry: event.error.canRetry,
     }
 

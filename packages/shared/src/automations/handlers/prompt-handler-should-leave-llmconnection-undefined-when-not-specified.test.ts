@@ -21,7 +21,7 @@ afterEach(() => {
 
 describe('llmConnection passthrough', () => {
 it('should leave llmConnection undefined when not specified', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           actions: [{
@@ -50,7 +50,7 @@ it('should leave llmConnection undefined when not specified', async () => {
 
 describe('model passthrough', () => {
 it('should pass model from prompt action to pending prompt', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           actions: [{
@@ -78,7 +78,7 @@ it('should pass model from prompt action to pending prompt', async () => {
     });
 
 it('should leave model undefined when not specified', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           actions: [{
@@ -107,7 +107,7 @@ it('should leave model undefined when not specified', async () => {
 
 describe('automationName propagation', () => {
 it('should set automationName from matcher.name when provided', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           name: 'Daily Triage',
@@ -132,7 +132,7 @@ it('should set automationName from matcher.name when provided', async () => {
     });
 
 it('should derive automationName from @mention when matcher has no name', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           actions: [{ type: 'prompt', prompt: '@linear check for issues' }],
@@ -156,7 +156,7 @@ it('should derive automationName from @mention when matcher has no name', async 
     });
 
 it('should derive automationName from prompt text when no name or @mention', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           actions: [{ type: 'prompt', prompt: 'Review the code' }],
@@ -193,7 +193,7 @@ it('should unsubscribe from the event bus', () => {
     });
 
 it('should not process events after disposal', async () => {
-      const onPromptsReady = jest.fn();
+      const onPromptsReady = jest.fn<(prompts: PendingPrompt[]) => void>();
       const configProvider = createMockConfigProvider({
         LabelAdd: [{
           actions: [{ type: 'prompt', prompt: 'Should not fire' }],

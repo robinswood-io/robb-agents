@@ -99,6 +99,7 @@ export interface SessionMeta {
 export function findLastFinalMessageId(messages: Message[]): string | undefined {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i]
+    if (!msg) continue
     // Include plan messages as final responses (they're AI-generated content)
     if ((msg.role === 'assistant' || msg.role === 'plan') && !msg.isIntermediate && !msg.isStreaming && !msg.isPending) {
       return msg.id

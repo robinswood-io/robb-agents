@@ -18,7 +18,7 @@ export function exactRegisteredShellObservation(
 ): boolean {
   if (!isObjectiveToolExecutedSuccessfully(message) || isObjectiveMutationTool(message)) return false;
   if (!isObjectiveShellExecutorToolName(message.toolName ?? '')) return false;
-  const command = [message.toolInput?.command, message.toolInput?.cmd, message.toolInput?.script]
+  const command = [message.toolInput?.["command"], message.toolInput?.["cmd"], message.toolInput?.["script"]]
     .find((value): value is string => typeof value === 'string');
   // Only commands whose closed grammar proves they are observational may
   // coexist with sibling checks. Opaque validators and SSH scripts remain
@@ -91,7 +91,7 @@ function canonicalGmailPreflightInput(
 
 function exactStringArray(value: unknown, expected: readonly string[]): boolean {
   return Array.isArray(value) && value.length === expected.length
-    && value.every((item, index) => item === expected[index]);
+    && value.every((item: unknown, index) => item === expected[index]);
 }
 
 function emptyArray(value: unknown): boolean {
@@ -203,7 +203,7 @@ function exactGmailAttachmentEffect(value: unknown, expected: GmailAttachmentEff
 
 function exactGmailAttachmentEffects(value: unknown, expected: readonly GmailAttachmentEffect[]): boolean {
   return Array.isArray(value) && value.length === expected.length
-    && value.every((item, index) => exactGmailAttachmentEffect(item, expected[index]!));
+    && value.every((item: unknown, index) => exactGmailAttachmentEffect(item, expected[index]!));
 }
 
 function gmailPreflightAttachmentEffect(
@@ -247,35 +247,35 @@ export function gmailSendConfirmsPreflightCriterion(
   const preflightInput = canonicalGmailPreflightInput(criterion);
   if (!preflightInput) return false;
   const preflightAttachments = canonicalGmailAttachmentContract(
-    Object.hasOwn(preflightInput, 'attachmentPaths') ? preflightInput.attachmentPaths : [],
+    Object.hasOwn(preflightInput, 'attachmentPaths') ? preflightInput["attachmentPaths"] : [],
   );
   if (!preflightAttachments) return false;
 
   const input = message.toolInput ?? {};
   if (Object.keys(input).some(field => !CANONICAL_GMAIL_SEND_FIELDS.has(field))
     || Object.hasOwn(input, 'from') || Object.hasOwn(input, 'replyTo')) return false;
-  const sendAttachments = canonicalGmailAttachmentContract(input.attachmentPaths);
+  const sendAttachments = canonicalGmailAttachmentContract(input["attachmentPaths"]);
   if (!sendAttachments
     || JSON.stringify(sendAttachments.paths) !== JSON.stringify(preflightAttachments.paths)) return false;
-  const expectedTo = exactOptionalEmailSet(preflightInput.to);
-  const expectedCc = exactOptionalEmailSet(preflightInput.cc);
-  const expectedBcc = exactOptionalEmailSet(preflightInput.bcc);
-  const actualTo = exactOptionalEmailSet(input.to);
-  const actualCc = exactOptionalEmailSet(input.cc);
-  const actualBcc = exactOptionalEmailSet(input.bcc);
+  const expectedTo = exactOptionalEmailSet(preflightInput["to"]);
+  const expectedCc = exactOptionalEmailSet(preflightInput["cc"]);
+  const expectedBcc = exactOptionalEmailSet(preflightInput["bcc"]);
+  const actualTo = exactOptionalEmailSet(input["to"]);
+  const actualCc = exactOptionalEmailSet(input["cc"]);
+  const actualBcc = exactOptionalEmailSet(input["bcc"]);
   if (!expectedTo || !expectedCc || !expectedBcc || !actualTo || !actualCc || !actualBcc
     || expectedTo.length === 0
     || JSON.stringify(actualTo) !== JSON.stringify(expectedTo)
     || JSON.stringify(actualCc) !== JSON.stringify(expectedCc)
     || JSON.stringify(actualBcc) !== JSON.stringify(expectedBcc)) return false;
 
-  const expectedSender = exactEmailSet(preflightInput.sendAsEmail);
+  const expectedSender = exactEmailSet(preflightInput["sendAsEmail"]);
   // The send receipt exposes the effective mailbox and verified From header,
   // not the optional human-readable label supplied to preflight. Preserve the
   // criterion only when that label contains exactly the same single mailbox;
   // do not claim that the display text itself was observed after the send.
-  const expectedFrom = singleMailbox(preflightInput.from);
-  const actualSender = exactEmailSet(input.sendAsEmail);
+  const expectedFrom = singleMailbox(preflightInput["from"]);
+  const actualSender = exactEmailSet(input["sendAsEmail"]);
   if (!expectedSender || expectedSender.length !== 1 || !actualSender
     || JSON.stringify(actualSender) !== JSON.stringify(expectedSender)
     || expectedFrom !== expectedSender[0]) return false;
@@ -285,11 +285,11 @@ export function gmailSendConfirmsPreflightCriterion(
   ]) {
     if (!sameJsonScalar(input[field], preflightInput[field])) return false;
   }
-  if (typeof preflightInput.subject !== 'string' || typeof preflightInput.body !== 'string'
-    || typeof preflightInput.isHtml !== 'boolean'
-    || typeof preflightInput.requireKnownContacts !== 'boolean'
-    || typeof preflightInput.allowExternal !== 'boolean'
-    || typeof preflightInput.checkContacts !== 'boolean') return false;
+  if (typeof preflightInput["subject"] !== 'string' || typeof preflightInput["body"] !== 'string'
+    || typeof preflightInput["isHtml"] !== 'boolean'
+    || typeof preflightInput["requireKnownContacts"] !== 'boolean'
+    || typeof preflightInput["allowExternal"] !== 'boolean'
+    || typeof preflightInput["checkContacts"] !== 'boolean') return false;
   const result = resultProjection(message, false);
   if (!result || typeof result !== 'object' || Array.isArray(result)) return false;
   const messageId = atPath(result, '$.id');
@@ -345,7 +345,7 @@ export function gmailSendConfirmsPreflightCriterion(
     || JSON.stringify(resultSender) !== JSON.stringify(expectedSender)
     || singleMailbox(atPath(result, '$.requested_from')) !== expectedSender[0]
     || atPath(result, '$.requested_reply_to') !== expectedSender[0]
-    || atPath(result, '$.subject') !== preflightInput.subject
+    || atPath(result, '$.subject') !== preflightInput["subject"]
     || singleMailbox(atPath(result, '$.preflight.sender.requestedFrom')) !== expectedSender[0]
     || atPath(result, '$.preflight.sender.requestedSendAsEmail') !== expectedSender[0]
     || atPath(result, '$.preflight.sender.resolvedEmail') !== expectedSender[0]
@@ -356,15 +356,15 @@ export function gmailSendConfirmsPreflightCriterion(
     || atPath(result, '$.preflight.sender.replyTo') !== expectedSender[0]
     || atPath(result, '$.preflight.sender.identityFound') !== true
     || atPath(result, '$.preflight.sender.verified') !== true
-    || atPath(result, '$.preflight.subject') !== preflightInput.subject
-    || atPath(result, '$.preflight.body.isHtml') !== preflightInput.isHtml
-    || atPath(result, '$.preflight.body.plainLength') !== [...preflightInput.body].length
+    || atPath(result, '$.preflight.subject') !== preflightInput["subject"]
+    || atPath(result, '$.preflight.body.isHtml') !== preflightInput["isHtml"]
+    || atPath(result, '$.preflight.body.plainLength') !== [...preflightInput["body"]].length
     || !exactStringArray(atPath(result, '$.verification.expected.from'), expectedSender)
     || singleMailbox(atPath(result, '$.verification.expected.fromHeader')) !== expectedSender[0]
     || !exactStringArray(atPath(result, '$.verification.expected.replyTo'), expectedSender)
     || !exactStringArray(atPath(result, '$.verification.expected.to'), expectedTo)
     || !exactStringArray(atPath(result, '$.verification.expected.cc'), expectedCc)
-    || atPath(result, '$.verification.expected.subject') !== preflightInput.subject
+    || atPath(result, '$.verification.expected.subject') !== preflightInput["subject"]
     || !exactStringArray(atPath(result, '$.verification.expected.attachmentNames'), preflightAttachments.names)
     || !exactGmailAttachmentEffects(atPath(result, '$.verification.expected.attachmentEffects'), attachmentEffects)
     || !exactStringArray(atPath(result, '$.verification.attachmentNames'), preflightAttachments.names)

@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -98,9 +99,12 @@ describe('durable restart recovery', () => {
     expect(managed.sessionStatus).toBe('blocked')
     expect(managed.activeObjective).toEqual(previousObjective)
     expect(managed.pendingTurnRecovery).toEqual(previousRecovery)
-    expect(managed.userInputRequests).toEqual([expect.objectContaining({
-      id: 'context-question', status: 'pending', answeredAt: undefined,
-    })])
+    expect(managed.userInputRequests).toHaveLength(1)
+    const restoredRequest = requiredTestValue(managed.userInputRequests?.[0])
+    expect(restoredRequest.id).toBe('context-question')
+    expect(restoredRequest.status).toBe('pending')
+    expect(restoredRequest.answeredAt).toBeUndefined()
+    expect(Object.hasOwn(restoredRequest, 'answeredAt')).toBe(false)
     expect(managed.providerContextBoundaryMessageId).toBe(rootId)
     expect(managed.sdkSessionId).toBe('provider-session-before-clean-retry')
     expect(managed.branchFromSdkSessionId).toBe('provider-parent-before-clean-retry')
@@ -119,8 +123,8 @@ describe('durable restart recovery', () => {
     ))).toEqual([])
     expect(h.events.filter(event => event.type === 'user_input_changed')).toEqual([])
     const rolledBackRows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
-    expect(rolledBackRows[0]).toMatchObject({
+      .trim().split('\n').map(parseRecoveryJournalObservation)
+    expect<unknown>(rolledBackRows[0]).toMatchObject({
       sessionStatus: 'blocked', providerContextBoundaryMessageId: rootId,
       sdkSessionId: 'provider-session-before-clean-retry',
       branchFromMessageId: rootId,
@@ -130,8 +134,11 @@ describe('durable restart recovery', () => {
       branchFromSdkTurnId: 'provider-turn-before-clean-retry',
       tokenUsage: previousTokenUsage,
       contextCompactionAttempt: previousContextCompactionAttempt,
-      userInputRequests: [expect.objectContaining({ id: 'context-question', status: 'pending' })],
+      userInputRequests: [(expect.objectContaining({ id: 'context-question', status: 'pending' }) as unknown)],
     })
+    const persistedRequest = requiredTestValue(requiredTestValue(rolledBackRows[0]).userInputRequests?.[0]);
+    expect(persistedRequest['answeredAt']).toBeUndefined();
+    expect(Object.hasOwn(persistedRequest, 'answeredAt')).toBe(false);
     expect(rolledBackRows.some(row => row.type === 'user'
       && row.content?.includes('<host_clean_recovery_continuation'))).toBe(false)
 
@@ -151,23 +158,23 @@ describe('durable restart recovery', () => {
       expect(preparations).toBe(1)
       expect(disposals).toBe(1)
       expect(managed.isProcessing).toBe(true)
-      expect(managed.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
-        phase: 'started', cause: 'user_retry', origin: 'retry', cleanContinuationId: expect.any(String),
+      expect<unknown>(managed.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
+        phase: 'started', cause: 'user_retry', origin: 'retry', cleanContinuationId: (expect.any(String) as unknown),
       })
       expect(managed.pendingTurnRecovery?.recoveryDispatch?.id).not.toBe(oldDispatchId)
       expect(managed.messages.filter(message => (
         message.id === managed.pendingTurnRecovery?.recoveryDispatch?.id
       ))).toHaveLength(1)
       const freshHeader = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-        .trim().split('\n').map(line => JSON.parse(line))[0]
-      expect(freshHeader.sdkSessionId).toBeUndefined()
-      expect(freshHeader.branchFromSdkSessionId).toBeUndefined()
-      expect(freshHeader.branchFromSessionPath).toBeUndefined()
-      expect(freshHeader.branchFromSdkCwd).toBeUndefined()
-      expect(freshHeader.branchFromSdkTurnId).toBeUndefined()
-      expect(freshHeader.contextCompactionAttempt).toBeUndefined()
-      expect(freshHeader.tokenUsage.contextTokens).toBeLessThan(100_000)
-      expect(freshHeader.providerContextBoundaryMessageId)
+        .trim().split('\n').map(parseRecoveryJournalObservation)[0]
+      expect(requiredTestValue(freshHeader).sdkSessionId).toBeUndefined()
+      expect(requiredTestValue(freshHeader).branchFromSdkSessionId).toBeUndefined()
+      expect(requiredTestValue(freshHeader).branchFromSessionPath).toBeUndefined()
+      expect(requiredTestValue(freshHeader).branchFromSdkCwd).toBeUndefined()
+      expect(requiredTestValue(freshHeader).branchFromSdkTurnId).toBeUndefined()
+      expect(requiredTestValue(freshHeader).contextCompactionAttempt).toBeUndefined()
+      expect(requiredTestValue(requiredTestValue(freshHeader).tokenUsage).contextTokens).toBeLessThan(100_000)
+      expect(requiredTestValue(freshHeader).providerContextBoundaryMessageId)
         .toBe(managed.pendingTurnRecovery?.recoveryDispatch?.id)
       const cold = h.cold(); const coldRestored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       await cold.runtime.ensureMessagesLoaded(coldRestored)

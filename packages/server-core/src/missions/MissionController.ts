@@ -11,7 +11,7 @@ export { previewAdmissibleMissionReplan } from './mission-controller/shared.ts';
 export class MissionController {
     private readonly workspaceRoot: string;
     private readonly now: () => Date;
-    private readonly resolveSubmissionEvidence?: MissionControllerOptions['resolveSubmissionEvidence'];
+    /** @internal */ public readonly resolveSubmissionEvidence?: MissionControllerOptions['resolveSubmissionEvidence'];
     constructor(options: MissionControllerOptions) {
         this.workspaceRoot = options.workspaceRoot;
         this.now = options.now ?? (() => new Date());
@@ -23,7 +23,7 @@ export class MissionController {
     private event<T extends Omit<MissionEvent, 'at'>>(event: T): MissionEvent {
         return MissionEventSchema.parse({ ...event, at: this.at() });
     }
-    private telemetryEvent(workItemId: string, dispatchId: string, telemetry?: MissionAttemptTelemetry): MissionEvent[] {
+    /** @internal */ public telemetryEvent(workItemId: string, dispatchId: string, telemetry?: MissionAttemptTelemetry): MissionEvent[] {
         return telemetry
             ? [this.event({ kind: 'work-item-attempt-metered', workItemId, dispatchId, telemetry })]
             : [];
@@ -34,7 +34,7 @@ export class MissionController {
             throw new Error(`Unknown mission "${missionId}"`);
         return snapshot;
     }
-    private preview(missionId: string, events: readonly MissionEvent[]): MissionSnapshot {
+    /** @internal */ public preview(missionId: string, events: readonly MissionEvent[]): MissionSnapshot {
         return reduceMissionEvents([...readMissionEvents(this.workspaceRoot, missionId), ...events]);
     }
     private commit(missionId: string, revision: number, events: readonly MissionEvent[]): MissionSnapshot {
@@ -119,28 +119,28 @@ export class MissionController {
     recordVerdict(missionId: string, reviewWorkItemId: string, sessionId: string, input: StructuredMissionVerdict, telemetry?: MissionAttemptTelemetry): MissionSnapshot {
         return missionControllerResults.recordVerdict(this, missionId, reviewWorkItemId, sessionId, input, telemetry);
     }
-    private preservePause(missionId: string, before: MissionSnapshot, events: MissionEvent[]): void {
+    /** @internal */ public preservePause(missionId: string, before: MissionSnapshot, events: MissionEvent[]): void {
         return missionControllerReview.preservePause(this, missionId, before, events);
     }
     private assertIndependentSession(snapshot: MissionSnapshot, item: MissionWorkItem, sessionId: string, external = false): void {
         return missionControllerReview.assertIndependentSession(this, snapshot, item, sessionId, external);
     }
-    private assertVerdictContract(snapshot: MissionSnapshot, review: MissionWorkItem, verdict: StructuredMissionVerdict): void {
+    /** @internal */ public assertVerdictContract(snapshot: MissionSnapshot, review: MissionWorkItem, verdict: StructuredMissionVerdict): void {
         return missionControllerReview.assertVerdictContract(this, snapshot, review, verdict);
     }
-    private addReadyReviews(missionId: string, events: MissionEvent[]): void {
+    /** @internal */ public addReadyReviews(missionId: string, events: MissionEvent[]): void {
         return missionControllerReview.addReadyReviews(this, missionId, events);
     }
-    private applyPass(missionId: string, before: MissionSnapshot, review: MissionWorkItem, events: MissionEvent[]): void {
+    /** @internal */ public applyPass(missionId: string, before: MissionSnapshot, review: MissionWorkItem, events: MissionEvent[]): void {
         return missionControllerReview.applyPass(this, missionId, before, review, events);
     }
-    private addFinalReview(missionId: string, events: MissionEvent[]): void {
+    /** @internal */ public addFinalReview(missionId: string, events: MissionEvent[]): void {
         return missionControllerReview.addFinalReview(this, missionId, events);
     }
-    private applyFailure(missionId: string, before: MissionSnapshot, review: MissionWorkItem, verdict: StructuredMissionVerdict, events: MissionEvent[]): void {
+    /** @internal */ public applyFailure(missionId: string, before: MissionSnapshot, review: MissionWorkItem, verdict: StructuredMissionVerdict, events: MissionEvent[]): void {
         return missionControllerReview.applyFailure(this, missionId, before, review, verdict, events);
     }
-    private expandAffectedFrontier(snapshot: MissionSnapshot, initial: readonly string[]): string[] {
+    /** @internal */ public expandAffectedFrontier(snapshot: MissionSnapshot, initial: readonly string[]): string[] {
         return missionControllerReview.expandAffectedFrontier(this, snapshot, initial);
     }
 }

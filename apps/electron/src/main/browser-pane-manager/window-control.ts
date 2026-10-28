@@ -46,7 +46,7 @@ export function hide(transportOwner: BrowserPaneManager, id: string): void {
         instance.pendingShowOnReady = false;
         instance.pendingShowToken += 1;
     }
-    transportOwner["forceCloseToolbarMenu"](instance, 'window-hide');
+    transportOwner.forceCloseToolbarMenu(instance, 'window-hide');
     // Cancel an in-flight page load before hiding. Hiding the window while the
     // WebContentsView is still loading can trigger a Chromium compositor assertion
     // and kill the main process.
@@ -78,6 +78,7 @@ export function windowResize(transportOwner: BrowserPaneManager, id: string, wid
     transportOwner["layoutAllViews"](instance);
     // Return effective viewport dimensions after OS/window min-size constraints are applied.
     const [appliedContentWidth, appliedContentHeight] = instance.window.getContentSize();
+    if (appliedContentWidth === undefined || appliedContentHeight === undefined) throw new Error('Browser window content size unavailable');
     return {
         width: Math.max(0, Math.floor(appliedContentWidth)),
         height: Math.max(0, Math.floor(appliedContentHeight - TOOLBAR_HEIGHT)),

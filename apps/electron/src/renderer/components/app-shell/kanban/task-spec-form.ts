@@ -190,9 +190,9 @@ export function buildSpec(form: SpecForm, modelToConnection: Map<string, string>
   const acceptanceCriteria = form.acceptanceCriteria?.trim()
   // Task-family defaults: orchestrator model/connection + the explicit, persisted permission mode.
   const defaults: Record<string, unknown> = {}
-  if (form.orchModel) defaults.model = form.orchModel
-  if (orchConn) defaults.llmConnection = orchConn
-  if (form.permissionMode) defaults.permissionMode = form.permissionMode
+  if (form.orchModel) defaults["model"] = form.orchModel
+  if (orchConn) defaults["llmConnection"] = orchConn
+  if (form.permissionMode) defaults["permissionMode"] = form.permissionMode
   // Leaving the picker on "No Project" for an already-bound task must NOT drop `project` (children read
   // spec.project) — fall back to the existing binding as a floor. A picked project overrides it.
   const project = form.projectId || form.boundProjectId

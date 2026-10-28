@@ -52,7 +52,7 @@ const activeTransfers = new Map<string, TransferState>()
 const transferableHandlers = new Map<string, HandlerFn>()
 
 function getTransferTtlMs(): number {
-  const raw = Number(process.env.CRAFT_TRANSFER_TTL_MS)
+  const raw = Number(process.env["CRAFT_TRANSFER_TTL_MS"])
   return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_TRANSFER_TTL_MS
 }
 
@@ -161,7 +161,7 @@ export function registerTransferHandlers(server: RpcServer): void {
       channel: opts.channel,
       args: opts.args,
       largeArgIndex: opts.largeArgIndex,
-      checksum: opts.checksum,
+      ...(opts.checksum !== undefined ? { checksum: opts.checksum } : {}),
       timer: null,
       timerGeneration: 0,
     }

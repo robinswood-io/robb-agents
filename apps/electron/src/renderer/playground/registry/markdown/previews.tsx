@@ -1,3 +1,5 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import { z } from "zod";
 import * as React from "react";
 import { CollapsibleMarkdownProvider, ImageCardStack, PlatformProvider } from "@craft-agent/ui";
 import { MOCK_IMAGE_DATA } from "./fixtures";
@@ -37,8 +39,9 @@ export function ImageCardStackPlayground({
     if (Array.isArray(items)) return items
     if (typeof items === 'string') {
       try {
-        const parsed = JSON.parse(items)
-        return Array.isArray(parsed) ? parsed : []
+        return z.array(z.object({
+          src: z.string(), label: z.string().optional(), ratio: z.number().optional(),
+        })).parse(JSON.parse(items)).map(item => omitUndefined(item))
       } catch {
         return []
       }

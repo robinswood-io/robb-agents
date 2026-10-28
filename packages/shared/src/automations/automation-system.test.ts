@@ -272,11 +272,11 @@ it('should emit PermissionModeChange event', async () => {
       });
 
       expect(events).toContain('PermissionModeChange');
-      expect(emitSpy).toHaveBeenCalledWith('PermissionModeChange', expect.objectContaining({
+      expect<unknown>(emitSpy).toHaveBeenCalledWith('PermissionModeChange', (expect.objectContaining({
         sessionId: 'session-1',
         oldMode: '',
         newMode: 'execute',
-      }));
+      }) as unknown));
 
       await system.dispose();
     });
@@ -294,12 +294,12 @@ it('should emit LabelAdd event for new labels', async () => {
       });
 
       expect(events).toContain('LabelAdd');
-      expect(emitSpy).toHaveBeenCalledWith('LabelAdd', expect.objectContaining({
+      expect<unknown>(emitSpy).toHaveBeenCalledWith('LabelAdd', (expect.objectContaining({
         label: 'label-1',
-      }));
-      expect(emitSpy).toHaveBeenCalledWith('LabelAdd', expect.objectContaining({
+      }) as unknown));
+      expect<unknown>(emitSpy).toHaveBeenCalledWith('LabelAdd', (expect.objectContaining({
         label: 'label-2',
-      }));
+      }) as unknown));
 
       await system.dispose();
     });
@@ -322,9 +322,9 @@ it('should emit LabelRemove event for removed labels', async () => {
       });
 
       expect(events).toContain('LabelRemove');
-      expect(emitSpy).toHaveBeenCalledWith('LabelRemove', expect.objectContaining({
+      expect<unknown>(emitSpy).toHaveBeenCalledWith('LabelRemove', (expect.objectContaining({
         label: 'label-2',
-      }));
+      }) as unknown));
 
       await system.dispose();
     });
@@ -342,9 +342,9 @@ it('should emit FlagChange event', async () => {
       });
 
       expect(events).toContain('FlagChange');
-      expect(emitSpy).toHaveBeenCalledWith('FlagChange', expect.objectContaining({
+      expect<unknown>(emitSpy).toHaveBeenCalledWith('FlagChange', (expect.objectContaining({
         isFlagged: true,
-      }));
+      }) as unknown));
 
       await system.dispose();
     });
@@ -366,10 +366,10 @@ it('should emit SessionStatusChange event', async () => {
       });
 
       expect(events).toContain('SessionStatusChange');
-      expect(emitSpy).toHaveBeenCalledWith('SessionStatusChange', expect.objectContaining({
+      expect<unknown>(emitSpy).toHaveBeenCalledWith('SessionStatusChange', (expect.objectContaining({
         oldState: 'todo',
         newState: 'done',
-      }));
+      }) as unknown));
 
       await system.dispose();
     });

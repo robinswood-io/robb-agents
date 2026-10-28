@@ -30,17 +30,17 @@ export { evaluateMissionRuntimePolicy } from './mission-runtime/shared.ts';
  * the sole semantic authority; this service supplies lifecycle and RPC seams.
  */
 export class MissionRuntimeService {
-    private readonly contexts = new Map<string, Promise<WorkspaceMissionRuntime>>();
-    private readonly reportLoops = new Map<string, Promise<void>>();
-    private readonly ordinaryRouteEstimates = new Map<string, OrdinaryMissionRouteEstimateCache>();
-    private readonly ordinaryRoutePreparationLocks = new Map<string, Promise<void>>();
-    private startPromise?: Promise<string[]>;
-    private readonly specializedProfileFoundries = new Map<string, SpecializedProfileService>();
+    /** @internal */ public readonly contexts = new Map<string, Promise<WorkspaceMissionRuntime>>();
+    /** @internal */ public readonly reportLoops = new Map<string, Promise<void>>();
+    /** @internal */ public readonly ordinaryRouteEstimates = new Map<string, OrdinaryMissionRouteEstimateCache>();
+    /** @internal */ public readonly ordinaryRoutePreparationLocks = new Map<string, Promise<void>>();
+    /** @internal */ public startPromise?: Promise<string[]>;
+    /** @internal */ public readonly specializedProfileFoundries = new Map<string, SpecializedProfileService>();
     constructor(private readonly options: MissionRuntimeServiceOptions) { }
     start(): Promise<string[]> {
         return missionRuntimeStart.start(this);
     }
-    private async startInternal(): Promise<string[]> {
+    /** @internal */ public async startInternal(): Promise<string[]> {
         return missionRuntimeStart.startInternal(this);
     }
     /**
@@ -51,7 +51,7 @@ export class MissionRuntimeService {
     async preflightMission(workspaceId: string, target: MissionPreflightTarget): Promise<MissionDigitalTwinReport> {
         return missionRuntimePreflight.preflightMission(this, workspaceId, target);
     }
-    private async preflightMissionInternal(workspaceId: string, target: MissionPreflightTarget,
+    /** @internal */ public async preflightMissionInternal(workspaceId: string, target: MissionPreflightTarget,
     /** The spec already passed the host-owned specialized binder. */
     trustedBoundSpec: boolean): Promise<MissionDigitalTwinReport> {
         return missionRuntimePreflight.preflightMissionInternal(this, workspaceId, target,
@@ -145,55 +145,55 @@ export class MissionRuntimeService {
     private async contextFor(workspaceId: string): Promise<WorkspaceMissionRuntime> {
         return missionRuntimeLifecycle.contextFor(this, workspaceId);
     }
-    private async createContext(workspaceId: string): Promise<WorkspaceMissionRuntime> {
+    /** @internal */ public async createContext(workspaceId: string): Promise<WorkspaceMissionRuntime> {
         return missionRuntimeLifecycle.createContext(this, workspaceId);
     }
-    private createSpecializedProfileResolver(workspace: MissionWorkspace): MissionSpecializedProfileResolver {
+    /** @internal */ public createSpecializedProfileResolver(workspace: MissionWorkspace): MissionSpecializedProfileResolver {
         return missionRuntimeProfiles.createSpecializedProfileResolver(this, workspace);
     }
-    private ensureCompletionPassport(context: WorkspaceMissionRuntime, snapshot: MissionSnapshot): boolean {
+    /** @internal */ public ensureCompletionPassport(context: WorkspaceMissionRuntime, snapshot: MissionSnapshot): boolean {
         return missionRuntimeProfiles.ensureCompletionPassport(this, context, snapshot);
     }
-    private scheduleReport(context: WorkspaceMissionRuntime, snapshot: MissionSnapshot): void {
+    /** @internal */ public scheduleReport(context: WorkspaceMissionRuntime, snapshot: MissionSnapshot): void {
         return missionRuntimeReport.scheduleReport(this, context, snapshot);
     }
-    private async deliverReport(context: WorkspaceMissionRuntime, missionId: string): Promise<void> {
+    /** @internal */ public async deliverReport(context: WorkspaceMissionRuntime, missionId: string): Promise<void> {
         return missionRuntimeReport.deliverReport(this, context, missionId);
     }
-    private emitReportFailure(context: WorkspaceMissionRuntime, missionId: string, reportId: string, originSessionId: string, reason: string): void {
+    /** @internal */ public emitReportFailure(context: WorkspaceMissionRuntime, missionId: string, reportId: string, originSessionId: string, reason: string): void {
         return missionRuntimeReport.emitReportFailure(this, context, missionId, reportId, originSessionId, reason);
     }
-    private waitForSessionCompletion(sessionId: string, timeoutMs: number): {
+    /** @internal */ public waitForSessionCompletion(sessionId: string, timeoutMs: number): {
         promise: Promise<Parameters<Parameters<ISessionManager['onSessionComplete']>[0]>[0]>;
         cancel: () => void;
     } {
         return missionRuntimeReport.waitForSessionCompletion(this, sessionId, timeoutMs);
     }
-    private async createProductionExecutor(workspace: MissionWorkspace): Promise<MissionWorkExecutor> {
+    /** @internal */ public async createProductionExecutor(workspace: MissionWorkspace): Promise<MissionWorkExecutor> {
         return missionRuntimeRoutes.createProductionExecutor(this, workspace);
     }
-    private ordinaryRouteKey(workspaceId: string, missionId: string): string {
+    /** @internal */ public ordinaryRouteKey(workspaceId: string, missionId: string): string {
         return missionRuntimeRoutes.ordinaryRouteKey(this, workspaceId, missionId);
     }
-    private async withOrdinaryRoutePreparationLock<T>(workspaceId: string, missionId: string, operation: () => Promise<T>): Promise<T> {
+    /** @internal */ public async withOrdinaryRoutePreparationLock<T>(workspaceId: string, missionId: string, operation: () => Promise<T>): Promise<T> {
         return missionRuntimeRoutes.withOrdinaryRoutePreparationLock<T>(this, workspaceId, missionId, operation);
     }
-    private async prepareOrdinaryMissionDispatchRoute(workspaceId: string, input: MissionExecutionInput): Promise<OrdinaryMissionRoutePin | undefined> {
+    /** @internal */ public async prepareOrdinaryMissionDispatchRoute(workspaceId: string, input: MissionExecutionInput): Promise<OrdinaryMissionRoutePin | undefined> {
         return missionRuntimeRoutes.prepareOrdinaryMissionDispatchRoute(this, workspaceId, input);
     }
-    private async revalidateOrdinaryMissionDispatchRoute(workspaceId: string, input: MissionExecutionInput, route: MissionExecutionBinding['missionRoute']): Promise<void> {
+    /** @internal */ public async revalidateOrdinaryMissionDispatchRoute(workspaceId: string, input: MissionExecutionInput, route: MissionExecutionBinding['missionRoute']): Promise<void> {
         return missionRuntimeRoutes.revalidateOrdinaryMissionDispatchRoute(this, workspaceId, input, route);
     }
-    private currentMissionConnections(): MissionPreflightConnection[] {
+    /** @internal */ public currentMissionConnections(): MissionPreflightConnection[] {
         return missionRuntimeRoutes.currentMissionConnections(this);
     }
-    private validOrdinaryRuntimeIdentity(): string | undefined {
+    /** @internal */ public validOrdinaryRuntimeIdentity(): string | undefined {
         return missionRuntimeRoutes.validOrdinaryRuntimeIdentity(this);
     }
-    private missionEstimateEnvironmentIdentity(workspace: MissionWorkspace, snapshot: MissionSnapshot, config: ReturnType<typeof loadWorkspaceConfig>, connections: readonly MissionPreflightConnection[], origin: Session | undefined): string {
+    /** @internal */ public missionEstimateEnvironmentIdentity(workspace: MissionWorkspace, snapshot: MissionSnapshot, config: ReturnType<typeof loadWorkspaceConfig>, connections: readonly MissionPreflightConnection[], origin: Session | undefined): string {
         return missionRuntimeBudget.missionEstimateEnvironmentIdentity(this, workspace, snapshot, config, connections, origin);
     }
-    private async projectedRemainingMissionCostUsd(input: {
+    /** @internal */ public async projectedRemainingMissionCostUsd(input: {
         workspace: MissionWorkspace;
         snapshot: MissionSnapshot;
         config: ReturnType<typeof loadWorkspaceConfig>;
@@ -205,10 +205,10 @@ export class MissionRuntimeService {
     }): Promise<number | undefined> {
         return missionRuntimeBudget.projectedRemainingMissionCostUsd(this, input);
     }
-    private releaseOrdinaryMissionEstimate(workspaceId: string, missionId: string, workItemId: string): void {
+    /** @internal */ public releaseOrdinaryMissionEstimate(workspaceId: string, missionId: string, workItemId: string): void {
         return missionRuntimeBudget.releaseOrdinaryMissionEstimate(this, workspaceId, missionId, workItemId);
     }
-    private async addOrdinaryMissionEstimate(cache: OrdinaryMissionRouteEstimateCache, input: {
+    /** @internal */ public async addOrdinaryMissionEstimate(cache: OrdinaryMissionRouteEstimateCache, input: {
         workspace: MissionWorkspace;
         snapshot: MissionSnapshot;
         config: ReturnType<typeof loadWorkspaceConfig>;
@@ -219,7 +219,7 @@ export class MissionRuntimeService {
     }): Promise<void> {
         return missionRuntimeBudget.addOrdinaryMissionEstimate(this, cache, input);
     }
-    private resolveOrdinaryRouteForItem(input: {
+    /** @internal */ public resolveOrdinaryRouteForItem(input: {
         workspace: MissionWorkspace;
         spec: MissionSpec;
         item: MissionWorkItem;
@@ -232,16 +232,16 @@ export class MissionRuntimeService {
     }) {
         return missionRuntimeRoutes.resolveOrdinaryRouteForItem(this, input);
     }
-    private assertAdmissible(workspace: MissionWorkspace, spec: MissionSpec): void {
+    /** @internal */ public assertAdmissible(workspace: MissionWorkspace, spec: MissionSpec): void {
         return missionRuntimeAdmission.assertAdmissible(this, workspace, spec);
     }
-    private workItemPathsAreAuthorized(workspace: MissionWorkspace, spec: MissionSpec, item: MissionWorkItem): boolean {
+    /** @internal */ public workItemPathsAreAuthorized(workspace: MissionWorkspace, spec: MissionSpec, item: MissionWorkItem): boolean {
         return missionRuntimeAdmission.workItemPathsAreAuthorized(this, workspace, spec, item);
     }
-    private resolveWorkspace(workspaceId: string): MissionWorkspace | null {
+    /** @internal */ public resolveWorkspace(workspaceId: string): MissionWorkspace | null {
         return this.options.resolveWorkspace?.(workspaceId) ?? getWorkspaceByNameOrId(workspaceId);
     }
-    private listWorkspaces(): MissionWorkspace[] {
+    /** @internal */ public listWorkspaces(): MissionWorkspace[] {
         return this.options.listWorkspaces?.() ?? getWorkspaces();
     }
     private reportError(context: {

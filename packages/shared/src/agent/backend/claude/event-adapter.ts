@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentEvent } from '@craft-agent/core/types';
 import { BaseEventAdapter } from '../base-event-adapter.ts';
@@ -107,7 +108,7 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
         type: 'text_complete',
         text: this.pendingText,
         isIntermediate: false,
-        turnId: this.currentTurnId || undefined,
+        ...(this.currentTurnId ? { turnId: this.currentTurnId } : {}),
       };
       this.pendingText = null;
       return event;
@@ -194,7 +195,7 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
         type: 'usage_update',
         usage: {
           inputTokens: currentInputTokens,
-          contextWindow: this.cachedContextWindow,
+          ...(this.cachedContextWindow !== undefined ? { contextWindow: this.cachedContextWindow } : {}),
         },
       });
     }
@@ -260,23 +261,25 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
       const stopReason = event.delta?.stop_reason;
       if (this.pendingText) {
         const isIntermediate = stopReason === 'tool_use';
+        const optionalParentToolUseId = message.parent_tool_use_id || undefined;
         events.push({
           type: 'text_complete',
           text: this.pendingText,
           isIntermediate,
-          turnId: this.currentTurnId || undefined,
-          parentToolUseId: message.parent_tool_use_id || undefined,
+          ...(this.currentTurnId ? { turnId: this.currentTurnId } : {}),
+          ...(optionalParentToolUseId !== undefined ? { parentToolUseId: optionalParentToolUseId } : {}),
         });
         this.pendingText = null;
       }
     }
 
     if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+      const optionalParentToolUseId2 = message.parent_tool_use_id || undefined;
       events.push({
         type: 'text_delta',
         text: event.delta.text,
-        turnId: this.currentTurnId || undefined,
-        parentToolUseId: message.parent_tool_use_id || undefined,
+        ...(this.currentTurnId ? { turnId: this.currentTurnId } : {}),
+        ...(optionalParentToolUseId2 !== undefined ? { parentToolUseId: optionalParentToolUseId2 } : {}),
       });
     } else if (event.type === 'content_block_start' && event.content_block.type === 'tool_use') {
       // Stream events arrive with empty input — the full input comes later
@@ -320,7 +323,7 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
       const msgContent = ('message' in message && message.message)
         ? ((message.message as { content?: unknown[] }).content ?? [])
         : [];
-      const contentBlocks = (Array.isArray(msgContent) ? msgContent : []) as ContentBlock[];
+      const contentBlocks = (isUnknownArray(msgContent) ? msgContent : []) as ContentBlock[];
 
       const sdkParentId = message.parent_tool_use_id;
       const toolUseResultValue = message.tool_use_result;
@@ -344,13 +347,8 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
     }
   }
 
-  private adaptToolProgress(message: SDKMessage, events: AgentEvent[]): void {
-    const progress = message as unknown as {
-      tool_use_id: string;
-      tool_name: string;
-      parent_tool_use_id: string | null;
-      elapsed_time_seconds?: number;
-    };
+  private adaptToolProgress(message: Extract<SDKMessage, { type: 'tool_progress' }>, events: AgentEvent[]): void {
+    const progress = message;
 
     // Forward elapsed time for live progress updates
     if (progress.elapsed_time_seconds !== undefined) {
@@ -358,7 +356,7 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
         type: 'task_progress',
         toolUseId: progress.parent_tool_use_id || progress.tool_use_id,
         elapsedSeconds: progress.elapsed_time_seconds,
-        turnId: this.currentTurnId || undefined,
+        ...(this.currentTurnId ? { turnId: this.currentTurnId } : {}),
       });
     }
 
@@ -424,17 +422,17 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
       inputTokens = msg.usage.input_tokens + cacheRead + cacheCreation;
     }
 
-    const usage = {
+    const usage: Extract<AgentEvent, { type: 'complete' }>['usage'] = {
       inputTokens,
       outputTokens: msg.usage.output_tokens,
       cacheReadTokens: cacheRead,
       cacheCreationTokens: cacheCreation,
       costUsd: msg.total_cost_usd,
-      contextWindow: primaryModelUsage?.contextWindow,
+      ...(primaryModelUsage?.contextWindow !== undefined ? { contextWindow: primaryModelUsage?.contextWindow } : {}),
     };
 
     if (msg.subtype === 'success' && !msg.is_error) {
-      events.push({ type: 'complete', usage });
+      events.push({ type: 'complete', ...(usage !== undefined ? { usage } : {}) });
     } else {
       const errorMsg = 'errors' in msg ? msg.errors.join(', ')
         : 'result' in msg && typeof msg.result === 'string' ? msg.result : 'Query failed';
@@ -445,7 +443,7 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
       } else {
         events.push({ type: 'error', message: errorMsg });
       }
-      events.push({ type: 'complete', usage });
+      events.push({ type: 'complete', ...(usage !== undefined ? { usage } : {}) });
     }
   }
 
@@ -454,7 +452,7 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
 
     if (msg.subtype === 'init') {
       // Capture tools list from SDK init message
-      if ('tools' in msg && Array.isArray(msg.tools)) {
+      if ('tools' in msg && isUnknownArray(msg.tools)) {
         this._sdkTools = msg.tools;
         this.callbacks.onDebug?.(`SDK init: captured ${this._sdkTools.length} tools`);
       }
@@ -478,9 +476,9 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
         type: 'task_completed',
         taskId: notification.task_id,
         status,
-        outputFile: notification.output_file,
-        summary: notification.summary,
-        turnId: this.currentTurnId || undefined,
+        ...(notification.output_file !== undefined ? { outputFile: notification.output_file } : {}),
+        ...(notification.summary !== undefined ? { summary: notification.summary } : {}),
+        ...(this.currentTurnId ? { turnId: this.currentTurnId } : {}),
       });
     }
   }

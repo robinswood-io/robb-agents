@@ -6,8 +6,8 @@ export interface AutomationExecutionRecord {
   scheduledFor: string
   attempt: number
   status: AutomationExecutionStatus
-  nextAttemptAt?: number
-  error?: string
+  nextAttemptAt?: number | undefined
+  error?: string | undefined
 }
 
 export interface RetryPolicy {

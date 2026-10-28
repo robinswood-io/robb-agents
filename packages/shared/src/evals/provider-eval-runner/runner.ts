@@ -100,9 +100,9 @@ async function runCase(
       passed: judgePassedForCategory(evalCase, score),
       score: score.factualityScore,
       policyCompliant: score.policyCompliant,
-      toolSucceeded: score.toolSucceeded,
-      destructiveActionSafe: score.destructiveActionSafe,
-      providerErrorRecovered: score.providerErrorRecovered,
+      ...(score.toolSucceeded !== undefined ? { toolSucceeded: score.toolSucceeded } : {}),
+      ...(score.destructiveActionSafe !== undefined ? { destructiveActionSafe: score.destructiveActionSafe } : {}),
+      ...(score.providerErrorRecovered !== undefined ? { providerErrorRecovered: score.providerErrorRecovered } : {}),
       evidenceSummary: score.evidenceSummary,
     }),
   ];
@@ -273,7 +273,7 @@ export async function runProviderEvalCorpus(
     corpusId: input.corpusId,
     corpusVersion: input.corpusVersion,
     runId: input.runId,
-    createdAt: input.createdAt,
+    ...(input.createdAt !== undefined ? { createdAt: input.createdAt } : {}),
     versions: input.versions,
     results: results.filter((result): result is EvalCaseResult => result !== undefined),
   });

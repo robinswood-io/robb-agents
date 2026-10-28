@@ -8,8 +8,8 @@ import type { KanbanProject, KanbanSubtask } from './types'
 
 interface TaskChatPreviewProps {
   title: string
-  project?: KanbanProject
-  status?: SessionStatus
+  project?: KanbanProject | undefined
+  status?: SessionStatus | undefined
   /** Orchestrator model id for the task. */
   model: string
   /** The user's opening request. */
@@ -19,7 +19,7 @@ interface TaskChatPreviewProps {
   /** Subtasks the orchestrator spawned (each routed to a best-fit model). */
   subtasks: KanbanSubtask[]
   /** Optional closing note after the subtask panel. */
-  assistantFollowUp?: string
+  assistantFollowUp?: string | undefined
 }
 
 /**

@@ -16,17 +16,17 @@ import { ActivityRow } from "./turn-card-activity-row";
 export interface ActivityGroupRowProps {
   group: ActivityGroup
   /** Controlled expansion state for activity groups */
-  expandedGroups?: Set<string>
+  expandedGroups?: Set<string> | undefined
   /** Callback when expansion changes */
-  onExpandedGroupsChange?: (groups: Set<string>) => void
+  onExpandedGroupsChange?: ((groups: Set<string>) => void) | undefined
   /** Callback to open activity details in Monaco */
-  onOpenActivityDetails?: (activity: ActivityItem) => void
+  onOpenActivityDetails?: ((activity: ActivityItem) => void) | undefined
   /** Animation index for staggered animation */
-  animationIndex?: number
+  animationIndex?: number | undefined
   /** Session folder path for stripping from file paths in tool display */
-  sessionFolderPath?: string
+  sessionFolderPath?: string | undefined
   /** Display mode: 'detailed' shows all info, 'informative' hides MCP/API names and params */
-  displayMode?: 'informative' | 'detailed'
+  displayMode?: 'informative' | 'detailed' | undefined
 }
 
 export function ActivityGroupRow({ group, expandedGroups: externalExpandedGroups, onExpandedGroupsChange, onOpenActivityDetails, animationIndex = 0, sessionFolderPath, displayMode = 'detailed' }: ActivityGroupRowProps) {
@@ -48,8 +48,8 @@ export function ActivityGroupRow({ group, expandedGroups: externalExpandedGroups
     setExpandedGroups(next)
   }, [groupId, expandedGroups, setExpandedGroups])
 
-  const description = group.parent.toolInput?.description as string | undefined
-  const subagentType = group.parent.toolInput?.subagent_type as string | undefined
+  const description = group.parent.toolInput?.["description"] as string | undefined
+  const subagentType = group.parent.toolInput?.["subagent_type"] as string | undefined
   const isCheckpoint = group.parent.status === 'checkpoint'
   const isComplete = group.parent.status === 'completed' || group.parent.status === 'error' || isCheckpoint
   const hasError = group.parent.status === 'error'

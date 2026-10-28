@@ -1,3 +1,5 @@
+import type { HandleErrorMessageActionOptions } from './error-message-actions.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import * as React from "react";
 import { useTranslation } from "react-i18next";
 
@@ -21,23 +23,23 @@ export interface MessageBubbleProps {
   message: Message
   onOpenFile: (path: string) => void
   onOpenUrl: (url: string) => void
-  sessionId?: string
+  sessionId?: string | undefined
   /**
    * Markdown render mode for assistant messages
    * @default 'minimal'
    */
-  renderMode?: RenderMode
+  renderMode?: RenderMode | undefined
   /**
    * Callback to pop out message into a separate window
    */
-  onPopOut?: (message: Message) => void
+  onPopOut?: ((message: Message) => void) | undefined
   /** Compact mode - reduces padding for popover embedding */
-  compactMode?: boolean
+  compactMode?: boolean | undefined
   /** Callback to resume an existing request without adding a user message. */
-  onRetry?: () => void
+  onRetry?: (() => void) | undefined
 }
 
-export function ErrorMessage({ message, onOpenUrl, sessionId, onRetry }: { message: Message; onOpenUrl?: (url: string) => void; sessionId?: string; onRetry?: () => void }) {
+export function ErrorMessage({ message, onOpenUrl, sessionId, onRetry }: { message: Message; onOpenUrl?: ((url: string) => void) | undefined; sessionId?: string | undefined; onRetry?: (() => void) | undefined }) {
   const { t } = useTranslation()
   const hasDetails = (message.errorDetails && message.errorDetails.length > 0) || message.errorOriginal
   const [detailsOpen, setDetailsOpen] = React.useState(false)
@@ -51,7 +53,7 @@ export function ErrorMessage({ message, onOpenUrl, sessionId, onRetry }: { messa
   })
   const handleReconnectRuntime = React.useCallback(() => {
     if (!sessionId) return
-    void window.electronAPI.sessionCommand(sessionId, { type: 'restartRuntime' }).catch(error => {
+    void window.electronAPI.sessionCommand(sessionId, { type: 'restartRuntime' }).catch((error: unknown) => {
       const detail = error instanceof Error ? error.message : String(error)
       toast.error(t('toast.reconnectFailed'), { description: detail })
     })
@@ -79,12 +81,12 @@ export function ErrorMessage({ message, onOpenUrl, sessionId, onRetry }: { messa
               <button
                 key={action.key}
                 onClick={() => {
-                  handleErrorMessageAction(action, {
+                  handleErrorMessageAction(action, omitUndefined<HandleErrorMessageActionOptions>({
                     sessionId,
                     onOpenUrl,
                     onRetry,
                     onReconnectRuntime: handleReconnectRuntime,
-                  })
+                  }))
                 }}
                 className="text-xs px-2 py-0.5 rounded border border-destructive/20 text-destructive/70 hover:text-destructive hover:border-destructive/40 transition-colors"
               >

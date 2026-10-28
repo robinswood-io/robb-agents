@@ -52,10 +52,10 @@ interface PanelStackContainerProps {
   navigatorSlot: React.ReactNode
   navigatorWidth: number
   isSidebarAndNavigatorHidden: boolean
-  isRightSidebarVisible?: boolean
+  isRightSidebarVisible?: boolean | undefined
   /** Compact mode: single-panel, list/content toggle (mobile or narrow window) */
-  isCompact?: boolean
-  isResizing?: boolean
+  isCompact?: boolean | undefined
+  isResizing?: boolean | undefined
 }
 
 export function PanelStackContainer({

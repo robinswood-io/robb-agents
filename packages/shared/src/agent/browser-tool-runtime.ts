@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 import { withBrowserToolExecutionWatchdog } from "./browser-tool-execution-watchdog.ts";
 
 import type { BrowserPaneFns } from "./browser-tools.ts";
@@ -129,12 +130,12 @@ function throwIfBrowserToolExecutionAborted(signal: AbortSignal): void {
  */
 function abortAwareBrowserPaneFns(fns: BrowserPaneFns, signal: AbortSignal): BrowserPaneFns {
   return new Proxy(fns, {
-    get(target, property, receiver) {
-      const value = Reflect.get(target, property, receiver);
+    get(target, property, receiver: unknown) {
+      const value: unknown = Reflect.get(target, property, receiver);
       if (typeof value !== 'function') return value;
       return (...callbackArgs: unknown[]) => {
         throwIfBrowserToolExecutionAborted(signal);
-        const result = Reflect.apply(value, target, callbackArgs);
+        const result: unknown = Reflect.apply(value, target, callbackArgs);
         if (result !== null && (typeof result === 'object' || typeof result === 'function')
           && 'then' in result && typeof result.then === 'function') {
           return Promise.resolve(result).then(resolved => {
@@ -157,7 +158,7 @@ async function executeBrowserToolCommandWithoutWatchdog(args: {
   signal: AbortSignal;
 }): Promise<BrowserCommandResult> {
   // Array mode: no batch splitting, pass directly to single command execution
-  if (Array.isArray(args.command)) {
+  if (isUnknownArray(args.command)) {
     if (args.command.length === 0) {
       throw new Error('Missing command. Use "--help" to see supported browser_tool commands.');
     }
@@ -209,14 +210,14 @@ async function executeBatchCommands(args: {
   return {
     output: outputs.join('\n'),
     appendReleaseHint,
-    image: lastImage,
+    ...(lastImage !== undefined ? { image: lastImage } : {}),
   };
 }
 
 async function executeSingleCommand(args: BrowserCommandExecutionArgs): Promise<BrowserCommandResult> {
   throwIfBrowserToolExecutionAborted(args.signal);
   // Array mode: use parts directly, no parsing needed
-  const parts = Array.isArray(args.command)
+  const parts = isUnknownArray(args.command)
     ? args.command
     : tokenizeCommand(args.command.trim());
   const cmd = parts[0]?.toLowerCase();

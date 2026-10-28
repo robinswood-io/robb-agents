@@ -1,3 +1,5 @@
+import type { ActiveSessionObjective } from '../../../shared/src/sessions/types/objectives.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from "bun:test";
 import type { Message } from "@craft-agent/core/types";
 import { buildObjectiveContractPrompt, isObjectiveEvidenceInvalidatingMutation, isObjectiveMutationTool, isExplicitReadOnlyClosureRequest, isExplicitReadOnlyReview, objectiveRequiresExecutionEvidence, transitionObjectiveContract } from "./objective-contract.ts";
@@ -410,10 +412,10 @@ describe('durable objective contract', () => {
     ]) {
       const objective = transitionObjectiveContract({ messageId: 'reported-comma', text });
       expect(objective.requiresExecutionEvidence).toBeUndefined();
-      expect(objectiveRequiresExecutionEvidence({
+      expect(objectiveRequiresExecutionEvidence(omitUndefined<ActiveSessionObjective>({
         ...objective,
         requiresExecutionEvidence: undefined,
-      })).toBe(false);
+      }))).toBe(false);
     }
 
     const active = transitionObjectiveContract({

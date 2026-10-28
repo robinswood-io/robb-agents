@@ -1,3 +1,6 @@
+import type { SessionCompletionEvent } from '../runtime-types.ts';
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { isImmutableAutomaticRecoveryBlock, isLegacyHostObjectiveContractEnabled } from '../policy.ts';
 import type { UserInputRequest } from '@craft-agent/core';
@@ -21,22 +24,22 @@ async function sessionOpStopImmutableRestartRecovery(sessionOperationContext: Se
     if (!await sessionOpTerminalizeImmutableAutomaticRecoveryBlock(sessionOperationContext, managed, lineage))
         return false;
     const objective = managed.activeObjective;
-    await sessionOperationContext.owner["reconcileRecoveredTerminalStatus"](managed, 'error');
+    await sessionOperationContext.owner.reconcileRecoveredTerminalStatus(managed, 'error');
     if (sessionOperationContext.state.sessions.get(managed.id) !== managed || managed.activeObjective !== objective
         || objective?.terminalState === 'active' || managed.isProcessing)
         return true;
-    sessionOperationContext.owner["emitObjectiveChanged"](managed);
-    sessionOperationContext.owner["sendEvent"]({
+    sessionOperationContext.owner.emitObjectiveChanged(managed);
+    sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'complete' }>>({
         type: 'complete', sessionId: managed.id, reason: 'error', tokenUsage: managed.tokenUsage,
         hasUnread: managed.hasUnread, backgroundTasksAlive: sessionOperationContext.state.keepBackgroundTasksAlive,
-    }, managed.workspace.id);
+    }), managed.workspace.id);
     const finalMessageId = sessionOpGetLastFinalAssistantMessageId(sessionOperationContext, managed.messages);
-    sessionOperationContext.owner["emitSessionComplete"]({
+    sessionOperationContext.owner.emitSessionComplete(omitUndefined<SessionCompletionEvent>({
         sessionId: managed.id, workspaceId: managed.workspace.id, reason: 'error',
-        finalMessageId,
+        ...(finalMessageId !== undefined ? { finalMessageId: finalMessageId } : {}),
         finalText: finalMessageId ? managed.messages.find(message => message.id === finalMessageId)?.content : undefined,
-        tokenUsage: managed.tokenUsage,
-    });
+        ...(managed.tokenUsage !== undefined ? { tokenUsage: managed.tokenUsage } : {}),
+    }));
     return true;
 }
 

@@ -40,7 +40,7 @@ export function Btn({
   variant = 'secondary',
   className,
   ...rest
-}: { variant?: BtnVariant } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+}: { variant?: BtnVariant | undefined } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       type="button"
@@ -87,8 +87,8 @@ export function ModelSelect({
   value: string
   onChange: (id: string) => void
   groups: KanbanModelProviderGroup[]
-  width?: number
-  size?: 'sm' | 'md'
+  width?: number | undefined
+  size?: 'sm' | 'md' | undefined
 }) {
   return (
     <DropdownMenu>

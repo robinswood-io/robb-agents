@@ -1,13 +1,14 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import type { OtlpTelemetryConfig, ResolvedBatchConfig } from './contracts.ts';
 
 function parseOtlpHeaders(raw: string | undefined): Readonly<Record<string, string>> | undefined {
   if (!raw?.trim()) return undefined
   try {
     const parsed: unknown = JSON.parse(raw)
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return undefined
+    if (typeof parsed !== 'object' || parsed === null || isUnknownArray(parsed)) return undefined
 
     const headers: Record<string, string> = {}
-    for (const [key, value] of Object.entries(parsed)) {
+    for (const [key, value] of Object.entries<unknown>((parsed as Record<string, unknown>))) {
       if (
         typeof value !== 'string'
         || key.trim().length === 0
@@ -64,28 +65,28 @@ export function resolveOtlpTelemetryConfig(
   environment: Readonly<Record<string, string | undefined>>,
   workspaceId: string,
 ): OtlpTelemetryConfig {
-  const endpoint = environment.ROBB_OTLP_ENDPOINT?.trim() ?? ''
-  const enabledWorkspaces = (environment.ROBB_OTLP_ENABLED_WORKSPACES ?? '')
+  const endpoint = environment["ROBB_OTLP_ENDPOINT"]?.trim() ?? ''
+  const enabledWorkspaces = (environment["ROBB_OTLP_ENABLED_WORKSPACES"] ?? '')
     .split(',')
     .map(value => value.trim())
     .filter(Boolean)
   const enabled = isHttpEndpoint(endpoint)
     && (enabledWorkspaces.includes('*') || enabledWorkspaces.includes(workspaceId))
   const requestedSignals = new Set(
-    (environment.ROBB_OTLP_SIGNALS ?? 'logs,traces,metrics')
+    (environment["ROBB_OTLP_SIGNALS"] ?? 'logs,traces,metrics')
       .split(',')
       .map(value => value.trim().toLowerCase())
       .filter(Boolean),
   )
-  const headers = parseOtlpHeaders(environment.ROBB_OTLP_HEADERS_JSON)
-  const spoolPath = environment.ROBB_OTLP_SPOOL_PATH?.trim()
+  const headers = parseOtlpHeaders(environment["ROBB_OTLP_HEADERS_JSON"])
+  const spoolPath = environment["ROBB_OTLP_SPOOL_PATH"]?.trim()
 
   return {
     enabled,
     endpoint,
-    serviceName: environment.ROBB_OTLP_SERVICE_NAME?.trim() || 'robb-agents',
-    ...(environment.ROBB_OTLP_SERVICE_VERSION?.trim()
-      ? { serviceVersion: environment.ROBB_OTLP_SERVICE_VERSION.trim() }
+    serviceName: environment["ROBB_OTLP_SERVICE_NAME"]?.trim() || 'robb-agents',
+    ...(environment["ROBB_OTLP_SERVICE_VERSION"]?.trim()
+      ? { serviceVersion: environment["ROBB_OTLP_SERVICE_VERSION"].trim() }
       : {}),
     ...(headers ? { headers } : {}),
     signals: {
@@ -94,15 +95,15 @@ export function resolveOtlpTelemetryConfig(
       metrics: requestedSignals.has('metrics'),
     },
     batch: {
-      enabled: environment.ROBB_OTLP_BATCH_ENABLED?.trim().toLowerCase() !== 'false',
-      maxBatchSize: positiveInteger(environment.ROBB_OTLP_BATCH_SIZE, 32, 1_000),
-      flushIntervalMs: positiveInteger(environment.ROBB_OTLP_FLUSH_INTERVAL_MS, 1_000, 60_000),
-      maxQueueSize: positiveInteger(environment.ROBB_OTLP_MAX_QUEUE_SIZE, 512, 100_000),
-      maxRetries: positiveInteger(environment.ROBB_OTLP_MAX_RETRIES, 3, 10),
-      retryBaseMs: positiveInteger(environment.ROBB_OTLP_RETRY_BASE_MS, 250, 60_000),
+      enabled: environment["ROBB_OTLP_BATCH_ENABLED"]?.trim().toLowerCase() !== 'false',
+      maxBatchSize: positiveInteger(environment["ROBB_OTLP_BATCH_SIZE"], 32, 1_000),
+      flushIntervalMs: positiveInteger(environment["ROBB_OTLP_FLUSH_INTERVAL_MS"], 1_000, 60_000),
+      maxQueueSize: positiveInteger(environment["ROBB_OTLP_MAX_QUEUE_SIZE"], 512, 100_000),
+      maxRetries: positiveInteger(environment["ROBB_OTLP_MAX_RETRIES"], 3, 10),
+      retryBaseMs: positiveInteger(environment["ROBB_OTLP_RETRY_BASE_MS"], 250, 60_000),
       ...(spoolPath ? { spoolPath } : {}),
       maxSpoolBytes: positiveInteger(
-        environment.ROBB_OTLP_MAX_SPOOL_BYTES,
+        environment["ROBB_OTLP_MAX_SPOOL_BYTES"],
         5 * 1024 * 1024,
         1024 * 1024 * 1024,
       ),

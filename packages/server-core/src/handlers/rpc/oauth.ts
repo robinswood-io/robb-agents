@@ -126,7 +126,7 @@ export async function completeOAuthFlow(opts: {
         codeVerifier: flow.codeVerifier ?? '',
         tokenEndpoint: flow.tokenEndpoint ?? '',
         clientId: flow.clientId ?? '',
-        clientSecret: flow.clientSecret,
+        ...(flow.clientSecret !== undefined ? { clientSecret: flow.clientSecret } : {}),
         redirectUri: flow.redirectUri ?? '',
       },
     )
@@ -145,8 +145,8 @@ export async function completeOAuthFlow(opts: {
         requestId: flow.authRequestId,
         sourceSlug,
         success: result.success,
-        email: result.email,
-        error: result.error,
+        ...(result.email !== undefined ? { email: result.email } : {}),
+        ...(result.error !== undefined ? { error: result.error } : {}),
       })
     }
 
@@ -204,7 +204,7 @@ export function registerOAuthHandlers(server: RpcServer, deps: HandlerDeps): voi
       throw new Error(`Source not found: ${sourceSlug}`)
     }
 
-    const prepared = await credManager.prepareOAuth(source, { callbackPort, callbackUrl })
+    const prepared = await credManager.prepareOAuth(source, { ...(callbackPort !== undefined ? { callbackPort: callbackPort } : {}), ...(callbackUrl !== undefined ? { callbackUrl: callbackUrl } : {}) })
 
     if (sessionId && authRequestId
       && !deps.sessionManager.isPendingOAuthRequest(sessionId, authRequestId, sourceSlug, ctx.workspaceId)) {
@@ -219,14 +219,14 @@ export function registerOAuthHandlers(server: RpcServer, deps: HandlerDeps): voi
       redirectUri: prepared.redirectUri,
       source,
       clientId: prepared.clientId,
-      clientSecret: prepared.clientSecret,
+      ...(prepared.clientSecret !== undefined ? { clientSecret: prepared.clientSecret } : {}),
       tokenEndpoint: prepared.tokenEndpoint,
       provider: prepared.provider,
       ownerClientId: ctx.clientId,
       workspaceId: ctx.workspaceId,
       sourceSlug,
-      sessionId,
-      authRequestId,
+      ...(sessionId !== undefined ? { sessionId: sessionId } : {}),
+      ...(authRequestId !== undefined ? { authRequestId: authRequestId } : {}),
     })
     if (sessionId && authRequestId
       && !deps.sessionManager.claimPendingOAuthRequest(

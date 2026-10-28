@@ -62,8 +62,8 @@ export function loadProjectMemoryV2Context(
   options?: LoadProjectMemoryV2ContextOptions,
 ): string | null {
   const loaded = loadProjectMemoryJournal(workspaceRootPath, projectSlug, {
-    now: options?.now,
-    legacyWorkspaceRootPath: options?.legacyWorkspaceRootPath,
+    ...(options?.now !== undefined ? { now: options?.now } : {}),
+    ...(options?.legacyWorkspaceRootPath !== undefined ? { legacyWorkspaceRootPath: options?.legacyWorkspaceRootPath } : {}),
   });
   const retrieved = retrieveProjectMemories(loaded.entries, { ...options, projectSlug, workspaceKey: memoryWorkspaceKey(workspaceRootPath) });
   if (retrieved.length === 0) return null;

@@ -12,7 +12,7 @@ export async function getLlmApiKey(transportOwner: CredentialManager, connection
 }
 
 export async function setLlmApiKey(transportOwner: CredentialManager, connectionSlug: string, apiKey: string): Promise<void> {
-    await transportOwner["serializeMutation"](transportOwner["llmMutationKey"]('llm_api_key', connectionSlug), async () => {
+    await transportOwner.serializeMutation(transportOwner.llmMutationKey('llm_api_key', connectionSlug), async () => {
         await transportOwner["set"]({ type: 'llm_api_key', connectionSlug }, {
             value: apiKey,
             bindingId: randomUUID(),
@@ -21,14 +21,14 @@ export async function setLlmApiKey(transportOwner: CredentialManager, connection
 }
 
 export async function deleteLlmApiKey(transportOwner: CredentialManager, connectionSlug: string): Promise<boolean> {
-    return transportOwner["serializeMutation"](transportOwner["llmMutationKey"]('llm_api_key', connectionSlug), () => transportOwner["delete"]({ type: 'llm_api_key', connectionSlug }));
+    return transportOwner.serializeMutation(transportOwner.llmMutationKey('llm_api_key', connectionSlug), () => transportOwner["delete"]({ type: 'llm_api_key', connectionSlug }));
 }
 
 export async function deleteLlmCredentials(transportOwner: CredentialManager, connectionSlug: string): Promise<void> {
     for (const type of [
         'llm_api_key', 'llm_oauth', 'llm_iam', 'llm_service_account',
     ] as const) {
-        await transportOwner["serializeMutation"](transportOwner["llmMutationKey"](type, connectionSlug), () => transportOwner["delete"]({ type, connectionSlug }));
+        await transportOwner.serializeMutation(transportOwner.llmMutationKey(type, connectionSlug), () => transportOwner["delete"]({ type, connectionSlug }));
     }
 }
 
@@ -58,19 +58,18 @@ export async function hasLlmCredentials(transportOwner: CredentialManager, conne
         case 'api_key':
         case 'api_key_with_endpoint':
         case 'bearer_token':
-            return transportOwner["hasLlmApiKeyCredential"](connectionSlug);
+            return transportOwner.hasLlmApiKeyCredential(connectionSlug);
         // OAuth - browser flow
         case 'oauth':
-            return transportOwner["hasLlmOAuthCredential"](connectionSlug, providerType);
+            return transportOwner.hasLlmOAuthCredential(connectionSlug, providerType);
         // AWS IAM credentials
         case 'iam_credentials':
-            return transportOwner["hasLlmIamCredential"](connectionSlug);
+            return transportOwner.hasLlmIamCredential(connectionSlug);
         // GCP service account
         case 'service_account_file':
-            return transportOwner["hasLlmServiceAccountCredential"](connectionSlug);
+            return transportOwner.hasLlmServiceAccountCredential(connectionSlug);
         default:
             // Exhaustive check - TypeScript will error if we miss a case
-            const _exhaustive: never = authType;
             return false;
     }
 }

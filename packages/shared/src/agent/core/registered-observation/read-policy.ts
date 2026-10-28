@@ -1,6 +1,6 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 /// <reference path="../../bash-parser.d.ts" />
 import bashParser from "bash-parser";
-import { sqlCodeOutsideQuotes } from './database-inspection.ts';
 import { isHardenableGitRead, isProvablyReadOnlyShellCommand, isReadOnlyRegisteredShellObservation, isRecoverablePlainGitStatus } from './git-observations.ts';
 import { literalCommand } from './shell-vocabulary.ts';
 import { serializeLiteralCommand } from './success-markers.ts';
@@ -23,7 +23,7 @@ function staticSourceInspectionInvocation(
   try { ast = bashParser(command) as typeof ast; } catch { return undefined; }
   if (ast.commands?.length !== 1) return undefined;
   const node = ast.commands[0]!;
-  if (node.async || node.type !== 'Command') return undefined;
+  if (node["async"] || node["type"] !== 'Command') return undefined;
   const invocation = literalCommand(node, true);
   return isStaticSourceInspectionInvocation(invocation) ? invocation : undefined;
 }
@@ -79,12 +79,12 @@ export function containsRemoteStaticSourceInspectionCandidate(command: string): 
   let found = false;
   const visit = (value: unknown): void => {
     if (found || !value || typeof value !== 'object') return;
-    if (Array.isArray(value)) {
+    if (isUnknownArray(value)) {
       value.forEach(visit);
       return;
     }
     const node = value as Record<string, unknown>;
-    if (node.type === 'Command'
+    if (node["type"] === 'Command'
       && isStaticSourceInspectionInvocation(literalCommand(node, true))) {
       found = true;
       return;
@@ -111,33 +111,6 @@ export function isBoundedRemoteStaticSourceInspection(command: string): boolean 
     && !/(?:^|\/)(?:\.env(?:\.[^\/]*)?|\.ssh|secret[^\/]*|credentials?[^\/]*|private[_-]?key[^\/]*)(?=\/|$)/i.test(path);
 }
 
-/** A remediation hint must not make a mutating or executable SQL payload look
- * one guard away from safe. This remains intentionally looser than the actual
- * admission grammar so a plain SELECT can receive the guard instructions. */
-function isPlausiblyReadOnlyPostgresRepairQuery(query: string): boolean {
-  if (!query || query.length > 16_384 || /[\u0000\u007f\\"$]/.test(query)
-    || /--|\/\*|\*\//.test(query)) return false;
-  const code = sqlCodeOutsideQuotes(query);
-  if (!code || /[^\x09\x0a\x0d\x20-\x7e]/.test(code)) return false;
-  const statements = code.split(';').map(statement => statement.trim()).filter(Boolean);
-  if (statements.length < 1 || statements.length > 3) return false;
-  const select = statements.at(-1)!;
-  const guards = statements.slice(0, -1);
-  if (!/^select\b/i.test(select)
-    || [...select.matchAll(/\bselect\b/gi)].length !== 1
-    || guards.some((guard, index) => index === 0
-      ? !/^set\s+transaction\s+read\s+only$/i.test(guard)
-      : !/^set\s+local\s+statement_timeout\s*=\s*[1-9]\d*$/i.test(guard))
-    || /\b(?:alter|analyze|call|cluster|comment|copy|create|deallocate|delete|do|drop|except|execute|grant|insert|intersect|listen|lock|merge|notify|prepare|refresh|reindex|reset|revoke|truncate|union|unlisten|update|vacuum|with)\b/i.test(select)
-    || /\binto\b|\bfor\s+(?:update|share|no\s+key\s+update|key\s+share)\b/i.test(select)
-    || /::|:/.test(select)
-    || /\b[A-Za-z_][A-Za-z0-9_$.]*\s*\(/.test(select)) return false;
-  const operators = select.match(/[+\-*/<>=~!@#%^&|?]+/g) ?? [];
-  if (operators.some(operator => !['=', '<', '>', '<=', '>=', '<>', '!='].includes(operator))) {
-    return false;
-  }
-  return true;
-}
 
 /** This is a remediation classifier, never a permission grant. It is narrower
  * than the bundled read allow-list so a genuine mutation keeps the ordinary
@@ -155,17 +128,17 @@ export function isPlausiblyReadOnlyComposite(ast: { commands?: Array<Record<stri
     node: Record<string, unknown>,
     loopParameters: ReadonlySet<string>,
   ): boolean => {
-    const name = node.name as { type?: string; text?: string; expansion?: unknown[] } | undefined;
-    if (node.async || !name || name.type !== 'Word' || name.expansion?.length
+    const name = node["name"] as { type?: string; text?: string; expansion?: unknown[] } | undefined;
+    if (node["async"] || !name || name.type !== 'Word' || name.expansion?.length
       || !['[', 'test', 'echo', 'ls', 'printf', 'sed', 'sha256sum'].includes(name.text ?? '')
-      || Array.isArray(node.prefix) && node.prefix.length > 0) return false;
+      || isUnknownArray(node["prefix"]) && node["prefix"].length > 0) return false;
     const words: string[] = [];
-    for (const item of Array.isArray(node.suffix) ? node.suffix : []) {
+    for (const item of isUnknownArray(node["suffix"]) ? node["suffix"] : []) {
       const word = item as { type?: string; text?: string; expansion?: Array<Record<string, unknown>> };
       if (word.type !== 'Word' || typeof word.text !== 'string'
-        || word.expansion?.some(expansion => expansion.type !== 'ParameterExpansion'
-          || typeof expansion.parameter !== 'string'
-          || !loopParameters.has(expansion.parameter))) return false;
+        || word.expansion?.some(expansion => expansion["type"] !== 'ParameterExpansion'
+          || typeof expansion["parameter"] !== 'string'
+          || !loopParameters.has(expansion["parameter"]))) return false;
       words.push(word.text);
     }
     if (name.text === '[') {
@@ -227,36 +200,36 @@ export function isPlausiblyReadOnlyComposite(ast: { commands?: Array<Record<stri
   const visit = (value: unknown, loopParameters: ReadonlySet<string> = new Set()): boolean => {
     if (!value || typeof value !== 'object') return false;
     const node = value as Record<string, unknown>;
-    switch (node.type) {
+    switch (node["type"]) {
       case 'Script':
       case 'CompoundList':
-        return Array.isArray(node.commands) && node.commands.length > 0
-          && node.commands.every(command => visit(command, loopParameters));
+        return isUnknownArray(node["commands"]) && node["commands"].length > 0
+          && node["commands"].every((command: unknown) => visit(command, loopParameters));
       case 'Command':
         return literalDiagnostic(node, loopParameters);
       case 'LogicalExpression':
         composite = true;
-        return ['and', 'or'].includes(String(node.op))
-          && visit(node.left, loopParameters) && visit(node.right, loopParameters);
+        return ['and', 'or'].includes(String(node["op"]))
+          && visit(node["left"], loopParameters) && visit(node["right"], loopParameters);
       case 'Pipeline':
         composite = true;
-        return Array.isArray(node.commands) && node.commands.length > 0
-          && node.commands.every(command => visit(command, loopParameters));
+        return isUnknownArray(node["commands"]) && node["commands"].length > 0
+          && node["commands"].every((command: unknown) => visit(command, loopParameters));
       case 'Subshell':
         composite = true;
-        return visit(node.list, loopParameters);
+        return visit(node["list"], loopParameters);
       case 'If':
         composite = true;
-        return visit(node.clause, loopParameters)
-          && visit(node.then, loopParameters)
-          && (node.else === undefined || visit(node.else, loopParameters));
+        return visit(node["clause"], loopParameters)
+          && visit(node["then"], loopParameters)
+          && (node["else"] === undefined || visit(node["else"], loopParameters));
       case 'For': {
         composite = true;
-        const name = node.name as { type?: string; text?: string } | undefined;
+        const name = node["name"] as { type?: string; text?: string } | undefined;
         return name?.type === 'Name' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(name.text ?? '')
-          && Array.isArray(node.wordlist) && node.wordlist.length > 0
-          && node.wordlist.length <= 64 && node.wordlist.every(staticLoopWord)
-          && visit(node.do, new Set([...loopParameters, name.text!]));
+          && isUnknownArray(node["wordlist"]) && node["wordlist"].length > 0
+          && node["wordlist"].length <= 64 && node["wordlist"].every(staticLoopWord)
+          && visit(node["do"], new Set([...loopParameters, name.text!]));
       }
       default:
         return false;

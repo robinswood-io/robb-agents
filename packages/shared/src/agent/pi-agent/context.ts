@@ -23,10 +23,11 @@ export function resolveProjectContext(transportOwner: PiAgent): ProjectPromptCon
         if (!project)
             return null;
         const slug = project.config.slug;
+        const memoryContent = loadProjectMemory(root, slug, 5000, { includeStructured: false });
         return {
             name: project.config.name,
-            description: project.config.description,
-            details: project.config.details,
+            ...(project.config.description !== undefined ? { description: project.config.description } : {}),
+            ...(project.config.details !== undefined ? { details: project.config.details } : {}),
             assetsPath: getProjectAssetsPath(root, slug),
             assets: listProjectAssets(root, slug).map((a) => ({
                 filename: a.filename,
@@ -34,7 +35,7 @@ export function resolveProjectContext(transportOwner: PiAgent): ProjectPromptCon
                 sizeBytes: a.sizeBytes,
             })),
             memoryPath: getProjectMemoryPath(root, slug),
-            memoryContent: loadProjectMemory(root, slug, 5000, { includeStructured: false }) ?? undefined,
+            ...(memoryContent != null ? { memoryContent } : {}),
         };
     }
     catch (error) {
@@ -78,7 +79,7 @@ export function parsePiError(transportOwner: PiAgent, error: Error): AgentError 
         errorMessage.includes('authentication')) {
         // For OAuth connections, attempt token refresh before giving up
         if (transportOwner["config"].authType === 'oauth') {
-            transportOwner["refreshAndPushTokens"]().catch(err => {
+            transportOwner.refreshAndPushTokens().catch((err: unknown) => {
                 transportOwner["debug"](`Token refresh from parsePiError failed: ${err}`);
             });
         }

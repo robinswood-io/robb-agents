@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -71,7 +72,14 @@ describe('Mistral Pi transport through the request interceptor', () => {
         stderr: 'pipe',
       });
       expect({ code: child.exitCode, stderr: child.stderr.toString() }).toEqual({ code: 0, stderr: '' });
-      const { requests, results } = JSON.parse(child.stdout.toString());
+      const { requests, results } = z.object({
+        requests: z.array(z.object({ url: z.string(), body: z.looseObject({
+          prompt_cache_key: z.string(),
+          messages: z.array(z.looseObject({ role: z.string(), content: z.unknown().optional(),
+            tool_calls: z.array(z.looseObject({ id: z.string() })).optional() })),
+        }) })),
+        results: z.array(z.looseObject({ stopReason: z.string(), errorMessage: z.unknown().optional(), usage: z.unknown() })),
+      }).parse(JSON.parse(child.stdout.toString()));
       expect(requests).toHaveLength(15);
       for (const [index, request] of requests.entries()) {
         expect(request.url).toBe('https://api.mistral.ai/v1/chat/completions');
@@ -80,10 +88,11 @@ describe('Mistral Pi transport through the request interceptor', () => {
         expect(request.body).not.toHaveProperty('prompt_mode');
         expect(request.body.prompt_cache_key).toBe('offline-session');
         const assistant = request.body.messages.find((message: { role: string }) => message.role === 'assistant');
+        if (!assistant) throw new Error('The captured request must contain the assistant history');
         expect(assistant.content).toContainEqual({
           type: 'thinking', thinking: [{ type: 'text', text: 'Earlier reasoning' }],
         });
-        expect(assistant.tool_calls[0].id).toBe('abcdefghi');
+        expect(assistant.tool_calls?.[0]?.id).toBe('abcdefghi');
       }
       for (const result of results) {
         expect(result.stopReason).toBe('stop');

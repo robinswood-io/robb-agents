@@ -36,7 +36,7 @@ describe('TaskRunner (Conductor)', () => {
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
       now: () => '2026-06-07T00:00:00.000Z',
-      nowMs,
+      ...(nowMs !== undefined ? { nowMs: nowMs } : {}),
       resolveSubagentAutonomyContext: () => autonomyContext,
       ...(executionProofIssuer ? {
         verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),
@@ -202,9 +202,9 @@ describe('TaskRunner (Conductor)', () => {
 
     expect(attempts).toBe(2);
     expect(settled.status).toBe('failed');
-    expect(readRunLog(root, 'terminal-drain-watchdog', 'r1').filter(
+    expect<unknown>(readRunLog(root, 'terminal-drain-watchdog', 'r1').filter(
       (entry) => entry.kind === 'run-draining',
-    )).toEqual([expect.objectContaining({ cause: 'budget', target: 'failed' })]);
+    )).toEqual([(expect.objectContaining({ cause: 'budget', target: 'failed' }) as unknown)]);
   });
 
   it('does not rewrite a failed budget intent when operator stop retries its drain', async () => {
@@ -229,9 +229,9 @@ describe('TaskRunner (Conductor)', () => {
 
     await runner.stop('budget-intent-retry', 'r1');
     expect(runner.getRunState('budget-intent-retry', 'r1')?.status).toBe('failed');
-    expect(readRunLog(root, 'budget-intent-retry', 'r1').filter(
+    expect<unknown>(readRunLog(root, 'budget-intent-retry', 'r1').filter(
       (entry) => entry.kind === 'run-draining',
-    )).toEqual([expect.objectContaining({ cause: 'budget', target: 'failed' })]);
+    )).toEqual([(expect.objectContaining({ cause: 'budget', target: 'failed' }) as unknown)]);
   });
 
   it('recovers a create-before-log worker during a durable terminal drain', async () => {

@@ -73,13 +73,13 @@ export class PrivilegedExecutionBroker {
       sessionId: input.sessionId,
       command: input.command,
       commandHash: this.hashCommand(input.command),
-      reason: input.reason,
-      impact: input.impact,
+      ...(input.reason !== undefined ? { reason: input.reason } : {}),
+      ...(input.impact !== undefined ? { impact: input.impact } : {}),
       approvalTtlSeconds: ttl,
       createdAt: now,
       expiresAt: now + ttl * 1000,
       policyAllowed: policy.allowed,
-      policyReason: policy.reason,
+      ...(policy.reason !== undefined ? { policyReason: policy.reason } : {}),
     }
 
     this.pending.set(input.requestId, request)
@@ -174,8 +174,8 @@ export class PrivilegedExecutionBroker {
         sessionId: request.sessionId,
         command: request.command,
         commandHash: request.commandHash,
-        reason: request.reason,
-        impact: request.impact,
+        ...(request.reason !== undefined ? { reason: request.reason } : {}),
+        ...(request.impact !== undefined ? { impact: request.impact } : {}),
         approvalTtlSeconds: request.approvalTtlSeconds,
         createdAt: request.createdAt,
         expiresAt: request.expiresAt,

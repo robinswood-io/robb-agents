@@ -61,32 +61,32 @@ export interface OperationsTurnInput {
   workspaceId: string;
   workspaceRootPath: string;
   sessionId: string;
-  missionId?: string;
-  workItemId?: string;
-  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor';
+  missionId?: string | undefined;
+  workItemId?: string | undefined;
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor' | undefined;
   /** Host-derived continuity intent. Commercial routing must not infer resumes from word count alone. */
-  turnKind?: 'new-request' | 'resume' | 'automatic-recovery' | 'quality-correction';
+  turnKind?: 'new-request' | 'resume' | 'automatic-recovery' | 'quality-correction' | undefined;
   /** Number of independent correction rounds already requested for this objective. */
-  qualityIteration?: number;
+  qualityIteration?: number | undefined;
   message: string;
   hidden: boolean;
   messageCount: number;
   completedAssistantTurns: number;
   /** Recent visible user requests, oldest first, bounded by the host. */
-  recentUserMessages?: string[];
+  recentUserMessages?: string[] | undefined;
   /** Last visible final answer, bounded by the host, for continuity-aware routing. */
-  lastFinalText?: string;
+  lastFinalText?: string | undefined;
   pendingRecovery?: {
     active: boolean;
     attempts: number;
     cause?: 'app_restart' | 'stream_ended' | 'runtime_error' | 'premature_final';
-  };
-  tokenUsage?: OperationsTokenUsage;
-  currentConnectionSlug?: string;
-  currentModel?: string;
-  currentThinkingLevel?: ThinkingLevel;
+  } | undefined;
+  tokenUsage?: OperationsTokenUsage | undefined;
+  currentConnectionSlug?: string | undefined;
+  currentModel?: string | undefined;
+  currentThinkingLevel?: ThinkingLevel | undefined;
   enabledSourceSlugs: string[];
-  sourceSensitivity?: 'public' | 'internal' | 'confidential' | 'restricted';
+  sourceSensitivity?: 'public' | 'internal' | 'confidential' | 'restricted' | undefined;
   connections: OperationsConnectionCandidate[];
 }
 

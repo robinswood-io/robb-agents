@@ -35,7 +35,7 @@ const DEFAULT_KEEP_ALIVE = true;
 export function resolveKeepBackgroundTasksAlive(
   env: Record<string, string | undefined> = process.env,
 ): boolean {
-  const raw = env.CRAFT_KEEP_BG_AGENTS_ALIVE;
+  const raw = env["CRAFT_KEEP_BG_AGENTS_ALIVE"];
   if (raw === '1' || raw === 'true') return true;
   if (raw === '0' || raw === 'false') return false;
   return DEFAULT_KEEP_ALIVE;
@@ -69,7 +69,7 @@ export function createPushableInputStream<T>(): PushableInputStream<T> {
     w?.();
   };
 
-  async function* generator(): AsyncGenerator<T> {
+  async function* generator(): AsyncGenerator<T, void, unknown> {
     while (true) {
       // Drain everything currently queued before considering suspension, so a
       // burst of synchronous pushes is delivered in order without gaps.
@@ -92,7 +92,7 @@ export function createPushableInputStream<T>(): PushableInputStream<T> {
       if (ended) {
         throw new Error('PushableInputStream: cannot push() after end()');
       }
-      queue.push({ item, onConsumed });
+      queue.push({ item, ...(onConsumed !== undefined ? { onConsumed } : {}) });
       wakeConsumer();
     },
     end(): void {

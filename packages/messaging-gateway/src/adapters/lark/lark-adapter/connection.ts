@@ -2,7 +2,7 @@ import * as lark from "@larksuiteoapi/node-sdk";
 import type { PlatformConfig } from "../../../types";
 import type { LarkAdapter } from '../index.ts';
 import { NOOP_LOGGER, parseLarkCredentials, resolveLarkDomain } from './shared.ts';
-import type { LarkClient, LarkMessageEvent, LarkCardActionEvent } from './shared.ts';
+import type { LarkMessageEvent, LarkCardActionEvent } from './shared.ts';
 
 export async function initialize(transportOwner: LarkAdapter, config: PlatformConfig): Promise<void> {
     transportOwner["log"] = config.logger ?? NOOP_LOGGER;
@@ -14,14 +14,14 @@ export async function initialize(transportOwner: LarkAdapter, config: PlatformCo
         appSecret: creds.appSecret,
         domain: sdkDomain,
         loggerLevel: lark.LoggerLevel.warn,
-    }) as unknown as LarkClient;
+    });
     // Long-connection WS client + event dispatcher.
     //
     // Lifecycle hooks log explicitly so we can distinguish "socket never
     // opened" from "socket open but no events firing" — the second one
     // usually means the app's scopes or event subscriptions are misconfigured
     // on the Open Platform side, which is invisible from our side otherwise.
-    transportOwner["wsClient"] = new lark.WSClient({
+    transportOwner["wsClient"] = new lark.WSClient(({
         appId: creds.appId,
         appSecret: creds.appSecret,
         domain: sdkDomain,
@@ -41,7 +41,7 @@ export async function initialize(transportOwner: LarkAdapter, config: PlatformCo
         onReconnected: () => {
             transportOwner["log"].info('[lark] ws reconnected', { event: 'lark_ws_reconnected' });
         },
-    } as unknown as ConstructorParameters<typeof lark.WSClient>[0]);
+    }) as ConstructorParameters<typeof lark.WSClient>[0]);
     // The SDK's `register` typing is a wide-open union over hundreds of event
     // names. Cast the handler block once via `unknown` to keep the adapter
     // readable; the per-handler payload casts above handle the actual shape.
@@ -56,7 +56,7 @@ export async function initialize(transportOwner: LarkAdapter, config: PlatformCo
             // visual cleanup async via the binding's existing post-press flow.
             return {};
         },
-    } as unknown as Parameters<lark.EventDispatcher['register']>[0]);
+    } as Parameters<lark.EventDispatcher['register']>[0]);
     await transportOwner["wsClient"].start({ eventDispatcher });
     transportOwner["connected"] = true;
     transportOwner["log"].info('[lark] connected', {

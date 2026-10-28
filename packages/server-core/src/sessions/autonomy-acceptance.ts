@@ -214,7 +214,7 @@ export function evaluateAutonomyAcceptance(
     metrics,
     gates,
     technicalGatesPassed: gates.every((gate) => gate.passed),
-    humanQualification,
+    ...(humanQualification !== undefined ? { humanQualification: humanQualification } : {}),
     qualificationBindingGaps,
     eligibleForPromotion: gates.every((gate) => gate.passed) && qualificationBindingGaps.length === 0,
   };

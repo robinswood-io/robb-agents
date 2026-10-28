@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import { latestSignedResumeAuthoritySegment } from './signed-resume-targets.ts';
 
 function isBoundedJsonData(value: unknown, depth = 0): boolean {
@@ -5,10 +6,10 @@ function isBoundedJsonData(value: unknown, depth = 0): boolean {
     || typeof value === 'string' && value.length <= 8_192
     || typeof value === 'number' && Number.isFinite(value)) return true;
   if (depth >= 6 || !value || typeof value !== 'object') return false;
-  if (Array.isArray(value)) return value.length <= 128
-    && value.every(item => isBoundedJsonData(item, depth + 1));
+  if (isUnknownArray(value)) return value.length <= 128
+    && value.every((item: unknown) => isBoundedJsonData(item, depth + 1));
   try {
-    const prototype = Object.getPrototypeOf(value);
+    const prototype: unknown = Object.getPrototypeOf(value);
     if (prototype !== Object.prototype && prototype !== null) return false;
     const entries = Object.entries(value as Record<string, unknown>);
     return entries.length <= 32 && entries.every(([key, item]) => (
@@ -21,7 +22,7 @@ function isBoundedJsonData(value: unknown, depth = 0): boolean {
 }
 
 function isBoundedSharePointColumnFacet(type: string, value: unknown): boolean {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  if (!value || typeof value !== 'object' || isUnknownArray(value)) return false;
   const facet = value as Record<string, unknown>;
   const keysAre = (allowed: readonly string[]) => (
     Object.keys(facet).every(key => allowed.includes(key))
@@ -41,26 +42,26 @@ function isBoundedSharePointColumnFacet(type: string, value: unknown): boolean {
   if (type === 'choice') {
     return keysAre(['allowTextEntry', 'choices', 'displayAs'])
       && optionalBoolean('allowTextEntry')
-      && (facet.choices === undefined || Array.isArray(facet.choices)
-        && facet.choices.length > 0 && facet.choices.length <= 128
-        && facet.choices.every(choice => typeof choice === 'string'
+      && (facet["choices"] === undefined || isUnknownArray(facet["choices"])
+        && facet["choices"].length > 0 && facet["choices"].length <= 128
+        && facet["choices"].every((choice: unknown) => typeof choice === 'string'
           && choice.length > 0 && choice.length <= 255 && !/\0/u.test(choice)))
-      && (facet.displayAs === undefined
-        || typeof facet.displayAs === 'string'
-          && ['checkBoxes', 'dropDownMenu', 'radioButtons'].includes(facet.displayAs));
+      && (facet["displayAs"] === undefined
+        || typeof facet["displayAs"] === 'string'
+          && ['checkBoxes', 'dropDownMenu', 'radioButtons'].includes(facet["displayAs"]));
   }
   if (type === 'personOrGroup') {
     return keysAre(['allowMultipleSelection', 'chooseFromType', 'displayAs'])
       && optionalBoolean('allowMultipleSelection')
-      && (facet.chooseFromType === undefined
-        || typeof facet.chooseFromType === 'string'
-          && ['peopleAndGroups', 'peopleOnly'].includes(facet.chooseFromType))
-      && (facet.displayAs === undefined
-        || typeof facet.displayAs === 'string' && [
+      && (facet["chooseFromType"] === undefined
+        || typeof facet["chooseFromType"] === 'string'
+          && ['peopleAndGroups', 'peopleOnly'].includes(facet["chooseFromType"]))
+      && (facet["displayAs"] === undefined
+        || typeof facet["displayAs"] === 'string' && [
           'account', 'department', 'id', 'name', 'nameWithPicture',
           'nameWithPictureAndDetails', 'nameWithPresence', 'sipAddress',
           'title', 'userName', 'workPhone',
-        ].includes(facet.displayAs));
+        ].includes(facet["displayAs"]));
   }
   if (type === 'text') {
     return keysAre([
@@ -71,30 +72,30 @@ function isBoundedSharePointColumnFacet(type: string, value: unknown): boolean {
       && optionalBoolean('appendChangesToExistingText')
       && optionalBoundedInteger('linesForEditing', 1, 1_000)
       && optionalBoundedInteger('maxLength', 1, 1_000_000)
-      && (facet.textType === undefined
-        || typeof facet.textType === 'string'
-          && ['plain', 'richText'].includes(facet.textType));
+      && (facet["textType"] === undefined
+        || typeof facet["textType"] === 'string'
+          && ['plain', 'richText'].includes(facet["textType"]));
   }
   if (type === 'dateTime') {
     return keysAre(['displayAs', 'format'])
-      && (facet.displayAs === undefined
-        || typeof facet.displayAs === 'string'
-          && ['default', 'friendly', 'standard'].includes(facet.displayAs))
-      && (facet.format === undefined
-        || typeof facet.format === 'string'
-          && ['dateOnly', 'dateTime'].includes(facet.format));
+      && (facet["displayAs"] === undefined
+        || typeof facet["displayAs"] === 'string'
+          && ['default', 'friendly', 'standard'].includes(facet["displayAs"]))
+      && (facet["format"] === undefined
+        || typeof facet["format"] === 'string'
+          && ['dateOnly', 'dateTime'].includes(facet["format"]));
   }
   if (type === 'number') {
-    const minimum = facet.minimum;
-    const maximum = facet.maximum;
+    const minimum = facet["minimum"];
+    const maximum = facet["maximum"];
     return keysAre(['decimalPlaces', 'displayAs', 'maximum', 'minimum'])
-      && (facet.decimalPlaces === undefined
-        || typeof facet.decimalPlaces === 'string' && [
+      && (facet["decimalPlaces"] === undefined
+        || typeof facet["decimalPlaces"] === 'string' && [
           'automatic', 'none', 'one', 'two', 'three', 'four', 'five',
-        ].includes(facet.decimalPlaces))
-      && (facet.displayAs === undefined
-        || typeof facet.displayAs === 'string'
-          && ['number', 'percentage'].includes(facet.displayAs))
+        ].includes(facet["decimalPlaces"]))
+      && (facet["displayAs"] === undefined
+        || typeof facet["displayAs"] === 'string'
+          && ['number', 'percentage'].includes(facet["displayAs"]))
       && (minimum === undefined || typeof minimum === 'number' && Number.isFinite(minimum))
       && (maximum === undefined || typeof maximum === 'number' && Number.isFinite(maximum))
       && !(typeof minimum === 'number' && typeof maximum === 'number' && minimum > maximum);
@@ -120,12 +121,14 @@ export function boundedResumedSharePointCreationContract(
   const site = /cible exacte[^`\r\n]{0,120}`([a-z0-9.-]+,[a-f0-9-]{36},[a-f0-9-]{36})`/iu.exec(segment)?.[1];
   const listName = /(?:liste|list)[^`\r\n]{0,220}(?:d[ée]di[ée]e?|dedicated)[^`\r\n]{0,80}`([^`\r\n]{1,255})`/iu.exec(segment)?.[1];
   if (!site || !listName) return undefined;
+  const driveId = /^Drive documentaire exact\s*:\s*`([A-Za-z0-9_!-]{10,255})`\s*$/imu.exec(segment)?.[1];
+  const folderName = /^Dossier documentaire exact\s*:\s*`([^`\r\n]{1,255})`\s*$/imu.exec(segment)?.[1];
   return {
     segment,
     site,
     listName,
-    driveId: /^Drive documentaire exact\s*:\s*`([A-Za-z0-9_!-]{10,255})`\s*$/imu.exec(segment)?.[1],
-    folderName: /^Dossier documentaire exact\s*:\s*`([^`\r\n]{1,255})`\s*$/imu.exec(segment)?.[1],
+    ...(driveId !== undefined ? { driveId } : {}),
+    ...(folderName !== undefined ? { folderName } : {}),
   };
 }
 
@@ -135,57 +138,57 @@ export function isBoundedResumedSharePointCreation(
   objectiveSegments: readonly string[],
 ): boolean {
   if (toolName !== 'mcp__plc-microsoft-365__graph_request'
-    || input.method !== 'POST'
+    || input["method"] !== 'POST'
     || Object.keys(input).some(key => ![
       'method', 'endpoint', 'body', '_displayName', '_intent',
     ].includes(key))) return false;
   const contract = boundedResumedSharePointCreationContract(objectiveSegments);
   if (!contract) return false;
   const { driveId, folderName, listName, site } = contract;
-  const body = input.body;
-  if (!body || typeof body !== 'object' || Array.isArray(body)
+  const body = input["body"];
+  if (!body || typeof body !== 'object' || isUnknownArray(body)
     || !isBoundedJsonData(body)) return false;
   const record = body as Record<string, unknown>;
-  if (typeof input.endpoint === 'string' && input.endpoint.startsWith('drives/')) {
-    const folder = record.folder;
+  if (typeof input["endpoint"] === 'string' && input["endpoint"].startsWith('drives/')) {
+    const folder = record["folder"];
     return !!driveId && !!folderName
       && folderName === folderName.trim()
       && folderName !== '.' && folderName !== '..'
       && !/[\/\\\0]/u.test(folderName)
-      && input.endpoint === `drives/${driveId}/root/children`
+      && input["endpoint"] === `drives/${driveId}/root/children`
       && Object.keys(record).length === 3
-      && record.name === folderName
+      && record["name"] === folderName
       && record['@microsoft.graph.conflictBehavior'] === 'fail'
-      && !!folder && typeof folder === 'object' && !Array.isArray(folder)
+      && !!folder && typeof folder === 'object' && !isUnknownArray(folder)
       && Object.keys(folder).length === 0;
   }
-  if (input.endpoint !== `sites/${site}/lists`) return false;
+  if (input["endpoint"] !== `sites/${site}/lists`) return false;
   if (Object.keys(record).some(key => !['displayName', 'description', 'columns', 'list'].includes(key))
-    || record.displayName !== listName
-    || typeof record.description !== 'string' || record.description.length > 8_192) return false;
-  const list = record.list;
-  if (!list || typeof list !== 'object' || Array.isArray(list)
+    || record["displayName"] !== listName
+    || typeof record["description"] !== 'string' || record["description"].length > 8_192) return false;
+  const list = record["list"];
+  if (!list || typeof list !== 'object' || isUnknownArray(list)
     || Object.keys(list).length !== 1
-    || (list as Record<string, unknown>).template !== 'genericList') return false;
+    || (list as Record<string, unknown>)["template"] !== 'genericList') return false;
   // The list creation must be atomic. Allowing the empty-list retry would
   // strand the mission on later opaque `/lists/{id}/columns` mutations whose
   // discovered ID is not present in the authenticated human objective.
-  if (!Array.isArray(record.columns) || record.columns.length === 0
-    || record.columns.length > 100) return false;
+  if (!isUnknownArray(record["columns"]) || record["columns"].length === 0
+    || record["columns"].length > 100) return false;
   const typeKeys = new Set([
     'boolean', 'choice', 'personOrGroup', 'text', 'dateTime', 'number',
   ]);
-  return record.columns.every(column => {
-    if (!column || typeof column !== 'object' || Array.isArray(column)) return false;
+  return record["columns"].every((column: unknown) => {
+    if (!column || typeof column !== 'object' || isUnknownArray(column)) return false;
     const item = column as Record<string, unknown>;
     if (Object.keys(item).some(key => ![
       'name', 'displayName', 'description', 'required', ...typeKeys,
     ].includes(key))) return false;
-    if (typeof item.name !== 'string' || !/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(item.name)
-      || typeof item.displayName !== 'string' || item.displayName.length > 255
-      || item.description !== undefined && (typeof item.description !== 'string'
-        || item.description.length > 4_096)
-      || item.required !== undefined && typeof item.required !== 'boolean') return false;
+    if (typeof item["name"] !== 'string' || !/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(item["name"])
+      || typeof item["displayName"] !== 'string' || item["displayName"].length > 255
+      || item["description"] !== undefined && (typeof item["description"] !== 'string'
+        || item["description"].length > 4_096)
+      || item["required"] !== undefined && typeof item["required"] !== 'boolean') return false;
     const selectedTypes = Object.keys(item).filter(key => typeKeys.has(key));
     return selectedTypes.length === 1
       && isBoundedSharePointColumnFacet(selectedTypes[0]!, item[selectedTypes[0]!]);

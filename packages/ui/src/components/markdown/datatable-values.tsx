@@ -1,5 +1,6 @@
 import * as React from 'react';
 import niceTicks from 'nice-ticks';
+import { isJsonObject, isUnknownArray, omitUndefined } from '@craft-agent/shared/utils/json';
 
 import { cn } from "../../lib/utils";
 
@@ -16,23 +17,75 @@ import { cn } from "../../lib/utils";
 export interface ColumnDef {
   key: string
   label: string
-  type?: 'text' | 'number' | 'currency' | 'percent' | 'boolean' | 'date' | 'badge'
+  type?: 'text' | 'number' | 'currency' | 'percent' | 'boolean' | 'date' | 'badge' | 'formula'
   align?: 'left' | 'center' | 'right'
 }
 
 
 export interface DatatableData {
-  title?: string
+  title?: string | undefined
+  filename?: string | undefined
+  sheetName?: string | undefined
   columns: ColumnDef[]
   rows: Record<string, unknown>[]
 }
 
 
-export interface DatatableSpec {
+export interface DatatableSpec extends Pick<DatatableData, 'title' | 'filename' | 'sheetName'> {
   src?: string
-  title?: string
   columns?: ColumnDef[]
   rows?: Record<string, unknown>[]
+}
+
+const COLUMN_TYPES = ['text', 'number', 'currency', 'percent', 'boolean', 'date', 'badge', 'formula'] as const;
+const COLUMN_ALIGNMENTS = ['left', 'center', 'right'] as const;
+
+function readColumns(value: unknown): ColumnDef[] | null {
+  if (!isUnknownArray(value)) return null;
+  const columns: ColumnDef[] = [];
+  for (const entry of value) {
+    if (!isJsonObject(entry) || typeof entry['key'] !== 'string') return null;
+    columns.push(omitUndefined<ColumnDef>({
+      key: entry['key'],
+      label: typeof entry['label'] === 'string' ? entry['label'] : entry['key'],
+      type: COLUMN_TYPES.find(type => type === entry['type']),
+      align: COLUMN_ALIGNMENTS.find(align => align === entry['align']),
+    }));
+  }
+  return columns;
+}
+
+function readRows(value: unknown): Record<string, unknown>[] | null {
+  return isUnknownArray(value) && value.every(isJsonObject) ? value : null;
+}
+
+function readMetadata(value: Record<string, unknown>): Pick<DatatableData, 'title' | 'filename' | 'sheetName'> {
+  return omitUndefined({
+    title: typeof value['title'] === 'string' ? value['title'] : undefined,
+    filename: typeof value['filename'] === 'string' ? value['filename'] : undefined,
+    sheetName: typeof value['sheetName'] === 'string' ? value['sheetName'] : undefined,
+  });
+}
+
+/** Validate the existing inline/file-backed table format before rendering it. */
+export function parseDatatableSpec(code: string): DatatableSpec | null {
+  const raw: unknown = JSON.parse(code);
+  if (!isJsonObject(raw)) return null;
+  const src = typeof raw['src'] === 'string' ? raw['src'] : undefined;
+  const columns = raw['columns'] === undefined ? undefined : readColumns(raw['columns']);
+  const rows = raw['rows'] === undefined ? undefined : readRows(raw['rows']);
+  if (columns === null || rows === null || (!src && (!columns || !rows))) return null;
+  return omitUndefined<DatatableSpec>({ ...readMetadata(raw), src, columns, rows });
+}
+
+/** File payloads contain a rows array, optionally with columns and display metadata. */
+export function parseTabularFile(code: string): DatatableData | null {
+  const raw: unknown = JSON.parse(code);
+  const record: Record<string, unknown> = isJsonObject(raw) ? raw : { rows: raw };
+  const columns = readColumns(record['columns'] ?? []);
+  const rows = readRows(record['rows']);
+  if (!columns || !rows) return null;
+  return omitUndefined<DatatableData>({ ...readMetadata(record), columns, rows });
 }
 
 
@@ -169,8 +222,6 @@ export function computeDateGranularities(values: number[]): GranularityOption[] 
   const min = Math.min(...values)
   const max = Math.max(...values)
   const spanMs = max - min
-
-  const HOUR = 3600_000
   const DAY = 86400_000
   const MONTH = 30 * DAY
   const YEAR = 365 * DAY
@@ -254,12 +305,12 @@ export class DatatableErrorBoundary extends React.Component<
   { children: React.ReactNode; fallback: React.ReactNode },
   { hasError: boolean }
 > {
-  state = { hasError: false }
+  override state = { hasError: false }
   static getDerivedStateFromError() { return { hasError: true } }
-  componentDidCatch(error: Error) {
+  override componentDidCatch(error: Error) {
     console.warn('[MarkdownDatatableBlock] Render failed, falling back to CodeBlock:', error)
   }
-  render() {
+  override render() {
     if (this.state.hasError) return this.props.fallback
     return this.props.children
   }
@@ -270,5 +321,5 @@ export class DatatableErrorBoundary extends React.Component<
 
 export interface MarkdownDatatableBlockProps {
   code: string
-  className?: string
+  className?: string | undefined
 }

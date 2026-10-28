@@ -1,13 +1,13 @@
 import * as React from "react";
 
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef,useState,useEffect,useCallback } from "react";
 
 import { type FilterMode } from "./view-filters";
 
 import type { Workspace } from "../../../shared/types";
 
 import { toast } from "sonner";
-import { navigate, routes } from "@/lib/navigate";
+import { navigate,routes } from "@/lib/navigate";
 
 interface useShellConfigurationInput {
   activeWorkspace: Workspace | undefined
@@ -23,7 +23,6 @@ interface useShellConfigurationInput {
 
 export function useShellConfiguration({
   activeWorkspace,
-  viewConfigs,
   t,
   listFilter,
   labelFilter,
@@ -60,31 +59,11 @@ useEffect(() => {
     }
   }, [editPopoverOpen])
 
-const openConfigureStatuses = useCallback(() => {
-    captureContextMenuPosition()
-    setTimeout(() => setEditPopoverOpen('statuses'), 50)
-  }, [captureContextMenuPosition])
-
 const openConfigureLabels = useCallback((labelId?: string) => {
     editLabelTargetId.current = labelId
     captureContextMenuPosition()
     setTimeout(() => setEditPopoverOpen('labels'), 50)
   }, [captureContextMenuPosition])
-
-const openConfigureViews = useCallback(() => {
-    captureContextMenuPosition()
-    setTimeout(() => setEditPopoverOpen('views'), 50)
-  }, [captureContextMenuPosition])
-
-const handleDeleteView = useCallback(async (viewId: string) => {
-    if (!activeWorkspace?.id) return
-    try {
-      const updated = viewConfigs.filter(v => v.id !== viewId)
-      await window.electronAPI.saveViews(activeWorkspace.id, updated)
-    } catch (err) {
-      console.error('[AppShell] Failed to delete view:', err)
-    }
-  }, [activeWorkspace?.id, viewConfigs])
 
 const handleAddLabel = useCallback((parentId?: string) => {
     editLabelTargetId.current = parentId
@@ -144,15 +123,15 @@ const resolveInheritedNewSessionParams = useCallback((): { status?: string; labe
     if (total !== 1) return null
     if (statusCount === 1) {
       const [stateId] = [...listFilter.keys()]
-      return { status: stateId }
+      return stateId === undefined ? null : { status: stateId }
     }
     if (labelCount === 1) {
       const [labelId] = [...labelFilter.keys()]
-      return { label: labelId }
+      return labelId === undefined ? null : { label: labelId }
     }
     if (projectCount === 1) {
       const [projectId] = [...projectFilter.keys()]
-      return { project: projectId }
+      return projectId === undefined ? null : { project: projectId }
     }
     return null
   }, [listFilter, labelFilter, projectFilter])

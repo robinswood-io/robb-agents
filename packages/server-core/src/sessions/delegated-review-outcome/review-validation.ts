@@ -1,3 +1,5 @@
+import { isJsonObject, isUnknownArray } from '@craft-agent/shared/utils/json';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { Message } from "@craft-agent/core/types";
 import type { ActiveSessionObjective } from "@craft-agent/shared/sessions";
 import { inspectReadOnlyReviewCommand } from "@craft-agent/shared/agent/bash-validator";
@@ -14,12 +16,12 @@ import { getDelegatedReviewRequest } from './review-request.ts';
  * No saved objective/criterion, result, authorization or visible JSON is changed.
  */
 export function validateDelegatedReviewCompletion(input: {
-  parentSessionId?: string;
-  sessionId?: string;
+  parentSessionId?: string | undefined;
+  sessionId?: string | undefined;
   objective: ActiveSessionObjective;
   messages: Message[];
-  sourceSlugs?: readonly string[];
-  finalMessage?: Message;
+  sourceSlugs?: readonly string[] | undefined;
+  finalMessage?: Message | undefined;
 }): DelegatedReviewValidation | undefined {
   if (!input.parentSessionId || !input.objective.originalText) return undefined;
   const request = getDelegatedReviewRequest(
@@ -42,21 +44,22 @@ export function validateDelegatedReviewCompletion(input: {
     || root!.content !== input.objective.originalText)) return reject('The host review contract needs its authenticated root and delegating parent');
   const content = final.content.trim();
   if (content.length > 32_000) return reject('The delegated review receipt exceeds the size limit');
-  let receipt: { verdict?: unknown; objectiveId?: unknown; acceptanceSha256?: unknown; criteria?: unknown; findings?: unknown };
+  let receipt: unknown;
   try { receipt = JSON.parse(content); } catch { return reject('Return the single requested review JSON object, without a second receipt or surrounding prose'); }
-  if (!receipt || Array.isArray(receipt) || !['PASS', 'FAIL'].includes(String(receipt.verdict))
-    || receipt.objectiveId !== request.objectiveId || receipt.acceptanceSha256 !== request.acceptanceSha256) return reject('The review verdict must retain the exact binding from the original delegated request');
-  if (!Array.isArray(receipt.criteria) || receipt.criteria.length !== request.criteria.length
-    || receipt.criteria.some(item => !item || typeof item.id !== 'string' || typeof item.passed !== 'boolean')
-    || new Set(receipt.criteria.map(item => item.id)).size !== request.criteria.length
-    || request.criteria.some(id => !(receipt.criteria as Array<{ id: string }>).some(item => item.id === id))) return reject('The review must report every requested criterion exactly once');
-  const criteria = receipt.criteria as Array<{ id: string; passed: boolean }>;
-  if (!Array.isArray(receipt.findings) || receipt.findings.length > 64
-    || receipt.findings.some(item => typeof item !== 'string' || !item.trim() || item.length > 4_000
-      || /^<.*>$/.test(item.trim())
-      || /replace this example|example[_ -]?only/i.test(item))) return reject('Review findings must be bounded, concrete text rather than an example placeholder');
-  const findings = receipt.findings as string[];
-  if (receipt.verdict === 'PASS' ? findings.length > 0 || criteria.some(item => !item.passed)
+  if (!isJsonObject(receipt) || (receipt['verdict'] !== 'PASS' && receipt['verdict'] !== 'FAIL')
+    || receipt['objectiveId'] !== request.objectiveId || receipt['acceptanceSha256'] !== request.acceptanceSha256) return reject('The review verdict must retain the exact binding from the original delegated request');
+  const criteria = receipt['criteria'];
+  if (!isUnknownArray(criteria) || criteria.length !== request.criteria.length
+    || !criteria.every((item): item is { id: string; passed: boolean } => isJsonObject(item)
+      && typeof item['id'] === 'string' && typeof item['passed'] === 'boolean')
+    || new Set(criteria.map(item => item.id)).size !== request.criteria.length
+    || request.criteria.some(id => !criteria.some(item => item.id === id))) return reject('The review must report every requested criterion exactly once');
+  const findings = receipt['findings'];
+  if (!isUnknownArray(findings) || findings.length > 64
+    || !findings.every((item): item is string => typeof item === 'string' && !!item.trim() && item.length <= 4_000
+      && !/^<.*>$/.test(item.trim())
+      && !/replace this example|example[_ -]?only/i.test(item))) return reject('Review findings must be bounded, concrete text rather than an example placeholder');
+  if (receipt['verdict'] === 'PASS' ? findings.length > 0 || criteria.some(item => !item.passed)
     : findings.length === 0) return reject('The review verdict, criterion results and findings must agree');
   const scoped = input.messages.slice(rootIndex + 1, finalIndex);
   if (scoped.some(message => message.role === 'tool' && message.toolExecuted !== false && !COORDINATION.test(message.toolName ?? '')
@@ -79,7 +82,7 @@ export function validateDelegatedReviewCompletion(input: {
         && inspectReadOnlyReviewCommand(
           command,
           '/',
-          typeof message.toolInput?.cwd === 'string' ? message.toolInput.cwd : undefined,
+          typeof message.toolInput?.["cwd"] === 'string' ? message.toolInput["cwd"] : undefined,
         ).safe);
     }
     return !reviewCommand(message, request).safe;
@@ -88,7 +91,7 @@ export function validateDelegatedReviewCompletion(input: {
   // above. Evaluate its immutable checks directly rather than asking the child
   // model to duplicate them with set_completion_criteria. Child registration
   // metadata is neither authority nor a prerequisite for these observations.
-  const evidenceObjective = request.targetChecks ? {
+  const evidenceObjective = request.targetChecks ? omitUndefined<ActiveSessionObjective>({
     ...input.objective,
     acceptanceCriteria: structuredClone(request.targetChecks),
     acceptanceNeedsReview: false,
@@ -99,7 +102,7 @@ export function validateDelegatedReviewCompletion(input: {
       check.id,
       input.objective.startedAt,
     ])),
-  } : input.objective;
+  }) : input.objective;
   const observations = collectObjectiveAcceptanceObservations(
     evidenceObjective, input.messages.slice(0, finalIndex), input.sessionId,
   )
@@ -107,13 +110,13 @@ export function validateDelegatedReviewCompletion(input: {
       ? request.targetChecks.some(criterion => criterion.id === criterionId
         && isBoundReadOnlyHostTargetCheck(criterion, message))
       : observationalTool(message, request));
-  if (!observations.length && !(receipt.verdict === 'FAIL' && request.targetChecks?.length)) {
+  if (!observations.length && !(receipt['verdict'] === 'FAIL' && request.targetChecks?.length)) {
     return reject('The review needs an observed invocation of a registered check on the requested target');
   }
   const expectedObservationCount = request.targetChecks?.length ?? input.objective.acceptanceCriteria?.length;
-  if (receipt.verdict === 'PASS' && (observations.length !== expectedObservationCount || observations.some(item => !item.passed))) return reject('A passing review cannot certify a failed or unobserved registered check');
+  if (receipt['verdict'] === 'PASS' && (observations.length !== expectedObservationCount || observations.some(item => !item.passed))) return reject('A passing review cannot certify a failed or unobserved registered check');
   const failedTargetEvidence: Message[] = [];
-  if (receipt.verdict === 'FAIL' && request.targetChecks) {
+  if (receipt['verdict'] === 'FAIL' && request.targetChecks) {
     const observationById = new Map(observations.map(observation => [observation.criterionId, observation]));
     let observedTargetFailure = false;
     for (const targetCheck of request.targetChecks) {
@@ -147,7 +150,7 @@ export function validateDelegatedReviewCompletion(input: {
     const observedExpected = revisions.some(value => value.startsWith(request.revision!.toLowerCase()));
     // A changed HEAD is a valid negative audit result, never proof that the
     // expected commit was reviewed. Require the observed revision in findings.
-    const reportedMismatch = receipt.verdict === 'FAIL' && revisions.some(value => !value.startsWith(request.revision!.toLowerCase())
+    const reportedMismatch = receipt['verdict'] === 'FAIL' && revisions.some(value => !value.startsWith(request.revision!.toLowerCase())
       && findings.some(finding => finding.toLowerCase().includes(value)));
     if (!observedExpected && !reportedMismatch) return reject('The requested revision must be observed, or its observed mismatch explicitly reported as FAIL');
   }

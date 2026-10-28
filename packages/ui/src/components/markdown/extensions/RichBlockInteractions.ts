@@ -26,8 +26,8 @@ function syncImageLoadingState(root: ParentNode): void {
     if (!src) return
 
     const markLoaded = (loadedSrc: string) => {
-      image.dataset.loading = 'false'
-      image.dataset.loadTrackedSrc = loadedSrc
+      image.dataset["loading"] = 'false'
+      image.dataset["loadTrackedSrc"] = loadedSrc
     }
 
     if (image.complete) {
@@ -35,11 +35,11 @@ function syncImageLoadingState(root: ParentNode): void {
       return
     }
 
-    image.dataset.loading = 'true'
+    image.dataset["loading"] = 'true'
 
-    if (image.dataset.loadTrackedSrc === src) return
+    if (image.dataset["loadTrackedSrc"] === src) return
 
-    image.dataset.loadTrackedSrc = src
+    image.dataset["loadTrackedSrc"] = src
 
     const handleDone = () => {
       const latestSrc = image.currentSrc || image.src

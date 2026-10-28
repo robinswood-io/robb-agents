@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 /// <reference path="../../bash-parser.d.ts" />
 import bashParser from "bash-parser";
 import { isAllowlistedReadOnlyGitArguments, READ_ONLY_GIT_HARDENING_ARGS, validateBashCommand } from "../../bash-validator.ts";
@@ -21,12 +22,12 @@ function objectiveGitReadsUseAllowlistedOptions(command: string): boolean {
   let safe = true;
   const visit = (value: unknown): void => {
     if (!safe || !value || typeof value !== 'object') return;
-    if (Array.isArray(value)) {
+    if (isUnknownArray(value)) {
       value.forEach(visit);
       return;
     }
     const node = value as Record<string, unknown>;
-    if (node.type === 'Command') {
+    if (node["type"] === 'Command') {
       const invocation = literalCommand(node, true);
       if (invocation?.name === 'git' && !isAllowlistedReadOnlyGitArguments(invocation.args)) {
         safe = false;
@@ -84,11 +85,11 @@ export function isRegisteredShellObservation(command: string): boolean {
   try { ast = bashParser(command) as typeof ast; } catch { return false; }
   if (ast.commands?.length !== 1) return false;
   const node = ast.commands[0]!;
-  if (node.async) return false;
-  if (node.type === 'LogicalExpression') {
-    if (node.op !== 'and') return false;
-    const validator = literalCommand(node.left, true);
-    const marker = literalCommand(node.right, false);
+  if (node["async"]) return false;
+  if (node["type"] === 'LogicalExpression') {
+    if (node["op"] !== 'and') return false;
+    const validator = literalCommand(node["left"], true);
+    const marker = literalCommand(node["right"], false);
     // This marker can run only if the actual validator exited successfully.
     // It is not a substitute for the registered target/result/chronology
     // checks, and printf alone never proves an observation.
@@ -120,7 +121,7 @@ export function isReadOnlyRegisteredShellObservation(command: string): boolean {
   try { ast = bashParser(command) as typeof ast; } catch { return false; }
   if (ast.commands?.length !== 1) return false;
   const node = ast.commands[0]!;
-  if (node.async || node.type !== 'Command') return false;
+  if (node["async"] || node["type"] !== 'Command') return false;
   const invocation = literalCommand(node, true);
   if (!invocation) return false;
   return isBoundedRegisteredInspection(invocation)

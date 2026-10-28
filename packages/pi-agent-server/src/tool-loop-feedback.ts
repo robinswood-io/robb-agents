@@ -11,10 +11,12 @@ export interface ToolLoopHintMessage {
   details: { schemaVersion: 1; toolCallId: string };
 }
 export interface ToolLoopFeedbackChannel {
-  session: Pick<AgentSession, 'isStreaming' | 'agent'> | null;
+  session: (Pick<AgentSession, 'isStreaming'> & {
+    agent: { transformContext?: AgentSession['agent']['transformContext'] | undefined };
+  }) | null;
   isCurrentSession: () => boolean;
   toolCallId: string;
-  signal?: AbortSignal;
+  signal?: AbortSignal | undefined;
   onHint?: (message: ToolLoopHintMessage) => void;
   onError?: (error: unknown) => void;
 }

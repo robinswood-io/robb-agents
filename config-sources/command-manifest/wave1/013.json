@@ -1,0 +1,423 @@
+[
+  {
+    "legacy_id": "oss-temporal-execution-slo-guard",
+    "name": "OSS — Temporal execution SLO guard",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_temporal_execution_slo_guard.py",
+    "timeout_seconds": 240,
+    "cutover_ready": true,
+    "category": "oss-governance",
+    "task_queue": "watchdog",
+    "riskClass": "low_observability_or_guardrail",
+    "triggerType": "scheduled",
+    "sideEffects": [
+      "temporal-read:workflow-list",
+      "filesystem-write:ops-report"
+    ],
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-temporal-execution-slo-guard-last.json",
+    "description": "Checks Temporal runtime execution health: old running workflows, recent failures/timeouts/terminations, and SDK connectivity.",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_temporal_execution_slo_guard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 240
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-temporal-execution-slo-guard-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-temporal-execution-slo-guard-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-temporal-execution-slo-guard-last.md",
+    "businessContractVersion": "oss-temporal-execution-slo-guard-v1"
+  },
+  {
+    "legacy_id": "traid-reliability-training",
+    "name": "TRAID — sandbox reliability training (fail-closed)",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/traid_reliability_training.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "category": "investment-lab-governance",
+    "task_queue": "watchdog",
+    "riskClass": "low_observability_or_guardrail",
+    "triggerType": "scheduled",
+    "sideEffects": [
+      "filesystem-write:ops-report",
+      "remote-dev-filesystem-write:traid-sandbox-reliability-report"
+    ],
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/traid-reliability-training-last.json",
+    "description": "Runs TRAID P40 sandbox reliability training/testing and preserves prod/live fail-closed invariants.",
+    "guardrails": {
+      "sandboxOnly": true,
+      "noApprovalFabrication": true,
+      "noLiveTrading": true,
+      "noBrokerSecrets": true,
+      "noBrokerConnector": true,
+      "noProdDeployment": true,
+      "validationDoesNotActivateProd": true
+    },
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/traid_reliability_training.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/traid-reliability-training-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/traid-reliability-training-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/traid-reliability-training-last.md",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "traid-paper-research-loop",
+    "name": "TRAID — causal news consequences + advanced flow mathematics P41-P968 v115 (sandbox fail-closed)",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/traid_paper_research_loop.py",
+    "timeout_seconds": 1500,
+    "cutover_ready": true,
+    "category": "investment-lab-governance",
+    "task_queue": "watchdog",
+    "riskClass": "low_observability_or_guardrail",
+    "triggerType": "scheduled",
+    "sideEffects": [
+      "filesystem-write:ops-report",
+      "remote-dev-filesystem-write:traid-paper-research-artifacts"
+    ],
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/traid-paper-research-loop-last.json",
+    "description": "Runs audited GDELT news-consequence research, advanced flow/cross-asset mathematics and causal precision gates; no 2026 selection, promotion, broker, orders, deployment or live capital.",
+    "guardrails": {
+      "sandboxOnly": true,
+      "noLiveTrading": true,
+      "noBrokerLiveConnector": true,
+      "noBrokerSecrets": true,
+      "noRealOrders": true,
+      "noProdDeployment": true,
+      "noNightAgent": true
+    },
+    "metadata": {
+      "latestTraidPhase": "P968",
+      "latestTraidBundle": "artifacts/ops/p968-release-evidence-bundle-v115.json",
+      "latestWrapperVersion": "v115-p953-p968",
+      "continuousSelfImprovement": true,
+      "runtimeState": "artifacts/runtime/autonomous_improvement/state.json",
+      "mlRuntime": ".venv-ml",
+      "featureCount": 24,
+      "modelFamilies": [
+        "logistic_v2",
+        "extra_trees_v2",
+        "hist_gradient_boosting_v2"
+      ],
+      "purgedEmbargoRows": 5,
+      "causalOnlineThresholds": true,
+      "futureLabelAccess": false,
+      "causalExperimentCount": 1860,
+      "regimeSchemes": [
+        "trend_vol_4",
+        "trend_2",
+        "vol_2"
+      ],
+      "regimeFutureLabelAccess": false,
+      "regimeExperimentCount": 2232,
+      "lowVolExperimentCount": 2976,
+      "sealed2026Shadow": true,
+      "shadow2026UsedForSelection": false,
+      "multiHorizonExperimentCount": 372,
+      "executionRealism": true,
+      "paperExecutionAllowed": false,
+      "liveExecutionAllowed": false,
+      "sealedForwardLedgerActive": false,
+      "sealedForwardIncident": "artifacts/ops/sealed-forward-activation-incident-v1.json",
+      "gdeltPublicNews": true,
+      "gdeltCoverage": 0.9878406709,
+      "gdeltEventCount": 2992610,
+      "advancedFlowFeatureCount": 54,
+      "newsFlowExperimentCount": 372,
+      "causalPrecisionMetaGate": true,
+      "news2026UsedForSelection": false
+    },
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/traid_paper_research_loop.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 1500
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/traid-paper-research-loop-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/traid-paper-research-loop-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/traid-paper-research-loop-last.md",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-security-audit-guard",
+    "name": "OSS — security audit guard",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_security_audit_guard_v2.py",
+    "timeout_seconds": 240,
+    "cutover_ready": true,
+    "category": "security-governance",
+    "task_queue": "watchdog",
+    "riskClass": "low_observability_or_guardrail",
+    "triggerType": "scheduled",
+    "sideEffects": [
+      "filesystem-read:security-metadata",
+      "filesystem-write:ops-report"
+    ],
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-security-audit-guard-last.json",
+    "description": "Defensive security audit guard v2: permissions, secret exposure candidates, unsafe public ports reconciled with canonical firewall guard, and active sensitive backups.",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_security_audit_guard_v2.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 240
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-security-audit-guard-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-security-audit-guard-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-security-audit-guard-last.md",
+    "businessContractVersion": "oss-security-audit-guard-v2"
+  },
+  {
+    "legacy_id": "oss-security-firewall-guard",
+    "name": "OSS — security firewall guard",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_security_firewall_guard.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "category": "security-governance",
+    "task_queue": "watchdog",
+    "riskClass": "low_observability_or_guardrail",
+    "triggerType": "scheduled",
+    "sideEffects": [
+      "filesystem-read:security-metadata",
+      "filesystem-write:ops-report"
+    ],
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-security-firewall-guard-last.json",
+    "description": "Verifies firewall drop rules for unsafe public service ports.",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_security_firewall_guard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-security-firewall-guard-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-security-firewall-guard-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-security-firewall-guard-last.md",
+    "businessContractVersion": "oss-security-firewall-guard-v1"
+  },
+  {
+    "legacy_id": "afnor-bookstore-retail-audit",
+    "name": "AFNOR - audit libraires professionnels France prepare-only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/afnor_bookstore_retail_audit.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "triggerType": "Schedule",
+    "task_queue": "campaigns",
+    "riskClass": "prepare_only_no_outbound_retail_audit",
+    "sideEffects": [
+      "read_campaign_ops_artifacts",
+      "write_campaign_ops_reports",
+      "refresh_prepare_only_action_queue",
+      "no_external_outbound_message",
+      "no_physical_copy_shipment"
+    ],
+    "category": "campaign-governance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/afnor-bookstore-retail-audit-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Prepare-only audit for bookstore/professional retail subcampaign. Tracks ISBN/price/order-route gates, seed list and copy policy. No outreach, no shipment.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/afnor_bookstore_retail_audit.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/afnor-bookstore-retail-audit-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/afnor-book-launch-2026-libraires-pro-fr-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/afnor-book-launch-2026-libraires-pro-fr-last.md",
+    "businessContractVersion": "afnor-bookstore-retail-audit-v1"
+  },
+  {
+    "legacy_id": "afnor-bookstore-candidate-verifier",
+    "name": "AFNOR - verification candidates libraires prepare-only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/afnor_bookstore_candidate_verifier.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "triggerType": "Schedule",
+    "task_queue": "campaigns",
+    "riskClass": "prepare_only_no_outbound_bookstore_candidate_verification",
+    "sideEffects": [
+      "read_campaign_ops_artifacts",
+      "write_campaign_ops_reports",
+      "write_prepare_only_verification_queue",
+      "write_preliminary_unverified_shortlist",
+      "no_external_outbound_message",
+      "no_physical_copy_shipment"
+    ],
+    "category": "campaign-governance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/afnor-bookstore-candidate-verifier-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Prepare-only verifier for France-wide bookstore candidate universe. Creates public-verification queue and preliminary shortlist. No outreach, no phone, no forms, no shipment.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/afnor_bookstore_candidate_verifier.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/afnor-bookstore-candidate-verifier-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/afnor-book-launch-2026-libraires-pro-fr-candidate-verifier-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/afnor-book-launch-2026-libraires-pro-fr-candidate-verifier-last.md",
+    "businessContractVersion": "afnor-bookstore-candidate-verifier-v1"
+  },
+  {
+    "legacy_id": "robinswood-media-authority-2026",
+    "name": "Robinswood Media Authority 2026 — journalistes, podcasts, presse",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_media_authority_2026.py --apply",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "triggerType": "Schedule",
+    "task_queue": "campaigns",
+    "riskClass": "bounded_autonomous_media_first_send_low_volume",
+    "sideEffects": [
+      "read_media_seeds",
+      "read_legacy_pr_database_for_exclusion",
+      "read_suppression_list",
+      "gmail_send_bounded_first_touch",
+      "gmail_read_sent_threads_for_replies",
+      "write_candidates_queue_ledger_reports",
+      "write_reply_action_queue",
+      "no_paid_submission",
+      "no_legacy_pr_relaunch",
+      "no_auto_reply_to_positive_media_interest"
+    ],
+    "category": "campaign-governance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-authority-2026-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Clean media authority lane separated from old PR Avant le Flow reliquat. Low-volume autonomous first-touch only; excludes all legacy PR contacts, global blockedRecipients, bounced contacts and paid submissions. Scans replies into human/bounce queues; no autonomous negotiation.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_media_authority_2026.py",
+        "--apply"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-authority-2026-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-authority-2026-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-authority-2026-last.md",
+    "businessContractVersion": "media-authority-2026-v3-bounded-first-send-reply-scan-bounce-persistence"
+  },
+  {
+    "legacy_id": "robinswood-media-authority-2026-tests",
+    "name": "Robinswood Media Authority 2026 — guardrail tests",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_media_authority_2026_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "triggerType": "ScheduleStep",
+    "task_queue": "campaigns",
+    "riskClass": "guardrail_tests_no_outbound",
+    "sideEffects": [
+      "read_policy_seeds_legacy_pr_database",
+      "run_dry_run_no_send",
+      "write_test_report",
+      "no_external_outbound_message"
+    ],
+    "category": "campaign-governance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-authority-2026-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Anti-regression tests for media authority: low caps, legacy PR exclusion, global blockedRecipients suppression, bounce artifact blocking, reply-scan-only no-send path, dry-run no send, preserves operational last report.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_media_authority_2026_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-authority-2026-tests-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-authority-2026-tests-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-authority-2026-tests-last.md",
+    "businessContractVersion": "media-authority-2026-tests-v3-suppression-bounce-scan-only"
+  },
+  {
+    "legacy_id": "robinswood-media-authority-2026-replenisher",
+    "name": "Robinswood Media Authority 2026 — replenisher contacts presse",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_media_authority_2026_replenisher.py --apply --max-add 5",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "triggerType": "Schedule",
+    "task_queue": "campaigns",
+    "riskClass": "prepare_only_seed_replenishment_no_outbound",
+    "sideEffects": [
+      "read_pr_topup_seeds",
+      "read_legacy_pr_database_for_exclusion",
+      "write_media_authority_seeds",
+      "write_replenisher_report",
+      "no_external_outbound_message"
+    ],
+    "category": "campaign-governance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-authority-2026-replenisher-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Prepare-only replenisher importing high-fit public PR contacts into the clean media authority lane. No outbound; excludes legacy PR, global suppression, bounced contacts, weak localparts and non-editorial generic inboxes.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_media_authority_2026_replenisher.py",
+        "--apply",
+        "--max-add",
+        "5"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-authority-2026-replenisher-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-authority-2026-replenisher-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-authority-2026-replenisher-last.md",
+    "businessContractVersion": "media-authority-replenisher-v2-strict-nominative-editorial-bounce-suppression"
+  }
+]

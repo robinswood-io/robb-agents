@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../json.ts';
 import { existsSync, writeFileSync, unlinkSync } from "fs";
 import { join } from "path";
 import { execSync } from "child_process";
@@ -45,9 +46,11 @@ if (fileURLs && !fileURLs.isNil()) {
     try { unlinkSync(scriptFile); } catch {}
 
     if (result !== 'no_files' && result.startsWith('{')) {
-      const parsed = JSON.parse(result);
-      if (parsed.type === 'files' && Array.isArray(parsed.paths)) {
-        for (const filePath of parsed.paths) {
+      const parsed: unknown = JSON.parse(result);
+      if (parsed !== null && typeof parsed === 'object' && 'type' in parsed && parsed.type === 'files' && 'paths' in parsed && isUnknownArray(parsed.paths)) {
+        const paths: unknown[] = parsed.paths;
+        for (const filePath of paths) {
+          if (typeof filePath !== 'string') continue;
           const attachment = readFileAttachment(filePath);
           if (attachment) {
             attachments.push(attachment);

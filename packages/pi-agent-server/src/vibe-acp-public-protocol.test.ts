@@ -1,3 +1,5 @@
+import { z } from 'zod';
+const protocolMessageSchema = z.looseObject({ params: z.looseObject({ sessionId: z.string().optional() }).optional() });
 import { expect, it } from 'bun:test';
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
@@ -63,11 +65,11 @@ createInterface({input:process.stdin,crlfDelay:Infinity}).on('line',line=>{
   const child = spawn(process.execPath, ['src/vibe-acp-server.ts'], {
     cwd: join(import.meta.dir, '..'),
     stdio: ['pipe', 'pipe', 'pipe'],
-    env: { HOME: directory, PATH: process.env.PATH, ROBB_VIBE_ACP_COMMAND: executable },
+    env: { HOME: directory, PATH: process.env["PATH"], ROBB_VIBE_ACP_COMMAND: executable },
   });
   const output: ObservedBridgeMessage[] = [];
   let diagnostic = '';
-  child.stderr!.on('data', chunk => { diagnostic += String(chunk); });
+  child.stderr!.on('data', (chunk: unknown) => { diagnostic += String(chunk); });
   const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });
   const send = (message: Record<string, unknown>) => child.stdin!.write(`${JSON.stringify(message)}\n`);
   lines.on('line', line => {
@@ -85,14 +87,14 @@ createInterface({input:process.stdin,crlfDelay:Infinity}).on('line',line=>{
       await Bun.sleep(10);
     }
   };
-  const protocol = (): Array<Record<string, unknown> & { params?: { sessionId?: string } }> => existsSync(protocolLog)
-    ? readFileSync(protocolLog, 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line))
+  const protocol = () => existsSync(protocolLog)
+    ? readFileSync(protocolLog, 'utf8').trim().split('\n').filter(Boolean).map(line => protocolMessageSchema.parse(JSON.parse(line)))
     : [];
   try {
     send({ type: 'init', cwd: directory, sdkSessionId: 'persisted-qa-session', model: 'pi/mistral-vibe' });
     await waitFor(() => output.some(message => message.type === 'ready'));
     expect(output.find(message => message.type === 'ready')?.sessionId).toBe('persisted-qa-session');
-    await waitFor(() => protocol().some(message => message.marker === 'idle-replay-sent'));
+    await waitFor(() => protocol().some(message => message["marker"] === 'idle-replay-sent'));
     for (const number of [1, 2]) {
       send({ type: 'prompt', id: `qa-turn-${number}`, message: `QA prompt ${number}` });
       await waitFor(() => output.filter(message => message.event?.type === 'agent_end').length === number);
@@ -100,9 +102,9 @@ createInterface({input:process.stdin,crlfDelay:Infinity}).on('line',line=>{
       expect(completed[number - 1]?.event?.message?.content).toEqual([{ type: 'text', text: `fresh turn ${number}` }]);
     }
     const calls = protocol();
-    expect(calls.filter(message => message.method === 'session/load')).toHaveLength(1);
-    expect(calls.some(message => message.method === 'session/new')).toBe(false);
-    expect(calls.filter(message => message.method === 'session/prompt').map(message => message.params?.sessionId)).toEqual(['persisted-qa-session', 'persisted-qa-session']);
+    expect(calls.filter(message => message["method"] === 'session/load')).toHaveLength(1);
+    expect(calls.some(message => message["method"] === 'session/new')).toBe(false);
+    expect(calls.filter(message => message["method"] === 'session/prompt').map(message => message.params?.sessionId)).toEqual(['persisted-qa-session', 'persisted-qa-session']);
     expect(output.filter(message => message.type === 'provider_handoff')).toHaveLength(2);
     expect(output.filter(message => message.event?.type === 'tool_execution_start')).toHaveLength(2);
     expect(output.filter(message => message.event?.type === 'tool_execution_end')).toHaveLength(2);

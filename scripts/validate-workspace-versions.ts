@@ -1,3 +1,5 @@
+import { UV_VERSION } from './build/common/binary-downloads'
+import { execFileSync } from 'node:child_process'
 import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join, relative, sep } from 'node:path'
 
@@ -26,6 +28,19 @@ export function readBunLockWorkspaceVersion(
 }
 
 function main(): void {
+  if (process.argv.includes('--runtime')) {
+    const runtimes = [
+      ['Node', execFileSync('node', ['--version'], { encoding: 'utf8' }).trim(), 'v26.12.1'],
+      ['Bun', Bun.version, '1.4.4'],
+      ['Python', execFileSync('python3', ['--version'], { encoding: 'utf8' }).trim(), 'Python 3.14.6'],
+      ['RTK', execFileSync('rtk', ['--version'], { encoding: 'utf8' }).trim(), 'rtk '+readVersion(join(rootDir, 'scripts/vendor/rtk-manifest.json'))],
+      ['uv', execFileSync('uv', ['--version'], { encoding: 'utf8' }).trim().split(/\s+/)[1], UV_VERSION],
+    ] as const
+    for (const [name, actual, expected] of runtimes) {
+      if (actual !== expected) throw new Error(`${name}: expected ${expected}, received ${actual}`)
+    }
+    console.log('Local/CI runtime contract passed: '+runtimes.map(([name, actual]) => name+' '+actual).join(', '))
+  }
   const expectedVersion = readVersion(join(rootDir, 'package.json'))
   const packageFiles = ['apps', 'packages'].flatMap(group => (
     readdirSync(join(rootDir, group), { withFileTypes: true })

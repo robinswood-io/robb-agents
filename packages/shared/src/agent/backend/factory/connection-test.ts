@@ -93,8 +93,8 @@ export async function testBackendConnection(args: {
       authType,
       defaultModel: testModel,
       createdAt: now,
-      piAuthProvider: args.connection?.piAuthProvider,
-      customEndpoint: args.connection?.customEndpoint,
+      ...(args.connection?.piAuthProvider !== undefined ? { piAuthProvider: args.connection?.piAuthProvider } : {}),
+      ...(args.connection?.customEndpoint !== undefined ? { customEndpoint: args.connection?.customEndpoint } : {}),
       ...(args.baseUrl?.trim() ? { baseUrl: args.baseUrl.trim() } : {}),
     } as LlmConnection;
 
@@ -112,8 +112,8 @@ export async function testBackendConnection(args: {
         provider: args.provider,
         apiKey: trimmedKey,
         model: testModel,
-        baseUrl: args.baseUrl,
-        connection: args.connection,
+        ...(args.baseUrl !== undefined ? { baseUrl: args.baseUrl } : {}),
+        ...(args.connection !== undefined ? { connection: args.connection } : {}),
         hostRuntime: args.hostRuntime,
         resolvedPaths,
         timeoutMs: args.timeoutMs ?? 20000,
@@ -130,20 +130,19 @@ export async function testBackendConnection(args: {
         session: { id: `test-${now}`, workspaceRootPath: cwd, createdAt: 0, lastUsedAt: 0 },
         isHeadless: true,
         miniModel: testModel,
-        envOverrides: args.provider === 'anthropic'
-          ? {
+        ...(args.provider === 'anthropic'
+          ? { envOverrides: {
             ANTHROPIC_API_KEY: trimmedKey,
             ...(args.baseUrl?.trim() ? { ANTHROPIC_BASE_URL: args.baseUrl.trim() } : {}),
-          }
-          : undefined,
+          } }
+          : {}),
       },
       hostRuntime: args.hostRuntime,
-      providerOptions: { piAuthProvider: args.connection?.piAuthProvider },
+      providerOptions: { ...(args.connection?.piAuthProvider !== undefined ? { piAuthProvider: args.connection?.piAuthProvider } : {}) },
     });
 
     const readAgentStderr = (): string => {
-      const maybe = agent as unknown as { getRecentStderr?: () => string };
-      return typeof maybe.getRecentStderr === 'function' ? maybe.getRecentStderr() : '';
+      return agent.getRecentStderr?.() ?? '';
     };
     const withStderrContext = (message: string): string => {
       const stderr = readAgentStderr();
@@ -213,9 +212,9 @@ export async function validateConnection(
       const { validateAnthropicConnection } = await import("../../../config/llm-validation.ts");
       return validateAnthropicConnection({
         model: connection.defaultModel || DEFAULT_MODEL,
-        apiKey: credentials.apiKey,
-        oauthToken: credentials.oauthToken,
-        baseUrl: connection.baseUrl,
+        ...(credentials.apiKey !== undefined ? { apiKey: credentials.apiKey } : {}),
+        ...(credentials.oauthToken !== undefined ? { oauthToken: credentials.oauthToken } : {}),
+        ...(connection.baseUrl !== undefined ? { baseUrl: connection.baseUrl } : {}),
       });
     }
 

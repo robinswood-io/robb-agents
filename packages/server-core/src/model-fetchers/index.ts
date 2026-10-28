@@ -177,7 +177,7 @@ class ModelRefreshService {
       if (!fetcher) continue
 
       // Immediate non-blocking fetch
-      this.refreshConnection(conn.slug).catch(err => {
+      this.refreshConnection(conn.slug).catch((err: unknown) => {
         handlerLog.warn(`Initial model refresh failed for ${conn.slug}: ${err instanceof Error ? err.message : err}`)
       })
 

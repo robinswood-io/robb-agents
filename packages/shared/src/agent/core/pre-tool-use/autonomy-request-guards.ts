@@ -1,3 +1,4 @@
+import { isJsonObject, isUnknownArray } from '../../../utils/json.ts';
 import { posix } from "node:path";
 import { normalizeAutonomyGuardText } from './tool-names.ts';
 
@@ -29,10 +30,10 @@ export function oversizedRbwOssCatalogReadGuidance(
   toolName: string,
   input: Record<string, unknown>,
 ): string | undefined {
-  if (toolName !== RBW_OSS_WHOLE_CATALOG_READ_TOOL || typeof input.path !== 'string') {
+  if (toolName !== RBW_OSS_WHOLE_CATALOG_READ_TOOL || typeof input["path"] !== 'string') {
     return undefined;
   }
-  const rawPath = input.path.trim();
+  const rawPath = input["path"].trim();
   // Connector paths are POSIX paths. Canonicalize dot segments as well as
   // duplicate separators so a spelling alias cannot bypass a known-catalog
   // guard, while a path that genuinely resolves elsewhere remains available.
@@ -54,12 +55,12 @@ export function redundantlyAsksPermissionForSellsyReadOnlyOAuth(
   input: Record<string, unknown>,
 ): boolean {
   if (!REQUEST_USER_INPUT_TOOL_NAMES.has(toolName)
-    || !Array.isArray(input.questions)
-    || input.questions.length !== 1) return false;
-  const question = input.questions[0];
-  if (!question || typeof question !== 'object' || Array.isArray(question)) return false;
-  const text = typeof question.question === 'string'
-    ? normalizeAutonomyGuardText(question.question) : '';
+    || !isUnknownArray(input["questions"])
+    || input["questions"].length !== 1) return false;
+  const question = input["questions"][0];
+  if (!isJsonObject(question)) return false;
+  const text = typeof question["question"] === 'string'
+    ? normalizeAutonomyGuardText(question["question"]) : '';
   return /\bsellsy\b/u.test(text)
     && /\boauth\b/u.test(text)
     && /\bsubscriptions\.read\b/u.test(text)

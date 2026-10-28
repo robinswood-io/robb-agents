@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { startCompactionTelemetry, persistenceRootFor } from '../policy.ts';
 import type { AgentEvent } from '@craft-agent/shared/agent';
@@ -16,12 +18,12 @@ export function handleAgentStatus(sessionOperationContext: SessionOperationConte
     if (event.message.includes('Compacting')) {
         startCompactionTelemetry(managed, generationKey);
     }
-    sessionOperationContext.owner["sendEvent"]({
+    sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'status' }>>({
         type: 'status',
         sessionId,
         message: event.message,
         statusType: event.message.includes('Compacting') ? 'compacting' : undefined
-    }, workspaceId);
+    }), workspaceId);
     return;
 }
 
@@ -55,18 +57,18 @@ export function handleAgentInfo(sessionOperationContext: SessionOperationContext
                     sessionId,
                     tokenUsage: {
                         inputTokens: managed.tokenUsage.inputTokens,
-                        contextWindow: managed.tokenUsage.contextWindow,
+                        ...(managed.tokenUsage.contextWindow !== undefined ? { contextWindow: managed.tokenUsage.contextWindow } : {}),
                     },
                 }, workspaceId);
             }
         }
-        sessionOperationContext.owner["sendEvent"]({
+        sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'info' }>>({
             type: 'info',
             sessionId,
             message: event.message,
             statusType: isCompactionComplete ? 'compaction_complete' : undefined,
             timestamp: infoTimestamp,
-        }, workspaceId);
+        }), workspaceId);
         return;
     }
 }
@@ -156,8 +158,8 @@ export async function handleAgentTypedError(sessionOperationContext: SessionOper
         // Rich error fields for diagnostics and retry functionality
         errorCode: event.error.code,
         errorTitle: event.error.title,
-        errorDetails: event.error.details,
-        errorOriginal: event.error.originalError,
+        ...(event.error.details !== undefined ? { errorDetails: event.error.details } : {}),
+        ...(event.error.originalError !== undefined ? { errorOriginal: event.error.originalError } : {}),
         errorCanRetry: event.error.canRetry,
     };
     managed.messages.push(typedErrorMessage);
@@ -172,8 +174,8 @@ export async function handleAgentTypedError(sessionOperationContext: SessionOper
             message: event.error.message,
             actions: event.error.actions,
             canRetry: event.error.canRetry,
-            details: event.error.details,
-            originalError: event.error.originalError,
+            ...(event.error.details !== undefined ? { details: event.error.details } : {}),
+            ...(event.error.originalError !== undefined ? { originalError: event.error.originalError } : {}),
         },
         timestamp: typedErrorMessage.timestamp,
     }, workspaceId);

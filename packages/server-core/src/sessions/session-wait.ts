@@ -12,10 +12,10 @@ export function sessionWaitCursor(snapshot: WaitSessionSnapshot): string {
 /** Event-driven wait. Previously delivered targets cannot starve unfinished siblings. */
 export async function waitForSessionChange(input: {
   snapshot: () => WaitSessionSnapshot[];
-  previous?: Readonly<Record<string, string>>;
+  previous?: Readonly<Record<string, string>> | undefined;
   timeoutMs: number;
   subscribe: (wake: () => void) => () => void;
-  signal?: AbortSignal;
+  signal?: AbortSignal | undefined;
 }): Promise<WaitSessionsResult> {
   const snapshot = () => input.snapshot().map(item => {
     const cursor = sessionWaitCursor(item);

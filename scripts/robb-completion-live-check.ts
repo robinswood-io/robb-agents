@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Live acceptance with independent file checks and an existing selected connection.
  * The normal profile is accessible only with the explicit --local-staging option.
@@ -32,8 +33,8 @@ const platform = createHeadlessPlatform({ appVersion: 'completion-live-check', b
 const diagnosticCounts: Record<string, number> = {};
 platform.logger = {
   info: () => {}, debug: () => {},
-  warn: () => { diagnosticCounts.warnings = (diagnosticCounts.warnings ?? 0) + 1; },
-  error: () => { diagnosticCounts.errors = (diagnosticCounts.errors ?? 0) + 1; },
+  warn: () => { diagnosticCounts["warnings"] = (diagnosticCounts["warnings"] ?? 0) + 1; },
+  error: () => { diagnosticCounts["errors"] = (diagnosticCounts["errors"] ?? 0) + 1; },
 };
 setSessionPlatform(platform);
 const operations = operationsBundle ? await loadRobbOperationsModule({
@@ -52,7 +53,7 @@ manager.setEventSink((_channel, _target, ...payload: unknown[]) => {
   const value = payload[0];
   if (!value || typeof value !== 'object') return;
   const event = value as { sessionId?: string; type?: string; toolName?: string; toolUseId?: string; isError?: boolean; executed?: boolean; toolInput?: { a?: number; b?: number }; message?: string };
-  const observed = { sessionId: event.sessionId, type: event.type, toolName: event.toolName, toolUseId: event.toolUseId, isError: event.isError, executed: event.executed, ...(event.toolName?.endsWith('qa_sum') ? { a: event.toolInput?.a, b: event.toolInput?.b } : {}), observedAt: Date.now() };
+  const observed = omitUndefined<ObservedEvent>({ sessionId: event.sessionId, type: event.type, toolName: event.toolName, toolUseId: event.toolUseId, isError: event.isError, executed: event.executed, ...(event.toolName?.endsWith('qa_sum') ? { a: event.toolInput?.a, b: event.toolInput?.b } : {}), observedAt: Date.now() });
   events.push(observed);
   if (event.type === 'info' && event.message?.startsWith('Compacted') && event.sessionId) compactions.add(event.sessionId);
   if (event.type === 'tool_start' && event.sessionId) {
@@ -67,12 +68,12 @@ function metrics(sessionId: string, startedAt: number) {
   const scoped = events.filter(event => event.sessionId === sessionId);
   const calls = scoped.filter(event => event.type === 'tool_start');
   const errors = scoped.filter(event => event.type === 'tool_result' && event.isError);
-  return {
+  return omitUndefined({
     toolCalls: new Set(calls.map(event => event.toolUseId).filter(Boolean)).size,
     toolErrors: new Set(errors.map(event => event.toolUseId).filter(Boolean)).size,
     firstToolLatencyMs: calls[0] ? calls[0].observedAt - startedAt : undefined,
     sourceErrors: scoped.filter(event => event.type === 'typed_error').length,
-  };
+  });
 }
 const sha = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
 const requireCheck = (condition: boolean, label: string) => { if (!condition) throw new Error(label); };
@@ -115,7 +116,7 @@ async function mission(name: string, body: (dir: string, sessionId: string) => P
     const state = await manager.getSession(session.id);
     requireCheck(state?.activeObjective?.terminalState === 'complete_verified', 'The host did not complete the mission.');
     requireCheck(!state?.pendingTurnRecovery, 'Automatic recovery is still pending.');
-    results.push({ name, passed: true, sessionId: session.id, checks, durationMs: Date.now() - started, tokenUsage: state?.tokenUsage,
+    results.push({ name, passed: true, sessionId: session.id, checks, durationMs: Date.now() - started, ...(state?.tokenUsage !== undefined ? { tokenUsage: state?.tokenUsage } : {}),
       ...metrics(session.id, started) });
   } catch (error) {
     await manager.cancelProcessing(session.id, false).catch(() => {});

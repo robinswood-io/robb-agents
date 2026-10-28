@@ -22,7 +22,7 @@ export function buildTaskWindowProps(task: KanbanTask): TaskWindowProps {
   const hasSubtasks = task.subtasks.length > 0
   return {
     title: task.title,
-    project,
+    ...(project !== undefined ? { project: project } : {}),
     status: mockStatusesById.get(task.statusId),
     model: task.model,
     userMessage: `Coordinate "${task.title}" and route each part to the best-fit model.`,
@@ -48,7 +48,7 @@ export function buildSubtaskWindowProps(sub: KanbanSubtask, parent: KanbanTask):
 
   return {
     title: sub.title,
-    project,
+    ...(project !== undefined ? { project: project } : {}),
     status: mockStatusesById.get(SUBTASK_STATUS_BY_RUN_STATE[sub.runState]),
     model: sub.model,
     userMessage: sub.title,

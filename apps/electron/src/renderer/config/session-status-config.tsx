@@ -69,7 +69,7 @@ export function statusConfigToSessionStatus(
   return {
     id: config.id,
     label: config.label,
-    color: config.color,
+    ...(config.color !== undefined ? { color: config.color } : {}),
     resolvedColor,
     icon: (
       <StatusIcon

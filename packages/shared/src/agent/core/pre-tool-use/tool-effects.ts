@@ -34,8 +34,8 @@ export function classifyToolEffect(
     return {
       kind: 'external-mutation',
       reversibility: 'irreversible',
-      idempotent: declared.idempotent,
-      openWorld: declared.openWorld,
+      ...(declared.idempotent !== undefined ? { idempotent: declared.idempotent } : {}),
+      ...(declared.openWorld !== undefined ? { openWorld: declared.openWorld } : {}),
       source: 'mcp-annotations',
     };
   }
@@ -88,9 +88,9 @@ export function classifyToolEffect(
     };
   }
 
-  const action = [input.action, input.operation]
+  const action = [input["action"], input["operation"]]
     .find((value): value is string => typeof value === 'string' && value.trim().length > 0);
-  const method = typeof input.method === 'string' ? input.method.trim().toUpperCase() : undefined;
+  const method = typeof input["method"] === 'string' ? input["method"].trim().toUpperCase() : undefined;
   if (
     (method && MUTATION_HTTP_METHOD_PATTERN.test(method))
     || (action && classifyToolNameMutationSemantics(action) === 'mutation')
@@ -117,7 +117,7 @@ export function classifyToolEffect(
       kind: 'read',
       reversibility: 'not-applicable',
       idempotent: true,
-      openWorld: declared?.openWorld,
+      ...(declared?.openWorld !== undefined ? { openWorld: declared?.openWorld } : {}),
       source: 'permissions-config',
     };
   }
@@ -129,7 +129,7 @@ export function classifyToolEffect(
     return {
       kind: 'external-mutation',
       reversibility: 'unknown',
-      idempotent: declared?.idempotent,
+      ...(declared?.idempotent !== undefined ? { idempotent: declared?.idempotent } : {}),
       openWorld: declared?.openWorld ?? true,
       source: 'input-semantics',
     };
@@ -143,8 +143,8 @@ export function classifyToolEffect(
     return {
       kind: 'read',
       reversibility: 'not-applicable',
-      idempotent: declared.idempotent,
-      openWorld: declared.openWorld,
+      ...(declared.idempotent !== undefined ? { idempotent: declared.idempotent } : {}),
+      ...(declared.openWorld !== undefined ? { openWorld: declared.openWorld } : {}),
       source: 'mcp-annotations',
     };
   }
@@ -167,8 +167,8 @@ export function classifyToolEffect(
     return {
       kind: 'read',
       reversibility: 'not-applicable',
-      idempotent: declared?.idempotent,
-      openWorld: declared?.openWorld,
+      ...(declared?.idempotent !== undefined ? { idempotent: declared?.idempotent } : {}),
+      ...(declared?.openWorld !== undefined ? { openWorld: declared?.openWorld } : {}),
       source: 'permissions-config',
     };
   }

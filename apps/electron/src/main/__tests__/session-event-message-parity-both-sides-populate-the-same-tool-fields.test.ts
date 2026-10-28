@@ -33,13 +33,13 @@ describe('tool_start → tool Message field parity', () => {
       timestamp: event.timestamp!,
       toolName: event.toolName,
       toolUseId: event.toolUseId,
-      toolInput: event.toolInput,
+      ...(event.toolInput !== undefined ? { toolInput: event.toolInput } : {}),
       toolStatus: 'executing',
-      toolIntent: event.toolIntent,
-      toolDisplayName: event.toolDisplayName,
-      toolDisplayMeta: event.toolDisplayMeta,
-      turnId: event.turnId,
-      parentToolUseId: event.parentToolUseId,
+      ...(event.toolIntent !== undefined ? { toolIntent: event.toolIntent } : {}),
+      ...(event.toolDisplayName !== undefined ? { toolDisplayName: event.toolDisplayName } : {}),
+      ...(event.toolDisplayMeta !== undefined ? { toolDisplayMeta: event.toolDisplayMeta } : {}),
+      ...(event.turnId !== undefined ? { turnId: event.turnId } : {}),
+      ...(event.parentToolUseId !== undefined ? { parentToolUseId: event.parentToolUseId } : {}),
     }
 
     // Renderer (handleToolStart — new message path)
@@ -50,13 +50,13 @@ describe('tool_start → tool Message field parity', () => {
       timestamp: event.timestamp ?? Date.now(),
       toolUseId: event.toolUseId,
       toolName: event.toolName,
-      toolInput: event.toolInput,
+      ...(event.toolInput !== undefined ? { toolInput: event.toolInput } : {}),
       toolStatus: 'executing',
-      turnId: event.turnId,
-      parentToolUseId: event.parentToolUseId,
-      toolIntent: event.toolIntent,
-      toolDisplayName: event.toolDisplayName,
-      toolDisplayMeta: event.toolDisplayMeta,
+      ...(event.turnId !== undefined ? { turnId: event.turnId } : {}),
+      ...(event.parentToolUseId !== undefined ? { parentToolUseId: event.parentToolUseId } : {}),
+      ...(event.toolIntent !== undefined ? { toolIntent: event.toolIntent } : {}),
+      ...(event.toolDisplayName !== undefined ? { toolDisplayName: event.toolDisplayName } : {}),
+      ...(event.toolDisplayMeta !== undefined ? { toolDisplayMeta: event.toolDisplayMeta } : {}),
     }
 
     // Core tool fields must match

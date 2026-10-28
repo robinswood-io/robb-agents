@@ -94,12 +94,12 @@ export function validateMacAsarHeaderIntegrity(appAsarPath: string, infoPlistPat
     ? (metadata as Record<string, unknown>)['Resources/app.asar']
     : undefined
   if (!entry || typeof entry !== 'object'
-    || (entry as Record<string, unknown>).algorithm !== 'SHA256'
-    || typeof (entry as Record<string, unknown>).hash !== 'string'
-    || !/^[0-9a-f]{64}$/i.test((entry as Record<string, unknown>).hash as string)) {
+    || (entry as Record<string, unknown>)["algorithm"] !== 'SHA256'
+    || typeof (entry as Record<string, unknown>)["hash"] !== 'string'
+    || !/^[0-9a-f]{64}$/i.test((entry as Record<string, unknown>)["hash"] as string)) {
     throw new Error(`Invalid embedded ASAR integrity declaration in ${infoPlistPath}`)
   }
-  const declaredHash = ((entry as Record<string, unknown>).hash as string).toLowerCase()
+  const declaredHash = ((entry as Record<string, unknown>)["hash"] as string).toLowerCase()
   const actualHash = createHash('sha256').update(getRawHeader(appAsarPath).headerString).digest('hex')
   if (declaredHash !== actualHash) {
     throw new Error(`Embedded ASAR header integrity mismatch: Info.plist declares ${declaredHash}, archive has ${actualHash}`)
@@ -243,7 +243,7 @@ export async function validatePackagedElectronSecurity(
   validateRequiredElectronFuses(readElectronFuseWires(readFileSync(fuseBinary)))
   const whatsAppWorkerGitSha = validatePackagedWhatsAppWorkerProvenance(
     resourcesDir,
-    process.env.ROBB_BUILD_COMMIT,
+    process.env["ROBB_BUILD_COMMIT"],
   )
   const verifiedRuntimeFiles = validateProtectedExternalRuntimeInventory(
     layout.appAsarPath,
@@ -255,7 +255,7 @@ export async function validatePackagedElectronSecurity(
     protectedRuntimeManifestPath: RUNTIME_INTEGRITY_MANIFEST_ASAR_PATH,
     verifiedRuntimeFiles,
     whatsAppWorkerGitSha,
-    embeddedAsarHeaderSha256,
+    ...(embeddedAsarHeaderSha256 !== undefined ? { embeddedAsarHeaderSha256 } : {}),
   }
 }
 

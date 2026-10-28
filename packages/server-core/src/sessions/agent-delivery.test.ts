@@ -1,5 +1,7 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
-import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
+import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from "bun:test";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -44,8 +46,9 @@ describe('durable agent inbox — E05 E13', () => {
         kind: 'agent-message', senderSessionId: 'source', deliveryId: id,
         agentMessageType: 'result',
       }, agentDelivery: { id, status: 'queued', attempts: 0 } };
-    const restored = storedToMessage(JSON.parse(JSON.stringify(messageToStored(message))));
-    expect(recoveredInternalMessageOptions(restored)).toEqual({ hidden: true, internalOrigin: message.internalOrigin });
+    const stored = messageToStored(message);
+    const restored = storedToMessage(JSON.parse(JSON.stringify(stored)) as typeof stored);
+    expect(recoveredInternalMessageOptions(restored)).toEqual({ hidden: true, internalOrigin: requiredTestValue(message.internalOrigin) });
     expect(restored.agentDelivery).toEqual(message.agentDelivery);
   });
 
@@ -97,7 +100,7 @@ describe('durable agent inbox — E05 E13', () => {
     managed.messages.push(rootMessage);
     managed.activeObjective = transitionObjectiveContract({ messageId: rootMessage.id, text: rootMessage.content, nowMs: 1 });
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
-    const runtime = manager as unknown as { flushSession(id: string): Promise<void> };
+    const runtime = sessionManagerForTest(manager);
     const flushSession = runtime.flushSession.bind(manager);
     let terminalizedDuringFirstFlush = false;
     runtime.flushSession = async id => {
@@ -120,9 +123,9 @@ describe('durable agent inbox — E05 E13', () => {
       expect(managed.messageQueue).toEqual([]);
       expect(managed.pendingAgentDeliveryIds ?? []).toEqual([]);
       expect(managed.pendingQueuedMessageIds ?? []).toEqual([]);
-      const disk = readFileSync(getSessionFilePath(root, managed.id), 'utf8').trim().split('\n').map(line => JSON.parse(line));
-      expect(disk[0].pendingAgentDeliveryIds).toEqual([]);
-      expect(disk[0].pendingQueuedMessageIds).toEqual([]);
+      const disk = readFileSync(getSessionFilePath(root, managed.id), 'utf8').trim().split('\n').map(line => parseRecoveryJournalObservation(line));
+      expect(requiredTestValue(disk[0]).pendingAgentDeliveryIds).toEqual([]);
+      expect(requiredTestValue(disk[0]).pendingQueuedMessageIds).toEqual([]);
       expect(disk.some(entry => entry.agentDelivery?.id === 'idle-flush-receipt')).toBe(false);
     } finally { runtime.flushSession = flushSession; await manager.flushAllSessions(); rmSync(root, { recursive: true, force: true }); }
   });
@@ -137,10 +140,7 @@ describe('durable agent inbox — E05 E13', () => {
     managed.activeObjective = transitionObjectiveContract({ messageId: rootMessage.id, text: rootMessage.content, nowMs: 1 });
     managed.isProcessing = true;
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
-    const runtime = manager as unknown as {
-      flushSession(id: string): Promise<void>;
-      persistSession(session: typeof managed): void;
-    };
+    const runtime = sessionManagerForTest(manager);
     const flushSession = runtime.flushSession.bind(manager);
     let terminalizedDuringQueueFlush = false;
     runtime.flushSession = async id => {
@@ -163,9 +163,9 @@ describe('durable agent inbox — E05 E13', () => {
       expect(managed.messageQueue).toEqual([]);
       expect(managed.pendingAgentDeliveryIds ?? []).toEqual([]);
       expect(managed.pendingQueuedMessageIds ?? []).toEqual([]);
-      const disk = readFileSync(getSessionFilePath(root, managed.id), 'utf8').trim().split('\n').map(line => JSON.parse(line));
-      expect(disk[0].pendingAgentDeliveryIds).toEqual([]);
-      expect(disk[0].pendingQueuedMessageIds).toEqual([]);
+      const disk = readFileSync(getSessionFilePath(root, managed.id), 'utf8').trim().split('\n').map(line => parseRecoveryJournalObservation(line));
+      expect(requiredTestValue(disk[0]).pendingAgentDeliveryIds).toEqual([]);
+      expect(requiredTestValue(disk[0]).pendingQueuedMessageIds).toEqual([]);
       expect(disk.some(entry => entry.agentDelivery?.id === 'late-flush-receipt')).toBe(false);
     } finally { runtime.flushSession = flushSession; await manager.flushAllSessions(); rmSync(root, { recursive: true, force: true }); }
   });
@@ -180,14 +180,7 @@ describe('durable agent inbox — E05 E13', () => {
     managed.activeObjective = transitionObjectiveContract({ messageId: rootMessage.id, text: rootMessage.content, nowMs: 1 });
     managed.isProcessing = true;
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
-    const runtime = manager as unknown as {
-      flushSession(id: string): Promise<void>;
-      processNextQueuedMessage(id: string): void;
-      queuedMessageDispatches: Map<string, symbol>;
-      queuedAgentDeliveryDispatches: Map<string, unknown>;
-      agentDeliveryAppendsInFlight: Set<string>;
-      automaticAdmissionReservations: Set<string>;
-    };
+    const runtime = sessionManagerForTest(manager);
     const flushSession = runtime.flushSession.bind(manager);
     let terminalizedAfterDequeue = false;
     runtime.flushSession = async id => {
@@ -218,9 +211,9 @@ describe('durable agent inbox — E05 E13', () => {
       expect(sessionRuntimeStateForTest(manager).automaticAdmissionReservations.has(managed.id)).toBe(false);
       expect(managed.pendingAgentDeliveryIds ?? []).toEqual([]);
       expect(managed.pendingQueuedMessageIds ?? []).toEqual([]);
-      const disk = readFileSync(getSessionFilePath(root, managed.id), 'utf8').trim().split('\n').map(line => JSON.parse(line));
-      expect(disk[0].pendingAgentDeliveryIds).toEqual([]);
-      expect(disk[0].pendingQueuedMessageIds).toEqual([]);
+      const disk = readFileSync(getSessionFilePath(root, managed.id), 'utf8').trim().split('\n').map(line => parseRecoveryJournalObservation(line));
+      expect(requiredTestValue(disk[0]).pendingAgentDeliveryIds).toEqual([]);
+      expect(requiredTestValue(disk[0]).pendingQueuedMessageIds).toEqual([]);
       expect(disk.some(entry => entry.agentDelivery?.id === 'dequeued-flush-receipt')).toBe(false);
     } finally { runtime.flushSession = flushSession; await manager.flushAllSessions(); rmSync(root, { recursive: true, force: true }); }
   });
@@ -235,13 +228,8 @@ describe('durable agent inbox — E05 E13', () => {
     managed.activeObjective = transitionObjectiveContract({ messageId: rootMessage.id, text: rootMessage.content, nowMs: 1 });
     managed.isProcessing = true;
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
-    type DispatchState = { sessionId: string; deliveryId: string; dispatchToken: symbol; claimed: boolean; dispatchSettled: boolean };
-    const runtime = manager as unknown as {
-      flushSession(id: string): Promise<void>;
-      queuedMessageDispatches: Map<string, symbol>;
-      queuedAgentDeliveryDispatches: Map<string, DispatchState>;
-      agentDeliveryAppendsInFlight: Set<string>;
-    };
+    
+    const runtime = sessionManagerForTest(manager);
     const flushSession = runtime.flushSession.bind(manager);
     let claimedMessageId: string | undefined;
     runtime.flushSession = async id => {
@@ -277,9 +265,9 @@ describe('durable agent inbox — E05 E13', () => {
       expect(managed.isProcessing).toBe(true);
       expect(sessionRuntimeStateForTest(manager).queuedMessageDispatches.has(managed.id)).toBe(false);
       expect(managed.messageQueue).toEqual([]);
-      expect(managed.messages.find(message => message.id === claimedMessageId)?.agentDelivery).toEqual({
-        id: 'claimed-transition-receipt', status: 'queued', attempts: 0, attachmentsSha256: undefined,
-      });
+      const receipt = requiredTestValue(managed.messages.find(message => message.id === claimedMessageId)?.agentDelivery);
+      expect<unknown>(receipt).toEqual({attachmentsSha256: undefined,  id: 'claimed-transition-receipt', status: 'queued', attempts: 0 });
+      expect(Object.hasOwn(receipt, 'attachmentsSha256')).toBe(false);
       expect(sessionRuntimeStateForTest(manager).queuedAgentDeliveryDispatches.get(claimedMessageId!)).toMatchObject({ claimed: true });
       expect(sessionRuntimeStateForTest(manager).agentDeliveryAppendsInFlight.has(claimedMessageId!)).toBe(false);
     } finally { runtime.flushSession = flushSession; await manager.flushAllSessions(); rmSync(root, { recursive: true, force: true }); }
@@ -296,14 +284,8 @@ describe('durable agent inbox — E05 E13', () => {
     managed.activeObjective = transitionObjectiveContract({ messageId: rootMessage.id, text: rootMessage.content, nowMs: 1 });
     managed.isProcessing = true;
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
-    type DispatchState = { sessionId: string; deliveryId: string; dispatchToken: symbol; claimed: boolean; dispatchSettled: boolean };
-    const runtime = manager as unknown as {
-      flushSession(id: string): Promise<void>;
-      queuedMessageDispatches: Map<string, symbol>;
-      queuedAgentDeliveryDispatches: Map<string, DispatchState>;
-      agentDeliveryAppendsInFlight: Set<string>;
-      automaticAdmissionReservations: Set<string>;
-    };
+    
+    const runtime = sessionManagerForTest(manager);
     const flushSession = runtime.flushSession.bind(manager);
     const abandonedToken = Symbol('abandoned-agent-delivery');
     const foreignToken = Symbol('foreign-active-turn');
@@ -345,7 +327,7 @@ describe('durable agent inbox — E05 E13', () => {
       expect(managed.messages).toEqual([rootMessage, foreignMessage]);
       expect(managed.messageQueue).toEqual([]);
       expect(managed.pendingAgentDeliveryIds ?? []).toEqual([]);
-      const disk = readFileSync(getSessionFilePath(root, managed.id), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+      const disk = readFileSync(getSessionFilePath(root, managed.id), 'utf8').trim().split('\n').map(line => parseRecoveryJournalObservation(line));
       expect(disk.some(entry => entry.agentDelivery?.id === 'foreign-turn-receipt')).toBe(false);
     } finally { runtime.flushSession = flushSession; await manager.flushAllSessions(); rmSync(root, { recursive: true, force: true }); }
   });
@@ -360,13 +342,8 @@ describe('durable agent inbox — E05 E13', () => {
     managed.activeObjective = transitionObjectiveContract({ messageId: rootMessage.id, text: rootMessage.content, nowMs: 1 });
     managed.isProcessing = true;
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
-    type DispatchState = { sessionId: string; deliveryId: string; dispatchToken: symbol; claimed: boolean; dispatchSettled: boolean };
-    const runtime = manager as unknown as {
-      processNextQueuedMessage(id: string): void;
-      queuedMessageDispatches: Map<string, symbol>;
-      queuedAgentDeliveryDispatches: Map<string, DispatchState>;
-      agentDeliveryAppendsInFlight: Set<string>;
-    };
+    
+    const runtime = sessionManagerForTest(manager);
     const foreignToken = Symbol('newer-foreign-dispatch');
     try {
       await manager.sendMessage(managed.id, 'Queued receipt whose dequeue will be superseded', undefined, undefined, {
@@ -403,13 +380,7 @@ describe('durable agent inbox — E05 E13', () => {
     managed.activeObjective = transitionObjectiveContract({ messageId: rootMessage.id, text: rootMessage.content, nowMs: 1 });
     managed.isProcessing = true;
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
-    const runtime = manager as unknown as {
-      sendMessage: SessionManager['sendMessage'];
-      processNextQueuedMessage(id: string): void;
-      queuedMessageDispatches: Map<string, symbol>;
-      queuedAgentDeliveryDispatches: Map<string, unknown>;
-      agentDeliveryAppendsInFlight: Set<string>;
-    };
+    const runtime = sessionManagerForTest(manager);
     const sendMessage = runtime.sendMessage.bind(manager);
     try {
       await manager.sendMessage(managed.id, 'Queued receipt whose callback will fail', undefined, undefined, {

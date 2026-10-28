@@ -102,16 +102,16 @@ export async function ensureBundledUvForCurrentPlatform(): Promise<void> {
 // Detects instance number from folder name suffix (e.g., robinswood-agents-1 → instance 1)
 export function detectInstance(): void {
   // Don't override if already set (e.g., by sourcing detect-instance.sh first)
-  if (process.env.CRAFT_VITE_PORT) return;
+  if (process.env["CRAFT_VITE_PORT"]) return;
 
   const folderName = basename(ROOT_DIR);
   const match = folderName.match(/-(\d+)$/);
 
   if (match) {
     const instanceNum = match[1];
-    process.env.CRAFT_INSTANCE_NUMBER = instanceNum;
-    process.env.CRAFT_VITE_PORT = `${instanceNum}173`;
-    console.log(`🔢 Development instance ${instanceNum} detected: port=${process.env.CRAFT_VITE_PORT}`);
+    process.env["CRAFT_INSTANCE_NUMBER"] = instanceNum;
+    process.env["CRAFT_VITE_PORT"] = `${instanceNum}173`;
+    console.log(`🔢 Development instance ${instanceNum} detected: port=${process.env["CRAFT_VITE_PORT"]}`);
   }
 }
 
@@ -145,30 +145,30 @@ export function loadEnvFile(): void {
 
 
 export function configureDevelopmentIdentity(): void {
-  const instance = process.env.CRAFT_INSTANCE_NUMBER;
+  const instance = process.env["CRAFT_INSTANCE_NUMBER"];
   const suffix = instance ? ` [${instance}]` : "";
   const profileSuffix = instance && instance !== "e2e" ? `-${instance}` : "";
   const schemeSuffix = instance && instance !== "e2e" ? instance : "";
 
-  process.env.ROBB_BUILD_CHANNEL = "development";
-  process.env.CRAFT_APP_NAME ||= `Robb Agents Dev${suffix}`;
-  process.env.CRAFT_CONFIG_DIR ||= `${DEVELOPMENT_CONFIG_DIR}${profileSuffix}`;
-  process.env.CRAFT_DEEPLINK_SCHEME ||= `robbagentsdev${schemeSuffix}`;
+  process.env["ROBB_BUILD_CHANNEL"] = "development";
+  process.env["CRAFT_APP_NAME"] ||= `Robb Agents Dev${suffix}`;
+  process.env["CRAFT_CONFIG_DIR"] ||= `${DEVELOPMENT_CONFIG_DIR}${profileSuffix}`;
+  process.env["CRAFT_DEEPLINK_SCHEME"] ||= `robbagentsdev${schemeSuffix}`;
 
-  if (resolve(process.env.CRAFT_CONFIG_DIR) === resolve(PRODUCTION_CONFIG_DIR)) {
+  if (resolve(process.env["CRAFT_CONFIG_DIR"]) === resolve(PRODUCTION_CONFIG_DIR)) {
     throw new Error(
       `Development profile isolation refused: CRAFT_CONFIG_DIR cannot target production (${PRODUCTION_CONFIG_DIR})`,
     );
   }
-  if (process.env.CRAFT_APP_NAME === "Robb Agents") {
+  if (process.env["CRAFT_APP_NAME"] === "Robb Agents") {
     throw new Error("Development identity isolation refused: CRAFT_APP_NAME cannot be Robb Agents");
   }
-  if (process.env.CRAFT_DEEPLINK_SCHEME === "craftagents") {
+  if (process.env["CRAFT_DEEPLINK_SCHEME"] === "craftagents") {
     throw new Error("Development deep-link isolation refused: CRAFT_DEEPLINK_SCHEME cannot be craftagents");
   }
 
   console.log(
-    `🧪 Development identity: app="${process.env.CRAFT_APP_NAME}", config=${process.env.CRAFT_CONFIG_DIR}, scheme=${process.env.CRAFT_DEEPLINK_SCHEME}`,
+    `🧪 Development identity: app="${process.env["CRAFT_APP_NAME"]}", config=${process.env["CRAFT_CONFIG_DIR"]}, scheme=${process.env["CRAFT_DEEPLINK_SCHEME"]}`,
   );
 }
 
@@ -190,13 +190,13 @@ export function configureDevelopmentBuildProvenance(): void {
   }
 
   const buildCommit = resolveBuildCommit(
-    process.env.ROBB_BUILD_COMMIT,
+    process.env["ROBB_BUILD_COMMIT"],
     gitCommit,
-    process.env.GITHUB_SHA,
+    process.env["GITHUB_SHA"],
   );
-  const buildDirty = resolveBuildDirty(process.env.ROBB_BUILD_DIRTY, gitPorcelain);
-  if (buildCommit) process.env.ROBB_BUILD_COMMIT = buildCommit;
-  if (buildDirty !== undefined) process.env.ROBB_BUILD_DIRTY = String(buildDirty);
+  const buildDirty = resolveBuildDirty(process.env["ROBB_BUILD_DIRTY"], gitPorcelain);
+  if (buildCommit) process.env["ROBB_BUILD_COMMIT"] = buildCommit;
+  if (buildDirty !== undefined) process.env["ROBB_BUILD_DIRTY"] = String(buildDirty);
 }
 
 
@@ -297,8 +297,8 @@ export function getOAuthDefines(): Record<string, string> {
     defines[`process.env.${varName}`] = JSON.stringify(value);
   }
   defines["process.env.ROBB_BUILD_CHANNEL"] = JSON.stringify("development");
-  defines["process.env.ROBB_BUILD_COMMIT"] = JSON.stringify(process.env.ROBB_BUILD_COMMIT || "");
-  defines["process.env.ROBB_BUILD_DIRTY"] = JSON.stringify(process.env.ROBB_BUILD_DIRTY || "");
+  defines["process.env.ROBB_BUILD_COMMIT"] = JSON.stringify(process.env["ROBB_BUILD_COMMIT"] || "");
+  defines["process.env.ROBB_BUILD_DIRTY"] = JSON.stringify(process.env["ROBB_BUILD_DIRTY"] || "");
   return defines;
 }
 
@@ -337,7 +337,7 @@ export function ensureMacRobbElectronApp(): string {
 
 // Get environment variables for electron process
 export function getElectronEnv(): Record<string, string> {
-  const vitePort = process.env.CRAFT_VITE_PORT || "5173";
+  const vitePort = process.env["CRAFT_VITE_PORT"] || "5173";
 
   // Codex binary path is resolved at runtime by the binary-resolver module.
   // It checks: CODEX_PATH env var > bundled binary > local dev fork > system PATH.
@@ -347,9 +347,9 @@ export function getElectronEnv(): Record<string, string> {
     ...process.env as Record<string, string>,
     VITE_DEV_SERVER_URL: `http://localhost:${vitePort}`,
     ROBB_BUILD_CHANNEL: "development",
-    CRAFT_CONFIG_DIR: process.env.CRAFT_CONFIG_DIR || DEVELOPMENT_CONFIG_DIR,
-    CRAFT_APP_NAME: process.env.CRAFT_APP_NAME || "Robb Agents Dev",
-    CRAFT_DEEPLINK_SCHEME: process.env.CRAFT_DEEPLINK_SCHEME || "robbagentsdev",
-    CRAFT_INSTANCE_NUMBER: process.env.CRAFT_INSTANCE_NUMBER || "",
+    CRAFT_CONFIG_DIR: process.env["CRAFT_CONFIG_DIR"] || DEVELOPMENT_CONFIG_DIR,
+    CRAFT_APP_NAME: process.env["CRAFT_APP_NAME"] || "Robb Agents Dev",
+    CRAFT_DEEPLINK_SCHEME: process.env["CRAFT_DEEPLINK_SCHEME"] || "robbagentsdev",
+    CRAFT_INSTANCE_NUMBER: process.env["CRAFT_INSTANCE_NUMBER"] || "",
   };
 }

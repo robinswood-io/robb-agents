@@ -16,17 +16,17 @@ export function validateObjectiveOutcome(
     objective: ActiveSessionObjective;
     messages: Message[];
     /** Host-owned session identity used to bind spill artifacts to this transcript. */
-    sessionId?: string;
-    extractionError?: string;
-    evidenceGap?: string;
-    executionEvidenceMissing?: boolean;
-    autonomyEvents?: readonly AutonomyEvent[];
+    sessionId?: string | undefined;
+    extractionError?: string | undefined;
+    evidenceGap?: string | undefined;
+    executionEvidenceMissing?: boolean | undefined;
+    autonomyEvents?: readonly AutonomyEvent[] | undefined;
     /** True only while the host owns an unresolved structured question,
      * authentication flow or scoped permission request for this session. */
-    pendingHumanConfirmation?: boolean;
+    pendingHumanConfirmation?: boolean | undefined;
     /** Legacy turns cannot safely spend another automatic attempt. Preserve
      * only an earlier host-validated continuation if it still validates now. */
-    preservedContinueOnLegacyBudget?: boolean;
+    preservedContinueOnLegacyBudget?: boolean | undefined;
   },
 ): ObjectiveOutcomeValidation {
   const gaps: string[] = [];

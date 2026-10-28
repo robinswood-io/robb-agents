@@ -22,16 +22,16 @@ const log = (label: string) => (...args: unknown[]) => {
 type MessageCount = '1' | '5' | '20'
 
 interface ChatDisplayMobilePreviewProps {
-  device?: MobileDevice
-  showBezel?: boolean
+  device?: MobileDevice | undefined
+  showBezel?: boolean | undefined
   /** Number of messages to show. '1' = single user msg, '5' = full thread, '20' = scroll test */
-  messageCount?: MessageCount
+  messageCount?: MessageCount | undefined
   /** Show the last assistant turn as still streaming. */
-  streaming?: boolean
+  streaming?: boolean | undefined
   /** Exercise recovery of an existing request, including sessions marked done. */
-  stoppedRequest?: 'none' | 'interrupted' | 'exhausted' | 'marked-complete'
+  stoppedRequest?: 'none' | 'interrupted' | 'exhausted' | 'marked-complete' | undefined
   /** Initial permission mode for the inline badge. */
-  permissionMode?: PermissionMode
+  permissionMode?: PermissionMode | undefined
 }
 
 const DEMO_SESSION_ID = 'mobile-chat-demo'
@@ -42,15 +42,17 @@ const DEMO_SESSION_ID = 'mobile-chat-demo'
  */
 function buildMessages(count: MessageCount, streaming: boolean): Message[] {
   if (count === '1') {
-    return [MOCK_MESSAGES[0]]
+    const first = MOCK_MESSAGES[0]
+    return first ? [first] : []
   }
   if (count === '5') {
     const base = MOCK_MESSAGES.slice(0, 4)
-    if (!streaming) return base
+    const last = base.at(-1)
+    if (!streaming || !last) return base
     return [
       ...base.slice(0, -1),
       {
-        ...base[base.length - 1],
+        ...last,
         id: 'm-streaming',
         content: 'Trying to reproduce on iOS 17.4… ',
         isStreaming: true,
@@ -61,6 +63,7 @@ function buildMessages(count: MessageCount, streaming: boolean): Message[] {
   const out: Message[] = []
   for (let i = 0; i < 20; i++) {
     const base = MOCK_MESSAGES[i % MOCK_MESSAGES.length]
+    if (!base) break
     out.push({
       ...base,
       id: `${base.id}-loop-${i}`,
@@ -69,7 +72,7 @@ function buildMessages(count: MessageCount, streaming: boolean): Message[] {
   }
   if (streaming) {
     const last = out[out.length - 1]
-    out[out.length - 1] = { ...last, isStreaming: true, content: last.content + ' …' }
+    if (last) out[out.length - 1] = { ...last, isStreaming: true, content: last.content + ' …' }
   }
   return out
 }

@@ -1,3 +1,4 @@
+import {omitUndefined, setOptional } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { validAllocatedRecoveryDispatch } from '../policy.ts';
 import type { PendingTurnRecovery } from '@craft-agent/shared/sessions';
@@ -55,7 +56,7 @@ async function sessionOpHealPendingContextLimitQuestionAfterRestart(sessionOpera
     }
     delete allocatedDispatch.fallbackIntent;
     delete allocatedDispatch.cleanContinuationId;
-    const basePending: PendingTurnRecovery = {
+    const basePending: PendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
         ...pending,
         // startRecoveryDispatch always records this cause before the provider
         // seam. Include it before hashing the handoff or the first Retry rebuild
@@ -63,7 +64,7 @@ async function sessionOpHealPendingContextLimitQuestionAfterRestart(sessionOpera
         lastCause: allocatedDispatch.cause,
         recoveryDispatch: allocatedDispatch,
         cleanContextBoundaryMessageId: undefined,
-    };
+    });
     const provisionalHandoff = dispatch.origin === 'retry'
         ? sessionOpCreateContextLimitRetryHandoff(sessionOperationContext, managed, basePending)
             ?? sessionOperationContext.owner["createAutonomousContextLimitHandoff"](managed, basePending)
@@ -186,10 +187,10 @@ async function sessionOpHealPendingContextLimitQuestionAfterRestart(sessionOpera
                 && representedAnswerMessage
                 && !managed.messageQueue.some(item => item === representedAnswerQueueItem)) {
                 managed.messageQueue.splice(Math.min(representedAnswerQueueIndex, managed.messageQueue.length), 0, representedAnswerQueueItem);
-                representedAnswerMessage.isQueued = previous.representedAnswerWasQueued;
+                setOptional(representedAnswerMessage, "isQueued", previous.representedAnswerWasQueued);
             }
             request.status = previous.requestStatus;
-            request.answeredAt = previous.requestAnsweredAt;
+            setOptional(request, "answeredAt", previous.requestAnsweredAt);
             managed.pendingTurnRecovery = previous.pendingTurnRecovery;
             managed.sdkSessionId = previous.sdkSessionId;
             managed.branchFromSdkSessionId = previous.branchFromSdkSessionId;

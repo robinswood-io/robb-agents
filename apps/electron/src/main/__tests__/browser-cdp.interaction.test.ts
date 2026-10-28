@@ -3,6 +3,29 @@ import { createMockWebContents, createTestBrowserCDP, requireCommandParams } fro
 
 describe('BrowserCDP', () => {
 describe('clickElement', () => {
+    it.each([
+      [10, 10, 50, 10, 50, 50, 10],
+      [10, 10, 50, 10, 50, 50, 10, Number.NaN],
+      [10, 10, 50, 10, 50, 50, 10, Number.POSITIVE_INFINITY],
+    ])('refuses invalid browser geometry before dispatching input: %j', async (...content) => {
+      const sentCommands: string[] = []
+      const wc = createMockWebContents(async method => {
+        sentCommands.push(method)
+        if (method === 'Accessibility.getFullAXTree') return {
+          nodes: [{ role: { value: 'button' }, name: { value: 'Click' }, backendDOMNodeId: 42 }],
+        }
+        if (method === 'DOM.resolveNode') return { object: { objectId: 'obj-42' } }
+        if (method === 'DOM.getBoxModel') return { model: { content } }
+        return {}
+      })
+      const cdp = createTestBrowserCDP(wc)
+      await cdp.getAccessibilitySnapshot()
+      await expect(cdp.clickElement('@e1')).rejects.toThrow()
+      expect(sentCommands).not.toContain('Input.dispatchMouseEvent')
+      expect(wc.sendInputEvent).not.toHaveBeenCalled()
+      cdp.detach()
+    })
+
     it('throws for unknown ref', async () => {
       const wc = createMockWebContents()
       const cdp = createTestBrowserCDP(wc)
@@ -12,7 +35,7 @@ describe('clickElement', () => {
 
     it('resolves node and dispatches mouse events', async () => {
       const sentCommands: string[] = []
-      const wc = createMockWebContents(async (method, params) => {
+      const wc = createMockWebContents(async (method, _params) => {
         sentCommands.push(method)
         if (method === 'Accessibility.getFullAXTree') {
           return {
@@ -64,7 +87,7 @@ describe('clickElement', () => {
           }
         }
         if (method === 'DOM.resolveNode') {
-          const backendNodeId = Number(params?.backendNodeId)
+          const backendNodeId = Number(params?.["backendNodeId"])
           resolvedBackendNodeIds.push(backendNodeId)
           if (backendNodeId === 42) throw new Error('No node with given id found')
           return { object: { objectId: 'obj-84' } }
@@ -76,7 +99,7 @@ describe('clickElement', () => {
       })
 
       const cdp = new BrowserCDP(
-        wc as unknown as ConstructorParameters<typeof BrowserCDP>[0],
+        wc as ConstructorParameters<typeof BrowserCDP>[0],
       )
       await cdp.getAccessibilitySnapshot()
 
@@ -92,12 +115,12 @@ describe('typeText', () => {
     it('inserts the full text with one CDP command', async () => {
       const calls: Array<{ method: string; params?: Record<string, unknown> }> = []
       const wc = createMockWebContents(async (method, params) => {
-        calls.push({ method, params })
+        calls.push({ method, ...(params !== undefined ? { params: params } : {}) })
         return method === 'Runtime.evaluate' ? { result: { value: true } } : {}
       })
 
       const cdp = new BrowserCDP(
-        wc as unknown as ConstructorParameters<typeof BrowserCDP>[0],
+        wc as ConstructorParameters<typeof BrowserCDP>[0],
       )
       await cdp.typeText('a long value')
 
@@ -112,7 +135,7 @@ describe('fillElement', () => {
     it('focuses, clears, and inserts the full value with one CDP command', async () => {
       const calls: Array<{ method: string; params?: Record<string, unknown> }> = []
       const wc = createMockWebContents(async (method, params) => {
-        calls.push({ method, params })
+        calls.push({ method, ...(params !== undefined ? { params: params } : {}) })
         if (method === 'Accessibility.getFullAXTree') {
           return {
             nodes: [
@@ -178,7 +201,7 @@ describe('setFileInputFiles', () => {
     it('uses the referenced file input directly', async () => {
       const calls: Array<{ method: string; params?: Record<string, unknown> }> = []
       const wc = createMockWebContents(async (method, params) => {
-        calls.push({ method, params })
+        calls.push({ method, ...(params !== undefined ? { params: params } : {}) })
         if (method === 'Accessibility.getFullAXTree') {
           return {
             nodes: [
@@ -258,10 +281,10 @@ describe('drag', () => {
         buttons: 1,
       })
 
-      const movedEvents = mouseEvents.filter((event) => event.type === 'mouseMoved')
+      const movedEvents = mouseEvents.filter((event) => event["type"] === 'mouseMoved')
       expect(movedEvents.length).toBeGreaterThan(0)
       for (const event of movedEvents) {
-        expect(event.buttons).toBe(1)
+        expect(event["buttons"]).toBe(1)
       }
 
       const lastEvent = mouseEvents[mouseEvents.length - 1]
@@ -278,7 +301,7 @@ describe('drag', () => {
       const wc = createMockWebContents(async (method, params) => {
         if (method === 'Input.dispatchMouseEvent') {
           mouseEvents.push(requireCommandParams(params))
-          if (params?.type === 'mouseMoved' && !failedOnce) {
+          if (params?.["type"] === 'mouseMoved' && !failedOnce) {
             failedOnce = true
             throw new Error('move failed')
           }
@@ -288,7 +311,7 @@ describe('drag', () => {
 
       const cdp = createTestBrowserCDP(wc)
       await expect(cdp.drag(0, 0, 100, 0)).rejects.toThrow('move failed')
-      expect(mouseEvents.some((event) => event.type === 'mouseReleased')).toBe(true)
+      expect(mouseEvents.some((event) => event["type"] === 'mouseReleased')).toBe(true)
     })
   })
 })

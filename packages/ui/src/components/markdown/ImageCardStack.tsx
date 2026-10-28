@@ -15,23 +15,23 @@ export interface ImageCardStackItem {
   label?: string
   alt?: string
   /** Optional image ratio (width / height). Defaults to 4/3. */
-  ratio?: number
+  ratio?: number | undefined
 }
 
 export interface ImageCardStackProps {
   items: ImageCardStackItem[]
   currentIndex: number
   onIndexChange: (index: number) => void
-  className?: string
-  maxRotate?: number
-  minSwipeDistanceRatio?: number
-  minSwipeVelocity?: number
+  className?: string | undefined
+  maxRotate?: number | undefined
+  minSwipeDistanceRatio?: number | undefined
+  minSwipeVelocity?: number | undefined
   /** Max stack height in px. Defaults to 320. */
-  maxHeight?: number
+  maxHeight?: number | undefined
   /** Fraction of container size used by cards (0..1). Defaults to 0.8. */
-  stackScale?: number
+  stackScale?: number | undefined
   /** Called when the top card is tapped/clicked. */
-  onTopCardTap?: () => void
+  onTopCardTap?: (() => void) | undefined
 }
 
 export function ImageCardStack({
@@ -112,7 +112,7 @@ interface StackImageProps {
   minSpeed: number
   stackScale: number
   isTopCard: boolean
-  onTopCardTap?: () => void
+  onTopCardTap?: (() => void) | undefined
   setNextImage: () => void
 }
 

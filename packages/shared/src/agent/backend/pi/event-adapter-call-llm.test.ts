@@ -10,7 +10,7 @@ type ToolStartEvent = Extract<AgentEvent, { type: 'tool_start' }>;
 import { describe, it, expect, beforeEach } from 'bun:test';
 import { PiEventAdapter } from './event-adapter.ts';
 
-function collect<T>(gen: Generator<T>): T[] {
+function collect<T>(gen: Generator<T, void, unknown>): T[] {
   return [...gen];
 }
 
@@ -33,7 +33,7 @@ describe('PiEventAdapter — call_llm model badge', () => {
     }));
 
     expect(events).toHaveLength(1);
-    expect((events[0] as ToolStartEvent).input.model).toBe('pi/gpt-5-pro');
+    expect((events[0] as ToolStartEvent).input["model"]).toBe('pi/gpt-5-pro');
   });
 
   it('fills args.model with callLlmModel when absent', () => {
@@ -47,7 +47,7 @@ describe('PiEventAdapter — call_llm model badge', () => {
     }));
 
     expect(events).toHaveLength(1);
-    expect((events[0] as ToolStartEvent).input.model).toBe('pi/gpt-5-mini');
+    expect((events[0] as ToolStartEvent).input["model"]).toBe('pi/gpt-5-mini');
   });
 
   it('leaves args.model undefined when callLlmModel is also unset', () => {
@@ -61,7 +61,7 @@ describe('PiEventAdapter — call_llm model badge', () => {
     }));
 
     expect(events).toHaveLength(1);
-    expect((events[0] as ToolStartEvent).input.model).toBeUndefined();
+    expect((events[0] as ToolStartEvent).input["model"]).toBeUndefined();
   });
 
   it('preserves explicit args.model even when callLlmModel is set to a different value', () => {
@@ -77,6 +77,6 @@ describe('PiEventAdapter — call_llm model badge', () => {
     expect(events).toHaveLength(1);
     // The adapter must not overwrite the agent's choice even if it looks odd —
     // the subprocess will resolve or error on invalid explicit models.
-    expect((events[0] as ToolStartEvent).input.model).toBe('pi/nonexistent-model');
+    expect((events[0] as ToolStartEvent).input["model"]).toBe('pi/nonexistent-model');
   });
 });

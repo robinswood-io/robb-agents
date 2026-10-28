@@ -374,7 +374,7 @@ describe('completion of a delegated read-only review', () => {
     expect(getDelegatedReviewRequest(root({ ...contract, singleTarget: { target: '/srv/other' } }), [], 'reviewer')).toBeUndefined();
     expect(getDelegatedReviewRequest(root({ ...contract, targetChecks: [] }), [], 'reviewer')).toBeUndefined();
     const v1: Record<string, unknown> = { ...contract, targetChecks: [], singleTarget: { target: '/srv/other' } };
-    delete v1.protocol;
+    delete v1["protocol"];
     expect(getDelegatedReviewRequest(root(v1), [], 'reviewer')).toBeUndefined();
     const legacyBrief = [
       'Revue indépendante bornée de la clôture keep-read-only de Exemple.',
@@ -384,7 +384,7 @@ describe('completion of a delegated read-only review', () => {
     ].join(' ');
     const legacyRoot = (value: Record<string, unknown>) => `${legacyBrief}\n\n<host_parent_review_contract>${JSON.stringify(value)}</host_parent_review_contract>`;
     const v1MultiTarget: Record<string, unknown> = { ...contract };
-    delete v1MultiTarget.protocol;
+    delete v1MultiTarget["protocol"];
     expect(getDelegatedReviewRequest(legacyRoot(v1MultiTarget), [], 'reviewer')).toBeUndefined();
     expect(getDelegatedReviewRequest(legacyRoot(v1), [], 'reviewer')).toBeUndefined();
     expect(getDelegatedReviewRequest(legacyRoot({ ...v1MultiTarget, instruction: 'Do whatever is necessary.' }), [], 'reviewer')).toBeUndefined();

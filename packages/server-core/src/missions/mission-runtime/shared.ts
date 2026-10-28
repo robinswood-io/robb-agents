@@ -1,3 +1,5 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import type { MissionOrdinaryRouteLock, MissionOrdinarySourceBinding } from '@craft-agent/shared/sessions';
 import { type MissionConnectorPreflight, type MissionExecutionBinding, type MissionAttemptTelemetry, type MissionSnapshot, type MissionSpec, type MissionWorkItem } from "@craft-agent/shared/missions";
 import { WorkspaceGovernanceProfileSchema, type EnterpriseKillSwitchSnapshot } from "@craft-agent/shared/governance";
 import type { Session } from "@craft-agent/shared/protocol";
@@ -70,48 +72,48 @@ export interface OrdinaryMissionRouteEstimateCache {
 
 export interface MissionRuntimeServiceOptions {
     sessionManager: ISessionManager;
-    resolveWorkspace?: (workspaceId: string) => MissionWorkspace | null;
-    listWorkspaces?: () => MissionWorkspace[];
-    executorFactory?: (workspace: MissionWorkspace) => Promise<MissionWorkExecutor> | MissionWorkExecutor;
+    resolveWorkspace?: ((workspaceId: string) => MissionWorkspace | null) | undefined;
+    listWorkspaces?: (() => MissionWorkspace[]) | undefined;
+    executorFactory?: ((workspace: MissionWorkspace) => Promise<MissionWorkExecutor> | MissionWorkExecutor) | undefined;
     /** Host-only factory. Its executor must route every mutation through ConnectorExecutionRuntime. */
-    connectorExecutorFactory?: (workspace: MissionWorkspace) => Promise<BrokeredMissionConnectorExecutor> | BrokeredMissionConnectorExecutor;
-    proofPassportFactory?: (workspace: MissionWorkspace) => Promise<MissionProofPassportService | null | undefined> | MissionProofPassportService | null | undefined;
-    connectorReadiness?: MissionConnectorReadinessResolver;
-    preflightCostEstimator?: MissionPreflightCostEstimator;
-    preflightConnections?: () => MissionPreflightConnection[];
-    preflightNow?: () => Date;
+    connectorExecutorFactory?: ((workspace: MissionWorkspace) => Promise<BrokeredMissionConnectorExecutor> | BrokeredMissionConnectorExecutor) | undefined;
+    proofPassportFactory?: ((workspace: MissionWorkspace) => Promise<MissionProofPassportService | null | undefined> | MissionProofPassportService | null | undefined) | undefined;
+    connectorReadiness?: MissionConnectorReadinessResolver | undefined;
+    preflightCostEstimator?: MissionPreflightCostEstimator | undefined;
+    preflightConnections?: (() => MissionPreflightConnection[]) | undefined;
+    preflightNow?: (() => Date) | undefined;
     /** Host credential generation used by ordinary Mission route identities. */
-    ordinaryRouteCredentialBindingResolver?: OrdinaryMissionCredentialBindingResolver;
+    ordinaryRouteCredentialBindingResolver?: OrdinaryMissionCredentialBindingResolver | undefined;
     /** Authenticated registry loader; primarily replaceable for isolated tests. */
-    specializedProfileRegistryLoader?: SpecializedProfileRegistryLoader;
+    specializedProfileRegistryLoader?: SpecializedProfileRegistryLoader | undefined;
     /** Host-resolved effective capabilities. Omission uses configured skills/sources plus live autonomy. */
-    specializedProfileCapabilityResolver?: SpecializedProfileCapabilityResolver;
+    specializedProfileCapabilityResolver?: SpecializedProfileCapabilityResolver | undefined;
     /** Host-resolved provider/connection identity; tests may inject an isolated digest. */
-    specializedProfileRouteIdentityResolver?: SpecializedProfileExecutionRouteIdentityResolver;
+    specializedProfileRouteIdentityResolver?: SpecializedProfileExecutionRouteIdentityResolver | undefined;
     /** Host build identity. Missing/dirty/unversioned runtimes cannot reuse qualification. */
-    specializedProfileRuntimeIdentitySha256?: string;
-    specializedProfileNow?: () => Date;
+    specializedProfileRuntimeIdentitySha256?: string | undefined;
+    specializedProfileNow?: (() => Date) | undefined;
     /** Testable host authority injection; production uses the governance credential store. */
-    specializedProfileAuthorityKeyLoader?: (workspaceId: string) => Promise<string | Uint8Array>;
+    specializedProfileAuthorityKeyLoader?: ((workspaceId: string) => Promise<string | Uint8Array>) | undefined;
     /** Internal foundry persistence; inject memory/temp state in tests. */
-    specializedProfileAnchorStore?: SpecializedProfileRegistryAnchorStore;
-    specializedProfileHumanApprovalProvider?: SpecializedProfileHumanApprovalProvider;
-    specializedProfileMissionEvidenceProvider?: SpecializedProfileMissionEvidenceProvider;
+    specializedProfileAnchorStore?: SpecializedProfileRegistryAnchorStore | undefined;
+    specializedProfileHumanApprovalProvider?: SpecializedProfileHumanApprovalProvider | undefined;
+    specializedProfileMissionEvidenceProvider?: SpecializedProfileMissionEvidenceProvider | undefined;
     /** Optional host corpus authority. Absence keeps profile promotion fail-closed. */
-    specializedProfileCorpusLineageProvider?: SpecializedProfileCorpusLineageProvider;
+    specializedProfileCorpusLineageProvider?: SpecializedProfileCorpusLineageProvider | undefined;
     /** Shared live emergency-control registry. Omission keeps embedded/test runtimes unchanged. */
-    getKillSwitch?: () => EnterpriseKillSwitchSnapshot;
-    nowMs?: () => number;
-    onSnapshot?: (workspaceId: string, snapshot: MissionSnapshot) => void;
-    onError?: (context: {
+    getKillSwitch?: (() => EnterpriseKillSwitchSnapshot) | undefined;
+    nowMs?: (() => number) | undefined;
+    onSnapshot?: ((workspaceId: string, snapshot: MissionSnapshot) => void) | undefined;
+    onError?: ((context: {
         workspaceId?: string;
         missionId?: string;
         workItemId?: string;
         error: Error;
-    }) => void;
-    reportTimeoutMs?: number;
+    }) => void) | undefined;
+    reportTimeoutMs?: number | undefined;
     /** Live workspace/origin authority used by both admission and child creation. */
-    resolveSubagentAutonomyContext?: (workspace: MissionWorkspace, parentSessionId?: string) => SubagentAutonomyContext;
+    resolveSubagentAutonomyContext?: ((workspace: MissionWorkspace, parentSessionId?: string) => SubagentAutonomyContext) | undefined;
 }
 
 export const DEFAULT_REPORT_TIMEOUT_MS = 10 * 60 * 1000;
@@ -191,7 +193,14 @@ export class OrdinaryMissionRouteBindingExecutor implements MissionWorkExecutor 
         }
         await this.revalidateRoute(input, binding.missionRoute);
         const { missionRoute: _route, ...underlyingBinding } = binding;
-        return this.executor.execute(binding.missionRoute ? pinOrdinaryMissionRoute(input, binding.missionRoute) : input, underlyingBinding, lifecycle);
+        const route = binding.missionRoute
+            ? omitUndefined<MissionOrdinaryRouteLock>({
+                ...binding.missionRoute,
+                effectiveSourceBindings: binding.missionRoute.effectiveSourceBindings
+                    .map(source => omitUndefined<MissionOrdinarySourceBinding>(source)),
+            })
+            : undefined;
+        return this.executor.execute(route ? pinOrdinaryMissionRoute(input, route) : input, underlyingBinding, lifecycle);
     }
 }
 
@@ -234,9 +243,9 @@ export function lowerLimit(left?: number, right?: number): number | undefined {
 export function evaluateMissionRuntimePolicy(input: {
     workspace: MissionWorkspace;
     snapshot: MissionSnapshot;
-    pendingTelemetry?: MissionAttemptTelemetry;
-    completedAttempt?: boolean;
-    killSwitch?: EnterpriseKillSwitchSnapshot;
+    pendingTelemetry?: MissionAttemptTelemetry | undefined;
+    completedAttempt?: boolean | undefined;
+    killSwitch?: EnterpriseKillSwitchSnapshot | undefined;
     nowMs: number;
 }): MissionRuntimePolicyDecision | null {
     const { workspace, snapshot, pendingTelemetry, completedAttempt, killSwitch, nowMs } = input;

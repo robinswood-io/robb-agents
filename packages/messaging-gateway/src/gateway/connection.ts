@@ -4,7 +4,7 @@ import type { MessagingGateway } from '../gateway.ts';
 export function registerAdapter(transportOwner: MessagingGateway, adapter: PlatformAdapter): void {
     const existing = transportOwner["adapters"].get(adapter.platform);
     if (existing) {
-        existing.destroy().catch((err) => {
+        existing.destroy().catch((err: unknown) => {
             transportOwner["log"].warn('failed to destroy existing adapter during replacement', {
                 event: 'adapter_replace_destroy_failed',
                 platform: adapter.platform,

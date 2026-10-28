@@ -1,22 +1,22 @@
 import * as React from "react";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState,useEffect,useCallback,useMemo } from "react";
 import { useAtomValue } from "jotai";
 
 import { type FilterMode } from "./view-filters";
 
-import { findPendingRequestForConversation, getUserFacingSessionId, isUserFacingSession } from "@/utils/session-visibility";
+import { findPendingRequestForConversation,getUserFacingSessionId,isUserFacingSession } from "@/utils/session-visibility";
 import { pendingSessionAuthRequestsAtom } from "@/atoms/session-auth-requests";
 import { useSetAtom } from "jotai";
-import type { Session, Workspace, PermissionRequest, LoadedSource, LoadedSkill } from "../../../shared/types";
-import { sessionMetaMapAtom, type SessionMeta } from "@/atoms/sessions";
+import type { Session,Workspace,PermissionRequest,LoadedSource,LoadedSkill } from "../../../shared/types";
+import { sessionMetaMapAtom,type SessionMeta } from "@/atoms/sessions";
 
-import { type SessionStatusId, type SessionStatus } from "@/config/session-status-config";
+import { type SessionStatusId,type SessionStatus } from "@/config/session-status-config";
 
-import { getDescendantIds, flattenLabels, extractLabelId, matchesLabelFilter } from "@craft-agent/shared/labels";
+import { getDescendantIds,flattenLabels,extractLabelId,matchesLabelFilter } from "@craft-agent/shared/labels";
 import type { LabelConfig } from "@craft-agent/shared/labels";
 
-import { APP_EVENTS, AGENT_EVENTS } from "../automations/types";
+import { APP_EVENTS,AGENT_EVENTS } from "../automations/types";
 
 interface useShellSessionMetadataInput {
   pendingPermissions: Map<string, PermissionRequest[]>
@@ -47,7 +47,6 @@ export function useShellSessionMetadata({
   activeWorkspace,
   workspaces,
   labelConfigs,
-  effectiveSessionStatuses,
   sources,
   automations,
   sessionFilter,
@@ -57,11 +56,7 @@ export function useShellSessionMetadata({
   projectFilter,
   ensureMessagesLoaded,
 }: useShellSessionMetadataInput) {
-const springTransition = {
-    type: "spring" as const,
-    stiffness: 600,
-    damping: 49,
-  }
+
 
 const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
 
@@ -86,7 +81,7 @@ React.useEffect(() => {
     if (!activeWorkspaceId) return
     window.electronAPI.getSkills(activeWorkspaceId, activeSessionWorkingDirectory).then((loaded) => {
       setSkills(loaded || [])
-    }).catch(err => {
+    }).catch((err: unknown) => {
       console.error('[Chat] Failed to load skills:', err)
     })
   }, [activeWorkspaceId, activeSessionWorkingDirectory, setSkills])
@@ -147,7 +142,6 @@ useEffect(() => {
     return cleanup
   }, [workspaces])
 
-const isMetaDone = (s: SessionMeta) => s.sessionStatus === 'done' || s.sessionStatus === 'cancelled'
 
 const flaggedCount = activeSessionMetas.filter(s => s.isFlagged).length
 
@@ -176,20 +170,7 @@ const labelCounts = useMemo(() => {
     return counts
   }, [activeSessionMetas, labelConfigs])
 
-const sessionStatusCounts = useMemo(() => {
-    const counts: Record<SessionStatusId, number> = {}
-    // Initialize counts for all dynamic statuses
-    for (const state of effectiveSessionStatuses) {
-      counts[state.id] = 0
-    }
-    // Count sessions
-    for (const s of activeSessionMetas) {
-      const state = (s.sessionStatus || 'todo') as SessionStatusId
-      // Increment count (initialize to 0 if status not in effectiveSessionStatuses yet)
-      counts[state] = (counts[state] || 0) + 1
-    }
-    return counts
-  }, [activeSessionMetas, effectiveSessionStatuses])
+
 
 const sourceTypeCounts = useMemo(() => {
     const counts = { api: 0, mcp: 0, local: 0 }

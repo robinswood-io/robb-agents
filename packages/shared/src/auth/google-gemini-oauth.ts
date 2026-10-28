@@ -32,9 +32,9 @@ type GoogleGeminiOAuthEnvironment = Readonly<Record<string, string | undefined>>
 export function loadGoogleGeminiOAuthCredentials(
   environment: GoogleGeminiOAuthEnvironment = process.env,
 ): GoogleGeminiOAuthCredentials {
-  const explicitClientId = environment.GOOGLE_OAUTH_CLIENT_ID?.trim();
+  const explicitClientId = environment["GOOGLE_OAUTH_CLIENT_ID"]?.trim();
   const clientId = explicitClientId || GOOGLE_GEMINI_OAUTH_CONFIG.PUBLIC_CLIENT_ID;
-  const explicitClientSecret = environment.GOOGLE_OAUTH_CLIENT_SECRET?.trim();
+  const explicitClientSecret = environment["GOOGLE_OAUTH_CLIENT_SECRET"]?.trim();
   const usesOfficialClient = !explicitClientId
     || explicitClientId === GOOGLE_GEMINI_OAUTH_CONFIG.PUBLIC_CLIENT_ID;
   const clientSecret = explicitClientId
@@ -42,7 +42,7 @@ export function loadGoogleGeminiOAuthCredentials(
       || (usesOfficialClient ? GOOGLE_GEMINI_PUBLIC_CLIENT_CREDENTIAL : undefined))
     : GOOGLE_GEMINI_PUBLIC_CLIENT_CREDENTIAL;
 
-  return { clientId, clientSecret };
+  return { clientId, ...(clientSecret !== undefined ? { clientSecret } : {}) };
 }
 
 export interface PreparedGoogleGeminiOAuth {
@@ -111,9 +111,9 @@ async function exchangeTokenRequest(params: URLSearchParams): Promise<GoogleGemi
 
   return {
     accessToken: data.access_token,
-    refreshToken: data.refresh_token,
+    ...(data.refresh_token !== undefined ? { refreshToken: data.refresh_token } : {}),
     expiresAt: Date.now() + Math.max(0, (data.expires_in ?? 3600) - 60) * 1000,
-    idToken: data.id_token,
+    ...(data.id_token !== undefined ? { idToken: data.id_token } : {}),
   };
 }
 

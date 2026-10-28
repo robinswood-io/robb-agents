@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import * as React from "react";
 
 import { useMemo } from "react";
@@ -39,15 +40,15 @@ const pendingFollowUpAnnotations = useMemo<PendingFollowUpAnnotation[]>(() => {
         if (!note) continue
         if (isAnnotationFollowUpSent(annotation)) continue
 
-        pending.push({
+        pending.push(omitUndefined<PendingFollowUpAnnotation>({
           messageId: message.id,
           annotationId: annotation.id,
           note,
           selectedText: extractAnnotationSelectedText(annotation, message.content),
           createdAt: annotation.updatedAt ?? annotation.createdAt,
-          color: annotation.style?.color,
+          ...(annotation.style?.color !== undefined ? { color: annotation.style?.color } : {}),
           meta: asRecord(annotation.meta) ?? undefined,
-        })
+        }))
       }
     }
 

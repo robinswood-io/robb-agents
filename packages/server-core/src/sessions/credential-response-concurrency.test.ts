@@ -67,7 +67,7 @@ describe('credential response concurrency', () => {
     expect(h.managed.pendingAuthRequest).toBeUndefined()
     expect(h.managed.messages[0]?.authStatus).toBe('cancelled')
     expect(h.managed.enabledSourceSlugs).toBeUndefined()
-    expect(h.events.filter(event => event.type === 'auth_completed')).toEqual([{
+    expect(h.events.filter(event => event["type"] === 'auth_completed')).toEqual([{
       type: 'auth_completed',
       sessionId: h.managed.id,
       requestId: h.request.requestId,
@@ -105,7 +105,7 @@ describe('credential response concurrency', () => {
     expect(h.managed.pendingAuthRequest).toBeUndefined()
     expect(sessionRuntimeStateForTest(h.runtime).oauthResponsesInFlight.size).toBe(0)
     expect(h.managed.messages[0]?.authStatus).toBe('cancelled')
-    expect(h.events.filter(event => event.type === 'auth_completed')).toHaveLength(1)
+    expect(h.events.filter(event => event["type"] === 'auth_completed')).toHaveLength(1)
   })
 
   it('drains credential cancellation before deletion and never requeues the deleted session', async () => {
@@ -178,7 +178,7 @@ describe('credential response concurrency', () => {
     expect(prompts).toHaveLength(1)
     expect(prompts[0]!.message).not.toContain(hostile)
     expect(prompts[0]!.message).toContain('untrusted host data')
-    expect(prompts[0]!.options?.internalOrigin).toMatchObject({ kind: 'auth-result' })
+    expect(prompts[0]!.options?.["internalOrigin"]).toMatchObject({ kind: 'auth-result' })
   })
 
   it('abandons an auth continuation when a human objective wins during send hydration', async () => {

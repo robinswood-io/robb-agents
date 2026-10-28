@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import { isBrowserToolNameOrAlias } from "../../browser-tool-names.ts";
 import { createHmac } from "node:crypto";
 import type { TerminalReconciliationPolicy } from "../../backend/types.ts";
@@ -20,7 +21,7 @@ export function canonicalTerminalReconciliationToolInput(value: unknown): string
     if (typeof item !== 'object' || seen.has(item)) return undefined;
     seen.add(item);
     try {
-      if (Array.isArray(item)) {
+      if (isUnknownArray(item)) {
         if (Object.getPrototypeOf(item) !== Array.prototype) return undefined;
         const own = Reflect.ownKeys(item);
         if (own.some(key => typeof key !== 'string'
@@ -35,7 +36,7 @@ export function canonicalTerminalReconciliationToolInput(value: unknown): string
         }
         return `[${values.join(',')}]`;
       }
-      const prototype = Object.getPrototypeOf(item);
+      const prototype: unknown = Object.getPrototypeOf(item);
       if (prototype !== Object.prototype && prototype !== null) return undefined;
       const record = item as Record<string, unknown>;
       const keys = Reflect.ownKeys(record);
@@ -133,28 +134,28 @@ export function terminalReconciliationToolAllowed(
       ));
   }
   if (/^(?:mcp__session__|session__)?spawn_session$/u.test(toolName)) {
-    return policy.allowReviewerSpawn && input.role === 'reviewer'
-      && typeof input.prompt === 'string' && input.prompt.trim().length > 0
-      && (input.permissionMode === undefined || input.permissionMode === 'safe')
+    return policy.allowReviewerSpawn && input["role"] === 'reviewer'
+      && typeof input["prompt"] === 'string' && input["prompt"].trim().length > 0
+      && (input["permissionMode"] === undefined || input["permissionMode"] === 'safe')
       && Object.keys(input).every(key => (
         key === 'prompt' || key === 'name' || key === 'role' || key === 'permissionMode'
         || inertUiMetadata(key)
       ));
   }
   if (/^(?:mcp__session__|session__)?wait_sessions$/u.test(toolName)) {
-    const sessionIds = input.sessionIds;
+    const sessionIds = input["sessionIds"];
     if (canonicalTerminalReconciliationToolInput(input) === undefined
-      || !Array.isArray(sessionIds)
+      || !isUnknownArray(sessionIds)
       || sessionIds.length < 1 || sessionIds.length > 8
       || new Set(sessionIds).size !== sessionIds.length
-      || sessionIds.some(id => typeof id !== 'string'
+      || sessionIds.some((id: unknown) => typeof id !== 'string'
         || !policy.waitReviewerSessionIds.includes(id))) return false;
-    if (input.afterCursors !== undefined) {
-      if (!input.afterCursors || typeof input.afterCursors !== 'object'
-        || Array.isArray(input.afterCursors)
-        || Object.keys(input.afterCursors).some(id => !sessionIds.includes(id))) return false;
+    if (input["afterCursors"] !== undefined) {
+      if (!input["afterCursors"] || typeof input["afterCursors"] !== 'object'
+        || isUnknownArray(input["afterCursors"])
+        || Object.keys(input["afterCursors"]).some((id) => !sessionIds.includes(id))) return false;
     }
-    if (input.mode !== undefined && input.mode !== 'first' && input.mode !== 'all') return false;
+    if (input["mode"] !== undefined && input["mode"] !== 'first' && input["mode"] !== 'all') return false;
     return Object.keys(input).every(key => (
       key === 'sessionIds' || key === 'timeoutMs' || key === 'afterCursors' || key === 'mode'
       || inertUiMetadata(key)

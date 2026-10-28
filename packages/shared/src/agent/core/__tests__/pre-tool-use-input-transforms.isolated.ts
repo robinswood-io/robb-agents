@@ -23,7 +23,7 @@ describe('runPreToolUseChecks', () => {
 
       expect(result.type).toBe('modify');
       if (result.type === 'modify') {
-        expect(result.input.file_path).toBe('/Users/test/Documents/file.ts');
+        expect(result.input["file_path"]).toBe('/Users/test/Documents/file.ts');
       }
     });
 
@@ -46,9 +46,9 @@ describe('runPreToolUseChecks', () => {
 
       expect(result.type).toBe('modify');
       if (result.type === 'modify') {
-        expect(result.input.title).toBe('Bug fix');
-        expect(result.input._intent).toBeUndefined();
-        expect(result.input._displayName).toBeUndefined();
+        expect(result.input["title"]).toBe('Bug fix');
+        expect(result.input["_intent"]).toBeUndefined();
+        expect(result.input["_displayName"]).toBeUndefined();
       }
     });
 
@@ -60,8 +60,8 @@ describe('runPreToolUseChecks', () => {
 
       expect(result.type).toBe('modify');
       if (result.type === 'modify') {
-        expect(result.input.file_path).toBe('/Users/test/test.ts');
-        expect(result.input._intent).toBeUndefined();
+        expect(result.input["file_path"]).toBe('/Users/test/test.ts');
+        expect(result.input["_intent"]).toBeUndefined();
       }
     });
 

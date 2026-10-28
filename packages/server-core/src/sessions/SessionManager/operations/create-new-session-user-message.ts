@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { prepareCleanRetryUserMessage } from './prepare-clean-retry-user-message.ts';
 import { cancelSourceActivationPending, commitSourceActivationPending, releaseSourceActivationClaim } from '../policy.ts';
 import type { Message } from '@craft-agent/core/types';
@@ -53,7 +55,7 @@ export async function createNewSessionUserMessage(
     let durablyAcknowledged = false;
     let cleanRecoveryProviderStateAtomized = false;
 // Create new message
-    userMessage = {
+    userMessage = omitUndefined<Message>({
         // Bind a deferred automatic recovery to its durable dispatch identity.
         // Cold restore can then distinguish it from every other hidden message
         // without trusting prompt text.
@@ -61,7 +63,7 @@ export async function createNewSessionUserMessage(
         role: 'user',
         content: activeMessageState.message,
         timestamp: sessionOpMonotonic(sessionOperationContext),
-        attachments: storedAttachments, // Include for persistence (has thumbnailBase64)
+        ...(storedAttachments !== undefined ? { attachments: storedAttachments } : {}), // Include for persistence (has thumbnailBase64)
         ...(!activeMessageState.options?.hidden ? { isQueued: true } : {}),
         badges: activeMessageState.options?.badges, // Include content badges (sources, skills with embedded icons)
         // Hidden system-generated messages reach the model but never render as a
@@ -70,9 +72,9 @@ export async function createNewSessionUserMessage(
         ...(activeMessageState.options?.internalOrigin ? { internalOrigin: activeMessageState.options.internalOrigin } : {}),
         ...(activeMessageState.options?.internalOrigin?.deliveryId ? {
             isQueued: true,
-            agentDelivery: { id: activeMessageState.options.internalOrigin.deliveryId, status: 'queued' as const, attempts: 0, attachmentsSha256: activeMessageState.options.internalOrigin.attachmentsSha256 },
+            agentDelivery: { id: activeMessageState.options.internalOrigin.deliveryId, status: 'queued' as const, attempts: 0, ...(activeMessageState.options.internalOrigin.attachmentsSha256 !== undefined ? { attachmentsSha256: activeMessageState.options.internalOrigin.attachmentsSha256 } : {}) },
         } : {}),
-    };
+    });
     managed.messages.push(userMessage);
     if (cleanExplicitRetry) {
         ({ existingTurnRollback, cleanRecoveryProviderStateAtomized } = prepareCleanRetryUserMessage(userMessagePreparationInput, userMessage));
@@ -303,13 +305,13 @@ export async function createNewSessionUserMessage(
         }
     }
     // Emit user_message event so UI can confirm the optimistic message
-    sessionOperationContext.owner["sendEvent"]({
+    sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'user_message' }>>({
         type: 'user_message',
         sessionId,
         message: userMessage,
         status: 'accepted',
         optimisticMessageId: activeMessageState.options?.optimisticMessageId
-    }, managed.workspace.id);
+    }), managed.workspace.id);
     // If this is the first user message and no title exists, set one immediately
     // AI generation will enhance it later, but we always have a title from the start
     // Automation sessions (triggeredBy set) already have a title and skip AI generation entirely

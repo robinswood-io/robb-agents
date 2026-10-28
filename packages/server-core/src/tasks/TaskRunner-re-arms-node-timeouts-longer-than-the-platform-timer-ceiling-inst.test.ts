@@ -36,7 +36,7 @@ describe('TaskRunner (Conductor)', () => {
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
       now: () => '2026-06-07T00:00:00.000Z',
-      nowMs,
+      ...(nowMs !== undefined ? { nowMs: nowMs } : {}),
       resolveSubagentAutonomyContext: () => autonomyContext,
       ...(executionProofIssuer ? {
         verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),
@@ -381,10 +381,10 @@ describe('TaskRunner (Conductor)', () => {
     expect(result).toMatchObject({ status: 'failed', tokensUsed: 0, costUsed: 0 });
     expect(Number.isFinite(result.tokensUsed)).toBe(true);
     expect(Number.isFinite(result.costUsed)).toBe(true);
-    expect(readRunLog(root, 'invalid-usage', 'r1')).toContainEqual(expect.objectContaining({
+    expect<unknown>(readRunLog(root, 'invalid-usage', 'r1')).toContainEqual((expect.objectContaining({
       kind: 'run-draining', cause: 'recovery',
-      reason: expect.stringContaining('non-finite'),
-    }));
+      reason: (expect.stringContaining('non-finite') as unknown),
+    }) as unknown));
   });
 
   it('fails closed when individually finite usage counters overflow their aggregate', async () => {
@@ -403,9 +403,9 @@ describe('TaskRunner (Conductor)', () => {
     const result = await runner.waitUntilSettled('overflow-usage', 'r1');
     expect(result).toMatchObject({ status: 'failed', tokensUsed: 0, costUsed: 0 });
     expect(Number.isFinite(result.tokensUsed)).toBe(true);
-    expect(readRunLog(root, 'overflow-usage', 'r1')).toContainEqual(expect.objectContaining({
+    expect<unknown>(readRunLog(root, 'overflow-usage', 'r1')).toContainEqual((expect.objectContaining({
       kind: 'run-draining', cause: 'recovery',
-      reason: expect.stringContaining('non-finite'),
-    }));
+      reason: (expect.stringContaining('non-finite') as unknown),
+    }) as unknown));
   });
 });

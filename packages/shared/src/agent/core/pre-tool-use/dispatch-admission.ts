@@ -44,7 +44,7 @@ export function checkBrowserChannelAdmission(
   const boundedBrowserHandoffObservation = browserChannelDirective === 'browser-handoff'
     && classifyBrowserObjectiveAuthority(toolName, input) === 'observational';
   if (browserToolCall
-    && !isBrowserLifecycleCommand(input.command)
+    && !isBrowserLifecycleCommand(input["command"])
     && (browserChannelDirective === 'non-browser'
       || browserChannelDirective === 'browser-handoff' && !boundedBrowserHandoffObservation)) {
     const reason = browserChannelDirective === 'browser-handoff'
@@ -61,6 +61,7 @@ export function checkBrowserChannelAdmission(
     onDebug?.(`User channel constraint: blocking ${toolName}`);
     return { type: 'block', reason };
   }
+  return undefined;
 }
 
 interface ObjectiveAdmissionInput {
@@ -120,8 +121,8 @@ export function checkDispatchObjectiveAuthority(
   // 5. HIGH-STAKES EVIDENCE GATE
   // ============================================================
   const spawnSessionTool = /^(?:mcp__session__|session__)?spawn_session$/.test(toolName);
-  const readOnlyReviewerSpawn = spawnSessionTool && input.role === 'reviewer'
-    && (input.permissionMode === undefined || input.permissionMode === 'safe');
+  const readOnlyReviewerSpawn = spawnSessionTool && input["role"] === 'reviewer'
+    && (input["permissionMode"] === undefined || input["permissionMode"] === 'safe');
   const sendAgentMessageTool = /^(?:mcp__session__|session__)?send_agent_message$/.test(toolName);
   const objectiveCoordinationTool = /^(?:mcp__session__|session__)?(?:set_completion_criteria|update_plan|wait_sessions)$/.test(toolName)
     || readOnlyReviewerSpawn;
@@ -190,7 +191,7 @@ export function checkDispatchObjectiveAuthority(
       toolName,
       input,
       'safe',
-      { plansFolderPath, dataFolderPath, permissionsContext },
+      { ...(plansFolderPath !== undefined ? { plansFolderPath } : {}), ...(dataFolderPath !== undefined ? { dataFolderPath } : {}), permissionsContext },
     );
     const unknownExternalEffect = toolEffect.kind === 'unknown' && (
       (toolName.startsWith('mcp__') && !BUILT_IN_MCP_SERVERS.has(toolName.split('__')[1] ?? ''))
@@ -205,7 +206,7 @@ export function checkDispatchObjectiveAuthority(
     ) {
       const bypassEvidenceGate = objectiveMutationAuthorized === undefined
         && objectiveAuthorizationSegments !== undefined
-        && process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT !== '1';
+        && process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] !== '1';
       const evidenceDecision = (readOnlyReviewerSpawn || bypassEvidenceGate)
         ? { allowed: true as const }
         : checkObjectiveEvidenceBeforeMutation(sessionId, toolName, toolEffect.kind);

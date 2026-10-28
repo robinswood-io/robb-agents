@@ -243,7 +243,7 @@ export function setAutomaticToolFallback(
   }
 
 export async function cleanupRestartRecovery() {
-  delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+  delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]
   spies.splice(0).forEach(spy => spy.mockRestore())
   for (const manager of managers.splice(0)) {
     for (const id of sessionRuntimeStateForTest(manager).sessions.keys()) clearObjectiveEvidenceGate(id)

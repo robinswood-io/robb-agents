@@ -30,8 +30,8 @@ describe('executePromptAutomation waitForCompletion', () => {
     sm = withSessionOperationsForTest(new SessionManager())
     // Stub the collaborators executePromptAutomation touches. With no labels /
     // mentions / llmConnection in the input, everything else is skipped.
-    ;(sm as unknown as { createSession: unknown }).createSession = async () => ({ id: 'test-sess' })
-    ;(sm as unknown as { sendEvent: unknown }).sendEvent = () => {}
+    ;(sm as { createSession: unknown }).createSession = async () => ({ id: 'test-sess' })
+    ;(sm)["sendEvent"] = () => {}
   })
 
   afterEach(() => {
@@ -41,7 +41,7 @@ describe('executePromptAutomation waitForCompletion', () => {
   it('waitForCompletion:false returns as soon as the session is created (does not await the turn)', async () => {
     let sendCalled = false
     // Never-resolving send simulates a long tool-using turn.
-    ;(sm as unknown as { sendMessage: unknown }).sendMessage = () => {
+    ;(sm as { sendMessage: unknown }).sendMessage = () => {
       sendCalled = true
       return new Promise<never>(() => {})
     }
@@ -58,7 +58,7 @@ describe('executePromptAutomation waitForCompletion', () => {
   })
 
   it('default (waitForCompletion unset) awaits sendMessage and propagates its error', async () => {
-    ;(sm as unknown as { sendMessage: unknown }).sendMessage = () =>
+    ;(sm as { sendMessage: unknown }).sendMessage = () =>
       Promise.reject(new Error('send failed'))
 
     await expect(

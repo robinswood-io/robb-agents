@@ -9,7 +9,7 @@ export function emitPendingChanged(transportOwner: MessagingGatewayRegistry, wor
     // Channel name kept symmetric with BINDING_CHANGED. Phase 3 wires the
     // RPC channel constant; for now this is a no-op when the constant is
     // absent.
-    const channel = (RPC_CHANNELS.messaging as Record<string, string | undefined>).PENDING_CHANGED;
+    const channel = (RPC_CHANNELS.messaging as Record<string, string | undefined>)["PENDING_CHANGED"];
     if (!channel)
         return;
     transportOwner["opts"].publishEvent?.(channel, { to: 'workspace', workspaceId }, workspaceId);

@@ -1,3 +1,4 @@
+import { isUnknownArray } from "../../../../shared/src/utils/json.ts";
 import { createHash } from "node:crypto";
 import { type NodeOutput } from "@craft-agent/shared/tasks";
 
@@ -134,23 +135,23 @@ export function parseReviewerVerdict(text: string, contract: ReviewerContract): 
     catch {
         return { result: 'unparsed', reason: 'reviewer result is not a standalone JSON object' };
     }
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    if (!parsed || typeof parsed !== 'object' || isUnknownArray(parsed)) {
         return { result: 'unparsed', reason: 'reviewer result must be a JSON object' };
     }
     const record = parsed as Record<string, unknown>;
-    if (record.objectiveId !== contract.objectiveId
-        || record.acceptanceSha256 !== contract.acceptanceSha256) {
+    if (record["objectiveId"] !== contract.objectiveId
+        || record["acceptanceSha256"] !== contract.acceptanceSha256) {
         return { result: 'unparsed', reason: 'reviewer result does not match the current host binding' };
     }
-    if (record.verdict !== 'PASS' && record.verdict !== 'FAIL') {
+    if (record["verdict"] !== 'PASS' && record["verdict"] !== 'FAIL') {
         return { result: 'unparsed', reason: 'reviewer verdict must be PASS or FAIL' };
     }
-    if (!Array.isArray(record.criteria) || record.criteria.length !== contract.criteria.length) {
+    if (!isUnknownArray(record["criteria"]) || record["criteria"].length !== contract.criteria.length) {
         return { result: 'unparsed', reason: 'reviewer result must report every bound criterion exactly once' };
     }
     const criterionResults = new Map<string, boolean>();
-    for (const item of record.criteria) {
-        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    for (const item of record["criteria"]) {
+        if (!item || typeof item !== 'object' || isUnknownArray(item)) {
             return { result: 'unparsed', reason: 'reviewer criteria have an invalid shape' };
         }
         const { id, passed } = item as {
@@ -166,17 +167,17 @@ export function parseReviewerVerdict(text: string, contract: ReviewerContract): 
     if (contract.criteria.some((id) => !criterionResults.has(id))) {
         return { result: 'unparsed', reason: 'reviewer result omitted a bound criterion' };
     }
-    if (!Array.isArray(record.findings) || record.findings.length > MAX_REVIEW_NODES
-        || record.findings.some((finding) => typeof finding !== 'string'
+    if (!isUnknownArray(record["findings"]) || record["findings"].length > MAX_REVIEW_NODES
+        || record["findings"].some((finding) => typeof finding !== 'string'
             || finding.trim().length === 0
             || finding.length > MAX_REVIEW_REASON_CHARS
             || /^<.*>$/.test(finding.trim())
             || /replace this example|example[_ -]?only/i.test(finding))) {
         return { result: 'unparsed', reason: 'reviewer findings must be bounded concrete strings' };
     }
-    const findings = (record.findings as string[]).map((finding) => finding.trim());
+    const findings = (record["findings"] as string[]).map((finding) => finding.trim());
     const failedCriteria = [...criterionResults].filter(([, passed]) => !passed).map(([id]) => id);
-    if (record.verdict === 'PASS') {
+    if (record["verdict"] === 'PASS') {
         if (findings.length > 0 || failedCriteria.length > 0) {
             return { result: 'unparsed', reason: 'PASS cannot contain findings or failed criteria' };
         }

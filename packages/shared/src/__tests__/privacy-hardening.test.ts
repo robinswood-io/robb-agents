@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../utils/json.ts';
 import { describe, it, expect, afterEach } from 'bun:test';
 import { readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -8,11 +9,11 @@ import { getSystemPrompt } from '../prompts/system.ts';
 const REPO_ROOT = join(import.meta.dir, '../../../..');
 
 const ORIGINAL_ENV = {
-  ROBB_ALLOW_CRAFT_VERSION_MANIFEST: process.env.ROBB_ALLOW_CRAFT_VERSION_MANIFEST,
-  CRAFT_DEBUG: process.env.CRAFT_DEBUG,
-  CRAFT_FEATURE_DEVELOPER_FEEDBACK: process.env.CRAFT_FEATURE_DEVELOPER_FEEDBACK,
-  CRAFT_STRICT_LOCAL_ENDPOINT: process.env.CRAFT_STRICT_LOCAL_ENDPOINT,
-  ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS: process.env.ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS,
+  ROBB_ALLOW_CRAFT_VERSION_MANIFEST: process.env["ROBB_ALLOW_CRAFT_VERSION_MANIFEST"],
+  CRAFT_DEBUG: process.env["CRAFT_DEBUG"],
+  CRAFT_FEATURE_DEVELOPER_FEEDBACK: process.env["CRAFT_FEATURE_DEVELOPER_FEEDBACK"],
+  CRAFT_STRICT_LOCAL_ENDPOINT: process.env["CRAFT_STRICT_LOCAL_ENDPOINT"],
+  ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS: process.env["ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS"],
 };
 
 afterEach(() => {
@@ -24,13 +25,13 @@ afterEach(() => {
 
 describe('Robb Agent privacy & confidentiality hardening', () => {
   it('blocks external Craft version manifest phone-home by default', async () => {
-    delete process.env.ROBB_ALLOW_CRAFT_VERSION_MANIFEST;
+    delete process.env["ROBB_ALLOW_CRAFT_VERSION_MANIFEST"];
     const originalFetch = globalThis.fetch;
     let fetchCalled = false;
-    globalThis.fetch = (async () => {
+    globalThis.fetch = Object.assign((async () => {
       fetchCalled = true;
       return new Response(JSON.stringify({ version: '9.9.9' }), { status: 200 });
-    }) as unknown as typeof fetch;
+    }), { preconnect() {} });
 
     try {
       const latest = await getLatestVersion();
@@ -44,8 +45,8 @@ describe('Robb Agent privacy & confidentiality hardening', () => {
   });
 
   it('removes external craft-agents-docs instructions and gates developer feedback prompt in system prompt', () => {
-    process.env.CRAFT_DEBUG = '1';
-    delete process.env.CRAFT_FEATURE_DEVELOPER_FEEDBACK;
+    process.env["CRAFT_DEBUG"] = '1';
+    delete process.env["CRAFT_FEATURE_DEVELOPER_FEEDBACK"];
 
     const prompt = getSystemPrompt(
       undefined,
@@ -98,10 +99,10 @@ describe('Robb Agent privacy & confidentiality hardening', () => {
         stdout: 'pipe', stderr: 'pipe',
       });
       expect(child.exitCode).toBe(0);
-      const result: { blocked: boolean; networkCalls: number; message?: string } = JSON.parse(child.stdout.toString());
-      expect(result.blocked).toBe(true);
-      expect(result.networkCalls).toBe(0);
-      expect(result.message).toContain('[Privacy Guard] Blocked outbound network request');
+      const result = parseJsonObject(child.stdout.toString());
+      expect(result["blocked"]).toBe(true);
+      expect(result["networkCalls"]).toBe(0);
+      expect(result["message"]).toContain('[Privacy Guard] Blocked outbound network request');
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 });

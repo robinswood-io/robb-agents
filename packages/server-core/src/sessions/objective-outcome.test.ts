@@ -367,7 +367,7 @@ describe('objective outcome receipt', () => {
     ]) {
       const compoundMutation: Message = {
         id: `${toolUseId}-message`, role: 'tool', content: '', timestamp: 4,
-        toolName, toolUseId, toolStatus: 'completed', toolExecuted: true,
+        ...(toolName !== undefined ? { toolName: toolName } : {}), ...(toolUseId !== undefined ? { toolUseId: toolUseId } : {}), toolStatus: 'completed', toolExecuted: true,
         toolResult: 'Mutation completed with one affected resource',
       };
       for (const evidence of ['check-1', toolUseId]) {

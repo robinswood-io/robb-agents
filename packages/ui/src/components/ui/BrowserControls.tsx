@@ -40,50 +40,50 @@ NavButton.displayName = 'NavButton'
 
 export interface BrowserControlsProps {
   /** Current URL displayed in the address bar */
-  url?: string
+  url?: string | undefined
   /** Whether page is loading (toggles Stop/Reload, shows progress) */
-  loading?: boolean
+  loading?: boolean | undefined
   /** Enable back button */
-  canGoBack?: boolean
+  canGoBack?: boolean | undefined
   /** Enable forward button */
-  canGoForward?: boolean
+  canGoForward?: boolean | undefined
   /** Called when user submits a URL */
-  onNavigate?: (url: string) => void
+  onNavigate?: ((url: string) => void) | undefined
   /** Back button click */
-  onGoBack?: () => void
+  onGoBack?: (() => void) | undefined
   /** Forward button click */
-  onGoForward?: () => void
+  onGoForward?: (() => void) | undefined
   /** Reload button click */
-  onReload?: () => void
+  onReload?: (() => void) | undefined
   /** Stop button click */
-  onStop?: () => void
+  onStop?: (() => void) | undefined
   /** Controlled URL input change */
-  onUrlChange?: (url: string) => void
+  onUrlChange?: ((url: string) => void) | undefined
   /** Compact layout variant */
-  compact?: boolean
+  compact?: boolean | undefined
   /** Content rendered before navigation buttons */
-  leadingContent?: ReactNode
+  leadingContent?: ReactNode | undefined
   /** Content rendered after URL bar (e.g. label) */
-  trailingContent?: ReactNode
+  trailingContent?: ReactNode | undefined
   /** Show animated loading progress bar (default true) */
-  showProgressBar?: boolean
+  showProgressBar?: boolean | undefined
   /** Additional CSS classes on the URL bar group (reload + form) */
-  urlBarClassName?: string
+  urlBarClassName?: string | undefined
   /**
    * Minimum left clearance in px. When set, enables window-center mode:
    * back/forward are absolutely positioned and the reload + URL bar
    * centers in the full component width via CSS max(), falling back
    * to this clearance when the component is narrow.
    */
-  leftClearance?: number
+  leftClearance?: number | undefined
   /**
    * Website theme color (from `<meta name="theme-color">`).
    * When set, tints the toolbar background like Safari/Chrome.
    * Text and icons automatically adjust for contrast.
    */
-  themeColor?: string | null
+  themeColor?: string | null | undefined
   /** Additional CSS classes on the root element */
-  className?: string
+  className?: string | undefined
 }
 
 /**
@@ -141,9 +141,6 @@ function colorLuminance(color: string): number | null {
   return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b)
 }
 
-/** Half of the default URL bar max-width (600px), used for CSS max() centering calc */
-const HALF_MAX_WIDTH = 300
-
 export function BrowserControls({
   url: controlledUrl,
   loading = false,
@@ -160,7 +157,7 @@ export function BrowserControls({
   trailingContent,
   showProgressBar = true,
   urlBarClassName,
-  leftClearance,
+  leftClearance: _leftClearance,
   themeColor,
   className,
 }: BrowserControlsProps) {
@@ -221,7 +218,6 @@ export function BrowserControls({
   const safeThemeColor = safeCssColor(themeColor)
   const themeLum = safeThemeColor ? colorLuminance(safeThemeColor) : null
   const isDarkBg = themeLum != null && themeLum < 0.4
-  const useWindowCenter = leftClearance != null
 
   /* Shared: reload / stop button */
   const reloadButton = (

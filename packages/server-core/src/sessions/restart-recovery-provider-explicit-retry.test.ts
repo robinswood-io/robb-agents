@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { ScriptedSessionAgent, completeSessionAgentFixture } from "./testing/scripted-session-agent.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -115,9 +116,9 @@ describe('provider dispatch write-ahead recovery', () => {
         if (variant === 'agent-delivery') expect(fenced.agentDelivery?.status).toBe('processing')
         await h.manager.flushSession(managed.id)
         const stored = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-          .trim().split('\n').map(line => JSON.parse(line))
+          .trim().split('\n').map(parseRecoveryJournalObservation)
           .find(message => message.id === fenced.id)
-        expect(stored.providerDispatch?.state).toBe('acceptance-unknown')
+        expect(requiredTestValue(stored).providerDispatch?.state).toBe('acceptance-unknown')
       })
     }
   }
@@ -151,9 +152,9 @@ describe('provider dispatch write-ahead recovery', () => {
       .toBe('acceptance-unknown')
     await h.manager.flushSession(managed.id)
     const stored = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
       .find(message => message.id === anchor.id)
-    expect(stored.providerDispatch?.state).toBe('acceptance-unknown')
+    expect(requiredTestValue(stored).providerDispatch?.state).toBe('acceptance-unknown')
     expect(durableFlushes).toBeGreaterThanOrEqual(2)
   })
 

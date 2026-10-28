@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { getAdminRememberKey } from '../policy.ts';
 import { randomUUID } from 'node:crypto';
@@ -60,10 +62,10 @@ function sessionOpRejectPendingPrivilegedApproval(sessionOperationContext: Sessi
 }): void {
     if (metadata.type !== 'admin_approval')
         return;
-    const result = sessionOperationContext.state.privilegedExecutionBroker.resolveApproval(requestId, false, {
+    const result = sessionOperationContext.state.privilegedExecutionBroker.resolveApproval(requestId, false, omitUndefined({
         expectedCommandHash: metadata.commandHash,
         expectedSessionId: metadata.sessionId,
-    });
+    }));
     if (!result.ok) {
         sessionLog.warn(`Could not close privileged approval ${requestId}: ${result.reason}`);
     }
@@ -71,7 +73,7 @@ function sessionOpRejectPendingPrivilegedApproval(sessionOperationContext: Sessi
 
 function sessionOpDenyPermissionOnRecordedRuntime(sessionOperationContext: SessionOperationContext, requestId: string, metadata: {
     sessionId: string;
-    runtimeAgent?: AgentInstance;
+    runtimeAgent?: AgentInstance | undefined;
 }): void {
     const runtimeAgent = metadata.runtimeAgent ?? sessionOperationContext.state.sessions.get(metadata.sessionId)?.agent;
     try {
@@ -144,7 +146,7 @@ function sessionOpExpirePendingPermissionRequest(sessionOperationContext: Sessio
         sessionOpDenyPermissionOnRecordedRuntime(sessionOperationContext, cohortRequestId, candidate);
     }
     if (terminalized) {
-        void sessionOpFinishExpiredPermissionWait(sessionOperationContext, managed, expiryGeneration, expiryObjective).catch(error => {
+        void sessionOpFinishExpiredPermissionWait(sessionOperationContext, managed, expiryGeneration, expiryObjective).catch((error: unknown) => {
             sessionLog.warn('Expired permission terminal handoff failed', {
                 sessionId: managed.id,
                 requestId,
@@ -165,8 +167,8 @@ function sessionOpExpirePendingPermissionRequest(sessionOperationContext: Sessio
  * denied pre-execution receipt and stop the generation before the watchdog
  * can allocate an automatic retry of the same mutation. */
 function sessionOpMarkPermissionToolNotExecuted(sessionOperationContext: SessionOperationContext, managed: ManagedSession, metadata: {
-    toolName?: string;
-    toolUseId?: string;
+    toolName?: string | undefined;
+    toolUseId?: string | undefined;
 }): boolean {
     if (!metadata.toolUseId)
         return false;
@@ -193,7 +195,7 @@ function sessionOpMarkPermissionToolNotExecuted(sessionOperationContext: Session
     toolMessage.toolExecuted = false;
     toolMessage.isError = true;
     try {
-        sessionOperationContext.owner["sendEvent"]({
+        sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'tool_result' }>>({
             type: 'tool_result',
             sessionId: managed.id,
             toolUseId: metadata.toolUseId,
@@ -204,7 +206,7 @@ function sessionOpMarkPermissionToolNotExecuted(sessionOperationContext: Session
             isError: true,
             executed: false,
             timestamp: toolMessage.timestamp,
-        }, managed.workspace.id);
+        }), managed.workspace.id);
     }
     catch (error) {
         // Renderer delivery is best-effort. It must never strand the provider or
@@ -224,8 +226,8 @@ function sessionOpMarkPermissionToolNotExecuted(sessionOperationContext: Session
  * non-execution fact first prevents a later retry from treating the missing
  * provider receipt as an ambiguous external effect. */
 async function sessionOpRecordDeniedPermissionBeforeProviderResume(sessionOperationContext: SessionOperationContext, managed: ManagedSession, metadata: {
-    toolName?: string;
-    toolUseId?: string;
+    toolName?: string | undefined;
+    toolUseId?: string | undefined;
     processingGeneration: number;
 }): Promise<void> {
     if (!metadata.toolUseId)
@@ -283,7 +285,7 @@ function sessionOpDenyPermissionRequestDuringShutdown(sessionOperationContext: S
     // Register the denied tool synchronously before the first await, then make
     // the receipt durable before releasing the provider-side permission wait.
     void sessionOpRecordDeniedPermissionBeforeProviderResume(sessionOperationContext, managed, metadata)
-        .catch(error => {
+        .catch((error: unknown) => {
         sessionLog.warn('Could not record shutdown permission denial', {
             sessionId: managed.id,
             requestId: request.requestId,
@@ -310,7 +312,7 @@ function sessionOpTerminalizeExpiredPermissionWait(sessionOperationContext: Sess
     toolUseId?: string;
     processingGeneration: number;
     objectiveId?: string;
-    runtimeAgent?: AgentInstance;
+    runtimeAgent?: AgentInstance | undefined;
     requestedAt: number;
 }): boolean {
     const pending = managed.pendingTurnRecovery;
@@ -318,8 +320,8 @@ function sessionOpTerminalizeExpiredPermissionWait(sessionOperationContext: Sess
     const exactWaiting = waiting?.requestId === requestId ? waiting : undefined;
     const toolUseId = metadata.toolUseId ?? exactWaiting?.toolUseId;
     const receiptChanged = sessionOpMarkPermissionToolNotExecuted(sessionOperationContext, managed, {
-        toolName: metadata.toolName,
-        toolUseId,
+        ...(metadata.toolName !== undefined ? { toolName: metadata.toolName } : {}),
+        ...(toolUseId !== undefined ? { toolUseId: toolUseId } : {}),
     });
     const objective = managed.activeObjective;
     const objectiveId = objective?.objectiveId ?? objective?.userMessageId;

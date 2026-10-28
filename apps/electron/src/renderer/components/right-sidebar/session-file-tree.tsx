@@ -1,9 +1,9 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect, memo } from 'react';
-import { AnimatePresence, motion, type Variants } from 'motion/react';
-import { File, Folder, FolderOpen, FileText, Image, FileCode, ChevronRight, ExternalLink } from 'lucide-react';
-import { ContextMenu, ContextMenuTrigger, StyledContextMenuContent, StyledContextMenuItem } from '@/components/ui/styled-context-menu';
+import { useState,useEffect,memo } from 'react';
+import { AnimatePresence,motion,type Variants } from 'motion/react';
+import { File,Folder,FolderOpen,FileText,Image,FileCode,ChevronRight,ExternalLink } from 'lucide-react';
+import { ContextMenu,ContextMenuTrigger,StyledContextMenuContent,StyledContextMenuItem } from '@/components/ui/styled-context-menu';
 import type { SessionFile } from "../../../shared/types";
 import { cn } from '@/lib/utils';
 
@@ -51,12 +51,12 @@ export const itemVariants: Variants = {
 
 
 export interface SessionFilesSectionProps {
-  sessionId?: string
-  className?: string
+  sessionId?: string | undefined
+  className?: string | undefined
   /** Absolute session folder path for header actions (e.g. View in Finder) */
-  sessionFolderPath?: string
+  sessionFolderPath?: string | undefined
   /** Hide section header when embedded inside compact containers (e.g. popovers) */
-  hideHeader?: boolean
+  hideHeader?: boolean | undefined
 }
 
 
@@ -235,7 +235,7 @@ export interface FileTreeItemProps {
   onFileDoubleClick: (file: SessionFile) => void
   onRevealInFileManager: (path: string) => void
   /** Whether this item is inside an expanded folder (for stagger animation) */
-  isNested?: boolean
+  isNested?: boolean | undefined
 }
 
 
@@ -254,7 +254,6 @@ export function FileTreeItem({
   onFileClick,
   onFileDoubleClick,
   onRevealInFileManager,
-  isNested,
 }: FileTreeItemProps) {
   const { t } = useTranslation()
   const isDirectory = file.type === 'directory'

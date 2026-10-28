@@ -34,10 +34,10 @@ export type { SessionEvent, PlanMessageRecorder, PermissionMessageRecorder } fro
 
 export class Renderer {
     /** Per-binding render state. Keyed by binding.id */
-    private states = new Map<string, RenderState>();
-    private readonly planTokens: PlanTokenRegistry | undefined;
-    private readonly recordPlanMessage: PlanMessageRecorder | undefined;
-    private readonly recordPermissionMessage: PermissionMessageRecorder | undefined;
+    /** @internal */ public states = new Map<string, RenderState>();
+    /** @internal */ public readonly planTokens: PlanTokenRegistry | undefined;
+    /** @internal */ public readonly recordPlanMessage: PlanMessageRecorder | undefined;
+    /** @internal */ public readonly recordPermissionMessage: PermissionMessageRecorder | undefined;
     constructor(deps?: {
         planTokens?: PlanTokenRegistry;
         recordPlanMessage?: PlanMessageRecorder;
@@ -47,53 +47,53 @@ export class Renderer {
         this.recordPlanMessage = deps?.recordPlanMessage;
         this.recordPermissionMessage = deps?.recordPermissionMessage;
     }
-    private getState(bindingId: string): RenderState {
+    /** @internal */ public getState(bindingId: string): RenderState {
         return rendererStreaming.getState(this, bindingId);
     }
     /** Handle an outbound session event for a specific binding. */
     async handle(event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
         return rendererStreaming.handle(this, event, binding, adapter);
     }
-    private async handleStreaming(event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
+    /** @internal */ public async handleStreaming(event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
         return rendererStreaming.handleStreaming(this, event, binding, adapter);
     }
-    private async handleStreamingDelta(state: RenderState, binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
+    /** @internal */ public async handleStreamingDelta(state: RenderState, binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
         return rendererStreaming.handleStreamingDelta(this, state, binding, adapter);
     }
-    private scheduleEdit(state: RenderState, binding: ChannelBinding, adapter: PlatformAdapter): void {
+    /** @internal */ public scheduleEdit(state: RenderState, binding: ChannelBinding, adapter: PlatformAdapter): void {
         return rendererStreaming.scheduleEdit(this, state, binding, adapter);
     }
-    private async handleProgress(event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
+    /** @internal */ public async handleProgress(event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
         return rendererProgress.handleProgress(this, event, binding, adapter);
     }
-    private async ensureProgressBubble(state: RenderState, binding: ChannelBinding, adapter: PlatformAdapter, status: string): Promise<void> {
+    /** @internal */ public async ensureProgressBubble(state: RenderState, binding: ChannelBinding, adapter: PlatformAdapter, status: string): Promise<void> {
         return rendererProgress.ensureProgressBubble(this, state, binding, adapter, status);
     }
-    private async handleFinalOnly(event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
+    /** @internal */ public async handleFinalOnly(event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
         return rendererResponses.handleFinalOnly(this, event, binding, adapter);
     }
-    private async handlePermissionRequest(event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter, state: RenderState): Promise<void> {
+    /** @internal */ public async handlePermissionRequest(event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter, state: RenderState): Promise<void> {
         return rendererResponses.handlePermissionRequest(this, event, binding, adapter, state);
     }
-    private async handleCredentialRequest(binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
+    /** @internal */ public async handleCredentialRequest(binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
         return rendererResponses.handleCredentialRequest(this, binding, adapter);
     }
-    private async handlePlanSubmitted(event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
+    /** @internal */ public async handlePlanSubmitted(event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
         return rendererResponses.handlePlanSubmitted(this, event, binding, adapter);
     }
-    private async handleError(event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter, state: RenderState): Promise<void> {
+    /** @internal */ public async handleError(event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter, state: RenderState): Promise<void> {
         return rendererResponses.handleError(this, event, binding, adapter, state);
     }
-    private async tryEditMessage(adapter: PlatformAdapter, binding: ChannelBinding, messageId: string, text: string, state: RenderState): Promise<void> {
+    /** @internal */ public async tryEditMessage(adapter: PlatformAdapter, binding: ChannelBinding, messageId: string, text: string, state: RenderState): Promise<void> {
         return rendererStreaming.tryEditMessage(this, adapter, binding, messageId, text, state);
     }
-    private cancelEditTimer(state: RenderState): void {
+    /** @internal */ public cancelEditTimer(state: RenderState): void {
         return rendererStreaming.cancelEditTimer(this, state);
     }
-    private resetRun(state: RenderState): void {
+    /** @internal */ public resetRun(state: RenderState): void {
         return rendererResponses.resetRun(this, state);
     }
-    private async sendText(adapter: PlatformAdapter, binding: ChannelBinding, text: string): Promise<SentMessage | undefined> {
+    /** @internal */ public async sendText(adapter: PlatformAdapter, binding: ChannelBinding, text: string): Promise<SentMessage | undefined> {
         return rendererResponses.sendText(this, adapter, binding, text);
     }
     /** Clean up state for a removed binding. */

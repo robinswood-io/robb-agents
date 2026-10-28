@@ -35,9 +35,9 @@ export interface TransportConnectionState {
     status: TransportConnectionStatus;
     url: string;
     attempt: number;
-    nextRetryInMs?: number;
-    lastError?: TransportConnectionError;
-    lastClose?: TransportCloseInfo;
+    nextRetryInMs?: number | undefined;
+    lastError?: TransportConnectionError | undefined;
+    lastClose?: TransportCloseInfo | undefined;
     updatedAt: number;
 }
 

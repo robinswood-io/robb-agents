@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "arrays": {
+    "acceptedManifestOnly": [
+      "acceptedManifestOnly/001.json",
+      "acceptedManifestOnly/002.json",
+      "acceptedManifestOnly/003.json"
+    ]
+  }
+}

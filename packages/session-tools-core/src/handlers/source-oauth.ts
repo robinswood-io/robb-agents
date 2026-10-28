@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+import type { SourceOAuthTriggerSchema } from '../tool-defs/schemas.ts';
 /**
  * Source OAuth Handlers
  *
@@ -24,9 +26,7 @@ import { basename } from 'node:path';
 // MCP OAuth Trigger
 // ============================================================
 
-export interface SourceOAuthTriggerArgs {
-  sourceSlug: string;
-}
+export type SourceOAuthTriggerArgs = z.infer<typeof SourceOAuthTriggerSchema>;
 
 /**
  * Handle the source_oauth_trigger tool call.
@@ -96,9 +96,7 @@ export async function handleSourceOAuthTrigger(
 // Google OAuth Trigger
 // ============================================================
 
-export interface GoogleOAuthTriggerArgs {
-  sourceSlug: string;
-}
+export type GoogleOAuthTriggerArgs = z.infer<typeof SourceOAuthTriggerSchema>;
 
 /**
  * Handle the source_google_oauth_trigger tool call.
@@ -187,7 +185,7 @@ export GOOGLE_OAUTH_CLIENT_SECRET="YOUR_CLIENT_SECRET"
     sessionId: ctx.sessionId,
     sourceSlug,
     sourceName: source.name,
-    service,
+    ...(service !== undefined ? { service } : {}),
   };
 
   // Trigger auth request
@@ -202,9 +200,7 @@ export GOOGLE_OAUTH_CLIENT_SECRET="YOUR_CLIENT_SECRET"
 // Slack OAuth Trigger
 // ============================================================
 
-export interface SlackOAuthTriggerArgs {
-  sourceSlug: string;
-}
+export type SlackOAuthTriggerArgs = z.infer<typeof SourceOAuthTriggerSchema>;
 
 /**
  * Handle the source_slack_oauth_trigger tool call.
@@ -291,9 +287,7 @@ export async function handleSlackOAuthTrigger(
 // Microsoft OAuth Trigger
 // ============================================================
 
-export interface MicrosoftOAuthTriggerArgs {
-  sourceSlug: string;
-}
+export type MicrosoftOAuthTriggerArgs = z.infer<typeof SourceOAuthTriggerSchema>;
 
 /**
  * Handle the source_microsoft_oauth_trigger tool call.

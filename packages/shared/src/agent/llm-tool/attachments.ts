@@ -86,8 +86,8 @@ function isBinaryContent(content: string): boolean {
 
 interface AttachmentInput {
   path: string;
-  startLine?: number;
-  endLine?: number;
+  startLine?: number | undefined;
+  endLine?: number | undefined;
 }
 
 type AttachmentResult =
@@ -124,7 +124,7 @@ export async function processAttachment(
   }
 
   // --- Get file stats with error handling for permission issues and broken symlinks ---
-  let stats;
+  let stats: import('node:fs').Stats;
   try {
     stats = statSync(filePath);
   } catch (err) {

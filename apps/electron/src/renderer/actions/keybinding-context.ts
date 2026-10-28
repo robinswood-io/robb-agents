@@ -65,7 +65,7 @@ if (typeof document !== 'undefined') {
  * Build a context snapshot from DOM state at event time.
  * Called synchronously in the keyboard handler's capture phase.
  */
-export function getKeybindingContext(e: KeyboardEvent): KeybindingContext {
+export function getKeybindingContext(e: Pick<KeyboardEvent, 'target'>): KeybindingContext {
   const target = e.target as HTMLElement
   const isInput =
     target.tagName === 'INPUT' ||

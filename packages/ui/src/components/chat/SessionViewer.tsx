@@ -30,31 +30,31 @@ export type SessionViewerMode = 'interactive' | 'readonly'
 export interface SessionViewerProps {
   /** Session data to display */
   session: StoredSession
-  userInputRequests?: UserInputRequest[]
+  userInputRequests?: UserInputRequest[] | undefined
   /** View mode - 'readonly' for web viewer, 'interactive' for Electron */
-  mode?: SessionViewerMode
+  mode?: SessionViewerMode | undefined
   /** Platform-specific actions (file opening, URL handling, etc.) */
-  platformActions?: PlatformActions
+  platformActions?: PlatformActions | undefined
   /** Additional className for the container */
-  className?: string
+  className?: string | undefined
   /** Callback when a turn is clicked */
-  onTurnClick?: (turnId: string) => void
+  onTurnClick?: ((turnId: string) => void) | undefined
   /** Callback when an activity is clicked */
-  onActivityClick?: (activity: ActivityItem) => void
+  onActivityClick?: ((activity: ActivityItem) => void) | undefined
   /** Default expanded state for turns (true for readonly, false for interactive) */
-  defaultExpanded?: boolean
+  defaultExpanded?: boolean | undefined
   /** Custom header content */
-  header?: ReactNode
+  header?: ReactNode | undefined
   /** Custom footer content (input area for interactive mode) */
-  footer?: ReactNode
+  footer?: ReactNode | undefined
   /** Optional session folder path for stripping from file paths in tool display */
-  sessionFolderPath?: string
+  sessionFolderPath?: string | undefined
 }
 
 /**
  * CraftAgentLogo - The Craft Agent "C" logo for branding
  */
-function CraftAgentLogo({ className }: { className?: string }) {
+function CraftAgentLogo({ className }: { className?: string | undefined }) {
   return (
     <svg
       className={className}

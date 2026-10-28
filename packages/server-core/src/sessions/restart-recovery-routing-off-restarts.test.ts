@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { type SessionManagerTestView } from "./testing/private-runtime-access.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -82,14 +83,14 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
         })
         expect(managed.messages.find(message => message.id === allocated.id)?.internalOrigin).toBeUndefined()
         const persistedRows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-          .trim().split('\n').map(line => JSON.parse(line))
-        expect(persistedRows[0].pendingTurnRecovery.recoveryDispatch).toMatchObject({
+          .trim().split('\n').map(parseRecoveryJournalObservation)
+        expect(requiredTestValue(requiredTestValue(persistedRows[0]).pendingTurnRecovery).recoveryDispatch).toMatchObject({
           id: allocated.id,
           attempt: allocated.attempt,
           phase: 'started',
         })
-        expect(persistedRows[0].pendingTurnRecovery.recoveryDispatch.fallbackIntent).toBeUndefined()
-        const persistedBoundary = persistedRows.find(row => row.id === allocated.id)
+        expect(requiredTestValue(requiredTestValue(requiredTestValue(persistedRows[0]).pendingTurnRecovery).recoveryDispatch).fallbackIntent).toBeUndefined()
+        const persistedBoundary = requiredTestValue(persistedRows.find(row => row.id === allocated.id))
         expect(persistedBoundary).toMatchObject({
           type: 'user', hidden: true, content: admittedTurn?.message,
         })
@@ -157,14 +158,14 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
       expect(firstRestored.messages.find((message) => message.id === allocated.id)?.internalOrigin)
         .toBeUndefined()
       const firstPersistedRows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-        .trim().split('\n').map(line => JSON.parse(line))
-      expect(firstPersistedRows[0].pendingTurnRecovery.recoveryDispatch).toMatchObject({
+        .trim().split('\n').map(parseRecoveryJournalObservation)
+      expect(requiredTestValue(requiredTestValue(firstPersistedRows[0]).pendingTurnRecovery).recoveryDispatch).toMatchObject({
         id: allocated.id,
         attempt: allocated.attempt,
         phase: 'allocated',
       })
-      expect(firstPersistedRows[0].pendingTurnRecovery.recoveryDispatch.fallbackIntent).toBeUndefined()
-      const firstPersistedMessage = firstPersistedRows.find(row => row.id === allocated.id)
+      expect(requiredTestValue(requiredTestValue(requiredTestValue(firstPersistedRows[0]).pendingTurnRecovery).recoveryDispatch).fallbackIntent).toBeUndefined()
+      const firstPersistedMessage = requiredTestValue(firstPersistedRows.find(row => row.id === allocated.id))
       expect(firstPersistedMessage).toMatchObject({
         type: 'user', hidden: true, isQueued: true,
       })
@@ -271,9 +272,9 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
         cause: 'runtime_error',
         origin: 'automatic',
         phase: 'allocated',
-        cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-[a-f0-9]{24}$/),
       },
     })
+    expect(restored.pendingTurnRecovery?.recoveryDispatch?.cleanContinuationId).toMatch(/^clean-continuation-v1-[a-f0-9]{24}$/)
     expect(requiredTestValue(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).fallbackIntent).toBeUndefined()
     expect(restored.messageQueue).toHaveLength(1)
     expect(restored.messageQueue[0]?.options?.internalOrigin).toBeUndefined()
@@ -296,10 +297,10 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
     expect(restored.providerContextBoundaryMessageId).toBe(dispatchId)
     expect(restored.contextCompactionAttempt).toBeUndefined()
 
-    const persisted = JSON.parse(
-      readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!,
+    const persisted = parseRecoveryJournalObservation(
+      requiredTestValue(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]),
     )
-    expect(persisted.pendingTurnRecovery).toEqual(restored.pendingTurnRecovery)
+    expect<unknown>(persisted.pendingTurnRecovery).toEqual(restored.pendingTurnRecovery)
     expect(persisted.sdkSessionId).toBeUndefined()
     expect(persisted.branchFromSdkSessionId).toBeUndefined()
     expect(persisted.branchFromSessionPath).toBeUndefined()
@@ -391,10 +392,10 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
         cause: 'app_restart',
         origin: 'restart',
         phase: 'allocated',
-        cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-[a-f0-9]{24}$/),
       },
     })
     const newDispatch = requiredTestValue(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch)
+    expect(newDispatch.cleanContinuationId).toMatch(/^clean-continuation-v1-[a-f0-9]{24}$/)
     expect(newDispatch.id).not.toBe(oldDispatchId)
     expect(newDispatch.fallbackIntent).toBeUndefined()
     expect(requiredTestValue(restored.pendingTurnRecovery).cleanContextBoundaryMessageId).toBe(newDispatch.id)
@@ -422,16 +423,17 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
     expect(restored.providerContextBoundaryMessageId).toBe(newDispatch.id)
     expect(restored.contextCompactionAttempt).toBeUndefined()
     const persistedRows = readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
-    expect(persistedRows[0].pendingTurnRecovery).toEqual(restored.pendingTurnRecovery)
-    expect(persistedRows[0].sdkSessionId).toBeUndefined()
-    expect(persistedRows[0].branchFromSdkSessionId).toBeUndefined()
-    expect(persistedRows[0].branchFromSessionPath).toBeUndefined()
-    expect(persistedRows[0].branchFromSdkCwd).toBeUndefined()
-    expect(persistedRows[0].branchFromSdkTurnId).toBeUndefined()
-    expect(persistedRows[0].branchContextStrategy).toBeUndefined()
-    expect(persistedRows[0].providerContextBoundaryMessageId).toBe(newDispatch.id)
-    expect(persistedRows[0].contextCompactionAttempt).toBeUndefined()
+      .trim().split('\n').map(parseRecoveryJournalObservation)
+    const persistedHeader = requiredTestValue(persistedRows[0])
+    expect<unknown>(persistedHeader.pendingTurnRecovery).toEqual(restored.pendingTurnRecovery)
+    expect(persistedHeader.sdkSessionId).toBeUndefined()
+    expect(persistedHeader.branchFromSdkSessionId).toBeUndefined()
+    expect(persistedHeader.branchFromSessionPath).toBeUndefined()
+    expect(persistedHeader.branchFromSdkCwd).toBeUndefined()
+    expect(persistedHeader.branchFromSdkTurnId).toBeUndefined()
+    expect(persistedHeader.branchContextStrategy).toBeUndefined()
+    expect(persistedHeader.providerContextBoundaryMessageId).toBe(newDispatch.id)
+    expect(persistedHeader.contextCompactionAttempt).toBeUndefined()
     expect(persistedRows.filter(row => row.id === oldDispatchId)).toHaveLength(1)
     expect(persistedRows.find(row => row.id === 'persisted-provider-intermediate-output'))
       .toMatchObject({ type: 'assistant', isIntermediate: true })

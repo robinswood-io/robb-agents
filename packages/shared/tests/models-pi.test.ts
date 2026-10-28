@@ -31,7 +31,7 @@ describe('models-pi filtering', () => {
     for (const provider of ['openai', 'openai-codex'] as const) {
       const models = getPiModelsForAuthProvider(provider);
       const ids = models.map(m => m.id);
-      expect(ids).toEqual(expect.arrayContaining([
+      expect<unknown>(ids).toEqual(expect.arrayContaining([
         'pi/gpt-6.1-sol',
         'pi/gpt-6-astra',
         'pi/gpt-6-sol',
@@ -65,7 +65,7 @@ describe('models-pi filtering', () => {
   it('exposes the current Anthropic snapshots alongside existing selections', () => {
     const models = getPiModelsForAuthProvider('anthropic');
     for (const id of ['pi/claude-opus-5', 'pi/claude-fable-5-1']) {
-      expect(models.filter(model => model.id === id)).toEqual([
+      expect<unknown>(models.filter(model => model.id === id)).toEqual([
         expect.objectContaining({
           id,
           contextWindow: 1_000_000,
@@ -122,7 +122,7 @@ describe('models-pi filtering', () => {
 
   it('exposes Mistral Vibe as a separate subscription agent without an API-key catalog', () => {
     const models = getPiModelsForAuthProvider('mistral-vibe');
-    expect(models).toEqual([expect.objectContaining({
+    expect<unknown>(models).toEqual([expect.objectContaining({
       id: 'pi/mistral-vibe',
       name: 'Mistral Vibe',
       supportsThinking: false,

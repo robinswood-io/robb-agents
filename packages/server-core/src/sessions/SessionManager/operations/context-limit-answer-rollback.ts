@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { validAllocatedRecoveryDispatch } from '../policy.ts';
 import type { UserInputRequest } from '@craft-agent/core';
 import type { PendingTurnRecovery } from '@craft-agent/shared/sessions';
@@ -91,11 +92,11 @@ export function createContextLimitAnswerRollback(
         const canonicalAnswers = canonicalUserInputAnswerContents(trustedContextLimitAnswer);
         if (!canonicalAnswers.includes(userMessage.content))
             return undefined;
-        const cleanPending: PendingTurnRecovery = {
+        const cleanPending: PendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
             ...pending,
             cleanContinuationCount: (pending.cleanContinuationCount ?? 0) + 1,
             recoveryDispatch: undefined,
-        };
+        });
         const provisionalHandoff = sessionOperationContext.owner["createAutonomousContextLimitHandoff"](managed, cleanPending);
         if (!provisionalHandoff)
             return undefined;

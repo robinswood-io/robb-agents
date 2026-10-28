@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { classifyAutomaticRecoveryWorkForSession as policyClassifyAutomaticRecoveryWorkForSession } from "./SessionManager/policy.ts";
 import { registerObjectiveAcceptanceCriteria } from "./objective-acceptance-criteria.ts";
@@ -10,15 +11,15 @@ import { pickSessionFields } from "@craft-agent/shared/sessions/utils";
 import { clearObjectiveEvidenceGate } from "@craft-agent/shared/agent";
 import { createPendingTurnRecovery } from "./turn-recovery.ts";
 import { createManagedSession } from "./SessionManager.ts";
-import { type Managed, activeObjective, installAgent, installReviewedAgent, makeHarness, outcomeComment, roots, sessionIds } from "./testing/session-objective-outcome-integration-fixture.ts";
+import { activeObjective, installAgent, installReviewedAgent, makeHarness, outcomeComment, roots, sessionIds } from "./testing/session-objective-outcome-integration-fixture.ts";
 
 beforeEach(() => {
   roots.length = 0
   sessionIds.length = 0
-  process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+  process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
 })
 afterEach(() => {
-  delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+  delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]
   for (const sessionId of sessionIds) clearObjectiveEvidenceGate(sessionId)
   for (const root of roots) rmSync(root, { recursive: true, force: true })
 })
@@ -42,13 +43,7 @@ describe('SessionManager objective outcome integration', () => {
       requiresExecutionEvidence: false,
     }
     harness.managed.pendingTurnRecovery = createPendingTurnRecovery('root')
-    const enqueue = (harness.manager as unknown as {
-      enqueueAutomaticTurnRecovery: (
-        managed: Managed,
-        cause: 'objective_incomplete',
-        gaps?: string[],
-      ) => Promise<boolean>
-    }).enqueueAutomaticTurnRecovery.bind(harness.manager)
+    const enqueue = (sessionManagerForTest(harness.manager)).enqueueAutomaticTurnRecovery.bind(harness.manager)
     const gaps = ['missing structured objective outcome receipt']
 
     expect(await enqueue(harness.managed, 'objective_incomplete', gaps)).toBe(true)
@@ -61,10 +56,10 @@ describe('SessionManager objective outcome integration', () => {
     harness.managed.messageQueue.length = 0
 
     expect(await enqueue(harness.managed, 'objective_incomplete', gaps)).toBe(false)
-    expect(harness.managed.pendingTurnRecovery).toMatchObject({
+    expect<unknown>(harness.managed.pendingTurnRecovery).toMatchObject({
       attempts: 2,
       stagnantAttempts: 1,
-      exhaustedAt: expect.any(Number),
+      exhaustedAt: (expect.any(Number) as unknown),
     })
     expect(harness.managed.messageQueue).toEqual([])
   })
@@ -121,13 +116,7 @@ describe('SessionManager objective outcome integration', () => {
     harness.managed.messages.push({ id: 'root', role: 'user', content: rootText, timestamp: 1 })
     harness.managed.activeObjective = { ...activeObjective('root'), originalText: rootText }
     harness.managed.pendingTurnRecovery = createPendingTurnRecovery('root')
-    const enqueue = (harness.manager as unknown as {
-      enqueueAutomaticTurnRecovery: (
-        managed: Managed,
-        cause: 'objective_incomplete' | 'runtime_error',
-        gaps?: string[],
-      ) => Promise<boolean>
-    }).enqueueAutomaticTurnRecovery.bind(harness.manager)
+    const enqueue = (sessionManagerForTest(harness.manager)).enqueueAutomaticTurnRecovery.bind(harness.manager)
     const gap = 'malformed objective outcome receipt: criteria[2].satisfied must be a boolean'
 
     expect(await enqueue(harness.managed, 'objective_incomplete', [gap])).toBe(true)
@@ -140,8 +129,8 @@ describe('SessionManager objective outcome integration', () => {
     expect(harness.managed.pendingTurnRecovery?.exhaustedAt).toBeUndefined()
     harness.managed.messageQueue.length = 0
     expect(await enqueue(harness.managed, 'objective_incomplete', [gap])).toBe(false)
-    expect(harness.managed.pendingTurnRecovery).toMatchObject({
-      exhaustedAt: expect.any(Number),
+    expect<unknown>(harness.managed.pendingTurnRecovery).toMatchObject({
+      exhaustedAt: (expect.any(Number) as unknown),
       validationGaps: [gap],
     })
     expect(harness.managed.messageQueue).toEqual([])
@@ -224,11 +213,11 @@ describe('SessionManager objective outcome integration', () => {
     await harness.manager.sendMessage(harness.managed.id, 'Livre le résultat et vérifie target.json.')
     expect(harness.managed.activeObjective?.terminalState).toBe('exhausted')
     expect(harness.managed.activeObjective?.completedAt).toBeUndefined()
-    expect(harness.managed.pendingTurnRecovery).toMatchObject({
-      exhaustedAt: expect.any(Number),
-      validationGaps: expect.arrayContaining([
+    expect<unknown>(harness.managed.pendingTurnRecovery).toMatchObject({
+      exhaustedAt: (expect.any(Number) as unknown),
+      validationGaps: (expect.arrayContaining([
         'Business criterion lacks matching post-action evidence: target-verified',
-      ]),
+      ]) as unknown),
     })
     expect(harness.managed.messages.findLast(message => message.role === 'error'))
       .toMatchObject({ errorCode: 'objective_validation_failed', errorCanRetry: true })
@@ -263,11 +252,11 @@ describe('SessionManager objective outcome integration', () => {
     await harness.manager.sendMessage(harness.managed.id, 'Implémente le résultat puis teste-le.')
     const diagnostic = 'malformed objective outcome receipt: criteria must be a bounded array'
     const stopped = structuredClone(harness.managed.pendingTurnRecovery)
-    expect(structuredClone(stopped)).toMatchObject({ attempts: 256, stagnantAttempts: 7, lastCause: 'objective_incomplete', exhaustedAt: expect.any(Number), validationGaps: expect.arrayContaining([diagnostic]) })
+    expect<unknown>(structuredClone(stopped)).toMatchObject({ attempts: 256, stagnantAttempts: 7, lastCause: 'objective_incomplete', exhaustedAt: (expect.any(Number) as unknown), validationGaps: (expect.arrayContaining([diagnostic]) as unknown) })
     expect(stopped?.validationGaps).not.toContain('Previous rejection which is no longer the current diagnostic')
     const error = harness.managed.messages.at(-1)!
-    expect(structuredClone(error)).toMatchObject({ role: 'error', errorCode: 'objective_validation_failed', errorCanRetry: true, errorDetails: expect.arrayContaining([diagnostic]) })
-    expect(harness.sentEvents.findLast(event => event.type === 'typed_error')).toMatchObject({ error: { code: 'objective_validation_failed', details: error.errorDetails } })
+    expect<unknown>(structuredClone(error)).toMatchObject({ role: 'error', errorCode: 'objective_validation_failed', errorCanRetry: true, errorDetails: (expect.arrayContaining([diagnostic]) as unknown) })
+    expect(harness.sentEvents.findLast(event => event["type"] === 'typed_error')).toMatchObject({ error: { code: 'objective_validation_failed', details: error.errorDetails } })
 
     const path = join(harness.managed.workspace.rootPath, 'session.jsonl')
     writeSessionJsonl(path, {
@@ -280,10 +269,7 @@ describe('SessionManager objective outcome integration', () => {
       messagesLoaded: true, messages: persisted.messages.map(storedToMessage),
     })
     harness.managed = restored
-    const internals = harness.manager as unknown as {
-      sessions: Map<string, Managed>; flushSession: () => Promise<void>;
-      resumePendingTurnAfterRestart: (sessionId: string) => Promise<void>;
-    }
+    const internals = sessionManagerForTest(harness.manager)
     sessionRuntimeStateForTest(internals).sessions.set(restored.id, restored)
     await internals.resumePendingTurnAfterRestart(restored.id)
     expect(restored.isProcessing).toBe(false)
@@ -309,7 +295,7 @@ describe('SessionManager objective outcome integration', () => {
     expect(restored.lastSentMessage).toContain('Do not repeat an external mutation')
     expect(restored.lastSentMessage).toContain('"messageId":"preserved-check"')
     await dispatch
-    expect(structuredClone(restored.pendingTurnRecovery)).toMatchObject({ attempts: 256, stagnantAttempts: 7, exhaustedAt: expect.any(Number), validationGaps: expect.arrayContaining([diagnostic]) })
+    expect<unknown>(structuredClone(restored.pendingTurnRecovery)).toMatchObject({ attempts: 256, stagnantAttempts: 7, exhaustedAt: (expect.any(Number) as unknown), validationGaps: (expect.arrayContaining([diagnostic]) as unknown) })
     expect(restored.activeObjective).toEqual(objective)
     expect(restored.messages.filter(message => message.role === 'user')).toHaveLength(1)
     expect(restored.messages.filter(message => message.role === 'tool')).toEqual(originalMessages.filter(message => message.role === 'tool'))
@@ -334,7 +320,7 @@ describe('SessionManager objective outcome integration', () => {
     const stopped = structuredClone(harness.managed.pendingTurnRecovery!)
     const root = harness.managed.activeObjective!.userMessageId
     if (failure === 'setup') {
-      ;(harness.manager as unknown as { getOrCreateAgent: () => Promise<unknown> }).getOrCreateAgent = async () => { throw new Error('Fixture runtime unavailable before provider startup') }
+      ;(sessionManagerForTest(harness.manager)).getOrCreateAgent = async () => { throw new Error('Fixture runtime unavailable before provider startup') }
       harness.managed.agent = null
     } else {
       installAgent(harness, [
@@ -356,7 +342,7 @@ describe('SessionManager objective outcome integration', () => {
     expect(harness.managed.isProcessing).toBe(false)
     harness.manager.retryTurn = async () => { throw new Error('A stopped retry must not start automatically') }
     const marker = structuredClone(harness.managed.pendingTurnRecovery)
-    await (harness.manager as unknown as { resumePendingTurnAfterRestart: (id: string) => Promise<void> }).resumePendingTurnAfterRestart(harness.managed.id)
+    await (sessionManagerForTest(harness.manager)).resumePendingTurnAfterRestart(harness.managed.id)
     expect(harness.managed.pendingTurnRecovery).toEqual(marker)
     expect(harness.managed.messageQueue).toEqual([])
   })
@@ -392,7 +378,7 @@ describe('SessionManager objective outcome integration', () => {
     expect(tool.toolResult).toBe(result)
     expect(messageToStored(tool).toolInput).toEqual({ command })
     expect(messageToStored(tool).toolResult).toBe(result)
-    expect(harness.sentEvents.find(event => event.type === 'tool_start')?.toolInput).toEqual({ command })
+    expect(harness.sentEvents.find(event => event["type"] === 'tool_start')?.["toolInput"]).toEqual({ command })
     expect(harness.managed.activeObjective?.terminalState).toBe('complete_verified')
     expect(harness.managed.messageQueue).toEqual([])
     expect(harness.resumedSessionIds).toEqual([])

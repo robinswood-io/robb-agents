@@ -1,0 +1,10 @@
+diff --git a/pkg/whatsapp_rust_bridge.d.ts b/pkg/whatsapp_rust_bridge.d.ts
+index ef7c279d2e41f7085c8c5a29b1063bbc6bc23ad0..8274abef3bca28ec4416b569c45160ec8ae102d4 100644
+--- a/pkg/whatsapp_rust_bridge.d.ts
++++ b/pkg/whatsapp_rust_bridge.d.ts
+@@ -1,3 +1,5 @@
++export type EncodingNode = BinaryNode;
++
+ /* tslint:disable */
+ /* eslint-disable */
+ 

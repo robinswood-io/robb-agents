@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 /**
  * Shared PreToolUse utilities and centralized PreToolUse pipeline.
  *
@@ -23,12 +24,12 @@ import type { ToolEffectDescriptor } from './contracts.ts';
 import { REMOTE_COMMAND_TOOL_PATTERN } from './tool-names.ts';
 
 export function isBrowserKeyboardText(toolName: string, input: Record<string, unknown>): boolean {
-  return isCanonicalBrowserToolName(toolName) && containsBrowserKeyboardText(input.command);
+  return isCanonicalBrowserToolName(toolName) && containsBrowserKeyboardText(input["command"]);
 }
 
 export function explicitlyNamesGmailBrowserMutation(command: unknown): boolean {
-  const text = Array.isArray(command)
-    ? command.filter((part): part is string => typeof part === 'string').join(' ')
+  const text = isUnknownArray(command)
+    ? command.filter((part: unknown): part is string => typeof part === 'string').join(' ')
     : typeof command === 'string' ? command : '';
   return /(?:^|[^a-z0-9])(?:gmail|mail\.google\.com)(?:[^a-z0-9]|$)/iu.test(text);
 }
@@ -73,13 +74,13 @@ function containsOnlyContextualGmailCompletionObservations(
   input: Record<string, unknown>,
 ): boolean {
   if (!SET_COMPLETION_CRITERIA_TOOL_PATTERN.test(toolName)
-    || !Array.isArray(input.criteria)
-    || input.criteria.length === 0) return false;
-  return input.criteria.every(value => {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    || !isUnknownArray(input["criteria"])
+    || input["criteria"].length === 0) return false;
+  return input["criteria"].every((value: unknown) => {
+    if (!value || typeof value !== 'object' || isUnknownArray(value)) return false;
     const criterion = value as Record<string, unknown>;
-    return typeof criterion.toolName === 'string'
-      && CONTEXTUAL_GMAIL_COMPLETION_OBSERVATION_TOOLS.has(criterion.toolName);
+    return typeof criterion["toolName"] === 'string'
+      && CONTEXTUAL_GMAIL_COMPLETION_OBSERVATION_TOOLS.has(criterion["toolName"]);
   });
 }
 

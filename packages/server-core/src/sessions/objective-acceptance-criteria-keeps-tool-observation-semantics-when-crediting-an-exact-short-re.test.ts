@@ -285,7 +285,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
 
     expect(() => registerObjectiveAcceptanceCriteria(base, criteria.map((item, index) => ({
       ...item,
-      input: { server: 'dev', projectId: `project-${index}`, command: String(item.input.command) },
+      input: { server: 'dev', projectId: `project-${index}`, command: String(item.input["command"]) },
     })), 4)).not.toThrow();
   });
 

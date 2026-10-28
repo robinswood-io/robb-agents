@@ -24,7 +24,8 @@ export function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array]
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    // Both indices are within the copied array; T itself may include undefined.
+    [shuffled[i], shuffled[j]] = [shuffled[j] as T, shuffled[i] as T]
   }
   return shuffled
 }
@@ -36,11 +37,11 @@ export function WorkingDirectoryBadge({
   isEmptySession = false,
   workspaceId,
 }: {
-  workingDirectory?: string
+  workingDirectory?: string | undefined
   onWorkingDirectoryChange: (path: string) => void
-  sessionFolderPath?: string
-  isEmptySession?: boolean
-  workspaceId?: string
+  sessionFolderPath?: string | undefined
+  isEmptySession?: boolean | undefined
+  workspaceId?: string | undefined
 }) {
   const { t } = useTranslation()
   return (

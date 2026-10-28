@@ -13,35 +13,35 @@ export function accountSessionUsage(transportOwner: ActiveRun, evt: SessionCompl
     const costUsd = evt.tokenUsage.costUsd ?? 0;
     const cumulativeTokens = inputTokens + outputTokens;
     if (![inputTokens, outputTokens, costUsd, cumulativeTokens].every(Number.isFinite)) {
-        if (transportOwner["invalidUsageSessions"].has(evt.sessionId))
+        if (transportOwner.invalidUsageSessions.has(evt.sessionId))
             return null;
-        transportOwner["invalidUsageSessions"].add(evt.sessionId);
+        transportOwner.invalidUsageSessions.add(evt.sessionId);
         return {
             metric: 'invalid',
             reason: `session ${evt.sessionId} returned non-finite token or cost usage`,
         };
     }
     const cumulative = Math.max(0, cumulativeTokens);
-    const previousTokens = transportOwner["sessionTokens"].get(evt.sessionId) ?? 0;
+    const previousTokens = transportOwner.sessionTokens.get(evt.sessionId) ?? 0;
     const tokenHighWater = Math.max(previousTokens, cumulative);
     const cumulativeCost = Math.max(0, costUsd);
-    const previousCost = transportOwner["sessionCosts"].get(evt.sessionId) ?? 0;
+    const previousCost = transportOwner.sessionCosts.get(evt.sessionId) ?? 0;
     const costHighWater = Math.max(previousCost, cumulativeCost);
     const nextTokensUsed = transportOwner["tokensUsed"] + (tokenHighWater - previousTokens);
     const nextCostUsed = transportOwner["costUsed"] + (costHighWater - previousCost);
     if (!Number.isFinite(nextTokensUsed) || !Number.isFinite(nextCostUsed)) {
-        if (transportOwner["invalidUsageSessions"].has(evt.sessionId))
+        if (transportOwner.invalidUsageSessions.has(evt.sessionId))
             return null;
-        transportOwner["invalidUsageSessions"].add(evt.sessionId);
+        transportOwner.invalidUsageSessions.add(evt.sessionId);
         return {
             metric: 'invalid',
             reason: `session ${evt.sessionId} overflowed cumulative token or cost usage`,
         };
     }
     transportOwner["tokensUsed"] = nextTokensUsed;
-    transportOwner["sessionTokens"].set(evt.sessionId, tokenHighWater);
+    transportOwner.sessionTokens.set(evt.sessionId, tokenHighWater);
     transportOwner["costUsed"] = nextCostUsed;
-    transportOwner["sessionCosts"].set(evt.sessionId, costHighWater);
+    transportOwner.sessionCosts.set(evt.sessionId, costHighWater);
     transportOwner["log"]({
         kind: 'usage-updated',
         tokensUsed: transportOwner["tokensUsed"],
@@ -51,12 +51,12 @@ export function accountSessionUsage(transportOwner: ActiveRun, evt: SessionCompl
         cumulativeTokens: tokenHighWater,
         cumulativeCostUsd: costHighWater,
     });
-    return transportOwner["measuredBudgetBreach"]();
+    return transportOwner.measuredBudgetBreach();
 }
 
 export function failForUsageIssue(transportOwner: ActiveRun, issue: UsageIssue): void {
     if (issue.metric !== 'invalid') {
-        transportOwner["failForBudget"](issue.metric, issue.value, issue.limit);
+        transportOwner.failForBudget(issue.metric, issue.value, issue.limit);
         return;
     }
     if (transportOwner["isTerminal"]() || transportOwner["terminalIntent"])
@@ -81,11 +81,11 @@ export function costBudgetLimit(transportOwner: ActiveRun): number | undefined {
 
 /** A limit reached before a new dispatch is fail-closed: no unbudgeted work starts. */
 export function schedulingBudgetBreach(transportOwner: ActiveRun): ActiveRunSchedulingBudgetBreachResult | null {
-    const tokenLimit = transportOwner["tokenBudgetLimit"]();
+    const tokenLimit = transportOwner.tokenBudgetLimit();
     if (tokenLimit !== undefined && transportOwner["tokensUsed"] >= tokenLimit) {
         return { metric: 'tokens', value: transportOwner["tokensUsed"], limit: tokenLimit };
     }
-    const costLimit = transportOwner["costBudgetLimit"]();
+    const costLimit = transportOwner.costBudgetLimit();
     if (costLimit !== undefined && transportOwner["costUsed"] >= costLimit) {
         return { metric: 'cost', value: transportOwner["costUsed"], limit: costLimit };
     }
@@ -94,11 +94,11 @@ export function schedulingBudgetBreach(transportOwner: ActiveRun): ActiveRunSche
 
 /** Measured usage may overshoot between provider reports; overshoot immediately fails the run. */
 export function measuredBudgetBreach(transportOwner: ActiveRun): ActiveRunSchedulingBudgetBreachResult | null {
-    const tokenLimit = transportOwner["tokenBudgetLimit"]();
+    const tokenLimit = transportOwner.tokenBudgetLimit();
     if (tokenLimit !== undefined && transportOwner["tokensUsed"] > tokenLimit) {
         return { metric: 'tokens', value: transportOwner["tokensUsed"], limit: tokenLimit };
     }
-    const costLimit = transportOwner["costBudgetLimit"]();
+    const costLimit = transportOwner.costBudgetLimit();
     if (costLimit !== undefined && transportOwner["costUsed"] > costLimit) {
         return { metric: 'cost', value: transportOwner["costUsed"], limit: costLimit };
     }

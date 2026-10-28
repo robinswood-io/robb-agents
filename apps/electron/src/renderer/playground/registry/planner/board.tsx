@@ -37,8 +37,8 @@ export function PlannerBoard() {
 
   const project = projects.find(p => p.id === activeProjectId) ?? projects[0]
   const projectHeadings = React.useMemo(
-    () => headingsState.filter(h => h.projectId === project.id).sort((a, b) => a.sortOrder - b.sortOrder),
-    [headingsState, project.id]
+    () => headingsState.filter(h => h.projectId === project?.id).sort((a, b) => a.sortOrder - b.sortOrder),
+    [headingsState, project?.id]
   )
 
   const selectedTask = tasksState.find(t => t.id === selectedTaskId)
@@ -121,12 +121,13 @@ export function PlannerBoard() {
         .filter((headingId): headingId is string => Boolean(headingId && projectHeadingIds.has(headingId)))
     )
 
-    if (orderedHeadingIds.length === 0) return
+    const firstHeadingId = orderedHeadingIds[0]
+    if (!firstHeadingId) return
 
     const orderedTaskIds: string[] = []
     const seenTaskIds = new Set<string>()
     const nextHeadingByTaskId = new Map<string, string>()
-    let currentHeadingId = orderedHeadingIds[0]
+    let currentHeadingId = firstHeadingId
 
     normalizedOrderedKeys.forEach((rowKey) => {
       const headingId = parseHeadingIdFromKey(rowKey)
@@ -192,7 +193,7 @@ export function PlannerBoard() {
 
       const orderedKeys = uniqueOrdered(
         Array.from(list.children)
-          .map(el => (el as HTMLElement).dataset.rowKey)
+          .map(el => (el as HTMLElement).dataset["rowKey"])
           .filter((key): key is string => Boolean(key))
       )
 
@@ -316,11 +317,12 @@ export function PlannerBoard() {
 
   const addTask = React.useCallback(() => {
     const title = quickAdd.trim()
-    if (!title || projectHeadings.length === 0) return
+    const firstHeading = projectHeadings[0]
+    if (!title || !firstHeading) return
 
     const task: PlannerTask = {
       id: `t-${Date.now()}`,
-      headingId: projectHeadings[0].id,
+      headingId: firstHeading.id,
       title,
       notes: '',
       state: 'todo',
@@ -329,7 +331,7 @@ export function PlannerBoard() {
 
     setTasksState(prev => [task, ...prev])
     setFlatOrder((prev) => {
-      const firstHeadingKey = `heading:${projectHeadings[0].id}`
+      const firstHeadingKey = `heading:${firstHeading.id}`
       const insertionIndex = prev.indexOf(firstHeadingKey)
       if (insertionIndex === -1) return [...prev, `task:${task.id}`]
       const next = [...prev]
@@ -340,6 +342,7 @@ export function PlannerBoard() {
     setQuickAdd('')
   }, [projectHeadings, quickAdd])
 
+  if (!project) return null
   return renderPlannerBoard({
     sidebarWidth,
     setActiveProjectId,

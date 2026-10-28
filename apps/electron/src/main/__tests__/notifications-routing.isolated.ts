@@ -56,10 +56,8 @@ describe('notification click routing', () => {
       } satisfies Pick<NotificationWindow['webContents'], 'id' | 'isDestroyed'> as NotificationWindow['webContents'],
     } satisfies Pick<NotificationWindow, 'isDestroyed' | 'isMinimized' | 'restore' | 'focus' | 'webContents'> as NotificationWindow
 
-    notifications.initNotificationService({
-      getWindowByWorkspace: () => mockWindow,
-      createWindow: () => mockWindow,
-    } satisfies Pick<Parameters<typeof notifications.initNotificationService>[0], 'getWindowByWorkspace' | 'createWindow'> as Partial<Parameters<typeof notifications.initNotificationService>[0]> as Parameters<typeof notifications.initNotificationService>[0])
+    notifications.initNotificationService(({getWindowByWorkspace: () => mockWindow,
+createWindow: () => mockWindow} satisfies Parameters<typeof notifications.initNotificationService>[0]))
 
     const pushed: Array<{ channel: string; target: unknown; args: unknown[] }> = []
     notifications.setNotificationEventSink(((channel: string, target: unknown, ...args: unknown[]) => {
@@ -91,10 +89,8 @@ describe('notification click routing', () => {
       } satisfies Pick<NotificationWindow['webContents'], 'id' | 'isDestroyed'> as NotificationWindow['webContents'],
     } satisfies Pick<NotificationWindow, 'isDestroyed' | 'isMinimized' | 'restore' | 'focus' | 'webContents'> as NotificationWindow
 
-    notifications.initNotificationService({
-      getWindowByWorkspace: () => mockWindow,
-      createWindow: () => mockWindow,
-    } satisfies Pick<Parameters<typeof notifications.initNotificationService>[0], 'getWindowByWorkspace' | 'createWindow'> as Partial<Parameters<typeof notifications.initNotificationService>[0]> as Parameters<typeof notifications.initNotificationService>[0])
+    notifications.initNotificationService(({getWindowByWorkspace: () => mockWindow,
+createWindow: () => mockWindow} satisfies Parameters<typeof notifications.initNotificationService>[0]))
 
     const pushed: Array<{ channel: string; target: unknown; args: unknown[] }> = []
     notifications.setNotificationEventSink(((channel: string, target: unknown, ...args: unknown[]) => {

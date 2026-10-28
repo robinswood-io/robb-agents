@@ -32,9 +32,11 @@ class ModeManager {
       return;
     }
 
+    const existingWithoutOverrides = { ...existing };
+    delete existingWithoutOverrides.previousPermissionMode;
     const newState: ModeState = {
-      ...existing,
-      previousPermissionMode,
+      ...existingWithoutOverrides,
+      ...(previousPermissionMode !== undefined ? { previousPermissionMode } : {}),
     };
     this.states.set(sessionId, newState);
   }
@@ -79,9 +81,12 @@ class ModeManager {
 
     const shouldTrackTransition = !(existing.modeVersion === 0 && changedBy === 'restore');
 
+    const optionalPreviousPermissionMode = shouldTrackTransition ? existing.permissionMode : undefined;
+    const existingWithoutOverrides2 = { ...existing };
+    delete existingWithoutOverrides2.previousPermissionMode;
     const newState: ModeState = {
-      ...existing,
-      previousPermissionMode: shouldTrackTransition ? existing.permissionMode : undefined,
+      ...existingWithoutOverrides2,
+      ...(optionalPreviousPermissionMode !== undefined ? { previousPermissionMode: optionalPreviousPermissionMode } : {}),
       permissionMode: mode,
       modeVersion: existing.modeVersion + 1,
       lastChangedAt: changedAt,

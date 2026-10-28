@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { PushTarget } from "@craft-agent/shared/protocol";
 import type { CredentialManager } from "@craft-agent/shared/credentials";
 import type { ISessionManager, MessagingBindingInfo } from "@craft-agent/server-core/handlers";
@@ -5,7 +6,7 @@ import { MessagingGateway } from "../gateway";
 import { ConfigStore } from "../config-store";
 import { WhatsAppAdapter } from "../adapters/whatsapp/index";
 import { TopicRegistry } from "../topic-registry";
-import type { ChannelBinding, MessagingLogger, MessagingPlatformRuntimeInfo, PlatformOwner, PlatformType } from "../types";
+import type { ChannelBinding, MessagingConfig, MessagingLogger, MessagingPlatformRuntimeInfo, PlatformOwner, PlatformType } from "../types";
 
 export const consoleLogger: MessagingLogger = {
     info: (message, meta) => console.log('[MessagingRegistry]', message, meta ?? ''),
@@ -23,7 +24,7 @@ export const consoleLogger: MessagingLogger = {
 
 export interface MessagingGatewayRegistryOptions {
     sessionManager: ISessionManager;
-    credentialManager: CredentialManager;
+    credentialManager: Pick<CredentialManager, 'get' | 'set' | 'delete'>;
     /** Absolute path to the messaging storage directory for the given workspace. */
     getMessagingDir: (workspaceId: string) => string;
     /** Optional legacy messaging dir (pre-relocation) for one-shot migration. */
@@ -43,6 +44,12 @@ export interface MessagingGatewayRegistryOptions {
     logger?: MessagingLogger;
 }
 
+export type PlatformRuntimePatch = {
+    [K in keyof MessagingPlatformRuntimeInfo]?: MessagingPlatformRuntimeInfo[K] | ({} extends Pick<MessagingPlatformRuntimeInfo, K> ? undefined : never);
+};
+type TelegramConfig = NonNullable<MessagingConfig['platforms']['telegram']>;
+export type TelegramConfigPatch = { [K in keyof TelegramConfig]?: TelegramConfig[K] | ({} extends Pick<TelegramConfig, K> ? undefined : never) };
+
 export interface WorkspaceState {
     gateway: MessagingGateway;
     configStore: ConfigStore;
@@ -57,7 +64,7 @@ export interface WorkspaceState {
 // Helpers
 // ---------------------------------------------------------------------------
 export function toBindingInfo(b: ChannelBinding): MessagingBindingInfo {
-    return {
+    return omitUndefined<MessagingBindingInfo>({
         id: b.id,
         workspaceId: b.workspaceId,
         sessionId: b.sessionId,
@@ -69,7 +76,7 @@ export function toBindingInfo(b: ChannelBinding): MessagingBindingInfo {
         createdAt: b.createdAt,
         accessMode: b.config.accessMode,
         allowedSenderIds: [...b.config.allowedSenderIds],
-    };
+    });
 }
 
 export function isKnownPlatform(p: string): p is PlatformType {

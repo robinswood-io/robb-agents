@@ -25,8 +25,7 @@ export async function runValidation(
   const results: Array<{ step: string; status: string; detail: string; elapsed: number }> = []
   const totalStart = performance.now()
 
-  for (let i = 0; i < steps.length; i++) {
-    const step = steps[i]
+  for (const [i, step] of steps.entries()) {
     const num = `[${i + 1}/${total}]`
     const plainLen = num.length + 1 + step.name.length
 
@@ -68,7 +67,7 @@ export async function runValidation(
         switch (ev.type) {
           // Buffer prompt — shown when agent starts responding
           case 'user_message': {
-            const text = cliMessageText(ev.message)
+            const text = cliMessageText(ev["message"])
             const clean = text.replace(/\n/g, ' ').trim()
             bufferedPrompt = clean.length > 100 ? clean.slice(0, 100) + '…' : clean
             break
@@ -76,7 +75,7 @@ export async function runValidation(
           // Agent text — stop spinner, show header + prompt + text
           case 'text_delta':
             ensureHeader()
-            accText += String(ev.delta ?? '')
+            accText += String(ev["delta"] ?? '')
             if (!textFlushed && accText.length > 40) flushText()
             break
           case 'text_complete':
@@ -87,8 +86,8 @@ export async function runValidation(
           case 'tool_start': {
             ensureHeader()
             flushText()
-            const name = String(ev.toolName ?? '?')
-            const intent = ev.toolIntent ? ` — "${ev.toolIntent}"` : ''
+            const name = String(ev["toolName"] ?? '?')
+            const intent = ev["toolIntent"] ? ` — "${ev["toolIntent"]}"` : ''
             process.stdout.write(`    ${c.dim('↳')} ${c.dim(`tool: ${name}${intent}`)}\n`)
             accText = ''
             textFlushed = false

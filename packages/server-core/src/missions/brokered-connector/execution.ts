@@ -1,3 +1,5 @@
+import type { ConnectorExecutionState } from './shared.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { capabilityOperationRequestHash } from "@craft-agent/shared/governance";
 import { type MissionExecutionBinding } from "@craft-agent/shared/missions";
 import type { ConnectorAuthorizationResult, PreparedConnectorInvocation } from "../../services/connector-execution-runtime.ts";
@@ -6,7 +8,7 @@ import type { BrokeredMissionConnectorExecutor } from '../BrokeredMissionConnect
 import { STATE_SCHEMA_VERSION, requirePack, connectorInvocation, idempotencyKey, resultProof } from './shared.ts';
 import type { DurablePendingMissionConnectorApproval } from './shared.ts';
 
-export async function prepare(transportOwner: BrokeredMissionConnectorExecutor, input: MissionExecutionInput): Promise<MissionExecutionBinding> {
+export async function prepare(_transportOwner: BrokeredMissionConnectorExecutor, input: MissionExecutionInput): Promise<MissionExecutionBinding> {
     connectorInvocation(input);
     return { executorKind: 'connector-broker', executionId: idempotencyKey(input) };
 }
@@ -92,7 +94,7 @@ export async function execute(transportOwner: BrokeredMissionConnectorExecutor, 
         }
     }
     else if (approvalExpired) {
-        state = transportOwner["store"].update(input.mission.id, input.item.id, state.revision, (current) => ({
+        state = transportOwner["store"].update(input.mission.id, input.item.id, state.revision, (current) => (omitUndefined<ConnectorExecutionState>({
             ...current,
             status: 'prepared',
             requestHash,
@@ -100,7 +102,7 @@ export async function execute(transportOwner: BrokeredMissionConnectorExecutor, 
             pendingApproval: undefined,
             approval: undefined,
             updatedAt: transportOwner["now"](),
-        }));
+        })));
     }
     if (state.requestHash !== requestHash) {
         return transportOwner["failed"]('Connector request changed after durable preparation; policy or registry drifted', false);
@@ -155,12 +157,12 @@ export async function execute(transportOwner: BrokeredMissionConnectorExecutor, 
         }));
         return transportOwner["failed"](state.failureReason!, false);
     }
-    state = transportOwner["store"].update(input.mission.id, input.item.id, state.revision, (current) => ({
+    state = transportOwner["store"].update(input.mission.id, input.item.id, state.revision, (current) => (omitUndefined<ConnectorExecutionState>({
         ...current,
         status: 'executing',
         pendingApproval: undefined,
         updatedAt: transportOwner["now"](),
-    }));
+    })));
     try {
         const executed = await transportOwner["options"].runtime.invokeAuthorized(prepared.preparationId);
         return transportOwner["complete"](input, state, resultProof(executed.output));

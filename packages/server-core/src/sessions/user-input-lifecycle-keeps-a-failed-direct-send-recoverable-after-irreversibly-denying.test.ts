@@ -1,3 +1,7 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import { parseJsonObject } from '@craft-agent/shared/utils/json';
+import type { SessionOperations } from './SessionManager/operation-types.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { ScriptedSessionAgent } from './testing/scripted-session-agent.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
@@ -20,7 +24,7 @@ import { type AgentEvent, type UserInputQuestion } from '@craft-agent/core/types
 
 
 
-type Managed = ReturnType<typeof createManagedSession>
+
 const roots: string[] = []
 const ids: string[] = []
 const questions: UserInputQuestion[] = [{ id: 'format', question: 'Quel format souhaites-tu ?', options: [{ id: 'short', label: 'Court' }, { id: 'long', label: 'Détaillé' }] }]
@@ -34,20 +38,9 @@ function harness() {
   const manager = withSessionOperationsForTest(new SessionManager())
   const events: Array<Record<string, unknown>> = []
   const snapshots: Array<Record<string, unknown>> = []
-  const internals = manager as unknown as {
-    sessions: Map<string, Managed>; enqueuePersist: (m: Managed) => void; flushSession: (id: string) => Promise<void>
-    sendEvent: (e: Record<string, unknown>) => void; enqueueAutomaticTurnRecovery: (m: Managed, cause: 'objective_incomplete') => Promise<boolean>
-    resumePendingTurnAfterRestart: (id: string) => Promise<void>; onProcessingStopped: (id: string, reason: 'interrupted') => Promise<void>
-    emitExecutionTelemetry: () => void; startGenerationTelemetry: () => void; finishGenerationTelemetry: () => void
-    beginAutomaticSessionStatusLifecycle: () => Promise<void>; finishAutomaticSessionStatusLifecycle: () => Promise<void>
-    isSessionBeingViewed: () => boolean; markSessionRead: () => Promise<void>; processNextQueuedMessage: (id: string) => void
-    disposeManagedAgentRuntime: () => Promise<void>; getOrCreateAgent: (m: Managed) => Promise<unknown>
-    ensureMessagesLoaded: (m: Managed) => Promise<void>
-    ensureDelegatedTerminalResultDelivery: (child: Managed, deferRecipientDispatch?: boolean) => Promise<boolean>
-    queuedMessageDispatches: Map<string, symbol>
-  }
+  const internals = sessionManagerForTest(manager)
   sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
-  internals.enqueuePersist = m => snapshots.push(JSON.parse(JSON.stringify({ ...pickSessionFields(m), messages: m.messages })))
+  internals.enqueuePersist = m => { snapshots.push(parseJsonObject(JSON.stringify({ ...pickSessionFields(m), messages: m.messages }))); return true }
   internals.flushSession = async () => {}
   internals.sendEvent = e => events.push(e)
   internals.emitExecutionTelemetry = () => {}; internals.startGenerationTelemetry = () => {}; internals.finishGenerationTelemetry = () => {}
@@ -57,8 +50,8 @@ function harness() {
   internals.processNextQueuedMessage = () => {}; internals.disposeManagedAgentRuntime = async () => { managed.agent = null }
   const redirects: string[] = []
   const installAgent = (steer = true, stream: AgentEvent[] = [], beforeChat?: () => void) => {
-    const agent = { redirect: (text: string) => { redirects.push(text); return steer }, getModel: () => 'test', getSessionId: () => null, setAllSources: () => {}, async *chat() { beforeChat?.(); for (const e of stream) yield e } }
-    managed.agent = agent as never; internals.getOrCreateAgent = async m => { m.agent = agent as never; return agent }
+    const agent = completeSessionAgentFixture(managed.workspace, { redirect: (text: string) => { redirects.push(text); return steer }, getModel: () => 'test', getSessionId: () => null, setAllSources: () => {}, async *chat() { beforeChat?.(); for (const e of stream) yield e } })
+    managed.agent = agent; internals.getOrCreateAgent = async m => { m.agent = agent; return agent }
   }
   const restoreQueueProcessing = () => { internals.processNextQueuedMessage = realProcessNextQueuedMessage }
   return { manager, managed, internals, events, snapshots, redirects, installAgent, restoreQueueProcessing }
@@ -102,7 +95,7 @@ it('keeps a failed direct send recoverable after irreversibly denying its old pe
 it('serializes concurrent direct supersessions so a failed first flush cannot revive the second handoff', async () => {
     const h = harness()
     await h.manager.requestUserInput(h.managed.id, questions)
-    h.internals.processNextQueuedMessage = Object.getPrototypeOf(h.manager).processNextQueuedMessage.bind(h.manager)
+    h.internals.processNextQueuedMessage = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'processNextQueuedMessage'>).processNextQueuedMessage.bind(h.manager)
     const send = h.manager.sendMessage.bind(h.manager)
     const replayed: string[] = []
     h.manager.sendMessage = (...args) => {
@@ -141,7 +134,7 @@ for (const transition of ['closed', 'terminal'] as const) {
       h.managed.messages.push({ id: 'cold-human', role: 'user', content: 'old cold row', timestamp: 3, isQueued: true })
       const queued = { messageId: 'cold-human', message: 'old cold row' }
       h.managed.messageQueue.push(queued)
-      h.internals.processNextQueuedMessage = Object.getPrototypeOf(h.manager).processNextQueuedMessage.bind(h.manager)
+      h.internals.processNextQueuedMessage = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'processNextQueuedMessage'>).processNextQueuedMessage.bind(h.manager)
       const starts: string[] = []
       h.manager.sendMessage = async (...args) => { if (args[5]) starts.push(args[5]) }
 
@@ -157,9 +150,9 @@ for (const transition of ['closed', 'terminal'] as const) {
       expect(starts).toEqual([])
       expect(h.managed.messageQueue).toEqual([queued])
       expect(h.managed.messages.find(message => message.id === 'cold-human')?.isQueued).toBe(true)
-      expect(h.events.some(event => event.type === 'user_message'
-        && event.status === 'processing'
-        && (event.message as { id?: string } | undefined)?.id === 'cold-human')).toBe(false)
+      expect(h.events.some(event => event["type"] === 'user_message'
+        && event["status"] === 'processing'
+        && (event["message"] as { id?: string } | undefined)?.id === 'cold-human')).toBe(false)
       expect(sessionRuntimeStateForTest(h.internals).queuedMessageDispatches.has(h.managed.id)).toBe(false)
       expect(sessionRuntimeStateForTest(h.internals).automaticAdmissionReservations.has(h.managed.id)).toBe(false)
     })
@@ -178,7 +171,7 @@ it('queues instead of steering while permission cleanup is still processing, the
       redirect: (text: string) => { redirects.push(text); return true },
       isProcessing: () => false,
     } as never
-    h.internals.processNextQueuedMessage = Object.getPrototypeOf(h.manager).processNextQueuedMessage.bind(h.manager)
+    h.internals.processNextQueuedMessage = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'processNextQueuedMessage'>).processNextQueuedMessage.bind(h.manager)
     const send = h.manager.sendMessage.bind(h.manager)
     const replayed: string[] = []
     h.manager.sendMessage = (...args) => {
@@ -205,7 +198,7 @@ it('retries the exact live dequeue after a permission-deny stop callback loses t
     h.managed.pendingTurnRecovery!.waitingForPermission = {
       requestId: 'expiring', requestedAt: 2, toolName: 'Bash', recoveryRequired: true,
     }
-    h.internals.processNextQueuedMessage = Object.getPrototypeOf(h.manager).processNextQueuedMessage.bind(h.manager)
+    h.internals.processNextQueuedMessage = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'processNextQueuedMessage'>).processNextQueuedMessage.bind(h.manager)
     const send = h.manager.sendMessage.bind(h.manager)
     const replayed: string[] = []
     h.manager.sendMessage = (...args) => {
@@ -253,7 +246,7 @@ it('does not acknowledge or resurrect a direct continuation when Stop wins its d
     h.managed.pendingTurnRecovery!.waitingForPermission = {
       requestId: 'expired', requestedAt: 2, toolName: 'Bash', recoveryRequired: true,
     }
-    h.internals.processNextQueuedMessage = Object.getPrototypeOf(h.manager).processNextQueuedMessage.bind(h.manager)
+    h.internals.processNextQueuedMessage = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'processNextQueuedMessage'>).processNextQueuedMessage.bind(h.manager)
     let releaseDirectFlush!: () => void
     const directFlush = new Promise<void>(resolve => { releaseDirectFlush = resolve })
     let flushes = 0

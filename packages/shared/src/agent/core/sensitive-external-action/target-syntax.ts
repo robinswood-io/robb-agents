@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import { posix } from "node:path";
 import { hasSingleMailboxShape } from "../../../utils/string-boundaries.ts";
 
@@ -65,9 +66,9 @@ export function isBoundedSessionPdfAttachmentPath(path: unknown): path is string
 }
 
 export function hasBoundedSessionPdfAttachment(input: Record<string, unknown>): boolean {
-  if (!Array.isArray(input.attachmentPaths) || input.attachmentPaths.length !== 1) return false;
+  if (!isUnknownArray(input["attachmentPaths"]) || input["attachmentPaths"].length !== 1) return false;
   // The symbolic session root is resolved by the host and cannot escape into
   // another task. Limit this authority recovery to one ordinary PDF beneath
   // the two directories used for connector downloads and long results.
-  return isBoundedSessionPdfAttachmentPath(input.attachmentPaths[0]);
+  return isBoundedSessionPdfAttachmentPath(input["attachmentPaths"][0]);
 }

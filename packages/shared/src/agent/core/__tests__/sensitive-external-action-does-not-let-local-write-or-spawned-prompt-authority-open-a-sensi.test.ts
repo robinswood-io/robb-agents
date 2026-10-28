@@ -28,11 +28,11 @@ function checkBash(
     activeSourceSlugs: [],
     allSourceSlugs: [],
     hasSourceActivation: false,
-    externalActionPolicy,
-    objectiveMutationAuthorized,
-    objectiveAuthorizationSegments,
+    ...(externalActionPolicy !== undefined ? { externalActionPolicy } : {}),
+    ...(objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized } : {}),
+    ...(objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 function checkMcp(
@@ -78,15 +78,15 @@ function checkMcp(
     activeSourceSlugs: [sourceSlug],
     allSourceSlugs: [sourceSlug],
     hasSourceActivation: false,
-    externalActionPolicy: options?.externalActionPolicy,
-    objectiveMutationAuthorized: options?.objectiveMutationAuthorized,
-    objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized,
-    objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments,
-    authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments,
-    dataFolderPath: options?.dataFolderPath,
-    declaredToolCapabilities: options?.declaredToolCapabilities,
+    ...(options?.externalActionPolicy !== undefined ? { externalActionPolicy: options?.externalActionPolicy } : {}),
+    ...(options?.objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized: options?.objectiveMutationAuthorized } : {}),
+    ...(options?.objectiveSensitiveActionAuthorized !== undefined ? { objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized } : {}),
+    ...(options?.objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments } : {}),
+    ...(options?.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments } : {}),
+    ...(options?.dataFolderPath !== undefined ? { dataFolderPath: options?.dataFolderPath } : {}),
+    ...(options?.declaredToolCapabilities !== undefined ? { declaredToolCapabilities: options?.declaredToolCapabilities } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 
@@ -102,9 +102,6 @@ afterEach(() => {
 });
 
 describe('sensitive external action gate across permission modes', () => {
-  const silaeConfirmationObjective = [
-    'Reprends l’objectif explicite d’écrire à Benoît. Vérifie d’abord Sent/Brouillons pour éviter un doublon, exécute le préflight exact vers benoit@example.test, sans fallback navigateur, puis arrête-toi immédiatement avant l’envoi pour la confirmation d’action externe. Après confirmation, envoie une seule fois et vérifie le messageId.',
-  ];
 
   it('does not let local-write or spawned-prompt authority open a sensitive external target', () => {
     const rootLocalObjective = ['Corrige le fichier /tmp/report.md et vérifie le résultat.'];
@@ -118,7 +115,7 @@ describe('sensitive external action gate across permission modes', () => {
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveAuthorizationSegments: rootLocalObjective,
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     expect(checkMcp(
       'allow-all', 'mcp__google-contacts__gmail_send',
       { to: 'alice@example.com', subject: 'Rapport' }, 'Envoie le rapport à alice@example.com.',
@@ -126,19 +123,19 @@ describe('sensitive external action gate across permission modes', () => {
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveSensitiveActionAuthorized: true, objectiveAuthorizationSegments: [],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     expect(checkBash(
       'allow-all', 'git push origin main', 'Corrige le fichier',
       'allow-in-execute', true, rootLocalObjective,
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     expect(checkBash(
       'allow-all', "curl -X POST https://api.example.com/jobs -d '{\"run\":true}'",
       'Corrige le fichier', 'allow-in-execute', true, rootLocalObjective,
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     expect(checkBash(
       'allow-all', 'npm run deploy -- --environment prod', 'Corrige le fichier',
       'allow-in-execute', true, rootLocalObjective,
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     expect(checkMcp(
       'allow-all', 'mcp__rbw-servers__ssh_execute',
       { server: 'prod-server', command: 'git push origin main' }, 'Pousse origin main sur prod-server',
@@ -146,21 +143,21 @@ describe('sensitive external action gate across permission modes', () => {
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveAuthorizationSegments: rootLocalObjective,
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     expect(checkMcp(
       'allow-all', 'mcp__todo__delete_task', { task_id: 'task-7' }, 'Supprime la tâche task-7.',
       {
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveAuthorizationSegments: rootLocalObjective,
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     expect(checkMcp(
       'allow-all', 'api_jobs', { method: 'DELETE', path: '/jobs/7' }, 'Supprime /jobs/7.',
       {
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveAuthorizationSegments: rootLocalObjective,
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
   });
 
   it('allows only a matching action and target from one authenticated objective segment', () => {
@@ -179,7 +176,7 @@ describe('sensitive external action gate across permission modes', () => {
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveAuthorizationSegments: ['Envoie le rapport à alice@example.com.', 'Poursuis.'],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     expect(checkBash(
       'allow-all', 'git push origin main', 'Poursuis', 'allow-in-execute', true,
       ['Pousse origin main après les tests.', 'Poursuis.'],
@@ -235,14 +232,14 @@ describe('sensitive external action gate across permission modes', () => {
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveAuthorizationSegments: ['Supprime la tâche task-7.'],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     expect(checkMcp(
       'allow-all', 'mcp__todo__delete_task', { task_id: 'task-7' }, 'Poursuis',
       {
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveAuthorizationSegments: ['Supprime la tâche task-7.', 'Mets plutôt à jour la tâche task-7.'],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
 
     // Never combine the target from one amendment with the action from another.
     expect(checkMcp(
@@ -281,7 +278,7 @@ describe('sensitive external action gate across permission modes', () => {
             amendment,
           ],
         },
-      )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+      )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     }
 
     for (const amendment of [
@@ -308,7 +305,7 @@ describe('sensitive external action gate across permission modes', () => {
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveAuthorizationSegments: ['Inspecte la tâche task-7.', 'Poursuis.'],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
   });
 
   it('keeps constraints local while negative and retargeting amendments revoke stale authority', () => {
@@ -320,7 +317,7 @@ describe('sensitive external action gate across permission modes', () => {
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveAuthorizationSegments: [liveObjective],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
 
     expect(checkBash(
       'allow-all', 'npm run deploy -- --environment prod',
@@ -331,7 +328,7 @@ describe('sensitive external action gate across permission modes', () => {
       'allow-all', 'systemctl restart Zero',
       'Déploie prod sans redémarrer Zero.', 'allow-in-execute', true,
       ['Déploie prod sans redémarrer Zero.'],
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     expect(checkBash(
       'allow-all', 'npm run deploy -- --environment prod',
       'Ne redémarre pas Zero; déploie prod.', 'allow-in-execute', true,
@@ -342,7 +339,7 @@ describe('sensitive external action gate across permission modes', () => {
       expect(checkBash(
         'allow-all', 'npm run deploy -- --environment prod', request,
         'allow-in-execute', true, [request],
-      )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+      )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     }
 
     expect(checkMcp(
@@ -351,7 +348,7 @@ describe('sensitive external action gate across permission modes', () => {
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveAuthorizationSegments: ['Envoie à bob@example.com.', 'N’envoie pas à bob@example.com.'],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
 
     const remoteInput = { server: 'dev', cwd: '/srv/workspace/zero', command: 'touch marker' };
     for (const amendment of [
@@ -366,7 +363,7 @@ describe('sensitive external action gate across permission modes', () => {
           externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
           objectiveAuthorizationSegments: ['Corrige Zero sur le serveur dev.', amendment],
         },
-      )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+      )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     }
     expect(checkMcp(
       'allow-all', 'mcp__rbw-servers__ssh_execute', remoteInput, 'Continue les tests.', {
@@ -388,7 +385,7 @@ describe('sensitive external action gate across permission modes', () => {
           externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
           objectiveAuthorizationSegments: ['Send the report to alice@example.com.', amendment],
         },
-      )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+      )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     }
   });
 

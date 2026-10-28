@@ -1,3 +1,7 @@
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { requiredTestValue } from '@craft-agent/shared/testing/fixture-values';
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test';
@@ -11,7 +15,7 @@ import { SessionManager, createManagedSession } from './SessionManager.ts';
 
 import type { AgentBackend } from '@craft-agent/shared/agent/backend/types.ts';
 import type { SessionEvent } from '@craft-agent/shared/protocol';
-import type { SessionOperations } from './SessionManager/operation-types.ts';
+
 
 
 
@@ -37,7 +41,7 @@ function harness(stallAnswer = false) {
   const rootPath = mkdtempSync(join(tmpdir(), 'native-question-retry-')); roots.push(rootPath)
   const workspace = { id: 'native-fixture', slug: 'native-fixture', name: 'Native fixture', rootPath, createdAt: 1 }
   const manager = withSessionOperationsForTest(new SessionManager()); managers.push(manager)
-  const runtime = manager as unknown as SessionOperations
+  const runtime = sessionManagerForTest(manager)
   let managed = createManagedSession({ id: 'native-question' }, workspace, { messagesLoaded: true })
   sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
   const events: SessionEvent[] = []
@@ -49,7 +53,7 @@ function harness(stallAnswer = false) {
   const chatPrompts: string[] = []
   let answerWasStopped = false
   let chats = 0, requestId = '', dispatch: Promise<void> | undefined
-  const agent = ({
+  const agent = completeSessionAgentFixture(managed.workspace, ({
     getModel: () => 'fixture', getSessionId: () => null, setAllSources: () => {},
     isProcessing: () => managed.isProcessing, forceAbort: () => {
       if (chats === 1) release.resolve()
@@ -72,11 +76,11 @@ function harness(stallAnswer = false) {
       else throw new Error('Unexpected extra model continuation in a conversational fixture')
       yield { type: 'complete' }
     },
-  } satisfies Partial<AgentBackend> & { dispose?: () => void }) as Partial<AgentBackend> as AgentBackend
+  } satisfies Partial<AgentBackend> & { dispose?: () => void }))
   runtime.getOrCreateAgent = async () => { managed.agent = agent as never; return agent }
   const send = manager.sendMessage.bind(manager)
   manager.sendMessage = (...args) => { dispatch = send(...args); return dispatch }
-  const readHeader = () => JSON.parse(readFileSync(getSessionFilePath(rootPath, managed.id), 'utf8').split('\n')[0]!)
+  const readHeader = () => parseRecoveryJournalObservation(readFileSync(getSessionFilePath(rootPath, managed.id), 'utf8').split('\n')[0]!)
   const restore = () => {
     const saved = loadSession(rootPath, managed.id)!
     const { messages, ...metadata } = saved
@@ -120,7 +124,7 @@ it('finishes the fresh conversational objective without inventing checks or losi
     await h.manager.flushSession(h.managed.id)
 
     expect(result.delivery).toBe('started')
-    expect(stoppedHeader.activeObjective.interruptedTurnRecovery?.recovery).toEqual(initialBudget)
+    expect<unknown>(requiredTestValue(stoppedHeader.activeObjective).interruptedTurnRecovery?.recovery).toEqual(initialBudget)
     expect(retryBudget.attempts).toBe(initialBudget.attempts)
     expect(retryBudget.budgetHistoryUnavailable).not.toBe(true)
     expect(h.managed.activeObjective).toMatchObject({
@@ -134,7 +138,7 @@ it('finishes the fresh conversational objective without inventing checks or losi
     expect(h.managed.messages.filter(message => message.role === 'tool').map(message => message.toolName)).toEqual(['mcp__session__request_user_input'])
     expect(h.managed.messages.find(message => message.turnId === 'native-final')).toMatchObject({ content: 'UI-3af573b1 : Bleu' })
     expect(h.managed.messages.find(message => message.turnId === 'native-final')?.isIntermediate).not.toBe(true)
-    expect(h.readHeader().activeObjective.terminalState).toBe('complete_verified')
+    expect(requiredTestValue(h.readHeader().activeObjective).terminalState).toBe('complete_verified')
     expect(h.chats()).toBe(3)
   })
 
@@ -177,7 +181,7 @@ it('migrates an exact legacy restart transcript and grants Retry only a bounded 
     await h.manager.cancelProcessing(h.managed.id)
     await initial
     h.managed.pendingTurnRecovery = undefined
-    h.managed.activeObjective!.interruptedTurnRecovery = undefined
+    delete h.managed.activeObjective!.interruptedTurnRecovery;
     h.managed.activeObjective!.terminalState = 'exhausted'
     const recoveryStartedAt = h.managed.messages.find(message => message.id === anchor)!.timestamp + 10
     for (const attempt of [1, 2]) h.managed.messages.push({
@@ -225,7 +229,7 @@ it('migrates an exact legacy restart transcript anchored to the latest accepted 
       messageId: amendmentId, text: amendmentText, timestamp: rootTimestamp + 10,
     }]
     h.managed.pendingTurnRecovery = undefined
-    h.managed.activeObjective!.interruptedTurnRecovery = undefined
+    delete h.managed.activeObjective!.interruptedTurnRecovery;
     h.managed.activeObjective!.terminalState = 'exhausted'
     const recoveryStartedAt = rootTimestamp + 20
     for (const attempt of [1, 2]) h.managed.messages.push({
@@ -269,7 +273,7 @@ it('keeps malformed, cross-objective, duplicate and over-cap legacy histories un
       await h.manager.cancelProcessing(h.managed.id)
       await initial
       h.managed.pendingTurnRecovery = undefined
-      h.managed.activeObjective!.interruptedTurnRecovery = undefined
+      delete h.managed.activeObjective!.interruptedTurnRecovery;
       h.managed.activeObjective!.terminalState = 'exhausted'
       const startedAt = h.managed.messages.find(message => message.id === anchor)!.timestamp + 10
       const row = (id: string, objectiveId: string, attempt: number, contentAttempt = String(attempt)) => ({
@@ -361,7 +365,7 @@ it('persists a prospective Retry reserve, reuses its remainder after Stop, and n
     await h.manager.retryTurn(h.managed.id, anchor)
     await h.dispatch()
     const grant = structuredClone(h.managed.pendingTurnRecovery!.explicitRetryAllowances![0]!)
-    expect(h.readHeader().pendingTurnRecovery.explicitRetryAllowances).toEqual([grant])
+    expect(requiredTestValue(h.readHeader().pendingTurnRecovery).explicitRetryAllowances).toEqual([grant])
     await h.manager.respondToUserInput(h.managed.id, { requestId: h.requestId(),
       answers: [{ questionId: 'color', optionIds: ['blue'] }] })
     await h.answerStarted.promise
@@ -371,19 +375,19 @@ it('persists a prospective Retry reserve, reuses its remainder after Stop, and n
     await h.manager.flushSession(h.managed.id)
     const stoppedAnswerHeader = h.readHeader()
     expect(stoppedAnswerHeader.pendingTurnRecovery).toBeUndefined()
-    expect(stoppedAnswerHeader.activeObjective.interruptedTurnRecovery.recovery.explicitRetryAllowances).toEqual([grant])
+    expect(requiredTestValue(requiredTestValue(stoppedAnswerHeader.activeObjective).interruptedTurnRecovery).recovery.explicitRetryAllowances).toEqual([grant])
 
     // Recreate the exact shape written by an older host so startup migration,
     // not only the live Stop path above, proves it cannot spend the reserve.
     h.managed.pendingTurnRecovery = structuredClone(h.managed.activeObjective!.interruptedTurnRecovery!.recovery)
-    h.managed.activeObjective!.interruptedTurnRecovery = undefined
+    delete h.managed.activeObjective!.interruptedTurnRecovery;
     h.runtime.persistSession(h.managed)
     await h.manager.flushSession(h.managed.id)
     h.restore()
     await h.runtime.resumePendingTurnAfterRestart(h.managed.id)
     expect(h.chats()).toBe(3)
     expect(h.managed.pendingTurnRecovery).toBeUndefined()
-    expect(h.readHeader().activeObjective.interruptedTurnRecovery.recovery.explicitRetryAllowances).toEqual([grant])
+    expect(requiredTestValue(requiredTestValue(h.readHeader().activeObjective).interruptedTurnRecovery).recovery.explicitRetryAllowances).toEqual([grant])
 
     await h.manager.retryTurn(h.managed.id, anchor)
     await h.dispatch()

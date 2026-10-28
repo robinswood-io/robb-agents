@@ -22,7 +22,7 @@ export function settleReviewerSession(transportOwner: ActiveRun, reviewerSession
     transportOwner["reviewerPending"] = false;
     if (transportOwner["reviewerSessionId"] === reviewerSessionId) {
         transportOwner["reviewerSessionId"] = undefined;
-        transportOwner["reviewerContract"] = undefined;
+        delete transportOwner.reviewerContract;
     }
     transportOwner["pendingReviewerSessionIds"].delete(reviewerSessionId);
     transportOwner["bestEffortHostMetadata"]('settle reviewer session status', reviewerSessionId, () => (transportOwner["deps"].host.setSessionStatus(reviewerSessionId, acceptedResult ? DONE_STATUS : FAILED_STATUS)));
@@ -40,7 +40,7 @@ export function failReviewer(transportOwner: ActiveRun, reviewerSessionId: strin
     if (sessionId)
         transportOwner["pendingReviewerSessionIds"].add(sessionId);
     transportOwner["reviewerPending"] = transportOwner["pendingReviewerSessionIds"].size > 0;
-    transportOwner["recoveredReviewerResultReusable"] = false;
+    transportOwner.recoveredReviewerResultReusable = false;
     transportOwner["persistReviewerOutput"](sessionId, 'invalid', '', reason);
     transportOwner["log"]({ kind: 'verdict', result: 'unparsed', reason });
     // Every reviewer failure uses the same durable whole-run barrier as worker
@@ -56,7 +56,7 @@ export function failReviewer(transportOwner: ActiveRun, reviewerSessionId: strin
     }, () => {
         if (transportOwner["reviewerFailure"] === retirement)
             transportOwner["reviewerFailure"] = undefined;
-    }).catch((error) => {
+    }).catch((error: unknown) => {
         transportOwner["failForUnexpectedAsyncError"]('reviewer retirement bookkeeping', error);
     });
 }
@@ -78,7 +78,7 @@ export async function retirePendingReviewer(transportOwner: ActiveRun, initialSe
     if (reviewerSessionIds.length === 0) {
         transportOwner["reviewerSessionId"] = undefined;
         transportOwner["reviewerPending"] = false;
-        transportOwner["reviewerContract"] = undefined;
+        delete transportOwner.reviewerContract;
         return undefined;
     }
     for (const sessionId of reviewerSessionIds)
@@ -157,7 +157,7 @@ export async function retirePendingReviewer(transportOwner: ActiveRun, initialSe
     transportOwner["persistReviewerCandidateIds"]();
     transportOwner["reviewerSessionId"] = undefined;
     transportOwner["reviewerPending"] = false;
-    transportOwner["reviewerContract"] = undefined;
+    delete transportOwner.reviewerContract;
     if (budget) {
         transportOwner["failForUsageIssue"](budget);
     }

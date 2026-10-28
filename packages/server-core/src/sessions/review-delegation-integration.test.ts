@@ -1,10 +1,13 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import { managedToSession } from './SessionManager/session-presentation.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { mkdtempSync, realpathSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'bun:test';
-import type { SpawnSessionRequest, SpawnSessionResult } from '@craft-agent/shared/agent';
+import type { SpawnSessionRequest } from '@craft-agent/shared/agent';
 import { SessionManager, createManagedSession } from './SessionManager.ts';
 import fixtures from './__fixtures__/review-recursion-20260909.json';
 import { transitionObjectiveContract } from './objective-contract.ts';
@@ -20,12 +23,7 @@ function harness(review = false) {
   parent.isProcessing = true;
   parent.activeObjective = transitionObjectiveContract({ messageId: review ? 'objective-0' : 'parent-objective',
     text: review ? fixtures[0]!.prompt : 'Inspect the requested target.', nowMs: 1 });
-  const host = manager as unknown as {
-    sessions: Map<string, Managed>;
-    spawnDelegatedSession: (parent: Managed, request: SpawnSessionRequest) => Promise<SpawnSessionResult>;
-    createSession: (workspaceId: string, options: Partial<Managed>) => Promise<Managed>;
-    sendMessage: (id: string, prompt: string, ...args: unknown[]) => Promise<void>;
-  };
+  const host = sessionManagerForTest(manager);
   sessionRuntimeStateForTest(manager).sessions.set(parent.id, parent);
   if (review) {
     const root = createManagedSession({ id: 'root' }, workspace, { messagesLoaded: true });
@@ -35,8 +33,9 @@ function harness(review = false) {
   }
   const created: Managed[] = []; const sent: string[] = [];
   host.createSession = async (_workspaceId, options) => {
-    const child = createManagedSession({ ...options, id: `child-${created.length + 1}` }, workspace, { messagesLoaded: true });
-    sessionRuntimeStateForTest(manager).sessions.set(child.id, child); created.push(child); return child;
+    const child = createManagedSession({ ...omitUndefined<Partial<Managed>>(options ?? {}), id: `child-${created.length + 1}` }, workspace, { messagesLoaded: true });
+    sessionRuntimeStateForTest(manager).sessions.set(child.id, child); created.push(child);
+    return managedToSession(child);
   };
   host.sendMessage = async (id, _prompt, ...args) => {
     sent.push(id); const child = sessionRuntimeStateForTest(manager).sessions.get(id)!; child.isProcessing = true; child.processingGeneration = 1;
@@ -83,7 +82,7 @@ describe('SessionManager review delegation integration without a live backend', 
       llmConnection: 'connection-b',
       model: 'other-provider/model',
       thinkingLevel: 'off',
-    } as unknown as SpawnSessionRequest;
+    } as SpawnSessionRequest;
     await expect(fixture.spawn(hostileRoute)).rejects.toThrow('Invalid spawn_session arguments');
     expect(fixture.created).toHaveLength(0);
     expect(fixture.sent).toHaveLength(0);

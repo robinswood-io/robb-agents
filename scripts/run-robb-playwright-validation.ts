@@ -2,8 +2,8 @@ import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 const repositoryRoot = resolve(import.meta.dir, '..');
-const rulebookRoot = process.env.RULEBOOK_AI_HOME
-  ?? join(process.env.HOME ?? '/Users/thibault', 'code', 'rulebook-ai');
+const rulebookRoot = process.env["RULEBOOK_AI_HOME"]
+  ?? join(process.env["HOME"] ?? '/Users/thibault', 'code', 'rulebook-ai');
 const skillDirectory = join(rulebookRoot, 'skills', 'playwright-skill');
 const officialTemplate = join(skillDirectory, 'templates', 'robb-agents.js');
 const sourceTemplate = join(repositoryRoot, 'scripts', 'playwright', 'robb-agents.js');

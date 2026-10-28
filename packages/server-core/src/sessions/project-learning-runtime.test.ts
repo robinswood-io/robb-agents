@@ -1,3 +1,5 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import * as configStorage from '@craft-agent/shared/config/storage';
@@ -13,7 +15,7 @@ import { createManagedSession, SessionManager } from './SessionManager.ts';
 import { transitionObjectiveContract } from './objective-contract.ts';
 import { registerObjectiveAcceptanceCriteria } from './objective-acceptance-criteria.ts';
 
-type Managed = ReturnType<typeof createManagedSession>;
+
 const fixtures: Array<{ root: string; id: string }> = [];
 afterEach(() => {
   for (const { root, id } of fixtures.splice(0)) {
@@ -37,33 +39,24 @@ function harness(stream: AgentEvent[] = [], beforeChat?: () => void) {
     { id: 'answer', role: 'assistant', content: 'Le document est complet.', timestamp: 2 },
   ];
   managed.activeObjective = transitionObjectiveContract({ messageId: 'objective', text: managed.messages[0]!.content, nowMs: 1 });
-  const runtime = manager as unknown as {
-    sessions: Map<string, Managed>; enqueuePersist: () => void; persistSession: () => boolean; flushSession: () => Promise<void>;
-    sendEvent: () => void; emitExecutionTelemetry: () => void; startGenerationTelemetry: () => void; finishGenerationTelemetry: () => void;
-    beginAutomaticSessionStatusLifecycle: () => Promise<void>; finishAutomaticSessionStatusLifecycle: () => Promise<void>;
-    isSessionBeingViewed: () => boolean; markSessionRead: () => Promise<void>; processNextQueuedMessage: () => void;
-    disposeManagedAgentRuntime: () => Promise<void>; getOrCreateAgent: (m: Managed) => Promise<unknown>;
-    enqueueAutomaticTurnRecovery: () => Promise<boolean>;
-    processEvent: (m: Managed, event: AgentEvent) => Promise<void>;
-    onProcessingStopped: (id: string, reason: 'error') => Promise<void>;
-  };
+  const runtime = sessionManagerForTest(manager);
   sessionRuntimeStateForTest(manager).sessions.set(id, managed);
   // Stub UI/session IO and the provider only. Real sendMessage, objective
   // transition, event processing, policy reads and project journal writes run.
-  runtime.enqueuePersist = () => {}; runtime.persistSession = () => true; runtime.flushSession = async () => {};
+  runtime.enqueuePersist = () => true; runtime.persistSession = () => true; runtime.flushSession = async () => {};
   runtime.sendEvent = () => {}; runtime.emitExecutionTelemetry = () => {};
   runtime.startGenerationTelemetry = () => {}; runtime.finishGenerationTelemetry = () => {};
   runtime.beginAutomaticSessionStatusLifecycle = async () => {}; runtime.finishAutomaticSessionStatusLifecycle = async () => {};
   runtime.isSessionBeingViewed = () => true; runtime.markSessionRead = async () => {};
   runtime.processNextQueuedMessage = () => {}; runtime.disposeManagedAgentRuntime = async () => { managed.agent = null; };
   runtime.enqueueAutomaticTurnRecovery = async () => false;
-  const agent = {
+  const agent = completeSessionAgentFixture(managed.workspace, {
     async *chat(): AsyncGenerator<AgentEvent> { beforeChat?.(); for (const event of stream) yield event; },
     getModel: () => 'fixture/local', getSessionId: () => null, setAllSources: () => {},
     isProcessing: () => false, redirect: () => true,
-  };
-  managed.agent = agent as never;
-  runtime.getOrCreateAgent = async session => { session.agent = agent as never; return agent; };
+  });
+  managed.agent = agent;
+  runtime.getOrCreateAgent = async session => { session.agent = agent; return agent; };
   return { manager, managed, runtime, root, project };
 }
 
@@ -101,8 +94,8 @@ describe('SessionManager runtime project learning', () => {
   });
 
   it('binds the selected playbook before chat and refuses closure with only a generic technical check', async () => {
-    const previousLegacyMode = process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
-    process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1';
+    const previousLegacyMode = process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"];
+    process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1';
     try {
       const stream: AgentEvent[] = [];
       const h = harness(stream, () => {
@@ -136,8 +129,8 @@ describe('SessionManager runtime project learning', () => {
         'Full-request coverage requires the current independent review, not only a successful registered observation',
       ]);
     } finally {
-      if (previousLegacyMode === undefined) delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
-      else process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = previousLegacyMode;
+      if (previousLegacyMode === undefined) delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"];
+      else process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = previousLegacyMode;
     }
   });
 
@@ -177,7 +170,7 @@ describe('SessionManager runtime project learning', () => {
   });
 
   it('captures the exhausted terminal error through real event processing, never as a learned rule', async () => {
-    process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1';
+    process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1';
     try {
       const h = harness([
         { type: 'tool_start', toolName: 'Bash', toolUseId: 'failed-render', input: { command: 'fixture-render' } },
@@ -192,7 +185,7 @@ describe('SessionManager runtime project learning', () => {
       expect(entries.some(e => e.content.includes('host:objective_validation_failed'))).toBe(true);
       expect(entries.every(e => e.status === 'proposed' && e.scope?.version === 'fixture-build')).toBe(true);
     } finally {
-      delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
+      delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"];
     }
   });
 

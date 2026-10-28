@@ -155,7 +155,7 @@ describe('Shared Package Security Hardening Regressions', () => {
 
   describe('Hardened sprintf-js (GHSA-hp3w-g68c-fv3c Precision/Width Bounds)', () => {
     it('formats normal specifiers and rejects excessive precision/width DoS specifiers', () => {
-      const { sprintf } = require('../../../../scripts/vendor/sprintf-js/src/sprintf.js');
+      const { sprintf } = require('../../../../scripts/vendor/sprintf-js/src/sprintf.js') as { sprintf: (format: string, ...values: unknown[]) => string };
       expect(sprintf('%04d %.2f %s', 7, 3.14159, 'ok')).toBe('0007 3.14 ok');
       expect(() => sprintf('%5000s', 'dos')).toThrow(RangeError);
       expect(() => sprintf('%.5000s', 'dos')).toThrow(RangeError);

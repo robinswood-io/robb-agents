@@ -50,7 +50,7 @@ let mockFetch: ReturnType<typeof mock>;
 
 beforeEach(() => {
     mockFetch = mock(() => Promise.resolve(new Response('Not Found', { status: 404 })));
-    globalThis.fetch = mockFetch as unknown as typeof fetch;
+    globalThis.fetch = Object.assign(mockFetch, { preconnect() {} });
   });
 
 afterEach(() => {

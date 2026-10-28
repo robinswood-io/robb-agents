@@ -58,9 +58,9 @@ describe('Pi Gmail host execution lifecycle', () => {
     const sent: Array<Record<string, unknown>> = [];
     internals['subprocessRuntimeContext'] = runtime;
     internals['send'] = (message: Record<string, unknown>) => { sent.push(message); return true; };
-    internals['resolveContextualGmailPromptDecision'] = () => ({ applies: false, allowed: false });
+    internals.resolveContextualGmailPromptDecision = () => ({ applies: false, allowed: false });
 
-    await internals['handlePreToolUsePrompt'](
+    await internals.handlePreToolUsePrompt(
       'ordinary-request',
       'Read',
       { file_path: '/tmp/original' },
@@ -69,7 +69,7 @@ describe('Pi Gmail host execution lifecycle', () => {
       'ordinary-tool',
       runtime,
     );
-    await internals['handlePreToolUsePrompt'](
+    await internals.handlePreToolUsePrompt(
       'sensitive-request',
       'Bash',
       { command: 'deploy' },
@@ -107,7 +107,7 @@ internals['config'].mcpPool.callTool = async () => {
         poolCalls += 1;
         return { content: 'unexpected', isError: false };
       };
-    const result = await internals['routeToolCall'](
+    const result = await internals.routeToolCall(
       'mcp__google-contacts__gmail_reply_bound',
       { messageId: '1a0a917ea946a540' },
       'gmail-tool-1',
@@ -136,19 +136,19 @@ internals['config'].mcpPool.callTool = async () => {
         await poolGate;
         return { content: '{"ok":true}', isError: false };
       };
-    internals['beginContextualGmailHostExecution'] = () => ({
+    internals.beginContextualGmailHostExecution = () => ({
       applies: true,
       allowed: true,
       ticket: executionTicket,
     });
-    internals['settleContextualGmailHostExecution'] = (
+    internals.settleContextualGmailHostExecution = (
       received: ContextualGmailHostExecutionTicket,
     ) => {
       settled.push(received);
       return true;
     };
 
-    const resultPromise = internals['routeToolCall'](
+    const resultPromise = internals.routeToolCall(
       'mcp__google-contacts__gmail_reply_bound',
       { messageId: '1a0a917ea946a540' },
       'gmail-tool-1',
@@ -176,17 +176,17 @@ internals['config'].mcpPool.isProxyTool = () => true;
 internals['config'].mcpPool.callTool = async () => {
         throw new Error('transport lost after dispatch');
       };
-    internals['beginContextualGmailHostExecution'] = () => ({
+    internals.beginContextualGmailHostExecution = () => ({
       applies: true,
       allowed: true,
       ticket: executionTicket,
     });
-    internals['settleContextualGmailHostExecution'] = () => {
+    internals.settleContextualGmailHostExecution = () => {
       settleCalls += 1;
       return true;
     };
 
-    await expect(internals['routeToolCall'](
+    await expect(internals.routeToolCall(
       'mcp__google-contacts__gmail_reply_bound',
       { messageId: '1a0a917ea946a540' },
       'gmail-tool-1',
@@ -219,12 +219,12 @@ internals['config'].mcpPool.callTool = async () => {
         poolCalls += 1;
         return { content: 'unexpected', isError: false };
       };
-    internals['beginContextualGmailHostExecution'] = () => ({
+    internals.beginContextualGmailHostExecution = () => ({
       applies: true,
       allowed: true,
       ticket: executionTicket,
     });
-    internals['settleContextualGmailHostExecution'] = (received: ContextualGmailHostExecutionTicket) => {
+    internals.settleContextualGmailHostExecution = (received: ContextualGmailHostExecutionTicket) => {
       settled.push(received);
       return true;
     };
@@ -237,7 +237,7 @@ internals['config'].mcpPool.callTool = async () => {
       { messageId: '1a0a917ea946a540' },
     );
 
-    await internals['handleToolExecuteRequest']({
+    await internals.handleToolExecuteRequest({
       requestId: 'gmail-request',
       toolName: 'mcp__google-contacts__gmail_reply_bound',
       toolCallId: 'gmail-tool-1',
@@ -270,7 +270,7 @@ internals['config'].mcpPool.callTool = async () => {
         await poolGate;
         return { content: 'old result', isError: false };
       };
-    internals['beginContextualGmailHostExecution'] = () => ({ applies: false, allowed: true });
+    internals.beginContextualGmailHostExecution = () => ({ applies: false, allowed: true });
 
     admitExecution(
       internals,
@@ -280,7 +280,7 @@ internals['config'].mcpPool.callTool = async () => {
       {},
     );
 
-    const pending = internals['handleToolExecuteRequest']({
+    const pending = internals.handleToolExecuteRequest({
       requestId: 'old-request',
       toolName: 'mcp__example__read',
       toolCallId: 'old-tool-call',

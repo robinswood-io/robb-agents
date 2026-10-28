@@ -1,3 +1,5 @@
+import type { ContextCompactionAttemptState } from '../../../shared/src/sessions/types/turn-recovery.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, expect, test } from "bun:test";
 import { CONTEXT_COMPACTION_RETRY_COOLDOWN_MS, captureProviderContextBaseline, classifyContextCompactionFailure, consumeContextProviderBaselineAdmission, decideContextProviderAdmission, isHardLimitFollowUpContextCompaction, isHardLimitRecoveryContextCompaction, shouldAttemptContextCompaction } from "./context-compaction";
 
@@ -72,7 +74,7 @@ describe('context compaction', () => {
       hardLimitTokens: 100_000,
       objectiveRootId: 'objective-root',
       now: 2_002,
-      previous: { ...awaitingProviderBaseline, awaitingProviderContextBaseline: undefined },
+      previous: omitUndefined<ContextCompactionAttemptState>({ ...awaitingProviderBaseline, awaitingProviderContextBaseline: undefined }),
       canCompactContext: true,
     })).toEqual({
       action: 'start-clean-continuation',

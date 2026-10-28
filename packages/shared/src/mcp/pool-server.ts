@@ -46,14 +46,14 @@ function toToolAnnotations(def: ProxyToolDef): ToolAnnotations | undefined {
 }
 
 export class McpPoolServer {
-  private pool: McpClientPool;
+  private pool: Pick<McpClientPool, 'getProxyToolDefs' | 'callTool'>;
   private httpServer: HttpServer | null = null;
   private mcpHandler: McpHttpHandler | null = null;
   private nodeHandler: NodeMcpRequestHandler | null = null;
   private debugFn: ((msg: string) => void) | undefined;
   private _port = 0;
 
-  constructor(pool: McpClientPool, options?: { debug?: (msg: string) => void }) {
+  constructor(pool: Pick<McpClientPool, 'getProxyToolDefs' | 'callTool'>, options?: { debug?: (msg: string) => void }) {
     this.pool = pool;
     this.debugFn = options?.debug;
   }
@@ -109,7 +109,9 @@ export class McpPoolServer {
       // origin or DNS-rebinding Host header from reaching the MCP handler.
       if (!validateHost(req, res) || !validateOrigin(req, res)) return;
 
-      await this.nodeHandler!(req, res);
+      // Node guarantees these fields on server requests; make that contract explicit for the SDK adapter.
+      if (!req.method || !req.url) { res.writeHead(400); res.end("Missing HTTP request target"); return; }
+      await this.nodeHandler!(Object.assign(req, { method: req.method, url: req.url }), res);
     });
 
     await new Promise<void>((resolve, reject) => {

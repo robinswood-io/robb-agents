@@ -1,7 +1,7 @@
+import { nodeByteStream } from '../../../../shared/src/utils/node-byte-stream.ts';
 import type { LookupFunction } from "node:net";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
-import { Readable } from "node:stream";
 import type { ValidatedUrlTarget } from './network-safety.ts';
 import { isPrivateIp, parseIpv4Uint32 } from './network-safety.ts';
 
@@ -60,18 +60,18 @@ export async function fetchWithPinnedDns(
   } = {},
 ): Promise<Response> {
   const hasEnvProxy = Boolean(
-    process.env.HTTPS_PROXY ||
-    process.env.HTTP_PROXY ||
-    process.env.https_proxy ||
-    process.env.http_proxy ||
-    process.env.ALL_PROXY ||
-    process.env.all_proxy,
+    process.env["HTTPS_PROXY"] ||
+    process.env["HTTP_PROXY"] ||
+    process.env["https_proxy"] ||
+    process.env["http_proxy"] ||
+    process.env["ALL_PROXY"] ||
+    process.env["all_proxy"],
   );
   if (!init.forceSocketPinning && (globalThis.fetch !== INITIAL_GLOBAL_FETCH || hasEnvProxy)) {
     return globalThis.fetch(target.url, {
-      headers: init.headers,
+      ...(init.headers !== undefined ? { headers: init.headers } : {}),
       redirect: 'manual',
-      signal: init.signal,
+      ...(init.signal !== undefined ? { signal: init.signal } : {}),
     });
   }
 
@@ -109,7 +109,7 @@ export async function fetchWithPinnedDns(
         }
         const bodyStream = isNullBody
           ? null
-          : (Readable.toWeb(res) as unknown as ReadableStream<Uint8Array>);
+          : (nodeByteStream(res));
         const response = new Response(bodyStream, {
           status,
           statusText: res.statusMessage ?? '',

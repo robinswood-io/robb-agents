@@ -1,3 +1,6 @@
+import type { Session } from '../../../../../../../packages/shared/src/protocol/dto/sessions.ts';
+import type { Effect } from '../../types.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Session Event Handlers
  *
@@ -100,7 +103,7 @@ export function handlePermissionModeChanged(
 ): ProcessResult {
   return {
     state,
-    effects: [{
+    effects: [omitUndefined<Effect>({
       type: 'permission_mode_changed',
       sessionId: event.sessionId,
       permissionMode: event.permissionMode,
@@ -109,7 +112,7 @@ export function handlePermissionModeChanged(
       modeVersion: event.modeVersion,
       changedAt: event.changedAt,
       changedBy: event.changedBy,
-    }],
+    })],
   }
 }
 
@@ -124,7 +127,7 @@ export function handleSessionModelChanged(
 
   return {
     state: {
-      session: {
+      session: omitUndefined<Session>({
         ...session,
         model: event.model ?? undefined,
         ...(event.modelRoutePinned !== undefined
@@ -132,7 +135,7 @@ export function handleSessionModelChanged(
           : event.model === null
             ? { modelRoutePinned: false }
             : {}),
-      },
+      }),
       streaming,
     },
     effects: [],

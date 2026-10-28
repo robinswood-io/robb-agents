@@ -188,7 +188,7 @@ class PermissionsConfigCache {
         merged.readOnlyBashPatterns.push({
           regex,
           source: patternEntry.pattern,
-          comment: patternEntry.comment,
+          ...(patternEntry.comment !== undefined ? { comment: patternEntry.comment } : {}),
         });
       } else {
         debug(`[Permissions] Invalid default bash pattern, skipping: ${patternEntry.pattern}`);
@@ -243,7 +243,7 @@ class PermissionsConfigCache {
         merged.readOnlyBashPatterns.push({
           regex,
           source: patternEntry.pattern,
-          comment: patternEntry.comment,
+          ...(patternEntry.comment !== undefined ? { comment: patternEntry.comment } : {}),
         });
       } else {
         debug(`[Permissions] Invalid bash pattern, skipping: ${patternEntry.pattern}`);
@@ -329,7 +329,7 @@ class PermissionsConfigCache {
         merged.readOnlyBashPatterns.push({
           regex,
           source: patternEntry.pattern,
-          comment: patternEntry.comment,
+          ...(patternEntry.comment !== undefined ? { comment: patternEntry.comment } : {}),
         });
       } else {
         debug(`[Permissions] Invalid bash pattern, skipping: ${patternEntry.pattern}`);

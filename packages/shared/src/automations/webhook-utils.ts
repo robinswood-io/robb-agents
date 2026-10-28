@@ -331,7 +331,7 @@ export async function executeWebhookRequest(
     const response = await executeFetch(parsedUrl, {
       method,
       headers,
-      body: requestBody,
+      ...(requestBody !== undefined ? { body: requestBody } : {}),
       signal: controller.signal,
       redirect: 'error',
     });
@@ -358,7 +358,7 @@ export async function executeWebhookRequest(
       url,
       statusCode: response.status,
       success,
-      error: success ? undefined : `HTTP ${response.status} ${response.statusText}`,
+      ...(!success ? { error: `HTTP ${response.status} ${response.statusText}` } : {}),
       durationMs: Date.now() - start,
       ...(responseBody !== undefined ? { responseBody } : {}),
     };

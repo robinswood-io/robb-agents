@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { nodeByteStream } from '../../shared/src/utils/node-byte-stream.ts';
 /**
  * Mistral Vibe ACP bridge.
  *
@@ -10,7 +11,7 @@
 
 import type { ChildProcess } from 'node:child_process';
 import { createInterface } from 'node:readline';
-import { Readable, Writable } from 'node:stream';
+import { Writable } from 'node:stream';
 import {
   client, methods, ndJsonStream, PROTOCOL_VERSION,
   type ClientConnection, type ContentBlock, type InitializeRequest, type PermissionOption,
@@ -114,18 +115,18 @@ function isExactPromptRequest(
   sessionId: string,
   prompt: string,
 ): boolean {
-  const params = request.params;
+  const params = request["params"];
   if (!params || typeof params !== 'object' || Array.isArray(params)) return false;
   const promptParams = params as Record<string, unknown>;
-  if (promptParams.sessionId !== sessionId || !Array.isArray(promptParams.prompt)) return false;
-  if (promptParams.prompt.length !== 1) return false;
-  const block = promptParams.prompt[0];
+  if (promptParams["sessionId"] !== sessionId || !Array.isArray(promptParams["prompt"])) return false;
+  if (promptParams["prompt"].length !== 1) return false;
+  const block: unknown = promptParams["prompt"][0];
   return Boolean(
     block
     && typeof block === 'object'
     && !Array.isArray(block)
-    && (block as Record<string, unknown>).type === 'text'
-    && (block as Record<string, unknown>).text === prompt,
+    && (block as Record<string, unknown>)["type"] === 'text'
+    && (block as Record<string, unknown>)["text"] === prompt,
   );
 }
 
@@ -166,7 +167,7 @@ async function waitForPermission(params: RequestPermissionRequest): Promise<Requ
 async function startVibe(init: InitMessage): Promise<void> {
   if (bridgeSessionId) return;
 
-  const command = process.env.ROBB_VIBE_ACP_COMMAND || 'vibe-acp';
+  const command = process.env["ROBB_VIBE_ACP_COMMAND"] || 'vibe-acp';
   const cwd = init.workingDirectory || init.cwd || process.cwd();
   debug('Launching official Vibe ACP command.');
 
@@ -204,7 +205,7 @@ async function startVibe(init: InitMessage): Promise<void> {
 
   const stream = ndJsonStream(
     Writable.toWeb(child.stdin!) as WritableStream<Uint8Array>,
-    Readable.toWeb(child.stdout!) as unknown as ReadableStream<Uint8Array>,
+    nodeByteStream(child.stdout!),
   );
   const observedPromptStream = createCorrelatedProviderPromptStream(stream, turnId => {
     // A late completion from a superseded child must not acknowledge a turn on
@@ -334,7 +335,7 @@ async function runPrompt(id: string, message: string, systemPrompt?: string): Pr
         sessionId: promptSessionId,
         prompt: [{ type: 'text', text: prompt }],
       }))
-      .catch(error => {
+      .catch((error: unknown) => {
         // A rejected prompt operation cannot later enqueue a frame. Combined
         // with a still-unbound reservation, this is positive pre-write proof.
         if (reservation?.cancel()) {
@@ -371,7 +372,7 @@ async function handle(message: InboundMessage): Promise<void> {
       await startVibe(message);
       return;
     case 'prompt':
-      promptQueue = promptQueue.then(() => runPrompt(message.id, message.message, message.systemPrompt)).catch(error => {
+      promptQueue = promptQueue.then(() => runPrompt(message.id, message.message, message.systemPrompt)).catch((error: unknown) => {
         if (error instanceof VibePromptRejectedBeforeWriteError) {
           send({
             type: 'error',
@@ -432,7 +433,6 @@ async function handle(message: InboundMessage): Promise<void> {
       vibeProcess?.kill();
       clearVibeState();
       process.exit(0);
-      return;
     case 'register_tools':
     case 'set_thinking_level':
     case 'steer':

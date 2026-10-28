@@ -1,3 +1,6 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
+import type { SendMessageOptions } from '../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { ScriptedSessionAgent } from "./testing/scripted-session-agent.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -39,7 +42,7 @@ describe('durable restart recovery', () => {
     parent.messageQueue.push({
       messageId: queuedDelivery.id,
       message: queuedDelivery.content,
-      options: { hidden: true, internalOrigin: queuedDelivery.internalOrigin },
+      options: { hidden: true, ...(queuedDelivery.internalOrigin !== undefined ? { internalOrigin: queuedDelivery.internalOrigin } : {}) },
     })
     await h.save(parent)
 
@@ -54,7 +57,7 @@ describe('durable restart recovery', () => {
     expect(queuedDelivery).toMatchObject({ isQueued: true, agentDelivery: { status: 'queued', attempts: 0 } })
     expect(parent.messageQueue.map(item => item.messageId)).toEqual([queuedDelivery.id])
     const stored = readFileSync(getSessionFilePath(h.rootPath, parent.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     expect(stored.find(message => message.toolUseId === 'parent-read-after-child-queue'))
       .toMatchObject({ toolStatus: 'executing' })
 
@@ -99,7 +102,7 @@ describe('durable restart recovery', () => {
       messageId: 'later-child-result', message: 'Another child result.',
       options: { hidden: true, internalOrigin: { kind: 'agent-message', senderSessionId: 'other-child', deliveryId: laterDeliveryId } },
     })
-    managed.lastSentOptions = { hidden: true, internalOrigin: delivered.internalOrigin }
+    managed.lastSentOptions = omitUndefined<SendMessageOptions>({ hidden: true, internalOrigin: delivered.internalOrigin })
     const runtimeAgent = Object.assign(new ScriptedSessionAgent(managed.workspace, { async *chat() {}, isProcessing: () => true }), { dispose: async () => {} })
     managed.agent = runtimeAgent
     managed.isProcessing = true
@@ -281,7 +284,7 @@ describe('durable restart recovery', () => {
   })
 
   it('admits a reconciliation Read from a clean Retry boundary but quarantines an uncertain prior mutation', async () => {
-    process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+    process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
     const h = harness(); const managed = h.make('clean-context-retry-tool-admission')
     const rootId = `${managed.id}-user`
     const allocatedAt = Date.now() - 2_000
@@ -340,7 +343,7 @@ describe('durable restart recovery', () => {
     expect(receipt).toMatchObject({ role: 'tool', toolStatus: 'executing',
       toolInput: { file_path: '/fixture/state.json' } })
     const stored = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     const boundaryIndex = stored.findIndex(message => message.id === boundaryId)
     const receiptIndex = stored.findIndex(message => message.toolUseId === 'clean-retry-reconciliation-read')
     expect(boundaryIndex).toBe(3)

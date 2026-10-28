@@ -95,7 +95,7 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
             verificationUri,
           })
           // Open GitHub device code page on the client's machine
-          server.invokeClient(ctx.clientId, CLIENT_OPEN_EXTERNAL, verificationUri).catch(err => {
+          server.invokeClient(ctx.clientId, CLIENT_OPEN_EXTERNAL, verificationUri).catch((err: unknown) => {
             deps.platform.logger?.warn(`Failed to open browser for GitHub OAuth: ${err}`)
           })
         },

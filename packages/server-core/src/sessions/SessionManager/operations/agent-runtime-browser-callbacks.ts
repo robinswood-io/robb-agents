@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import type { BrowserMutationUrlPolicy } from '@craft-agent/server-core/handlers';
 import { mergeSessionScopedToolCallbacks, assertContextualGmailBrowserMutationTargetAllowed, isContextualGmailBrowserMutationGuardEnabled } from '@craft-agent/shared/agent';
@@ -58,7 +59,7 @@ export function installRuntimeBrowserCallbacks(sessionOperationContext: SessionO
                 throw new Error(`Browser mutation guard could not inspect resolved instance ${instanceId}.`);
             }
             assertContextualGmailBrowserMutationTargetAllowed(sid, info.currentUrl);
-            return { instanceId, mutationPolicy: currentBrowserMutationUrlPolicy() };
+            return omitUndefined({ instanceId, mutationPolicy: currentBrowserMutationUrlPolicy() });
         };
         const resolveLifecycleWindowTarget = async (command: 'release' | 'close' | 'hide', requestedInstanceId?: string) => {
             const windows = await bpm.listInstancesAsync();
@@ -80,7 +81,7 @@ export function installRuntimeBrowserCallbacks(sessionOperationContext: SessionO
             if (requestedInstanceId) {
                 const validated = validateTarget(windows.find((w) => w.id === requestedInstanceId));
                 if (!validated.ok) {
-                    return { windows, reason: validated.reason };
+                    return omitUndefined({ windows, reason: validated.reason });
                 }
                 return { windows, target: validated.target };
             }
@@ -91,7 +92,7 @@ export function installRuntimeBrowserCallbacks(sessionOperationContext: SessionO
             }
             const validated = validateTarget(fallbackTarget);
             if (!validated.ok) {
-                return { windows, reason: validated.reason };
+                return omitUndefined({ windows, reason: validated.reason });
             }
             return { windows, target: validated.target };
         };
@@ -248,50 +249,50 @@ export function installRuntimeBrowserCallbacks(sessionOperationContext: SessionO
                         const afterActive = after.filter((w) => !!w.agentControlActive).length;
                         const released = afterActive < beforeActive;
                         sessionLog.info(`[browser-pane] lifecycle release-all session=${sid} overlays=${beforeActive}->${afterActive}`);
-                        return {
-                            action: released ? 'released' : 'noop',
+                        return omitUndefined({
+                            action: released ? 'released' as const : 'noop' as const,
                             requestedInstanceId,
                             affectedIds: released ? before.filter((w) => !!w.agentControlActive).map((w) => w.id) : [],
                             reason: released ? undefined : 'No active overlay was found for this session.',
-                        };
+                        });
                     }
                     const resolution = await resolveLifecycleWindowTarget('release', requestedInstanceId);
                     if (!resolution.target) {
                         sessionLog.info(`[browser-pane] lifecycle release session=${sid} requested=${requestedInstanceId ?? 'auto'} result=noop reason=${resolution.reason}`);
-                        return {
-                            action: 'noop',
-                            requestedInstanceId,
+                        return omitUndefined({
+                            action: 'noop' as const,
+                            ...(requestedInstanceId !== undefined ? { requestedInstanceId: requestedInstanceId } : {}),
                             affectedIds: [],
                             reason: resolution.reason,
-                        };
+                        });
                     }
                     const result = bpm.clearAgentControlForInstance(resolution.target.id, sid);
                     const action = result.released ? 'released' : 'noop';
                     sessionLog.info(`[browser-pane] lifecycle release session=${sid} requested=${requestedInstanceId ?? 'auto'} resolved=${resolution.target.id} result=${action} reason=${result.reason ?? 'none'}`);
                     return {
                         action,
-                        requestedInstanceId,
+                        ...(requestedInstanceId !== undefined ? { requestedInstanceId: requestedInstanceId } : {}),
                         resolvedInstanceId: resolution.target.id,
                         affectedIds: result.released ? [resolution.target.id] : [],
-                        reason: result.reason,
+                        ...(result.reason !== undefined ? { reason: result.reason } : {}),
                     };
                 },
                 closeWindow: async (requestedInstanceId) => {
                     const resolution = await resolveLifecycleWindowTarget('close', requestedInstanceId);
                     if (!resolution.target) {
                         sessionLog.info(`[browser-pane] lifecycle close session=${sid} requested=${requestedInstanceId ?? 'auto'} result=noop reason=${resolution.reason}`);
-                        return {
-                            action: 'noop',
-                            requestedInstanceId,
+                        return omitUndefined({
+                            action: 'noop' as const,
+                            ...(requestedInstanceId !== undefined ? { requestedInstanceId: requestedInstanceId } : {}),
                             affectedIds: [],
                             reason: resolution.reason,
-                        };
+                        });
                     }
                     bpm.destroyInstance(resolution.target.id);
                     sessionLog.info(`[browser-pane] lifecycle close session=${sid} requested=${requestedInstanceId ?? 'auto'} resolved=${resolution.target.id} result=closed`);
                     return {
                         action: 'closed',
-                        requestedInstanceId,
+                        ...(requestedInstanceId !== undefined ? { requestedInstanceId: requestedInstanceId } : {}),
                         resolvedInstanceId: resolution.target.id,
                         affectedIds: [resolution.target.id],
                     };
@@ -300,18 +301,18 @@ export function installRuntimeBrowserCallbacks(sessionOperationContext: SessionO
                     const resolution = await resolveLifecycleWindowTarget('hide', requestedInstanceId);
                     if (!resolution.target) {
                         sessionLog.info(`[browser-pane] lifecycle hide session=${sid} requested=${requestedInstanceId ?? 'auto'} result=noop reason=${resolution.reason}`);
-                        return {
-                            action: 'noop',
-                            requestedInstanceId,
+                        return omitUndefined({
+                            action: 'noop' as const,
+                            ...(requestedInstanceId !== undefined ? { requestedInstanceId: requestedInstanceId } : {}),
                             affectedIds: [],
                             reason: resolution.reason,
-                        };
+                        });
                     }
                     bpm.hide(resolution.target.id);
                     sessionLog.info(`[browser-pane] lifecycle hide session=${sid} requested=${requestedInstanceId ?? 'auto'} resolved=${resolution.target.id} result=hidden`);
                     return {
                         action: 'hidden',
-                        requestedInstanceId,
+                        ...(requestedInstanceId !== undefined ? { requestedInstanceId: requestedInstanceId } : {}),
                         resolvedInstanceId: resolution.target.id,
                         affectedIds: [resolution.target.id],
                     };

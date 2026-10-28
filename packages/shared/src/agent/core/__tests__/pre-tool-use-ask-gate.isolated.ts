@@ -93,8 +93,8 @@ describe('runPreToolUseChecks', () => {
       expect(result.type).toBe('prompt');
       if (result.type === 'prompt') {
         expect(result.modifiedInput).toBeDefined();
-        expect(result.modifiedInput!.file_path).toBe('/Users/test/test.ts');
-        expect(result.modifiedInput!._intent).toBeUndefined();
+        expect(result.modifiedInput!["file_path"]).toBe('/Users/test/test.ts');
+        expect(result.modifiedInput!["_intent"]).toBeUndefined();
       }
     });
 

@@ -68,20 +68,20 @@ export async function setupLlmConnection(
     // and sets providerType='pi_compat', piAuthProvider, etc.
     providerType = 'pi_compat'
     authType = 'api_key_with_endpoint'
-    setupPayload.baseUrl = baseUrl
-    setupPayload.customEndpoint = {
+    setupPayload["baseUrl"] = baseUrl
+    setupPayload["customEndpoint"] = {
       api: provider === 'anthropic' ? 'anthropic-messages' : 'openai-completions',
     }
-    setupPayload.defaultModel = provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o'
+    setupPayload["defaultModel"] = provider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o'
   } else if (provider === 'anthropic') {
     providerType = 'anthropic'
     authType = 'api_key'
   } else if (provider === 'amazon-bedrock') {
     // Bedrock uses IAM credentials, not a single API key
-    const accessKeyId = process.env.AWS_ACCESS_KEY_ID
-    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
-    const region = process.env.AWS_REGION || 'us-east-1'
-    const sessionToken = process.env.AWS_SESSION_TOKEN
+    const accessKeyId = process.env["AWS_ACCESS_KEY_ID"]
+    const secretAccessKey = process.env["AWS_SECRET_ACCESS_KEY"]
+    const region = process.env["AWS_REGION"] || 'us-east-1'
+    const sessionToken = process.env["AWS_SESSION_TOKEN"]
     if (!accessKeyId || !secretAccessKey) {
       throw new Error(
         'Amazon Bedrock requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables',
@@ -89,15 +89,15 @@ export async function setupLlmConnection(
     }
     providerType = 'pi'
     authType = 'iam_credentials'
-    setupPayload.piAuthProvider = 'amazon-bedrock'
-    setupPayload.bedrockAuthMethod = 'iam_credentials'
-    setupPayload.iamCredentials = { accessKeyId, secretAccessKey, sessionToken }
-    setupPayload.awsRegion = region
-    delete setupPayload.credential // IAM credentials go through iamCredentials field
+    setupPayload["piAuthProvider"] = 'amazon-bedrock'
+    setupPayload["bedrockAuthMethod"] = 'iam_credentials'
+    setupPayload["iamCredentials"] = { accessKeyId, secretAccessKey, sessionToken }
+    setupPayload["awsRegion"] = region
+    delete setupPayload["credential"] // IAM credentials go through iamCredentials field
   } else {
     providerType = 'pi'
     authType = 'api_key'
-    setupPayload.piAuthProvider = provider
+    setupPayload["piAuthProvider"] = provider
   }
 
   await client.invoke('LLM_Connection:save', {

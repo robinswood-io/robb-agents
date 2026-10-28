@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect,useState,useMemo,useCallback } from "react";
 
 import type { Session } from "../../../shared/types";
 
@@ -121,13 +121,11 @@ const countOccurrences = useCallback((text: string, query: string): number => {
 
 const matchingOccurrences = useMemo(() => {
     if (!searchQuery.trim() || !session?.messages) return []
-    const startTime = performance.now()
     const query = searchQuery.toLowerCase()
     const turns = allTurns
     const matches: { matchId: string; turnId: string; turnIndex: number; matchIndexInTurn: number }[] = []
 
-    for (let turnIndex = 0; turnIndex < turns.length; turnIndex++) {
-      const turn = turns[turnIndex]
+    for (const [turnIndex, turn] of turns.entries()) {
       let textContent = ''
       let turnId = ''
 
@@ -172,7 +170,7 @@ useEffect(() => {
     // Find the earliest matching turn index (reduce to avoid RangeError on large arrays)
     const earliestMatchTurnIndex = matchingOccurrences.reduce(
       (min, m) => m.turnIndex < min ? m.turnIndex : min,
-      matchingOccurrences[0]!.turnIndex
+      Number.POSITIVE_INFINITY
     )
     const totalTurns = allTurns.length
 

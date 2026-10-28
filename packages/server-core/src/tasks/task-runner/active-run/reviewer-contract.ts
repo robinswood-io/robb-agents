@@ -123,7 +123,7 @@ export function persistReviewerOutput(transportOwner: ActiveRun, reviewerSession
             ...(transportOwner["opts"].orchestratorSessionId
                 ? { reviewerParentSessionId: transportOwner["opts"].orchestratorSessionId }
                 : {}),
-            reviewerAttempt: transportOwner["unparsedReAsks"] + 1,
+            reviewerAttempt: transportOwner.unparsedReAsks + 1,
             reviewedOutputFingerprint: repairOutputFingerprint(transportOwner["spec"].nodes.map((node) => node.id).sort(), transportOwner["outputs"]),
             responseHash: createHash('sha256').update(response, 'utf8').digest('hex'),
             responseTruncated: reviewTextExceedsLimit(response, MAX_REVIEW_RESULT_CHARS),

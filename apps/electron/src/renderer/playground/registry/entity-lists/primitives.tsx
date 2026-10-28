@@ -81,15 +81,15 @@ export function MockMenuItems() {
 // ============================================================================
 
 interface EntityRowPreviewProps {
-  title?: string
-  subtitle?: string
-  showIcon?: boolean
-  showBadges?: boolean
-  showTrailing?: boolean
-  showMenu?: boolean
-  isSelected?: boolean
-  isInMultiSelect?: boolean
-  showSeparator?: boolean
+  title?: string | undefined
+  subtitle?: string | undefined
+  showIcon?: boolean | undefined
+  showBadges?: boolean | undefined
+  showTrailing?: boolean | undefined
+  showMenu?: boolean | undefined
+  isSelected?: boolean | undefined
+  isInMultiSelect?: boolean | undefined
+  showSeparator?: boolean | undefined
 }
 
 export function EntityRowPreview({

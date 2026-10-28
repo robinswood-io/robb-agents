@@ -95,14 +95,14 @@ export function convertParsedRouteToNavigationState(parsed: ParsedRoute): Naviga
     case 'session':
       if (parsed.id) {
         // Reconstruct filter from params
-        const filterKind = (parsed.params.filter || 'allSessions') as SessionFilter['kind']
+        const filterKind = (parsed.params["filter"] || 'allSessions') as SessionFilter['kind']
         let filter: SessionFilter
-        if (filterKind === 'state' && parsed.params.stateId) {
-          filter = { kind: 'state', stateId: parsed.params.stateId }
-        } else if (filterKind === 'label' && parsed.params.labelId) {
-          filter = { kind: 'label', labelId: parsed.params.labelId }
-        } else if (filterKind === 'view' && parsed.params.viewId) {
-          filter = { kind: 'view', viewId: parsed.params.viewId }
+        if (filterKind === 'state' && parsed.params["stateId"]) {
+          filter = { kind: 'state', stateId: parsed.params["stateId"] }
+        } else if (filterKind === 'label' && parsed.params["labelId"]) {
+          filter = { kind: 'label', labelId: parsed.params["labelId"] }
+        } else if (filterKind === 'view' && parsed.params["viewId"]) {
+          filter = { kind: 'view', viewId: parsed.params["viewId"] }
         } else {
           filter = { kind: filterKind as 'allSessions' | 'flagged' | 'archived' }
         }

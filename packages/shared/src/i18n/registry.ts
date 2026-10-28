@@ -2,7 +2,7 @@
  * Canonical locale registry — single source of truth for all supported locales.
  *
  * To add a new locale:
- * 1. Create the locale JSON file in ./locales/
+ * 1. Create the locale folder and its domain JSON files in ./locales/
  * 2. Import the messages and date-fns locale below
  * 3. Add one entry to LOCALE_REGISTRY
  *
@@ -13,14 +13,14 @@
 import type { Locale } from "date-fns";
 
 // ─── Translation resources ───────────────────────────────────────────────────
-import enMessages from "./locales/en.json";
-import esMessages from "./locales/es.json";
-import zhHansMessages from "./locales/zh-Hans.json";
-import jaMessages from "./locales/ja.json";
-import huMessages from "./locales/hu.json";
-import deMessages from "./locales/de.json";
-import plMessages from "./locales/pl.json";
-import frMessages from "./locales/fr.json";
+import enMessages from "./locales/en/index.ts";
+import esMessages from "./locales/es/index.ts";
+import zhHansMessages from "./locales/zh-Hans/index.ts";
+import jaMessages from "./locales/ja/index.ts";
+import huMessages from "./locales/hu/index.ts";
+import deMessages from "./locales/de/index.ts";
+import plMessages from "./locales/pl/index.ts";
+import frMessages from "./locales/fr/index.ts";
 
 // ─── date-fns locales ────────────────────────────────────────────────────────
 import { enUS } from "date-fns/locale/en-US";

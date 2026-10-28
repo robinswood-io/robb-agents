@@ -66,7 +66,7 @@ describe('Google Code Assist provider', () => {
       }
       throw new Error(`Unexpected fetch URL: ${url}`);
     });
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    globalThis.fetch = Object.assign(fetchMock, { preconnect() {} });
 
     try {
       const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
@@ -98,8 +98,8 @@ describe('Google Code Assist provider', () => {
 
   it('onboards an allowed organization tier when the personal tier is ineligible', async () => {
     const originalFetch = globalThis.fetch;
-    const originalProject = process.env.GOOGLE_CLOUD_PROJECT;
-    const originalProjectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+    const originalProject = process.env["GOOGLE_CLOUD_PROJECT"];
+    const originalProjectId = process.env["GOOGLE_CLOUD_PROJECT_ID"];
     const fetchMock = mock(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.includes(':loadCodeAssist')) {
@@ -134,9 +134,9 @@ describe('Google Code Assist provider', () => {
       }
       throw new Error(`Unexpected fetch URL: ${url}`);
     });
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    process.env.GOOGLE_CLOUD_PROJECT = 'organization-project';
-    delete process.env.GOOGLE_CLOUD_PROJECT_ID;
+    globalThis.fetch = Object.assign(fetchMock, { preconnect() {} });
+    process.env["GOOGLE_CLOUD_PROJECT"] = 'organization-project';
+    delete process.env["GOOGLE_CLOUD_PROJECT_ID"];
 
     try {
       const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
@@ -159,17 +159,17 @@ describe('Google Code Assist provider', () => {
       expect(fetchMock).toHaveBeenCalledTimes(3);
     } finally {
       globalThis.fetch = originalFetch;
-      if (originalProject === undefined) delete process.env.GOOGLE_CLOUD_PROJECT;
-      else process.env.GOOGLE_CLOUD_PROJECT = originalProject;
-      if (originalProjectId === undefined) delete process.env.GOOGLE_CLOUD_PROJECT_ID;
-      else process.env.GOOGLE_CLOUD_PROJECT_ID = originalProjectId;
+      if (originalProject === undefined) delete process.env["GOOGLE_CLOUD_PROJECT"];
+      else process.env["GOOGLE_CLOUD_PROJECT"] = originalProject;
+      if (originalProjectId === undefined) delete process.env["GOOGLE_CLOUD_PROJECT_ID"];
+      else process.env["GOOGLE_CLOUD_PROJECT_ID"] = originalProjectId;
     }
   });
 
   it('requires a Google Cloud project before onboarding an organization tier', async () => {
     const originalFetch = globalThis.fetch;
-    const originalProject = process.env.GOOGLE_CLOUD_PROJECT;
-    const originalProjectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+    const originalProject = process.env["GOOGLE_CLOUD_PROJECT"];
+    const originalProjectId = process.env["GOOGLE_CLOUD_PROJECT_ID"];
     const fetchMock = mock(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes(':loadCodeAssist')) {
@@ -186,9 +186,9 @@ describe('Google Code Assist provider', () => {
       }
       throw new Error(`Unexpected fetch URL: ${url}`);
     });
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    delete process.env.GOOGLE_CLOUD_PROJECT;
-    delete process.env.GOOGLE_CLOUD_PROJECT_ID;
+    globalThis.fetch = Object.assign(fetchMock, { preconnect() {} });
+    delete process.env["GOOGLE_CLOUD_PROJECT"];
+    delete process.env["GOOGLE_CLOUD_PROJECT_ID"];
 
     try {
       const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
@@ -212,17 +212,17 @@ describe('Google Code Assist provider', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     } finally {
       globalThis.fetch = originalFetch;
-      if (originalProject === undefined) delete process.env.GOOGLE_CLOUD_PROJECT;
-      else process.env.GOOGLE_CLOUD_PROJECT = originalProject;
-      if (originalProjectId === undefined) delete process.env.GOOGLE_CLOUD_PROJECT_ID;
-      else process.env.GOOGLE_CLOUD_PROJECT_ID = originalProjectId;
+      if (originalProject === undefined) delete process.env["GOOGLE_CLOUD_PROJECT"];
+      else process.env["GOOGLE_CLOUD_PROJECT"] = originalProject;
+      if (originalProjectId === undefined) delete process.env["GOOGLE_CLOUD_PROJECT_ID"];
+      else process.env["GOOGLE_CLOUD_PROJECT_ID"] = originalProjectId;
     }
   });
 
   it('fails closed with AI Studio guidance when no organization tier is available', async () => {
     const originalFetch = globalThis.fetch;
-    const originalProject = process.env.GOOGLE_CLOUD_PROJECT;
-    const originalProjectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+    const originalProject = process.env["GOOGLE_CLOUD_PROJECT"];
+    const originalProjectId = process.env["GOOGLE_CLOUD_PROJECT_ID"];
     const fetchMock = mock(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes(':loadCodeAssist')) {
@@ -234,9 +234,9 @@ describe('Google Code Assist provider', () => {
       }
       throw new Error(`Unexpected fetch URL: ${url}`);
     });
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    delete process.env.GOOGLE_CLOUD_PROJECT;
-    delete process.env.GOOGLE_CLOUD_PROJECT_ID;
+    globalThis.fetch = Object.assign(fetchMock, { preconnect() {} });
+    delete process.env["GOOGLE_CLOUD_PROJECT"];
+    delete process.env["GOOGLE_CLOUD_PROJECT_ID"];
 
     try {
       const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
@@ -260,10 +260,10 @@ describe('Google Code Assist provider', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     } finally {
       globalThis.fetch = originalFetch;
-      if (originalProject === undefined) delete process.env.GOOGLE_CLOUD_PROJECT;
-      else process.env.GOOGLE_CLOUD_PROJECT = originalProject;
-      if (originalProjectId === undefined) delete process.env.GOOGLE_CLOUD_PROJECT_ID;
-      else process.env.GOOGLE_CLOUD_PROJECT_ID = originalProjectId;
+      if (originalProject === undefined) delete process.env["GOOGLE_CLOUD_PROJECT"];
+      else process.env["GOOGLE_CLOUD_PROJECT"] = originalProject;
+      if (originalProjectId === undefined) delete process.env["GOOGLE_CLOUD_PROJECT_ID"];
+      else process.env["GOOGLE_CLOUD_PROJECT_ID"] = originalProjectId;
     }
   });
 
@@ -288,7 +288,7 @@ describe('Google Code Assist provider', () => {
       }
       throw new Error(`Unexpected fetch URL: ${url}`);
     });
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    globalThis.fetch = Object.assign(fetchMock, { preconnect() {} });
 
     try {
       const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
@@ -318,10 +318,10 @@ describe('Google Code Assist provider', () => {
 
   it('fails closed before fetch when the v1internal kill switch is active', async () => {
     const originalFetch = globalThis.fetch;
-    const originalKillSwitch = process.env.ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL;
+    const originalKillSwitch = process.env["ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL"];
     const fetchMock = mock(async () => new Response('{}'));
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    process.env.ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL = '1';
+    globalThis.fetch = Object.assign(fetchMock, { preconnect() {} });
+    process.env["ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL"] = '1';
 
     try {
       const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
@@ -346,9 +346,9 @@ describe('Google Code Assist provider', () => {
     } finally {
       globalThis.fetch = originalFetch;
       if (originalKillSwitch === undefined) {
-        delete process.env.ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL;
+        delete process.env["ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL"];
       } else {
-        process.env.ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL = originalKillSwitch;
+        process.env["ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL"] = originalKillSwitch;
       }
     }
   });
@@ -394,7 +394,7 @@ describe('Google Code Assist provider', () => {
       }
       throw new Error(`Unexpected fetch URL: ${url}`);
     });
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    globalThis.fetch = Object.assign(fetchMock, { preconnect() {} });
 
     try {
       const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {

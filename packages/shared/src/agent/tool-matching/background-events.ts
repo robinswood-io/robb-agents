@@ -45,7 +45,7 @@ export function detectBackgroundEvents(
   // App.tsx (`isBackgroundingResult`). For both shapes a real task_completed
   // notification eventually arrives; the WS3 registry + turn-end orphan backstop
   // cover the case where it does not.
-  const wasRunInBackground = entry.input?.run_in_background === true;
+  const wasRunInBackground = entry.input?.["run_in_background"] === true;
   const looksAsyncLaunched =
     /agentId:\s*[a-zA-Z0-9_-]+/.test(resultStr) &&
     (/working in the background/i.test(resultStr) ||
@@ -58,14 +58,14 @@ export function detectBackgroundEvents(
       // set it, so fall back to its concise `description` param (the "3-5 word
       // description of the task") — this is what the chip shows instead of the
       // opaque agent ID. Mirrors the Bash background-shell path below.
-      const intentValue = (typeof entry.input._intent === 'string' && entry.input._intent)
-        || (typeof entry.input.description === 'string' && entry.input.description)
+      const intentValue = (typeof entry.input["_intent"] === 'string' && entry.input["_intent"])
+        || (typeof entry.input["description"] === 'string' && entry.input["description"])
         || undefined;
       events.push({
         type: 'task_backgrounded',
         toolUseId,
         taskId: agentIdMatch[1],
-        turnId,
+        ...(turnId !== undefined ? { turnId } : {}),
         ...(intentValue && { intent: intentValue }),
       });
     }
@@ -76,15 +76,15 @@ export function detectBackgroundEvents(
     const shellIdMatch = resultStr.match(/shell_id:\s*([a-zA-Z0-9_-]+)/)
       || resultStr.match(/"backgroundTaskId":\s*"([a-zA-Z0-9_-]+)"/);
     if (shellIdMatch?.[1]) {
-      const intentValue = (typeof entry.input._intent === 'string' && entry.input._intent)
-        || (typeof entry.input.description === 'string' && entry.input.description)
+      const intentValue = (typeof entry.input["_intent"] === 'string' && entry.input["_intent"])
+        || (typeof entry.input["description"] === 'string' && entry.input["description"])
         || undefined;
-      const commandValue = typeof entry.input.command === 'string' ? entry.input.command : undefined;
+      const commandValue = typeof entry.input["command"] === 'string' ? entry.input["command"] : undefined;
       events.push({
         type: 'shell_backgrounded',
         toolUseId,
         shellId: shellIdMatch[1],
-        turnId,
+        ...(turnId !== undefined ? { turnId } : {}),
         ...(intentValue && { intent: intentValue }),
         ...(commandValue && { command: commandValue }),
       });
@@ -105,14 +105,14 @@ export function detectBackgroundEvents(
     if (taskIdMatch?.[1]) {
       const summaryMatch = resultStr.match(/Summary:\s*(.+)/);
       const workflowId = parseWorkflowIdFromTranscriptPath(resultStr);
-      const intentValue = (typeof entry.input._intent === 'string' && entry.input._intent)
+      const intentValue = (typeof entry.input["_intent"] === 'string' && entry.input["_intent"])
         || (summaryMatch?.[1]?.trim())
         || undefined;
       events.push({
         type: 'task_backgrounded',
         toolUseId,
         taskId: taskIdMatch[1],
-        turnId,
+        ...(turnId !== undefined ? { turnId } : {}),
         kind: 'workflow',
         ...(intentValue && { intent: intentValue }),
         ...(workflowId && { workflowId }),
@@ -122,12 +122,12 @@ export function detectBackgroundEvents(
 
   // Shell killed detection — KillShell tool
   if (entry.name === 'KillShell') {
-    const shellId = entry.input.shell_id as string;
+    const shellId = entry.input["shell_id"] as string;
     if (shellId) {
       events.push({
         type: 'shell_killed',
         shellId,
-        turnId,
+        ...(turnId !== undefined ? { turnId } : {}),
       });
     }
   }

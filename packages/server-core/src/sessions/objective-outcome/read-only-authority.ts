@@ -81,7 +81,7 @@ export function explicitReadOnlyAuthorityBlocker(
   const originalObjective = transitionObjectiveContract({
     messageId: objective.userMessageId,
     text: originalObjectiveText,
-    delegatedRole: objective.delegatedRole,
+    ...(objective.delegatedRole !== undefined ? { delegatedRole: objective.delegatedRole } : {}),
     nowMs: objective.startedAt,
   });
   if (!objectiveRequiresExecutionEvidence(originalObjective, originalObjectiveText)

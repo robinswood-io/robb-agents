@@ -1,6 +1,6 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import type { AgentEvent as PiAgentEvent } from '@earendil-works/pi-agent-core';
 import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
-import { parseReadCommand } from '../read-patterns.ts';
 import { PI_TOOL_NAME_MAP } from './constants.ts';
 import { toolMetadataStore } from '../../../interceptor-common.ts';
 
@@ -17,7 +17,7 @@ export function extractToolMetadataFromEvent(event: PiEvent): { intent?: string;
     const displayName = typeof metadata.displayName === 'string' ? metadata.displayName : undefined;
 
     if (!intent && !displayName) return undefined;
-    return { intent, displayName };
+    return { ...(intent !== undefined ? { intent } : {}), ...(displayName !== undefined ? { displayName } : {}) };
   }
 
 export function resolveStoredMetadata(toolCallId: string, sessionDir?: string): { meta?: { intent?: string; displayName?: string }; keyTried?: string } {
@@ -32,7 +32,7 @@ export function resolveStoredMetadata(toolCallId: string, sessionDir?: string): 
       if (meta) return { meta, keyTried: candidate };
     }
 
-    return { meta: undefined, keyTried: Array.from(candidates).join(' -> ') };
+    return {  keyTried: Array.from(candidates).join(' -> ') };
   }
 
 export function normalizeToolInput(
@@ -42,33 +42,33 @@ export function normalizeToolInput(
     if (toolName === 'Edit') {
       const normalized = { ...args };
       if ('path' in normalized && !('file_path' in normalized)) {
-        normalized.file_path = normalized.path;
-        delete normalized.path;
+        normalized["file_path"] = normalized["path"];
+        delete normalized["path"];
       }
 
       // Pi SDK >= 0.63.2 uses edits[] array instead of top-level oldText/newText.
       // Preserve the full edits[] payload so the renderer can expand and display
       // every replacement block. Also derive the first edit into flat old/new
       // fields as a compatibility bridge for UI paths that still expect them.
-      const edits = normalized.edits as Array<{ oldText?: string; newText?: string }> | undefined;
-      if (Array.isArray(edits) && edits.length > 0 && edits[0]) {
+      const edits = normalized["edits"] as Array<{ oldText?: string; newText?: string }> | undefined;
+      if (isUnknownArray(edits) && edits.length > 0 && edits[0]) {
         const first = edits[0];
         if (first.oldText != null && !('old_string' in normalized)) {
-          normalized.old_string = first.oldText;
+          normalized["old_string"] = first.oldText;
         }
         if (first.newText != null && !('new_string' in normalized)) {
-          normalized.new_string = first.newText;
+          normalized["new_string"] = first.newText;
         }
       }
 
       // Legacy path: top-level oldText/newText (Pi SDK < 0.63.2 or resumed sessions)
       if ('oldText' in normalized && !('old_string' in normalized)) {
-        normalized.old_string = normalized.oldText;
-        delete normalized.oldText;
+        normalized["old_string"] = normalized["oldText"];
+        delete normalized["oldText"];
       }
       if ('newText' in normalized && !('new_string' in normalized)) {
-        normalized.new_string = normalized.newText;
-        delete normalized.newText;
+        normalized["new_string"] = normalized["newText"];
+        delete normalized["newText"];
       }
       return normalized;
     }
@@ -76,8 +76,8 @@ export function normalizeToolInput(
     if (toolName === 'Write') {
       const normalized = { ...args };
       if ('path' in normalized && !('file_path' in normalized)) {
-        normalized.file_path = normalized.path;
-        delete normalized.path;
+        normalized["file_path"] = normalized["path"];
+        delete normalized["path"];
       }
       return normalized;
     }
@@ -85,8 +85,8 @@ export function normalizeToolInput(
     if (toolName === 'Read' || toolName === 'Glob' || toolName === 'Grep') {
       const normalized = { ...args };
       if ('path' in normalized && !('file_path' in normalized)) {
-        normalized.file_path = normalized.path;
-        delete normalized.path;
+        normalized["file_path"] = normalized["path"];
+        delete normalized["path"];
       }
       return normalized;
     }
@@ -111,7 +111,7 @@ export function extractToolResult(result: unknown, isError: boolean): string {
       details?: unknown;
     };
 
-    if (Array.isArray(typed.content)) {
+    if (isUnknownArray(typed.content)) {
       if (typed.content.length === 0) return '';
       const texts = typed.content
         .filter((c) => c.type === 'text' && typeof c.text === 'string')

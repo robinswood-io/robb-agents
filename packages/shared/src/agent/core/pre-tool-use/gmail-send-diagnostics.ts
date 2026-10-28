@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import { resolve } from "node:path";
 import { parseStructuredGmailSendResumeSegment } from "../sensitive-external-action.ts";
 import { PORTABLE_SESSION_PATH_TOKEN } from './portable-scope.ts';
@@ -15,9 +16,9 @@ export function structuredGmailSendDiagnosticInput(
   dataFolderPath: string | undefined,
 ): Record<string, unknown> {
   if (!dataFolderPath
-    || !Array.isArray(input.attachmentPaths)
-    || input.attachmentPaths.length !== 1
-    || typeof input.attachmentPaths[0] !== 'string') return input;
+    || !isUnknownArray(input["attachmentPaths"])
+    || input["attachmentPaths"].length !== 1
+    || typeof input["attachmentPaths"][0] !== 'string') return input;
 
   let expectedAttachmentPath: string | undefined;
   for (let index = objectiveSegments.length - 1; index >= 0; index -= 1) {
@@ -37,7 +38,7 @@ export function structuredGmailSendDiagnosticInput(
   const directlyExpandedPath = sessionPath + expectedAttachmentPath.slice(
     PORTABLE_SESSION_PATH_TOKEN.length,
   );
-  const actualAttachmentPath = input.attachmentPaths[0];
+  const actualAttachmentPath = input["attachmentPaths"][0];
   if (actualAttachmentPath !== directlyExpandedPath) return input;
 
   return { ...input, attachmentPaths: [expectedAttachmentPath] };

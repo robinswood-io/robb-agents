@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /** Playground entries; scenario data and preview components are kept in adjacent sections. */
 import "react";
 import type { ComponentEntry } from "./types";
@@ -7,6 +8,12 @@ import "motion/react";
 import { AuthRequestCard } from "@/components/chat/AuthRequestCard";
 import { AssistantMessage, StatusMessage, CompactionDivider, ProcessingIndicator } from "./messages/status";
 import { MessageGallery, createAuthMessage } from "./messages/gallery";
+
+type AuthPreviewOptions = Parameters<typeof createAuthMessage>[0];
+type AuthPreviewProps = Omit<AuthPreviewOptions, 'type' | 'status' | 'sourceSlug'> & {
+  authType: AuthPreviewOptions['type'];
+  authStatus: AuthPreviewOptions['status'];
+};
 
 // ============================================================================
 // Component Registry Entries
@@ -182,11 +189,11 @@ export const messagesComponents: ComponentEntry[] = [
     name: 'AuthRequestCard',
     category: 'Chat Messages',
     description: 'Inline authentication request card for credentials or OAuth flows',
-    component: ({ authType, authStatus, sourceName, mode, description, hint, error, email }) => (
+    component: ({ authType, authStatus, sourceName, mode, description, hint, error, email }: AuthPreviewProps) => (
       <div className="w-[80%]">
         <AuthRequestCard
           sessionId="playground-session"
-          message={createAuthMessage({
+          message={createAuthMessage(omitUndefined<AuthPreviewOptions>({
             type: authType,
             status: authStatus,
             sourceSlug: sourceName.toLowerCase().replace(/\s+/g, '-'),
@@ -196,7 +203,7 @@ export const messagesComponents: ComponentEntry[] = [
             hint,
             error,
             email,
-          })}
+          }))}
           onRespondToCredential={(sessionId, requestId, response) =>
             console.log('Credential response:', { sessionId, requestId, response })
           }

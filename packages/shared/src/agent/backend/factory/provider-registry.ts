@@ -127,29 +127,30 @@ export function createBackendFromResolvedContext(args: {
   context: ResolvedBackendContext;
   coreConfig: CoreBackendConfig;
   hostRuntime: BackendHostRuntimeContext;
-  providerOptions?: BackendProviderOptions;
+  providerOptions?: BackendProviderOptions | undefined;
 }): AgentBackend {
   const { context, coreConfig, hostRuntime, providerOptions } = args;
   const { driver, resolvedPaths } = resolveDriverRuntime(context.provider, hostRuntime);
 
-  const buildArgs = {
+  const buildArgs: import('../internal/driver-types.ts').DriverBuildArgs = {
     context,
     coreConfig,
     hostRuntime,
     resolvedPaths,
-    providerOptions,
+    ...(providerOptions !== undefined ? { providerOptions } : {}),
   };
 
   driver.prepareRuntime?.(buildArgs);
   const runtime = driver.buildRuntime(buildArgs);
 
+  const authType = context.authType || getDefaultAuthType(context.provider);
   const config: ResolvedBackendConfig = {
     ...coreConfig,
     provider: context.provider,
     providerType: context.connection?.providerType ?? getDefaultProviderType(context.provider),
-    authType: context.authType || getDefaultAuthType(context.provider),
+    ...(authType !== undefined ? { authType } : {}),
     model: context.resolvedModel,
-    connectionSlug: context.connection?.slug,
+    ...(context.connection?.slug !== undefined ? { connectionSlug: context.connection?.slug } : {}),
     runtime,
   };
 
@@ -212,10 +213,11 @@ export function createBackendFromConnection(
     );
   }
 
+  const authType = connectionAuthTypeToBackendAuthType(connection.authType);
   const context: ResolvedBackendContext = {
     connection,
     provider: providerTypeToAgentProvider(connection.providerType || 'anthropic'),
-    authType: connectionAuthTypeToBackendAuthType(connection.authType),
+    ...(authType !== undefined ? { authType } : {}),
     resolvedModel: resolveModelForProvider(
       providerTypeToAgentProvider(connection.providerType || 'anthropic'),
       baseConfig.model,
@@ -229,7 +231,7 @@ export function createBackendFromConnection(
       context,
       coreConfig: baseConfig,
       hostRuntime,
-      providerOptions,
+      ...(providerOptions !== undefined ? { providerOptions } : {}),
     });
   }
 

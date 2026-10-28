@@ -41,7 +41,7 @@ export function createWindow(transportOwner: WindowManager, moduleDirectory: str
         minHeight: 600,
         show: false, // Don't show until ready-to-show event (faster perceived startup)
         title: '',
-        icon: iconExists ? iconPath : undefined,
+        ...(iconExists ? { icon: iconPath } : {}),
         // macOS-specific: hidden title bar with inset traffic lights
         ...(isMac && {
             titleBarStyle: 'hiddenInset',
@@ -79,7 +79,7 @@ export function createWindow(transportOwner: WindowManager, moduleDirectory: str
     // schemes directly to shell.openExternal. Markdown normal-clicks go through
     // OPEN_URL; middle-clicks/window.open/top-navigation land here.
     window.webContents.setWindowOpenHandler((details) => {
-        transportOwner["openExternalFromRenderer"](details.url, 'window-open', window);
+        transportOwner.openExternalFromRenderer(details.url, 'window-open', window);
         return { action: 'deny' };
     });
     // Handle external navigation attempts from renderer WebContents
@@ -87,10 +87,10 @@ export function createWindow(transportOwner: WindowManager, moduleDirectory: str
         // Allow only the actual app shell (file:// in prod, Vite dev server in dev).
         // Any other navigation is treated as an external URL and goes through the
         // same URL-safety classifier used by OPEN_URL.
-        if (transportOwner["isRendererAppUrl"](url))
+        if (transportOwner.isRendererAppUrl(url))
             return;
         event.preventDefault();
-        transportOwner["openExternalFromRenderer"](url, 'will-navigate', window);
+        transportOwner.openExternalFromRenderer(url, 'will-navigate', window);
     });
     // Enable right-click context menu in development
     if (!app.isPackaged) {
@@ -162,7 +162,7 @@ export function createWindow(transportOwner: WindowManager, moduleDirectory: str
         // Build URL from options
         const query: Record<string, string> = { workspaceId };
         if (focused) {
-            query.focused = 'true'; // Open in focused mode (no sidebars)
+            query["focused"] = 'true'; // Open in focused mode (no sidebars)
         }
         if (VITE_DEV_SERVER_URL) {
             const params = new URLSearchParams(query).toString();
@@ -200,7 +200,7 @@ export function createWindow(transportOwner: WindowManager, moduleDirectory: str
                 if (target && (target.view || target.action)) {
                     // Wait a bit for React to mount and register IPC listeners
                     setTimeout(() => {
-                        transportOwner["pushToWindow"](window, RPC_CHANNELS.deeplink.NAVIGATE, {
+                        transportOwner.pushToWindow(window, RPC_CHANNELS.deeplink.NAVIGATE, {
                             view: target.view,
                             action: target.action,
                             actionParams: target.actionParams,
@@ -212,15 +212,15 @@ export function createWindow(transportOwner: WindowManager, moduleDirectory: str
     }
     // Listen for system theme changes and notify this window's renderer
     const themeHandler = () => {
-        transportOwner["pushToWindow"](window, RPC_CHANNELS.theme.SYSTEM_CHANGED, nativeTheme.shouldUseDarkColors);
+        transportOwner.pushToWindow(window, RPC_CHANNELS.theme.SYSTEM_CHANGED, nativeTheme.shouldUseDarkColors);
     };
     nativeTheme.on('updated', themeHandler);
     // Handle focus/blur to broadcast window focus state
     window.on('focus', () => {
-        transportOwner["pushToWindow"](window, RPC_CHANNELS.window.FOCUS_STATE, true);
+        transportOwner.pushToWindow(window, RPC_CHANNELS.window.FOCUS_STATE, true);
     });
     window.on('blur', () => {
-        transportOwner["pushToWindow"](window, RPC_CHANNELS.window.FOCUS_STATE, false);
+        transportOwner.pushToWindow(window, RPC_CHANNELS.window.FOCUS_STATE, false);
     });
     // Detect Cmd/Ctrl+W before close events so renderer can distinguish close source.
     // Intent is short-lived to avoid stale classification.
@@ -236,13 +236,13 @@ export function createWindow(transportOwner: WindowManager, moduleDirectory: str
         if (!isCloseShortcut)
             return;
         const wcId = window.webContents.id;
-        transportOwner["keyboardCloseIntents"].add(wcId);
-        const existingTimeout = transportOwner["keyboardCloseIntentTimeouts"].get(wcId);
+        transportOwner.keyboardCloseIntents.add(wcId);
+        const existingTimeout = transportOwner.keyboardCloseIntentTimeouts.get(wcId);
         if (existingTimeout)
             clearTimeout(existingTimeout);
-        transportOwner["keyboardCloseIntentTimeouts"].set(wcId, setTimeout(() => {
-            transportOwner["keyboardCloseIntentTimeouts"].delete(wcId);
-            transportOwner["keyboardCloseIntents"].delete(wcId);
+        transportOwner.keyboardCloseIntentTimeouts.set(wcId, setTimeout(() => {
+            transportOwner.keyboardCloseIntentTimeouts.delete(wcId);
+            transportOwner.keyboardCloseIntents.delete(wcId);
         }, 500));
     });
     // Handle window close request (traffic-light button, menu close, Cmd/Ctrl+W)
@@ -250,7 +250,7 @@ export function createWindow(transportOwner: WindowManager, moduleDirectory: str
     window.on('close', (event) => {
         // During app quit, bypass layered close behavior and allow native close flow.
         // This preserves expected Cmd+Q semantics (quit app instead of closing overlays/panels first).
-        if (transportOwner["isAppQuitting"]) {
+        if (transportOwner.isAppQuitting) {
             return;
         }
         // Check if renderer is ready (mainFrame exists) - if not, allow close directly
@@ -258,17 +258,17 @@ export function createWindow(transportOwner: WindowManager, moduleDirectory: str
             event.preventDefault();
             const wcId = window.webContents.id;
             let source: WindowCloseRequestSource = 'window-button';
-            if (transportOwner["keyboardCloseIntents"].has(wcId)) {
+            if (transportOwner.keyboardCloseIntents.has(wcId)) {
                 source = 'keyboard-shortcut';
-                transportOwner["keyboardCloseIntents"].delete(wcId);
-                const keyboardIntentTimeout = transportOwner["keyboardCloseIntentTimeouts"].get(wcId);
+                transportOwner.keyboardCloseIntents.delete(wcId);
+                const keyboardIntentTimeout = transportOwner.keyboardCloseIntentTimeouts.get(wcId);
                 if (keyboardIntentTimeout) {
                     clearTimeout(keyboardIntentTimeout);
-                    transportOwner["keyboardCloseIntentTimeouts"].delete(wcId);
+                    transportOwner.keyboardCloseIntentTimeouts.delete(wcId);
                 }
             }
             // Send close request to renderer - it will either close a modal/panel or confirm close.
-            transportOwner["pushToWindow"](window, RPC_CHANNELS.window.CLOSE_REQUESTED, { source });
+            transportOwner.pushToWindow(window, RPC_CHANNELS.window.CLOSE_REQUESTED, { source });
             // Fallback timeout: if IPC fails (e.g., on Hyprland/Wayland), force close after 3s.
             // Reset timeout on each attempt so active users closing modals aren't interrupted.
             const existingTimeout = transportOwner["pendingCloseTimeouts"].get(wcId);
@@ -291,12 +291,12 @@ export function createWindow(transportOwner: WindowManager, moduleDirectory: str
             transportOwner["pendingCloseTimeouts"].delete(webContentsId);
         }
         // Clean up short-lived keyboard-close intent tracking.
-        const keyboardIntentTimeout = transportOwner["keyboardCloseIntentTimeouts"].get(webContentsId);
+        const keyboardIntentTimeout = transportOwner.keyboardCloseIntentTimeouts.get(webContentsId);
         if (keyboardIntentTimeout) {
             clearTimeout(keyboardIntentTimeout);
-            transportOwner["keyboardCloseIntentTimeouts"].delete(webContentsId);
+            transportOwner.keyboardCloseIntentTimeouts.delete(webContentsId);
         }
-        transportOwner["keyboardCloseIntents"].delete(webContentsId);
+        transportOwner.keyboardCloseIntents.delete(webContentsId);
         nativeTheme.removeListener('updated', themeHandler);
         transportOwner["windows"].delete(webContentsId);
         transportOwner["focusedModeWindows"].delete(webContentsId);

@@ -40,8 +40,8 @@ export function handleUserMessage(
 
   let updatedMessages: Message[]
 
-  if (existingIndex >= 0) {
-    const existingMessage = session.messages[existingIndex]
+  const existingMessage = session.messages[existingIndex]
+  if (existingMessage) {
 
     // Event sequence protection: don't regress from 'processing' back to 'queued'
     // This handles out-of-order events (e.g., 'processing' arrives before 'queued')

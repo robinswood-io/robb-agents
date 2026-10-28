@@ -37,7 +37,7 @@ const samples: Record<string, JsonObject> = {
   unbind_messaging_channel: { platform: 'telegram' },
 };
 const definitions = getToolDefsAsJsonSchema({ includeDeveloperFeedback: true });
-function validate(name: string, args: JsonObject) {
+function validate(name: string, args: JsonObject): unknown {
   const definition = definitions.find(tool => tool.name === name)!;
   return validateToolArguments({ name, description: definition.description, parameters: definition.inputSchema as never },
     { id: 'fixture', type: 'toolCall', name, arguments: args });
@@ -49,7 +49,7 @@ describe('Pi session tool argument contracts', () => {
   });
   it.each(Object.entries(samples))('%s preserves valid argument types and required fields', (name, input) => {
     expect(validate(name, input)).toEqual(input);
-    const required = definitions.find(tool => tool.name === name)!.inputSchema.required as string[] | undefined;
+    const required = definitions.find(tool => tool.name === name)!.inputSchema["required"] as string[] | undefined;
     for (const key of required ?? []) {
       const missing = { ...input };
       delete missing[key];

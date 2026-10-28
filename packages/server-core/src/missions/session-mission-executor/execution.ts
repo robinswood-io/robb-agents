@@ -1,3 +1,5 @@
+import type { CreateSessionOptions } from '../../../../shared/src/protocol/dto/sessions.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { type MissionExecutionBinding } from "@craft-agent/shared/missions";
 import { isDeepStrictEqual } from "node:util";
 import { getRobbOperationsExtension } from '@craft-agent/shared/operations';
@@ -28,7 +30,7 @@ export async function executeUnmetered(transportOwner: SessionMissionExecutor, i
             ambiguousMutation: false,
         };
     }
-    const reviewPreflight = await transportOwner["preflightRequiredReviewInvocations"](input, missionWorkingDirectory);
+    const reviewPreflight = await transportOwner.preflightRequiredReviewInvocations(input, missionWorkingDirectory);
     if (!reviewPreflight.allowed) {
         return {
             status: 'failed',
@@ -68,7 +70,7 @@ export async function executeUnmetered(transportOwner: SessionMissionExecutor, i
                 && input.ordinaryRoutePin.connectionSlug !== pinnedAccount) {
                 throw new Error('Mission route pin differs from the selected Robb Operations account');
             }
-            session = await transportOwner["options"].host.createSession(transportOwner["options"].workspaceId, {
+            session = await transportOwner["options"].host.createSession(transportOwner["options"].workspaceId, omitUndefined<CreateSessionOptions>({
                 name: `${input.profile.role}: ${input.item.title}`,
                 parentSessionId: input.mission.originSessionId,
                 projectId: input.mission.projectId,
@@ -95,7 +97,7 @@ export async function executeUnmetered(transportOwner: SessionMissionExecutor, i
                 ...(input.specializedProfile ? {
                     missionRouteLockSha256: input.specializedProfile.executionRouteSha256,
                 } : {}),
-            }, input.ordinaryRoutePin ? {
+            }), input.ordinaryRoutePin ? {
                 missionOrdinaryRouteLock: structuredClone(input.ordinaryRoutePin),
             } : undefined);
         }
@@ -182,12 +184,12 @@ export async function executeUnmetered(transportOwner: SessionMissionExecutor, i
             ambiguousMutation: input.item.effect !== 'read',
         };
     }
-    return transportOwner["runOrRecover"](input, session.id, lifecycle, startedAt, reviewPreflight.reviewInvocations, terminalReviewBoundary);
+    return transportOwner.runOrRecover(input, session.id, lifecycle, startedAt, reviewPreflight.reviewInvocations, terminalReviewBoundary);
 }
 
 export async function runOrRecover(transportOwner: SessionMissionExecutor, input: MissionExecutionInput, sessionId: string, startedAt: number, reviewInvocations: readonly RequiredReviewInvocation[], lifecycle?: MissionExecutionLifecycle, terminalReviewBoundary?: TerminalReviewSessionBoundary): Promise<MissionExecutionResult> {
     const marker = dispatchMarker(input);
-    const completion = transportOwner["waitForCompletion"](sessionId, executionTimeout(input, transportOwner["timeoutMs"]));
+    const completion = transportOwner.waitForCompletion(sessionId, executionTimeout(input, transportOwner.timeoutMs));
     let accepted = false;
     try {
         const current = await transportOwner["options"].host.getSession(sessionId);
@@ -258,7 +260,7 @@ export async function runOrRecover(transportOwner: SessionMissionExecutor, input
             await transportOwner["options"].host.sendMessage(sessionId, buildMissionSessionPrompt(input, reviewInvocations), undefined, undefined, {
                 internalOrigin: {
                     kind: 'spawned-session',
-                    senderSessionId: input.mission.originSessionId,
+                    ...(input.mission.originSessionId !== undefined ? { senderSessionId: input.mission.originSessionId } : {}),
                 },
             }, undefined, undefined, (messageId) => {
                 accepted = true;

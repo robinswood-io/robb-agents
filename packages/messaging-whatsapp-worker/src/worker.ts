@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * WhatsApp worker subprocess entry.
  *
@@ -16,11 +17,11 @@
 
 import { mkdirSync } from 'node:fs';
 import { Buffer } from 'node:buffer';
-import { parseFrames, type WorkerCommand } from './protocol';
+import { parseFrames, type WorkerCommand, type WorkerEvent } from './protocol';
 import { bareJid, rememberSentId } from './filter';
 import { processUpsertMessage } from './upsert';
 
-import { emit, log, silentLogger, type BaileysModule, type BaileysSock } from "./worker-protocol";
+import { emit, log, silentLogger, isBaileysModule, type BaileysModule, type BaileysSock } from "./worker-protocol";
 export { type BaileysModule } from "./worker-protocol";
 
 
@@ -116,7 +117,8 @@ async function loadBaileys(): Promise<BaileysModule | null> {
   try {
     // Baileys is bundled into worker.cjs at build time; the dynamic form
     // keeps this site isolated behind a try/catch for runtime init failures.
-    const mod = (await import('@whiskeysockets/baileys')) as unknown as BaileysModule
+    const mod = await import('@whiskeysockets/baileys')
+    if (!isBaileysModule(mod)) throw new TypeError('Baileys SDK exports are incomplete')
     return mod
   } catch (err) {
     log('baileys load failed:', err instanceof Error ? err.message : String(err))
@@ -164,12 +166,12 @@ async function startSession(
   const { state, saveCreds } = await baileys.useMultiFileAuthState(authStateDir)
   const { version } = await baileys.fetchLatestBaileysVersion().catch(() => ({ version: undefined }))
 
-  emit({
+  emit(omitUndefined<Extract<WorkerEvent, { type: 'ready' }>>({
     type: 'ready',
     baileysVersion: version?.join('.'),
     buildId: WORKER_BUILD_ID,
     gitSha: WORKER_GIT_SHA,
-  })
+  }))
 
   const makeWASocket = baileys.makeWASocket ?? baileys.default
   if (typeof makeWASocket !== 'function') {
@@ -212,13 +214,13 @@ async function startSession(
           session.reconnectAttempts = 0
           session.connectedAtSec = Math.floor(Date.now() / 1000)
         }
-        emit({ type: 'connected', jid: sock.user?.id, name: sock.user?.name })
+        emit(omitUndefined<Extract<WorkerEvent, { type: 'connected' }>>({ type: 'connected', jid: sock.user?.id, name: sock.user?.name }))
         return
       }
       if (connection !== 'close') return
 
       const statusCode = lastDisconnect?.error?.output?.statusCode
-      const loggedOut = statusCode === baileys.DisconnectReason.loggedOut
+      const loggedOut = statusCode === baileys.DisconnectReason["loggedOut"]
       emit({
         type: 'disconnected',
         loggedOut,
@@ -228,7 +230,6 @@ async function startSession(
       if (loggedOut) {
         session = null
         process.exit(0)
-        return
       }
 
       // Non-logout close — this includes Baileys' 515 "Stream Errored
@@ -247,7 +248,6 @@ async function startSession(
         })
         session = null
         process.exit(0)
-        return
       }
 
       const delay = reconnectDelayMs(session.reconnectAttempts)
@@ -339,7 +339,7 @@ async function handleCommand(cmd: WorkerCommand): Promise<void> {
         cmd.pairingMode ?? 'code',
         cmd.selfChatMode ?? false,
         cmd.responsePrefix ?? DEFAULT_RESPONSE_PREFIX,
-      ).catch((err) => {
+      ).catch((err: unknown) => {
         emit({ type: 'error', message: err instanceof Error ? err.message : String(err) })
       })
       return
@@ -366,7 +366,7 @@ async function handleCommand(cmd: WorkerCommand): Promise<void> {
         const text = applyPrefixIfSelfChat(session, cmd.channelId, cmd.text)
         const res = await session.sock.sendMessage(cmd.channelId, { text })
         if (res?.key?.id) rememberSentId(session.sentIds, res.key.id)
-        emit({ type: 'send_result', id: cmd.id, ok: true, messageId: res?.key?.id })
+        emit(omitUndefined<Extract<WorkerEvent, { type: 'send_result' }>>({ type: 'send_result', id: cmd.id, ok: true, messageId: res?.key?.id }))
       } catch (err) {
         emit({
           type: 'send_result',
@@ -394,7 +394,7 @@ async function handleCommand(cmd: WorkerCommand): Promise<void> {
           caption,
         })
         if (res?.key?.id) rememberSentId(session.sentIds, res.key.id)
-        emit({ type: 'send_result', id: cmd.id, ok: true, messageId: res?.key?.id })
+        emit(omitUndefined<Extract<WorkerEvent, { type: 'send_result' }>>({ type: 'send_result', id: cmd.id, ok: true, messageId: res?.key?.id }))
       } catch (err) {
         emit({
           type: 'send_result',
@@ -420,7 +420,6 @@ async function handleCommand(cmd: WorkerCommand): Promise<void> {
         session = null
       }
       process.exit(0)
-      return
     }
   }
 }

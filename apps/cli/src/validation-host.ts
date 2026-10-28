@@ -1,5 +1,5 @@
+import { requireWorkspaceList } from './rpc-shapes.ts';
 import { getProviderDisplayName, resolveApiKey, shouldSetupLlmConnection } from './llm-setup.ts';
-import type { CliWorkspace } from './rpc-shapes.ts';
 import { requireListResponse } from './rpc-shapes.ts';
 import type { ValidateSession, ValidateStep } from './validation-types.ts';
 
@@ -48,13 +48,14 @@ export function getHostValidationSteps(): ValidateStep[] {
           await client.invoke('window:switchWorkspace', ws.id)
           return `registered: ${absPath}`
         }
-        const r = (await client.invoke('workspaces:get')) as CliWorkspace[]
-        if (r?.length > 0) {
-          ctx.workspaceId = r[0].id
-          ctx.workspaceRootPath = r[0].rootPath ?? r[0].path
+        const r = requireWorkspaceList(await client.invoke('workspaces:get'))
+        const first = r[0]
+        if (first) {
+          ctx.workspaceId = first.id
+          ctx.workspaceRootPath = first.rootPath ?? first.path
           // Bind this client to the workspace so push events (e.g. session:event)
           // routed { to: 'workspace' } reach us.
-          await client.invoke('window:switchWorkspace', r[0].id)
+          await client.invoke('window:switchWorkspace', first.id)
           return `${r.length} workspaces`
         }
         // Auto-bootstrap a temp workspace for CI environments
@@ -114,10 +115,10 @@ export function getHostValidationSteps(): ValidateStep[] {
 
         // Amazon Bedrock: IAM credential setup
         if (ctx.provider === 'amazon-bedrock') {
-          const accessKeyId = process.env.AWS_ACCESS_KEY_ID
-          const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
-          const region = process.env.AWS_REGION || 'us-east-1'
-          const sessionToken = process.env.AWS_SESSION_TOKEN
+          const accessKeyId = process.env["AWS_ACCESS_KEY_ID"]
+          const secretAccessKey = process.env["AWS_SECRET_ACCESS_KEY"]
+          const region = process.env["AWS_REGION"] || 'us-east-1'
+          const sessionToken = process.env["AWS_SESSION_TOKEN"]
           if (!accessKeyId || !secretAccessKey) {
             return '0 connections (missing AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY)'
           }

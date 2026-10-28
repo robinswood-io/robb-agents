@@ -7,14 +7,14 @@ import { clearIconCaches, loadSkillIcon, loadSourceIcon } from '../icon-cache'
 const originalWindow = globalThis.window
 afterEach(() => {
   clearIconCaches()
-  ;(globalThis as unknown as { window: unknown }).window = originalWindow
+  ;((globalThis) as { window: unknown }).window = originalWindow
 })
 
 it('releases a failed shared image read so a later request can succeed', async () => {
   let rejectRead!: (error: Error) => void
   let reads = 0
   const firstRead = new Promise<string>((_resolve, reject) => { rejectRead = reject })
-  ;(globalThis as unknown as { window: unknown }).window = {
+  ;((globalThis) as { window: unknown }).window = {
     electronAPI: {
       readWorkspaceImage: () => {
         reads += 1
@@ -34,7 +34,7 @@ it('releases a failed shared image read so a later request can succeed', async (
 
 it('keeps shared image reads isolated between workspaces', async () => {
   const reads: string[] = []
-  ;(globalThis as unknown as { window: unknown }).window = {
+  ;((globalThis) as { window: unknown }).window = {
     electronAPI: {
       readWorkspaceImage: async (workspaceId: string) => { reads.push(workspaceId); return `data:${workspaceId}` },
     },
@@ -66,7 +66,7 @@ it('keeps a new message available while two composers load the same 35 skill ico
   })
   const loads: Array<Promise<string | null>> = []
   try {
-    ;(globalThis as unknown as { window: unknown }).window = {
+    ;((globalThis) as { window: unknown }).window = {
       electronAPI: {
         readWorkspaceImage: (workspaceId: string, path: string) =>
           client.invoke(RPC_CHANNELS.workspace.READ_IMAGE, workspaceId, path),

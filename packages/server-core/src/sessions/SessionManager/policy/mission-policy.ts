@@ -132,7 +132,7 @@ export function loadSpecializedMissionSkillPackages(
     return lock.capabilities.filter(({ kind }) => kind === 'skill').map((capability) => {
       const snapshot = loadSpecializedSkillPackageSnapshot({
         workspaceRoot: managed.workspace.rootPath,
-        workingDirectory: managed.workingDirectory,
+        ...(managed.workingDirectory !== undefined ? { workingDirectory: managed.workingDirectory } : {}),
         slug: capability.name,
       })
       if (!snapshot || snapshot.identitySha256 !== capability.identitySha256) {

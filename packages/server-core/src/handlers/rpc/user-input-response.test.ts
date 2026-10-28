@@ -1,3 +1,7 @@
+import { OAuthFlowStore } from '@craft-agent/shared/auth';
+import type { ISessionManager } from '@craft-agent/server-core/handlers';
+import { SessionManager as FixtureSessionManager } from '@craft-agent/server-core/sessions';
+import { createHeadlessPlatform } from '../../runtime/platform-headless.ts';
 import { describe, expect, it } from 'bun:test'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import type { HandlerFn, RequestContext, RpcServer } from '../../transport'
@@ -8,15 +12,18 @@ describe('interactive question response workspace authority', () => {
   it('authorizes an existing-turn retry before dispatch and forwards its exact anchor and caller', async () => {
     const handlers = new Map<string, HandlerFn<unknown[]>>()
     const delivered: unknown[] = []
-    const server = { handle: (channel: string, handler: HandlerFn) => handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args])) } as unknown as RpcServer
-    const deps = {
-      platform: { logger: {} },
-      sessionManager: {
-        getSessions: () => [{ id: 'session', workspaceId: 'private-workspace' }],
+    const server = ({handle: (channel, handler) => handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args])),
+push: () => {},
+invokeClient: async () => undefined,
+hasClientCapability: () => false,
+findClientsWithCapability: () => []} satisfies RpcServer)
+    const deps = ({platform: createHeadlessPlatform(),
+sessionManager: Object.assign(new FixtureSessionManager(), ({
+        getSessions: () => [{ id: 'session', workspaceId: 'private-workspace', workspaceName: 'Test', lastMessageAt: 0, messages: [], isProcessing: false }],
         getSession: () => { throw new Error('Authorize before hydrating') },
-        retryTurn: async (...args: unknown[]) => { delivered.push(args); return { status: 'started' } },
-      },
-    } as unknown as HandlerDeps
+        retryTurn: async (...args: unknown[]) => { delivered.push(args); return { status: 'started' as const } },
+      } satisfies Partial<ISessionManager>)),
+oauthFlowStore: new OAuthFlowStore()} satisfies HandlerDeps)
     registerSessionsHandlers(server, deps)
     const handler = handlers.get(RPC_CHANNELS.sessions.COMMAND)!
     const context: RequestContext = { clientId: 'client', workspaceId: 'other-workspace', webContentsId: null, actorId: 'human', roles: ['user'], authorizationGeneration: 1, allowedWorkspaceIds: '*' }
@@ -30,15 +37,18 @@ describe('interactive question response workspace authority', () => {
   it('rejects another workspace before hydration or dispatch and pins a valid response to its actual caller', async () => {
     const handlers = new Map<string, HandlerFn<unknown[]>>()
     const delivered: unknown[] = []
-    const server = { handle: (channel: string, handler: HandlerFn) => handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args])) } as unknown as RpcServer
-    const deps = {
-      platform: { logger: {} },
-      sessionManager: {
-        getSessions: () => [{ id: 'child-origin', workspaceId: 'private-workspace' }],
+    const server = ({handle: (channel, handler) => handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args])),
+push: () => {},
+invokeClient: async () => undefined,
+hasClientCapability: () => false,
+findClientsWithCapability: () => []} satisfies RpcServer)
+    const deps = ({platform: createHeadlessPlatform(),
+sessionManager: Object.assign(new FixtureSessionManager(), ({
+        getSessions: () => [{ id: 'child-origin', workspaceId: 'private-workspace', workspaceName: 'Test', lastMessageAt: 0, messages: [], isProcessing: false }],
         getSession: () => { throw new Error('Request must authorize before hydrating') },
         respondToUserInput: async (...args: unknown[]) => { delivered.push(args); return { status: 'cancelled' } },
-      },
-    } as unknown as HandlerDeps
+      } satisfies Partial<ISessionManager>)),
+oauthFlowStore: new OAuthFlowStore()} satisfies HandlerDeps)
     registerSessionsHandlers(server, deps)
     const handler = handlers.get(RPC_CHANNELS.sessions.RESPOND_TO_USER_INPUT)!
     const context: RequestContext = { clientId: 'client', workspaceId: 'other-workspace', webContentsId: null, actorId: 'human', roles: ['user'], authorizationGeneration: 1, allowedWorkspaceIds: '*' }

@@ -7,7 +7,7 @@ import { normalizeInputSchema, normalizeStructuredContent } from './shared.ts';
 import type { McpToolResult } from './shared.ts';
 
 export async function callTool(transportOwner: McpClientPool, proxyName: string, args: Record<string, unknown>): Promise<McpToolResult> {
-    const info = transportOwner["proxyTools"].get(proxyName);
+    const info = transportOwner.proxyTools.get(proxyName);
     if (!info) {
         return {
             content: `Unknown MCP proxy tool: ${proxyName}`,
@@ -34,13 +34,13 @@ export async function callTool(transportOwner: McpClientPool, proxyName: string,
     const inputSchema = normalizeInputSchema(sourceTool.inputSchema);
     try {
         const schemaKey = JSON.stringify(inputSchema);
-        let cachedValidator = transportOwner["toolInputValidators"].get(proxyName);
+        let cachedValidator = transportOwner.toolInputValidators.get(proxyName);
         if (!cachedValidator || cachedValidator.schemaKey !== schemaKey) {
             cachedValidator = {
                 schemaKey,
-                validate: transportOwner["inputSchemaValidator"].getValidator<Record<string, unknown>>(inputSchema),
+                validate: transportOwner.inputSchemaValidator.getValidator<Record<string, unknown>>(inputSchema),
             };
-            transportOwner["toolInputValidators"].set(proxyName, cachedValidator);
+            transportOwner.toolInputValidators.set(proxyName, cachedValidator);
         }
         const validation = cachedValidator.validate(args);
         if (!validation.valid) {
@@ -52,7 +52,7 @@ export async function callTool(transportOwner: McpClientPool, proxyName: string,
         }
     }
     catch (error) {
-        transportOwner["debug"](`Invalid input schema for ${proxyName}: ${error instanceof Error ? error.message : String(error)}`);
+        transportOwner.debug(`Invalid input schema for ${proxyName}: ${error instanceof Error ? error.message : String(error)}`);
         return {
             content: `MCP tool "${originalName}" has an invalid input schema and was not executed.`,
             isError: true,
@@ -60,7 +60,7 @@ export async function callTool(transportOwner: McpClientPool, proxyName: string,
         };
     }
     const possibleMutation = classifyToolNameMutationSemantics(originalName) !== 'neutral'
-        || (typeof args.method === 'string' && !['GET', 'HEAD'].includes(args.method.toUpperCase()));
+        || (typeof args["method"] === 'string' && !['GET', 'HEAD'].includes(args["method"].toUpperCase()));
     const mutationWorkspace = possibleMutation ? transportOwner["resolveCollectionCacheScope"]()?.workspace : undefined;
     try {
         // This is deliberately the final awaited host fence before dispatching to
@@ -90,13 +90,13 @@ export async function callTool(transportOwner: McpClientPool, proxyName: string,
             try {
                 const outputSchema = normalizeInputSchema(sourceTool.outputSchema);
                 const schemaKey = JSON.stringify(outputSchema);
-                let cachedValidator = transportOwner["toolOutputValidators"].get(proxyName);
+                let cachedValidator = transportOwner.toolOutputValidators.get(proxyName);
                 if (!cachedValidator || cachedValidator.schemaKey !== schemaKey) {
                     cachedValidator = {
                         schemaKey,
-                        validate: transportOwner["inputSchemaValidator"].getValidator<Record<string, unknown>>(outputSchema),
+                        validate: transportOwner.inputSchemaValidator.getValidator<Record<string, unknown>>(outputSchema),
                     };
-                    transportOwner["toolOutputValidators"].set(proxyName, cachedValidator);
+                    transportOwner.toolOutputValidators.set(proxyName, cachedValidator);
                 }
                 if (!cachedValidator.validate(structuredContent).valid) {
                     return {
@@ -107,7 +107,7 @@ export async function callTool(transportOwner: McpClientPool, proxyName: string,
                 }
             }
             catch (error) {
-                transportOwner["debug"](`Invalid output schema for ${proxyName}: ${error instanceof Error ? error.message : String(error)}`);
+                transportOwner.debug(`Invalid output schema for ${proxyName}: ${error instanceof Error ? error.message : String(error)}`);
                 return {
                     content: `MCP tool "${originalName}" has an invalid output schema. Its structured result was rejected.`,
                     isError: true,
@@ -154,7 +154,7 @@ export async function callTool(transportOwner: McpClientPool, proxyName: string,
                 sessionPath: transportOwner["sessionPath"],
                 toolName: proxyName,
                 input: args,
-                summarize: transportOwner["summarizeCallback"],
+                ...(transportOwner.summarizeCallback !== undefined ? { summarize: transportOwner.summarizeCallback } : {}),
             });
             if (guarded) {
                 return { content: guarded, isError: false };

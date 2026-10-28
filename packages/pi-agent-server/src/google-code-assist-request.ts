@@ -87,10 +87,10 @@ export function buildRequest(model: Model<Api>, context: Context, projectId: str
   const systemPrompt = getCurrentSystemPrompt(transcript.messages);
   const tools = getCurrentTools(transcript.messages);
   const generationConfig: Record<string, unknown> = {};
-  if (options?.temperature !== undefined) generationConfig.temperature = options.temperature;
-  if (options?.maxTokens !== undefined) generationConfig.maxOutputTokens = options.maxTokens;
+  if (options?.temperature !== undefined) generationConfig["temperature"] = options.temperature;
+  if (options?.maxTokens !== undefined) generationConfig["maxOutputTokens"] = options.maxTokens;
   if (model.reasoning && options?.reasoning) {
-    generationConfig.thinkingConfig = { includeThoughts: true };
+    generationConfig["thinkingConfig"] = { includeThoughts: true };
   }
 
   return {

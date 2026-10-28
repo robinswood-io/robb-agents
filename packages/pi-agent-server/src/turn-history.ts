@@ -17,4 +17,5 @@ export function findSdkTurnAnchor(
     }
     id = entry.parentId;
   }
+  return undefined;
 }

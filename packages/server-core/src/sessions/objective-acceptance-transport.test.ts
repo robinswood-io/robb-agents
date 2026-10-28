@@ -1,3 +1,4 @@
+import { isJsonObject, parseJsonObject } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from 'bun:test';
 import { validateToolArguments, parseToolCallArguments, type Tool } from '@earendil-works/pi-ai';
 import { getToolDefsAsJsonSchema, SESSION_TOOL_REGISTRY, type SessionToolContext } from '@craft-agent/session-tools-core';
@@ -32,9 +33,10 @@ async function registerThroughPi(criteria: ObjectiveAcceptanceCriterion[], prefi
   const args = { criteria: structuredClone(criteria) };
   // This is the actual SDK validation step before the proxy sends arguments
   // to the main process. No observation tool or provider is executed here.
-  const validated = validateToolArguments({
+  const validated: unknown = validateToolArguments({
     name: definition.name, description: definition.description, parameters: definition.inputSchema,
   } as Tool, { type: 'toolCall', id: 'registration', name: definition.name, arguments: parseToolCallArguments(JSON.stringify(args)).arguments });
+  if (!isJsonObject(validated)) throw new Error('SDK argument validation returned a non-object');
   let objective = transitionObjectiveContract({ messageId: root.id, text: root.content, nowMs: 1 });
   const result = await SESSION_TOOL_REGISTRY.get('set_completion_criteria')!.handler!({
     sessionId: 'isolated-contract-test',
@@ -50,10 +52,10 @@ describe('typed acceptance criteria across Pi registration and evidence validati
   it.each(['', 'mcp__session__'])('preserves original scalar types through %s schema, SDK, host, ACK, and stored JSON', async (prefix) => {
     const { args, validated, result, objective } = await registerThroughPi([criterion], prefix);
     expect(args.criteria).toEqual([criterion]);
-    expect(validated.criteria).toEqual([criterion]);
+    expect(validated['criteria']).toEqual([criterion]);
     expect(result.isError).toBeFalsy();
-    expect(JSON.parse(result.content[0]!.text).criteria).toEqual([criterion]);
-    const restored = JSON.parse(JSON.stringify(objective));
+    expect(parseJsonObject(result.content[0]!.text)['criteria']).toEqual([criterion]);
+    const restored = JSON.parse(JSON.stringify(objective)) as typeof objective;
     expect(restored.acceptanceCriteria).toEqual([criterion]);
     expect(validateObjectiveAcceptanceCriteria(restored, [root, observation], receipt)).toEqual([]);
   });
@@ -75,11 +77,13 @@ describe('typed acceptance criteria across Pi registration and evidence validati
   });
 
   it.each(['1', '001', 'true', 'false', ''])('keeps intentional string %j distinct from numeric, boolean, and null values', async (text) => {
+    const command = criterion.input['command'];
+    if (typeof command !== 'string') throw new Error('Expected the command fixture');
     const strings: ObjectiveAcceptanceCriterion = {
-      ...criterion, input: { command: criterion.input.command, literal: text }, checks: [{ path: '$.value', equals: text }],
+      ...criterion, input: { command, literal: text }, checks: [{ path: '$.value', equals: text }],
     };
     const { objective, validated } = await registerThroughPi([strings]);
-    expect(validated.criteria).toEqual([strings]);
+    expect(validated['criteria']).toEqual([strings]);
     const message = { ...observation, toolInput: strings.input, toolResult: JSON.stringify({ value: text }) };
     expect(validateObjectiveAcceptanceCriteria(objective, [root, message], receipt)).toEqual([]);
     for (const value of [1, true, false, null]) {

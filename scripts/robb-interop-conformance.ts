@@ -1,3 +1,4 @@
+import { omitUndefined, parseJsonObject } from '@craft-agent/shared/utils/json';
 import {
   fetchInteropConformanceTransport,
   runA2AConformance,
@@ -21,44 +22,44 @@ function mcpEra(value: string | undefined): McpConformanceEra {
 }
 
 async function execute(): Promise<InteropConformanceReport> {
-  const selected = protocol(process.env.ROBB_INTEROP_PROTOCOL)
-  const endpoint = process.env.ROBB_INTEROP_ENDPOINT
+  const selected = protocol(process.env["ROBB_INTEROP_PROTOCOL"])
+  const endpoint = process.env["ROBB_INTEROP_ENDPOINT"]
   if (!endpoint) throw new Error('ROBB_INTEROP_ENDPOINT is required')
-  const bearerToken = process.env.ROBB_INTEROP_BEARER_TOKEN
+  const bearerToken = process.env["ROBB_INTEROP_BEARER_TOKEN"]
   const authorization = bearerToken ? `Bearer ${bearerToken}` : undefined
   if (selected === 'mcp-tasks') {
-    const toolArguments = process.env.ROBB_INTEROP_TOOL_ARGUMENTS
-      ? JSON.parse(process.env.ROBB_INTEROP_TOOL_ARGUMENTS)
+    const toolArguments = process.env["ROBB_INTEROP_TOOL_ARGUMENTS"]
+      ? parseJsonObject(process.env["ROBB_INTEROP_TOOL_ARGUMENTS"])
       : undefined
-    const taskInputResponses = process.env.ROBB_INTEROP_TASK_INPUT_RESPONSES
-      ? JSON.parse(process.env.ROBB_INTEROP_TASK_INPUT_RESPONSES)
+    const taskInputResponses = process.env["ROBB_INTEROP_TASK_INPUT_RESPONSES"]
+      ? parseJsonObject(process.env["ROBB_INTEROP_TASK_INPUT_RESPONSES"])
       : undefined
-    return runMcpTasksConformance({
+    return runMcpTasksConformance(omitUndefined({
       endpoint,
       authorization,
       transport: fetchInteropConformanceTransport,
-      era: mcpEra(process.env.ROBB_INTEROP_MCP_ERA),
-      toolName: process.env.ROBB_INTEROP_TOOL_NAME,
+      era: mcpEra(process.env["ROBB_INTEROP_MCP_ERA"]),
+      toolName: process.env["ROBB_INTEROP_TOOL_NAME"],
       toolArguments,
       taskInputResponses,
-    })
+    }))
   }
   if (selected === 'a2a') {
-    return runA2AConformance({
+    return runA2AConformance(omitUndefined({
       baseUrl: endpoint,
       authorization,
       transport: fetchInteropConformanceTransport,
-      message: process.env.ROBB_INTEROP_EXECUTE === '1'
-        ? (process.env.ROBB_INTEROP_MESSAGE ?? 'Return the current service status.')
+      message: process.env["ROBB_INTEROP_EXECUTE"] === '1'
+        ? (process.env["ROBB_INTEROP_MESSAGE"] ?? 'Return the current service status.')
         : undefined,
-    })
+    }))
   }
-  return runAgUiConformance({
+  return runAgUiConformance(omitUndefined({
     endpoint,
     authorization,
     transport: fetchInteropConformanceTransport,
-    message: process.env.ROBB_INTEROP_MESSAGE,
-  })
+    message: process.env["ROBB_INTEROP_MESSAGE"],
+  }))
 }
 
 const result = await execute()

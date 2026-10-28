@@ -2,10 +2,10 @@
 export interface CliArgs {
   url: string
   token: string
-  workspace?: string
+  workspace?: string | undefined
   timeout: number
   json: boolean
-  tlsCa?: string
+  tlsCa?: string | undefined
   sendTimeout: number
   command: string
   rest: string[]
@@ -16,8 +16,8 @@ export interface CliArgs {
   noCleanup: boolean
   noSpinner: boolean
   verbose: boolean
-  serverEntry?: string
-  workspaceDir?: string
+  serverEntry?: string | undefined
+  workspaceDir?: string | undefined
   // LLM configuration
   provider: string
   model: string
@@ -51,6 +51,7 @@ export function parseArgs(argv: string[]): CliArgs {
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
+    if (arg === undefined) throw new Error('Missing command line argument')
     switch (arg) {
       case '--url':
         url = args[++i] ?? ''
@@ -131,13 +132,13 @@ export function parseArgs(argv: string[]): CliArgs {
   }
 
   // Env var fallbacks
-  if (!url) url = process.env.CRAFT_SERVER_URL ?? ''
-  if (!token) token = process.env.CRAFT_SERVER_TOKEN ?? ''
-  if (!tlsCa) tlsCa = process.env.CRAFT_TLS_CA
-  if (!provider) provider = process.env.LLM_PROVIDER ?? 'anthropic'
-  if (!model) model = process.env.LLM_MODEL ?? ''
-  if (!apiKey) apiKey = process.env.LLM_API_KEY ?? ''
-  if (!baseUrl) baseUrl = process.env.LLM_BASE_URL ?? ''
+  if (!url) url = process.env["CRAFT_SERVER_URL"] ?? ''
+  if (!token) token = process.env["CRAFT_SERVER_TOKEN"] ?? ''
+  if (!tlsCa) tlsCa = process.env["CRAFT_TLS_CA"]
+  if (!provider) provider = process.env["LLM_PROVIDER"] ?? 'anthropic'
+  if (!model) model = process.env["LLM_MODEL"] ?? ''
+  if (!apiKey) apiKey = process.env["LLM_API_KEY"] ?? ''
+  if (!baseUrl) baseUrl = process.env["LLM_BASE_URL"] ?? ''
 
   return { url, token, workspace, timeout, json, tlsCa, sendTimeout, command, rest, sources, mode, outputFormat, noCleanup, noSpinner, verbose, serverEntry, workspaceDir, provider, model, apiKey, baseUrl }
 }

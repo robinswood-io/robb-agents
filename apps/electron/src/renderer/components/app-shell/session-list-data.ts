@@ -27,63 +27,63 @@ export type ChatGroupingMode = 'date' | 'status' | 'unread' | 'project'
 export interface SessionListProps {
   items: SessionMeta[]
   /** Full workspace family used only to project delegated activity onto visible parents. */
-  relatedItems?: SessionMeta[]
+  relatedItems?: SessionMeta[] | undefined
   onDelete: (sessionId: string, skipConfirmation?: boolean) => Promise<boolean>
-  onFlag?: (sessionId: string) => void
-  onUnflag?: (sessionId: string) => void
-  onArchive?: (sessionId: string) => void
-  onUnarchive?: (sessionId: string) => void
+  onFlag?: ((sessionId: string) => void) | undefined
+  onUnflag?: ((sessionId: string) => void) | undefined
+  onArchive?: ((sessionId: string) => void) | undefined
+  onUnarchive?: ((sessionId: string) => void) | undefined
   onMarkUnread: (sessionId: string) => void
   onSessionStatusChange: (sessionId: string, state: SessionStatusId) => void
   onRename: (sessionId: string, name: string) => void
   /** Called when Enter is pressed to focus chat input for a specific session */
-  onFocusChatInput?: (sessionId?: string) => void
+  onFocusChatInput?: ((sessionId?: string) => void) | undefined
   /** Called when a session is selected */
-  onSessionSelect?: (session: SessionMeta) => void
+  onSessionSelect?: ((session: SessionMeta) => void) | undefined
   /** Called when user wants to open a session in a new window */
-  onOpenInNewWindow?: (session: SessionMeta) => void
+  onOpenInNewWindow?: ((session: SessionMeta) => void) | undefined
   /** Called to navigate to a specific view (e.g., 'allSessions', 'flagged') */
-  onNavigateToView?: (view: 'allSessions' | 'flagged') => void
+  onNavigateToView?: ((view: 'allSessions' | 'flagged') => void) | undefined
   /** Unified session options per session (real-time state) */
-  sessionOptions?: Map<string, import('../../hooks/useSessionOptions').SessionOptions>
+  sessionOptions?: Map<string, import('../../hooks/useSessionOptions').SessionOptions> | undefined
   /** Whether search mode is active */
-  searchActive?: boolean
+  searchActive?: boolean | undefined
   /** Current search query */
-  searchQuery?: string
+  searchQuery?: string | undefined
   /** Called when search query changes */
-  onSearchChange?: (query: string) => void
+  onSearchChange?: ((query: string) => void) | undefined
   /** Called when search is closed */
-  onSearchClose?: () => void
+  onSearchClose?: (() => void) | undefined
   /** Dynamic todo states from workspace config */
-  sessionStatuses?: SessionStatus[]
+  sessionStatuses?: SessionStatus[] | undefined
   /** View evaluator — evaluates a session and returns matching view configs */
-  evaluateViews?: (meta: SessionMeta) => ViewConfig[]
+  evaluateViews?: ((meta: SessionMeta) => ViewConfig[]) | undefined
   /** Label configs for resolving session label IDs to display info */
-  labels?: LabelConfig[]
+  labels?: LabelConfig[] | undefined
   /** Callback when session labels are toggled (for labels submenu in SessionMenu) */
-  onLabelsChange?: (sessionId: string, labels: string[]) => void
+  onLabelsChange?: ((sessionId: string, labels: string[]) => void) | undefined
   /** Quick filter/toggle sessions by a specific label */
-  onToggleLabelFilter?: (labelId: string) => void
+  onToggleLabelFilter?: ((labelId: string) => void) | undefined
   /** Workspace projects (for the Projects submenu in SessionMenu) */
-  projects?: Array<{ id: string; slug: string; name: string; color?: string }>
+  projects?: Array<{ id: string; slug: string; name: string; color?: string | undefined }> | undefined
   /** Callback to bind/unbind a session to a project (null = unbind) */
-  onSetProjectId?: (sessionId: string, projectId: string | null) => void
+  onSetProjectId?: ((sessionId: string, projectId: string | null) => void) | undefined
   /** How to group sessions: 'date' (default) or 'status' */
-  groupingMode?: ChatGroupingMode
+  groupingMode?: ChatGroupingMode | undefined
   /** Workspace ID for content search (optional - if not provided, content search is disabled) */
-  workspaceId?: string
+  workspaceId?: string | undefined
   /** Secondary status filter (status chips in "All Sessions" view) - for search result grouping */
-  statusFilter?: Map<string, FilterMode>
+  statusFilter?: Map<string, FilterMode> | undefined
   /** Secondary label filter (label chips) - for search result grouping */
-  labelFilterMap?: Map<string, FilterMode>
+  labelFilterMap?: Map<string, FilterMode> | undefined
   /** Override which session is highlighted (for multi-panel focused panel tracking) */
-  focusedSessionId?: string | null
+  focusedSessionId?: string | null | undefined
   /** Override navigation target (for multi-panel: focuses existing panel or navigates focused panel) */
-  onNavigateToSession?: (sessionId: string) => void
+  onNavigateToSession?: ((sessionId: string) => void) | undefined
   /** Session-level pending prompt marker (permission/admin approval) */
-  hasPendingPrompt?: (sessionId: string) => boolean
+  hasPendingPrompt?: ((sessionId: string) => boolean) | undefined
   /** DOM-verified match info for the active session (from ChatDisplay) */
-  activeChatMatchInfo?: { sessionId: string | null; count: number; isHighlighting?: boolean }
+  activeChatMatchInfo?: { sessionId: string | null; count: number; isHighlighting?: boolean } | undefined
 }
 
 
@@ -103,7 +103,7 @@ interface SessionListRowsInput {
   groupingMode: ChatGroupingMode
   collapsedGroupsMeta: import("@/hooks/useSessionSearch").CollapsedGroupMeta[]
   sessionStatuses: SessionStatus[]
-  projects: { id: string; slug: string; name: string; color?: string; }[] | undefined
+  projects: { id: string; slug: string; name: string; color?: string | undefined; }[] | undefined
   i18n: import("i18next").i18n
 }
 
@@ -230,7 +230,7 @@ export function buildSessionListRows({
       })
 
       // If only one group exists, disable collapsing — there's nothing to collapse into
-      if (orderedGroups.length === 1) {
+      if (orderedGroups.length === 1 && orderedGroups[0]) {
         orderedGroups[0].collapsible = false
       }
 
@@ -291,7 +291,7 @@ export function buildSessionListRows({
         return aOrder - bOrder
       })
 
-      if (orderedGroups.length === 1) {
+      if (orderedGroups.length === 1 && orderedGroups[0]) {
         orderedGroups[0].collapsible = false
       }
 
@@ -344,7 +344,7 @@ export function buildSessionListRows({
     const orderedGroups = orderedKeys.map(key => groupsByKey.get(key)!)
 
     // If only one group exists, disable collapsing — there's nothing to collapse into
-    if (orderedGroups.length === 1) {
+    if (orderedGroups.length === 1 && orderedGroups[0]) {
       orderedGroups[0].collapsible = false
     }
 

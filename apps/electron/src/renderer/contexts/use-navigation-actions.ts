@@ -49,65 +49,65 @@ const handleActionNavigation = useCallback(
       switch (parsed.name) {
         case 'new-session': {
           const createOptions: import('../../shared/types').CreateSessionOptions = {}
-          if (parsed.params.mode) {
-            const parsedMode = parsePermissionMode(parsed.params.mode)
+          if (parsed.params["mode"]) {
+            const parsedMode = parsePermissionMode(parsed.params["mode"])
             if (parsedMode) {
               createOptions.permissionMode = parsedMode
             }
           }
-          if (parsed.params.workdir) {
-            createOptions.workingDirectory = parsed.params.workdir as 'user_default' | 'none' | string
+          if (parsed.params["workdir"]) {
+            createOptions.workingDirectory = parsed.params["workdir"] as 'user_default' | 'none' | string
           }
-          if (parsed.params.model) {
-            createOptions.model = parsed.params.model
+          if (parsed.params["model"]) {
+            createOptions.model = parsed.params["model"]
           }
-          if (parsed.params.systemPrompt) {
-            createOptions.systemPromptPreset = parsed.params.systemPrompt as 'default' | 'mini' | string
+          if (parsed.params["systemPrompt"]) {
+            createOptions.systemPromptPreset = parsed.params["systemPrompt"] as 'default' | 'mini' | string
           }
-          if (parsed.params.status) {
-            createOptions.sessionStatus = parsed.params.status
+          if (parsed.params["status"]) {
+            createOptions.sessionStatus = parsed.params["status"]
           }
-          if (parsed.params.label) {
-            createOptions.labels = [parsed.params.label]
+          if (parsed.params["label"]) {
+            createOptions.labels = [parsed.params["label"]]
           }
-          if (parsed.params.project) {
-            createOptions.projectId = parsed.params.project
+          if (parsed.params["project"]) {
+            createOptions.projectId = parsed.params["project"]
           }
-          if (parsed.params.playbook) {
-            createOptions.playbookSlug = parsed.params.playbook
+          if (parsed.params["playbook"]) {
+            createOptions.playbookSlug = parsed.params["playbook"]
           }
           const session = await onCreateSession(workspaceId, createOptions)
           autoDeleteEligibleSessionIdsRef.current.add(session.id)
 
-          if (parsed.params.name) {
-            await window.electronAPI.sessionCommand(session.id, { type: 'rename', name: parsed.params.name })
+          if (parsed.params["name"]) {
+            await window.electronAPI.sessionCommand(session.id, { type: 'rename', name: parsed.params["name"] })
           }
 
-          if (parsed.params.status) {
-            updateSessionMeta(session.id, { sessionStatus: parsed.params.status })
+          if (parsed.params["status"]) {
+            updateSessionMeta(session.id, { sessionStatus: parsed.params["status"] })
           }
-          if (parsed.params.label) {
-            updateSessionMeta(session.id, { labels: [parsed.params.label] })
+          if (parsed.params["label"]) {
+            updateSessionMeta(session.id, { labels: [parsed.params["label"]] })
           }
 
-          if (parsed.params.status) {
-            await window.electronAPI.sessionCommand(session.id, { type: 'setSessionStatus', state: parsed.params.status })
+          if (parsed.params["status"]) {
+            await window.electronAPI.sessionCommand(session.id, { type: 'setSessionStatus', state: parsed.params["status"] })
           }
-          if (parsed.params.label) {
-            await window.electronAPI.sessionCommand(session.id, { type: 'setLabels', labels: [parsed.params.label] })
+          if (parsed.params["label"]) {
+            await window.electronAPI.sessionCommand(session.id, { type: 'setLabels', labels: [parsed.params["label"]] })
           }
 
           // Determine navigation filter
           const filter: import('../../shared/types').SessionFilter =
-            parsed.params.status ? { kind: 'state', stateId: parsed.params.status } :
-            parsed.params.label ? { kind: 'label', labelId: parsed.params.label } :
+            parsed.params["status"] ? { kind: 'state', stateId: parsed.params["status"] } :
+            parsed.params["label"] ? { kind: 'label', labelId: parsed.params["label"] } :
             { kind: 'allSessions' }
 
           if (options?.newPanel) {
             // Open the new session in a new panel using lane-aware routing (pushPanel auto-focuses it)
             pushPanel({
               route: routes.view.allSessions(session.id) as ViewRoute,
-              targetLaneId: options.targetLaneId,
+              ...(options.targetLaneId !== undefined ? { targetLaneId: options.targetLaneId } : {}),
               intent: 'explicit',
             })
           } else {
@@ -124,22 +124,22 @@ const handleActionNavigation = useCallback(
 
           // Parse badges from params
           let badges: ContentBadge[] | undefined
-          if (parsed.params.badges) {
+          if (parsed.params["badges"]) {
             try {
-              badges = JSON.parse(parsed.params.badges) as ContentBadge[]
+              badges = JSON.parse(parsed.params["badges"]) as ContentBadge[]
             } catch (e) {
               console.warn('[Navigation] Failed to parse badges param:', e)
             }
           }
 
           // Handle input: either auto-send or pre-fill
-          if (parsed.params.input) {
-            const shouldSend = parsed.params.send === 'true'
+          if (parsed.params["input"]) {
+            const shouldSend = parsed.params["send"] === 'true'
             if (shouldSend) {
               setTimeout(() => {
                 window.electronAPI.sendMessage(
                   session.id,
-                  parsed.params.input!,
+                  parsed.params["input"]!,
                   undefined,
                   undefined,
                   badges ? { badges } : undefined
@@ -147,7 +147,7 @@ const handleActionNavigation = useCallback(
               }, 100)
             } else if (onInputChange) {
               setTimeout(() => {
-                onInputChange(session.id, parsed.params.input!)
+                onInputChange(session.id, parsed.params["input"]!)
               }, 100)
             }
           }
@@ -155,8 +155,8 @@ const handleActionNavigation = useCallback(
         }
 
         case 'rename-session':
-          if (parsed.id && parsed.params.name) {
-            await window.electronAPI.sessionCommand(parsed.id, { type: 'rename', name: parsed.params.name })
+          if (parsed.id && parsed.params["name"]) {
+            await window.electronAPI.sessionCommand(parsed.id, { type: 'rename', name: parsed.params["name"] })
           }
           break
 
@@ -191,10 +191,10 @@ const handleActionNavigation = useCallback(
           break
 
         case 'set-mode':
-          if (parsed.id && parsed.params.mode) {
-            const parsedMode = parsePermissionMode(parsed.params.mode)
+          if (parsed.id && parsed.params["mode"]) {
+            const parsedMode = parsePermissionMode(parsed.params["mode"])
             if (!parsedMode) {
-              console.warn('[Navigation] Invalid permission mode:', parsed.params.mode)
+              console.warn('[Navigation] Invalid permission mode:', parsed.params["mode"])
               break
             }
             await window.electronAPI.sessionCommand(
@@ -205,8 +205,8 @@ const handleActionNavigation = useCallback(
           break
 
         case 'copy':
-          if (parsed.params.text) {
-            await navigator.clipboard.writeText(parsed.params.text)
+          if (parsed.params["text"]) {
+            await navigator.clipboard.writeText(parsed.params["text"])
           }
           break
 
@@ -262,7 +262,7 @@ const navigate = useCallback(
         if (removedInternalDetail) suppressAutoSelectRef.current = true
         pushPanel({
           route: normalizedRoute,
-          targetLaneId: options.targetLaneId,
+          ...(options.targetLaneId !== undefined ? { targetLaneId: options.targetLaneId } : {}),
           intent: 'explicit',
         })
         return

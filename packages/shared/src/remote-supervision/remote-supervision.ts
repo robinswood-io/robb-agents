@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 import { createHash, sign, verify, type KeyObject } from 'node:crypto';
 
 export type RemoteSyncField =
@@ -295,7 +296,7 @@ export function verifyRemoteAuditEvents(events: readonly RemoteAuditEvent[]): bo
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === 'object' && value !== null && !isUnknownArray(value);
 }
 
 function isRemoteSyncField(value: unknown): value is RemoteSyncField {
@@ -336,10 +337,10 @@ function parseRemoteConsent(value: unknown): RemoteSupervisionConsent {
     || typeof expiresAt !== 'string'
     || !Number.isFinite(Date.parse(expiresAt))
     || Date.parse(expiresAt) <= Date.parse(grantedAt)
-    || !Array.isArray(fields)
+    || !isUnknownArray(fields)
     || fields.length === 0
     || !fields.every(isRemoteSyncField)
-    || !Array.isArray(actions)
+    || !isUnknownArray(actions)
     || actions.length === 0
     || !actions.every(isRemoteAction)
     || typeof purpose !== 'string'
@@ -408,7 +409,7 @@ export function parseRemoteSupervisionProfile(value: unknown): RemoteSupervision
     throw new Error('Remote supervision profile must be an object');
   }
   const { schemaVersion, state, audit } = value;
-  if (schemaVersion !== 1 || !isRecord(state) || !Array.isArray(audit)) {
+  if (schemaVersion !== 1 || !isRecord(state) || !isUnknownArray(audit)) {
     throw new Error('Remote supervision profile has an invalid envelope');
   }
   const { mode, consent, revokedAt, revocationReason } = state;

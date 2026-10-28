@@ -1,23 +1,24 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import * as React from "react";
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef,useEffect,useCallback } from "react";
 
 import { Tag } from "lucide-react";
 
-import { Tooltip, TooltipTrigger, TooltipContent } from "@craft-agent/ui";
+import { Tooltip,TooltipTrigger,TooltipContent } from "@craft-agent/ui";
 
 import { type LinkItem } from "./LeftSidebar";
 
-import type { Workspace, AutomationFilter } from "../../../shared/types";
+import type { Workspace,AutomationFilter } from "../../../shared/types";
 
-import { type SessionStatusId, type SessionStatus } from "@/config/session-status-config";
+import { type SessionStatusId,type SessionStatus } from "@/config/session-status-config";
 
-import { LabelIcon, LabelValueTypeIcon } from "@/components/ui/label-icon";
+import { LabelIcon,LabelValueTypeIcon } from "@/components/ui/label-icon";
 
 import { getLabelDisplayName } from "@craft-agent/shared/labels";
-import type { LabelConfig, LabelTreeNode } from "@craft-agent/shared/labels";
+import type { LabelConfig,LabelTreeNode } from "@craft-agent/shared/labels";
 
-import { isSourcesNavigation, isSettingsNavigation, isSkillsNavigation, isAutomationsNavigation, isProjectsNavigation, isMissionsNavigation, type NavigationState } from "@/contexts/NavigationContext";
+import { isSourcesNavigation,isSettingsNavigation,isSkillsNavigation,isAutomationsNavigation,isProjectsNavigation,isMissionsNavigation,type NavigationState } from "@/contexts/NavigationContext";
 import type { SettingsSubpage } from "../../../shared/types";
 
 interface useShellSidebarInteractionInput {
@@ -76,8 +77,6 @@ export function useShellSidebarInteraction({
   handleWhatsNewClick,
   labelConfigs,
   viewConfigs,
-  handleViewClick,
-  setExpandedFolders,
   focusedSidebarItemId,
   sidebarItemRefs,
   sidebarFocused,
@@ -145,17 +144,7 @@ const unifiedSidebarItems = React.useMemo((): SidebarItem[] => {
     return result
   }, [handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelTree, handleSourcesClick, handleSkillsClick, handleProjectsClick, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick])
 
-const handleToggleFolder = React.useCallback((path: string) => {
-    setExpandedFolders(prev => {
-      const next = new Set(prev)
-      if (next.has(path)) {
-        next.delete(path)
-      } else {
-        next.add(path)
-      }
-      return next
-    })
-  }, [ setExpandedFolders])
+
 
 const getSidebarItemProps = React.useCallback((id: string) => ({
     tabIndex: focusedSidebarItemId === id ? 0 : -1,
@@ -180,6 +169,7 @@ const handleSidebarKeyDown = React.useCallback((e: React.KeyboardEvent) => {
         e.preventDefault()
         const nextIndex = currentIndex < unifiedSidebarItems.length - 1 ? currentIndex + 1 : 0
         const nextItem = unifiedSidebarItems[nextIndex]
+          if (!nextItem) break
         setFocusedSidebarItemId(nextItem.id)
         sidebarItemRefs.current.get(nextItem.id)?.focus()
         break
@@ -188,6 +178,7 @@ const handleSidebarKeyDown = React.useCallback((e: React.KeyboardEvent) => {
         e.preventDefault()
         const prevIndex = currentIndex > 0 ? currentIndex - 1 : unifiedSidebarItems.length - 1
         const prevItem = unifiedSidebarItems[prevIndex]
+          if (!prevItem) break
         setFocusedSidebarItemId(prevItem.id)
         sidebarItemRefs.current.get(prevItem.id)?.focus()
         break
@@ -215,6 +206,7 @@ const handleSidebarKeyDown = React.useCallback((e: React.KeyboardEvent) => {
         e.preventDefault()
         if (unifiedSidebarItems.length > 0) {
           const firstItem = unifiedSidebarItems[0]
+          if (!firstItem) break
           setFocusedSidebarItemId(firstItem.id)
           sidebarItemRefs.current.get(firstItem.id)?.focus()
         }
@@ -224,6 +216,7 @@ const handleSidebarKeyDown = React.useCallback((e: React.KeyboardEvent) => {
         e.preventDefault()
         if (unifiedSidebarItems.length > 0) {
           const lastItem = unifiedSidebarItems[unifiedSidebarItems.length - 1]
+          if (!lastItem) break
           setFocusedSidebarItemId(lastItem.id)
           sidebarItemRefs.current.get(lastItem.id)?.focus()
         }
@@ -235,7 +228,8 @@ const handleSidebarKeyDown = React.useCallback((e: React.KeyboardEvent) => {
 React.useEffect(() => {
     if (sidebarFocused && unifiedSidebarItems.length > 0) {
       // Set focused item if not already set
-      const itemId = focusedSidebarItemId || unifiedSidebarItems[0].id
+      const itemId = focusedSidebarItemId || unifiedSidebarItems[0]?.id
+      if (!itemId) return
       if (!focusedSidebarItemId) {
         setFocusedSidebarItemId(itemId)
       }
@@ -305,7 +299,7 @@ const buildLabelSidebarItems = useCallback((nodes: LabelTreeNode[]): LinkItem[] 
       const isActive = sessionFilter?.kind === 'label' && sessionFilter.labelId === node.fullId
       const count = labelCounts[node.fullId] || 0
 
-      const item: LinkItem = {
+      const item: LinkItem = omitUndefined<LinkItem>({
         id: `nav:label:${node.fullId}`,
         title: node.label?.name || node.segment.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
         label: count > 0 ? String(count) : undefined,
@@ -338,7 +332,7 @@ const buildLabelSidebarItems = useCallback((nodes: LabelTreeNode[]): LinkItem[] 
           onAddLabel: handleAddLabel,
           onDeleteLabel: handleDeleteLabel,
         },
-      }
+      })
 
       if (hasChildren) {
         item.expandable = true

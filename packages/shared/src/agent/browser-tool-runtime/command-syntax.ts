@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 
 export const NAVIGATION_COMMANDS = new Set([
   'navigate',
@@ -141,10 +142,10 @@ export function tokenizeCommand(input: string): string[] {
 
 /** Uses exactly the executor's tokenization; quoted/array text is never an action. */
 export function containsBrowserKeyboardText(command: unknown): boolean {
-  if (Array.isArray(command)) return typeof command[0] === 'string' && command[0].toLowerCase() === 'type-keys';
+  if (isUnknownArray(command)) return typeof command[0] === 'string' && command[0].toLowerCase() === 'type-keys';
   if (typeof command !== 'string') return false;
   try {
-    return splitBatchCommands(command.trim()).some(part => tokenizeCommand(part)[0]?.toLowerCase() === 'type-keys');
+    return splitBatchCommands(command.trim()).some((part) => tokenizeCommand(part)[0]?.toLowerCase() === 'type-keys');
   } catch {
     return false; // Malformed commands are rejected by the same parser before execution.
   }
@@ -217,8 +218,8 @@ export function isObservationalBrowserCommandParts(parts: string[]): boolean {
 export function isObservationalBrowserCommand(command: unknown): boolean {
   let commands: string[][];
   try {
-    if (Array.isArray(command)) {
-      if (command.length === 0 || !command.every((part): part is string => typeof part === 'string')) {
+    if (isUnknownArray(command)) {
+      if (command.length === 0 || !command.every((part: unknown): part is string => typeof part === 'string')) {
         return false;
       }
       commands = [command];

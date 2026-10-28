@@ -68,7 +68,7 @@ export async function startGoogleOAuth(
     // Start callback server with deeplink for returning to chat session
     const appType = options.appType || 'electron';
     const deeplinkUrl = buildOAuthDeeplinkUrl(options.sessionContext);
-    const callbackServer = await createCallbackServer({ appType, deeplinkUrl });
+    const callbackServer = await createCallbackServer({ appType, ...(deeplinkUrl !== undefined ? { deeplinkUrl } : {}) });
     const redirectUri = `${callbackServer.url}/callback`;
 
     // Build authorization URL
@@ -90,7 +90,7 @@ export async function startGoogleOAuth(
     const callback = await callbackServer.promise;
 
     // Verify state
-    if (callback.query.state !== state) {
+    if (callback.query["state"] !== state) {
       return {
         success: false,
         error: 'OAuth state mismatch - possible CSRF attack',
@@ -98,21 +98,21 @@ export async function startGoogleOAuth(
     }
 
     // Check for error
-    if (callback.query.error) {
+    if (callback.query["error"]) {
       const isAccessBlocked =
-        callback.query.error === 'access_denied' &&
-        String(callback.query.error_description ?? '').toLowerCase().includes('verif');
+        callback.query["error"] === 'access_denied' &&
+        String(callback.query["error_description"] ?? '').toLowerCase().includes('verif');
       const error = isAccessBlocked
         ? 'Google has blocked this app (not yet verified).\n\n' +
           'To fix this, add your own Google OAuth credentials to the source config:\n' +
           '  "googleOAuthClientId": "..."\n\n' +
           'See: https://console.cloud.google.com/apis/credentials'
-        : callback.query.error_description || callback.query.error;
+        : callback.query["error_description"] || callback.query["error"];
       return { success: false, error };
     }
 
     // Get authorization code
-    const code = callback.query.code;
+    const code = callback.query["code"];
     if (!code) {
       return {
         success: false,
@@ -130,12 +130,12 @@ export async function startGoogleOAuth(
     return {
       success: true,
       accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresAt: tokens.expiresIn ? Date.now() + tokens.expiresIn * 1000 : undefined,
+      ...(tokens.refreshToken !== undefined ? { refreshToken: tokens.refreshToken } : {}),
+      ...(tokens.expiresIn ? { expiresAt: Date.now() + tokens.expiresIn * 1000 } : {}),
       email,
       // Return credentials so they can be stored for token refresh
       clientId,
-      clientSecret,
+      ...(clientSecret !== undefined ? { clientSecret } : {}),
     };
   } catch (error) {
     return {

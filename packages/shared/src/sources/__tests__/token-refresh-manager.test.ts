@@ -50,7 +50,7 @@ function createMockCredManager(overrides: Partial<SourceCredentialManager> = {})
     needsRefresh: mock(() => true),
     markSourceNeedsReauth: mock(() => {}),
     ...overrides,
-  } as unknown as SourceCredentialManager;
+  } as SourceCredentialManager;
 }
 
 describe('isOAuthSource', () => {

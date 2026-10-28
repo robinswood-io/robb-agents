@@ -1,3 +1,4 @@
+import { setOptional } from '../../utils/json.ts';
 import type { SessionConfig, StoredSession, SessionStatus } from "../types.ts";
 import { assertSessionPersistenceRootIdentity, type SessionPersistenceRootIdentity } from "../persistence-queue.ts";
 import { createSession, saveSession } from './creation.ts';
@@ -14,10 +15,10 @@ export async function clearSessionMessages(workspaceRootPath: string, sessionId:
   if (session) {
     // Clear messages and SDK session ID but preserve metadata
     session.messages = [];
-    session.sdkSessionId = undefined;
-    session.pendingTurnRecovery = undefined;
-    session.activeObjective = undefined;
-    session.userInputRequests = undefined;
+    delete session.sdkSessionId
+    delete session.pendingTurnRecovery
+    delete session.activeObjective
+    delete session.userInputRequests
     // Reset token usage to zero
     session.tokenUsage = {
       inputTokens: 0,
@@ -40,13 +41,13 @@ export async function getOrCreateLatestSession(workspaceRootPath: string): Promi
     const latest = sessions[0];
     return {
       id: latest.id,
-      sdkSessionId: latest.sdkSessionId,
+      ...(latest.sdkSessionId !== undefined ? { sdkSessionId: latest.sdkSessionId } : {}),
       workspaceRootPath: latest.workspaceRootPath,
-      name: latest.name,
+      ...(latest.name !== undefined ? { name: latest.name } : {}),
       createdAt: latest.createdAt,
       lastUsedAt: latest.lastUsedAt,
-      createdByApp: latest.createdByApp,
-      lastUsedByApp: latest.lastUsedByApp,
+      ...(latest.createdByApp !== undefined ? { createdByApp: latest.createdByApp } : {}),
+      ...(latest.lastUsedByApp !== undefined ? { lastUsedByApp: latest.lastUsedByApp } : {}),
     };
   }
   return createSession(workspaceRootPath);
@@ -93,7 +94,7 @@ export function canUpdateSdkCwd(session: StoredSession): boolean {
 export async function updateSessionMetadata(
   workspaceRootPath: string,
   sessionId: string,
-  updates: Partial<Pick<SessionConfig,
+  updates: { [K in keyof Pick<SessionConfig,
     | 'isFlagged'
     | 'name'
     | 'sessionStatus'
@@ -114,7 +115,7 @@ export async function updateSessionMetadata(
     | 'isArchived'
     | 'archivedAt'
     | 'projectId'
-  >>,
+  >]?: SessionConfig[K] | undefined },
   persistenceRootIdentity?: SessionPersistenceRootIdentity,
 ): Promise<void> {
   if (persistenceRootIdentity) {
@@ -131,18 +132,18 @@ export async function updateSessionMetadata(
   if (updates.workingDirectory !== undefined) session.workingDirectory = updates.workingDirectory;
   if (updates.sdkCwd !== undefined) session.sdkCwd = updates.sdkCwd;
   if (updates.permissionMode !== undefined) session.permissionMode = updates.permissionMode;
-  if ('lastReadMessageId' in updates) session.lastReadMessageId = updates.lastReadMessageId;
-  if ('hasUnread' in updates) session.hasUnread = updates.hasUnread;
-  if ('sharedUrl' in updates) session.sharedUrl = updates.sharedUrl;
-  if ('sharedId' in updates) session.sharedId = updates.sharedId;
-  if ('model' in updates) session.model = updates.model;
+  if ('lastReadMessageId' in updates) setOptional(session, 'lastReadMessageId', updates.lastReadMessageId);
+  if ('hasUnread' in updates) setOptional(session, 'hasUnread', updates.hasUnread);
+  if ('sharedUrl' in updates) setOptional(session, 'sharedUrl', updates.sharedUrl);
+  if ('sharedId' in updates) setOptional(session, 'sharedId', updates.sharedId);
+  if ('model' in updates) setOptional(session, 'model', updates.model);
   if (updates.modelRoutePinned !== undefined) session.modelRoutePinned = updates.modelRoutePinned;
   if (updates.llmConnection !== undefined) session.llmConnection = updates.llmConnection;
   if (updates.connectionRoutePinned !== undefined) session.connectionRoutePinned = updates.connectionRoutePinned;
   if (updates.thinkingLevelPinned !== undefined) session.thinkingLevelPinned = updates.thinkingLevelPinned;
   if (updates.isArchived !== undefined) session.isArchived = updates.isArchived;
-  if ('archivedAt' in updates) session.archivedAt = updates.archivedAt;
-  if ('projectId' in updates) session.projectId = updates.projectId;
+  if ('archivedAt' in updates) setOptional(session, 'archivedAt', updates.archivedAt);
+  if ('projectId' in updates) setOptional(session, 'projectId', updates.projectId);
 
   await saveSession(session, workspaceRootPath, persistenceRootIdentity);
 }
@@ -192,8 +193,9 @@ export async function setSessionProjectId(
   sessionId: string,
   projectId: string | null
 ): Promise<void> {
+  const optionalProjectId = projectId === null ? undefined : projectId;
   await updateSessionMetadata(workspaceRootPath, sessionId, {
-    projectId: projectId === null ? undefined : projectId,
+    ...(optionalProjectId !== undefined ? { projectId: optionalProjectId } : {}),
   });
 }
 
@@ -211,7 +213,7 @@ export async function unbindProjectFromSessions(
   for (const meta of sessions) {
     const full = loadSession(workspaceRootPath, meta.id);
     if (full?.projectId === projectId) {
-      full.projectId = undefined;
+      delete full.projectId
       await saveSession(full, workspaceRootPath);
       touched++;
     }

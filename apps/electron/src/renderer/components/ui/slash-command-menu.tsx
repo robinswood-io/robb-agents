@@ -123,7 +123,7 @@ export function InlineSlashCommand({
       style={{ left: Math.round(position.x) - 10, bottom: bottomPosition, minWidth: 220, maxWidth: 260 }}
     >
       <div ref={listRef} className={MENU_LIST_STYLE}>
-        {filteredSections.map((section, sectionIndex) => (
+        {filteredSections.map((section, _sectionIndex) => (
           <React.Fragment key={section.id}>
             {/* Section header */}
             <div className={MENU_SECTION_HEADER}>

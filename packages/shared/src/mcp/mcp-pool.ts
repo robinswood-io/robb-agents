@@ -33,12 +33,12 @@ export class McpClientPool {
     /** Cached tool lists keyed by source slug */
     private toolCache = new Map<string, PoolTool[]>();
     /** Proxy tool name → { slug, originalName } (e.g., "mcp__linear__createIssue" → { slug: "linear", originalName: "createIssue" }) */
-    private proxyTools = new Map<string, {
+    /** @internal */ public proxyTools = new Map<string, {
         slug: string;
         originalName: string;
     }>();
     /** Source slug → original tool name → safe proxy tool name */
-    private sourceToolProxyNames = new Map<string, Map<string, string>>();
+    /** @internal */ public sourceToolProxyNames = new Map<string, Map<string, string>>();
     /** Optional debug logger */
     private debugFn: ((msg: string) => void) | undefined;
     /** Workspace root path for local MCP filtering */
@@ -46,15 +46,15 @@ export class McpClientPool {
     /** Session storage path for saving large responses */
     private sessionPath?: string;
     /** Summarize callback for large response handling */
-    private summarizeCallback?: (prompt: string) => Promise<string | null>;
+    /** @internal */ public summarizeCallback?: (prompt: string) => Promise<string | null>;
     private collectionCacheScope?: CollectionCacheScope | (() => CollectionCacheScope | undefined);
     private beforeSourceToolExecution?: BeforeSourceToolExecution;
-    private readonly inputSchemaValidator = new AjvJsonSchemaValidator();
-    private readonly toolInputValidators = new Map<string, {
+    /** @internal */ public readonly inputSchemaValidator = new AjvJsonSchemaValidator();
+    /** @internal */ public readonly toolInputValidators = new Map<string, {
         schemaKey: string;
         validate: JsonSchemaValidator<Record<string, unknown>>;
     }>();
-    private readonly toolOutputValidators = new Map<string, {
+    /** @internal */ public readonly toolOutputValidators = new Map<string, {
         schemaKey: string;
         validate: JsonSchemaValidator<Record<string, unknown>>;
     }>();
@@ -66,8 +66,8 @@ export class McpClientPool {
         sessionPath?: string;
     }) {
         this.debugFn = options?.debug;
-        this.workspaceRootPath = options?.workspaceRootPath;
-        this.sessionPath = options?.sessionPath;
+        if (options?.workspaceRootPath === undefined) { delete this.workspaceRootPath } else { this.workspaceRootPath = options?.workspaceRootPath }
+        if (options?.sessionPath === undefined) { delete this.sessionPath } else { this.sessionPath = options?.sessionPath }
     }
     /**
      * Set the summarize callback for large response handling.
@@ -77,10 +77,11 @@ export class McpClientPool {
         this.summarizeCallback = createCollectionSummaryCallback(() => this.resolveCollectionCacheScope(), fn);
     }
     setCollectionCacheScope(scope?: CollectionCacheScope | (() => CollectionCacheScope | undefined)): void {
-        this.collectionCacheScope = typeof scope === 'function' ? scope : scope ? { ...scope } : undefined;
+        if (scope) this.collectionCacheScope = typeof scope === 'function' ? scope : { ...scope };
+        else delete this.collectionCacheScope;
     }
     setBeforeSourceToolExecution(fence?: BeforeSourceToolExecution): void {
-        this.beforeSourceToolExecution = fence;
+        if (fence === undefined) { delete this.beforeSourceToolExecution } else { this.beforeSourceToolExecution = fence }
     }
     private resolveCollectionCacheScope(): CollectionCacheScope | undefined {
         const scope = typeof this.collectionCacheScope === 'function' ? this.collectionCacheScope() : this.collectionCacheScope;
@@ -93,7 +94,7 @@ export class McpClientPool {
         ])).digest('hex');
         return { ...scope, permissionRevision };
     }
-    private debug(msg: string): void {
+    /** @internal Shared with the extracted backend helpers. */ public debug(msg: string): void {
         this.debugFn?.(`[McpClientPool] ${msg}`);
     }
     protected async registerClient(slug: string, client: PoolClient): Promise<void> {

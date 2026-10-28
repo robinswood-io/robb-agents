@@ -1,3 +1,4 @@
+import { requiredTestValue } from '@craft-agent/shared/testing/fixture-values';
 import { describe, it, expect } from 'bun:test'
 import {
   parseCompoundRoute,
@@ -44,7 +45,7 @@ describe('route-parser: label filter routes', () => {
 
   it('session ids extracted from label routes stay clean even with a query tail', () => {
     // Mirrors parseSessionIdFromRoute's segment logic (panel-stack.ts).
-    const segments = 'label/task/session/abc123?stray=x'.split('?')[0].split('/')
+    const segments = requiredTestValue('label/task/session/abc123?stray=x'.split('?')[0]).split('/')
     expect(segments[segments.indexOf('session') + 1]).toBe('abc123')
   })
 })

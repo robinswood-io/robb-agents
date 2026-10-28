@@ -33,17 +33,20 @@ export function createConfigFromConnection(
   baseConfig: Omit<BackendConfig, 'provider' | 'authType' | 'providerType'>
 ): BackendConfig {
   // Use new providerType if available, fall back to legacy type
-  const providerType = connection.providerType || (connection.type ? connectionTypeToProvider(connection.type) as unknown as LlmProviderType : 'anthropic');
+  const providerType = connection.providerType || (connection.type ? (connectionTypeToProvider(connection.type)) as LlmProviderType : 'anthropic');
   const provider = providerTypeToAgentProvider(providerType);
 
+  const optionalModel = baseConfig.model || connection.defaultModel;
+  const baseConfigWithoutOverrides = { ...baseConfig };
+  delete baseConfigWithoutOverrides.model;
   return {
-    ...baseConfig,
+    ...baseConfigWithoutOverrides,
     provider,
     providerType,
     authType: connection.authType,
     connectionSlug: connection.slug,
     // Use connection's default model if no model specified in baseConfig
-    model: baseConfig.model || connection.defaultModel,
+    ...(optionalModel !== undefined ? { model: optionalModel } : {}),
   };
 }
 

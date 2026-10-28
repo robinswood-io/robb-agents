@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import React, { useMemo } from 'react';
 
 import { type OfflineDraftView, type OfflineOutboxItemView, type OfflinePinnedTextView, type OfflineSessionSnapshotView } from './components/OfflineWorkspace';
@@ -18,7 +19,7 @@ export function useWebuiOfflineViews({
   reviewedOutbox,
 }: useWebuiOfflineViewsInput) {
 const offlineSnapshots = useMemo<OfflineSessionSnapshotView[]>(() => (
-    offlineState.sessions.map((snapshot) => ({
+    offlineState.sessions.map((snapshot) => omitUndefined<OfflineSessionSnapshotView>({
       id: snapshot.id,
       title: snapshot.name,
       workspaceName: offlineState.scope?.hostLabel,
@@ -48,7 +49,7 @@ const offlineDrafts = useMemo<OfflineDraftView[]>(() => {
       ...Object.keys(offlineState.drafts),
       ...Object.keys(offlineDraftEdits),
     ])
-    return [...sessionIds].map((sessionId) => ({
+    return [...sessionIds].map((sessionId) => omitUndefined<OfflineDraftView>({
       sessionId,
       sessionTitle: titles.get(sessionId) ?? translateRef.current('chat.newChat', 'New chat'),
       text: offlineDraftEdits[sessionId] ?? offlineState.drafts[sessionId]?.text ?? '',
@@ -61,7 +62,7 @@ const offlineOutbox = useMemo<OfflineOutboxItemView[]>(() => (
     offlineState.outbox.map((item) => {
       const review = reviewedOutbox[item.id]
       const uncertain = item.status === 'uncertain'
-      return {
+      return omitUndefined<OfflineOutboxItemView>({
         id: item.id,
         sessionId: item.sessionId,
         sessionTitle: item.sessionName,
@@ -77,7 +78,7 @@ const offlineOutbox = useMemo<OfflineOutboxItemView[]>(() => (
         canSend: !uncertain && review?.canSend === true,
         contextChanged: review?.contextChanged || item.failureKind === 'context-changed',
         detail: review?.detail,
-      }
+      })
     })
   ), [offlineState.outbox, reviewedOutbox])
 return { offlineSnapshots, offlinePins, offlineDrafts, offlineOutbox }

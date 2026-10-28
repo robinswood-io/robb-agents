@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { registerObjectiveAcceptanceCriteria } from "./objective-acceptance-criteria.ts";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
@@ -6,15 +7,15 @@ import { type ObjectiveOutcomeDeclaration } from "@craft-agent/core/types";
 import { clearObjectiveEvidenceGate } from "@craft-agent/shared/agent";
 import { createPendingTurnRecovery } from "./turn-recovery.ts";
 import { createManagedSession } from "./SessionManager.ts";
-import { type Managed, activeObjective, installAgent, installReviewedAgent, makeHarness, outcomeComment, roots, sessionIds } from "./testing/session-objective-outcome-integration-fixture.ts";
+import { activeObjective, installAgent, installReviewedAgent, makeHarness, outcomeComment, roots, sessionIds } from "./testing/session-objective-outcome-integration-fixture.ts";
 
 beforeEach(() => {
   roots.length = 0
   sessionIds.length = 0
-  process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+  process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
 })
 afterEach(() => {
-  delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+  delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]
   for (const sessionId of sessionIds) clearObjectiveEvidenceGate(sessionId)
   for (const root of roots) rmSync(root, { recursive: true, force: true })
 })
@@ -47,18 +48,16 @@ describe('SessionManager objective outcome integration', () => {
     reviewer.isProcessing = true
     ;sessionRuntimeStateForTest(harness.manager).sessions.set(reviewer.id, reviewer)
 
-    const deferred = await (harness.manager as unknown as {
-      deferTerminalOutcomeForActiveDelegations: (session: Managed) => Promise<boolean>
-    }).deferTerminalOutcomeForActiveDelegations(harness.managed)
+    const deferred = await (sessionManagerForTest(harness.manager)).deferTerminalOutcomeForActiveDelegations(harness.managed)
 
     expect(deferred).toBe(true)
     expect(harness.managed.activeObjective?.terminalState).toBe('active')
-    expect(harness.managed.pendingTurnRecovery).toMatchObject({
+    expect<unknown>(harness.managed.pendingTurnRecovery).toMatchObject({
       attempts: 8,
-      exhaustedAt: expect.any(Number),
+      exhaustedAt: (expect.any(Number) as unknown),
       lastCause: 'premature_final',
       continuationRequired: false,
-      validationGaps: [expect.stringContaining(reviewer.id)],
+      validationGaps: [(expect.stringContaining(reviewer.id) as unknown)],
     })
     expect(harness.managed.pendingTurnRecovery?.recoveryDispatch).toBeUndefined()
     expect(harness.managed.messageQueue).toEqual([])
@@ -111,14 +110,8 @@ describe('SessionManager objective outcome integration', () => {
         if (event.sessionId === harness.managed.id) { off(); resolve() }
       })
     })
-    delete (harness.manager as unknown as Record<string, unknown>).processNextQueuedMessage
-    await (harness.manager as unknown as {
-      onProcessingStopped: (
-        sessionId: string,
-        reason: 'complete' | 'interrupted' | 'error' | 'timeout',
-        processingGeneration?: number,
-      ) => Promise<void>
-    }).onProcessingStopped(reviewer.id, 'complete', reviewer.processingGeneration)
+    Reflect.deleteProperty(harness.manager, 'processNextQueuedMessage')
+    await (sessionManagerForTest(harness.manager)).onProcessingStopped(reviewer.id, 'complete', reviewer.processingGeneration)
     await completed
 
     expect(harness.managed.activeObjective?.terminalState).toBe('complete_verified')
@@ -173,17 +166,15 @@ describe('SessionManager objective outcome integration', () => {
       },
     })
 
-    const deferred = await (harness.manager as unknown as {
-      deferTerminalOutcomeForActiveDelegations: (session: Managed) => Promise<boolean>
-    }).deferTerminalOutcomeForActiveDelegations(harness.managed)
+    const deferred = await (sessionManagerForTest(harness.manager)).deferTerminalOutcomeForActiveDelegations(harness.managed)
 
     expect(deferred).toBe(true)
     expect(harness.managed.pendingTurnRecovery?.attempts).toBe(1)
-    expect(harness.managed.messageQueue.map(item => (
+    expect<unknown>(harness.managed.messageQueue.map(item => (
       item.options?.internalOrigin?.deliveryId ?? item.options?.automaticRecovery?.dispatchId
     ))).toEqual([
       'queued-reviewer-delivery',
-      allocated ? 'persisted-recovery' : expect.any(String),
+      allocated ? 'persisted-recovery' : (expect.any(String) as unknown),
     ])
   })
 
@@ -205,11 +196,7 @@ describe('SessionManager objective outcome integration', () => {
     const restoredRecovery = child('restored-recovery-reviewer', 3)
     restoredRecovery.activeObjective = activeObjective('restored-recovery-root')
     restoredRecovery.pendingTurnRecovery = createPendingTurnRecovery('restored-recovery-root', 1)
-    const runtime = harness.manager as unknown as {
-      sessions: Map<string, Managed>
-      automaticAdmissionReservations: Set<string>
-      activeRelevantDelegatedDescendants: (session: Managed) => Managed[]
-    }
+    const runtime = sessionManagerForTest(harness.manager)
     sessionRuntimeStateForTest(runtime).sessions.set(reserved.id, reserved)
     sessionRuntimeStateForTest(runtime).sessions.set(relaunched.id, relaunched)
     sessionRuntimeStateForTest(runtime).sessions.set(restoredRecovery.id, restoredRecovery)
@@ -233,11 +220,7 @@ describe('SessionManager objective outcome integration', () => {
         depth: 1, role: 'reviewer',
       },
     }, harness.managed.workspace, { messagesLoaded: true })
-    const runtime = harness.manager as unknown as {
-      sessions: Map<string, Managed>
-      activeRelevantDelegatedDescendants: (session: Managed) => Managed[]
-      deferTerminalOutcomeForActiveDelegations: (session: Managed) => Promise<boolean>
-    }
+    const runtime = sessionManagerForTest(harness.manager)
     sessionRuntimeStateForTest(runtime).sessions.set(orphan.id, orphan)
 
     expect(orphan.messages).toEqual([])
@@ -285,19 +268,16 @@ describe('SessionManager objective outcome integration', () => {
     reviewer.activeObjective = activeObjective('restart-reviewer-root')
     reviewer.pendingTurnRecovery = createPendingTurnRecovery('restart-reviewer-root', 1)
     reviewer.isProcessing = true
-    const runtime = harness.manager as unknown as {
-      sessions: Map<string, Managed>
-      resumePendingTurnAfterRestartOnce: (sessionId: string) => Promise<void>
-    }
+    const runtime = sessionManagerForTest(harness.manager)
     sessionRuntimeStateForTest(runtime).sessions.set(reviewer.id, reviewer)
 
     await runtime.resumePendingTurnAfterRestartOnce(harness.managed.id)
 
     expect(harness.managed.activeObjective?.terminalState).toBe('active')
     expect(harness.managed.activeObjective?.completedAt).toBeUndefined()
-    expect(harness.managed.pendingTurnRecovery).toMatchObject({
+    expect<unknown>(harness.managed.pendingTurnRecovery).toMatchObject({
       attempts: 1, lastCause: 'premature_final',
-      validationGaps: [expect.stringContaining(reviewer.id)],
+      validationGaps: [(expect.stringContaining(reviewer.id) as unknown)],
     })
     expect(harness.managed.messageQueue).toHaveLength(1)
     expect(harness.managed.messageQueue[0]?.options?.automaticRecovery?.cause).toBe('premature_final')
@@ -324,10 +304,7 @@ describe('SessionManager objective outcome integration', () => {
     }, harness.managed.workspace, { messagesLoaded: true })
     reviewer.activeObjective = activeObjective('late-reviewer-root')
     reviewer.isProcessing = true
-    const runtime = harness.manager as unknown as {
-      sessions: Map<string, Managed>
-      resumePendingTurnAfterRestartOnce: (sessionId: string) => Promise<void>
-    }
+    const runtime = sessionManagerForTest(harness.manager)
     sessionRuntimeStateForTest(runtime).sessions.set(reviewer.id, reviewer)
 
     await runtime.resumePendingTurnAfterRestartOnce(harness.managed.id)

@@ -3,7 +3,7 @@ import { normalizeInputSchema, sanitizeToolNamePart, withOutputBudgetGuidance } 
 import type { ProxyToolDef, ProxyToolCapabilities } from './shared.ts';
 
 export function getProxyToolName(transportOwner: McpClientPool, slug: string, originalName: string): string | null {
-    return transportOwner["sourceToolProxyNames"].get(slug)?.get(originalName) ?? null;
+    return transportOwner.sourceToolProxyNames.get(slug)?.get(originalName) ?? null;
 }
 
 export function getProxyToolLocalName(transportOwner: McpClientPool, slug: string, originalName: string): string | null {
@@ -29,10 +29,10 @@ export function getProxyToolDefs(transportOwner: McpClientPool, slugs?: string[]
                 description: withOutputBudgetGuidance(tool.description || `Tool from ${slug}`, tool.name, inputSchema),
                 inputSchema,
                 ...(tool.outputSchema ? { outputSchema: tool.outputSchema } : {}),
-                readOnly: tool.annotations?.readOnlyHint,
-                idempotent: tool.annotations?.idempotentHint,
-                destructive: tool.annotations?.destructiveHint,
-                openWorld: tool.annotations?.openWorldHint,
+                ...(tool.annotations?.readOnlyHint !== undefined ? { readOnly: tool.annotations?.readOnlyHint } : {}),
+                ...(tool.annotations?.idempotentHint !== undefined ? { idempotent: tool.annotations?.idempotentHint } : {}),
+                ...(tool.annotations?.destructiveHint !== undefined ? { destructive: tool.annotations?.destructiveHint } : {}),
+                ...(tool.annotations?.openWorldHint !== undefined ? { openWorld: tool.annotations?.openWorldHint } : {}),
             });
         }
     }
@@ -45,10 +45,10 @@ export function getProxyToolCapabilities(transportOwner: McpClientPool, proxyNam
             if (transportOwner["getProxyToolName"](slug, tool.name) !== proxyName)
                 continue;
             return {
-                readOnly: tool.annotations?.readOnlyHint,
-                idempotent: tool.annotations?.idempotentHint,
-                destructive: tool.annotations?.destructiveHint,
-                openWorld: tool.annotations?.openWorldHint,
+                ...(tool.annotations?.readOnlyHint !== undefined ? { readOnly: tool.annotations?.readOnlyHint } : {}),
+                ...(tool.annotations?.idempotentHint !== undefined ? { idempotent: tool.annotations?.idempotentHint } : {}),
+                ...(tool.annotations?.destructiveHint !== undefined ? { destructive: tool.annotations?.destructiveHint } : {}),
+                ...(tool.annotations?.openWorldHint !== undefined ? { openWorld: tool.annotations?.openWorldHint } : {}),
                 trusted: false,
             };
         }
@@ -57,5 +57,5 @@ export function getProxyToolCapabilities(transportOwner: McpClientPool, proxyNam
 }
 
 export function isProxyTool(transportOwner: McpClientPool, toolName: string): boolean {
-    return transportOwner["proxyTools"].has(toolName);
+    return transportOwner.proxyTools.has(toolName);
 }

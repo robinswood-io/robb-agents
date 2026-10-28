@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "arrays": {
+    "items": [
+      "items/001.json",
+      "items/002.json",
+      "items/003.json",
+      "items/004.json",
+      "items/005.json"
+    ]
+  }
+}

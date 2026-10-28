@@ -21,7 +21,7 @@ export interface SessionListContextValue {
   /** Set or clear the project binding for a session (null = unbind) */
   onSetProjectId?: (sessionId: string, projectId: string | null) => void
   /** Available workspace projects for the context-menu submenu */
-  projects?: Array<{ id: string; slug: string; name: string; color?: string }>
+  projects?: Array<{ id: string; slug: string; name: string; color?: string | undefined }>
   onSelectSessionById: (sessionId: string) => void
   onOpenInNewWindow: (item: SessionMeta) => void
   onSendToWorkspace?: (sessionIds: string[]) => void

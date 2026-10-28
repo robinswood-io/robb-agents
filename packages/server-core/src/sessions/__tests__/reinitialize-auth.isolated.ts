@@ -10,16 +10,16 @@ describe('SessionManager reinitializeAuth', () => {
   let previousConfigDir: string | undefined
 
   beforeEach(() => {
-    previousConfigDir = process.env.CRAFT_CONFIG_DIR
+    previousConfigDir = process.env["CRAFT_CONFIG_DIR"]
     tmpConfigRoot = mkdtempSync(join(tmpdir(), 'sm-reinitialize-auth-'))
-    process.env.CRAFT_CONFIG_DIR = tmpConfigRoot
+    process.env["CRAFT_CONFIG_DIR"] = tmpConfigRoot
   })
 
   afterEach(() => {
     if (previousConfigDir === undefined) {
-      delete process.env.CRAFT_CONFIG_DIR
+      delete process.env["CRAFT_CONFIG_DIR"]
     } else {
-      process.env.CRAFT_CONFIG_DIR = previousConfigDir
+      process.env["CRAFT_CONFIG_DIR"] = previousConfigDir
     }
     rmSync(tmpConfigRoot, { recursive: true, force: true })
   })

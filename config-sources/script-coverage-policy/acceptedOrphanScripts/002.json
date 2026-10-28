@@ -1,0 +1,433 @@
+[
+  {
+    "path": "scripts/build_prerequisite_registry.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286467Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_builder_or_migration_tool",
+    "riskClass": "medium_admin_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_tool_only"
+    ],
+    "rationale": "Builder/migration utility used during controlled maintenance; not a recurring automation entrypoint."
+  },
+  {
+    "path": "scripts/build_temporal_schedule_manifest.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286480Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_builder_or_migration_tool",
+    "riskClass": "medium_admin_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_tool_only"
+    ],
+    "rationale": "Builder/migration utility used during controlled maintenance; not a recurring automation entrypoint."
+  },
+  {
+    "path": "scripts/build_wrapper_capabilities.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286493Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_builder_or_migration_tool",
+    "riskClass": "medium_admin_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_tool_only"
+    ],
+    "rationale": "Builder/migration utility used during controlled maintenance; not a recurring automation entrypoint."
+  },
+  {
+    "path": "scripts/business_prospecting_engine.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286510Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_campaign_or_contact_helper",
+    "riskClass": "medium_campaign_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_campaign_pipeline"
+    ],
+    "rationale": "Campaign/contact helper or retired lane script; direct scheduling requires outbound/enrichment policy review."
+  },
+  {
+    "path": "scripts/campaign_autonomy_loop_durable_shadow.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286534Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_campaign_or_contact_helper",
+    "riskClass": "medium_campaign_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_campaign_pipeline"
+    ],
+    "rationale": "Campaign/contact helper or retired lane script; direct scheduling requires outbound/enrichment policy review."
+  },
+  {
+    "path": "scripts/campaign_seed_queue.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286552Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_campaign_or_contact_helper",
+    "riskClass": "medium_campaign_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_campaign_pipeline"
+    ],
+    "rationale": "Campaign/contact helper or retired lane script; direct scheduling requires outbound/enrichment policy review."
+  },
+  {
+    "path": "scripts/campaigns_multichannel_router.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286569Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_campaign_or_contact_helper",
+    "riskClass": "medium_campaign_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_campaign_pipeline"
+    ],
+    "rationale": "Campaign/contact helper or retired lane script; direct scheduling requires outbound/enrichment policy review."
+  },
+  {
+    "path": "scripts/campaigns_multichannel_safe_wrapper.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286593Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_campaign_or_contact_helper",
+    "riskClass": "medium_campaign_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_campaign_pipeline"
+    ],
+    "rationale": "Campaign/contact helper or retired lane script; direct scheduling requires outbound/enrichment policy review."
+  },
+  {
+    "path": "scripts/contact_campaign_policy.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286611Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_campaign_or_contact_helper",
+    "riskClass": "medium_campaign_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_campaign_pipeline"
+    ],
+    "rationale": "Campaign/contact helper or retired lane script; direct scheduling requires outbound/enrichment policy review."
+  },
+  {
+    "path": "scripts/contact_language.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286651Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_campaign_or_contact_helper",
+    "riskClass": "medium_campaign_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_campaign_pipeline"
+    ],
+    "rationale": "Campaign/contact helper or retired lane script; direct scheduling requires outbound/enrichment policy review."
+  },
+  {
+    "path": "scripts/contact_quality_gate.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286670Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_campaign_or_contact_helper",
+    "riskClass": "medium_campaign_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_campaign_pipeline"
+    ],
+    "rationale": "Campaign/contact helper or retired lane script; direct scheduling requires outbound/enrichment policy review."
+  },
+  {
+    "path": "scripts/contact_salutation.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286688Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_campaign_or_contact_helper",
+    "riskClass": "medium_campaign_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_campaign_pipeline"
+    ],
+    "rationale": "Campaign/contact helper or retired lane script; direct scheduling requires outbound/enrichment policy review."
+  },
+  {
+    "path": "scripts/context_graph_bootstrap.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286707Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_unmapped_script",
+    "riskClass": "medium_unclassified_manual",
+    "allowedInvocation": [
+      "manual_direct_after_review"
+    ],
+    "rationale": "Active Python script outside command-manifest; classified to prevent silent drift but requires review before automation."
+  },
+  {
+    "path": "scripts/context_graph_report.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286725Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_observability_or_builder_tool",
+    "riskClass": "low_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_observability_pipeline"
+    ],
+    "rationale": "Observability/reporting/builder helper not intended as a standalone manifest command."
+  },
+  {
+    "path": "scripts/drive_audio_transcription_autopilot.original.py",
+    "accepted": true,
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "policyClass": "retained_original_reference",
+    "riskClass": "medium_manual_reference",
+    "allowedInvocation": [
+      "manual_direct_after_review"
+    ],
+    "updatedAt": "2026-07-12T17:46:20.481465Z",
+    "updatedBy": "oss-architecture-v2-orphan-classification",
+    "rationale": "Classified conservatively during runtime-v2 migration; LinkedIn/browser/dispatch helpers remain manual, unscheduled and review-gated."
+  },
+  {
+    "path": "scripts/drive_audio_transcription_autopilot.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286746Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_unmapped_script",
+    "riskClass": "medium_unclassified_manual",
+    "allowedInvocation": [
+      "manual_direct_after_review"
+    ],
+    "rationale": "Active Python script outside command-manifest; classified to prevent silent drift but requires review before automation."
+  },
+  {
+    "path": "scripts/ensure_auto_ads_migration_entry.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286759Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_builder_or_migration_tool",
+    "riskClass": "medium_admin_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_tool_only"
+    ],
+    "rationale": "Builder/migration utility used during controlled maintenance; not a recurring automation entrypoint."
+  },
+  {
+    "path": "scripts/ensure_auto_ads_schedule_in_manifest.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286771Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_builder_or_migration_tool",
+    "riskClass": "medium_admin_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_tool_only"
+    ],
+    "rationale": "Builder/migration utility used during controlled maintenance; not a recurring automation entrypoint."
+  },
+  {
+    "path": "scripts/extract_prompt_packs.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286784Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_builder_or_migration_tool",
+    "riskClass": "medium_admin_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_tool_only"
+    ],
+    "rationale": "Builder/migration utility used during controlled maintenance; not a recurring automation entrypoint."
+  },
+  {
+    "path": "scripts/gmail_default_signature.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286800Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "high_risk_manual_or_retired_tool",
+    "riskClass": "high_review_required",
+    "allowedInvocation": [
+      "manual_direct_after_explicit_review"
+    ],
+    "rationale": "Potentially mutating/outbound/manual operation script; not manifest-scheduled and requires explicit review before any automation."
+  },
+  {
+    "path": "scripts/gtm_policy_gate.py",
+    "accepted": true,
+    "coverageClass": "gtm_policy_gate_helper",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-28T19:16:02.150135Z",
+    "updatedBy": "oss-p14-p16-script-coverage-followup",
+    "policyClass": "gtm_policy_gate_helper",
+    "riskClass": "medium_campaign_or_contact_policy_guardrail",
+    "allowedInvocation": [
+      "imported_by_gtm_abm_pipelines",
+      "manual_direct_tests"
+    ],
+    "rationale": "Shared GTM/ABM policy gate helper that scores candidates and blocks external sends when evidence/gates are missing; intentionally not scheduled standalone."
+  },
+  {
+    "path": "scripts/gtm_policy_gate_tests.py",
+    "accepted": true,
+    "coverageClass": "gtm_policy_gate_tests",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-28T19:16:02.150135Z",
+    "updatedBy": "oss-p14-p16-script-coverage-followup",
+    "policyClass": "gtm_policy_gate_tests",
+    "riskClass": "low_test_guardrail",
+    "allowedInvocation": [
+      "manual_direct",
+      "ci_or_guard_harness"
+    ],
+    "rationale": "Regression tests for the GTM policy gate; intentionally not a scheduled automation."
+  },
+  {
+    "path": "scripts/inject_github_snapshots_into_portfolio.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286813Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_builder_or_migration_tool",
+    "riskClass": "medium_admin_manual",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_tool_only"
+    ],
+    "rationale": "Builder/migration utility used during controlled maintenance; not a recurring automation entrypoint."
+  }
+]

@@ -4,12 +4,10 @@ import { FINAL_RESPONSE_GUIDANCE, DOCUMENT_DELIVERY_GUIDANCE, PROGRESS_GUIDANCE 
 import { getBrowserToolEnabled } from "../config/storage.ts";
 
 
-import { basename } from 'path';
 import { DOC_REFS, APP_ROOT } from "../docs/index.ts";
 import { PERMISSION_MODE_CONFIG } from "../agent/mode-types.ts";
 import { FEATURE_FLAGS } from "../feature-flags.ts";
 import { APP_VERSION } from "../version/index.ts";
-import { readPluginName } from "../utils/workspace.ts";
 
 
 import os from 'os';
@@ -47,9 +45,6 @@ export function getCraftAssistantPrompt(workspaceRootPath?: string, backendName:
 
   // Read the SDK plugin name from .claude-plugin/plugin.json — this is what the SDK
   // uses to resolve skills. Falls back to basename for backwards compatibility.
-  const workspaceId = (workspaceRootPath && readPluginName(workspaceRootPath))
-    || basename(workspacePath)
-    || '{workspaceId}';
 
   // Environment marker for SDK JSONL detection
   const environmentMarker = getCraftAgentEnvironmentMarker();

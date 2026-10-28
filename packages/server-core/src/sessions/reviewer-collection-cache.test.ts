@@ -1,3 +1,7 @@
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import type { ActiveSessionObjective } from '../../../shared/src/sessions/types/objectives.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperations } from './SessionManager/operation-types.ts';
 import type { ManagedSession } from './SessionManager/managed-session.ts';
 import type { AgentBackend } from '@craft-agent/shared/agent/backend/types.ts';
@@ -19,7 +23,7 @@ it('keeps a host-declared reviewer fresh through real spawn, creation and turn p
  const workspace = { id: 'fixture-ws', slug: 'fixture-ws', name: 'Fixture', rootPath, createdAt: 1 }
  const loader = spyOn(storage,'loadStoredConfig').mockReturnValue({ workspaces:[workspace], activeWorkspaceId:null, activeSessionId:null, defaultLlmConnection:'test-route',
   llmConnections:[{ slug:'test-route',name:'Fixture',providerType:'pi_compat',authType:'none',baseUrl:'http://localhost:11434/v1',defaultModel:'test-model',models:['test-model'],customEndpoint:{api:'openai-completions'},createdAt:1 }] } as never)
- const host = withSessionOperationsForTest(new SessionManager()) as unknown as SessionOperations
+ const host = sessionManagerForTest(withSessionOperationsForTest(new SessionManager()))
  try {
   host.sendEvent = () => {}; host.emitUnreadSummaryChanged = () => {}; host.notifySessionCreated = () => {}
   const created = await host.createSession(workspace.id,{name:'Worker',llmConnection:'test-route',model:'test-model',permissionMode:'safe'})
@@ -50,7 +54,7 @@ it('keeps a host-declared reviewer fresh through real spawn, creation and turn p
   host.disposeManagedAgentRuntime=async()=>{}
   host.getOrCreateAgent=async(m)=>{
    child=m
-   const agent=({...summaryAgent,getModel:()=> 'test-model',getSessionId:()=>null,setAllSources:()=>{},
+   const agent=completeSessionAgentFixture(child.workspace, ({...summaryAgent,getModel:()=> 'test-model',getSessionId:()=>null,setAllSources:()=>{},
     async *chat(){
      const workerSummary=await host.getCollectionSummarizer(parent)('Exact fresh collection payload', {requestIdentity:'fixture-get-exact-observation',allowReuse:true})
      const reviewerSummary=await host.getCollectionSummarizer(child)('Exact fresh collection payload', {requestIdentity:'fixture-get-exact-observation',allowReuse:true})
@@ -61,7 +65,7 @@ it('keeps a host-declared reviewer fresh through real spawn, creation and turn p
       parentScope:host.getCollectionCacheScope(parent),childScope:host.getCollectionCacheScope(child),
       workerSummary,reviewerSummary,secondReviewerSummary,generations}
      yield {type:'text_complete',text:'Fixture diagnostic completed.'};yield {type:'complete'}
-    }} satisfies Partial<AgentBackend>) as Partial<AgentBackend> as AgentBackend
+    }} satisfies Partial<AgentBackend>))
    m.agent=agent;return agent
   }
   host.sendMessage=(...args)=>{dispatched=realSend(...args);return dispatched}
@@ -78,7 +82,7 @@ it('keeps a host-declared reviewer fresh through real spawn, creation and turn p
   child.delegation = undefined
   expect(host.getCollectionCacheScope(child)?.freshEvidence).toBe(true)
   child.delegation = delegation
-  child.activeObjective = { ...child.activeObjective!, delegatedRole: undefined }
+  child.activeObjective = omitUndefined<ActiveSessionObjective>({ ...child.activeObjective!, delegatedRole: undefined })
   expect(host.getCollectionCacheScope(child)?.freshEvidence).toBe(true)
  }finally{
   loader.mockRestore()

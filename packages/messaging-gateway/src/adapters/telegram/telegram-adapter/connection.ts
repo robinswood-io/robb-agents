@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { Bot, type Context } from "grammy";
 import type { PlatformConfig, IncomingMessage, ButtonPress } from "../../../types";
 import type { TelegramAdapter } from '../index.ts';
@@ -30,8 +31,8 @@ export async function initialize(transportOwner: TelegramAdapter, config: Platfo
             return;
         }
         const threadId = transportOwner["extractThreadId"](ctx);
-        const msg: IncomingMessage = {
-            platform: 'telegram',
+        const msg: IncomingMessage = omitUndefined({
+            platform: 'telegram' as const,
             channelId: String(ctx.chat.id),
             ...(threadId !== undefined ? { threadId } : {}),
             messageId: String(ctx.message.message_id),
@@ -42,7 +43,7 @@ export async function initialize(transportOwner: TelegramAdapter, config: Platfo
             text: ctx.message.text ?? '',
             timestamp: ctx.message.date * 1000,
             raw: ctx.message,
-        };
+        });
         await transportOwner["messageHandler"](msg);
     });
     // Attachment handlers — photos, documents, voice, video, audio.
@@ -63,7 +64,7 @@ export async function initialize(transportOwner: TelegramAdapter, config: Platfo
         await transportOwner["emitAttachmentMessage"](ctx, {
             type: 'photo',
             fileId: largest.file_id,
-            fileSize: largest.file_size,
+            ...(largest.file_size !== undefined ? { fileSize: largest.file_size } : {}),
             mimeType: 'image/jpeg', // Telegram re-encodes photos to JPEG
         });
     });
@@ -78,9 +79,9 @@ export async function initialize(transportOwner: TelegramAdapter, config: Platfo
         await transportOwner["emitAttachmentMessage"](ctx, {
             type: 'document',
             fileId: doc.file_id,
-            fileName: doc.file_name,
-            fileSize: doc.file_size,
-            mimeType: doc.mime_type,
+            ...(doc.file_name !== undefined ? { fileName: doc.file_name } : {}),
+            ...(doc.file_size !== undefined ? { fileSize: doc.file_size } : {}),
+            ...(doc.mime_type !== undefined ? { mimeType: doc.mime_type } : {}),
         });
     });
     transportOwner["bot"].on('message:voice', async (ctx: Context) => {
@@ -94,7 +95,7 @@ export async function initialize(transportOwner: TelegramAdapter, config: Platfo
         await transportOwner["emitAttachmentMessage"](ctx, {
             type: 'voice',
             fileId: voice.file_id,
-            fileSize: voice.file_size,
+            ...(voice.file_size !== undefined ? { fileSize: voice.file_size } : {}),
             mimeType: voice.mime_type ?? 'audio/ogg',
         });
     });
@@ -109,8 +110,8 @@ export async function initialize(transportOwner: TelegramAdapter, config: Platfo
         await transportOwner["emitAttachmentMessage"](ctx, {
             type: 'video',
             fileId: video.file_id,
-            fileName: video.file_name,
-            fileSize: video.file_size,
+            ...(video.file_name !== undefined ? { fileName: video.file_name } : {}),
+            ...(video.file_size !== undefined ? { fileSize: video.file_size } : {}),
             mimeType: video.mime_type ?? 'video/mp4',
         });
     });
@@ -125,8 +126,8 @@ export async function initialize(transportOwner: TelegramAdapter, config: Platfo
         await transportOwner["emitAttachmentMessage"](ctx, {
             type: 'audio',
             fileId: audio.file_id,
-            fileName: audio.file_name,
-            fileSize: audio.file_size,
+            ...(audio.file_name !== undefined ? { fileName: audio.file_name } : {}),
+            ...(audio.file_size !== undefined ? { fileSize: audio.file_size } : {}),
             mimeType: audio.mime_type ?? 'audio/mpeg',
         });
     });
@@ -148,8 +149,8 @@ export async function initialize(transportOwner: TelegramAdapter, config: Platfo
         const threadId = typeof ctx.callbackQuery.message?.message_thread_id === 'number'
             ? ctx.callbackQuery.message.message_thread_id
             : undefined;
-        const press: ButtonPress = {
-            platform: 'telegram',
+        const press: ButtonPress = omitUndefined<ButtonPress>({
+            platform: 'telegram' as const,
             channelId: String(ctx.chat?.id ?? ''),
             ...(threadId !== undefined ? { threadId } : {}),
             messageId: String(ctx.callbackQuery.message?.message_id ?? ''),
@@ -159,7 +160,7 @@ export async function initialize(transportOwner: TelegramAdapter, config: Platfo
             ...(ctx.from?.is_bot ? { senderIsBot: true } : {}),
             buttonId: ctx.callbackQuery.data ?? '',
             data: ctx.callbackQuery.data ?? undefined,
-        };
+        });
         // Diagnostic for #726: timestamp callback receipt vs. handler return so
         // we can tell from logs whether the gateway is slow or grammY's
         // sequential polling is stalling on a previous update.

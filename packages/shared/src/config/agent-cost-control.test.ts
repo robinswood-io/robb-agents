@@ -107,12 +107,14 @@ describe('public agent context and recovery controls', () => {
   });
 
   test('fails safe to defaults for malformed persisted fields', () => {
-    const resolved = resolveAgentCostControlPolicy({
+    const resolved: unknown = Reflect.apply(resolveAgentCostControlPolicy, undefined, [{
       enabled: 'yes',
       recovery: { browserFallbackToolPatterns: ['web', 5] },
-    } as unknown as Parameters<typeof resolveAgentCostControlPolicy>[0]);
-    expect(resolved.enabled).toBe(true);
-    expect(resolved.recovery.browserFallbackToolPatterns).toContain('browser');
+    }]);
+    expect(resolved).toMatchObject({
+      enabled: true,
+      recovery: { browserFallbackToolPatterns: expect.arrayContaining(['browser']) as unknown },
+    });
   });
 
   test('recognizes terse objective continuations without selecting a model', () => {

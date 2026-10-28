@@ -1,10 +1,10 @@
+import type { z } from 'zod';
+import type { ListBackgroundTasksSchema } from '../tool-defs/schemas.ts';
 import type { SessionToolContext } from '../context.ts';
 import type { ToolResult } from '../types.ts';
 import { successResponse, errorResponse } from '../response.ts';
 
-export interface ListBackgroundTasksArgs {
-  sessionId?: string;
-}
+export type ListBackgroundTasksArgs = z.infer<typeof ListBackgroundTasksSchema>;
 
 /**
  * list_background_tasks — enumerate the background agents/tasks tracked for a

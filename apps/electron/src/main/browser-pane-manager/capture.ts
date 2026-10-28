@@ -1,9 +1,12 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { nativeImage } from "electron";
 import { type ElementGeometry } from "../browser-cdp";
 import { CANVAS_CAPTURE_LIMITS } from "../browser-canvas-capture";
 import type { BrowserPaneManager } from '../browser-pane-manager.ts';
 import { SCREENSHOT_RETRY_DELAY_MS, SCREENSHOT_NETWORK_IDLE_TIMEOUT_MS, SCREENSHOT_NETWORK_IDLE_MS } from './shared.ts';
 import type { BrowserInstance, BrowserScreenshotOptions, BrowserScreenshotRegionTarget, BrowserScreenshotResult } from './shared.ts';
+type ScreenshotMetadata = NonNullable<BrowserScreenshotResult['metadata']>;
+
 import * as browserPaneManagerCapturePage from './capture-page.ts';
 
 export async function screenshot(transportOwner: BrowserPaneManager, id: string, options?: BrowserScreenshotOptions): Promise<BrowserScreenshotResult> {
@@ -16,23 +19,23 @@ export async function screenshot(transportOwner: BrowserPaneManager, id: string,
         const mode = (annotate || options?.mode === 'agent') ? 'agent' : 'raw';
         if (mode === 'raw') {
             const viewport = await instance.cdp.getViewportMetrics();
-            const captured = await transportOwner["capturePageWithRecovery"](instance, {
+            const captured = await transportOwner.capturePageWithRecovery(instance, {
                 mode,
                 errorPrefix: 'screenshot',
                 dpr: viewport.dpr,
-                format: options?.format,
-                jpegQuality: options?.jpegQuality,
+                ...(options?.format !== undefined ? { format: options?.format } : {}),
+                ...(options?.jpegQuality !== undefined ? { jpegQuality: options?.jpegQuality } : {}),
             });
-            return {
+            return omitUndefined<BrowserScreenshotResult>({
                 imageBuffer: captured.imageBuffer,
                 imageFormat: captured.imageFormat,
                 metadata: options?.includeMetadata
-                    ? {
+                    ? omitUndefined<ScreenshotMetadata>({
                         mode: 'raw',
                         warnings: captured.warnings.length > 0 ? captured.warnings : undefined,
-                    }
+                    })
                     : undefined,
-            };
+            });
         }
         const warnings: string[] = [];
         const geometries: ElementGeometry[] = [];
@@ -52,8 +55,7 @@ export async function screenshot(transportOwner: BrowserPaneManager, id: string,
             }
         }
         const settled = await Promise.allSettled(refs.map((ref) => instance.cdp.getElementGeometry(ref)));
-        for (let i = 0; i < settled.length; i++) {
-            const result = settled[i]!;
+        for (const [i, result] of settled.entries()) {
             if (result.status === 'fulfilled') {
                 geometries.push(result.value);
             }
@@ -85,12 +87,12 @@ export async function screenshot(transportOwner: BrowserPaneManager, id: string,
         }
         try {
             const viewport = await instance.cdp.getViewportMetrics();
-            const captured = await transportOwner["capturePageWithRecovery"](instance, {
+            const captured = await transportOwner.capturePageWithRecovery(instance, {
                 mode,
                 errorPrefix: 'screenshot',
                 dpr: viewport.dpr,
-                format: options?.format,
-                jpegQuality: options?.jpegQuality,
+                ...(options?.format !== undefined ? { format: options?.format } : {}),
+                ...(options?.jpegQuality !== undefined ? { jpegQuality: options?.jpegQuality } : {}),
             });
             if (captured.warnings.length > 0) {
                 warnings.push(...captured.warnings);
@@ -98,10 +100,10 @@ export async function screenshot(transportOwner: BrowserPaneManager, id: string,
             return {
                 imageBuffer: captured.imageBuffer,
                 imageFormat: captured.imageFormat,
-                metadata: {
+                metadata: omitUndefined<ScreenshotMetadata>({
                     mode: 'agent',
                     viewport,
-                    targets: geometries.map((g) => ({
+                    targets: geometries.map((g) => omitUndefined({
                         ref: g.ref,
                         role: g.role,
                         name: g.name,
@@ -111,14 +113,14 @@ export async function screenshot(transportOwner: BrowserPaneManager, id: string,
                     action: instance.lastAction
                         ? {
                             tool: instance.lastAction.tool,
-                            ref: instance.lastAction.ref,
+                            ...(instance.lastAction.ref !== undefined ? { ref: instance.lastAction.ref } : {}),
                             status: instance.lastAction.status,
                             timestamp: instance.lastAction.timestamp,
                         }
                         : undefined,
                     annotationPartial,
                     warnings: warnings.length > 0 ? warnings : undefined,
-                },
+                }),
             };
         }
         finally {
@@ -131,7 +133,7 @@ export async function screenshot(transportOwner: BrowserPaneManager, id: string,
         }
     }
     finally {
-        transportOwner["restoreOverlayAfterCapture"](instance, suspendedOverlay);
+        transportOwner.restoreOverlayAfterCapture(instance, suspendedOverlay);
     }
 }
 
@@ -229,7 +231,7 @@ export async function screenshotRegion(transportOwner: BrowserPaneManager, id: s
         if (maxWidth <= 0 || maxHeight <= 0 || clippedWidth <= 0 || clippedHeight <= 0) {
             throw new Error('Resolved screenshot region is outside the current viewport');
         }
-        const captured = await transportOwner["capturePageWithRecovery"](instance, {
+        const captured = await transportOwner.capturePageWithRecovery(instance, {
             mode: 'region',
             errorPrefix: 'region screenshot',
             rect: {
@@ -239,13 +241,13 @@ export async function screenshotRegion(transportOwner: BrowserPaneManager, id: s
                 height: clippedHeight,
             },
             dpr: viewport.dpr,
-            format: target.format,
-            jpegQuality: target.jpegQuality,
+            ...(target.format !== undefined ? { format: target.format } : {}),
+            ...(target.jpegQuality !== undefined ? { jpegQuality: target.jpegQuality } : {}),
         });
         return {
             imageBuffer: captured.imageBuffer,
             imageFormat: captured.imageFormat,
-            metadata: {
+            metadata: omitUndefined<ScreenshotMetadata>({
                 mode: 'raw',
                 viewport,
                 region: {
@@ -256,11 +258,11 @@ export async function screenshotRegion(transportOwner: BrowserPaneManager, id: s
                 },
                 targetMode: hasRef ? 'ref' : hasSelector ? 'selector' : 'coords',
                 warnings: captured.warnings.length > 0 ? captured.warnings : undefined,
-            },
+            }),
         };
     }
     finally {
-        transportOwner["restoreOverlayAfterCapture"](instance, suspendedOverlay);
+        transportOwner.restoreOverlayAfterCapture(instance, suspendedOverlay);
     }
 }
 
@@ -281,5 +283,5 @@ export async function waitForScreenshotReadiness(transportOwner: BrowserPaneMana
     catch {
         // network-idle can fail on continuously active pages; still proceed after bounded delay
     }
-    await transportOwner["sleep"](SCREENSHOT_RETRY_DELAY_MS);
+    await transportOwner.sleep(SCREENSHOT_RETRY_DELAY_MS);
 }

@@ -100,7 +100,7 @@ describe('TaskRunner (Conductor)', () => {
           }
           if (!rootObjectiveId) throw new Error('reviewer objective root is missing');
           const evidence = readNodeOutput(root, 'real-review', 'r1', '__verdict__');
-          const fingerprint = evidence?.params?.reviewedOutputFingerprint;
+          const fingerprint = evidence?.params?.["reviewedOutputFingerprint"];
           if (typeof fingerprint !== 'string') throw new Error('review evidence fingerprint is missing');
 
           if (turn === 1) {
@@ -383,8 +383,8 @@ describe('TaskRunner (Conductor)', () => {
       tokensUsed: 12,
     });
     expect(recovered.created.filter(entry => entry.options.taskNodeId === '__verdict__')).toHaveLength(0);
-    expect(readRunLog(root, 'review-late-cost', 'r1')).toContainEqual(expect.objectContaining({
+    expect<unknown>(readRunLog(root, 'review-late-cost', 'r1')).toContainEqual((expect.objectContaining({
       kind: 'budget-breach', metric: 'tokens', value: 12, limit: 10,
-    }));
+    }) as unknown));
   });
 });

@@ -1,10 +1,12 @@
+import { PermissionsConfigSchema } from '../permissions-config.ts';
+import { parseJsonObject } from '../../utils/json.ts';
 import { describe, it, expect, afterEach } from 'bun:test';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const originalCwd = process.cwd();
-const originalConfigDir = process.env.CRAFT_CONFIG_DIR;
+const originalConfigDir = process.env["CRAFT_CONFIG_DIR"];
 
 const legacyBundledBashPatterns = [
   '^tree\\b',
@@ -71,8 +73,8 @@ const legacyBundledBashPatterns = [
 
 afterEach(() => {
   process.chdir(originalCwd);
-  if (originalConfigDir === undefined) delete process.env.CRAFT_CONFIG_DIR;
-  else process.env.CRAFT_CONFIG_DIR = originalConfigDir;
+  if (originalConfigDir === undefined) delete process.env["CRAFT_CONFIG_DIR"];
+  else process.env["CRAFT_CONFIG_DIR"] = originalConfigDir;
 });
 
 describe('ensureDefaultPermissions migration', () => {
@@ -151,17 +153,17 @@ describe('ensureDefaultPermissions migration', () => {
       }, null, 2)
     );
 
-    process.env.CRAFT_CONFIG_DIR = tempConfig;
+    process.env["CRAFT_CONFIG_DIR"] = tempConfig;
     process.chdir(tempRoot);
 
-    const mod = await import(`../permissions-config.ts?case=${Date.now()}`);
+    const mod = await import(`../permissions-config.ts?case=${Date.now()}`) as typeof import("../permissions-config.ts");
     mod.ensureDefaultPermissions();
 
-    const merged = JSON.parse(readFileSync(join(installedDir, 'default.json'), 'utf-8'));
+    const merged = PermissionsConfigSchema.parse(parseJsonObject(readFileSync(join(installedDir, 'default.json'), 'utf-8')));
 
-    expect(merged.version).toBe('2026-03-01');
+    expect(merged["version"]).toBe('2026-03-01');
 
-    const bashPatterns = merged.allowedBashPatterns.map((p: string | { pattern: string }) =>
+    const bashPatterns = (merged.allowedBashPatterns ?? []).map((p: string | { pattern: string }) =>
       typeof p === 'string' ? p : p.pattern
     );
 
@@ -175,11 +177,11 @@ describe('ensureDefaultPermissions migration', () => {
     expect(bashPatterns.some((pattern: string) => pattern.startsWith('^rg\\b('))).toBe(true);
     expect(bashPatterns.filter((p: string) => p === '^grep\\b').length).toBe(1);
 
-    const mcpPatterns = merged.allowedMcpPatterns as string[];
+    const mcpPatterns = merged["allowedMcpPatterns"] as string[];
     expect(mcpPatterns).toContain('list');
     expect(mcpPatterns).toContain('search');
 
-    const blockedCommandHints = merged.blockedCommandHints as Array<{ command: string; reason: string }>;
+    const blockedCommandHints = merged["blockedCommandHints"] as Array<{ command: string; reason: string }>;
     expect(blockedCommandHints.some(h => h.command === 'printf')).toBe(true);
     expect(blockedCommandHints.some(h => h.reason === 'sed print-only policy')).toBe(true);
     expect(blockedCommandHints.some(h => h.reason.startsWith('Only print-only sed'))).toBe(false);

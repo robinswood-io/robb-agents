@@ -7,12 +7,12 @@ import type { PiCompactionResult } from './protocol.ts';
    * Handle ensure_session_ready_result from subprocess.
    */
 export function handleEnsureSessionReadyResult(transportOwner: PiAgent, msg: Record<string, unknown>): void {
-    const id = msg.id as string;
-    const sessionId = (msg.sessionId as string | null) ?? null;
-    const pending = transportOwner["pendingEnsureSessionReady"].get(id);
+    const id = msg["id"] as string;
+    const sessionId = (msg["sessionId"] as string | null) ?? null;
+    const pending = transportOwner.pendingEnsureSessionReady.get(id);
     if (!pending)
         return;
-    transportOwner["pendingEnsureSessionReady"].delete(id);
+    transportOwner.pendingEnsureSessionReady.delete(id);
     if (sessionId && transportOwner["piSessionId"] !== sessionId) {
         transportOwner["piSessionId"] = sessionId;
         transportOwner["config"].onSdkSessionIdUpdate?.(sessionId);
@@ -24,31 +24,27 @@ export function handleEnsureSessionReadyResult(transportOwner: PiAgent, msg: Rec
    * Handle compact_result from subprocess.
    */
 export function handleCompactResult(transportOwner: PiAgent, msg: Record<string, unknown>): void {
-    const id = msg.id as string;
-    const success = Boolean(msg.success);
-    const pending = transportOwner["pendingCompactions"].get(id);
+    const id = msg["id"] as string;
+    const success = Boolean(msg["success"]);
+    const pending = transportOwner.pendingCompactions.get(id);
     if (!pending)
         return;
-    transportOwner["pendingCompactions"].delete(id);
+    transportOwner.pendingCompactions.delete(id);
     if (!success) {
-        pending.reject(new Error(String(msg.errorMessage || 'Compaction failed')));
+        pending.reject(new Error(String(msg["errorMessage"] || 'Compaction failed')));
         return;
     }
-    const raw = msg.result as Record<string, unknown> | undefined;
+    const raw = msg["result"] as Record<string, unknown> | undefined;
     if (!raw) {
         pending.resolve(null);
         return;
     }
     pending.resolve({
-        summary: String(raw.summary || ''),
-        firstKeptEntryId: String(raw.firstKeptEntryId || ''),
-        tokensBefore: Number(raw.tokensBefore || 0),
-        estimatedTokensAfter: typeof raw.estimatedTokensAfter === 'number'
-            ? raw.estimatedTokensAfter
-            : undefined,
-        compactionModel: typeof raw.compactionModel === 'string'
-            ? raw.compactionModel
-            : undefined,
+        summary: String(raw["summary"] || ''),
+        firstKeptEntryId: String(raw["firstKeptEntryId"] || ''),
+        tokensBefore: Number(raw["tokensBefore"] || 0),
+        ...(typeof raw["estimatedTokensAfter"] === 'number' ? { estimatedTokensAfter: raw["estimatedTokensAfter"] } : {}),
+        ...(typeof raw["compactionModel"] === 'string' ? { compactionModel: raw["compactionModel"] } : {}),
     });
 }
 
@@ -56,34 +52,34 @@ export function handleCompactResult(transportOwner: PiAgent, msg: Record<string,
    * Handle set_auto_compaction_result from subprocess.
    */
 export function handleSetAutoCompactionResult(transportOwner: PiAgent, msg: Record<string, unknown>): void {
-    const id = msg.id as string;
-    const success = Boolean(msg.success);
-    const pending = transportOwner["pendingAutoCompactionToggles"].get(id);
+    const id = msg["id"] as string;
+    const success = Boolean(msg["success"]);
+    const pending = transportOwner.pendingAutoCompactionToggles.get(id);
     if (!pending)
         return;
-    transportOwner["pendingAutoCompactionToggles"].delete(id);
+    transportOwner.pendingAutoCompactionToggles.delete(id);
     if (!success) {
-        pending.reject(new Error(String(msg.errorMessage || 'Failed to set auto-compaction')));
+        pending.reject(new Error(String(msg["errorMessage"] || 'Failed to set auto-compaction')));
         return;
     }
-    pending.resolve(Boolean(msg.enabled));
+    pending.resolve(Boolean(msg["enabled"]));
 }
 
 /**
    * Handle update_runtime_config_result from subprocess.
    */
 export function handleRuntimeConfigUpdateResult(transportOwner: PiAgent, msg: Record<string, unknown>): void {
-    const id = msg.id as string;
-    const success = Boolean(msg.success);
-    const pending = transportOwner["pendingRuntimeConfigUpdates"].get(id);
+    const id = msg["id"] as string;
+    const success = Boolean(msg["success"]);
+    const pending = transportOwner.pendingRuntimeConfigUpdates.get(id);
     if (!pending)
         return;
-    transportOwner["pendingRuntimeConfigUpdates"].delete(id);
+    transportOwner.pendingRuntimeConfigUpdates.delete(id);
     if (!success) {
-        pending.reject(new Error(String(msg.errorMessage || 'Runtime config update failed')));
+        pending.reject(new Error(String(msg["errorMessage"] || 'Runtime config update failed')));
         return;
     }
-    pending.resolve(Boolean(msg.updated ?? true));
+    pending.resolve(Boolean(msg["updated"] ?? true));
 }
 
 /**
@@ -91,15 +87,15 @@ export function handleRuntimeConfigUpdateResult(transportOwner: PiAgent, msg: Re
    * and return the active Pi session ID.
    */
 export async function requestEnsureSessionReady(transportOwner: PiAgent): Promise<string | null> {
-    await transportOwner["ensureSubprocess"]();
-    const id = `ensure-ready-${++transportOwner["rpcIdCounter"]}`;
+    await transportOwner.ensureSubprocess();
+    const id = `ensure-ready-${++transportOwner.rpcIdCounter}`;
     const timeoutMs = 15000;
     return new Promise<string | null>((resolve, reject) => {
         const timer = setTimeout(() => {
-            transportOwner["pendingEnsureSessionReady"].delete(id);
+            transportOwner.pendingEnsureSessionReady.delete(id);
             reject(new Error(`ensure_session_ready timed out after ${Math.floor(timeoutMs / 1000)}s`));
         }, timeoutMs);
-        transportOwner["pendingEnsureSessionReady"].set(id, {
+        transportOwner.pendingEnsureSessionReady.set(id, {
             resolve: (sessionId) => {
                 clearTimeout(timer);
                 resolve(sessionId);
@@ -117,8 +113,8 @@ export async function requestEnsureSessionReady(transportOwner: PiAgent): Promis
    * Ask subprocess to compact the active session context.
    */
 export async function requestCompact(transportOwner: PiAgent, customInstructions?: string): Promise<PiCompactionResult | null> {
-    await transportOwner["ensureSubprocess"]();
-    const id = `compact-${++transportOwner["rpcIdCounter"]}`;
+    await transportOwner.ensureSubprocess();
+    const id = `compact-${++transportOwner.rpcIdCounter}`;
     // GPT-backed Pi compactions on large conversations can legitimately take 60-120s.
     // Bound them at 210s and explicitly abort the SDK compaction on expiry so a
     // lost response cannot keep consuming tokens in the subprocess indefinitely.
@@ -131,11 +127,11 @@ export async function requestCompact(transportOwner: PiAgent, customInstructions
         compactionModel?: string;
     } | null>((resolve, reject) => {
         const timer = setTimeout(() => {
-            transportOwner["pendingCompactions"].delete(id);
+            transportOwner.pendingCompactions.delete(id);
             transportOwner["send"]({ type: 'abort_compaction', id });
             reject(new Error(`compact timed out after ${Math.floor(timeoutMs / 1000)}s`));
         }, timeoutMs);
-        transportOwner["pendingCompactions"].set(id, {
+        transportOwner.pendingCompactions.set(id, {
             resolve: (result) => {
                 clearTimeout(timer);
                 resolve(result);
@@ -150,22 +146,22 @@ export async function requestCompact(transportOwner: PiAgent, customInstructions
 }
 
 export async function compactContext(transportOwner: PiAgent, customInstructions?: string): Promise<PiCompactionResult | null> {
-    return transportOwner["requestCompact"](customInstructions);
+    return transportOwner.requestCompact(customInstructions);
 }
 
 /**
    * Ask subprocess to enable/disable auto-compaction.
    */
 export async function requestSetAutoCompaction(transportOwner: PiAgent, enabled: boolean): Promise<boolean> {
-    await transportOwner["ensureSubprocess"]();
-    const id = `set-auto-compaction-${++transportOwner["rpcIdCounter"]}`;
+    await transportOwner.ensureSubprocess();
+    const id = `set-auto-compaction-${++transportOwner.rpcIdCounter}`;
     const timeoutMs = 15000;
     return new Promise<boolean>((resolve, reject) => {
         const timer = setTimeout(() => {
-            transportOwner["pendingAutoCompactionToggles"].delete(id);
+            transportOwner.pendingAutoCompactionToggles.delete(id);
             reject(new Error(`set_auto_compaction timed out after ${Math.floor(timeoutMs / 1000)}s`));
         }, timeoutMs);
-        transportOwner["pendingAutoCompactionToggles"].set(id, {
+        transportOwner.pendingAutoCompactionToggles.set(id, {
             resolve: (value) => {
                 clearTimeout(timer);
                 resolve(value);
@@ -185,15 +181,15 @@ export async function requestSetAutoCompaction(transportOwner: PiAgent, enabled:
 export async function requestRuntimeConfigUpdate(transportOwner: PiAgent, update: BackendRuntimeUpdate): Promise<boolean> {
     if (!transportOwner["subprocess"])
         return true;
-    const id = `runtime-config-${++transportOwner["rpcIdCounter"]}`;
+    const id = `runtime-config-${++transportOwner.rpcIdCounter}`;
     const timeoutMs = 15000;
     const runtime = update.runtime ?? {};
     return new Promise<boolean>((resolve, reject) => {
         const timer = setTimeout(() => {
-            transportOwner["pendingRuntimeConfigUpdates"].delete(id);
+            transportOwner.pendingRuntimeConfigUpdates.delete(id);
             reject(new Error(`update_runtime_config timed out after ${Math.floor(timeoutMs / 1000)}s`));
         }, timeoutMs);
-        transportOwner["pendingRuntimeConfigUpdates"].set(id, {
+        transportOwner.pendingRuntimeConfigUpdates.set(id, {
             resolve: (value) => {
                 clearTimeout(timer);
                 resolve(value);
@@ -224,7 +220,7 @@ export async function ensureBranchReady(transportOwner: PiAgent): Promise<void> 
     if (!transportOwner["config"].session?.branchFromSessionPath) {
         throw new Error('Pi branch preflight failed: missing branchFromSessionPath metadata');
     }
-    const sessionId = await transportOwner["requestEnsureSessionReady"]();
+    const sessionId = await transportOwner.requestEnsureSessionReady();
     if (!sessionId) {
         throw new Error('Pi branch preflight failed: subprocess did not provide a session ID');
     }
@@ -237,10 +233,12 @@ export async function ensureBranchReady(transportOwner: PiAgent): Promise<void> 
 export async function updateRuntimeConfig(transportOwner: PiAgent, update: BackendRuntimeUpdate): Promise<boolean> {
     const previousModel = transportOwner["getModel"]();
     const previousRuntime = getBackendRuntime(transportOwner["config"]);
+    const providerType = update.providerType ?? transportOwner["config"].providerType;
+    const authType = update.authType ?? transportOwner["config"].authType;
     transportOwner["config"] = {
         ...transportOwner["config"],
-        providerType: update.providerType ?? transportOwner["config"].providerType,
-        authType: update.authType ?? transportOwner["config"].authType,
+        ...(providerType !== undefined ? { providerType } : {}),
+        ...(authType !== undefined ? { authType } : {}),
         model: update.model,
         runtime: {
             ...previousRuntime,
@@ -253,10 +251,13 @@ export async function updateRuntimeConfig(transportOwner: PiAgent, update: Backe
         transportOwner["debug"](`Runtime config updated locally (no subprocess): ${previousModel} → ${update.model}`);
         return true;
     }
-    const updated = await transportOwner["requestRuntimeConfigUpdate"]({
-        ...update,
-        providerType: transportOwner["config"].providerType,
-        authType: transportOwner["config"].authType,
+    const updateWithoutOverrides = { ...update };
+    delete updateWithoutOverrides.providerType;
+    delete updateWithoutOverrides.authType;
+    const updated = await transportOwner.requestRuntimeConfigUpdate({
+        ...updateWithoutOverrides,
+        ...(transportOwner["config"].providerType !== undefined ? { providerType: transportOwner["config"].providerType } : {}),
+        ...(transportOwner["config"].authType !== undefined ? { authType: transportOwner["config"].authType } : {}),
         runtime: getBackendRuntime(transportOwner["config"]),
     });
     transportOwner["debug"](`Runtime config refreshed in subprocess: ${previousModel} → ${update.model}`);

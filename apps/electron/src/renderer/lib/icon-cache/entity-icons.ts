@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Unified Icon Cache
  *
@@ -313,11 +314,12 @@ export function useEntityIcon(opts: UseEntityIconOptions): ResolvedEntityIcon {
     const cached = iconCache.get(cacheKey)
     if (cached) {
       const colorable = colorableCache.has(cacheKey)
+      const rawSvg = colorable ? rawSvgCache.get(cacheKey) : undefined
       return {
         kind: 'file',
         value: cached,
         colorable,
-        rawSvg: colorable ? rawSvgCache.get(cacheKey) : undefined,
+        ...(rawSvg !== undefined ? { rawSvg } : {}),
       }
     }
     return { kind: 'fallback', colorable: false }
@@ -341,12 +343,13 @@ export function useEntityIcon(opts: UseEntityIconOptions): ResolvedEntityIcon {
     const cached = iconCache.get(cacheKey)
     if (cached) {
       const colorable = colorableCache.has(cacheKey)
-      setResolved({
-        kind: 'file',
+      const rawSvg = colorable ? rawSvgCache.get(cacheKey) : undefined
+      setResolved(omitUndefined({
+        kind: 'file' as const,
         value: cached,
         colorable,
-        rawSvg: colorable ? rawSvgCache.get(cacheKey) : undefined,
-      })
+        ...(rawSvg !== undefined ? { rawSvg } : {}),
+      }))
       return
     }
 
@@ -381,12 +384,12 @@ export function useEntityIcon(opts: UseEntityIconOptions): ResolvedEntityIcon {
         if (result.rawSvg) {
           rawSvgCache.set(cacheKey, result.rawSvg)
         }
-        setResolved({
-          kind: 'file',
+        setResolved(omitUndefined({
+          kind: 'file' as const,
           value: result.dataUrl,
           colorable: result.colorable,
           rawSvg: result.rawSvg,
-        })
+        }))
       } else {
         setResolved({ kind: 'fallback', colorable: false })
       }

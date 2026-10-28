@@ -1,3 +1,4 @@
+import { parseMarkdownPreviewSpec, type MarkdownPreviewItem as PreviewItem } from './markdown-preview-helpers'
 /**
  * MarkdownImageBlock - Renders ```image-preview code blocks as inline image previews.
  *
@@ -30,28 +31,18 @@ import { usePlatform } from '../../context/PlatformContext'
 import { ImageCardStack } from './ImageCardStack'
 import { useTranslation } from 'react-i18next'
 
-interface PreviewItem {
-  src: string
-  label?: string
-  ratio?: number
-}
 
-interface ImagePreviewSpec {
-  src?: string
-  title?: string
-  items?: PreviewItem[]
-}
 
 class ImageBlockErrorBoundary extends React.Component<
   { children: React.ReactNode; fallback: React.ReactNode },
   { hasError: boolean }
 > {
-  state = { hasError: false }
+  override state = { hasError: false }
   static getDerivedStateFromError() { return { hasError: true } }
-  componentDidCatch(error: Error) {
+  override componentDidCatch(error: Error) {
     console.warn('[MarkdownImageBlock] Render failed, falling back to CodeBlock:', error)
   }
-  render() {
+  override render() {
     if (this.state.hasError) return this.props.fallback
     return this.props.children
   }
@@ -59,8 +50,8 @@ class ImageBlockErrorBoundary extends React.Component<
 
 export interface MarkdownImageBlockProps {
   code: string
-  className?: string
-  onCreateRegionAnnotation?: (region: { x: number; y: number; w: number; h: number; unit: 'pixel' | 'percent' }) => void
+  className?: string | undefined
+  onCreateRegionAnnotation?: ((region: { x: number; y: number; w: number; h: number; unit: 'pixel' | 'percent' }) => void) | undefined
 }
 
 function detectImageRatio(src: string): Promise<number | null> {
@@ -82,20 +73,7 @@ export function MarkdownImageBlock({ code, className, onCreateRegionAnnotation: 
   const { t } = useTranslation()
   const { onReadFileDataUrl } = usePlatform()
 
-  const spec = React.useMemo<ImagePreviewSpec | null>(() => {
-    try {
-      const raw = JSON.parse(code)
-      if (raw.items && Array.isArray(raw.items) && raw.items.length > 0) {
-        return raw as ImagePreviewSpec
-      }
-      if (raw.src && typeof raw.src === 'string') {
-        return raw as ImagePreviewSpec
-      }
-      return null
-    } catch {
-      return null
-    }
-  }, [code])
+  const spec = React.useMemo(() => parseMarkdownPreviewSpec(code), [code])
 
   const items = React.useMemo<PreviewItem[]>(() => {
     if (!spec) return []
@@ -203,12 +181,12 @@ export function MarkdownImageBlock({ code, className, onCreateRegionAnnotation: 
     return <CodeBlock code={code} language="json" mode="full" className={className} />
   }
 
-  const stackItems = items.reduce<Array<{ src: string; label?: string; ratio?: number; alt: string }>>((acc, item, index) => {
+  const stackItems = items.reduce<Array<{ src: string; label?: string; ratio?: number | undefined; alt: string }>>((acc, item, index) => {
     const dataUrl = contentCache[item.src]
     if (!dataUrl) return acc
     acc.push({
       src: dataUrl,
-      label: item.label,
+      ...(item.label !== undefined ? { label: item.label } : {}),
       ratio: item.ratio ?? ratioCache[item.src],
       alt: item.label || `Image ${index + 1}`,
     })

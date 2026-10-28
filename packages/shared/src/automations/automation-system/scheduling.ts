@@ -15,23 +15,23 @@ export function createHandlers(transportOwner: AutomationSystem): void {
     transportOwner["promptHandler"] = new PromptHandler({
         workspaceId: transportOwner["options"].workspaceId,
         workspaceRootPath: transportOwner["options"].workspaceRootPath,
-        onPromptsReady: transportOwner["options"].onPromptsReady,
-        onError: transportOwner["options"].onError,
+        ...(transportOwner["options"].onPromptsReady !== undefined ? { onPromptsReady: transportOwner["options"].onPromptsReady } : {}),
+        ...(transportOwner["options"].onError !== undefined ? { onError: transportOwner["options"].onError } : {}),
     }, transportOwner);
     transportOwner["promptHandler"].subscribe(transportOwner["eventBus"]);
     // Webhook handler
     transportOwner["webhookHandler"] = new WebhookHandler({
         workspaceId: transportOwner["options"].workspaceId,
         workspaceRootPath: transportOwner["options"].workspaceRootPath,
-        onWebhookResults: transportOwner["options"].onWebhookResults,
-        onError: transportOwner["options"].onError,
+        ...(transportOwner["options"].onWebhookResults !== undefined ? { onWebhookResults: transportOwner["options"].onWebhookResults } : {}),
+        ...(transportOwner["options"].onError !== undefined ? { onError: transportOwner["options"].onError } : {}),
     }, transportOwner);
     transportOwner["webhookHandler"].subscribe(transportOwner["eventBus"]);
     // Event log handler
     transportOwner["eventLogHandler"] = new EventLogHandler({
         workspaceRootPath: transportOwner["options"].workspaceRootPath,
         workspaceId: transportOwner["options"].workspaceId,
-        onEventLost: transportOwner["options"].onEventLost,
+        ...(transportOwner["options"].onEventLost !== undefined ? { onEventLost: transportOwner["options"].onEventLost } : {}),
     });
     transportOwner["eventLogHandler"].subscribe(transportOwner["eventBus"]);
     log.debug(`[AutomationSystem] Handlers created and subscribed`);

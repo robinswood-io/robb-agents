@@ -1,3 +1,5 @@
+import type { WebApiOptions } from './adapter/web-api.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import React, { useCallback, useEffect } from 'react';
 
 import { createWebApi } from './adapter/web-api';
@@ -174,12 +176,12 @@ const initialize = useCallback(async () => {
         }
       }
 
-      const { api, client, syncOfflineData } = createWebApi({
+      const { api, client, syncOfflineData } = createWebApi(omitUndefined<WebApiOptions>({
         serverUrl: nextConfig.wsUrl,
         workspaceId,
         offlineCoordinator,
         onWorkspaceChanged: applyValidatedWorkspaceScope,
-      })
+      }))
       clientRef.current = client
       offlineSyncRef.current = syncOfflineData
       transportCleanupRef.current = client.onConnectionStateChanged((state) => {
@@ -194,7 +196,7 @@ const initialize = useCallback(async () => {
         client.destroy()
         void purgeAllLocalPrivateData()
           .then(() => window.location.replace('/login'))
-          .catch((purgeError) => {
+          .catch((purgeError: unknown) => {
             const message = purgeError instanceof Error ? purgeError.message : String(purgeError)
             setOfflineStorageError(message)
             setError(message)

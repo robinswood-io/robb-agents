@@ -1,0 +1,129 @@
+--- 
+
++++ 
+
+@@ -3,4 +3,9 @@
+
+ !function() {
+     'use strict'
++
++    var MAX_WIDTH = 1024
++    var MAX_PRECISION = 1024
++    var MAX_NUMERIC_PRECISION = 100
++    var MAX_CACHE_ENTRIES = 1024
+ 
+     var re = {
+@@ -79,14 +84,14 @@
+
+                         break
+                     case 'j':
+-                        arg = JSON.stringify(arg, null, ph.width ? parseInt(ph.width) : 0)
++                        arg = JSON.stringify(arg, null, ph.width ? parseInt(ph.width, 10) : 0)
+                         break
+                     case 'e':
+-                        arg = ph.precision ? parseFloat(arg).toExponential(ph.precision) : parseFloat(arg).toExponential()
++                        arg = ph.precision !== undefined ? parseFloat(arg).toExponential(ph.precision) : parseFloat(arg).toExponential()
+                         break
+                     case 'f':
+-                        arg = ph.precision ? parseFloat(arg).toFixed(ph.precision) : parseFloat(arg)
++                        arg = ph.precision !== undefined ? parseFloat(arg).toFixed(ph.precision) : parseFloat(arg)
+                         break
+                     case 'g':
+-                        arg = ph.precision ? String(Number(arg.toPrecision(ph.precision))) : parseFloat(arg)
++                        arg = ph.precision !== undefined ? String(Number(arg.toPrecision(ph.precision))) : parseFloat(arg)
+                         break
+                     case 'o':
+@@ -95,13 +100,13 @@
+
+                     case 's':
+                         arg = String(arg)
+-                        arg = (ph.precision ? arg.substring(0, ph.precision) : arg)
++                        arg = (ph.precision !== undefined ? arg.substring(0, ph.precision) : arg)
+                         break
+                     case 't':
+                         arg = String(!!arg)
+-                        arg = (ph.precision ? arg.substring(0, ph.precision) : arg)
++                        arg = (ph.precision !== undefined ? arg.substring(0, ph.precision) : arg)
+                         break
+                     case 'T':
+                         arg = Object.prototype.toString.call(arg).slice(8, -1).toLowerCase()
+-                        arg = (ph.precision ? arg.substring(0, ph.precision) : arg)
++                        arg = (ph.precision !== undefined ? arg.substring(0, ph.precision) : arg)
+                         break
+                     case 'u':
+@@ -110,5 +115,5 @@
+
+                     case 'v':
+                         arg = arg.valueOf()
+-                        arg = (ph.precision ? arg.substring(0, ph.precision) : arg)
++                        arg = (ph.precision !== undefined ? arg.substring(0, ph.precision) : arg)
+                         break
+                     case 'x':
+@@ -131,5 +136,5 @@
+
+                     }
+                     pad_character = ph.pad_char ? ph.pad_char === '0' ? '0' : ph.pad_char.charAt(1) : ' '
+-                    pad_length = ph.width - (sign + arg).length
++                    pad_length = (ph.width || 0) - (sign + arg).length
+                     pad = ph.width ? (pad_length > 0 ? pad_character.repeat(pad_length) : '') : ''
+                     output += ph.align ? sign + arg + pad : (pad_character === '0' ? sign + pad + arg : pad + sign + arg)
+@@ -141,4 +146,5 @@
+
+ 
+     var sprintf_cache = Object.create(null)
++    var sprintf_cache_size = 0
+ 
+     function sprintf_parse(fmt) {
+@@ -185,4 +191,16 @@
+
+                 }
+ 
++                var width = match[6] !== undefined ? parseInt(match[6], 10) : undefined
++                var precision = match[7] !== undefined ? parseInt(match[7], 10) : undefined
++                if (width !== undefined && (isNaN(width) || width > MAX_WIDTH)) {
++                    throw new RangeError('[sprintf] width specifier exceeds maximum allowed limit (' + MAX_WIDTH + ')')
++                }
++                if (precision !== undefined && (isNaN(precision) || precision > MAX_PRECISION)) {
++                    throw new RangeError('[sprintf] precision specifier exceeds maximum allowed limit (' + MAX_PRECISION + ')')
++                }
++                if (re.number.test(match[8]) && precision !== undefined && precision > MAX_NUMERIC_PRECISION) {
++                    throw new RangeError('[sprintf] numeric precision specifier exceeds maximum allowed limit (' + MAX_NUMERIC_PRECISION + ')')
++                }
++
+                 parse_tree.push(
+                     {
+@@ -193,6 +211,6 @@
+
+                         pad_char:    match[4],
+                         align:       match[5],
+-                        width:       match[6],
+-                        precision:   match[7],
++                        width:       width,
++                        precision:   precision,
+                         type:        match[8]
+                     }
+@@ -204,4 +222,9 @@
+
+             _fmt = _fmt.substring(match[0].length)
+         }
++        if (sprintf_cache_size >= MAX_CACHE_ENTRIES) {
++            sprintf_cache = Object.create(null)
++            sprintf_cache_size = 0
++        }
++        sprintf_cache_size++
+         return sprintf_cache[fmt] = parse_tree
+     }
+@@ -210,5 +233,4 @@
+
+      * export to either browser or node.js
+      */
+-    /* eslint-disable quote-props */
+     if (typeof exports !== 'undefined') {
+         exports['sprintf'] = sprintf
+@@ -228,4 +250,3 @@
+
+         }
+     }
+-    /* eslint-enable quote-props */
+-}(); // eslint-disable-line
++}();

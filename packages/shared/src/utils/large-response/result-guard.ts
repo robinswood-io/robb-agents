@@ -19,7 +19,7 @@ export interface HandleLargeResponseOptions {
   /** Context about the tool call */
   context: SummarizationContext;
   /** Optional summarize callback — typically agent.getSummarizeCallback() */
-  summarize?: (prompt: string) => Promise<string | null>;
+  summarize?: ((prompt: string) => Promise<string | null>) | undefined;
   /** Active model's context window — see {@link guardLargeResult}. */
   contextWindow?: number;
 }
@@ -108,9 +108,13 @@ export async function guardLargeResult(
   const result = await handleLargeResponse({
     text,
     sessionPath: opts.sessionPath,
-    context: { toolName: opts.toolName, input: opts.input, intent: opts.intent },
-    summarize: opts.summarize,
-    contextWindow: opts.contextWindow,
+    context: {
+      toolName: opts.toolName,
+      ...(opts.input !== undefined ? { input: opts.input } : {}),
+      ...(opts.intent !== undefined ? { intent: opts.intent } : {}),
+    },
+    ...(opts.summarize !== undefined ? { summarize: opts.summarize } : {}),
+    ...(opts.contextWindow !== undefined ? { contextWindow: opts.contextWindow } : {}),
   });
   return result?.message ?? null;
 }
@@ -190,13 +194,15 @@ export async function handleLargeResponse(
   }
 
   // 3. Format message
+  const preview = summary ? undefined : buildHeadTailPreview(text);
+  const resultMetadataJson = extractLargeResultMetadataJson(text, context);
   const message = formatLargeResponseMessage({
     estimatedTokens,
     relativePath,
     absolutePath,
-    summary,
-    preview: summary ? undefined : buildHeadTailPreview(text),
-    resultMetadataJson: extractLargeResultMetadataJson(text, context),
+    ...(summary !== undefined ? { summary } : {}),
+    ...(preview !== undefined ? { preview } : {}),
+    ...(resultMetadataJson !== undefined ? { resultMetadataJson } : {}),
     fullDataSha256: createHash('sha256').update(text).digest('hex'),
   });
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { parseJsonObject } from '../packages/shared/src/utils/json.ts';
 /**
  * Build script for standalone Craft Agent server.
  *
@@ -121,8 +122,8 @@ function createRootConfig(config: ServerBuildConfig): void {
       if (!existsSync(pkgJsonPath)) continue;
 
       try {
-        const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
-        const name: string = pkgJson.name || '';
+        const pkgJson = parseJsonObject(readFileSync(pkgJsonPath, 'utf-8'));
+        const name = typeof pkgJson['name'] === 'string' ? pkgJson['name'] : '';
         if (name.startsWith('@craft-agent/')) {
           const shortName = name.replace('@craft-agent/', '');
           const linkPath = join(scopeDir, shortName);
@@ -289,7 +290,7 @@ echo ""
 // ---------------------------------------------------------------------------
 
 function createDockerFiles(config: ServerBuildConfig): void {
-  const { outputDir, version } = config;
+  const { outputDir } = config;
 
   const dockerfile = `FROM oven/bun:1.3-slim
 
@@ -387,8 +388,9 @@ async function main(): Promise<void> {
   }
 
   // Read version from electron package.json
-  const electronPkg = JSON.parse(readFileSync(join(electronDir, 'package.json'), 'utf-8'));
-  const version: string = electronPkg.version;
+  const electronPkg = parseJsonObject(readFileSync(join(electronDir, 'package.json'), 'utf-8'));
+  const version = electronPkg['version'];
+  if (typeof version !== 'string' || !version) throw new Error('Electron package version is missing');
 
   const outputDir = join(rootDir, values.output!);
 

@@ -12,13 +12,13 @@ export class SessionManager implements ISessionManager {
   private emitExecutionTelemetry(...args: SessionOperationArguments<'emitExecutionTelemetry'>): SessionOperationResult<'emitExecutionTelemetry'> {
     return operations.emitExecutionTelemetry({ owner: this, state: this.runtimeState }, ...args);
   }
-  private startGenerationTelemetry(...args: SessionOperationArguments<'startGenerationTelemetry'>): SessionOperationResult<'startGenerationTelemetry'> {
+  /** @internal */ public startGenerationTelemetry(...args: SessionOperationArguments<'startGenerationTelemetry'>): SessionOperationResult<'startGenerationTelemetry'> {
     return operations.startGenerationTelemetry({ owner: this, state: this.runtimeState }, ...args);
   }
   private finishGenerationTelemetry(...args: SessionOperationArguments<'finishGenerationTelemetry'>): SessionOperationResult<'finishGenerationTelemetry'> {
     return operations.finishGenerationTelemetry({ owner: this, state: this.runtimeState }, ...args);
   }
-  private finishAllGenerationTelemetry(...args: SessionOperationArguments<'finishAllGenerationTelemetry'>): SessionOperationResult<'finishAllGenerationTelemetry'> {
+  /** @internal */ public finishAllGenerationTelemetry(...args: SessionOperationArguments<'finishAllGenerationTelemetry'>): SessionOperationResult<'finishAllGenerationTelemetry'> {
     return operations.finishAllGenerationTelemetry({ owner: this, state: this.runtimeState }, ...args);
   }
   waitForInit(...args: SessionOperationArguments<'waitForInit'>): SessionOperationResult<'waitForInit'> {
@@ -42,7 +42,7 @@ export class SessionManager implements ISessionManager {
   onClientDisconnected(...args: SessionOperationArguments<'onClientDisconnected'>): SessionOperationResult<'onClientDisconnected'> {
     return operations.onClientDisconnected({ owner: this, state: this.runtimeState }, ...args);
   }
-  private closePendingPermissionRequestsForStop(...args: SessionOperationArguments<'closePendingPermissionRequestsForStop'>): SessionOperationResult<'closePendingPermissionRequestsForStop'> {
+  /** @internal */ public closePendingPermissionRequestsForStop(...args: SessionOperationArguments<'closePendingPermissionRequestsForStop'>): SessionOperationResult<'closePendingPermissionRequestsForStop'> {
     return operations.closePendingPermissionRequestsForStop({ owner: this, state: this.runtimeState }, ...args);
   }
   setupConfigWatcher(...args: SessionOperationArguments<'setupConfigWatcher'>): SessionOperationResult<'setupConfigWatcher'> {
@@ -51,7 +51,7 @@ export class SessionManager implements ISessionManager {
   notifyConfigFileChange(...args: SessionOperationArguments<'notifyConfigFileChange'>): SessionOperationResult<'notifyConfigFileChange'> {
     return operations.notifyConfigFileChange({ owner: this, state: this.runtimeState }, ...args);
   }
-  private buildSessionSourceServers(...args: SessionOperationArguments<'buildSessionSourceServers'>): SessionOperationResult<'buildSessionSourceServers'> {
+  /** @internal */ public buildSessionSourceServers(...args: SessionOperationArguments<'buildSessionSourceServers'>): SessionOperationResult<'buildSessionSourceServers'> {
     return operations.buildSessionSourceServers({ owner: this, state: this.runtimeState }, ...args);
   }
   reinitializeAuth(...args: SessionOperationArguments<'reinitializeAuth'>): SessionOperationResult<'reinitializeAuth'> {
@@ -87,16 +87,16 @@ export class SessionManager implements ISessionManager {
   private enqueueAutomaticTurnRecovery(...args: SessionOperationArguments<'enqueueAutomaticTurnRecovery'>): SessionOperationResult<'enqueueAutomaticTurnRecovery'> {
     return operations.enqueueAutomaticTurnRecovery({ owner: this, state: this.runtimeState }, ...args);
   }
-  private resumePendingTurnAfterRestart(...args: SessionOperationArguments<'resumePendingTurnAfterRestart'>): SessionOperationResult<'resumePendingTurnAfterRestart'> {
+  /** @internal */ public resumePendingTurnAfterRestart(...args: SessionOperationArguments<'resumePendingTurnAfterRestart'>): SessionOperationResult<'resumePendingTurnAfterRestart'> {
     return operations.resumePendingTurnAfterRestart({ owner: this, state: this.runtimeState }, ...args);
   }
-  private resumePendingTurnsAfterRestart(...args: SessionOperationArguments<'resumePendingTurnsAfterRestart'>): SessionOperationResult<'resumePendingTurnsAfterRestart'> {
+  /** @internal */ public resumePendingTurnsAfterRestart(...args: SessionOperationArguments<'resumePendingTurnsAfterRestart'>): SessionOperationResult<'resumePendingTurnsAfterRestart'> {
     return operations.resumePendingTurnsAfterRestart({ owner: this, state: this.runtimeState }, ...args);
   }
   private scheduleDeferredAutomaticRetry(...args: SessionOperationArguments<'scheduleDeferredAutomaticRetry'>): SessionOperationResult<'scheduleDeferredAutomaticRetry'> {
     return operations.scheduleDeferredAutomaticRetry({ owner: this, state: this.runtimeState }, ...args);
   }
-  private reconcileRecoveredTerminalStatus(...args: SessionOperationArguments<'reconcileRecoveredTerminalStatus'>): SessionOperationResult<'reconcileRecoveredTerminalStatus'> {
+  /** @internal */ public reconcileRecoveredTerminalStatus(...args: SessionOperationArguments<'reconcileRecoveredTerminalStatus'>): SessionOperationResult<'reconcileRecoveredTerminalStatus'> {
     return operations.reconcileRecoveredTerminalStatus({ owner: this, state: this.runtimeState }, ...args);
   }
   private claimAutomaticAdmission(...args: SessionOperationArguments<'claimAutomaticAdmission'>): SessionOperationResult<'claimAutomaticAdmission'> {
@@ -111,13 +111,13 @@ export class SessionManager implements ISessionManager {
   private persistSession(...args: SessionOperationArguments<'persistSession'>): SessionOperationResult<'persistSession'> {
     return operations.persistSession({ owner: this, state: this.runtimeState }, ...args);
   }
-  private emitObjectiveChanged(...args: SessionOperationArguments<'emitObjectiveChanged'>): SessionOperationResult<'emitObjectiveChanged'> {
+  /** @internal */ public emitObjectiveChanged(...args: SessionOperationArguments<'emitObjectiveChanged'>): SessionOperationResult<'emitObjectiveChanged'> {
     return operations.emitObjectiveChanged({ owner: this, state: this.runtimeState }, ...args);
   }
-  private reconcileRetainedTerminalMachineInbox(...args: SessionOperationArguments<'reconcileRetainedTerminalMachineInbox'>): SessionOperationResult<'reconcileRetainedTerminalMachineInbox'> {
+  /** @internal */ public reconcileRetainedTerminalMachineInbox(...args: SessionOperationArguments<'reconcileRetainedTerminalMachineInbox'>): SessionOperationResult<'reconcileRetainedTerminalMachineInbox'> {
     return operations.reconcileRetainedTerminalMachineInbox({ owner: this, state: this.runtimeState }, ...args);
   }
-  private enqueuePersist(...args: SessionOperationArguments<'enqueuePersist'>): SessionOperationResult<'enqueuePersist'> {
+  /** @internal */ public enqueuePersist(...args: SessionOperationArguments<'enqueuePersist'>): SessionOperationResult<'enqueuePersist'> {
     return operations.enqueuePersist({ owner: this, state: this.runtimeState }, ...args);
   }
   flushSession(...args: SessionOperationArguments<'flushSession'>): SessionOperationResult<'flushSession'> {
@@ -129,7 +129,7 @@ export class SessionManager implements ISessionManager {
   flushAllSessions(...args: SessionOperationArguments<'flushAllSessions'>): SessionOperationResult<'flushAllSessions'> {
     return operations.flushAllSessions({ owner: this, state: this.runtimeState }, ...args);
   }
-  private sendAuthenticatedInternalContinuation(...args: SessionOperationArguments<'sendAuthenticatedInternalContinuation'>): SessionOperationResult<'sendAuthenticatedInternalContinuation'> {
+  /** @internal */ public sendAuthenticatedInternalContinuation(...args: SessionOperationArguments<'sendAuthenticatedInternalContinuation'>): SessionOperationResult<'sendAuthenticatedInternalContinuation'> {
     return operations.sendAuthenticatedInternalContinuation({ owner: this, state: this.runtimeState }, ...args);
   }
   isPendingOAuthRequest(...args: SessionOperationArguments<'isPendingOAuthRequest'>): SessionOperationResult<'isPendingOAuthRequest'> {
@@ -210,7 +210,7 @@ export class SessionManager implements ISessionManager {
   createSession(...args: SessionOperationArguments<'createSession'>): SessionOperationResult<'createSession'> {
     return operations.createSession({ owner: this, state: this.runtimeState }, ...args);
   }
-  private performCreateSession(...args: SessionOperationArguments<'performCreateSession'>): SessionOperationResult<'performCreateSession'> {
+  /** @internal */ public performCreateSession(...args: SessionOperationArguments<'performCreateSession'>): SessionOperationResult<'performCreateSession'> {
     return operations.performCreateSession({ owner: this, state: this.runtimeState }, ...args);
   }
   notifySessionCreated(...args: SessionOperationArguments<'notifySessionCreated'>): SessionOperationResult<'notifySessionCreated'> {
@@ -228,19 +228,19 @@ export class SessionManager implements ISessionManager {
   cancelProcessingAndWait(...args: SessionOperationArguments<'cancelProcessingAndWait'>): SessionOperationResult<'cancelProcessingAndWait'> {
     return operations.cancelProcessingAndWait({ owner: this, state: this.runtimeState }, ...args);
   }
-  private performCancelProcessingAndWait(...args: SessionOperationArguments<'performCancelProcessingAndWait'>): SessionOperationResult<'performCancelProcessingAndWait'> {
+  /** @internal */ public performCancelProcessingAndWait(...args: SessionOperationArguments<'performCancelProcessingAndWait'>): SessionOperationResult<'performCancelProcessingAndWait'> {
     return operations.performCancelProcessingAndWait({ owner: this, state: this.runtimeState }, ...args);
   }
   private disposeManagedAgentRuntime(...args: SessionOperationArguments<'disposeManagedAgentRuntime'>): SessionOperationResult<'disposeManagedAgentRuntime'> {
     return operations.disposeManagedAgentRuntime({ owner: this, state: this.runtimeState }, ...args);
   }
-  private tryRefreshAgentRuntime(...args: SessionOperationArguments<'tryRefreshAgentRuntime'>): SessionOperationResult<'tryRefreshAgentRuntime'> {
+  /** @internal */ public tryRefreshAgentRuntime(...args: SessionOperationArguments<'tryRefreshAgentRuntime'>): SessionOperationResult<'tryRefreshAgentRuntime'> {
     return operations.tryRefreshAgentRuntime({ owner: this, state: this.runtimeState }, ...args);
   }
   refreshConnectionRuntime(...args: SessionOperationArguments<'refreshConnectionRuntime'>): SessionOperationResult<'refreshConnectionRuntime'> {
     return operations.refreshConnectionRuntime({ owner: this, state: this.runtimeState }, ...args);
   }
-  private applyExternalActionPolicyToRuntime(...args: SessionOperationArguments<'applyExternalActionPolicyToRuntime'>): SessionOperationResult<'applyExternalActionPolicyToRuntime'> {
+  /** @internal */ public applyExternalActionPolicyToRuntime(...args: SessionOperationArguments<'applyExternalActionPolicyToRuntime'>): SessionOperationResult<'applyExternalActionPolicyToRuntime'> {
     return operations.applyExternalActionPolicyToRuntime({ owner: this, state: this.runtimeState }, ...args);
   }
   refreshWorkspaceExternalActionPolicy(...args: SessionOperationArguments<'refreshWorkspaceExternalActionPolicy'>): SessionOperationResult<'refreshWorkspaceExternalActionPolicy'> {
@@ -249,7 +249,7 @@ export class SessionManager implements ISessionManager {
   restartAgentRuntime(...args: SessionOperationArguments<'restartAgentRuntime'>): SessionOperationResult<'restartAgentRuntime'> {
     return operations.restartAgentRuntime({ owner: this, state: this.runtimeState }, ...args);
   }
-  private loadAgentContextWindowPreference(...args: SessionOperationArguments<'loadAgentContextWindowPreference'>): SessionOperationResult<'loadAgentContextWindowPreference'> {
+  /** @internal */ public loadAgentContextWindowPreference(...args: SessionOperationArguments<'loadAgentContextWindowPreference'>): SessionOperationResult<'loadAgentContextWindowPreference'> {
     return operations.loadAgentContextWindowPreference({ owner: this, state: this.runtimeState }, ...args);
   }
   private getOrCreateAgent(...args: SessionOperationArguments<'getOrCreateAgent'>): SessionOperationResult<'getOrCreateAgent'> {
@@ -321,7 +321,7 @@ export class SessionManager implements ISessionManager {
   clearActiveViewingSession(...args: SessionOperationArguments<'clearActiveViewingSession'>): SessionOperationResult<'clearActiveViewingSession'> {
     return operations.clearActiveViewingSession({ owner: this, state: this.runtimeState }, ...args);
   }
-  private isSessionBeingViewed(...args: SessionOperationArguments<'isSessionBeingViewed'>): SessionOperationResult<'isSessionBeingViewed'> {
+  /** @internal */ public isSessionBeingViewed(...args: SessionOperationArguments<'isSessionBeingViewed'>): SessionOperationResult<'isSessionBeingViewed'> {
     return operations.isSessionBeingViewed({ owner: this, state: this.runtimeState }, ...args);
   }
   markSessionRead(...args: SessionOperationArguments<'markSessionRead'>): SessionOperationResult<'markSessionRead'> {
@@ -366,7 +366,7 @@ export class SessionManager implements ISessionManager {
   sendMessage(...args: SessionOperationArguments<'sendMessage'>): SessionOperationResult<'sendMessage'> {
     return operations.sendMessage({ owner: this, state: this.runtimeState }, ...args);
   }
-  private performSendMessage(...args: SessionOperationArguments<'performSendMessage'>): SessionOperationResult<'performSendMessage'> {
+  /** @internal */ public performSendMessage(...args: SessionOperationArguments<'performSendMessage'>): SessionOperationResult<'performSendMessage'> {
     return operations.performSendMessage({ owner: this, state: this.runtimeState }, ...args);
   }
   cancelProcessing(...args: SessionOperationArguments<'cancelProcessing'>): SessionOperationResult<'cancelProcessing'> {
@@ -378,7 +378,7 @@ export class SessionManager implements ISessionManager {
   recordExecutionProof(...args: SessionOperationArguments<'recordExecutionProof'>): SessionOperationResult<'recordExecutionProof'> {
     return operations.recordExecutionProof({ owner: this, state: this.runtimeState }, ...args);
   }
-  private emitSessionComplete(...args: SessionOperationArguments<'emitSessionComplete'>): SessionOperationResult<'emitSessionComplete'> {
+  /** @internal */ public emitSessionComplete(...args: SessionOperationArguments<'emitSessionComplete'>): SessionOperationResult<'emitSessionComplete'> {
     return operations.emitSessionComplete({ owner: this, state: this.runtimeState }, ...args);
   }
   private onProcessingStopped(...args: SessionOperationArguments<'onProcessingStopped'>): SessionOperationResult<'onProcessingStopped'> {
@@ -390,7 +390,7 @@ export class SessionManager implements ISessionManager {
   killShell(...args: SessionOperationArguments<'killShell'>): SessionOperationResult<'killShell'> {
     return operations.killShell({ owner: this, state: this.runtimeState }, ...args);
   }
-  private markOrphanedBackgroundTasks(...args: SessionOperationArguments<'markOrphanedBackgroundTasks'>): SessionOperationResult<'markOrphanedBackgroundTasks'> {
+  /** @internal */ public markOrphanedBackgroundTasks(...args: SessionOperationArguments<'markOrphanedBackgroundTasks'>): SessionOperationResult<'markOrphanedBackgroundTasks'> {
     return operations.markOrphanedBackgroundTasks({ owner: this, state: this.runtimeState }, ...args);
   }
   listBackgroundTasks(...args: SessionOperationArguments<'listBackgroundTasks'>): SessionOperationResult<'listBackgroundTasks'> {

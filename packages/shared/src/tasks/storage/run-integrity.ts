@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { createHash } from "crypto";
 import type { RunLogEntry } from './run-types.ts';
 import { RUN_LOG } from './run-types.ts';
@@ -30,7 +31,7 @@ export function errnoCode(error: unknown): string | undefined {
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === 'object' && value !== null && !isUnknownArray(value);
 }
 
 export function checksumFor(entry: RunLogEntry, sequence: number, previousChecksum: string): string {
@@ -47,20 +48,20 @@ export function checksumFor(entry: RunLogEntry, sequence: number, previousChecks
 function parseIntegrity(value: unknown): RunLogIntegrity | null {
   if (!isRecord(value)) return null;
   if (
-    value.version !== RUN_LOG_INTEGRITY_VERSION ||
-    typeof value.sequence !== 'number' ||
-    !Number.isInteger(value.sequence) ||
-    value.sequence <= 0 ||
-    typeof value.previousChecksum !== 'string' ||
-    typeof value.checksum !== 'string'
+    value["version"] !== RUN_LOG_INTEGRITY_VERSION ||
+    typeof value["sequence"] !== 'number' ||
+    !Number.isInteger(value["sequence"]) ||
+    value["sequence"] <= 0 ||
+    typeof value["previousChecksum"] !== 'string' ||
+    typeof value["checksum"] !== 'string'
   ) {
     throw new Error('Run log integrity metadata is invalid');
   }
   return {
     version: RUN_LOG_INTEGRITY_VERSION,
-    sequence: value.sequence,
-    previousChecksum: value.previousChecksum,
-    checksum: value.checksum,
+    sequence: value["sequence"],
+    previousChecksum: value["previousChecksum"],
+    checksum: value["checksum"],
   };
 }
 
@@ -109,7 +110,7 @@ export function parseRunLogText(text: string): ParsedRunLog {
       throw new Error(`Run log integrity failure: record ${index + 1} is not an object`);
     }
 
-    const integrity = parseIntegrity(raw._integrity);
+    const integrity = parseIntegrity(raw["_integrity"]);
     const { _integrity: _ignored, ...entryFields } = raw;
     const entry = entryFields as RunLogEntry;
 

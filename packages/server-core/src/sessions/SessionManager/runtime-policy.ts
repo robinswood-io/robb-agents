@@ -81,7 +81,7 @@ export async function withRuntimeDisposeTimeout(operation: Promise<void>, label:
 }
 
 export function resolveSessionRuntimeIdleTimeoutMs(): number {
-  const configured = process.env.CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS
+  const configured = process.env["CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS"]
   if (configured === '0') return 0
   if (!configured) return DEFAULT_SESSION_RUNTIME_IDLE_TIMEOUT_MS
 

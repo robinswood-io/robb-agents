@@ -1,3 +1,4 @@
+import type { SnapshotInput } from '@craft-agent/shared/utils/json';
 import { useCallback } from 'react';
 
 import type { Session, SessionStatus } from '../shared/types';
@@ -9,7 +10,7 @@ interface useAppSessionActionsInput {
   syncSessionOptionsFromSession: (session: Session) => void
   store: import("jotai").Store
   removeSession: (sessionId: string) => void
-  updateSessionById: (sessionId: string, updates: Partial<Session> | ((session: Session) => Partial<Session>)) => void
+  updateSessionById: (sessionId: string, updates: Partial<SnapshotInput<Session>> | ((session: Session) => Partial<SnapshotInput<Session>>)) => void
   windowWorkspaceId: string | null
 }
 

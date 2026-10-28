@@ -1,3 +1,4 @@
+import { SessionManager as FixtureSessionManager } from "../sessions/SessionManager";
 import { offlineMissionRouteOptions, withOfflineMissionRoutes } from './testing/mission-route-fixture.ts';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { createHash } from 'node:crypto';
@@ -302,11 +303,11 @@ describe('MissionRuntimeService specialized profiles', () => {
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), 'mission-specialized-profile-'));
     executor = new CapturingExecutor();
-    sessionManager = {
+    sessionManager = Object.assign(new FixtureSessionManager(), ({
       waitForInit: async () => {},
       getSessions: () => [],
       cancelProcessing: async () => {},
-    } as unknown as ISessionManager;
+    } satisfies Partial<ISessionManager>));
   });
   afterEach(() => rmSync(root, { recursive: true, force: true }));
 
@@ -439,14 +440,14 @@ describe('MissionRuntimeService specialized profiles', () => {
       thinkingLevel: 'medium',
     });
     expect(ordinary.specializedProfile).toBeUndefined();
-    expect(ordinary.profile).toMatchObject({
+    expect<unknown>(ordinary.profile).toMatchObject({
       llmConnection: 'openai',
-      model: expect.stringMatching(/^pi\/gpt-5\.6-/),
-      thinkingLevel: expect.any(String),
+      model: (expect.stringMatching(/^pi\/gpt-5\.6-/) as unknown),
+      thinkingLevel: (expect.any(String) as unknown),
     });
     const snapshot = await runtime.getMission('workspace-1', 'mixed-routes');
-    expect(snapshot.workItems['ordinary-task']?.executionBinding?.missionRoute).toMatchObject({
-      routeDecisionSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+    expect<unknown>(snapshot.workItems['ordinary-task']?.executionBinding?.missionRoute).toMatchObject({
+      routeDecisionSha256: (expect.stringMatching(/^[a-f0-9]{64}$/) as unknown),
       agentProfileId: 'ordinary-worker',
       connectionSlug: 'openai',
       model: ordinary.profile.model,

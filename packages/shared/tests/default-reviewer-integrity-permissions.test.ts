@@ -14,7 +14,7 @@ const permissions = JSON.parse(readFileSync(permissionsPath, 'utf8')) as Default
 const patterns: CompiledBashPattern[] = permissions.allowedBashPatterns.map(entry => ({
   regex: new RegExp(entry.pattern),
   source: entry.pattern,
-  comment: entry.comment,
+  ...(entry.comment !== undefined ? { comment: entry.comment } : {}),
 }));
 const SAFE_GIT = 'git --no-optional-locks -c core.fsmonitor=false -c core.hooksPath=/dev/null -c log.showSignature=false -c format.pretty=medium --no-pager';
 

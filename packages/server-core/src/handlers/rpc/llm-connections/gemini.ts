@@ -88,8 +88,8 @@ export function registerGeminiAuthHandlers(server: RpcServer, deps: HandlerDeps)
 
       await credentialManager.setLlmOAuth(flow.connectionSlug, {
         accessToken: tokens.accessToken,
-        idToken: tokens.idToken,
-        refreshToken: tokens.refreshToken,
+        ...(tokens.idToken !== undefined ? { idToken: tokens.idToken } : {}),
+        ...(tokens.refreshToken !== undefined ? { refreshToken: tokens.refreshToken } : {}),
         expiresAt: tokens.expiresAt,
       })
 
@@ -129,7 +129,7 @@ export function registerGeminiAuthHandlers(server: RpcServer, deps: HandlerDeps)
       const isExpired = creds.expiresAt && Date.now() > creds.expiresAt - 5 * 60 * 1000
       return {
         authenticated: !isExpired || !!creds.refreshToken,
-        expiresAt: creds.expiresAt,
+        ...(creds.expiresAt !== undefined ? { expiresAt: creds.expiresAt } : {}),
         hasRefreshToken: !!creds.refreshToken,
       }
     } catch (error) {

@@ -51,15 +51,15 @@ function checkMcp(
     activeSourceSlugs: [sourceSlug],
     allSourceSlugs: [sourceSlug],
     hasSourceActivation: false,
-    externalActionPolicy: options?.externalActionPolicy,
-    objectiveMutationAuthorized: options?.objectiveMutationAuthorized,
-    objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized,
-    objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments,
-    authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments,
-    dataFolderPath: options?.dataFolderPath,
-    declaredToolCapabilities: options?.declaredToolCapabilities,
+    ...(options?.externalActionPolicy !== undefined ? { externalActionPolicy: options?.externalActionPolicy } : {}),
+    ...(options?.objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized: options?.objectiveMutationAuthorized } : {}),
+    ...(options?.objectiveSensitiveActionAuthorized !== undefined ? { objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized } : {}),
+    ...(options?.objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments } : {}),
+    ...(options?.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments } : {}),
+    ...(options?.dataFolderPath !== undefined ? { dataFolderPath: options?.dataFolderPath } : {}),
+    ...(options?.declaredToolCapabilities !== undefined ? { declaredToolCapabilities: options?.declaredToolCapabilities } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 
@@ -112,7 +112,7 @@ describe('sensitive external action classifier', () => {
       server: 'prod-server', command: 'git push origin main',
     });
     expect(connectorPush).toMatchObject({ category: 'git_push', promptType: 'mcp_mutation' });
-    expect(connectorPush?.targetCandidates).toEqual(expect.arrayContaining([
+    expect<unknown>(connectorPush?.targetCandidates).toEqual(expect.arrayContaining([
       'unresolved remote scope', 'origin main',
     ]));
 
@@ -141,7 +141,7 @@ PY"`,
       cwd: '/opt/ia-webdev/agent-dev/worktrees/orion/scotland-ai-executive-day-20260930',
       command: 'touch apps/web/lib/orion/campaign.ts',
     });
-    expect(action?.targetCandidates).toEqual(expect.arrayContaining(['dev', 'orion', 'unresolved remote scope']));
+    expect<unknown>(action?.targetCandidates).toEqual(expect.arrayContaining(['dev', 'orion', 'unresolved remote scope']));
     expect(action?.targetCandidates).not.toContain('ia-webdev');
     const manager = classifySensitiveExternalAction('mcp__rbw-servers__ssh_execute', {
       server: 'dev', cwd: '/opt/ia-webdev/agent-dev', command: 'touch marker',
@@ -227,7 +227,7 @@ PY"`,
       },
     )).toMatchObject({
       type: 'prompt',
-      command: expect.stringContaining('dev:/srv/workspace/zero/.zero-devlogin-patch.py'),
+      command: (expect.stringContaining('dev:/srv/workspace/zero/.zero-devlogin-patch.py') as unknown),
       sensitiveActionTargets: ['dev', 'zero', 'unresolved remote scope'],
       requiresExplicitConfirmation: true,
     });
@@ -352,7 +352,7 @@ PY"`,
       expect(checkMcp('allow-all', 'mcp__rbw-servers__ssh_execute', input, 'Corrige Zero.', {
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveAuthorizationSegments: ['Corrige Zero.'],
-      })).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+      })).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
       expect(checkMcp('allow-all', 'mcp__rbw-servers__ssh_execute', input, 'Corrige Other sur le serveur dev.', {
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveAuthorizationSegments: ['Corrige Other sur le serveur dev.'],
@@ -370,7 +370,7 @@ PY"`,
     expect(checkMcp('allow-all', 'mcp__rbw-servers__ssh_execute', destructive, 'Corrige Other.', {
       externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
       objectiveAuthorizationSegments: ['Corrige Other.'],
-    })).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    })).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     expect(checkMcp('allow-all', 'mcp__rbw-servers__ssh_execute', destructive, 'Supprime les fichiers Other sur le serveur dev.', {
       externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
       objectiveAuthorizationSegments: ['Supprime les fichiers Other sur le serveur dev.'],

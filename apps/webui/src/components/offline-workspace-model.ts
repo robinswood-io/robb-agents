@@ -75,29 +75,29 @@ export interface OfflineWorkspaceProps {
   drafts: readonly OfflineDraftView[]
   outbox: readonly OfflineOutboxItemView[]
   retentionDays: number
-  lastSyncedAt?: OfflineTimestamp
-  storageBytes?: number
-  storageLimitBytes?: number
-  draftMaxChars?: number
-  maxOutboxItems?: number
-  selectedSnapshotId?: string
-  enablePending?: boolean
-  errorMessage?: string
-  retentionOptionsDays?: readonly number[]
-  onEnable?: () => MaybePromise
-  onRetry?: () => MaybePromise
-  onClose?: () => MaybePromise
-  onSelectSnapshot?: (sessionId: string) => MaybePromise
-  onPinText?: (candidate: OfflinePinnedTextCandidate) => MaybePromise
-  onUnpinText?: (pinId: string) => MaybePromise
-  onDraftChange?: (sessionId: string, text: string) => void
-  onAddToOutbox?: (sessionId: string, text: string) => MaybePromise
-  onReviewOutbox?: (itemId: string) => MaybePromise
-  onSendOutbox?: (itemId: string) => MaybePromise
-  onDeleteOutbox?: (itemId: string) => MaybePromise
-  onRetentionDaysChange?: (days: number) => MaybePromise
-  onExportOfflineData?: () => MaybePromise
-  onClearOfflineData?: () => MaybePromise
+  lastSyncedAt?: OfflineTimestamp | undefined
+  storageBytes?: number | undefined
+  storageLimitBytes?: number | undefined
+  draftMaxChars?: number | undefined
+  maxOutboxItems?: number | undefined
+  selectedSnapshotId?: string | undefined
+  enablePending?: boolean | undefined
+  errorMessage?: string | undefined
+  retentionOptionsDays?: readonly number[] | undefined
+  onEnable?: (() => MaybePromise) | undefined
+  onRetry?: (() => MaybePromise) | undefined
+  onClose?: (() => MaybePromise) | undefined
+  onSelectSnapshot?: ((sessionId: string) => MaybePromise) | undefined
+  onPinText?: ((candidate: OfflinePinnedTextCandidate) => MaybePromise) | undefined
+  onUnpinText?: ((pinId: string) => MaybePromise) | undefined
+  onDraftChange?: ((sessionId: string, text: string) => void) | undefined
+  onAddToOutbox?: ((sessionId: string, text: string) => MaybePromise) | undefined
+  onReviewOutbox?: ((itemId: string) => MaybePromise) | undefined
+  onSendOutbox?: ((itemId: string) => MaybePromise) | undefined
+  onDeleteOutbox?: ((itemId: string) => MaybePromise) | undefined
+  onRetentionDaysChange?: ((days: number) => MaybePromise) | undefined
+  onExportOfflineData?: (() => MaybePromise) | undefined
+  onClearOfflineData?: (() => MaybePromise) | undefined
 }
 
 export type MobilePane = 'sessions' | 'reader' | 'offline'

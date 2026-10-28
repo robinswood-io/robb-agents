@@ -181,7 +181,8 @@ export function toPrivacySafeTelemetryRecord(event: RobbExecutionTelemetryEvent)
       ...(correlation.evalRunId ? { evalRunId: correlation.evalRunId } : {}),
     },
   }
-  for (const [key, value] of Object.entries(event)) {
+  const eventEntries: Array<[string, unknown]> = Object.entries(event);
+  for (const [key, value] of eventEntries) {
     if (LOCAL_SAFE_FIELDS.has(key) && value !== undefined) record[key] = value
   }
   return record

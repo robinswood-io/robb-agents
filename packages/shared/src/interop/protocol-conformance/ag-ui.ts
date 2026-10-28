@@ -1,9 +1,10 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { randomUUID } from "node:crypto";
 import type { InteropConformanceCheck, InteropConformanceReport, InteropConformanceTransport } from './probe-types.ts';
 import { authorizationHeaders, check, endpointUrl, parseSseEvents, recordValue, report, stringValue } from './probe-types.ts';
 
 function validateAgUiSequence(events: Record<string, unknown>[], checks: InteropConformanceCheck[]): void {
-  const types = events.map((event) => stringValue(event.type)).filter((type): type is string => Boolean(type))
+  const types = events.map((event) => stringValue(event["type"])).filter((type): type is string => Boolean(type))
   check(checks, 'event stream', events.length > 0, 'SSE stream contains JSON events')
   check(checks, 'run start', types[0] === 'RUN_STARTED', 'first event is RUN_STARTED')
   check(
@@ -23,30 +24,30 @@ function validateAgUiSequence(events: Record<string, unknown>[], checks: Interop
   let validMessages = true
   let validStateDeltas = true
   for (const event of events) {
-    const type = stringValue(event.type)
-    const messageId = stringValue(event.messageId)
+    const type = stringValue(event["type"])
+    const messageId = stringValue(event["messageId"])
     if (type === 'TEXT_MESSAGE_START') {
-      validMessages = validMessages && Boolean(messageId) && event.role === 'assistant'
+      validMessages = validMessages && Boolean(messageId) && event["role"] === 'assistant'
       if (messageId) openMessages.add(messageId)
     }
     if (type === 'TEXT_MESSAGE_CONTENT') {
       validMessages = validMessages
         && Boolean(messageId && openMessages.has(messageId))
-        && Boolean(stringValue(event.delta))
+        && Boolean(stringValue(event["delta"]))
     }
     if (type === 'TEXT_MESSAGE_END') {
       validMessages = validMessages && Boolean(messageId && openMessages.delete(messageId))
     }
     if (type === 'STATE_DELTA') {
-      const delta = event.delta
+      const delta = event["delta"]
       validStateDeltas = validStateDeltas
-        && Array.isArray(delta)
-        && delta.every((operation) => {
+        && isUnknownArray(delta)
+        && delta.every((operation: unknown) => {
           const patch = recordValue(operation)
           return Boolean(
             patch
-            && ['add', 'remove', 'replace', 'move', 'copy', 'test'].includes(String(patch.op))
-            && typeof patch.path === 'string',
+            && ['add', 'remove', 'replace', 'move', 'copy', 'test'].includes(String(patch["op"]))
+            && typeof patch["path"] === 'string',
           )
         })
     }
@@ -124,7 +125,7 @@ export const fetchInteropConformanceTransport: InteropConformanceTransport = asy
     const response = await fetch(request.url, {
       method: request.method,
       headers: request.headers,
-      body: request.body,
+      ...(request.body !== undefined ? { body: request.body } : {}),
       signal: controller.signal,
     })
     return {

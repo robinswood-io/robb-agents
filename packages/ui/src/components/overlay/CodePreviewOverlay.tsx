@@ -5,7 +5,7 @@
  * File path badge provides "Open" / "Reveal in {file manager}" via PlatformContext.
  */
 
-import * as React from 'react'
+
 import { useTranslation } from 'react-i18next'
 import { BookOpen, PenLine } from 'lucide-react'
 import { PreviewOverlay } from './PreviewOverlay'
@@ -22,23 +22,23 @@ export interface CodePreviewOverlayProps {
   /** File path for language detection and display */
   filePath: string
   /** Language for syntax highlighting (auto-detected if not provided) */
-  language?: string
+  language?: string | undefined
   /** Mode: 'read' or 'write' */
-  mode?: 'read' | 'write'
+  mode?: 'read' | 'write' | undefined
   /** Starting line number (default: 1) */
-  startLine?: number
+  startLine?: number | undefined
   /** Total lines in original file (for display) */
-  totalLines?: number
+  totalLines?: number | undefined
   /** Number of lines shown */
-  numLines?: number
+  numLines?: number | undefined
   /** Theme mode */
-  theme?: 'light' | 'dark'
+  theme?: 'light' | 'dark' | undefined
   /** Error message if tool failed */
-  error?: string
+  error?: string | undefined
   /** Render inline without dialog (for playground) */
-  embedded?: boolean
+  embedded?: boolean | undefined
   /** Original shell command (for Codex reads) - shown above code */
-  command?: string
+  command?: string | undefined
 }
 
 export function CodePreviewOverlay({

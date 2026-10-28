@@ -71,17 +71,13 @@ export function savePreferences(prefs: UserPreferences): void {
 
 export function updatePreferences(updates: Partial<UserPreferences>): UserPreferences {
   const current = loadPreferences();
+  const location = updates.location ? { ...current.location, ...updates.location } : current.location;
+  const diffViewer = updates.diffViewer ? { ...current.diffViewer, ...updates.diffViewer } : current.diffViewer;
   const updated = {
     ...current,
     ...updates,
-    // Merge location if provided
-    location: updates.location
-      ? { ...current.location, ...updates.location }
-      : current.location,
-    // Merge diffViewer if provided
-    diffViewer: updates.diffViewer
-      ? { ...current.diffViewer, ...updates.diffViewer }
-      : current.diffViewer,
+    ...(location !== undefined ? { location } : {}),
+    ...(diffViewer !== undefined ? { diffViewer } : {}),
   };
   savePreferences(updated);
   return updated;

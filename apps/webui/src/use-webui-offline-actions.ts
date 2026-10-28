@@ -80,7 +80,7 @@ const updateOfflineDraft = useCallback((sessionId: string, text: string) => {
             return next
           })
         })
-        .catch((draftError) => {
+        .catch((draftError: unknown) => {
           setOfflineStorageError(draftError instanceof Error ? draftError.message : String(draftError))
         })
     }, 350)
@@ -173,9 +173,9 @@ const reviewOutboxItem = useCallback(async (itemId: string) => {
           canSend: true,
           contextChanged: result.contextChanged,
           reviewedAnchor: result.reviewedAnchor,
-          detail: result.contextChanged
-            ? translateRef.current('webui.offlineContextReviewRequired', 'The live conversation changed. Read it before confirming this send.')
-            : undefined,
+          ...(result.contextChanged ? {
+            detail: translateRef.current('webui.offlineContextReviewRequired', 'The live conversation changed. Read it before confirming this send.'),
+          } : {}),
         },
       }))
       return

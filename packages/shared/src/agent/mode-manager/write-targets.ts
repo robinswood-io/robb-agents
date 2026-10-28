@@ -85,7 +85,7 @@ export function looksLikePotentialWrite(command: string): boolean {
  * Get a helpful hint based on comparing target path to plans folder path.
  * Detects common mistakes and provides actionable guidance.
  */
-export function getPathHint(targetPath: string, plansFolderPath: string, dataFolderPath?: string): string | null {
+export function getPathHint(targetPath: string, plansFolderPath: string, _dataFolderPath?: string): string | null {
   const normalizedTarget = targetPath.replace(/\\/g, '/').toLowerCase();
   const normalizedPlans = plansFolderPath.replace(/\\/g, '/').toLowerCase();
 

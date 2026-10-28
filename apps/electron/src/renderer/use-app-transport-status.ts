@@ -18,7 +18,7 @@ const connectionState = useTransportConnectionState()
 const showTransportConnectionBanner = shouldShowTransportConnectionBanner(connectionState)
 
 const handleReconnectTransport = useCallback(() => {
-    void window.electronAPI.reconnectTransport().catch((error) => {
+    void window.electronAPI.reconnectTransport().catch((error: unknown) => {
       const message = error instanceof Error ? error.message : 'Unknown error'
       toast.error(t('toast.reconnectFailed'), { description: message })
     })

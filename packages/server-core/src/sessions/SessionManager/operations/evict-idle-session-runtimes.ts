@@ -22,7 +22,7 @@ function sessionOpFinishManagedAgentRuntimeDisposal(sessionOperationContext: Ses
         sessionOperationContext.state.runtimeDisposalsInFlight.delete(sessionId);
 }
 
-function sessionOpHasRunningBackgroundTasks(sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
+function sessionOpHasRunningBackgroundTasks(_sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
     for (const task of managed.backgroundTaskRegistry.values()) {
         if (task.status === 'running')
             return true;
@@ -92,7 +92,7 @@ function sessionOpStartRuntimeEvictionSweep(sessionOperationContext: SessionOper
         return;
     const intervalMs = Math.min(SESSION_RUNTIME_SWEEP_INTERVAL_MS, Math.max(MIN_SESSION_RUNTIME_IDLE_TIMEOUT_MS, Math.floor(sessionOperationContext.state.runtimeIdleTimeoutMs / 3)));
     sessionOperationContext.state.runtimeEvictionTimer = setInterval(() => {
-        void sessionOpEvictIdleSessionRuntimes(sessionOperationContext).catch(error => {
+        void sessionOpEvictIdleSessionRuntimes(sessionOperationContext).catch((error: unknown) => {
             sessionLog.warn('Idle runtime eviction sweep failed', {
                 error: error instanceof Error ? error.message : String(error),
             });
@@ -124,7 +124,7 @@ function sessionOpGetCollectionCacheScope(sessionOperationContext: SessionOperat
             return undefined;
         const workspace = managed.workspace.rootPath;
         const config = loadWorkspaceConfig(workspace);
-        const backend = resolveBackendContext({ sessionConnectionSlug: managed.llmConnection, workspaceDefaultConnectionSlug: config?.defaults?.defaultLlmConnection, managedModel: managed.model });
+        const backend = resolveBackendContext({ ...(managed.llmConnection !== undefined ? { sessionConnectionSlug: managed.llmConnection } : {}), ...(config?.defaults?.defaultLlmConnection !== undefined ? { workspaceDefaultConnectionSlug: config?.defaults?.defaultLlmConnection } : {}), ...(managed.model !== undefined ? { managedModel: managed.model } : {}) });
         if (!backend.connection)
             return undefined;
         const sources = loadCollectionCacheSources(workspace, managed.enabledSourceSlugs);

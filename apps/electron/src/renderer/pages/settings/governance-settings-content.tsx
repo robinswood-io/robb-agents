@@ -22,7 +22,7 @@ import { SPACE_ROLES, optionalPositiveNumber, isSpaceRole } from "./governance-s
 interface GovernanceSettingsContentProps {
   t: import("i18next").TFunction<"translation", undefined>
   selectableWorkspaces: import("@craft-agent/core").Workspace[]
-  workspaceId: string
+  workspaceId: string | null
   isSaving: boolean
   setSelectedWorkspaceId: React.Dispatch<React.SetStateAction<string | null>>
   profile: { schemaVersion: 1; space: { schemaVersion: 1; id: string; kind: "personal" | "team" | "client"; name: string; members: { actorId: string; role: "owner" | "admin" | "operator" | "validator" | "reader"; assignedBy: string; assignedAt: string; }[]; memory: { enabled: boolean; retentionDays: number; }; createdBy: string; createdAt: string; }; budgets: { warningPercent: number; missionMaxTokens?: number | undefined; missionMaxCostUsd?: number | undefined; }; audit: { sequence: number; spaceId: string; action: "member.role.changed" | "policy.versioned" | "playbook.versioned" | "connection.versioned" | "memory.exported" | "memory.purged"; actorId: string; targetId: string; timestamp: string; detailsHash: string; previousHash: string; hash: string; }[]; } | null

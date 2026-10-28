@@ -51,15 +51,15 @@ function checkMcp(
     activeSourceSlugs: [sourceSlug],
     allSourceSlugs: [sourceSlug],
     hasSourceActivation: false,
-    externalActionPolicy: options?.externalActionPolicy,
-    objectiveMutationAuthorized: options?.objectiveMutationAuthorized,
-    objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized,
-    objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments,
-    authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments,
-    dataFolderPath: options?.dataFolderPath,
-    declaredToolCapabilities: options?.declaredToolCapabilities,
+    ...(options?.externalActionPolicy !== undefined ? { externalActionPolicy: options?.externalActionPolicy } : {}),
+    ...(options?.objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized: options?.objectiveMutationAuthorized } : {}),
+    ...(options?.objectiveSensitiveActionAuthorized !== undefined ? { objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized } : {}),
+    ...(options?.objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments } : {}),
+    ...(options?.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments } : {}),
+    ...(options?.dataFolderPath !== undefined ? { dataFolderPath: options?.dataFolderPath } : {}),
+    ...(options?.declaredToolCapabilities !== undefined ? { declaredToolCapabilities: options?.declaredToolCapabilities } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 
@@ -115,7 +115,7 @@ describe('sensitive external action classifier', () => {
     expect(sedPrompt).toMatchObject({
       type: 'prompt',
       command: liveSedInput.command,
-      description: expect.stringContaining('mcp__rbw-servers__ssh_execute'),
+      description: (expect.stringContaining('mcp__rbw-servers__ssh_execute') as unknown),
       sensitiveActionTargets: ['dev', 'orion', 'unresolved remote scope'],
       requiresExplicitConfirmation: true,
     });
@@ -380,7 +380,7 @@ describe('sensitive external action classifier', () => {
       );
       expect(mixedSecretDecision).toMatchObject({
         type: 'block',
-        reason: expect.stringContaining('Split it into separate operations'),
+        reason: (expect.stringContaining('Split it into separate operations') as unknown),
       });
       expect(JSON.stringify(mixedSecretDecision)).not.toContain(privateKeyMaterial);
     }

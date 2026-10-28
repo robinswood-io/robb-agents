@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Stable production updater.
  *
@@ -110,14 +111,14 @@ autoUpdater.on('update-available', (info) => {
   }
 
   autoUpdateLog.info(`Stable update available: ${updateInfo.currentVersion} → ${info.version}`)
-  updateInfo = {
+  updateInfo = omitUndefined<UpdateInfo>({
     ...updateInfo,
     available: true,
     latestVersion: info.version,
     downloadState: 'idle',
     downloadProgress: 0,
     error: undefined,
-  }
+  })
   broadcastUpdateInfo()
 })
 
@@ -126,14 +127,14 @@ autoUpdater.on('update-not-available', (info) => {
     currentVersion: updateInfo.currentVersion,
     feedVersion: info.version,
   })
-  updateInfo = {
+  updateInfo = omitUndefined<UpdateInfo>({
     ...updateInfo,
     available: false,
     latestVersion: info.version,
     downloadState: 'idle',
     downloadProgress: 0,
     error: undefined,
-  }
+  })
   broadcastUpdateInfo()
 })
 
@@ -160,14 +161,14 @@ autoUpdater.on('update-downloaded', (info) => {
   }
 
   autoUpdateLog.info(`Stable update downloaded: v${info.version}`)
-  updateInfo = {
+  updateInfo = omitUndefined<UpdateInfo>({
     ...updateInfo,
     available: true,
     latestVersion: info.version,
     downloadState: 'ready',
     downloadProgress: 100,
     error: undefined,
-  }
+  })
   broadcastUpdateInfo()
 })
 
@@ -255,12 +256,12 @@ export async function checkForUpdates(
   const operation = (async (): Promise<UpdateInfo> => {
     updateCheckInProgress = true
     activeUpdateCheckSource = source
-    updateInfo = {
+    updateInfo = omitUndefined<UpdateInfo>({
       ...updateInfo,
       downloadState: 'idle',
       downloadProgress: 0,
       error: undefined,
-    }
+    })
     broadcastUpdateInfo()
 
     try {
@@ -297,7 +298,7 @@ function scheduleAutomaticUpdateCheck(delayMs: number): void {
     void checkForUpdates('automatic').then(() => {
       consecutiveAutomaticCheckFailures = 0
       scheduleAutomaticUpdateCheck(AUTOMATIC_UPDATE_SUCCESS_INTERVAL_MS)
-    }).catch((error) => {
+    }).catch((error: unknown) => {
       consecutiveAutomaticCheckFailures++
       const retryDelay = Math.min(
         AUTOMATIC_UPDATE_RETRY_BASE_MS * (2 ** (consecutiveAutomaticCheckFailures - 1)),
@@ -350,12 +351,12 @@ export async function downloadUpdate(): Promise<UpdateInfo> {
   }
 
   const operation = (async (): Promise<UpdateInfo> => {
-    updateInfo = {
+    updateInfo = omitUndefined<UpdateInfo>({
       ...updateInfo,
       downloadState: 'downloading',
       downloadProgress: 0,
       error: undefined,
-    }
+    })
     broadcastUpdateInfo()
 
     try {

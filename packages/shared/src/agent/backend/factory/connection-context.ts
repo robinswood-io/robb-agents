@@ -59,9 +59,9 @@ export interface ResolvedBackendContext extends BackendResolutionContext {}
  * This keeps main-process orchestration free from provider-specific branching.
  */
 export function resolveBackendContext(args: {
-  sessionConnectionSlug?: string;
-  workspaceDefaultConnectionSlug?: string;
-  managedModel?: string;
+  sessionConnectionSlug?: string | undefined;
+  workspaceDefaultConnectionSlug?: string | undefined;
+  managedModel?: string | undefined;
 }): ResolvedBackendContext {
   const connection = resolveSessionConnection(
     args.sessionConnectionSlug,
@@ -85,7 +85,7 @@ export function resolveBackendContext(args: {
   return {
     connection,
     provider,
-    authType,
+    ...(authType !== undefined ? { authType } : {}),
     resolvedModel,
     capabilities: BACKEND_CAPABILITIES[provider],
   };
@@ -112,7 +112,7 @@ export function resolveSetupTestConnectionHint(args: {
 
     return {
       providerType: 'pi',
-      piAuthProvider: args.piAuthProvider,
+      ...(args.piAuthProvider !== undefined ? { piAuthProvider: args.piAuthProvider } : {}),
     };
   }
 

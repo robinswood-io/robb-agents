@@ -5,7 +5,7 @@
  * Features: searchable tools, sortable columns, max-height scroll.
  */
 
-import * as React from 'react'
+
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
@@ -25,12 +25,12 @@ export interface ToolRow {
 interface ToolsDataTableProps {
   data: ToolRow[]
   /** Show loading spinner */
-  loading?: boolean
+  loading?: boolean | undefined
   /** Show error message */
-  error?: string
+  error?: string | undefined
   /** Max height with scroll (default: 400) */
-  maxHeight?: number
-  className?: string
+  maxHeight?: number | undefined
+  className?: string | undefined
 }
 
 function getColumns(t: TFunction): ColumnDef<ToolRow>[] {

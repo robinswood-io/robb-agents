@@ -45,7 +45,7 @@ export function setPlatformOwners(transportOwner: MessagingGatewayRegistry, work
     }
     const state = transportOwner["workspaces"].get(workspaceId) ?? transportOwner["bootstrapWorkspace"](workspaceId);
     transportOwner["patchTelegramConfig"](workspaceId, { owners: dedupeOwners(owners) });
-    transportOwner["emitBindingChanged"](workspaceId);
+    transportOwner.emitBindingChanged(workspaceId);
     return state.configStore.get().platforms.telegram?.owners ?? [];
 }
 
@@ -67,9 +67,9 @@ export function setPlatformAccessMode(transportOwner: MessagingGatewayRegistry, 
     // bindings remain public — exactly the false-sense-of-security UX
     // the feature is supposed to prevent.
     if (mode === 'owner-only') {
-        transportOwner["migrateOpenBindingsToInherit"](workspaceId);
+        transportOwner.migrateOpenBindingsToInherit(workspaceId);
     }
-    transportOwner["emitBindingChanged"](workspaceId);
+    transportOwner.emitBindingChanged(workspaceId);
 }
 
 /**
@@ -156,7 +156,7 @@ export function allowPendingSender(transportOwner: MessagingGatewayRegistry, wor
             reason: 'not-on-binding-allowlist',
             bindingId,
         });
-        transportOwner["emitBindingChanged"](workspaceId);
+        transportOwner.emitBindingChanged(workspaceId);
         const owners = state.configStore.get().platforms.telegram?.owners ?? [];
         return { owners, bindingId };
     }
@@ -185,7 +185,7 @@ export function allowPendingSender(transportOwner: MessagingGatewayRegistry, wor
     // so any binding-allow-list rejects pending against them have been
     // superseded by the inherit path.
     state.gateway.getPendingStore().dismiss(platform, userId);
-    transportOwner["emitBindingChanged"](workspaceId);
+    transportOwner.emitBindingChanged(workspaceId);
     return { owners: nextOwners };
 }
 
@@ -203,5 +203,5 @@ export function setBindingAccess(transportOwner: MessagingGatewayRegistry, works
     });
     if (!next)
         throw new Error('Binding not found');
-    transportOwner["emitBindingChanged"](workspaceId);
+    transportOwner.emitBindingChanged(workspaceId);
 }

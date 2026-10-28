@@ -11,8 +11,8 @@ import { sampleSessions, sampleSources, SOURCE_TYPE_CONFIG, SOURCE_STATUS_CONFIG
 // ============================================================================
 
 interface SessionEntityListPreviewProps {
-  selectedIndex?: number
-  showMultiSelect?: boolean
+  selectedIndex?: number | undefined
+  showMultiSelect?: boolean | undefined
 }
 
 export function SessionEntityListPreview({
@@ -96,8 +96,8 @@ export function SessionEntityListPreview({
 // ============================================================================
 
 interface SourceEntityListPreviewProps {
-  selectedIndex?: number
-  typeFilter?: string
+  selectedIndex?: number | undefined
+  typeFilter?: string | undefined
 }
 
 export function SourceEntityListPreview({
@@ -152,7 +152,7 @@ export function SourceEntityListPreview({
 // ============================================================================
 
 interface SkillEntityListPreviewProps {
-  selectedIndex?: number
+  selectedIndex?: number | undefined
 }
 
 export function SkillEntityListPreview({

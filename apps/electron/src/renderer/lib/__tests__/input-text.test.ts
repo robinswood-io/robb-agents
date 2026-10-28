@@ -47,6 +47,6 @@ describe('appendRestoredInput', () => {
   })
 
   it('coerces malformed (non-string) persisted draft values defensively', () => {
-    expect(appendRestoredInput({ text: 'draft' } as unknown as string, 'msg')).toBe('draft\n\nmsg')
+    expect(appendRestoredInput({ text: 'draft' }, 'msg')).toBe('draft\n\nmsg')
   })
 })

@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import { createHash } from "node:crypto";
 import { contextualGmailReplyPreflightAttestationFromObjective } from "../sensitive-external-action.ts";
 import type { PendingDependencyKind } from './dependency-guards.ts';
@@ -193,46 +194,46 @@ export function recordContextualGmailToolResult(input: {
     pending.intent,
   );
   if (!matchingRead && !exactHumanAnchor) return;
-  const binding = typeof receipt.recipientBinding === 'string'
-    ? receipt.recipientBinding.trim().toLowerCase()
+  const binding = typeof receipt["recipientBinding"] === 'string'
+    ? receipt["recipientBinding"].trim().toLowerCase()
     : '';
-  const resolved = receipt.resolvedRecipients && typeof receipt.resolvedRecipients === 'object'
-    ? receipt.resolvedRecipients as Record<string, unknown>
+  const resolved = receipt["resolvedRecipients"] && typeof receipt["resolvedRecipients"] === 'object'
+    ? receipt["resolvedRecipients"] as Record<string, unknown>
     : undefined;
-  const resolvedTo = Array.isArray(resolved?.to) ? resolved.to : [];
-  const resolvedCc = Array.isArray(resolved?.cc) ? resolved.cc : [];
+  const resolvedTo = isUnknownArray(resolved?.["to"]) ? resolved["to"] : [];
+  const resolvedCc = isUnknownArray(resolved?.["cc"]) ? resolved["cc"] : [];
   const recipientsAreStrings = [...resolvedTo, ...resolvedCc]
-    .every(value => typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(value));
+    .every((value: unknown) => typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(value));
   const bodySha256 = createHash('sha256').update(pending.intent.body, 'utf8').digest('hex');
   const bindingExpiresAtMs = contextualGmailBindingExpiresAt(
     binding,
-    receipt.bindingExpiresInSeconds,
+    receipt["bindingExpiresInSeconds"],
     now,
   );
-  const receiptMatches = receipt.ok === true
-    && receipt.willSend === false
-    && receipt.messageId === pending.intent.messageId
-    && receipt.bodySha256 === bodySha256
-    && receipt.isHtml === pending.intent.isHtml
+  const receiptMatches = receipt["ok"] === true
+    && receipt["willSend"] === false
+    && receipt["messageId"] === pending.intent.messageId
+    && receipt["bodySha256"] === bodySha256
+    && receipt["isHtml"] === pending.intent.isHtml
     && (pending.intent.expectedSenderEmail === undefined
-      ? receipt.expectedSenderEmail === undefined
-        && (receipt.primarySenderEmail === undefined
-          || typeof receipt.primarySenderEmail === 'string'
-            && /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(receipt.primarySenderEmail))
-      : receipt.expectedSenderEmail === pending.intent.expectedSenderEmail
-        && receipt.primarySenderEmail === pending.intent.expectedSenderEmail)
+      ? receipt["expectedSenderEmail"] === undefined
+        && (receipt["primarySenderEmail"] === undefined
+          || typeof receipt["primarySenderEmail"] === 'string'
+            && /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(receipt["primarySenderEmail"]))
+      : receipt["expectedSenderEmail"] === pending.intent.expectedSenderEmail
+        && receipt["primarySenderEmail"] === pending.intent.expectedSenderEmail)
     && bindingExpiresAtMs !== undefined
     && recipientsAreStrings
     && resolvedTo.length + resolvedCc.length > 0
     && (pending.intent.expectedSubject === undefined
-      || receipt.subject === pending.intent.expectedSubject)
+      || receipt["subject"] === pending.intent.expectedSubject)
     && (pending.intent.expectedCc === undefined
       || JSON.stringify([...resolvedCc].sort())
         === JSON.stringify(canonicalGmailEmailSet(pending.intent.expectedCc)))
     && (pending.intent.scope === 'reply-all'
-      ? receipt.replyAll === true
-      : receipt.replyAll === false
-        && receipt.expectedRecipientEmail === pending.intent.expectedRecipientEmail
+      ? receipt["replyAll"] === true
+      : receipt["replyAll"] === false
+        && receipt["expectedRecipientEmail"] === pending.intent.expectedRecipientEmail
         && resolvedTo.length === 1
         && resolvedTo[0] === pending.intent.expectedRecipientEmail
         && resolvedCc.length === 0)

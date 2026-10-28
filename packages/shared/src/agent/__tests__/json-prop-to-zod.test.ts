@@ -6,7 +6,6 @@
  * LLM to receive no type information for structured parameters.
  */
 import { describe, it, expect } from 'bun:test'
-import { z } from 'zod'
 import { jsonPropToZod } from '../claude-agent.ts'
 
 describe('jsonPropToZod', () => {

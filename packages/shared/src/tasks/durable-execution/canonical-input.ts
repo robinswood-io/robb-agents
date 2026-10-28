@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 
 const MAX_ISOLATED_TOOL_INPUT_BYTES = 64 * 1024;
 
@@ -19,7 +20,7 @@ function canonicalToolInputValue(
   if (depth > MAX_ISOLATED_TOOL_INPUT_DEPTH) return undefined;
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
   if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
-  if (Array.isArray(value)) {
+  if (isUnknownArray(value)) {
     const result: unknown[] = [];
     for (const item of value) {
       const canonical = canonicalToolInputValue(item, depth + 1, counter);
@@ -53,7 +54,7 @@ export function canonicalExecutionIsolationToolInput(
   input: Record<string, unknown>,
 ): string | undefined {
   const canonical = canonicalToolInputValue(input, 0, { fields: 0 });
-  if (!canonical || typeof canonical !== 'object' || Array.isArray(canonical)) return undefined;
+  if (!canonical || typeof canonical !== 'object' || isUnknownArray(canonical)) return undefined;
   const encoded = JSON.stringify(canonical);
   return Buffer.byteLength(encoded, 'utf8') <= MAX_ISOLATED_TOOL_INPUT_BYTES
     ? encoded

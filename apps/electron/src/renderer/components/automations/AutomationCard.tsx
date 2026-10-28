@@ -5,7 +5,7 @@
  * Collapsed: shows name + summary. Expanded: shows trigger, actions, and controls.
  */
 
-import * as React from 'react'
+
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronRight } from 'lucide-react'
@@ -17,10 +17,10 @@ import { getEventDisplayName, type AutomationListItem } from './types'
 
 export interface AutomationCardProps {
   automation: AutomationListItem
-  defaultExpanded?: boolean
-  onToggleEnabled?: (enabled: boolean) => void
-  onTest?: () => void
-  className?: string
+  defaultExpanded?: boolean | undefined
+  onToggleEnabled?: ((enabled: boolean) => void) | undefined
+  onTest?: (() => void) | undefined
+  className?: string | undefined
 }
 
 export function AutomationCard({

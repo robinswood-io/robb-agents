@@ -127,12 +127,12 @@ it('admits the bounded PNS reads from the current structured instruction and no 
       }).type).toBe('block');
     }
 
-    for (const command of invocations.slice(1).map(([, input]) => String(input.command))) {
+    for (const command of invocations.slice(1).map(([, input]) => String(input["command"]))) {
       expect(check({
         toolName: 'mcp__rbw-servers__ssh_execute',
         input: { server: 'dev', command }, dataFolderPath, ...authorization,
       })).toMatchObject({
-        type: 'block', reason: expect.stringContaining('Structured SSH read validation failed'),
+        type: 'block', reason: (expect.stringContaining('Structured SSH read validation failed') as unknown),
       });
     }
     expect(check({
@@ -159,7 +159,7 @@ it('admits the bounded PNS reads from the current structured instruction and no 
         toolName: 'mcp__rbw-servers__ssh_execute',
         input: { server: 'pns', command }, dataFolderPath, ...authorization,
       })).toMatchObject({
-        type: 'block', reason: expect.stringContaining('Structured SSH read validation failed'),
+        type: 'block', reason: (expect.stringContaining('Structured SSH read validation failed') as unknown),
       });
     }
 
@@ -177,7 +177,7 @@ it('admits the bounded PNS reads from the current structured instruction and no 
       ...authorization,
       objectiveAuthorizationSegments: [objectiveWithoutRegistryAuthority],
     })).toMatchObject({
-      type: 'block', reason: expect.stringContaining('Structured SSH read validation failed'),
+      type: 'block', reason: (expect.stringContaining('Structured SSH read validation failed') as unknown),
     });
 
     const negatedEndpointObjective = `${objective} Ne touche jamais le serveur pns : cette cible est hors périmètre.`;
@@ -191,7 +191,7 @@ it('admits the bounded PNS reads from the current structured instruction and no 
       ...authorization,
       objectiveAuthorizationSegments: [negatedEndpointObjective],
     })).toMatchObject({
-      type: 'block', reason: expect.stringContaining('Structured SSH read validation failed'),
+      type: 'block', reason: (expect.stringContaining('Structured SSH read validation failed') as unknown),
     });
   });
 
@@ -214,7 +214,7 @@ it.skipIf(process.platform !== 'darwin')('does not let trusted SSH download meta
       objectiveAuthorizationSegments: [objective],
       declaredToolCapabilities: { trusted: true, readOnly: true, idempotent: true },
     }, objective)).toMatchObject({
-      type: 'block', reason: expect.stringContaining('installed Robb Agents'),
+      type: 'block', reason: (expect.stringContaining('installed Robb Agents') as unknown),
     });
   });
 
@@ -245,7 +245,7 @@ it('does not turn the host-owned SSH observation grammar into a local Bash grant
     )).toMatchObject({ kind: 'unknown' });
     expect(check({
       toolName: 'Bash', input: { command }, permissionMode: 'safe',
-    })).toMatchObject({ type: 'block', reason: expect.stringContaining('Explore') });
+    })).toMatchObject({ type: 'block', reason: (expect.stringContaining('Explore') as unknown) });
   });
 
 it('admits the audited PLC compound read with the bundled default patterns', () => {
@@ -287,7 +287,7 @@ it('does not downgrade lookalike operational mutations to reads', () => {
         permissionMode: 'allow-all',
         externalActionPolicy: 'allow-in-execute',
         objectiveMutationAuthorized: false,
-      })).toMatchObject({ type: 'block', reason: expect.stringContaining('Objective authority') });
+      })).toMatchObject({ type: 'block', reason: (expect.stringContaining('Objective authority') as unknown) });
     }
   });
 
@@ -322,7 +322,7 @@ it('admits only host-configured non-executing preflights during an observational
         objectiveMutationAuthorized: false,
         activeSourceSlugs: [toolName.split('__')[1]!],
         allSourceSlugs: [toolName.split('__')[1]!],
-      })).toMatchObject({ type: 'block', reason: expect.stringContaining('Objective authority') });
+      })).toMatchObject({ type: 'block', reason: (expect.stringContaining('Objective authority') as unknown) });
     }
   });
 

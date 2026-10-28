@@ -36,7 +36,7 @@ describe('TaskRunner (Conductor)', () => {
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
       now: () => '2026-06-07T00:00:00.000Z',
-      nowMs,
+      ...(nowMs !== undefined ? { nowMs: nowMs } : {}),
       resolveSubagentAutonomyContext: () => autonomyContext,
       ...(executionProofIssuer ? {
         verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),
@@ -88,7 +88,7 @@ describe('TaskRunner (Conductor)', () => {
     const corruptPath = join(root, 'tasks', 'corrupt-run', 'runs', 'r1', 'run-log.jsonl');
     const corruptLines = readFileSync(corruptPath, 'utf8').trimEnd().split('\n');
     const firstRecord = JSON.parse(corruptLines[0]!) as Record<string, unknown>;
-    firstRecord.kind = 'run-stopped';
+    firstRecord["kind"] = 'run-stopped';
     corruptLines[0] = JSON.stringify(firstRecord);
     writeFileSync(corruptPath, `${corruptLines.join('\n')}\n`, 'utf8');
 

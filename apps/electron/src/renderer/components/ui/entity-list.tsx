@@ -42,36 +42,36 @@ export interface EntityListGroup<T> {
 
 export interface EntityListProps<T> {
   /** Flat item list (used when not grouped) */
-  items?: T[]
+  items?: T[] | undefined
   /** Grouped items with section headers (takes precedence over items) */
-  groups?: EntityListGroup<T>[]
+  groups?: EntityListGroup<T>[] | undefined
   /** Render function for each item */
   renderItem: (item: T, index: number, isFirstInGroup: boolean) => React.ReactNode
   /** Unique key extractor */
   getKey: (item: T) => string
   /** Empty state content — rendered centered, outside ScrollArea */
-  emptyState?: React.ReactNode
+  emptyState?: React.ReactNode | undefined
   /** Header content above the list (e.g. search bar) — rendered outside ScrollArea */
-  header?: React.ReactNode
+  header?: React.ReactNode | undefined
   /** Footer content after all items (e.g. infinite scroll sentinel) — inside ScrollArea */
-  footer?: React.ReactNode
+  footer?: React.ReactNode | undefined
   /** Ref for the inner list container (for keyboard navigation zones) */
-  containerRef?: React.Ref<HTMLDivElement>
+  containerRef?: React.Ref<HTMLDivElement> | undefined
   /** Props spread on the inner list container (role, aria-label, data-focus-zone) */
-  containerProps?: Record<string, string>
+  containerProps?: Record<string, string> | undefined
   /** Ref to the ScrollArea viewport element (for scroll-based pagination) */
-  viewportRef?: React.RefObject<HTMLDivElement | null>
+  viewportRef?: React.RefObject<HTMLDivElement | null> | undefined
   /** Additional ScrollArea class */
-  scrollAreaClassName?: string
-  className?: string
+  scrollAreaClassName?: string | undefined
+  className?: string | undefined
   /** Set of collapsed group keys (for collapsible groups) */
-  collapsedGroups?: Set<string>
+  collapsedGroups?: Set<string> | undefined
   /** Called when a collapsible group header is clicked */
-  onToggleCollapse?: (groupKey: string) => void
+  onToggleCollapse?: ((groupKey: string) => void) | undefined
   /** Collapse all collapsible groups */
-  onCollapseAll?: () => void
+  onCollapseAll?: (() => void) | undefined
   /** Expand all collapsible groups */
-  onExpandAll?: () => void
+  onExpandAll?: (() => void) | undefined
 }
 
 // ============================================================================
@@ -101,8 +101,8 @@ function CollapsibleGroupHeader({
   isCollapsed: boolean
   itemCount: number
   onToggle: () => void
-  onCollapseAll?: () => void
-  onExpandAll?: () => void
+  onCollapseAll?: (() => void) | undefined
+  onExpandAll?: (() => void) | undefined
 }) {
   return (
     <ContextMenu modal>

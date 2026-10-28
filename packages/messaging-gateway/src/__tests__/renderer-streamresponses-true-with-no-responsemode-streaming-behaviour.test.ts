@@ -12,7 +12,6 @@
  */
 import { describe, expect, it } from "bun:test";
 import { Renderer } from "../renderer";
-import { type BindingConfig } from "../types";
 import { ev, makeAdapter, makeBinding, play } from "./testing/renderer-fixture.ts";
 
 describe('Renderer — legacy config coercion', () => {
@@ -21,7 +20,8 @@ describe('Renderer — legacy config coercion', () => {
     const adapter = makeAdapter()
     const binding = makeBinding()
     // Simulate a legacy binding (responseMode field absent).
-    ;(binding.config as Partial<BindingConfig>).responseMode = undefined
+    expect(Reflect.deleteProperty(binding.config, 'responseMode')).toBe(true)
+    expect(Object.hasOwn(binding.config, 'responseMode')).toBe(false)
     binding.config.streamResponses = true
 
     await play(renderer, binding, adapter, [ev.completeText('hi'), ev.complete()])
@@ -35,7 +35,8 @@ describe('Renderer — legacy config coercion', () => {
     const renderer = new Renderer()
     const adapter = makeAdapter()
     const binding = makeBinding()
-    ;(binding.config as Partial<BindingConfig>).responseMode = undefined
+    expect(Reflect.deleteProperty(binding.config, 'responseMode')).toBe(true)
+    expect(Object.hasOwn(binding.config, 'responseMode')).toBe(false)
     binding.config.streamResponses = false
 
     await play(renderer, binding, adapter, [

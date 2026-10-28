@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from "bun:test";
 import type { Message } from "@craft-agent/core/types";
 import { validateObjectiveOutcome } from "./objective-outcome.ts";
@@ -315,7 +316,7 @@ describe('objective outcome receipt', () => {
     };
     for (const toolResult of [completedPoll.toolResult, JSON.stringify({ status: 'authorized' })]) {
       expect(validateObjectiveOutcome(blocked, {
-        objective, messages: [...messages, started, { ...completedPoll, toolResult }],
+        objective, messages: [...messages, started, omitUndefined<Message>({ ...completedPoll, toolResult })],
       }).state).toBe('continue');
     }
     const resultCorrelatedPoll: Message = {

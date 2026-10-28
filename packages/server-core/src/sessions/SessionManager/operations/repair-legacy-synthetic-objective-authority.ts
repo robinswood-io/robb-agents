@@ -36,7 +36,7 @@ function sessionOpScheduleSourceActivationDispatch(sessionOperationContext: Sess
             return;
         }
         pending.dispatchAttempts++;
-        void sessionOperationContext.owner.sendMessage(current.id, pending.content, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, dispatchToken).catch(error => {
+        void sessionOperationContext.owner.sendMessage(current.id, pending.content, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, dispatchToken).catch((error: unknown) => {
             const latest = current.autoRetryPending;
             if (latest?.dispatchToken === dispatchToken && !latest.committed && !latest.cancelled) {
                 releaseSourceActivationClaim(current, dispatchToken);
@@ -53,7 +53,7 @@ function sessionOpScheduleSourceActivationDispatch(sessionOperationContext: Sess
     }, delayMs);
 }
 
-function sessionOpInvalidateSourceActivationRestart(sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
+function sessionOpInvalidateSourceActivationRestart(_sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
     const changed = cancelSourceActivationPending(managed);
     managed.sourceActivationRestartGeneration = undefined;
     managed.sourceActivationTurn = undefined;
@@ -63,7 +63,7 @@ function sessionOpInvalidateSourceActivationRestart(sessionOperationContext: Ses
 /** Remove only deferred source-activation rows. Completed history remains
  * intact, while legacy/unbound rows and rows for another objective can never
  * be promoted into a real user turn during restore or dequeue. */
-function sessionOpDropDeferredSourceActivations(sessionOperationContext: SessionOperationContext, managed: ManagedSession, supersededByHuman = false): boolean {
+function sessionOpDropDeferredSourceActivations(_sessionOperationContext: SessionOperationContext, managed: ManagedSession, supersededByHuman = false): boolean {
     let changed = false;
     const currentBinding = sourceActivationObjectiveBinding(managed.activeObjective);
     if (managed.autoRetryPending && (supersededByHuman || !currentBinding
@@ -107,7 +107,7 @@ function sessionOpDropDeferredSourceActivations(sessionOperationContext: Session
 /** Return only transcript-backed authority text. Durable objective metadata is
  * routing state, not a substitute for an accepted human (or authenticated
  * automation/delegation root) row. */
-function sessionOpAuthenticatedObjectiveAuthorizationSegments(sessionOperationContext: SessionOperationContext, owner: ManagedSession, objective: ActiveSessionObjective): {
+function sessionOpAuthenticatedObjectiveAuthorizationSegments(_sessionOperationContext: SessionOperationContext, owner: ManagedSession, objective: ActiveSessionObjective): {
     authorizationSegments: string[];
     authenticatedUserAuthorizationSegments: string[];
 } {
@@ -238,13 +238,13 @@ function sessionOpConsumeTerminalInvocationCapability(sessionOperationContext: S
         // Consume before checking freshness. A stale/foreign invocation never
         // gets a second attempt and the digest is not reusable after an error.
         sessionOperationContext.state.terminalInvocationCapabilities.delete(key);
-        const requestedSessionIds = Array.isArray(input.sessionIds) ? input.sessionIds : [];
+        const requestedSessionIds = Array.isArray(input["sessionIds"]) ? input["sessionIds"] : [];
         const scopeAllows = suffix === 'set_completion_criteria'
             ? capability.scope.allowInitialCriteriaRegistration
             : suffix === 'spawn_session'
                 ? capability.scope.allowReviewerSpawn
                 : suffix === 'wait_sessions'
-                    ? requestedSessionIds.length > 0 && requestedSessionIds.every(id => (typeof id === 'string' && capability.scope.waitReviewerSessionIds.includes(id)))
+                    ? requestedSessionIds.length > 0 && requestedSessionIds.every((id: unknown) => (typeof id === 'string' && capability.scope.waitReviewerSessionIds.includes(id)))
                     : false;
         return capability.managed === managed
             && scopeAllows
@@ -263,7 +263,7 @@ function sessionOpConsumeTerminalInvocationCapability(sessionOperationContext: S
  * replayed to recover its semantic constraints; verification criteria and
  * accounting remain context, but cannot grant mutation authority themselves.
  */
-function sessionOpRepairLegacySyntheticObjectiveAuthority(sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
+function sessionOpRepairLegacySyntheticObjectiveAuthority(_sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
     const previous = managed.activeObjective;
     if (!previous)
         return false;
@@ -357,7 +357,7 @@ function sessionOpRepairLegacySyntheticObjectiveAuthority(sessionOperationContex
 
 /** Only explicit terminal states are terminal. Legacy objectives with no
  * state remain recoverable instead of being silently treated as completed. */
-function sessionOpHasTerminalObjectiveState(sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
+function sessionOpHasTerminalObjectiveState(_sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
     const state = managed.activeObjective?.terminalState as string | null | undefined;
     return state != null && state !== 'active';
 }
@@ -376,7 +376,7 @@ function sessionOpRevokePendingToolPermissionsForDirectContinuation(sessionOpera
     for (const generation of generations) {
         // closePendingPermissionRequestsForStop removes every request from the
         // broker map synchronously before its first await.
-        void sessionOperationContext.owner["closePendingPermissionRequestsForStop"](managed, generation);
+        void sessionOperationContext.owner.closePendingPermissionRequestsForStop(managed, generation);
     }
 }
 

@@ -1,3 +1,4 @@
+import { omitUndefined, type SnapshotInput } from '@craft-agent/shared/utils/json';
 import * as React from 'react';
 
 import { toast } from 'sonner';
@@ -156,7 +157,7 @@ const persistProjectColumns = React.useCallback(
 const resolveEditableColumns = React.useCallback((): KanbanColumnDef[] => {
     const custom = editingProject?.config.kanbanColumns
     if (custom?.length) return custom.map(c => ({ ...c }))
-    return activeColumns.map(c => ({
+    return activeColumns.map(c => omitUndefined<KanbanColumnDef>({
       id: c.id,
       name: c.name ?? (c.labelKey ? t(c.labelKey) : c.id),
       color: c.color,
@@ -171,8 +172,8 @@ const handleAddColumn = React.useCallback(() => {
   }, [resolveEditableColumns, persistProjectColumns, t])
 
 const handleUpdateColumn = React.useCallback(
-    (columnId: string, patch: Partial<KanbanColumnDef>) => {
-      const next = resolveEditableColumns().map(c => (c.id === columnId ? { ...c, ...patch } : c))
+    (columnId: string, patch: Partial<SnapshotInput<KanbanColumnDef>>) => {
+      const next = resolveEditableColumns().map(c => (c.id === columnId ? omitUndefined<KanbanColumnDef>({ ...c, ...patch }) : c))
       persistProjectColumns(next)
     },
     [resolveEditableColumns, persistProjectColumns]

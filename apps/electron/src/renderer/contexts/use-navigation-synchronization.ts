@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { useCallback, useEffect, useRef } from 'react';
 
 import { toast } from 'sonner';
@@ -188,11 +189,11 @@ useEffect(() => {
         route = nav.view
       } else if (nav.action) {
         route = `action/${nav.action}`
-        if (nav.actionParams?.id) {
-          route += `/${nav.actionParams.id}`
+        if (nav.actionParams?.["id"]) {
+          route += `/${nav.actionParams["id"]}`
         }
         const otherParams = { ...nav.actionParams }
-        delete otherParams.id
+        delete otherParams["id"]
         if (Object.keys(otherParams).length > 0) {
           const params = new URLSearchParams(otherParams)
           route += `?${params.toString()}`
@@ -219,7 +220,7 @@ useEffect(() => {
       const customEvent = event as CustomEvent<{ route: Route; newPanel?: boolean; targetLaneId?: 'main' }>
       if (customEvent.detail?.route) {
         const { route: r, newPanel, targetLaneId } = customEvent.detail
-        navigate(r, newPanel ? { newPanel, targetLaneId } : undefined)
+        navigate(r, newPanel ? omitUndefined({ newPanel, targetLaneId }) : undefined)
       }
     }
 

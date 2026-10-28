@@ -10,7 +10,7 @@ function createCtx(): { ctx: SessionToolContext; writes: WriteRecord[] } {
     updatePreferences: (updates: Record<string, unknown>) => {
       writes.push(updates);
     },
-  } as unknown as SessionToolContext;
+  } as SessionToolContext;
   return { ctx, writes };
 }
 
@@ -33,13 +33,13 @@ describe('handleUpdatePreferences', () => {
 
   it('ignores legacy `language` argument (not in the documented schema)', async () => {
     const { ctx, writes } = createCtx();
-    await handleUpdatePreferences(ctx, { language: 'Hungarian' } as unknown as UpdatePreferencesArgs);
+    await handleUpdatePreferences(ctx, { language: 'Hungarian' } as UpdatePreferencesArgs);
     expect(writes).toHaveLength(0);
   });
 
   it('ignores `uiLanguage` argument (internal field — not user-editable here)', async () => {
     const { ctx, writes } = createCtx();
-    await handleUpdatePreferences(ctx, { uiLanguage: 'hu' } as unknown as UpdatePreferencesArgs);
+    await handleUpdatePreferences(ctx, { uiLanguage: 'hu' } as UpdatePreferencesArgs);
     expect(writes).toHaveLength(0);
   });
 

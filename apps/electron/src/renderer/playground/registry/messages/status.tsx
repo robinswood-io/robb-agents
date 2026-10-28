@@ -46,7 +46,7 @@ export function StatusMessage({ content }: { content: string }) {
 }
 
 /** Compaction divider - horizontal rule with centered label shown after context compaction (playground demo) */
-export function CompactionDivider({ label = 'Conversation Compacted' }: { label?: string }) {
+export function CompactionDivider({ label = 'Conversation Compacted' }: { label?: string | undefined }) {
   return (
     <div className="flex items-center gap-3 my-12 px-3">
       <div className="flex-1 h-px bg-border" />
@@ -114,11 +114,11 @@ const PROCESSING_MESSAGES = [
 
 interface ProcessingIndicatorProps {
   /** Animation cycle duration in milliseconds */
-  cycleMs?: number
+  cycleMs?: number | undefined
   /** Whether the elapsed counter should count automatically */
-  counting?: boolean
+  counting?: boolean | undefined
   /** Initial elapsed time (only used if counting is false) */
-  elapsed?: number
+  elapsed?: number | undefined
 }
 
 export function ProcessingIndicator({ cycleMs = 10000, counting = true, elapsed: initialElapsed = 0 }: ProcessingIndicatorProps) {

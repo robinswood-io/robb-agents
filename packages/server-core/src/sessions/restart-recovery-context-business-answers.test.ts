@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { ScriptedSessionAgent, completeSessionAgentFixture } from "./testing/scripted-session-agent.ts";
@@ -137,12 +138,12 @@ describe('durable restart recovery', () => {
       .toMatchObject({ status: 'answered', responseMessageId: answerId })
     expect(restored.messages.filter((message: { id: string }) => message.id === answerId)).toHaveLength(1)
     expect(restored.messageQueue).toHaveLength(1)
-    expect(requiredTestValue(requiredTestValue(restored.messageQueue[0].options).automaticRecovery).cleanContinuationId)
+    expect(requiredTestValue(requiredTestValue(requiredTestValue(restored.messageQueue[0]).options).automaticRecovery).cleanContinuationId)
       .toMatch(/^clean-continuation-v1-/)
     expect(requiredTestValue(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).phase).toBe('allocated')
     expect(restored.sdkSessionId).toBeUndefined()
-    const header = JSON.parse(readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8').split('\n')[0]!)
-    expect(header.pendingTurnRecovery.recoveryDispatch.cleanContinuationId)
+    const header = parseRecoveryJournalObservation(readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8').split('\n')[0]!)
+    expect(requiredTestValue(requiredTestValue(header.pendingTurnRecovery).recoveryDispatch).cleanContinuationId)
       .toMatch(/^clean-continuation-v1-/)
     await runtime.resumeOrphanedContextAnswerAfterRestart(managed.id)
     expect(dequeues).toEqual([managed.id])
@@ -320,12 +321,12 @@ describe('durable restart recovery', () => {
       releaseFreshRuntime.resolve()
       await dispatch?.catch(() => {})
     }
-    expect(managed.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
+    expect<unknown>(managed.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
       id: managed.userInputRequests![0]!.responseMessageId,
       cause: 'user_retry', origin: 'retry', phase: 'allocated',
-      cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-/),
+      cleanContinuationId: (expect.stringMatching(/^clean-continuation-v1-/) as unknown),
       setupFailureCount: 1, lastSetupFailureClass: 'unknown',
-      setupRetryNotBefore: expect.any(Number),
+      setupRetryNotBefore: (expect.any(Number) as unknown),
     })
     expect(managed.messages.some(message => (
       message.id === managed.userInputRequests![0]!.responseMessageId

@@ -40,7 +40,7 @@ export async function testConnection(
     success = true;
   }
 
-  return { lines, success, hasError, error };
+  return { lines, success, hasError, ...(error !== undefined ? { error } : {}) };
 }
 
 async function testApiConnection(
@@ -78,7 +78,7 @@ async function testApiConnection(
           lines.push(`  ${result.hint}`);
         }
       }
-      return { lines, success, hasError, error };
+      return { lines, success, hasError, ...(error !== undefined ? { error } : {}) };
     } catch (e) {
       // Fall through to built-in test
     }

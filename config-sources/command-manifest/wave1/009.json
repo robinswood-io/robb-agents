@@ -1,0 +1,415 @@
+[
+  {
+    "legacy_id": "ovh-domain-remediation",
+    "name": "Planner remédiation safe domaines OVH",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/ovh_domain_remediation.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "observability_prepare_only",
+    "sideEffects": [
+      "reads_domain_state",
+      "writes_reports_or_registry",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/ovh_domain_remediation.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/ovh-domain-remediation-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/ovh-domain-remediation-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "ovh-domain-dns-diagnostics",
+    "name": "Diagnostics DNS OVH Domain Sentinel",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/ovh_domain_dns_diagnostics.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "observability_prepare_only",
+    "sideEffects": [
+      "reads_domain_state",
+      "writes_reports_or_registry",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/ovh_domain_dns_diagnostics.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/ovh-domain-dns-diagnostics-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/ovh-domain-dns-diagnostics-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "ovh-domain-http-tls-diagnostics",
+    "name": "Diagnostics HTTP/TLS OVH Domain Sentinel",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/ovh_domain_http_tls_diagnostics.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "observability_prepare_only",
+    "sideEffects": [
+      "reads_domain_state",
+      "writes_reports_or_registry",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/ovh_domain_http_tls_diagnostics.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/ovh-domain-http-tls-diagnostics-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/ovh-domain-http-tls-diagnostics-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "ovh-domain-action-matrix",
+    "name": "Matrice actions domaines OVH",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/ovh_domain_action_matrix.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "observability_prepare_only",
+    "sideEffects": [
+      "reads_domain_state",
+      "writes_reports_or_registry",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/ovh_domain_action_matrix.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/ovh-domain-action-matrix-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/ovh-domain-action-matrix-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-agent-card-builder",
+    "name": "Construction des Agent Cards OSS",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_agent_card_builder.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "observability",
+    "sideEffects": [
+      "reads_ops_state",
+      "writes_reports",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_agent_card_builder.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-agent-card-builder-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-agent-card-builder-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-agent-frontier-method-radar",
+    "name": "Radar méthodes agentiques frontier",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_agent_frontier_method_radar.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "observability",
+    "sideEffects": [
+      "reads_ops_state",
+      "writes_reports",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_agent_frontier_method_radar.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-agent-frontier-method-radar-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-agent-frontier-method-radar-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-industrialization-dashboard",
+    "name": "OSS Industrialization Dashboard",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_industrialization_dashboard.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "observability",
+    "sideEffects": [
+      "reads_ops_state",
+      "writes_reports",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_industrialization_dashboard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-industrialization-dashboard-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-industrialization-dashboard-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-release-gate",
+    "name": "OSS Release Gate",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_release_gate.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "observability_guardrail",
+    "sideEffects": [
+      "reads_temporal_or_ops_state",
+      "writes_guardrail_report",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_release_gate.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-release-gate-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-release-gate-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-agent-control-plane",
+    "name": "OSS Agent Control Plane",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_agent_control_plane.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "observability",
+    "sideEffects": [
+      "reads_ops_state",
+      "writes_reports",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_agent_control_plane.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-agent-control-plane-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-agent-control-plane-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "linkedin-editorial-regression-tests",
+    "name": "Contrôle éditorial LinkedIn Robinswood 80/20",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/linkedin_editorial_regression_tests.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "guardrail_tests",
+    "sideEffects": [
+      "reads_live_or_fixture_state",
+      "writes_test_report",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/linkedin_editorial_regression_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/linkedin-editorial-regression-tests-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/linkedin-editorial-regression-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "blog-topicality-regression-tests",
+    "name": "Contrôle topicalité articles blog Robinswood",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/blog_topicality_regression_tests.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "guardrail_tests",
+    "sideEffects": [
+      "reads_live_or_fixture_state",
+      "writes_test_report",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/blog_topicality_regression_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/blog-topicality-regression-tests-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/blog-topicality-regression-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "agent-task-google-tasks-intake-day",
+    "name": "Agent Task Google Tasks Intake — Day Cadence",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/agent_task_google_tasks_intake.py --max 20",
+    "timeout_seconds": 240,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "cadenceClass": "agent_task_official_cadence",
+    "cadencePolicy": "agent-task-cadence-policy-v1",
+    "riskClass": "agent_task_intake_guarded",
+    "sideEffects": [
+      "reads_google_tasks",
+      "writes_agent_task_inbox",
+      "may_update_google_task_notes_or_status_per_policy",
+      "no_external_outbound_message"
+    ],
+    "note": "Official Agent Task intake cadence alias; title-only tasks ignored, non-empty descriptions are canonical prompts.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/agent_task_google_tasks_intake.py",
+        "--max",
+        "20"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 240
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-google-tasks-intake-day-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-google-tasks-intake-day-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "agent-task-google-tasks-intake-evening",
+    "name": "Agent Task Google Tasks Intake — Evening Boundary",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/agent_task_google_tasks_intake.py --max 20",
+    "timeout_seconds": 240,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "cadenceClass": "agent_task_official_cadence",
+    "cadencePolicy": "agent-task-cadence-policy-v1",
+    "riskClass": "agent_task_intake_guarded",
+    "sideEffects": [
+      "reads_google_tasks",
+      "writes_agent_task_inbox",
+      "may_update_google_task_notes_or_status_per_policy",
+      "no_external_outbound_message"
+    ],
+    "note": "Official Agent Task evening-boundary intake alias; no 10-minute polling restored.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/agent_task_google_tasks_intake.py",
+        "--max",
+        "20"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 240
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-google-tasks-intake-evening-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-google-tasks-intake-evening-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  }
+]

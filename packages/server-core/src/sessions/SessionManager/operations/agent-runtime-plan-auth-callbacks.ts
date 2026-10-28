@@ -1,3 +1,5 @@
+import type { PendingTurnRecovery } from '../../../../../shared/src/sessions/types/turn-recovery.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { getAuthRequestDescription } from '../policy.ts';
 import { readFile } from 'fs/promises';
@@ -109,13 +111,13 @@ export function installRuntimePlanAuthCallbacks(sessionOperationContext: Session
             // Copy type-specific fields for credentials
             ...(request.type === 'credential' && {
                 authCredentialMode: request.mode,
-                authLabels: request.labels,
-                authDescription: request.description,
-                authHint: request.hint,
-                authHeaderName: request.headerName,
-                authHeaderNames: request.headerNames,
-                authSourceUrl: request.sourceUrl,
-                authPasswordRequired: request.passwordRequired,
+                ...(request.labels !== undefined ? { authLabels: request.labels } : {}),
+                ...(request.description !== undefined ? { authDescription: request.description } : {}),
+                ...(request.hint !== undefined ? { authHint: request.hint } : {}),
+                ...(request.headerName !== undefined ? { authHeaderName: request.headerName } : {}),
+                ...(request.headerNames !== undefined ? { authHeaderNames: request.headerNames } : {}),
+                ...(request.sourceUrl !== undefined ? { authSourceUrl: request.sourceUrl } : {}),
+                ...(request.passwordRequired !== undefined ? { authPasswordRequired: request.passwordRequired } : {}),
             }),
         };
         // Add to session messages
@@ -138,13 +140,13 @@ export function installRuntimePlanAuthCallbacks(sessionOperationContext: Session
                 // Keep a durable continuation marker across the human auth handoff.
                 // Clearing it here created a crash gap after credentials were saved
                 // but before the hidden auth-result turn reached disk.
-                managed.pendingTurnRecovery = {
+                managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
                     ...retained,
                     userMessageId: recoveryAnchor,
                     lastCause: 'app_restart',
                     continuationRequired: true,
                     recoveryDispatch: undefined,
-                };
+                });
             }
             else {
                 sessionOperationContext.owner["clearPendingTurnRecovery"](managed);

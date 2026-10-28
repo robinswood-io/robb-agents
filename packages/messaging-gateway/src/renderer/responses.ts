@@ -33,14 +33,14 @@ import type { SessionEvent, PermissionRequest, RenderState } from './shared.ts';
   // Mode: final_only (silent → single send on complete)
   // ---------------------------------------------------------------------------
 export async function handleFinalOnly(transportOwner: Renderer, event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
-    const state = transportOwner["getState"](binding.id);
+    const state = transportOwner.getState(binding.id);
     switch (event.type) {
         case 'text_complete': {
             // Only keep non-intermediate text. `isIntermediate` is a hint; when
             // absent (older events or non-Claude backends), we include the text
             // because it's the only thing we might ever see.
-            const isIntermediate = Boolean(event.isIntermediate);
-            const text = typeof event.text === 'string' ? event.text : '';
+            const isIntermediate = Boolean(event["isIntermediate"]);
+            const text = typeof event["text"] === 'string' ? event["text"] : '';
             if (text.trim()) {
                 if (!isIntermediate) {
                     state.finalBuffer = appendFinal(state.finalBuffer, text);
@@ -56,9 +56,9 @@ export async function handleFinalOnly(transportOwner: Renderer, event: SessionEv
             // staying silent when the run ends on a tool call.
             const finalText = (state.finalBuffer.trim() || state.lastAssistantText.trim());
             if (finalText) {
-                await transportOwner["sendText"](adapter, binding, finalText);
+                await transportOwner.sendText(adapter, binding, finalText);
             }
-            transportOwner["resetRun"](state);
+            transportOwner.resetRun(state);
             return;
         }
     }
@@ -69,14 +69,14 @@ export async function handleFinalOnly(transportOwner: Renderer, event: SessionEv
   // Permissions / errors (shared across modes)
   // ---------------------------------------------------------------------------
 export async function handlePermissionRequest(transportOwner: Renderer, event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter, state: RenderState): Promise<void> {
-    const request = event.request as PermissionRequest | undefined;
+    const request = event["request"] as PermissionRequest | undefined;
     if (!request?.requestId)
         return;
     // Flush any streaming state first so the prompt lands as a distinct
     // message (progress-mode bubble stays in place as a separate message).
     if (state.streamingMessageId && state.textBuffer.trim()) {
-        transportOwner["cancelEditTimer"](state);
-        await transportOwner["tryEditMessage"](adapter, binding, state.streamingMessageId, state.textBuffer.trim(), state);
+        transportOwner.cancelEditTimer(state);
+        await transportOwner.tryEditMessage(adapter, binding, state.streamingMessageId, state.textBuffer.trim(), state);
         state.streamingMessageId = null;
         state.textBuffer = '';
         state.lastEditedLength = 0;
@@ -93,7 +93,7 @@ Approve it in the desktop app to continue.`, bindingOpts(binding));
             { id: `perm:deny:${request.requestId}`, label: '❌ Deny' },
         ];
         const sent = await adapter.sendButtons(binding.channelId, text, buttons, bindingOpts(binding));
-        transportOwner["recordPermissionMessage"]?.(binding, request.requestId, sent.messageId);
+        transportOwner.recordPermissionMessage?.(binding, request.requestId, sent.messageId);
     }
     else {
         await adapter.sendText(binding.channelId, `⏸ Permission required: ${request.description}
@@ -101,7 +101,7 @@ Approve in the desktop app to continue.`, bindingOpts(binding));
     }
 }
 
-export async function handleCredentialRequest(transportOwner: Renderer, binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
+export async function handleCredentialRequest(_transportOwner: Renderer, binding: ChannelBinding, adapter: PlatformAdapter): Promise<void> {
     if (binding.platform !== 'whatsapp')
         return;
     await adapter.sendText(binding.channelId, '🔐 Credentials are required to continue. Open the desktop app to review and submit them securely.', bindingOpts(binding));
@@ -120,17 +120,17 @@ export async function handlePlanSubmitted(transportOwner: Renderer, event: Sessi
         return;
     // Token registry is optional for backwards compatibility; without it we
     // degrade to the generic pointer so the bot still sees *something*.
-    if (!transportOwner["planTokens"]) {
+    if (!transportOwner.planTokens) {
         await adapter.sendText(binding.channelId, '📝 A plan is ready for review. Open the desktop app to inspect and approve it.', bindingOpts(binding));
         return;
     }
-    const planMessage = event.message as {
+    const planMessage = event["message"] as {
         planPath?: string;
         content?: string;
     } | undefined;
     const planPath = planMessage?.planPath ?? '';
     const planContent = planMessage?.content ?? '';
-    const token = transportOwner["planTokens"].issue(binding.id, binding.sessionId, planPath);
+    const token = transportOwner.planTokens.issue(binding.id, binding.sessionId, planPath);
     const buttons: InlineButton[] = [
         { id: `plan:accept:${token}`, label: '✅ Accept plan' },
         { id: `plan:compact:${token}`, label: '♻️ Accept & compact' },
@@ -144,7 +144,7 @@ export async function handlePlanSubmitted(transportOwner: Renderer, event: Sessi
             : `${header}\n\n${firstLines(planContent, 15)}\n\n…full plan attached below.`;
     try {
         const sent = await adapter.sendButtons(binding.channelId, bodyText, buttons, bindingOpts(binding));
-        transportOwner["recordPlanMessage"]?.(binding, token, sent.messageId);
+        transportOwner.recordPlanMessage?.(binding, token, sent.messageId);
         if (!fitsInline && planContent.length > 0) {
             await adapter.sendFile(binding.channelId, Buffer.from(planContent, 'utf-8'), 'plan.md', 'Full plan', bindingOpts(binding));
         }
@@ -156,14 +156,14 @@ export async function handlePlanSubmitted(transportOwner: Renderer, event: Sessi
 }
 
 export async function handleError(transportOwner: Renderer, event: SessionEvent, binding: ChannelBinding, adapter: PlatformAdapter, state: RenderState): Promise<void> {
-    const errorMsg = extractErrorMessage(event.error);
-    transportOwner["cancelEditTimer"](state);
+    const errorMsg = extractErrorMessage(event["error"]);
+    transportOwner.cancelEditTimer(state);
     await adapter.sendText(binding.channelId, `❌ ${errorMsg}`, bindingOpts(binding));
-    transportOwner["resetRun"](state);
+    transportOwner.resetRun(state);
 }
 
 /** Send text, splitting if it exceeds platform limits. */
-export async function sendText(transportOwner: Renderer, adapter: PlatformAdapter, binding: ChannelBinding, text: string): Promise<SentMessage | undefined> {
+export async function sendText(_transportOwner: Renderer, adapter: PlatformAdapter, binding: ChannelBinding, text: string): Promise<SentMessage | undefined> {
     const maxLen = adapter.capabilities.maxMessageLength;
     const opts = bindingOpts(binding);
     if (text.length <= maxLen) {
@@ -179,7 +179,7 @@ export async function sendText(transportOwner: Renderer, adapter: PlatformAdapte
 
 /** Reset per-run state (called on `complete`, `error`, etc.). */
 export function resetRun(transportOwner: Renderer, state: RenderState): void {
-    transportOwner["cancelEditTimer"](state);
+    transportOwner.cancelEditTimer(state);
     state.textBuffer = '';
     state.streamingMessageId = null;
     state.lastEditedLength = 0;
@@ -191,9 +191,9 @@ export function resetRun(transportOwner: Renderer, state: RenderState): void {
 }
 
 export function removeBinding(transportOwner: Renderer, bindingId: string): void {
-    const state = transportOwner["states"].get(bindingId);
+    const state = transportOwner.states.get(bindingId);
     if (state) {
-        transportOwner["cancelEditTimer"](state);
-        transportOwner["states"].delete(bindingId);
+        transportOwner.cancelEditTimer(state);
+        transportOwner.states.delete(bindingId);
     }
 }

@@ -27,35 +27,35 @@ export interface DocumentFormattedMarkdownOverlayProps {
   /** Called when overlay should close */
   onClose: () => void
   /** Variant: 'response' (default) or 'plan' (shows header) */
-  variant?: 'response' | 'plan'
+  variant?: 'response' | 'plan' | undefined
   /** Callback for URL clicks */
-  onOpenUrl?: (url: string) => void
+  onOpenUrl?: ((url: string) => void) | undefined
   /** Callback for file path clicks */
-  onOpenFile?: (path: string) => void
+  onOpenFile?: ((path: string) => void) | undefined
   /** Optional file path — shows badge with "Open" / "Reveal in {file manager}" menu */
-  filePath?: string
+  filePath?: string | undefined
   /** Optional type badge — tool/format indicator (e.g. "Write") shown in header */
-  typeBadge?: OverlayTypeBadge
+  typeBadge?: OverlayTypeBadge | undefined
   /** Optional error message — renders a tinted error banner above the content card */
-  error?: string
+  error?: string | undefined
   /** Optional session id used for annotation payload source metadata */
-  sessionId?: string
+  sessionId?: string | undefined
   /** Optional message id; when present with callbacks, overlay becomes annotatable */
-  messageId?: string
+  messageId?: string | undefined
   /** Persisted annotations for the message */
-  annotations?: AnnotationV1[]
+  annotations?: AnnotationV1[] | undefined
   /** Callback to add annotation */
-  onAddAnnotation?: (messageId: string, annotation: AnnotationV1) => void
+  onAddAnnotation?: ((messageId: string, annotation: AnnotationV1) => void) | undefined
   /** Callback to remove annotation */
-  onRemoveAnnotation?: (messageId: string, annotationId: string) => void
+  onRemoveAnnotation?: ((messageId: string, annotationId: string) => void) | undefined
   /** Callback to update annotation */
-  onUpdateAnnotation?: (messageId: string, annotationId: string, patch: Partial<AnnotationV1>) => void
+  onUpdateAnnotation?: ((messageId: string, annotationId: string, patch: Partial<AnnotationV1>) => void) | undefined
   /** Input send key behavior used by follow-up editor */
-  sendMessageKey?: 'enter' | 'cmd-enter'
+  sendMessageKey?: 'enter' | 'cmd-enter' | undefined
   /** Whether source content is currently streaming (affects annotation eligibility parity) */
-  isStreaming?: boolean
+  isStreaming?: boolean | undefined
   /** Optional external request to open a specific annotation */
-  openAnnotationRequest?: ExternalOpenAnnotationRequest | null
+  openAnnotationRequest?: ExternalOpenAnnotationRequest | null | undefined
 }
 
 export function DocumentFormattedMarkdownOverlay({

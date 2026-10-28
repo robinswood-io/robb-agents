@@ -17,7 +17,7 @@ export async function startCallbackServer(runtimeState: PiRuntimeState): Promise
         }
         try {
             const chunks: Buffer[] = [];
-            for await (const chunk of req)
+            for await (const chunk of req as AsyncIterable<unknown>)
                 chunks.push(chunk as Buffer);
             const body = JSON.parse(Buffer.concat(chunks).toString()) as Record<string, unknown>;
             debugLog('Received call_llm request via callback server');

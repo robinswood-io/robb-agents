@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 /**
  * Resource Bundle — Export/Import Logic
  *
@@ -44,9 +45,9 @@ export function exportResources(
   try {
     const wsConfigPath = join(workspaceRootPath, 'config.json')
     if (existsSync(wsConfigPath)) {
-      const wsConfig = JSON.parse(readFileSync(wsConfigPath, 'utf-8'))
-      if (wsConfig.name) {
-        bundle.sourceWorkspace = wsConfig.name
+      const wsConfig = parseJsonObject(readFileSync(wsConfigPath, 'utf-8'))
+      if (typeof wsConfig["name"] === "string" && wsConfig["name"]) {
+        bundle.sourceWorkspace = wsConfig["name"]
       }
     }
   } catch {

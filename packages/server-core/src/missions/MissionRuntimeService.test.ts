@@ -1,3 +1,4 @@
+import { SessionManager as FixtureSessionManager } from "../sessions/SessionManager";
 import { offlineMissionRouteOptions, withOfflineMissionRoutes } from './testing/mission-route-fixture.ts';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { generateKeyPairSync } from 'node:crypto';
@@ -101,11 +102,11 @@ describe('MissionRuntimeService', () => {
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), 'mission-service-'));
     executor = new SuccessfulExecutor();
-    sessionManager = {
+    sessionManager = Object.assign(new FixtureSessionManager(), ({
       waitForInit: async () => {},
       getSessions: () => [],
       cancelProcessing: async () => {},
-    } as unknown as ISessionManager;
+    } satisfies Partial<ISessionManager>));
   });
   afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 
@@ -187,11 +188,11 @@ describe('MissionRuntimeService', () => {
         connectorIds: [],
       },
     })).toMatchObject({ status: 'cancelled' });
-    expect(evaluateMissionRuntimePolicy({
+    expect<unknown>(evaluateMissionRuntimePolicy({
       ...common,
       nowMs: Date.parse('2026-09-05T10:00:00Z'),
-    })).toMatchObject({ status: 'failed', reason: expect.stringContaining('deadline') });
-    expect(evaluateMissionRuntimePolicy({
+    })).toMatchObject({ status: 'failed', reason: (expect.stringContaining('deadline') as unknown) });
+    expect<unknown>(evaluateMissionRuntimePolicy({
       ...common,
       completedAttempt: true,
       pendingTelemetry: {
@@ -204,7 +205,7 @@ describe('MissionRuntimeService', () => {
           costUsd: 0.02,
         },
       },
-    })).toMatchObject({ status: 'failed', reason: expect.stringContaining('token budget') });
+    })).toMatchObject({ status: 'failed', reason: (expect.stringContaining('token budget') as unknown) });
   });
 
   it('refuses all dispatch while an emergency stop is active', async () => {
@@ -241,11 +242,11 @@ describe('MissionRuntimeService', () => {
         return new Promise<MissionExecutionResult>((resolve) => { release = resolve; });
       },
     };
-    sessionManager = {
+    sessionManager = Object.assign(new FixtureSessionManager(), ({
       waitForInit: async () => {},
       getSessions: () => [],
       cancelProcessing: async (sessionId: string) => { cancelledSessions.push(sessionId); },
-    } as unknown as ISessionManager;
+    } satisfies Partial<ISessionManager>));
     const runtimeService = new MissionRuntimeService({
       ...offlineMissionRouteOptions,
       sessionManager,
@@ -404,7 +405,7 @@ describe('MissionRuntimeService', () => {
     } as Session;
     const listeners = new Set<(event: SessionCompletionEvent) => void>();
     let sends = 0;
-    sessionManager = {
+    sessionManager = Object.assign(new FixtureSessionManager(), ({
       waitForInit: async () => {},
       getSessions: () => [origin],
       getSession: async () => origin,
@@ -433,7 +434,7 @@ describe('MissionRuntimeService', () => {
           for (const listener of listeners) listener(event);
         });
       },
-    } as unknown as ISessionManager;
+    } satisfies Partial<ISessionManager>));
 
     const runtimeService = service();
     await runtimeService.createAndStart('workspace-1', fixture({ originSessionId: origin.id }));

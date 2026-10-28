@@ -1,0 +1,427 @@
+[
+  {
+    "legacy_id": "gtm-autonomous-decision-governor",
+    "name": "GTM Autonomous Decision Governor",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/gtm_autonomous_decision_governor.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "gtm_decision_proposal_only",
+    "sideEffects": [
+      "reads_gtm_artifacts",
+      "writes_decision_report_and_approval_queue",
+      "sellsyMutation_proposal_only",
+      "githubMutation_proposal_only",
+      "no_external_send"
+    ],
+    "note": "P4c activation: decision/proposal materialization only; external sends still require downstream gates.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/gtm_autonomous_decision_governor.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/gtm-autonomous-decision-governor-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/gtm-autonomous-decision-governor-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "business-acquisition-enhanced-dashboard",
+    "name": "Business Acquisition Enhanced Dashboard",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/business_acquisition_enhanced_dashboard.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "dashboard_report_only",
+    "sideEffects": [
+      "reads_business_reports",
+      "writes_dashboard_report",
+      "no_external_outbound_message"
+    ],
+    "note": "P4c activation: dashboard/report wrapper only.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/business_acquisition_enhanced_dashboard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/business-acquisition-enhanced-dashboard-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/business-acquisition-enhanced-dashboard-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "source-lane-learning-governor",
+    "name": "Source Lane Learning Governor",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/source_lane_learning_governor.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "source_lane_learning_report_only",
+    "sideEffects": [
+      "reads_campaign_impact_reports",
+      "writes_learning_report_and_state",
+      "no_apply_safe_flag",
+      "no_outbound_send_or_crm_mutation"
+    ],
+    "note": "P4c activation: command intentionally omits --apply-safe.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/source_lane_learning_governor.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/source-lane-learning-governor-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/source-lane-learning-governor-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-campaign-agent-memory-fabric",
+    "name": "OSS Campaign + Agent Memory Fabric",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_campaign_agent_memory_fabric.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "riskClass": "memory_fabric_report_pack",
+    "sideEffects": [
+      "reads_campaign_reports",
+      "writes_memory_pack_and_playbook",
+      "no_external_send"
+    ],
+    "note": "P4c activation: writes internal memory/playbook artifacts only.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_campaign_agent_memory_fabric.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-campaign-agent-memory-fabric-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-campaign-agent-memory-fabric-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-runtime-freshness-guard",
+    "name": "OSS — runtime freshness and artifact guard",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_runtime_freshness_guard.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "category": "oss-governance",
+    "task_queue": "watchdog",
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-runtime-freshness-guard-last.json",
+    "description": "Checks declared report artifact freshness and last-report status for scheduled OSS wrappers.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_runtime_freshness_guard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-runtime-freshness-guard-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-runtime-freshness-guard-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-runtime-freshness-guard-last.md",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-backup-hygiene-guard",
+    "name": "OSS — backup hygiene guard",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_backup_hygiene_guard.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "category": "oss-governance",
+    "task_queue": "watchdog",
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-backup-hygiene-guard-last.json",
+    "description": "Checks active .bak files and reports backup-pattern migration candidates for safe_backup.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_backup_hygiene_guard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-backup-hygiene-guard-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-backup-hygiene-guard-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-backup-hygiene-guard-last.md",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "traid-agent-managed-prod-readiness",
+    "name": "TRAID — agent-managed production readiness gate (sandbox fail-closed)",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/traid_agent_managed_prod_readiness.py",
+    "timeout_seconds": 1500,
+    "cutover_ready": true,
+    "category": "investment-lab-governance",
+    "task_queue": "watchdog",
+    "riskClass": "low_observability_or_guardrail",
+    "triggerType": "scheduled",
+    "sideEffects": [
+      "filesystem-write:ops-report",
+      "filesystem-write:agent-action-queue",
+      "remote-dev-filesystem-write:traid-sandbox-report"
+    ],
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/traid-agent-managed-prod-readiness-last.json",
+    "description": "Runs TRAID P39 agent-managed gates on the dev sandbox, writes OSS readiness evidence, and keeps production/live capital fail-closed until signed records and evidence gates pass.",
+    "guardrails": {
+      "sandboxOnly": true,
+      "noLiveTrading": true,
+      "noBrokerLiveConnector": true,
+      "noBrokerSecrets": true,
+      "noRealOrders": true,
+      "noProdDeployment": true,
+      "noNightAgent": true
+    },
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/traid_agent_managed_prod_readiness.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 1500
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/traid-agent-managed-prod-readiness-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/traid-agent-managed-prod-readiness-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/traid-agent-managed-prod-readiness-last.md",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "traid-signed-decision-intake",
+    "name": "TRAID — signed decision intake and validation (fail-closed)",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/traid_signed_decision_intake.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "category": "investment-lab-governance",
+    "task_queue": "watchdog",
+    "riskClass": "low_observability_or_guardrail",
+    "triggerType": "scheduled",
+    "sideEffects": [
+      "filesystem-write:ops-report",
+      "filesystem-write:decision-request-pack",
+      "filesystem-write:decision-inbox-template"
+    ],
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/traid-signed-decision-intake-last.json",
+    "description": "Materializes TRAID P39 signed decision requests, validates submitted JSONL records, scans for raw secrets, and keeps prod/live fail-closed unless records are explicit and syntactically valid.",
+    "guardrails": {
+      "noApprovalFabrication": true,
+      "missingKeepsFailClosed": true,
+      "noLiveTrading": true,
+      "noBrokerSecrets": true,
+      "noBrokerConnector": true,
+      "noProdDeployment": true
+    },
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/traid_signed_decision_intake.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/traid-signed-decision-intake-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/traid-prod-readiness-decision-validation-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/traid-prod-readiness-decision-validation-last.md",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "traid-decision-sync-rerun",
+    "name": "TRAID — decision input sync and P39 rerun (fail-closed)",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/traid_decision_sync_rerun.py",
+    "timeout_seconds": 1500,
+    "cutover_ready": true,
+    "category": "investment-lab-governance",
+    "task_queue": "watchdog",
+    "riskClass": "low_observability_or_guardrail",
+    "triggerType": "scheduled",
+    "sideEffects": [
+      "filesystem-write:ops-report",
+      "remote-dev-filesystem-write:traid-decision-input-artifacts",
+      "remote-dev-filesystem-write:traid-sandbox-report"
+    ],
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/traid-decision-sync-rerun-last.json",
+    "description": "Syncs OSS TRAID decision inbox/request records into TRAID _bmad/decision-inputs, reruns P39, and keeps prod/live fail-closed until valid signed records and gates exist.",
+    "guardrails": {
+      "noApprovalFabrication": true,
+      "noLiveTrading": true,
+      "noBrokerSecrets": true,
+      "noBrokerConnector": true,
+      "noProdDeployment": true,
+      "validationDoesNotActivateProd": true
+    },
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/traid_decision_sync_rerun.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 1500
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/traid-decision-sync-rerun-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/traid-decision-sync-rerun-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/traid-decision-sync-rerun-last.md",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "traid-failclosed-regression-guard",
+    "name": "TRAID — fail-closed regression guard",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/traid_failclosed_regression_guard.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "category": "investment-lab-governance",
+    "task_queue": "watchdog",
+    "riskClass": "low_observability_or_guardrail",
+    "triggerType": "scheduled",
+    "sideEffects": [
+      "filesystem-write:ops-report",
+      "remote-dev-readonly:traid-p39-report"
+    ],
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/traid-failclosed-regression-guard-last.json",
+    "description": "Checks that the TRAID OSS readiness chain remains registered, scheduled, report-producing, and strictly fail-closed for production/live capital.",
+    "guardrails": {
+      "noApprovalFabrication": true,
+      "noLiveTrading": true,
+      "noBrokerSecrets": true,
+      "noBrokerConnector": true,
+      "noProdDeployment": true,
+      "guardFailsIfProdOrLiveAllowed": true
+    },
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/traid_failclosed_regression_guard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/traid-failclosed-regression-guard-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/traid-failclosed-regression-guard-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/traid-failclosed-regression-guard-last.md",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-config-mutation-guard",
+    "name": "OSS — config mutation guard",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_config_mutation_guard.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "category": "oss-governance",
+    "task_queue": "watchdog",
+    "riskClass": "low_observability_or_guardrail",
+    "triggerType": "scheduled",
+    "sideEffects": [
+      "filesystem-read:oss-config-and-scripts",
+      "filesystem-write:ops-report"
+    ],
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-config-mutation-guard-last.json",
+    "description": "Detects active-tree backups and new config-mutating scripts that bypass scripts/lib/config_mutation.py.",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_config_mutation_guard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-config-mutation-guard-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-config-mutation-guard-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-config-mutation-guard-last.md",
+    "businessContractVersion": "oss-config-mutation-guard-v1"
+  },
+  {
+    "legacy_id": "oss-report-contract-coverage-guard",
+    "name": "OSS — report contract coverage guard",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_report_contract_coverage_guard.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "category": "oss-governance",
+    "task_queue": "watchdog",
+    "riskClass": "low_observability_or_guardrail",
+    "triggerType": "scheduled",
+    "sideEffects": [
+      "filesystem-read:oss-config",
+      "filesystem-write:ops-report"
+    ],
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-report-contract-coverage-guard-last.json",
+    "description": "Prevents new scheduled automations from running without declared report artifacts; existing gaps are policy-baselined debt.",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_report_contract_coverage_guard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-report-contract-coverage-guard-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-report-contract-coverage-guard-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-report-contract-coverage-guard-last.md",
+    "businessContractVersion": "oss-report-contract-coverage-guard-v1"
+  }
+]

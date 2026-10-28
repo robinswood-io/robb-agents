@@ -34,12 +34,12 @@ export type RecordedPiEvent =
   | { type: 'auto_retry_end'; success: boolean; finalError?: string; attempt?: number }
   | { type: 'queue_update'; steering: string[]; followUp: string[] };
 
-export function recordedPiEvent(event: RecordedPiEvent): Parameters<PiEventAdapter['adaptEvent']>[0] {
-  // A single test-only bridge for sparse, recorded events from earlier SDKs.
-  return event as unknown as Parameters<PiEventAdapter['adaptEvent']>[0];
+/** Exercise legacy wire inputs against the real adapter without claiming they are current SDK events. */
+export function adaptRecordedPiEvent(adapter: PiEventAdapter, event: RecordedPiEvent): ReturnType<PiEventAdapter['adaptEvent']> {
+  return Reflect.apply(adapter.adaptEvent, adapter, [event]) as ReturnType<PiEventAdapter['adaptEvent']>;
 }
 
-export function collect(events: Generator<AgentEvent>): AgentEvent[] {
+export function collect(events: Generator<AgentEvent, void, unknown>): AgentEvent[] {
   return [...events];
 }
 

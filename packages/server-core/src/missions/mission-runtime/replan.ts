@@ -17,8 +17,8 @@ export async function previewReplan(transportOwner: MissionRuntimeService, works
         expectedRevision,
         proposedWorkItems,
     });
-    const proposedSpec = await transportOwner["createSpecializedProfileResolver"](workspace).revalidateMissionSpec(MissionSpecSchema.parse({ ...snapshot.spec, workItems: proposedWorkItems }));
-    transportOwner["assertAdmissible"](workspace, proposedSpec);
+    const proposedSpec = await transportOwner.createSpecializedProfileResolver(workspace).revalidateMissionSpec(MissionSpecSchema.parse({ ...snapshot.spec, workItems: proposedWorkItems }));
+    transportOwner.assertAdmissible(workspace, proposedSpec);
     return preview;
 }
 
@@ -34,9 +34,9 @@ export async function replanMission(transportOwner: MissionRuntimeService, input
     const context = await transportOwner["contextFor"](input.workspaceId);
     const before = context.controller.getMission(input.missionId);
     const revalidated = await context.specializedProfiles.revalidateMissionSpec(before.spec);
-    transportOwner["assertAdmissible"](context.workspace, revalidated);
+    transportOwner.assertAdmissible(context.workspace, revalidated);
     const proposedSpec = await context.specializedProfiles.revalidateMissionSpec(MissionSpecSchema.parse({ ...before.spec, workItems: input.proposedWorkItems }));
-    transportOwner["assertAdmissible"](context.workspace, proposedSpec);
+    transportOwner.assertAdmissible(context.workspace, proposedSpec);
     const snapshot = context.controller.replanMission(input.missionId, {
         expectedRevision: input.expectedRevision,
         proposedWorkItems: input.proposedWorkItems,

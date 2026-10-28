@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { type EvalCase, type EvalGraderKind, type EvalJsonValue } from "../eval-gate.ts";
 
 export type LiveEvalProvider =
@@ -99,13 +100,13 @@ export interface CompletedGraderOutcome extends EvalGraderOutcome {
 }
 
 export function recordValue(value: unknown): Record<string, unknown> | null {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? Object.fromEntries(Object.entries(value))
+  return typeof value === 'object' && value !== null && !isUnknownArray(value)
+    ? Object.fromEntries(Object.entries<unknown>((value as Record<string, unknown>)))
     : null;
 }
 
 export function arrayValue(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
+  return isUnknownArray(value) ? value : [];
 }
 
 export function stringValue(value: unknown): string | null {

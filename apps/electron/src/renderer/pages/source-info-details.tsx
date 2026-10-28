@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import { type PermissionRow, type ToolRow } from '@/components/info';
 import type { LoadedSource, McpToolWithPermission } from "../../shared/types";
 import type { PermissionsConfigFile } from '@craft-agent/shared/agent/modes';
@@ -7,14 +8,14 @@ export interface SourceInfoPageProps {
   sourceSlug: string
   workspaceId: string
   /** Optional callback when source is deleted */
-  onDelete?: () => void
+  onDelete?: (() => void) | undefined
 }
 
 
 /**
  * Format timestamp to relative time
  */
-export function formatRelativeTime(timestamp: number | undefined, t: (key: string, options?: Record<string, unknown>) => string): string {
+export function formatRelativeTime(timestamp: number | undefined, t: TFunction): string {
   if (!timestamp) return t('common.never')
 
   const now = Date.now()
@@ -54,21 +55,21 @@ export function buildApiPermissionsData(config: PermissionsConfigFile): Permissi
   config.blockedTools?.forEach((item) => {
     const pattern = typeof item === 'string' ? item : item.pattern
     const comment = typeof item === 'string' ? null : item.comment
-    rows.push({ access: 'blocked', type: 'tool', pattern, comment })
+    rows.push({ access: 'blocked', type: 'tool', pattern, ...(comment !== undefined ? { comment: comment } : {}) })
   })
 
   // Allowed Bash Patterns
   config.allowedBashPatterns?.forEach((item) => {
     const pattern = typeof item === 'string' ? item : item.pattern
     const comment = typeof item === 'string' ? null : item.comment
-    rows.push({ access: 'allowed', type: 'bash', pattern, comment })
+    rows.push({ access: 'allowed', type: 'bash', pattern, ...(comment !== undefined ? { comment: comment } : {}) })
   })
 
   // Allowed API Endpoints
   config.allowedApiEndpoints?.forEach((item) => {
     const pattern = `${item.method} ${item.path}`
     const comment = typeof item === 'object' && 'comment' in item ? item.comment : null
-    rows.push({ access: 'allowed', type: 'api', pattern, comment })
+    rows.push({ access: 'allowed', type: 'api', pattern, ...(comment !== undefined ? { comment: comment } : {}) })
   })
 
   return rows
@@ -85,14 +86,14 @@ export function buildMcpPermissionsData(config: PermissionsConfigFile): Permissi
   config.blockedTools?.forEach((item) => {
     const pattern = typeof item === 'string' ? item : item.pattern
     const comment = typeof item === 'string' ? null : item.comment
-    rows.push({ access: 'blocked', type: 'mcp', pattern, comment })
+    rows.push({ access: 'blocked', type: 'mcp', pattern, ...(comment !== undefined ? { comment: comment } : {}) })
   })
 
   // Allowed MCP Patterns
   config.allowedMcpPatterns?.forEach((item) => {
     const pattern = typeof item === 'string' ? item : item.pattern
     const comment = typeof item === 'string' ? null : item.comment
-    rows.push({ access: 'allowed', type: 'mcp', pattern, comment })
+    rows.push({ access: 'allowed', type: 'mcp', pattern, ...(comment !== undefined ? { comment: comment } : {}) })
   })
 
   return rows

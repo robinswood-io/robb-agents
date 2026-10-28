@@ -58,7 +58,7 @@ async function sessionOpSetSessionSourcesWithinOperation(sessionOperationContext
         const sources = getSourcesBySlugs(workspaceRootPath, sourceSlugs);
         // Pass session path so large API responses can be saved to session folder
         const sessionPath = getSessionStoragePath(persistenceRootFor(managed), sessionId);
-        const { mcpServers, apiServers, errors } = await sessionOperationContext.owner["buildSessionSourceServers"](managed, sources, sessionPath);
+        const { mcpServers, apiServers, errors } = await sessionOperationContext.owner.buildSessionSourceServers(managed, sources, sessionPath);
         sessionOpAssertSessionRuntimeOperationOwner(sessionOperationContext, managed, agent);
         if (errors.length > 0) {
             sessionLog.warn(`Source build errors:`, errors);
@@ -102,11 +102,11 @@ function sessionOpGetSessionSources(sessionOperationContext: SessionOperationCon
  * - isIntermediate !== true (not commentary between tool calls)
  * Returns undefined if no final assistant message exists
  */
-function sessionOpGetLastFinalAssistantMessageId(sessionOperationContext: SessionOperationContext, messages: Message[]): string | undefined {
+function sessionOpGetLastFinalAssistantMessageId(_sessionOperationContext: SessionOperationContext, messages: Message[]): string | undefined {
     // Iterate backwards to find the most recent final assistant message
     for (let i = messages.length - 1; i >= 0; i--) {
         const msg = messages[i];
-        if (msg.role === 'assistant' && !msg.isIntermediate) {
+        if (msg?.role === 'assistant' && !msg.isIntermediate) {
             return msg.id;
         }
     }
@@ -140,7 +140,7 @@ function sessionOpSetActiveViewingSession(sessionOperationContext: SessionOperat
         // When user starts viewing a session that's not processing, clear unread
         const managed = sessionOperationContext.state.sessions.get(sessionId);
         if (managed && sessionOpOwnsSessionOperation(sessionOperationContext, managed) && !managed.isProcessing && managed.hasUnread) {
-            void sessionOperationContext.owner.markSessionRead(sessionId).catch(error => {
+            void sessionOperationContext.owner.markSessionRead(sessionId).catch((error: unknown) => {
                 sessionLog.warn(`Failed to mark viewed session ${sessionId} as read:`, error);
             });
         }

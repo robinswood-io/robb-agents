@@ -1,3 +1,5 @@
+import { sessionManagerForTest } from "./private-runtime-access.ts";
+
 import { withSessionOperationsForTest } from './session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./runtime-state-access.ts";
 import { mkdtempSync } from "node:fs";
@@ -58,21 +60,7 @@ export function harness() {
   const manager = withSessionOperationsForTest(new SessionManager())
   const events: Array<Record<string, unknown>> = []
   const stopRuntime = deferred()
-  const internals = manager as unknown as {
-    sessions: Map<string, Managed>
-    enqueuePersist: () => boolean
-    flushSession: () => Promise<void>
-    sendEvent: (event: Record<string, unknown>) => void
-    getOrCreateAgent: () => Promise<unknown>
-    disposeManagedAgentRuntime: () => Promise<void>
-    processNextQueuedMessage: () => void
-    startGenerationTelemetry: () => void
-    finishGenerationTelemetry: () => void
-    pendingPermissionRequests: Map<string, { sessionId: string }>
-    resumePendingTurnAfterRestart: (sessionId: string) => Promise<void>
-    ensureMessagesLoaded: (session: Managed) => Promise<void>
-    onProcessingStopped: (sessionId: string, reason: 'timeout', generation: number) => Promise<void>
-  }
+  const internals = sessionManagerForTest(manager)
   sessionRuntimeStateForTest(manager).sessions.set(id, managed)
   internals.enqueuePersist = () => true
   internals.flushSession = async () => {}

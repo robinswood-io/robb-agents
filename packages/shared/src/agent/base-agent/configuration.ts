@@ -37,7 +37,7 @@ export function startConfigWatcher(transportOwner: BaseAgent): void {
     };
     transportOwner["configWatcherManager"] = new ConfigWatcherManager({
         workspaceRootPath: transportOwner["config"].workspace.rootPath,
-        isHeadless: transportOwner["config"].isHeadless,
+        ...(transportOwner["config"].isHeadless !== undefined ? { isHeadless: transportOwner["config"].isHeadless } : {}),
         onDebug: (msg) => transportOwner["debug"](msg),
     }, callbacks);
     transportOwner["configWatcherManager"].start();
@@ -116,9 +116,9 @@ export function handleSessionMcpToolCompletion(transportOwner: BaseAgent, toolNa
     //   2. Create a plan message (role: 'plan')
     //   3. Send plan_submitted event to renderer
     //   4. Call interruptForHandoff(AbortReason.PlanSubmitted) → turn terminates
-    if (toolName === 'SubmitPlan' && args.planPath) {
-        transportOwner["debug"](`SubmitPlan completed: ${args.planPath}`);
-        transportOwner["onPlanSubmitted"]?.(args.planPath as string);
+    if (toolName === 'SubmitPlan' && args["planPath"]) {
+        transportOwner["debug"](`SubmitPlan completed: ${args["planPath"]}`);
+        transportOwner["onPlanSubmitted"]?.(args["planPath"] as string);
         return;
     }
     // Auth tools — trigger auth request in the UI.
@@ -131,8 +131,8 @@ export function handleSessionMcpToolCompletion(transportOwner: BaseAgent, toolNa
         'source_credential_prompt': 'credential',
     };
     const authType = authToolTypes[toolName];
-    if (authType && args.sourceSlug && transportOwner["onAuthRequest"]) {
-        const sourceSlug = args.sourceSlug as string;
+    if (authType && args["sourceSlug"] && transportOwner["onAuthRequest"]) {
+        const sourceSlug = args["sourceSlug"] as string;
         const source = transportOwner["sourceManager"].getAllSources().find(s => s.config.slug === sourceSlug);
         const sourceName = source?.config.name || sourceSlug;
         transportOwner["debug"](`Auth tool completed: ${toolName} for ${sourceSlug}`);
@@ -143,10 +143,10 @@ export function handleSessionMcpToolCompletion(transportOwner: BaseAgent, toolNa
             sourceSlug,
             sourceName,
             ...(authType === 'credential' && {
-                mode: (args.mode as string) || 'bearer',
-                labels: args.labels as Record<string, string> | undefined,
-                description: args.description as string | undefined,
-                hint: args.hint as string | undefined,
+                mode: (args["mode"] as string) || 'bearer',
+                labels: args["labels"] as Record<string, string> | undefined,
+                description: args["description"] as string | undefined,
+                hint: args["hint"] as string | undefined,
             }),
         } as AuthRequest);
     }

@@ -1,3 +1,5 @@
+import type { PendingTurnRecovery } from '../../../../../shared/src/sessions/types/turn-recovery.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { isExactQueuedSourceActivation, cancelSourceActivationPending } from '../policy.ts';
 import { sessionLog } from '../runtime-platform.ts';
 import { isSourceActivationOriginCurrent } from '../source-activation.ts';
@@ -37,11 +39,11 @@ if (directHumanContinuation) {
         // human acknowledgement flush, so a crash cannot resurrect the marker.
         sessionOpDropDeferredSourceActivations(sessionOperationContext, managed, true);
         if (managed.pendingTurnRecovery?.recoveryDispatch) {
-            managed.pendingTurnRecovery = {
+            managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
                 ...managed.pendingTurnRecovery,
                 waitingForPermission: undefined,
                 recoveryDispatch: undefined,
-            };
+            });
         }
     }
     if (activeMessageState.options?.internalOrigin?.kind === 'source-activation') {

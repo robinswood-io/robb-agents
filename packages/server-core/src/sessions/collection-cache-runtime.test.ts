@@ -1,3 +1,6 @@
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { StoredConfigSchema } from '../../../shared/src/config/validators.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterAll, beforeAll, expect, it, spyOn } from 'bun:test'
@@ -5,19 +8,20 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import type { SummarizeCallback } from '@craft-agent/shared/sources'
-import type { CollectionCacheScope } from '@craft-agent/shared/mcp'
+
 
 let SessionManager: typeof import('./SessionManager.ts')['SessionManager']
 let createManagedSession: typeof import('./SessionManager.ts')['createManagedSession']
 let createApiTool: typeof import('@craft-agent/shared/sources/api-tools')['createApiTool']
 let root: string
 let restoreConfig: (() => void) | undefined
-const originalConfigDir = process.env.CRAFT_CONFIG_DIR
+const originalConfigDir = process.env["CRAFT_CONFIG_DIR"]
 
 beforeAll(async () => {
   root = mkdtempSync(join(tmpdir(), 'collection-runtime-'))
-  process.env.CRAFT_CONFIG_DIR = root
+  process.env["CRAFT_CONFIG_DIR"] = root
   writeFileSync(join(root, 'config.json'), JSON.stringify({
+    schemaVersion: 1,
     workspaces: [], activeWorkspaceId: null, activeSessionId: null, defaultLlmConnection: 'test-route',
     llmConnections: [{ slug: 'test-route', name: 'Isolated test', providerType: 'pi_compat', authType: 'none', baseUrl: 'http://localhost:11434/v1', defaultModel: 'test-model', models: ['test-model'], customEndpoint: { api: 'openai-completions' }, createdAt: 1 }],
   }))
@@ -25,7 +29,7 @@ beforeAll(async () => {
   // Replace only disk loading, retaining real connection and capability resolution.
   const storage = await import('@craft-agent/shared/config/storage')
   const configLoader = spyOn(storage, 'loadStoredConfig').mockImplementation(() =>
-    JSON.parse(readFileSync(join(root, 'config.json'), 'utf8')),
+    StoredConfigSchema.parse(JSON.parse(readFileSync(join(root, 'config.json'), 'utf8'))) as NonNullable<ReturnType<typeof storage.loadStoredConfig>>,
   )
   restoreConfig = () => configLoader.mockRestore()
   ;({ SessionManager, createManagedSession } = await import('./SessionManager.ts'))
@@ -34,22 +38,18 @@ beforeAll(async () => {
 
 afterAll(() => {
   restoreConfig?.()
-  if (originalConfigDir === undefined) delete process.env.CRAFT_CONFIG_DIR
-  else process.env.CRAFT_CONFIG_DIR = originalConfigDir
+  if (originalConfigDir === undefined) delete process.env["CRAFT_CONFIG_DIR"]
+  else process.env["CRAFT_CONFIG_DIR"] = originalConfigDir
   rmSync(root, { recursive: true, force: true })
 })
 
 type Managed = ReturnType<typeof createManagedSession>
-type CacheHost = {
-  sessions: Map<string, Managed>
-  getCollectionCacheScope: (managed: Managed) => CollectionCacheScope | undefined
-  getCollectionSummarizer: (managed: Managed) => SummarizeCallback
-}
+
 
 function sessions() {
   const workspace = { id: 'ws-test', slug: 'ws-test', name: 'Test', rootPath: join(root, 'workspace'), createdAt: 1 }
   mkdirSync(workspace.rootPath, { recursive: true })
-  const manager = withSessionOperationsForTest(new SessionManager()) as unknown as CacheHost
+  const manager = sessionManagerForTest(withSessionOperationsForTest(new SessionManager()))
   const parent = createManagedSession({ id: 'parent', name: 'Parent', llmConnection: 'test-route', permissionMode: 'safe' }, workspace, { messagesLoaded: true })
   parent.activeObjective = {
     schemaVersion: 1, objectiveId: 'objective-1', userMessageId: 'message-1', startedAt: 1,
@@ -101,39 +101,39 @@ it('actual API handler and deferred host callback share current collections, ref
   const makeTool = (session: Managed, summarize: SummarizeCallback) => createApiTool(
     { name: 'collection', baseUrl: 'https://example.test', auth: { type: 'bearer' } },
     async () => token, join(root, session.id), summarize,
-  ) as unknown as { handler: (args: { path: string; method: string }) => Promise<{ isError?: boolean }> }
+  )
   const parentTool = makeTool(parent, callback)
   const childTool = makeTool(child, manager.getCollectionSummarizer(child))
-  const stub = { getSummarizeCallback: () => async () => { synthesisCalls++; return 'Verified source summary'; } }
+  const stub = completeSessionAgentFixture(parent.workspace, { getSummarizeCallback: () => async () => { synthesisCalls++; return 'Verified source summary'; } })
   globalThis.fetch = Object.assign(async () => { fetchCalls++; return new Response(content, { status }); }, { preconnect: previousFetch.preconnect }) as typeof fetch
   try {
-    await parentTool.handler({ path: '/records', method: 'GET' })
+    await parentTool.handler({ path: '/records', method: 'GET', params: undefined, _intent: undefined }, undefined)
     expect(synthesisCalls).toBe(0)
-    parent.agent = stub as never
-    child.agent = stub as never
-    await parentTool.handler({ path: '/records', method: 'GET' })
-    await childTool.handler({ path: '/records', method: 'GET' })
+    parent.agent = stub
+    child.agent = stub
+    await parentTool.handler({ path: '/records', method: 'GET', params: undefined, _intent: undefined }, undefined)
+    await childTool.handler({ path: '/records', method: 'GET', params: undefined, _intent: undefined }, undefined)
     expect(fetchCalls).toBe(3)
     expect(synthesisCalls).toBe(1)
     token = 'test-token-B'
-    await childTool.handler({ path: '/records', method: 'GET' })
+    await childTool.handler({ path: '/records', method: 'GET', params: undefined, _intent: undefined }, undefined)
     expect(synthesisCalls).toBe(2)
     content += ' Material source change.'
-    await childTool.handler({ path: '/records', method: 'GET' })
+    await childTool.handler({ path: '/records', method: 'GET', params: undefined, _intent: undefined }, undefined)
     expect(synthesisCalls).toBe(3)
-    await parentTool.handler({ path: '/records', method: 'POST' })
-    await childTool.handler({ path: '/records', method: 'GET' })
+    await parentTool.handler({ path: '/records', method: 'POST', params: undefined, _intent: undefined }, undefined)
+    await childTool.handler({ path: '/records', method: 'GET', params: undefined, _intent: undefined }, undefined)
     expect(synthesisCalls).toBe(5)
     child.activeObjective!.originalText = `Tu es reviewer indépendant. Vérifie indépendamment en lecture seule. Cible /srv/review. Retourne uniquement ${JSON.stringify({ verdict: 'PASS|FAIL', criteria: [{ id: 'requested-outcome-delivered', passed: false }], findings: [], objectiveId: 'parent-objective', acceptanceSha256: 'a'.repeat(64) })}`
-    await childTool.handler({ path: '/records', method: 'GET' })
+    await childTool.handler({ path: '/records', method: 'GET', params: undefined, _intent: undefined }, undefined)
     expect(synthesisCalls).toBe(6)
     status = 401
-    expect((await parentTool.handler({ path: '/records', method: 'GET' })).isError).toBe(true)
+    expect((await parentTool.handler({ path: '/records', method: 'GET', params: undefined, _intent: undefined }, undefined)).isError).toBe(true)
     expect(synthesisCalls).toBe(6)
     status = 200
     parent.activeObjective!.objectiveId = 'new-task'
     parent.agent = { getSummarizeCallback: () => async () => { synthesisCalls++; return 'Refreshed backend summary'; } } as never
-    await parentTool.handler({ path: '/records', method: 'GET' })
+    await parentTool.handler({ path: '/records', method: 'GET', params: undefined, _intent: undefined }, undefined)
     expect(synthesisCalls).toBe(7)
     expect(fetchCalls).toBe(10)
   } finally { globalThis.fetch = previousFetch }

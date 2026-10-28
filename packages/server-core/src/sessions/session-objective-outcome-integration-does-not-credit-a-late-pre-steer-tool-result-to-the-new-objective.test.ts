@@ -1,3 +1,5 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -14,10 +16,10 @@ import { type Managed, activeObjective, enableAutomaticToolFallback, installAgen
 beforeEach(() => {
   roots.length = 0
   sessionIds.length = 0
-  process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+  process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
 })
 afterEach(() => {
-  delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+  delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]
   for (const sessionId of sessionIds) clearObjectiveEvidenceGate(sessionId)
   for (const root of roots) rmSync(root, { recursive: true, force: true })
 })
@@ -111,7 +113,7 @@ describe('SessionManager objective outcome integration', () => {
     expect(steeredMessage.content).toBe(originalText)
     expect(steeredMessage.content).not.toContain('host_objective_contract')
     expect(harness.managed.messageQueue[0]?.message).not.toContain('host_objective_contract')
-    expect(harness.sentEvents.filter(event => event.type === 'user_message')).toHaveLength(1)
+    expect(harness.sentEvents.filter(event => event["type"] === 'user_message')).toHaveLength(1)
   })
 
   it('requeues an undelivered structured fallback as a hidden automatic runtime recovery', async () => {
@@ -162,7 +164,7 @@ describe('SessionManager objective outcome integration', () => {
   })
 
   it('recovers a native unfinished plan after restart without demanding a legacy receipt', async () => {
-    delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+    delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]
     const harness = makeHarness('native-restart-plan')
     const user: Message = { id: 'native-root', role: 'user', content: 'Crée premier.md et second.md puis vérifie les deux.', timestamp: 1 }
     harness.managed.messages.push(user, {
@@ -172,7 +174,7 @@ describe('SessionManager objective outcome integration', () => {
     }, { id: 'native-false-final', role: 'assistant', content: 'Premier fichier livré.', timestamp: 3 })
     harness.managed.activeObjective = transitionObjectiveContract({ messageId: user.id, text: user.content, nowMs: 1 })
     harness.managed.pendingTurnRecovery = createPendingTurnRecovery(user.id)
-    await (harness.manager as unknown as {
+    await (harness.manager as {
       resumePendingTurnAfterRestart: (sessionId: string) => Promise<void>
     }).resumePendingTurnAfterRestart(harness.managed.id)
     expect(harness.managed.activeObjective?.terminalState).toBe('active')
@@ -184,7 +186,7 @@ describe('SessionManager objective outcome integration', () => {
   })
 
   it('finishes a two-deliverable mission after an omitted step, with real files, automatic dispatch and persisted completion', async () => {
-    delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+    delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]
     const harness = makeHarness('native-complete-mission')
     const dir = harness.managed.workspace.rootPath
     const first = join(dir, 'premier.md')
@@ -192,12 +194,7 @@ describe('SessionManager objective outcome integration', () => {
     const path = join(dir, 'session.jsonl')
     const prompts: string[] = []
     let firstModifiedAt: number | undefined
-    const runtime = harness.manager as unknown as {
-      enqueuePersist: (session: Managed) => boolean
-      flushSession: () => Promise<void>
-      processNextQueuedMessage?: (sessionId: string) => void
-      getOrCreateAgent: (session: Managed) => Promise<typeof agent>
-    }
+    const runtime = sessionManagerForTest(harness.manager)
     const persist = (session: Managed) => {
       writeSessionJsonl(path, { ...pickSessionFields(session), workspaceRootPath: dir,
         createdAt: 1, lastUsedAt: Date.now(), messages: session.messages.map(messageToStored),
@@ -208,7 +205,7 @@ describe('SessionManager objective outcome integration', () => {
     runtime.enqueuePersist = persist
     runtime.flushSession = async () => { persist(harness.managed) }
     // Use the real queue dispatcher, including its automatic admission checks.
-    delete runtime.processNextQueuedMessage
+    Reflect.deleteProperty(runtime, 'processNextQueuedMessage')
     async function* publishPlan(id: string, finished: boolean): AsyncGenerator<AgentEvent> {
       yield { type: 'tool_start', toolName: 'mcp__session__update_plan', toolUseId: id, input: { plan: [
         { step: 'Créer premier.md', status: 'completed' },
@@ -217,7 +214,7 @@ describe('SessionManager objective outcome integration', () => {
       ] } }
       yield { type: 'tool_result', toolName: 'mcp__session__update_plan', toolUseId: id, result: 'Plan updated', executed: true, isError: false }
     }
-    const agent = {
+    const agent = completeSessionAgentFixture(harness.managed.workspace, {
       async *chat(prompt: string): AsyncGenerator<AgentEvent> {
         prompts.push(prompt)
         const current = prompts.length === 1 ? first : second
@@ -240,9 +237,9 @@ describe('SessionManager objective outcome integration', () => {
       },
       getModel: () => 'test/objective-model', getSessionId: () => null,
       isProcessing: () => false, setAllSources: () => {}, redirect: () => true,
-    }
-    harness.managed.agent = agent as never
-    runtime.getOrCreateAgent = async session => { session.agent = agent as never; return agent }
+    })
+    harness.managed.agent = agent
+    runtime.getOrCreateAgent = async session => { session.agent = agent; return agent }
     const completed = new Promise<void>(resolve => {
       const off = harness.manager.onSessionComplete(event => {
         if (event.sessionId === harness.managed.id && event.reason === 'complete') { off(); resolve() }
@@ -267,25 +264,19 @@ describe('SessionManager objective outcome integration', () => {
   }, 15_000)
 
   it('uses provider-driven execution by default without injecting host_objective_contract or rejecting receipt-free completions', async () => {
-    delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+    delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]
     const harness = makeHarness('default-provider-driven-mode')
     const capturedPrompts: string[] = []
     const redirected: string[] = []
     let activeAuthority: {
-      authorized?: boolean
-      sensitiveActionAuthorized?: boolean
+      authorized: boolean | undefined
+      sensitiveActionAuthorized: boolean | undefined
       authorizationSegments: string[]
     } | undefined
-    const agent = {
+    const agent = completeSessionAgentFixture(harness.managed.workspace, {
       async *chat(prompt: string): AsyncGenerator<AgentEvent> {
         capturedPrompts.push(prompt)
-        activeAuthority = (harness.manager as unknown as {
-          resolveRuntimeObjectiveMutationAuthority: (session: Managed, request?: string) => {
-            authorized?: boolean
-            sensitiveActionAuthorized?: boolean
-            authorizationSegments: string[]
-          }
-        }).resolveRuntimeObjectiveMutationAuthority(harness.managed)
+        activeAuthority = (sessionManagerForTest(harness.manager)).resolveRuntimeObjectiveMutationAuthority(harness.managed)
         yield { type: 'text_complete', text: 'Le changement est terminé.' }
         yield { type: 'complete' }
       },
@@ -297,12 +288,10 @@ describe('SessionManager objective outcome integration', () => {
         redirected.push(message)
         return true
       },
-    }
-    harness.managed.agent = agent as never
-    ;(harness.manager as unknown as {
-      getOrCreateAgent: (session: Managed) => Promise<typeof agent>
-    }).getOrCreateAgent = async session => {
-      session.agent = agent as never
+    })
+    harness.managed.agent = agent
+    ;(sessionManagerForTest(harness.manager)).getOrCreateAgent = async session => {
+      session.agent = agent
       return agent
     }
 

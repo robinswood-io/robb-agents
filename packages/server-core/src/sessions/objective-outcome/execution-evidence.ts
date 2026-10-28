@@ -1,3 +1,5 @@
+import type { IndependentReviewContext } from '../../../../shared/src/agent/core/objective-evidence-gate/review-receipts.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { Message } from "@craft-agent/core/types";
 import { classifyToolNameMutationSemantics, isObjectiveShellExecutorToolName, isObjectiveShellEvidenceCommand, isObjectiveShellObservationCommand, parseIndependentReviewReceipt } from "@craft-agent/shared/agent";
 import type { ActiveSessionObjective } from "@craft-agent/shared/sessions";
@@ -20,7 +22,7 @@ function observationOrValidationTool(message: Message): boolean {
   if (classifyToolNameMutationSemantics(message.toolName ?? '') === 'ambiguous-compound') return false;
   const toolName = normalizedToolName(message.toolName);
   const input = message.toolInput ?? {};
-  const command = [input.command, input.cmd, input.script]
+  const command = [input["command"], input["cmd"], input["script"]]
     .find((value): value is string => typeof value === 'string');
   // Generic/local/remote shell executors use the shared non-opaque subset.
   // The registered-only validator/curl extension is applied below only after
@@ -31,12 +33,12 @@ function observationOrValidationTool(message: Message): boolean {
   }
   if (NON_VALIDATION_TOOL_PATTERN.test(toolName)) return false;
   if (OBSERVATION_TOOL_PATTERN.test(toolName)) return true;
-  const action = [input.action, input.operation]
+  const action = [input["action"], input["operation"]]
     .find((value): value is string => typeof value === 'string');
   if (action && OBSERVATION_ACTION_PATTERN.test(action.trim())) return true;
-  const method = input.method;
+  const method = input["method"];
   if (typeof method === 'string' && OBSERVATION_HTTP_METHOD_PATTERN.test(method.trim())) return true;
-  const query = [input.query, input.sql, input.statement]
+  const query = [input["query"], input["sql"], input["statement"]]
     .find((value): value is string => typeof value === 'string');
   if (query && OBSERVATION_SQL_PATTERN.test(query)) return true;
   return command ? isObjectiveShellObservationCommand(command) : false;
@@ -123,12 +125,12 @@ export function hostEvidenceRefs(
       && observationOrValidationTool(message);
     const binding = objectiveReviewBinding(objective);
     const reviewReceipt = REVIEW_TOOL_PATTERN.test(message.toolName ?? '')
-      ? parseIndependentReviewReceipt(substantiveResult, {
+      ? parseIndependentReviewReceipt(substantiveResult, omitUndefined<IndependentReviewContext>({
         ...binding, toolName: message.toolName ?? '',
-        sessionIds: Array.isArray(message.toolInput?.sessionIds)
-          && message.toolInput.sessionIds.every(id => typeof id === 'string')
-          ? message.toolInput.sessionIds as string[] : undefined,
-      })
+        sessionIds: Array.isArray(message.toolInput?.["sessionIds"])
+          && message.toolInput["sessionIds"].every((id: unknown) => typeof id === 'string')
+          ? message.toolInput["sessionIds"] as string[] : undefined,
+      }))
       : undefined;
     const reviewedCriteria = new Set(reviewReceipt?.criteria.map(criterion => criterion.id));
     const requiredReviewCriteria = [...objective.completionCriteria.filter(criterion => (
@@ -181,7 +183,7 @@ export function hostEvidenceRefs(
   for (const [index, message] of scoped.entries()) {
     if (!acceptanceEvidenceRefs.has(message.id)) continue;
     addRefs(successful, message, index);
-    const command = [message.toolInput?.command, message.toolInput?.cmd, message.toolInput?.script]
+    const command = [message.toolInput?.["command"], message.toolInput?.["cmd"], message.toolInput?.["script"]]
       .find((value): value is string => typeof value === 'string');
     const registeredShellCheck = isObjectiveShellExecutorToolName(message.toolName ?? '')
       && command !== undefined && isObjectiveShellEvidenceCommand(command);

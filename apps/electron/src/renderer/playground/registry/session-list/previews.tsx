@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import * as React from "react";
 import type { SessionMeta } from "@/atoms/sessions";
 import type { ContentSearchResult } from "@/hooks/useSessionSearch";
@@ -13,19 +14,19 @@ import { sampleSessions, createMockContext, noopKeyDown } from "./fixtures";
 
 interface SessionListSearchPreviewProps {
   /** Current search query (highlights matches in titles) */
-  searchQuery?: string
+  searchQuery?: string | undefined
   /** Show search input bar */
-  showSearchInput?: boolean
+  showSearchInput?: boolean | undefined
   /** Show loading state in status row */
-  isSearching?: boolean
+  isSearching?: boolean | undefined
   /** Index of currently selected session (0-based) */
-  selectedIndex?: number
+  selectedIndex?: number | undefined
   /** Match count for selected session (shows yellow badge) */
-  chatMatchCount?: number
+  chatMatchCount?: number | undefined
   /** Whether to show "no results" state */
-  showNoResults?: boolean
+  showNoResults?: boolean | undefined
   /** Explicit result count to display (defaults to filtered session count) */
-  resultCount?: number
+  resultCount?: number | undefined
 }
 
 export function SessionListSearchPreview({
@@ -121,14 +122,14 @@ export function SessionListSearchPreview({
 // ============================================================================
 
 interface SessionItemPreviewProps {
-  item?: SessionMeta
-  isSelected?: boolean
-  searchQuery?: string
-  chatMatchCount?: number
-  subagentCount?: number
-  runningSubagentCount?: number
-  state?: 'none' | 'loading' | 'plan' | 'new'
-  flagged?: boolean
+  item?: SessionMeta | undefined
+  isSelected?: boolean | undefined
+  searchQuery?: string | undefined
+  chatMatchCount?: number | undefined
+  subagentCount?: number | undefined
+  runningSubagentCount?: number | undefined
+  state?: 'none' | 'loading' | 'plan' | 'new' | undefined
+  flagged?: boolean | undefined
 }
 
 export function SessionItemPreview({
@@ -142,7 +143,7 @@ export function SessionItemPreview({
   flagged = false,
 }: SessionItemPreviewProps) {
   const resolvedItem = React.useMemo(() => {
-    const base: SessionMeta = { ...item, isProcessing: false, hasUnread: false, lastMessageRole: undefined, isFlagged: flagged }
+    const base: SessionMeta = omitUndefined<SessionMeta>({ ...item, isProcessing: false, hasUnread: false, lastMessageRole: undefined, isFlagged: flagged })
     switch (state) {
       case 'loading': base.isProcessing = true; break
       case 'plan': base.lastMessageRole = 'plan'; break

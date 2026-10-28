@@ -32,12 +32,12 @@ export function loadShellEnv(): void {
   }
 
   // Skip in dev mode - terminal launches already have full environment
-  if (process.env.VITE_DEV_SERVER_URL) {
+  if (process.env["VITE_DEV_SERVER_URL"]) {
     mainLog.info('[shell-env] Skipping in dev mode (already have shell environment)')
     return
   }
 
-  const shell = process.env.SHELL || '/bin/zsh'
+  const shell = process.env["SHELL"] || '/bin/zsh'
   mainLog.info(`[shell-env] Loading environment from ${shell}`)
 
   try {
@@ -49,11 +49,11 @@ export function loadShellEnv(): void {
       encoding: 'utf-8',
       timeout: 5000,
       env: {
-        HOME: process.env.HOME,
-        USER: process.env.USER,
+        HOME: process.env["HOME"],
+        USER: process.env["USER"],
         SHELL: shell,
         TERM: 'xterm-256color',
-        TMPDIR: process.env.TMPDIR,
+        TMPDIR: process.env["TMPDIR"],
         // Prevent macOS from showing "Install Command Line Developer Tools" dialog
         // when the shell hits the /usr/bin/git shim on systems without Xcode CLT
         APPLE_SUPPRESS_DEVELOPER_TOOL_POPUP: '1',
@@ -79,8 +79,8 @@ export function loadShellEnv(): void {
     mainLog.info(`[shell-env] Loaded ${count} environment variables`)
 
     // Log PATH for debugging
-    if (process.env.PATH) {
-      const pathCount = process.env.PATH.split(':').length
+    if (process.env["PATH"]) {
+      const pathCount = process.env["PATH"].split(':').length
       mainLog.info(`[shell-env] PATH has ${pathCount} entries`)
     }
   } catch (error) {
@@ -94,16 +94,16 @@ export function loadShellEnv(): void {
       '/opt/homebrew/sbin',
       '/usr/local/bin',
       '/usr/local/sbin',
-      `${process.env.HOME}/.local/bin`,
-      `${process.env.HOME}/.bun/bin`,
-      `${process.env.HOME}/.cargo/bin`,
+      `${process.env["HOME"]}/.local/bin`,
+      `${process.env["HOME"]}/.bun/bin`,
+      `${process.env["HOME"]}/.cargo/bin`,
     ]
 
-    const currentPath = process.env.PATH || '/usr/bin:/bin:/usr/sbin:/sbin'
+    const currentPath = process.env["PATH"] || '/usr/bin:/bin:/usr/sbin:/sbin'
     const newPath = [...fallbackPaths, ...currentPath.split(':')]
       .filter((p, i, arr) => arr.indexOf(p) === i) // dedupe
       .join(':')
 
-    process.env.PATH = newPath
+    process.env["PATH"] = newPath
   }
 }

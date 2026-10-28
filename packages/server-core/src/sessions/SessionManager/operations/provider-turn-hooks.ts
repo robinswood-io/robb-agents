@@ -1,3 +1,4 @@
+import { setOptional } from '@craft-agent/shared/utils/json';
 import { enqueueRecoveredMessageInTranscriptOrder } from '../policy.ts';
 import { recoveredInternalMessageOptions } from '../../agent-delivery.ts';
 import type { Message } from '@craft-agent/core/types';
@@ -63,13 +64,13 @@ export function installProviderTurnHooks(
                 enqueueRecoveredMessageInTranscriptOrder(managed, {
                     message: userMessage.content,
                     messageId: userMessage.id,
-                    storedAttachments: userMessage.attachments,
+                    ...(userMessage.attachments !== undefined ? { storedAttachments: userMessage.attachments } : {}),
                     options: recoveredInternalMessageOptions(userMessage),
                 });
             }
         }
         if (!sessionOperationContext.owner["persistSession"](managed)) {
-            userMessage.providerDispatch = activeProviderState.providerWriteAheadMarker;
+            setOptional(userMessage, "providerDispatch", activeProviderState.providerWriteAheadMarker);
             throw new Error('The provider dispatch rollback could not be queued for durable storage');
         }
         try {
@@ -78,7 +79,7 @@ export function installProviderTurnHooks(
         catch (error) {
             // A failed deletion is not proof that the preceding write-ahead was
             // removed. Restore the in-memory fence and remain fail-closed.
-            userMessage.providerDispatch = activeProviderState.providerWriteAheadMarker;
+            setOptional(userMessage, "providerDispatch", activeProviderState.providerWriteAheadMarker);
             sessionOperationContext.owner["persistSession"](managed);
             throw error;
         }

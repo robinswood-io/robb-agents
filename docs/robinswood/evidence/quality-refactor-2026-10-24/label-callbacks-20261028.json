@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-28T06:20:57.684Z",
+  "status": "pass",
+  "scope": "Actual restored useShellConfiguration hook rendered in real Chrome; only ephemeral UI and a simulated deleteLabel API, no user data modified; not the packaged app",
+  "steps": [
+    "open-add-label-with-parent-through-restored-callback",
+    "close-label-popover",
+    "reopen-at-root-and-clear-previous-parent",
+    "delete-uses-the-selected-workspace-and-label"
+  ],
+  "errors": [],
+  "bundleSha256": "f2a2355ce58c04f1fea08c153e274da01adbc1b18158d5928015564e387cb5af"
+}

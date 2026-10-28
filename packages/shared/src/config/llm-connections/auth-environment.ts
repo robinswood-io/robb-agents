@@ -113,7 +113,7 @@ export interface ResolvedAuthEnvVars {
 export async function resolveAuthEnvVars(
   connection: LlmConnection,
   connectionSlug: string,
-  credentialManager: CredentialManager,
+  credentialManager: Pick<CredentialManager, 'getLlmApiKey' | 'getLlmOAuth'>,
   getValidOAuthToken: (slug: string) => Promise<{ accessToken?: string | null }>,
   expectedCredentialBindingId?: string,
 ): Promise<ResolvedAuthEnvVars> {
@@ -127,7 +127,7 @@ export async function resolveAuthEnvVars(
 
   // Set base URL if configured
   if (connection.baseUrl) {
-    envVars.ANTHROPIC_BASE_URL = connection.baseUrl;
+    envVars["ANTHROPIC_BASE_URL"] = connection.baseUrl;
   }
 
   const authType = connection.authType;
@@ -135,10 +135,10 @@ export async function resolveAuthEnvVars(
   if (authType === 'api_key' || authType === 'api_key_with_endpoint' || authType === 'bearer_token') {
     const apiKey = await credentialManager.getLlmApiKey(connectionSlug, expectedCredentialBindingId);
     if (apiKey) {
-      envVars.ANTHROPIC_API_KEY = apiKey;
+      envVars["ANTHROPIC_API_KEY"] = apiKey;
     } else if (connection.baseUrl) {
       // Keyless provider (e.g. Ollama)
-      envVars.ANTHROPIC_API_KEY = 'not-needed';
+      envVars["ANTHROPIC_API_KEY"] = 'not-needed';
     } else {
       return { envVars, success: false, warning: `No API key found for: ${connectionSlug}` };
     }
@@ -157,7 +157,7 @@ export async function resolveAuthEnvVars(
         : await getValidOAuthToken(connectionSlug);
       const accessToken = tokenResult.accessToken;
       if (accessToken) {
-        envVars.CLAUDE_CODE_OAUTH_TOKEN = accessToken;
+        envVars["CLAUDE_CODE_OAUTH_TOKEN"] = accessToken;
       } else {
         return { envVars, success: false, warning: `Failed to get OAuth token for: ${connectionSlug}` };
       }
@@ -165,7 +165,7 @@ export async function resolveAuthEnvVars(
       // Fallback OAuth path (should not be reached after legacy migration)
       const llmOAuth = await credentialManager.getLlmOAuth(connectionSlug, expectedCredentialBindingId);
       if (llmOAuth?.accessToken) {
-        envVars.CLAUDE_CODE_OAUTH_TOKEN = llmOAuth.accessToken;
+        envVars["CLAUDE_CODE_OAUTH_TOKEN"] = llmOAuth.accessToken;
       } else {
         return { envVars, success: false, warning: `No OAuth token found for: ${connectionSlug}` };
       }
@@ -205,11 +205,11 @@ export function migrateLlmConnection(legacy: {
     name: legacy.name,
     providerType,
     type: legacy.type, // Keep for backwards compatibility
-    baseUrl: legacy.baseUrl,
+    ...(legacy.baseUrl !== undefined ? { baseUrl: legacy.baseUrl } : {}),
     authType,
-    models: legacy.models,
-    defaultModel: legacy.defaultModel,
+    ...(legacy.models !== undefined ? { models: legacy.models } : {}),
+    ...(legacy.defaultModel !== undefined ? { defaultModel: legacy.defaultModel } : {}),
     createdAt: legacy.createdAt,
-    lastUsedAt: legacy.lastUsedAt,
+    ...(legacy.lastUsedAt !== undefined ? { lastUsedAt: legacy.lastUsedAt } : {}),
   };
 }

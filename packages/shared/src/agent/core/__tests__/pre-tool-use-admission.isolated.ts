@@ -74,11 +74,11 @@ describe('runPreToolUseChecks', () => {
       }));
 
       // Mocked diagnostics returns permissionMode='safe', which must be authoritative.
-      expect(preToolUseMocks.shouldAllowToolInMode).toHaveBeenCalledWith(
+      expect<unknown>(preToolUseMocks.shouldAllowToolInMode).toHaveBeenCalledWith(
         'Bash',
         { command: 'ls' },
         'safe',
-        expect.any(Object)
+        (expect.any(Object) as unknown)
       );
     });
   });
@@ -217,7 +217,7 @@ describe('runPreToolUseChecks', () => {
         },
         checkPrerequisites: () => ({
           allowed: guideLoaded,
-          blockReason: guideLoaded ? undefined : 'Read guide.md first',
+          ...(!guideLoaded ? { blockReason: 'Read guide.md first' } : {}),
         }),
       });
 

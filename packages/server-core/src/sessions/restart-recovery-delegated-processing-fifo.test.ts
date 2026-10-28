@@ -1,3 +1,5 @@
+import type { SendMessageOptions } from '../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { delegatedTerminalResultDeliveryId as policyDelegatedTerminalResultDeliveryId } from "./SessionManager/policy.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -134,7 +136,7 @@ describe('durable restart recovery', () => {
     managed.isProcessing = true
     managed.processingGeneration = 1
     managed.lastSentMessage = receipt.content
-    managed.lastSentOptions = { hidden: true, internalOrigin: receipt.internalOrigin }
+    managed.lastSentOptions = omitUndefined<SendMessageOptions>({ hidden: true, internalOrigin: receipt.internalOrigin })
     managed.waitDiagnosticBoundary = {
       generation: 1,
       objectiveId: managed.activeObjective!.objectiveId ?? managed.activeObjective!.userMessageId,
@@ -175,12 +177,12 @@ describe('durable restart recovery', () => {
     parent.messages.push(receiptA, receiptB)
     parent.messageQueue.push({
       messageId: receiptB.id, message: receiptB.content,
-      options: { hidden: true, internalOrigin: receiptB.internalOrigin },
+      options: { hidden: true, ...(receiptB.internalOrigin !== undefined ? { internalOrigin: receiptB.internalOrigin } : {}) },
     })
     parent.isProcessing = true
     parent.processingGeneration = 1
     parent.lastSentMessage = receiptA.content
-    parent.lastSentOptions = { hidden: true, internalOrigin: receiptA.internalOrigin }
+    parent.lastSentOptions = omitUndefined<SendMessageOptions>({ hidden: true, internalOrigin: receiptA.internalOrigin })
     parent.waitDiagnosticBoundary = { generation: 1, objectiveId: parentObjectiveId, fromMessageCount: boundary }
     const observedFronts: Array<string | undefined> = []
     h.runtime.processNextQueuedMessage = () => { observedFronts.push(parent.messageQueue[0]?.messageId) }
@@ -211,7 +213,7 @@ describe('durable restart recovery', () => {
     managed.messages.push(receiptA, receiptB)
     managed.messageQueue.push({
       messageId: receiptB.id, message: receiptB.content,
-      options: { hidden: true, internalOrigin: receiptB.internalOrigin },
+      options: { hidden: true, ...(receiptB.internalOrigin !== undefined ? { internalOrigin: receiptB.internalOrigin } : {}) },
     })
     await h.save(managed)
 

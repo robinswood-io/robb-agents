@@ -110,7 +110,7 @@ export function markSourceAuthenticated(
 
   config.isAuthenticated = true;
   config.connectionStatus = 'connected';
-  config.connectionError = undefined;
+  delete config.connectionError
 
   saveSourceConfig(workspaceRootPath, config);
   debug(`[markSourceAuthenticated] Marked ${sourceSlug} as authenticated`);

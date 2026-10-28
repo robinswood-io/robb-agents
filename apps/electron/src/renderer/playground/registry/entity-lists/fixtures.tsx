@@ -19,11 +19,11 @@ interface MockSessionStatus {
   icon: React.ReactNode
 }
 
-const mockStatuses: MockSessionStatus[] = [
+const mockStatuses = [
   { id: 'todo', label: 'Todo', color: 'var(--muted-foreground)', icon: <Circle className="h-3.5 w-3.5" strokeWidth={1.5} /> },
   { id: 'in-progress', label: 'In Progress', color: 'var(--info)', icon: <Circle className="h-3.5 w-3.5" strokeWidth={1.5} /> },
   { id: 'done', label: 'Done', color: 'var(--success)', icon: <Circle className="h-3.5 w-3.5" strokeWidth={1.5} /> },
-]
+] as const satisfies readonly MockSessionStatus[]
 
 export const sampleSessions: (SessionMeta & { _status: MockSessionStatus })[] = [
   {
@@ -136,9 +136,9 @@ export const interactiveItems: AnyMockEntity[] = [
     id: s.id,
     name: s.name || 'Untitled',
     status: s._status,
-    hasUnread: s.hasUnread,
-    isFlagged: s.isFlagged,
-    lastMessageAt: s.lastMessageAt,
+    ...(s.hasUnread !== undefined ? { hasUnread: s.hasUnread } : {}),
+    ...(s.isFlagged !== undefined ? { isFlagged: s.isFlagged } : {}),
+    ...(s.lastMessageAt !== undefined ? { lastMessageAt: s.lastMessageAt } : {}),
   })),
   // Sources
   ...sampleSources.map(s => ({
@@ -156,6 +156,6 @@ export const interactiveItems: AnyMockEntity[] = [
     id: s.id,
     name: s.name,
     description: s.description,
-    emoji: s.icon,
+    ...(s.icon !== undefined ? { emoji: s.icon } : {}),
   })),
 ]

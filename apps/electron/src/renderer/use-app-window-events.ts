@@ -1,14 +1,15 @@
-import React, { useEffect, useCallback } from 'react';
+import { useEffectEvent } from 'react';
+import React,{ useEffect,useCallback } from 'react';
 
 import { type ThemeOverrides } from '@config/theme';
 import { useAtomValue } from 'jotai';
-import type { Workspace, PermissionRequest, SetupNeeds, LlmConnectionWithStatus } from '../shared/types';
+import type { Workspace,PermissionRequest,SetupNeeds,LlmConnectionWithStatus } from '../shared/types';
 import type { SessionDraft } from '@craft-agent/shared/config';
 
 import { useNotifications } from '@/hooks/useNotifications';
 import { useSession } from '@/hooks/useSession';
 
-import { navigate, routes } from './lib/navigate';
+import { navigate,routes } from './lib/navigate';
 
 import { sessionMetaMapAtom } from '@/atoms/sessions';
 
@@ -37,7 +38,7 @@ interface useAppWindowEventsInput {
   loadSessionsFromServer: () => Promise<void>
   setLlmConnections: React.Dispatch<React.SetStateAction<LlmConnectionWithStatus[]>>
   setDefaultLlmConnectionSlug: React.Dispatch<React.SetStateAction<string | undefined>>
-  resolveDefaultConnectionSlug: (connections: LlmConnectionWithStatus[]) => string
+  resolveDefaultConnectionSlug: (connections: LlmConnectionWithStatus[]) => string | undefined
   sessionDraftsRef: React.RefObject<Map<string, SessionDraft>>
   setAppTheme: React.Dispatch<React.SetStateAction<ThemeOverrides | null>>
   refreshLlmConnections: () => Promise<void>
@@ -124,7 +125,7 @@ const handleNavigateToSession = useCallback((sessionId: string) => {
     navigate(routes.view.allSessions(sessionId))
   }, [])
 
-const { isWindowFocused, showSessionNotification } = useNotifications({
+const { showSessionNotification } = useNotifications({
     workspaceId: windowWorkspaceId,
     // NOTE: sessions removed - hook now uses sessionMetaMapAtom internally
     // to prevent closures from retaining full message arrays
@@ -132,6 +133,7 @@ const { isWindowFocused, showSessionNotification } = useNotifications({
     enabled: notificationsEnabled,
   })
 
+const translateStartupEvent = useEffectEvent(t);
 useEffect(() => {
     if (appState !== 'ready') return
 
@@ -141,8 +143,8 @@ useEffect(() => {
     // Show actionable toast for missing system dependencies (Windows only)
     window.electronAPI.getSystemWarnings().then((warnings) => {
       if (warnings.vcredistMissing) {
-        toast.warning(t('toast.vcRedistNotFound'), {
-          description: t('toast.vcRedistNotFoundDesc'),
+        toast.warning(translateStartupEvent('toast.vcRedistNotFound'), {
+          description: translateStartupEvent('toast.vcRedistNotFoundDesc'),
           duration: Infinity,
           action: {
             label: 'Install',
@@ -169,7 +171,6 @@ useEffect(() => {
     window.electronAPI.getAppTheme().then(setAppTheme)
   // Startup loading must not repeat solely because the translation function
   // changes language; it is used here only for the one-time warning toast.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appState, loadSessionsFromServer, resolveDefaultConnectionSlug, sessionDraftsRef, setAppTheme, setDefaultLlmConnectionSlug, setLlmConnections, setNotificationsEnabled, setWorkspaces])
 
 useEffect(() => {

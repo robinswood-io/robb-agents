@@ -3,7 +3,7 @@ import { windowLog } from "../logger";
 import { release } from "os";
 
 // Vite dev server URL for hot reload
-export const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
+export const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
 
 /**
  * Get the appropriate background material for Windows transparency effects

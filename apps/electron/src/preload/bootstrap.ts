@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json'
 /**
  * WS-mode preload — replaces the full IPC preload (index.ts).
  *
@@ -22,7 +23,8 @@ import { RoutedClient } from '../transport/routed-client'
 import { buildClientApi } from '../transport/build-api'
 import { configureOAuthApi } from './oauth-api'
 import { CHANNEL_MAP } from '../transport/channel-map'
-import type { LocalRpcEndpoint } from '../transport/local-rpc-endpoint'
+import { localRpcEndpointSchema } from '../transport/local-rpc-endpoint'
+import { z } from 'zod'
 
 
 
@@ -56,8 +58,8 @@ interface TransportClient extends RpcClient {
 // Connection setup
 // ---------------------------------------------------------------------------
 
-const webContentsId: number = ipcRenderer.sendSync('__get-web-contents-id')
-const isClientOnly = !!process.env.CRAFT_SERVER_URL
+const webContentsId = z.number().int().nonnegative().parse(ipcRenderer.sendSync('__get-web-contents-id'))
+const isClientOnly = !!process.env["CRAFT_SERVER_URL"]
 
 let client: TransportClient
 
@@ -66,8 +68,8 @@ if (isClientOnly) {
   // Single WsRpcClient connected directly to the remote server.
   // No local server, no routing — all channels go to remote.
 
-  const wsUrl = process.env.CRAFT_SERVER_URL!
-  const wsToken = process.env.CRAFT_SERVER_TOKEN ?? ''
+  const wsUrl = process.env["CRAFT_SERVER_URL"]!
+  const wsToken = process.env["CRAFT_SERVER_TOKEN"] ?? ''
 
   // Block unencrypted ws:// to non-localhost servers — tokens would be sent in cleartext
   const parsed = new URL(wsUrl)
@@ -81,16 +83,16 @@ if (isClientOnly) {
   }
 
   // Workspace ID is optional — if missing, renderer shows a workspace picker
-  const workspaceId = process.env.CRAFT_WORKSPACE_ID || ipcRenderer.sendSync('__get-workspace-id') || undefined
+  const workspaceId = process.env["CRAFT_WORKSPACE_ID"] || z.string().parse(ipcRenderer.sendSync('__get-workspace-id')) || undefined
 
-  const wsClient = new WsRpcClient(wsUrl, {
+  const wsClient = new WsRpcClient(wsUrl, omitUndefined({
     token: wsToken,
     workspaceId,
     webContentsId,
     autoReconnect: true,
-    mode: 'remote',
+    mode: 'remote' as const,
     clientCapabilities: [...LOCAL_CLIENT_CAPABILITIES],
-  })
+  }))
   wsClient.connect()
   client = wsClient
 
@@ -99,9 +101,9 @@ if (isClientOnly) {
   // RoutedClient routes LOCAL_ONLY to local server, REMOTE_ELIGIBLE to
   // whichever server owns the workspace (local or remote).
 
-  const localEndpoint = ipcRenderer.sendSync('__get-ws-endpoint') as LocalRpcEndpoint
-  const wsToken: string = ipcRenderer.sendSync('__get-ws-token')
-  const workspaceId: string = ipcRenderer.sendSync('__get-workspace-id')
+  const localEndpoint = localRpcEndpointSchema.parse(ipcRenderer.sendSync('__get-ws-endpoint'))
+  const wsToken = z.string().parse(ipcRenderer.sendSync('__get-ws-token'))
+  const workspaceId = z.string().parse(ipcRenderer.sendSync('__get-workspace-id'))
 
   const localClient = new WsRpcClient(localEndpoint.url, {
     token: wsToken,
@@ -114,7 +116,9 @@ if (isClientOnly) {
   })
 
   // Check if the current workspace is remote (synchronous IPC during preload eval)
-  const remoteConfig: RemoteServerConfig | null = ipcRenderer.sendSync('__get-workspace-remote-config')
+  const remoteConfig: RemoteServerConfig | null = z.object({
+    url: z.string(), token: z.string(), remoteWorkspaceId: z.string(),
+  }).nullable().parse(ipcRenderer.sendSync('__get-workspace-remote-config'))
 
   let initialWorkspaceClient: WsRpcClient
   if (remoteConfig && typeof remoteConfig.url === 'string') {
@@ -288,9 +292,9 @@ api.relaunchApp = () => ipcRenderer.invoke('app:relaunch')
 
 // System warnings — expose env-based flags set during main process startup
 // (preload-only: reads env var directly, no IPC round-trip needed)
-;api.getSystemWarnings = async () => ({
-  vcredistMissing: process.env.CRAFT_VCREDIST_MISSING === '1',
-  downloadUrl: process.env.CRAFT_VCREDIST_URL,
+;api.getSystemWarnings = async () => omitUndefined({
+  vcredistMissing: process.env["CRAFT_VCREDIST_MISSING"] === '1',
+  downloadUrl: process.env["CRAFT_VCREDIST_URL"],
 })
 
 // i18n: sync language changes to main process (for native menus/dialogs)

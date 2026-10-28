@@ -30,17 +30,17 @@ import { SESSION_META_DEBOUNCE_MS, loadPreferences } from './shared.ts';
 /**
    * Handle a file change within the workspace directory
    */
-export function handleWorkspaceFileChange(transportOwner: ConfigWatcher, relativePath: string, eventType: string): void {
+export function handleWorkspaceFileChange(transportOwner: ConfigWatcher, relativePath: string, _eventType: string): void {
     const parts = relativePath.split('/');
     // Workspace-level permissions.json
     if (relativePath === 'permissions.json') {
-        transportOwner["debounce"]('workspace-permissions', () => transportOwner["handleWorkspacePermissionsChange"]());
+        transportOwner.debounce('workspace-permissions', () => transportOwner.handleWorkspacePermissionsChange());
         return;
     }
     // Workspace-level automations config file
     if (relativePath === AUTOMATIONS_CONFIG_FILE) {
         debug('[ConfigWatcher] automations config change detected:', relativePath);
-        transportOwner["debounce"]('automations-config', () => transportOwner["handleAutomationsConfigChange"]());
+        transportOwner.debounce('automations-config', () => transportOwner.handleAutomationsConfigChange());
         return;
     }
     // Sources changes: sources/{slug}/...
@@ -49,18 +49,18 @@ export function handleWorkspaceFileChange(transportOwner: ConfigWatcher, relativ
         const file = parts[2];
         // Directory-level changes (new/removed source folders)
         if (parts.length === 2) {
-            transportOwner["debounce"]('sources-dir', () => transportOwner["handleSourcesDirChange"]());
+            transportOwner.debounce('sources-dir', () => transportOwner.handleSourcesDirChange());
             return;
         }
         // File-level changes
         if (file === 'config.json') {
-            transportOwner["debounce"](`source-config:${slug}`, () => transportOwner["handleSourceConfigChange"](slug));
+            transportOwner.debounce(`source-config:${slug}`, () => transportOwner.handleSourceConfigChange(slug));
         }
         else if (file === 'guide.md') {
-            transportOwner["debounce"](`source-guide:${slug}`, () => transportOwner["handleSourceGuideChange"](slug));
+            transportOwner.debounce(`source-guide:${slug}`, () => transportOwner.handleSourceGuideChange(slug));
         }
         else if (file === 'permissions.json') {
-            transportOwner["debounce"](`source-permissions:${slug}`, () => transportOwner["handleSourcePermissionsChange"](slug));
+            transportOwner.debounce(`source-permissions:${slug}`, () => transportOwner.handleSourcePermissionsChange(slug));
         }
         return;
     }
@@ -70,16 +70,16 @@ export function handleWorkspaceFileChange(transportOwner: ConfigWatcher, relativ
         const file = parts[2];
         // Directory-level changes (new/removed skill folders)
         if (parts.length === 2) {
-            transportOwner["debounce"]('skills-dir', () => transportOwner["handleSkillsDirChange"]());
+            transportOwner.debounce('skills-dir', () => transportOwner.handleSkillsDirChange());
             return;
         }
         // File-level changes
         if (file === 'SKILL.md') {
-            transportOwner["debounce"](`skill:${slug}`, () => transportOwner["handleSkillChange"](slug));
+            transportOwner.debounce(`skill:${slug}`, () => transportOwner.handleSkillChange(slug));
         }
         else if (file && /^icon\.(svg|png|jpg|jpeg)$/i.test(file)) {
             // Icon file changes also trigger a skill change (to update iconPath)
-            transportOwner["debounce"](`skill-icon:${slug}`, () => transportOwner["handleSkillChange"](slug));
+            transportOwner.debounce(`skill-icon:${slug}`, () => transportOwner.handleSkillChange(slug));
         }
         return;
     }
@@ -91,7 +91,7 @@ export function handleWorkspaceFileChange(transportOwner: ConfigWatcher, relativ
         const file = parts[2];
         // Only watch actual session files, ignore .tmp (atomic write intermediates)
         if (file === 'session.jsonl') {
-            transportOwner["debounce"](`session-meta:${sessionId}`, () => transportOwner["handleSessionMetadataChange"](sessionId), SESSION_META_DEBOUNCE_MS);
+            transportOwner.debounce(`session-meta:${sessionId}`, () => transportOwner.handleSessionMetadataChange(sessionId), SESSION_META_DEBOUNCE_MS);
         }
         return;
     }
@@ -100,15 +100,15 @@ export function handleWorkspaceFileChange(transportOwner: ConfigWatcher, relativ
         const file = parts[1];
         // config.json change
         if (file === 'config.json') {
-            transportOwner["debounce"]('statuses-config', () => transportOwner["handleStatusConfigChange"]());
+            transportOwner.debounce('statuses-config', () => transportOwner.handleStatusConfigChange());
             return;
         }
         // Icon file changes: statuses/icons/*.svg, *.png, etc.
         if (file === 'icons' && parts.length >= 3) {
             const iconFilename = parts[2];
             if (iconFilename) {
-                transportOwner["debounce"](`statuses-icon:${iconFilename}`, () => {
-                    transportOwner["handleStatusIconChange"](iconFilename);
+                transportOwner.debounce(`statuses-icon:${iconFilename}`, () => {
+                    transportOwner.handleStatusIconChange(iconFilename);
                 });
             }
             return;
@@ -119,7 +119,7 @@ export function handleWorkspaceFileChange(transportOwner: ConfigWatcher, relativ
         const file = parts[1];
         // config.json change
         if (file === 'config.json') {
-            transportOwner["debounce"]('labels-config', () => transportOwner["handleLabelConfigChange"]());
+            transportOwner.debounce('labels-config', () => transportOwner.handleLabelConfigChange());
             return;
         }
     }
@@ -158,9 +158,9 @@ export function handleConfigChange(transportOwner: ConfigWatcher): void {
         // Use JSON hash comparison for deep equality check
         const connections = config.llmConnections || [];
         const currentHash = JSON.stringify(connections);
-        if (currentHash !== transportOwner["lastLlmConnectionsHash"]) {
+        if (currentHash !== transportOwner.lastLlmConnectionsHash) {
             debug('[ConfigWatcher] LLM connections changed');
-            transportOwner["lastLlmConnectionsHash"] = currentHash;
+            transportOwner.lastLlmConnectionsHash = currentHash;
             transportOwner["callbacks"].onLlmConnectionsChange?.(connections);
         }
     }
@@ -209,7 +209,7 @@ export function handleStatusConfigChange(transportOwner: ConfigWatcher): void {
                     transportOwner["callbacks"].onStatusConfigChange?.(transportOwner["workspaceId"]);
                 }
             })
-                .catch((err) => {
+                .catch((err: unknown) => {
                 debug('[ConfigWatcher] Status icon download failed:', status.id, err);
             });
         }

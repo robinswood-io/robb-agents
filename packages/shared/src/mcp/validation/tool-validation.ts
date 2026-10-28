@@ -50,8 +50,8 @@ export function findInvalidProperties(
   }
 
   // Check properties object
-  if (schema.properties && typeof schema.properties === 'object') {
-    const properties = schema.properties as Record<string, unknown>;
+  if (schema["properties"] && typeof schema["properties"] === 'object') {
+    const properties = schema["properties"] as Record<string, unknown>;
     for (const key of Object.keys(properties)) {
       if (!ANTHROPIC_PROPERTY_NAME_PATTERN.test(key)) {
         invalid.push({
@@ -73,10 +73,10 @@ export function findInvalidProperties(
   }
 
   // Check items for arrays
-  if (schema.items && typeof schema.items === 'object') {
+  if (schema["items"] && typeof schema["items"] === 'object') {
     invalid.push(
       ...findInvalidProperties(
-        schema.items as Record<string, unknown>,
+        schema["items"] as Record<string, unknown>,
         path ? `${path}[]` : '[]'
       )
     );
@@ -84,12 +84,12 @@ export function findInvalidProperties(
 
   // Check additionalProperties if it's a schema object
   if (
-    schema.additionalProperties &&
-    typeof schema.additionalProperties === 'object'
+    schema["additionalProperties"] &&
+    typeof schema["additionalProperties"] === 'object'
   ) {
     invalid.push(
       ...findInvalidProperties(
-        schema.additionalProperties as Record<string, unknown>,
+        schema["additionalProperties"] as Record<string, unknown>,
         path ? `${path}.<additionalProperties>` : '<additionalProperties>'
       )
     );

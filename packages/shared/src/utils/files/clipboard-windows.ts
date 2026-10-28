@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../json.ts';
 import { existsSync } from "fs";
 import { join } from "path";
 import { execSync } from "child_process";
@@ -32,8 +33,10 @@ export function readClipboardWindows(): FileAttachment[] {
     if (result !== 'no_files' && result.length > 0) {
       try {
         // PowerShell returns single item as string, array as JSON array
-        const paths = result.startsWith('[') ? JSON.parse(result) : [result.replace(/^"|"$/g, '')];
-        for (const filePath of paths) {
+        const paths: unknown = result.startsWith('[') ? JSON.parse(result) : [result.replace(/^"|"$/g, '')];
+        const filePaths: unknown[] = isUnknownArray(paths) ? paths : [];
+        for (const filePath of filePaths) {
+          if (typeof filePath !== 'string') continue;
           const attachment = readFileAttachment(filePath);
           if (attachment) {
             attachments.push(attachment);

@@ -115,28 +115,28 @@ function decodeWireValue(value: unknown): unknown {
 
 function isWireError(value: unknown): boolean {
   return isRecord(value)
-    && value.code != null
-    && typeof value.message === 'string'
+    && value["code"] != null
+    && typeof value["message"] === 'string'
 }
 
 export function validateEnvelopeShape(value: unknown): value is MessageEnvelope {
   if (!isRecord(value)) return false
-  if (typeof value.id !== 'string' || value.id.length === 0) return false
-  if (typeof value.type !== 'string' || !MESSAGE_TYPES.has(value.type)) return false
+  if (typeof value["id"] !== 'string' || value["id"].length === 0) return false
+  if (typeof value["type"] !== 'string' || !MESSAGE_TYPES.has(value["type"])) return false
 
-  if (value.type === 'handshake_ack' && (typeof value.clientId !== 'string' || value.clientId.length === 0)) {
+  if (value["type"] === 'handshake_ack' && (typeof value["clientId"] !== 'string' || value["clientId"].length === 0)) {
     return false
   }
 
-  if ((value.type === 'request' || value.type === 'event') && typeof value.channel !== 'string') {
+  if ((value["type"] === 'request' || value["type"] === 'event') && typeof value["channel"] !== 'string') {
     return false
   }
 
-  if (value.type === 'response' && value.error !== undefined && !isWireError(value.error)) {
+  if (value["type"] === 'response' && value["error"] !== undefined && !isWireError(value["error"])) {
     return false
   }
 
-  if (value.type === 'error' && !isWireError(value.error)) {
+  if (value["type"] === 'error' && !isWireError(value["error"])) {
     return false
   }
 

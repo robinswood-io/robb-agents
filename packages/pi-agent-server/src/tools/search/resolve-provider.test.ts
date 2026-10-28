@@ -1,3 +1,4 @@
+import { parseJsonObject } from '@craft-agent/shared/utils/json';
 import { afterEach, describe, expect, it } from 'bun:test';
 import { resolveSearchProvider } from './resolve-provider.ts';
 import { ResponsesApiSearchProvider } from './providers/openai.ts';
@@ -5,15 +6,15 @@ import { ChatGPTBackendSearchProvider } from './providers/chatgpt.ts';
 import { GoogleSearchProvider } from './providers/google.ts';
 import { DDGSearchProvider } from './providers/ddg.ts';
 
-const originalChatGptKillSwitch = process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND;
+const originalChatGptKillSwitch = process.env["ROBB_DISABLE_CHATGPT_CODEX_BACKEND"];
 const originalFetch = globalThis.fetch;
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
   if (originalChatGptKillSwitch === undefined) {
-    delete process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND;
+    delete process.env["ROBB_DISABLE_CHATGPT_CODEX_BACKEND"];
   } else {
-    process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND = originalChatGptKillSwitch;
+    process.env["ROBB_DISABLE_CHATGPT_CODEX_BACKEND"] = originalChatGptKillSwitch;
   }
 });
 
@@ -32,7 +33,10 @@ describe('resolveSearchProvider', () => {
   it('uses the selected session model for ChatGPT search instead of a fixed legacy model', async () => {
     let requestedModel: string | undefined;
     globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
-      requestedModel = JSON.parse(init!.body as string).model;
+      const body = parseJsonObject(String(init?.body));
+      const model = body?.['model'];
+      if (typeof model !== 'string') throw new Error('The search fixture expects a model');
+      requestedModel = model;
       return new Response(JSON.stringify({ output_text: 'Search result' }), { status: 200 });
     }) as typeof fetch;
     const provider = resolveSearchProvider({
@@ -82,7 +86,7 @@ describe('resolveSearchProvider', () => {
   });
 
   it('routes directly to DDG when the private ChatGPT backend is disabled', () => {
-    process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND = '1';
+    process.env["ROBB_DISABLE_CHATGPT_CODEX_BACKEND"] = '1';
     const provider = resolveSearchProvider({
       provider: 'openai-codex',
       credential: { type: 'api_key', key: makeJwt('acc_disabled') },

@@ -26,11 +26,11 @@ import type { AuthRequestType } from '@craft-agent/core/types';
 interface AuthRequestCardProps {
   message: Message
   /** Callback to respond to credential request */
-  onRespondToCredential?: (sessionId: string, requestId: string, response: CredentialResponse) => void | Promise<void>
+  onRespondToCredential?: ((sessionId: string, requestId: string, response: CredentialResponse) => void | Promise<void>) | undefined
   /** Session ID for this auth request */
   sessionId: string
   /** Whether the card is interactive (last message, no user message after). Default true. */
-  isInteractive?: boolean
+  isInteractive?: boolean | undefined
 }
 
 /**
@@ -93,7 +93,7 @@ export function AuthRequestCard({ message, onRespondToCredential, sessionId, isI
   const isValid = isBasicAuth
     ? validateBasicAuthCredentials(username, password, passwordRequired)
     : isMultiHeader
-    ? authHeaderNames?.every(name => headerValues[name]?.trim().length > 0) ?? false
+    ? authHeaderNames?.every(name => (headerValues[name]?.trim().length ?? 0) > 0) ?? false
     : value.trim().length > 0
 
   const submitCredentialResponse = useCallback(async (response: CredentialResponse) => {

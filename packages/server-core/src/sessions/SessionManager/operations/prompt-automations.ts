@@ -1,3 +1,5 @@
+import type { SendMessageOptions } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { resolveAutomationMentions } from '../policy.ts';
 import type { ExecutePromptAutomationInput } from '@craft-agent/server-core/handlers';
@@ -54,7 +56,7 @@ async function sessionOpPerformExecutePromptAutomation(sessionOperationContext: 
     // and the session is identifiable as automation-initiated after reload
     const managed = sessionOperationContext.state.sessions.get(session.id);
     if (managed) {
-        managed.triggeredBy = { automationName, timestamp: Date.now() };
+        managed.triggeredBy = omitUndefined({ automationName, timestamp: Date.now() });
         sessionOperationContext.owner["persistSession"](managed);
     }
     // (session_created is emitted by createSession above; triggeredBy is set synchronously
@@ -86,10 +88,10 @@ async function sessionOpPerformExecutePromptAutomation(sessionOperationContext: 
     // client timeout (craft-agents-oss#943). The session streams live either
     // way; a background failure surfaces in the session UI and is logged here.
     if (waitForCompletion === false) {
-        void sessionOperationContext.owner.sendMessage(session.id, prompt, undefined, undefined, {
+        void sessionOperationContext.owner.sendMessage(session.id, prompt, undefined, undefined, omitUndefined<SendMessageOptions>({
             skillSlugs: resolved?.skillSlugs,
             internalOrigin: { kind: 'automation' },
-        }).catch((err) => {
+        })).catch((err: unknown) => {
             sessionLog.error('[Automations] background sendMessage failed for test run', {
                 sessionId: session.id,
                 error: err instanceof Error ? err.message : String(err),
@@ -97,10 +99,10 @@ async function sessionOpPerformExecutePromptAutomation(sessionOperationContext: 
         });
         return { sessionId: session.id };
     }
-    await sessionOperationContext.owner.sendMessage(session.id, prompt, undefined, undefined, {
+    await sessionOperationContext.owner.sendMessage(session.id, prompt, undefined, undefined, omitUndefined<SendMessageOptions>({
         skillSlugs: resolved?.skillSlugs,
         internalOrigin: { kind: 'automation' },
-    });
+    }));
     return { sessionId: session.id };
 }
 

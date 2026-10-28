@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+import type { MermaidValidateSchema } from '../tool-defs/schemas.ts';
 /**
  * Mermaid Validate Handler
  *
@@ -10,10 +12,7 @@ import type { ToolResult } from '../types.ts';
 import { renderMermaidSVG } from 'beautiful-mermaid';
 import { normalizeMermaidSource } from '../validation.ts';
 
-export interface MermaidValidateArgs {
-  code: string;
-  render?: boolean;
-}
+export type MermaidValidateArgs = z.infer<typeof MermaidValidateSchema>;
 
 /**
  * Handle the mermaid_validate tool call.

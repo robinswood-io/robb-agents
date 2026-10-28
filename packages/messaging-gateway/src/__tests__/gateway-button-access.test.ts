@@ -1,3 +1,4 @@
+import { SessionManager as FixtureSessionManager } from "../../../server-core/src/sessions/SessionManager";
 /**
  * MessagingGateway — inline button press access gating. Regression for
  * PR #348 review item "Block #1: Inline buttons completely bypass access
@@ -44,9 +45,9 @@ function makeFakeAdapter(): FakeAdapter {
   let buttonHandler: ((press: ButtonPress) => Promise<void>) | null = null
   let messageHandler: ((msg: IncomingMessage) => Promise<void>) | null = null
   const sent: string[] = []
-  const adapter = {
-    platform: 'telegram' as const,
-    capabilities: {
+  const adapter = ({fireButton: (press: ButtonPress) => buttonHandler!(press), fireMessage: (msg: IncomingMessage) => messageHandler!(msg),sent,
+platform: 'telegram' as const,
+capabilities: {
       messageEditing: true,
       inlineButtons: true,
       maxButtons: 10,
@@ -54,34 +55,30 @@ function makeFakeAdapter(): FakeAdapter {
       markdown: 'v2' as const,
       webhookSupport: false,
     },
-    initialize: async () => {},
-    destroy: async () => {},
-    isConnected: () => true,
-    onMessage(h: (msg: IncomingMessage) => Promise<void>) {
+initialize: async () => {},
+destroy: async () => {},
+isConnected: () => true,
+onMessage(h: (msg: IncomingMessage) => Promise<void>) {
       messageHandler = h
     },
-    onButtonPress(h: (press: ButtonPress) => Promise<void>) {
+onButtonPress(h: (press: ButtonPress) => Promise<void>) {
       buttonHandler = h
     },
-    sendText: mock(async (_channelId: string, text: string) => {
+sendText: mock(async (_channelId: string, text: string) => {
       sent.push(text)
-      return { platform: 'telegram', channelId: _channelId, messageId: String(sent.length) }
+      return { platform: 'telegram' as const, channelId: _channelId, messageId: String(sent.length) }
     }),
-    editMessage: async () => {},
-    sendButtons: async () => ({ platform: 'telegram' as const, channelId: '', messageId: '0' }),
-    sendTyping: async () => {},
-    sendFile: async () => ({ platform: 'telegram' as const, channelId: '', messageId: '0' }),
-  } as unknown as FakeAdapter
+editMessage: async () => {},
+sendButtons: async () => ({ platform: 'telegram' as const, channelId: '', messageId: '0' }),
+sendTyping: async () => {},
+sendFile: async () => ({ platform: 'telegram' as const, channelId: '', messageId: '0' })} satisfies FakeAdapter)
   ;(adapter as { sent: string[] }).sent = sent
-  ;(adapter as { fireButton: (press: ButtonPress) => Promise<void> }).fireButton = (press) =>
-    buttonHandler!(press)
-  ;(adapter as { fireMessage: (msg: IncomingMessage) => Promise<void> }).fireMessage = (msg) =>
-    messageHandler!(msg)
+  ;
   return adapter
 }
 
 function makeStubSessionManager(): ISessionManager {
-  return {
+  return Object.assign(new FixtureSessionManager(), ({
     getSession: async (id: string) => ({ id, name: id } as never),
     sendMessage: async () => {},
     cancelProcessing: async () => {},
@@ -90,7 +87,7 @@ function makeStubSessionManager(): ISessionManager {
     setPendingPlanExecution: mock(async () => {}),
     clearPendingPlanExecution: mock(async () => {}),
     setAutomationBinder: () => {},
-  } as unknown as ISessionManager
+  } satisfies Partial<ISessionManager>))
 }
 
 interface Harness {

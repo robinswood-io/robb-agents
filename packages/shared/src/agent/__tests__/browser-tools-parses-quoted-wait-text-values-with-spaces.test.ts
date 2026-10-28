@@ -176,7 +176,7 @@ it('routes close command with explicit window id', async () => {
       let requestedId: string | undefined
       mockFns.closeWindow = async (instanceId?: string) => {
         requestedId = instanceId
-        return { action: 'closed' as const, requestedInstanceId: instanceId, resolvedInstanceId: instanceId, affectedIds: instanceId ? [instanceId] : [] }
+        return { action: 'closed' as const, ...(instanceId !== undefined ? { requestedInstanceId: instanceId, resolvedInstanceId: instanceId } : {}), affectedIds: instanceId ? [instanceId] : [] }
       }
 
       const result = await executeTool(tools, 'browser_tool', { command: 'close browser-9' })
@@ -189,7 +189,7 @@ it('routes close command with explicit window id', async () => {
 it('reports close no-op explicitly', async () => {
       mockFns.closeWindow = async (instanceId?: string) => ({
         action: 'noop' as const,
-        requestedInstanceId: instanceId,
+        ...(instanceId !== undefined ? { requestedInstanceId: instanceId } : {}),
         affectedIds: [],
         reason: 'No close target is currently associated with this session.',
       })
@@ -203,19 +203,19 @@ it('reports close no-op explicitly', async () => {
 
 it('returns validation feedback for invalid command', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'scroll diagonal' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('scroll requires direction')
     })
 
 it('returns parse error for unclosed quotes', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'fill @e1 "unterminated' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('Parse error: unclosed quote')
     })
 
 it('returns error for unknown command', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'teleport' })
-      expect(result.isError).toBe(true)
+      expect(result["isError"]).toBe(true)
       expect(result.content[0].text).toContain('Unknown browser_tool command')
     })
 });

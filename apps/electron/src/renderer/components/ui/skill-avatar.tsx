@@ -15,13 +15,13 @@ interface SkillAvatarProps {
   /** LoadedSkill object */
   skill: LoadedSkill
   /** Size variant */
-  size?: IconSize
+  size?: IconSize | undefined
   /** Fill parent container (h-full w-full). Overrides size. */
-  fluid?: boolean
+  fluid?: boolean | undefined
   /** Additional className overrides */
-  className?: string
+  className?: string | undefined
   /** Workspace ID for loading local icons */
-  workspaceId?: string
+  workspaceId?: string | undefined
 }
 
 export function SkillAvatar({ skill, size = 'md', fluid, className, workspaceId }: SkillAvatarProps) {
@@ -29,8 +29,8 @@ export function SkillAvatar({ skill, size = 'md', fluid, className, workspaceId 
     workspaceId: workspaceId ?? '',
     entityType: 'skill',
     identifier: skill.slug,
-    iconPath: skill.iconPath,
-    iconValue: skill.metadata.icon,
+    ...(skill.iconPath !== undefined ? { iconPath: skill.iconPath } : {}),
+    ...(skill.metadata.icon !== undefined ? { iconValue: skill.metadata.icon } : {}),
   })
 
   return (

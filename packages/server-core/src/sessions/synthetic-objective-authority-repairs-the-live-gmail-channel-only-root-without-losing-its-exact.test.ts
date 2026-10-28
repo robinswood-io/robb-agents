@@ -65,10 +65,10 @@ describe('host synthetic objective authority', () => {
       tokenBaseline: 246_349,
       acceptanceRegisteredRevision: channel.id,
     })
-    expect(managed.activeObjective?.amendments).toEqual(expect.arrayContaining([
-      expect.objectContaining({ messageId: channel.id, text: channel.content }),
-      expect.objectContaining({ messageId: resume.id, text: resume.content }),
-    ]))
+    expect<unknown>(managed.activeObjective?.amendments).toEqual((expect.arrayContaining([
+      (expect.objectContaining({ messageId: channel.id, text: channel.content }) as unknown),
+      (expect.objectContaining({ messageId: resume.id, text: resume.content }) as unknown),
+    ]) as unknown))
     expect(managed.pendingTurnRecovery?.userMessageId).toBe(resume.id)
   })
 
@@ -95,7 +95,7 @@ describe('host synthetic objective authority', () => {
       terminalState: 'exhausted',
       requiresExecutionEvidence: true,
     })
-    expect(managed.activeObjective?.amendments).toContainEqual(expect.objectContaining({ messageId: repair.id }))
+    expect<unknown>(managed.activeObjective?.amendments).toContainEqual((expect.objectContaining({ messageId: repair.id }) as unknown))
   })
 
   it('never recovers mutation authority across a verified completion', () => {
@@ -397,8 +397,8 @@ Envoie maintenant à Benoît le message exact défini ci-dessous exclusivement a
       requiresExecutionEvidence: true,
       requiresObservationEvidence: true,
     })
-    expect(managed.activeObjective?.amendments).toEqual([
-      expect.objectContaining({ messageId: replayV2.id, text: replayV2.content }),
+    expect<unknown>(managed.activeObjective?.amendments).toEqual([
+      (expect.objectContaining({ messageId: replayV2.id, text: replayV2.content }) as unknown),
     ])
     expect(managed.activeObjective?.amendments?.some(item => (
       item.messageId === channel.id || item.messageId === send.id

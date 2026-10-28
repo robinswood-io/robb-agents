@@ -1,0 +1,137 @@
+{
+  "sessionId": "260930-fresh-shoal",
+  "objective": {
+    "schemaVersion": 1,
+    "originalText": "Recette QA locale YOLO, sans aucun envoi externe ni modification hors /private/tmp/robb-yolo-live-artifacts. Produis mesures.csv et rapport.md dans ce dossier. Le CSV doit contenir mois,valeur,cumul pour les mois 1 à 12, avec valeur = mois au carré et cumul = somme des valeurs jusque-là. Le rapport en français doit expliquer que les données sont simulées, indiquer la somme et la moyenne, et citer le CSV. Choisis toi-même les détails de présentation manquants. Vérifie les deux fichiers réellement écrits avec un contrôle indépendant de leurs 12 lignes et calculs. Termine avec les chemins exacts et le résultat des contrôles. Aucun accès, préférence ou décision supplémentaire ne doit être demandé.",
+    "requiresAcceptanceCriteria": true,
+    "requiresObservationEvidence": true,
+    "objectiveId": "msg-1790766350538-2cd0f0441c8651f810702e7402a4494e",
+    "userMessageId": "msg-1790766350538-2cd0f0441c8651f810702e7402a4494e",
+    "lastUserMessageId": "msg-1790766350538-2cd0f0441c8651f810702e7402a4494e",
+    "startedAt": 1790766350615,
+    "budgetBaselineUsd": 0,
+    "tokenBaseline": 0,
+    "continuationCount": 0,
+    "orchestrationMode": "direct",
+    "risk": "standard",
+    "requiresExecutionEvidence": true,
+    "completionCriteria": [
+      "requested-outcome-delivered",
+      "relevant-checks-passed",
+      "no-safe-work-remaining"
+    ],
+    "terminalState": "exhausted",
+    "procedure": {
+      "id": "document-package",
+      "version": 1
+    },
+    "acceptanceCriteria": [
+      {
+        "id": "artifact-inventory",
+        "description": "Le dossier cible contient les deux livrables demandés, mesures.csv et rapport.md.",
+        "requirementId": "source-inventory",
+        "toolName": "functions.ls",
+        "input": {
+          "path": "/private/tmp/robb-yolo-live-artifacts"
+        },
+        "checks": [
+          {
+            "path": "$text",
+            "equals": "mesures.csv\nrapport.md"
+          }
+        ]
+      },
+      {
+        "id": "csv-content",
+        "description": "Le CSV cible contient l’en-tête exact et les 12 lignes calculées avec carrés et cumuls corrects.",
+        "requirementId": "content-completeness",
+        "toolName": "functions.read",
+        "input": {
+          "path": "/private/tmp/robb-yolo-live-artifacts/mesures.csv"
+        },
+        "checks": [
+          {
+            "path": "$text",
+            "equals": "mois,valeur,cumul\n1,1,1\n2,4,5\n3,9,14\n4,16,30\n5,25,55\n6,36,91\n7,49,140\n8,64,204\n9,81,285\n10,100,385\n11,121,506\n12,144,650"
+          }
+        ]
+      },
+      {
+        "id": "report-content",
+        "description": "Le rapport français est lisible, explique que les données sont simulées, indique somme et moyenne et cite mesures.csv.",
+        "requirementId": "recipient-usability",
+        "toolName": "functions.read",
+        "input": {
+          "path": "/private/tmp/robb-yolo-live-artifacts/rapport.md"
+        },
+        "checks": [
+          {
+            "path": "$text",
+            "equals": "# Rapport de mesures simulées\n\n## Présentation\n\nLes données de ce rapport sont **simulées** à des fins de recette QA locale. Elles couvrent les mois 1 à 12. Pour chaque mois, la valeur correspond au carré du numéro du mois, et le cumul additionne toutes les valeurs depuis le premier mois.\n\n## Résultats\n\n- Nombre de mesures : **12**\n- Somme des valeurs : **650**\n- Moyenne des valeurs : **54.17** (valeur exacte : **650/12**)\n\n## Source\n\nLe détail des données et des cumuls figure dans le fichier [`mesures.csv`](./mesures.csv)."
+          }
+        ]
+      }
+    ],
+    "acceptanceRegisteredRevision": "msg-1790766350538-2cd0f0441c8651f810702e7402a4494e",
+    "acceptanceRegisteredAt": 1790766591739,
+    "acceptanceRegisteredAtById": {
+      "artifact-inventory": 1790766591739,
+      "csv-content": 1790766591739,
+      "report-content": 1790766591739
+    }
+  },
+  "messages": [],
+  "originalOutcome": {
+    "state": "complete_verified",
+    "criteria": [
+      {
+        "id": "requested-outcome-delivered",
+        "satisfied": true,
+        "evidence": [
+          "assistant-final",
+          "msg-1790766782624-c695914c79bfb1ff7774d49e30152e31"
+        ]
+      },
+      {
+        "id": "relevant-checks-passed",
+        "satisfied": true,
+        "evidence": [
+          "msg-1790766782624-c695914c79bfb1ff7774d49e30152e31"
+        ]
+      },
+      {
+        "id": "no-safe-work-remaining",
+        "satisfied": true,
+        "evidence": [
+          "assistant-final",
+          "msg-1790766782624-c695914c79bfb1ff7774d49e30152e31"
+        ]
+      },
+      {
+        "id": "artifact-inventory",
+        "satisfied": true,
+        "evidence": [
+          "tool:functions.ls",
+          "msg-1790766782624-c695914c79bfb1ff7774d49e30152e31"
+        ]
+      },
+      {
+        "id": "csv-content",
+        "satisfied": true,
+        "evidence": [
+          "msg-1790766782624-c695914c79bfb1ff7774d49e30152e31"
+        ]
+      },
+      {
+        "id": "report-content",
+        "satisfied": true,
+        "evidence": [
+          "msg-1790766782624-c695914c79bfb1ff7774d49e30152e31"
+        ]
+      }
+    ],
+    "remainingWork": [],
+    "blocker": null
+  },
+  "finalMessageId": "msg-1790766815858-d72d9c81f6aa00327a69bf3a8be94026"
+}

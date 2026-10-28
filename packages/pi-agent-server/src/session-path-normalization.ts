@@ -21,7 +21,7 @@ export function normalizeSessionPathTokens(
   sessionPath: string,
 ): unknown {
   if (typeof value === 'string') return normalizePathString(value, sessionPath);
-  if (Array.isArray(value)) return value.map(child => normalizeSessionPathTokens(child, sessionPath));
+  if (Array.isArray(value)) return value.map((child: unknown) => normalizeSessionPathTokens(child, sessionPath));
   if (!value || typeof value !== 'object') return value;
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>)

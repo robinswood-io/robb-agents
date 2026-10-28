@@ -5,7 +5,7 @@ import type { OfflineVaultScopeToken } from './shared.ts';
 
 export async function storeDraft(transportOwner: OfflineVault, sessionId: string, draft: SessionDraft | string, dirty: boolean, expectedScope: OfflineVaultScopeToken): Promise<void> {
     const text = userText(typeof draft === 'string' ? draft : draft.text, OFFLINE_VAULT_MAX_DRAFT_CHARS, 'Draft');
-    const committed = await transportOwner["mutate"]((state, now) => {
+    const committed = await transportOwner.mutate((state, now) => {
         if (!text)
             delete state.drafts[sessionId];
         else {
@@ -22,16 +22,16 @@ export async function storeDraft(transportOwner: OfflineVault, sessionId: string
             state.drafts[sessionId] = { sessionId, text, updatedAt: now, dirty };
         }
     }, expectedScope);
-    transportOwner["assertUserMutationCommitted"](committed);
+    transportOwner.assertUserMutationCommitted(committed);
 }
 
 export async function deleteDraft(transportOwner: OfflineVault, sessionId: string, expectedScope: OfflineVaultScopeToken): Promise<void> {
-    const committed = await transportOwner["mutate"]((state) => { delete state.drafts[sessionId]; }, expectedScope);
-    transportOwner["assertUserMutationCommitted"](committed);
+    const committed = await transportOwner.mutate((state) => { delete state.drafts[sessionId]; }, expectedScope);
+    transportOwner.assertUserMutationCommitted(committed);
 }
 
 export async function mergeRemoteDrafts(transportOwner: OfflineVault, drafts: Record<string, SessionDraft>, expectedScope?: OfflineVaultScopeToken): Promise<void> {
-    await transportOwner["mutate"]((state, now) => {
+    await transportOwner.mutate((state, now) => {
         const allowedSessionIds = new Set(state.sessions.map((snapshot) => snapshot.id));
         const dirtyEntries = Object.values(state.drafts)
             // Never discard local edits just because their snapshot aged out or

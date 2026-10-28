@@ -5,7 +5,7 @@ export function emitOperationsEvent(event: OperationsRuntimeEvent): void {
   const extension = getRobbOperationsExtension();
   if (!extension) return;
   try {
-    void Promise.resolve(extension.onRuntimeEvent(event)).catch(error => {
+    void Promise.resolve(extension.onRuntimeEvent(event)).catch((error: unknown) => {
       sessionLog.warn('Robb Operations event failed', {
         extensionId: extension.id, eventKind: event.kind,
         message: error instanceof Error ? error.message : String(error),

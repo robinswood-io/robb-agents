@@ -21,8 +21,8 @@ export class LarkAdapter implements PlatformAdapter {
     };
     private client: LarkClient | null = null;
     private wsClient: lark.WSClient | null = null;
-    private messageHandler: ((msg: IncomingMessage) => Promise<void>) | null = null;
-    private buttonHandler: ((press: ButtonPress) => Promise<void>) | null = null;
+    /** @internal */ public messageHandler: ((msg: IncomingMessage) => Promise<void>) | null = null;
+    /** @internal */ public buttonHandler: ((press: ButtonPress) => Promise<void>) | null = null;
     private connected = false;
     private log: MessagingLogger = NOOP_LOGGER;
     /**
@@ -38,25 +38,13 @@ export class LarkAdapter implements PlatformAdapter {
         if (!this.client)
             return null;
         try {
-            // The SDK's `bot.v3.info.get` (no args) returns `{ data: { bot: { app_name } } }`.
-            // Unsafe-cast through unknown — the bot namespace isn't in our narrow projection.
-            const c = this.client as unknown as {
-                bot: {
-                    v3: {
-                        info: {
-                            get: () => Promise<{
-                                data?: {
-                                    bot?: {
-                                        app_name?: string;
-                                    };
-                                };
-                            }>;
-                        };
-                    };
-                };
-            };
-            const result = await c.bot.v3.info.get();
-            const name = result.data?.bot?.app_name;
+            const result = await this.client.request<unknown>({
+                url: '/open-apis/bot/v3/info', method: 'GET',
+            });
+            if (!result || typeof result !== 'object' || !('bot' in result)) return null;
+            const bot = result.bot;
+            if (!bot || typeof bot !== 'object' || !('app_name' in bot)) return null;
+            const name = typeof bot.app_name === 'string' ? bot.app_name : undefined;
             return name ? { name } : null;
         }
         catch {
@@ -102,10 +90,10 @@ export class LarkAdapter implements PlatformAdapter {
     private async handleIncomingMessage(data: LarkMessageEvent): Promise<void> {
         return larkAdapterIncoming.handleIncomingMessage(this, data);
     }
-    private async handleAttachmentMessage(data: LarkMessageEvent): Promise<void> {
+    /** @internal */ public async handleAttachmentMessage(data: LarkMessageEvent): Promise<void> {
         return larkAdapterIncoming.handleAttachmentMessage(this, data);
     }
-    private async downloadResource(args: {
+    /** @internal */ public async downloadResource(args: {
         messageId: string;
         fileKey: string;
         filename: string;

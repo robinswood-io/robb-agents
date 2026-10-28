@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { appendFileSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, statSync, unlinkSync, writeSync } from "node:fs";
 import { createHash, type KeyObject } from "node:crypto";
 import { dirname } from "node:path";
@@ -7,10 +8,10 @@ import type { ConnectorPackContractVerifier, ConnectorPackLifecycleRequest, Conn
 import { ConnectorPackRegistryEventSchema, ContractResultSchema, SignedManifestSchema } from './contracts.ts';
 
 function canonicalValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalValue)
+  if (isUnknownArray(value)) return value.map(canonicalValue)
   if (value && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value)
+      Object.entries<unknown>((value as Record<string, unknown>))
         .sort(([left], [right]) => left.localeCompare(right))
         .map(([key, child]) => [key, canonicalValue(child)]),
     )

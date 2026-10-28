@@ -112,11 +112,13 @@ export async function handleSourceTest(
   const willFlipEnabled = shouldAutoEnable && source.enabled === false;
 
   if (ctx.saveSourceConfig) {
+    const sourceWithoutOverrides = { ...source };
+    delete sourceWithoutOverrides.connectionError;
     const updatedSource: SourceConfig = {
-      ...source,
+      ...sourceWithoutOverrides,
       lastTestedAt: Date.now(),
       connectionStatus,
-      connectionError,
+      ...(connectionError !== undefined ? { connectionError } : {}),
       // Fold enabled flip into the same save — one write, not two.
       ...(willFlipEnabled ? { enabled: true } : {}),
     };

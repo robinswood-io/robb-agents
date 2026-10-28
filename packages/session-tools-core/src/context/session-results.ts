@@ -50,6 +50,7 @@ export interface SessionInfo {
   createdAt: number;
   updatedAt?: number;
   workingDirectory?: string;
+  projectId?: string;
   llmConnection?: string;
   model?: string;
   isActive: boolean;

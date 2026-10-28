@@ -8,7 +8,7 @@ export function getAutomationValidationSteps(): ValidateStep[] {
 // ----- Automation lifecycle -----
     {
       name: 'automation:create',
-      fn: async (client, ctx) => {
+      fn: async (_client, ctx) => {
         if (!ctx.createdSessionId || !ctx.workspaceRootPath) return 'skipped (no session or workspace)'
         const configPath = `${ctx.workspaceRootPath}/automations.json`
         const historyPath = `${ctx.workspaceRootPath}/automations-history.jsonl`
@@ -189,7 +189,7 @@ export function getAutomationValidationSteps(): ValidateStep[] {
     },
 {
       name: 'webhook:verify failure',
-      fn: async (client, ctx) => {
+      fn: async (_client, ctx) => {
         if (!ctx.workspaceRootPath) return 'skipped (no workspace root)'
         const { readFile } = await import('fs/promises')
         const historyPath = `${ctx.workspaceRootPath}/automations-history.jsonl`

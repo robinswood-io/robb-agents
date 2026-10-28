@@ -93,7 +93,7 @@ describe('handleInterrupted (#616)', () => {
 
     it('marks running tools as interrupted regardless of redirect type', () => {
       const state = makeState([
-        { timestamp: 0, content: '', id: 'tool-1', role: 'tool', toolStatus: 'executing', toolResult: undefined },
+        { timestamp: 0, content: '', id: 'tool-1', role: 'tool', toolStatus: 'executing' },
       ])
       const event: InterruptedEvent = {
         type: 'interrupted',

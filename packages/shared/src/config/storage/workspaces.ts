@@ -62,7 +62,7 @@ export function getWorkspaces(): Workspace[] {
     }
 
     const slug = extractWorkspaceSlugFromPath(w.rootPath, w.id);
-    return { ...w, name, slug, iconUrl };
+    return { ...w, name, slug, ...(iconUrl !== undefined ? { iconUrl } : {}) };
   });
 }
 

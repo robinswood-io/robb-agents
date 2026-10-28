@@ -19,17 +19,17 @@ export interface InlineLabelMenuProps {
   items: LabelMenuItem[]
   onSelect: (labelId: string) => void
   /** Called when user picks "Add New Label" (receives the current filter text as prefill) */
-  onAddLabel?: (prefill: string) => void
-  filter?: string
+  onAddLabel?: ((prefill: string) => void) | undefined
+  filter?: string | undefined
   position: { x: number; y: number }
-  className?: string
+  className?: string | undefined
   // ── State selection (optional — when provided, shows a "States" section) ──
   /** Available workflow states to show in the menu */
-  states?: SessionStatus[]
+  states?: SessionStatus[] | undefined
   /** Currently active state ID (shows checkmark) */
-  activeStateId?: string
+  activeStateId?: string | undefined
   /** Callback when a state is selected */
-  onSelectState?: (stateId: string) => void
+  onSelectState?: ((stateId: string) => void) | undefined
 }
 
 // ============================================================================
@@ -56,7 +56,7 @@ export function filterSessionStatuses(states: SessionStatus[], filter: string): 
   if (segments.length === 0) return states
 
   // States are flat (no hierarchy), so just match the first segment against the label
-  const segment = segments[0]
+  const segment = segments[0] ?? ''
   const scored: { state: SessionStatus; score: number }[] = []
 
   for (const state of states) {
@@ -147,7 +147,8 @@ export function InlineLabelMenu({
             onOpenChange(false)
           } else if (selectedIndex < filteredStates_.length) {
             // Selected item is a state
-            onSelectState?.(filteredStates_[selectedIndex].id)
+            const state = filteredStates_[selectedIndex]
+            if (state) onSelectState?.(state.id)
             onOpenChange(false)
           } else {
             // Selected item is a label
@@ -452,7 +453,7 @@ export function useInlineLabelMenu({
     position,
     items,
     states: sessionStatuses,
-    activeStateId,
+    ...(activeStateId !== undefined ? { activeStateId: activeStateId } : {}),
     handleInputChange,
     close,
     handleSelect,

@@ -4,6 +4,7 @@
  * See docs/adr-transport-locality.md for the locality boundary definition.
  */
 
+import { z } from 'zod'
 import type { BrowserCapabilityRequest } from './browser-capability'
 import type { RpcServer } from './types'
 
@@ -96,15 +97,16 @@ export async function requestClientShowInFolder(
 }
 
 /** Spec for a confirmation dialog (maps to Electron's MessageBoxOptions). */
-export interface ConfirmDialogSpec {
-  type?: 'none' | 'info' | 'warning' | 'error' | 'question'
-  title: string
-  message: string
-  detail?: string
-  buttons: string[]
-  defaultId?: number
-  cancelId?: number
-}
+export const ConfirmDialogSpecSchema = z.object({
+  type: z.enum(['none', 'info', 'warning', 'error', 'question']).optional(),
+  title: z.string(),
+  message: z.string(),
+  detail: z.string().optional(),
+  buttons: z.array(z.string()),
+  defaultId: z.number().optional(),
+  cancelId: z.number().optional(),
+}).strict();
+export type ConfirmDialogSpec = z.infer<typeof ConfirmDialogSpecSchema>;
 
 /**
  * Ask the client to show a confirmation dialog.
@@ -123,12 +125,15 @@ export async function requestClientConfirmDialog(
 }
 
 /** Spec for a file/folder picker dialog (maps to Electron's OpenDialogOptions). */
-export interface FileDialogSpec {
-  title?: string
-  defaultPath?: string
-  properties?: string[]
-  filters?: Array<{ name: string; extensions: string[] }>
-}
+export const FileDialogSpecSchema = z.object({
+  title: z.string().optional(),
+  defaultPath: z.string().optional(),
+  properties: z.array(z.enum(['openFile', 'openDirectory', 'multiSelections',
+    'showHiddenFiles', 'createDirectory', 'promptToCreate', 'noResolveAliases',
+    'treatPackageAsDirectory', 'dontAddToRecent'])).optional(),
+  filters: z.array(z.object({ name: z.string(), extensions: z.array(z.string()) }).strict()).optional(),
+}).strict();
+export type FileDialogSpec = z.infer<typeof FileDialogSpecSchema>;
 
 /**
  * Ask the client to show a native file/folder picker.

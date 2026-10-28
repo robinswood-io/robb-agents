@@ -10,7 +10,7 @@ import { generateTitle as sessionOpGenerateTitle } from './objective-registratio
  * If no agent exists, creates a temporary one using the session's connection.
  */
 function sessionOpScheduleTitleGeneration(sessionOperationContext: SessionOperationContext, managed: ManagedSession, userMessage: string): void {
-    void sessionOpTrackSessionOperation(sessionOperationContext, managed, () => sessionOpGenerateTitle(sessionOperationContext, managed, userMessage)).catch(error => {
+    void sessionOpTrackSessionOperation(sessionOperationContext, managed, () => sessionOpGenerateTitle(sessionOperationContext, managed, userMessage)).catch((error: unknown) => {
         // Deletion closes admission synchronously. A title is optional and must
         // never keep a rejected detached-session promise alive as an unhandled
         // background task.

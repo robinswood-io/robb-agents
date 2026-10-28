@@ -1,3 +1,4 @@
+import {setOptional, omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * useAutomations
  *
@@ -61,7 +62,7 @@ export function useAutomations(
       try {
         const map = await window.electronAPI.getAutomationLastExecuted(activeWorkspaceId)
         for (const item of items) {
-          item.lastExecutedAt = map[item.id] ?? item.lastExecutedAt
+          setOptional(item, 'lastExecutedAt', map[item.id] ?? item.lastExecutedAt)
         }
       } catch { /* history unavailable — timestamps stay undefined */ }
       setAutomations(items)
@@ -97,9 +98,9 @@ export function useAutomations(
       automationId: automation.id,
       automationName: automation.name,
       actions: automation.actions,
-      permissionMode: automation.permissionMode,
-      labels: automation.labels,
-      telegramTopic: automation.telegramTopic,
+      ...(automation.permissionMode !== undefined ? { permissionMode: automation.permissionMode } : {}),
+      ...(automation.labels !== undefined ? { labels: automation.labels } : {}),
+      ...(automation.telegramTopic !== undefined ? { telegramTopic: automation.telegramTopic } : {}),
     }).then((result) => {
       const actions = result.actions
       if (!actions || actions.length === 0) {
@@ -112,11 +113,11 @@ export function useAutomations(
       const duration = actions.reduce((sum, a) => sum + (a.duration ?? 0), 0)
       setAutomationTestResults(prev => ({
         ...prev,
-        [automationId]: {
+        [automationId]: omitUndefined<TestResult>({
           state,
           stderr: stderr || undefined,
           duration: duration || undefined,
-        },
+        }),
       }))
     }).catch((err: Error) => {
       setAutomationTestResults(prev => ({ ...prev, [automationId]: { state: 'error', stderr: err.message } }))
@@ -163,7 +164,7 @@ export function useAutomations(
     try {
       const entries = await window.electronAPI.getAutomationHistory(activeWorkspaceId, automationId, 20)
       const automation = findAutomation(automationId)
-      return entries.map(e => ({
+      return entries.map(e => (omitUndefined({
         id: `${e.id}-${e.ts}`,
         automationId: e.id,
         event: automation?.event ?? 'LabelAdd',
@@ -175,7 +176,7 @@ export function useAutomations(
           ? `Webhook ${e.webhook.method} ${e.webhook.url}${e.webhook.attempts && e.webhook.attempts > 1 ? ` (${e.webhook.attempts} attempts)` : ''}`
           : e.prompt,
         error: e.webhook?.error ?? e.error,
-        webhookDetails: e.webhook ? {
+        webhookDetails: e.webhook ? omitUndefined({
           method: e.webhook.method,
           url: e.webhook.url,
           statusCode: e.webhook.statusCode,
@@ -183,8 +184,8 @@ export function useAutomations(
           attempts: e.webhook.attempts,
           error: e.webhook.error,
           responseBody: e.webhook.responseBody,
-        } : undefined,
-      }))
+        }) : undefined,
+      })))
     } catch {
       return []
     }

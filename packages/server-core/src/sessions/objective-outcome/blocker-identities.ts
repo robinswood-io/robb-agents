@@ -34,7 +34,7 @@ function stableRequestValue(value: unknown, depth = 0): string | undefined {
   if (depth > 6 || !value || typeof value !== 'object') return undefined;
   if (Array.isArray(value)) {
     if (value.length > 128) return undefined;
-    const items = value.map(item => stableRequestValue(item, depth + 1));
+    const items = value.map((item: unknown) => stableRequestValue(item, depth + 1));
     return items.every((item): item is string => item !== undefined) ? `[${items.join(',')}]` : undefined;
   }
   // These two root fields are renderer annotations injected around the real
@@ -70,8 +70,8 @@ export function blockerKindsForFailureSignal(message: Message, signal = message.
   const normalizedSignal = signal.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const failure = classifyAgentFailure({
     message: signal,
-    toolName: message.toolName,
-    code,
+    ...(message.toolName !== undefined ? { toolName: message.toolName } : {}),
+    ...(code !== undefined ? { code: code } : {}),
   });
   if (failure.failureClass === 'interactive-auth-required') {
     if (/\b(?:mfa|2fa|two[- ]factor|deux\s+facteurs)\b/i.test(normalizedSignal)) return ['mfa'];

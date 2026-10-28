@@ -10,7 +10,7 @@ export function YamlLine({ line }: { line: string }) {
     return <div className="text-foreground/35">{line || ' '}</div>
   const m = line.match(/^(\s*-?\s*)([\w.-]+:)(.*)$/)
   if (m) {
-    const [, lead, key, rest] = m
+    const [, lead = '', key = '', rest = ''] = m
     const cm = rest.indexOf(' #')
     const value = cm >= 0 ? rest.slice(0, cm) : rest
     const comment = cm >= 0 ? rest.slice(cm) : ''
@@ -57,7 +57,7 @@ export function Btn({
   block = false,
   className,
   ...rest
-}: { variant?: BtnVariant; size?: BtnSize; block?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+}: { variant?: BtnVariant | undefined; size?: BtnSize | undefined; block?: boolean | undefined } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       type="button"
@@ -81,7 +81,7 @@ export function SelectButton({
   children,
   className,
   ...rest
-}: { size?: 'sm' | 'md' } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+}: { size?: 'sm' | 'md' | undefined } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       type="button"
@@ -111,7 +111,7 @@ export function FieldRow({ label, children }: { label: string; children: React.R
   )
 }
 
-export function ModelSelect({ value, onChange, width = 168, size = 'md' }: { value: string; onChange: (id: string) => void; width?: number; size?: 'sm' | 'md' }) {
+export function ModelSelect({ value, onChange, width = 168, size = 'md' }: { value: string; onChange: (id: string) => void; width?: number | undefined; size?: 'sm' | 'md' | undefined }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

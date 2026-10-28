@@ -1,4 +1,5 @@
 import { parseSpawnSessionInput, SPAWN_SESSION_ROLE_HELP } from "@craft-agent/session-tools-core";
+import { omitUndefined } from "../../utils/json.ts";
 import { expandPath } from "../../utils/paths.ts";
 import { assertExistingWorkingDirectory } from "../spawn-helpers.ts";
 import { buildCallLlmRequest, type LLMQueryResult } from "../llm-tool.ts";
@@ -75,13 +76,12 @@ export async function preExecuteSpawnSession(transportOwner: BaseAgent, input: R
     if (!transportOwner["onSpawnSession"]) {
         throw new Error('spawn_session is not available in this context.');
     }
-    const request: SpawnSessionRequest = {
+    const workingDirectory = parsed.workingDirectory ? expandPath(parsed.workingDirectory) : undefined;
+    const request = omitUndefined<SpawnSessionRequest>({
         ...parsed,
         prompt,
-        workingDirectory: parsed.workingDirectory
-            ? expandPath(parsed.workingDirectory)
-            : undefined,
-    };
+        workingDirectory,
+    });
     // Reject remote or stale paths before the host creates a stored child.
     if (request.workingDirectory) {
         await assertExistingWorkingDirectory(request.workingDirectory);

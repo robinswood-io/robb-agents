@@ -54,58 +54,58 @@ export function contextualGmailReplyPreflightAttestationFromObjective(
     : CONTEXTUAL_GMAIL_REPLY_PREFLIGHT_KEYS;
   if (toolName !== expectedTool
     || Object.keys(input).some(key => !allowedKeys.has(key))
-    || typeof input.messageId !== 'string'
-    || input.messageId !== input.messageId.trim()
-    || !GMAIL_MESSAGE_ID.test(input.messageId)
-    || typeof input.body !== 'string'
-    || input.body.trim().length === 0
-    || /\0/u.test(input.body)
-    || input.isHtml !== undefined && typeof input.isHtml !== 'boolean') return undefined;
+    || typeof input["messageId"] !== 'string'
+    || input["messageId"] !== input["messageId"].trim()
+    || !GMAIL_MESSAGE_ID.test(input["messageId"])
+    || typeof input["body"] !== 'string'
+    || input["body"].trim().length === 0
+    || /\0/u.test(input["body"])
+    || input["isHtml"] !== undefined && typeof input["isHtml"] !== 'boolean') return undefined;
 
-  const messageId = input.messageId.toLowerCase();
+  const messageId = input["messageId"].toLowerCase();
   const objectiveMessageIds = constraints.messageIds;
   if (objectiveMessageIds.length > 1
     || objectiveMessageIds.length === 1
       && objectiveMessageIds[0]!.toLowerCase() !== messageId) return undefined;
 
   const exactBody = constraints.body;
-  if (exactBody !== undefined && (input.body !== exactBody || input.isHtml === true)) {
+  if (exactBody !== undefined && (input["body"] !== exactBody || input["isHtml"] === true)) {
     return undefined;
   }
   const objectiveEmails = constraints.recipients;
   const objectiveSenderEmails = constraints.senders;
-  const validOptionalSenderEmail = input.expectedSenderEmail === undefined
-    || typeof input.expectedSenderEmail === 'string'
-      && input.expectedSenderEmail === input.expectedSenderEmail.trim().toLowerCase()
-      && /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(input.expectedSenderEmail);
+  const validOptionalSenderEmail = input["expectedSenderEmail"] === undefined
+    || typeof input["expectedSenderEmail"] === 'string'
+      && input["expectedSenderEmail"] === input["expectedSenderEmail"].trim().toLowerCase()
+      && /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(input["expectedSenderEmail"]);
   if (objectiveSenderEmails.length > 1
     || !validOptionalSenderEmail
     || objectiveSenderEmails.length === 1
-      && input.expectedSenderEmail !== objectiveSenderEmails[0]) return undefined;
+      && input["expectedSenderEmail"] !== objectiveSenderEmails[0]) return undefined;
   if (requested.scope === 'reply-all') {
-    if (input.expectedRecipientEmail !== undefined || objectiveEmails.length > 0) return undefined;
+    if (input["expectedRecipientEmail"] !== undefined || objectiveEmails.length > 0) return undefined;
   } else {
-    if (typeof input.expectedRecipientEmail !== 'string'
-      || input.expectedRecipientEmail !== input.expectedRecipientEmail.trim().toLowerCase()
-      || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(input.expectedRecipientEmail)
+    if (typeof input["expectedRecipientEmail"] !== 'string'
+      || input["expectedRecipientEmail"] !== input["expectedRecipientEmail"].trim().toLowerCase()
+      || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(input["expectedRecipientEmail"])
       || objectiveEmails.length > 1
       || objectiveEmails.length === 1
-        && input.expectedRecipientEmail !== objectiveEmails[0]) return undefined;
+        && input["expectedRecipientEmail"] !== objectiveEmails[0]) return undefined;
   }
 
   return {
     scope: requested.scope,
     messageId,
-    body: input.body,
-    isHtml: input.isHtml === true,
+    body: input["body"],
+    isHtml: input["isHtml"] === true,
     requiresExactEffectReconciliation: requested.requiresExactEffectReconciliation,
     ...(requested.scope === 'reply'
-      ? { expectedRecipientEmail: String(input.expectedRecipientEmail) }
+      ? { expectedRecipientEmail: String(input["expectedRecipientEmail"]) }
       : {}),
     ...(objectiveSenderEmails.length === 1
       ? { expectedSenderEmail: objectiveSenderEmails[0] }
-      : typeof input.expectedSenderEmail === 'string'
-        ? { expectedSenderEmail: input.expectedSenderEmail }
+      : typeof input["expectedSenderEmail"] === 'string'
+        ? { expectedSenderEmail: input["expectedSenderEmail"] }
         : {}),
     ...(exactEffect?.expectedCc !== undefined
       ? { expectedCc: exactEffect.expectedCc }
@@ -129,14 +129,14 @@ function contextualGmailReplyMatchesPreflightAttestation(
     || attestation.requiresExactEffectReconciliation
       !== requested.requiresExactEffectReconciliation
     || attestation.objectiveRequest !== constraints.objectiveRequest
-    || attestation.messageId !== String(input.messageId).toLowerCase()
-    || attestation.recipientBinding !== input.recipientBinding
-    || attestation.body !== String(input.body)
-    || attestation.isHtml !== (input.isHtml === true)
-    || attestation.expectedSenderEmail !== input.expectedSenderEmail) return false;
+    || attestation.messageId !== String(input["messageId"]).toLowerCase()
+    || attestation.recipientBinding !== input["recipientBinding"]
+    || attestation.body !== String(input["body"])
+    || attestation.isHtml !== (input["isHtml"] === true)
+    || attestation.expectedSenderEmail !== input["expectedSenderEmail"]) return false;
   return requested.scope === 'reply-all'
     ? attestation.expectedRecipientEmail === undefined
-    : attestation.expectedRecipientEmail === input.expectedRecipientEmail;
+    : attestation.expectedRecipientEmail === input["expectedRecipientEmail"];
 }
 
 /**
@@ -154,7 +154,7 @@ export function isContextualGmailReplyAuthorizedByObjective(
   if (!isCanonicalContextualGmailReplyInput(toolName, input)) return false;
   const requested = contextualGmailReplyObjective(objectiveSegments);
   const constraints = requested ? contextualGmailResolvedConstraints(requested) : undefined;
-  const messageId = String(input.messageId).toLowerCase();
+  const messageId = String(input["messageId"]).toLowerCase();
   const objectiveMessageIds = constraints?.messageIds ?? [];
   const objectiveEmails = constraints?.recipients ?? [];
   const objectiveSenderEmails = constraints?.senders ?? [];
@@ -187,16 +187,16 @@ export function isContextualGmailReplyAuthorizedByObjective(
     && objectiveMessageIds.length <= 1
     && (exactHumanAnchor || hostObservedAnchor)
     && (exactBody === undefined
-      || String(input.body) === exactBody && input.isHtml !== true)
+      || String(input["body"]) === exactBody && input["isHtml"] !== true)
     && objectiveSenderEmails.length <= 1
     && (objectiveSenderEmails.length === 0
-      ? input.expectedSenderEmail === undefined || typeof input.expectedSenderEmail === 'string'
-      : input.expectedSenderEmail === objectiveSenderEmails[0])
+      ? input["expectedSenderEmail"] === undefined || typeof input["expectedSenderEmail"] === 'string'
+      : input["expectedSenderEmail"] === objectiveSenderEmails[0])
     && (requested.scope === 'reply-all'
       ? objectiveEmails.length === 0
       : objectiveEmails.length <= 1
         && (objectiveEmails.length === 0
-          || input.expectedRecipientEmail === objectiveEmails[0]))
+          || input["expectedRecipientEmail"] === objectiveEmails[0]))
     && toolName === (requested.scope === 'reply-all'
       ? CONTEXTUAL_GMAIL_REPLY_ALL_TOOL
       : CONTEXTUAL_GMAIL_REPLY_TOOL);
@@ -244,7 +244,7 @@ export function contextualGmailReplyRecoveryReason(
         : 'Validation failed: Gmail thread replies must use one exact messageId and the signed closed preflight/reply contract. Do not use a legacy or unbound reply path, infer another recipient, or use a browser fallback.';
     }
     const mentionedIds = contextualGmailMessageIds(contextualMention);
-    const selectedId = typeof input.messageId === 'string' ? input.messageId.trim().toLowerCase() : '';
+    const selectedId = typeof input["messageId"] === 'string' ? input["messageId"].trim().toLowerCase() : '';
     if (mentionedIds.length !== 1
       || toolName !== CONTEXTUAL_GMAIL_SEND_TOOL
         && mentionedIds[0]!.toLowerCase() !== selectedId) {
@@ -259,7 +259,7 @@ export function contextualGmailReplyRecoveryReason(
   const objectiveMessageIds = constraints.messageIds;
   const objectiveEmails = constraints.recipients;
   const objectiveSenderEmails = constraints.senders;
-  const messageId = typeof input.messageId === 'string' ? input.messageId.trim().toLowerCase() : '';
+  const messageId = typeof input["messageId"] === 'string' ? input["messageId"].trim().toLowerCase() : '';
   if (objectiveMessageIds.length > 1) {
     return 'Validation failed: the accepted objective names more than one Gmail messageId. Do not choose a thread or use a browser fallback; obtain one unambiguous target-bound instruction before sending.';
   }
@@ -295,17 +295,17 @@ export function contextualGmailReplyRecoveryReason(
     ? CONTEXTUAL_GMAIL_REPLY_ALL_TOOL
     : CONTEXTUAL_GMAIL_REPLY_TOOL)
     && objectiveSenderEmails.length === 1
-    && input.expectedSenderEmail !== objectiveSenderEmails[0]) {
+    && input["expectedSenderEmail"] !== objectiveSenderEmails[0]) {
     return 'Validation failed: expectedSenderEmail does not match the exact From identity named in the accepted human objective. Re-run the signed preflight for that authenticated Gmail profile; do not select another account or alias.';
   }
   if (requestedScope === 'reply'
     && toolName === CONTEXTUAL_GMAIL_REPLY_TOOL
     && objectiveEmails.length === 1
-    && input.expectedRecipientEmail !== objectiveEmails[0]) {
+    && input["expectedRecipientEmail"] !== objectiveEmails[0]) {
     return 'Validation failed: expectedRecipientEmail does not match the exact recipient named in the accepted human objective. Re-run the signed preflight for that exact address; do not retarget the reply.';
   }
   const exactBody = constraints.body;
-  const suppliedBody = typeof input.body === 'string' ? input.body : '';
+  const suppliedBody = typeof input["body"] === 'string' ? input["body"] : '';
   if (exactBody !== undefined && suppliedBody !== exactBody) {
     return 'Validation failed: the Gmail reply body does not match the exact delimited body in the accepted human objective. Reuse that body verbatim in the signed preflight and reply; do not paraphrase it or use a browser fallback.';
   }

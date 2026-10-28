@@ -30,10 +30,10 @@ export function isBoundedOrionWorktreeCommand(
 ): boolean {
   if (toolName !== 'mcp__rbw-servers__ssh_execute' || !boundedLifecycle
     || Object.keys(input).some(key => !['server', 'cwd', 'command', 'timeout', '_displayName', '_intent'].includes(key))
-    || input.server !== 'dev' || typeof input.cwd !== 'string'
-    || !/^\/opt\/ia-webdev\/agent-dev\/worktrees\/orion\/[a-z0-9][a-z0-9-]{0,63}$/u.test(input.cwd)
-    || typeof input.command !== 'string') return false;
-  const command = input.command;
+    || input["server"] !== 'dev' || typeof input["cwd"] !== 'string'
+    || !/^\/opt\/ia-webdev\/agent-dev\/worktrees\/orion\/[a-z0-9][a-z0-9-]{0,63}$/u.test(input["cwd"])
+    || typeof input["command"] !== 'string') return false;
+  const command = input["command"];
   const namedCheck = /^bun (?:run )?(?:test|check|typecheck|verify|scripts\/[A-Za-z0-9_./-]+)(?::[a-z0-9][a-z0-9:-]{0,79})?(?: [A-Za-z0-9_./ -]+)?$/u.test(command);
   const sourceEdit = /^sed -i '[^'\r\n]{1,4096}' (?:apps|packages|tests)\/[A-Za-z0-9_./-]+\.(?:ts|tsx|js|jsx)$/u.test(command);
   if (!namedCheck && !sourceEdit) return false;
@@ -45,7 +45,7 @@ export function isBoundedOrionWorktreeCommand(
     && !boundedSoftwareMutationIsRevoked(boundedSoftwareInstructionPhases(latest))
     && detectHighStakesEvidenceDomain(latest) === undefined
     && explicitlyAuthorizesStructuredRemoteReadChannel(latest)
-    && explicitlyAuthorizesBoundedSoftwareMutationScope(latest, 'dev', input.cwd);
+    && explicitlyAuthorizesBoundedSoftwareMutationScope(latest, 'dev', input["cwd"]);
 }
 
 export function boundedRemoteCwd(
@@ -53,7 +53,7 @@ export function boundedRemoteCwd(
   endpoint: string,
   segment: string,
 ): string | undefined {
-  const raw = input.cwd;
+  const raw = input["cwd"];
   if (typeof raw !== 'string' || raw !== raw.trim()
     || !raw.startsWith('/srv/') && !(endpoint === 'dev' && managedDevOrionPath(raw))
     || raw.length > 2_048 || /[$`*?[\]{}~\0\r\n]/u.test(raw)) return undefined;

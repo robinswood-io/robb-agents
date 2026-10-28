@@ -1,3 +1,4 @@
+import { isJsonObject, isUnknownArray, parseJsonObject } from '@craft-agent/shared/utils/json'
 
 // ============================================================================
 // Individual Tool Parsers
@@ -15,17 +16,18 @@ export interface ReadResult {
  */
 export function parseReadResult(rawContent: string): ReadResult {
   try {
-    const parsed = JSON.parse(rawContent)
-    if (parsed.file) {
+    const parsed = parseJsonObject(rawContent)
+    const file = parsed['file']
+    if (isJsonObject(file) && typeof file['content'] === 'string') {
       return {
-        content: parsed.file.content || '',
-        numLines: parsed.file.numLines,
-        startLine: parsed.file.startLine,
-        totalLines: parsed.file.totalLines,
+        content: file['content'],
+        ...(typeof file['numLines'] === 'number' ? { numLines: file['numLines'] } : {}),
+        ...(typeof file['startLine'] === 'number' ? { startLine: file['startLine'] } : {}),
+        ...(typeof file['totalLines'] === 'number' ? { totalLines: file['totalLines'] } : {}),
       }
     }
   } catch {
-    // Not JSON, use as plain text
+    // Retain the original output when it is not a structured Read result.
   }
   return { content: rawContent }
 }
@@ -40,13 +42,14 @@ export interface BashResult {
  */
 export function parseBashResult(rawContent: string): BashResult {
   try {
-    const parsed = JSON.parse(rawContent)
-    if (parsed.stdout !== undefined || parsed.stderr !== undefined) {
-      const stdout = parsed.stdout || ''
-      const stderr = parsed.stderr || ''
+    const parsed = parseJsonObject(rawContent)
+    if (typeof parsed['stdout'] === 'string' || typeof parsed['stderr'] === 'string') {
+      const stdout = typeof parsed['stdout'] === 'string' ? parsed['stdout'] : ''
+      const stderr = typeof parsed['stderr'] === 'string' ? parsed['stderr'] : ''
+      const exitCode = parsed['interrupted'] === true ? 130 : parsed['exitCode']
       return {
         output: stdout + (stderr ? `\n${stderr}` : ''),
-        exitCode: parsed.interrupted ? 130 : parsed.exitCode,
+        ...(typeof exitCode === 'number' ? { exitCode } : {}),
       }
     }
   } catch {
@@ -78,16 +81,16 @@ export function parseGrepResult(
   let description = `Search for "${pattern}"`
 
   try {
-    const parsed = JSON.parse(rawContent)
-    if (parsed.content !== undefined) {
-      output = parsed.content || ''
-      if (parsed.numFiles !== undefined) {
-        description = `Search for "${pattern}" (${parsed.numFiles} files, ${parsed.numLines || 0} lines)`
+    const parsed = parseJsonObject(rawContent)
+    if (typeof parsed['content'] === 'string') {
+      output = parsed['content']
+      if (typeof parsed['numFiles'] === 'number') {
+        const lines = typeof parsed['numLines'] === 'number' ? parsed['numLines'] : 0
+        description = `Search for "${pattern}" (${parsed['numFiles']} files, ${lines} lines)`
       }
-    } else if (parsed.filenames) {
-      // files_with_matches mode returns filenames array
-      output = parsed.filenames.join('\n')
-      description = `Search for "${pattern}" (${parsed.filenames.length} files)`
+    } else if (isUnknownArray(parsed['filenames']) && parsed['filenames'].every((name): name is string => typeof name === 'string')) {
+      output = parsed['filenames'].join('\n')
+      description = `Search for "${pattern}" (${parsed['filenames'].length} files)`
     }
   } catch {
     // Not JSON, use as plain text
@@ -115,14 +118,13 @@ export function parseGlobResult(
   let description = `Find files matching "${pattern}"`
 
   try {
-    const parsed = JSON.parse(rawContent)
-    if (parsed.filenames && Array.isArray(parsed.filenames)) {
-      // Standard Glob result format: { filenames: [...], numFiles, durationMs, truncated }
-      output = parsed.filenames.join('\n')
-      const truncated = parsed.truncated ? ' (truncated)' : ''
-      description = `Find files matching "${pattern}" (${parsed.numFiles || parsed.filenames.length} files${truncated})`
-    } else if (Array.isArray(parsed)) {
-      // Simple array format
+    const parsed: unknown = JSON.parse(rawContent)
+    if (isJsonObject(parsed) && isUnknownArray(parsed['filenames']) && parsed['filenames'].every((name): name is string => typeof name === 'string')) {
+      output = parsed['filenames'].join('\n')
+      const truncated = parsed['truncated'] === true ? ' (truncated)' : ''
+      const count = typeof parsed['numFiles'] === 'number' ? parsed['numFiles'] : parsed['filenames'].length
+      description = `Find files matching "${pattern}" (${count} files${truncated})`
+    } else if (isUnknownArray(parsed) && parsed.every((name): name is string => typeof name === 'string')) {
       output = parsed.join('\n')
       description = `Find files matching "${pattern}" (${parsed.length} matches)`
     }
@@ -211,12 +213,9 @@ function findJsonArrayEnd(value: string, start: number): number {
 }
 
 function isWebSearchLinkArray(value: unknown): value is Array<{ title: string; url: string }> {
-  return Array.isArray(value) && value.every(link => (
-    typeof link === 'object'
-    && link !== null
-    && 'title' in link
-    && typeof link.title === 'string'
-    && 'url' in link
-    && typeof link.url === 'string'
+  return isUnknownArray(value) && value.every(link => (
+    isJsonObject(link)
+    && typeof link['title'] === 'string'
+    && typeof link['url'] === 'string'
   ))
 }

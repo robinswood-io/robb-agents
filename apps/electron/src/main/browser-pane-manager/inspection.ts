@@ -65,7 +65,7 @@ export async function waitFor(transportOwner: BrowserPaneManager, id: string, ar
                     detail,
                 };
             }
-            await transportOwner["sleep"](pollMs);
+            await transportOwner.sleep(pollMs);
         }
         throw new Error(`Wait timed out after ${timeoutMs}ms (${args.kind})`);
     };
@@ -80,7 +80,7 @@ export async function waitFor(transportOwner: BrowserPaneManager, id: string, ar
         if (!selector)
             throw new Error('browser_wait selector requires value');
         return until(async () => {
-            const exists = await instance.pageView.webContents.executeJavaScript(`Boolean(document.querySelector(${JSON.stringify(selector)}))`);
+            const exists: unknown = await instance.pageView.webContents.executeJavaScript(`Boolean(document.querySelector(${JSON.stringify(selector)}))`);
             return Boolean(exists);
         }, `selector matched: ${selector}`);
     }
@@ -89,7 +89,7 @@ export async function waitFor(transportOwner: BrowserPaneManager, id: string, ar
         if (!text)
             throw new Error('browser_wait text requires value');
         return until(async () => {
-            const found = await instance.pageView.webContents.executeJavaScript(`document.body && document.body.innerText && document.body.innerText.includes(${JSON.stringify(text)})`);
+            const found: unknown = await instance.pageView.webContents.executeJavaScript(`document.body && document.body.innerText && document.body.innerText.includes(${JSON.stringify(text)})`);
             return Boolean(found);
         }, `text found: ${text}`);
     }
@@ -123,19 +123,19 @@ export async function getDownloads(transportOwner: BrowserPaneManager, id: strin
             const hasTerminal = instance.downloads.some((d) => d.state === 'completed' || d.state === 'interrupted' || d.state === 'cancelled');
             if (hasTerminal)
                 break;
-            await transportOwner["sleep"](100);
+            await transportOwner.sleep(100);
         }
     }
     return instance.downloads.slice(-limit);
 }
 
 export async function evaluate(transportOwner: BrowserPaneManager, id: string, expression: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<unknown> {
-    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner["evaluateAtCurrentUrl"](id, expression, mutationPolicy));
+    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner.evaluateAtCurrentUrl(id, expression, mutationPolicy));
 }
 
 export async function evaluateAtCurrentUrl(transportOwner: BrowserPaneManager, id: string, expression: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<unknown> {
     const instance = transportOwner["requireAliveInstance"](id);
-    transportOwner["assertMutationUrlAllowed"](instance, mutationPolicy);
+    transportOwner.assertMutationUrlAllowed(instance, mutationPolicy);
     return instance.pageView.webContents.executeJavaScript(expression);
 }
 

@@ -43,7 +43,7 @@ export interface Message {
   // Pending: streaming text where we don't yet know if it's intermediate
   // Set to true when text_delta creates message, false when text_complete arrives
   // Also used for optimistic user messages before backend confirmation
-  isPending?: boolean;
+  isPending?: boolean | undefined;
   // Queued: user message that is waiting to be processed (sent during ongoing response)
   isQueued?: boolean;
   /** Durable transport provenance; this never grants user authority. */

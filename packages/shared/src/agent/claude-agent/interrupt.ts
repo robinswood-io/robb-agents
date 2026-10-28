@@ -16,7 +16,7 @@ import type { ClaudeAgent } from '../claude-agent.ts';
    * AbortController mid-control-write.
    */
 export function interruptForHandoff(transportOwner: ClaudeAgent, reason: AbortReason): void {
-    const gmailRuntime = transportOwner["activeTurnGmailRuntime"] ?? (transportOwner["persistentGmailRuntimeId"] && transportOwner["persistentGmailSessionId"]
+    const gmailRuntime = transportOwner.activeTurnGmailRuntime ?? (transportOwner["persistentGmailRuntimeId"] && transportOwner["persistentGmailSessionId"]
         ? {
             sessionId: transportOwner["persistentGmailSessionId"],
             runtimeId: transportOwner["persistentGmailRuntimeId"],
@@ -30,14 +30,14 @@ export function interruptForHandoff(transportOwner: ClaudeAgent, reason: AbortRe
         transportOwner["forceAbort"](reason);
         return;
     }
-    transportOwner["promptPreparationRevision"]++;
+    transportOwner.promptPreparationRevision++;
     transportOwner["revokeAdmittedToolExecutions"]();
-    transportOwner["lastAbortReason"] = reason;
+    transportOwner.lastAbortReason = reason;
     transportOwner["denyAllPendingPermissions"]();
     if (!transportOwner["currentQuery"]) {
         return;
     }
-    void transportOwner["currentQuery"].interrupt().catch((error) => {
+    void transportOwner["currentQuery"].interrupt().catch((error: unknown) => {
         transportOwner["debug"](`Claude handoff interrupt failed: ${error instanceof Error ? error.message : String(error)}`);
     });
 }
@@ -50,12 +50,12 @@ export function interruptForHandoff(transportOwner: ClaudeAgent, reason: AbortRe
    * @param reason - Why the abort is happening (affects UI feedback)
    */
 export function forceAbort(transportOwner: ClaudeAgent, reason: AbortReason): void {
-    transportOwner["promptPreparationRevision"]++;
+    transportOwner.promptPreparationRevision++;
     transportOwner["revokeAdmittedToolExecutions"]();
-    transportOwner["lastAbortReason"] = reason;
+    transportOwner.lastAbortReason = reason;
     const abortSessionIds = new Set<string>();
-    if (transportOwner["activeTurnGmailRuntime"]?.sessionId) {
-        abortSessionIds.add(transportOwner["activeTurnGmailRuntime"].sessionId);
+    if (transportOwner.activeTurnGmailRuntime?.sessionId) {
+        abortSessionIds.add(transportOwner.activeTurnGmailRuntime.sessionId);
     }
     if (transportOwner["persistentGmailSessionId"]) {
         abortSessionIds.add(transportOwner["persistentGmailSessionId"]);
@@ -113,7 +113,7 @@ export async function close(transportOwner: ClaudeAgent): Promise<void> {
    * Abort current query (async interface for AgentBackend compatibility).
    * Wraps forceAbort() in a Promise.
    */
-export async function abort(transportOwner: ClaudeAgent, reason?: string): Promise<void> {
+export async function abort(transportOwner: ClaudeAgent, _reason?: string): Promise<void> {
     transportOwner["forceAbort"]();
 }
 

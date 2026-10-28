@@ -8,7 +8,7 @@ import { AGENTS_PLUGIN_NAME } from '@craft-agent/shared/skills/types';
 import { isValidMentionTrigger } from './mention-trigger';
 export { isValidMentionTrigger } from './mention-trigger'
 
-import { type MentionItem, type MentionSection, filterCacheResults, type UseInlineMentionOptions, type UseInlineMentionReturn } from "./mention-menu-view";
+import { type MentionItem,type MentionSection,filterCacheResults,type UseInlineMentionOptions,type UseInlineMentionReturn } from "./mention-menu-view";
 export { type MentionItemType, type MentionItem, type MentionSection, type InlineMentionMenuProps, InlineMentionMenu, type MentionInputElement, type UseInlineMentionOptions, type UseInlineMentionReturn } from "./mention-menu-view";
 
 
@@ -31,7 +31,7 @@ export function useInlineMention({
   workspaceId,
 }: UseInlineMentionOptions): UseInlineMentionReturn {
   const [isOpen, setIsOpen] = React.useState(false)
-  const [filter, setFilter] = React.useState('')
+  const [, setFilter] = React.useState('')
   // committedFilter: only updates when IPC returns (or immediately when no IPC needed).
   // Prevents visual jumps — the menu shows all items until results are ready,
   // then applies filter + file results in a single frame.
@@ -86,7 +86,7 @@ export function useInlineMention({
             id: source.config.slug,
             type: 'source' as const,
             label: source.config.name,
-            description: source.config.tagline,
+            ...(source.config.tagline !== undefined ? { description: source.config.tagline } : {}),
             source,
           })),
       })

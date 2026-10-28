@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 /// <reference path="../../bash-parser.d.ts" />
 import bashParser from "bash-parser";
 import { posix } from "node:path";
@@ -62,13 +63,13 @@ function boundedImplementationRedirects(
   node: Record<string, unknown>,
   cwd: string,
 ): boolean {
-  const suffix = Array.isArray(node.suffix)
-    ? node.suffix as Array<Record<string, unknown>>
+  const suffix = isUnknownArray(node["suffix"])
+    ? node["suffix"] as Array<Record<string, unknown>>
     : [];
   return suffix.every((item) => {
-    if (item.type !== 'Redirect') return true;
-    const op = (item.op as { text?: unknown } | undefined)?.text;
-    const file = (item.file as { text?: unknown; expansion?: unknown[] } | undefined);
+    if (item["type"] !== 'Redirect') return true;
+    const op = (item["op"] as { text?: unknown } | undefined)?.text;
+    const file = (item["file"] as { text?: unknown; expansion?: unknown[] } | undefined);
     if (typeof op !== 'string' || typeof file?.text !== 'string'
       || file.expansion?.length) return false;
     if (file.text === '/dev/null' && ['>', '>>', '<'].includes(op)) return true;
@@ -319,13 +320,13 @@ function boundedImplementationSimpleCommand(words: string[], cwd: string): boole
 }
 
 function boundedImplementationHasOutputRedirect(node: Record<string, unknown>): boolean {
-  const suffix = Array.isArray(node.suffix)
-    ? node.suffix as Array<Record<string, unknown>>
+  const suffix = isUnknownArray(node["suffix"])
+    ? node["suffix"] as Array<Record<string, unknown>>
     : [];
   return suffix.some((item) => {
-    if (item.type !== 'Redirect') return false;
-    const op = (item.op as { text?: unknown } | undefined)?.text;
-    const file = (item.file as { text?: unknown } | undefined)?.text;
+    if (item["type"] !== 'Redirect') return false;
+    const op = (item["op"] as { text?: unknown } | undefined)?.text;
+    const file = (item["file"] as { text?: unknown } | undefined)?.text;
     return (op === '>' || op === '>>') && file !== '/dev/null';
   });
 }
@@ -374,23 +375,23 @@ export function isBoundedRemoteImplementationLifecycleCommand(command: string, c
   if (hasDynamicShellExpansion(ast) || hasUnsafeRemoteInvocationMetadata(ast)) return false;
   const validatedCommands: Array<{ words: string[]; node: Record<string, unknown> }> = [];
   const visit = (node: unknown): boolean => {
-    if (!node || typeof node !== 'object' || Array.isArray(node)) return false;
+    if (!node || typeof node !== 'object' || isUnknownArray(node)) return false;
     const record = node as Record<string, unknown>;
-    if (record.async === true) return false;
-    if (record.type === 'Script' || record.type === 'Pipeline') {
-      return Array.isArray(record.commands) && record.commands.length > 0
-        && record.commands.every(visit);
+    if (record["async"] === true) return false;
+    if (record["type"] === 'Script' || record["type"] === 'Pipeline') {
+      return isUnknownArray(record["commands"]) && record["commands"].length > 0
+        && record["commands"].every(visit);
     }
-    if (record.type === 'LogicalExpression') {
-      return (record.op === 'and' || record.op === 'or')
-        && visit(record.left) && visit(record.right);
+    if (record["type"] === 'LogicalExpression') {
+      return (record["op"] === 'and' || record["op"] === 'or')
+        && visit(record["left"]) && visit(record["right"]);
     }
-    if (record.type !== 'Command' || Array.isArray(record.prefix) && record.prefix.length > 0
+    if (record["type"] !== 'Command' || isUnknownArray(record["prefix"]) && record["prefix"].length > 0
       || !boundedImplementationRedirects(record, cwd)) return false;
-    const name = record.name as { text?: unknown; expansion?: unknown[] } | undefined;
+    const name = record["name"] as { text?: unknown; expansion?: unknown[] } | undefined;
     if (typeof name?.text !== 'string' || name.expansion?.length) return false;
     const words = [name.text];
-    for (const rawSuffix of Array.isArray(record.suffix) ? record.suffix : []) {
+    for (const rawSuffix of isUnknownArray(record["suffix"]) ? record["suffix"] : []) {
       const suffix = rawSuffix as { type?: unknown; text?: unknown; expansion?: unknown[] };
       if (suffix.type === 'Redirect') continue;
       if (suffix.type !== 'Word' || typeof suffix.text !== 'string' || suffix.expansion?.length) return false;

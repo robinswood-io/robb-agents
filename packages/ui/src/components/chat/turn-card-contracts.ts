@@ -68,10 +68,10 @@ export function computeEditWriteDiffStats(
 
   if (toolName === 'Edit') {
     // Check for Codex format: { changes: Array<{ path, kind, diff }> }
-    if (toolInput.changes && Array.isArray(toolInput.changes)) {
+    if (toolInput["changes"] && Array.isArray(toolInput["changes"])) {
       let totalAdditions = 0
       let totalDeletions = 0
-      for (const change of toolInput.changes as Array<{ path?: string; diff?: string }>) {
+      for (const change of toolInput["changes"] as Array<{ path?: string; diff?: string }>) {
         if (change.diff) {
           const stats = getUnifiedDiffStats(change.diff, change.path || 'file')
           if (stats) {
@@ -85,8 +85,8 @@ export function computeEditWriteDiffStats(
     }
 
     // Claude Code format: { file_path, old_string, new_string }
-    const oldString = (toolInput.old_string as string) ?? ''
-    const newString = (toolInput.new_string as string) ?? ''
+    const oldString = (toolInput["old_string"] as string) ?? ''
+    const newString = (toolInput["new_string"] as string) ?? ''
     if (!oldString && !newString) return null
 
     const oldFile: FileContents = { name: 'file', contents: oldString, lang: 'text' }
@@ -96,7 +96,7 @@ export function computeEditWriteDiffStats(
   }
 
   if (toolName === 'Write') {
-    const content = (toolInput.content as string) ?? ''
+    const content = (toolInput["content"] as string) ?? ''
     if (!content) return null
 
     // For Write, everything is an addition (new file content)
@@ -140,51 +140,51 @@ export interface TodoItem {
   /** Current status */
   status: TodoStatus
   /** Present continuous form shown when in_progress (e.g., "Running tests") */
-  activeForm?: string
+  activeForm?: string | undefined
 }
 
 export interface ActivityItem {
   id: string
   type: ActivityType
   status: ActivityStatus
-  toolName?: string
-  toolUseId?: string  // For matching parent-child relationships
-  toolInput?: Record<string, unknown>
-  content?: string
-  intent?: string
+  toolName?: string | undefined
+  toolUseId?: string | undefined  // For matching parent-child relationships
+  toolInput?: Record<string, unknown> | undefined
+  content?: string | undefined
+  intent?: string | undefined
   /** Optional backing message id (used by plan activities for branching/annotations) */
-  messageId?: string
+  messageId?: string | undefined
   /** Optional persisted annotations (used by plan activities) */
-  annotations?: AnnotationV1[]
-  displayName?: string  // LLM-generated human-friendly tool name (for MCP tools)
-  toolDisplayMeta?: ToolDisplayMeta  // Embedded metadata with base64 icon (for viewer compatibility)
+  annotations?: AnnotationV1[] | undefined
+  displayName?: string | undefined  // LLM-generated human-friendly tool name (for MCP tools)
+  toolDisplayMeta?: ToolDisplayMeta | undefined  // Embedded metadata with base64 icon (for viewer compatibility)
   timestamp: number
-  error?: string
+  error?: string | undefined
   /** False when the host closed the result envelope before invoking the tool. */
-  executed?: boolean
-  checkpoint?: ToolExecutionCheckpoint
+  executed?: boolean | undefined
+  checkpoint?: ToolExecutionCheckpoint | undefined
   // Parent-child nesting for Task subagents
-  parentId?: string  // Parent activity's toolUseId
-  depth?: number     // Nesting level (0 = root, 1 = child, etc.)
+  parentId?: string | undefined  // Parent activity's toolUseId
+  depth?: number | undefined     // Nesting level (0 = root, 1 = child, etc.)
   // Status activities (e.g., compacting)
-  statusType?: string  // e.g., 'compacting'
+  statusType?: string | undefined  // e.g., 'compacting'
   // Background task fields
-  taskId?: string         // For background Task tools
-  shellId?: string        // For background Bash shells
-  elapsedSeconds?: number // Live progress updates
-  isBackground?: boolean  // Flag for UI differentiation
+  taskId?: string | undefined         // For background Task tools
+  shellId?: string | undefined        // For background Bash shells
+  elapsedSeconds?: number | undefined // Live progress updates
+  isBackground?: boolean | undefined  // Flag for UI differentiation
 }
 
 export interface ResponseContent {
   text: string
   isStreaming: boolean
-  streamStartTime?: number
+  streamStartTime?: number | undefined
   /** Whether this response is a plan (renders with plan variant) */
-  isPlan?: boolean
+  isPlan?: boolean | undefined
   /** ID of the underlying message (for branching + annotations) */
-  messageId?: string
+  messageId?: string | undefined
   /** Persisted annotations attached to the response message */
-  annotations?: AnnotationV1[]
+  annotations?: AnnotationV1[] | undefined
 }
 
 export type OpenAnnotationRequest = {
@@ -198,83 +198,83 @@ export type OpenAnnotationRequest = {
 
 export interface TurnCardProps {
   /** Session ID for state persistence (optional in shared context) */
-  sessionId?: string
+  sessionId?: string | undefined
   /** Turn ID for state persistence */
   turnId: string
   /** All activities in this turn (tools, thinking, intermediate text) */
   activities: ActivityItem[]
   /** Final response content (may be streaming) */
-  response?: ResponseContent
+  response?: ResponseContent | undefined
   /** Primary intent/goal for this turn (shown in collapsed preview) */
-  intent?: string
+  intent?: string | undefined
   /** Whether content is still being received */
   isStreaming: boolean
   /** Whether this turn is fully complete */
   isComplete: boolean
   /** Start in expanded state */
-  defaultExpanded?: boolean
+  defaultExpanded?: boolean | undefined
   /** Controlled expansion state (overrides internal state) */
-  isExpanded?: boolean
+  isExpanded?: boolean | undefined
   /** Callback when expansion state changes */
-  onExpandedChange?: (expanded: boolean) => void
+  onExpandedChange?: ((expanded: boolean) => void) | undefined
   /** Controlled expansion state for activity groups */
-  expandedActivityGroups?: Set<string>
+  expandedActivityGroups?: Set<string> | undefined
   /** Callback when activity group expansion changes */
-  onExpandedActivityGroupsChange?: (groups: Set<string>) => void
+  onExpandedActivityGroupsChange?: ((groups: Set<string>) => void) | undefined
   /** Callback when file path is clicked */
-  onOpenFile?: (path: string) => void
+  onOpenFile?: ((path: string) => void) | undefined
   /** Callback when URL is clicked */
-  onOpenUrl?: (url: string) => void
+  onOpenUrl?: ((url: string) => void) | undefined
   /** Callback to open response in Monaco editor */
-  onPopOut?: (text: string) => void
+  onPopOut?: ((text: string) => void) | undefined
   /** Callback to open turn details in a new window */
-  onOpenDetails?: () => void
+  onOpenDetails?: (() => void) | undefined
   /** Callback to open individual activity details in Monaco */
-  onOpenActivityDetails?: (activity: ActivityItem) => void
+  onOpenActivityDetails?: ((activity: ActivityItem) => void) | undefined
   /** Callback to open all edits/writes in multi-file diff view */
-  onOpenMultiFileDiff?: () => void
+  onOpenMultiFileDiff?: (() => void) | undefined
   /** Whether this turn has any Edit or Write activities */
-  hasEditOrWriteActivities?: boolean
+  hasEditOrWriteActivities?: boolean | undefined
   /** TodoWrite tool state - shown at bottom of turn */
-  todos?: TodoItem[]
+  todos?: TodoItem[] | undefined
   /** Optional render prop for actions menu (Electron provides dropdown) */
-  renderActionsMenu?: () => React.ReactNode
+  renderActionsMenu?: (() => React.ReactNode) | undefined
   /** Callback when user accepts the plan (plan responses only) */
-  onAcceptPlan?: () => void
+  onAcceptPlan?: (() => void) | undefined
   /** Callback when user accepts the plan with compaction (compact conversation first, then execute) */
-  onAcceptPlanWithCompact?: () => void
+  onAcceptPlanWithCompact?: (() => void) | undefined
   /** Whether this is the last response in the session (shows Accept Plan button only for last response) */
-  isLastResponse?: boolean
+  isLastResponse?: boolean | undefined
   /** Session folder path for stripping from file paths in tool display */
-  sessionFolderPath?: string
+  sessionFolderPath?: string | undefined
   /** Display mode: 'detailed' shows all info, 'informative' hides MCP/API names and params */
-  displayMode?: 'informative' | 'detailed'
+  displayMode?: 'informative' | 'detailed' | undefined
   /** Optional presentation variant. The default keeps the existing card-based UI. */
-  presentation?: 'default' | 'codex'
+  presentation?: 'default' | 'codex' | undefined
   /** Animate response appearance (for playground demos) */
-  animateResponse?: boolean
+  animateResponse?: boolean | undefined
   /** Compact-footer layout. Used by EditPopover (popover embedding) and ChatPage in
    *  auto-compact / WebUI mobile. Hides Copy / Markdown / Branch actions; keeps the
    *  Accept Plan dropdown when a plan is the last response. */
-  compactMode?: boolean
+  compactMode?: boolean | undefined
   /** Callback to branch the session from a specific message */
-  onBranch?: (messageId: string, options?: { newPanel?: boolean }) => void
+  onBranch?: ((messageId: string, options?: { newPanel?: boolean }) => void) | undefined
   /** Callback to add an annotation to a response message */
-  onAddAnnotation?: (messageId: string, annotation: AnnotationV1) => void
+  onAddAnnotation?: ((messageId: string, annotation: AnnotationV1) => void) | undefined
   /** Callback to remove a persisted annotation from a response message */
-  onRemoveAnnotation?: (messageId: string, annotationId: string) => void
+  onRemoveAnnotation?: ((messageId: string, annotationId: string) => void) | undefined
   /** Callback to update a persisted annotation */
-  onUpdateAnnotation?: (messageId: string, annotationId: string, patch: Partial<AnnotationV1>) => void
+  onUpdateAnnotation?: ((messageId: string, annotationId: string, patch: Partial<AnnotationV1>) => void) | undefined
   /** Input send key behavior used by follow-up editor */
-  sendMessageKey?: 'enter' | 'cmd-enter'
+  sendMessageKey?: 'enter' | 'cmd-enter' | undefined
   /** Callback when follow-up is saved via "Save & Send" action */
-  onSaveAndSendFollowUp?: (target: { messageId: string; annotationId: string; note: string; selectedText: string }) => void
+  onSaveAndSendFollowUp?: ((target: { messageId: string; annotationId: string; note: string; selectedText: string }) => void) | undefined
   /** Whether there are active pending follow-up annotations in the session */
-  hasActiveFollowUpAnnotations?: boolean
+  hasActiveFollowUpAnnotations?: boolean | undefined
   /** External request to open a specific annotation in the follow-up island */
-  openAnnotationRequest?: OpenAnnotationRequest | null
+  openAnnotationRequest?: OpenAnnotationRequest | null | undefined
   /** Annotation interaction mode (viewer uses tooltip-only to suppress the island) */
-  annotationInteractionMode?: AnnotationInteractionMode
+  annotationInteractionMode?: AnnotationInteractionMode | undefined
   /** Quick iteration action callback */
-  onQuickAction?: (actionText: string) => void
+  onQuickAction?: ((actionText: string) => void) | undefined
 }

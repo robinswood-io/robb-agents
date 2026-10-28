@@ -1,13 +1,13 @@
 import type { ActiveSessionObjective } from "@craft-agent/shared/sessions";
 
 export interface ObjectiveTransitionInput {
-  existing?: ActiveSessionObjective;
+  existing?: ActiveSessionObjective | undefined;
   messageId: string;
   text: string;
-  lifetimeCostUsd?: number;
-  lifetimeTokens?: number;
-  nowMs?: number;
-  delegatedRole?: 'worker' | 'reviewer';
+  lifetimeCostUsd?: number | undefined;
+  lifetimeTokens?: number | undefined;
+  nowMs?: number | undefined;
+  delegatedRole?: 'worker' | 'reviewer' | undefined;
 }
 
 export function foldForIntent(value: string): string {

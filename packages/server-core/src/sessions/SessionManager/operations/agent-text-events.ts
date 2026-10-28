@@ -1,3 +1,7 @@
+import type { RobbExecutionTelemetryEvent } from '@craft-agent/shared/telemetry';
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import type { RoutingMeta } from '../../../../../core/src/types/message/routing.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { persistenceRootFor, rehydrateObjectiveEvidence } from '../policy.ts';
 import { randomUUID } from 'node:crypto';
@@ -55,7 +59,7 @@ export async function handleAgentTextComplete(sessionOperationContext: SessionOp
         const routingConnection = managed.llmConnection ? getLlmConnection(managed.llmConnection) : undefined;
         const modelProvenance = event.modelProvenance;
         const responseAppProvenance = toRoutingMetaAppProvenance(getPlatformSessionAppProvenance(_platform));
-        const assistantMessage: Message = {
+        const assistantMessage: Message = omitUndefined<Message>({
             id: generateMessageId(),
             role: 'assistant',
             content: extractedOutcome.visibleContent,
@@ -65,7 +69,7 @@ export async function handleAgentTextComplete(sessionOperationContext: SessionOp
             isIntermediate: event.isIntermediate,
             turnId: event.turnId,
             parentToolUseId: event.parentToolUseId,
-            routingMeta: {
+            routingMeta: omitUndefined<RoutingMeta>({
                 ...managed.pendingRoutingMeta,
                 ...responseAppProvenance,
                 connectionSlug: managed.llmConnection,
@@ -83,8 +87,8 @@ export async function handleAgentTextComplete(sessionOperationContext: SessionOp
                     ? { contextWindow: modelProvenance.contextWindow }
                     : {}),
                 reason: managed.pendingRoutingReason ?? managed.pendingRoutingMeta?.reason ?? 'session-connection',
-            },
-        };
+            }),
+        });
         managed.messages.push(assistantMessage);
         managed.streamingText = '';
         managed.streamingTurnId = undefined;
@@ -137,7 +141,7 @@ export async function handleAgentTextComplete(sessionOperationContext: SessionOp
         }
         if (!event.isIntermediate) {
             const routingMeta = assistantMessage.routingMeta;
-            sessionOperationContext.owner["emitExecutionTelemetry"](managed, {
+            sessionOperationContext.owner["emitExecutionTelemetry"](managed, omitUndefined<RobbExecutionTelemetryEvent>({
                 schemaVersion: 1,
                 eventId: randomUUID(),
                 timestamp: assistantMessage.timestamp,
@@ -155,9 +159,9 @@ export async function handleAgentTextComplete(sessionOperationContext: SessionOp
                 sensitivity: routingMeta?.sensitivity,
                 policyRuleIds: routingMeta?.policyRuleIds,
                 fallbackReason: routingMeta?.fallbackReason,
-            });
+            }));
         }
-        sessionOperationContext.owner["sendEvent"]({ type: 'text_complete', sessionId, text: assistantMessage.content, isIntermediate: event.isIntermediate, turnId: event.turnId, parentToolUseId: event.parentToolUseId, timestamp: assistantMessage.timestamp, messageId: assistantMessage.id, routingMeta: assistantMessage.routingMeta, objectiveOutcome: assistantMessage.objectiveOutcome ?? null, objectiveOutcomeError: assistantMessage.objectiveOutcomeError ?? null }, workspaceId);
+        sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'text_complete' }>>({ type: 'text_complete', sessionId, text: assistantMessage.content, isIntermediate: event.isIntermediate, turnId: event.turnId, parentToolUseId: event.parentToolUseId, timestamp: assistantMessage.timestamp, messageId: assistantMessage.id, routingMeta: assistantMessage.routingMeta, objectiveOutcome: assistantMessage.objectiveOutcome ?? null, objectiveOutcomeError: assistantMessage.objectiveOutcomeError ?? null }), workspaceId);
         // Persist session after complete message to prevent data loss on quit
         sessionOperationContext.owner["persistSession"](managed);
         return;

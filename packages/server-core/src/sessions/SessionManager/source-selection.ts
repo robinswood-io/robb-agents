@@ -19,8 +19,8 @@ export function resolveEffectiveSessionSourceSelection(
 /** Keep inherited source snapshots live without confusing them with a user selection. */
 export function refreshInheritedSessionSourceSelection(
   selection: {
-    enabledSourceSlugs?: string[]
-    inheritsWorkspaceSourceSlugs?: boolean
+    enabledSourceSlugs?: string[] | undefined
+    inheritsWorkspaceSourceSlugs?: boolean | undefined
   },
   workspaceDefaultSourceSlugs: readonly string[] | undefined,
 ): boolean {
@@ -37,8 +37,8 @@ export function refreshInheritedSessionSourceSelection(
 
 /** Persist explicit selections only; inherited values are recomputed on reload. */
 export function sessionSourceSlugsForPersistence(selection: {
-  enabledSourceSlugs?: readonly string[]
-  inheritsWorkspaceSourceSlugs?: boolean
+  enabledSourceSlugs?: readonly string[] | undefined
+  inheritsWorkspaceSourceSlugs?: boolean | undefined
 }): string[] | undefined {
   return selection.inheritsWorkspaceSourceSlugs
     ? undefined
@@ -48,8 +48,8 @@ export function sessionSourceSlugsForPersistence(selection: {
 /** A branch inherits the source selection's provenance from its parent. */
 export function resolveBranchedSessionSourceSelection(
   parent: {
-    enabledSourceSlugs?: readonly string[]
-    inheritsWorkspaceSourceSlugs?: boolean
+    enabledSourceSlugs?: readonly string[] | undefined
+    inheritsWorkspaceSourceSlugs?: boolean | undefined
   },
   workspaceDefaultSourceSlugs: readonly string[] | undefined,
 ): EffectiveSessionSourceSelection & { persistedSourceSlugs?: string[] } {

@@ -97,7 +97,7 @@ export function validateAndMergeObjectiveAcceptanceCriteria(
       acceptanceHistory: [...(objective.acceptanceHistory ?? []), {
         revision: objective.acceptanceRegisteredRevision ?? objective.userMessageId,
         criteria: structuredClone(objective.acceptanceCriteria ?? []),
-        registeredAt: objective.acceptanceRegisteredAt,
+        ...(objective.acceptanceRegisteredAt !== undefined ? { registeredAt: objective.acceptanceRegisteredAt } : {}),
         registeredAtById: Object.fromEntries((objective.acceptanceCriteria ?? []).map(item => [
           item.id, criterionRegisteredAt(objective, item.id),
         ])),
@@ -154,13 +154,15 @@ export function projectObjectiveAcceptanceCriteria(
     try {
       // Historical attestation checks syntax and identity, not today's
       // admission policy. Old contradictory equalities remain contradictory.
-      validateAndMergeObjectiveAcceptanceCriteria({ ...objective, terminalState: 'active', acceptanceCriteria: undefined }, criteria,
+      const historical: ActiveSessionObjective = { ...objective, terminalState: 'active' };
+      delete historical.acceptanceCriteria;
+      validateAndMergeObjectiveAcceptanceCriteria(historical, criteria,
         objective.acceptanceRegisteredAt);
       return true;
     } catch { return false; }
   };
-  return { ...(recoverLegacyAcceptanceScalars(objective, messages, validateOriginal)
-    ?? { criteria: objective.acceptanceCriteria ?? [] }),
-    gscSiteIdentity: recoverLegacyGscSiteIdentity(objective, messages, validateOriginal),
-  };
+  const projection = recoverLegacyAcceptanceScalars(objective, messages, validateOriginal)
+    ?? { criteria: objective.acceptanceCriteria ?? [] };
+  const gscSiteIdentity = recoverLegacyGscSiteIdentity(objective, messages, validateOriginal);
+  return { ...projection, ...(gscSiteIdentity !== undefined ? { gscSiteIdentity } : {}) };
 }

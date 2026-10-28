@@ -1,3 +1,5 @@
+import { parseJsonObject } from '../utils/json.ts';
+import { isUnknownArray } from '../utils/json.ts';
 /**
  * Unified fetch interceptor for all AI API requests (Anthropic + OpenAI format).
  *
@@ -100,8 +102,8 @@ export function createOpenAiSseStrippingStream(): TransformStream<Uint8Array, Ui
 
       if (tc.arguments) {
         try {
-          const parsed = JSON.parse(tc.arguments);
-          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          const parsed: unknown = JSON.parse(tc.arguments);
+          if (parsed && typeof parsed === 'object' && !isUnknownArray(parsed)) {
             merged = { ...merged, ...(parsed as Record<string, unknown>) };
           }
         } catch {
@@ -112,8 +114,8 @@ export function createOpenAiSseStrippingStream(): TransformStream<Uint8Array, Ui
 
       for (const piece of tc.shiftedArgs) {
         try {
-          const parsed = JSON.parse(piece);
-          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          const parsed: unknown = JSON.parse(piece);
+          if (parsed && typeof parsed === 'object' && !isUnknownArray(parsed)) {
             merged = { ...merged, ...(parsed as Record<string, unknown>) };
           }
         } catch {
@@ -129,8 +131,8 @@ export function createOpenAiSseStrippingStream(): TransformStream<Uint8Array, Ui
         outArgs = tc.arguments;
       } else {
         captureMetadataFromInput(tc.id, tc.name, merged);
-        delete merged._intent;
-        delete merged._displayName;
+        delete merged["_intent"];
+        delete merged["_displayName"];
         outArgs = JSON.stringify(merged);
       }
 
@@ -166,13 +168,13 @@ export function createOpenAiSseStrippingStream(): TransformStream<Uint8Array, Ui
 
     let data: Record<string, unknown>;
     try {
-      data = JSON.parse(dataStr);
+      data = parseJsonObject(dataStr);
     } catch {
       emitSseLine(dataStr, controller);
       return;
     }
 
-    const choices = data.choices as Array<{
+    const choices = data["choices"] as Array<{
       index?: number;
       delta?: {
         tool_calls?: Array<{
@@ -353,7 +355,7 @@ export const openAiAdapter: ApiAdapter = {
   },
 
   addMetadataToTools(body: Record<string, unknown>): Record<string, unknown> {
-    const tools = body.tools as Array<{
+    const tools = body["tools"] as Array<{
       type?: string;
       function?: {
         name?: string;
@@ -365,7 +367,7 @@ export const openAiAdapter: ApiAdapter = {
       };
     }> | undefined;
 
-    if (!tools || !Array.isArray(tools)) {
+    if (!tools || !isUnknownArray(tools)) {
       return body;
     }
 
@@ -389,8 +391,8 @@ export const openAiAdapter: ApiAdapter = {
       params.required = updatedSchema.required;
       // External MCP servers may set additionalProperties: false which would
       // cause validation to reject _intent/_displayName in tool inputs.
-      if ((params as Record<string, unknown>).additionalProperties === false) {
-        delete (params as Record<string, unknown>).additionalProperties;
+      if ((params as Record<string, unknown>)["additionalProperties"] === false) {
+        delete (params as Record<string, unknown>)["additionalProperties"];
       }
       modifiedCount++;
     }
@@ -405,7 +407,7 @@ export const openAiAdapter: ApiAdapter = {
   injectMetadataIntoHistory(body: Record<string, unknown>): Record<string, unknown> {
     sanitizeOpenAiHistoryInPlace(body);
 
-    const messages = body.messages as Array<{
+    const messages = body["messages"] as Array<{
       role?: string;
       tool_call_id?: string;
       tool_calls?: Array<{
@@ -423,14 +425,14 @@ export const openAiAdapter: ApiAdapter = {
     let injectedCount = 0;
 
     for (const message of messages) {
-      if (message.role !== 'assistant' || !Array.isArray(message.tool_calls)) continue;
+      if (message.role !== 'assistant' || !isUnknownArray(message.tool_calls)) continue;
 
       for (const tc of message.tool_calls) {
         if (!tc.id || !tc.function?.arguments) continue;
 
         let args: Record<string, unknown>;
         try {
-          args = JSON.parse(tc.function.arguments);
+          args = parseJsonObject(tc.function.arguments);
         } catch {
           continue;
         }
@@ -442,8 +444,8 @@ export const openAiAdapter: ApiAdapter = {
         const stored = toolMetadataStore.get(tc.id);
         if (stored) {
           const newArgs: Record<string, unknown> = {};
-          if (!hasDisplayName && stored.displayName) newArgs._displayName = stored.displayName;
-          if (!hasIntent && stored.intent) newArgs._intent = stored.intent;
+          if (!hasDisplayName && stored.displayName) newArgs["_displayName"] = stored.displayName;
+          if (!hasIntent && stored.intent) newArgs["_intent"] = stored.intent;
           if (Object.keys(newArgs).length > 0) {
             Object.assign(newArgs, args);
             tc.function.arguments = JSON.stringify(newArgs);

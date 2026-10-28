@@ -1,0 +1,437 @@
+[
+  {
+    "capability_id": "gtm-autonomous-decision-governor",
+    "mode": "temporal",
+    "workflow_id": "rbw.gtm-autonomous-decision-governor",
+    "schedule_id": "sched.gtm-autonomous-decision-governor",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "campaigns",
+    "payload": {
+      "legacy_id": "gtm-autonomous-decision-governor",
+      "name": "GTM Autonomous Decision Governor",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "gtm-autonomous-execution-materializer",
+    "mode": "temporal",
+    "workflow_id": "rbw.gtm-autonomous-execution-materializer",
+    "schedule_id": "sched.gtm-autonomous-execution-materializer",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "campaigns",
+    "payload": {
+      "legacy_id": "gtm-autonomous-execution-materializer",
+      "name": "GTM Autonomous Execution Materializer",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "business-acquisition-enhanced-dashboard",
+    "mode": "temporal",
+    "workflow_id": "rbw.business-acquisition-enhanced-dashboard",
+    "schedule_id": "sched.business-acquisition-enhanced-dashboard",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "campaigns",
+    "payload": {
+      "legacy_id": "business-acquisition-enhanced-dashboard",
+      "name": "Business Acquisition Enhanced Dashboard",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "oss-gtm-coherence-report",
+    "mode": "temporal",
+    "workflow_id": "rbw.oss-gtm-coherence-report",
+    "schedule_id": "sched.oss-gtm-coherence-report",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "campaigns",
+    "payload": {
+      "legacy_id": "oss-gtm-coherence-report",
+      "name": "OSS GTM Coherence Report",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "temporal-history-audit",
+    "mode": "temporal",
+    "workflow_id": "rbw.temporal-history-audit",
+    "schedule_id": "sched.temporal-history-audit",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "temporal-history-audit",
+      "name": "Temporal History Audit",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "ovh-domain-sentinel",
+    "mode": "temporal",
+    "workflow_id": "rbw.ovh-domain-sentinel",
+    "schedule_id": "sched.ovh-domain-sentinel",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "ovh-domain-sentinel",
+      "name": "Surveillance OVH Domain Sentinel",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "ovh-domain-registry-refresh",
+    "mode": "temporal",
+    "workflow_id": "rbw.ovh-domain-registry-refresh",
+    "schedule_id": "sched.ovh-domain-registry-refresh",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "ovh-domain-registry-refresh",
+      "name": "Rafraîchissement registre domaines OVH",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "ovh-domain-remediation",
+    "mode": "temporal",
+    "workflow_id": "rbw.ovh-domain-remediation",
+    "schedule_id": "sched.ovh-domain-remediation",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "ovh-domain-remediation",
+      "name": "Planner remédiation safe domaines OVH",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "temporal-rtk-token-optimization-report",
+    "mode": "temporal",
+    "workflow_id": "rbw.temporal-rtk-token-optimization-report",
+    "schedule_id": "sched.temporal-rtk-token-optimization-report",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "temporal-rtk-token-optimization-report",
+      "name": "Temporal RTK Token Optimization Report V3",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "temporal-rtk-regression-guard",
+    "mode": "temporal",
+    "workflow_id": "rbw.temporal-rtk-regression-guard",
+    "schedule_id": "sched.temporal-rtk-regression-guard",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "temporal-rtk-regression-guard",
+      "name": "Temporal RTK Regression Guard",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "ovh-domain-dns-diagnostics",
+    "mode": "temporal",
+    "workflow_id": "rbw.ovh-domain-dns-diagnostics",
+    "schedule_id": "sched.ovh-domain-dns-diagnostics",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "ovh-domain-dns-diagnostics",
+      "name": "Diagnostics DNS OVH Domain Sentinel",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "ovh-domain-http-tls-diagnostics",
+    "mode": "temporal",
+    "workflow_id": "rbw.ovh-domain-http-tls-diagnostics",
+    "schedule_id": "sched.ovh-domain-http-tls-diagnostics",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "ovh-domain-http-tls-diagnostics",
+      "name": "Diagnostics HTTP/TLS OVH Domain Sentinel",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "ovh-domain-action-matrix",
+    "mode": "temporal",
+    "workflow_id": "rbw.ovh-domain-action-matrix",
+    "schedule_id": "sched.ovh-domain-action-matrix",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "ovh-domain-action-matrix",
+      "name": "Matrice actions domaines OVH",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "oss-agent-method-evidence-builder",
+    "mode": "temporal",
+    "workflow_id": "rbw.oss-agent-method-evidence-builder",
+    "schedule_id": "sched.oss-agent-method-evidence-builder",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "oss-agent-method-evidence-builder",
+      "name": "OSS Agent Method Evidence Builder",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "oss-agent-autonomy-governor",
+    "mode": "temporal",
+    "workflow_id": "rbw.oss-agent-autonomy-governor",
+    "schedule_id": "sched.oss-agent-autonomy-governor",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "oss-agent-autonomy-governor",
+      "name": "OSS Agent Autonomy Governor",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "temporal-performance-slo-guard",
+    "mode": "temporal",
+    "workflow_id": "rbw.temporal-performance-slo-guard",
+    "schedule_id": "sched.temporal-performance-slo-guard",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "temporal-performance-slo-guard",
+      "name": "Temporal Performance SLO Guard",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "contact-source-catalog-expander",
+    "mode": "temporal",
+    "workflow_id": "rbw.contact-source-catalog-expander",
+    "schedule_id": "sched.contact-source-catalog-expander",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "campaigns",
+    "payload": {
+      "legacy_id": "contact-source-catalog-expander",
+      "name": "Expansion autonome du catalogue sources contact",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "oss-agent-card-builder",
+    "mode": "temporal",
+    "workflow_id": "rbw.oss-agent-card-builder",
+    "schedule_id": "sched.oss-agent-card-builder",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "oss-agent-card-builder",
+      "name": "Construction des Agent Cards OSS",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "oss-agent-frontier-method-radar",
+    "mode": "temporal",
+    "workflow_id": "rbw.oss-agent-frontier-method-radar",
+    "schedule_id": "sched.oss-agent-frontier-method-radar",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "oss-agent-frontier-method-radar",
+      "name": "Radar méthodes agentiques frontier",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "report-envelope-standardizer",
+    "mode": "temporal",
+    "workflow_id": "rbw.report-envelope-standardizer",
+    "schedule_id": "sched.report-envelope-standardizer",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "report-envelope-standardizer",
+      "name": "Report Envelope Standardizer",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "campaign-impact-events",
+    "mode": "temporal",
+    "workflow_id": "rbw.campaign-impact-events",
+    "schedule_id": "sched.campaign-impact-events",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "campaigns",
+    "payload": {
+      "legacy_id": "campaign-impact-events",
+      "name": "Campaign Impact Events Normalizer",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "campaign-impact-autonomy-guard",
+    "mode": "temporal",
+    "workflow_id": "rbw.campaign-impact-autonomy-guard",
+    "schedule_id": "sched.campaign-impact-autonomy-guard",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "campaigns",
+    "payload": {
+      "legacy_id": "campaign-impact-autonomy-guard",
+      "name": "Campaign Impact Autonomy Guard",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "qualified-opportunity-quote-guard",
+    "mode": "temporal",
+    "workflow_id": "rbw.qualified-opportunity-quote-guard",
+    "schedule_id": "sched.qualified-opportunity-quote-guard",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "campaigns",
+    "payload": {
+      "legacy_id": "qualified-opportunity-quote-guard",
+      "name": "Qualified Opportunity Quote Guard",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "source-lane-learning-governor",
+    "mode": "temporal",
+    "workflow_id": "rbw.source-lane-learning-governor",
+    "schedule_id": "sched.source-lane-learning-governor",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "campaigns",
+    "payload": {
+      "legacy_id": "source-lane-learning-governor",
+      "name": "Source Lane Learning Governor",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "oss-industrialization-dashboard",
+    "mode": "temporal",
+    "workflow_id": "rbw.oss-industrialization-dashboard",
+    "schedule_id": "sched.oss-industrialization-dashboard",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "oss-industrialization-dashboard",
+      "name": "OSS Industrialization Dashboard",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "oss-release-gate",
+    "mode": "temporal",
+    "workflow_id": "rbw.oss-release-gate",
+    "schedule_id": "sched.oss-release-gate",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "oss-release-gate",
+      "name": "OSS Release Gate",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "oss-self-healing-candidate-queue",
+    "mode": "temporal",
+    "workflow_id": "rbw.oss-self-healing-candidate-queue",
+    "schedule_id": "sched.oss-self-healing-candidate-queue",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "oss-self-healing-candidate-queue",
+      "name": "OSS Self-Healing Candidate Queue",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "oss-agent-control-plane",
+    "mode": "temporal",
+    "workflow_id": "rbw.oss-agent-control-plane",
+    "schedule_id": "sched.oss-agent-control-plane",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "oss-agent-control-plane",
+      "name": "OSS Agent Control Plane",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  },
+  {
+    "capability_id": "agent-task-inbox-router",
+    "mode": "temporal",
+    "workflow_id": "rbw.agent-task-inbox-router",
+    "schedule_id": "sched.agent-task-inbox-router",
+    "backfilledBy": "oss-p9-p13-improvements",
+    "task_queue": "watchdog",
+    "payload": {
+      "legacy_id": "agent-task-inbox-router",
+      "name": "Agent Task Inbox Router",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    },
+    "enabled": true
+  }
+]

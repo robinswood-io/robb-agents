@@ -27,10 +27,10 @@ import type { PiToolExecuteRequest, PiSessionToolResult } from './protocol.ts';
    *   { content: string; isError: boolean }
    */
 export async function handleToolExecuteRequest(transportOwner: PiAgent, request: PiToolExecuteRequest, runtimeContext?: PiSubprocessRuntimeContext): Promise<void> {
-    if (!transportOwner["isRuntimeCurrent"](runtimeContext))
+    if (!transportOwner.isRuntimeCurrent(runtimeContext))
         return;
     const respond = (message: Record<string, unknown>) => {
-        transportOwner["sendForRuntime"](message, runtimeContext);
+        transportOwner.sendForRuntime(message, runtimeContext);
     };
     const sessionId = runtimeContext?.sessionId
         ?? transportOwner["config"].session?.id
@@ -60,10 +60,10 @@ export async function handleToolExecuteRequest(transportOwner: PiAgent, request:
     // prerequisites changed or the proxy disappeared after PreToolUse, the
     // exact reservation must reach a terminal state instead of remaining
     // locked forever.
-    const hostGuard = transportOwner["beginContextualGmailHostExecution"]({
+    const hostGuard = transportOwner.beginContextualGmailHostExecution({
         sessionId,
         runtimeId,
-        toolUseId: request.toolCallId,
+        ...(request.toolCallId !== undefined ? { toolUseId: request.toolCallId } : {}),
         toolName: request.toolName,
         toolInput: request.args,
     });
@@ -90,7 +90,7 @@ export async function handleToolExecuteRequest(transportOwner: PiAgent, request:
             });
             return;
         }
-        const result = await transportOwner["routeToolCall"](request.toolName, request.args, request.toolCallId, runtimeContext, hostGuard.applies);
+        const result = await transportOwner.routeToolCall(request.toolName, request.args, request.toolCallId, runtimeContext, hostGuard.applies);
         respond({
             type: 'tool_execute_response',
             requestId: request.requestId,
@@ -109,7 +109,7 @@ export async function handleToolExecuteRequest(transportOwner: PiAgent, request:
     }
     finally {
         transportOwner["settleAdmittedToolExecution"](request.toolCallId);
-        if (ticket && !transportOwner["settleContextualGmailHostExecution"](ticket)) {
+        if (ticket && !transportOwner.settleContextualGmailHostExecution(ticket)) {
             transportOwner["debug"](`Gmail host execution ticket was already settled or invalid for ${request.toolName}`);
         }
     }
@@ -132,7 +132,7 @@ export async function routeToolCall(transportOwner: PiAgent, toolName: string, a
         ? toolName.slice('mcp__session__'.length)
         : toolName;
     if (SESSION_TOOL_NAMES.has(strippedName)) {
-        return transportOwner["executeSessionTool"](strippedName, args);
+        return transportOwner.executeSessionTool(strippedName, args);
     }
     // MCP source tools — route through centralized pool
     if (transportOwner["mcpPool"]?.isProxyTool(toolName)) {
@@ -145,10 +145,10 @@ export async function routeToolCall(transportOwner: PiAgent, toolName: string, a
         const runtimeId = runtimeContext?.runtimeId
             ?? transportOwner["subprocessRuntimeContext"]?.runtimeId
             ?? '';
-        const hostGuard = transportOwner["beginContextualGmailHostExecution"]({
+        const hostGuard = transportOwner.beginContextualGmailHostExecution({
             sessionId,
             runtimeId,
-            toolUseId,
+            ...(toolUseId !== undefined ? { toolUseId } : {}),
             toolName,
             toolInput: args,
         });
@@ -165,7 +165,7 @@ export async function routeToolCall(transportOwner: PiAgent, toolName: string, a
             return await transportOwner["mcpPool"].callTool(toolName, args);
         }
         finally {
-            if (ticket && !transportOwner["settleContextualGmailHostExecution"](ticket)) {
+            if (ticket && !transportOwner.settleContextualGmailHostExecution(ticket)) {
                 transportOwner["debug"](`Gmail host execution ticket was already settled or invalid for ${toolName}`);
             }
         }
@@ -182,12 +182,12 @@ export async function routeToolCall(transportOwner: PiAgent, toolName: string, a
    * Cached per agent instance since the workspace/session don't change.
    */
 export function getSessionToolContext(transportOwner: PiAgent): SessionToolContext {
-    if (transportOwner["_sessionToolContext"])
-        return transportOwner["_sessionToolContext"];
+    if (transportOwner._sessionToolContext)
+        return transportOwner._sessionToolContext;
     const sessionId = transportOwner["config"].session?.id || '';
     const workspacePath = transportOwner["config"].workspace.rootPath;
     const workspaceId = transportOwner["config"].workspace.id;
-    transportOwner["_sessionToolContext"] = createClaudeContext({
+    transportOwner._sessionToolContext = createClaudeContext({
         sessionId,
         workspacePath,
         workspaceId,
@@ -200,8 +200,8 @@ export function getSessionToolContext(transportOwner: PiAgent): SessionToolConte
         },
     });
     // Attach session self-management bindings (lazy getters from callback registry)
-    attachSessionSelfManagementBindings(transportOwner["_sessionToolContext"], sessionId);
-    return transportOwner["_sessionToolContext"];
+    attachSessionSelfManagementBindings(transportOwner._sessionToolContext, sessionId);
+    return transportOwner._sessionToolContext;
 }
 
 /**
@@ -244,7 +244,7 @@ export async function executeSessionTool(transportOwner: PiAgent, toolName: stri
             }
             try {
                 const result = await executeBrowserToolCommand({
-                    command: (args.command as string | string[]) ?? '',
+                    command: (args["command"] as string | string[]) ?? '',
                     fns: browserFns,
                     sessionId: transportOwner["_sessionId"],
                 });
@@ -296,7 +296,7 @@ export async function executeSessionTool(transportOwner: PiAgent, toolName: stri
                 isError: true,
             };
         }
-        const ctx = transportOwner["getSessionToolContext"]();
+        const ctx = transportOwner.getSessionToolContext();
         const result: SessionToolResult = await def.handler(ctx, args);
         // Convert ToolResult to subprocess response format
         const text = result.content.map(c => c.text).join('\n');
@@ -319,8 +319,8 @@ export async function executeSessionTool(transportOwner: PiAgent, toolName: stri
    * here to avoid double-firing callbacks.
    */
 export function handleSessionToolCompleted(transportOwner: PiAgent, msg: Record<string, unknown>): void {
-    const toolName = msg.toolName as string;
-    const isError = msg.isError as boolean;
+    const toolName = msg["toolName"] as string;
+    const isError = msg["isError"] as boolean;
     transportOwner["debug"](`Session tool completed: ${toolName} (isError=${isError})`);
     // Callbacks already handled by executeSessionTool() — no-op.
 }
@@ -329,11 +329,11 @@ export function handleSessionToolCompleted(transportOwner: PiAgent, msg: Record<
    * Handle mini_completion_result from subprocess.
    */
 export function handleMiniCompletionResult(transportOwner: PiAgent, msg: Record<string, unknown>): void {
-    const id = msg.id as string;
-    const text = msg.text as string | null;
-    const pending = transportOwner["pendingMiniCompletions"].get(id);
+    const id = msg["id"] as string;
+    const text = msg["text"] as string | null;
+    const pending = transportOwner.pendingMiniCompletions.get(id);
     if (pending) {
-        transportOwner["pendingMiniCompletions"].delete(id);
+        transportOwner.pendingMiniCompletions.delete(id);
         pending.resolve(text);
     }
 }

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { copySessionBranchStorage, prepareSessionBranchRuntime } from './branch-session-preparation.ts';
 import type { ValidatedSessionBranch } from './branch-session-preparation.ts';
 import type { SessionOperationContext } from '../operation-context.ts';
@@ -75,9 +76,9 @@ async function sessionOpPerformCreateSession(sessionOperationContext: SessionOpe
     const resolvedModelOption = options?.model ?? selectedConnectionDefault;
     // Resolve backend target early for branching policy checks.
     const targetBackendContext = resolveBackendContext({
-        sessionConnectionSlug: options?.llmConnection,
-        workspaceDefaultConnectionSlug: wsConfig?.defaults?.defaultLlmConnection,
-        managedModel: resolvedModelOption,
+        ...(options?.llmConnection !== undefined ? { sessionConnectionSlug: options?.llmConnection } : {}),
+        ...(wsConfig?.defaults?.defaultLlmConnection !== undefined ? { workspaceDefaultConnectionSlug: wsConfig?.defaults?.defaultLlmConnection } : {}),
+        ...(resolvedModelOption !== undefined ? { managedModel: resolvedModelOption } : {}),
     });
     const creationRoute = resolveCreateSessionRouteProvenance(options, targetBackendContext.connection?.slug);
     const targetProviderType = targetBackendContext.connection?.providerType
@@ -201,14 +202,14 @@ async function sessionOpPerformCreateSession(sessionOperationContext: SessionOpe
         // parent; it cannot freeze a materialized workspace default into an
         // explicit child selection (or substitute a different source set).
         const branchedSources = resolveBranchedSessionSourceSelection(sourceManaged ?? {
-            enabledSourceSlugs: sourceSession.enabledSourceSlugs,
+            ...(sourceSession.enabledSourceSlugs !== undefined ? { enabledSourceSlugs: sourceSession.enabledSourceSlugs } : {}),
             inheritsWorkspaceSourceSlugs: sourceSession.enabledSourceSlugs === undefined,
         }, wsConfig?.defaults?.enabledSourceSlugs);
         sourceSlugsForPersistence = branchedSources.persistedSourceSlugs;
         sourceSelection = branchedSources;
         const sourceBackendContext = resolveBackendContext({
             sessionConnectionSlug: sourceManaged?.llmConnection || sourceSession.llmConnection,
-            workspaceDefaultConnectionSlug: wsConfig?.defaults?.defaultLlmConnection,
+            ...(wsConfig?.defaults?.defaultLlmConnection !== undefined ? { workspaceDefaultConnectionSlug: wsConfig?.defaults?.defaultLlmConnection } : {}),
             managedModel: sourceManaged?.model || sourceSession.model,
         });
         const sourceProviderType = sourceBackendContext.connection?.providerType
@@ -317,7 +318,7 @@ async function sessionOpPerformCreateSession(sessionOperationContext: SessionOpe
             });
             throw new Error('Cannot create branch yet: parent session SDK context is not initialized. Send one message in the parent session and try again.');
         }
-        validatedBranch = {
+        validatedBranch = omitUndefined<NonNullable<ValidatedSessionBranch>>({
             sourceSessionId: options.branchFromSessionId,
             sourceMessageId: options.branchFromMessageId,
             sourceSession,
@@ -330,7 +331,7 @@ async function sessionOpPerformCreateSession(sessionOperationContext: SessionOpe
             sourceProvider: sourceBackendContext.provider,
             sourcePersistenceRootPath,
             sourcePersistenceRootIdentity,
-        };
+        });
         sessionLog.info('Branch validation succeeded', {
             workspaceId,
             branchFromSessionId: validatedBranch.sourceSessionId,
@@ -342,7 +343,7 @@ async function sessionOpPerformCreateSession(sessionOperationContext: SessionOpe
     }
     // Use storage layer to create and persist the session
     const currentApp = getPlatformSessionAppProvenance(_platform);
-    const storedSession = await createStoredSession(workspaceRootPath, {
+    const storedSession = await createStoredSession(workspaceRootPath, omitUndefined<NonNullable<Parameters<typeof createStoredSession>[1]>>({
         name: options?.name,
         permissionMode: defaultPermissionMode,
         workingDirectory: resolvedWorkingDir,
@@ -383,7 +384,7 @@ async function sessionOpPerformCreateSession(sessionOperationContext: SessionOpe
         thinkingLevelPinned: options?.thinkingLevelPinned ?? options?.thinkingLevel !== undefined,
         createdByApp: currentApp,
         lastUsedByApp: currentApp,
-    });
+    }));
     // Branch: copy messages from source session up to and including the branch point
     if (validatedBranch) await copySessionBranchStorage(validatedBranch, workspaceRootPath, storedSession);
     // Resolve connection/provider/auth/model using the provider-agnostic backend resolver.
@@ -429,11 +430,11 @@ async function sessionOpPerformCreateSession(sessionOperationContext: SessionOpe
     const automationSystem = sessionOperationContext.state.automationSystems.get(workspaceRootPath);
     if (automationSystem) {
         automationSystem.setInitialSessionMetadata(storedSession.id, {
-            permissionMode: storedSession.permissionMode,
-            labels: managed.labels,
-            isFlagged: storedSession.isFlagged,
-            sessionStatus: storedSession.sessionStatus,
-            sessionName: managed.name,
+            ...(storedSession.permissionMode !== undefined ? { permissionMode: storedSession.permissionMode } : {}),
+            ...(managed.labels !== undefined ? { labels: managed.labels } : {}),
+            ...(storedSession.isFlagged !== undefined ? { isFlagged: storedSession.isFlagged } : {}),
+            ...(storedSession.sessionStatus !== undefined ? { sessionStatus: storedSession.sessionStatus } : {}),
+            ...(managed.name !== undefined ? { sessionName: managed.name } : {}),
         });
     }
     // Reserved "Task" label: task flows opt in so the tile (and its subtasks, which inherit the
@@ -442,7 +443,7 @@ async function sessionOpPerformCreateSession(sessionOperationContext: SessionOpe
     // a label problem must never abort session creation.
     if (options?.applyTaskLabel) {
         try {
-            await sessionOperationContext.owner.applyTaskLabel(storedSession.id, { parentSessionId: options?.parentSessionId });
+            await sessionOperationContext.owner.applyTaskLabel(storedSession.id, omitUndefined({ parentSessionId: options?.parentSessionId }));
         }
         catch (error) {
             sessionLog.warn('Failed to apply Task label to new session', {

@@ -154,7 +154,7 @@ export async function validateStdioMcpConnection(
           clearTimeout(id);
           resolve(v);
         },
-        (e) => {
+        (e: unknown) => {
           clearTimeout(id);
           reject(e);
         },
@@ -166,7 +166,7 @@ export async function validateStdioMcpConnection(
     transport = new StdioClientTransport({
       ...protectApplicationCommand(command, args),
       env: buildStdioMcpSubprocessEnvironment(env),
-      cwd,
+      ...(cwd !== undefined ? { cwd } : {}),
       stderr: 'pipe',
     });
 

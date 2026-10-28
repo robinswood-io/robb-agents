@@ -38,16 +38,16 @@ export interface MissionRouteDecisionResult {
 export function resolveExplicitMissionModel(input: {
   profile: AgentProfile;
   origin?: Pick<Session, 'llmConnection' | 'connectionRoutePinned' | 'model'
-    | 'modelRoutePinned' | 'thinkingLevel' | 'thinkingLevelPinned'>;
-  defaultConnectionSlug?: string;
+    | 'modelRoutePinned' | 'thinkingLevel' | 'thinkingLevelPinned'> | undefined;
+  defaultConnectionSlug?: string | undefined;
   defaultThinkingLevel: ThinkingLevel;
   connections: readonly MissionRouteConnection[];
-  routingContext?: MissionSelectionContext;
-  missionObjective?: string;
-  assignment?: string;
-  reviewOnly?: boolean;
-  measuredMissionUsd?: number;
-  projectedMissionUsd?: number;
+  routingContext?: MissionSelectionContext | undefined;
+  missionObjective?: string | undefined;
+  assignment?: string | undefined;
+  reviewOnly?: boolean | undefined;
+  measuredMissionUsd?: number | undefined;
+  projectedMissionUsd?: number | undefined;
 }): MissionRouteDecisionResult {
   const inherited = inheritMissionModelSettings(input.profile, input.origin, input.defaultConnectionSlug);
   const slug = inherited.llmConnection ?? input.defaultConnectionSlug;

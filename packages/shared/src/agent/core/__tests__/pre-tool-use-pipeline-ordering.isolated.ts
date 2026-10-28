@@ -86,7 +86,7 @@ describe('runPreToolUseChecks', () => {
       expect(result.type).toBe('call_llm_intercept');
       if (result.type === 'call_llm_intercept') {
         // Input should be passed through unmodified (no stripping)
-        expect(result.input._intent).toBe('summarize');
+        expect(result.input["_intent"]).toBe('summarize');
       }
     });
   });

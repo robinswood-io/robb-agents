@@ -47,8 +47,8 @@ describe('processing lifecycle revisions', () => {
 
   it('preserves a Stop revision through ordinary activity without inferring another start', () => {
     const events: AgentEvent[] = [
-      { type: 'tool_start', sessionId: 'session', toolName: 'Read', toolUseId: 'tool' },
-      { type: 'tool_result', sessionId: 'session', toolUseId: 'tool', result: 'Done', executed: true },
+      { type: 'tool_start', sessionId: 'session', toolName: 'Read', toolUseId: 'tool', toolInput: {} },
+      { type: 'tool_result', sessionId: 'session', toolUseId: 'tool', toolName: 'Read', result: 'Done', executed: true },
       { type: 'text_complete', sessionId: 'session', text: 'Recorded report.', isIntermediate: true },
       { type: 'user_input_changed', sessionId: 'session', requests: [] },
       { type: 'user_message', sessionId: 'session', status: 'queued', message: { id: 'queued', role: 'user', content: 'Later', timestamp: 2 } },
@@ -62,7 +62,7 @@ describe('processing lifecycle revisions', () => {
       expect(state.session.isProcessing).toBe(false)
       expect(getSessionProcessingRevision(state.session)).toBe(stopRevision)
     }
-    const serialized = JSON.parse(JSON.stringify(state.session))
+    const serialized = JSON.parse(JSON.stringify(state.session)) as typeof state.session
     expect(getSessionProcessingRevision(serialized)).toBe(0)
     expect(serialized.messages).toEqual(state.session.messages)
   })

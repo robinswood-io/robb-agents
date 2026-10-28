@@ -15,7 +15,7 @@ export function extractFilePaths(input: string): string[] {
 
   // Match quoted paths first (handles spaces naturally)
   const quotedRegex = /["']([^"']+)["']/g;
-  let match;
+  let match: RegExpExecArray | null;
   while ((match = quotedRegex.exec(input)) !== null) {
     const path = match[1];
     if (path && looksLikeFilePath(path)) {
@@ -83,7 +83,7 @@ function looksLikeFilePath(str: string): boolean {
  */
 export function resolvePath(filePath: string): string {
   if (filePath.startsWith('~/')) {
-    const home = process.env.HOME || process.env.USERPROFILE || '';
+    const home = process.env["HOME"] || process.env["USERPROFILE"] || '';
     return resolve(home, filePath.slice(2));
   }
   return resolve(filePath);

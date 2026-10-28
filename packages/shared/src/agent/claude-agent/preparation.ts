@@ -18,7 +18,7 @@ import type { ClaudeAgent } from '../claude-agent.ts';
 import { resolveClaudeThinkingOptions, createSourceProxyServers } from './shared.ts';
 import type { SourceProxyGmailLifecycleContext, ClaudeQueryPreparation } from './shared.ts';
 
-export async function* prepareClaudeQueryRuntime(transportOwner: ClaudeAgent, userMessage: string, attachments: FileAttachment[] | undefined, sessionId: string, _isRetry: boolean, gmailRuntimeId: string, gmailRuntimeContext: SourceProxyGmailLifecycleContext): AsyncGenerator<AgentEvent, ClaudeQueryPreparation | undefined> {
+export async function* prepareClaudeQueryRuntime(transportOwner: ClaudeAgent, userMessage: string, attachments: FileAttachment[] | undefined, sessionId: string, _isRetry: boolean, gmailRuntimeId: string, gmailRuntimeContext: SourceProxyGmailLifecycleContext): AsyncGenerator<AgentEvent, ClaudeQueryPreparation | undefined, unknown> {
     if (transportOwner["config"].session?.workingDirectory) {
         await assertExistingWorkingDirectory(expandPath(transportOwner["config"].session.workingDirectory));
     }
@@ -31,7 +31,7 @@ export async function* prepareClaudeQueryRuntime(transportOwner: ClaudeAgent, us
                 ...transportOwner["config"].envOverrides,
                 CLAUDE_CODE_OAUTH_TOKEN: freshToken.accessToken,
             };
-            process.env.CLAUDE_CODE_OAUTH_TOKEN = freshToken.accessToken;
+            process.env["CLAUDE_CODE_OAUTH_TOKEN"] = freshToken.accessToken;
         }
         else if (freshToken.migrationRequired) {
             yield {
@@ -50,18 +50,18 @@ export async function* prepareClaudeQueryRuntime(transportOwner: ClaudeAgent, us
         // First chat in this session - pin current values
         transportOwner["pinnedPreferencesPrompt"] = currentPreferencesPrompt;
         transportOwner["pinnedIncludeCoAuthoredBy"] = currentCoAuthorPref;
-        transportOwner["pinnedProjectContext"] = transportOwner["resolveProjectContext"]();
+        transportOwner["pinnedProjectContext"] = transportOwner.resolveProjectContext();
         debug('[chat] Pinned system prompt components for session consistency');
     }
     else {
         // Detect drift: warn user if context has changed since session started
         const preferencesDrifted = currentPreferencesPrompt !== transportOwner["pinnedPreferencesPrompt"];
-        if (preferencesDrifted && !transportOwner["preferencesDriftNotified"]) {
+        if (preferencesDrifted && !transportOwner.preferencesDriftNotified) {
             yield {
                 type: 'info',
                 message: `Note: Your preferences changed since this session started. Start a new session to apply changes.`,
             };
-            transportOwner["preferencesDriftNotified"] = true;
+            transportOwner.preferencesDriftNotified = true;
             debug(`[chat] Detected drift in: preferences`);
         }
     }
@@ -82,7 +82,7 @@ export async function* prepareClaudeQueryRuntime(transportOwner: ClaudeAgent, us
     // branch fallback recovery the post-failure path uses.
     if (!_isRetry && transportOwner["branchFromSdkCwd"] && transportOwner["branchFromSdkSessionId"] &&
         !isExistingDirectory(transportOwner["branchFromSdkCwd"])) {
-        yield* transportOwner["recoverFromStaleBranchFork"](userMessage, attachments, /* isPreSpawn */ true);
+        yield* transportOwner.recoverFromStaleBranchFork(userMessage, attachments, /* isPreSpawn */ true);
         return;
     }
     // Get centralized mini agent configuration (from BaseAgent)
@@ -103,7 +103,7 @@ export async function* prepareClaudeQueryRuntime(transportOwner: ClaudeAgent, us
             toolInput: args,
             sessionId,
             runtimeId: gmailRuntimeId,
-            authorizationEpoch: transportOwner["promptPreparationRevision"],
+            authorizationEpoch: transportOwner.promptPreparationRevision,
         })),
         settle: (toolUseId: string) => transportOwner["settleAdmittedToolExecution"](toolUseId),
     };
@@ -119,7 +119,7 @@ export async function* prepareClaudeQueryRuntime(transportOwner: ClaudeAgent, us
         // Session-scoped tools (SubmitPlan, source_test, update_user_preferences, transform_data, etc.)
         session: getSessionScopedTools(sessionId, transportOwner["workspaceRootPath"], transportOwner["config"].workspace.id, toolExecutionGuard),
         // Craft Agents documentation - opt-in only for strict privacy/confidentiality
-        ...(process.env.ROBB_ENABLE_CRAFT_DOCS_MCP === '1' && process.env.CRAFT_DISABLE_DOCS !== '1'
+        ...(process.env["ROBB_ENABLE_CRAFT_DOCS_MCP"] === '1' && process.env["CRAFT_DISABLE_DOCS"] !== '1'
             ? {
                 'craft-agents-docs': {
                     type: 'http' as const,
@@ -145,7 +145,7 @@ export async function* prepareClaudeQueryRuntime(transportOwner: ClaudeAgent, us
     const defaultConn = defaultConnSlug ? getLlmConnection(defaultConnSlug) : null;
     const activeBaseUrl = defaultConn?.baseUrl;
     if (activeBaseUrl) {
-        debug(`[chat] Custom provider: baseUrl=${activeBaseUrl}, model=${model}, hasApiKey=${!!process.env.ANTHROPIC_API_KEY}`);
+        debug(`[chat] Custom provider: baseUrl=${activeBaseUrl}, model=${model}, hasApiKey=${!!process.env["ANTHROPIC_API_KEY"]}`);
     }
     const thinkingOptions = resolveClaudeThinkingOptions({
         thinkingLevel: transportOwner["_thinkingLevel"],
@@ -191,7 +191,7 @@ export async function* prepareClaudeQueryRuntime(transportOwner: ClaudeAgent, us
     // Capture the resolved spawn cwd here (rather than via an instance
     // field) so the catch handler reads the value passed to *this*
     // chatImpl invocation, not state left over from an earlier call.
-    const resolvedCwd = transportOwner["resolveSpawnCwd"]({ isRetry: _isRetry, sessionId });
+    const resolvedCwd = transportOwner.resolveSpawnCwd({ isRetry: _isRetry, sessionId });
     await assertExistingWorkingDirectory(resolvedCwd);
     return { effectiveModel, thinkingOptions, miniConfig, resolvedCwd, mcpServers, disallowedTools };
 }
@@ -238,7 +238,7 @@ This is a branched conversation. All prior messages in this conversation are par
         turnMessageSource = transportOwner["currentQuery"];
     }
     else {
-        turnMessageSource = await transportOwner["performProviderDispatchWriteAhead"]<AsyncIterable<SDKMessage>>(() => transportOwner["createProviderTurnMessageSource"](effectiveUserMessage, attachments, optionsWithAbort, gmailRuntimeContext));
+        turnMessageSource = await transportOwner["performProviderDispatchWriteAhead"]<AsyncIterable<SDKMessage>>(() => transportOwner.createProviderTurnMessageSource(effectiveUserMessage, attachments, optionsWithAbort, gmailRuntimeContext));
     }
     return turnMessageSource;
 }

@@ -7,6 +7,7 @@
  * This solves the performance issue where streaming in Session A
  * caused re-renders and focus loss in Session B.
  */
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { atom } from "jotai";
 import type { Getter, Setter } from "jotai/vanilla";
 import type { Session, Message } from "../../../shared/types";
@@ -19,7 +20,7 @@ import { loadedSessionsAtom, sessionAtomFamily, sessionLoadingPromises, sessionM
 
 /** Merge a fetched history with events delivered while it was loading. */
 function mergeHydratedMessages(history: Message[], current: Message[], beforeFetch: Message[], keepLiveTail: boolean): Message[] {
-  const initialReferences = new Set(beforeFetch)
+  const initialMessages = new Map(beforeFetch.map(message => [message.id, message]))
   const initiallyCompletedAssistantIds = new Set(beforeFetch.filter(message => message.role === 'assistant' && !message.isStreaming && !message.isPending).map(message => message.id))
   const currentIds = new Set(current.map(message => message.id))
   const removedQueuedIds = new Set(beforeFetch.filter(message => message.role === 'user' && message.isQueued && !currentIds.has(message.id)).map(message => message.id))
@@ -50,7 +51,8 @@ function mergeHydratedMessages(history: Message[], current: Message[], beforeFet
       }
     }
 
-    const changedDuringFetch = !initialReferences.has(live)
+    const initial = initialMessages.get(live.id)
+    const changedDuringFetch = initial !== live
     if (index < 0) {
       if (changedDuringFetch || keepLiveTail) merged.push(live)
       continue
@@ -60,7 +62,14 @@ function mergeHydratedMessages(history: Message[], current: Message[], beforeFet
     const useLive = temporary(fetched) && !temporary(live)
       || (changedDuringFetch && !(temporary(live) && !temporary(fetched)))
     if (useLive) {
-      merged[index] = { ...fetched, ...live, id: temporary(fetched) && !temporary(live) ? live.id : fetched.id }
+      const updated = { ...fetched, ...live, id: temporary(fetched) && !temporary(live) ? live.id : fetched.id }
+      // A live update may delete optional metadata. An older snapshot must not restore it.
+      if (initial && changedDuringFetch) {
+        for (const key of Object.keys(initial)) {
+          if (!Object.hasOwn(live, key)) Reflect.deleteProperty(updated, key)
+        }
+      }
+      merged[index] = updated
     }
   }
   return merged.sort((left, right) => left.timestamp - right.timestamp)
@@ -137,7 +146,7 @@ async function loadSessionMessages(
       && (!loadedSession.messages || loadedSession.messages.length === 0)
 
     let mergedSession = existingSession
-      ? {
+      ? omitUndefined<Session>({
           ...existingSession,
           isProcessing: isProcessing ?? existingSession.isProcessing,
           // Even one live tool event can precede the history response on cold
@@ -148,7 +157,7 @@ async function loadSessionMessages(
           userInputRequests: mergeUserInputRequests(existingSession.userInputRequests, loadedSession.userInputRequests),
           tokenUsage: loadedSession.tokenUsage ?? existingSession.tokenUsage,
           sessionFolderPath: loadedSession.sessionFolderPath ?? existingSession.sessionFolderPath,
-        }
+        })
       : loadedSession
     // A completed fresh load is itself a processing snapshot. Mark it so an
     // older request still in flight cannot overwrite it, even at the same value.

@@ -150,7 +150,7 @@ export function reconcileCompletedChatArchives(root: string): CompletedChatArchi
 
 /** Extracts attributed historical context locally, without starting an idle agent. */
 export function captureCompletedChatMemory(root: string, input: {
-  id: string; name?: string; projectId?: string; lastMessageAt: number; messages: Message[]
+  id: string; name?: string | undefined; projectId?: string | undefined; lastMessageAt: number; messages: Message[]
 }, now = Date.now()): CompletedChatMemory {
   const previous = readCompletedChatMemory(root, input.id)
   const directMessages = input.messages.filter(isDirectVisibleUserMessage)
@@ -164,7 +164,7 @@ export function captureCompletedChatMemory(root: string, input: {
     && previous.projectId === input.projectId) return previous
   const directUserExcerpt = buildDirectUserExcerpt(directMessages)
   const memory: CompletedChatMemory = {
-    version: 1, sessionId: input.id, projectId: input.projectId,
+    version: 1, sessionId: input.id, ...(input.projectId !== undefined ? { projectId: input.projectId } : {}),
     title: redactSecretLikeMaterial(input.name ?? 'Conversation terminée').slice(0, 300),
     completedAt: now, lastActivityAt: input.lastMessageAt, transcriptSha256,
     retrievalVersion: 2,

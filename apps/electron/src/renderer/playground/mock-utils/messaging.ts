@@ -146,7 +146,7 @@ export const playgroundMessagingHandle: PlaygroundMessagingHandle = {
       configured: connected,
       connected,
       state: connected ? 'connected' : 'disconnected',
-      identity,
+      ...(identity !== undefined ? { identity: identity } : {}),
       updatedAt: Date.now(),
     }
     emitPlatformStatus('telegram')
@@ -157,7 +157,7 @@ export const playgroundMessagingHandle: PlaygroundMessagingHandle = {
       configured: connected,
       connected,
       state: connected ? 'connected' : 'disconnected',
-      identity,
+      ...(identity !== undefined ? { identity: identity } : {}),
       updatedAt: Date.now(),
     }
     emitPlatformStatus('whatsapp')

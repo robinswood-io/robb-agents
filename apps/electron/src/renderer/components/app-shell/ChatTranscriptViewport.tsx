@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import * as React from "react";
 
 import { AlertTriangle } from "lucide-react";
@@ -399,7 +400,7 @@ export function ChatTranscriptViewport({
                           // rather than multi-diff, since these are better viewed as formatted documents
                           const isDocumentWrite = activity.toolName === 'Write' && (() => {
                             const actInput = activity.toolInput as Record<string, unknown> | undefined
-                            const fp = (actInput?.file_path as string) || ''
+                            const fp = (actInput?.["file_path"] as string) || ''
                             const ext = fp.split('.').pop()?.toLowerCase()
                             return ext === 'md' || ext === 'txt'
                           })()
@@ -409,12 +410,12 @@ export function ChatTranscriptViewport({
                           if ((activity.toolName === 'Edit' || activity.toolName === 'Write') && !isDocumentWrite) {
                             const changes = collectFileChangesFromActivities(turn.activities)
                             if (changes.length > 0) {
-                              setOverlayState({
-                                type: 'multi-diff',
+                              setOverlayState(omitUndefined({
+                                type: 'multi-diff' as const,
                                 changes,
-                                consolidated: false, // Ungrouped mode - show individual changes
+                                consolidated: false as const, // Ungrouped mode - show individual changes
                                 focusedChangeId: getFirstFileChangeIdForActivity(activity.id, changes),
-                              })
+                              }))
                             }
                           } else {
                             // All other tools → open generic activity cards overlay (Input/Output)

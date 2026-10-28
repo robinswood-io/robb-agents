@@ -73,7 +73,7 @@ export function resolveClaudeThinkingOptions(args: {
     providerType?: BackendConfig['providerType'];
     minimizeThinking: boolean;
 }): Partial<Options> {
-    const { thinkingLevel, model, providerType, minimizeThinking } = args;
+    const { thinkingLevel, model, minimizeThinking } = args;
     const isClaude = isClaudeModel(model);
     const effort = THINKING_TO_EFFORT[thinkingLevel];
     const isHaiku = model.toLowerCase().includes('haiku');
@@ -362,29 +362,29 @@ export function createClaudeBackendConfig(config: ClaudeAgentConfig, model: stri
     return {
         provider: 'anthropic',
         workspace: config.workspace,
-        session: config.session,
+        ...(config.session !== undefined ? { session: config.session } : {}),
         model,
-        thinkingLevel: config.thinkingLevel,
-        isModelRoutePinned: config.isModelRoutePinned,
-        mcpToken: config.mcpToken,
-        isHeadless: config.isHeadless,
-        skipConfigWatcher: config.skipConfigWatcher,
-        debugMode: config.debugMode,
-        systemPromptPreset: config.systemPromptPreset,
-        onSdkSessionIdUpdate: config.onSdkSessionIdUpdate,
-        onSdkSessionIdCleared: config.onSdkSessionIdCleared,
-        onBranchForkInvalidated: config.onBranchForkInvalidated,
-        getRecoveryMessages: config.getRecoveryMessages,
-        getBranchFallbackMessages: config.getBranchFallbackMessages,
-        getBranchSeedMessages: config.getBranchSeedMessages,
-        markBranchSeedApplied: config.markBranchSeedApplied,
-        getTransferredSessionSummary: config.getTransferredSessionSummary,
-        markTransferredSessionSummaryApplied: config.markTransferredSessionSummaryApplied,
-        envOverrides: config.envOverrides,
-        miniModel: config.miniModel,
-        mcpPool: config.mcpPool,
-        connectionSlug: config.connectionSlug,
-        automationSystem: config.automationSystem,
+        ...(config.thinkingLevel !== undefined ? { thinkingLevel: config.thinkingLevel } : {}),
+        ...(config.isModelRoutePinned !== undefined ? { isModelRoutePinned: config.isModelRoutePinned } : {}),
+        ...(config.mcpToken !== undefined ? { mcpToken: config.mcpToken } : {}),
+        ...(config.isHeadless !== undefined ? { isHeadless: config.isHeadless } : {}),
+        ...(config.skipConfigWatcher !== undefined ? { skipConfigWatcher: config.skipConfigWatcher } : {}),
+        ...(config.debugMode !== undefined ? { debugMode: config.debugMode } : {}),
+        ...(config.systemPromptPreset !== undefined ? { systemPromptPreset: config.systemPromptPreset } : {}),
+        ...(config.onSdkSessionIdUpdate !== undefined ? { onSdkSessionIdUpdate: config.onSdkSessionIdUpdate } : {}),
+        ...(config.onSdkSessionIdCleared !== undefined ? { onSdkSessionIdCleared: config.onSdkSessionIdCleared } : {}),
+        ...(config.onBranchForkInvalidated !== undefined ? { onBranchForkInvalidated: config.onBranchForkInvalidated } : {}),
+        ...(config.getRecoveryMessages !== undefined ? { getRecoveryMessages: config.getRecoveryMessages } : {}),
+        ...(config.getBranchFallbackMessages !== undefined ? { getBranchFallbackMessages: config.getBranchFallbackMessages } : {}),
+        ...(config.getBranchSeedMessages !== undefined ? { getBranchSeedMessages: config.getBranchSeedMessages } : {}),
+        ...(config.markBranchSeedApplied !== undefined ? { markBranchSeedApplied: config.markBranchSeedApplied } : {}),
+        ...(config.getTransferredSessionSummary !== undefined ? { getTransferredSessionSummary: config.getTransferredSessionSummary } : {}),
+        ...(config.markTransferredSessionSummaryApplied !== undefined ? { markTransferredSessionSummaryApplied: config.markTransferredSessionSummaryApplied } : {}),
+        ...(config.envOverrides !== undefined ? { envOverrides: config.envOverrides } : {}),
+        ...(config.miniModel !== undefined ? { miniModel: config.miniModel } : {}),
+        ...(config.mcpPool !== undefined ? { mcpPool: config.mcpPool } : {}),
+        ...(config.connectionSlug !== undefined ? { connectionSlug: config.connectionSlug } : {}),
+        ...(config.automationSystem !== undefined ? { automationSystem: config.automationSystem } : {}),
     };
 }
 

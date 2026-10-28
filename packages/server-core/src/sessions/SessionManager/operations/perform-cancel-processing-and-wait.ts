@@ -1,3 +1,5 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import type { StrongCancellationStop } from '../runtime-state.ts';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { unregisterSessionScopedToolCallbacks } from '@craft-agent/shared/agent';
 import { CodedError } from '@craft-agent/shared/protocol';
@@ -27,12 +29,12 @@ async function sessionOpCancelProcessingAndWait(sessionOperationContext: Session
     // The strong Stop implementation intentionally uses the silent/untracked
     // cancel path below to avoid nesting a second lease. This outer lease owns
     // the complete stop proof for deletion and shutdown.
-    return sessionOpTrackSessionOperation(sessionOperationContext, managed, () => sessionOperationContext.owner["performCancelProcessingAndWait"](managed, timeoutMs));
+    return sessionOpTrackSessionOperation(sessionOperationContext, managed, () => sessionOperationContext.owner.performCancelProcessingAndWait(managed, timeoutMs));
 }
 
 async function sessionOpPerformCancelProcessingAndWait(sessionOperationContext: SessionOperationContext, managed: ManagedSession, timeoutMs: number): Promise<SessionCompletionEvent> {
     const sessionId = managed.id;
-    const snapshot = (reason: SessionCompletionEvent['reason'] = 'interrupted'): SessionCompletionEvent => ({
+    const snapshot = (reason: SessionCompletionEvent['reason'] = 'interrupted'): SessionCompletionEvent => omitUndefined<SessionCompletionEvent>({
         sessionId: managed.id,
         workspaceId: managed.workspace.id,
         reason,
@@ -76,15 +78,15 @@ async function sessionOpPerformCancelProcessingAndWait(sessionOperationContext: 
         retirement?.offCompletion();
         // Defer the Stop by one microtask so the completion listener and
         // coalescing entry exist even if a test/backend completes synchronously.
-        const ownedRetirement = {
+        const ownedRetirement: StrongCancellationStop = {
             managed,
             operation: Promise.resolve(),
             requiresCompletion: false,
             generation: managed.processingGeneration,
             stopCompleted: false,
             stopFailed: false,
-            completionEvent: undefined as SessionCompletionEvent | undefined,
-            completionGeneration: undefined as number | undefined,
+            completionEvent: undefined,
+            completionGeneration: undefined,
             offCompletion: () => { },
         };
         const operation = Promise.resolve().then(async () => {
@@ -241,7 +243,7 @@ function sessionOpCreateManagedAgentRuntimeDisposalBarrier(sessionOperationConte
 function sessionOpRunManagedAgentRuntimeDisposalBarrier(sessionOperationContext: SessionOperationContext, sessionId: string, key: symbol, barrier: {
     label: string;
     dispose: () => void | Promise<void>;
-    inFlight?: Promise<void>;
+    inFlight?: Promise<void> | undefined;
 }): Promise<void> {
     if (barrier.inFlight)
         return barrier.inFlight;
@@ -258,14 +260,14 @@ function sessionOpRunManagedAgentRuntimeDisposalBarrier(sessionOperationContext:
         const barriers = sessionOperationContext.state.runtimeDisposalBarriers.get(sessionId);
         if (barriers?.get(key) !== barrier)
             return;
-        barrier.inFlight = undefined;
+        delete barrier.inFlight;
         barriers.delete(key);
         if (barriers.size === 0)
             sessionOperationContext.state.runtimeDisposalBarriers.delete(sessionId);
     }, () => {
         const barriers = sessionOperationContext.state.runtimeDisposalBarriers.get(sessionId);
         if (barriers?.get(key) === barrier)
-            barrier.inFlight = undefined;
+            delete barrier.inFlight;
     });
     return rawDisposal;
 }

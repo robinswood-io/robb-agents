@@ -9,23 +9,23 @@
  * Adapted from SendToWorkspaceDialog (session transfer).
  */
 
-import * as React from 'react'
-import { useState, useCallback, useEffect, useRef } from 'react'
-import { Cloud, CloudOff, Monitor, Send } from 'lucide-react'
+
+import { useState,useCallback,useEffect,useRef } from 'react'
+import { Cloud,CloudOff,Monitor,Send } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
+Dialog,
+DialogContent,
+DialogHeader,
+DialogTitle,
+DialogDescription,
+DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { WorkspaceAvatar } from '@/components/ui/workspace-avatar'
 import { useWorkspaceIcons } from '@/hooks/useWorkspaceIcon'
 import { cn } from '@/lib/utils'
-import type { Workspace, ExportResourcesOptions, ResourceImportMode, ResourceImportResult } from '../../../shared/types'
+import type { Workspace,ExportResourcesOptions,ResourceImportMode,ResourceImportResult } from '../../../shared/types'
 
 export type SendResourceType = 'source' | 'skill' | 'automation'
 
@@ -43,7 +43,7 @@ export interface SendResourceToWorkspaceDialogProps {
   /** Current workspace ID (excluded from picker) */
   activeWorkspaceId: string | null
   /** Called after successful transfer */
-  onTransferComplete?: () => void
+  onTransferComplete?: (() => void) | undefined
 }
 
 const RESOURCE_TYPE_LABELS: Record<SendResourceType, { singular: string; plural: string }> = {
@@ -118,9 +118,8 @@ export function SendResourceToWorkspaceDialog({
 
     setIsSending(true)
     const targetName = targetWorkspace.name
-    const { singular, plural } = RESOURCE_TYPE_LABELS[resourceType]
-    const count = resourceIds.length
-    const label = count === 1 ? singular : plural
+      const count = resourceIds.length
+    const label = count === 1 ? RESOURCE_TYPE_LABELS[resourceType].singular : RESOURCE_TYPE_LABELS[resourceType].plural
     const mode: ResourceImportMode = 'skip'
 
     const toastId = toast.loading(`Sending ${resourceLabel} to ${targetName}...`)
@@ -138,7 +137,7 @@ export function SendResourceToWorkspaceDialog({
       )
 
       // 2. Import into target workspace
-      let importResult
+      let importResult: ResourceImportResult
       if (targetWorkspace.remoteServer) {
         // Remote target — use invokeOnServer
         const { url, token, remoteWorkspaceId } = targetWorkspace.remoteServer
@@ -190,7 +189,6 @@ export function SendResourceToWorkspaceDialog({
     }
   }, [selectedWorkspaceId, activeWorkspaceId, resourceIds, resourceType, resourceLabel, workspaces, onOpenChange, onTransferComplete])
 
-  const { singular, plural } = RESOURCE_TYPE_LABELS[resourceType]
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {

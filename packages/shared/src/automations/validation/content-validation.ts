@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { AUTOMATIONS_CONFIG_FILE } from "../constants.ts";
 import { AutomationsConfigSchema, zodErrorToIssues, DEPRECATED_EVENT_ALIASES } from "../schemas.ts";
 import { Cron } from "croner";
@@ -157,7 +158,7 @@ function runMatcherSemanticValidations(
       }
 
       // Validate conditions
-      if (matcher.conditions && Array.isArray(matcher.conditions)) {
+      if (matcher.conditions && isUnknownArray(matcher.conditions)) {
         validateConditionsArray(matcher.conditions, `automations.${event}[${i}].conditions`, event, file, errors, warnings, 0);
       }
     }

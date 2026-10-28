@@ -9,7 +9,7 @@
  * Custom patterns can be edited via workspace permissions.json file.
  */
 
-import * as React from 'react'
+
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
@@ -49,7 +49,7 @@ function buildDefaultPermissionsData(config: PermissionsConfigFile | null): Perm
   const rows: PermissionRow[] = []
 
   // Helper to extract pattern and comment from string or object format
-  const extractPatternInfo = (item: string | { pattern: string; comment?: string }): { pattern: string; comment: string | null } => {
+  const extractPatternInfo = (item: string | { pattern: string; comment?: string | undefined }): { pattern: string; comment: string | null } => {
     if (typeof item === 'string') {
       return { pattern: item, comment: null }
     }

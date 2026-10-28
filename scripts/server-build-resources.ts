@@ -1,3 +1,4 @@
+import { parseJsonObject, isJsonObject } from '../packages/shared/src/utils/json.ts';
 import { dirname, join } from 'path';
 
 import { existsSync, mkdirSync, copyFileSync, cpSync, lstatSync, readdirSync, readFileSync, chmodSync } from 'fs';
@@ -29,7 +30,7 @@ export interface ServerBuildConfig {
 // ---------------------------------------------------------------------------
 
 export function assembleResources(config: ServerBuildConfig): void {
-  const { electronDir, outputDir, platform, arch } = config;
+  const { electronDir, outputDir } = config;
   const srcResources = join(electronDir, 'resources');
   const destResources = join(outputDir, 'resources');
 
@@ -228,8 +229,10 @@ export function copyDependencyTree(
   const pkgPath = join(src, 'package.json');
   if (existsSync(pkgPath)) {
     try {
-      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
-      for (const childDep of Object.keys(pkg.dependencies || {})) {
+      const pkg = parseJsonObject(readFileSync(pkgPath, 'utf-8'));
+      const dependencies = pkg['dependencies'];
+      if (dependencies !== undefined && !isJsonObject(dependencies)) throw new Error('Invalid dependencies');
+      for (const childDep of Object.keys(dependencies ?? {})) {
         copyDependencyTree(childDep, srcModules, destModules, visited);
       }
     } catch {
@@ -308,13 +311,17 @@ export function copyProductionDeps(config: ServerBuildConfig): void {
     const pkgJsonPath = join(rootDir, 'packages', pkg, 'package.json');
     if (!existsSync(pkgJsonPath)) continue;
     try {
-      const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
-      for (const [dep, version] of Object.entries(pkgJson.dependencies || {}) as [string, string][]) {
+      const pkgJson = parseJsonObject(readFileSync(pkgJsonPath, 'utf-8'));
+      const dependencies = pkgJson['dependencies'];
+      const peerDependencies = pkgJson['peerDependencies'];
+      if (dependencies !== undefined && !isJsonObject(dependencies)) throw new Error('Invalid dependencies');
+      if (peerDependencies !== undefined && !isJsonObject(peerDependencies)) throw new Error('Invalid peer dependencies');
+      for (const [dep, version] of Object.entries(dependencies ?? {})) {
         if (typeof version === 'string' && version.startsWith('workspace:')) continue;
         allImports.add(dep);
       }
       // Also peer dependencies (they're real runtime deps)
-      for (const dep of Object.keys(pkgJson.peerDependencies || {})) {
+      for (const dep of Object.keys(peerDependencies ?? {})) {
         allImports.add(dep);
       }
     } catch { /* skip */ }
@@ -333,9 +340,7 @@ export function copyProductionDeps(config: ServerBuildConfig): void {
   // 0.2.113 the SDK ships only sdk.mjs in the main package; the native
   // `claude` binary lives in this per-platform optional dep. The server runs
   // on its host platform/arch so we ship only the matching one.
-  const sdkPlatformPkg = platform === 'win32'
-    ? `@anthropic-ai/claude-agent-sdk-win32-${arch}`
-    : `@anthropic-ai/claude-agent-sdk-${platform}-${arch}`;
+  const sdkPlatformPkg = `@anthropic-ai/claude-agent-sdk-${platform}-${arch}`;
 
   const PLATFORM_DEPS = [
     `@img/sharp-${platform === 'darwin' ? 'darwin' : 'linux'}-${arch}`,

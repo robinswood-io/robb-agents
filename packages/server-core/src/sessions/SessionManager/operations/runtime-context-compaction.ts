@@ -1,3 +1,4 @@
+import { setOptional } from '@craft-agent/shared/utils/json';
 import { AGENT_RUNTIME_ACTIVITY } from '@craft-agent/core/types';
 import { resolveEffectiveAgentContextLimits } from '@craft-agent/shared/config';
 import { COST_CONTROL_COMPACTION_INSTRUCTIONS, assessContextCompactionResult, classifyContextCompactionFailure, isHardLimitFollowUpContextCompaction, isHardLimitRecoveryContextCompaction, shouldAttemptContextCompaction } from '../../context-compaction';
@@ -76,14 +77,14 @@ const now = Date.now();
             if (managed.pendingRoutingMeta?.costControl) {
                 managed.pendingRoutingMeta.costControl.compacted = assessment.outcome === 'succeeded';
                 managed.pendingRoutingMeta.costControl.compactionOutcome = assessment.outcome;
-                managed.pendingRoutingMeta.costControl.compactionModel = compacted?.compactionModel;
+                setOptional(managed.pendingRoutingMeta.costControl, "compactionModel", compacted?.compactionModel);
                 managed.pendingRoutingMeta.costControl.compactionDurationMs = compactionDurationMs;
-                managed.pendingRoutingMeta.costControl.contextTokensAfter = assessment.tokensAfter;
-                managed.pendingRoutingMeta.costControl.reclaimedTokens = assessment.reclaimedTokens;
-                managed.pendingRoutingMeta.costControl.reductionRatio = assessment.reductionRatio;
-                managed.pendingRoutingMeta.costControl.compactionIssueCodes = assessment.issues.length > 0
+                setOptional(managed.pendingRoutingMeta.costControl, "contextTokensAfter", assessment.tokensAfter);
+                setOptional(managed.pendingRoutingMeta.costControl, "reclaimedTokens", assessment.reclaimedTokens);
+                setOptional(managed.pendingRoutingMeta.costControl, "reductionRatio", assessment.reductionRatio);
+                setOptional(managed.pendingRoutingMeta.costControl, "compactionIssueCodes", assessment.issues.length > 0
                     ? assessment.issues
-                    : undefined;
+                    : undefined);
             }
             sessionOperationContext.owner["persistSession"](managed);
             // The compaction itself is already billable and irreversible from

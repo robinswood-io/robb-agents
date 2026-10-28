@@ -7,10 +7,10 @@
  *
  * Imports groupMessagesByTurn (pure function) from turn-utils.
  */
-import { describe, it, expect, beforeEach } from 'bun:test'
-import { groupMessagesByTurn, type AssistantTurn } from '@craft-agent/ui/chat/turn-utils'
-import { messageToStored, storedToMessage } from '@craft-agent/core'
-import type { Message, MessageRole } from '@craft-agent/core'
+import { describe,it,expect,beforeEach } from 'bun:test'
+import { groupMessagesByTurn,type AssistantTurn } from '@craft-agent/ui/chat/turn-utils'
+import { messageToStored,storedToMessage } from '@craft-agent/core'
+import type { Message,MessageRole } from '@craft-agent/core'
 
 // ============================================================================
 // Mirror: persistence pipeline (two-stage filter)
@@ -182,7 +182,7 @@ describe('turn grouping stability across reload', () => {
       }),
     ]
 
-    const liveGrouping = groupMessagesByTurn(messages)
+    groupMessagesByTurn(messages);
     const reloaded = simulatePersistAndReload(messages)
     const reloadGrouping = groupMessagesByTurn(reloaded)
 

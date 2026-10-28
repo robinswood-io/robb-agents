@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 import type { StoredConfig } from '../storage/config-types.ts'
 import type { LlmConnection } from '../llm-connections.ts'
 import { describe, expect, it } from 'bun:test'
@@ -89,7 +90,7 @@ function runMigration(configDir: string) {
 }
 
 function readPiApiKeyConnection(configPath: string): LlmConnection | undefined {
-  const migrated: StoredConfig = JSON.parse(readFileSync(configPath, 'utf-8'))
+  const migrated = JSON.parse(readFileSync(configPath, 'utf-8')) as StoredConfig
   return migrated.llmConnections!.find((c) => c.slug === 'pi-api-key')
 }
 
@@ -268,16 +269,10 @@ describe('startup migration (integration)', () => {
 })
 
 function readConfigJson(configPath: string): StoredConfig {
-  return JSON.parse(readFileSync(configPath, 'utf-8'))
+  return JSON.parse(readFileSync(configPath, 'utf-8')) as StoredConfig
 }
 
-function findConnection(configPath: string, slug: string): LlmConnection | undefined {
-  return readConfigJson(configPath).llmConnections!.find((c) => c.slug === slug)
-}
 
-function modelIdsOf(connection: LlmConnection | undefined): string[] {
-  return (connection?.models ?? []).map((m) => typeof m === 'string' ? m : m.id)
-}
 
 describe('preserving existing explicit selections at startup', () => {
   it('preserves an orphaned selected connection and rejects backend creation instead of using another one', () => {
@@ -306,8 +301,8 @@ describe('preserving existing explicit selections at startup', () => {
     it(`preserves connection and workspace model ${selected}`, () => {
       const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
       const workspacePath = join(workspaceRoot, 'config.json')
-      const workspace = JSON.parse(readFileSync(workspacePath, 'utf-8'))
-      workspace.defaults = { model: selected, defaultLlmConnection: 'retired-explicit-connection' }
+      const workspace = parseJsonObject(readFileSync(workspacePath, 'utf-8'))
+      workspace["defaults"] = { model: selected, defaultLlmConnection: 'retired-explicit-connection' }
       writeFileSync(workspacePath, JSON.stringify(workspace))
       writeRootConfig(configPath, workspaceRoot, [{
         slug: 'pi-api-key', name: 'Explicit selection', providerType: 'anthropic',
@@ -317,7 +312,7 @@ describe('preserving existing explicit selections at startup', () => {
       runMigration(configDir)
       expect(readPiApiKeyConnection(configPath)!.defaultModel).toBe(selected)
       expect(getModelIds(readPiApiKeyConnection(configPath)!)).toEqual([selected])
-      expect(JSON.parse(readFileSync(workspacePath, 'utf-8')).defaults)
+      expect(parseJsonObject(readFileSync(workspacePath, 'utf-8'))["defaults"])
         .toEqual({ model: selected, defaultLlmConnection: 'retired-explicit-connection' })
     })
   }

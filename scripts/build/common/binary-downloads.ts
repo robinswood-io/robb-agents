@@ -31,7 +31,7 @@ export const BUN_VERSION = 'bun-v1.4.4';
  * uv version to bundle with the app.
  * Update this when upgrading uv. Check latest at: https://github.com/astral-sh/uv/releases
  */
-export const UV_VERSION = '0.10.6';
+export const UV_VERSION = '0.13.6';
 
 /**
  * Get platform key for resources/bin folder naming.
@@ -194,11 +194,9 @@ export async function downloadUv(config: BuildConfig): Promise<void> {
   const targetDir = join(electronDir, 'resources', 'bin', platformKey);
   const targetPath = join(targetDir, uvBinaryName);
 
-  // Skip when already provisioned
-  if (existsSync(targetPath)) {
-    console.log(`uv already present at ${targetPath}`);
-    return;
-  }
+  // Callers may reuse a version-validated native binary; this downloader refreshes
+  // unchecked artifacts so an ignored cache cannot retain an older release.
+  if (existsSync(targetPath)) rmSync(targetPath, { force: true });
 
   console.log(`Downloading uv ${UV_VERSION} for ${platformKey}...`);
 

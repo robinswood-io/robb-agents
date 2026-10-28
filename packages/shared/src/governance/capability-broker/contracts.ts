@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { createHash } from "node:crypto";
 import { z } from "zod";
 
@@ -262,10 +263,10 @@ export interface CapabilityKillSwitches {
 }
 
 function stableValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(stableValue)
+  if (isUnknownArray(value)) return value.map(stableValue)
   if (value && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value)
+      Object.entries<unknown>((value as Record<string, unknown>))
         .sort(([left], [right]) => left.localeCompare(right))
         .map(([key, child]) => [key, stableValue(child)]),
     )

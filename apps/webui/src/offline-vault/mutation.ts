@@ -22,12 +22,12 @@ export async function persistState(transportOwner: OfflineVault, state: OfflineV
 }
 
 export function invalidateAfterConflict(transportOwner: OfflineVault): void {
-    transportOwner["key"] = null;
+    transportOwner.key = null;
     // Do not let a stale tab reinterpret the intentionally empty in-memory
     // view as an expired scope: that path would clear the newer tab's record.
     // Only an explicit load() may adopt the winning CAS revision.
     transportOwner["loaded"] = false;
-    transportOwner["conflicted"] = true;
+    transportOwner.conflicted = true;
     transportOwner["recordRevision"] = null;
     transportOwner["state"] = emptyState();
     transportOwner["generation"] += 1;
@@ -36,11 +36,11 @@ export function invalidateAfterConflict(transportOwner: OfflineVault): void {
 
 export function mutate(transportOwner: OfflineVault, update: (state: OfflineVaultState, now: number) => void, expectedScope?: OfflineVaultScopeToken): Promise<boolean> {
     const operation = transportOwner["queue"].then(async () => {
-        if (transportOwner["conflicted"])
+        if (transportOwner.conflicted)
             throw new OfflineVaultConflictError();
         if (!transportOwner["loaded"])
             await transportOwner["loadNow"]();
-        if (transportOwner["conflicted"])
+        if (transportOwner.conflicted)
             throw new OfflineVaultConflictError();
         if (!isOfflineVaultEnabled())
             throw new OfflineVaultUnavailableError('Offline storage is not enabled');
@@ -49,7 +49,7 @@ export function mutate(transportOwner: OfflineVault, update: (state: OfflineVaul
             await transportOwner["purgeNow"]();
             throw new OfflineVaultUnavailableError('The offline session has expired');
         }
-        if (!transportOwner["scopeTokenMatches"](transportOwner["state"], expectedScope))
+        if (!transportOwner.scopeTokenMatches(transportOwner["state"], expectedScope))
             return false;
         const next = normalizeState(cloneState(transportOwner["state"]), now);
         if (!next.scope || isScopeExpired(next.scope, now)) {
@@ -58,7 +58,7 @@ export function mutate(transportOwner: OfflineVault, update: (state: OfflineVaul
         }
         update(next, now);
         const normalized = normalizeState(next, now);
-        if (!normalized.scope || !transportOwner["scopeTokenMatches"](normalized, expectedScope))
+        if (!normalized.scope || !transportOwner.scopeTokenMatches(normalized, expectedScope))
             return false;
         normalized.updatedAt = now;
         // Commit to IndexedDB before publishing the new in-memory snapshot. A
@@ -79,7 +79,7 @@ export function mutate(transportOwner: OfflineVault, update: (state: OfflineVaul
     return operation;
 }
 
-export function assertUserMutationCommitted(transportOwner: OfflineVault, committed: boolean): void {
+export function assertUserMutationCommitted(committed: boolean): void {
     if (!committed) {
         throw new OfflineVaultUnavailableError('The offline workspace changed before the action was saved');
     }

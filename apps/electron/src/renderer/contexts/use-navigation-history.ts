@@ -70,6 +70,7 @@ const syncUrl = useCallback((push: boolean = false) => {
     if (panels.length === 0) return
 
     const focusedPanel = panels[focusedIdx] ?? panels[0]
+    if (!focusedPanel) return
     const url = new URL(window.location.href)
 
     // ?ws= workspace slug

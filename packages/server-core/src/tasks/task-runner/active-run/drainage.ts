@@ -73,13 +73,13 @@ export function beginTerminalDrain(transportOwner: ActiveRun): Promise<void> {
     if (!intent)
         return Promise.reject(new Error('Terminal drain requested without a durable intent'));
     const drain = (async () => {
-        await transportOwner["drainTerminalChildren"](intent.sessionIds, intent.reviewerSessionIds);
+        await transportOwner.drainTerminalChildren(intent.sessionIds, intent.reviewerSessionIds);
         if (transportOwner["settled"])
             return;
         if (transportOwner["reviewerPending"] || transportOwner["reviewerSessionId"] || transportOwner["pendingReviewerSessionIds"].size > 0) {
             throw new Error('terminal retirement completed without releasing every reviewer identity');
         }
-        transportOwner["terminalRetirementAttempts"] = 0;
+        transportOwner.terminalRetirementAttempts = 0;
         if (transportOwner["terminalRetryTimeout"])
             clearTimeout(transportOwner["terminalRetryTimeout"]);
         transportOwner["terminalRetryTimeout"] = undefined;
@@ -109,9 +109,9 @@ export function beginTerminalDrain(transportOwner: ActiveRun): Promise<void> {
     }, () => {
         if (transportOwner["terminalDrain"] === drain) {
             transportOwner["terminalDrain"] = undefined;
-            transportOwner["scheduleTerminalDrainRetry"]();
+            transportOwner.scheduleTerminalDrainRetry();
         }
-    }).catch((error) => {
+    }).catch((error: unknown) => {
         transportOwner["failForUnexpectedAsyncError"]('terminal drain supervision', error);
     });
     return drain;
@@ -123,8 +123,8 @@ export function beginTerminalDrain(transportOwner: ActiveRun): Promise<void> {
 export function scheduleTerminalDrainRetry(transportOwner: ActiveRun): void {
     if (transportOwner["terminalRetryTimeout"] || !transportOwner["terminalIntent"] || transportOwner["settled"])
         return;
-    transportOwner["terminalRetirementAttempts"] += 1;
-    const delayMs = Math.min(TERMINAL_RETIRE_RETRY_MAX_MS, TERMINAL_RETIRE_RETRY_BASE_MS * (2 ** Math.min(transportOwner["terminalRetirementAttempts"] - 1, 6)));
+    transportOwner.terminalRetirementAttempts += 1;
+    const delayMs = Math.min(TERMINAL_RETIRE_RETRY_MAX_MS, TERMINAL_RETIRE_RETRY_BASE_MS * (2 ** Math.min(transportOwner.terminalRetirementAttempts - 1, 6)));
     transportOwner["terminalRetryTimeout"] = setTimeout(() => {
         transportOwner["terminalRetryTimeout"] = undefined;
         if (!transportOwner["terminalIntent"] || transportOwner["settled"])
@@ -146,7 +146,7 @@ export function beginPauseDrain(transportOwner: ActiveRun): Promise<void> {
         return Promise.resolve();
     }
     const drain = (async () => {
-        const errors = await transportOwner["retireWorkerSessions"](transportOwner["pausedSessionIds"]);
+        const errors = await transportOwner.retireWorkerSessions(transportOwner["pausedSessionIds"]);
         if (errors.length > 0) {
             const discovered = transportOwner["deps"].host.listTaskWorkerSessions(transportOwner["deps"].workspaceId, transportOwner["slug"], transportOwner["runId"]).map((session) => session.id);
             transportOwner["pausedSessionIds"] = [...new Set([
@@ -158,7 +158,7 @@ export function beginPauseDrain(transportOwner: ActiveRun): Promise<void> {
             throw new AggregateError(errors, 'One or more paused task workers could not be retired');
         }
         transportOwner["pausedSessionIds"] = [];
-        transportOwner["pauseRetirementAttempts"] = 0;
+        transportOwner.pauseRetirementAttempts = 0;
         if (transportOwner["pauseRetryTimeout"])
             clearTimeout(transportOwner["pauseRetryTimeout"]);
         transportOwner["pauseRetryTimeout"] = undefined;
@@ -178,9 +178,9 @@ export function beginPauseDrain(transportOwner: ActiveRun): Promise<void> {
     }, () => {
         if (transportOwner["pauseDrain"] === drain) {
             transportOwner["pauseDrain"] = undefined;
-            transportOwner["schedulePauseDrainRetry"]();
+            transportOwner.schedulePauseDrainRetry();
         }
-    }).catch((error) => {
+    }).catch((error: unknown) => {
         transportOwner["failForUnexpectedAsyncError"]('pause drain supervision', error);
     });
     return drain;
@@ -193,8 +193,8 @@ export function schedulePauseDrainRetry(transportOwner: ActiveRun): void {
     if (transportOwner["pauseRetryTimeout"] || transportOwner["runStatus"] !== 'paused'
         || transportOwner["terminalIntent"] || transportOwner["settled"] || !transportOwner["pauseDrainRequired"])
         return;
-    transportOwner["pauseRetirementAttempts"] += 1;
-    const delayMs = Math.min(PAUSE_RETIRE_RETRY_MAX_MS, PAUSE_RETIRE_RETRY_BASE_MS * (2 ** Math.min(transportOwner["pauseRetirementAttempts"] - 1, 6)));
+    transportOwner.pauseRetirementAttempts += 1;
+    const delayMs = Math.min(PAUSE_RETIRE_RETRY_MAX_MS, PAUSE_RETIRE_RETRY_BASE_MS * (2 ** Math.min(transportOwner.pauseRetirementAttempts - 1, 6)));
     transportOwner["pauseRetryTimeout"] = setTimeout(() => {
         transportOwner["pauseRetryTimeout"] = undefined;
         if (transportOwner["runStatus"] !== 'paused' || transportOwner["terminalIntent"] || transportOwner["settled"]
@@ -249,9 +249,9 @@ export async function retireWorkerSessions(transportOwner: ActiveRun, initialSes
      * usage, before a terminal state is published. All candidates are attempted
      * even when one retirement fails. */
 export async function drainTerminalChildren(transportOwner: ActiveRun, initialSessionIds: string[], initialReviewerSessionIds: string[]): Promise<void> {
-    const errors = await transportOwner["retireWorkerSessions"](initialSessionIds);
+    const errors = await transportOwner.retireWorkerSessions(initialSessionIds);
     try {
-        const completedReviewer = await transportOwner["retirePendingReviewer"](initialReviewerSessionIds);
+        const completedReviewer = await transportOwner.retirePendingReviewer(initialReviewerSessionIds);
         if (completedReviewer) {
             await transportOwner["deps"].host.setSessionStatus(completedReviewer.sessionId, 'cancelled');
             await transportOwner["deps"].host.setKanbanColumn(completedReviewer.sessionId, 'todo');

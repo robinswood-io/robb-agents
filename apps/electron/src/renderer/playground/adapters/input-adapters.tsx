@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Playground Adapters for Input Components
  *
@@ -50,25 +51,25 @@ export function mockAdminApprovalRequest(overrides?: Partial<AdminApprovalReques
  * Props for PermissionRequest in playground context
  */
 export interface PermissionRequestPlaygroundProps {
-  toolName?: string
-  description?: string
-  command?: string
-  onAction?: () => void
-  unstyled?: boolean
+  toolName?: string | undefined
+  description?: string | undefined
+  command?: string | undefined
+  onAction?: (() => void) | undefined
+  unstyled?: boolean | undefined
 }
 
 /**
  * Props for AdminApprovalRequest in playground context
  */
 export interface AdminApprovalRequestPlaygroundProps {
-  appName?: string
-  reason?: string
-  command?: string
-  impact?: string
-  requiresSystemPrompt?: boolean
-  rememberForMinutes?: number
-  onAction?: () => void
-  unstyled?: boolean
+  appName?: string | undefined
+  reason?: string | undefined
+  command?: string | undefined
+  impact?: string | undefined
+  requiresSystemPrompt?: boolean | undefined
+  rememberForMinutes?: number | undefined
+  onAction?: (() => void) | undefined
+  unstyled?: boolean | undefined
 }
 
 
@@ -80,11 +81,11 @@ export interface AdminApprovalRequestPlaygroundProps {
  * Convert playground props to PermissionRequest type
  */
 export function toPermissionRequest(props: PermissionRequestPlaygroundProps): PermissionRequest {
-  return mockPermissionRequest({
+  return mockPermissionRequest(omitUndefined({
     toolName: props.toolName,
     description: props.description,
     command: props.command,
-  })
+  }))
 }
 
 

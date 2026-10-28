@@ -1,24 +1,20 @@
+import type { ActiveSessionObjective } from '../../../../shared/src/sessions/types/objectives.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { type Workspace } from "@craft-agent/shared/config";
 import { captureSessionPersistenceRootIdentity } from "@craft-agent/shared/sessions";
 import { getSourceCredentialManager, TokenRefreshManager } from "@craft-agent/shared/sources";
 import { type CreateSessionOptions } from "@craft-agent/shared/protocol";
 import { type Message } from "@craft-agent/core/types";
-import { type ThinkingLevel, normalizeThinkingLevel } from "@craft-agent/shared/agent/thinking-levels";
+import { normalizeThinkingLevel } from "@craft-agent/shared/agent/thinking-levels";
 import { extractLabelId } from "@craft-agent/shared/labels";
 import type { ManagedSession } from './managed-session.ts';
 import { sessionLog } from './runtime-platform.ts';
 
-export interface SpawnRouteSelection {
-  llmConnection?: string
-  /** True only for a host-authenticated manual/task connection choice. */
-  connectionRoutePinned?: boolean
-  model?: string
-  thinkingLevel?: ThinkingLevel
-  /** True only for a host-authenticated manual/task model choice. */
-  modelRoutePinned?: boolean
-  /** True only for a host-authenticated reasoning choice. */
-  thinkingLevelPinned?: boolean
-}
+/** Host-owned route choices, using the same optional values as live sessions. */
+export type SpawnRouteSelection = Pick<ManagedSession,
+  | 'llmConnection' | 'connectionRoutePinned' | 'model' | 'thinkingLevel'
+  | 'modelRoutePinned' | 'thinkingLevelPinned'
+>;
 
 type SessionCreationRouteRequest = Pick<CreateSessionOptions,
   | 'model'
@@ -54,7 +50,7 @@ export function resolveCreateSessionRouteProvenance(
 
   return {
     modelRoutePinned,
-    llmConnection,
+    ...(llmConnection !== undefined ? { llmConnection: llmConnection } : {}),
     connectionRoutePinned: hasPinnedExplicitModel && llmConnection !== undefined
       ? true
       : (request?.connectionRoutePinned ?? request?.llmConnection !== undefined),
@@ -75,7 +71,7 @@ export function resolveSpawnedSessionRoute(
   const inheritsPinnedThinking = request.thinkingLevel === undefined
     && !changesConnection
     && parent.thinkingLevelPinned === true
-  return {
+  return omitUndefined<SpawnRouteSelection>({
     llmConnection: request.llmConnection ?? parent.llmConnection,
     // A model is connection-scoped. Carrying an OpenAI model into an
     // Anthropic (or another Pi-provider) connection creates a false audit
@@ -83,10 +79,10 @@ export function resolveSpawnedSessionRoute(
     model: request.model ?? (changesConnection ? undefined : parent.model),
     thinkingLevel: request.thinkingLevel
       ?? (inheritsPinnedThinking ? parent.thinkingLevel : undefined),
-  }
+  })
 }
 
-export function resolveExplicitSpawnedSessionRoute(_request: SpawnRouteSelection, parent: SpawnRouteSelection, _input: Record<string,unknown> = {}): SpawnRouteSelection { return {...resolveSpawnedSessionRoute({},parent),thinkingLevel:parent.thinkingLevel,connectionRoutePinned:parent.llmConnection!==undefined,modelRoutePinned:parent.model!==undefined,thinkingLevelPinned:parent.thinkingLevel!==undefined}; }
+export function resolveExplicitSpawnedSessionRoute(_request: SpawnRouteSelection, parent: SpawnRouteSelection, _input: Record<string,unknown> = {}): SpawnRouteSelection { return omitUndefined<SpawnRouteSelection>({...resolveSpawnedSessionRoute({},parent),thinkingLevel:parent.thinkingLevel,connectionRoutePinned:parent.llmConnection!==undefined,modelRoutePinned:parent.model!==undefined,thinkingLevelPinned:parent.thinkingLevel!==undefined}); }
 
 const PARENT_SESSION_LABEL_ID = 'parent-session'
 
@@ -132,12 +128,12 @@ export function repairPersistedFalseCompletion(managed: ManagedSession, finalMes
         || criterion.id === 'no-safe-work-remaining')
       && criterion.satisfied === false
     )) {
-    managed.activeObjective = {
+    managed.activeObjective = omitUndefined<ActiveSessionObjective>({
       ...managed.activeObjective,
       terminalState: 'exhausted',
       completedAt: undefined,
       lastOutcome: unfinishedFinal,
-    }
+    })
     return true
   }
   return false
@@ -190,10 +186,10 @@ export function createManagedSession(
     agent: null,
     messages: [],
     isProcessing: false,
-    lastMessageAt: (s.lastMessageAt ?? s.lastUsedAt ?? Date.now()) as number,
+    lastMessageAt: (s["lastMessageAt"] ?? s["lastUsedAt"] ?? Date.now()) as number,
     streamingText: '',
     processingGeneration: 0,
-    isFlagged: (s.isFlagged ?? false) as boolean,
+    isFlagged: (s["isFlagged"] ?? false) as boolean,
     messageQueue: [],
     backgroundShellCommands: new Map(),
     backgroundTaskOutputs: new Map(),

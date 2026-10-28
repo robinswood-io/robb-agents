@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { z } from 'zod';
 
 
@@ -89,25 +90,25 @@ export function jsonPropToZod(prop: unknown, depth = 0): z.ZodTypeAny {
     schemaProperty.description ? zodType.describe(schemaProperty.description) : zodType;
 
   // Enum — string literals
-  if (schemaProperty.enum && Array.isArray(schemaProperty.enum) && schemaProperty.enum.length > 0) {
+  if (schemaProperty.enum && isUnknownArray(schemaProperty.enum) && schemaProperty.enum.length > 0) {
     return withDesc(z.enum(schemaProperty.enum as [string, ...string[]]));
   }
 
   // oneOf / anyOf — discriminated or plain unions
   const unionVariants = schemaProperty.oneOf ?? schemaProperty.anyOf;
-  if (Array.isArray(unionVariants) && unionVariants.length > 0) {
+  if (isUnknownArray(unionVariants) && unionVariants.length > 0) {
     const members = unionVariants.map((v) => jsonPropToZod(v, depth + 1));
     if (members.length === 1) return withDesc(members[0]!);
     return withDesc(z.union(members as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]));
   }
 
   // allOf — merge into a single object shape
-  if (Array.isArray(schemaProperty.allOf) && schemaProperty.allOf.length > 0) {
+  if (isUnknownArray(schemaProperty.allOf) && schemaProperty.allOf.length > 0) {
     const mergedProps: Record<string, ClaudeJsonSchemaProperty> = {};
     const mergedRequired: string[] = [];
     for (const sub of schemaProperty.allOf) {
       if (sub.properties) Object.assign(mergedProps, sub.properties);
-      if (Array.isArray(sub.required)) mergedRequired.push(...sub.required);
+      if (isUnknownArray(sub.required)) mergedRequired.push(...sub.required);
     }
     if (Object.keys(mergedProps).length > 0) {
       return withDesc(jsonPropToZod({
@@ -157,8 +158,8 @@ export function jsonPropToZod(prop: unknown, depth = 0): z.ZodTypeAny {
 
 
 export function jsonSchemaToZodShape(schema: Record<string, unknown>, depth = 0): Record<string, z.ZodTypeAny> {
-  const properties = (schema.properties as Record<string, ClaudeJsonSchemaProperty>) || {};
-  const required = new Set((schema.required as string[]) || []);
+  const properties = (schema["properties"] as Record<string, ClaudeJsonSchemaProperty>) || {};
+  const required = new Set((schema["required"] as string[]) || []);
   const shape: Record<string, z.ZodTypeAny> = {};
 
   for (const [key, prop] of Object.entries(properties)) {

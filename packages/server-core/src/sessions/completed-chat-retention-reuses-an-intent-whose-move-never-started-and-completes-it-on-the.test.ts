@@ -1,4 +1,4 @@
-import type { SessionManagerTestView } from "./testing/private-runtime-access.ts";
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { withSessionOperationsForTest } from "./testing/session-operation-access.ts";
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
@@ -43,10 +43,7 @@ describe('completed-chat memory and retention', () => {
     managed.messages = messages
     managed.sessionStatus = 'done'
     managed.lastMessageAt = 2
-    const runtime = restarted as unknown as {
-      sessions: Map<string, typeof managed>
-      sweepCompletedChats: (now: number) => Promise<void>
-    }
+    const runtime = sessionManagerForTest(restarted)
     sessionRuntimeStateForTest(restarted).sessions.set(managed.id, managed)
     await runtime.sweepCompletedChats(1000 + MONTH)
 
@@ -73,13 +70,7 @@ describe('completed-chat memory and retention', () => {
     managed.messages = messages
     managed.sessionStatus = 'done'
     managed.lastMessageAt = 2
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      sweepCompletedChats: (
-        now: number,
-        archiveChat?: typeof archiveCompletedChatDirectory,
-      ) => Promise<void>
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 
     await runtime.sweepCompletedChats(1000)
@@ -188,7 +179,7 @@ describe('completed-chat memory and retention', () => {
 
   it('never automatically archives a chat containing a worktree', async () => {
     const stored = await createSession(root, { name: 'Protected worktree' })
-    const manager = withSessionOperationsForTest(new SessionManager()); const runtime = manager as unknown as SessionManagerTestView
+    const manager = withSessionOperationsForTest(new SessionManager()); const runtime = sessionManagerForTest(manager)
     const managed = createManagedSession(stored, { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true })
     managed.messages = messages; managed.sessionStatus = 'done'; managed.lastMessageAt = 2
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)

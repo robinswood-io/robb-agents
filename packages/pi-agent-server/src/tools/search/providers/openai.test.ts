@@ -1,6 +1,13 @@
+import { z } from 'zod';
 import { afterEach, describe, expect, it } from 'bun:test';
 import { ResponsesApiSearchProvider } from './openai.ts';
 
+const capturedSearchRequestSchema = z.looseObject({
+  model: z.string(), tools: z.array(z.looseObject({ type: z.string() })),
+});
+function captureSearchRequest(init: RequestInit | undefined) {
+  return init?.body ? capturedSearchRequestSchema.parse(JSON.parse(String(init.body))) : null;
+}
 const originalFetch = globalThis.fetch;
 
 afterEach(() => {
@@ -15,7 +22,7 @@ describe('ResponsesApiSearchProvider', () => {
 
     globalThis.fetch = Object.assign(async (input: RequestInfo | URL, init?: RequestInit) => {
       calledUrl = typeof input === 'string' ? input : input.toString();
-      calledBody = init?.body ? JSON.parse(String(init.body)) : null;
+      calledBody = captureSearchRequest(init);
       const h = init?.headers as Record<string, string> | undefined;
       calledHeaders = h || {};
 
@@ -64,7 +71,7 @@ describe('ResponsesApiSearchProvider', () => {
 
     globalThis.fetch = Object.assign(async (input: RequestInfo | URL, init?: RequestInit) => {
       calledUrl = typeof input === 'string' ? input : input.toString();
-      calledBody = init?.body ? JSON.parse(String(init.body)) : null;
+      calledBody = captureSearchRequest(init);
 
       return new Response(
         JSON.stringify({

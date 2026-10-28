@@ -1,3 +1,5 @@
+import type { DurableTaskBuildOptions } from '../../../../shared/src/tasks/durable-task.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { registerTaskAuthoringHandlers } from "./tasks/authoring";
 import { registerTaskExecutionHandlers } from "./tasks/execution";
 import { registerTaskResultHandlers } from "./tasks/results";
@@ -147,12 +149,12 @@ function toValidationDto(result: ReturnType<typeof parseTaskYaml>): TaskValidati
     ...(i.suggestion ? { suggestion: i.suggestion } : {}),
   })
   const sessionNodeCount = result.spec?.nodes.filter((n) => n.kind === 'session').length ?? 0
-  return {
+  return omitUndefined<TaskValidationResultDto>({
     valid: result.valid,
     errors: result.errors.map(issue),
     warnings: result.warnings.map(issue),
     estimate: result.spec ? { nodeCount: result.spec.nodes.length, sessionNodeCount } : undefined,
-  }
+  })
 }
 
 const GENERATE_TIMEOUT_MS = 180_000
@@ -164,7 +166,7 @@ const MAX_GENERATE_ATTEMPTS = 2
 /** Pull the YAML body out of an LLM reply (tolerate ```yaml fences or surrounding prose). */
 function extractYaml(text: string): string {
   const fenced = text.match(/```(?:ya?ml)?\s*\n?([\s\S]*?)```/i)
-  return (fenced ? fenced[1] : text).trim()
+  return (fenced?.[1] ?? text).trim()
 }
 
 export interface TaskHandlerRuntimeOptions {
@@ -231,11 +233,11 @@ export function registerTasksHandlers(
             ? deps.sessionManager.getSessions(ws.id).find((session) => session.id === parentSessionId)
             : undefined
           return {
-            workspacePermissionMode: workspaceConfig?.defaults?.permissionMode,
+            ...(workspaceConfig?.defaults?.permissionMode !== undefined ? { workspacePermissionMode: workspaceConfig?.defaults?.permissionMode } : {}),
             // A supplied-but-missing parent is not permission to fall back to
             // a more permissive workspace default.
             parentPermissionMode: parentSessionId ? (parent?.permissionMode ?? 'safe') : undefined,
-            externalActionPolicy: workspaceConfig?.defaults?.externalActionPolicy,
+            ...(workspaceConfig?.defaults?.externalActionPolicy !== undefined ? { externalActionPolicy: workspaceConfig?.defaults?.externalActionPolicy } : {}),
           }
         },
         defaultRetry: DEFAULT_AUTONOMOUS_RETRY_POLICY,
@@ -320,11 +322,11 @@ export function registerTasksHandlers(
     const loaded = loadTaskSpec(ws.rootPath, slug)
     if (!loaded?.spec || !loaded.valid) throw new Error(`Task "${slug}" has no valid task.yaml`)
     const proofIssuer = await loadWorkspaceExecutionProofIssuer(ws.id)
-    return buildDurableTaskSnapshot(ws.rootPath, slug, loaded.spec, {
+    return buildDurableTaskSnapshot(ws.rootPath, slug, loaded.spec, omitUndefined<DurableTaskBuildOptions>({
       runId,
       workspaceId: ws.id,
       verifyExecutionProof: (proof, binding) => proofIssuer.verifyForTask(proof, binding),
-    })
+    }))
   }
   registerTaskAuthoringHandlers(server, deps, authorizeTaskAction, toValidationDto, tasksLog, GENERATE_TIMEOUT_MS, MAX_GENERATE_ATTEMPTS, extractYaml)
   registerTaskExecutionHandlers(server, authorizeTaskAction, runnerFor, killSwitchRegistry)

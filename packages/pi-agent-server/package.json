@@ -10,11 +10,11 @@
   },
   "scripts": {
     "build": "bun build src/index.ts src/vibe-acp-server.ts src/antigravity-server.ts --outdir=dist --target=bun --format=esm --external koffi",
-    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit -p tsconfig.typecheck.json",
+    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit -p tsconfig.json",
     "validate": "bun run typecheck && bun run build"
   },
   "dependencies": {
-    "@agentclientprotocol/sdk": "2.0.2",
+    "@agentclientprotocol/sdk": "^2.1.0",
     "@craft-agent/core": "workspace:*",
     "@earendil-works/pi-agent-core": "1.4.0",
     "@earendil-works/pi-ai": "1.4.0",
@@ -27,6 +27,6 @@
     "zod": "4.6.7"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5"
+    "@types/node": "^26.6.6"
   }
 }

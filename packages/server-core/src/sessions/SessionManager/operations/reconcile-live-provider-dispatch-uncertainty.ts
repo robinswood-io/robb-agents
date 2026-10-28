@@ -1,3 +1,6 @@
+import type { PendingTurnRecovery } from '../../../../../shared/src/sessions/types/turn-recovery.ts';
+import type { ProviderDispatchWriteAhead } from '../../../../../core/src/types/message/message-store.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { exactProviderDispatchAcceptanceUnknown } from '../policy.ts';
 import { generateMessageId } from '@craft-agent/shared/protocol';
@@ -43,13 +46,13 @@ async function sessionOpReconcileLiveProviderDispatchUncertainty(sessionOperatio
         if (laterVisibleHuman?.isQueued === true
             && managed.messageQueue.some(item => item.messageId === laterVisibleHuman.id)) {
             const retiredAt = Date.now();
-            const tombstone: NonNullable<Message['providerDispatch']> = {
+            const tombstone: NonNullable<Message['providerDispatch']> = omitUndefined<ProviderDispatchWriteAhead>({
                 ...marker,
                 state: 'retired-uncertain',
                 acceptedAt: undefined,
                 retiredAt,
                 retirementReason: 'superseded-by-new-human-objective',
-            };
+            });
             delete message.providerDispatch;
             managed.messages.push({
                 id: generateMessageId(), role: 'info', hidden: true,
@@ -63,13 +66,13 @@ async function sessionOpReconcileLiveProviderDispatchUncertainty(sessionOperatio
             // checkpoint into that newer human instruction.
         }
         else if (laterCurrentHuman && !currentBound) {
-            const tombstone: NonNullable<Message['providerDispatch']> = {
+            const tombstone: NonNullable<Message['providerDispatch']> = omitUndefined<ProviderDispatchWriteAhead>({
                 ...marker,
                 state: 'retired-uncertain',
                 acceptedAt: undefined,
                 retiredAt: Date.now(),
                 retirementReason: 'superseded-by-new-human-objective',
-            };
+            });
             // Keep the audit receipt on a separate inert row. The original closure
             // still owns `message` and may run its exact-WAL cleanup while unwinding;
             // separating the tombstone prevents that cleanup from erasing the
@@ -86,12 +89,12 @@ async function sessionOpReconcileLiveProviderDispatchUncertainty(sessionOperatio
             if (!pending || !sessionOpPendingRecoveryBelongsToCurrentObjective(sessionOperationContext, managed, pending)) {
                 throw new Error('The superseding human objective has no exact recovery binding');
             }
-            managed.pendingTurnRecovery = {
+            managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
                 ...pending,
                 lastCause: 'app_restart',
                 continuationRequired: true,
                 recoveryDispatch: undefined,
-            };
+            });
             const queued = await sessionOperationContext.owner["enqueueAutomaticTurnRecovery"](managed, 'runtime_error', undefined, undefined, 'automatic');
             if (!queued) {
                 throw new Error('The superseding human objective could not allocate a generic continuation');
@@ -129,12 +132,12 @@ async function sessionOpReconcileLiveProviderDispatchUncertainty(sessionOperatio
                 sessionOpUntrackSyntheticAutomaticMessage(sessionOperationContext, managed, message);
                 managed.messages.splice(messageIndex, 1);
             }
-            managed.pendingTurnRecovery = {
+            managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
                 ...managed.pendingTurnRecovery!,
                 lastCause: 'app_restart',
                 continuationRequired: true,
                 recoveryDispatch: undefined,
-            };
+            });
             const queued = await sessionOperationContext.owner["enqueueAutomaticTurnRecovery"](managed, 'runtime_error', undefined, undefined, 'automatic');
             if (!queued)
                 throw new Error('The provider uncertainty could not allocate a generic continuation');
@@ -184,7 +187,7 @@ function sessionOpUntrackSyntheticAutomaticMessage(sessionOperationContext: Sess
  * stale identity remains a fail-closed replay barrier; only an exact live
  * callback or an explicit Retry may reconcile it.
  */
-function sessionOpProviderDispatchAcceptanceUnknown(sessionOperationContext: SessionOperationContext, managed: ManagedSession): Message | undefined {
+function sessionOpProviderDispatchAcceptanceUnknown(_sessionOperationContext: SessionOperationContext, managed: ManagedSession): Message | undefined {
     return managed.messages.find(message => (message.role === 'user'
         && message.providerDispatch?.state === 'acceptance-unknown'));
 }

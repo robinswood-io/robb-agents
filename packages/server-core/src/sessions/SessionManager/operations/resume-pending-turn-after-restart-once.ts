@@ -1,3 +1,5 @@
+import type { ActiveSessionObjective } from '../../../../../shared/src/sessions/types/objectives.ts';
+import {setOptional, omitUndefined } from '@craft-agent/shared/utils/json';
 import { resumeColdCleanAnswerRetry } from './cold-clean-answer-retry.ts';
 import { reclaimColdStartedDispatch } from './cold-started-dispatch-reclaim.ts';
 import { resumeColdRecoveryQueue } from './cold-recovery-resume.ts';
@@ -169,7 +171,7 @@ async function sessionOpResumePendingTurnAfterRestartOnce(sessionOperationContex
             if (sessionOperationContext.state.sessions.get(sessionId) === managed
                 && managed.activeObjective === objective
                 && managed.pendingTurnRecovery === undefined) {
-                objective.interruptedTurnRecovery = previousInterrupted;
+                setOptional(objective, "interruptedTurnRecovery", previousInterrupted);
                 managed.pendingTurnRecovery = pending;
                 sessionOperationContext.owner["persistSession"](managed);
                 try {
@@ -218,7 +220,7 @@ async function sessionOpResumePendingTurnAfterRestartOnce(sessionOperationContex
             && Number.isFinite(objective.completedAt)
             && objective.completedAt! - allocatedCleanRecovery!.setupRetryBlockedAt! >= 0
             && objective.completedAt! - allocatedCleanRecovery!.setupRetryBlockedAt! <= 5000) {
-            const migratedObjective = { ...objective, terminalState: 'active' as const, completedAt: undefined };
+            const migratedObjective = omitUndefined<ActiveSessionObjective>({ ...objective, terminalState: 'active', completedAt: undefined });
             managed.activeObjective = migratedObjective;
             try {
                 if (!sessionOperationContext.owner["persistSession"](managed))
@@ -260,7 +262,7 @@ async function sessionOpResumePendingTurnAfterRestartOnce(sessionOperationContex
         }
         sessionOperationContext.state.deferredAutomaticSessions.delete(sessionId);
         sessionOperationContext.state.automaticAdmissionReservations.delete(sessionId);
-        sessionOperationContext.owner["emitObjectiveChanged"](managed);
+        sessionOperationContext.owner.emitObjectiveChanged(managed);
         sessionOperationContext.owner["sendEvent"]({
             type: 'typed_error', sessionId: managed.id,
             error: {
@@ -308,11 +310,11 @@ async function sessionOpResumePendingTurnAfterRestartOnce(sessionOperationContex
                 : 'objective_provenance_mismatch');
             return;
         }
-        managed.activeObjective = {
+        managed.activeObjective = omitUndefined<ActiveSessionObjective>({
             ...objective,
             terminalState: 'active',
             completedAt: undefined,
-        };
+        });
         const reactivatedObjective = managed.activeObjective;
         sessionOperationContext.owner["persistSession"](managed);
         await sessionOperationContext.owner.flushSession(managed.id);
@@ -381,7 +383,7 @@ async function sessionOpResumePendingTurnAfterRestartOnce(sessionOperationContex
         if (finalMessage) {
             rehydrateObjectiveEvidence(managed);
             const completionObjective = projectLegacyObjectiveCompletionRequirements(objective, findObjectiveText(managed.messages, objective));
-            const reviewValidation = validateDelegatedReviewCompletion({ parentSessionId: managed.parentSessionId, sessionId: managed.id, sourceSlugs: managed.enabledSourceSlugs,
+            const reviewValidation = validateDelegatedReviewCompletion({ ...(managed.parentSessionId !== undefined ? { parentSessionId: managed.parentSessionId } : {}), sessionId: managed.id, ...(managed.enabledSourceSlugs !== undefined ? { sourceSlugs: managed.enabledSourceSlugs } : {}),
                 objective, messages: managed.messages, finalMessage });
             const explicitStructuredTracking = sessionOpHasExplicitStructuredObjectiveTracking(sessionOperationContext, managed);
             const remainingPlanSteps = incompletePlanSteps(managed.messages, objective.userMessageId);
@@ -389,22 +391,22 @@ async function sessionOpResumePendingTurnAfterRestartOnce(sessionOperationContex
             const executionEvidenceMissing = !reviewValidation && explicitStructuredTracking && objectiveRequiresExecutionEvidence(objective, findObjectiveText(managed.messages, objective))
                 && !hasObjectiveExecutionEvidence(managed.messages, objective.userMessageId);
             const validation = reviewValidation ?? validateObjectiveOutcome(finalMessage.objectiveOutcome, {
-                objective: completionObjective, messages: managed.messages, sessionId: managed.id, extractionError: finalMessage.objectiveOutcomeError,
-                evidenceGap, executionEvidenceMissing, autonomyEvents: managed.autonomyEvents,
+                objective: completionObjective, messages: managed.messages, sessionId: managed.id, ...(finalMessage.objectiveOutcomeError !== undefined ? { extractionError: finalMessage.objectiveOutcomeError } : {}),
+                ...(evidenceGap !== undefined ? { evidenceGap: evidenceGap } : {}), executionEvidenceMissing, ...(managed.autonomyEvents !== undefined ? { autonomyEvents: managed.autonomyEvents } : {}),
                 pendingHumanConfirmation: sessionOperationContext.owner["hasPendingUserInput"](managed) || sessionOpHasPendingDecision(sessionOperationContext, managed),
                 preservedContinueOnLegacyBudget: pending.budgetHistoryUnavailable === true,
             });
             if (validation.declaration && !finalMessage.objectiveOutcome) {
                 finalMessage.objectiveOutcome = validation.declaration;
             }
-            const state = reviewValidation?.state ?? classifyObjectiveTerminalState(finalMessage.content, {
+            const state = reviewValidation?.state ?? classifyObjectiveTerminalState(finalMessage.content, omitUndefined({
                 remainingPlanSteps,
                 evidenceGap, executionEvidenceMissing,
                 structuredOutcomeRequired: explicitStructuredTracking && requiresStructuredObjectiveOutcome(completionObjective),
                 ...(explicitStructuredTracking && (finalMessage.objectiveOutcome || finalMessage.objectiveOutcomeError || validation.declaration) ? {
                     declaredState: validation.state, structuredOutcomeValid: validation.valid,
                 } : {}),
-            });
+            }));
             invalidFinal = state === 'continue';
             if (invalidFinal) {
                 const validContinuation = validation.valid && validation.state === 'continue'
@@ -422,7 +424,7 @@ async function sessionOpResumePendingTurnAfterRestartOnce(sessionOperationContex
                 continuationWork = !explicitStructuredTracking ? remainingPlanSteps
                     : validContinuation ? effectiveContinuation?.remainingWork : undefined;
                 if (validContinuation)
-                    objective.lastOutcome = effectiveContinuation;
+                    setOptional(objective, "lastOutcome", effectiveContinuation);
             }
             if (state !== 'continue') {
                 // The process may have died after persisting provider text but before
@@ -438,7 +440,7 @@ async function sessionOpResumePendingTurnAfterRestartOnce(sessionOperationContex
                 objective.terminalState = state;
                 if (!reviewValidation && validation.valid && validation.declaration)
                     sessionOpApplyValidatedNativeOutcome(sessionOperationContext, managed, finalMessage, validation.declaration);
-                objective.lastOutcome = reviewValidation?.declaration ?? (validation.valid ? finalMessage.objectiveOutcome : undefined);
+                setOptional(objective, "lastOutcome", reviewValidation?.declaration ?? (validation.valid ? finalMessage.objectiveOutcome : undefined));
                 objective.completedAt = Date.now();
                 reconciledTerminalFinal = true;
             }
@@ -448,7 +450,7 @@ async function sessionOpResumePendingTurnAfterRestartOnce(sessionOperationContex
         sessionOperationContext.owner["clearPendingTurnRecovery"](managed);
         sessionOperationContext.owner["persistSession"](managed);
         await sessionOperationContext.owner.flushSession(managed.id);
-        sessionOperationContext.owner["emitObjectiveChanged"](managed);
+        sessionOperationContext.owner.emitObjectiveChanged(managed);
         if (reconciledTerminalFinal) { }
         return;
     }

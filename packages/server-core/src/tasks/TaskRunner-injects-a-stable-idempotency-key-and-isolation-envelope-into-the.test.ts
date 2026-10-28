@@ -36,7 +36,7 @@ describe('TaskRunner (Conductor)', () => {
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
       now: () => '2026-06-07T00:00:00.000Z',
-      nowMs,
+      ...(nowMs !== undefined ? { nowMs: nowMs } : {}),
       resolveSubagentAutonomyContext: () => autonomyContext,
       ...(executionProofIssuer ? {
         verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),
@@ -370,12 +370,12 @@ describe('TaskRunner (Conductor)', () => {
     });
     await tick();
     expect(runner.getRunState('approve-mutation', 'r1')?.status).toBe('completed');
-    expect(readRunLog(root, 'approve-mutation', 'r1')).toContainEqual(expect.objectContaining({
+    expect<unknown>(readRunLog(root, 'approve-mutation', 'r1')).toContainEqual((expect.objectContaining({
       kind: 'node-checkpoint',
       nodeId: 'publish',
       status: 'confirmed',
-      executionProof: expect.objectContaining({ proofId: 'proof-publish' }),
-    }));
+      executionProof: (expect.objectContaining({ proofId: 'proof-publish' }) as unknown),
+    }) as unknown));
   });
 
   it('never accepts model text as proof of an external mutation and does not retry ambiguously', async () => {
@@ -402,16 +402,16 @@ describe('TaskRunner (Conductor)', () => {
 
     expect(runner.getRunState('mutation-without-proof', 'r1')?.status).toBe('failed');
     expect(host.created).toHaveLength(1);
-    expect(readRunLog(root, 'mutation-without-proof', 'r1')).not.toContainEqual(expect.objectContaining({
+    expect<unknown>(readRunLog(root, 'mutation-without-proof', 'r1')).not.toContainEqual((expect.objectContaining({
       kind: 'node-checkpoint',
       nodeId: 'publish',
       status: 'confirmed',
-    }));
-    expect(readRunLog(root, 'mutation-without-proof', 'r1')).toContainEqual(expect.objectContaining({
+    }) as unknown));
+    expect<unknown>(readRunLog(root, 'mutation-without-proof', 'r1')).toContainEqual((expect.objectContaining({
       kind: 'node-finished',
       nodeId: 'publish',
       state: 'failed',
-      reason: expect.stringContaining('without an authoritative provider-reconciled execution proof'),
-    }));
+      reason: (expect.stringContaining('without an authoritative provider-reconciled execution proof') as unknown),
+    }) as unknown));
   });
 });

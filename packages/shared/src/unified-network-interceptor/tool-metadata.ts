@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 /**
  * Unified fetch interceptor for all AI API requests (Anthropic + OpenAI format).
  *
@@ -122,7 +123,7 @@ export function injectMetadataIntoToolSchema<T extends {
   schema: T,
 ): T & { properties: Record<string, unknown>; required: string[] } {
   const normalizedProperties = schema.properties && typeof schema.properties === 'object' ? schema.properties : {};
-  const normalizedRequired = Array.isArray(schema.required) ? schema.required : [];
+  const normalizedRequired = isUnknownArray(schema.required) ? schema.required : [];
   const result = injectMetadataFields(normalizedProperties, normalizedRequired);
   return {
     ...schema,
@@ -138,10 +139,10 @@ export function injectMetadataIntoToolSchema<T extends {
  * @returns true if metadata was found and stored
  */
 export function captureMetadataFromInput(toolId: string, toolName: string, parsed: Record<string, unknown>): boolean {
-  const intent = typeof parsed._intent === 'string' ? parsed._intent : undefined;
-  const displayName = typeof parsed._displayName === 'string' ? parsed._displayName : undefined;
+  const intent = typeof parsed["_intent"] === 'string' ? parsed["_intent"] : undefined;
+  const displayName = typeof parsed["_displayName"] === 'string' ? parsed["_displayName"] : undefined;
   if (intent || displayName) {
-    toolMetadataStore.set(toolId, { intent, displayName, timestamp: Date.now() });
+    toolMetadataStore.set(toolId, { ...(intent !== undefined ? { intent } : {}), ...(displayName !== undefined ? { displayName } : {}), timestamp: Date.now() });
     debugLog(`[SSE] Stored metadata for ${toolName} (${toolId}): intent=${!!intent}, displayName=${!!displayName}`);
     return true;
   }

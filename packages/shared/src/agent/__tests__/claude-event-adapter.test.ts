@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test';import { ClaudeEventAdapter } from '../backend/claude/event-adapter.ts';
-import { createCallbacks, recordedClaudeMessage } from './fixtures/claude-event-fixtures.ts';
+import { createCallbacks, adaptRecordedClaudeMessage } from './fixtures/claude-event-fixtures.ts';
 
 describe('ClaudeEventAdapter', () => {
 let adapter: ClaudeEventAdapter;
@@ -11,7 +11,7 @@ beforeEach(() => {
 
 describe('stream_event: message_start', () => {
     it('should capture turn ID from message_start', async () => {
-      const events = await adapter.adapt(recordedClaudeMessage({
+      const events = await adaptRecordedClaudeMessage(adapter, {
         type: 'stream_event',
         event: {
           type: 'message_start',
@@ -19,13 +19,13 @@ describe('stream_event: message_start', () => {
         },
         parent_tool_use_id: null,
         session_id: 'sess-1',
-      }));
+      });
 
       // No events emitted for message_start itself
       expect(events).toHaveLength(0);
 
       // Subsequent events should include the turn ID
-      const textEvents = await adapter.adapt(recordedClaudeMessage({
+      const textEvents = await adaptRecordedClaudeMessage(adapter, {
         type: 'stream_event',
         event: {
           type: 'content_block_delta',
@@ -33,7 +33,7 @@ describe('stream_event: message_start', () => {
         },
         parent_tool_use_id: null,
         session_id: 'sess-1',
-      }));
+      });
 
       expect(textEvents).toHaveLength(1);
       expect(textEvents[0]).toMatchObject({
@@ -46,7 +46,7 @@ describe('stream_event: message_start', () => {
 
 describe('stream_event: text_delta', () => {
     it('should emit text_delta for content_block_delta', async () => {
-      const events = await adapter.adapt(recordedClaudeMessage({
+      const events = await adaptRecordedClaudeMessage(adapter, {
         type: 'stream_event',
         event: {
           type: 'content_block_delta',
@@ -54,7 +54,7 @@ describe('stream_event: text_delta', () => {
         },
         parent_tool_use_id: null,
         session_id: 'sess-1',
-      }));
+      });
 
       expect(events).toHaveLength(1);
       expect(events[0]).toMatchObject({
@@ -64,7 +64,7 @@ describe('stream_event: text_delta', () => {
     });
 
     it('should include parentToolUseId from SDK message', async () => {
-      const events = await adapter.adapt(recordedClaudeMessage({
+      const events = await adaptRecordedClaudeMessage(adapter, {
         type: 'stream_event',
         event: {
           type: 'content_block_delta',
@@ -72,7 +72,7 @@ describe('stream_event: text_delta', () => {
         },
         parent_tool_use_id: 'task-001',
         session_id: 'sess-1',
-      }));
+      });
 
       expect(events[0]).toMatchObject({
         type: 'text_delta',
@@ -84,7 +84,7 @@ describe('stream_event: text_delta', () => {
 describe('stream_event: message_delta (text_complete)', () => {
     it('should emit text_complete when message_delta arrives with pending text', async () => {
       // First: assistant message sets pending text
-      await adapter.adapt(recordedClaudeMessage({
+      await adaptRecordedClaudeMessage(adapter, {
         type: 'assistant',
         message: {
           content: [{ type: 'text', text: 'Final answer' }],
@@ -93,10 +93,10 @@ describe('stream_event: message_delta (text_complete)', () => {
         parent_tool_use_id: null,
         session_id: 'sess-1',
         isReplay: false,
-      }));
+      });
 
       // Then: message_delta triggers text_complete
-      const events = await adapter.adapt(recordedClaudeMessage({
+      const events = await adaptRecordedClaudeMessage(adapter, {
         type: 'stream_event',
         event: {
           type: 'message_delta',
@@ -104,7 +104,7 @@ describe('stream_event: message_delta (text_complete)', () => {
         },
         parent_tool_use_id: null,
         session_id: 'sess-1',
-      }));
+      });
 
       const textComplete = events.find(e => e.type === 'text_complete');
       expect(textComplete).toBeDefined();
@@ -116,7 +116,7 @@ describe('stream_event: message_delta (text_complete)', () => {
     });
 
     it('should set isIntermediate=true when stop_reason is tool_use', async () => {
-      await adapter.adapt(recordedClaudeMessage({
+      await adaptRecordedClaudeMessage(adapter, {
         type: 'assistant',
         message: {
           content: [{ type: 'text', text: 'Let me check...' }],
@@ -125,9 +125,9 @@ describe('stream_event: message_delta (text_complete)', () => {
         parent_tool_use_id: null,
         session_id: 'sess-1',
         isReplay: false,
-      }));
+      });
 
-      const events = await adapter.adapt(recordedClaudeMessage({
+      const events = await adaptRecordedClaudeMessage(adapter, {
         type: 'stream_event',
         event: {
           type: 'message_delta',
@@ -135,7 +135,7 @@ describe('stream_event: message_delta (text_complete)', () => {
         },
         parent_tool_use_id: null,
         session_id: 'sess-1',
-      }));
+      });
 
       const textComplete = events.find(e => e.type === 'text_complete');
       expect(textComplete).toMatchObject({
@@ -146,7 +146,7 @@ describe('stream_event: message_delta (text_complete)', () => {
 
 describe('assistant message', () => {
     it('should skip replayed messages', async () => {
-      const events = await adapter.adapt(recordedClaudeMessage({
+      const events = await adaptRecordedClaudeMessage(adapter, {
         type: 'assistant',
         message: {
           content: [{ type: 'text', text: 'replayed' }],
@@ -155,13 +155,13 @@ describe('assistant message', () => {
         parent_tool_use_id: null,
         session_id: 'sess-1',
         isReplay: true,
-      }));
+      });
 
       expect(events).toHaveLength(0);
     });
 
     it('should emit usage_update for non-sidechain messages', async () => {
-      const events = await adapter.adapt(recordedClaudeMessage({
+      const events = await adaptRecordedClaudeMessage(adapter, {
         type: 'assistant',
         message: {
           content: [],
@@ -174,7 +174,7 @@ describe('assistant message', () => {
         parent_tool_use_id: null,
         session_id: 'sess-1',
         isReplay: false,
-      }));
+      });
 
       const usageEvent = events.find(e => e.type === 'usage_update');
       expect(usageEvent).toBeDefined();
@@ -187,7 +187,7 @@ describe('assistant message', () => {
     });
 
     it('should not emit usage_update for sidechain messages', async () => {
-      const events = await adapter.adapt(recordedClaudeMessage({
+      const events = await adaptRecordedClaudeMessage(adapter, {
         type: 'assistant',
         message: {
           content: [],
@@ -196,20 +196,20 @@ describe('assistant message', () => {
         parent_tool_use_id: 'task-001', // sidechain
         session_id: 'sess-1',
         isReplay: false,
-      }));
+      });
 
       const usageEvent = events.find(e => e.type === 'usage_update');
       expect(usageEvent).toBeUndefined();
     });
 
     it('should handle SDK errors via callback', async () => {
-      const events = await adapter.adapt(recordedClaudeMessage({
+      const events = await adaptRecordedClaudeMessage(adapter, {
         type: 'assistant',
         error: 'rate_limit',
         message: { content: [], usage: {} },
         parent_tool_use_id: null,
         session_id: 'sess-1',
-      }));
+      });
 
       expect(events).toHaveLength(1);
       expect(events[0]).toMatchObject({
@@ -224,7 +224,7 @@ describe('assistant message', () => {
 describe('flushPending', () => {
     it('should flush pending text', async () => {
       // Set pending text via assistant message
-      await adapter.adapt(recordedClaudeMessage({
+      await adaptRecordedClaudeMessage(adapter, {
         type: 'assistant',
         message: {
           content: [{ type: 'text', text: 'unflushed text' }],
@@ -233,7 +233,7 @@ describe('flushPending', () => {
         parent_tool_use_id: null,
         session_id: 'sess-1',
         isReplay: false,
-      }));
+      });
 
       const flushed = adapter.flushPending();
       expect(flushed).toMatchObject({
@@ -259,10 +259,10 @@ describe('unknown message types', () => {
       }));
       adapter.startTurn();
 
-      const events = await adapter.adapt(recordedClaudeMessage({
+      const events = await adaptRecordedClaudeMessage(adapter, {
         type: 'unknown_type',
         session_id: 'sess-1',
-      }));
+      });
 
       expect(events).toHaveLength(0);
       expect(debugMessages.some(m => m.includes('Unhandled SDK message type'))).toBe(true);

@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { afterEach, describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { getSessionFilePath } from "@craft-agent/shared/sessions/storage";
@@ -52,7 +53,7 @@ describe('durable restart recovery', () => {
     expect(managed.messageQueue).toEqual([])
     expect(managed.messages.some(message => message.content === 'This continuation must not survive Stop.')).toBe(false)
     const duringStopRows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     expect(duringStopRows.some(row => row.content === 'This continuation must not survive Stop.')).toBe(false)
 
     releaseStopFlush.resolve()
@@ -101,7 +102,7 @@ describe('durable restart recovery', () => {
     expect(managed.messageQueue).toEqual([])
     expect(managed.messages.some(message => message.content === 'This stale pre-Stop continuation must not be appended.')).toBe(false)
     const rows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     expect(rows.some(row => row.content === 'This stale pre-Stop continuation must not be appended.')).toBe(false)
   })
 
@@ -144,7 +145,7 @@ describe('durable restart recovery', () => {
     expect(managed.messageQueue).toEqual([])
     expect(managed.messages.some(message => message.content === content)).toBe(false)
     const rows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     expect(rows.some(row => row.content === content)).toBe(false)
   })
 
@@ -197,7 +198,7 @@ describe('durable restart recovery', () => {
     expect(managed.messageQueue.some(item => item.options?.internalOrigin?.deliveryId === deliveryId)).toBe(false)
     expect(managed.messages.some(message => message.agentDelivery?.id === deliveryId)).toBe(false)
     const rows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     expect(rows.some(row => row.agentDelivery?.id === deliveryId)).toBe(false)
 
     let resumed = 0

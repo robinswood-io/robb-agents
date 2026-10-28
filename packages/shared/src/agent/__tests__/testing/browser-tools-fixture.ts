@@ -65,7 +65,7 @@ export function createMockFns(): BrowserPaneFns {
     scroll: async (_dir: 'up' | 'down' | 'left' | 'right', _amount?: number) => {},
     goBack: async () => {},
     goForward: async () => {},
-    evaluate: async (expr: string) => eval(expr),
+    evaluate: async (expr: string): Promise<unknown> => eval(expr),
     focusWindow: async (instanceId?: string) => ({ instanceId: instanceId ?? 'browser-1', title: 'Example Domain', url: 'https://example.com' }),
     releaseControl: async (_instanceId?: string) => ({ action: 'released' as const, resolvedInstanceId: 'browser-1', affectedIds: ['browser-1'] }),
     closeWindow: async (_instanceId?: string) => ({ action: 'closed' as const, resolvedInstanceId: 'browser-1', affectedIds: ['browser-1'] }),

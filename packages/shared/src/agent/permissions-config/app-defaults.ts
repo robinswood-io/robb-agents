@@ -11,7 +11,7 @@
  * Rules are additive - custom configs extend the defaults (more permissive).
  */
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from "fs";
-import { homedir } from "os";
+import { resolveConfigDir } from "../../config/paths.ts";
 import { join } from "path";
 import { debug } from "../../utils/debug.ts";
 import { safeJsonParse } from "../../utils/files.ts";
@@ -116,7 +116,7 @@ const REVOKED_BUNDLED_BLOCKED_COMMAND_HINT_KEYS = new Set([
  * Reads env var dynamically so tests can override via CRAFT_CONFIG_DIR.
  */
 export function getAppPermissionsDir(): string {
-  const configDir = process.env.CRAFT_CONFIG_DIR || join(homedir(), '.craft-agent');
+  const configDir = resolveConfigDir();
   return join(configDir, 'permissions');
 }
 

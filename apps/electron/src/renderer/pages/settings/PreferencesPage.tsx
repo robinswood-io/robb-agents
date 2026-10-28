@@ -1,3 +1,4 @@
+import { emptyFormState, parsePreferences, type PreferencesFormState } from './preferences-form-data';
 /**
  * PreferencesPage
  *
@@ -8,7 +9,7 @@
  * - Auto-saves on change with debouncing
  */
 
-import * as React from 'react'
+
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
@@ -30,54 +31,22 @@ export const meta: DetailsPageMeta = {
   slug: 'preferences',
 }
 
-interface PreferencesFormState {
-  name: string
-  timezone: string
-  city: string
-  country: string
-  notes: string
-}
-
-const emptyFormState: PreferencesFormState = {
-  name: '',
-  timezone: '',
-  city: '',
-  country: '',
-  notes: '',
-}
-
-// Parse JSON to form state
-function parsePreferences(json: string): PreferencesFormState {
-  try {
-    const prefs = JSON.parse(json)
-    return {
-      name: prefs.name || '',
-      timezone: prefs.timezone || '',
-      city: prefs.location?.city || '',
-      country: prefs.location?.country || '',
-      notes: prefs.notes || '',
-    }
-  } catch {
-    return emptyFormState
-  }
-}
-
 // Serialize form state to JSON
 function serializePreferences(state: PreferencesFormState): string {
   const prefs: Record<string, unknown> = {}
 
-  if (state.name) prefs.name = state.name
-  if (state.timezone) prefs.timezone = state.timezone
+  if (state.name) prefs["name"] = state.name
+  if (state.timezone) prefs["timezone"] = state.timezone
 
   if (state.city || state.country) {
     const location: Record<string, string> = {}
-    if (state.city) location.city = state.city
-    if (state.country) location.country = state.country
-    prefs.location = location
+    if (state.city) location["city"] = state.city
+    if (state.country) location["country"] = state.country
+    prefs["location"] = location
   }
 
-  if (state.notes) prefs.notes = state.notes
-  prefs.updatedAt = Date.now()
+  if (state.notes) prefs["notes"] = state.notes
+  prefs["updatedAt"] = Date.now()
 
   return JSON.stringify(prefs, null, 2)
 }
@@ -164,7 +133,7 @@ export default function PreferencesPage() {
       const currentJson = serializePreferences(formStateRef.current)
       if (lastSavedRef.current !== currentJson && !isInitialLoadRef.current) {
         // Fire and forget - we can't await in cleanup
-        window.electronAPI.writePreferences(currentJson).catch((err) => {
+        window.electronAPI.writePreferences(currentJson).catch((err: unknown) => {
           console.error('Failed to save preferences on unmount:', err)
         })
       }

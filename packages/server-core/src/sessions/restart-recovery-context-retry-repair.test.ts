@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
 import { createPendingTurnRecovery, buildCleanRecoveryContinuationPrompt } from "./turn-recovery";
@@ -81,9 +82,9 @@ describe('durable restart recovery', () => {
       expect(restored.messages.find((message: Managed['messages'][number]) => (
         message.id === dispatchId
       ))?.content).toContain(repaired.cleanContinuationId)
-      expect(restored.userInputRequests).toEqual([expect.objectContaining({
+      expect<unknown>(restored.userInputRequests).toEqual([(expect.objectContaining({
         id: request.requestId, status: 'cancelled',
-      })])
+      }) as unknown)])
     } finally {
       release.resolve()
     }
@@ -156,7 +157,7 @@ describe('durable restart recovery', () => {
     const send = cold.manager.sendMessage.bind(cold.manager)
     cold.manager.sendMessage = (...args) => {
       const allowanceToken = args[12]
-      admission = {
+      admission = omitUndefined({
         existingMessageId: args[5],
         automaticRecovery: args[4]?.automaticRecovery as Record<string, unknown> | undefined,
         retryInFlight: sessionRuntimeStateForTest(cold.runtime).retryTurnsInFlight.has(restored.id),
@@ -164,7 +165,7 @@ describe('durable restart recovery', () => {
         allowanceIntent: allowanceToken
           ? sessionRuntimeStateForTest(cold.runtime).explicitRetryAllowanceTokens.get(allowanceToken)
           : undefined,
-      }
+      })
       dispatch = send(...args)
       sendInvoked.resolve()
       return dispatch
@@ -173,8 +174,7 @@ describe('durable restart recovery', () => {
     try {
       await cold.runtime.resumePendingTurnAfterRestart(restored.id)
       await sendInvoked.promise
-      expect(admission).toMatchObject({
-        existingMessageId: undefined,
+      expect<unknown>(admission).toMatchObject({
         automaticRecovery: {
           originalUserMessageId: rootId,
           cause: 'user_retry',
@@ -182,35 +182,36 @@ describe('durable restart recovery', () => {
           dispatchAttempt: 3,
           dispatchOrigin: 'retry',
           dispatchAllocatedAt: allocatedAt,
-          cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-/),
+          cleanContinuationId: (expect.stringMatching(/^clean-continuation-v1-/) as unknown),
         },
         retryInFlight: true,
-        allowanceToken: expect.any(Symbol),
+        allowanceToken: (expect.any(Symbol) as unknown),
         allowanceIntent: {
           sessionId: restored.id,
           userMessageId: rootId,
           objectiveId: rootId,
           cleanBoundaryMessageId: dispatchId,
-          cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-/),
+          cleanContinuationId: (expect.stringMatching(/^clean-continuation-v1-/) as unknown),
         },
       })
+      expect(Object.hasOwn(requiredTestValue(admission), 'existingMessageId')).toBe(false)
       await Promise.race([
         providerEntered.promise,
         dispatch!.then(
           () => { throw new Error('The recovered clean Retry ended before provider admission') },
-          error => { throw error },
+          (error: unknown) => { throw error },
         ),
       ])
 
-      expect(restored.userInputRequests).toEqual([expect.objectContaining({
+      expect<unknown>(restored.userInputRequests).toEqual([(expect.objectContaining({
         id: request.requestId, status: 'cancelled',
-      })])
+      }) as unknown)])
       expect(restored.pendingTurnRecovery).toMatchObject({
         attempts: 2, lastCause: 'user_retry',
         recoveryDispatch: {
           id: dispatchId, attempt: 3, phase: 'started',
           cause: 'user_retry', origin: 'retry', allocatedAt,
-          cleanContinuationId: admission!.automaticRecovery!.cleanContinuationId,
+          cleanContinuationId: admission!.automaticRecovery!["cleanContinuationId"],
         },
       })
       expect(restored.messageQueue).toEqual([])
@@ -294,9 +295,9 @@ describe('durable restart recovery', () => {
       await entered.promise
       expect(managed.userInputRequests?.find(candidate => candidate.id === request.requestId)?.status)
         .toBe('cancelled')
-      expect(managed.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
+      expect<unknown>(managed.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
         id: dispatchId, cause: 'user_retry', origin: 'retry', phase: 'started',
-        cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-/),
+        cleanContinuationId: (expect.stringMatching(/^clean-continuation-v1-/) as unknown),
       })
       expect(managed.messages.filter(message => message.id === dispatchId)).toHaveLength(1)
       expect(managed.messages[0]!.content).toBe('Resume the original mission and verify the final target.')

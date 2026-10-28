@@ -29,31 +29,31 @@ export async function update(transportOwner: SpecializedProfileRegistryStore, ex
 }
 
 export async function writeDocument(transportOwner: SpecializedProfileRegistryStore, document: SpecializedProfileRegistryDocument, previous: SpecializedProfileRegistryDocument | null): Promise<void> {
-    const parsed = transportOwner["parseAndVerifyDocument"](document);
-    transportOwner["requireDurableAuthority"]();
+    const parsed = transportOwner.parseAndVerifyDocument(document);
+    transportOwner.requireDurableAuthority();
     const committed = previous ? registryAnchorRef(previous) : null;
     const pending = registryAnchorRef(parsed);
-    const pendingAnchor = transportOwner["sealAnchor"]({
+    const pendingAnchor = transportOwner.sealAnchor({
         schemaVersion: 1,
         workspaceId: parsed.workspaceId,
         committed,
         pending,
         updatedAt: transportOwner["now"]().toISOString(),
     });
-    transportOwner["writeDocumentFile"](parsed, transportOwner["pendingDocumentPath"]);
-    await transportOwner["anchorStore"]!.save(parsed.workspaceId, pendingAnchor);
-    transportOwner["promotePendingDocument"]();
-    const committedAnchor = transportOwner["sealAnchor"]({
+    transportOwner.writeDocumentFile(parsed, transportOwner["pendingDocumentPath"]);
+    await transportOwner.anchorStore!.save(parsed.workspaceId, pendingAnchor);
+    transportOwner.promotePendingDocument();
+    const committedAnchor = transportOwner.sealAnchor({
         schemaVersion: 1,
         workspaceId: parsed.workspaceId,
         committed: pending,
         updatedAt: transportOwner["now"]().toISOString(),
     });
-    await transportOwner["anchorStore"]!.save(parsed.workspaceId, committedAnchor);
+    await transportOwner.anchorStore!.save(parsed.workspaceId, committedAnchor);
 }
 
 export function writeDocumentFile(transportOwner: SpecializedProfileRegistryStore, document: SpecializedProfileRegistryDocument, destinationPath: string): void {
-    const directory = transportOwner["ensureStoreDirectory"]();
+    const directory = transportOwner.ensureStoreDirectory();
     const temporaryPath = `${destinationPath}.${process.pid}.${randomUUID()}.tmp`;
     const directoryDescriptor = process.platform === 'win32'
         ? undefined
@@ -109,7 +109,7 @@ export function writeDocumentFile(transportOwner: SpecializedProfileRegistryStor
 }
 
 export function promotePendingDocument(transportOwner: SpecializedProfileRegistryStore): void {
-    const directory = transportOwner["ensureStoreDirectory"]();
+    const directory = transportOwner.ensureStoreDirectory();
     const directoryDescriptor = process.platform === 'win32'
         ? undefined
         : openSync(directory, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
@@ -137,7 +137,7 @@ export function promotePendingDocument(transportOwner: SpecializedProfileRegistr
 }
 
 export function sealDocument(transportOwner: SpecializedProfileRegistryStore, value: Omit<SpecializedProfileRegistryDocument, 'head'> | SpecializedProfileRegistryDocument, previousDocumentSha256: string | null): SpecializedProfileRegistryDocument {
-    transportOwner["requireDurableAuthority"]();
+    transportOwner.requireDurableAuthority();
     const payload = Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'head')) as Omit<SpecializedProfileRegistryDocument, 'head'>;
     const documentSha256 = canonicalSpecializedProfileRegistryPayloadHash(payload);
     return SpecializedProfileRegistryDocumentSchema.parse({
@@ -158,7 +158,7 @@ export function sealDocument(transportOwner: SpecializedProfileRegistryStore, va
 }
 
 export function sealAnchor(transportOwner: SpecializedProfileRegistryStore, value: Omit<SpecializedProfileRegistryAnchor, 'authority'>): SpecializedProfileRegistryAnchor {
-    transportOwner["requireDurableAuthority"]();
+    transportOwner.requireDurableAuthority();
     return SpecializedProfileRegistryAnchorSchema.parse({
         ...value,
         authority: transportOwner["authority"]!.attestRegistryAnchor(value),
@@ -166,7 +166,7 @@ export function sealAnchor(transportOwner: SpecializedProfileRegistryStore, valu
 }
 
 export function requireDurableAuthority(transportOwner: SpecializedProfileRegistryStore): void {
-    if (!transportOwner["authority"] || !transportOwner["anchorStore"]) {
+    if (!transportOwner["authority"] || !transportOwner.anchorStore) {
         throw new SpecializedProfileTransitionGateError('Specialized profile registry requires host authority and an external monotone anchor');
     }
 }

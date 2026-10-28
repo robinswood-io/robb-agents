@@ -18,7 +18,7 @@ function BannerDemo({
   onClickEnable,
 }: {
   modelName: string
-  onClickEnable?: () => void
+  onClickEnable?: (() => void) | undefined
 }) {
   const [enabled, setEnabled] = React.useState(false)
   return (

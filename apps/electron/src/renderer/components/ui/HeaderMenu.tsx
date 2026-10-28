@@ -25,9 +25,9 @@ interface HeaderMenuProps {
   /** Route string for Open in New Window action */
   route: string
   /** Page-specific menu items (rendered before Open in New Window) */
-  children?: React.ReactNode
+  children?: React.ReactNode | undefined
   /** Documentation feature - when provided, adds a "Learn More" link to docs */
-  helpFeature?: DocFeature
+  helpFeature?: DocFeature | undefined
 }
 
 export function HeaderMenu({ route, children, helpFeature }: HeaderMenuProps) {

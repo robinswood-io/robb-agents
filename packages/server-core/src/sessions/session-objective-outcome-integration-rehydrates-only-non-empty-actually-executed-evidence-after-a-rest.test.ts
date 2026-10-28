@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { rehydrateObjectiveEvidence as policyRehydrateObjectiveEvidence } from "./SessionManager/policy.ts";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { rmSync } from "node:fs";
@@ -5,15 +6,15 @@ import { type Message } from "@craft-agent/core/types";
 import { checkObjectiveEvidenceBeforeMutation, clearObjectiveEvidenceGate, getObjectiveEvidenceCompletionGap } from "@craft-agent/shared/agent";
 import { createPendingTurnRecovery } from "./turn-recovery.ts";
 import { transitionObjectiveContract } from "./objective-contract.ts";
-import { type Harness, type Managed, activeObjective, installAgent, makeHarness, roots, sessionIds } from "./testing/session-objective-outcome-integration-fixture.ts";
+import { type Harness, activeObjective, installAgent, makeHarness, roots, sessionIds } from "./testing/session-objective-outcome-integration-fixture.ts";
 
 beforeEach(() => {
   roots.length = 0
   sessionIds.length = 0
-  process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+  process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
 })
 afterEach(() => {
-  delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+  delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]
   for (const sessionId of sessionIds) clearObjectiveEvidenceGate(sessionId)
   for (const root of roots) rmSync(root, { recursive: true, force: true })
 })
@@ -130,8 +131,8 @@ describe('SessionManager objective outcome integration', () => {
     })
     expect(promoted.managed.activeObjective.risk).toBe('high-stakes')
     rehydrate(promoted)
-    expect(checkObjectiveEvidenceBeforeMutation(promoted.managed.id, 'Write', 'local-write'))
-      .toMatchObject({ allowed: false, reason: expect.stringContaining('security source') })
+    expect<unknown>(checkObjectiveEvidenceBeforeMutation(promoted.managed.id, 'Write', 'local-write'))
+      .toMatchObject({ allowed: false, reason: (expect.stringContaining('security source') as unknown) })
 
     const changed = makeHarness('legal-to-security-amendment')
     const legalRoot: Message = {
@@ -162,8 +163,8 @@ describe('SessionManager objective outcome integration', () => {
     })
     rehydrate(changed)
     expect(getObjectiveEvidenceCompletionGap(changed.managed.id)).toBe('authoritative evidence has not been inspected')
-    expect(checkObjectiveEvidenceBeforeMutation(changed.managed.id, 'Write', 'local-write'))
-      .toMatchObject({ allowed: false, reason: expect.stringContaining('security source') })
+    expect<unknown>(checkObjectiveEvidenceBeforeMutation(changed.managed.id, 'Write', 'local-write'))
+      .toMatchObject({ allowed: false, reason: (expect.stringContaining('security source') as unknown) })
   })
 
   it.each([
@@ -183,8 +184,8 @@ describe('SessionManager objective outcome integration', () => {
     })
 
     ;policyRehydrateObjectiveEvidence(harness.managed)
-    expect(checkObjectiveEvidenceBeforeMutation(harness.managed.id, 'Write', 'local-write'))
-      .toMatchObject({ allowed: false, reason: expect.stringContaining('security source') })
+    expect<unknown>(checkObjectiveEvidenceBeforeMutation(harness.managed.id, 'Write', 'local-write'))
+      .toMatchObject({ allowed: false, reason: (expect.stringContaining('security source') as unknown) })
   })
 
   it('uses a read-only audit subject only after a later deictic correction authorizes it', () => {
@@ -214,8 +215,8 @@ describe('SessionManager objective outcome integration', () => {
     })
 
     ;policyRehydrateObjectiveEvidence(harness.managed)
-    expect(checkObjectiveEvidenceBeforeMutation(harness.managed.id, 'Write', 'local-write'))
-      .toMatchObject({ allowed: false, reason: expect.stringContaining('security source') })
+    expect<unknown>(checkObjectiveEvidenceBeforeMutation(harness.managed.id, 'Write', 'local-write'))
+      .toMatchObject({ allowed: false, reason: (expect.stringContaining('security source') as unknown) })
   })
 
   it('retains an older security gate anchor beyond the bounded amendment window', () => {
@@ -261,8 +262,8 @@ describe('SessionManager objective outcome integration', () => {
     })
 
     ;policyRehydrateObjectiveEvidence(harness.managed)
-    expect(checkObjectiveEvidenceBeforeMutation(harness.managed.id, 'Write', 'local-write'))
-      .toMatchObject({ allowed: false, reason: expect.stringContaining('security source') })
+    expect<unknown>(checkObjectiveEvidenceBeforeMutation(harness.managed.id, 'Write', 'local-write'))
+      .toMatchObject({ allowed: false, reason: (expect.stringContaining('security source') as unknown) })
   })
 
   it('atomically replaces the objective and recovery anchor when a distinct user steer is accepted', async () => {
@@ -294,10 +295,10 @@ describe('SessionManager objective outcome integration', () => {
     expect(redirected[0]).toContain('Nouvel objectif : crée et vérifie le rapport B.')
     expect(redirected[0]).toContain(`objective_user_message_id="${steeredUser.id}"`)
     expect(harness.managed.messageQueue).toEqual([])
-    expect(harness.sentEvents).toContainEqual(expect.objectContaining({
+    expect<unknown>(harness.sentEvents).toContainEqual((expect.objectContaining({
       type: 'user_message',
       status: 'accepted',
-    }))
+    }) as unknown))
   })
 
   it('keeps the objective and recovery budgets when an accepted user steer clarifies the task', async () => {
@@ -370,10 +371,10 @@ describe('SessionManager objective outcome integration', () => {
       message: 'Le spécialiste a terminé le rapport B.',
       options: { internalOrigin: { kind: 'agent-message', senderSessionId: 'specialist-b' } },
     })
-    expect(harness.sentEvents).toContainEqual(expect.objectContaining({
+    expect<unknown>(harness.sentEvents).toContainEqual((expect.objectContaining({
       type: 'user_message',
       status: 'queued',
-    }))
+    }) as unknown))
   })
 
   it('does not reset the parent objective or retry budget when a queued agent report is consumed', async () => {
@@ -400,9 +401,7 @@ describe('SessionManager objective outcome integration', () => {
     harness.managed.messages.push({ id: 'root', role: 'user', content: rootText, timestamp: 1 })
     harness.managed.activeObjective = { ...activeObjective('root'), originalText: rootText }
     harness.managed.pendingTurnRecovery = createPendingTurnRecovery('root')
-    const enqueue = (harness.manager as unknown as {
-      enqueueAutomaticTurnRecovery: (managed: Managed, cause: 'objective_incomplete' | 'app_restart', gaps?: string[]) => Promise<boolean>
-    }).enqueueAutomaticTurnRecovery.bind(harness.manager)
+    const enqueue = (sessionManagerForTest(harness.manager)).enqueueAutomaticTurnRecovery.bind(harness.manager)
     const gaps = ['Business criterion lacks matching post-action evidence: delivered']
     expect(await enqueue(harness.managed, 'objective_incomplete', gaps)).toBe(true)
     harness.managed.messageQueue.length = 0
@@ -413,7 +412,7 @@ describe('SessionManager objective outcome integration', () => {
     expect(await enqueue(harness.managed, 'objective_incomplete', gaps)).toBe(false)
     expect(harness.managed.pendingTurnRecovery?.exhaustedAt).toBeNumber()
     expect(harness.managed.messageQueue).toEqual([])
-    harness.managed.pendingTurnRecovery = JSON.parse(JSON.stringify(harness.managed.pendingTurnRecovery))
+    harness.managed.pendingTurnRecovery = JSON.parse(JSON.stringify(harness.managed.pendingTurnRecovery)) as typeof harness.managed.pendingTurnRecovery
     harness.managed.messages.push({ id: 'date3', role: 'tool', content: '', timestamp: 4, toolName: 'Bash', toolInput: { command: 'date' }, toolResult: '12:00:03', toolStatus: 'completed', toolExecuted: true })
     expect(await enqueue(harness.managed, 'app_restart')).toBe(false)
     expect(harness.managed.pendingTurnRecovery?.exhaustedAt).toBeNumber()

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { Message } from "@craft-agent/core/types";
 import type { ActiveSessionObjective } from "@craft-agent/shared/sessions";
 
@@ -55,7 +56,7 @@ export const terminalReconciliationObjective: ActiveSessionObjective = {
 };
 
 
-export const activeSafeContinuationObjective = (): ActiveSessionObjective => ({
+export const activeSafeContinuationObjective = (): ActiveSessionObjective => (omitUndefined<ActiveSessionObjective>({
   ...terminalReconciliationObjective,
   objectiveId: 'objective-continue',
   userMessageId: 'user-continue',
@@ -67,4 +68,4 @@ export const activeSafeContinuationObjective = (): ActiveSessionObjective => ({
     remainingWork: ['Apply the remaining safe correction', 'Run final verification'],
     blocker: null,
   },
-});
+}));

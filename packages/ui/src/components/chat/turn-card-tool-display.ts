@@ -59,8 +59,8 @@ export function formatToolInput(
 
   // Handle Codex format: { changes: Array<{ path, kind, diff }> }
   // Extract path from first change if present
-  if (isEditOrWrite && input.changes && Array.isArray(input.changes)) {
-    const firstChange = input.changes[0] as { path?: string } | undefined
+  if (isEditOrWrite && input["changes"] && Array.isArray(input["changes"])) {
+    const firstChange = input["changes"][0] as { path?: string } | undefined
     if (firstChange?.path) {
       const pathStr = stripSessionFolderPath(firstChange.path, sessionFolderPath)
       parts.push(pathStr)
@@ -115,8 +115,8 @@ export function formatToolDisplay(
         const toolSlug = parts[2]
         return {
           name: `${toolDisplayMeta.displayName}: ${toolSlug}`,
-          icon: toolDisplayMeta.iconDataUrl,
-          description: toolDisplayMeta.description,
+          ...(toolDisplayMeta.iconDataUrl !== undefined ? { icon: toolDisplayMeta.iconDataUrl } : {}),
+          ...(toolDisplayMeta.description !== undefined ? { description: toolDisplayMeta.description } : {}),
         }
       }
     }
@@ -131,8 +131,8 @@ export function formatToolDisplay(
       const action = extractActionFromDisplayName(iconName, displayName)
       return {
         name: iconName.toLowerCase() === 'terminal' ? action : `${iconName}: ${action}`,
-        icon: toolDisplayMeta.iconDataUrl,
-        description: toolDisplayMeta.description,
+        ...(toolDisplayMeta.iconDataUrl !== undefined ? { icon: toolDisplayMeta.iconDataUrl } : {}),
+        ...(toolDisplayMeta.description !== undefined ? { description: toolDisplayMeta.description } : {}),
       }
     }
 
@@ -141,21 +141,21 @@ export function formatToolDisplay(
     if (displayName && toolDisplayMeta.category === 'native') {
       return {
         name: displayName,
-        icon: toolDisplayMeta.iconDataUrl,
-        description: toolDisplayMeta.description,
+        ...(toolDisplayMeta.iconDataUrl !== undefined ? { icon: toolDisplayMeta.iconDataUrl } : {}),
+        ...(toolDisplayMeta.description !== undefined ? { description: toolDisplayMeta.description } : {}),
       }
     }
 
     return {
       name: toolDisplayMeta.displayName,
-      icon: toolDisplayMeta.iconDataUrl,
-      description: toolDisplayMeta.description,
+      ...(toolDisplayMeta.iconDataUrl !== undefined ? { icon: toolDisplayMeta.iconDataUrl } : {}),
+      ...(toolDisplayMeta.description !== undefined ? { description: toolDisplayMeta.description } : {}),
     }
   }
 
   // Fallback for Skill tool without toolDisplayMeta (legacy sessions)
-  if (toolName === 'Skill' && toolInput?.skill) {
-    const skillId = String(toolInput.skill)
+  if (toolName === 'Skill' && toolInput?.["skill"]) {
+    const skillId = String(toolInput["skill"])
     // Extract slug from qualified name (workspaceId:slug) for display
     const colonIdx = skillId.indexOf(':')
     const slug = colonIdx > 0 ? skillId.slice(colonIdx + 1) : skillId
@@ -192,8 +192,8 @@ export function getPreviewText(
 
   // Find running Task tools and show their description
   const runningTask = activities.find(a => isParentTaskTool(a.toolName ?? '') && a.status === 'running')
-  if (runningTask?.toolInput?.description) {
-    return runningTask.toolInput.description as string
+  if (runningTask?.toolInput?.["description"]) {
+    return runningTask.toolInput["description"] as string
   }
 
   // While still streaming, show the latest intermediate message content
@@ -221,11 +221,11 @@ export function getPreviewText(
 
   // When complete, show first Task's description if available
   const firstTask = activities.find(a => isParentTaskTool(a.toolName ?? ''))
-  if (firstTask?.toolInput?.description) {
+  if (firstTask?.toolInput?.["description"]) {
     const errorSuffix = errorCount > 0
       ? i18n.t('turnCard.errorCount', { count: errorCount })
       : ''
-    return `${firstTask.toolInput.description as string}${errorSuffix}`
+    return `${firstTask.toolInput["description"] as string}${errorSuffix}`
   }
 
   // When complete, show summary (badge already shows count)

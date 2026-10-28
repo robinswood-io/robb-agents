@@ -10,7 +10,7 @@ import { isCurrentDelegatedDescendant as sessionOpIsCurrentDelegatedDescendant }
 import { hasTerminalObjectiveState as sessionOpHasTerminalObjectiveState } from './repair-legacy-synthetic-objective-authority.ts';
 import { isManagedSessionYolo as sessionOpIsManagedSessionYolo, stopYoloHumanHandoff as sessionOpStopYoloHumanHandoff } from './is-managed-session-yolo.ts';
 
-function sessionOpDelegatedTerminalResultReceipt(sessionOperationContext: SessionOperationContext, parent: ManagedSession, child: ManagedSession): Message | undefined {
+function sessionOpDelegatedTerminalResultReceipt(_sessionOperationContext: SessionOperationContext, parent: ManagedSession, child: ManagedSession): Message | undefined {
     const deliveryId = delegatedTerminalResultDeliveryId(parent, child);
     if (!deliveryId)
         return undefined;
@@ -91,7 +91,7 @@ async function sessionOpEnsureDelegatedTerminalResultDelivery(sessionOperationCo
             enqueueRecoveredMessageInTranscriptOrder(parent, {
                 message: existing.content,
                 messageId: existing.id,
-                storedAttachments: existing.attachments,
+                ...(existing.attachments !== undefined ? { storedAttachments: existing.attachments } : {}),
                 options: recoveredInternalMessageOptions(existing),
             });
         }
@@ -155,7 +155,7 @@ function sessionOpScheduleDelegatedTerminalResultRetry(sessionOperationContext: 
         void sessionOpEnsureDelegatedTerminalResultDelivery(sessionOperationContext, current).then(delivered => {
             if (!delivered)
                 sessionOpScheduleDelegatedTerminalResultRetry(sessionOperationContext, childSessionId);
-        }, error => {
+        }, (error: unknown) => {
             sessionLog.warn('Delegated terminal result retry failed', {
                 childSessionId,
                 error: error instanceof Error ? error.message : String(error),

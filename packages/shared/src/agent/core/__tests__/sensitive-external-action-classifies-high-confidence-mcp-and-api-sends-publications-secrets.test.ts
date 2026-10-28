@@ -29,11 +29,11 @@ function checkBash(
     activeSourceSlugs: [],
     allSourceSlugs: [],
     hasSourceActivation: false,
-    externalActionPolicy,
-    objectiveMutationAuthorized,
-    objectiveAuthorizationSegments,
+    ...(externalActionPolicy !== undefined ? { externalActionPolicy } : {}),
+    ...(objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized } : {}),
+    ...(objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 function checkMcp(
@@ -79,15 +79,15 @@ function checkMcp(
     activeSourceSlugs: [sourceSlug],
     allSourceSlugs: [sourceSlug],
     hasSourceActivation: false,
-    externalActionPolicy: options?.externalActionPolicy,
-    objectiveMutationAuthorized: options?.objectiveMutationAuthorized,
-    objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized,
-    objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments,
-    authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments,
-    dataFolderPath: options?.dataFolderPath,
-    declaredToolCapabilities: options?.declaredToolCapabilities,
+    ...(options?.externalActionPolicy !== undefined ? { externalActionPolicy: options?.externalActionPolicy } : {}),
+    ...(options?.objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized: options?.objectiveMutationAuthorized } : {}),
+    ...(options?.objectiveSensitiveActionAuthorized !== undefined ? { objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized } : {}),
+    ...(options?.objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments } : {}),
+    ...(options?.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments } : {}),
+    ...(options?.dataFolderPath !== undefined ? { dataFolderPath: options?.dataFolderPath } : {}),
+    ...(options?.declaredToolCapabilities !== undefined ? { declaredToolCapabilities: options?.declaredToolCapabilities } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 
@@ -261,7 +261,7 @@ describe('sensitive external action classifier', () => {
           'Pas à bob@example.com.',
         ],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
     for (const amendment of [
       'bob@example.com n’est pas autorisé.',
       'bob@example.com is not allowed.',
@@ -345,7 +345,7 @@ describe('sensitive external action classifier', () => {
     expect(checkBash(
       'allow-all', command, 'Envoie à alice@example.com via api.example.com.',
       'allow-in-execute', true,
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
   });
 
   it('rejects negations, questions, and analysis requests in English and French', () => {

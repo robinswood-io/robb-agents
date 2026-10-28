@@ -30,31 +30,31 @@ import * as browserPaneManagerObservations from './browser-pane-manager/observat
 import * as browserPaneManagerPermissions from './browser-pane-manager/permissions.ts';
 import * as browserPaneManagerStateEvents from './browser-pane-manager/state-events.ts';
 import * as browserPaneManagerWindowEvents from './browser-pane-manager/window-events.ts';
-import * as browserPaneManagerWindowState from './browser-pane-manager/window-state.ts';
-import * as browserPaneManagerNavigationRules from './browser-pane-manager/navigation-rules.ts';
-import * as browserPaneManagerCapturePage from './browser-pane-manager/capture-page.ts';
-import * as browserPaneManagerToolbarState from './browser-pane-manager/toolbar-state.ts';
-import * as browserPaneManagerCapabilityValues from './browser-pane-manager/capability-values.ts';
-import * as browserPaneManagerSessionRecords from './browser-pane-manager/session-records.ts';
+
+
+
+
+
+
 export type { BrowserScreenshotOptions, BrowserConsoleEntry, BrowserConsoleOptions, BrowserScreenshotRegionTarget, BrowserNetworkEntry, BrowserNetworkOptions, BrowserWaitArgs, BrowserWaitResult, BrowserKeyArgs, BrowserDownloadEntry, BrowserDownloadOptions, BrowserScreenshotResult } from './browser-pane-manager/shared.ts';
 export { BROWSER_PANE_SESSION_PARTITION } from './browser-pane-manager/shared.ts';
 
 export class BrowserPaneManager implements IBrowserPaneManager {
     private instances: Map<string, BrowserInstance> = new Map();
     private destroyingIds: Set<string> = new Set();
-    private stateChangeCallback: ((info: BrowserInstanceInfo) => void) | null = null;
+    /** @internal */ public stateChangeCallback: ((info: BrowserInstanceInfo) => void) | null = null;
     private removedCallback: ((id: string) => void) | null = null;
-    private interactedCallback: ((id: string) => void) | null = null;
-    private partitionPermissionsInitialized = false;
+    /** @internal */ public interactedCallback: ((id: string) => void) | null = null;
+    /** @internal */ public partitionPermissionsInitialized = false;
     private partitionObserversInitialized = false;
     private inFlightRequestsByWebContentsId = new Map<number, number>();
     private lastNetworkActivityByWebContentsId = new Map<number, number>();
-    private popupWindowsByParentInstanceId = new Map<string, Set<BrowserWindow>>();
-    private popupParentByWebContentsId = new Map<number, string>();
-    private popupWebContentsIdByWindow = new WeakMap<BrowserWindow, number>();
-    private windowManager: WindowManager | null = null;
-    private sessionPathResolver: ((sessionId: string) => string | null) | null = null;
-    private permissionAutonomyResolver: BrowserPanePermissionAutonomyResolver | null = null;
+    /** @internal */ public popupWindowsByParentInstanceId = new Map<string, Set<BrowserWindow>>();
+    /** @internal */ public popupParentByWebContentsId = new Map<number, string>();
+    /** @internal */ public popupWebContentsIdByWindow = new WeakMap<BrowserWindow, number>();
+    /** @internal */ public windowManager: WindowManager | null = null;
+    /** @internal */ public sessionPathResolver: ((sessionId: string) => string | null) | null = null;
+    /** @internal */ public permissionAutonomyResolver: BrowserPanePermissionAutonomyResolver | null = null;
     /** Serialize URL-changing operations and page mutations per instance. This
      * keeps the URL fence and the following effect in one ordered host section. */
     private serializedOperationTails = new Map<string, Promise<void>>();
@@ -98,16 +98,16 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     private async runSerializedBrowserOperation<T>(id: string, operation: () => Promise<T> | T): Promise<T> {
         return browserPaneManagerOperationGuard.runSerializedBrowserOperation<T>(this, id, operation);
     }
-    private assertMutationUrlAllowed(instance: BrowserInstance, policy?: BrowserMutationUrlPolicy): void {
+    /** @internal */ public assertMutationUrlAllowed(instance: BrowserInstance, policy?: BrowserMutationUrlPolicy): void {
         return browserPaneManagerOperationGuard.assertMutationUrlAllowed(this, instance, policy);
     }
     async handleEmptyStateLaunchFromRenderer(senderWebContentsId: number, payload: BrowserEmptyStateLaunchPayload): Promise<BrowserEmptyStateLaunchResult> {
         return browserPaneManagerLaunch.handleEmptyStateLaunchFromRenderer(this, senderWebContentsId, payload);
     }
-    private buildDeepLinkFromRoute(route: string): string {
+    /** @internal */ public buildDeepLinkFromRoute(route: string): string {
         return browserPaneManagerLaunch.buildDeepLinkFromRoute(this, route);
     }
-    private async triggerEmptyStateRouteLaunch(instance: BrowserInstance, route: string, token: string | null, source: 'hash' | 'ipc'): Promise<boolean> {
+    /** @internal */ public async triggerEmptyStateRouteLaunch(instance: BrowserInstance, route: string, token: string | null, source: 'hash' | 'ipc'): Promise<boolean> {
         return browserPaneManagerLaunch.triggerEmptyStateRouteLaunch(this, instance, route, token, source);
     }
     listInstances(): BrowserInstanceInfo[] {
@@ -169,25 +169,25 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     async clickAtCoordinates(id: string, x: number, y: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerPointerInput.clickAtCoordinates(this, id, x, y, mutationPolicy);
     }
-    private async clickAtCoordinatesAtCurrentUrl(id: string, x: number, y: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    /** @internal */ public async clickAtCoordinatesAtCurrentUrl(id: string, x: number, y: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerPointerInput.clickAtCoordinatesAtCurrentUrl(this, id, x, y, mutationPolicy);
     }
     async drag(id: string, x1: number, y1: number, x2: number, y2: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerPointerInput.drag(this, id, x1, y1, x2, y2, mutationPolicy);
     }
-    private async dragAtCurrentUrl(id: string, x1: number, y1: number, x2: number, y2: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    /** @internal */ public async dragAtCurrentUrl(id: string, x1: number, y1: number, x2: number, y2: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerPointerInput.dragAtCurrentUrl(this, id, x1, y1, x2, y2, mutationPolicy);
     }
     async typeText(id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerTextInput.typeText(this, id, text, mutationPolicy);
     }
-    private async typeTextAtCurrentUrl(id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    /** @internal */ public async typeTextAtCurrentUrl(id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerTextInput.typeTextAtCurrentUrl(this, id, text, mutationPolicy);
     }
     async setClipboard(id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerTextInput.setClipboard(this, id, text, mutationPolicy);
     }
-    private async setClipboardAtCurrentUrl(id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    /** @internal */ public async setClipboardAtCurrentUrl(id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerTextInput.setClipboardAtCurrentUrl(this, id, text, mutationPolicy);
     }
     async getClipboard(id: string): Promise<string> {
@@ -196,22 +196,22 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     async clickElement(id: string, ref: string, options?: BrowserPaneClickElementOptionsPayload, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerPointerInput.clickElement(this, id, ref, options, mutationPolicy);
     }
-    private async clickElementAtCurrentUrl(id: string, ref: string, options?: BrowserPaneClickElementOptionsPayload, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    /** @internal */ public async clickElementAtCurrentUrl(id: string, ref: string, options?: BrowserPaneClickElementOptionsPayload, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerPointerInput.clickElementAtCurrentUrl(this, id, ref, options, mutationPolicy);
     }
     async fillElement(id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerTextInput.fillElement(this, id, ref, value, mutationPolicy);
     }
-    private async fillElementAtCurrentUrl(id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    /** @internal */ public async fillElementAtCurrentUrl(id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerTextInput.fillElementAtCurrentUrl(this, id, ref, value, mutationPolicy);
     }
     async selectOption(id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerTextInput.selectOption(this, id, ref, value, mutationPolicy);
     }
-    private async selectOptionAtCurrentUrl(id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    /** @internal */ public async selectOptionAtCurrentUrl(id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerTextInput.selectOptionAtCurrentUrl(this, id, ref, value, mutationPolicy);
     }
-    private restoreOverlayAfterCapture(instance: BrowserInstance, suspended: boolean): void {
+    /** @internal */ public restoreOverlayAfterCapture(instance: BrowserInstance, suspended: boolean): void {
         return browserPaneManagerCapture.restoreOverlayAfterCapture(this, instance, suspended);
     }
     async screenshot(id: string, options?: BrowserScreenshotOptions): Promise<BrowserScreenshotResult> {
@@ -220,10 +220,10 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     async screenshotRegion(id: string, target: BrowserScreenshotRegionTarget): Promise<BrowserScreenshotResult> {
         return browserPaneManagerCapture.screenshotRegion(this, id, target);
     }
-    private async capturePageWithRecovery(instance: BrowserInstance, options: BrowserPaneCapturePageWithRecoveryOptionsPayload): Promise<BrowserPaneCapturePageWithRecoveryResult> {
+    /** @internal */ public async capturePageWithRecovery(instance: BrowserInstance, options: BrowserPaneCapturePageWithRecoveryOptionsPayload): Promise<BrowserPaneCapturePageWithRecoveryResult> {
         return browserPaneManagerCaptureRecovery.capturePageWithRecovery(this, instance, options);
     }
-    private async waitForScreenshotReadiness(instanceId: string): Promise<void> {
+    /** @internal */ public async waitForScreenshotReadiness(instanceId: string): Promise<void> {
         return browserPaneManagerCapture.waitForScreenshotReadiness(this, instanceId);
     }
     getConsoleLogs(id: string, options?: BrowserConsoleOptions): BrowserConsoleEntry[] {
@@ -238,7 +238,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     async sendKey(id: string, args: BrowserKeyArgs, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerTextInput.sendKey(this, id, args, mutationPolicy);
     }
-    private async sendKeyAtCurrentUrl(id: string, args: BrowserKeyArgs, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    /** @internal */ public async sendKeyAtCurrentUrl(id: string, args: BrowserKeyArgs, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
         return browserPaneManagerTextInput.sendKeyAtCurrentUrl(this, id, args, mutationPolicy);
     }
     async getDownloads(id: string, options?: BrowserDownloadOptions): Promise<BrowserDownloadEntry[]> {
@@ -247,7 +247,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     async uploadFile(id: string, ref: string, filePaths: string[], mutationPolicy?: BrowserMutationUrlPolicy): Promise<ElementGeometry> {
         return browserPaneManagerTextInput.uploadFile(this, id, ref, filePaths, mutationPolicy);
     }
-    private async uploadFileAtCurrentUrl(id: string, ref: string, filePaths: string[], mutationPolicy?: BrowserMutationUrlPolicy): Promise<ElementGeometry> {
+    /** @internal */ public async uploadFileAtCurrentUrl(id: string, ref: string, filePaths: string[], mutationPolicy?: BrowserMutationUrlPolicy): Promise<ElementGeometry> {
         return browserPaneManagerTextInput.uploadFileAtCurrentUrl(this, id, ref, filePaths, mutationPolicy);
     }
     windowResize(id: string, width: number, height: number): BrowserPaneWindowResizeResult {
@@ -256,7 +256,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     async evaluate(id: string, expression: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<unknown> {
         return browserPaneManagerInspection.evaluate(this, id, expression, mutationPolicy);
     }
-    private async evaluateAtCurrentUrl(id: string, expression: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<unknown> {
+    /** @internal */ public async evaluateAtCurrentUrl(id: string, expression: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<unknown> {
         return browserPaneManagerInspection.evaluateAtCurrentUrl(this, id, expression, mutationPolicy);
     }
     async detectSecurityChallenge(id: string): Promise<BrowserPaneDetectSecurityChallengeResult> {
@@ -295,19 +295,19 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     async clearVisualsForSession(sessionId: string): Promise<void> {
         return browserPaneManagerSessionBinding.clearVisualsForSession(this, sessionId);
     }
-    private reapplyAgentControlVisual(instance: BrowserInstance): void {
+    /** @internal */ public reapplyAgentControlVisual(instance: BrowserInstance): void {
         return browserPaneManagerOverlay.reapplyAgentControlVisual(this, instance);
     }
-    private isLiveInstance(instance: BrowserInstance): boolean {
+    /** @internal */ public isLiveInstance(instance: BrowserInstance): boolean {
         return browserPaneManagerInstances.isLiveInstance(this, instance);
     }
     private async loadNativeOverlayPage(instance: BrowserInstance): Promise<void> {
         return browserPaneManagerOverlay.loadNativeOverlayPage(this, instance);
     }
-    private layoutToolbarView(instance: BrowserInstance): void {
+    /** @internal */ public layoutToolbarView(instance: BrowserInstance): void {
         return browserPaneManagerLayout.layoutToolbarView(this, instance);
     }
-    private bringToolbarToFront(instance: BrowserInstance): void {
+    /** @internal */ public bringToolbarToFront(instance: BrowserInstance): void {
         return browserPaneManagerLayout.bringToolbarToFront(this, instance);
     }
     private updateNativeOverlayState(instance: BrowserInstance): void {
@@ -322,22 +322,22 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     private finalizeDestroyedInstance(instance: BrowserInstance, source: 'destroy' | 'closed'): void {
         return browserPaneManagerDestruction.finalizeDestroyedInstance(this, instance, source);
     }
-    private layoutPageView(instance: BrowserInstance): void {
+    /** @internal */ public layoutPageView(instance: BrowserInstance): void {
         return browserPaneManagerLayout.layoutPageView(this, instance);
     }
     private layoutAllViews(instance: BrowserInstance): void {
         return browserPaneManagerLayout.layoutAllViews(this, instance);
     }
-    private forceCloseToolbarMenu(instance: BrowserInstance, reason: string): void {
+    /** @internal */ public forceCloseToolbarMenu(instance: BrowserInstance, reason: string): void {
         return browserPaneManagerLayout.forceCloseToolbarMenu(this, instance, reason);
     }
-    private normalizePageState(url: string, title: string): BrowserPaneNavigateResult {
+    /** @internal */ public normalizePageState(url: string, title: string): BrowserPaneNavigateResult {
         return browserPaneManagerNavigation.normalizePageState(this, url, title);
     }
     private async loadEmptyStatePage(instance: BrowserInstance): Promise<void> {
         return browserPaneManagerToolbar.loadEmptyStatePage(this, __dirname, instance);
     }
-    private async maybeHandleEmptyStateLaunch(instance: BrowserInstance, url: string): Promise<boolean> {
+    /** @internal */ public async maybeHandleEmptyStateLaunch(instance: BrowserInstance, url: string): Promise<boolean> {
         return browserPaneManagerLaunch.maybeHandleEmptyStateLaunch(this, instance, url);
     }
     private async loadToolbarPage(instance: BrowserInstance): Promise<void> {
@@ -346,7 +346,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     private isLiveToolbarInstance(instance: BrowserInstance): boolean {
         return browserPaneManagerToolbar.isLiveToolbarInstance(this, instance);
     }
-    private sleep(ms: number): Promise<void> {
+    /** @internal */ public sleep(ms: number): Promise<void> {
         return browserPaneManagerToolbar.sleep(this, ms);
     }
     registerToolbarIpc(): void {
@@ -364,7 +364,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     private listInstancesForOwner(ownerKey: string): BrowserInstanceInfo[] {
         return browserPaneManagerCapabilities.listInstancesForOwner(this, ownerKey);
     }
-    private async dispatchCapability(req: BrowserCapabilityRequest): Promise<unknown> {
+    /** @internal */ public async dispatchCapability(req: BrowserCapabilityRequest): Promise<unknown> {
         return browserPaneManagerCapabilities.dispatchCapability(this, req);
     }
     private markToolbarReady(instance: BrowserInstance, reason: string): void {
@@ -379,22 +379,22 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     clearAgentControlForInstance(instanceId: string, sessionId?: string): BrowserPaneClearAgentControlForInstanceResult {
         return browserPaneManagerOverlay.clearAgentControlForInstance(this, instanceId, sessionId);
     }
-    private async extractThemeColor(instance: BrowserInstance): Promise<void> {
+    /** @internal */ public async extractThemeColor(instance: BrowserInstance): Promise<void> {
         return browserPaneManagerTheme.extractThemeColor(this, instance);
     }
-    private applyThemeColor(instance: BrowserInstance, color: string | null): void {
+    /** @internal */ public applyThemeColor(instance: BrowserInstance, color: string | null): void {
         return browserPaneManagerTheme.applyThemeColor(this, instance, color);
     }
-    private installThemeObserver(instance: BrowserInstance, allowRetry = true): void {
+    /** @internal */ public installThemeObserver(instance: BrowserInstance, allowRetry = true): void {
         return browserPaneManagerTheme.installThemeObserver(this, instance, allowRetry);
     }
-    private scheduleEarlyThemeExtraction(instance: BrowserInstance, urlAtSchedule: string): void {
+    /** @internal */ public scheduleEarlyThemeExtraction(instance: BrowserInstance, urlAtSchedule: string): void {
         return browserPaneManagerTheme.scheduleEarlyThemeExtraction(this, instance, urlAtSchedule);
     }
     private getInstanceByWebContentsId(webContentsId: number): BrowserInstance | undefined {
         return browserPaneManagerPopups.getInstanceByWebContentsId(this, webContentsId);
     }
-    private registerPopupWindow(parentInstance: BrowserInstance, popupWindow: BrowserWindow, sourceUrl?: string): void {
+    /** @internal */ public registerPopupWindow(parentInstance: BrowserInstance, popupWindow: BrowserWindow, sourceUrl?: string): void {
         return browserPaneManagerPopups.registerPopupWindow(this, parentInstance, popupWindow, sourceUrl);
     }
     private closePopupsForParent(parentId: string, reason: 'parent_destroy'): void {
@@ -403,13 +403,13 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     private setupSessionObservers(ses: ElectronSession): void {
         return browserPaneManagerObservations.setupSessionObservers(this, ses);
     }
-    private getPermissionInstance(webContents: BrowserPaneGetPermissionInstanceWebContentsPayload | null): BrowserInstance | undefined {
+    /** @internal */ public getPermissionInstance(webContents: BrowserPaneGetPermissionInstanceWebContentsPayload | null): BrowserInstance | undefined {
         return browserPaneManagerPermissions.getPermissionInstance(this, webContents);
     }
-    private getPermissionContext(webContents: BrowserPaneGetPermissionInstanceWebContentsPayload | null, requestingOrigin: string): BrowserPanePermissionContext | undefined {
+    /** @internal */ public getPermissionContext(webContents: BrowserPaneGetPermissionInstanceWebContentsPayload | null, requestingOrigin: string): BrowserPanePermissionContext | undefined {
         return browserPaneManagerPermissions.getPermissionContext(this, webContents, requestingOrigin);
     }
-    private isPermissionAllowed(webContents: BrowserPaneGetPermissionInstanceWebContentsPayload | null, permission: string, requestingOrigin: string): boolean {
+    /** @internal */ public isPermissionAllowed(webContents: BrowserPaneGetPermissionInstanceWebContentsPayload | null, permission: string, requestingOrigin: string): boolean {
         return browserPaneManagerPermissions.isPermissionAllowed(this, webContents, permission, requestingOrigin);
     }
     private setupSessionPermissions(ses: ElectronSession): void {

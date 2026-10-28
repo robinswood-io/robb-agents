@@ -14,13 +14,13 @@ interface AddWorkspaceStep_ConnectRemoteProps {
   onCreate: (folderPath: string, name: string, remoteServer: { url: string; token: string; remoteWorkspaceId: string }) => Promise<void>
   isCreating: boolean
   /** Pre-fill the server URL (for reconnect flow) */
-  initialUrl?: string
+  initialUrl?: string | undefined
   /** Pre-fill the token (for reconnect flow) */
-  initialToken?: string
+  initialToken?: string | undefined
   /** When set, updating an existing workspace's remote config instead of creating */
-  reconnectWorkspace?: { id: string; name: string; remoteWorkspaceId: string }
+  reconnectWorkspace?: { id: string; name: string; remoteWorkspaceId: string } | undefined
   /** Called when reconnect updates the remote server config */
-  onUpdate?: (workspaceId: string, remoteServer: { url: string; token: string; remoteWorkspaceId: string }) => Promise<void>
+  onUpdate?: ((workspaceId: string, remoteServer: { url: string; token: string; remoteWorkspaceId: string }) => Promise<void>) | undefined
 }
 
 /**

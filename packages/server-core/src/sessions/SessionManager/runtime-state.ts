@@ -23,6 +23,18 @@ import { resolveSessionRuntimeIdleTimeoutMs } from "./runtime-policy.ts";
 import type { AgentInstance, MissionPendingTurnRecoveryClaimRecord, SessionCompletionEvent } from "./runtime-types.ts";
 
 /** Internal session data; initialization order matches the manager. */
+export interface StrongCancellationStop {
+      managed: ManagedSession
+      operation: Promise<void>
+      requiresCompletion: boolean
+      generation: number
+      stopCompleted: boolean
+      stopFailed: boolean
+      completionEvent?: SessionCompletionEvent | undefined
+      completionGeneration?: number | undefined
+      offCompletion: () => void
+    }
+
 export class SessionRuntimeState {
   sessions: Map<string, ManagedSession> = new Map()
   /** Managed objects detached by an explicit deletion. Late completion and
@@ -85,7 +97,7 @@ export class SessionRuntimeState {
       toolUseId?: string
       processingGeneration: number
       objectiveId?: string
-      runtimeAgent?: AgentInstance
+      runtimeAgent?: AgentInstance | undefined
       requestedAt: number
       expiresAt: number
       request: PermissionRequest
@@ -156,22 +168,12 @@ export class SessionRuntimeState {
   readonly runtimeDisposalBarriers = new Map<string, Map<symbol, {
       label: string
       dispose: () => void | Promise<void>
-      inFlight?: Promise<void>
+      inFlight?: Promise<void> | undefined
     }>>()
   /** Coalesce repeated strong Stop attempts while the first durable Stop is
      * still pending. A timed-out caller may retry the proof without launching a
      * second concurrent persistence/cancellation transaction. */
-  readonly strongCancellationStops = new Map<string, {
-      managed: ManagedSession
-      operation: Promise<void>
-      requiresCompletion: boolean
-      generation: number
-      stopCompleted: boolean
-      stopFailed: boolean
-      completionEvent?: SessionCompletionEvent
-      completionGeneration?: number
-      offCompletion: () => void
-    }>()
+  readonly strongCancellationStops = new Map<string, StrongCancellationStop>()
   /** Monotonic clock to ensure strictly increasing message timestamps */
   lastTimestamp = 0
   /**

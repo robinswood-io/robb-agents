@@ -87,13 +87,13 @@ function convertCompoundToNavigationState(compound: ParsedCompoundRoute): Naviga
     if (!compound.details) {
       return {
         navigator: 'sources',
-        filter: compound.sourceFilter,
+        ...(compound.sourceFilter !== undefined ? { filter: compound.sourceFilter } : {}),
         details: null,
       }
     }
     return {
       navigator: 'sources',
-      filter: compound.sourceFilter,
+      ...(compound.sourceFilter !== undefined ? { filter: compound.sourceFilter } : {}),
       details: { type: 'source', sourceSlug: compound.details.id },
     }
   }
@@ -114,13 +114,13 @@ function convertCompoundToNavigationState(compound: ParsedCompoundRoute): Naviga
     if (!compound.details) {
       return {
         navigator: 'automations',
-        filter: compound.automationFilter,
+        ...(compound.automationFilter !== undefined ? { filter: compound.automationFilter } : {}),
         details: null,
       }
     }
     return {
       navigator: 'automations',
-      filter: compound.automationFilter,
+      ...(compound.automationFilter !== undefined ? { filter: compound.automationFilter } : {}),
       details: { type: 'automation', automationId: compound.details.id },
     }
   }
@@ -159,7 +159,7 @@ function convertCompoundToNavigationState(compound: ParsedCompoundRoute): Naviga
   return {
     navigator: 'sessions',
     filter,
-    viewMode: compound.viewMode,
+    ...(compound.viewMode !== undefined ? { viewMode: compound.viewMode } : {}),
     details: null,
   }
 }

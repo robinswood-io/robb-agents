@@ -227,7 +227,7 @@ async function main(): Promise<void> {
   // Build WhatsApp worker bundle so the adapter can spawn it on demand
   await buildWaWorker();
 
-  const vitePort = process.env.CRAFT_VITE_PORT || "5173";
+  const vitePort = process.env["CRAFT_VITE_PORT"] || "5173";
   const oauthDefines = getOAuthDefines();
 
   // Kill any existing process on the Vite port
@@ -385,7 +385,7 @@ async function main(): Promise<void> {
   console.log("🚀 Starting Electron...\n");
 
   const electronBinary = ensureMacRobbElectronApp();
-  const remoteDebuggingPort = process.env.CRAFT_ELECTRON_REMOTE_DEBUGGING_PORT;
+  const remoteDebuggingPort = process.env["CRAFT_ELECTRON_REMOTE_DEBUGGING_PORT"];
   const electronArgs = [electronBinary];
   if (remoteDebuggingPort) {
     electronArgs.push(`--remote-debugging-port=${remoteDebuggingPort}`);
@@ -436,7 +436,7 @@ async function main(): Promise<void> {
   await cleanup();
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   console.error("❌ Error:", err);
   process.exit(1);
 });

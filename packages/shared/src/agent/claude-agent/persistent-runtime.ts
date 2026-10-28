@@ -174,9 +174,10 @@ export function startPersistentConsumer(transportOwner: ClaudeAgent): void {
         let reportedStaleConsumer = false;
         try {
             while (true) {
-                const { done, value } = await iterator.next();
-                if (done)
+                const next: IteratorResult<SDKMessage, unknown> = await iterator.next();
+                if (next.done)
                     break;
+                const value = next.value;
                 const isCurrentConsumer = transportOwner["persistentIterator"] === iterator
                     && transportOwner["persistentQueryGeneration"] === consumerGeneration
                     && transportOwner["persistentGmailRuntimeId"] === gmailRuntimeId
@@ -244,7 +245,7 @@ export function startPersistentConsumer(transportOwner: ClaudeAgent): void {
    * doesn't disturb the turn-scoped event adapter. Mirrors event-adapter.ts:544.
    */
 export function routeBackgroundMessage(transportOwner: ClaudeAgent, message: SDKMessage): void {
-    const msg = message as unknown as {
+    const msg = message as {
         type?: string;
         subtype?: string;
         task_id?: string;
@@ -268,12 +269,12 @@ export function routeBackgroundMessage(transportOwner: ClaudeAgent, message: SDK
 }
 
 /** Globally unique across overlapping agent instances and SDK processes. */
-export function createGmailRuntimeId(transportOwner: ClaudeAgent, sessionId: string): string {
+export function createGmailRuntimeId(_transportOwner: ClaudeAgent, sessionId: string): string {
     return `${sessionId}:claude:${randomUUID()}`;
 }
 
 /** Narrow seam for exact runtime teardown tests and generation correlation. */
-export function confirmContextualGmailRuntimeTeardownOperation(transportOwner: ClaudeAgent, runtime: Parameters<typeof confirmContextualGmailRuntimeTeardown>[0]): boolean {
+export function confirmContextualGmailRuntimeTeardownOperation(_transportOwner: ClaudeAgent, runtime: Parameters<typeof confirmContextualGmailRuntimeTeardown>[0]): boolean {
     return confirmContextualGmailRuntimeTeardown(runtime);
 }
 
@@ -307,7 +308,7 @@ export function destroyClaudeRuntime(transportOwner: ClaudeAgent): void {
     transportOwner["pinnedPreferencesPrompt"] = null;
     transportOwner["pinnedIncludeCoAuthoredBy"] = null;
     transportOwner["pinnedProjectContext"] = null;
-    transportOwner["preferencesDriftNotified"] = false;
+    transportOwner.preferencesDriftNotified = false;
     // Clear Claude-specific callbacks (not handled by BaseAgent)
     transportOwner["onSourcesListChange"] = null;
     transportOwner["onConfigValidationError"] = null;
@@ -336,5 +337,5 @@ export function clearClaudeHistoryState(transportOwner: ClaudeAgent): void {
     transportOwner["pinnedPreferencesPrompt"] = null;
     transportOwner["pinnedIncludeCoAuthoredBy"] = null;
     transportOwner["pinnedProjectContext"] = null;
-    transportOwner["preferencesDriftNotified"] = false;
+    transportOwner.preferencesDriftNotified = false;
 }

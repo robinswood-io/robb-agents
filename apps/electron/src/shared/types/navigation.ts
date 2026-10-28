@@ -292,7 +292,7 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
   // Check for session details
   if (key.includes('/session/')) {
     const [filterPart, , sessionId] = key.split('/')
-    return parseSessionsKey(filterPart, sessionId)
+    return filterPart ? parseSessionsKey(filterPart, sessionId) : null
   }
 
   // Simple filter key

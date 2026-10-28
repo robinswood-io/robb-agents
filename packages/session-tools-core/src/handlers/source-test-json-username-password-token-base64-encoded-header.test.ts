@@ -45,7 +45,7 @@ describe('source_test basic-auth header (regression for #824)', () => {
         authType: 'basic',
         testEndpoint: { method: 'GET', path: '/ping' },
       },
-    } as unknown as SourceConfig;
+    } as SourceConfig;
     writeFileSync(join(sourcePath, 'config.json'), JSON.stringify(config, null, 2));
     writeFileSync(
       join(sourcePath, 'guide.md'),

@@ -1,4 +1,7 @@
-import type { SessionOperations } from './SessionManager/operation-types.ts';
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import type { Session } from '../../../shared/src/protocol/dto/sessions.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest , requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
@@ -19,15 +22,15 @@ function fixture() {
   parent.isProcessing = true
   parent.processingGeneration = 1
   parent.activeObjective = transitionObjectiveContract({ messageId: 'objective', text: 'Inspect the target files.', nowMs: 1 })
-  const host = withSessionOperationsForTest(new SessionManager()) as unknown as SessionOperations
+  const host = sessionManagerForTest(withSessionOperationsForTest(new SessionManager()))
   sessionRuntimeStateForTest(host).sessions.set(parent.id, parent)
   const created: Managed[] = [], sent: string[] = []
   host.persistSession = () => false
   host.flushSession = async () => {}
   host.sendEvent = () => {}
   host.createSession = async (_id: string, options, internal) => {
-    const child = createManagedSession({ ...options, id: `child-${created.length}`, delegation: internal!.delegation }, workspace)
-    sessionRuntimeStateForTest(host).sessions.set(child.id, child); created.push(child); return { ...child, workspaceId: workspace.id, workspaceName: workspace.name }
+    const child = createManagedSession(omitUndefined({ ...options, id: `child-${created.length}`, delegation: internal!.delegation }), workspace)
+    sessionRuntimeStateForTest(host).sessions.set(child.id, child); created.push(child); return omitUndefined<Session>({ ...child, workspaceId: workspace.id, workspaceName: workspace.name })
   }
   host.sendMessage = async (id: string, _prompt: string, ...args: unknown[]) => {
     sent.push(id); requiredTestValue(sessionRuntimeStateForTest(host).sessions.get(id)).isProcessing = true

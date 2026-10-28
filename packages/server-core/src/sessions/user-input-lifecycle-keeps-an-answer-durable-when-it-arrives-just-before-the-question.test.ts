@@ -1,3 +1,7 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import { parseJsonObject } from '@craft-agent/shared/utils/json';
+import type { SessionOperations } from './SessionManager/operation-types.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import "./testing/scripted-session-agent.ts";
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
@@ -42,20 +46,9 @@ function harness() {
   const manager = withSessionOperationsForTest(new SessionManager())
   const events: Array<Record<string, unknown>> = []
   const snapshots: Array<Record<string, unknown>> = []
-  const internals = manager as unknown as {
-    sessions: Map<string, Managed>; enqueuePersist: (m: Managed) => void; flushSession: (id: string) => Promise<void>
-    sendEvent: (e: Record<string, unknown>) => void; enqueueAutomaticTurnRecovery: (m: Managed, cause: 'objective_incomplete') => Promise<boolean>
-    resumePendingTurnAfterRestart: (id: string) => Promise<void>; onProcessingStopped: (id: string, reason: 'interrupted') => Promise<void>
-    emitExecutionTelemetry: () => void; startGenerationTelemetry: () => void; finishGenerationTelemetry: () => void
-    beginAutomaticSessionStatusLifecycle: () => Promise<void>; finishAutomaticSessionStatusLifecycle: () => Promise<void>
-    isSessionBeingViewed: () => boolean; markSessionRead: () => Promise<void>; processNextQueuedMessage: (id: string) => void
-    disposeManagedAgentRuntime: () => Promise<void>; getOrCreateAgent: (m: Managed) => Promise<unknown>
-    ensureMessagesLoaded: (m: Managed) => Promise<void>
-    ensureDelegatedTerminalResultDelivery: (child: Managed, deferRecipientDispatch?: boolean) => Promise<boolean>
-    queuedMessageDispatches: Map<string, symbol>
-  }
+  const internals = sessionManagerForTest(manager)
   sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
-  internals.enqueuePersist = m => snapshots.push(JSON.parse(JSON.stringify({ ...pickSessionFields(m), messages: m.messages })))
+  internals.enqueuePersist = m => { snapshots.push(parseJsonObject(JSON.stringify({ ...pickSessionFields(m), messages: m.messages }))); return true }
   internals.flushSession = async () => {}
   internals.sendEvent = e => events.push(e)
   internals.emitExecutionTelemetry = () => {}; internals.startGenerationTelemetry = () => {}; internals.finishGenerationTelemetry = () => {}
@@ -65,8 +58,8 @@ function harness() {
   internals.processNextQueuedMessage = () => {}; internals.disposeManagedAgentRuntime = async () => { managed.agent = null }
   const redirects: string[] = []
   const installAgent = (steer = true, stream: AgentEvent[] = [], beforeChat?: () => void) => {
-    const agent = { redirect: (text: string) => { redirects.push(text); return steer }, getModel: () => 'test', getSessionId: () => null, setAllSources: () => {}, async *chat() { beforeChat?.(); for (const e of stream) yield e } }
-    managed.agent = agent as never; internals.getOrCreateAgent = async m => { m.agent = agent as never; return agent }
+    const agent = completeSessionAgentFixture(managed.workspace, { redirect: (text: string) => { redirects.push(text); return steer }, getModel: () => 'test', getSessionId: () => null, setAllSources: () => {}, async *chat() { beforeChat?.(); for (const e of stream) yield e } })
+    managed.agent = agent; internals.getOrCreateAgent = async m => { m.agent = agent; return agent }
   }
   const restoreQueueProcessing = () => { internals.processNextQueuedMessage = realProcessNextQueuedMessage }
   return { manager, managed, internals, events, snapshots, redirects, installAgent, restoreQueueProcessing }
@@ -80,7 +73,7 @@ it('keeps an answer durable when it arrives just before the question turn comple
     const questionReady = new Promise<string>(resolve => { questionCreated = resolve })
     let finishQuestion!: () => void
     const questionCanFinish = new Promise<void>(resolve => { finishQuestion = resolve })
-    const agent = h.managed.agent as unknown as { chat: (message: string) => AsyncGenerator<AgentEvent> }
+    const agent = h.managed.agent as { chat: (message: string) => AsyncGenerator<AgentEvent> }
     let calls = 0
     let consumedAnswer: string | undefined
     agent.chat = async function* (message) {
@@ -115,11 +108,11 @@ it('keeps an answer durable when it arrives just before the question turn comple
     expect(h.redirects).toEqual([])
     expect(response.delivery).toBe('queued')
     expect(await h.manager.respondToUserInput(h.managed.id, { requestId, answers })).toMatchObject({ status: 'already_answered', responseMessageId: response.responseMessageId })
-    h.internals.processNextQueuedMessage = Object.getPrototypeOf(h.manager).processNextQueuedMessage.bind(h.manager)
+    h.internals.processNextQueuedMessage = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'processNextQueuedMessage'>).processNextQueuedMessage.bind(h.manager)
     const dispatchFinished = nextDispatchCompletion(h.manager)
     h.internals.processNextQueuedMessage(h.managed.id)
     // The queue dispatch event must wait for sendMessage's durable marker.
-    expect(h.events.some(event => event.type === 'user_message' && event.status === 'processing')).toBe(false)
+    expect(h.events.some(event => event["type"] === 'user_message' && event["status"] === 'processing')).toBe(false)
     await dispatchFinished
     expect(consumedAnswer).toContain(JSON.stringify(answers))
     expect(calls).toBe(2)
@@ -127,7 +120,7 @@ it('keeps an answer durable when it arrives just before the question turn comple
     expect(h.managed.messages.find(message => message.id === response.responseMessageId)?.isQueued).toBe(false)
     expect(h.managed.activeObjective?.userMessageId).toBe('objective-root')
     expect(h.managed.activeObjective?.terminalState).toBe('complete_verified')
-    expect(h.events.filter(event => event.type === 'user_message' && event.status === 'processing')).toHaveLength(1)
+    expect(h.events.filter(event => event["type"] === 'user_message' && event["status"] === 'processing')).toHaveLength(1)
   })
 
 it('rejects forged options, stale objectives and public messages that impersonate a user answer', async () => {
@@ -153,7 +146,7 @@ it('pauses recovery while pending, including after restart, and preserves it on 
     await h.internals.onProcessingStopped(h.managed.id, 'interrupted')
     expect(h.managed.activeObjective?.terminalState).toBe('active')
     expect(h.managed.pendingTurnRecovery).toEqual(before)
-    expect(h.events.some(e => e.type === 'error' || e.type === 'typed_error')).toBe(false)
+    expect(h.events.some(e => e["type"] === 'error' || e["type"] === 'typed_error')).toBe(false)
   })
 
 it('cancels while idle before the stop early-return, including child requests, without waking work', async () => {
@@ -162,7 +155,7 @@ it('cancels while idle before the stop early-return, including child requests, w
     await h.manager.cancelProcessing(h.managed.id)
     expect(h.managed.userInputRequests?.[0]?.status).toBe('cancelled')
     expect(h.managed.pendingTurnRecovery).toBeUndefined()
-    expect(await h.manager.respondToUserInput(h.managed.id, { requestId, cancelled: true })).toEqual({ status: 'cancelled', responseMessageId: undefined })
+    expect<unknown>(await h.manager.respondToUserInput(h.managed.id, { requestId, cancelled: true })).toEqual({responseMessageId: undefined,  status: 'cancelled', })
     expect(h.managed.messageQueue).toEqual([])
     expect(h.managed.messages).toHaveLength(1)
   })
@@ -198,8 +191,8 @@ it('restores a retryable saved answer when the processing marker flush fails aft
     expect(h.managed.messages[1]?.isQueued).toBe(true)
     expect(h.managed.pendingTurnRecovery).toEqual(recoveryBefore)
     expect(h.managed.sessionStatus).toBe('todo')
-    expect(h.events.filter(event => event.type === 'session_status_changed').map(event => event.sessionStatus)).toEqual(['in-progress', 'todo'])
-    expect(h.events.some(event => event.type === 'user_message' && event.status === 'processing')).toBe(false)
+    expect(h.events.filter(event => event["type"] === 'session_status_changed').map(event => event["sessionStatus"])).toEqual(['in-progress', 'todo'])
+    expect(h.events.some(event => event["type"] === 'user_message' && event["status"] === 'processing')).toBe(false)
     const responseMessageId = h.managed.userInputRequests![0]!.responseMessageId
     h.internals.flushSession = async () => {}
     let release!: () => void
@@ -254,7 +247,7 @@ it('starts an idle persisted answer on the same objective without a provider que
     const result = await h.manager.respondToUserInput(h.managed.id, { requestId, answers })
     expect(result).toMatchObject({ status: 'accepted', delivery: 'started' })
     expect(lifecycleStarts).toBe(1)
-    expect(h.events.filter(event => event.type === 'user_message' && event.status === 'processing')).toMatchObject([
+    expect(h.events.filter(event => event["type"] === 'user_message' && event["status"] === 'processing')).toMatchObject([
       { sessionId: h.managed.id, message: { id: result.responseMessageId, hidden: true, internalOrigin: { kind: 'user-input' } } },
     ])
     expect(h.managed.activeObjective).toEqual(originalObjective)
@@ -310,7 +303,7 @@ it('keeps a durable answer ahead of a newer user send while its dispatch is hydr
     const ready = new Promise<void>(resolve => { releaseAgent = resolve })
     const getAgent = h.internals.getOrCreateAgent.bind(h.manager)
     h.internals.getOrCreateAgent = async managed => { await ready; return getAgent(managed) }
-    h.internals.processNextQueuedMessage = Object.getPrototypeOf(h.manager).processNextQueuedMessage.bind(h.manager)
+    h.internals.processNextQueuedMessage = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'processNextQueuedMessage'>).processNextQueuedMessage.bind(h.manager)
     let queuedDispatch: Promise<void> | undefined
     const send = h.manager.sendMessage.bind(h.manager)
     h.manager.sendMessage = (...args) => {
@@ -373,7 +366,7 @@ it.each([
       // must never close the resumed objective before that answer reaches SDK.
       h.managed.messages.push({ id: 'question-final', role: 'assistant', timestamp: Date.now(), content: 'Choisis le format souhaité.' })
       await h.internals.onProcessingStopped(h.managed.id, 'interrupted')
-      h.internals.processNextQueuedMessage = Object.getPrototypeOf(h.manager).processNextQueuedMessage.bind(h.manager)
+      h.internals.processNextQueuedMessage = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'processNextQueuedMessage'>).processNextQueuedMessage.bind(h.manager)
       h.internals.processNextQueuedMessage(h.managed.id)
       for (let index = 0; index < 40 && h.managed.messages[1]?.isQueued; index++) await new Promise<void>(resolve => setImmediate(resolve))
     }
@@ -389,20 +382,20 @@ it.each([
     let observedRecovery: Managed['pendingTurnRecovery']
     restarted.internals.getOrCreateAgent = async managed => {
       expect(managed.sdkSessionId).toBe('existing-provider-session')
-      const agent = {
+      const agent = completeSessionAgentFixture(managed.workspace, {
         getModel: () => 'test', getSessionId: () => 'existing-provider-session', setAllSources: () => {},
-        async *chat(message: string): AsyncGenerator<AgentEvent> {
+        async *chat(message: string): AsyncGenerator<AgentEvent, void, unknown> {
           providerPrompt = message; observedRecovery = structuredClone(managed.pendingTurnRecovery)
           // No recovery-history fallback: the normal SDK resume receives only
           // this prompt, which must include the exact already accepted answer.
           await restarted.manager.requestUserInput(managed.id, [{ id: 'next', question: 'Quel détail ajouter ?' }])
           yield { type: 'complete' }
         },
-      }
-      managed.agent = agent as never
+      })
+      managed.agent = agent
       return agent
     }
-    restarted.internals.processNextQueuedMessage = Object.getPrototypeOf(restarted.manager).processNextQueuedMessage.bind(restarted.manager)
+    restarted.internals.processNextQueuedMessage = (Object.getPrototypeOf(restarted.manager) as Pick<SessionOperations, 'processNextQueuedMessage'>).processNextQueuedMessage.bind(restarted.manager)
     let resolveDispatch!: () => void, rejectDispatch!: (reason: unknown) => void
     const dispatchFinished = new Promise<void>((resolve, reject) => { resolveDispatch = resolve; rejectDispatch = reject })
     const resumedSend = restarted.manager.sendMessage.bind(restarted.manager)

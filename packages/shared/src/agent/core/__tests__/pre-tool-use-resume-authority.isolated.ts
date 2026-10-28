@@ -266,7 +266,7 @@ Dossier documentaire exact : \`Entretiens annuels\``;
         ['plc-microsoft-365'],
       )).toMatchObject({
         type: 'block',
-        reason: expect.stringContaining('empty/partial list'),
+        reason: (expect.stringContaining('empty/partial list') as unknown),
       });
       for (const input of [
         { ...list, endpoint: 'sites/attacker.example,06efb18b-29c2-409a-8ef4-d634918a7caa,a833b57e-9482-471b-9aa9-4dad3e78e46d/lists' },
@@ -335,7 +335,7 @@ Lis d’abord son hash, écris uniquement ce fichier et exécute les tests hors 
         'test-copied-session',
       )).toMatchObject({
         type: 'block',
-        reason: expect.stringContaining('belongs to another durable session'),
+        reason: (expect.stringContaining('belongs to another durable session') as unknown),
       });
 
       for (const [candidateTool, input] of [

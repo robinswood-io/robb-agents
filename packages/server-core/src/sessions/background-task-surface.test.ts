@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
@@ -57,17 +58,15 @@ describe('background task completion surfacing (idle keep-alive)', () => {
 
   function spyOnSendMessage() {
     const calls: Array<{ msg: string; hidden?: boolean }> = []
-    ;(sm as unknown as {
-      sendMessage: (id: string, msg: string, a?: unknown, s?: unknown, opts?: { hidden?: boolean }) => Promise<void>
-    }).sendMessage = async (_id, msg, _a, _s, opts) => {
-      calls.push({ msg, hidden: opts?.hidden })
+    ;(sessionManagerForTest(sm)).sendMessage = async (_id, msg, _a, _s, opts) => {
+      calls.push({ msg, ...(opts?.hidden !== undefined ? { hidden: opts?.hidden } : {}) })
     }
     return calls
   }
 
   async function fireTaskCompleted(sessionId: string, event: TaskCompletedEvent) {
     const managed = sessionRuntimeStateForTest(sm).sessions.get(sessionId)!
-    await (sm as unknown as { processEvent: (m: unknown, e: unknown) => Promise<void> }).processEvent(managed, event)
+    await (sessionManagerForTest(sm)).processEvent(managed, event)
   }
 
   it('surfaces a completed task to an idle keep-alive session with intent + output file', async () => {

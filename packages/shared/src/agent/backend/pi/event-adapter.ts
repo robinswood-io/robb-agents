@@ -1,3 +1,4 @@
+import { isJsonObject, isUnknownArray } from '../../../utils/json.ts';
 /**
  * Pi SDK Event Adapter
  *
@@ -16,6 +17,7 @@ import type {
 import type {
   AgentEvent as PiAgentEvent,
 } from '@earendil-works/pi-agent-core';
+
 import type {
   AgentSessionEvent,
 } from '@earendil-works/pi-coding-agent';
@@ -32,7 +34,7 @@ const OVERFLOW_RECOVERY_EXHAUSTED_MESSAGE =
  * Combined event type the adapter can handle.
  * AgentSessionEvent is a superset of PiAgentEvent (adds compaction_*, auto_retry_*, queue_update).
  */
-type PiEvent = PiAgentEvent | AgentSessionEvent;
+type PiEvent = PiAgentEvent | AgentSessionEvent | { type: 'pi_turn_anchor'; sdkMessageId?: string; sdkTurnAnchor?: string };
 
 /**
  * Maps Pi SDK events to Craft AgentEvents for UI compatibility.
@@ -113,7 +115,7 @@ export class PiEventAdapter extends BaseEventAdapter {
     this.messageState.messageSubTurnId = null;
     this.clearPendingError();
     this.nativeTurnComplete = false;
-    this.messageState.turnUsage = undefined;
+    delete this.messageState.turnUsage
     this.log.debug('Turn started', { turnIndex: this.turnIndex });
   }
 
@@ -127,16 +129,16 @@ export class PiEventAdapter extends BaseEventAdapter {
   /**
    * Adapt a Pi SDK event to zero or more Craft AgentEvents.
    */
-  *adaptEvent(event: PiEvent): Generator<CraftAgentEvent> {
+  *adaptEvent(event: PiEvent): Generator<CraftAgentEvent, void, unknown> {
     // The worker pairs each assistant event with the exact persisted turn
     // anchor after turn_end. sdkMessageId is an opaque transport correlation.
-    if ((event as { type?: string }).type === 'pi_turn_anchor') {
-      const e = event as unknown as { sdkMessageId?: string; sdkTurnAnchor?: string };
-      if (e.sdkMessageId && e.sdkTurnAnchor) {
+    if (event.type === 'pi_turn_anchor') {
+      if (typeof event.sdkMessageId === 'string' && event.sdkMessageId
+        && typeof event.sdkTurnAnchor === 'string' && event.sdkTurnAnchor) {
         yield {
           type: 'pi_turn_anchor',
-          sdkMessageId: e.sdkMessageId,
-          sdkTurnAnchor: e.sdkTurnAnchor,
+          sdkMessageId: event.sdkMessageId,
+          sdkTurnAnchor: event.sdkTurnAnchor,
         };
       }
       return;
@@ -165,7 +167,7 @@ export class PiEventAdapter extends BaseEventAdapter {
         }
         this.clearPendingError();
         yield this.messageState.turnUsage
-          ? { type: 'complete', usage: { ...this.messageState.turnUsage, contextWindow: this.messageState.contextWindow } }
+          ? { type: 'complete', usage: { ...this.messageState.turnUsage, ...(this.messageState.contextWindow !== undefined ? { contextWindow: this.messageState.contextWindow } : {}) } }
           : { type: 'complete' };
         break;
 
@@ -228,8 +230,8 @@ export class PiEventAdapter extends BaseEventAdapter {
         // For call_llm, fill in the default display model when the caller didn't
         // specify one — Pi's call_llm defaults to callLlmModel. We only fill the gap;
         // we never overwrite an explicit agent-provided model (that was the #596 bug).
-        if (toolName.includes('call_llm') && this.callLlmModel && !args.model) {
-          args.model = this.callLlmModel;
+        if (toolName.includes('call_llm') && this.callLlmModel && !args["model"]) {
+          args["model"] = this.callLlmModel;
         }
 
         // Canonical metadata from subprocess event payload (interceptor/bridge-authoritative path).
@@ -240,13 +242,13 @@ export class PiEventAdapter extends BaseEventAdapter {
         const { meta: storedMeta, keyTried } = resolveStoredMetadata(toolCallId, this.sessionDir);
 
         // Last-resort fallback: args metadata if present.
-        const argsIntent = typeof args._intent === 'string' ? args._intent : undefined;
-        const argsDisplayName = typeof args._displayName === 'string' ? args._displayName : undefined;
+        const argsIntent = typeof args["_intent"] === 'string' ? args["_intent"] : undefined;
+        const argsDisplayName = typeof args["_displayName"] === 'string' ? args["_displayName"] : undefined;
 
         const intent = eventMeta?.intent
           || storedMeta?.intent
           || argsIntent
-          || (typeof args.description === 'string' ? args.description : undefined);
+          || (typeof args["description"] === 'string' ? args["description"] : undefined);
 
         const displayName = eventMeta?.displayName
           || storedMeta?.displayName
@@ -259,7 +261,7 @@ export class PiEventAdapter extends BaseEventAdapter {
             ? `store(${keyTried})`
             : (argsIntent || argsDisplayName)
               ? 'args'
-              : (typeof args.description === 'string')
+              : (typeof args["description"] === 'string')
                 ? 'description'
                 : 'fallback';
 
@@ -277,8 +279,8 @@ export class PiEventAdapter extends BaseEventAdapter {
         // Keep the executed name/input throughout the lifecycle; classify only
         // the display label, never the evidence or admission identity.
         const isReadCommand = toolName === 'Bash'
-          && typeof args.command === 'string'
-          && parseReadCommand(args.command) !== null;
+          && typeof args["command"] === 'string'
+          && parseReadCommand(args["command"]) !== null;
 
         yield this.createToolStart(
           toolCallId,
@@ -293,14 +295,14 @@ export class PiEventAdapter extends BaseEventAdapter {
       case 'tool_execution_update': {
         // Pi updates are cumulative snapshots, not deltas. Keep only the latest
         // snapshot as a fallback when the terminal event has no result.
-        const partialResult = event.partialResult;
-        if (partialResult && typeof partialResult === 'object') {
-          const content = (partialResult as { content?: Array<{ type: string; text?: string }> }).content;
-          if (Array.isArray(content)) {
-            this.commandOutput.set(event.toolCallId, content
-              .filter(part => part.type === 'text' && typeof part.text === 'string')
-              .map(part => part.text!)
-              .join('\n'));
+        const partialResult: unknown = event.partialResult;
+        if (isJsonObject(partialResult)) {
+          const content = partialResult['content'];
+          if (isUnknownArray(content)) {
+            this.commandOutput.set(event.toolCallId, content.flatMap(part =>
+              isJsonObject(part) && part['type'] === 'text' && typeof part['text'] === 'string'
+                ? [part['text']] : [],
+            ).join('\n'));
           }
         }
         break;

@@ -39,12 +39,12 @@ interface TopBarProps {
   workspaces: Workspace[]
   activeWorkspaceId: string | null
   onSelectWorkspace: (workspaceId: string, openInNewWindow?: boolean) => void | Promise<void>
-  workspaceUnreadMap?: Record<string, boolean>
-  onWorkspaceCreated?: (workspace: Workspace) => void
-  onWorkspaceRemoved?: () => void
-  activeSessionId?: string | null
+  workspaceUnreadMap?: Record<string, boolean> | undefined
+  onWorkspaceCreated?: ((workspace: Workspace) => void) | undefined
+  onWorkspaceRemoved?: (() => void) | undefined
+  activeSessionId?: string | null | undefined
   onNewChat: () => void
-  onNewWindow?: () => void
+  onNewWindow?: (() => void) | undefined
   onOpenSettings: () => void
   onOpenSettingsSubpage: (subpage: SettingsMenuItem['id']) => void
   onOpenKeyboardShortcuts: () => void
@@ -58,7 +58,7 @@ interface TopBarProps {
   onAddSessionPanel: () => void
   onAddBrowserPanel: () => void
   /** When true, hides controls that don't apply in compact/mobile layout */
-  isCompact?: boolean
+  isCompact?: boolean | undefined
 }
 
 export function TopBar({

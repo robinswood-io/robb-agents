@@ -7,12 +7,6 @@ import { matcherMatches, matcherMatchesSdk } from './utils.ts';
 
 describe('matcherMatches with conditions', () => {
 it('should work with time conditions', () => {
-    const matcher = {
-      conditions: [
-        { condition: 'time' as const, after: '09:00', before: '17:00', weekday: ['fri'] },
-      ],
-      actions: [{ type: 'prompt' as const, prompt: 'test' }],
-    };
     // Can't easily control time in matcherMatches, so this tests the wiring
     // The condition evaluator uses Date.now() which we can't inject here,
     // but the integration is verified via the evaluateConditions tests above

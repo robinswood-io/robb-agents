@@ -49,11 +49,11 @@ const STOPLIGHT_PADDING = 84
 
 export interface PanelHeaderProps {
   /** Header title (undefined hides with animation) */
-  title?: string
+  title?: string | undefined
   /** Optional badge element (e.g., agent badge) */
-  badge?: React.ReactNode
+  badge?: React.ReactNode | undefined
   /** Optional dropdown menu content for interactive title (renders chevron when provided) */
-  titleMenu?: React.ReactNode
+  titleMenu?: React.ReactNode | undefined
   /**
    * Compact-mode replacement for the interactive title. When provided AND
    * `isCompactMode === true`, this node is rendered in place of the desktop
@@ -63,23 +63,23 @@ export interface PanelHeaderProps {
    * submenus get clipped by the panel container query on narrow viewports;
    * this lets consumers swap to a vaul `Drawer` instead.
    */
-  compactTitleMenu?: React.ReactNode
+  compactTitleMenu?: React.ReactNode | undefined
   /** Optional leading action rendered before the title (e.g., back button in compact mode) */
-  leadingAction?: React.ReactNode
+  leadingAction?: React.ReactNode | undefined
   /** Optional center button rendered between title and right actions */
-  centerButton?: React.ReactNode
+  centerButton?: React.ReactNode | undefined
   /** Optional action buttons rendered on the right */
-  actions?: React.ReactNode
+  actions?: React.ReactNode | undefined
   /** Optional right sidebar button (rendered after actions) */
-  rightSidebarButton?: React.ReactNode
+  rightSidebarButton?: React.ReactNode | undefined
   /** When true, animates left margin to avoid macOS traffic lights (use when this is the first panel on screen) */
-  compensateForStoplight?: boolean
+  compensateForStoplight?: boolean | undefined
   /** Left padding override (e.g., for focused mode with traffic lights) */
-  paddingLeft?: string
+  paddingLeft?: string | undefined
   /** Optional className for additional styling */
-  className?: string
+  className?: string | undefined
   /** Whether title is being regenerated (shows shimmer effect) */
-  isRegeneratingTitle?: boolean
+  isRegeneratingTitle?: boolean | undefined
 }
 
 /**

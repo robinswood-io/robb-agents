@@ -91,7 +91,7 @@ interface APISetupStepProps {
   onContinue: () => void
   onBack: () => void
   /** Initial segment to show (defaults to 'anthropic') */
-  initialSegment?: ProviderSegment
+  initialSegment?: ProviderSegment | undefined
 }
 
 /**

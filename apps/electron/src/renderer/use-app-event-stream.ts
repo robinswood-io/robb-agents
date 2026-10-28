@@ -1,3 +1,4 @@
+import { useEffectEvent } from 'react';
 import React, { useEffect } from 'react';
 
 import type { Session, SessionEvent, PermissionRequest, PermissionModeState } from '../shared/types';
@@ -66,6 +67,7 @@ export function useAppEventStream({
   processAgentEvent,
   updateSessionDirect,
 }: useAppEventStreamInput) {
+const changeInputFromStream = useEffectEvent(handleInputChange);
 useEffect(() => {
     // Handoff events signal end of streaming - need to sync back to React state
     // Also includes todo_state_changed so status updates immediately reflect in sidebar
@@ -128,7 +130,7 @@ useEffect(() => {
             const restored = existingText
               ? `${existingText}\n\n${restoredText}`
               : restoredText
-            handleInputChange(sessionId, restored)
+            changeInputFromStream(sessionId, restored)
             // handleInputChange updates the ref but ChatPage has local state.
             // Dispatch a custom event so ChatPage re-reads the draft.
             window.dispatchEvent(new CustomEvent('craft:restore-input', {
@@ -203,7 +205,7 @@ useEffect(() => {
         return
       }
 
-      const agentEvent = event as unknown as AgentEvent
+      const agentEvent: AgentEvent = event
 
       // Track activity for stale session watchdog
       trackSessionActivity(sessionId)
@@ -317,7 +319,6 @@ useEffect(() => {
     return cleanup
   // The input callback is declared after this subscription in App; the deferred
   // delegate retains the callback from the render that installed the listener.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     processAgentEvent,
     trackSessionActivity,

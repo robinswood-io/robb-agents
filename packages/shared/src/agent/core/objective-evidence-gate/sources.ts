@@ -1,3 +1,4 @@
+import { isJsonObject, isUnknownArray } from '../../../utils/json.ts';
 import { trimTrailingCharacters } from "../../../utils/string-boundaries.ts";
 import type { HighStakesEvidenceDomain, SecurityDocumentationProvider } from './contracts.ts';
 
@@ -135,16 +136,16 @@ export function sourceObservationSucceeded(result: string): boolean {
   if (normalized.startsWith('{') && normalized.endsWith('}')) {
     try {
       const parsed = JSON.parse(normalized) as unknown;
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      if (parsed && typeof parsed === 'object' && !isUnknownArray(parsed)) {
         const envelope = parsed as Record<string, unknown>;
-        const numericStatus = typeof envelope.status === 'number'
-          ? envelope.status
-          : typeof envelope.status === 'string' && /^\d{3}$/.test(envelope.status)
-            ? Number(envelope.status) : undefined;
-        if (envelope.success === false || envelope.ok === false
+        const numericStatus = typeof envelope["status"] === 'number'
+          ? envelope["status"]
+          : typeof envelope["status"] === 'string' && /^\d{3}$/.test(envelope["status"])
+            ? Number(envelope["status"]) : undefined;
+        if (envelope["success"] === false || envelope["ok"] === false
           || numericStatus !== undefined && numericStatus >= 400
-          || typeof envelope.error === 'string' && envelope.error.trim().length > 0
-          || Array.isArray(envelope.errors) && envelope.errors.length > 0) return false;
+          || typeof envelope["error"] === 'string' && envelope["error"].trim().length > 0
+          || isUnknownArray(envelope["errors"]) && envelope["errors"].length > 0) return false;
       }
     } catch {
       // A fetched document can itself be non-JSON text beginning with `{`.
@@ -200,12 +201,12 @@ export function targetsOfficialSource(
     if (typeof input[key] === 'string'
       && isOfficialSourceUrl(input[key], domain, businessSourceVendors, securityDocumentationProviders)) return true;
   }
-  if (Array.isArray(input.open) && input.open.slice(0, 8).some(item => (
-    item && typeof item === 'object' && typeof item.ref_id === 'string'
-      && isOfficialSourceUrl(item.ref_id, domain, businessSourceVendors, securityDocumentationProviders)
+  if (isUnknownArray(input["open"]) && input["open"].slice(0, 8).some((item: unknown) => (
+    isJsonObject(item) && typeof item["ref_id"] === 'string'
+      && isOfficialSourceUrl(item["ref_id"], domain, businessSourceVendors, securityDocumentationProviders)
   ))) return true;
-  const command = input.command;
-  if (Array.isArray(command)) return command.length === 2
+  const command = input["command"];
+  if (isUnknownArray(command)) return command.length === 2
     && /^(?:open|navigate|goto)$/.test(String(command[0]))
     && typeof command[1] === 'string'
     && isOfficialSourceUrl(command[1], domain, businessSourceVendors, securityDocumentationProviders);

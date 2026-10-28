@@ -82,11 +82,11 @@ export async function executeScreenshotBrowserCommand(parts: string[], fns: Brow
       `Capture time: ${elapsedMs}ms`,
     ];
     const metadata = result.metadata as Record<string, unknown> | undefined;
-    const viewport = metadata?.viewport as { width?: number; height?: number; dpr?: number } | undefined;
+    const viewport = metadata?.["viewport"] as { width?: number; height?: number; dpr?: number } | undefined;
     if (viewport?.width && viewport?.height) {
       lines.push(`Viewport: ${viewport.width}x${viewport.height} @ DPR ${viewport.dpr ?? 1}`);
     }
-    const targets = (metadata?.targets as Array<unknown> | undefined)?.length;
+    const targets = (metadata?.["targets"] as Array<unknown> | undefined)?.length;
     if (typeof targets === 'number') {
       lines.push(`Annotated targets: ${targets}`);
     }
@@ -119,7 +119,7 @@ export async function executeScreenshotRegionBrowserCommand(parts: string[], fns
       }
       const result = await fns.screenshotRegion({ source: 'canvas', selector: tokens[1], format: 'png' });
       const buf = result.imageBuffer;
-      if (!buf?.length || buf.length > 4 * 1024 * 1024 || result.imageFormat !== 'png' || result.metadata?.source !== 'canvas-bitmap') {
+      if (!buf?.length || buf.length > 4 * 1024 * 1024 || result.imageFormat !== 'png' || result.metadata?.["source"] !== 'canvas-bitmap') {
         throw new Error('Canvas capture returned an invalid, empty or oversized image receipt. No page screenshot was substituted.');
       }
       return {
@@ -152,12 +152,12 @@ export async function executeScreenshotRegionBrowserCommand(parts: string[], fns
     if (cleaned[0] === '--ref') {
       const ref = cleaned[1];
       if (!ref) throw new Error('screenshot-region --ref requires a ref value.');
-      screenshotArgs = { ref, padding, format };
+      screenshotArgs = { ref, ...(padding !== undefined ? { padding } : {}), format };
       targetDescription = `ref ${ref}`;
     } else if (cleaned[0] === '--selector') {
       const selector = cleaned.slice(1).join(' ').trim();
       if (!selector) throw new Error('screenshot-region --selector requires a CSS selector value.');
-      screenshotArgs = { selector, padding, format };
+      screenshotArgs = { selector, ...(padding !== undefined ? { padding } : {}), format };
       targetDescription = `selector ${selector}`;
     } else {
       if (cleaned.length < 4) {
@@ -171,7 +171,7 @@ export async function executeScreenshotRegionBrowserCommand(parts: string[], fns
       if ([x, y, width, height].some((n) => Number.isNaN(n))) {
         throw new Error('screenshot-region coordinates must be numbers.');
       }
-      screenshotArgs = { x, y, width, height, padding, format };
+      screenshotArgs = { x, y, width, height, ...(padding !== undefined ? { padding } : {}), format };
       targetDescription = `box (${x}, ${y}, ${width}x${height})`;
     }
 

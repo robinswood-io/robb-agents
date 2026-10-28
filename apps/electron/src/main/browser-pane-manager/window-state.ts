@@ -36,17 +36,17 @@ export function findReusableUnboundInstance(transportOwner: BrowserPaneManager, 
     if (candidates.length === 0)
         return null;
     // Prefer visible windows first, then fall back to first available.
-    return candidates.find((i) => i.isVisible) ?? candidates[0];
+    return candidates.find((i) => i.isVisible) ?? candidates[0] ?? null;
 }
 
-export function getAgentControlLabel(transportOwner: BrowserPaneManager, agentControl: Pick<AgentControlState, 'displayName' | 'intent'> | null | undefined): string {
+export function getAgentControlLabel(_transportOwner: BrowserPaneManager, agentControl: Pick<AgentControlState, 'displayName' | 'intent'> | null | undefined): string {
     if (agentControl?.intent) {
         return `${agentControl.displayName ?? 'Agent'} — ${agentControl.intent}`;
     }
     return agentControl?.displayName ?? 'Agent is working…';
 }
 
-export function isBrowserWindowAlive(transportOwner: BrowserPaneManager, window: BrowserWindow): boolean {
+export function isBrowserWindowAlive(_transportOwner: BrowserPaneManager, window: BrowserWindow): boolean {
     try {
         return !window.isDestroyed();
     }
@@ -56,7 +56,7 @@ export function isBrowserWindowAlive(transportOwner: BrowserPaneManager, window:
 }
 
 /** Resolve the app's current accent color as a concrete CSS value (not a var reference). */
-export function getResolvedAccentColor(transportOwner: BrowserPaneManager): string {
+export function getResolvedAccentColor(_transportOwner: BrowserPaneManager): string {
     const isDark = nativeTheme.shouldUseDarkColors;
     const userTheme = loadAppTheme();
     const accent = isDark
@@ -65,14 +65,14 @@ export function getResolvedAccentColor(transportOwner: BrowserPaneManager): stri
     return accent;
 }
 
-export function getToolbarEffectiveHeight(transportOwner: BrowserPaneManager, instance: BrowserInstance): number {
+export function getToolbarEffectiveHeight(_transportOwner: BrowserPaneManager, instance: BrowserInstance): number {
     if (!instance.toolbarMenuOpen)
         return TOOLBAR_HEIGHT;
     const [, contentHeight] = instance.window.getContentSize();
-    return Math.max(TOOLBAR_HEIGHT, contentHeight);
+    return Math.max(TOOLBAR_HEIGHT, contentHeight ?? TOOLBAR_HEIGHT);
 }
 
-export function getWindowResizable(transportOwner: BrowserPaneManager, window: BrowserWindow): boolean {
+export function getWindowResizable(_transportOwner: BrowserPaneManager, window: BrowserWindow): boolean {
     try {
         return typeof window.isResizable === 'function' ? window.isResizable() : true;
     }
@@ -81,7 +81,7 @@ export function getWindowResizable(transportOwner: BrowserPaneManager, window: B
     }
 }
 
-export function setWindowResizable(transportOwner: BrowserPaneManager, window: BrowserWindow, value: boolean): boolean {
+export function setWindowResizable(_transportOwner: BrowserPaneManager, window: BrowserWindow, value: boolean): boolean {
     try {
         if (typeof window.setResizable === 'function') {
             window.setResizable(value);

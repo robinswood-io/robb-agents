@@ -149,25 +149,25 @@ export function isCanonicalContextualGmailReplyInput(
   if (!(toolName === CONTEXTUAL_GMAIL_REPLY_TOOL
       || toolName === CONTEXTUAL_GMAIL_REPLY_ALL_TOOL)
     || Object.keys(input).some(key => !allowedKeys.has(key))
-    || typeof input.messageId !== 'string'
-    || !GMAIL_MESSAGE_ID.test(input.messageId.trim())
-    || input.messageId !== input.messageId.trim()
-    || typeof input.body !== 'string'
-    || input.body.trim().length === 0
-    || /\0/u.test(input.body)
-    || typeof input.recipientBinding !== 'string'
-    || !/^v1\.[0-9]{10}\.[0-9a-f]{64}$/iu.test(input.recipientBinding)
+    || typeof input["messageId"] !== 'string'
+    || !GMAIL_MESSAGE_ID.test(input["messageId"].trim())
+    || input["messageId"] !== input["messageId"].trim()
+    || typeof input["body"] !== 'string'
+    || input["body"].trim().length === 0
+    || /\0/u.test(input["body"])
+    || typeof input["recipientBinding"] !== 'string'
+    || !/^v1\.[0-9]{10}\.[0-9a-f]{64}$/iu.test(input["recipientBinding"])
     || toolName === CONTEXTUAL_GMAIL_REPLY_TOOL
-      && (typeof input.expectedRecipientEmail !== 'string'
-        || input.expectedRecipientEmail !== input.expectedRecipientEmail.trim().toLowerCase()
-        || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(input.expectedRecipientEmail))
+      && (typeof input["expectedRecipientEmail"] !== 'string'
+        || input["expectedRecipientEmail"] !== input["expectedRecipientEmail"].trim().toLowerCase()
+        || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(input["expectedRecipientEmail"]))
     || toolName === CONTEXTUAL_GMAIL_REPLY_ALL_TOOL
-      && input.expectedRecipientEmail !== undefined
-    || input.expectedSenderEmail !== undefined
-      && (typeof input.expectedSenderEmail !== 'string'
-        || input.expectedSenderEmail !== input.expectedSenderEmail.trim().toLowerCase()
-        || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(input.expectedSenderEmail))
-    || input.isHtml !== undefined && typeof input.isHtml !== 'boolean') return false;
+      && input["expectedRecipientEmail"] !== undefined
+    || input["expectedSenderEmail"] !== undefined
+      && (typeof input["expectedSenderEmail"] !== 'string'
+        || input["expectedSenderEmail"] !== input["expectedSenderEmail"].trim().toLowerCase()
+        || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(input["expectedSenderEmail"]))
+    || input["isHtml"] !== undefined && typeof input["isHtml"] !== 'boolean') return false;
   for (const key of ['_displayName', '_intent'] as const) {
     if (input[key] !== undefined && (typeof input[key] !== 'string' || /\0/u.test(input[key]))) {
       return false;

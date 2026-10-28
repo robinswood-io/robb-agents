@@ -35,23 +35,23 @@ export function expandToolPaths(
   let updatedInput: Record<string, unknown> | null = null;
 
   // Expand file_path if present and starts with ~
-  if (typeof input.file_path === 'string' && input.file_path.startsWith('~')) {
-    const expandedPath = expandPath(input.file_path);
-    onDebug?.(`Expanding path: ${input.file_path} → ${expandedPath}`);
+  if (typeof input["file_path"] === 'string' && input["file_path"].startsWith('~')) {
+    const expandedPath = expandPath(input["file_path"]);
+    onDebug?.(`Expanding path: ${input["file_path"]} → ${expandedPath}`);
     updatedInput = { ...input, file_path: expandedPath };
   }
 
   // Expand notebook_path if present and starts with ~
-  if (typeof input.notebook_path === 'string' && input.notebook_path.startsWith('~')) {
-    const expandedPath = expandPath(input.notebook_path);
-    onDebug?.(`Expanding notebook path: ${input.notebook_path} → ${expandedPath}`);
+  if (typeof input["notebook_path"] === 'string' && input["notebook_path"].startsWith('~')) {
+    const expandedPath = expandPath(input["notebook_path"]);
+    onDebug?.(`Expanding notebook path: ${input["notebook_path"]} → ${expandedPath}`);
     updatedInput = { ...(updatedInput || input), notebook_path: expandedPath };
   }
 
   // Expand path if present and starts with ~ (for Glob, Grep)
-  if (typeof input.path === 'string' && input.path.startsWith('~')) {
-    const expandedPath = expandPath(input.path);
-    onDebug?.(`Expanding search path: ${input.path} → ${expandedPath}`);
+  if (typeof input["path"] === 'string' && input["path"].startsWith('~')) {
+    const expandedPath = expandPath(input["path"]);
+    onDebug?.(`Expanding search path: ${input["path"]} → ${expandedPath}`);
     updatedInput = { ...(updatedInput || input), path: expandedPath };
   }
 
@@ -93,7 +93,7 @@ export function qualifySkillName(
   workingDirectory?: string,
   onDebug?: (message: string) => void
 ): SkillQualificationResult {
-  const skill = input.skill as string | undefined;
+  const skill = input["skill"] as string | undefined;
   if (!skill) return { modified: false, input };
 
   // Extract the bare slug — strip any existing qualifier (e.g. "CraftAgentWS:commit" → "commit")

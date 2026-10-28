@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import type { PermissionMode } from '@craft-agent/shared/agent';
 import { getDefaultLlmConnection } from '@craft-agent/shared/config';
@@ -172,7 +174,7 @@ async function sessionOpSetKanbanColumn(sessionOperationContext: SessionOperatio
             await sessionOperationContext.owner.flushSession(managed.id);
             // Self-writes don't re-emit through the file watcher (kanbanColumn isn't in the header
             // signature), so push a live metadata event for the board to consume.
-            sessionOperationContext.owner["sendEvent"]({ type: 'session_metadata_changed', sessionId, changes: { kanbanColumn: column ?? undefined } }, managed.workspace.id);
+            sessionOperationContext.owner["sendEvent"]({ type: 'session_metadata_changed', sessionId, changes: { kanbanColumn: column } }, managed.workspace.id);
             const watcher = sessionOperationContext.state.configWatchers.get(managed.workspace.rootPath);
             watcher?.notifyFileChange(`sessions/${sessionId}/session.jsonl`);
         });
@@ -213,7 +215,7 @@ async function sessionOpSetTaskNodeCount(sessionOperationContext: SessionOperati
  */
 async function sessionOpAdoptGeneratedTaskOrchestrator(sessionOperationContext: SessionOperationContext, sessionId: string, taskSlug: string, reconcile?: {
     name?: string;
-    projectId?: string;
+    projectId?: string | undefined;
     workingDirectory?: string;
     model?: string;
     llmConnection?: string;
@@ -229,7 +231,7 @@ async function sessionOpAdoptGeneratedTaskOrchestrator(sessionOperationContext: 
 
 async function sessionOpPerformAdoptGeneratedTaskOrchestrator(sessionOperationContext: SessionOperationContext, managed: ManagedSession, taskSlug: string, reconcile?: {
     name?: string;
-    projectId?: string;
+    projectId?: string | undefined;
     workingDirectory?: string;
     model?: string;
     llmConnection?: string;
@@ -329,7 +331,7 @@ async function sessionOpPerformAdoptGeneratedTaskOrchestrator(sessionOperationCo
         changes.projectId = reconcile.projectId;
     sessionOperationContext.owner["sendEvent"]({ type: 'session_metadata_changed', sessionId, changes }, managed.workspace.id);
     if (renamed) {
-        sessionOperationContext.owner["sendEvent"]({ type: 'name_changed', sessionId, name: managed.name }, managed.workspace.id);
+        sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'name_changed' }>>({ type: 'name_changed', sessionId, name: managed.name }), managed.workspace.id);
     }
     if (connectionChanged) {
         sessionOperationContext.owner["sendEvent"]({
@@ -363,7 +365,7 @@ async function sessionOpPerformAdoptGeneratedTaskOrchestrator(sessionOperationCo
  */
 async function sessionOpBindExistingSessionToTask(sessionOperationContext: SessionOperationContext, sessionId: string, taskSlug: string, reconcile?: {
     name?: string;
-    projectId?: string;
+    projectId?: string | undefined;
     workingDirectory?: string;
     model?: string;
     llmConnection?: string;

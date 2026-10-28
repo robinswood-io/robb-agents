@@ -26,7 +26,7 @@ export async function setPendingPlanExecution(
 
   session.pendingPlanExecution = {
     planPath,
-    draftInputSnapshot,
+    ...(draftInputSnapshot !== undefined ? { draftInputSnapshot } : {}),
     awaitingCompaction: true,
     executionDispatched: false,
   };

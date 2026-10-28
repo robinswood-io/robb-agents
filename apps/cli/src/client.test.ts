@@ -29,7 +29,7 @@ function createMockServer(opts?: {
 
   const server = Bun.serve({
     port: 0,
-    tls: opts?.tls,
+    ...(opts?.tls ? { tls: opts.tls } : {}),
     fetch(req, server) {
       if (server.upgrade(req)) return undefined
       return new Response('Not found', { status: 404 })
@@ -69,8 +69,8 @@ function createMockServer(opts?: {
           const response: MessageEnvelope = {
             id: envelope.id,
             type: 'response',
-            channel: envelope.channel,
-            result: envelope.args,
+            ...(envelope.channel !== undefined ? { channel: envelope.channel } : {}),
+            ...(envelope.args !== undefined ? { result: envelope.args } : {}),
           }
           ws.send(serializeEnvelope(response))
         }
@@ -130,7 +130,7 @@ function createErrorServer(): MockServer {
           const response: MessageEnvelope = {
             id: envelope.id,
             type: 'response',
-            channel: envelope.channel,
+            ...(envelope.channel !== undefined ? { channel: envelope.channel } : {}),
             error: { code: 'HANDLER_ERROR', message: 'test error' },
           }
           ws.send(serializeEnvelope(response))
@@ -390,7 +390,7 @@ function generateSelfSignedCert(): { cert: string; key: string } | null {
     const pem = keyResult.stdout.toString()
     const certMatch = pem.match(/(-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----)/)
     const keyMatch = pem.match(/(-----BEGIN (?:EC )?PRIVATE KEY-----[\s\S]+?-----END (?:EC )?PRIVATE KEY-----)/)
-    if (!certMatch || !keyMatch) return null
+    if (!certMatch?.[1] || !keyMatch?.[1]) return null
 
     return { cert: certMatch[1], key: keyMatch[1] }
   } catch {

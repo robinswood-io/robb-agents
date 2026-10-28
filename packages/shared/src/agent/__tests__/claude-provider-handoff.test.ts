@@ -3,8 +3,8 @@ import { ClaudeAgent } from '../claude-agent.ts';
 
 function persistentTurnHarness(push: (prompt: unknown, onConsumed?: () => void) => void) {
   const runtime = Object.create(ClaudeAgent.prototype) as ClaudeAgent;
-  runtime["persistentInput"] = ({ push } satisfies Partial<NonNullable<ClaudeAgent["persistentInput"]>>) as Partial<NonNullable<ClaudeAgent["persistentInput"]>> as ClaudeAgent["persistentInput"];
-  runtime["currentQuery"] = ({} satisfies Partial<NonNullable<ClaudeAgent["currentQuery"]>>) as Partial<NonNullable<ClaudeAgent["currentQuery"]>> as ClaudeAgent["currentQuery"];
+  runtime["persistentInput"] = ({ push } satisfies Partial<NonNullable<ClaudeAgent["persistentInput"]>>) as ClaudeAgent["persistentInput"];
+  runtime["currentQuery"] = ({} satisfies Partial<NonNullable<ClaudeAgent["currentQuery"]>>) as ClaudeAgent["currentQuery"];
   runtime["persistentAbortController"] = null;
   runtime["currentQueryAbortController"] = null;
   runtime["activeTurnChannel"] = null;
@@ -81,7 +81,7 @@ describe('Claude provider handoff boundary', () => {
     runtime.onProviderDispatchRejected = () => { rejected += 1; };
 
     await expect(runtime["performProviderDispatchWriteAhead"](
-      () => runtime["createProviderTurnMessageSource"](
+      () => runtime.createProviderTurnMessageSource(
         'Continue.', undefined, {},
         { sessionId: 'session-handoff', runtimeId: 'runtime-handoff' },
       ),

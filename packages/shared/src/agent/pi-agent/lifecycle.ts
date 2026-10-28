@@ -6,21 +6,21 @@ import { unregisterSessionScopedToolCallbacks } from "../session-scoped-tools.ts
 import { invalidateContextualGmailSessionState } from "../core/pre-tool-use.ts";
 import type { PiAgent } from '../pi-agent.ts';
 
-export async function abort(transportOwner: PiAgent, reason?: string): Promise<void> {
-    const requiresRuntimeTeardown = transportOwner["hasContextualGmailInFlightForCurrentRuntime"]()
+export async function abort(transportOwner: PiAgent, _reason?: string): Promise<void> {
+    const requiresRuntimeTeardown = transportOwner.hasContextualGmailInFlightForCurrentRuntime()
         || transportOwner["hasAdmittedToolExecutions"]();
     transportOwner["promptPreparationRevision"]++;
     transportOwner["revokeAdmittedToolExecutions"]();
     // Fire Stop hook event (fire-and-forget)
     transportOwner["emitAutomationEvent"]('Stop', { hook_event_name: 'Stop' });
     // Deny all pending permissions
-    transportOwner["denyAllPendingPermissions"]();
-    transportOwner["invalidateContextualGmailStateForCurrentSession"]();
+    transportOwner.denyAllPendingPermissions();
+    transportOwner.invalidateContextualGmailStateForCurrentSession();
     // A plain SDK abort leaves the subprocess able to emit a delayed proxy
     // request. An admitted Gmail mutation therefore requires confirmed process
     // teardown before its not-yet-started reservation can be released.
     if (requiresRuntimeTeardown) {
-        await transportOwner["killSubprocessGracefully"]();
+        await transportOwner.killSubprocessGracefully();
     }
     else {
         transportOwner["send"]({ type: 'abort' });
@@ -31,22 +31,22 @@ export async function abort(transportOwner: PiAgent, reason?: string): Promise<v
 }
 
 export function forceAbort(transportOwner: PiAgent, reason: AbortReason): void {
-    const requiresRuntimeTeardown = transportOwner["hasContextualGmailInFlightForCurrentRuntime"]()
+    const requiresRuntimeTeardown = transportOwner.hasContextualGmailInFlightForCurrentRuntime()
         || transportOwner["hasAdmittedToolExecutions"]();
     transportOwner["promptPreparationRevision"]++;
     transportOwner["revokeAdmittedToolExecutions"]();
     // Fire Stop hook event (fire-and-forget)
     transportOwner["emitAutomationEvent"]('Stop', { hook_event_name: 'Stop' });
-    transportOwner["abortReason"] = reason;
+    transportOwner.abortReason = reason;
     transportOwner["_isProcessing"] = false;
     // Reject all pending permissions
-    transportOwner["denyAllPendingPermissions"]();
-    transportOwner["invalidateContextualGmailStateForCurrentSession"]();
+    transportOwner.denyAllPendingPermissions();
+    transportOwner.invalidateContextualGmailStateForCurrentSession();
     // Reject all pending tool executions
-    for (const [, pending] of transportOwner["pendingToolExecutions"]) {
+    for (const [, pending] of transportOwner.pendingToolExecutions) {
         pending.reject(new Error(`Force aborted: ${reason}`));
     }
-    transportOwner["pendingToolExecutions"].clear();
+    transportOwner.pendingToolExecutions.clear();
     // Signal turn complete to wake up any waiting consumers
     transportOwner["eventQueue"].complete();
     // Clear bridge cache for aborted turn.
@@ -64,7 +64,7 @@ export function forceAbort(transportOwner: PiAgent, reason: AbortReason): void {
 }
 
 export function redirect(transportOwner: PiAgent, message: string): boolean {
-    if ((transportOwner["pendingPermissions"]?.size ?? 0) > 0 || transportOwner["hasAdmittedToolExecutions"]()) {
+    if ((transportOwner.pendingPermissions?.size ?? 0) > 0 || transportOwner["hasAdmittedToolExecutions"]()) {
         transportOwner["forceAbort"](AbortReason.Redirect);
         return false;
     }
@@ -101,7 +101,7 @@ export function destroy(transportOwner: PiAgent): void {
         invalidateContextualGmailSessionState(transportOwner["config"].session.id);
         unregisterSessionScopedToolCallbacks(transportOwner["config"].session.id);
     }
-    transportOwner["_sessionToolContext"] = null;
+    transportOwner._sessionToolContext = null;
     // Pool clients are owned by the main process — don't close them here.
     transportOwner["killSubprocess"]();
     transportOwner["debug"]('PiAgent destroyed');
@@ -113,8 +113,8 @@ export async function disposeForRestart(transportOwner: PiAgent): Promise<void> 
         invalidateContextualGmailSessionState(transportOwner["config"].session.id);
         unregisterSessionScopedToolCallbacks(transportOwner["config"].session.id);
     }
-    transportOwner["_sessionToolContext"] = null;
-    await transportOwner["killSubprocessGracefully"]();
+    transportOwner._sessionToolContext = null;
+    await transportOwner.killSubprocessGracefully();
     transportOwner["debug"]('PiAgent disposed for restart');
 }
 

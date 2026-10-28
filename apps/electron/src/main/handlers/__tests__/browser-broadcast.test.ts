@@ -1,3 +1,5 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import { requiredTestValue } from '@craft-agent/shared/testing/fixture-values';
 /**
  * Tests for browser handler broadcast + LIST.
  *
@@ -74,7 +76,7 @@ function makeDeps(opts: {
   captureRemovedCb?: (cb: (id: string) => void) => void
   captureInteractedCb?: (cb: (id: string) => void) => void
 }): HandlerDeps {
-  return {
+  return omitUndefined<HandlerDeps>({
     sessionManager: {} as HandlerDeps['sessionManager'],
     platform: {
       appRootPath: '',
@@ -94,9 +96,9 @@ function makeDeps(opts: {
       onStateChange: (cb: (info: BrowserInstanceInfo) => void) => opts.captureStateCb?.(cb),
       onRemoved: (cb: (id: string) => void) => opts.captureRemovedCb?.(cb),
       onInteracted: (cb: (id: string) => void) => opts.captureInteractedCb?.(cb),
-    } as unknown as NonNullable<HandlerDeps['browserPaneManager']>,
+    } as NonNullable<HandlerDeps['browserPaneManager']>,
     oauthFlowStore: {} as HandlerDeps['oauthFlowStore'],
-  }
+  })
 }
 
 describe('browser handler — workspace filtering', () => {
@@ -122,12 +124,12 @@ describe('browser handler — workspace filtering', () => {
       // Workspace-stamped instance broadcasts to all (renderer will filter).
       captured!(makeInstance('b-ws', { workspaceId: 'ws-1' }))
       expect(recorder.pushes).toHaveLength(1)
-      expect(recorder.pushes[0].target).toEqual({ to: 'all' })
+      expect(requiredTestValue(recorder.pushes[0]).target).toEqual({ to: 'all' })
 
       // Unbound instance also broadcasts to all.
       captured!(makeInstance('b-unbound', { workspaceId: null }))
       expect(recorder.pushes).toHaveLength(2)
-      expect(recorder.pushes[1].target).toEqual({ to: 'all' })
+      expect(requiredTestValue(recorder.pushes[1]).target).toEqual({ to: 'all' })
     })
   })
 
@@ -146,9 +148,9 @@ describe('browser handler — workspace filtering', () => {
       captured!('b-removed')
 
       expect(recorder.pushes).toHaveLength(1)
-      expect(recorder.pushes[0].target).toEqual({ to: 'all' })
+      expect(requiredTestValue(recorder.pushes[0]).target).toEqual({ to: 'all' })
       // Payload is id-only — workspaces that never saw the entry simply no-op.
-      expect(recorder.pushes[0].args).toEqual(['b-removed'])
+      expect(requiredTestValue(recorder.pushes[0]).args).toEqual(['b-removed'])
     })
 
     it('INTERACTED uses { to: "all" }', async () => {
@@ -165,7 +167,7 @@ describe('browser handler — workspace filtering', () => {
       captured!('b-interacted')
 
       expect(recorder.pushes).toHaveLength(1)
-      expect(recorder.pushes[0].target).toEqual({ to: 'all' })
+      expect(requiredTestValue(recorder.pushes[0]).target).toEqual({ to: 'all' })
     })
   })
 

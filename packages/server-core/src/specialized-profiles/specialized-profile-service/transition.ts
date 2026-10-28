@@ -24,7 +24,7 @@ export async function transition(transportOwner: SpecializedProfileService, work
         to: request.to,
         actorId,
         reason: request.reason,
-        evaluationIds: request.evaluationIds,
+        ...(request.evaluationIds !== undefined ? { evaluationIds: request.evaluationIds } : {}),
     }, requiresPromotionApproval ? async (context) => {
         const unsafe = context.version.definition.requestedCapabilities.find((capability) => WRITE_OR_EXTERNAL_CAPABILITIES.has(capability.kind));
         if (unsafe) {

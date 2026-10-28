@@ -32,8 +32,8 @@ describe('Craft metadata schema compatibility for Pi tools', () => {
     expect(widened.required).toEqual(schema.required);
     expect(widened.required).not.toContain('_displayName');
     expect(widened.required).not.toContain('_intent');
-    expect((widened.properties as Record<string, unknown>)._displayName).toBeDefined();
-    expect((widened.properties as Record<string, unknown>)._intent).toBeDefined();
+    expect((widened.properties as Record<string, unknown>)["_displayName"]).toBeDefined();
+    expect((widened.properties as Record<string, unknown>)["_intent"]).toBeDefined();
     expect(widened.properties.path).toBe(schema.properties.path);
     expect(widened.properties.edits).toBe(schema.properties.edits);
   });
@@ -48,13 +48,13 @@ describe('Craft metadata schema compatibility for Pi tools', () => {
     };
 
     expect(widenedSchema.additionalProperties).toBe((editTool.parameters as { additionalProperties?: unknown }).additionalProperties);
-    expect(widenedSchema.properties._displayName).toBeDefined();
-    expect(widenedSchema.properties._intent).toBeDefined();
+    expect(widenedSchema.properties["_displayName"]).toBeDefined();
+    expect(widenedSchema.properties["_intent"]).toBeDefined();
     expect(widenedSchema.required ?? []).not.toContain('_displayName');
     expect(widenedSchema.required ?? []).not.toContain('_intent');
-    expect(widenedSchema.properties.file_path).toBeDefined();
-    expect(widenedSchema.properties.old_string).toBeDefined();
-    expect(widenedSchema.properties.new_string).toBeDefined();
+    expect(widenedSchema.properties["file_path"]).toBeDefined();
+    expect(widenedSchema.properties["old_string"]).toBeDefined();
+    expect(widenedSchema.properties["new_string"]).toBeDefined();
     expect((widened as { anyOf?: unknown[] }).anyOf).toEqual([
       { required: ['path', 'edits'] },
       { required: ['file_path', 'old_string', 'new_string'] },
@@ -102,8 +102,8 @@ describe('Craft metadata schema compatibility for Pi tools', () => {
 
     const widened = allowCraftMetadataProperties(schema);
 
-    expect((widened.properties as Record<string, unknown>)._displayName).toBe(upstreamDisplayName);
-    expect((widened.properties as Record<string, unknown>)._intent).toBe(upstreamIntent);
+    expect((widened.properties as Record<string, unknown>)["_displayName"]).toBe(upstreamDisplayName);
+    expect((widened.properties as Record<string, unknown>)["_intent"]).toBe(upstreamIntent);
   });
 
   it('returns unknown schema shapes unchanged', () => {

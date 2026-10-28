@@ -59,8 +59,9 @@ export async function testApiConnectionWithAuth(
       // api-tools.ts buildHeaders does at runtime. Fall through if the token is
       // already a non-JSON string (legacy / hand-edited vault entries).
       try {
-        const parsed = JSON.parse(token);
-        if (parsed && typeof parsed === 'object' && parsed.username && parsed.password) {
+        const parsed: unknown = JSON.parse(token);
+        if (parsed && typeof parsed === 'object' && 'username' in parsed && 'password' in parsed
+          && typeof parsed.username === 'string' && parsed.username && typeof parsed.password === 'string' && parsed.password) {
           const encoded = Buffer.from(`${parsed.username}:${parsed.password}`).toString('base64');
           headers['Authorization'] = `Basic ${encoded}`;
           break;
@@ -252,5 +253,5 @@ export async function testApiConnectionBasic(
     }
   }
 
-  return { lines, success, hasError, error };
+  return { lines, success, hasError, ...(error !== undefined ? { error } : {}) };
 }

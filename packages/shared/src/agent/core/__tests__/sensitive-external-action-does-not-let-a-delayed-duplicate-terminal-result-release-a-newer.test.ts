@@ -57,7 +57,7 @@ function createClosedExactGmailPreflightScenario(options: {
     input,
     sessionId,
     toolUseId,
-    runtimeId: invocationRuntimeId,
+    ...(invocationRuntimeId !== undefined ? { runtimeId: invocationRuntimeId } : {}),
     sourceActivationReentry,
     permissionMode,
     workspaceRootPath: '/tmp/robb-sensitive-action-test',
@@ -180,9 +180,6 @@ afterEach(() => {
 });
 
 describe('sensitive external action gate across permission modes', () => {
-  const silaeConfirmationObjective = [
-    'Reprends l’objectif explicite d’écrire à Benoît. Vérifie d’abord Sent/Brouillons pour éviter un doublon, exécute le préflight exact vers benoit@example.test, sans fallback navigateur, puis arrête-toi immédiatement avant l’envoi pour la confirmation d’action externe. Après confirmation, envoie une seule fois et vérifie le messageId.',
-  ];
 
   it('does not let a delayed duplicate terminal result release a newer Gmail reservation', () => {
     const scenario = createClosedExactGmailPreflightScenario();

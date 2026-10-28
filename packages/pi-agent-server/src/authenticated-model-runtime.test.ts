@@ -37,7 +37,7 @@ describe('native Pi credentials and runtime isolation', () => {
   });
 
   it('maps IAM credentials to native provider environment without changing process.env', async () => {
-    const before = process.env.AWS_ACCESS_KEY_ID;
+    const before = process.env["AWS_ACCESS_KEY_ID"];
     const credentials = new InMemoryCredentialStore();
     await storePiCredential(credentials, 'amazon-bedrock', { type: 'iam', accessKeyId: 'fixture-id',
       secretAccessKey: 'fixture-secret', sessionToken: 'fixture-session', region: 'eu-west-3' });
@@ -45,6 +45,6 @@ describe('native Pi credentials and runtime isolation', () => {
       AWS_ACCESS_KEY_ID: 'fixture-id', AWS_SECRET_ACCESS_KEY: 'fixture-secret',
       AWS_SESSION_TOKEN: 'fixture-session', AWS_REGION: 'eu-west-3',
     } });
-    expect(process.env.AWS_ACCESS_KEY_ID).toBe(before);
+    expect(process.env["AWS_ACCESS_KEY_ID"]).toBe(before);
   });
 });

@@ -1,3 +1,4 @@
+import { setOptional } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { recoveredInternalMessageOptions } from '../../agent-delivery.ts';
 import { normalizeUserInputResponse } from '@craft-agent/core';
@@ -63,7 +64,7 @@ async function sessionOpPerformRespondToUserInput(sessionOperationContext: Sessi
             sessionOperationContext.owner["persistSession"](managed);
             await sessionOperationContext.owner.flushSession(managed.id);
             sessionOpWakeQueuedQuestionAncestors(sessionOperationContext, managed);
-            return { status: request.status === 'cancelled' ? 'cancelled' : 'already_answered', responseMessageId: request.responseMessageId };
+            return { status: request.status === 'cancelled' ? 'cancelled' : 'already_answered', ...(request.responseMessageId !== undefined ? { responseMessageId: request.responseMessageId } : {}) };
         }
     }
     const delegatedTerminalRetryQuestion = request.questions.length === 1
@@ -152,7 +153,7 @@ async function sessionOpPerformRespondToUserInput(sessionOperationContext: Sessi
             managed.messageQueue.push({
                 message: failedReceipt.content,
                 messageId: failedReceipt.id,
-                storedAttachments: failedReceipt.attachments,
+                ...(failedReceipt.attachments !== undefined ? { storedAttachments: failedReceipt.attachments } : {}),
                 options: recoveredInternalMessageOptions(failedReceipt),
             });
         }
@@ -187,7 +188,7 @@ async function sessionOpPerformRespondToUserInput(sessionOperationContext: Sessi
         // hidden answer turn is created and no model/tool call can interpret or
         // ignore this explicit choice.
         request.status = 'answered';
-        request.answers = response.answers;
+        setOptional(request, "answers", response.answers);
         request.answeredAt = Math.max(Date.now(), (request.answeredAt ?? 0) + 1);
         sessionOperationContext.state.turnCancellationEpochs.set(managed, (sessionOperationContext.state.turnCancellationEpochs.get(managed) ?? 0) + 1);
         sessionOperationContext.state.objectiveAuthorityEpochs.set(managed, (sessionOperationContext.state.objectiveAuthorityEpochs.get(managed) ?? 0) + 1);
@@ -234,7 +235,7 @@ async function sessionOpPerformRespondToUserInput(sessionOperationContext: Sessi
         content: userInputAnswerMessageContent(request.id, request.questions, response.answers ?? []),
     };
     request.status = 'answered';
-    request.answers = response.answers;
+    setOptional(request, "answers", response.answers);
     request.answeredAt = Math.max(Date.now(), (request.answeredAt ?? 0) + 1);
     request.responseMessageId = message.id;
     managed.messages.push(message);

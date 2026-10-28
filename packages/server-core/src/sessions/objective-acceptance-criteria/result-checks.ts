@@ -16,7 +16,7 @@ export function withoutFinalLineTerminator(text: string): string {
 function matchesBoundedReadText(message: Message, expected: string): boolean {
   if (canonicalToolName(message.toolName ?? '') !== 'read'
     || message.toolExecuted !== true || !isObjectiveToolExecutedSuccessfully(message)
-    || typeof message.toolInput?.path !== 'string' || !message.toolInput.path
+    || typeof message.toolInput?.["path"] !== 'string' || !message.toolInput["path"]
     || typeof message.toolResult !== 'string') return false;
   const { offset, limit } = message.toolInput;
   if (!Number.isSafeInteger(offset) || !Number.isSafeInteger(limit)
@@ -45,7 +45,7 @@ export function matchesAcceptanceResultCheck(
   if (matchesBoundedReadText(message, expected)) return true;
   if (message.toolName !== 'mcp__rbw-servers__ssh_execute'
     || message.toolExecuted !== true) return false;
-  const command = message.toolInput?.command;
+  const command = message.toolInput?.["command"];
   if (typeof command !== 'string' || !isProvablyReadOnlyShellCommand(command)) return false;
   const stdout = atPath(projection, '$.stdout');
   return typeof stdout === 'string'
@@ -59,7 +59,7 @@ export function matchesAcceptanceResultCheck(
 export function criterionRegisteredAt(objective: ActiveSessionObjective, criterionId: string): number {
   const fallback = objective.acceptanceRegisteredAt ?? objective.startedAt;
   const entry = Object.getOwnPropertyDescriptor(objective.acceptanceRegisteredAtById ?? {}, criterionId);
-  const value = entry && 'value' in entry ? entry.value : undefined;
+  const value: unknown = entry && 'value' in entry ? entry.value : undefined;
   return typeof value === 'number' && Number.isFinite(value)
     && value >= objective.startedAt && value <= fallback ? value : fallback;
 }

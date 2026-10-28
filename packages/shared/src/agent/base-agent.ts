@@ -95,7 +95,7 @@ export abstract class BaseAgent implements AgentBackend {
      * proxy execution (Pi), and marks the SDK-owned execution window (Claude).
      */
     private admittedToolExecutions = new Map<string, BaseAgentAdmittedToolExecutions>();
-    private sourceServerSnapshot: SourceServerSnapshot = {
+    /** @internal */ public sourceServerSnapshot: SourceServerSnapshot = {
         mcpServers: {},
         apiServers: {},
         intendedSlugs: [],
@@ -212,18 +212,18 @@ export abstract class BaseAgent implements AgentBackend {
         // PromptBuilder: builds context blocks for user messages
         this.promptBuilder = new PromptBuilder({
             workspace: config.workspace,
-            session: config.session,
-            debugMode: config.debugMode,
-            systemPromptPreset: config.systemPromptPreset,
-            isHeadless: config.isHeadless,
-            externalActionPolicy: config.externalActionPolicy,
-            getHumanInputAllowed: config.getHumanInputAllowed,
+            ...(config.session !== undefined ? { session: config.session } : {}),
+            ...(config.debugMode !== undefined ? { debugMode: config.debugMode } : {}),
+            ...(config.systemPromptPreset !== undefined ? { systemPromptPreset: config.systemPromptPreset } : {}),
+            ...(config.isHeadless !== undefined ? { isHeadless: config.isHeadless } : {}),
+            ...(config.externalActionPolicy !== undefined ? { externalActionPolicy: config.externalActionPolicy } : {}),
+            ...(config.getHumanInputAllowed !== undefined ? { getHumanInputAllowed: config.getHumanInputAllowed } : {}),
         });
         // PathProcessor: expands ~ and normalizes paths
         this.pathProcessor = new PathProcessor();
         // UsageTracker: token usage and context window tracking
         this.usageTracker = new UsageTracker({
-            contextWindow,
+            ...(contextWindow !== undefined ? { contextWindow } : {}),
             onUsageUpdate: (update) => this.onUsageUpdate?.(update),
             onDebug: (msg) => this.debug(msg),
         });
@@ -235,7 +235,7 @@ export abstract class BaseAgent implements AgentBackend {
             onDebug: (msg) => this.debug(msg),
         });
         // AutomationSystem: workspace-level automations from automations.json
-        this.automationSystem = config.automationSystem;
+        if (config.automationSystem === undefined) { delete this.automationSystem } else { this.automationSystem = config.automationSystem }
     }
     protected startConfigWatcher(): void {
         return baseAgentConfiguration.startConfigWatcher(this);
@@ -390,7 +390,7 @@ export abstract class BaseAgent implements AgentBackend {
     protected formatSealedSkillDirective(skills: Map<string, string>): string {
         return baseAgentSkills.formatSealedSkillDirective(this, skills);
     }
-    async *chat(message: string, attachments?: FileAttachment[], options?: ChatOptions): AsyncGenerator<AgentEvent> {
+    async *chat(message: string, attachments?: FileAttachment[], options?: ChatOptions): AsyncGenerator<AgentEvent, void, unknown> {
         return yield* baseAgentConversation.chat(this, message, attachments, options);
     }
     // ============================================================
@@ -406,7 +406,7 @@ export abstract class BaseAgent implements AgentBackend {
      * @param attachments - File attachments
      * @param options - Chat options (resume, retry, etc.)
      */
-    protected abstract chatImpl(message: string, attachments?: FileAttachment[], options?: ChatOptions): AsyncGenerator<AgentEvent>;
+    protected abstract chatImpl(message: string, attachments?: FileAttachment[], options?: ChatOptions): AsyncGenerator<AgentEvent, void, unknown>;
     /**
      * Abort current query (user stop or internal abort).
      */

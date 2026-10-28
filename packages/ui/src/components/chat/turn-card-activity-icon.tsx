@@ -14,9 +14,9 @@ export function ActivityStatusIcon({
   customIcon
 }: {
   status: ActivityStatus
-  toolName?: string
+  toolName?: string | undefined
   /** Custom icon from tool metadata - emoji or data URL (base64) */
-  customIcon?: string
+  customIcon?: string | undefined
 }) {
   // Render the appropriate icon based on status
   const renderIcon = () => {
@@ -94,16 +94,16 @@ export function ActivityStatusIcon({
 export interface ActivityRowProps {
   activity: ActivityItem
   /** Callback to open activity details in Monaco */
-  onOpenDetails?: () => void
+  onOpenDetails?: (() => void) | undefined
   /** Whether this is the last child at its depth level (for └ corner in tree view) */
-  isLastChild?: boolean
+  isLastChild?: boolean | undefined
   /** Session folder path for stripping from file paths in tool display */
-  sessionFolderPath?: string
+  sessionFolderPath?: string | undefined
   /** Display mode: 'detailed' shows all info, 'informative' hides MCP/API names and params */
-  displayMode?: 'informative' | 'detailed'
+  displayMode?: 'informative' | 'detailed' | undefined
 }
 
-export function TreeViewConnector({ depth }: { depth: number; isLastChild?: boolean }) {
+export function TreeViewConnector({ depth }: { depth: number; isLastChild?: boolean | undefined }) {
   if (depth === 0) return null
 
   // Just add indentation based on depth, no connectors

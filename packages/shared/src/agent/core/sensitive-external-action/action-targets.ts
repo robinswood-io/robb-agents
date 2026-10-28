@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import { ADDITIONAL_UNRESOLVED_TARGETS, TARGET_FIELD_NAMES, UNRESOLVED_EXTERNAL_TARGET, hasDynamicOrGlobTargetSyntax } from './host-authorization.ts';
 import { isHttpExternalAudienceField, isKnownHttpExternalSendNonAudienceField, resemblesUnknownExternalAudienceField } from './http-audience-fields.ts';
 import { hasBoundedSessionPdfAttachment, isCanonicalEmailAddress } from './target-syntax.ts';
@@ -66,7 +67,7 @@ function extractCanonicalGmailSendTargets(input: Record<string, unknown>): strin
       continue;
     }
     if (key === 'attachmentPaths') {
-      if (!Array.isArray(value)
+      if (!isUnknownArray(value)
         || value.length !== 0 && !hasBoundedSessionPdfAttachment(input)) unresolved = true;
       continue;
     }
@@ -105,12 +106,12 @@ export function extractInputTargets(
       return;
     }
     if (targets.length > 64 || !value || typeof value !== 'object') return;
-    if (Array.isArray(value)) {
+    if (isUnknownArray(value)) {
       for (const entry of value) visit(entry, depth + 1);
       return;
     }
 
-    for (const [rawKey, entry] of Object.entries(value)) {
+    for (const [rawKey, entry] of Object.entries<unknown>((value as Record<string, unknown>))) {
       // Agent-facing presentation metadata is not connector payload. Ignore
       // only the exact root keys stripped before execution and operation
       // hashing; unprefixed or nested lookalikes remain fail-closed.
@@ -142,7 +143,7 @@ export function extractInputTargets(
           targets.push(String(entry));
           recognized = true;
         }
-        if (Array.isArray(entry)) {
+        if (isUnknownArray(entry)) {
           recognized = true;
           for (const item of entry) {
             if (typeof item === 'string') appendStringTarget(item);
@@ -159,7 +160,7 @@ export function extractInputTargets(
             }
           }
         }
-        if (!Array.isArray(entry) && entry && typeof entry === 'object') {
+        if (!isUnknownArray(entry) && entry && typeof entry === 'object') {
           recognized = true;
           const before = targets.length;
           visit(entry, depth + 1);

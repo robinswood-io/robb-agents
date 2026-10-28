@@ -88,7 +88,7 @@ export function pruneIntraTurnToolResults(
     const prunedMessage = {
       ...original,
       content: nextContent,
-    } as unknown as AgentMessage;
+    } as AgentMessage;
     const afterTokens = estimateTokens(prunedMessage);
     if (afterTokens >= beforeTokens) continue;
 

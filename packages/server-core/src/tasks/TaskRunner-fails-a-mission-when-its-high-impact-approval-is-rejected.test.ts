@@ -36,7 +36,7 @@ describe('TaskRunner (Conductor)', () => {
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
       now: () => '2026-06-07T00:00:00.000Z',
-      nowMs,
+      ...(nowMs !== undefined ? { nowMs: nowMs } : {}),
       resolveSubagentAutonomyContext: () => autonomyContext,
       ...(executionProofIssuer ? {
         verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),
@@ -333,7 +333,7 @@ describe('TaskRunner (Conductor)', () => {
       host: recoveredHost, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch,
     });
     const [snapshot] = recovered.recoverNonTerminalRuns();
-    expect(snapshot.status).toBe('paused');
+    expect(snapshot?.status).toBe('paused');
     await waitUntil(() => retired.length === 1);
     expect(retired).toEqual(['sess-a']);
     expect(recoveredHost.created).toHaveLength(0);

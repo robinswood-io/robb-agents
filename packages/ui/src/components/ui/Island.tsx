@@ -69,7 +69,7 @@ export function Island({
     () => ({ duration: cfg.duration, ease: CONTENT_EASE }),
     [cfg.duration]
   )
-  const { contentViews, activeView, shouldMorph } = useIslandContentLayout({
+  const { activeView, shouldMorph } = useIslandContentLayout({
     children,
     activeViewId,
     shellRef,
@@ -147,7 +147,7 @@ export function Island({
         ? () => Boolean(onRequestBack)
         : undefined,
       back: dialogBehavior === 'back-or-close'
-        ? () => handleIslandEscape({ dialogBehavior, onRequestBack, onRequestClose })
+        ? () => handleIslandEscape({ dialogBehavior, ...(onRequestBack !== undefined ? { onRequestBack: onRequestBack } : {}), ...(onRequestClose !== undefined ? { onRequestClose: onRequestClose } : {}) })
         : undefined,
     })
   }, [isDialogMode, isVisible, dialogBehavior, onRequestBack, onRequestClose])
@@ -178,8 +178,8 @@ export function Island({
 
       const handled = handleIslandEscape({
         dialogBehavior,
-        onRequestBack,
-        onRequestClose,
+        ...(onRequestBack !== undefined ? { onRequestBack: onRequestBack } : {}),
+        ...(onRequestClose !== undefined ? { onRequestClose: onRequestClose } : {}),
       })
 
       if (!handled) return
@@ -392,7 +392,7 @@ export function Island({
           onPointerUp={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            handleIslandEscape({ dialogBehavior, onRequestBack, onRequestClose })
+            handleIslandEscape({ dialogBehavior, ...(onRequestBack !== undefined ? { onRequestBack: onRequestBack } : {}), ...(onRequestClose !== undefined ? { onRequestClose: onRequestClose } : {}) })
           }}
         />,
         document.body

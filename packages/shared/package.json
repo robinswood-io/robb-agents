@@ -81,7 +81,9 @@
     "./telemetry": "./src/telemetry/index.ts",
     "./i18n": "./src/i18n/index.ts",
     "./resources": "./src/resources/index.ts",
-    "./robinswood-branding": "./src/robinswood-branding.ts"
+    "./robinswood-branding": "./src/robinswood-branding.ts",
+    "./utils/json": "./src/utils/json.ts",
+    "./testing/fixture-values": "./src/testing/fixture-values.ts"
   },
   "dependencies": {
     "@craft-agent/core": "workspace:*",
@@ -98,14 +100,14 @@
     "croner": "^11.0.0",
     "date-fns": "^4.4.0",
     "filtrex": "^3.1.0",
-    "glob": "^13.0.6",
+    "glob": "^14.0.3",
     "i18next": "^26.5.11",
     "incr-regex-package": "^1.0.4",
     "shell-quote": "1.12.0",
     "yaml": "^2.9.1"
   },
   "peerDependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.3.311",
+    "@anthropic-ai/claude-agent-sdk": "^0.3.312",
     "@modelcontextprotocol/sdk": ">=1.32.1",
     "zod": ">=4.0.0"
   },

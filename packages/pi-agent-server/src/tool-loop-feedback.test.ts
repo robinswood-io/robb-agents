@@ -15,9 +15,10 @@ function hint() {
 const json = '{"code":0,"success":true,"stdout":"verified"}';
 function channel() {
   const messages: ToolLoopHintMessage[] = [];
+  const agent: FeedbackAgent = { transformContext: undefined };
   return { messages, toolCallId: 't3', isCurrentSession: () => true,
     signal: new AbortController().signal, onHint: (message: ToolLoopHintMessage) => { messages.push(message); },
-    session: { isStreaming: true, agent: ({ transformContext: undefined } satisfies Pick<FeedbackAgent, 'transformContext'>) as Partial<FeedbackAgent> as FeedbackAgent } };
+    session: { isStreaming: true, agent } };
 }
 
 describe('cost guidance preserves authoritative tool results', () => {
@@ -27,7 +28,8 @@ describe('cost guidance preserves authoritative tool results', () => {
     expect(done).toBe(result);
     expect(JSON.parse(done.content[0]!.text)).toEqual({ code: 0, success: true, stdout: 'verified' });
     expect(done.content).toHaveLength(1);
-    expect(ctx.messages).toEqual([{ role: 'custom', timestamp: expect.any(Number), customType: TOOL_LOOP_HINT_CUSTOM_TYPE, content: hint().message!,
+    expect(ctx.messages[0]?.timestamp).toBeGreaterThan(0);
+    expect(ctx.messages.map(({ timestamp: _timestamp, ...message }) => message)).toEqual([{ role: 'custom', customType: TOOL_LOOP_HINT_CUSTOM_TYPE, content: hint().message!,
       display: true, details: { schemaVersion: 1, toolCallId: 't3' } }]);
     expect(await ctx.session.agent.transformContext!([], ctx.signal)).toEqual(ctx.messages);
     expect(await ctx.session.agent.transformContext!([], new AbortController().signal)).toEqual([]);

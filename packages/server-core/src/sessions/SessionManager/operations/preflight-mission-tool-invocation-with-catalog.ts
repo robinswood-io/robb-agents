@@ -1,3 +1,5 @@
+import type { ProxyToolCapabilities } from '../../../../../shared/src/mcp/mcp-pool/shared.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { discoverMissionToolCatalog, loadSpecializedMissionSkillPackages } from '../policy.ts';
 import type { JsonSchemaType } from '@modelcontextprotocol/sdk/validation';
@@ -55,11 +57,11 @@ async function sessionOpPerformClaimAndResumePendingMissionTurn(sessionOperation
     if (!record.operation) {
         const exactRecord = record;
         const operation = Promise.resolve()
-            .then(() => sessionOperationContext.owner["resumePendingTurnAfterRestart"](sessionId, exactRecord.token))
+            .then(() => sessionOperationContext.owner.resumePendingTurnAfterRestart(sessionId, exactRecord.token))
             .finally(() => {
             if (sessionOperationContext.state.missionPendingTurnRecoveryClaims.get(sessionId) !== exactRecord)
                 return;
-            exactRecord.operation = undefined;
+            delete exactRecord.operation;
             if (!sessionOperationContext.state.sessions.get(sessionId)?.pendingTurnRecovery) {
                 sessionOperationContext.state.missionPendingTurnRecoveryClaims.delete(sessionId);
             }
@@ -101,7 +103,7 @@ function sessionOpAssertMissionOwnedRecoveryProviderFence(sessionOperationContex
 /** Materialize the exact current source selection before a Mission reviewer
  * is created. The caller persists this snapshot explicitly so workspace
  * defaults cannot change between tool preflight and provider dispatch. */
-function sessionOpResolveMissionEnabledSourceSlugs(sessionOperationContext: SessionOperationContext, workspaceId: string, requestedSourceSlugs?: string[]): string[] {
+function sessionOpResolveMissionEnabledSourceSlugs(_sessionOperationContext: SessionOperationContext, workspaceId: string, requestedSourceSlugs?: string[]): string[] {
     const workspace = getWorkspaceByNameOrId(workspaceId);
     if (!workspace)
         throw new Error(`Unknown workspace "${workspaceId}"`);
@@ -109,7 +111,7 @@ function sessionOpResolveMissionEnabledSourceSlugs(sessionOperationContext: Sess
     return [...new Set(resolved)].sort((left, right) => left.localeCompare(right));
 }
 
-async function sessionOpLoadMissionSourceToolCatalog(sessionOperationContext: SessionOperationContext, workspace: Workspace, source: LoadedSource): Promise<MissionSourceToolCatalogDecision> {
+async function sessionOpLoadMissionSourceToolCatalog(_sessionOperationContext: SessionOperationContext, workspace: Workspace, source: LoadedSource): Promise<MissionSourceToolCatalogDecision> {
     const sourceSlug = source.config.slug;
     let built: Awaited<ReturnType<typeof buildServersFromSources>>;
     try {
@@ -142,8 +144,8 @@ async function sessionOpLoadMissionSourceToolCatalog(sessionOperationContext: Se
     return discoverMissionToolCatalog(workspace, sourceSlug, built.mcpServers, built.apiServers);
 }
 
-async function sessionOpLoadMissionDocsToolCatalog(sessionOperationContext: SessionOperationContext, workspace: Workspace): Promise<MissionSourceToolCatalogDecision> {
-    if (process.env.ROBB_ENABLE_CRAFT_DOCS_MCP !== '1' || process.env.CRAFT_DISABLE_DOCS === '1') {
+async function sessionOpLoadMissionDocsToolCatalog(_sessionOperationContext: SessionOperationContext, workspace: Workspace): Promise<MissionSourceToolCatalogDecision> {
+    if (process.env["ROBB_ENABLE_CRAFT_DOCS_MCP"] !== '1' || process.env["CRAFT_DISABLE_DOCS"] === '1') {
         return {
             allowed: false,
             reason: 'Mission source "craft-agents-docs" is disabled by local privacy policy (ROBB_ENABLE_CRAFT_DOCS_MCP!=1)',
@@ -222,11 +224,11 @@ async function sessionOpPreflightMissionToolInvocationWithCatalog(sessionOperati
                     reason: `Mission tool "${input.toolName}" is not declared as a Safe read-only session tool`,
                 };
             }
-            declaredToolCapabilities = {
+            declaredToolCapabilities = omitUndefined<ProxyToolCapabilities>({
                 readOnly: true,
                 idempotent: definition.idempotent,
                 trusted: true,
-            };
+            });
         }
         else if (sourceSlug === 'craft-agents-docs') {
             // The docs server is wired directly by both backends rather than by

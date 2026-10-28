@@ -1,3 +1,5 @@
+import type { UseOnboardingOptions } from './hooks/onboarding-connection-setup.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import React, { useCallback } from 'react';
 
 import type { Workspace, SetupNeeds, LlmConnectionWithStatus } from '../shared/types';
@@ -53,10 +55,11 @@ const handleOnboardingComplete = useCallback(async () => {
     try {
       // Reload workspaces after onboarding
       const ws = await window.electronAPI.getWorkspaces()
-      if (ws.length > 0) {
+      const firstWorkspace = ws[0]
+      if (firstWorkspace) {
         // Switch to workspace in-place (no window close/reopen)
-        await window.electronAPI.switchWorkspace(ws[0].id)
-        setWindowWorkspaceId(ws[0].id)
+        await window.electronAPI.switchWorkspace(firstWorkspace.id)
+        setWindowWorkspaceId(firstWorkspace.id)
         setWorkspaces(ws)
       } else {
         setWorkspaces(ws)
@@ -68,11 +71,11 @@ const handleOnboardingComplete = useCallback(async () => {
     setAppState('ready')
   }, [setAppState, setWindowWorkspaceId, setWorkspaces])
 
-const onboarding = useOnboarding({
+const onboarding = useOnboarding(omitUndefined<UseOnboardingOptions>({
     onComplete: handleOnboardingComplete,
     onConfigSaved: refreshLlmConnections,
     initialSetupNeeds: setupNeeds || undefined,
-  })
+  }))
 
 const handleReauthLogin = useCallback(async () => {
     // Re-check setup needs
@@ -86,7 +89,7 @@ const handleReauthLogin = useCallback(async () => {
   }, [setAppState, setSetupNeeds])
 
 const handleReauthReset = useCallback(() => {
-    if (document.documentElement.dataset.robbRuntime === 'web') {
+    if (document.documentElement.dataset["robbRuntime"] === 'web') {
       toast.error(t('webui.hostResetDesktopOnly'))
       return
     }

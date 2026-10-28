@@ -1,3 +1,6 @@
+import { OAuthFlowStore } from '@craft-agent/shared/auth';
+import { createHeadlessPlatform } from '../../runtime/platform-headless.ts';
+import { sessionManagerForTest } from "../../sessions/testing/private-runtime-access.ts";
 import { withSessionOperationsForTest } from '../../sessions/testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "../../sessions/testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
@@ -42,7 +45,7 @@ function inputResponse(value: unknown): UserInputResponseResult {
   const delivery = 'delivery' in value ? value.delivery : undefined
   assert(responseMessageId === undefined || typeof responseMessageId === 'string')
   assert(delivery === undefined || delivery === 'steered' || delivery === 'queued' || delivery === 'started')
-  return { status: value.status, responseMessageId, delivery }
+  return { status: value.status, ...(responseMessageId !== undefined ? { responseMessageId: responseMessageId } : {}), ...(delivery !== undefined ? { delivery: delivery } : {}) }
 }
 
 const questions: UserInputQuestion[] = [
@@ -68,20 +71,16 @@ async function harness() {
   const manager = withSessionOperationsForTest(new SessionManager())
   const snapshots: Array<{ id: string; requests: Managed['userInputRequests'] }> = []
   const dispatches: Array<{ id: string; messageId?: string; callerClientId?: string }> = []
-  const internals = manager as unknown as {
-    sessions: Map<string, Managed>
-    enqueuePersist: (session: Managed) => void
-    sendEvent: () => void
-  }
+  const internals = sessionManagerForTest(manager)
   for (const session of [parent, origin, foreign]) sessionRuntimeStateForTest(manager).sessions.set(session.id, session)
-  internals.enqueuePersist = session => snapshots.push({ id: session.id, requests: structuredClone(session.userInputRequests) })
+  internals.enqueuePersist = session => { snapshots.push({ id: session.id, requests: structuredClone(session.userInputRequests) }); return true }
   internals.sendEvent = () => {}
   manager.flushSession = async () => {}
   manager.waitForInit = async () => {}
   // Stop at the durable dispatch seam: the real response lifecycle still
   // validates ownership, canonicalizes answers and creates its single receipt.
   manager.sendMessage = async (id, _text, _attachments, _stored, _options, messageId, _retry, ack, context) => {
-    dispatches.push({ id, messageId, callerClientId: context?.callerClientId })
+    dispatches.push({ id, ...(messageId !== undefined ? { messageId: messageId } : {}), ...(context?.callerClientId !== undefined ? { callerClientId: context?.callerClientId } : {}) })
     const message = sessionRuntimeStateForTest(manager).sessions.get(id)?.messages.find(item => item.id === messageId)
     if (!message) throw new Error('Missing durable response message')
     message.isQueued = false
@@ -99,10 +98,9 @@ async function harness() {
     authorizeRequest: createWebuiRpcAuthorizer(devices),
   })
   cleanup.push(() => server.close())
-  registerSessionsHandlers(server, {
-    sessionManager: manager,
-    platform: { logger: { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} } },
-  } as unknown as HandlerDeps)
+  registerSessionsHandlers(server, ({sessionManager: manager,
+platform: createHeadlessPlatform(),
+oauthFlowStore: new OAuthFlowStore()} satisfies HandlerDeps))
   await server.listen()
   const client = new WsRpcClient(`ws://127.0.0.1:${server.port}`, {
     workspaceId: workspace.id, token: 'isolated-test-token', mode: 'remote', autoReconnect: false, requestTimeout: 2_000, connectTimeout: 2_000,
@@ -133,7 +131,7 @@ describe('remote interactive answers across transport and session ownership', ()
     const response = inputResponse(await h.client.invoke(RPC_CHANNELS.sessions.RESPOND_TO_USER_INPUT, h.origin.id, { requestId: h.requestId, answers }))
     expect(response).toMatchObject({ status: 'accepted', delivery: 'started' })
     expect(response.responseMessageId).toBeTruthy()
-    expect(h.dispatches).toEqual([{ id: h.origin.id, messageId: response.responseMessageId, callerClientId: expect.any(String) }])
+    expect<unknown>(h.dispatches).toEqual([{ id: h.origin.id, ...(response.responseMessageId !== undefined ? { messageId: response.responseMessageId } : {}), callerClientId: (expect.any(String) as unknown) }])
     expect(h.origin.messages).toHaveLength(1)
     expect(h.snapshots.some(snapshot => snapshot.id === h.origin.id && snapshot.requests?.[0]?.responseMessageId === response.responseMessageId)).toBe(true)
     const after = await h.client.invoke(RPC_CHANNELS.sessions.GET_MESSAGES, h.parent.id)
@@ -146,7 +144,7 @@ describe('remote interactive answers across transport and session ownership', ()
   it('revalidates device authority after card hydration and denies a revoked device before receipt creation', async () => {
     const h = await harness()
     const session = await h.client.invoke(RPC_CHANNELS.sessions.GET_MESSAGES, h.parent.id)
-    expect(inputRequests(session)[0].status).toBe('pending')
+    expect(inputRequests(session)[0]?.status).toBe('pending')
     expect(h.devices.revoke('fixture-device')).toBe(true)
     await expect(h.client.invoke(RPC_CHANNELS.sessions.RESPOND_TO_USER_INPUT, h.origin.id, { requestId: h.requestId, answers })).rejects.toThrow('RPC channel denied')
     expect(h.origin.userInputRequests?.[0]?.status).toBe('pending')

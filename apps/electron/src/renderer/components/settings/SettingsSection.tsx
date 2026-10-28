@@ -15,15 +15,15 @@ export interface SettingsSectionProps {
   /** Section title */
   title: string
   /** Optional description below title (supports ReactNode for inline links) */
-  description?: React.ReactNode
+  description?: React.ReactNode | undefined
   /** Content - usually SettingsCard or SettingsRadioGroup */
   children: React.ReactNode
   /** Additional className */
-  className?: string
+  className?: string | undefined
   /** Variant for different visual treatments */
-  variant?: 'default' | 'danger'
+  variant?: 'default' | 'danger' | undefined
   /** Optional action element (e.g., Edit button) shown at the right of the header */
-  action?: React.ReactNode
+  action?: React.ReactNode | undefined
 }
 
 /**
@@ -75,7 +75,7 @@ export interface SettingsGroupProps {
   /** Content - usually multiple SettingsSection components */
   children: React.ReactNode
   /** Additional className */
-  className?: string
+  className?: string | undefined
 }
 
 /**
@@ -104,7 +104,7 @@ export function SettingsGroup({ title, children, className }: SettingsGroupProps
 
 export interface SettingsDividerProps {
   /** Additional className */
-  className?: string
+  className?: string | undefined
 }
 
 /**

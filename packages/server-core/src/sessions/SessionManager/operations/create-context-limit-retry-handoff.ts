@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { boundObjectiveForCleanHandoff, hasAuthenticatedObjectiveRoot } from '../policy.ts';
 import type { PendingTurnRecovery, ActiveSessionObjective } from '@craft-agent/shared/sessions';
@@ -10,7 +11,7 @@ function sessionOpCreateContextLimitRetryHandoff(sessionOperationContext: Sessio
     const storedObjective = managed.activeObjective;
     const objective = storedObjective?.terminalState === 'blocked_human'
         && sessionOpIsCleanSetupRetryBlocked(sessionOperationContext, pending.recoveryDispatch)
-        ? { ...storedObjective, terminalState: 'active' as const, completedAt: undefined }
+        ? omitUndefined<ActiveSessionObjective>({ ...storedObjective, terminalState: 'active', completedAt: undefined })
         : storedObjective;
     const criteria = objective?.acceptanceCriteria;
     const registeredRevision = objective?.acceptanceRegisteredRevision;

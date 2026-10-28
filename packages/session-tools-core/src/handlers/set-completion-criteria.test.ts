@@ -4,8 +4,8 @@ import { getToolDefsAsJsonSchema, SESSION_TOOL_REGISTRY, SetCompletionCriteriaSc
 import { SET_COMPLETION_CRITERIA_EXAMPLE } from '../completion-criteria-schema.ts';
 import { handleSetCompletionCriteria } from './set-completion-criteria.ts';
 
-const example = JSON.parse(SET_COMPLETION_CRITERIA_EXAMPLE);
-const criterion = example.criteria[0];
+const example = SetCompletionCriteriaSchema.parse(JSON.parse(SET_COMPLETION_CRITERIA_EXAMPLE));
+const criterion = example.criteria[0]!;
 const context = (setCompletionCriteria?: SessionToolContext['setCompletionCriteria']) => (
   { sessionId: 'test', setCompletionCriteria } as SessionToolContext
 );

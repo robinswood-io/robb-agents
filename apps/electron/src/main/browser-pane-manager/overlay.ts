@@ -1,3 +1,5 @@
+import type { AgentControlState } from './shared.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { mainLog } from "../logger";
 import { getBrowserLiveFxCornerRadii } from "../../shared/browser-live-fx";
 import type { BrowserPaneManager } from '../browser-pane-manager.ts';
@@ -7,7 +9,7 @@ import type { BrowserPaneSetAgentControlMetaPayload, BrowserPaneGetOrCreateForSe
 import * as browserPaneManagerWindowState from './window-state.ts';
 
 export function reapplyAgentControlVisual(transportOwner: BrowserPaneManager, instance: BrowserInstance): void {
-    if (!transportOwner["isLiveInstance"](instance))
+    if (!transportOwner.isLiveInstance(instance))
         return;
     const active = !!instance.agentControl?.active;
     transportOwner["applyAgentControlLock"](instance, active);
@@ -103,13 +105,14 @@ export function updateNativeOverlayState(transportOwner: BrowserPaneManager, ins
     const shouldShow = agentActive || menuActive;
     if (!shouldShow || !instance.nativeOverlayReady) {
         instance.nativeOverlayView.setBounds({ x: 0, y: 0, width: 0, height: 0 });
-        transportOwner["bringToolbarToFront"](instance);
+        transportOwner.bringToolbarToFront(instance);
         return;
     }
     const [width, height] = instance.window.getContentSize();
+    if (width === undefined || height === undefined) throw new Error('Browser window content size unavailable');
     const overlayHeight = Math.max(100, height - TOOLBAR_HEIGHT);
     instance.nativeOverlayView.setBounds({ x: 0, y: TOOLBAR_HEIGHT, width, height: overlayHeight });
-    transportOwner["bringToolbarToFront"](instance);
+    transportOwner.bringToolbarToFront(instance);
     if (agentActive) {
         const label = browserPaneManagerWindowState.getAgentControlLabel(transportOwner, control);
         const accent = browserPaneManagerWindowState.getResolvedAccentColor(transportOwner);
@@ -177,19 +180,19 @@ export function applyAgentControlLock(transportOwner: BrowserPaneManager, instan
 export function setAgentControl(transportOwner: BrowserPaneManager, sessionId: string, meta: BrowserPaneSetAgentControlMetaPayload, options?: BrowserPaneGetOrCreateForSessionAsyncOptionsPayload): void {
     for (const instance of transportOwner["instances"].values()) {
         if (instance.boundSessionId === sessionId) {
-            instance.agentControl = {
+            instance.agentControl = omitUndefined<AgentControlState>({
                 active: true,
                 sessionId,
                 displayName: meta.displayName,
                 intent: meta.intent,
-            };
+            });
             // Backfill workspaceId for instances that were created before the
             // workspace was known (legacy callers / pre-workspaceId code paths).
             if (options?.workspaceId !== undefined && instance.workspaceId === null) {
                 instance.workspaceId = options.workspaceId;
             }
             const label = browserPaneManagerWindowState.getAgentControlLabel(transportOwner, instance.agentControl);
-            transportOwner["reapplyAgentControlVisual"](instance);
+            transportOwner.reapplyAgentControlVisual(instance);
             transportOwner["emitStateChange"](instance);
             mainLog.info(`[browser-pane] agent control activated session=${sessionId} label=${label}`);
             return;

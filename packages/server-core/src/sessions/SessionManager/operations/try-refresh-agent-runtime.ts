@@ -1,3 +1,5 @@
+import type { BackendRuntimeUpdate } from '../../../../../shared/src/agent/backend/types/contracts.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { authenticatedTaskFor } from '../policy.ts';
 import { createHash } from 'node:crypto';
@@ -83,9 +85,9 @@ async function sessionOpTryRefreshAgentRuntime(sessionOperationContext: SessionO
         return;
     const workspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath);
     const backendContext = resolveBackendContext({
-        sessionConnectionSlug: managed.llmConnection,
-        workspaceDefaultConnectionSlug: workspaceConfig?.defaults?.defaultLlmConnection,
-        managedModel: managed.model,
+        ...(managed.llmConnection !== undefined ? { sessionConnectionSlug: managed.llmConnection } : {}),
+        ...(workspaceConfig?.defaults?.defaultLlmConnection !== undefined ? { workspaceDefaultConnectionSlug: workspaceConfig?.defaults?.defaultLlmConnection } : {}),
+        ...(managed.model !== undefined ? { managedModel: managed.model } : {}),
     });
     const connection = backendContext.connection;
     const sigInput = {
@@ -138,14 +140,14 @@ async function sessionOpRunAgentRuntimeRefresh(sessionOperationContext: SessionO
     let refreshed = false;
     if (managed.agent?.updateRuntimeConfig) {
         try {
-            refreshed = await managed.agent.updateRuntimeConfig({
+            refreshed = await managed.agent.updateRuntimeConfig(omitUndefined<BackendRuntimeUpdate>({
                 model: backendContext.resolvedModel,
-                providerType: connection?.providerType,
-                authType: backendContext.authType,
-                runtime: connection ? {
-                    baseUrl: connection.baseUrl,
-                    piAuthProvider: connection.piAuthProvider,
-                    customEndpoint: connection.customEndpoint,
+                ...(connection?.providerType !== undefined ? { providerType: connection?.providerType } : {}),
+                ...(backendContext.authType !== undefined ? { authType: backendContext.authType } : {}),
+                runtime: connection ? omitUndefined({
+                    ...(connection.baseUrl !== undefined ? { baseUrl: connection.baseUrl } : {}),
+                    ...(connection.piAuthProvider !== undefined ? { piAuthProvider: connection.piAuthProvider } : {}),
+                    ...(connection.customEndpoint !== undefined ? { customEndpoint: connection.customEndpoint } : {}),
                     customModels: connection.models?.map(model => {
                         if (typeof model === 'string')
                             return model;
@@ -163,8 +165,8 @@ async function sessionOpRunAgentRuntimeRefresh(sessionOperationContext: SessionO
                         }
                         return model.id;
                     }),
-                } : undefined,
-            });
+                }) : undefined,
+            }));
         }
         catch (error) {
             sessionLog.warn(`Runtime config in-place refresh failed for ${managed.id}: ${error instanceof Error ? error.message : error}`);
@@ -203,7 +205,7 @@ async function sessionOpPerformRefreshConnectionRuntime(sessionOperationContext:
             continue;
         try {
             await sessionOpTrackSessionOperation(sessionOperationContext, managed, async () => {
-                await sessionOperationContext.owner["tryRefreshAgentRuntime"](managed, 'connection update', () => sessionOpAssertSessionOperationOwner(sessionOperationContext, managed));
+                await sessionOperationContext.owner.tryRefreshAgentRuntime(managed, 'connection update', () => sessionOpAssertSessionOperationOwner(sessionOperationContext, managed));
                 sessionOpAssertSessionOperationOwner(sessionOperationContext, managed);
             });
         }
@@ -245,7 +247,7 @@ async function sessionOpPerformRefreshWorkspaceExternalActionPolicy(sessionOpera
             continue;
         try {
             await sessionOpTrackSessionOperation(sessionOperationContext, managed, async () => {
-                sessionOperationContext.owner["applyExternalActionPolicyToRuntime"](managed, policy, 'workspace setting update');
+                sessionOperationContext.owner.applyExternalActionPolicyToRuntime(managed, policy, 'workspace setting update');
                 if (policy === 'allow-in-execute')
                     await sessionOpRetireYoloHumanHandoffs(sessionOperationContext, managed);
             });

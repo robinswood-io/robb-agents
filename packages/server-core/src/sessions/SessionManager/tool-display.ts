@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { join } from "path";
 import { existsSync } from "fs";
 import { type LoadedSource } from "@craft-agent/shared/sources";
@@ -92,16 +93,16 @@ export async function resolveToolDisplayMeta(
         },
       }
 
-      const internalServer = internalMcpServers[serverSlug]
+      const internalServer = serverSlug === undefined ? undefined : internalMcpServers[serverSlug]
       if (internalServer) {
         const displayName = internalServer[toolSlug]
         if (displayName) {
           const normalizedBrowserTool = normalizeBrowserToolName(toolSlug)
-          return {
+          return omitUndefined<ToolDisplayMeta>({
             displayName,
             iconDataUrl: normalizedBrowserTool ? await getBrowserToolIconDataUrl() : undefined,
             category: 'native' as const,
-          }
+          })
         }
       }
 
@@ -120,12 +121,12 @@ export async function resolveToolDisplayMeta(
         const iconDataUrl = source.iconPath
           ? await encodeIconToDataUrlAsync(source.iconPath, { resize: resizeIconBuffer })
           : getEmojiIcon(source.config.icon)
-        return {
+        return omitUndefined<ToolDisplayMeta>({
           displayName: source.config.name,
           iconDataUrl,
           description: source.config.tagline,
           category: 'source' as const,
-        }
+        })
       }
     }
     return undefined
@@ -134,7 +135,7 @@ export async function resolveToolDisplayMeta(
   // Check if it's the Skill tool
   if (toolName === 'Skill' && toolInput) {
     // Skill input has 'skill' param with format: "skillSlug" or "workspaceId:skillSlug"
-    const skillParam = toolInput.skill as string | undefined
+    const skillParam = toolInput["skill"] as string | undefined
     if (skillParam) {
       // Extract skill slug (remove workspace prefix if present)
       const skillSlug = skillParam.includes(':') ? skillParam.split(':').pop() : skillParam
@@ -148,12 +149,12 @@ export async function resolveToolDisplayMeta(
             const iconDataUrl = skill.iconPath
               ? await encodeIconToDataUrlAsync(skill.iconPath, { resize: resizeIconBuffer })
               : getEmojiIcon(skill.metadata.icon)
-            return {
+            return omitUndefined<ToolDisplayMeta>({
               displayName: skill.metadata.name,
               iconDataUrl,
               description: skill.metadata.description,
               category: 'skill' as const,
-            }
+            })
           }
         } catch {
           // Skills loading failed, skip
@@ -166,10 +167,10 @@ export async function resolveToolDisplayMeta(
   // CLI tool icon resolution for Bash commands
   // Parses the command string to detect known tools (git, npm, docker, etc.)
   // and resolves their brand icon from ~/.craft-agent/tool-icons/
-  if (toolName === 'Bash' && toolInput?.command) {
+  if (toolName === 'Bash' && toolInput?.["command"]) {
     try {
       const toolIconsDir = getToolIconsDir()
-      const match = resolveToolIcon(String(toolInput.command), toolIconsDir)
+      const match = resolveToolIcon(String(toolInput["command"]), toolIconsDir)
       if (match) {
         return {
           displayName: match.displayName,
@@ -191,11 +192,11 @@ export async function resolveToolDisplayMeta(
       .join(' ')
       .replace(/^browser\s+/i, 'Browser ')
 
-    return {
+    return omitUndefined<ToolDisplayMeta>({
       displayName: browserDisplayName,
       iconDataUrl: await getBrowserToolIconDataUrl(),
       category: 'native' as const,
-    }
+    })
   }
 
   // Native tool display names (no icons - UI handles these with built-in icons)

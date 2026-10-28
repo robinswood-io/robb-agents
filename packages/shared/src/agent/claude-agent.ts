@@ -89,7 +89,7 @@ import { ToolIndex } from "./tool-matching.ts";
 
 import { createClaudeBackendConfig } from './claude-agent/shared.ts';
 import type { ClaudeAgentConfig, PendingPermission, SourceProxyGmailLifecycleContext, ClaudeQueryPreparation, ClaudeQueryFailureContext } from './claude-agent/shared.ts';
-import type { ClaudeOnPermissionRequest, ClaudeOnUsageUpdate, ClaudeCheckToolPermissionResult, ClaudeMapSDKErrorToTypedErrorResult, ClaudeDetectInactiveSourceToolErrorResult, ClaudeResolveSpawnCwdInputPayload } from './claude-agent/protocol.ts';
+import type { ClaudeOnPermissionRequest, ClaudeOnUsageUpdate, ClaudeMapSDKErrorToTypedErrorResult, ClaudeDetectInactiveSourceToolErrorResult, ClaudeResolveSpawnCwdInputPayload } from './claude-agent/protocol.ts';
 import * as claudeAgentPersistentRuntime from './claude-agent/persistent-runtime.ts';
 import * as claudeAgentInitialization from './claude-agent/initialization.ts';
 import * as claudeAgentPermissions from './claude-agent/permissions.ts';
@@ -110,11 +110,11 @@ export class ClaudeAgent extends BaseAgent {
     // Note: ClaudeAgentConfig is compatible with BackendConfig, so we use the inherited this.config
     private currentQuery: Query | null = null;
     private currentQueryAbortController: AbortController | null = null;
-    private lastAbortReason: AbortReason | null = null;
-    private promptPreparationRevision = 0;
+    /** @internal */ public lastAbortReason: AbortReason | null = null;
+    /** @internal */ public promptPreparationRevision = 0;
     private persistentGmailRuntimeId: string | null = null;
     private persistentGmailSessionId: string | null = null;
-    private activeTurnGmailRuntime: SourceProxyGmailLifecycleContext | null = null;
+    /** @internal */ public activeTurnGmailRuntime: SourceProxyGmailLifecycleContext | null = null;
     private sessionId: string | null = null;
     // Whether the most recent user turn included image/PDF attachments. Read by
     // mapSDKErrorToTypedError to decide whether attachment-related hints belong
@@ -124,13 +124,7 @@ export class ClaudeAgent extends BaseAgent {
     private branchFromSdkCwd: string | null = null;
     private branchFromSdkTurnId: string | null = null;
     private isHeadless: boolean = false;
-    private pendingPermissions: Map<string, PendingPermission> = new Map();
-    // Permission whitelists are now managed by this.permissionManager (inherited from BaseAgent)
-    // Source state tracking is now managed by this.sourceManager (inherited from BaseAgent)
-    // Source MCP connections are managed by this.config.mcpPool (centralized in main process)
-    // Both MCP sources and API sources are routed through the pool.
-    // Safe mode state - user-controlled read-only exploration mode
-    private safeMode: boolean = false;
+    /** @internal */ public pendingPermissions: Map<string, PendingPermission> = new Map();
     // Event adapter for SDK message → AgentEvent conversion (testable, pluggable)
     private eventAdapter!: ClaudeEventAdapter;
     // Thinking level is managed by BaseAgent
@@ -139,7 +133,7 @@ export class ClaudeAgent extends BaseAgent {
     private pinnedIncludeCoAuthoredBy: boolean | null = null;
     private pinnedProjectContext: import('../projects/types.ts').ProjectPromptContext | null = null;
     // Track if preference drift notification has been shown this session
-    private preferencesDriftNotified: boolean = false;
+    /** @internal */ public preferencesDriftNotified: boolean = false;
     // Captured stderr from SDK subprocess (for error diagnostics when process exits with code 1)
     private lastStderrOutput: string[] = [];
     /**
@@ -171,7 +165,7 @@ export class ClaudeAgent extends BaseAgent {
     private beginPersistentTurn(prompt: SDKUserMessage, options: Options, gmailLifecycle: SourceProxyGmailLifecycleContext): AsyncIterable<SDKMessage> {
         return claudeAgentPersistentRuntime.beginPersistentTurn(this, prompt, options, gmailLifecycle);
     }
-    private createProviderTurnMessageSource(effectiveUserMessage: string, attachments: FileAttachment[] | undefined, options: Options, gmailRuntimeContext: SourceProxyGmailLifecycleContext): AsyncIterable<SDKMessage> {
+    /** @internal */ public createProviderTurnMessageSource(effectiveUserMessage: string, attachments: FileAttachment[] | undefined, options: Options, gmailRuntimeContext: SourceProxyGmailLifecycleContext): AsyncIterable<SDKMessage> {
         return claudeAgentPersistentRuntime.createProviderTurnMessageSource(this, effectiveUserMessage, attachments, options, gmailRuntimeContext);
     }
     private createOneShotProviderInput(prompt: SDKUserMessage): AsyncIterable<SDKUserMessage> {
@@ -199,17 +193,17 @@ export class ClaudeAgent extends BaseAgent {
     private get workspaceRootPath(): string {
         return this.config.workspace.rootPath;
     }
-    private resolveProjectContext(): import('../projects/types.ts').ProjectPromptContext | null {
+    /** @internal */ public resolveProjectContext(): import('../projects/types.ts').ProjectPromptContext | null {
         return claudeAgentInitialization.resolveProjectContext(this);
     }
     // Callback for permission requests - set by application to receive permission prompts
-    public onPermissionRequest: ((request: ClaudeOnPermissionRequest) => void) | null = null;
+    public override onPermissionRequest: ((request: ClaudeOnPermissionRequest) => void) | null = null;
     // Debug callback for status messages
-    public onDebug: ((message: string) => void) | null = null;
+    public override onDebug: ((message: string) => void) | null = null;
     /** Callback when permission mode changes */
-    public onPermissionModeChange: ((mode: PermissionMode) => void) | null = null;
+    public override onPermissionModeChange: ((mode: PermissionMode) => void) | null = null;
     // Callback when a plan is submitted - set by application to display plan message
-    public onPlanSubmitted: ((planPath: string) => void) | null = null;
+    public override onPlanSubmitted: ((planPath: string) => void) | null = null;
     // Callback when authentication is requested (unified auth flow)
     // This follows the SubmitPlan pattern:
     // 1. Tool calls onAuthRequest
@@ -217,13 +211,13 @@ export class ClaudeAgent extends BaseAgent {
     // 3. User completes auth in UI
     // 4. Auth result is sent as a "faked user message"
     // 5. Agent resumes and processes the result
-    public onAuthRequest: ((request: AuthRequest) => void) | null = null;
+    public override onAuthRequest: ((request: AuthRequest) => void) | null = null;
     // Callback when a source config changes (hot-reload from file watcher)
-    public onSourceChange: ((slug: string, source: LoadedSource | null) => void) | null = null;
+    public override onSourceChange: ((slug: string, source: LoadedSource | null) => void) | null = null;
     // onSourcesListChange, onConfigValidationError, and onSourceActivationRequest are inherited from BaseAgent
     // Callback when token usage is updated (for context window display).
     // Note: Full UsageTracker integration is planned for Phase 4 refactoring.
-    public onUsageUpdate: ((update: ClaudeOnUsageUpdate) => void) | null = null;
+    public override onUsageUpdate: ((update: ClaudeOnUsageUpdate) => void) | null = null;
     constructor(config: ClaudeAgentConfig) {
         // Resolve model: prioritize session model > config model > current Anthropic default.
         const model = config.session?.model ?? config.model ?? DEFAULT_MODEL;
@@ -235,7 +229,7 @@ export class ClaudeAgent extends BaseAgent {
         // The inherited this.config is set by super() and compatible with ClaudeAgentConfig
         super(backendConfig, DEFAULT_MODEL, CLAUDE_CONTEXT_WINDOW);
         this.isHeadless = config.isHeadless ?? false;
-        this.automationSystem = config.automationSystem;
+        if (config.automationSystem === undefined) { delete this.automationSystem } else { this.automationSystem = config.automationSystem }
         // Initialize event adapter for SDK message → AgentEvent conversion
         this.eventAdapter = new ClaudeEventAdapter({
             onDebug: (msg) => this.onDebug?.(msg),
@@ -260,8 +254,6 @@ export class ClaudeAgent extends BaseAgent {
         const initialMode: PermissionMode = config.session?.permissionMode ?? globalDefaults.workspaceDefaults.permissionMode;
         initializeModeState(sessionId, initialMode, {
             onStateChange: (state) => {
-                // Sync permission mode state with agent
-                this.safeMode = state.permissionMode === 'safe';
                 // Notify UI of permission mode changes
                 this.onPermissionModeChange?.(state.permissionMode);
             },
@@ -294,22 +286,16 @@ export class ClaudeAgent extends BaseAgent {
     private denyAllPendingPermissions(): void {
         return claudeAgentPermissions.denyAllPendingPermissions(this);
     }
-    private resolveContextualGmailPromptDecision(sessionId: string, toolName: string, toolInput: Record<string, unknown>, toolUseId: string | undefined, approved: boolean) {
+    /** @internal */ public resolveContextualGmailPromptDecision(sessionId: string, toolName: string, toolInput: Record<string, unknown>, toolUseId: string | undefined, approved: boolean) {
         return claudeAgentPermissions.resolveContextualGmailPromptDecision(this, sessionId, toolName, toolInput, toolUseId, approved);
     }
-    private async checkToolPermission(toolName: string, input: Record<string, unknown>, toolUseId: string): Promise<ClaudeCheckToolPermissionResult> {
-        return claudeAgentPermissions.checkToolPermission(this, toolName, input, toolUseId);
-    }
-    private async getToken(): Promise<string | null> {
-        return claudeAgentInitialization.getToken(this);
-    }
-    private createGmailRuntimeId(sessionId: string): string {
+    /** @internal */ public createGmailRuntimeId(sessionId: string): string {
         return claudeAgentPersistentRuntime.createGmailRuntimeId(this, sessionId);
     }
     private confirmContextualGmailRuntimeTeardown(runtime: Parameters<typeof confirmContextualGmailRuntimeTeardown>[0]): boolean {
         return claudeAgentPersistentRuntime.confirmContextualGmailRuntimeTeardownOperation(this, runtime);
     }
-    protected async *chatImpl(userMessage: string, attachments?: FileAttachment[], options?: ChatOptions): AsyncGenerator<AgentEvent> {
+    protected async *chatImpl(userMessage: string, attachments?: FileAttachment[], options?: ChatOptions): AsyncGenerator<AgentEvent, void, unknown> {
         return yield* claudeAgentResponse.chatImpl(this, userMessage, attachments, options);
     }
     private buildSDKUserMessage(text: string, attachments?: FileAttachment[]): SDKUserMessage {
@@ -327,10 +313,10 @@ export class ClaudeAgent extends BaseAgent {
     private async mapSDKErrorToTypedError(errorCode: SDKAssistantMessageError): Promise<ClaudeMapSDKErrorToTypedErrorResult> {
         return claudeAgentMessages.mapSDKErrorToTypedError(this, errorCode);
     }
-    private detectInactiveSourceToolError(event: AgentEvent, toolIndex: ToolIndex): ClaudeDetectInactiveSourceToolErrorResult | null {
+    /** @internal */ public detectInactiveSourceToolError(event: AgentEvent, toolIndex: ToolIndex): ClaudeDetectInactiveSourceToolErrorResult | null {
         return claudeAgentMessages.detectInactiveSourceToolError(this, event, toolIndex);
     }
-    clearHistory(): void {
+    override clearHistory(): void {
         this.clearClaudeHistoryState();
         super.clearHistory();
     }
@@ -343,34 +329,34 @@ export class ClaudeAgent extends BaseAgent {
     forceAbort(reason: AbortReason = AbortReason.UserStop): void {
         return claudeAgentInterrupt.forceAbort(this, reason);
     }
-    getModel(): string {
+    override getModel(): string {
         return claudeAgentSdkOptions.getModel(this);
     }
     getSdkTools(): string[] {
         return claudeAgentSdkOptions.getSdkTools(this);
     }
-    setModel(model: string): void {
+    override setModel(model: string): void {
         super.setModel(model);
     }
-    isMiniAgent(): boolean {
+    override isMiniAgent(): boolean {
         return claudeAgentSdkOptions.isMiniAgent(this);
     }
-    getMiniAgentConfig(): MiniAgentConfig {
+    override getMiniAgentConfig(): MiniAgentConfig {
         return claudeAgentSdkOptions.getMiniAgentConfig(this);
     }
-    getWorkspace(): Workspace {
+    override getWorkspace(): Workspace {
         return claudeAgentWorkspace.getWorkspace(this);
     }
-    setWorkspace(workspace: Workspace): void {
+    override setWorkspace(workspace: Workspace): void {
         return claudeAgentWorkspace.setWorkspace(this, workspace);
     }
-    getSessionId(): string | null {
+    override getSessionId(): string | null {
         return claudeAgentPersistentRuntime.getSessionId(this);
     }
-    setSessionId(sessionId: string | null): void {
+    override setSessionId(sessionId: string | null): void {
         return claudeAgentPersistentRuntime.setSessionId(this, sessionId);
     }
-    updateWorkingDirectory(path: string): void {
+    override updateWorkingDirectory(path: string): void {
         return claudeAgentWorkspace.updateWorkingDirectory(this, path);
     }
     async close(): Promise<void> {
@@ -383,7 +369,7 @@ export class ClaudeAgent extends BaseAgent {
      * Destroy the agent and clean up resources.
      * Calls super.destroy() for base cleanup, then Claude-specific cleanup.
      */
-    destroy(): void {
+    override destroy(): void {
         this.destroyClaudeRuntime();
         // Base cleanup (stops config watcher, clears whitelists, resets source trackers)
         super.destroy();
@@ -391,13 +377,13 @@ export class ClaudeAgent extends BaseAgent {
     isProcessing(): boolean {
         return claudeAgentInterrupt.isProcessing(this);
     }
-    getPermissionMode(): PermissionMode {
+    override getPermissionMode(): PermissionMode {
         return claudeAgentPermissions.getPermissionModeOperation(this);
     }
-    setPermissionMode(mode: PermissionMode): void {
+    override setPermissionMode(mode: PermissionMode): void {
         return claudeAgentPermissions.setPermissionModeOperation(this, mode);
     }
-    cyclePermissionMode(): PermissionMode {
+    override cyclePermissionMode(): PermissionMode {
         return claudeAgentPermissions.cyclePermissionModeOperation(this);
     }
     override async ensureBranchReady(): Promise<void> {
@@ -415,7 +401,7 @@ export class ClaudeAgent extends BaseAgent {
      * branch candidate here is only relevant in the rare race where the cwd
      * vanishes between the pre-spawn check and the actual spawn.
      */
-    private resolveSpawnCwd({ isRetry, sessionId, }: ClaudeResolveSpawnCwdInputPayload): string {
+    /** @internal */ public resolveSpawnCwd({ isRetry, sessionId, }: ClaudeResolveSpawnCwdInputPayload): string {
         const candidates: Array<string | null | undefined> = [
             !isRetry && this.branchFromSdkSessionId ? this.branchFromSdkCwd : null,
             this.config.session?.sdkCwd,
@@ -433,10 +419,10 @@ export class ClaudeAgent extends BaseAgent {
         });
         return this.workspaceRootPath;
     }
-    private async *recoverFromStaleBranchFork(userMessage: string, attachments: FileAttachment[] | undefined, isPreSpawn: boolean): AsyncGenerator<AgentEvent> {
+    /** @internal */ public async *recoverFromStaleBranchFork(userMessage: string, attachments: FileAttachment[] | undefined, isPreSpawn: boolean): AsyncGenerator<AgentEvent, void, unknown> {
         return yield* claudeAgentBranches.recoverFromStaleBranchFork(this, userMessage, attachments, isPreSpawn);
     }
-    private async generateBranchFallbackContext(): Promise<string | null> {
+    /** @internal */ public async generateBranchFallbackContext(): Promise<string | null> {
         return claudeAgentBranches.generateBranchFallbackContext(this);
     }
     async queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
@@ -448,16 +434,16 @@ export class ClaudeAgent extends BaseAgent {
     private buildClaudeHooks(sessionId: string, gmailRuntimeId: string): Options['hooks'] {
         return claudeAgentSdkOptions.buildClaudeHooks(this, sessionId, gmailRuntimeId);
     }
-    private async buildClaudeQueryOptions(sessionId: string, gmailRuntimeId: string, _isRetry: boolean, prepared: ClaudeQueryPreparation): Promise<Options> {
+    /** @internal */ public async buildClaudeQueryOptions(sessionId: string, gmailRuntimeId: string, _isRetry: boolean, prepared: ClaudeQueryPreparation): Promise<Options> {
         return claudeAgentSdkOptions.buildClaudeQueryOptions(this, sessionId, gmailRuntimeId, _isRetry, prepared);
     }
-    private async *prepareClaudeQueryRuntime(userMessage: string, attachments: FileAttachment[] | undefined, sessionId: string, _isRetry: boolean, gmailRuntimeId: string, gmailRuntimeContext: SourceProxyGmailLifecycleContext): AsyncGenerator<AgentEvent, ClaudeQueryPreparation | undefined> {
+    /** @internal */ public async *prepareClaudeQueryRuntime(userMessage: string, attachments: FileAttachment[] | undefined, sessionId: string, _isRetry: boolean, gmailRuntimeId: string, gmailRuntimeContext: SourceProxyGmailLifecycleContext): AsyncGenerator<AgentEvent, ClaudeQueryPreparation | undefined, unknown> {
         return yield* claudeAgentPreparation.prepareClaudeQueryRuntime(this, userMessage, attachments, sessionId, _isRetry, gmailRuntimeId, gmailRuntimeContext);
     }
-    private async *recoverClaudeQueryError(sdkError: unknown, context: ClaudeQueryFailureContext): AsyncGenerator<AgentEvent> {
+    /** @internal */ public async *recoverClaudeQueryError(sdkError: unknown, context: ClaudeQueryFailureContext): AsyncGenerator<AgentEvent, void, unknown> {
         return yield* claudeAgentRecovery.recoverClaudeQueryError(this, sdkError, context);
     }
-    private async createClaudeTurnMessageSource(userMessage: string, attachments: FileAttachment[] | undefined, options: Options, slashCommandRunsOutsidePersistentRuntime: boolean, _isRetry: boolean, gmailRuntimeContext: SourceProxyGmailLifecycleContext): Promise<AsyncIterable<SDKMessage>> {
+    /** @internal */ public async createClaudeTurnMessageSource(userMessage: string, attachments: FileAttachment[] | undefined, options: Options, slashCommandRunsOutsidePersistentRuntime: boolean, _isRetry: boolean, gmailRuntimeContext: SourceProxyGmailLifecycleContext): Promise<AsyncIterable<SDKMessage>> {
         return claudeAgentPreparation.createClaudeTurnMessageSource(this, userMessage, attachments, options, slashCommandRunsOutsidePersistentRuntime, _isRetry, gmailRuntimeContext);
     }
     private destroyClaudeRuntime(): void {

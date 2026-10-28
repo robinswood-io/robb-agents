@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../src/utils/json.ts';
 /**
  * Tests for SessionPersistenceQueue in sessions/persistence-queue.ts
  *
@@ -43,8 +44,8 @@ describe('SessionPersistenceQueue', () => {
     expect(existsSync(filePath)).toBe(true);
 
     const content = readFileSync(filePath, 'utf-8');
-    const header = JSON.parse(content.split('\n')[0]!);
-    expect(header.sdkSessionId).toBe('sdk-123');
+    const header = parseJsonObject(content.split('\n')[0]!);
+    expect(header["sdkSessionId"]).toBe('sdk-123');
   });
 
   it('serializes concurrent flushes for the same session', async () => {
@@ -69,10 +70,10 @@ describe('SessionPersistenceQueue', () => {
     // The final file should have the NEWER data (new-thread-id)
     const filePath = join(testDir, 'sessions', 'test-session', 'session.jsonl');
     const content = readFileSync(filePath, 'utf-8');
-    const header = JSON.parse(content.split('\n')[0]!);
+    const header = parseJsonObject(content.split('\n')[0]!);
 
     // Before the fix, this could randomly be undefined due to race condition
-    expect(header.sdkSessionId).toBe('new-thread-id');
+    expect(header["sdkSessionId"]).toBe('new-thread-id');
   });
 
   it('serializes a debounce-timer write with an explicit flush', async () => {
@@ -104,9 +105,9 @@ describe('SessionPersistenceQueue', () => {
     await flush;
 
     const filePath = join(testDir, 'sessions', 'test-session', 'session.jsonl');
-    const header = JSON.parse(readFileSync(filePath, 'utf-8').split('\n')[0]!);
+    const header = parseJsonObject(readFileSync(filePath, 'utf-8').split('\n')[0]!);
     expect(writeStarts).toBe(2);
-    expect(header.sdkSessionId).toBe('flushed-write');
+    expect(header["sdkSessionId"]).toBe('flushed-write');
   });
 
   it('keeps an active temp file intact while session storage reads the primary', async () => {
@@ -137,8 +138,8 @@ describe('SessionPersistenceQueue', () => {
     releaseTempWrite();
     await flush;
 
-    const header = JSON.parse(readFileSync(filePath, 'utf-8').split('\n')[0]!);
-    expect(header.sdkSessionId).toBe('updated');
+    const header = parseJsonObject(readFileSync(filePath, 'utf-8').split('\n')[0]!);
+    expect(header["sdkSessionId"]).toBe('updated');
   });
 
   it('allows parallel writes to different sessions', async () => {
@@ -168,8 +169,8 @@ describe('SessionPersistenceQueue', () => {
       'utf-8'
     );
 
-    expect(JSON.parse(contentA.split('\n')[0]!).sdkSessionId).toBe('id-a');
-    expect(JSON.parse(contentB.split('\n')[0]!).sdkSessionId).toBe('id-b');
+    expect(parseJsonObject(contentA.split('\n')[0]!)["sdkSessionId"]).toBe('id-a');
+    expect(parseJsonObject(contentB.split('\n')[0]!)["sdkSessionId"]).toBe('id-b');
   });
 
   it('bounds serialization and temp writes across sessions while flushAll waits for every rename', async () => {
@@ -200,7 +201,7 @@ describe('SessionPersistenceQueue', () => {
     expect(finished).toBe(true);
     for (const id of ids) {
       const file = join(testDir, 'sessions', id, 'session.jsonl');
-      expect(JSON.parse(readFileSync(file, 'utf-8').split('\n')[0]!).sdkSessionId).toBe(id);
+      expect(parseJsonObject(readFileSync(file, 'utf-8').split('\n')[0]!)["sdkSessionId"]).toBe(id);
       expect(existsSync(`${file}.tmp`)).toBe(false);
     }
   });
@@ -253,7 +254,7 @@ describe('SessionPersistenceQueue', () => {
       await flushed;
     }
     const file = join(testDir, 'sessions', 'waiting', 'session.jsonl');
-    expect(JSON.parse(readFileSync(file, 'utf-8').split('\n')[0]!).sdkSessionId).toBe('newest');
+    expect(parseJsonObject(readFileSync(file, 'utf-8').split('\n')[0]!)["sdkSessionId"]).toBe('newest');
     expect(existsSync(join(testDir, 'sessions', 'cancelled', 'session.jsonl'))).toBe(false);
     expect(queue.pendingCount).toBe(0);
   });

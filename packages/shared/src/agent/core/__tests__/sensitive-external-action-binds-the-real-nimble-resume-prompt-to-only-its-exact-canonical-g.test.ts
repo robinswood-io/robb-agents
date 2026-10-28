@@ -55,15 +55,15 @@ function checkMcp(
     activeSourceSlugs: [sourceSlug],
     allSourceSlugs: [sourceSlug],
     hasSourceActivation: false,
-    externalActionPolicy: options?.externalActionPolicy,
-    objectiveMutationAuthorized: options?.objectiveMutationAuthorized,
-    objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized,
-    objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments,
-    authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments,
-    dataFolderPath: options?.dataFolderPath,
-    declaredToolCapabilities: options?.declaredToolCapabilities,
+    ...(options?.externalActionPolicy !== undefined ? { externalActionPolicy: options?.externalActionPolicy } : {}),
+    ...(options?.objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized: options?.objectiveMutationAuthorized } : {}),
+    ...(options?.objectiveSensitiveActionAuthorized !== undefined ? { objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized } : {}),
+    ...(options?.objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments } : {}),
+    ...(options?.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments } : {}),
+    ...(options?.dataFolderPath !== undefined ? { dataFolderPath: options?.dataFolderPath } : {}),
+    ...(options?.declaredToolCapabilities !== undefined ? { declaredToolCapabilities: options?.declaredToolCapabilities } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 
@@ -79,23 +79,20 @@ afterEach(() => {
 });
 
 describe('sensitive external action gate across permission modes', () => {
-  const silaeConfirmationObjective = [
-    'Reprends l’objectif explicite d’écrire à Benoît. Vérifie d’abord Sent/Brouillons pour éviter un doublon, exécute le préflight exact vers benoit@example.test, sans fallback navigateur, puis arrête-toi immédiatement avant l’envoi pour la confirmation d’action externe. Après confirmation, envoie une seule fois et vérifie le messageId.',
-  ];
 
   it('binds the real Nimble resume prompt to only its exact canonical Gmail send payload', () => {
     const liveTool = 'mcp__google-contacts__gmail_send';
     const payload = parseStructuredGmailSendResumeSegment(NIMBLE_GMAIL_RESUME_PROMPT);
-    expect(payload).toEqual({
+    if (!payload) throw new Error("Expected the canonical reply payload");
+    const { body, ...routing } = payload;
+    expect(routing).toEqual({
       from: 'sender@example.test',
       to: 'benoit@example.test',
       subject: 'Exemple — compte rendu de démonstration',
-      body: expect.any(String),
       attachmentPaths: [],
     });
-    if (!payload) return;
-    expect(payload.body.length).toBe(124);
-    expect(createHash('sha256').update(payload.body).digest('hex')).toBe(
+    expect(body.length).toBe(124);
+    expect(createHash('sha256').update(body).digest('hex')).toBe(
       '95d489042450d751c7632e6a1c5187f6e2f10625219da46af912cb7631984d90',
     );
 
@@ -141,7 +138,7 @@ describe('sensitive external action gate across permission modes', () => {
       'allow-all', liveTool, exactSecondInput, NIMBLE_GMAIL_RESUME_PROMPT, options,
     )).toMatchObject({
       type: 'modify',
-      input: expect.not.objectContaining({ _displayName: expect.anything(), _intent: expect.anything() }),
+      input: (expect.not.objectContaining({ _displayName: (expect.anything() as unknown), _intent: (expect.anything() as unknown) }) as unknown),
     });
 
     const mixedReplyAndSendObjective = [
@@ -163,7 +160,7 @@ describe('sensitive external action gate across permission modes', () => {
       },
     )).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('newer accepted instruction restricts or replaces'),
+      reason: (expect.stringContaining('newer accepted instruction restricts or replaces') as unknown),
     });
 
     const malformedSchemaObjective = NIMBLE_GMAIL_RESUME_PROMPT.replace('- BCC : []\n', '');
@@ -184,7 +181,7 @@ describe('sensitive external action gate across permission modes', () => {
       },
     )).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('authenticated-contract-unavailable'),
+      reason: (expect.stringContaining('authenticated-contract-unavailable') as unknown),
     });
 
     const priorContextualReplyObjective = [
@@ -204,7 +201,7 @@ describe('sensitive external action gate across permission modes', () => {
       },
     )).toMatchObject({
       type: 'modify',
-      input: expect.not.objectContaining({ _displayName: expect.anything(), _intent: expect.anything() }),
+      input: (expect.not.objectContaining({ _displayName: (expect.anything() as unknown), _intent: (expect.anything() as unknown) }) as unknown),
     });
     expect(structuredGmailSendAuthorizationDiagnostic(
       'mcp__google-contacts__gmail_reply',
@@ -227,7 +224,7 @@ describe('sensitive external action gate across permission modes', () => {
       },
     )).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('newer accepted instruction restricts or replaces'),
+      reason: (expect.stringContaining('newer accepted instruction restricts or replaces') as unknown),
     });
 
     const laterContextualReplyObjective = [
@@ -287,7 +284,7 @@ describe('sensitive external action gate across permission modes', () => {
       'allow-all', liveTool, missingAttachmentPathsInput, NIMBLE_GMAIL_RESUME_PROMPT, options,
     )).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('no values reflected): attachmentPaths'),
+      reason: (expect.stringContaining('no values reflected): attachmentPaths') as unknown),
     });
 
     const rejectedInputs: Array<[string, Record<string, unknown>]> = [

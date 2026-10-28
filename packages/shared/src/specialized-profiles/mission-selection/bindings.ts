@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { createHash } from "node:crypto";
 import { type SpecializedProfileCondition, type SpecializedProfileEvaluation, type SpecializedProfileRecord } from "../schema.ts";
 import type { SpecializedMissionCapability, SpecializedMissionProfileReference, SpecializedMissionProfileState } from './contracts.ts';
@@ -57,8 +58,8 @@ export function conditionMatches(
   if (value === undefined || value === null || condition.value === undefined) return false;
   if (condition.operator === 'equals') return String(value) === condition.value;
   if (condition.operator === 'includes') {
-    return Array.isArray(value)
-      ? value.some((entry) => String(entry) === condition.value)
+    return isUnknownArray(value)
+      ? value.some((entry: unknown) => String(entry) === condition.value)
       : String(value).includes(condition.value);
   }
   try {

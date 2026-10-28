@@ -1,13 +1,13 @@
 import * as React from 'react';
 import { useTranslation } from "react-i18next";
 import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { SlashCommandMenu, DEFAULT_SLASH_COMMAND_GROUPS, type SlashCommandId } from '@/components/ui/slash-command-menu';
-import { ChevronDown, Info } from 'lucide-react';
-import { PERMISSION_MODE_CONFIG, type PermissionMode } from '@craft-agent/shared/agent/modes';
+import { Popover,PopoverContent,PopoverTrigger } from '@/components/ui/popover';
+import { SlashCommandMenu,DEFAULT_SLASH_COMMAND_GROUPS,type SlashCommandId } from '@/components/ui/slash-command-menu';
+import { ChevronDown,Info } from 'lucide-react';
+import { PERMISSION_MODE_CONFIG,type PermissionMode } from '@craft-agent/shared/agent/modes';
 import { type BackgroundTask } from "./ActiveTasksBar";
 import type { TerminalOverlayData } from "./TaskActionMenu";
-import { LabelIcon, LabelValueTypeIcon } from '@/components/ui/label-icon';
+import { LabelIcon,LabelValueTypeIcon } from '@/components/ui/label-icon';
 import { LabelValuePopover } from '@/components/ui/label-value-popover';
 import type { LabelConfig } from '@craft-agent/shared/labels';
 import { formatDisplayValue } from '@craft-agent/shared/labels';
@@ -15,7 +15,7 @@ import { resolveEntityColor } from '@craft-agent/shared/colors';
 import { useTheme } from '@/context/ThemeContext';
 
 import type { SessionStatus } from '@/config/session-status-config';
-import { resolveStatusDisplayLabel, resolveLabelDisplayName } from '@/config/session-status-config';
+import { resolveStatusDisplayLabel,resolveLabelDisplayName } from '@/config/session-status-config';
 import { SessionStatusMenu } from '@/components/ui/session-status-menu';
 import { MetadataBadge } from '@/components/ui/metadata-badge';
 import { openLabelLink } from '@/lib/open-label-link';
@@ -26,7 +26,7 @@ import { SessionInfoPopover } from "./SessionInfoPopover";
 // Permission Mode Icon Component
 // ============================================================================
 
-export function PermissionModeIcon({ mode, className }: { mode: PermissionMode; className?: string }) {
+export function PermissionModeIcon({ mode, className }: { mode: PermissionMode; className?: string | undefined }) {
   const config = PERMISSION_MODE_CONFIG[mode]
   return (
     <svg
@@ -46,42 +46,42 @@ export function PermissionModeIcon({ mode, className }: { mode: PermissionMode; 
 
 export interface ActiveOptionBadgesProps {
   /** Current permission mode */
-  permissionMode?: PermissionMode
+  permissionMode?: PermissionMode | undefined
   /** Callback when permission mode changes */
-  onPermissionModeChange?: (mode: PermissionMode) => void
+  onPermissionModeChange?: ((mode: PermissionMode) => void) | undefined
   /** Background tasks to display */
-  tasks?: BackgroundTask[]
+  tasks?: BackgroundTask[] | undefined
   /** Session ID for opening preview windows */
-  sessionId?: string
+  sessionId?: string | undefined
   /** Absolute path to the session folder (for Files header actions) */
-  sessionFolderPath?: string
+  sessionFolderPath?: string | undefined
   /** Callback when kill button is clicked on a task */
-  onKillTask?: (taskId: string) => void
+  onKillTask?: ((taskId: string) => void) | undefined
   /** Callback to insert message into input field */
-  onInsertMessage?: (text: string) => void
+  onInsertMessage?: ((text: string) => void) | undefined
   /** Callback to show a task's output in a terminal overlay (optional) */
-  onShowTerminalOverlay?: (data: TerminalOverlayData) => void
+  onShowTerminalOverlay?: ((data: TerminalOverlayData) => void) | undefined
   /** Label entries applied to this session (e.g., ["bug", "priority::3"]) */
-  sessionLabels?: string[]
+  sessionLabels?: string[] | undefined
   /** Available label configs (tree structure) for resolving label display */
-  labels?: LabelConfig[]
+  labels?: LabelConfig[] | undefined
   /** Callback when a label is removed (legacy — prefer onLabelsChange) */
-  onRemoveLabel?: (labelId: string) => void
+  onRemoveLabel?: ((labelId: string) => void) | undefined
   /** Callback when session labels array changes (value edits or removals) */
-  onLabelsChange?: (updatedLabels: string[]) => void
+  onLabelsChange?: ((updatedLabels: string[]) => void) | undefined
   /** Label ID whose value popover should auto-open (set when a valued label is added via # menu) */
-  autoOpenLabelId?: string | null
+  autoOpenLabelId?: string | null | undefined
   /** Called after the auto-open has been consumed, so the parent can clear the signal */
-  onAutoOpenConsumed?: () => void
+  onAutoOpenConsumed?: (() => void) | undefined
   // ── State/status badge (in dynamic stack) ──
   /** Available workflow states */
-  sessionStatuses?: SessionStatus[]
+  sessionStatuses?: SessionStatus[] | undefined
   /** Current session state ID */
-  currentSessionStatus?: string
+  currentSessionStatus?: string | undefined
   /** Callback when state changes */
-  onSessionStatusChange?: (stateId: string) => void
+  onSessionStatusChange?: ((stateId: string) => void) | undefined
   /** Additional CSS classes */
-  className?: string
+  className?: string | undefined
 }
 
 
@@ -113,13 +113,13 @@ export function LabelBadge({
   sessionId,
 }: {
   label: LabelConfig
-  value?: string
+  value?: string | undefined
   /** When true, auto-open the value popover on mount (for newly added valued labels) */
-  autoOpen?: boolean
-  onAutoOpenConsumed?: () => void
-  onValueChange?: (newValue: string | undefined) => void
+  autoOpen?: boolean | undefined
+  onAutoOpenConsumed?: (() => void) | undefined
+  onValueChange?: ((newValue: string | undefined) => void) | undefined
   onRemove: () => void
-  sessionId?: string
+  sessionId?: string | undefined
 }) {
   const { isDark } = useTheme()
   const { t } = useTranslation()
@@ -186,8 +186,8 @@ export function StateBadge({
 }: {
   state: SessionStatus
   sessionStatuses: SessionStatus[]
-  onSessionStatusChange?: (stateId: string) => void
-  sessionId?: string
+  onSessionStatusChange?: ((stateId: string) => void) | undefined
+  sessionId?: string | undefined
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = React.useState(false)
@@ -246,9 +246,9 @@ export function StateBadge({
 }
 
 
-export function FilesPopoverButton({ sessionId, sessionFolderPath }: { sessionId?: string; sessionFolderPath?: string }) {
+export function FilesPopoverButton({ sessionId, sessionFolderPath }: { sessionId?: string | undefined; sessionFolderPath?: string | undefined }) {
   const { t } = useTranslation()
-  const [open, setOpen] = React.useState(false)
+  const [] = React.useState(false)
 
   if (!sessionId) return null
 
@@ -278,8 +278,8 @@ export function FilesPopoverButton({ sessionId, sessionFolderPath }: { sessionId
 
 export interface PermissionModeDropdownProps {
   permissionMode: PermissionMode
-  onPermissionModeChange?: (mode: PermissionMode) => void
-  sessionId?: string
+  onPermissionModeChange?: ((mode: PermissionMode) => void) | undefined
+  sessionId?: string | undefined
 }
 
 
@@ -307,8 +307,6 @@ export function PermissionModeDropdown({ permissionMode, onPermissionModeChange,
     setOpen(false)
   }, [onPermissionModeChange])
 
-  // Get config for current mode (use optimistic state for instant UI update)
-  const config = PERMISSION_MODE_CONFIG[optimisticMode]
 
   // Mode-specific styling using CSS variables (theme-aware)
   // - safe (Explore): foreground at 60% opacity - subtle, read-only feel

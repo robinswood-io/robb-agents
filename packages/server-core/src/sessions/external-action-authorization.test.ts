@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from 'bun:test';
@@ -201,17 +202,12 @@ describe('SessionManager sensitive permission persistence', () => {
       terminalState: 'active',
     } as never;
 
-    const internals = manager as unknown as {
-      sessions: Map<string, typeof managed>;
-      pendingPermissionRequests: Map<string, unknown>;
-      persistSession: (session: typeof managed) => void;
-      flushSession: (sessionId: string) => Promise<void>;
-      emitExecutionTelemetry: () => void;
-    };
+    const internals = sessionManagerForTest(manager);
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
     const persistedAuthorizations: Array<typeof managed.externalActionAuthorizations> = [];
     internals.persistSession = session => {
       persistedAuthorizations.push(structuredClone(session.externalActionAuthorizations));
+      return true;
     };
     internals.flushSession = async () => {};
     internals.emitExecutionTelemetry = () => {};

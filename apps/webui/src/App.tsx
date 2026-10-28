@@ -44,7 +44,7 @@ import { type Phase, type WebuiConfig, LoadingScreen, ConnectionScreen } from ".
 import type { WsRpcClient } from '../../electron/src/transport/client';
 
 if (typeof document !== 'undefined') {
-  document.documentElement.dataset.robbRuntime = 'web'
+  document.documentElement.dataset["robbRuntime"] = 'web'
 }
 
 // Lazy-load the Electron App after window.electronAPI is set up.
@@ -129,7 +129,7 @@ export default function App() {
       setOfflineStorageError(storageError instanceof Error ? storageError.message : String(storageError))
     }
     void offlineCoordinator.load()
-      .catch((loadError) => {
+      .catch((loadError: unknown) => {
         setOfflineStorageError(loadError instanceof Error ? loadError.message : String(loadError))
       })
       .finally(() => setOfflineStorageReady(true))
@@ -148,7 +148,7 @@ export default function App() {
     clientRef.current?.destroy()
     void purgeAllLocalPrivateData()
       .then(() => window.location.replace('/login'))
-      .catch((purgeError) => {
+      .catch((purgeError: unknown) => {
         const message = purgeError instanceof Error ? purgeError.message : String(purgeError)
         setOfflineStorageError(message)
         setError(message)
@@ -166,7 +166,7 @@ export default function App() {
         timeout = window.setTimeout(expireWhenDue, Math.min(remaining, 2_147_000_000))
         return
       }
-      void purgeAllLocalPrivateData().catch((purgeError) => {
+      void purgeAllLocalPrivateData().catch((purgeError: unknown) => {
         setOfflineStorageError(purgeError instanceof Error ? purgeError.message : String(purgeError))
       })
     }
@@ -186,7 +186,7 @@ export default function App() {
         timeout = window.setTimeout(pruneWhenDue, Math.min(remaining, 2_147_000_000))
         return
       }
-      void offlineVault.pruneExpired().catch((pruneError) => {
+      void offlineVault.pruneExpired().catch((pruneError: unknown) => {
         setOfflineStorageError(pruneError instanceof Error ? pruneError.message : String(pruneError))
       })
     }
@@ -237,6 +237,7 @@ export default function App() {
       }
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
+      if (!first || !last) return
       if (!focusable.includes(document.activeElement as HTMLElement)) {
         event.preventDefault()
         if (event.shiftKey) last.focus()

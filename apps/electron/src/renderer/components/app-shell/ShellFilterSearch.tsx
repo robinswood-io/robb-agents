@@ -71,7 +71,7 @@ export function ShellFilterSearch({
                                     if (idx < ms.length) {
                                       // Toggle a status filter
                                       const state = ms[idx]
-                                      if (state.id !== pinnedFilters.pinnedStatusId) {
+                                      if (state && state.id !== pinnedFilters.pinnedStatusId) {
                                         setListFilter(prev => {
                                           const next = new Map(prev)
                                           if (next.has(state.id)) next.delete(state.id)

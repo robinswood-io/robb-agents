@@ -81,7 +81,7 @@ export function evaluateGmailAuthority(
     && targetScopedContextualGmailSegments !== policyAuthorizationSegments
     && (!observedContextualGmailPreflight
       || contextualGmailExactEffectExpectationFromObjective(targetScopedContextualGmailSegments)?.expectedSenderEmail === undefined)
-    && input.expectedSenderEmail !== undefined) {
+    && input["expectedSenderEmail"] !== undefined) {
     return {
       type: 'block',
       reason: 'Validation failed: this selected Gmail reply did not specify a From identity. Omit expectedSenderEmail and retry the same read-only preflight using the connected Gmail profile; the signed connector receipt will report its actual sender. Do not ask the user for another authorization or an internal message ID.',

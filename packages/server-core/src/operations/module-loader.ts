@@ -22,7 +22,7 @@ export interface RobbOperationsModule {
 
 export interface LoadRobbOperationsModuleOptions extends RobbOperationsHostContext {
   /** Explicit path wins. Missing path means the OSS no-op behavior. */
-  modulePath?: string;
+  modulePath?: string | undefined;
 }
 
 function assertSafeModulePath(input: string): string {
@@ -53,7 +53,7 @@ export async function loadRobbOperationsModule(
   // Runtime environment injection is a development convenience only. A
   // packaged/production host must pass the fixed bundled path explicitly.
   const developmentPath = !options.isPackaged && options.buildChannel === 'development'
-    ? options.env.ROBB_OPERATIONS_MODULE_PATH
+    ? options.env["ROBB_OPERATIONS_MODULE_PATH"]
     : undefined;
   const requestedPath = options.modulePath ?? developmentPath;
   if (!requestedPath) return null;

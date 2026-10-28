@@ -92,7 +92,7 @@ export class TelegramAdapter implements PlatformAdapter {
     }): Promise<void> {
         return telegramAdapterIncoming.emitAttachmentMessage(this, ctx, meta);
     }
-    private async downloadToTemp(fileId: string, fallbackName: string, mimeType: string | undefined): Promise<{
+    /** @internal */ public async downloadToTemp(fileId: string, fallbackName: string, mimeType: string | undefined): Promise<{
         localPath: string;
         fileName: string;
         fileSize: number;

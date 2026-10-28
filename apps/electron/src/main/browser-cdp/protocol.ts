@@ -1,41 +1,52 @@
-/** The CDP response fields consumed by this client. Page script values remain untrusted. */
-interface AXValue {
-  value?: unknown;
-}
+import { z } from 'zod';
 
-interface AXNode {
-  role?: AXValue;
-  name?: AXValue;
-  value?: AXValue;
-  description?: AXValue;
-  backendDOMNodeId?: number;
-  properties?: Array<{ name: string; value?: AXValue }>;
-}
+/** Validate CDP metadata here; values returned by page scripts stay untrusted. */
+const AXValueSchema = z.object({ value: z.unknown().optional() });
+const AXNodeSchema = z.object({
+  role: AXValueSchema.optional(), name: AXValueSchema.optional(),
+  value: AXValueSchema.optional(), description: AXValueSchema.optional(),
+  backendDOMNodeId: z.number().optional(),
+  properties: z.array(z.object({ name: z.string(), value: AXValueSchema.optional() })).optional(),
+});
+const RuntimeResultSchema = z.object({
+  result: z.object({ objectId: z.string().optional(), value: z.unknown().optional() }).optional(),
+  exceptionDetails: z.unknown().optional(),
+});
+const AccessibilitySchema = z.object({ nodes: z.array(AXNodeSchema).optional() });
+const ResolvedNodeSchema = z.object({ object: z.object({ objectId: z.string() }) });
+const BoxModelSchema = z.object({ model: z.object({ content: z.array(z.number()).length(8) }) });
+const FrameTreeSchema = z.object({
+  frameTree: z.object({ frame: z.object({ id: z.string().optional(), loaderId: z.string().optional() }).optional() }).optional(),
+});
+const IsolatedWorldSchema = z.object({ executionContextId: z.number() });
+function ignoreResult(_value: unknown): void {}
 
-interface RemoteObject {
-  objectId?: string;
-  value?: unknown;
-}
+const responseReaders = {
+  'Accessibility.getFullAXTree': (value: unknown) => AccessibilitySchema.parse(value),
+  'DOM.resolveNode': (value: unknown) => ResolvedNodeSchema.parse(value),
+  'DOM.getBoxModel': (value: unknown) => BoxModelSchema.parse(value),
+  'Page.getFrameTree': (value: unknown) => FrameTreeSchema.parse(value),
+  'Page.createIsolatedWorld': (value: unknown) => IsolatedWorldSchema.parse(value),
+  'Runtime.evaluate': (value: unknown) => RuntimeResultSchema.parse(value),
+  'Runtime.callFunctionOn': (value: unknown) => RuntimeResultSchema.parse(value),
+  'Runtime.releaseObject': ignoreResult,
+  'Input.insertText': ignoreResult,
+  'Input.dispatchKeyEvent': ignoreResult,
+  'Input.dispatchMouseEvent': ignoreResult,
+  'DOM.focus': ignoreResult,
+  'DOM.setFileInputFiles': ignoreResult,
+};
+export type CDPCommandResponses = {
+  [Method in keyof typeof responseReaders]: ReturnType<(typeof responseReaders)[Method]>;
+};
+const checkedReaders: {
+  [Method in keyof CDPCommandResponses]: (value: unknown) => CDPCommandResponses[Method];
+} = responseReaders;
 
-interface RuntimeResult {
-  result?: RemoteObject;
-  exceptionDetails?: unknown;
-}
-
-export interface CDPCommandResponses {
-  'Accessibility.getFullAXTree': { nodes?: AXNode[] };
-  'DOM.resolveNode': { object: { objectId: string } };
-  'DOM.getBoxModel': { model: { content: number[] } };
-  'Page.getFrameTree': { frameTree?: { frame?: { id?: string; loaderId?: string } } };
-  'Page.createIsolatedWorld': { executionContextId: number };
-  'Runtime.evaluate': RuntimeResult;
-  'Runtime.callFunctionOn': RuntimeResult;
-  'Runtime.releaseObject': void;
-  'Input.insertText': void;
-  'Input.dispatchKeyEvent': void;
-  'Input.dispatchMouseEvent': void;
-  'DOM.focus': void;
-  'DOM.setFileInputFiles': void;
+export function parseCDPResponse<Method extends keyof CDPCommandResponses>(
+  method: Method, value: unknown,
+): CDPCommandResponses[Method] {
+  return checkedReaders[method](value);
 }
 
 export interface SelectorGeometryReceipt {

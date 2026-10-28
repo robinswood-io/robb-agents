@@ -16,7 +16,7 @@
 import * as React from 'react'
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { PencilLine, FilePlus, X } from 'lucide-react'
-import { parseDiffFromFile, parsePatchFiles, type FileContents } from '@pierre/diffs'
+import { parseDiffFromFile ,type FileContents } from '@pierre/diffs'
 import { ShikiDiffViewer, getDiffStats } from '../code-viewer/ShikiDiffViewer'
 import { UnifiedDiffViewer, getUnifiedDiffStats } from '../code-viewer/UnifiedDiffViewer'
 import { DiffViewerControls } from '../code-viewer/DiffViewerControls'
@@ -66,17 +66,17 @@ export interface MultiDiffPreviewOverlayProps {
   /** List of file changes to display */
   changes: FileChange[]
   /** Whether to consolidate changes by file path (default: true) */
-  consolidated?: boolean
+  consolidated?: boolean | undefined
   /** ID of change to focus on initially */
-  focusedChangeId?: string
+  focusedChangeId?: string | undefined
   /** Theme mode */
-  theme?: 'light' | 'dark'
+  theme?: 'light' | 'dark' | undefined
   /** Render inline without dialog (for playground) */
-  embedded?: boolean
+  embedded?: boolean | undefined
   /** Initial diff viewer settings (from user preferences) */
-  diffViewerSettings?: Partial<DiffViewerSettings>
+  diffViewerSettings?: Partial<DiffViewerSettings> | undefined
   /** Callback when diff viewer settings change (to persist to preferences) */
-  onDiffViewerSettingsChange?: (settings: DiffViewerSettings) => void
+  onDiffViewerSettingsChange?: ((settings: DiffViewerSettings) => void) | undefined
 }
 
 // ============================================

@@ -21,19 +21,19 @@ export { _getActiveWatchers, loadPreferences } from './watcher/shared.ts';
 export class ConfigWatcher {
     private workspaceId: string;
     private callbacks: ConfigWatcherCallbacks;
-    private watchers: FSWatcher[] = [];
-    private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
-    private isRunning = false;
+    /** @internal Shared with the extracted backend helpers. */ public watchers: FSWatcher[] = [];
+    /** @internal Shared with the extracted backend helpers. */ public debounceTimers: Map<string, NodeJS.Timeout> = new Map();
+    /** @internal */ public isRunning = false;
     // Track known items for detecting adds/removes
     private knownSources: Set<string> = new Set();
-    private knownSkills: Set<string> = new Set();
-    private knownThemes: Set<string> = new Set();
+    /** @internal Shared with the extracted backend helpers. */ public knownSkills: Set<string> = new Set();
+    /** @internal Shared with the extracted backend helpers. */ public knownThemes: Set<string> = new Set();
     // Track LLM connections for change detection (JSON string for deep comparison)
-    private lastLlmConnectionsHash: string = '';
+    /** @internal Shared with the extracted backend helpers. */ public lastLlmConnectionsHash: string = '';
     // Computed paths
     private workspaceDir: string;
     private sourcesDir: string;
-    private skillsDir: string;
+    /** @internal Shared with the extracted backend helpers. */ public skillsDir: string;
     constructor(workspaceIdOrPath: string, callbacks: ConfigWatcherCallbacks) {
         this.callbacks = callbacks;
         // Support both workspace ID and workspace root path
@@ -63,7 +63,7 @@ export class ConfigWatcher {
     start(): void {
         return watcherLifecycle.start(this);
     }
-    private initLlmConnectionsHash(): void {
+    /** @internal Shared with the extracted backend helpers. */ public initLlmConnectionsHash(): void {
         return watcherLifecycle.initLlmConnectionsHash(this);
     }
     /**
@@ -83,82 +83,82 @@ export class ConfigWatcher {
     stop(): void {
         return watcherLifecycle.stop(this);
     }
-    private watchGlobalConfigs(): void {
+    /** @internal Shared with the extracted backend helpers. */ public watchGlobalConfigs(): void {
         return watcherLifecycle.watchGlobalConfigs(this);
     }
-    private watchWorkspaceDir(): void {
+    /** @internal Shared with the extracted backend helpers. */ public watchWorkspaceDir(): void {
         return watcherLifecycle.watchWorkspaceDir(this);
     }
-    private handleWorkspaceFileChange(relativePath: string, eventType: string): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleWorkspaceFileChange(relativePath: string, eventType: string): void {
         return watcherWorkspace.handleWorkspaceFileChange(this, relativePath, eventType);
     }
-    private debounce(key: string, handler: () => void, delayMs: number = DEBOUNCE_MS): void {
+    /** @internal */ public debounce(key: string, handler: () => void, delayMs: number = DEBOUNCE_MS): void {
         return watcherLifecycle.debounce(this, key, handler, delayMs);
     }
-    private scanSources(): void {
+    /** @internal Shared with the extracted backend helpers. */ public scanSources(): void {
         return watcherSources.scanSources(this);
     }
-    private handleSourcesDirChange(): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleSourcesDirChange(): void {
         return watcherSources.handleSourcesDirChange(this);
     }
-    private handleSourceConfigChange(slug: string): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleSourceConfigChange(slug: string): void {
         return watcherSources.handleSourceConfigChange(this, slug);
     }
-    private handleSourceGuideChange(slug: string): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleSourceGuideChange(slug: string): void {
         return watcherSources.handleSourceGuideChange(this, slug);
     }
-    private handleSourcePermissionsChange(slug: string): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleSourcePermissionsChange(slug: string): void {
         return watcherSources.handleSourcePermissionsChange(this, slug);
     }
-    private scanSkills(): void {
+    /** @internal Shared with the extracted backend helpers. */ public scanSkills(): void {
         return watcherSkills.scanSkills(this);
     }
-    private handleSkillsDirChange(): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleSkillsDirChange(): void {
         return watcherSkills.handleSkillsDirChange(this);
     }
-    private handleSkillChange(slug: string): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleSkillChange(slug: string): void {
         return watcherSkills.handleSkillChange(this, slug);
     }
-    private handleWorkspacePermissionsChange(): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleWorkspacePermissionsChange(): void {
         return watcherWorkspace.handleWorkspacePermissionsChange(this);
     }
-    private handleConfigChange(): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleConfigChange(): void {
         return watcherWorkspace.handleConfigChange(this);
     }
-    private handlePreferencesChange(): void {
+    /** @internal Shared with the extracted backend helpers. */ public handlePreferencesChange(): void {
         return watcherWorkspace.handlePreferencesChange(this);
     }
-    private handleStatusConfigChange(): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleStatusConfigChange(): void {
         return watcherWorkspace.handleStatusConfigChange(this);
     }
-    private handleStatusIconChange(iconFilename: string): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleStatusIconChange(iconFilename: string): void {
         return watcherWorkspace.handleStatusIconChange(this, iconFilename);
     }
-    private handleLabelConfigChange(): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleLabelConfigChange(): void {
         return watcherWorkspace.handleLabelConfigChange(this);
     }
-    private handleAutomationsConfigChange(): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleAutomationsConfigChange(): void {
         return watcherWorkspace.handleAutomationsConfigChange(this);
     }
-    private handleSessionMetadataChange(sessionId: string): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleSessionMetadataChange(sessionId: string): void {
         return watcherWorkspace.handleSessionMetadataChange(this, sessionId);
     }
-    private handleAppThemeChange(): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleAppThemeChange(): void {
         return watcherThemes.handleAppThemeChange(this);
     }
-    private watchAppThemesDir(): void {
+    /** @internal Shared with the extracted backend helpers. */ public watchAppThemesDir(): void {
         return watcherThemes.watchAppThemesDir(this);
     }
-    private watchAppPermissionsDir(): void {
+    /** @internal Shared with the extracted backend helpers. */ public watchAppPermissionsDir(): void {
         return watcherThemes.watchAppPermissionsDir(this);
     }
-    private handleDefaultPermissionsChange(): void {
+    /** @internal Shared with the extracted backend helpers. */ public handleDefaultPermissionsChange(): void {
         return watcherThemes.handleDefaultPermissionsChange(this);
     }
-    private scanAppThemes(): void {
+    /** @internal Shared with the extracted backend helpers. */ public scanAppThemes(): void {
         return watcherThemes.scanAppThemes(this);
     }
-    private handlePresetThemeChange(themeId: string): void {
+    /** @internal Shared with the extracted backend helpers. */ public handlePresetThemeChange(themeId: string): void {
         return watcherThemes.handlePresetThemeChange(this, themeId);
     }
 }

@@ -5,12 +5,13 @@ import { MissionController } from "../MissionController.ts";
 
 
 export function routeConnection(slug: string, models = ['pi/gpt-5.6-luna', 'pi/gpt-5.6-terra', 'pi/gpt-5.6-sol']) {
+  const defaultModel = models[1] ?? models[0];
   return {
     slug,
     providerType: 'pi' as const,
     piAuthProvider: 'openai',
     models,
-    defaultModel: models[1] ?? models[0],
+    ...(defaultModel !== undefined ? { defaultModel } : {}),
   };
 }
 

@@ -18,9 +18,15 @@ TEST_LIST="$(mktemp -t robb-tests.XXXXXX)"
 ISOLATED_LIST="$(mktemp -t robb-isolated-tests.XXXXXX)"
 WORKSPACE_LIST="$(mktemp -t robb-test-workspaces.XXXXXX)"
 WORKSPACE_TEST_LIST="$(mktemp -t robb-workspace-tests.XXXXXX)"
+TEST_CONFIG_DIR=""
+if [ -z "${CRAFT_CONFIG_DIR:-}" ]; then
+  TEST_CONFIG_DIR="$(mktemp -d -t robb-test-profile.XXXXXX)"
+  export CRAFT_CONFIG_DIR="$TEST_CONFIG_DIR"
+fi
 
 cleanup() {
   rm -f "$TEST_LIST" "$ISOLATED_LIST" "$WORKSPACE_LIST" "$WORKSPACE_TEST_LIST"
+  if [ -n "$TEST_CONFIG_DIR" ]; then rm -rf "$TEST_CONFIG_DIR"; fi
 }
 trap cleanup EXIT
 
@@ -36,7 +42,7 @@ find . \
     -path './packages/*/dist' -o \
     -path './coverage' \
   \) -prune -o \
-  \( -name '*.test.ts' -o -name '*.test.tsx' \) \
+  \( -name '*.test.ts' -o -name '*.test.tsx' -o -name '*.test.cjs' \) \
   ! -name '*.e2e.test.ts' \
   ! -name '*.e2e.test.tsx' \
   ! -path './packages/server-core/src/sessions/refresh-connection-runtime.test.ts' \
@@ -85,3 +91,7 @@ while IFS= read -r file; do
   [ -n "$file" ] || continue
   "$RESOLVED_BUN_BIN" test --timeout 10000 ${BUN_TEST_ARGS:-} "$file"
 done < "$ISOLATED_LIST"
+
+
+python3 -m unittest discover -s scripts/tests -t . -p 'test_*.py'
+"$RESOLVED_BUN_BIN" run test:doc-tools

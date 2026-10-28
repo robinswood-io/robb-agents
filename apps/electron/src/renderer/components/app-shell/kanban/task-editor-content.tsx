@@ -1,3 +1,4 @@
+import type { SnapshotInput } from '@craft-agent/shared/utils/json';
 import * as React from 'react';
 import { ChevronLeft, Sparkles, Plus, Check, ExternalLink, RefreshCw, Archive } from 'lucide-react';
 
@@ -67,7 +68,7 @@ interface TaskEditorContentProps {
   subtasks: EditorSubtask[]
   addSubtask: () => void
   fallbackModel: string
-  updateSubtask: (id: string, patch: Partial<EditorSubtask>) => void
+  updateSubtask: (id: string, patch: Partial<SnapshotInput<EditorSubtask>>) => void
   removeSubtask: (id: string) => void
   generatePlan: () => Promise<void>
 }

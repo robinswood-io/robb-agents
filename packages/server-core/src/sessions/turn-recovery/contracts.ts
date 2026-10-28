@@ -54,14 +54,14 @@ export type AutomaticTurnRecoveryPlan =
 export interface AutomaticTurnRecoveryPlanInput {
   pending: PendingTurnRecovery;
   cause: AutomaticTurnRecoveryCause;
-  objective?: ActiveSessionObjective;
-  nowMs?: number;
-  maxAttempts?: number;
-  progressFingerprint?: string;
-  maxStagnantAttempts?: number;
-  leaseDurationMs?: number;
-  absoluteMaxAttempts?: number;
-  explicitContext?: { objectiveId: string; semanticProgressFingerprint: string };
+  objective?: ActiveSessionObjective | undefined;
+  nowMs?: number | undefined;
+  maxAttempts?: number | undefined;
+  progressFingerprint?: string | undefined;
+  maxStagnantAttempts?: number | undefined;
+  leaseDurationMs?: number | undefined;
+  absoluteMaxAttempts?: number | undefined;
+  explicitContext?: { objectiveId: string; semanticProgressFingerprint: string } | undefined;
 }
 
 export interface CleanRecoveryContinuationEvidence {
@@ -114,7 +114,7 @@ export interface CleanRecoveryContinuationHandoffInput {
   objective: ActiveSessionObjective;
   pending: PendingTurnRecovery;
   /** Required for legacy objectives whose original request was not persisted. */
-  objectiveText?: string;
+  objectiveText?: string | undefined;
   /** Facts already validated by the host. Raw tool output must not be supplied. */
   evidence: readonly CleanRecoveryContinuationEvidence[];
   /** Must exactly match the current host-validated `continue` receipt. */

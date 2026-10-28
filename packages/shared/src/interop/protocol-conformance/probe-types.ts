@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { MCP_LEGACY_PROTOCOL_VERSION, type McpWireEra } from "../../mcp/protocol-eras.ts";
 
 /** @deprecated Use MCP_LEGACY_PROTOCOL_VERSION or MCP_MODERN_PROTOCOL_VERSION explicitly. */
@@ -61,8 +62,8 @@ export function endpointUrl(value: string): URL {
 }
 
 export function recordValue(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? Object.fromEntries(Object.entries(value))
+  return value && typeof value === 'object' && !isUnknownArray(value)
+    ? Object.fromEntries(Object.entries<unknown>((value as Record<string, unknown>)))
     : null
 }
 
@@ -131,8 +132,8 @@ export function authorizationHeaders(authorization?: string): Record<string, str
 
 export function jsonRpcResult(value: unknown): Record<string, unknown> | null {
   const envelope = recordValue(value)
-  if (!envelope || envelope.jsonrpc !== '2.0' || Reflect.has(envelope, 'error')) return null
-  return recordValue(envelope.result)
+  if (!envelope || envelope["jsonrpc"] !== '2.0' || Reflect.has(envelope, 'error')) return null
+  return recordValue(envelope["result"])
 }
 
 const mcpTaskStatuses = new Set(['working', 'input_required', 'completed', 'failed', 'cancelled'])
@@ -140,13 +141,13 @@ const mcpTaskStatuses = new Set(['working', 'input_required', 'completed', 'fail
 export function mcpTask(value: unknown): Record<string, unknown> | null {
   const candidate = recordValue(value)
   if (!candidate) return null
-  const status = stringValue(candidate.status)
-  return stringValue(candidate.taskId) && status && mcpTaskStatuses.has(status) ? candidate : null
+  const status = stringValue(candidate["status"])
+  return stringValue(candidate["taskId"]) && status && mcpTaskStatuses.has(status) ? candidate : null
 }
 
 export function jsonRpcError(value: unknown): Record<string, unknown> | null {
   const envelope = recordValue(value)
-  return envelope?.jsonrpc === '2.0' ? recordValue(envelope.error) : null
+  return envelope?.["jsonrpc"] === '2.0' ? recordValue(envelope["error"]) : null
 }
 
 export function isSuccessfulHttpStatus(status: number): boolean {
@@ -156,9 +157,9 @@ export function isSuccessfulHttpStatus(status: number): boolean {
 export function hasModernCacheContract(value: Record<string, unknown> | null): boolean {
   return Boolean(
     value
-    && Number.isSafeInteger(value.ttlMs)
-    && Number(value.ttlMs) >= 0
-    && (value.cacheScope === 'public' || value.cacheScope === 'private'),
+    && Number.isSafeInteger(value["ttlMs"])
+    && Number(value["ttlMs"]) >= 0
+    && (value["cacheScope"] === 'public' || value["cacheScope"] === 'private'),
   )
 }
 

@@ -23,8 +23,8 @@ export function SummaryCard({
   icon: React.ComponentType<{ className?: string }>
   label: string
   value: React.ReactNode
-  hint?: string
-  tone?: 'default' | 'warning' | 'danger'
+  hint?: string | undefined
+  tone?: 'default' | 'warning' | 'danger' | undefined
 }) {
   return (
     <div className={cn(
@@ -93,7 +93,7 @@ export function MissionDetail({
   onControl: (mission: MissionSnapshotDto, action: 'pause' | 'resume' | 'cancel') => void
   onReplanned: (snapshot: MissionSnapshotDto) => void
   onClose: () => void
-  onOpenOrigin?: () => void
+  onOpenOrigin?: (() => void) | undefined
 }) {
   const { t } = useTranslation()
   const [passport, setPassport] = React.useState<MissionProofPassportDto | null>(null)
@@ -131,7 +131,7 @@ export function MissionDetail({
     setPassportLoading(true)
     window.electronAPI.getMissionProofPassport(workspaceId, mission.spec.id)
       .then((result) => { if (!stale) setPassport(result) })
-      .catch((cause) => { if (!stale) setPassportError(cause instanceof Error ? cause.message : String(cause)) })
+      .catch((cause: unknown) => { if (!stale) setPassportError(cause instanceof Error ? cause.message : String(cause)) })
       .finally(() => { if (!stale) setPassportLoading(false) })
     return () => { stale = true }
   }, [workspaceId, mission.spec.id, mission.revision, mission.status])
@@ -145,7 +145,7 @@ export function MissionDetail({
     setTrustAnchorLoading(true)
     window.electronAPI.getMissionProofPassportTrustAnchor(workspaceId)
       .then((result) => { if (!stale) setTrustAnchor(result) })
-      .catch((cause) => { if (!stale) setTrustAnchorError(cause instanceof Error ? cause.message : String(cause)) })
+      .catch((cause: unknown) => { if (!stale) setTrustAnchorError(cause instanceof Error ? cause.message : String(cause)) })
       .finally(() => { if (!stale) setTrustAnchorLoading(false) })
     return () => { stale = true }
   }, [workspaceId, mission.status])

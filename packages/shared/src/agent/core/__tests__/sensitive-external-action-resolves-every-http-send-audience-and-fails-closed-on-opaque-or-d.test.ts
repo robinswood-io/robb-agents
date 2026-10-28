@@ -51,15 +51,15 @@ function checkMcp(
     activeSourceSlugs: [sourceSlug],
     allSourceSlugs: [sourceSlug],
     hasSourceActivation: false,
-    externalActionPolicy: options?.externalActionPolicy,
-    objectiveMutationAuthorized: options?.objectiveMutationAuthorized,
-    objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized,
-    objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments,
-    authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments,
-    dataFolderPath: options?.dataFolderPath,
-    declaredToolCapabilities: options?.declaredToolCapabilities,
+    ...(options?.externalActionPolicy !== undefined ? { externalActionPolicy: options?.externalActionPolicy } : {}),
+    ...(options?.objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized: options?.objectiveMutationAuthorized } : {}),
+    ...(options?.objectiveSensitiveActionAuthorized !== undefined ? { objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized } : {}),
+    ...(options?.objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments } : {}),
+    ...(options?.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments } : {}),
+    ...(options?.dataFolderPath !== undefined ? { dataFolderPath: options?.dataFolderPath } : {}),
+    ...(options?.declaredToolCapabilities !== undefined ? { declaredToolCapabilities: options?.declaredToolCapabilities } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 
@@ -118,7 +118,7 @@ describe('sensitive external action classifier', () => {
         server: 'pns', cwd: '/srv/pnsgen', command,
       })).toMatchObject({
         category: 'external_send',
-        targetCandidates: expect.arrayContaining(['unresolved external audience']),
+        targetCandidates: (expect.arrayContaining(['unresolved external audience']) as unknown),
       });
     }
 
@@ -152,7 +152,7 @@ describe('sensitive external action classifier', () => {
       command: `curl -fsS -X POST https://api.example.com/send -d '{"to":"alice","backup_recipient_id":"bob"}'`,
     })).toMatchObject({
       category: 'external_send',
-      targetCandidates: expect.arrayContaining(['unresolved external audience']),
+      targetCandidates: (expect.arrayContaining(['unresolved external audience']) as unknown),
     });
     for (const field of [
       'routing_key', 'carbon_copy', 'group_id', 'mailing_list_id', 'subscriber_id',
@@ -209,7 +209,7 @@ describe('sensitive external action classifier', () => {
           'Déclenche pour le contrat 9999 un test e-doc depuis PNS Gen et envoie-le à sender@example.test.',
         ],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
 
     const noObjectId = {
       ...input,
@@ -222,7 +222,7 @@ describe('sensitive external action classifier', () => {
           'Déclenche pour le contrat 3598 un test e-doc depuis PNS Gen et envoie-le à sender@example.test.',
         ],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
 
     const matchingPath = {
       ...noObjectId,
@@ -250,7 +250,7 @@ describe('sensitive external action classifier', () => {
           'Déclenche pour le contrat 3598 un test e-doc depuis PNS Gen et envoie-le à sender@example.test.',
         ],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
 
     expect(checkMcp(
       'allow-all', 'mcp__rbw-servers__ssh_execute', input, 'Finalement contrat 9999.', {
@@ -260,7 +260,7 @@ describe('sensitive external action classifier', () => {
           'Finalement contrat 9999.',
         ],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
 
     const merged = classifySensitiveExternalAction('Bash', {
       command: "curl -X POST https://api.example.com/send -d '{\"email\":\"alice@example.com\",\"contract_id\":3598}' && curl -X POST https://api.example.com/send -d '{\"email\":\"bob@example.com\",\"contract_id\":9999}'",
@@ -335,7 +335,7 @@ PY"`,
         externalActionPolicy: 'allow-in-execute', objectiveMutationAuthorized: true,
         objectiveAuthorizationSegments: ['Push origin main depuis Zero.'],
       },
-    )).toMatchObject({ type: 'block', reason: expect.stringContaining('exact target') });
+    )).toMatchObject({ type: 'block', reason: (expect.stringContaining('exact target') as unknown) });
 
     const mixed = classifySensitiveExternalAction('mcp__rbw-servers__ssh_execute', {
       server: 'pns', cwd: '/srv/pnsgen',

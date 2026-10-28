@@ -61,9 +61,9 @@ export function createCtx(workspacePath: string, overrides: CtxOverrides = {}): 
     validateMcpConnection: overrides.validateMcpConnection,
     credentialManager: overrides.credentialManager,
     activateSourceInSession: overrides.activateSourceInSession,
-  } as unknown as SessionToolContext;
+  } as SessionToolContext;
   // Expose saved for assertions (test-only — not on real ctx).
-  (ctx as unknown as { _saved: typeof saved })._saved = saved;
+  Object.assign(ctx, { _saved: saved });
   return ctx;
 }
 
@@ -141,7 +141,7 @@ export function installFetchStub(
         : input instanceof URL
           ? input.toString()
           : String(input);
-    const call: FetchCall = { url, init };
+    const call: FetchCall = { url, ...(init !== undefined ? { init } : {}) };
     calls.push(call);
     return responder(call);
   }) as typeof fetch;

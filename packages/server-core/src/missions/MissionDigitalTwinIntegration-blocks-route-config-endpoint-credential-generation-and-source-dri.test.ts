@@ -1,3 +1,4 @@
+import { SessionManager as FixtureSessionManager } from "../sessions/SessionManager";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { appendFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -19,11 +20,11 @@ describe('Mission digital twin host integration', () => {
 
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), 'mission-twin-integration-'));
-    sessionManager = {
+    sessionManager = Object.assign(new FixtureSessionManager(), ({
       waitForInit: async () => {},
       getSessions: () => [],
       cancelProcessing: async () => {},
-    } as unknown as ISessionManager;
+    } satisfies Partial<ISessionManager>));
   });
 
   afterEach(() => rmSync(root, { recursive: true, force: true }));
@@ -85,12 +86,12 @@ describe('Mission digital twin host integration', () => {
       await eventually(() =>
         new MissionController({ workspaceRoot: caseRoot }).getMission(spec.id).status === 'blocked');
       const blocked = new MissionController({ workspaceRoot: caseRoot }).getMission(spec.id);
-      expect(blocked.workItems.source?.statusReason).toContain(expectedReason);
+      expect(blocked.workItems["source"]?.statusReason).toContain(expectedReason);
       if (name === 'source') {
-        expect(blocked.workItems.source?.executionBinding?.missionRoute?.effectiveSourceBindings)
+        expect<unknown>(blocked.workItems["source"]?.executionBinding?.missionRoute?.effectiveSourceBindings)
           .toEqual([{
             slug: 'local-docs',
-            identitySha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+            identitySha256: (expect.stringMatching(/^[a-f0-9]{64}$/) as unknown),
           }]);
       }
       expect(executeCount).toBe(0);

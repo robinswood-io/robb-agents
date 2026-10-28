@@ -32,9 +32,9 @@ import {
  */
 function resolveDebugMode(): boolean {
   if (process.argv.includes('--debug')) return true
-  if (process.env.ROBB_BUILD_CHANNEL === 'development') return true
+  if (process.env["ROBB_BUILD_CHANNEL"] === 'development') return true
 
-  const packagedEnv = process.env.CRAFT_IS_PACKAGED
+  const packagedEnv = process.env["CRAFT_IS_PACKAGED"]
   if (packagedEnv === 'true') return false
   if (packagedEnv === 'false') return true
 

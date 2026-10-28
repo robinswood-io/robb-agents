@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 /**
  * Source Storage
  *
@@ -26,7 +27,7 @@ export function parseGuideMarkdown(raw: string): SourceGuide {
 
   // Extract sections by headers (including Cache)
   const sectionRegex = /^## (Scope|Guidelines|Context|API Notes|Cache)\n([\s\S]*?)(?=\n## |\Z)/gim;
-  let match;
+  let match: RegExpExecArray | null;
   while ((match = sectionRegex.exec(raw)) !== null) {
     const sectionName = (match[1] ?? '').toLowerCase().replace(/\s+/g, '');
     const content = (match[2] ?? '').trim();
@@ -51,7 +52,7 @@ export function parseGuideMarkdown(raw: string): SourceGuide {
         const closingFence = jsonStart === -1 ? -1 : content.indexOf('\n```', jsonStart);
         if (jsonStart !== -1 && closingFence !== -1) {
           try {
-            guide.cache = JSON.parse(content.slice(jsonStart, closingFence));
+            guide.cache = parseJsonObject(content.slice(jsonStart, closingFence));
           } catch {
             // Invalid JSON, ignore
           }

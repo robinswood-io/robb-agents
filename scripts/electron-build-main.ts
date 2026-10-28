@@ -64,9 +64,9 @@ function resolveBuildCommit(): string {
     // A source archive may not include .git; explicit/CI metadata still works.
   }
   return chooseBuildCommit(
-    process.env.ROBB_BUILD_COMMIT,
+    process.env["ROBB_BUILD_COMMIT"],
     gitCommit,
-    process.env.GITHUB_SHA,
+    process.env["GITHUB_SHA"],
   ) || "";
 }
 
@@ -80,8 +80,8 @@ function resolveBuildDirtyFlag(buildChannel: 'development' | 'production'): bool
   } catch {
     // A source archive may not include .git; explicit CI metadata still works.
   }
-  assertCleanProductionBuild(buildChannel, process.env.ROBB_BUILD_DIRTY, gitPorcelain)
-  return resolveBuildDirty(process.env.ROBB_BUILD_DIRTY, gitPorcelain)
+  assertCleanProductionBuild(buildChannel, process.env["ROBB_BUILD_DIRTY"], gitPorcelain)
+  return resolveBuildDirty(process.env["ROBB_BUILD_DIRTY"], gitPorcelain)
 }
 
 // Get build-time defines for esbuild (OAuth, Sentry DSN, etc.)
@@ -91,8 +91,8 @@ function resolveBuildDirtyFlag(buildChannel: 'development' | 'production'): bool
 // via source config. See README_FOR_OSS.md for setup instructions.
 function getBuildDefines(): string[] {
   const buildChannel = resolveBuildChannel(
-    process.env.ROBB_BUILD_CHANNEL,
-    process.env.CRAFT_DEV_RUNTIME,
+    process.env["ROBB_BUILD_CHANNEL"],
+    process.env["CRAFT_DEV_RUNTIME"],
   );
   const buildCommit = resolveBuildCommit();
   const buildDirty = resolveBuildDirtyFlag(buildChannel);
@@ -110,7 +110,7 @@ function getBuildDefines(): string[] {
 
   return definedVars.map((varName) => {
     let value = process.env[varName] || "";
-    if (varName === "SENTRY_ELECTRON_INGEST_URL" && process.env.ROBB_ENABLE_SENTRY !== "1") {
+    if (varName === "SENTRY_ELECTRON_INGEST_URL" && process.env["ROBB_ENABLE_SENTRY"] !== "1") {
       value = "";
     }
     if (varName === "ROBB_BUILD_CHANNEL") value = buildChannel;

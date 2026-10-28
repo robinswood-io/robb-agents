@@ -1,3 +1,7 @@
+import type { TaskCreateRequest } from '../../../../../../../packages/shared/src/protocol/dto/tasks.ts';
+import type { SpecForm } from './task-spec-form.ts';
+import type { TaskGenerateRequest } from '../../../../../../../packages/shared/src/protocol/dto/tasks.ts';
+import { omitUndefined, type SnapshotInput } from '@craft-agent/shared/utils/json';
 import * as React from 'react';
 
 import { toast } from 'sonner';
@@ -104,8 +108,8 @@ const finishGenerate = React.useCallback(() => {
 
 const project = projects.find((p) => p.config.id === projectId)
 
-const updateSubtask = (id: string, patch: Partial<EditorSubtask>) =>
-    setSubtasks((prev) => prev.map((s) => (s.uid === id ? { ...s, ...patch } : s)))
+const updateSubtask = (id: string, patch: Partial<SnapshotInput<EditorSubtask>>) =>
+    setSubtasks((prev) => prev.map((s) => (s.uid === id ? omitUndefined<EditorSubtask>({ ...s, ...patch }) : s)))
 
 const removeSubtask = (id: string) =>
     setSubtasks((prev) =>
@@ -190,7 +194,7 @@ async function generatePlan() {
     }
     setBusy(true)
     try {
-      const ack = await window.electronAPI.generateTask(workspaceId, {
+      const ack = await window.electronAPI.generateTask(workspaceId, omitUndefined<TaskGenerateRequest>({
         goal: g,
         title: title.trim() || undefined,
         model: orchModel,
@@ -202,7 +206,7 @@ async function generatePlan() {
         ...(projectId ? { projectId } : {}),
         ...(sourceSlugs.length ? { enabledSourceSlugs: sourceSlugs } : {}),
         cwd: cwd.trim() || undefined,
-      })
+      }))
       // Authoring continues on the server; the spec arrives via onTaskGenerated. Keep busy until
       // then, with a fallback timer that releases the spinner if the event never lands.
       pendingGenRef.current = ack.orchestratorSessionId
@@ -234,24 +238,24 @@ async function submit(run: boolean) {
     // Edit mode pins the existing slug so the title can change without forking a new task folder
     // and orphaning the bound orchestrator session.
     const spec = buildSpec(
-      {
+      omitUndefined<SpecForm>({
         title,
         description,
         goal,
         acceptanceCriteria,
         maxRepairs: maxRepairs.trim() === '' ? undefined : Number(maxRepairs),
-        autonomy,
+        ...(autonomy !== undefined ? { autonomy: autonomy } : {}),
         projectId,
         orchModel,
-        orchConnection,
+        ...(orchConnection !== undefined ? { orchConnection: orchConnection } : {}),
         permissionMode,
         boundProjectId,
         subtasks,
         cwd,
         sourceSlugs,
         skillSlugs,
-        fixedId: editSlug,
-      },
+        ...(editSlug !== undefined ? { fixedId: editSlug } : {}),
+      }),
       modelToConnection,
     )
     const yaml = JSON.stringify(spec, null, 2) // JSON is a valid YAML subset
@@ -262,12 +266,12 @@ async function submit(run: boolean) {
     try {
       // Edit mode binds the authored spec onto the tile's existing session; create mode reuses
       // a generate draft if present, else mints a fresh orchestrator.
-      const created = await window.electronAPI.createTask(workspaceId, {
+      const created = await window.electronAPI.createTask(workspaceId, omitUndefined<TaskCreateRequest>({
         yaml,
         ...(isEdit && editSessionId
           ? { attachToExistingSession: editSessionId }
           : { orchestratorSessionId: draftId ?? undefined }),
-      })
+      }))
       if (!created.validation.valid) {
         const first = created.validation.errors[0]
         toast.error(t('tasks.toastInvalid'), { description: first ? `${first.path}: ${first.message}` : undefined })
@@ -285,8 +289,8 @@ async function submit(run: boolean) {
         if (isEdit) return
         onCreated?.({
           sessionId: created.orchestratorSessionId,
-          taskLabelId: created.taskLabelId,
-          projectId: projectId || undefined,
+          ...(created.taskLabelId !== undefined ? { taskLabelId: created.taskLabelId } : {}),
+          ...(projectId ? { projectId } : {}),
         })
       }
       if (!run) {

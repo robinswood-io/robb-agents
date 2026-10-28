@@ -12,7 +12,7 @@ import { createServer as createHttpsServer, type Server as HttpsServer } from "n
 import { HEARTBEAT_INTERVAL_MS, HEARTBEAT_MAX_MISSED } from "@craft-agent/shared/protocol";
 import type { WsRpcServer } from '../server.ts';
 
-export function configureNodeHttpTimeouts(transportOwner: WsRpcServer, server: HttpServer | HttpsServer): void {
+export function configureNodeHttpTimeouts(_transportOwner: WsRpcServer, server: HttpServer | HttpsServer): void {
     server.headersTimeout = 15000;
     server.requestTimeout = 60000;
     server.keepAliveTimeout = 5000;
@@ -21,87 +21,87 @@ export function configureNodeHttpTimeouts(transportOwner: WsRpcServer, server: H
 
 export async function listen(transportOwner: WsRpcServer): Promise<void> {
     return new Promise((resolve, reject) => {
-        if (transportOwner["tlsOptions"]) {
+        if (transportOwner.tlsOptions) {
             // TLS mode: create HTTPS server, attach WebSocketServer to it.
             // When httpHandler is set, regular HTTP requests are served by it
             // (e.g. WebUI), while ws intercepts WebSocket upgrade requests.
             transportOwner["_protocol"] = 'wss';
-            transportOwner["httpsServer"] = createHttpsServer({
-                cert: transportOwner["tlsOptions"].cert,
-                key: transportOwner["tlsOptions"].key,
-                ca: transportOwner["tlsOptions"].ca,
+            transportOwner.httpsServer = createHttpsServer({
+                cert: transportOwner.tlsOptions.cert,
+                key: transportOwner.tlsOptions.key,
+                ca: transportOwner.tlsOptions.ca,
                 // A client CA is an authentication requirement, not just a trust hint.
-                requestCert: transportOwner["tlsOptions"].ca !== undefined,
+                requestCert: transportOwner.tlsOptions.ca !== undefined,
                 rejectUnauthorized: true,
-                passphrase: transportOwner["tlsOptions"].passphrase,
-            }, transportOwner["httpHandler"]);
-            transportOwner["configureNodeHttpTimeouts"](transportOwner["httpsServer"]);
-            transportOwner["wss"] = new WebSocketServer({
-                server: transportOwner["httpsServer"],
+                passphrase: transportOwner.tlsOptions.passphrase,
+            }, transportOwner.httpHandler);
+            transportOwner.configureNodeHttpTimeouts(transportOwner.httpsServer);
+            transportOwner.wss = new WebSocketServer({
+                server: transportOwner.httpsServer,
                 perMessageDeflate: false,
-                maxPayload: transportOwner["maxPayloadBytes"],
+                maxPayload: transportOwner.maxPayloadBytes,
             });
-            transportOwner["httpsServer"].on('error', (err) => reject(err));
-            transportOwner["httpsServer"].listen(transportOwner["requestedPort"], transportOwner["host"], () => {
-                const addr = transportOwner["httpsServer"]!.address();
+            transportOwner.httpsServer.on('error', (err) => reject(err));
+            transportOwner.httpsServer.listen(transportOwner.requestedPort, transportOwner.host, () => {
+                const addr = transportOwner.httpsServer!.address();
                 if (typeof addr === 'object' && addr) {
                     transportOwner["_port"] = addr.port;
                 }
-                transportOwner["startHeartbeat"]();
+                transportOwner.startHeartbeat();
                 resolve();
             });
         }
-        else if (transportOwner["httpHandler"]) {
+        else if (transportOwner.httpHandler) {
             // Plain WS + HTTP handler: create an HTTP server for both.
             transportOwner["_protocol"] = 'ws';
-            transportOwner["httpServer"] = createHttpServer(transportOwner["httpHandler"]);
-            transportOwner["configureNodeHttpTimeouts"](transportOwner["httpServer"]);
-            transportOwner["wss"] = new WebSocketServer({
-                server: transportOwner["httpServer"],
+            transportOwner.httpServer = createHttpServer(transportOwner.httpHandler);
+            transportOwner.configureNodeHttpTimeouts(transportOwner.httpServer);
+            transportOwner.wss = new WebSocketServer({
+                server: transportOwner.httpServer,
                 perMessageDeflate: false,
-                maxPayload: transportOwner["maxPayloadBytes"],
+                maxPayload: transportOwner.maxPayloadBytes,
             });
-            transportOwner["httpServer"].on('error', (err) => reject(err));
-            transportOwner["httpServer"].listen(transportOwner["requestedPort"], transportOwner["host"], () => {
-                const addr = transportOwner["httpServer"]!.address();
+            transportOwner.httpServer.on('error', (err) => reject(err));
+            transportOwner.httpServer.listen(transportOwner.requestedPort, transportOwner.host, () => {
+                const addr = transportOwner.httpServer!.address();
                 if (typeof addr === 'object' && addr) {
                     transportOwner["_port"] = addr.port;
                 }
-                transportOwner["startHeartbeat"]();
+                transportOwner.startHeartbeat();
                 resolve();
             });
         }
         else {
             // Plain WS mode, no HTTP handler
             transportOwner["_protocol"] = 'ws';
-            transportOwner["wss"] = new WebSocketServer({
-                host: transportOwner["host"],
-                port: transportOwner["requestedPort"],
+            transportOwner.wss = new WebSocketServer({
+                host: transportOwner.host,
+                port: transportOwner.requestedPort,
                 perMessageDeflate: false,
-                maxPayload: transportOwner["maxPayloadBytes"],
+                maxPayload: transportOwner.maxPayloadBytes,
             });
-            transportOwner["wss"].on('listening', () => {
-                const addr = transportOwner["wss"]!.address();
+            transportOwner.wss.on('listening', () => {
+                const addr = transportOwner.wss!.address();
                 if (typeof addr === 'object' && addr) {
                     transportOwner["_port"] = addr.port;
                 }
-                transportOwner["startHeartbeat"]();
+                transportOwner.startHeartbeat();
                 resolve();
             });
-            transportOwner["wss"].on('error', (err) => {
+            transportOwner.wss.on('error', (err) => {
                 reject(err);
             });
         }
-        transportOwner["wss"].on('connection', (ws, req) => {
-            transportOwner["onConnection"](ws, req.headers.cookie ?? null, req.headers.origin ?? null, req.headers.host ?? null, req.socket?.remoteAddress ?? 'direct');
+        transportOwner.wss.on('connection', (ws, req) => {
+            transportOwner.onConnection(ws, req.headers.cookie ?? null, req.headers.origin ?? null, req.headers.host ?? null, req.socket?.remoteAddress ?? 'direct');
         });
     });
 }
 
 export function close(transportOwner: WsRpcServer): void {
-    if (transportOwner["heartbeatTimer"]) {
-        clearInterval(transportOwner["heartbeatTimer"]);
-        transportOwner["heartbeatTimer"] = null;
+    if (transportOwner.heartbeatTimer) {
+        clearInterval(transportOwner.heartbeatTimer);
+        transportOwner.heartbeatTimer = null;
     }
     // Reject all pending invokes before tearing down connections
     for (const [id, pending] of transportOwner["pendingInvokes"]) {
@@ -122,16 +122,16 @@ export function close(transportOwner: WsRpcServer): void {
         clearTimeout(entry.timer);
     }
     transportOwner["disconnectedClients"].clear();
-    transportOwner["wss"]?.close();
-    transportOwner["wss"] = null;
-    transportOwner["httpServer"]?.close();
-    transportOwner["httpServer"] = null;
-    transportOwner["httpsServer"]?.close();
-    transportOwner["httpsServer"] = null;
+    transportOwner.wss?.close();
+    transportOwner.wss = null;
+    transportOwner.httpServer?.close();
+    transportOwner.httpServer = null;
+    transportOwner.httpsServer?.close();
+    transportOwner.httpsServer = null;
 }
 
 export function startHeartbeat(transportOwner: WsRpcServer): void {
-    transportOwner["heartbeatTimer"] = setInterval(() => {
+    transportOwner.heartbeatTimer = setInterval(() => {
         const now = Date.now();
         for (const [ip, entry] of transportOwner["failedHandshakesByIp"].entries()) {
             if (now - entry.windowStart > 60000) {

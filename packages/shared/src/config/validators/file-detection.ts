@@ -102,13 +102,13 @@ export function detectConfigFileType(filePath: string, workspaceRootPath: string
   // Match: sources/{slug}/config.json
   const sourceMatch = relativePath.match(/^sources\/([^/]+)\/config\.json$/);
   if (sourceMatch) {
-    return { type: 'source', slug: sourceMatch[1], displayFile: `sources/${sourceMatch[1]}/config.json` };
+    return { type: 'source', ...(sourceMatch[1] !== undefined ? { slug: sourceMatch[1] } : {}), displayFile: `sources/${sourceMatch[1]}/config.json` };
   }
 
   // Match: skills/{slug}/SKILL.md
   const skillMatch = relativePath.match(/^skills\/([^/]+)\/SKILL\.md$/);
   if (skillMatch) {
-    return { type: 'skill', slug: skillMatch[1], displayFile: `skills/${skillMatch[1]}/SKILL.md` };
+    return { type: 'skill', ...(skillMatch[1] !== undefined ? { slug: skillMatch[1] } : {}), displayFile: `skills/${skillMatch[1]}/SKILL.md` };
   }
 
   // Match: statuses/config.json
@@ -134,7 +134,7 @@ export function detectConfigFileType(filePath: string, workspaceRootPath: string
   // Match: sources/{slug}/permissions.json (source-level)
   const sourcePermMatch = relativePath.match(/^sources\/([^/]+)\/permissions\.json$/);
   if (sourcePermMatch) {
-    return { type: 'permissions', slug: sourcePermMatch[1], displayFile: `sources/${sourcePermMatch[1]}/permissions.json` };
+    return { type: 'permissions', ...(sourcePermMatch[1] !== undefined ? { slug: sourcePermMatch[1] } : {}), displayFile: `sources/${sourcePermMatch[1]}/permissions.json` };
   }
 
   return null;
@@ -181,7 +181,7 @@ export function validateConfigFileContent(
     case 'source':
       return validateSourceConfigContent(content, {
         enforceMcpTransportWrite: true,
-        previousJsonString: previousContent,
+        ...(previousContent !== undefined ? { previousJsonString: previousContent } : {}),
       });
     case 'skill':
       return validateSkillContent(content, detection.slug || 'unknown');

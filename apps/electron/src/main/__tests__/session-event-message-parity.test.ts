@@ -27,9 +27,9 @@ describe('text_complete → assistant Message field parity', () => {
       role: 'assistant',
       content: event.text,
       timestamp: event.timestamp!,
-      isIntermediate: event.isIntermediate,
-      turnId: event.turnId,
-      parentToolUseId: event.parentToolUseId,
+      ...(event.isIntermediate !== undefined ? { isIntermediate: event.isIntermediate } : {}),
+      ...(event.turnId !== undefined ? { turnId: event.turnId } : {}),
+      ...(event.parentToolUseId !== undefined ? { parentToolUseId: event.parentToolUseId } : {}),
     }
 
     // Renderer (handleTextComplete — create-if-not-found path)
@@ -40,14 +40,14 @@ describe('text_complete → assistant Message field parity', () => {
       timestamp: event.timestamp ?? Date.now(),
       isStreaming: false,
       isPending: false,
-      isIntermediate: event.isIntermediate,
-      turnId: event.turnId,
-      parentToolUseId: event.parentToolUseId,
+      ...(event.isIntermediate !== undefined ? { isIntermediate: event.isIntermediate } : {}),
+      ...(event.turnId !== undefined ? { turnId: event.turnId } : {}),
+      ...(event.parentToolUseId !== undefined ? { parentToolUseId: event.parentToolUseId } : {}),
     }
 
     // Both should have these fields (modulo transient-only fields)
-    const mainKeys = definedKeys(mainMsg as unknown as Record<string, unknown>)
-    const rendererKeys = definedKeys(rendererMsg as unknown as Record<string, unknown>)
+    const mainKeys = definedKeys(mainMsg)
+    const rendererKeys = definedKeys(rendererMsg)
 
     // Core fields must be present on both sides
     const coreFields = ['role', 'content', 'timestamp', 'isIntermediate', 'turnId', 'parentToolUseId']
@@ -81,9 +81,9 @@ describe('text_complete → assistant Message field parity', () => {
       role: 'assistant',
       content: event.text,
       timestamp: Date.now(),
-      isIntermediate: event.isIntermediate,
-      turnId: event.turnId,
-      parentToolUseId: event.parentToolUseId,
+      ...(event.isIntermediate !== undefined ? { isIntermediate: event.isIntermediate } : {}),
+      ...(event.turnId !== undefined ? { turnId: event.turnId } : {}),
+      ...(event.parentToolUseId !== undefined ? { parentToolUseId: event.parentToolUseId } : {}),
     }
 
     const rendererMsg: Message = {
@@ -93,9 +93,9 @@ describe('text_complete → assistant Message field parity', () => {
       timestamp: Date.now(),
       isStreaming: false,
       isPending: false,
-      isIntermediate: event.isIntermediate,
-      turnId: event.turnId,
-      parentToolUseId: event.parentToolUseId,
+      ...(event.isIntermediate !== undefined ? { isIntermediate: event.isIntermediate } : {}),
+      ...(event.turnId !== undefined ? { turnId: event.turnId } : {}),
+      ...(event.parentToolUseId !== undefined ? { parentToolUseId: event.parentToolUseId } : {}),
     }
 
     expect(mainMsg.isIntermediate).toBe(true)

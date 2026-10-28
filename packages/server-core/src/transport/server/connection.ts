@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * WsRpcServer — WebSocket-based RPC server.
  *
@@ -24,12 +25,12 @@ export function parseAuthenticatedPrincipal(value: AuthenticationResult): Authen
         return null;
     const workspaceIdsValid = value.allowedWorkspaceIds === '*'
         || (Array.isArray(value.allowedWorkspaceIds)
-            && value.allowedWorkspaceIds.every((workspaceId) => typeof workspaceId === 'string' && workspaceId.trim() !== ''));
+            && value.allowedWorkspaceIds.every((workspaceId: unknown) => typeof workspaceId === 'string' && workspaceId.trim() !== ''));
     const capabilitiesValid = value.capabilities === '*'
         || (Array.isArray(value.capabilities)
-            && value.capabilities.every((capability) => typeof capability === 'string' && capability.trim() !== ''));
+            && value.capabilities.every((capability: unknown) => typeof capability === 'string' && capability.trim() !== ''));
     const rolesValid = Array.isArray(value.roles)
-        && value.roles.every((role) => typeof role === 'string' && role.trim() !== '');
+        && value.roles.every((role: unknown) => typeof role === 'string' && role.trim() !== '');
     return workspaceIdsValid && capabilitiesValid && rolesValid ? value : null;
 }
 
@@ -68,15 +69,15 @@ export function legacyAuthenticatedPrincipal(workspaceId: string | null, request
 
 export function onConnection(transportOwner: WsRpcServer, ws: WebSocket, upgradeRequestCookie: string | null, upgradeRequestOrigin: string | null, upgradeRequestHost: string | null, remoteAddress: string): void {
     // Reject if at capacity
-    if (transportOwner["maxClients"] > 0 && transportOwner["clients"].size >= transportOwner["maxClients"]) {
+    if (transportOwner.maxClients > 0 && transportOwner["clients"].size >= transportOwner.maxClients) {
         transportLog.warn('Connection rejected: at capacity', {
-            maxClients: transportOwner["maxClients"],
+            maxClients: transportOwner.maxClients,
             current: transportOwner["clients"].size,
         });
         ws.close(4008, 'Server at capacity');
         return;
     }
-    if (transportOwner["requireAuth"] && transportOwner["isHandshakeIpRateLimited"](remoteAddress)) {
+    if (transportOwner.requireAuth && transportOwner.isHandshakeIpRateLimited(remoteAddress)) {
         transportLog.warn('Connection rejected: handshake auth rate limit exceeded', { remoteAddress });
         ws.close(4029, 'Too many authentication attempts');
         return;
@@ -109,14 +110,14 @@ export function onConnection(transportOwner: WsRpcServer, ws: WebSocket, upgrade
             }
             // Protocol version check (required)
             if (!envelope.protocolVersion || typeof envelope.protocolVersion !== 'string') {
-                transportOwner["sendError"](ws, envelope.id, 'PROTOCOL_VERSION_UNSUPPORTED', `Missing protocolVersion. Server protocol ${PROTOCOL_VERSION}`);
+                transportOwner.sendError(ws, envelope.id, 'PROTOCOL_VERSION_UNSUPPORTED', `Missing protocolVersion. Server protocol ${PROTOCOL_VERSION}`);
                 ws.close(4004, 'Protocol version unsupported');
                 return;
             }
             const clientMajor = parseInt(envelope.protocolVersion.split('.')[0] ?? '0', 10);
             const serverMajor = parseInt(PROTOCOL_VERSION.split('.')[0] ?? '0', 10);
             if (clientMajor !== serverMajor) {
-                transportOwner["sendError"](ws, envelope.id, 'PROTOCOL_VERSION_UNSUPPORTED', `Server protocol ${PROTOCOL_VERSION}, client ${envelope.protocolVersion}`);
+                transportOwner.sendError(ws, envelope.id, 'PROTOCOL_VERSION_UNSUPPORTED', `Server protocol ${PROTOCOL_VERSION}, client ${envelope.protocolVersion}`);
                 ws.close(4004, 'Protocol version unsupported');
                 return;
             }
@@ -124,12 +125,12 @@ export function onConnection(transportOwner: WsRpcServer, ws: WebSocket, upgrade
             const requestedCapabilities = envelope.clientCapabilities ?? [];
             let principal = localPrincipal();
             // Auth check — bearer token OR session cookie (web UI)
-            if (transportOwner["requireAuth"]) {
+            if (transportOwner.requireAuth) {
                 let authenticationResult: AuthenticationResult = false;
                 // 1. Try bearer token (standard path)
-                if (envelope.token && transportOwner["validateToken"]) {
+                if (envelope.token && transportOwner.validateToken) {
                     try {
-                        authenticationResult = await transportOwner["validateToken"](envelope.token);
+                        authenticationResult = await transportOwner.validateToken(envelope.token);
                     }
                     catch (error) {
                         transportLog.warn('Bearer token validation failed', {
@@ -139,11 +140,11 @@ export function onConnection(transportOwner: WsRpcServer, ws: WebSocket, upgrade
                 }
                 // 2. Fallback: try session cookie from HTTP upgrade request (web UI path)
                 if (authenticationResult === false
-                    && transportOwner["validateSessionCookie"]
+                    && transportOwner.validateSessionCookie
                     && upgradeRequestCookie
-                    && transportOwner["isSessionCookieOriginAllowed"](upgradeRequestOrigin, upgradeRequestHost)) {
+                    && transportOwner.isSessionCookieOriginAllowed(upgradeRequestOrigin, upgradeRequestHost)) {
                     try {
-                        authenticationResult = await transportOwner["validateSessionCookie"](upgradeRequestCookie);
+                        authenticationResult = await transportOwner.validateSessionCookie(upgradeRequestCookie);
                     }
                     catch (error) {
                         transportLog.warn('Session cookie validation failed', {
@@ -155,19 +156,19 @@ export function onConnection(transportOwner: WsRpcServer, ws: WebSocket, upgrade
                 if (authoritativePrincipal) {
                     principal = authoritativePrincipal;
                 }
-                else if (authenticationResult === true && !transportOwner["requireAuthoritativePrincipal"]) {
+                else if (authenticationResult === true && !transportOwner.requireAuthoritativePrincipal) {
                     principal = legacyAuthenticatedPrincipal(requestedWorkspaceId, requestedCapabilities);
                 }
                 else {
-                    transportOwner["recordFailedHandshake"](remoteAddress);
+                    transportOwner.recordFailedHandshake(remoteAddress);
                     const reason = envelope.token ? 'Invalid token' : 'Token required';
-                    transportOwner["sendError"](ws, envelope.id, 'AUTH_FAILED', reason);
+                    transportOwner.sendError(ws, envelope.id, 'AUTH_FAILED', reason);
                     ws.close(4005, 'Auth failed');
                     return;
                 }
                 if (!principalAllowsWorkspace(principal, requestedWorkspaceId)) {
-                    transportOwner["recordFailedHandshake"](remoteAddress);
-                    transportOwner["sendError"](ws, envelope.id, 'AUTH_FAILED', 'Workspace access denied');
+                    transportOwner.recordFailedHandshake(remoteAddress);
+                    transportOwner.sendError(ws, envelope.id, 'AUTH_FAILED', 'Workspace access denied');
                     ws.close(4005, 'Auth failed');
                     return;
                 }
@@ -203,7 +204,7 @@ export function onConnection(transportOwner: WsRpcServer, ws: WebSocket, upgrade
                         // Determine replay vs stale using the per-client delivery sequence.
                         // Retained buffers continue collecting events while the client is disconnected,
                         // but TTL eviction still applies during the reconnect window.
-                        transportOwner["evictBuffer"](prevClient);
+                        transportOwner.evictBuffer(prevClient);
                         const lastSeq = envelope.lastSeq as number;
                         const hasMissedEvents = lastSeq < prevClient.lastSentSeq;
                         const firstBufferedSeq = prevClient.eventBuffer[0]?.seq;
@@ -212,15 +213,15 @@ export function onConnection(transportOwner: WsRpcServer, ws: WebSocket, upgrade
                             : firstBufferedSeq != null && lastSeq >= firstBufferedSeq - 1;
                         if (canReplay) {
                             const replayEvents = prevClient.eventBuffer.filter(e => e.seq > lastSeq);
-                            const ack: MessageEnvelope = {
+                            const ack: MessageEnvelope = omitUndefined<MessageEnvelope>({
                                 id: envelope.id,
                                 type: 'handshake_ack',
                                 protocolVersion: PROTOCOL_VERSION,
-                                serverVersion: transportOwner["serverVersion"] || undefined,
+                                serverVersion: transportOwner.serverVersion || undefined,
                                 clientId: prevClient.id,
                                 registeredChannels: [...transportOwner["handlers"].keys()],
                                 reconnected: true,
-                            };
+                            });
                             transportOwner["safeSend"](ws, serializeEnvelope(ack));
                             // Replay missed events in order
                             for (const event of replayEvents) {
@@ -234,16 +235,16 @@ export function onConnection(transportOwner: WsRpcServer, ws: WebSocket, upgrade
                         }
                         else {
                             // Buffer evicted — client must full-refresh
-                            const ack: MessageEnvelope = {
+                            const ack: MessageEnvelope = omitUndefined<MessageEnvelope>({
                                 id: envelope.id,
                                 type: 'handshake_ack',
                                 protocolVersion: PROTOCOL_VERSION,
-                                serverVersion: transportOwner["serverVersion"] || undefined,
+                                serverVersion: transportOwner.serverVersion || undefined,
                                 clientId: prevClient.id,
                                 registeredChannels: [...transportOwner["handlers"].keys()],
                                 reconnected: true,
                                 stale: true,
-                            };
+                            });
                             transportOwner["safeSend"](ws, serializeEnvelope(ack));
                             transportLog.info('Client reconnected as stale', {
                                 clientId: prevClient.id,
@@ -257,8 +258,8 @@ export function onConnection(transportOwner: WsRpcServer, ws: WebSocket, upgrade
                         transportOwner["disconnectedClients"].delete(envelope.reconnectClientId);
                         transportOwner["clients"].set(prevClient.id, prevClient);
                         transportOwner["clientByWs"].set(ws, prevClient);
-                        transportOwner["setupClientHandlers"](ws, prevClient);
-                        transportOwner["onClientConnected"]?.({
+                        transportOwner.setupClientHandlers(ws, prevClient);
+                        transportOwner.onClientConnected?.({
                             clientId: prevClient.id,
                             webContentsId: prevClient.webContentsId,
                             workspaceId: prevClient.workspaceId,
@@ -305,14 +306,14 @@ export function onConnection(transportOwner: WsRpcServer, ws: WebSocket, upgrade
             transportOwner["clientByWs"].set(ws, client);
             handshakeCompleted = true;
             // Send handshake_ack
-            const ack: MessageEnvelope = {
+            const ack: MessageEnvelope = omitUndefined<MessageEnvelope>({
                 id: envelope.id,
                 type: 'handshake_ack',
                 protocolVersion: PROTOCOL_VERSION,
-                serverVersion: transportOwner["serverVersion"] || undefined,
+                serverVersion: transportOwner.serverVersion || undefined,
                 clientId,
                 registeredChannels: [...transportOwner["handlers"].keys()],
-            };
+            });
             transportOwner["safeSend"](ws, serializeEnvelope(ack));
             // Notify lifecycle listener
             transportLog.info('Client connected', {
@@ -320,7 +321,7 @@ export function onConnection(transportOwner: WsRpcServer, ws: WebSocket, upgrade
                 webContentsId: client.webContentsId,
                 workspaceId: client.workspaceId,
             });
-            transportOwner["onClientConnected"]?.({
+            transportOwner.onClientConnected?.({
                 clientId,
                 webContentsId: client.webContentsId,
                 workspaceId: client.workspaceId,
@@ -332,20 +333,20 @@ export function onConnection(transportOwner: WsRpcServer, ws: WebSocket, upgrade
                     ? '*'
                     : [...client.allowedWorkspaceIds],
             });
-            transportOwner["setupClientHandlers"](ws, client);
+            transportOwner.setupClientHandlers(ws, client);
             return;
         }
         // Post-handshake: find the client for this ws
-        const client = transportOwner["findClientByWs"](ws);
+        const client = transportOwner.findClientByWs(ws);
         if (!client) {
             ws.close(4006, 'Unknown client');
             return;
         }
         if (envelope.type === 'request') {
-            await transportOwner["onRequest"](client, envelope);
+            await transportOwner.onRequest(client, envelope);
         }
         else if (envelope.type === 'response') {
-            transportOwner["onClientResponse"](client, envelope);
+            transportOwner.onClientResponse(client, envelope);
         }
         else if (envelope.type === 'sequence_ack') {
             const ackSeq = envelope.lastSeq;
@@ -376,12 +377,12 @@ export function isSessionCookieOriginAllowed(transportOwner: WsRpcServer, origin
         return false;
     try {
         const normalizedOrigin = new URL(origin).origin;
-        if (transportOwner["allowedSessionCookieOrigins"].size > 0) {
-            return transportOwner["allowedSessionCookieOrigins"].has(normalizedOrigin);
+        if (transportOwner.allowedSessionCookieOrigins.size > 0) {
+            return transportOwner.allowedSessionCookieOrigins.has(normalizedOrigin);
         }
         if (!host)
             return false;
-        const expectedProtocol = transportOwner["tlsOptions"] ? 'https' : 'http';
+        const expectedProtocol = transportOwner.tlsOptions ? 'https' : 'http';
         return normalizedOrigin === new URL(`${expectedProtocol}://${host}`).origin;
     }
     catch {

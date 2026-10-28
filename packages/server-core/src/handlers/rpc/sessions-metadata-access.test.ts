@@ -1,3 +1,7 @@
+import { OAuthFlowStore } from '@craft-agent/shared/auth';
+import { createHeadlessPlatform } from '../../runtime/platform-headless.ts';
+import type { ISessionManager } from '@craft-agent/server-core/handlers';
+import { SessionManager as FixtureSessionManager } from '@craft-agent/server-core/sessions';
 import { describe, expect, it } from 'bun:test'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import type { HandlerFn, RequestContext, RpcServer } from '@craft-agent/server-core/transport'
@@ -16,8 +20,7 @@ function createHarness(sessionWorkspaceId: string | null = 'workspace') {
     hasClientCapability: () => false,
     findClientsWithCapability: () => [],
   }
-  const deps = {
-    sessionManager: {
+  const deps = ({sessionManager: Object.assign(new FixtureSessionManager(), ({
       getSessionWorkspaceId: () => sessionWorkspaceId,
       getSession: async () => {
         transcriptHydrations++
@@ -32,12 +35,9 @@ function createHarness(sessionWorkspaceId: string | null = 'workspace') {
           changedBy: 'restore',
         }
       },
-    },
-    oauthFlowStore: {},
-    platform: {
-      logger: { info: () => {}, warn: () => {}, error: () => {}, debug: () => {} },
-    },
-  } as unknown as HandlerDeps
+    } satisfies Partial<ISessionManager>)),
+oauthFlowStore: new OAuthFlowStore(),
+platform: createHeadlessPlatform()} satisfies HandlerDeps)
 
   registerSessionsHandlers(server, deps)
 

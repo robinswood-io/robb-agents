@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { MAX_ISOLATED_READ_TOOL_INVOCATIONS, canonicalExecutionIsolationToolInput } from './canonical-input.ts';
 import type { ExecutionIsolationPolicy, GuardDecision, SessionExecutionIsolation } from './contracts.ts';
 import { isLocalHostname } from './network.ts';
@@ -45,7 +46,7 @@ export function validateExecutionIsolationPolicy(
     } catch {
       return { allowed: false, reason: 'Read tool invocation input is not valid JSON' };
     }
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)
+    if (!parsed || typeof parsed !== 'object' || isUnknownArray(parsed)
       || canonicalExecutionIsolationToolInput(parsed as Record<string, unknown>) !== invocation.inputJson) {
       return { allowed: false, reason: 'Read tool invocation input is not canonical' };
     }

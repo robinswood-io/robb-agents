@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import { createHash } from "node:crypto";
 import { contextualGmailClosedExactEffectExpectationFromObjective, type ContextualGmailReplyPreflightAttestation, type ContextualGmailReplyPreflightIntent } from "../sensitive-external-action.ts";
 import { CONTEXTUAL_GMAIL_BINDING_FUTURE_SKEW_MS, CONTEXTUAL_GMAIL_BINDING_MAX_TTL_MS, CONTEXTUAL_GMAIL_READ_TOOLS, GMAIL_API_MESSAGE_ID, contextualGmailPreflightAttestations, contextualGmailPreflightGenerations } from './gmail-state.ts';
@@ -80,7 +81,7 @@ export function contextualGmailToolReceipt(value: string): Record<string, unknow
   const trimmed = value.trim();
   try {
     const parsed: unknown = JSON.parse(trimmed);
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+    return parsed && typeof parsed === 'object' && !isUnknownArray(parsed)
       ? parsed as Record<string, unknown>
       : undefined;
   } catch {
@@ -88,7 +89,7 @@ export function contextualGmailToolReceipt(value: string): Record<string, unknow
     if (metadataMatch?.[1]) {
       try {
         const parsedMetadata: unknown = JSON.parse(metadataMatch[1]);
-        if (parsedMetadata && typeof parsedMetadata === 'object' && !Array.isArray(parsedMetadata)) {
+        if (parsedMetadata && typeof parsedMetadata === 'object' && !isUnknownArray(parsedMetadata)) {
           return parsedMetadata as Record<string, unknown>;
         }
       } catch {
@@ -113,25 +114,25 @@ export function canonicalGmailEmailSet(value: unknown): string[] | undefined {
 export function hasConclusiveContextualGmailExactEffectReconciliation(
   receipt: Record<string, unknown>,
 ): boolean {
-  const reconciliation = receipt.exactEffectReconciliation;
+  const reconciliation = receipt["exactEffectReconciliation"];
   if (!reconciliation || typeof reconciliation !== 'object'
-    || Array.isArray(reconciliation)) return false;
+    || isUnknownArray(reconciliation)) return false;
   const proof = reconciliation as Record<string, unknown>;
-  return proof.checked === true
-    && proof.conclusive === true
-    && proof.paginationComplete === true
-    && proof.source === 'gmail_threads_get_full'
-    && Array.isArray(proof.scopes)
-    && proof.scopes.length === 2
-    && proof.scopes[0] === 'SENT'
-    && proof.scopes[1] === 'DRAFT'
-    && proof.candidateCount === 0
-    && typeof receipt.threadId === 'string'
-    && GMAIL_API_MESSAGE_ID.test(receipt.threadId)
-    && proof.threadId === receipt.threadId
-    && typeof receipt.operationKey === 'string'
-    && /^[0-9a-f]{64}$/u.test(receipt.operationKey)
-    && proof.operationKey === receipt.operationKey;
+  return proof["checked"] === true
+    && proof["conclusive"] === true
+    && proof["paginationComplete"] === true
+    && proof["source"] === 'gmail_threads_get_full'
+    && isUnknownArray(proof["scopes"])
+    && proof["scopes"].length === 2
+    && proof["scopes"][0] === 'SENT'
+    && proof["scopes"][1] === 'DRAFT'
+    && proof["candidateCount"] === 0
+    && typeof receipt["threadId"] === 'string'
+    && GMAIL_API_MESSAGE_ID.test(receipt["threadId"])
+    && proof["threadId"] === receipt["threadId"]
+    && typeof receipt["operationKey"] === 'string'
+    && /^[0-9a-f]{64}$/u.test(receipt["operationKey"])
+    && proof["operationKey"] === receipt["operationKey"];
 }
 
 export function exactObservedGmailMessageId(
@@ -139,33 +140,33 @@ export function exactObservedGmailMessageId(
   input: Record<string, unknown> | undefined,
   result: Record<string, unknown>,
 ): string | undefined {
-  if (!CONTEXTUAL_GMAIL_READ_TOOLS.has(toolName) || result.error !== undefined) return undefined;
+  if (!CONTEXTUAL_GMAIL_READ_TOOLS.has(toolName) || result["error"] !== undefined) return undefined;
   if (toolName === 'mcp__orion-mcp__orion_mcp_read' || toolName === 'mcp__orion-mcp__orion_mcp_call') {
-    const innerTool = typeof input?.name === 'string' ? input.name : typeof result.tool === 'string' ? result.tool : '';
+    const innerTool = typeof input?.["name"] === 'string' ? input["name"] : typeof result["tool"] === 'string' ? result["tool"] : '';
     if (innerTool !== 'gmail_get_message' && innerTool !== 'gmail_get_message_by_url') return undefined;
   }
-  const payload = result.data && typeof result.data === 'object' && !Array.isArray(result.data)
-    ? result.data as Record<string, unknown>
+  const payload = result["data"] && typeof result["data"] === 'object' && !isUnknownArray(result["data"])
+    ? result["data"] as Record<string, unknown>
     : result;
-  if (payload.error !== undefined) return undefined;
-  const directId = typeof payload.id === 'string' && GMAIL_API_MESSAGE_ID.test(payload.id)
-    ? payload.id.toLowerCase()
+  if (payload["error"] !== undefined) return undefined;
+  const directId = typeof payload["id"] === 'string' && GMAIL_API_MESSAGE_ID.test(payload["id"])
+    ? payload["id"].toLowerCase()
     : undefined;
-  const latest = payload.latestMessage && typeof payload.latestMessage === 'object'
-    ? payload.latestMessage as Record<string, unknown>
+  const latest = payload["latestMessage"] && typeof payload["latestMessage"] === 'object'
+    ? payload["latestMessage"] as Record<string, unknown>
     : undefined;
-  const latestId = typeof latest?.id === 'string' && GMAIL_API_MESSAGE_ID.test(latest.id)
-    ? latest.id.toLowerCase()
+  const latestId = typeof latest?.["id"] === 'string' && GMAIL_API_MESSAGE_ID.test(latest["id"])
+    ? latest["id"].toLowerCase()
     : undefined;
   const messageId = directId ?? latestId;
   if (!messageId) return undefined;
-  const nestedArgs = input?.arguments && typeof input.arguments === 'object' && !Array.isArray(input.arguments)
-    ? input.arguments as Record<string, unknown>
+  const nestedArgs = input?.["arguments"] && typeof input["arguments"] === 'object' && !isUnknownArray(input["arguments"])
+    ? input["arguments"] as Record<string, unknown>
     : undefined;
-  const rawRequestedId = typeof input?.messageId === 'string'
-    ? input.messageId
-    : typeof nestedArgs?.messageId === 'string'
-      ? nestedArgs.messageId
+  const rawRequestedId = typeof input?.["messageId"] === 'string'
+    ? input["messageId"]
+    : typeof nestedArgs?.["messageId"] === 'string'
+      ? nestedArgs["messageId"]
       : undefined;
   const requestedId = rawRequestedId && GMAIL_API_MESSAGE_ID.test(rawRequestedId.trim())
     ? rawRequestedId.trim().toLowerCase()

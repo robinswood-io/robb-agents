@@ -146,7 +146,7 @@ export class OtlpHttpTelemetrySink implements ExecutionTelemetrySink {
   }
 
   private async exportPayloads(payloads: OtlpPayloads): Promise<void> {
-    const entries = Object.entries(payloads) as Array<
+    const entries = Object.entries<unknown>((payloads as Record<string, unknown>)) as Array<
       [OtlpSignal, Record<string, unknown>]
     >
     await Promise.all(entries.map(async ([signal, payload]) => {

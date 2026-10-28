@@ -14,7 +14,8 @@ describe('bounded automatic admission', () => {
     await h.runtime.resumePendingTurnsAfterRestart(sessions.map(session => session.id))
     expect(admitted).toEqual(sessions.slice(0, 8).map(session => session.id))
     expect(sessionRuntimeStateForTest(h.runtime).deferredAutomaticSessions.size).toBe(4)
-    sessions[0]!.pendingTurnRecovery = undefined; h.runtime.setProcessing(sessions[0], false)
+    const released = requiredTestValue(sessions[0])
+    released.pendingTurnRecovery = undefined; h.runtime.setProcessing(released, false)
     h.runtime.scheduleDeferredAutomaticSessions(); h.runtime.scheduleDeferredAutomaticSessions()
     for (let i = 0; i < 4; i++) await tick()
     expect(admitted).toEqual(sessions.slice(0, 9).map(session => session.id))
@@ -101,9 +102,9 @@ describe('bounded automatic admission', () => {
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
 
     expect(providerStarts).toBe(0)
-    expect(restored.activeObjective).toMatchObject({
+    expect<unknown>(restored.activeObjective).toMatchObject({
       terminalState: 'blocked_policy',
-      completedAt: expect.any(Number),
+      completedAt: (expect.any(Number) as unknown),
       interruptedTurnRecovery: {
         objectiveId: `${child.id}-user`,
         userMessageId: `${child.id}-latest-human`,

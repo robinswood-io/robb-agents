@@ -19,7 +19,7 @@ export function openLabelLink(rawValue: string): void {
   const hasProtocol = /^[a-z][\w+.-]*:\/\//i.test(trimmed) || trimmed.startsWith('mailto:')
   const url = hasProtocol ? trimmed : `https://${trimmed}`
 
-  void window.electronAPI.openUrl(url).catch((err) => {
+  void window.electronAPI.openUrl(url).catch((err: unknown) => {
     console.error('[openLabelLink] Failed to open URL:', url, err)
   })
 }

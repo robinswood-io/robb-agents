@@ -10,15 +10,15 @@ describe('resolveConfigDir()', () => {
   let originalCraftConfigDir: string | undefined
 
   beforeEach(() => {
-    originalCraftConfigDir = process.env.CRAFT_CONFIG_DIR
-    delete process.env.CRAFT_CONFIG_DIR
+    originalCraftConfigDir = process.env["CRAFT_CONFIG_DIR"]
+    delete process.env["CRAFT_CONFIG_DIR"]
   })
 
   afterEach(() => {
     if (originalCraftConfigDir === undefined) {
-      delete process.env.CRAFT_CONFIG_DIR
+      delete process.env["CRAFT_CONFIG_DIR"]
     } else {
-      process.env.CRAFT_CONFIG_DIR = originalCraftConfigDir
+      process.env["CRAFT_CONFIG_DIR"] = originalCraftConfigDir
     }
   })
 

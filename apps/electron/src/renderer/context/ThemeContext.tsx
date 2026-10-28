@@ -48,8 +48,7 @@ export function ThemeProvider({
     }).catch(() => {
       // Keep default on error
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Only run on mount
+  }, [stored?.isUserOverride]) // Only run on mount
 
   // === Preset theme state (singleton) ===
   const [presetTheme, setPresetTheme] = useState<ThemeFile | null>(null)
@@ -132,7 +131,7 @@ export function ThemeProvider({
       }
 
       applyFallback(`Preset theme was not returned by IPC for "${effectiveColorTheme}".`)
-    }).catch((error) => {
+    }).catch((error: unknown) => {
       applyFallback(`Failed to load preset theme via IPC for "${effectiveColorTheme}": ${error instanceof Error ? error.message : String(error)}.`)
     })
 
@@ -185,20 +184,20 @@ export function ThemeProvider({
 
     // Apply font
     if (font === 'inter') {
-      root.dataset.font = 'inter'
+      root.dataset["font"] = 'inter'
     } else {
-      delete root.dataset.font
+      delete root.dataset["font"]
     }
 
     // Apply color theme data attribute
     if (effectiveColorTheme && effectiveColorTheme !== 'default') {
-      root.dataset.theme = effectiveColorTheme
+      root.dataset["theme"] = effectiveColorTheme
     } else {
-      delete root.dataset.theme
+      delete root.dataset["theme"]
     }
 
     // Always set theme override for semi-transparent background (vibrancy effect)
-    root.dataset.themeOverride = 'true'
+    root.dataset["themeOverride"] = 'true'
   }, [effectiveColorTheme, font])
 
   // Apply dark/light class and theme-specific DOM attributes
@@ -224,19 +223,19 @@ export function ThemeProvider({
     const vibrancyMismatch = resolvedMode !== systemPreference
 
     if (themeModeUnsupported || vibrancyMismatch) {
-      root.dataset.themeMismatch = 'true'
+      root.dataset["themeMismatch"] = 'true'
     } else {
-      delete root.dataset.themeMismatch
+      delete root.dataset["themeMismatch"]
     }
 
     // Set scenic mode data attribute for CSS targeting
     if (isScenic) {
-      root.dataset.scenic = 'true'
+      root.dataset["scenic"] = 'true'
       if (resolvedTheme.backgroundImage) {
         root.style.setProperty('--background-image', `url("${resolvedTheme.backgroundImage}")`)
       }
     } else {
-      delete root.dataset.scenic
+      delete root.dataset["scenic"]
       root.style.removeProperty('--background-image')
     }
 
@@ -334,7 +333,7 @@ export function ThemeProvider({
     setModeState(newMode)
     // Preserve existing isUserOverride flag
     const existing = loadStoredTheme()
-    saveTheme({ mode: newMode, colorTheme, font, isUserOverride: existing?.isUserOverride })
+    saveTheme({ mode: newMode, colorTheme, font, ...(existing?.isUserOverride !== undefined ? { isUserOverride: existing?.isUserOverride } : {}) })
     if (!isExternalUpdate.current && window.electronAPI?.broadcastThemePreferences) {
       window.electronAPI.broadcastThemePreferences({ mode: newMode, colorTheme, font })
     }
@@ -353,7 +352,7 @@ export function ThemeProvider({
     setFontState(newFont)
     // Preserve existing isUserOverride flag
     const existing = loadStoredTheme()
-    saveTheme({ mode, colorTheme, font: newFont, isUserOverride: existing?.isUserOverride })
+    saveTheme({ mode, colorTheme, font: newFont, ...(existing?.isUserOverride !== undefined ? { isUserOverride: existing?.isUserOverride } : {}) })
     if (!isExternalUpdate.current && window.electronAPI?.broadcastThemePreferences) {
       window.electronAPI.broadcastThemePreferences({ mode, colorTheme, font: newFont })
     }

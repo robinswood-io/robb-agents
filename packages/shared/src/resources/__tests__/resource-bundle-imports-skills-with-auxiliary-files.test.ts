@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
@@ -326,8 +327,8 @@ it.each([
       }],
       ['the staged config', (stagedDir: string) => {
         const configPath = join(stagedDir, 'config.json')
-        const config = JSON.parse(readFileSync(configPath, 'utf-8'))
-        config.slug = 'retargeted-source'
+        const config = parseJsonObject(readFileSync(configPath, 'utf-8'))
+        config["slug"] = 'retargeted-source'
         writeFileSync(configPath, JSON.stringify(config))
       }],
       ['a restored source file', (stagedDir: string) => {

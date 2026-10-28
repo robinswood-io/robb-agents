@@ -1,3 +1,5 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import type { SessionInfo } from '@craft-agent/session-tools-core';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces';
 import { isYoloMode } from '@craft-agent/shared/agent';
@@ -60,11 +62,11 @@ async function sessionOpStopYoloHumanHandoff(sessionOperationContext: SessionOpe
         timestamp: sessionOpMonotonic(sessionOperationContext), message: reason }, managed.workspace.id);
 }
 
-function sessionOpGetSessionToolInfo(sessionOperationContext: SessionOperationContext, caller: ManagedSession, targetId = caller.id) {
+function sessionOpGetSessionToolInfo(sessionOperationContext: SessionOperationContext, caller: ManagedSession, targetId = caller.id) : SessionInfo | null {
     const session = sessionOperationContext.state.sessions.get(targetId);
     if (!session)
         return null;
-    return {
+    return omitUndefined<SessionInfo>({
         id: session.id,
         name: session.name ?? session.id,
         labels: session.labels ?? [],
@@ -79,7 +81,7 @@ function sessionOpGetSessionToolInfo(sessionOperationContext: SessionOperationCo
         objectiveEvidenceContext: session === caller && session.messagesLoaded && session.activeObjective
             ? buildObjectiveValidationEvidenceContext(session.messages, session.activeObjective, session.id)
             : undefined,
-    };
+    });
 }
 
 export { sessionOpIsManagedSessionYolo as isManagedSessionYolo };

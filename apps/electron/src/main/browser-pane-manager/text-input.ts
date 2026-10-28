@@ -8,13 +8,13 @@ import type { BrowserKeyArgs } from './shared.ts';
 import * as browserPaneManagerNavigationRules from './navigation-rules.ts';
 
 export async function typeText(transportOwner: BrowserPaneManager, id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
-    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner["typeTextAtCurrentUrl"](id, text, mutationPolicy));
+    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner.typeTextAtCurrentUrl(id, text, mutationPolicy));
 }
 
 export async function typeTextAtCurrentUrl(transportOwner: BrowserPaneManager, id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
     const instance = transportOwner["requireAliveInstance"](id);
     try {
-        transportOwner["assertMutationUrlAllowed"](instance, mutationPolicy);
+        transportOwner.assertMutationUrlAllowed(instance, mutationPolicy);
         await instance.cdp.typeText(text);
         instance.lastAction = {
             tool: 'browser_type',
@@ -33,7 +33,7 @@ export async function typeTextAtCurrentUrl(transportOwner: BrowserPaneManager, i
 }
 
 export async function setClipboard(transportOwner: BrowserPaneManager, id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
-    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner["setClipboardAtCurrentUrl"](id, text, mutationPolicy));
+    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner.setClipboardAtCurrentUrl(id, text, mutationPolicy));
 }
 
 export async function setClipboardAtCurrentUrl(transportOwner: BrowserPaneManager, id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
@@ -43,7 +43,7 @@ export async function setClipboardAtCurrentUrl(transportOwner: BrowserPaneManage
     if (!isBrowserPanePermissionAllowed('clipboard-sanitized-write')) {
         throw new Error('Clipboard write is denied by browser policy. No paste shortcut was sent. Use a DOM field or explicit type-keys; do not repeat paste or change permissions.');
     }
-    transportOwner["assertMutationUrlAllowed"](instance, mutationPolicy);
+    transportOwner.assertMutationUrlAllowed(instance, mutationPolicy);
     await instance.cdp.setClipboard(text);
 }
 
@@ -56,13 +56,13 @@ export async function getClipboard(transportOwner: BrowserPaneManager, id: strin
 }
 
 export async function fillElement(transportOwner: BrowserPaneManager, id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
-    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner["fillElementAtCurrentUrl"](id, ref, value, mutationPolicy));
+    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner.fillElementAtCurrentUrl(id, ref, value, mutationPolicy));
 }
 
 export async function fillElementAtCurrentUrl(transportOwner: BrowserPaneManager, id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
     const instance = transportOwner["requireAliveInstance"](id);
     try {
-        transportOwner["assertMutationUrlAllowed"](instance, mutationPolicy);
+        transportOwner.assertMutationUrlAllowed(instance, mutationPolicy);
         const geometry = await instance.cdp.fillElement(ref, value);
         instance.lastAction = {
             tool: 'browser_fill',
@@ -84,13 +84,13 @@ export async function fillElementAtCurrentUrl(transportOwner: BrowserPaneManager
 }
 
 export async function selectOption(transportOwner: BrowserPaneManager, id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
-    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner["selectOptionAtCurrentUrl"](id, ref, value, mutationPolicy));
+    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner.selectOptionAtCurrentUrl(id, ref, value, mutationPolicy));
 }
 
 export async function selectOptionAtCurrentUrl(transportOwner: BrowserPaneManager, id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
     const instance = transportOwner["requireAliveInstance"](id);
     try {
-        transportOwner["assertMutationUrlAllowed"](instance, mutationPolicy);
+        transportOwner.assertMutationUrlAllowed(instance, mutationPolicy);
         const geometry = await instance.cdp.selectOption(ref, value);
         instance.lastAction = {
             tool: 'browser_select',
@@ -112,7 +112,7 @@ export async function selectOptionAtCurrentUrl(transportOwner: BrowserPaneManage
 }
 
 export async function sendKey(transportOwner: BrowserPaneManager, id: string, args: BrowserKeyArgs, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
-    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner["sendKeyAtCurrentUrl"](id, args, mutationPolicy));
+    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner.sendKeyAtCurrentUrl(id, args, mutationPolicy));
 }
 
 export async function sendKeyAtCurrentUrl(transportOwner: BrowserPaneManager, id: string, args: BrowserKeyArgs, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
@@ -123,7 +123,7 @@ export async function sendKeyAtCurrentUrl(transportOwner: BrowserPaneManager, id
         const owner = instance.ownerSessionId;
         const bound = instance.boundSessionId;
         const controlled = instance.agentControl;
-        transportOwner["assertMutationUrlAllowed"](instance, mutationPolicy);
+        transportOwner.assertMutationUrlAllowed(instance, mutationPolicy);
         return instance.cdp.typeKeys(args.text, () => {
             const current = transportOwner["instances"].get(id);
             return current === instance && !instance.pageView.webContents.isDestroyed()
@@ -136,7 +136,7 @@ export async function sendKeyAtCurrentUrl(transportOwner: BrowserPaneManager, id
     if (!key)
         throw new Error('browser_key requires key');
     const modifiers = args.modifiers ?? [];
-    transportOwner["assertMutationUrlAllowed"](instance, mutationPolicy);
+    transportOwner.assertMutationUrlAllowed(instance, mutationPolicy);
     instance.pageView.webContents.sendInputEvent({
         type: 'keyDown',
         keyCode: key,
@@ -151,7 +151,7 @@ export async function sendKeyAtCurrentUrl(transportOwner: BrowserPaneManager, id
 
 // validateUploadFilePath removed — uses shared validateFilePath from @craft-agent/server-core/handlers
 export async function uploadFile(transportOwner: BrowserPaneManager, id: string, ref: string, filePaths: string[], mutationPolicy?: BrowserMutationUrlPolicy): Promise<ElementGeometry> {
-    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner["uploadFileAtCurrentUrl"](id, ref, filePaths, mutationPolicy));
+    return transportOwner["runSerializedBrowserOperation"](id, () => transportOwner.uploadFileAtCurrentUrl(id, ref, filePaths, mutationPolicy));
 }
 
 export async function uploadFileAtCurrentUrl(transportOwner: BrowserPaneManager, id: string, ref: string, filePaths: string[], mutationPolicy?: BrowserMutationUrlPolicy): Promise<ElementGeometry> {
@@ -164,6 +164,6 @@ export async function uploadFileAtCurrentUrl(transportOwner: BrowserPaneManager,
             throw new Error(`File not found: ${p}`);
         safePaths.push(safePath);
     }
-    transportOwner["assertMutationUrlAllowed"](instance, mutationPolicy);
+    transportOwner.assertMutationUrlAllowed(instance, mutationPolicy);
     return instance.cdp.setFileInputFiles(ref, safePaths);
 }

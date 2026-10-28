@@ -14,7 +14,7 @@ class McpClientRegistrationError extends Error {
   constructor(message: string, status?: number) {
     super(message);
     this.name = 'McpClientRegistrationError';
-    this.status = status;
+    if (status === undefined) { delete this.status } else { this.status = status }
   }
 }
 
@@ -92,7 +92,7 @@ async function exchangeMcpCodeForTokens(
 
   return {
     accessToken: data.access_token,
-    refreshToken: data.refresh_token,
+    ...(data.refresh_token !== undefined ? { refreshToken: data.refresh_token } : {}),
     expiresAt: Date.now() + expiresIn * 1000,
     tokenType: data.token_type || 'Bearer',
   };
@@ -154,7 +154,7 @@ export async function prepareMcpOAuth(
     codeVerifier: pkce.verifier,
     tokenEndpoint: metadata.token_endpoint,
     clientId,
-    clientSecret,
+    ...(clientSecret !== undefined ? { clientSecret } : {}),
     redirectUri,
     provider: 'mcp',
   };
@@ -176,8 +176,8 @@ export async function exchangeMcpOAuth(params: OAuthExchangeParams): Promise<OAu
     return {
       success: true,
       accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresAt: tokens.expiresAt,
+      ...(tokens.refreshToken !== undefined ? { refreshToken: tokens.refreshToken } : {}),
+      ...(tokens.expiresAt !== undefined ? { expiresAt: tokens.expiresAt } : {}),
       oauthClientId: params.clientId,
     };
   } catch (error) {

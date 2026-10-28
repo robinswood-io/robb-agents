@@ -8,6 +8,21 @@ import { fileURLToPath } from 'node:url';
 import { handleTransformData } from './transform-data.ts';
 import { TransformDataSchema } from '../tool-defs.ts';
 import type { SessionToolContext } from '../context.ts';
+import { z } from 'zod';
+
+const reportFileSchema = z.object({
+  inputSha256: z.string().optional(),
+  rows: z.array(z.record(z.string(), z.unknown())).optional(),
+  reused: z.boolean().optional(),
+  error: z.string().optional(),
+});
+const reportSchema = z.object({
+  succeeded: z.number(), failed: z.number(), reused: z.number(),
+  files: z.tuple([reportFileSchema]).rest(reportFileSchema),
+});
+const receiptSchema = z.looseObject({ data: z.string(), sha256: z.string(), mac: z.string().optional() });
+const readReport = (path: string) => reportSchema.parse(JSON.parse(readFileSync(path, 'utf8')));
+const readReceipt = (path: string) => receiptSchema.parse(JSON.parse(readFileSync(path, 'utf8')));
 
 function fixture() {
   const root = mkdtempSync(join(tmpdir(), 'deterministic-recipes-'));
@@ -27,7 +42,7 @@ describe('transform_data deterministic recipes through the actual handler/schema
       const args = TransformDataSchema.parse({ recipe: { name: 'json-records-v1', recordsPath: ['data'], select: ['id', 'amount'] }, inputFiles: ['first.json', 'second.json', 'missing.json'], outputFile: 'report.json' });
       const first = await handleTransformData(f.ctx, args);
       expect(first.isError).toBe(true);
-      let report = JSON.parse(readFileSync(join(f.data, 'report.json'), 'utf8'));
+      let report = readReport(join(f.data, 'report.json'));
       expect(report.succeeded).toBe(1);
       expect(report.failed).toBe(2);
       expect(report.files[0].rows).toEqual([{ id: 'a', amount: 4 }]);
@@ -36,15 +51,15 @@ describe('transform_data deterministic recipes through the actual handler/schema
       writeFileSync(join(f.session, 'missing.json'), JSON.stringify({ data: [{ id: 'c', amount: 1 }] }));
       const second = await handleTransformData(f.ctx, args);
       expect(second.isError).toBe(false);
-      report = JSON.parse(readFileSync(join(f.data, 'report.json'), 'utf8'));
+      report = readReport(join(f.data, 'report.json'));
       expect(report.succeeded).toBe(3);
       expect(report.failed).toBe(0);
       expect(report.reused).toBe(1);
       writeFileSync(join(f.session, 'first.json'), JSON.stringify({ data: [{ id: 'a', amount: 9 }] }));
       await handleTransformData(f.ctx, args);
-      report = JSON.parse(readFileSync(join(f.data, 'report.json'), 'utf8'));
+      report = readReport(join(f.data, 'report.json'));
       expect(report.reused).toBe(2);
-      expect(report.files[0].rows[0].amount).toBe(9);
+      expect(report.files[0].rows![0]!["amount"]).toBe(9);
       expect(report.files[0].reused).toBe(false);
     } finally { f.cleanup(); }
   });
@@ -57,16 +72,16 @@ describe('transform_data deterministic recipes through the actual handler/schema
       await handleTransformData(f.ctx, args);
       const cacheDir = join(f.data, '.transform-recipes');
       const path = join(cacheDir, readdirSync(cacheDir)[0]!);
-      const receipt = JSON.parse(readFileSync(path, 'utf8'));
+      const receipt = readReceipt(path);
       receipt.data = '[{"id":"WRONG"}]';
       receipt.sha256 = createHash('sha256').update(receipt.data).digest('hex');
       writeFileSync(path, JSON.stringify(receipt));
       await handleTransformData(f.ctx, args);
-      let report = JSON.parse(readFileSync(join(f.data, 'report.json'), 'utf8'));
+      let report = readReport(join(f.data, 'report.json'));
       expect(report.reused).toBe(0);
       expect(report.files[0].rows).toEqual([{ id: 'a' }, { id: 'b' }]);
       await handleTransformData(f.ctx, { ...args, recipe: { name: 'json-records-v1', filter: { field: 'id', equals: 'b' }, select: ['amount'] } });
-      report = JSON.parse(readFileSync(join(f.data, 'report.json'), 'utf8'));
+      report = readReport(join(f.data, 'report.json'));
       expect(report.reused).toBe(0);
       expect(report.files[0].rows).toEqual([{ amount: 3 }]);
     } finally { f.cleanup(); }
@@ -80,15 +95,15 @@ describe('transform_data deterministic recipes through the actual handler/schema
       await handleTransformData(f.ctx, args);
       const cacheDir = join(f.data, '.transform-recipes');
       const path = join(cacheDir, readdirSync(cacheDir)[0]!);
-      const legacy = JSON.parse(readFileSync(path, 'utf8'));
+      const legacy = readReceipt(path);
       delete legacy.mac;
       writeFileSync(path, JSON.stringify(legacy));
       await handleTransformData(f.ctx, args);
-      let report = JSON.parse(readFileSync(join(f.data, 'report.json'), 'utf8'));
+      let report = readReport(join(f.data, 'report.json'));
       expect(report.reused).toBe(0);
       expect(report.files[0].rows).toEqual([{ id: 'original' }]);
       await handleTransformData(f.ctx, args);
-      report = JSON.parse(readFileSync(join(f.data, 'report.json'), 'utf8'));
+      report = readReport(join(f.data, 'report.json'));
       expect(report.reused).toBe(1);
     } finally { f.cleanup(); }
   });
@@ -101,14 +116,14 @@ describe('transform_data deterministic recipes through the actual handler/schema
       await handleTransformData(f.ctx, args);
       const modulePath = fileURLToPath(new URL('./deterministic-recipes.ts', import.meta.url));
       const source = `import {runDeterministicRecipe} from ${JSON.stringify(modulePath)}; const report = runDeterministicRecipe(${JSON.stringify([join(f.session, 'input.json')])}, ${JSON.stringify(join(f.data, 'child-report.json'))}, ${JSON.stringify(f.data)}, {name:'json-records-v1'}); process.stdout.write(JSON.stringify({reused:report.reused}));`;
-      const child = spawnSync(process.execPath, ['-e', source], { encoding: 'utf8', env: { PATH: process.env.PATH, HOME: f.root }, timeout: 15_000 });
+      const child = spawnSync(process.execPath, ['-e', source], { encoding: 'utf8', env: { PATH: process.env["PATH"], HOME: f.root }, timeout: 15_000 });
       expect(child.status).toBe(0);
       expect(JSON.parse(child.stdout)).toEqual({ reused: 0 });
       // The child published a valid receipt for its own host process only.
       await handleTransformData(f.ctx, args);
-      expect(JSON.parse(readFileSync(join(f.data, 'report.json'), 'utf8')).reused).toBe(0);
+      expect(readReport(join(f.data, 'report.json')).reused).toBe(0);
       const cacheDir = join(f.data, '.transform-recipes');
-      const receipt = JSON.parse(readFileSync(join(cacheDir, readdirSync(cacheDir)[0]!), 'utf8'));
+      const receipt = readReceipt(join(cacheDir, readdirSync(cacheDir)[0]!));
       expect(Object.keys(receipt).sort()).toEqual(['data', 'key', 'mac', 'sha256']);
       expect(receipt.mac).toMatch(/^[a-f0-9]{64}$/);
     } finally { f.cleanup(); }
@@ -120,14 +135,14 @@ describe('transform_data deterministic recipes through the actual handler/schema
       writeFileSync(join(f.session, 'input.json'), JSON.stringify([{ status: 'paid', amount: 2 }, { status: 'paid', amount: 5 }, { status: 'pending', amount: 3 }]));
       const args = TransformDataSchema.parse({ recipe: { name: 'json-records-v1', aggregate: { groupBy: 'status', sums: ['amount'] } }, inputFiles: ['input.json'], outputFile: 'report.json' });
       expect((await handleTransformData(f.ctx, args)).isError).toBe(false);
-      const report = JSON.parse(readFileSync(join(f.data, 'report.json'), 'utf8'));
+      const report = readReport(join(f.data, 'report.json'));
       expect(report.files[0].rows).toEqual([{ group: 'paid', count: 2, sums: { amount: 7 } }, { group: 'pending', count: 1, sums: { amount: 3 } }]);
       writeFileSync(join(f.session, 'input.json'), JSON.stringify([{ status: 'paid', amount: '10' }]));
       expect((await handleTransformData(f.ctx, args)).isError).toBe(true);
-      expect(JSON.parse(readFileSync(join(f.data, 'report.json'), 'utf8')).files[0].error).toContain('Non-numeric');
+      expect(readReport(join(f.data, 'report.json')).files[0].error).toContain('Non-numeric');
       writeFileSync(join(f.session, 'input.json'), '[{"status":"paid","amount":9007199254740993}]');
       expect((await handleTransformData(f.ctx, args)).isError).toBe(true);
-      expect(JSON.parse(readFileSync(join(f.data, 'report.json'), 'utf8')).files[0].error).toContain('unsafe integer');
+      expect(readReport(join(f.data, 'report.json')).files[0].error).toContain('unsafe integer');
     } finally { f.cleanup(); }
   });
 

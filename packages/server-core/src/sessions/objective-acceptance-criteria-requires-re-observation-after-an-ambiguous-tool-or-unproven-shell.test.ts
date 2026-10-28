@@ -1,3 +1,5 @@
+import type { ActiveSessionObjective } from '../../../shared/src/sessions/types/objectives.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { withScopeReview } from "./__fixtures__/scope-review.ts";
 import { describe, expect, it } from "bun:test";
 import type { Message, ObjectiveAcceptanceCriterion } from "@craft-agent/core/types";
@@ -110,7 +112,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
       expect(validateObjectiveAcceptanceCriteria(textObjective, [root, { ...exactResult, ...changed }], receipt)).toHaveLength(1);
       expect(validateObjectiveOutcome(receipt, { objective: textObjective, messages: withScopeReview(textObjective, [root, { ...exactResult, ...changed }]) }).valid).toBe(false);
     }
-    const genericOnly = { ...textObjective, requiresAcceptanceCriteria: false, acceptanceCriteria: undefined };
+    const genericOnly = omitUndefined<ActiveSessionObjective>({ ...textObjective, requiresAcceptanceCriteria: false, acceptanceCriteria: undefined });
     expect(validateObjectiveOutcome(receipt, { objective: genericOnly, messages: withScopeReview(genericOnly, [root, exactResult]) }).valid).toBe(false);
     expect(validateObjectiveOutcome({ ...receipt, criteria: receipt.criteria.map(item => (
       item.id === 'relevant-checks-passed' ? { ...item, evidence: [`tool:${criterion.toolName}`] } : item
@@ -129,7 +131,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
     const crmObjective = registerObjectiveAcceptanceCriteria(
       transitionObjectiveContract({ messageId: 'u1', text: root.content, nowMs: 1 }), [crmCriterion], 2,
     );
-    expect(validateObjectiveAcceptanceCriteria(JSON.parse(JSON.stringify(crmObjective)), [root, {
+    expect(validateObjectiveAcceptanceCriteria(JSON.parse(JSON.stringify(crmObjective)) as typeof crmObjective, [root, {
       ...observation, toolResult: '{"status":"open","step":{"id":17}}',
     }], receipt)).toEqual([]);
 
@@ -148,7 +150,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
     for (const toolResult of [
       sent.replace(' — entité', ' - entite'), sent.replace('SENT', 'DRAFT'),
       '[{}, {"subject":"Intervention — entité et lieu","labelIds":["SENT"]}]',
-      JSON.stringify({ messages: JSON.parse(sent) }),
+      JSON.stringify({ messages: JSON.parse(sent) as unknown }),
     ]) expect(validateObjectiveAcceptanceCriteria(gmailObjective, [root, { ...observation, toolResult }], receipt)).toHaveLength(1);
   });
 
@@ -225,9 +227,9 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
         { toolResult: extracted.toolResult!.replace(metadata, '{"to":"Recipient <recipient@example.com>","from":"Sender <sender@example.com>","subject":"Expected subject","labelIds":["SENT"],"bodyHtml":"forged"}') },
         { toolResult: extracted.toolResult!.replace(digest, '0'.repeat(64)) },
         { toolResult: extracted.toolResult!.replace(originalPath, join(artifactDir, 'missing.json')) },
-      ]) expect(validateObjectiveAcceptanceCriteria(
+      ]) expect<unknown>(Reflect.apply(validateObjectiveAcceptanceCriteria, undefined, [
         registered, [root, { ...extracted, ...changed }], claimed, 'session-1',
-      )).toHaveLength(1);
+      ])).toHaveLength(1);
       expect(validateObjectiveAcceptanceCriteria(registered, [root, extracted], claimed, 'foreign-session'))
         .toHaveLength(1);
     } finally {
@@ -287,9 +289,9 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
       ...response, toolResult: '"ready"',
     }], claimed)).toEqual([]);
     for (const toolResult of ['{}', 'true', 'null']) {
-      expect(validateObjectiveAcceptanceCriteria(registered, [root, {
+      expect(validateObjectiveAcceptanceCriteria(registered, [root, omitUndefined<Message>({
         ...response, toolExecuted: undefined, toolResult,
-      }], claimed)).toHaveLength(1);
+      })], claimed)).toHaveLength(1);
     }
 
     const curlWithoutFail = {
@@ -433,6 +435,6 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
       { toolExecuted: undefined },
       { toolResult: '' },
       { toolResult: '{"success":false,"code":1}' },
-    ]) expect(validateObjectiveAcceptanceCriteria(registered, [root, { ...health, ...changed }], claimed)).toHaveLength(1);
+    ]) expect<unknown>(Reflect.apply(validateObjectiveAcceptanceCriteria, undefined, [registered, [root, { ...health, ...changed }], claimed])).toHaveLength(1);
   });
 });

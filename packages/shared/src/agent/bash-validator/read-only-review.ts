@@ -91,7 +91,6 @@ export function isAllowlistedReadOnlyGitArguments(rawArgs: readonly string[]): b
     return false;
   }
 
-  const optionBoundary = args.indexOf('--');
   let positional = false;
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index]!;
@@ -291,9 +290,9 @@ export function hasShellOutputRedirection(command: string): boolean {
   const visit = (value: unknown): boolean => {
     if (!value || typeof value !== 'object') return false;
     const node = value as Record<string, unknown>;
-    if (node.type === 'Redirect') {
-      const op = node.op as { text?: string } | undefined;
-      const file = node.file as { type?: string; text?: string; expansion?: unknown[] } | undefined;
+    if (node["type"] === 'Redirect') {
+      const op = node["op"] as { text?: string } | undefined;
+      const file = node["file"] as { type?: string; text?: string; expansion?: unknown[] } | undefined;
       const discardsOutput = file?.type === 'Word' && file.text === '/dev/null'
         && !file.expansion?.length;
       return !discardsOutput && typeof op?.text === 'string' && /^(?:>|>>|>\||&>|&>>)$/.test(op.text);

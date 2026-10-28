@@ -33,6 +33,8 @@ import type { AuthCallback, BackendRuntimeUpdate, ChatOptions, PermissionCallbac
  * 4. Allow capability-based UI adaptation
  */
 export interface AgentBackend {
+  /** Redacted subprocess diagnostics when the backend runs out of process. */
+  getRecentStderr?(): string;
   // ============================================================
   // Chat & Lifecycle
   // ============================================================
@@ -50,7 +52,7 @@ export interface AgentBackend {
     message: string,
     attachments?: FileAttachment[],
     options?: ChatOptions
-  ): AsyncGenerator<AgentEvent>;
+  ): AsyncGenerator<AgentEvent, void, unknown>;
 
   /**
    * Abort current query (user stop or internal abort).

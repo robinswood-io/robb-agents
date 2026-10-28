@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { queuedDirectHumanContinuationIndexForId, cancelSourceActivationPending, commitSourceActivationPending, projectLegacyObjectiveForUserTransition, isLegacyHostObjectiveContractEnabled, rehydrateObjectiveEvidence } from '../policy.ts';
 import { canSteerTextPayload } from '../../mid-stream-delivery';
 import { resolveSessionConnection } from '@craft-agent/shared/agent/backend';
@@ -52,7 +54,7 @@ export async function enqueueSessionMessage(input: QueuedMessageInput): Promise<
             throw new Error(`Existing message ${existingMessageId} not found`);
         existing.isQueued = true;
         if (!managed.messageQueue.some(item => item.messageId === existingMessageId)) {
-            managed.messageQueue.unshift({ message, attachments, storedAttachments, options, messageId: existingMessageId });
+            managed.messageQueue.unshift({ message, ...(attachments !== undefined ? { attachments: attachments } : {}), ...(storedAttachments !== undefined ? { storedAttachments: storedAttachments } : {}), ...(options !== undefined ? { options: options } : {}), messageId: existingMessageId });
         }
         sessionOpSettleQueuedAgentDeliveryDispatch(sessionOperationContext, existingMessageId, queuedDispatchToken);
         sessionOperationContext.state.queuedMessageDispatches.delete(sessionId);
@@ -84,13 +86,13 @@ export async function enqueueSessionMessage(input: QueuedMessageInput): Promise<
             role: 'user',
             content: message,
             timestamp: sessionOpMonotonic(sessionOperationContext),
-            attachments: storedAttachments,
-            badges: options?.badges,
+            ...(storedAttachments !== undefined ? { attachments: storedAttachments } : {}),
+            ...(options?.badges !== undefined ? { badges: options?.badges } : {}),
             ...(options?.hidden ? { hidden: true } : {}),
             ...(options?.internalOrigin ? { internalOrigin: options.internalOrigin } : {}),
             ...(options?.internalOrigin?.deliveryId ? {
                 isQueued: true,
-                agentDelivery: { id: options.internalOrigin.deliveryId, status: 'queued' as const, attempts: 0, attachmentsSha256: options.internalOrigin.attachmentsSha256 },
+                agentDelivery: { id: options.internalOrigin.deliveryId, status: 'queued' as const, attempts: 0, ...(options.internalOrigin.attachmentsSha256 !== undefined ? { attachmentsSha256: options.internalOrigin.attachmentsSha256 } : {}) },
             } : {}),
         };
     const steeredObjective = trustedUserInput ? managed.activeObjective
@@ -98,8 +100,8 @@ export async function enqueueSessionMessage(input: QueuedMessageInput): Promise<
             existing: projectLegacyObjectiveForUserTransition(managed),
             messageId: userMessage.id,
             text: message,
-            lifetimeCostUsd: managed.tokenUsage?.costUsd,
-            lifetimeTokens: managed.tokenUsage?.totalTokens,
+            ...(managed.tokenUsage?.costUsd !== undefined ? { lifetimeCostUsd: managed.tokenUsage?.costUsd } : {}),
+            ...(managed.tokenUsage?.totalTokens !== undefined ? { lifetimeTokens: managed.tokenUsage?.totalTokens } : {}),
             delegatedRole: delegatedObjectiveRoleForSession(managed),
         }) : undefined;
     const agent = managed.agent;
@@ -203,11 +205,10 @@ export async function enqueueSessionMessage(input: QueuedMessageInput): Promise<
             ? sessionOperationContext.owner["cancelPendingUserInput"](managed, true) : undefined;
         managed.pendingUserSteers ??= new Map();
         managed.pendingUserSteers.set(steeringMessage, {
-            queued: { message, attachments, storedAttachments, options, messageId: userMessage.id, optimisticMessageId: options?.optimisticMessageId },
-            messageBefore: agent?.getCurrentTurnUserMessage?.() ?? undefined,
-            objectiveBefore: managed.activeObjective,
+            queued: { message, ...(attachments !== undefined ? { attachments: attachments } : {}), ...(storedAttachments !== undefined ? { storedAttachments: storedAttachments } : {}), ...(options !== undefined ? { options: options } : {}), messageId: userMessage.id, ...(options?.optimisticMessageId !== undefined ? { optimisticMessageId: options?.optimisticMessageId } : {}) },
+            ...(managed.activeObjective !== undefined ? { objectiveBefore: managed.activeObjective } : {}),
             objectiveAfter: steeredObjective,
-            recoveryBefore: managed.pendingTurnRecovery,
+            ...(managed.pendingTurnRecovery !== undefined ? { recoveryBefore: managed.pendingTurnRecovery } : {}),
         });
         // The accepted user message and its host-side contract must move
         // together. Queued messages do not supersede the running objective.
@@ -249,12 +250,12 @@ export async function enqueueSessionMessage(input: QueuedMessageInput): Promise<
                     admissionBinding.automaticRecovery = options?.automaticRecovery;
                     admissionBinding.pendingTurnRecovery = managed.pendingTurnRecovery;
                     admissionBinding.recoveryDispatch = managed.pendingTurnRecovery?.recoveryDispatch;
-                    admissionBinding.liveToolFallbackIntent = undefined;
+                    delete admissionBinding.liveToolFallbackIntent;
                 }
                 releaseRebind();
                 void rebindChain.finally(() => {
                     if (admissionBinding.pendingRebind === rebindChain)
-                        admissionBinding.pendingRebind = undefined;
+                        delete admissionBinding.pendingRebind;
                 });
             };
         }
@@ -270,13 +271,13 @@ export async function enqueueSessionMessage(input: QueuedMessageInput): Promise<
     }
     // Emit to UI — 'accepted' iff a steer succeeded; 'queued' otherwise
     // (covers both queue-direct and queue-after-abort paths).
-    sessionOperationContext.owner["sendEvent"]({
+    sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'user_message' }>>({
         type: 'user_message',
         sessionId,
         message: userMessage,
         status: steered ? 'accepted' : 'queued',
         optimisticMessageId: options?.optimisticMessageId
-    }, managed.workspace.id);
+    }), managed.workspace.id);
     if (!steered) {
         // Push for FIFO replay on next onProcessingStopped tick. Same shape
         // for both queue-direct (current turn still running) and

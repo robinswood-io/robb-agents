@@ -1,0 +1,14 @@
+[
+  {
+    "legacy_id": "robinswood-media-contact-enrichment-2026",
+    "name": "Robinswood Media Contact Enrichment 2026",
+    "triggerType": "SchedulerTick",
+    "cron": "15 9-18/2 * * 1-5",
+    "timezone": "Europe/Paris",
+    "enabled": true,
+    "workflow_id": "rbw.robinswood-media-contact-enrichment-2026",
+    "task_queue": "campaigns",
+    "llm_connection": "openrouter",
+    "model": "nvidia/nemotron-3-super-120b-a12b:free"
+  }
+]

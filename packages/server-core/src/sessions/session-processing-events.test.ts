@@ -9,7 +9,7 @@ describe('authoritative processing state publication', () => {
       id: 'workspace', slug: 'workspace', name: 'Fixture', rootPath: '/tmp/processing-events', createdAt: 1,
     })
     const runtime = withSessionOperationsForTest(new SessionManager())
-    runtime['sendEvent'] = (event, workspaceId) => { events.push({ event, workspaceId }) }
+    runtime['sendEvent'] = (event, workspaceId) => { events.push({ event, ...(workspaceId !== undefined ? { workspaceId: workspaceId } : {}) }) }
     runtime['setProcessing'](managed, true)
     runtime['setProcessing'](managed, true)
     runtime['setProcessing'](managed, false)

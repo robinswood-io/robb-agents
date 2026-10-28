@@ -1,3 +1,5 @@
+import type { CoreBackendConfig } from '../../../../../shared/src/agent/backend/types/config.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { createRuntimeIdentityCallbacks } from './agent-runtime-identity-callbacks.ts';
 import { createRuntimeContextCallbacks } from './agent-runtime-context-callbacks.ts';
 import { installRuntimeDebugCallbacks } from './agent-runtime-debug-callbacks.ts';
@@ -105,7 +107,7 @@ async function sessionOpGetOrCreateAgent(sessionOperationContext: SessionOperati
     }
     const externalActionPolicy = workspaceConfig?.defaults?.externalActionPolicy ?? 'confirm';
     if (managed.agent) {
-        sessionOperationContext.owner["applyExternalActionPolicyToRuntime"](managed, managed.pendingExternalActionPolicy ?? externalActionPolicy, 'send-path refresh');
+        sessionOperationContext.owner.applyExternalActionPolicyToRuntime(managed, managed.pendingExternalActionPolicy ?? externalActionPolicy, 'send-path refresh');
     }
     { }
     assertActivePreparation?.();
@@ -117,9 +119,9 @@ async function sessionOpGetOrCreateAgent(sessionOperationContext: SessionOperati
     const ordinaryRouteSnapshot = await sessionOpResolveOrdinaryMissionRouteSnapshot(sessionOperationContext, managed);
     let sealedRouteSnapshot = specializedRouteSnapshot ?? ordinaryRouteSnapshot;
     const availableContext = sealedRouteSnapshot?.context ?? resolveBackendContext({
-        sessionConnectionSlug: managed.llmConnection,
-        workspaceDefaultConnectionSlug: workspaceConfig?.defaults?.defaultLlmConnection,
-        managedModel: managed.model,
+        ...(managed.llmConnection !== undefined ? { sessionConnectionSlug: managed.llmConnection } : {}),
+        ...(workspaceConfig?.defaults?.defaultLlmConnection !== undefined ? { workspaceDefaultConnectionSlug: workspaceConfig?.defaults?.defaultLlmConnection } : {}),
+        ...(managed.model !== undefined ? { managedModel: managed.model } : {}),
     });
     if (costTurn && !hasImmutableMissionRoute(managed)) {
         const policy = resolveAgentCostControlPolicy(workspaceConfig?.costControl);
@@ -131,7 +133,7 @@ async function sessionOpGetOrCreateAgent(sessionOperationContext: SessionOperati
     // Refresh runtime config in-place when the connection has drifted since
     // the agent was created. May null out `managed.agent` if the in-place
     // refresh fails, in which case the create branch below rebuilds it.
-    await sessionOperationContext.owner["tryRefreshAgentRuntime"](managed, 'send-path refresh', assertActivePreparation);
+    await sessionOperationContext.owner.tryRefreshAgentRuntime(managed, 'send-path refresh', assertActivePreparation);
     assertActivePreparation?.();
     // Refresh the sealed snapshot after every await-capable reconciliation.
     // The backend receives this exact frozen connection and revalidates the
@@ -139,9 +141,9 @@ async function sessionOpGetOrCreateAgent(sessionOperationContext: SessionOperati
     sealedRouteSnapshot = await sessionOpResolveSpecializedMissionRouteSnapshot(sessionOperationContext, managed)
         ?? await sessionOpResolveOrdinaryMissionRouteSnapshot(sessionOperationContext, managed);
     const backendContext = sealedRouteSnapshot?.context ?? resolveBackendContext({
-        sessionConnectionSlug: managed.llmConnection,
-        workspaceDefaultConnectionSlug: workspaceConfig?.defaults?.defaultLlmConnection,
-        managedModel: managed.model,
+        ...(managed.llmConnection !== undefined ? { sessionConnectionSlug: managed.llmConnection } : {}),
+        ...(workspaceConfig?.defaults?.defaultLlmConnection !== undefined ? { workspaceDefaultConnectionSlug: workspaceConfig?.defaults?.defaultLlmConnection } : {}),
+        ...(managed.model !== undefined ? { managedModel: managed.model } : {}),
     });
     const connection = backendContext.connection;
     const sigInput = {
@@ -180,7 +182,7 @@ async function sessionOpGetOrCreateAgent(sessionOperationContext: SessionOperati
         // The SDK subprocess reads CRAFT_SESSION_DIR to write tool-metadata.json;
         // the main process reads it via toolMetadataStore.setSessionDir().
         const sessionDirForMetadata = getSessionStoragePath(persistenceRootFor(managed), managed.id);
-        process.env.CRAFT_SESSION_DIR = sessionDirForMetadata;
+        process.env["CRAFT_SESSION_DIR"] = sessionDirForMetadata;
         toolMetadataStore.setSessionDir(sessionDirForMetadata);
         // Set up agentReady promise so title generation can await agent creation
         managed.agentReady = new Promise<void>(r => { managed.agentReadyResolve = r; });
@@ -228,7 +230,7 @@ async function sessionOpGetOrCreateAgent(sessionOperationContext: SessionOperati
         // ============================================================
         // Common session + callback config (identical for all backends)
         // ============================================================
-        const sessionConfig = {
+        const sessionConfig = omitUndefined<NonNullable<CoreBackendConfig['session']>>({
             id: managed.id,
             workspaceRootPath: managed.workspace.rootPath,
             sdkSessionId: managed.sdkSessionId,
@@ -247,7 +249,7 @@ async function sessionOpGetOrCreateAgent(sessionOperationContext: SessionOperati
             previousPermissionMode: managed.previousPermissionMode,
             projectId: managed.projectId,
             executionIsolation: managed.executionIsolation,
-        };
+        });
         let createdAgent: AgentInstance | undefined;
         const isCurrentRuntime = () => !!createdAgent && managed.agent === createdAgent;
         const { onSdkSessionIdUpdate, onSdkSessionIdCleared, onBranchForkInvalidated } = createRuntimeIdentityCallbacks(sessionOperationContext, managed, isCurrentRuntime);
@@ -255,12 +257,12 @@ async function sessionOpGetOrCreateAgent(sessionOperationContext: SessionOperati
         // ============================================================
         // Construct backend via factory
         // ============================================================
-        const enable1MContext = await sessionOperationContext.owner["loadAgentContextWindowPreference"]();
+        const enable1MContext = await sessionOperationContext.owner.loadAgentContextWindowPreference();
         assertActivePreparation?.();
         managed.agent = createBackendFromResolvedContext({
             context: backendContext,
             hostRuntime: buildBackendHostRuntimeContext(),
-            coreConfig: {
+            coreConfig: omitUndefined<CoreBackendConfig>({
                 workspace: managed.workspace,
                 isModelRoutePinned: () => managed.modelRoutePinned === true,
                 externalActionPolicy,
@@ -274,8 +276,8 @@ async function sessionOpGetOrCreateAgent(sessionOperationContext: SessionOperati
                 beforeProviderExecution: async () => {
                     await sessionOpAssertMissionProviderExecution(sessionOperationContext, managed);
                 },
-                missionCapabilityLock: managed.missionCapabilityLock,
-                sealedSkillPackages: managed.missionSealedSkillPackages,
+                ...(managed.missionCapabilityLock !== undefined ? { missionCapabilityLock: managed.missionCapabilityLock } : {}),
+                ...(managed.missionSealedSkillPackages !== undefined ? { sealedSkillPackages: managed.missionSealedSkillPackages } : {}),
                 ...(sealedRouteSnapshot ? {
                     sealedLlmConnection: sealedRouteSnapshot.connection,
                     ...(sealedRouteSnapshot.credentialBinding ? {
@@ -302,7 +304,7 @@ async function sessionOpGetOrCreateAgent(sessionOperationContext: SessionOperati
                 skipConfigWatcher: true, // Server owns workspace-level ConfigWatcher — don't duplicate in agents
                 automationSystem: sessionOperationContext.state.automationSystems.get(managed.workspace.rootPath),
                 systemPromptPreset: managed.systemPromptPreset,
-                debugMode: _platform?.isDebugMode ? { enabled: true, logFilePath: _platform.getLogFilePath?.() } : undefined,
+                debugMode: _platform?.isDebugMode ? omitUndefined({ enabled: true, logFilePath: _platform.getLogFilePath?.() }) : undefined,
                 enable1MContext,
                 // Image resize callback — prevents oversized images from entering conversation history
                 onImageResize: (filePath: string, maxSizeBytes: number): Promise<string | null> => {
@@ -337,7 +339,7 @@ async function sessionOpGetOrCreateAgent(sessionOperationContext: SessionOperati
                     apiServers,
                     enabledSlugs,
                 },
-            },
+            }),
         }) as AgentInstance;
         createdAgent = managed.agent;
         sessionLog.info(`Created ${provider} agent for session ${managed.id} (model: ${backendContext.resolvedModel})${managed.sdkSessionId ? ' (resuming)' : ''}`);

@@ -17,7 +17,7 @@ export function failMissionForRuntimeLimit(transportOwner: MissionController, mi
             runtime.dispatchId !== attempt.dispatchId) {
             throw new Error(`Runtime-limit telemetry does not match active work item "${attempt.workItemId}"`);
         }
-        events.push(...transportOwner["telemetryEvent"](attempt.workItemId, attempt.dispatchId, attempt.telemetry));
+        events.push(...transportOwner.telemetryEvent(attempt.workItemId, attempt.dispatchId, attempt.telemetry));
     }
     for (const runtime of runtimeItems(snapshot)) {
         if (['accepted', 'rejected', 'superseded', 'blocked', 'cancelled'].includes(runtime.status))
@@ -49,7 +49,7 @@ export function failWorkItemAttempt(transportOwner: MissionController, missionId
     const canRetry = failure.retryable && !ambiguousMutation && runtime.definition.effect === 'read' &&
         runtime.attempt < snapshot.spec.policy.maxTechnicalAttempts;
     const events: MissionEvent[] = [
-        ...transportOwner["telemetryEvent"](workItemId, dispatchId, failure.telemetry),
+        ...transportOwner.telemetryEvent(workItemId, dispatchId, failure.telemetry),
         transportOwner["event"]({
             kind: 'work-item-attempt-failed',
             workItemId,
@@ -79,7 +79,7 @@ export function failWorkItemAttempt(transportOwner: MissionController, missionId
                 : failure.reason,
         }));
     }
-    transportOwner["preservePause"](missionId, snapshot, events);
+    transportOwner.preservePause(missionId, snapshot, events);
     return transportOwner["commit"](missionId, snapshot.revision, events);
 }
 
@@ -97,15 +97,15 @@ export function submitWorkItem(transportOwner: MissionController, missionId: str
     const missing = [...required].filter((id) => !supplied.has(id));
     if (missing.length > 0)
         throw new Error(`Missing required evidence: ${missing.join(', ')}`);
-    if (transportOwner["resolveSubmissionEvidence"]) {
-        submission = WorkSubmissionSchema.parse(transportOwner["resolveSubmissionEvidence"](runtime.definition, submission));
+    if (transportOwner.resolveSubmissionEvidence) {
+        submission = WorkSubmissionSchema.parse(transportOwner.resolveSubmissionEvidence(runtime.definition, submission));
     }
     const events: MissionEvent[] = [
-        ...transportOwner["telemetryEvent"](workItemId, runtime.dispatchId!, telemetry),
+        ...transportOwner.telemetryEvent(workItemId, runtime.dispatchId!, telemetry),
         transportOwner["event"]({ kind: 'work-item-submitted', workItemId, sessionId, submission }),
     ];
-    transportOwner["addReadyReviews"](missionId, events);
-    transportOwner["preservePause"](missionId, snapshot, events);
+    transportOwner.addReadyReviews(missionId, events);
+    transportOwner.preservePause(missionId, snapshot, events);
     return transportOwner["commit"](missionId, snapshot.revision, events);
 }
 
@@ -118,13 +118,13 @@ export function recordVerdict(transportOwner: MissionController, missionId: stri
         throw new Error(`Review "${reviewWorkItemId}" is not running in session "${sessionId}"`);
     }
     const verdict = StructuredMissionVerdictSchema.parse(input);
-    transportOwner["assertVerdictContract"](snapshot, review.definition, verdict);
+    transportOwner.assertVerdictContract(snapshot, review.definition, verdict);
     const events: MissionEvent[] = [
-        ...transportOwner["telemetryEvent"](reviewWorkItemId, review.dispatchId!, telemetry),
+        ...transportOwner.telemetryEvent(reviewWorkItemId, review.dispatchId!, telemetry),
         transportOwner["event"]({ kind: 'verdict-recorded', workItemId: reviewWorkItemId, sessionId, verdict }),
     ];
     if (verdict.result === 'pass') {
-        transportOwner["applyPass"](missionId, snapshot, review.definition, events);
+        transportOwner.applyPass(missionId, snapshot, review.definition, events);
     }
     else if (verdict.result === 'inconclusive') {
         events.push(transportOwner["event"]({ kind: 'work-item-status-changed', workItemId: reviewWorkItemId, status: 'blocked', reason: verdict.summary }));
@@ -134,8 +134,8 @@ export function recordVerdict(transportOwner: MissionController, missionId: stri
         events.push(transportOwner["event"]({ kind: 'mission-status-changed', status: 'blocked', reason: verdict.summary }));
     }
     else {
-        transportOwner["applyFailure"](missionId, snapshot, review.definition, verdict, events);
+        transportOwner.applyFailure(missionId, snapshot, review.definition, verdict, events);
     }
-    transportOwner["preservePause"](missionId, snapshot, events);
+    transportOwner.preservePause(missionId, snapshot, events);
     return transportOwner["commit"](missionId, snapshot.revision, events);
 }

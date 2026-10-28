@@ -20,7 +20,7 @@ import {
 // Mode Icon (same SVG pattern as ActiveOptionBadges.PermissionModeIcon)
 // ============================================================================
 
-function ModeIcon({ mode, className }: { mode: PermissionMode; className?: string }) {
+function ModeIcon({ mode, className }: { mode: PermissionMode; className?: string | undefined }) {
   const config = PERMISSION_MODE_CONFIG[mode]
   return (
     <svg
@@ -70,7 +70,7 @@ const MODE_LABEL_KEYS: Record<PermissionMode, { name: string; short: string; des
 
 interface CompactPermissionModeSelectorProps {
   permissionMode: PermissionMode
-  onPermissionModeChange?: (mode: PermissionMode) => void
+  onPermissionModeChange?: ((mode: PermissionMode) => void) | undefined
 }
 
 export function CompactPermissionModeSelector({

@@ -190,7 +190,7 @@ describe('privileged permission lifecycle cleanup', () => {
     expect(h.internals.rejectPermissionRequestOutsideActiveGeneration(h.managed, {
       requestId: 'request-old-objective',
       toolUseId: 'call-old-objective',
-    }, h.managed.agent)).toBe(true)
+    }, requiredTestValue(h.managed.agent))).toBe(true)
     expect(h.manager.respondToPermission(
       h.managed.id,
       'request-old-objective',
@@ -213,8 +213,8 @@ describe('privileged permission lifecycle cleanup', () => {
       toolExecuted: false,
       isError: true,
     })
-    expect(h.events.some(event => event.type === 'permission_request'
-      && (event.request as { requestId?: string } | undefined)?.requestId === 'request-old-objective')).toBe(false)
+    expect(h.events.some(event => event["type"] === 'permission_request'
+      && (event["request"] as { requestId?: string } | undefined)?.requestId === 'request-old-objective')).toBe(false)
   })
 
   it('lets an on-time UI response win atomically over the later TTL callback', () => {
@@ -251,15 +251,15 @@ describe('privileged permission lifecycle cleanup', () => {
     expect(h.manager.respondToPermission('session-a', 'request-a', false, false)).toBe(true)
     await tick()
     expect(h.respondToPermission).toHaveBeenCalledWith('request-a', false, false)
-    expect(h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')).toMatchObject({
+    expect<unknown>(h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')).toMatchObject({
       toolStatus: 'error',
       toolExecuted: false,
       isError: true,
-      toolResult: expect.stringContaining('not executed'),
+      toolResult: (expect.stringContaining('not executed') as unknown),
     })
     const deniedReceipt = h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')?.toolResult
-    expect(h.events.filter(event => event.type === 'tool_result'
-      && event.toolUseId === 'gmail-call-a')).toHaveLength(1)
+    expect(h.events.filter(event => event["type"] === 'tool_result'
+      && event["toolUseId"] === 'gmail-call-a')).toHaveLength(1)
 
     // Pi reports a denied pre-tool hook as an ordinary failed execution. That
     // late envelope must not replace the stronger host-observed non-execution
@@ -283,8 +283,8 @@ describe('privileged permission lifecycle cleanup', () => {
     expect(deniedTool?.toolExecuted).toBe(false)
     expect(deniedTool?.isError).toBe(true)
     expect(deniedTool?.toolResult).toBe(deniedReceipt)
-    expect(h.events.filter(event => event.type === 'tool_result'
-      && event.toolUseId === 'gmail-call-a')).toHaveLength(1)
+    expect(h.events.filter(event => event["type"] === 'tool_result'
+      && event["toolUseId"] === 'gmail-call-a')).toHaveLength(1)
     await tick()
     expect(h.flushSession).toHaveBeenCalledWith('session-a')
     expect(h.managed.messages.some(message => message.role === 'assistant'
@@ -304,17 +304,17 @@ describe('privileged permission lifecycle cleanup', () => {
     expect(h.manager.respondToPermission('session-a', 'request-a', false, false)).toBe(true)
     await start
     await tick()
-    expect(h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')).toMatchObject({
+    expect<unknown>(h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')).toMatchObject({
       toolStatus: 'error',
       toolExecuted: false,
       isError: true,
-      toolResult: expect.stringContaining('not executed'),
+      toolResult: (expect.stringContaining('not executed') as unknown),
     })
 
     expect(h.respondToPermission).toHaveBeenCalledWith('request-a', false, false)
     expect(h.managed.messages.filter(message => message.toolUseId === 'gmail-call-a')).toHaveLength(1)
-    expect(h.events.some(event => event.type === 'tool_start'
-      && event.toolUseId === 'gmail-call-a')).toBe(false)
+    expect(h.events.some(event => event["type"] === 'tool_start'
+      && event["toolUseId"] === 'gmail-call-a')).toBe(false)
   })
 
   it('flushes stopped permission receipts before releasing the provider wait', async () => {
@@ -340,7 +340,7 @@ describe('privileged permission lifecycle cleanup', () => {
     const h = installActivePermissionWait()
     const captureEvent = h.internals.sendEvent
     h.internals.sendEvent = event => {
-      if (event.type === 'tool_result') throw new Error('renderer gone')
+      if (event["type"] === 'tool_result') throw new Error('renderer gone')
       captureEvent(event)
     }
 
@@ -368,13 +368,13 @@ describe('privileged permission lifecycle cleanup', () => {
       requestId: 'shutdown-flush-retry',
       toolName: 'gmail_send',
       toolUseId: 'gmail-call-a',
-    }, h.managed.agent)
+    }, requiredTestValue(h.managed.agent))
     await tick()
 
     expect(flushSession).toHaveBeenCalledTimes(1)
     expect(h.enqueuePersist).toHaveBeenCalledTimes(2)
     expect(h.respondToPermission).toHaveBeenCalledWith('shutdown-flush-retry', false, false)
-    await h.internals.flushSession()
+    await h.internals.flushSession(h.managed.id)
     expect(flushSession).toHaveBeenCalledTimes(2)
   })
 
@@ -391,7 +391,7 @@ describe('privileged permission lifecycle cleanup', () => {
       requestId: 'shutdown-late',
       toolName: 'gmail_send',
       toolUseId: 'gmail-call-a',
-    }, h.managed.agent)
+    }, requiredTestValue(h.managed.agent))
 
     // The denial capability is registered synchronously, before persistence.
     // A provider result racing the durability fence cannot overwrite it.
@@ -403,11 +403,11 @@ describe('privileged permission lifecycle cleanup', () => {
       isError: false,
       executed: true,
     }, 4)
-    expect(h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')).toMatchObject({
+    expect<unknown>(h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')).toMatchObject({
       toolStatus: 'error',
       toolExecuted: false,
       isError: true,
-      toolResult: expect.stringContaining('not executed'),
+      toolResult: (expect.stringContaining('not executed') as unknown),
     })
     expect(h.respondToPermission).not.toHaveBeenCalled()
     expect(h.internals.flushSession).toHaveBeenCalledWith('session-a')
@@ -415,8 +415,8 @@ describe('privileged permission lifecycle cleanup', () => {
     flushGate.resolve()
     await tick()
     expect(h.respondToPermission).toHaveBeenCalledWith('shutdown-late', false, false)
-    expect(h.events.filter(event => event.type === 'tool_result'
-      && event.toolUseId === 'gmail-call-a')).toHaveLength(1)
+    expect(h.events.filter(event => event["type"] === 'tool_result'
+      && event["toolUseId"] === 'gmail-call-a')).toHaveLength(1)
   })
 
   it('records non-execution before orderly shutdown disposes a waiting runtime', async () => {
@@ -426,11 +426,11 @@ describe('privileged permission lifecycle cleanup', () => {
 
     expect(h.respondToPermission).toHaveBeenCalledWith('request-a', false, false)
     expect(sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.size).toBe(0)
-    expect(h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')).toMatchObject({
+    expect<unknown>(h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')).toMatchObject({
       toolStatus: 'error',
       toolExecuted: false,
       isError: true,
-      toolResult: expect.stringContaining('not executed'),
+      toolResult: (expect.stringContaining('not executed') as unknown),
     })
   })
 });

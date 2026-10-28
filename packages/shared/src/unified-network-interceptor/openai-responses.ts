@@ -1,3 +1,5 @@
+import { parseJsonObject } from '../utils/json.ts';
+import { isUnknownArray } from '../utils/json.ts';
 /**
  * Unified fetch interceptor for all AI API requests (Anthropic + OpenAI format).
  *
@@ -52,23 +54,23 @@ export function createOpenAiResponsesSseStrippingStream(): TransformStream<Uint8
 
     let data: Record<string, unknown>;
     try {
-      data = JSON.parse(dataStr);
+      data = parseJsonObject(dataStr);
     } catch {
       emitSseLine(dataStr, controller);
       return;
     }
 
-    const eventType = data.type;
+    const eventType = data["type"];
     if (eventType === 'response.function_call_arguments.done') {
-      const callId = typeof data.call_id === 'string' ? data.call_id : undefined;
-      const argsStr = typeof data.arguments === 'string' ? data.arguments : undefined;
+      const callId = typeof data["call_id"] === 'string' ? data["call_id"] : undefined;
+      const argsStr = typeof data["arguments"] === 'string' ? data["arguments"] : undefined;
       if (callId && argsStr) {
         try {
           const parsed = JSON.parse(argsStr) as Record<string, unknown>;
           captureMetadataFromInput(callId, 'response:function_call', parsed);
-          delete parsed._intent;
-          delete parsed._displayName;
-          data.arguments = JSON.stringify(parsed);
+          delete parsed["_intent"];
+          delete parsed["_displayName"];
+          data["arguments"] = JSON.stringify(parsed);
         } catch {
           // pass through unchanged
         }
@@ -78,7 +80,7 @@ export function createOpenAiResponsesSseStrippingStream(): TransformStream<Uint8
     }
 
     if (eventType === 'response.output_item.done') {
-      const item = data.item as {
+      const item = data["item"] as {
         type?: string;
         call_id?: string;
         name?: string;
@@ -92,8 +94,8 @@ export function createOpenAiResponsesSseStrippingStream(): TransformStream<Uint8
           try {
             const parsed = JSON.parse(item.arguments) as Record<string, unknown>;
             captureMetadataFromInput(toolId, toolName, parsed);
-            delete parsed._intent;
-            delete parsed._displayName;
+            delete parsed["_intent"];
+            delete parsed["_displayName"];
             item.arguments = JSON.stringify(parsed);
           } catch {
             // pass through unchanged
@@ -145,7 +147,7 @@ export const openAiResponsesAdapter: ApiAdapter = {
   },
 
   addMetadataToTools(body: Record<string, unknown>): Record<string, unknown> {
-    const tools = body.tools as Array<{
+    const tools = body["tools"] as Array<{
       type?: string;
       name?: string;
       parameters?: {
@@ -155,7 +157,7 @@ export const openAiResponsesAdapter: ApiAdapter = {
       };
     }> | undefined;
 
-    if (!tools || !Array.isArray(tools)) return body;
+    if (!tools || !isUnknownArray(tools)) return body;
 
     const richDescriptions = isRichToolDescriptionsEnabled();
     let modifiedCount = 0;
@@ -170,8 +172,8 @@ export const openAiResponsesAdapter: ApiAdapter = {
       const updatedSchema = injectMetadataIntoToolSchema(params);
       params.properties = updatedSchema.properties;
       params.required = updatedSchema.required;
-      if ((params as Record<string, unknown>).additionalProperties === false) {
-        delete (params as Record<string, unknown>).additionalProperties;
+      if ((params as Record<string, unknown>)["additionalProperties"] === false) {
+        delete (params as Record<string, unknown>)["additionalProperties"];
       }
       modifiedCount++;
     }
@@ -184,8 +186,8 @@ export const openAiResponsesAdapter: ApiAdapter = {
   },
 
   injectMetadataIntoHistory(body: Record<string, unknown>): Record<string, unknown> {
-    const input = body.input as Array<Record<string, unknown>> | undefined;
-    if (!Array.isArray(input)) return body;
+    const input = body["input"] as Array<Record<string, unknown>> | undefined;
+    if (!isUnknownArray(input)) return body;
 
     // Pass 1: repair structurally-broken history before metadata injection.
     // Real-world cause: some Pi SDK code paths (notably DeepSeek + custom
@@ -199,11 +201,11 @@ export const openAiResponsesAdapter: ApiAdapter = {
     let injectedCount = 0;
 
     for (const entry of input) {
-      if (entry.type !== 'function_call' || typeof entry.call_id !== 'string' || typeof entry.arguments !== 'string') continue;
+      if (entry["type"] !== 'function_call' || typeof entry["call_id"] !== 'string' || typeof entry["arguments"] !== 'string') continue;
 
       let args: Record<string, unknown>;
       try {
-        args = JSON.parse(entry.arguments) as Record<string, unknown>;
+        args = JSON.parse(entry["arguments"]) as Record<string, unknown>;
       } catch {
         continue;
       }
@@ -212,15 +214,15 @@ export const openAiResponsesAdapter: ApiAdapter = {
       const hasDisplayName = '_displayName' in args;
       if (hasIntent && hasDisplayName) continue;
 
-      const stored = toolMetadataStore.get(entry.call_id);
+      const stored = toolMetadataStore.get(entry["call_id"]);
       if (!stored) continue;
 
       const newArgs: Record<string, unknown> = {};
-      if (!hasDisplayName && stored.displayName) newArgs._displayName = stored.displayName;
-      if (!hasIntent && stored.intent) newArgs._intent = stored.intent;
+      if (!hasDisplayName && stored.displayName) newArgs["_displayName"] = stored.displayName;
+      if (!hasIntent && stored.intent) newArgs["_intent"] = stored.intent;
       if (Object.keys(newArgs).length > 0) {
         Object.assign(newArgs, args);
-        entry.arguments = JSON.stringify(newArgs);
+        entry["arguments"] = JSON.stringify(newArgs);
         injectedCount++;
       }
     }

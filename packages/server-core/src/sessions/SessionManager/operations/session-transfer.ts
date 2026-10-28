@@ -1,3 +1,4 @@
+import {omitUndefined, setOptional } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { persistenceRootFor } from '../policy.ts';
 import { setPermissionMode, hydratePreviousPermissionMode, generateConversationSummary } from '@craft-agent/shared/agent';
@@ -44,8 +45,8 @@ async function sessionOpGenerateRemoteTransferSummary(sessionOperationContext: S
     const wsConfig = loadWorkspaceConfig(workspaceRootPath);
     const defaultModel = wsConfig?.defaults?.model;
     const backendContext = resolveBackendContext({
-        sessionConnectionSlug: managed.llmConnection,
-        workspaceDefaultConnectionSlug: wsConfig?.defaults?.defaultLlmConnection,
+        ...(managed.llmConnection !== undefined ? { sessionConnectionSlug: managed.llmConnection } : {}),
+        ...(wsConfig?.defaults?.defaultLlmConnection !== undefined ? { workspaceDefaultConnectionSlug: wsConfig?.defaults?.defaultLlmConnection } : {}),
         managedModel: managed.model || defaultModel,
     });
     const persistedGitBashPath = getGitBashPath();
@@ -65,18 +66,18 @@ async function sessionOpGenerateRemoteTransferSummary(sessionOperationContext: S
                 workspaceRootPath,
                 createdAt: Date.now(),
                 lastUsedAt: Date.now(),
-                workingDirectory: managed.workingDirectory,
-                sdkCwd: managed.sdkCwd,
-                model: managed.model,
-                llmConnection: managed.llmConnection,
-                permissionMode: managed.permissionMode,
-                previousPermissionMode: managed.previousPermissionMode,
+                ...(managed.workingDirectory !== undefined ? { workingDirectory: managed.workingDirectory } : {}),
+                ...(managed.sdkCwd !== undefined ? { sdkCwd: managed.sdkCwd } : {}),
+                ...(managed.model !== undefined ? { model: managed.model } : {}),
+                ...(managed.llmConnection !== undefined ? { llmConnection: managed.llmConnection } : {}),
+                ...(managed.permissionMode !== undefined ? { permissionMode: managed.permissionMode } : {}),
+                ...(managed.previousPermissionMode !== undefined ? { previousPermissionMode: managed.previousPermissionMode } : {}),
             },
-            thinkingLevel: managed.thinkingLevel,
+            ...(managed.thinkingLevel !== undefined ? { thinkingLevel: managed.thinkingLevel } : {}),
             envOverrides,
             isHeadless: true,
         },
-        providerOptions: { piAuthProvider: backendContext.connection?.piAuthProvider },
+        providerOptions: { ...(backendContext.connection?.piAuthProvider !== undefined ? { piAuthProvider: backendContext.connection?.piAuthProvider } : {}) },
     });
     const boundedMessages = selectTransferSummaryMessages(messages);
     const extractiveFallback = buildExtractiveTransferSummary(messages);
@@ -135,7 +136,7 @@ async function sessionOpPerformExportRemoteSessionTransfer(sessionOperationConte
         sessionLog.warn(`[dispatch] Failed to generate remote transfer summary for ${sessionId}`);
         return null;
     }
-    return {
+    return omitUndefined<RemoteSessionTransferPayload>({
         sourceSessionId: managed.id,
         name: managed.name,
         sessionStatus: managed.sessionStatus,
@@ -144,7 +145,7 @@ async function sessionOpPerformExportRemoteSessionTransfer(sessionOperationConte
         summary,
         trust: 'external-untrusted',
         secretLikeTextRedacted: true,
-    };
+    });
 }
 
 async function sessionOpImportRemoteSessionTransfer(sessionOperationContext: SessionOperationContext, workspaceId: string, payload: RemoteSessionTransferPayload): Promise<ImportRemoteSessionTransferResult> {
@@ -155,7 +156,7 @@ async function sessionOpPerformImportRemoteSessionTransfer(sessionOperationConte
     if (!payload || typeof payload !== 'object' || typeof payload.summary !== 'string' || !payload.summary.trim()) {
         throw new Error('Invalid remote session transfer payload');
     }
-    const session = await sessionOperationContext.owner["performCreateSession"](workspaceId, {
+    const session = await sessionOperationContext.owner.performCreateSession(workspaceId, {
         name: payload.name,
         // Remote metadata is untrusted and can never elevate execution rights.
         permissionMode: 'safe',
@@ -265,17 +266,17 @@ async function sessionOpPerformImportSession(sessionOperationContext: SessionOpe
     // Create session directory with all subdirectories
     const sessionDir = ensureSessionDir(workspaceRootPath, sessionId);
     // Build the stored session from bundle data
-    const storedSession: StoredSession = {
+    const storedSession: StoredSession = omitUndefined<StoredSession>({
         id: sessionId,
         workspaceRootPath,
         // Portable bundles are unsigned. Never resume a provider-native session
         // selected by an importing client, because that would be an SDK-session IDOR.
-        sdkSessionId: undefined,
+
         // Always regenerate sdkCwd for the target workspace.
         // The source sdkCwd points to a path on the originating server
         // which doesn't exist here (cross-server transfer).
         sdkCwd: getSessionStoragePath(workspaceRootPath, sessionId),
-        name: header.name,
+        ...(header.name !== undefined ? { name: header.name } : {}),
         createdAt: header.createdAt,
         lastUsedAt: Date.now(),
         ...importedAppProvenance,
@@ -308,22 +309,22 @@ async function sessionOpPerformImportSession(sessionOperationContext: SessionOpe
         messages: bundle.session.messages.map(message => message.internalOrigin?.kind === 'user-input'
             ? { ...message, isQueued: false } : message),
         tokenUsage: header.tokenUsage ?? DEFAULT_TOKEN_USAGE,
-    };
+    });
     if (bundle.branchInfo) {
         warnings.push('Unsigned provider-native branch metadata was ignored for security');
     }
     // Fork-specific: clear sharing state and attempt resume-first strategy
     if (mode === 'fork') {
-        storedSession.sharedUrl = undefined;
-        storedSession.sharedId = undefined;
+        delete storedSession.sharedUrl;
+        delete storedSession.sharedId;
         // Provider state is not portable. Import the transcript with the target
         // workspace's explicit defaults; never search for a similar connection.
-        storedSession.sdkSessionId = undefined;
-        storedSession.llmConnection = undefined;
+        delete storedSession.sdkSessionId;
+        delete storedSession.llmConnection;
         storedSession.connectionLocked = false;
         // Clear working directory — the source path won't exist on a different server.
         // The user can set a new cwd after the session is transferred.
-        storedSession.workingDirectory = undefined;
+        delete storedSession.workingDirectory;
     }
     // Check source compatibility (before writing JSONL so fixes are persisted)
     if (storedSession.enabledSourceSlugs?.length) {
@@ -336,8 +337,8 @@ async function sessionOpPerformImportSession(sessionOperationContext: SessionOpe
         }
     }
     if (storedSession.parentSessionId === sessionId)
-        storedSession.parentSessionId = undefined;
-    storedSession.labels = sanitizeParentSessionLabels(sessionId, storedSession.parentSessionId, storedSession.labels);
+        delete storedSession.parentSessionId;
+    setOptional(storedSession, "labels", sanitizeParentSessionLabels(sessionId, storedSession.parentSessionId, storedSession.labels));
     // Write JSONL file (after compatibility checks so remapped values are persisted)
     const sessionFile = getSessionFilePath(workspaceRootPath, sessionId);
     sessionLog.info(`[import] Writing JSONL: ${sessionFile} (llmConnection=${storedSession.llmConnection ?? 'default'}, messages=${storedSession.messages.length})`);
@@ -363,17 +364,17 @@ async function sessionOpPerformImportSession(sessionOperationContext: SessionOpe
     const automationSystem = sessionOperationContext.state.automationSystems.get(workspaceRootPath);
     if (automationSystem) {
         automationSystem.setInitialSessionMetadata(sessionId, {
-            permissionMode: storedSession.permissionMode,
-            labels: managed.labels,
-            isFlagged: storedSession.isFlagged,
-            sessionStatus: storedSession.sessionStatus,
-            sessionName: managed.name,
+            ...(storedSession.permissionMode !== undefined ? { permissionMode: storedSession.permissionMode } : {}),
+            ...(managed.labels !== undefined ? { labels: managed.labels } : {}),
+            ...(storedSession.isFlagged !== undefined ? { isFlagged: storedSession.isFlagged } : {}),
+            ...(storedSession.sessionStatus !== undefined ? { sessionStatus: storedSession.sessionStatus } : {}),
+            ...(managed.name !== undefined ? { sessionName: managed.name } : {}),
         });
     }
     // Built by hand (not via createSession), so announce it explicitly.
     sessionOperationContext.owner.notifySessionCreated(workspaceId, sessionId);
     sessionLog.info(`[import] Complete: sessionId=${sessionId}, transferredSummary=${managed.transferredSessionSummary ? `${managed.transferredSessionSummary.length} chars` : 'none'}, applied=${managed.transferredSessionSummaryApplied}, warnings=${warnings.length > 0 ? warnings.join('; ') : 'none'}`);
-    return { sessionId, warnings: warnings.length > 0 ? warnings : undefined };
+    return omitUndefined({ sessionId, warnings: warnings.length > 0 ? warnings : undefined });
 }
 
 export { sessionOpGenerateRemoteTransferSummary as generateRemoteTransferSummary };

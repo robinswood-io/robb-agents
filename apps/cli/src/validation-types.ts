@@ -11,34 +11,34 @@ export interface ValidateStep {
 
 export interface ValidateContext {
   /** Pre-existing workspace directory (from --workspace-dir) */
-  workspaceDir?: string
+  workspaceDir?: string | undefined
   /** Custom endpoint URL (from --base-url) */
-  baseUrl?: string
+  baseUrl?: string | undefined
   /** API key override (from --api-key) */
-  apiKey?: string
+  apiKey?: string | undefined
   /** Provider hint (from --provider, default 'anthropic') */
-  provider?: string
-  workspaceId?: string
-  workspaceRootPath?: string
-  createdWorkspace?: boolean
-  createdSessionId?: string
-  createdSourceSlug?: string
-  createdSkillSlug?: string
-  createdAutomation?: boolean
-  automationTestSessionId?: string
+  provider?: string | undefined
+  workspaceId?: string | undefined
+  workspaceRootPath?: string | undefined
+  createdWorkspace?: boolean | undefined
+  createdSessionId?: string | undefined
+  createdSourceSlug?: string | undefined
+  createdSkillSlug?: string | undefined
+  createdAutomation?: boolean | undefined
+  automationTestSessionId?: string | undefined
   /** Session created by automation that should be blocked by failing condition (if bug occurs) */
-  automationBlockedSessionId?: string
-  automationName?: string
-  automationBlockedName?: string
-  createdLabelId?: string
+  automationBlockedSessionId?: string | undefined
+  automationName?: string | undefined
+  automationBlockedName?: string | undefined
+  createdLabelId?: string | undefined
   /** Backup of existing automations.json before overwrite (undefined = didn't exist) */
-  automationsJsonBackup?: string | null
+  automationsJsonBackup?: string | null | undefined
   /** Backup of existing automations-history.jsonl before overwrite (undefined = didn't exist) */
-  automationsHistoryBackup?: string | null
-  branchedSessionId?: string
+  automationsHistoryBackup?: string | null | undefined
+  branchedSessionId?: string | undefined
   /** Label ID for e2e-test label created for session tool validation */
-  e2eTestLabelId?: string
-  onEvent?: (ev: { type: string; [key: string]: unknown }) => void
+  e2eTestLabelId?: string | undefined
+  onEvent?: ((ev: { type: string; [key: string]: unknown }) => void) | undefined
 }
 
 /** Minimal shapes for RPC responses used in validation steps. */

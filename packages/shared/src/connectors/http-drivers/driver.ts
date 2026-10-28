@@ -103,7 +103,7 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
   }
 
   async invoke(operationId: string, input: Record<string, unknown>): Promise<Record<string, unknown>> {
-    if (input.contractProbe === true) {
+    if (input["contractProbe"] === true) {
       const operation = this.staticOperation(operationId)
       return {
         operationId,

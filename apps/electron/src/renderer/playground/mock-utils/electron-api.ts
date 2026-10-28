@@ -25,7 +25,7 @@ export const mockElectronAPI = {
     return null // Let FileReader API handle it
   },
 
-  generateThumbnail: async (base64: string, mimeType: string) => {
+  generateThumbnail: async (_base64: string, _mimeType: string) => {
     console.log('[Playground] generateThumbnail called')
     return null // Skip thumbnails in playground
   },
@@ -280,7 +280,7 @@ export const mockElectronAPI = {
     return {
       code: '482193',
       expiresAt: Date.now() + 5 * 60_000,
-      botUsername: platform === 'telegram' ? 'playground_bot' : undefined,
+      ...(platform === 'telegram' ? { botUsername: 'playground_bot' } : {}),
     }
   },
 

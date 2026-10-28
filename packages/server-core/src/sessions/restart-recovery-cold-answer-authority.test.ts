@@ -1,3 +1,5 @@
+import type { PendingTurnRecovery } from '../../../shared/src/sessions/types/turn-recovery.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
 import { USER_INPUT_ANSWER_MESSAGE_PREFIX } from "@craft-agent/core";
@@ -14,12 +16,12 @@ describe('durable restart recovery', () => {
     managed.sessionStatus = 'todo'
     managed.activeObjective!.terminalState = 'exhausted'
     managed.activeObjective!.completedAt = 2
-    managed.pendingTurnRecovery = {
+    managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
       ...managed.pendingTurnRecovery!,
       lastCause: 'user_retry',
       exhaustedAt: undefined,
       validationExhausted: undefined,
-    }
+    })
     await h.save(managed)
 
     const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
@@ -91,13 +93,13 @@ describe('durable restart recovery', () => {
       managed.activeObjective!.terminalState = 'exhausted'
       managed.activeObjective!.completedAt = 2
       const staleId = `stale-anchor-${variant}`
-      managed.pendingTurnRecovery = {
+      managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
         ...managed.pendingTurnRecovery!,
         userMessageId: staleId,
         lastCause: 'user_retry',
         exhaustedAt: undefined,
         validationExhausted: undefined,
-      }
+      })
       if (variant === 'duplicated') {
         managed.activeObjective!.lastUserMessageId = staleId
         managed.messages.push(
@@ -131,13 +133,13 @@ describe('durable restart recovery', () => {
     managed.messages.push({
       id: 'older-objective-anchor', role: 'user', content: 'An older objective.', timestamp: 2,
     })
-    managed.pendingTurnRecovery = {
+    managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
       ...managed.pendingTurnRecovery!,
       userMessageId: 'older-objective-anchor',
       lastCause: 'user_retry',
       exhaustedAt: undefined,
       validationExhausted: undefined,
-    }
+    })
     await h.save(managed)
 
     const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
@@ -269,7 +271,7 @@ describe('durable restart recovery', () => {
     await tick(); await tick()
 
     expect(dequeues).toEqual([managed.id])
-    expect(restored.messageQueue.map((item: { messageId?: string }) => item.messageId)).toEqual(['queued-human'])
+    expect(restored.messageQueue.map(item => item.messageId)).toEqual(['queued-human'])
   })
 
   it('places a new human message behind an existing cold inbox before the scheduled dispatch runs', async () => {

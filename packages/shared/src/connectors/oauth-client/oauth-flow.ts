@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { createHash, randomBytes } from "node:crypto";
 import type { ConnectorSecretLease } from "../http-drivers";
 import type { SecretLeaseGrant } from "../../credentials/secret-lease-broker";
@@ -86,12 +87,12 @@ export function prepareConnectorOAuthFlow(input: {
 }
 
 function readString(body: object, key: string): string | undefined {
-  const value = Reflect.get(body, key)
+  const value: unknown = Reflect.get(body, key)
   return typeof value === 'string' && value.trim() ? value : undefined
 }
 
 function readPositiveNumber(body: object, key: string): number | undefined {
-  const value = Reflect.get(body, key)
+  const value: unknown = Reflect.get(body, key)
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined
 }
 
@@ -122,7 +123,7 @@ function tokenRequest(input: {
       )
     }
     if (input.profile.clientAuthentication === 'basic') {
-      headers.Authorization = basicAuthorization(input.clientId, input.clientSecret)
+      headers["Authorization"] = basicAuthorization(input.clientId, input.clientSecret)
     } else {
       input.parameters.set('client_secret', input.clientSecret)
     }
@@ -140,7 +141,7 @@ function parseTokenResponse(
       `OAuth token endpoint returned HTTP ${response.status}`,
     )
   }
-  if (!response.body || typeof response.body !== 'object' || Array.isArray(response.body)) {
+  if (!response.body || typeof response.body !== 'object' || isUnknownArray(response.body)) {
     throw new ConnectorOAuthError('INVALID_TOKEN_RESPONSE', 'OAuth token response must be an object')
   }
   const accessToken = readString(response.body, 'access_token')
@@ -148,13 +149,12 @@ function parseTokenResponse(
     throw new ConnectorOAuthError('INVALID_TOKEN_RESPONSE', 'OAuth token response has no access_token')
   }
   const expiresIn = readPositiveNumber(response.body, 'expires_in')
+  const refreshToken = readString(response.body, 'refresh_token')
   return {
     accessToken,
     tokenType: readString(response.body, 'token_type') ?? 'Bearer',
-    refreshToken: readString(response.body, 'refresh_token'),
-    expiresAt: expiresIn
-      ? new Date(Date.parse(now) + Math.floor(expiresIn * 1000)).toISOString()
-      : undefined,
+    ...(refreshToken !== undefined ? { refreshToken } : {}),
+    ...(expiresIn ? { expiresAt: new Date(Date.parse(now) + Math.floor(expiresIn * 1000)).toISOString() } : {}),
     grantedOAuthScopes: parseGrantedScopes(readString(response.body, 'scope')),
   }
 }
@@ -191,7 +191,7 @@ export async function exchangeConnectorOAuthCode(input: {
   const request = tokenRequest({
     profile: input.profile,
     clientId: input.clientId,
-    clientSecret: input.clientSecret,
+    ...(input.clientSecret !== undefined ? { clientSecret: input.clientSecret } : {}),
     parameters,
   })
   const response = await input.transport({
@@ -220,7 +220,7 @@ export async function refreshConnectorOAuthToken(input: {
   const request = tokenRequest({
     profile: input.profile,
     clientId: input.clientId,
-    clientSecret: input.clientSecret,
+    ...(input.clientSecret !== undefined ? { clientSecret: input.clientSecret } : {}),
     parameters,
   })
   const response = await input.transport({

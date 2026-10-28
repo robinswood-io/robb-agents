@@ -55,11 +55,11 @@ export interface SessionMissionExecutorOptions {
     workspaceId: string;
     workspaceRoot: string;
     /** Effective workspace/global connection used to scope a model-only profile pin. */
-    defaultLlmConnection?: string;
-    completionTimeoutMs?: number;
-    verifyExecutionProof?: (proof: SignedExecutionProof, binding: TaskExecutionProofBinding) => ExecutionProofVerificationDecision;
+    defaultLlmConnection?: string | undefined;
+    completionTimeoutMs?: number | undefined;
+    verifyExecutionProof?: ((proof: SignedExecutionProof, binding: TaskExecutionProofBinding) => ExecutionProofVerificationDecision) | undefined;
     /** Live origin/workspace authority. Omission deliberately resolves to Safe. */
-    resolveSubagentAutonomyContext?: (parentSessionId?: string) => SubagentAutonomyContext;
+    resolveSubagentAutonomyContext?: ((parentSessionId?: string) => SubagentAutonomyContext) | undefined;
 }
 
 export function dispatchMarker(input: MissionExecutionInput): string {
@@ -182,7 +182,7 @@ export function pendingMissionRecoveryClaim(input: MissionExecutionInput, sessio
         missionWorkItemId: input.item.id,
         missionDispatchId: input.dispatchId,
         boundary: {
-            permissionMode: session.permissionMode,
+            ...(session.permissionMode !== undefined ? { permissionMode: session.permissionMode } : {}),
             enabledSourceSlugs: canonicalSourceSlugs(session.enabledSourceSlugs),
             ...(session.executionIsolation ? {
                 executionIsolation: structuredClone(session.executionIsolation),

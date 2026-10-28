@@ -111,13 +111,13 @@ export interface PreToolUseInput {
   /** Current session ID */
   sessionId: string;
   /** Host-issued id for this exact tool call, used to bind post-tool receipts. */
-  toolUseId?: string;
+  toolUseId?: string | undefined;
   /** Stable identity of the backend runtime executing this turn. */
-  runtimeId?: string;
+  runtimeId?: string | undefined;
   /** Host-only marker for Pi's one synchronous re-check after it activates an MCP source. */
-  sourceActivationReentry?: boolean;
+  sourceActivationReentry?: boolean | undefined;
   /** Host-only marker for the same backend tool call after a permission wait. */
-  permissionApprovalReentry?: boolean;
+  permissionApprovalReentry?: boolean | undefined;
   /** Current permission mode */
   permissionMode: PermissionMode;
   /** Absolute path to workspace root */
@@ -125,15 +125,15 @@ export interface PreToolUseInput {
   /** Workspace ID or slug for skill qualification */
   workspaceId: string;
   /** Plans folder path for the session (writes allowed in explore mode) */
-  plansFolderPath?: string;
+  plansFolderPath?: string | undefined;
   /** Data folder path (writes allowed in explore mode for transform_data output) */
-  dataFolderPath?: string;
+  dataFolderPath?: string | undefined;
   /** Working directory override (for skill resolution) */
-  workingDirectory?: string;
+  workingDirectory?: string | undefined;
   /** Persisted host-enforced isolation for a Conductor child session. */
-  executionIsolation?: SessionExecutionIsolation;
+  executionIsolation?: SessionExecutionIsolation | undefined;
   /** Host-only evaluated capability lease for a specialized Mission. */
-  missionCapabilityLock?: import("../../../sessions/types.ts").MissionCapabilityLock;
+  missionCapabilityLock?: import("../../../sessions/types.ts").MissionCapabilityLock | undefined;
   /** Currently active source slugs */
   activeSourceSlugs: string[];
   /** All available sources (for source-exists check) */
@@ -144,42 +144,43 @@ export interface PreToolUseInput {
    * Confirmation policy for sensitive external actions. Defaults to `confirm`.
    * The opt-in bypass is honored only in the effective `allow-all` mode.
    */
-  externalActionPolicy?: 'confirm' | 'allow-in-execute';
+  externalActionPolicy?: 'confirm' | 'allow-in-execute' | undefined;
   /** Live host policy, including a bound ancestor's no-human requirement. */
-  humanInputAllowed?: boolean;
+  humanInputAllowed?: boolean | undefined;
   /** Host-derived from the persisted active objective, never from tool prose. */
-  objectiveMutationAuthorized?: boolean;
+  objectiveMutationAuthorized?: boolean | undefined;
   /** Mutation authority inherited from the authenticated root objective. A
    * spawned prompt cannot grant this capability to itself. */
-  objectiveSensitiveActionAuthorized?: boolean;
+  objectiveSensitiveActionAuthorized?: boolean | undefined;
   /** Authenticated human objective segments, kept separate so action words and
    * targets from unrelated amendments cannot be combined into authorization. */
-  objectiveAuthorizationSegments?: readonly string[];
+  objectiveAuthorizationSegments?: readonly string[] | undefined;
   /** Exact host-derived structured-answer segments. Public objective text can
    * never populate this provenance channel, even if it copies its marker. */
-  authenticatedUserAuthorizationSegments?: readonly string[];
+  authenticatedUserAuthorizationSegments?: readonly string[] | undefined;
   /** Host-owned terminal lock and its complete positive tool allowlist. */
-  objectiveTerminalReconciliationPolicy?: TerminalReconciliationPolicy;
+  objectiveTerminalReconciliationPolicy?: TerminalReconciliationPolicy | undefined;
   /** PermissionManager for session-scoped whitelists */
   permissionManager: PermissionManagerLike;
   /** PrerequisiteManager for guide.md checking */
-  prerequisiteManager?: PrerequisiteManagerLike;
+  prerequisiteManager?: PrerequisiteManagerLike | undefined;
   /**
    * Source guide files whose full contents were preloaded into the model's
    * current context. Host-owned context builders may provide these to avoid a
    * synthetic first-call rejection.
    */
-  preloadedSourceGuidePaths?: readonly string[];
+  preloadedSourceGuidePaths?: readonly string[] | undefined;
   /** Backend metadata (e.g. Pi forwards intent / displayName via input.metadata) */
-  backendMetadata?: { intent?: string; displayName?: string };
+  backendMetadata?: { intent?: string; displayName?: string } | undefined;
   /** Raw current request. Never overrides authenticated objective segments when they are present. */
-  currentUserRequest?: string;
+  /** Snapshot getters may explicitly report that no current request is available. */
+  currentUserRequest?: string | undefined;
   /** Capability hints supplied by the registered MCP definition, never by model input. */
-  declaredToolCapabilities?: DeclaredToolCapabilities;
+  declaredToolCapabilities?: DeclaredToolCapabilities | undefined;
   /** RTK Bash-rewrite context (undefined when toggle is off or rtk binary missing) */
-  rtkContext?: import("../rtk-rewrite.ts").RtkContext;
+  rtkContext?: import("../rtk-rewrite.ts").RtkContext | undefined;
   /** Debug callback */
-  onDebug?: (message: string) => void;
+  onDebug?: ((message: string) => void) | undefined;
 }
 
 /**

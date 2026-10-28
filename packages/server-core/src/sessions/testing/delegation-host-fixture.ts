@@ -1,3 +1,6 @@
+import { managedToSession } from '../SessionManager/session-presentation.ts';
+import { sessionManagerForTest } from "./private-runtime-access.ts";
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { withSessionOperationsForTest } from "./session-operation-access.ts";
 import { sessionRuntimeStateForTest } from "./runtime-state-access.ts";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -25,48 +28,33 @@ export function harness(permissionMode: PermissionMode = 'allow-all') {
   parent.isProcessing = true;
   parent.activeObjective = transitionObjectiveContract({ messageId: 'root-request', text: 'Vérifie les documents fournis.', nowMs: 1 });
   const manager = withSessionOperationsForTest(new SessionManager());
-  const internals = manager as unknown as {
-    sessions: Map<string, Managed>;
-    spawnDelegatedSession: (parent: Managed, input: unknown) => Promise<{ sessionId: string; status: string }>;
-    createSession: (workspaceId: string, options: CreateOptions, internal: { delegation: SessionDelegation }) => Promise<unknown>;
-    flushSession: (sessionId: string) => Promise<void>;
-    persistSession: (session: Managed) => void;
-    sendMessage: (sessionId: string, prompt: string, ...args: unknown[]) => Promise<void>;
-    sendEvent: () => void;
-    resolveObjectiveMutationAuthority: (managed: Managed, objective: Managed['activeObjective']) => {
-      terminalReconciliationPolicy?: {
-        invocationCapabilityKey?: string;
-        waitReviewerSessionIds: string[];
-      };
-    };
-    consumeTerminalInvocationCapability: (
-      managed: Managed,
-      toolName: string,
-      input: Record<string, unknown>,
-      presented?: string,
-    ) => boolean;
-  };
+  const internals = sessionManagerForTest(manager);
   sessionRuntimeStateForTest(manager).sessions.set(parent.id, parent);
   const creations: Array<{ options: CreateOptions; delegation: SessionDelegation }> = [];
   const sent: Array<{ sessionId: string; prompt: string; permissionMode?: PermissionMode }> = [];
-  const persisted: Array<Pick<Managed, 'id' | 'permissionMode' | 'delegation'>> = [];
-  internals.persistSession = session => { persisted.push(JSON.parse(JSON.stringify(pickSessionFields(session)))); };
+  const persisted: Array<ReturnType<typeof pickSessionFields>> = [];
+  internals.persistSession = session => {
+    const snapshot = pickSessionFields(session);
+    persisted.push(JSON.parse(JSON.stringify(snapshot)) as typeof snapshot);
+    return true;
+  };
   internals.flushSession = async () => {};
   internals.sendEvent = () => {};
   internals.sendMessage = async (sessionId, prompt, ...args) => {
-    sent.push({ sessionId, prompt, permissionMode: sessionRuntimeStateForTest(manager).sessions.get(sessionId)?.permissionMode });
+    sent.push(omitUndefined<{ sessionId: string; prompt: string; permissionMode?: PermissionMode }>({ sessionId, prompt, permissionMode: sessionRuntimeStateForTest(manager).sessions.get(sessionId)?.permissionMode }));
     const acknowledge = args[5] as ((messageId: string) => void) | undefined;
     acknowledge?.(`${sessionId}-durable-dispatch`);
   };
   // Only external boundaries are replaced: exercise the real host admission, budget,
   // request parsing, route inheritance, review binding, and dispatch method.
   internals.createSession = async (_workspaceId, options, internal) => {
+    if (!options || !internal?.delegation) throw new Error('Delegation fixture requires the host lineage');
     creations.push({ options, delegation: internal.delegation });
-    const child = createManagedSession({ id: `child-${creations.length}`, ...options,
-      delegation: internal.delegation } as never, workspace);
+    const child = createManagedSession({ ...omitUndefined<Partial<Managed>>({ ...options,
+      delegation: internal.delegation }), id: `child-${creations.length}` }, workspace, { messagesLoaded: true });
     sessionRuntimeStateForTest(manager).sessions.set(child.id, child);
     internals.persistSession(child);
-    return child;
+    return managedToSession(child);
   };
   cleanup.push(() => {
     for (const id of sessionRuntimeStateForTest(manager).sessions.keys()) cleanupModeState(id);

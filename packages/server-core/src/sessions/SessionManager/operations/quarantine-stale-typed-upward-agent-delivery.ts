@@ -214,8 +214,8 @@ function sessionOpConsumeDelegatedTerminalReceiptsFromWaitResult(sessionOperatio
         || waitTool.toolStatus === 'error'
         || waitTool.toolExecuted === false)
         return false;
-    const requestedIds = waitTool.toolInput?.sessionIds;
-    if (!Array.isArray(requestedIds) || !requestedIds.every(id => typeof id === 'string'))
+    const requestedIds = waitTool.toolInput?.["sessionIds"];
+    if (!Array.isArray(requestedIds) || !requestedIds.every((id: unknown) => typeof id === 'string'))
         return false;
     let parsed: unknown;
     try {
@@ -236,17 +236,17 @@ function sessionOpConsumeDelegatedTerminalReceiptsFromWaitResult(sessionOperatio
         if (!item || typeof item !== 'object')
             continue;
         const value = item as Record<string, unknown>;
-        if (typeof value.sessionId !== 'string' || !allowed.has(value.sessionId)
-            || typeof value.finalMessageId !== 'string' || typeof value.finalText !== 'string')
+        if (typeof value["sessionId"] !== 'string' || !allowed.has(value["sessionId"])
+            || typeof value["finalMessageId"] !== 'string' || typeof value["finalText"] !== 'string')
             continue;
-        const child = sessionOperationContext.state.sessions.get(value.sessionId);
+        const child = sessionOperationContext.state.sessions.get(value["sessionId"]);
         if (!child || child.parentSessionId !== parent.id
             || child.workspace.id !== parent.workspace.id
             || !sessionOpIsCurrentDelegatedDescendant(sessionOperationContext, parent, child)
             || !sessionOpHasTerminalObjectiveState(sessionOperationContext, child))
             continue;
-        const final = child.messages.findLast(message => (message.id === value.finalMessageId && message.role === 'assistant' && !message.isIntermediate));
-        if (!final || final.content.slice(0, 32000) !== value.finalText)
+        const final = child.messages.findLast(message => (message.id === value["finalMessageId"] && message.role === 'assistant' && !message.isIntermediate));
+        if (!final || final.content.slice(0, 32000) !== value["finalText"])
             continue;
         const receipt = sessionOpDelegatedTerminalResultReceipt(sessionOperationContext, parent, child);
         if (!receipt?.agentDelivery

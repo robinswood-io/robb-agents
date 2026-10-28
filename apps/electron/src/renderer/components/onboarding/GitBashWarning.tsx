@@ -14,9 +14,9 @@ interface GitBashWarningProps {
   onUsePath: (path: string) => void
   onRecheck: () => void
   onBack: () => void
-  isRechecking?: boolean
-  errorMessage?: string
-  onClearError?: () => void
+  isRechecking?: boolean | undefined
+  errorMessage?: string | undefined
+  onClearError?: (() => void) | undefined
 }
 
 /**

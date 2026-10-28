@@ -38,15 +38,15 @@ export function setInterceptorApiHints(model: {
     baseUrl?: string;
 } | undefined): void {
     if (!model) {
-        delete process.env.CRAFT_PI_MODEL_API;
-        delete process.env.CRAFT_PI_MODEL_PROVIDER;
-        delete process.env.CRAFT_PI_MODEL_BASE_URL;
+        delete process.env["CRAFT_PI_MODEL_API"];
+        delete process.env["CRAFT_PI_MODEL_PROVIDER"];
+        delete process.env["CRAFT_PI_MODEL_BASE_URL"];
         return;
     }
-    process.env.CRAFT_PI_MODEL_API = model.api || '';
-    process.env.CRAFT_PI_MODEL_PROVIDER = model.provider || '';
-    process.env.CRAFT_PI_MODEL_BASE_URL = model.baseUrl || '';
-    debugLog(`[interceptor-hint] api=${process.env.CRAFT_PI_MODEL_API || '-'} provider=${process.env.CRAFT_PI_MODEL_PROVIDER || '-'} baseUrl=${process.env.CRAFT_PI_MODEL_BASE_URL || '-'}`);
+    process.env["CRAFT_PI_MODEL_API"] = model.api || '';
+    process.env["CRAFT_PI_MODEL_PROVIDER"] = model.provider || '';
+    process.env["CRAFT_PI_MODEL_BASE_URL"] = model.baseUrl || '';
+    debugLog(`[interceptor-hint] api=${process.env["CRAFT_PI_MODEL_API"] || '-'} provider=${process.env["CRAFT_PI_MODEL_PROVIDER"] || '-'} baseUrl=${process.env["CRAFT_PI_MODEL_BASE_URL"] || '-'}`);
 }
 
 /**
@@ -85,12 +85,12 @@ export function isLocalhostUrl(url: string): boolean {
 export function isStrictLocalEndpointMode(runtimeState: PiRuntimeState): boolean {
     return Boolean(runtimeState.initConfig?.baseUrl
         && isLocalhostUrl(runtimeState.initConfig.baseUrl)
-        && process.env.ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS !== '1');
+        && process.env["ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS"] !== '1');
 }
 
 export function syncStrictLocalEndpointNetworkGuard(runtimeState: PiRuntimeState): void {
     const strictLocal = isStrictLocalEndpointMode(runtimeState);
-    process.env.CRAFT_STRICT_LOCAL_ENDPOINT = strictLocal ? '1' : '0';
+    process.env["CRAFT_STRICT_LOCAL_ENDPOINT"] = strictLocal ? '1' : '0';
     if (strictLocal) {
         debugLog(`[privacy-guard] Strict loopback-only network guard active for local endpoint: ${runtimeState.initConfig?.baseUrl}`);
     }

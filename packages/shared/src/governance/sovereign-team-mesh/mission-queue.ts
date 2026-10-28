@@ -176,7 +176,7 @@ export class SovereignMissionQueue {
   list(): Array<{ envelope: MissionQueueEnvelope; status: string; lease?: MeshMissionLease }> {
     const snapshot = this.read();
     return Object.values(snapshot.records)
-      .map((record) => ({ envelope: record.envelope, status: record.status, lease: record.lease }))
+      .map((record) => ({ envelope: record.envelope, status: record.status, ...(record.lease !== undefined ? { lease: record.lease } : {}) }))
       .sort((left, right) => right.envelope.priority - left.envelope.priority
         || left.envelope.createdAt.localeCompare(right.envelope.createdAt));
   }

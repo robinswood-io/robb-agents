@@ -1,9 +1,10 @@
+import { isUnknownArray } from '@craft-agent/shared/utils/json';
 /**
  * PendingSendersStore — bounded LRU + TTL behaviour.
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { mkdtempSync, rmSync, readFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { PendingSendersStore } from '../pending-senders'
@@ -123,9 +124,10 @@ describe('PendingSendersStore', () => {
     const store = new PendingSendersStore(dir)
     store.recordRejection({ platform: 'telegram', senderId: '999' })
     const raw = readFileSync(join(dir, 'pending.json'), 'utf-8')
-    const parsed = JSON.parse(raw)
-    expect(Array.isArray(parsed)).toBe(true)
-    expect(parsed[0].userId).toBe('999')
+    const parsed: unknown = JSON.parse(raw)
+    expect(isUnknownArray(parsed)).toBe(true)
+    if (!isUnknownArray(parsed)) throw new Error('Expected a persisted list')
+    expect(parsed[0]).toMatchObject({ userId: '999' })
   })
 
   it('TTL: entries older than 7 days are evicted on next read', () => {
@@ -134,14 +136,15 @@ describe('PendingSendersStore', () => {
     // the persisted file. Re-read via a fresh instance to apply the TTL.
     store.recordRejection({ platform: 'telegram', senderId: 'fresh' })
     const path = join(dir, 'pending.json')
-    const raw = JSON.parse(readFileSync(path, 'utf-8')) as Array<Record<string, unknown>>
+    const raw: unknown = JSON.parse(readFileSync(path, 'utf-8'))
+    if (!isUnknownArray(raw)) throw new Error('Expected a persisted list')
     raw.push({
       platform: 'telegram',
       userId: 'stale',
       lastAttemptAt: Date.now() - 8 * 24 * 60 * 60 * 1000,
       attemptCount: 99,
     })
-    require('node:fs').writeFileSync(path, JSON.stringify(raw))
+    writeFileSync(path, JSON.stringify(raw))
 
     const reloaded = new PendingSendersStore(dir)
     const ids = reloaded.list().map((e) => e.userId)

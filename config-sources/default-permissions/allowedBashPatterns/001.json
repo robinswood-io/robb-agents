@@ -1,0 +1,450 @@
+[
+  {
+    "pattern": "^ls\\b",
+    "comment": "List directory contents"
+  },
+  {
+    "pattern": "^ll\\b",
+    "comment": "Long listing (ls -l alias)"
+  },
+  {
+    "pattern": "^la\\b",
+    "comment": "List all including hidden (ls -la alias)"
+  },
+  {
+    "pattern": "^tree\\b(?![^\\r\\n]*\\s(?:-[^-\\s]*o\\S*|--output(?:=\\S*)?)(?:\\s|$))",
+    "comment": "Display directory tree structure without writing an output file"
+  },
+  {
+    "pattern": "^file\\b(?![^\\r\\n]*\\s(?:-[^-\\s]*C\\S*|--compile)(?:\\s|$))",
+    "comment": "Determine file type without compiling a magic database"
+  },
+  {
+    "pattern": "^test\\b",
+    "comment": "Evaluate file and value conditions without modifying them"
+  },
+  {
+    "pattern": "^cmp\\s+-s\\s+(?!-)(?!\\.\\.(?:/|\\s))(?![^\\r\\n]*/\\.\\.(?:/|\\s|$))[A-Za-z0-9_@%+=:,./-]+(?: [A-Za-z0-9_@%+=:,./-]+)*\\s+(?!-)(?!\\.\\.(?:/|$))(?![^\\r\\n]*/\\.\\.(?:/|\\s|$))[A-Za-z0-9_@%+=:,./-]+(?: [A-Za-z0-9_@%+=:,./-]+)*$",
+    "comment": "Silently compare exactly two static file paths"
+  },
+  {
+    "pattern": "^shasum\\s+-a\\s+256\\s+(?!-)(?!\\.\\.(?:/|$))(?![^\\r\\n]*/\\.\\.(?:/|\\s|$))[A-Za-z0-9_@%+=:,./-]+(?: [A-Za-z0-9_@%+=:,./-]+)*$",
+    "comment": "Compute SHA-256 for one static file path"
+  },
+  {
+    "pattern": "^diff\\b(?![^\\r\\n]*\\s--output(?:=|\\s|$))",
+    "comment": "Compare files or directories without writing an output file"
+  },
+  {
+    "pattern": "^stat\\b",
+    "comment": "Display file status and metadata"
+  },
+  {
+    "pattern": "^du\\b",
+    "comment": "Estimate file/directory disk usage"
+  },
+  {
+    "pattern": "^df\\b",
+    "comment": "Report filesystem disk space usage"
+  },
+  {
+    "pattern": "^wc\\b",
+    "comment": "Count lines, words, bytes in files"
+  },
+  {
+    "pattern": "^nl\\b",
+    "comment": "Add line numbers to text output"
+  },
+  {
+    "pattern": "^head\\b",
+    "comment": "Output first part of files"
+  },
+  {
+    "pattern": "^tail\\b",
+    "comment": "Output last part of files"
+  },
+  {
+    "pattern": "^cat\\b",
+    "comment": "Concatenate and display file contents"
+  },
+  {
+    "pattern": "^pdf-tool\\s+(?:extract|info)\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?|--set)(?:\\s|$))",
+    "comment": "PDF extraction and info to stdout without metadata edits"
+  },
+  {
+    "pattern": "^xlsx-tool\\s+(?:read|info|export)\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$))",
+    "comment": "Excel read, info and export operations to stdout"
+  },
+  {
+    "pattern": "^doc-diff\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$))",
+    "comment": "Document comparison to stdout"
+  },
+  {
+    "pattern": "^img-tool\\s+info\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$))",
+    "comment": "Image metadata/info to stdout"
+  },
+  {
+    "pattern": "^docx-tool\\s+(?:info|extract)\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$))",
+    "comment": "Word info and text extraction to stdout"
+  },
+  {
+    "pattern": "^pptx-tool\\s+(?:info|extract)\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$))",
+    "comment": "PowerPoint info and text extraction to stdout"
+  },
+  {
+    "pattern": "^ical-tool\\s+(?:read|filter)\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$))",
+    "comment": "Calendar read and filter operations to stdout"
+  },
+  {
+    "pattern": "^(pdf-tool|xlsx-tool|img-tool|docx-tool|pptx-tool|ical-tool)\\s*$",
+    "comment": "CLI tools: bare invocation (prints help)"
+  },
+  {
+    "pattern": "^craft-agent\\s+label\\s+(list|get|auto-rule-list|auto-rule-validate)\\b",
+    "comment": "craft-agent label read-only operations"
+  },
+  {
+    "pattern": "^craft-agent\\s+source\\s+(list|get|validate|test|auth-help)\\b",
+    "comment": "craft-agent source read-only operations"
+  },
+  {
+    "pattern": "^craft-agent\\s+skill\\s+(list|get|validate|where)\\b",
+    "comment": "craft-agent skill read-only operations"
+  },
+  {
+    "pattern": "^craft-agent\\s+automation\\s+(list|get|validate|history|last-executed|test|lint)\\b",
+    "comment": "craft-agent automation read-only operations"
+  },
+  {
+    "pattern": "^craft-agent\\s+permission\\s+(list|get|validate)\\b",
+    "comment": "craft-agent permission read-only operations"
+  },
+  {
+    "pattern": "^craft-agent\\s+theme\\s+(get|validate|list-presets|get-preset)\\b",
+    "comment": "craft-agent theme read-only operations"
+  },
+  {
+    "pattern": "^craft-agent\\s*$",
+    "comment": "craft-agent bare invocation (prints help)"
+  },
+  {
+    "pattern": "^craft-agent\\s+(label|source|skill|automation|permission|theme)\\s*$",
+    "comment": "craft-agent entity help"
+  },
+  {
+    "pattern": "^craft-agent\\s+(label|source|skill|automation|permission|theme)\\s+--help\\b",
+    "comment": "craft-agent entity help flags"
+  },
+  {
+    "pattern": "^craft-agent\\s+--(help|version|discover)\\b",
+    "comment": "craft-agent global flags"
+  },
+  {
+    "pattern": "^find\\b",
+    "comment": "Search for files in directory hierarchy"
+  },
+  {
+    "pattern": "^locate\\b",
+    "comment": "Find files by name using database"
+  },
+  {
+    "pattern": "^which\\b",
+    "comment": "Locate a command"
+  },
+  {
+    "pattern": "^whereis\\b",
+    "comment": "Locate binary, source, manual for command"
+  },
+  {
+    "pattern": "^type\\b",
+    "comment": "Display information about command type"
+  },
+  {
+    "pattern": "^grep\\b",
+    "comment": "Search file contents with patterns"
+  },
+  {
+    "pattern": "^rg\\b(?![^\\r\\n]*\\s--(?:pre|hostname-bin)(?:=\\S*)?(?:\\s|$))",
+    "comment": "Ripgrep search without executable preprocessors or hostname helpers"
+  },
+  {
+    "pattern": "^fd\\b(?![^\\r\\n]*\\s(?:-[^-\\s]*[xX]\\S*|--exec(?:-batch)?(?:=\\S*)?)(?:\\s|$))",
+    "comment": "Find files without executing a command for results"
+  },
+  {
+    "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*(?:status|log|show|shortlog|blame|annotate|describe|rev-parse|ls-files|ls-tree|cherry|whatchanged)\\b(?![^\\r\\n]*\\s--(?:output|ext-diff|textconv|exec)(?:=\\S*)?(?:\\s|$))",
+    "comment": "Git inspection operations with a closed set of safe global flags"
+  },
+  {
+    "pattern": "^git\\s+(?:-C\\s+(?!-)[^\\s]+\\s+)?(?:grep|merge-base)\\b",
+    "comment": "Git grep and merge-base; the host validator separately requires the exact hardened prefix and closed per-operation grammar"
+  },
+  {
+    "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*diff\\b(?![^\\r\\n]*\\s--(?:output|ext-diff|textconv)(?:=\\S*)?(?:\\s|$))",
+    "comment": "Git diff without output files or executable diff helpers"
+  },
+  {
+    "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*branch(?:\\s+(?:-[arv]+|--(?:all|remotes|verbose|list|show-current|contains|no-contains|merged|no-merged|points-at|format|sort|column|color)(?:=\\S+)?))*\\s*$",
+    "comment": "List Git branches or show the current branch without changing refs"
+  },
+  {
+    "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*tag(?:\\s+(?:-l|--list)(?:\\s+(?!-)[^\\s]+)?)?\\s*$",
+    "comment": "List Git tags without creating, deleting or verifying tags"
+  },
+  {
+    "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*remote(?:\\s+-v)?\\s*$",
+    "comment": "List configured Git remotes"
+  },
+  {
+    "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*remote\\s+show(?:\\s+-n)?(?:\\s+(?!-)[^\\s]+)?\\s*$",
+    "comment": "Inspect a configured Git remote"
+  },
+  {
+    "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*remote\\s+get-url(?:\\s+(?:--all|--push))*\\s+(?!-)[^\\s]+\\s*$",
+    "comment": "Read a configured Git remote URL"
+  },
+  {
+    "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*reflog(?:\\s+show)?(?:\\s+(?:--all|-n\\s+[0-9]+|--date=\\S+))*\\s*$",
+    "comment": "Inspect Git reflogs without deleting or expiring entries"
+  },
+  {
+    "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*stash\\s+list\\b(?![^\\r\\n]*\\s--(?:output|ext-diff|textconv)(?:=\\S*)?(?:\\s|$))",
+    "comment": "List Git stash entries"
+  },
+  {
+    "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*config\\s+(?:--get(?:-all|-regexp)?\\s+[^\\s]+(?:\\s+[^\\s]+)?|-l|--list)\\s*$",
+    "comment": "Read Git configuration values"
+  },
+  {
+    "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*ls-remote\\b(?![^\\r\\n]*\\s--(?:upload-pack|exec)(?:=\\S*)?(?:\\s|$))",
+    "comment": "List remote Git refs without a custom upload-pack executable"
+  },
+  {
+    "pattern": "^gh\\s+(pr|issue|repo|release|run|workflow|gist|project)\\s+(view|list|status|diff|checks|comments)\\b",
+    "comment": "GitHub CLI read operations: view PRs, issues, releases"
+  },
+  {
+    "pattern": "^gh\\s+api\\b(?=[^\\r\\n]*\\s(?:--method(?:=|\\s+)GET|-X(?:=?GET|\\s+GET))(?:\\s|$))(?![^\\r\\n]*\\s(?:--method(?:=(?!GET(?:\\s|$))\\S+|\\s+(?!GET(?:\\s|$))\\S+)|-X(?:=?(?!GET(?:\\s|$))\\S+|\\s+(?!GET(?:\\s|$))\\S+)))(?![^\\r\\n]*\\s(?:-[fF]\\S*|--(?:field|raw-field|input)(?:=\\S*)?)(?:\\s|$))",
+    "comment": "GitHub API with explicit GET method"
+  },
+  {
+    "pattern": "^gh\\s+api\\b(?![^\\r\\n]*\\s(?:--method(?:=\\S*)?|-X\\S*)(?:\\s|$))(?![^\\r\\n]*\\s(?:-[fF]\\S*|--(?:field|raw-field|input)(?:=\\S*)?)(?:\\s|$))",
+    "comment": "GitHub API without method (defaults to GET)"
+  },
+  {
+    "pattern": "^gh\\s+auth\\s+status\\b",
+    "comment": "Check GitHub authentication status"
+  },
+  {
+    "pattern": "^gh\\s+config\\s+(get|list)\\b",
+    "comment": "Read GitHub CLI configuration"
+  },
+  {
+    "pattern": "^npm\\s+(?:ls|list|view|info|show|outdated|search|explain|why|config\\s+get|config\\s+list)\\b",
+    "comment": "npm read operations: list packages, view info, check outdated"
+  },
+  {
+    "pattern": "^npm\\s+audit\\b(?![^\\r\\n]*\\s(?:fix|--fix(?:=\\S*)?)(?:\\s|$))",
+    "comment": "Audit npm dependencies without applying fixes"
+  },
+  {
+    "pattern": "^yarn\\s+(list|info|why|outdated|audit)\\b",
+    "comment": "Yarn read operations: list packages, check outdated"
+  },
+  {
+    "pattern": "^pnpm\\s+(?:list|ls|why|outdated)\\b",
+    "comment": "pnpm read operations: list packages, check outdated"
+  },
+  {
+    "pattern": "^pnpm\\s+audit\\b(?![^\\r\\n]*\\s(?:fix|--fix(?:=\\S*)?)(?:\\s|$))",
+    "comment": "Audit pnpm dependencies without applying fixes"
+  },
+  {
+    "pattern": "^bun\\s+(pm\\s+ls)\\b",
+    "comment": "Bun package manager list"
+  },
+  {
+    "pattern": "^bun\\s+run\\s+browser-tool\\b",
+    "comment": "Browser-tool helper CLI (templates/help)"
+  },
+  {
+    "pattern": "^bun\\s+run\\s+typecheck\\b$",
+    "comment": "Project typecheck script (read-only quality gate)"
+  },
+  {
+    "pattern": "^bun\\s+run\\s+typecheck:all\\b$",
+    "comment": "Monorepo typecheck script (read-only quality gate)"
+  },
+  {
+    "pattern": "^bunx\\s+tsc\\b.*--noEmit\\b",
+    "comment": "TypeScript compiler check without emitting artifacts"
+  },
+  {
+    "pattern": "^tsc\\b.*--noEmit\\b",
+    "comment": "TypeScript compiler check without emitting artifacts"
+  },
+  {
+    "pattern": "^npm\\s+run\\s+typecheck\\b$",
+    "comment": "npm typecheck script (read-only quality gate)"
+  },
+  {
+    "pattern": "^yarn\\s+typecheck\\b$",
+    "comment": "yarn typecheck script (read-only quality gate)"
+  },
+  {
+    "pattern": "^pnpm\\s+typecheck\\b$",
+    "comment": "pnpm typecheck script (read-only quality gate)"
+  },
+  {
+    "pattern": "^pip\\s+(list|show|freeze|check)\\b",
+    "comment": "pip read operations: list packages, show info"
+  },
+  {
+    "pattern": "^pip3\\s+(list|show|freeze|check)\\b",
+    "comment": "pip3 read operations: list packages, show info"
+  },
+  {
+    "pattern": "^cargo\\s+(tree|metadata|pkgid|verify-project)\\b",
+    "comment": "Cargo read operations: dependency tree, metadata"
+  },
+  {
+    "pattern": "^go\\s+(list|mod\\s+graph|mod\\s+why|version)\\b",
+    "comment": "Go read operations: list modules, dependency graph"
+  },
+  {
+    "pattern": "^composer\\s+(show|info|outdated|licenses)\\b",
+    "comment": "Composer read operations: show packages, licenses"
+  },
+  {
+    "pattern": "^gem\\s+(list|info|dependency|environment)\\b",
+    "comment": "RubyGems read operations: list gems, show info"
+  },
+  {
+    "pattern": "^bundle\\s+(list|info|outdated)\\b",
+    "comment": "Bundler read operations: list gems, check outdated"
+  },
+  {
+    "pattern": "^cd\\b",
+    "comment": "Change directory (affects shell session only)"
+  },
+  {
+    "pattern": "^pwd\\b",
+    "comment": "Print current working directory"
+  },
+  {
+    "pattern": "^whoami\\b",
+    "comment": "Print current username"
+  },
+  {
+    "pattern": "^id\\b",
+    "comment": "Print user and group IDs"
+  },
+  {
+    "pattern": "^groups\\b",
+    "comment": "Print group memberships"
+  },
+  {
+    "pattern": "^uname\\b",
+    "comment": "Print system information"
+  },
+  {
+    "pattern": "^hostname(?:\\s+(?:-f|-i|-I|-s|-d|--(?:fqdn|ip-address|all-ip-addresses|short|domain)))?\\s*$",
+    "comment": "Print hostname or derived host information without changing it"
+  },
+  {
+    "pattern": "^date(?:\\s+(?:-u|--utc|--universal|-R|--rfc-email|-I(?:date|hours|minutes|seconds|ns)?|--iso-8601(?:=(?:date|hours|minutes|seconds|ns))?|\\+\\S+))*\\s*$",
+    "comment": "Print the current date in bounded display formats without setting it"
+  },
+  {
+    "pattern": "^uptime\\b",
+    "comment": "Print system uptime and load"
+  },
+  {
+    "pattern": "^env$",
+    "comment": "Print all environment variables (bare command only, not env <cmd>)"
+  },
+  {
+    "pattern": "^printenv\\b",
+    "comment": "Print environment variables"
+  },
+  {
+    "pattern": "^echo\\b",
+    "comment": "Print text to stdout (read-only; redirects/substitution still blocked)"
+  },
+  {
+    "pattern": "^printf\\b(?!\\s+-v(?:[A-Za-z_][A-Za-z0-9_]*)?(?:\\s|$))(?![^\\r\\n]*%(?:[0-9]+\\$)?[-+ #0']*(?:\\*|[0-9]+)?(?:\\.(?:\\*|[0-9]+))?(?:hh|h|ll|l|j|z|t|L)?n)",
+    "comment": "Print formatted text to stdout; variable assignment formats/options, redirects, expansions and substitutions remain blocked"
+  },
+  {
+    "pattern": "^ps\\b",
+    "comment": "List running processes"
+  },
+  {
+    "pattern": "^top\\s+-[lb]",
+    "comment": "Process viewer in batch/list mode only"
+  },
+  {
+    "pattern": "^free\\b",
+    "comment": "Display memory usage"
+  },
+  {
+    "pattern": "^vmstat\\b",
+    "comment": "Virtual memory statistics"
+  },
+  {
+    "pattern": "^iostat\\b",
+    "comment": "I/O statistics"
+  },
+  {
+    "pattern": "^lscpu\\b",
+    "comment": "Display CPU architecture information"
+  },
+  {
+    "pattern": "^lsmem\\b",
+    "comment": "Display memory information"
+  },
+  {
+    "pattern": "^lsblk\\b",
+    "comment": "List block devices"
+  },
+  {
+    "pattern": "^lsusb\\b",
+    "comment": "List USB devices"
+  },
+  {
+    "pattern": "^lspci\\b",
+    "comment": "List PCI devices"
+  },
+  {
+    "pattern": "^docker\\s+(ps|images|logs|inspect|stats|top|port|diff|history|version|info|system\\s+info|system\\s+df|network\\s+ls|network\\s+inspect|volume\\s+ls|volume\\s+inspect|container\\s+ls|image\\s+ls)\\b",
+    "comment": "Docker read operations: list containers, images, logs, inspect"
+  },
+  {
+    "pattern": "^docker-compose\\s+(?:(?:ps|logs|images|top|version)\\b|config\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$)))",
+    "comment": "Docker Compose read operations: list services, view logs"
+  },
+  {
+    "pattern": "^docker\\s+compose\\s+(?:(?:ps|logs|images|top|version)\\b|config\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$)))",
+    "comment": "Docker Compose (v2) read operations"
+  },
+  {
+    "pattern": "^systemctl\\s+(show|status|cat|is-active|is-enabled|is-failed|list-units|list-unit-files|list-timers)\\b",
+    "comment": "Systemd read operations: inspect units, status and timers"
+  },
+  {
+    "pattern": "^kubectl\\s+(?:get|describe|logs|top|explain|api-resources|api-versions|cluster-info|config\\s+view|config\\s+get-contexts|version)\\b(?![^\\r\\n]*\\s--(?:output-directory|kubeconfig)(?:=\\S*)?(?:\\s|$))",
+    "comment": "Kubernetes read operations: get resources, describe, view logs"
+  },
+  {
+    "pattern": "^sort\\b(?![^\\r\\n]*\\s(?:-[^-\\s]*[oT]\\S*|--(?:output|temporary-directory|compress-program)(?:=\\S*)?)(?:\\s|$))",
+    "comment": "Sort lines of text files"
+  },
+  {
+    "pattern": "^uniq(?:\\s+(?:-[cdiuDz]+|--(?:count|repeated|all-repeated(?:=(?:none|prepend|separate))?|ignore-case|zero-terminated|group(?:=(?:separate|prepend|append|both))?)))*\\s*$",
+    "comment": "Report repeated stdin lines without an output-file operand"
+  },
+  {
+    "pattern": "^cut\\b",
+    "comment": "Remove sections from lines"
+  }
+]

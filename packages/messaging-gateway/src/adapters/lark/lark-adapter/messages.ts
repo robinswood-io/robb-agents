@@ -20,7 +20,7 @@ export async function sendText(transportOwner: LarkAdapter, channelId: string, t
     return { platform: 'lark', channelId, messageId };
 }
 
-export async function editMessage(transportOwner: LarkAdapter, channelId: string, messageId: string, text: string, _opts?: SendOptions): Promise<void> {
+export async function editMessage(transportOwner: LarkAdapter, _channelId: string, messageId: string, text: string, _opts?: SendOptions): Promise<void> {
     if (!transportOwner["client"])
         throw new Error('Lark adapter is not connected');
     const originalType = transportOwner["sentMsgTypes"].get(messageId) ?? 'text';
@@ -242,7 +242,7 @@ export async function sendFile(transportOwner: LarkAdapter, channelId: string, f
     // Lark can't combine caption + file in one message. If the caller wants a
     // caption, send it as a follow-up text message (best-effort).
     if (caption) {
-        transportOwner["sendText"](channelId, caption).catch((err) => {
+        transportOwner["sendText"](channelId, caption).catch((err: unknown) => {
             transportOwner["log"].warn('[lark] caption follow-up failed', {
                 event: 'lark_caption_failed',
                 messageId,

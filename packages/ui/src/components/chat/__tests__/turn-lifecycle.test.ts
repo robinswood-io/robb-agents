@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json'
 /**
  * Scenario tests for turn lifecycle transitions.
  *
@@ -36,7 +37,7 @@ function createToolMessage(
   name = 'Read',
   turnId?: string
 ): Message {
-  return {
+  return omitUndefined<Message>({
     id: `tool-${++messageIdCounter}`,
     role: 'tool',
     content: status === 'completed' ? 'Tool result' : '',
@@ -46,7 +47,7 @@ function createToolMessage(
     toolStatus: status === 'completed' ? 'completed' : undefined,
     toolResult: status === 'completed' ? 'Tool result' : undefined,
     turnId: turnId || `turn-${turnIdCounter}`,
-  }
+  })
 }
 
 function createAssistantMessage(
@@ -69,9 +70,9 @@ function createAssistantMessage(
 function updateMessage(
   messages: Message[],
   id: string,
-  updates: Partial<Message>
+  updates: Omit<Partial<Message>, 'toolResult'> & { toolResult?: string | undefined }
 ): Message[] {
-  return messages.map(m => (m.id === id ? { ...m, ...updates } : m))
+  return messages.map(m => (m.id === id ? omitUndefined<Message>({ ...m, ...updates }) : m))
 }
 
 /** Get the last assistant turn from grouped turns */

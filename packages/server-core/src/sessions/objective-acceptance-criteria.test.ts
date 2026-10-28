@@ -78,10 +78,10 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
       toolInput: { messageId: '1a0a000000000000', ...legacyWeakCriterion.input },
       toolResult: '{"ok":true}',
     };
-    expect(validateObjectiveAcceptanceCriteria(legacyWeakObjective, [gmailRoot, gmailAmendment, weakObservation], {
+    expect<unknown>(validateObjectiveAcceptanceCriteria(legacyWeakObjective, [gmailRoot, gmailAmendment, weakObservation], {
       state: 'complete_verified', blocker: null, remainingWork: [],
       criteria: [{ id: legacyWeakCriterion.id, satisfied: true, evidence: ['weak-old-message'] }],
-    })).toContainEqual(expect.stringContaining('Exact Gmail effect lacks one complete sent-message proof'));
+    })).toContainEqual((expect.stringContaining('Exact Gmail effect lacks one complete sent-message proof') as unknown));
 
     const registered = registerObjectiveAcceptanceCriteria(gmailObjective, [exactCriterion], 10);
     const claim: ObjectiveOutcomeDeclaration = {

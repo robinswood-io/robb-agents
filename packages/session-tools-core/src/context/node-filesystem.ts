@@ -1,5 +1,6 @@
 import { isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from "../runtime/application-protection.ts";
 import type { FileSystemInterface } from './ports.ts';
+import * as fs from 'node:fs';
 
 // ============================================================
 // Context Factory Helpers
@@ -9,9 +10,6 @@ import type { FileSystemInterface } from './ports.ts';
  * Create a basic file system implementation using Node.js fs.
  */
 export function createNodeFileSystem(): FileSystemInterface {
-  // Dynamic import to work in both environments
-  const fs = require('node:fs');
-
   return {
     exists: (path: string) => fs.existsSync(path),
     readFile: (path: string) => fs.readFileSync(path, 'utf-8'),

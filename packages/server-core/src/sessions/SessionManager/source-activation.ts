@@ -1,3 +1,4 @@
+import type { ManagedSession } from './managed-session.ts';
 import { type ActiveSessionObjective } from "@craft-agent/shared/sessions";
 import { type SendMessageOptions } from "@craft-agent/shared/protocol";
 
@@ -40,29 +41,7 @@ export const SOURCE_ACTIVATION_MAX_DISPATCH_ATTEMPTS = 2
 
 export const SOURCE_ACTIVATION_PROTOCOL_SUFFIX = /\n\n\[[a-z0-9](?:[a-z0-9-]{0,126}[a-z0-9])? activated\]$/
 
-export interface AutoRetryPendingHost {
-  autoRetryPending?: {
-    content: string
-    rawMessage: string
-    deadlineMs: number
-    tombstoneExpiresAt: number
-    objectiveId: string
-    objectiveRevision: string
-    sourceSlug: string
-    sourceActivationId: string
-    generation: number
-    cancellationEpoch: number
-    messageCountAtSchedule: number
-    dispatchToken: symbol
-    dispatchInFlight: boolean
-    dispatchAttempts: number
-    messageId?: string
-    providerStarted?: boolean
-    committed: boolean
-    cancelled: boolean
-  }
-  autoRetryTombstones?: Array<{ content: string; expiresAt: number }>
-}
+export type AutoRetryPendingHost = Pick<ManagedSession, 'autoRetryPending' | 'autoRetryTombstones'>;
 
 export function pruneAutoRetryTombstones(host: AutoRetryPendingHost, nowMs: number): void {
   if (host.autoRetryTombstones?.length) {
@@ -71,7 +50,7 @@ export function pruneAutoRetryTombstones(host: AutoRetryPendingHost, nowMs: numb
       .slice(-SOURCE_ACTIVATION_TOMBSTONE_LIMIT)
   }
   const pending = host.autoRetryPending
-  if (pending && pending.tombstoneExpiresAt <= nowMs) host.autoRetryPending = undefined
+  if (pending && pending.tombstoneExpiresAt <= nowMs) delete host.autoRetryPending;
 }
 
 export function rememberAutoRetryTombstone(
@@ -147,5 +126,5 @@ export function isSourceActivationOriginCurrent(
 }
 
 export interface SourceActivationRestartHost {
-  sourceActivationRestartGeneration?: number
+  sourceActivationRestartGeneration?: number | undefined
 }

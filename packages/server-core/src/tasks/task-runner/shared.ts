@@ -144,13 +144,13 @@ export interface TaskExecutionGuardContext {
 
 export interface RunOptions {
     /** The task's persistent parent/orchestrator session (reviewers are separate children). */
-    orchestratorSessionId?: string;
+    orchestratorSessionId?: string | undefined;
     /** Resolved task param values (merged over the spec's declared defaults). */
-    params?: Record<string, unknown>;
+    params?: Record<string, unknown> | undefined;
     /** Explicit run id (otherwise generated). */
-    runId?: string;
+    runId?: string | undefined;
     /** When the run completes, launch an independent reviewer child. Default true. */
-    verifyOnComplete?: boolean;
+    verifyOnComplete?: boolean | undefined;
     /** Confirmed outputs copied from an earlier run before scheduling a targeted repair. */
     replay?: {
         sourceRunId: string;
@@ -159,7 +159,7 @@ export interface RunOptions {
             nodeId: string;
             proofHash?: string;
         }>;
-    };
+    } | undefined;
 }
 
 export type RunStatus = 'running' | 'paused' | 'waiting-approval' | 'verifying' | 'stopped' | 'completed' | 'failed';
@@ -329,9 +329,9 @@ export function retryMatches(when: TaskFailureClass | TaskFailureClass[] | undef
 
 /** Resolve exponential retry delay in milliseconds; an omitted backoff keeps legacy immediate retry. */
 export function retryDelayMs(backoff: {
-    base?: number;
-    factor?: number;
-    max?: number;
+    base?: number | undefined;
+    factor?: number | undefined;
+    max?: number | undefined;
 } | undefined, failedAttempt: number): number {
     if (!backoff)
         return 0;

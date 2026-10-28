@@ -63,14 +63,14 @@ export function isBoundedStructuredRemoteTechnicalRead(
   dataFolderPath: string | undefined,
   objectiveSegments: readonly string[],
 ): boolean {
-  const rawServer = typeof input.server === 'string' ? input.server : '';
+  const rawServer = typeof input["server"] === 'string' ? input["server"] : '';
   const server = rawServer.trim();
   if (rawServer !== server || !isCanonicalRemoteEndpoint(server)) return false;
   const authoritySegment = targetBoundOperationalTechnicalReadAuthoritySegment(input, objectiveSegments);
   if (!authoritySegment) return false;
   if (toolName === 'mcp__rbw-servers__ssh_execute') {
     if (!boundedStructuredRemoteExecutionInput(input)) return false;
-    const command = typeof input.command === 'string' ? input.command : '';
+    const command = typeof input["command"] === 'string' ? input["command"] : '';
     const operationalInspection = classifyBoundedTargetedRemoteOperationalInspection(command);
     if (operationalInspection) {
       return operationalInspectionMatchesObjective(operationalInspection, server, authoritySegment);
@@ -106,15 +106,15 @@ export function isBoundedStructuredRemoteTechnicalRead(
     if (Object.keys(input).some(key => !['server', 'name', '_displayName', '_intent'].includes(key))) {
       return false;
     }
-    const name = typeof input.name === 'string' ? input.name.trim() : '';
+    const name = typeof input["name"] === 'string' ? input["name"].trim() : '';
     return /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(name);
   }
   if (toolName !== 'mcp__rbw-servers__ssh_download' || !dataFolderPath) return false;
   if (Object.keys(input).some(key => ![
     'server', 'remotePath', 'localPath', '_displayName', '_intent',
   ].includes(key))) return false;
-  const remotePath = typeof input.remotePath === 'string' ? input.remotePath.trim() : '';
-  const localPath = typeof input.localPath === 'string' ? input.localPath.trim() : '';
+  const remotePath = typeof input["remotePath"] === 'string' ? input["remotePath"].trim() : '';
+  const localPath = typeof input["localPath"] === 'string' ? input["localPath"].trim() : '';
   const remoteSegments = remotePath.startsWith('/srv/')
     ? remotePath.slice('/srv/'.length).split('/')
     : [];

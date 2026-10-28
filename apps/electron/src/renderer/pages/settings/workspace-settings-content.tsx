@@ -208,7 +208,7 @@ export function WorkspaceSettingsContent({
             >
               <SettingsCard>
                 {(['safe', 'ask', 'allow-all'] as const).map((m) => {
-                  const modeTranslations: Record<string, { label: string; desc: string }> = {
+                  const modeTranslations = {
                     'safe': { label: t("mode.explore"), desc: t("mode.exploreFullDesc") },
                     'ask': { label: t("mode.askToEdit"), desc: t("mode.askFullDesc") },
                     'allow-all': { label: t("mode.execute"), desc: t("mode.executeFullDesc") },

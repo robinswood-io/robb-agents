@@ -1,3 +1,4 @@
+import { isUnknownArray } from "../../../shared/src/utils/json.ts";
 import type { Message } from '@craft-agent/core/types';
 
 export type LatestTurnTerminalState =
@@ -27,15 +28,15 @@ export function incompletePlanSteps(messages: readonly Message[], objectiveUserM
     const nativeTodo = name === 'TodoWrite';
     if (!nativeTodo && name !== 'update_plan' && name !== 'mcp__session__update_plan' && name !== 'session__update_plan') continue;
     const items: unknown = message.toolInput?.[nativeTodo ? 'todos' : 'plan'];
-    if (!Array.isArray(items)) continue;
+    if (!isUnknownArray(items)) continue;
     const steps: Array<{ text: string; status: string }> = [];
     for (const item of items) {
       if (!item || typeof item !== 'object') break;
       const value = item as Record<string, unknown>;
       const text = value[nativeTodo ? 'content' : 'step'];
       if (typeof text !== 'string' || !text.trim()
-        || !['pending', 'in_progress', 'completed'].includes(String(value.status))) break;
-      steps.push({ text: text.trim(), status: String(value.status) });
+        || !['pending', 'in_progress', 'completed'].includes(String(value["status"]))) break;
+      steps.push({ text: text.trim(), status: String(value["status"]) });
     }
     if (steps.length !== items.length) continue;
     for (const step of steps) {

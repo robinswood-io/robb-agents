@@ -1,6 +1,8 @@
-import type { SessionManagerTestView } from './testing/private-runtime-access.ts';
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import type { ActiveSessionObjective } from '../../../shared/src/sessions/types/objectives.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
-import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
+import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { SessionManager, createManagedSession } from './SessionManager'
 import { objectiveReviewBinding, transitionObjectiveContract } from './objective-contract'
@@ -8,7 +10,7 @@ import { objectiveReviewBinding, transitionObjectiveContract } from './objective
 const managers: SessionManager[] = []
 function harness() {
   const manager = withSessionOperationsForTest(new SessionManager()); managers.push(manager)
-  const host = manager as unknown as SessionManagerTestView
+  const host = sessionManagerForTest(manager)
   host.sendEvent = () => {}
   const workspace = { id: 'wait-test', rootPath: '/tmp/robb-wait-test', name: 'Wait', createdAt: 1 }
   const make = (id: string, ws = workspace) => {
@@ -75,13 +77,13 @@ describe('delegated waits through SessionManager', () => {
       finalMessageId: 'all-terminal-final', finalText: 'Delivered once',
     })
     const first = await host.waitForDelegatedSessions(parent, [child.id], 0)
-    expect(first.sessions[0].finalText).toBe('Delivered once')
+    expect(requiredTestValue(first.sessions[0]).finalText).toBe('Delivered once')
 
     const result = await host.waitForDelegatedSessions(
       parent,
       [child.id],
       1_000,
-      { [child.id]: first.sessions[0].cursor! },
+      { [child.id]: requiredTestValue(first.sessions[0]).cursor! },
       'all',
     )
     expect(result).toMatchObject({
@@ -89,7 +91,7 @@ describe('delegated waits through SessionManager', () => {
       mode: 'all',
       sessions: [{ sessionId: child.id, changed: false, reason: 'complete' }],
     })
-    expect(result.sessions[0].finalText).toBeUndefined()
+    expect(requiredTestValue(result.sessions[0]).finalText).toBeUndefined()
     expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(0)
   })
 
@@ -127,8 +129,8 @@ describe('delegated waits through SessionManager', () => {
     expect(result.sessions[0]).toMatchObject({
       sessionId: a.id, state: 'idle', reason: 'complete', finalText: 'A recovered',
     })
-    expect(result.sessions[0].needsAttention).toBeUndefined()
-    expect(result.sessions[0].diagnostic).toBeUndefined()
+    expect(requiredTestValue(result.sessions[0]).needsAttention).toBeUndefined()
+    expect(requiredTestValue(result.sessions[0]).diagnostic).toBeUndefined()
   })
 
   it('mode:all clears an old truncation flag when a later cursor has short final text', async () => {
@@ -156,7 +158,7 @@ describe('delegated waits through SessionManager', () => {
 
     const result = await pending
     expect(result.sessions[0]).toMatchObject({ finalText: 'short final', reason: 'complete' })
-    expect(result.sessions[0].finalTextTruncated).toBeUndefined()
+    expect(requiredTestValue(result.sessions[0]).finalTextTruncated).toBeUndefined()
   })
 
   it('delivers a pre-subscription completion receipt once and lets the next sibling finish', async () => {
@@ -165,16 +167,16 @@ describe('delegated waits through SessionManager', () => {
     const receipt = JSON.stringify({ status: 'PASS', observations: 'x'.repeat(4500) })
     host.emitSessionComplete({ sessionId: a.id, workspaceId: a.workspace.id, reason: 'complete', finalMessageId: 'a-final', finalText: receipt })
     const first = await host.waitForDelegatedSessions(parent, ['a', 'b'], 1000)
-    expect(first.sessions[0].finalText).toBe(receipt)
+    expect(requiredTestValue(first.sessions[0]).finalText).toBe(receipt)
     const next = host.waitForDelegatedSessions(parent, ['a', 'b'], 1000)
     await new Promise(resolve => setImmediate(resolve))
     expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(1)
     b.isProcessing = false
     host.emitSessionComplete({ sessionId: b.id, workspaceId: b.workspace.id, reason: 'error' })
     const result = await next
-    expect(result.sessions[0].changed).toBe(false)
-    expect(result.sessions[0].finalText).toBeUndefined()
-    expect(result.sessions[1].reason).toBe('error')
+    expect(requiredTestValue(result.sessions[0]).changed).toBe(false)
+    expect(requiredTestValue(result.sessions[0]).finalText).toBeUndefined()
+    expect(requiredTestValue(result.sessions[1]).reason).toBe('error')
     expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(0)
   })
 
@@ -190,7 +192,7 @@ describe('delegated waits through SessionManager', () => {
     child.pendingTurnRecovery = undefined; sessionRuntimeStateForTest(host).deferredAutomaticSessions.delete(child.id)
     child.activeObjective!.terminalState = 'complete_verified'
     host.emitSessionComplete({ sessionId: child.id, workspaceId: child.workspace.id, reason: 'complete', finalText: 'Verified result' })
-    expect((await pending).sessions[0].finalText).toBe('Verified result')
+    expect(requiredTestValue((await pending).sessions[0]).finalText).toBe('Verified result')
     expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(0)
   })
 
@@ -206,9 +208,9 @@ describe('delegated waits through SessionManager', () => {
     const result = await host.waitForDelegatedSessions(parent, [child.id], 1000)
     expect(result.outcome).toBe('completed')
     expect(result.sessions[0]).toMatchObject({ state: 'idle', needsAttention: true, objectiveState: 'exhausted' })
-    expect(result.sessions[0].reason).not.toBe('complete')
-    expect(result.sessions[0].finalText).toBeUndefined()
-    expect(result.sessions[0].finalMessageId).toBeUndefined()
+    expect(requiredTestValue(result.sessions[0]).reason).not.toBe('complete')
+    expect(requiredTestValue(result.sessions[0]).finalText).toBeUndefined()
+    expect(requiredTestValue(result.sessions[0]).finalMessageId).toBeUndefined()
     expect(child.messageQueue[0]).toBe(held)
     expect(child.pendingTurnRecovery?.attempts).toBe(5)
     expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(0)
@@ -225,7 +227,7 @@ describe('delegated waits through SessionManager', () => {
     const result = await host.waitForDelegatedSessions(parent, [child.id], 1000)
     expect(result.outcome).toBe('completed')
     expect(result.sessions[0]).toMatchObject({ state: 'idle', reason: 'complete', finalMessageId: 'verified-final', finalText: receipt })
-    expect(result.sessions[0].needsAttention).not.toBe(true)
+    expect(requiredTestValue(result.sessions[0]).needsAttention).not.toBe(true)
     expect(child.messageQueue).toHaveLength(1)
   })
 
@@ -239,14 +241,14 @@ describe('delegated waits through SessionManager', () => {
     child.messageQueue.push({ messageId: 'human', message: 'Retry the existing objective.' })
     const queued = await host.waitForDelegatedSessions(parent, [child.id], 0)
     expect(queued.outcome).toBe('timeout')
-    expect(queued.sessions[0].state).toBe('active')
-    expect(queued.sessions[0].needsAttention).not.toBe(true)
+    expect(requiredTestValue(queued.sessions[0]).state).toBe('active')
+    expect(requiredTestValue(queued.sessions[0]).needsAttention).not.toBe(true)
     // The real retry now owns a running turn; the old machine item remains.
     child.messageQueue.pop(); child.isProcessing = true
     const running = await host.waitForDelegatedSessions(parent, [child.id], 0)
     expect(running.outcome).toBe('timeout')
-    expect(running.sessions[0].state).toBe('active')
-    expect(running.sessions[0].needsAttention).not.toBe(true)
+    expect(requiredTestValue(running.sessions[0]).state).toBe('active')
+    expect(requiredTestValue(running.sessions[0]).needsAttention).not.toBe(true)
     expect(child.pendingTurnRecovery?.attempts).toBe(5)
   })
 
@@ -257,8 +259,8 @@ describe('delegated waits through SessionManager', () => {
     child.lastFinalMessageId = 'checkpoint-final'
     make('foreign', { id: 'other', rootPath: '/tmp/other', name: 'Other', createdAt: 1 })
     const result = await host.waitForDelegatedSessions(parent, ['checkpoint'], 0)
-    expect(result.sessions[0].reason).toBeUndefined()
-    expect(result.sessions[0].finalText).toBeUndefined()
+    expect(requiredTestValue(result.sessions[0]).reason).toBeUndefined()
+    expect(requiredTestValue(result.sessions[0]).finalText).toBeUndefined()
     await expect(host.waitForDelegatedSessions(parent, ['checkpoint', 'foreign'], 0))
       .rejects.toThrow('Wait targets must be current delegated descendants')
   })
@@ -271,8 +273,8 @@ describe('delegated waits through SessionManager', () => {
     child.userInputRequests = ([{ id: 'question', sessionId: child.id, status: 'pending', createdAt: 1 }] satisfies Array<Partial<NonNullable<typeof child.userInputRequests>[number]>>) as NonNullable<typeof child.userInputRequests>
     host.emitUserInputChanged(child)
     const result = await pending
-    expect(result.sessions[0].needsAttention).toBe(true)
-    expect(result.sessions[0].reason).toBeUndefined()
+    expect(requiredTestValue(result.sessions[0]).needsAttention).toBe(true)
+    expect(requiredTestValue(result.sessions[0]).reason).toBeUndefined()
     expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(0)
   })
 
@@ -296,13 +298,13 @@ describe('delegated waits through SessionManager', () => {
       role: 'reviewer',
       reviewBinding: binding,
     }
-    parent.activeObjective = {
+    parent.activeObjective = omitUndefined<ActiveSessionObjective>({
       ...terminalObjective,
       lastUserMessageId: 'retarget-b',
       acceptanceRevision: 'retarget-b',
       acceptanceNeedsReview: true,
       terminalReconciliation: undefined,
-    }
+    })
 
     await expect(host.waitForDelegatedSessions(parent, [reviewer.id], 0))
       .rejects.toThrow('Wait targets must be current delegated descendants')

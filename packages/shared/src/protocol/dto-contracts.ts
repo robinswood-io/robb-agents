@@ -2,7 +2,6 @@ import { z } from 'zod'
 import type {
   MissionControlSnapshotDto,
   MissionReplayPlanDto,
-  DurableTaskSnapshotDto,
   TaskResultsDto,
   TaskRunSnapshotDto,
 } from './dto'
@@ -166,7 +165,7 @@ const durableTaskExternalRefsSchema = z.strictObject({
   temporalWorkflowId: z.string().min(1).optional(),
 })
 
-const durableTaskSnapshotDtoSchema: z.ZodType<DurableTaskSnapshotDto> = z.strictObject({
+export const DurableTaskSnapshotDtoSchema = z.strictObject({
   schemaVersion: z.literal(1),
   id: z.string().min(1),
   slug: z.string().min(1),
@@ -250,7 +249,7 @@ export const TaskResultsDtoSchema = z.strictObject({
   controlRoom: MissionControlSnapshotDtoSchema.optional(),
   replayPlan: MissionReplayPlanDtoSchema.optional(),
   reportMarkdown: z.string().optional(),
-  task: durableTaskSnapshotDtoSchema.optional(),
+  task: DurableTaskSnapshotDtoSchema.optional(),
   userEvidence: z.strictObject({
     actionRequested: z.string(),
     actionAttempted: z.array(z.string()),

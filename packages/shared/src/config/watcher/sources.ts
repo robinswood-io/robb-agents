@@ -128,7 +128,7 @@ export function handleSourceConfigChange(transportOwner: ConfigWatcher, slug: st
                 transportOwner["callbacks"].onSourceChange?.(slug, updatedSource);
             }
         })
-            .catch((err) => {
+            .catch((err: unknown) => {
             debug('[ConfigWatcher] Source icon download failed:', slug, err);
         });
     }

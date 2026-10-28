@@ -5,7 +5,7 @@
  * and connects it to Electron's ThemeContext and preset themes.
  */
 
-import * as React from 'react'
+
 import { ShikiCodeViewer as BaseShikiCodeViewer, type ShikiCodeViewerProps as BaseProps } from '@craft-agent/ui'
 import { useTheme } from '@/hooks/useTheme'
 

@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 /**
  * JSONL Session Storage
  *
@@ -97,18 +98,18 @@ export class UnsupportedSessionHeaderVersionError extends Error {
 
 function parseSessionHeaderLine(line: string, sessionDir: string): SessionHeader {
   const raw = safeJsonParse(expandSessionPath(line, sessionDir));
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+  if (!raw || typeof raw !== 'object' || isUnknownArray(raw)) {
     throw new Error('Session header must be an object');
   }
   const record = raw as Record<string, unknown>;
-  if (record.schemaVersion !== undefined && record.schemaVersion !== SESSION_HEADER_SCHEMA_VERSION) {
-    throw new UnsupportedSessionHeaderVersionError(record.schemaVersion);
+  if (record["schemaVersion"] !== undefined && record["schemaVersion"] !== SESSION_HEADER_SCHEMA_VERSION) {
+    throw new UnsupportedSessionHeaderVersionError(record["schemaVersion"]);
   }
   const migrated = {
     ...record,
     schemaVersion: SESSION_HEADER_SCHEMA_VERSION,
-    messageCount: record.messageCount ?? 0,
-    tokenUsage: record.tokenUsage ?? EMPTY_TOKEN_USAGE,
+    messageCount: record["messageCount"] ?? 0,
+    tokenUsage: record["tokenUsage"] ?? EMPTY_TOKEN_USAGE,
   };
   return normalizeHeaderPermissionModes(SessionHeaderStorageSchema.parse(migrated) as SessionHeader);
 }

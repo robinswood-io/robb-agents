@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { eventAttributes, resourceAttributes, toUnixNano } from './attributes.ts';
 import type { OtlpPayloads, OtlpSignal, OtlpTelemetryConfig, RobbExecutionTelemetryEvent } from './contracts.ts';
 import { metricPoints } from './metrics.ts';
@@ -85,14 +86,14 @@ export function buildOtlpPayloads(
 }
 
 function objectValue(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? Object.fromEntries(Object.entries(value))
+  return typeof value === 'object' && value !== null && !isUnknownArray(value)
+    ? Object.fromEntries(Object.entries<unknown>((value as Record<string, unknown>)))
     : undefined
 }
 
 function objectArray(value: unknown): Array<Record<string, unknown>> {
-  return Array.isArray(value)
-    ? value.flatMap(item => {
+  return isUnknownArray(value)
+    ? value.flatMap((item: unknown) => {
         const record = objectValue(item)
         return record ? [record] : []
       })

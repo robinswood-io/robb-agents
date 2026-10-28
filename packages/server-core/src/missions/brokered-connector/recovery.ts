@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { type MissionConnectorInvocation } from "@craft-agent/shared/missions";
 import type { MissionExecutionInput, MissionExecutionResult } from "../MissionRuntime.ts";
 import type { BrokeredMissionConnectorExecutor } from '../BrokeredMissionConnectorExecutor.ts';
@@ -28,12 +29,12 @@ export async function recover(transportOwner: BrokeredMissionConnectorExecutor, 
     if (observation.status === 'absent') {
         const approvalValid = state.approval?.decision === 'approved' && transportOwner["verifyApproval"](state.approval)
             && Date.parse(state.approval.expiresAt) > Date.parse(transportOwner["now"]());
-        const next = transportOwner["store"].update(input.mission.id, input.item.id, state.revision, (current) => ({
+        const next = transportOwner["store"].update(input.mission.id, input.item.id, state.revision, (current) => (omitUndefined<ConnectorExecutionState>({
             ...current,
             status: approvalValid ? 'approved' : 'prepared',
             approval: approvalValid ? current.approval : undefined,
             updatedAt: transportOwner["now"](),
-        }));
+        })));
         return { state: next };
     }
     const reason = observation.status === 'diverged'

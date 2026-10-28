@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import { uniqueTargets } from './action-targets.ts';
 import { isHttpExternalAudienceField, isKnownHttpExternalSendNonAudienceField, resemblesUnknownExternalAudienceField } from './http-audience-fields.ts';
 import type { SensitiveConditionalTarget, SensitiveConditionalTargetKind } from './types.ts';
@@ -70,11 +71,11 @@ function decodedLiteralValue(value: string): string | undefined {
 }
 
 export function literalAudienceValues(value: unknown, field: string): { values: string[]; resolved: boolean } {
-  if (Array.isArray(value)) {
-    const entries = value.map(entry => literalAudienceValues(entry, field));
+  if (isUnknownArray(value)) {
+    const entries = value.map((entry: unknown) => literalAudienceValues(entry, field));
     return {
-      values: entries.flatMap(entry => entry.values),
-      resolved: entries.length > 0 && entries.every(entry => entry.resolved),
+      values: entries.flatMap((entry) => entry.values),
+      resolved: entries.length > 0 && entries.every((entry) => entry.resolved),
     };
   }
   if (value && typeof value === 'object') {
@@ -82,7 +83,7 @@ export function literalAudienceValues(value: unknown, field: string): { values: 
       'id', 'email', 'email_address', 'address', 'phone', 'phone_number', 'number',
       'username', 'name', 'value',
     ]);
-    const candidates = Object.entries(value)
+    const candidates = Object.entries<unknown>((value as Record<string, unknown>))
       .map(([rawKey, entry]) => ({ key: normalizedPayloadFieldName(rawKey), entry }));
     const unknownField = candidates.some(candidate => !candidate.key || !identifierFields.has(candidate.key));
     const entries = candidates
@@ -91,8 +92,8 @@ export function literalAudienceValues(value: unknown, field: string): { values: 
       )
       .map(candidate => literalAudienceValues(candidate.entry, `${field}_${candidate.key}`));
     return {
-      values: entries.flatMap(entry => entry.values),
-      resolved: !unknownField && entries.length > 0 && entries.every(entry => entry.resolved),
+      values: entries.flatMap((entry) => entry.values),
+      resolved: !unknownField && entries.length > 0 && entries.every((entry) => entry.resolved),
     };
   }
   if (typeof value !== 'string' && !(typeof value === 'number' && Number.isFinite(value))) {
@@ -108,9 +109,9 @@ export function literalAudienceValues(value: unknown, field: string): { values: 
 
   const values = decoded
     .split(/[;,]/)
-    .map(entry => entry.trim())
+    .map((entry) => entry.trim())
     .filter(Boolean);
-  const resolved = values.length > 0 && values.every(entry =>
+  const resolved = values.length > 0 && values.every((entry) =>
     entry.length <= 200 && !hasDynamicShellValue(entry) && !/[\0\r\n]/.test(entry)
   );
   return { values: resolved ? values : [], resolved };
@@ -120,11 +121,11 @@ export function literalConditionalValues(
   value: unknown,
   kind: SensitiveConditionalTargetKind,
 ): { values: SensitiveConditionalTarget[]; resolved: boolean } {
-  if (Array.isArray(value)) {
-    const entries = value.map(entry => literalConditionalValues(entry, kind));
+  if (isUnknownArray(value)) {
+    const entries = value.map((entry: unknown) => literalConditionalValues(entry, kind));
     return {
-      values: entries.flatMap(entry => entry.values),
-      resolved: entries.length > 0 && entries.every(entry => entry.resolved),
+      values: entries.flatMap((entry) => entry.values),
+      resolved: entries.length > 0 && entries.every((entry) => entry.resolved),
     };
   }
   if (typeof value !== 'string' && !(typeof value === 'number' && Number.isFinite(value))) {
@@ -147,13 +148,13 @@ function collectHttpExternalSendPayload(
     accumulator.resolved = false;
     return;
   }
-  if (Array.isArray(value)) {
+  if (isUnknownArray(value)) {
     for (const entry of value) collectHttpExternalSendPayload(entry, accumulator, depth + 1);
     return;
   }
   if (!value || typeof value !== 'object') return;
 
-  for (const [rawKey, entry] of Object.entries(value)) {
+  for (const [rawKey, entry] of Object.entries<unknown>((value as Record<string, unknown>))) {
     const key = normalizedPayloadFieldName(rawKey);
     if (!key) {
       accumulator.resolved = false;
@@ -175,7 +176,7 @@ function collectHttpExternalSendPayload(
       if (!literal.resolved) accumulator.resolved = false;
     }
     if (!audienceField && !conditionalKind && !isKnownHttpExternalSendNonAudienceField(key)
-      && (Array.isArray(entry) || !entry || typeof entry !== 'object')) {
+      && (isUnknownArray(entry) || !entry || typeof entry !== 'object')) {
       accumulator.resolved = false;
     }
     if (!audienceField && entry && typeof entry === 'object') {

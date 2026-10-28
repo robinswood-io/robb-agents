@@ -113,7 +113,7 @@ function isEmoji(str: string): boolean {
 
 export function checkCompleteness(
   ctx: SessionToolContext,
-  sourcePath: string,
+  _sourcePath: string,
   source: SourceConfig
 ): { lines: string[]; hasWarning: boolean } {
   const lines: string[] = [];
@@ -143,7 +143,7 @@ export function checkCompleteness(
   // Check tagline field
   if (!source.tagline) {
     // Check if they used 'description' instead (common mistake)
-    if ((source as unknown as Record<string, unknown>)['description']) {
+    if (('description' in source && source.description)) {
       hasWarning = true;
       lines.push('⚠ Found "description" field instead of "tagline"');
       lines.push('  Rename "description" to "tagline" in config.json');

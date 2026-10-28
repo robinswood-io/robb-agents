@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { useCallback } from 'react';
 
 import type { LlmConnectionWithStatus } from '../../../shared/types';
@@ -103,7 +104,7 @@ const handleEditConnection = useCallback(async (connection: LlmConnectionWithSta
 
     const isCustomEndpointConnection = !!connection.customEndpoint && !!connection.baseUrl?.trim()
 
-    setEditInitialValues({
+    setEditInitialValues(omitUndefined({
       apiKey,
       baseUrl: connection.baseUrl,
       connectionDefaultModel: modelStr,
@@ -111,7 +112,7 @@ const handleEditConnection = useCallback(async (connection: LlmConnectionWithSta
       models: modelIds,
       customApi: connection.customEndpoint?.api,
       googleCloudProject: connection.googleCloudProject,
-    })
+    }))
 
     // Open overlay and jump directly to credentials step (no reset — jumpToCredentials sets state)
     openApiSetup(connection.slug)
@@ -152,7 +153,7 @@ const handleValidateConnection = useCallback(async (slug: string) => {
       } else {
         setValidationStates(prev => ({
           ...prev,
-          [slug]: { state: 'error', error: result.error }
+          [slug]: { state: 'error', ...(result.error !== undefined ? { error: result.error } : {}) }
         }))
         // Auto-clear error state after 5 seconds
         setTimeout(() => {

@@ -1,3 +1,4 @@
+import { isJsonObject, isUnknownArray, parseJsonObject } from '@craft-agent/shared/utils/json';
 import { sessionManagerForTest } from './testing/private-runtime-access.ts';
 import { describe, expect, it } from 'bun:test';
 import Ajv from 'ajv';
@@ -53,13 +54,20 @@ function fixture(criteria = [typed]) {
   return { objective, registration, observation, receipt, messages: [root, registration, observation] };
 }
 
+// Preserve malformed legacy inputs exactly; validate the returned envelope.
+function untrustedProjectionDiagnostic(objective: unknown, messages: unknown): unknown {
+  const projection: unknown = Reflect.apply(projectObjectiveAcceptanceCriteria, undefined, [objective, messages]);
+  if (!isJsonObject(projection)) throw new Error('Expected an objective projection envelope');
+  return projection['diagnostic'];
+}
+
 describe('evaluation-only legacy scalar transport recovery', () => {
   it('preserves attested historical projection even when the old contract contains incompatible equalities', () => {
     const originals = [typed, { ...typed, id: 'old-other-count', checks: [{ path: '$.count', equals: 2 }] }];
     const stored = throughOldSdk(originals);
     const f = fixture();
     f.objective.acceptanceCriteria = stored;
-    f.registration.toolInput!.criteria = structuredClone(originals);
+    f.registration.toolInput!["criteria"] = structuredClone(originals);
     f.registration.toolResult = JSON.stringify({ objectiveId: f.objective.objectiveId, criteria: stored });
     const before = structuredClone(f);
     const projected = projectObjectiveAcceptanceCriteria(f.objective, f.messages);
@@ -72,7 +80,7 @@ describe('evaluation-only legacy scalar transport recovery', () => {
   it('replays the historical SDK validation configuration and repairs types without mutating the saved contract or transcript', () => {
     const f = fixture();
     const before = JSON.stringify(f);
-    expect(f.objective.acceptanceCriteria![0]!.input.timeout).toBe('120');
+    expect(f.objective.acceptanceCriteria![0]!.input["timeout"]).toBe('120');
     expect(f.objective.acceptanceCriteria![0]!.checks.map(c => c.equals)).toEqual(['1', 'true', '', '001']);
     expect(validateObjectiveAcceptanceCriteria(f.objective, [root, f.observation], f.receipt)).toHaveLength(1);
     const projected = projectObjectiveAcceptanceCriteria(f.objective, f.messages);
@@ -136,15 +144,15 @@ describe('evaluation-only legacy scalar transport recovery', () => {
       { role: 'assistant' as const }, { toolName: 'mcp__other__set_completion_criteria' },
       { toolName: 'functions.set_completion_criteria' }, { toolExecuted: false }, { toolExecuted: undefined },
       { toolStatus: 'executing' as const }, { toolStatus: 'error' as const }, { isError: true },
-      { toolCheckpoint: {} as never }, { toolUseId: undefined }, { id: '' }, { timestamp: 9 }, { timestamp: 21 },
+      { toolCheckpoint: {} }, { toolUseId: undefined }, { id: '' }, { timestamp: 9 }, { timestamp: 21 },
       { toolResult: undefined }, { continuationRequired: true },
-    ]) expect(projectObjectiveAcceptanceCriteria(f.objective, [root, { ...f.registration, ...patch }, f.observation]).diagnostic).toBeUndefined();
+    ]) expect(untrustedProjectionDiagnostic(f.objective, [root, { ...f.registration, ...patch }, f.observation])).toBeUndefined();
     for (const messages of [
       [f.registration, root, f.observation], [f.registration, f.observation],
       [root, f.registration, { ...f.registration, id: 'duplicate' }, f.observation],
       [root, f.registration, { ...f.registration, id: 'unknown-success', toolExecuted: undefined }, f.observation],
       [root, f.registration, { ...f.registration, id: 'pending', toolStatus: 'executing' as const }, f.observation],
-    ]) expect(projectObjectiveAcceptanceCriteria(f.objective, messages).diagnostic).toBeUndefined();
+    ]) expect(untrustedProjectionDiagnostic(f.objective, messages)).toBeUndefined();
     const previous = { ...root, id: 'previous-root', timestamp: 1 };
     expect(projectObjectiveAcceptanceCriteria(f.objective, [previous, f.registration, ...f.messages]).diagnostic).toBeDefined();
     const failed = { ...f.registration, id: 'failed', isError: true };
@@ -153,12 +161,14 @@ describe('evaluation-only legacy scalar transport recovery', () => {
 
   it('requires the exact host ACK, current objective, complete criteria and deterministic legacy conversion', () => {
     const f = fixture();
-    const ack = JSON.parse(f.registration.toolResult!);
-    const other = structuredClone(ack.criteria[0]); other.id = 'other';
+    const ack = parseJsonObject(f.registration.toolResult!);
+    const criteria = ack['criteria'];
+    if (!isUnknownArray(criteria) || !isJsonObject(criteria[0])) throw new Error('Fixture criteria are missing');
+    const other = structuredClone(criteria[0]); other['id'] = 'other';
     const badResults = [
       'PASS', `Explanation ${f.registration.toolResult}`, `${f.registration.toolResult}\n{}`, f.registration.toolResult!.slice(0, -1),
       JSON.stringify({ ...ack, objectiveId: 'another-root' }), JSON.stringify({ ...ack, extra: true }),
-      JSON.stringify({ ...ack, criteria: [] }), JSON.stringify({ ...ack, criteria: [...ack.criteria, other] }),
+      JSON.stringify({ ...ack, criteria: [] }), JSON.stringify({ ...ack, criteria: [...criteria, other] }),
       JSON.stringify({ nested: ack }), `{"objectiveId":"other",${f.registration.toolResult!.slice(1)}`,
       JSON.stringify({ content: [{ type: 'text', text: f.registration.toolResult }, { type: 'text', text: f.registration.toolResult }] }),
       JSON.stringify({ isError: true, content: [{ type: 'text', text: f.registration.toolResult }] }),
@@ -168,17 +178,19 @@ describe('evaluation-only legacy scalar transport recovery', () => {
     const enveloped = { ...f.registration, toolResult: JSON.stringify({ content: [{ type: 'text', text: f.registration.toolResult }] }) };
     expect(projectObjectiveAcceptanceCriteria(f.objective, [root, enveloped, f.observation]).diagnostic).toBeDefined();
     for (const field of ['id', 'description', 'toolName', 'input', 'checks']) {
-      const changed = structuredClone(ack.criteria);
-      changed[0][field] = field === 'input' ? { ...changed[0].input, target: 'different' }
+      const changed = structuredClone(criteria);
+      const first = changed[0];
+      if (!isJsonObject(first) || !isJsonObject(first['input'])) throw new Error('Fixture criterion input is missing');
+      first[field] = field === 'input' ? { ...first['input'], target: 'different' }
         : field === 'checks' ? [{ path: '$.different', equals: '1' }] : 'changed';
-      expect(projectObjectiveAcceptanceCriteria({ ...f.objective, acceptanceCriteria: changed }, f.messages).diagnostic).toBeUndefined();
+      expect(untrustedProjectionDiagnostic({ ...f.objective, acceptanceCriteria: changed }, f.messages)).toBeUndefined();
     }
     const wrongRaw = structuredClone(f.registration.toolInput!);
-    (wrongRaw.criteria as ObjectiveAcceptanceCriterion[])[0]!.checks[0]!.equals = 2;
+    (wrongRaw["criteria"] as ObjectiveAcceptanceCriterion[])[0]!.checks[0]!.equals = 2;
     expect(projectObjectiveAcceptanceCriteria(f.objective, [root, { ...f.registration, toolInput: wrongRaw }]).diagnostic).toBeUndefined();
     const additive = { ...f.objective, acceptanceCriteria: [...f.objective.acceptanceCriteria!, other] };
-    expect(projectObjectiveAcceptanceCriteria(additive, [root, { ...f.registration,
-      toolResult: JSON.stringify({ ...ack, criteria: additive.acceptanceCriteria }) }]).diagnostic).toBeUndefined();
+    expect(untrustedProjectionDiagnostic(additive, [root, { ...f.registration,
+      toolResult: JSON.stringify({ ...ack, criteria: additive.acceptanceCriteria }) }])).toBeUndefined();
   });
 
   it('rejects invalid original selectors/scalars/structure even when a fabricated ACK mirrors their coercion', () => {
@@ -191,11 +203,11 @@ describe('evaluation-only legacy scalar transport recovery', () => {
       { ...typed, checks: [{ path: '$.count', equals: 1, extra: true }] },
     ]) {
       const f = fixture();
-      const saved = JSON.parse(JSON.stringify(raw, (key, value) => key === 'target' || key === 'equals' ? String(value) : value));
+      const saved: unknown = JSON.parse(JSON.stringify(raw, (key: string, value: unknown) => key === 'target' || key === 'equals' ? String(value) : value));
       const objective = { ...f.objective, acceptanceCriteria: [saved] };
       const registration = { ...f.registration, toolInput: { criteria: [raw] },
         toolResult: JSON.stringify({ objectiveId: objective.objectiveId, criteria: [saved] }) };
-      expect(projectObjectiveAcceptanceCriteria(objective, [root, registration]).diagnostic).toBeUndefined();
+      expect(untrustedProjectionDiagnostic(objective, [root, registration])).toBeUndefined();
     }
     const f = fixture();
     expect(projectObjectiveAcceptanceCriteria(f.objective, [root, { ...f.registration,
@@ -209,7 +221,7 @@ describe('evaluation-only legacy scalar transport recovery', () => {
       { ...f.objective, evidenceRequirement: 'authoritative-sources-before-mutation' as const },
       { ...f.objective, completionCriteria: [...f.objective.completionCriteria, 'independent-review-passed' as const] },
       { ...f.objective, acceptanceRegisteredAt: undefined },
-    ]) expect(projectObjectiveAcceptanceCriteria(objective, f.messages).diagnostic).toBeUndefined();
+    ]) expect(untrustedProjectionDiagnostic(objective, f.messages)).toBeUndefined();
     for (const toolName of ['mcp__session__call_llm', 'functions.call_llm', 'mcp__security__reviewer',
       'custom_review', 'mcp__session__spawn_session', 'mcp__session__wait_sessions']) {
       const review = { verdict: 'PASS', ...objectiveReviewBinding(f.objective), findings: [],
@@ -239,7 +251,7 @@ describe('evaluation-only legacy scalar transport recovery', () => {
     expect(prompt).toContain('"timeout":120');
     expect(prompt).toContain('in memory only');
     expect(buildObjectiveValidationEvidenceContext([root, f.registration], f.objective)).toContain('legacy-scalar-coercion');
-    expect(f.objective.acceptanceCriteria![0]!.input.timeout).toBe('120');
+    expect(f.objective.acceptanceCriteria![0]!.input["timeout"]).toBe('120');
   });
 
   it('uses the same projection in the real SessionManager runtime prompt without starting a provider or agent', async () => {

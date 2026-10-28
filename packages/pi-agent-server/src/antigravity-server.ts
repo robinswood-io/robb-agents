@@ -63,17 +63,17 @@ function captureSessionId(value: unknown): void {
 }
 
 function toolCallId(update: Record<string, unknown>): string {
-  const index = typeof update.step_index === 'number' ? update.step_index : Date.now();
+  const index = typeof update["step_index"] === 'number' ? update["step_index"] : Date.now();
   return `antigravity-${bridgeSessionId ?? 'pending'}-${index}`;
 }
 
 function emitToolUpdate(update: Record<string, unknown>, turn: ActiveTurn): void {
-  const toolInfo = asRecord(update.tool_info);
+  const toolInfo = asRecord(update["tool_info"]);
   const id = toolCallId(update);
-  const toolName = stringValue(update.tool_name)
-    ?? stringValue(toolInfo?.name)
+  const toolName = stringValue(update["tool_name"])
+    ?? stringValue(toolInfo?.["name"])
     ?? 'Google Antigravity tool';
-  const state = String(update.state ?? '').toUpperCase();
+  const state = String(update["state"] ?? '').toUpperCase();
 
   if (!turn.toolStarts.has(id)) {
     turn.toolStarts.add(id);
@@ -81,7 +81,7 @@ function emitToolUpdate(update: Record<string, unknown>, turn: ActiveTurn): void
       type: 'tool_execution_start',
       toolCallId: id,
       toolName,
-      args: asRecord(toolInfo?.parameters) ?? {},
+      args: asRecord(toolInfo?.["parameters"]) ?? {},
     });
   }
 
@@ -103,20 +103,20 @@ function emitToolUpdate(update: Record<string, unknown>, turn: ActiveTurn): void
 }
 
 function handleAntigravityEvent(message: Record<string, unknown>): void {
-  if (message.event === 'init') {
-    captureSessionId(message.conversation_id ?? asRecord(message.init)?.conversation_id);
+  if (message["event"] === 'init') {
+    captureSessionId(message["conversation_id"] ?? asRecord(message["init"])?.["conversation_id"]);
     return;
   }
 
   const turn = activeTurn;
   if (!turn) return;
 
-  if (message.event === 'step_update') {
-    const update = asRecord(message.step_update);
+  if (message["event"] === 'step_update') {
+    const update = asRecord(message["step_update"]);
     if (!update) return;
-    captureSessionId(update.conversation_id);
-    const stepType = stringValue(update.step_type);
-    const delta = stringValue(update.text_delta);
+    captureSessionId(update["conversation_id"]);
+    const stepType = stringValue(update["step_type"]);
+    const delta = stringValue(update["text_delta"]);
     if (stepType === 'agent_response' && delta) {
       turn.text += delta;
       emitEvent({ type: 'message_update', assistantMessageEvent: { type: 'text_delta', delta } });
@@ -128,9 +128,9 @@ function handleAntigravityEvent(message: Record<string, unknown>): void {
     return;
   }
 
-  if (message.event === 'result') {
-    const result = asRecord(message.result) ?? {};
-    captureSessionId(result.conversation_id);
+  if (message["event"] === 'result') {
+    const result = asRecord(message["result"]) ?? {};
+    captureSessionId(result["conversation_id"]);
     turn.resolve(result);
   }
 }
@@ -315,7 +315,7 @@ async function runPrompt(id: string, message: string, systemPrompt?: string): Pr
       providerHandoffCommitted = true;
 
       const result = await resultPromise;
-      const status = String(result.status ?? '').toUpperCase();
+      const status = String(result["status"] ?? '').toUpperCase();
       if (status !== 'SUCCESS') {
         const classified = classifyResultError(result);
         reportError(classified.code, classified.message);
@@ -323,8 +323,8 @@ async function runPrompt(id: string, message: string, systemPrompt?: string): Pr
         return;
       }
 
-      const text = stringValue(result.response) ?? turn.text;
-      const usage = perTurnUsage(result.usage);
+      const text = stringValue(result["response"]) ?? turn.text;
+      const usage = perTurnUsage(result["usage"]);
       const sdkMessageId = `antigravity-message-${Date.now()}`;
       emitEvent({
         type: 'message_end',
@@ -386,7 +386,7 @@ async function handle(message: InboundMessage): Promise<void> {
       promptQueue = promptQueue.then(
         () => runPrompt(message.id, message.message, message.systemPrompt),
         () => runPrompt(message.id, message.message, message.systemPrompt),
-      ).catch(error => {
+      ).catch((error: unknown) => {
         if (error instanceof AntigravityPromptRejectedBeforeWriteError) {
           send({
             type: 'error',
@@ -444,7 +444,6 @@ async function handle(message: InboundMessage): Promise<void> {
     case 'shutdown':
       await stopAntigravity();
       process.exit(0);
-      return;
     case 'register_tools':
     case 'pre_tool_use_response':
     case 'steer':

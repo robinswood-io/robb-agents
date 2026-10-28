@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
@@ -114,9 +115,9 @@ describe('durable restart recovery', () => {
     expect(redirects).toBe(0)
     expect(h.events.filter(event => event.type === 'complete')).toHaveLength(0)
     for (const [index, managed] of sessions.entries()) {
-      const disk = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8').trim().split('\n').map(line => JSON.parse(line))
-      expect(disk[0].pendingTurnRecovery).toEqual(original[index])
-      expect(disk.find(message => message.toolUseId === `${managed.id}-call`).toolResult).toBe(managed.id === 'root' ? 'Already verified' : 'Error: service unavailable')
+      const disk = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8').trim().split('\n').map(parseRecoveryJournalObservation)
+      expect<unknown>(requiredTestValue(disk[0]).pendingTurnRecovery).toEqual(original[index])
+      expect(requiredTestValue(disk.find(message => message.toolUseId === `${managed.id}-call`)).toolResult).toBe(managed.id === 'root' ? 'Already verified' : 'Error: service unavailable')
       expect(managed.messageQueue).toHaveLength(0)
       expect(managed.activeObjective?.terminalState).toBe('active')
     }

@@ -1,3 +1,4 @@
+import { createMockFns } from "./testing/browser-tools-fixture.ts";
 import { describe, expect, it } from 'bun:test';
 import { PiAgent } from '../pi-agent.ts';
 import type { BackendConfig } from '../backend/types.ts';
@@ -38,11 +39,9 @@ describe('Pi browser_tool watchdog bridge', () => {
     agent['subprocessRuntimeContext'] = runtime;
     agent['prerequisiteManager'].checkPrerequisites = () => ({ allowed: true });
     registerSessionScopedToolCallbacks(sessionId, {
-      browserPaneFns: {
-        evaluate: async () => new Promise(resolve => {
+      browserPaneFns: Object.assign(createMockFns(), ({evaluate: async () => new Promise(resolve => {
           resolveLateEvaluation = resolve;
-        }),
-      } as unknown as BrowserPaneFns,
+        })} satisfies Partial<BrowserPaneFns>)),
     });
 
     const originalSetTimeout = globalThis.setTimeout;
@@ -61,7 +60,7 @@ describe('Pi browser_tool watchdog bridge', () => {
         runtimeId: runtime.runtimeId,
         authorizationEpoch: 0,
       })).toBe(true);
-      await agent['handleToolExecuteRequest']({
+      await agent.handleToolExecuteRequest({
         requestId: 'browser-timeout-request',
         toolName: 'mcp__session__browser_tool',
         toolCallId: 'browser-timeout-tool',
@@ -76,7 +75,7 @@ describe('Pi browser_tool watchdog bridge', () => {
         requestId: 'browser-timeout-request',
         result: { isError: true },
       });
-      const content = String((sent[0]!.result as { content: string }).content);
+      const content = String((sent[0]!["result"] as { content: string }).content);
       expect(content).toContain('Browser operation timed out');
       expect(content).toContain('may have completed');
 

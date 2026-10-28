@@ -21,8 +21,8 @@ export async function loadDocument(transportOwner: SpecializedProfileRegistrySto
     try {
         const raw = readFileSync(handle.descriptor, 'utf8');
         handle.assertStillBound();
-        const document = transportOwner["parseAndVerifyDocument"](JSON.parse(raw) as unknown);
-        return await transportOwner["verifyAndRecoverAnchoredDocument"](document, recover);
+        const document = transportOwner.parseAndVerifyDocument(JSON.parse(raw) as unknown);
+        return await transportOwner.verifyAndRecoverAnchoredDocument(document, recover);
     }
     finally {
         handle.close();
@@ -38,20 +38,20 @@ export async function loadOrCreate(transportOwner: SpecializedProfileRegistrySto
             }
             return existing;
         }
-        transportOwner["requireDurableAuthority"]();
-        const orphanedAnchor = await transportOwner["anchorStore"]!.load(workspaceId);
+        transportOwner.requireDurableAuthority();
+        const orphanedAnchor = await transportOwner.anchorStore!.load(workspaceId);
         if (orphanedAnchor) {
             const anchor = SpecializedProfileRegistryAnchorSchema.parse(orphanedAnchor);
             if (anchor.workspaceId === workspaceId
                 && transportOwner["authority"]!.verifyRegistryAnchor(anchor)
                 && anchor.committed === null
                 && anchor.pending?.revision === 0) {
-                const pending = transportOwner["readPendingDocument"]();
+                const pending = transportOwner.readPendingDocument();
                 if (pending.workspaceId === workspaceId
                     && pending.head.previousDocumentSha256 === null
                     && sameAnchorRef(anchor.pending, registryAnchorRef(pending))) {
-                    transportOwner["promotePendingDocument"]();
-                    await transportOwner["anchorStore"]!.save(workspaceId, transportOwner["sealAnchor"]({
+                    transportOwner.promotePendingDocument();
+                    await transportOwner.anchorStore!.save(workspaceId, transportOwner.sealAnchor({
                         schemaVersion: 1,
                         workspaceId,
                         committed: registryAnchorRef(pending),
@@ -101,8 +101,8 @@ export function parseAndVerifyDocument(transportOwner: SpecializedProfileRegistr
 }
 
 export async function verifyAndRecoverAnchoredDocument(transportOwner: SpecializedProfileRegistryStore, document: SpecializedProfileRegistryDocument, recover: boolean): Promise<SpecializedProfileRegistryDocument> {
-    transportOwner["requireDurableAuthority"]();
-    const anchorValue = await transportOwner["anchorStore"]!.load(document.workspaceId);
+    transportOwner.requireDurableAuthority();
+    const anchorValue = await transportOwner.anchorStore!.load(document.workspaceId);
     if (!anchorValue) {
         throw new SpecializedProfileTransitionGateError('Specialized profile registry has no external monotone anchor');
     }
@@ -117,7 +117,7 @@ export async function verifyAndRecoverAnchoredDocument(transportOwner: Specializ
             throw new SpecializedProfileTransitionGateError('Specialized profile registry head chain is broken');
         }
         if (recover) {
-            await transportOwner["anchorStore"]!.save(document.workspaceId, transportOwner["sealAnchor"]({
+            await transportOwner.anchorStore!.save(document.workspaceId, transportOwner.sealAnchor({
                 schemaVersion: 1,
                 workspaceId: document.workspaceId,
                 committed: current,
@@ -132,13 +132,13 @@ export async function verifyAndRecoverAnchoredDocument(transportOwner: Specializ
         if (!recover) {
             throw new SpecializedProfileRegistryBusyError(transportOwner["lockPath"]);
         }
-        const pending = transportOwner["readPendingDocument"]();
+        const pending = transportOwner.readPendingDocument();
         if (!sameAnchorRef(anchor.pending, registryAnchorRef(pending))
             || pending.head.previousDocumentSha256 !== current.documentSha256) {
             throw new SpecializedProfileTransitionGateError('Pending specialized profile registry recovery does not match its external anchor');
         }
-        transportOwner["promotePendingDocument"]();
-        await transportOwner["anchorStore"]!.save(document.workspaceId, transportOwner["sealAnchor"]({
+        transportOwner.promotePendingDocument();
+        await transportOwner.anchorStore!.save(document.workspaceId, transportOwner.sealAnchor({
             schemaVersion: 1,
             workspaceId: document.workspaceId,
             committed: registryAnchorRef(pending),
@@ -163,7 +163,7 @@ export function readPendingDocument(transportOwner: SpecializedProfileRegistrySt
     try {
         const raw = readFileSync(handle.descriptor, 'utf8');
         handle.assertStillBound();
-        return transportOwner["parseAndVerifyDocument"](JSON.parse(raw) as unknown);
+        return transportOwner.parseAndVerifyDocument(JSON.parse(raw) as unknown);
     }
     finally {
         handle.close();

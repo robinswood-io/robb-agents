@@ -1,3 +1,5 @@
+import type { TestLlmConnectionParams } from '../../../../../packages/shared/src/protocol/dto/connections.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { useState, useCallback } from 'react';
 import { resolveProviderSetupSelection, isLoopbackEndpoint, apiSetupMethodToConnectionSetup } from "./onboarding-connection-setup";
 import type { OnboardingState, ApiSetupMethod } from '@/components/onboarding';
@@ -23,14 +25,14 @@ export function useConnectionOnboarding({
   existingSlugs,
 }: useConnectionOnboardingInput) {
 const handleSubmitCredential = useCallback(async (data: ApiKeySubmitData) => {
-    setState(s => ({ ...s, credentialStatus: 'validating', errorMessage: undefined }))
+    setState(s => (omitUndefined<OnboardingState>({ ...s, credentialStatus: 'validating', errorMessage: undefined })))
 
     const isPiApiKeyFlow = state.apiSetupMethod === 'pi_api_key'
 
     try {
       // Bedrock (Pi+amazon-bedrock) — skip API key validation and connection test
       if (data.bedrockAuthMethod) {
-        const saved = await handleSaveConfig(undefined, {
+        const saved = await handleSaveConfig(undefined, omitUndefined({
           baseUrl: data.baseUrl,
           connectionDefaultModel: data.connectionDefaultModel,
           models: data.models,
@@ -39,7 +41,7 @@ const handleSubmitCredential = useCallback(async (data: ApiKeySubmitData) => {
           iamCredentials: data.iamCredentials,
           awsRegion: data.awsRegion,
           bedrockAuthMethod: data.bedrockAuthMethod,
-        })
+        }))
         if (saved) {
           setState(s => ({ ...s, credentialStatus: 'success', step: 'complete' }))
         } else {
@@ -50,14 +52,14 @@ const handleSubmitCredential = useCallback(async (data: ApiKeySubmitData) => {
 
       // When editing an existing connection, API key is optional (empty = keep existing credential)
       if (!data.apiKey.trim() && editingSlug) {
-        const saved = await handleSaveConfig(undefined, {
+        const saved = await handleSaveConfig(undefined, omitUndefined({
           baseUrl: data.baseUrl,
           connectionDefaultModel: data.connectionDefaultModel,
           models: data.models,
           piAuthProvider: data.piAuthProvider,
           modelSelectionMode: data.modelSelectionMode,
           customEndpoint: data.customEndpoint,
-        })
+        }))
         if (saved) {
           setState(s => ({ ...s, credentialStatus: 'success', step: 'complete' }))
         } else {
@@ -94,14 +96,14 @@ const handleSubmitCredential = useCallback(async (data: ApiKeySubmitData) => {
       // Custom endpoint protocol routes through PiAgent at runtime, so test with Pi too.
       const setupTestProvider = data.customEndpoint ? 'pi' : (isPiApiKeyFlow ? 'pi' : 'anthropic')
       const effectivePiAuthProvider = data.piAuthProvider
-      const testResult = await window.electronAPI.testLlmConnectionSetup({
+      const testResult = await window.electronAPI.testLlmConnectionSetup(omitUndefined<TestLlmConnectionParams>({
         provider: setupTestProvider,
         apiKey: data.apiKey,
-        baseUrl: data.baseUrl,
+        ...(data.baseUrl !== undefined ? { baseUrl: data.baseUrl } : {}),
         model: data.models?.[0],
-        piAuthProvider: effectivePiAuthProvider,
-        customEndpoint: data.customEndpoint,
-      })
+        ...(effectivePiAuthProvider !== undefined ? { piAuthProvider: effectivePiAuthProvider } : {}),
+        ...(data.customEndpoint !== undefined ? { customEndpoint: data.customEndpoint } : {}),
+      }))
 
       if (!testResult.success) {
         setState(s => ({
@@ -112,14 +114,14 @@ const handleSubmitCredential = useCallback(async (data: ApiKeySubmitData) => {
         return
       }
 
-      const saved = await handleSaveConfig(data.apiKey, {
+      const saved = await handleSaveConfig(data.apiKey, omitUndefined({
         baseUrl: data.baseUrl,
         connectionDefaultModel: data.connectionDefaultModel,
         models: data.models,
         piAuthProvider: effectivePiAuthProvider,
         modelSelectionMode: data.modelSelectionMode,
         customEndpoint: data.customEndpoint,
-      })
+      }))
 
       if (saved) {
         setState(s => ({
@@ -178,15 +180,15 @@ const handleStartOAuth = useCallback(async (
     const effectiveMethod = methodOverride ?? state.apiSetupMethod
 
     if (methodOverride && methodOverride !== state.apiSetupMethod) {
-      setState(s => ({
+      setState(s => (omitUndefined<OnboardingState>({
         ...s,
         apiSetupMethod: methodOverride,
         step: 'credentials',
         credentialStatus: 'validating',
         errorMessage: undefined,
-      }))
+      })))
     } else {
-      setState(s => ({ ...s, credentialStatus: 'validating', errorMessage: undefined }))
+      setState(s => (omitUndefined<OnboardingState>({ ...s, credentialStatus: 'validating', errorMessage: undefined })))
     }
 
     if (!effectiveMethod) {
@@ -340,20 +342,20 @@ const handleStartOAuth = useCallback(async (
 const handleSelectProvider = useCallback((choice: ProviderChoice) => {
     if (choice === 'local') {
       // Local uses anthropic_api_key with custom endpoint (Ollama doesn't need an API key)
-      setState(s => ({ ...s, step: 'local-model', apiSetupMethod: 'anthropic_api_key', credentialStatus: 'idle', errorMessage: undefined }))
+      setState(s => (omitUndefined<OnboardingState>({ ...s, step: 'local-model', apiSetupMethod: 'anthropic_api_key', credentialStatus: 'idle', errorMessage: undefined })))
       return
     }
 
     const selection = resolveProviderSetupSelection(choice)
     const method = selection.method
-    setState(s => ({
+    setState(s => (omitUndefined<OnboardingState>({
       ...s,
       apiSetupMethod: method,
       preferredPiPreset: selection.preferredPiPreset,
       step: 'credentials',
       credentialStatus: 'idle',
       errorMessage: undefined,
-    }))
+    })))
 
     // OAuth methods start immediately
     if (selection.startOAuth) {

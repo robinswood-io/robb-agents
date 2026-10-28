@@ -1,3 +1,5 @@
+import type { MissionSelectionContext } from '../mission-model-decision.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel } from "@craft-agent/shared/config";
 import { loadMissionSnapshot, type MissionExecutionBinding, type MissionSpec, type MissionWorkItem } from "@craft-agent/shared/missions";
 import type { Session } from "@craft-agent/shared/protocol";
@@ -28,25 +30,25 @@ export async function createProductionExecutor(transportOwner: MissionRuntimeSer
     });
 }
 
-export function ordinaryRouteKey(transportOwner: MissionRuntimeService, workspaceId: string, missionId: string): string {
+export function ordinaryRouteKey(_transportOwner: MissionRuntimeService, workspaceId: string, missionId: string): string {
     return `${workspaceId}\0${missionId}`;
 }
 
 export async function withOrdinaryRoutePreparationLock<T>(transportOwner: MissionRuntimeService, workspaceId: string, missionId: string, operation: () => Promise<T>): Promise<T> {
-    const key = transportOwner["ordinaryRouteKey"](workspaceId, missionId);
-    const previous = transportOwner["ordinaryRoutePreparationLocks"].get(key) ?? Promise.resolve();
+    const key = transportOwner.ordinaryRouteKey(workspaceId, missionId);
+    const previous = transportOwner.ordinaryRoutePreparationLocks.get(key) ?? Promise.resolve();
     let release!: () => void;
     const gate = new Promise<void>(resolve => { release = resolve; });
     const tail = previous.then(() => gate);
-    transportOwner["ordinaryRoutePreparationLocks"].set(key, tail);
+    transportOwner.ordinaryRoutePreparationLocks.set(key, tail);
     await previous;
     try {
         return await operation();
     }
     finally {
         release();
-        if (transportOwner["ordinaryRoutePreparationLocks"].get(key) === tail) {
-            transportOwner["ordinaryRoutePreparationLocks"].delete(key);
+        if (transportOwner.ordinaryRoutePreparationLocks.get(key) === tail) {
+            transportOwner.ordinaryRoutePreparationLocks.delete(key);
         }
     }
 }
@@ -55,7 +57,7 @@ export async function withOrdinaryRoutePreparationLock<T>(transportOwner: Missio
 export async function prepareOrdinaryMissionDispatchRoute(transportOwner: MissionRuntimeService, workspaceId: string, input: MissionExecutionInput): Promise<OrdinaryMissionRoutePin | undefined> {
     if (input.specializedProfile)
         return undefined;
-    return transportOwner["withOrdinaryRoutePreparationLock"](workspaceId, input.mission.id, async () => {
+    return transportOwner.withOrdinaryRoutePreparationLock(workspaceId, input.mission.id, async () => {
         const workspace = transportOwner["resolveWorkspace"](workspaceId);
         if (!workspace)
             throw new Error(`Workspace ${workspaceId} not found`);
@@ -67,14 +69,14 @@ export async function prepareOrdinaryMissionDispatchRoute(transportOwner: Missio
         if (!currentRuntime || JSON.stringify(currentRuntime.definition) !== JSON.stringify(input.item)) {
             throw new Error(`Mission work item "${input.item.id}" drifted before route preparation`);
         }
-        const connections = transportOwner["currentMissionConnections"]();
+        const connections = transportOwner.currentMissionConnections();
         const origin = input.mission.originSessionId
             ? transportOwner["options"].sessionManager.getSessions(workspaceId)
                 .find(session => session.id === input.mission.originSessionId)
             : undefined;
         const measuredMissionUsd = measuredMissionCostUsd(snapshot);
-        const environmentSha256 = transportOwner["missionEstimateEnvironmentIdentity"](workspace, snapshot, config, connections, origin);
-        const projectedRemainingUsd = await transportOwner["projectedRemainingMissionCostUsd"]({
+        const environmentSha256 = transportOwner.missionEstimateEnvironmentIdentity(workspace, snapshot, config, connections, origin);
+        const projectedRemainingUsd = await transportOwner.projectedRemainingMissionCostUsd({
             workspace,
             snapshot,
             config,
@@ -84,7 +86,7 @@ export async function prepareOrdinaryMissionDispatchRoute(transportOwner: Missio
             environmentSha256,
             currentItem: input.item,
         });
-        const route = transportOwner["resolveOrdinaryRouteForItem"]({
+        const route = transportOwner.resolveOrdinaryRouteForItem({
             workspace,
             spec: input.mission,
             item: input.item,
@@ -93,7 +95,7 @@ export async function prepareOrdinaryMissionDispatchRoute(transportOwner: Missio
             connections,
             origin,
             measuredMissionUsd,
-            projectedRemainingUsd,
+            ...(projectedRemainingUsd !== undefined ? { projectedRemainingUsd: projectedRemainingUsd } : {}),
         });
         if (!route.policyAllowed || !route.connectionSlug || !route.routingDecision) {
             throw new Error(`Mission route preflight refused before dispatch: ${route.explanation}`);
@@ -105,20 +107,20 @@ export async function prepareOrdinaryMissionDispatchRoute(transportOwner: Missio
         const effectiveSourceBindings = await ordinaryMissionSourceBindings(workspace.rootPath, effectiveSourceSlugs);
         const sourceIdentitySha256 = ordinaryMissionSourceIdentityFromBindings(effectiveSourceBindings);
         const cwd = canonicalMissionWorkingDirectory(workspace.rootPath, input.mission.cwd);
-        const runtimeIdentitySha256 = transportOwner["validOrdinaryRuntimeIdentity"]();
+        const runtimeIdentitySha256 = transportOwner.validOrdinaryRuntimeIdentity();
         const connectionIdentitySha256 = await ordinaryMissionConnectionIdentity({
             agentProfileId: input.profile.id,
             connection,
             connectionSlug: route.connectionSlug,
             model: route.routingDecision.model,
             thinkingLevel: route.routingDecision.thinkingLevel,
-            runtimeIdentitySha256,
+            ...(runtimeIdentitySha256 !== undefined ? { runtimeIdentitySha256: runtimeIdentitySha256 } : {}),
             credentialBindingResolver: transportOwner["options"].ordinaryRouteCredentialBindingResolver,
         });
         const routeConfigIdentitySha256 = ordinaryMissionRouteConfigIdentity({
             profile: input.profile,
             config,
-            origin,
+            ...(origin !== undefined ? { origin: origin } : {}),
             defaults: {
                 defaultLlmConnection: getDefaultLlmConnection(),
                 defaultThinkingLevel: getDefaultThinkingLevel(),
@@ -187,7 +189,7 @@ export async function revalidateOrdinaryMissionDispatchRoute(transportOwner: Mis
     if (ordinaryMissionRouteConfigIdentity({
         profile: input.profile,
         config,
-        origin,
+        ...(origin !== undefined ? { origin: origin } : {}),
         defaults: {
             defaultLlmConnection: getDefaultLlmConnection(),
             defaultThinkingLevel: getDefaultThinkingLevel(),
@@ -209,11 +211,11 @@ export async function revalidateOrdinaryMissionDispatchRoute(transportOwner: Mis
     const cwd = canonicalMissionWorkingDirectory(workspace.rootPath, input.mission.cwd);
     if (cwd !== route.cwd)
         throw new Error('Mission working directory drifted after prepare');
-    const runtimeIdentitySha256 = transportOwner["validOrdinaryRuntimeIdentity"]();
+    const runtimeIdentitySha256 = transportOwner.validOrdinaryRuntimeIdentity();
     if (route.runtimeIdentitySha256 && route.runtimeIdentitySha256 !== runtimeIdentitySha256) {
         throw new Error('Mission host runtime identity drifted after prepare');
     }
-    const connection = transportOwner["currentMissionConnections"]()
+    const connection = transportOwner.currentMissionConnections()
         .find(candidate => candidate.slug === route.connectionSlug);
     if (!connection)
         throw new Error(`Mission connection "${route.connectionSlug}" is unavailable`);
@@ -223,7 +225,7 @@ export async function revalidateOrdinaryMissionDispatchRoute(transportOwner: Mis
         connectionSlug: route.connectionSlug,
         model: route.model,
         thinkingLevel: route.thinkingLevel,
-        runtimeIdentitySha256: route.runtimeIdentitySha256,
+        ...(route.runtimeIdentitySha256 !== undefined ? { runtimeIdentitySha256: route.runtimeIdentitySha256 } : {}),
         credentialBindingResolver: transportOwner["options"].ordinaryRouteCredentialBindingResolver,
     });
     if (connectionIdentitySha256 !== route.connectionIdentitySha256) {
@@ -240,7 +242,7 @@ export function validOrdinaryRuntimeIdentity(transportOwner: MissionRuntimeServi
     return identity && /^[a-f0-9]{64}$/.test(identity) ? identity : undefined;
 }
 
-export function resolveOrdinaryRouteForItem(transportOwner: MissionRuntimeService, input: {
+export function resolveOrdinaryRouteForItem(_transportOwner: MissionRuntimeService, input: {
     workspace: MissionWorkspace;
     spec: MissionSpec;
     item: MissionWorkItem;
@@ -259,21 +261,21 @@ export function resolveOrdinaryRouteForItem(transportOwner: MissionRuntimeServic
     const classification = { difficulty: undefined, requiredCapabilities: [] };
     return resolveExplicitMissionModel({
         profile: input.profile,
-        origin: input.origin,
+        ...(input.origin !== undefined ? { origin: input.origin } : {}),
         defaultConnectionSlug: input.config?.defaults?.defaultLlmConnection
             ?? getDefaultLlmConnection() ?? undefined,
         defaultThinkingLevel: input.config?.defaults?.thinkingLevel ?? getDefaultThinkingLevel(),
         connections: input.connections,
-        routingContext: {
+        routingContext: omitUndefined<MissionSelectionContext>({
             sensitivity: maxSourceSensitivity(sources.map(source => source.config.routingSensitivity)),
             sourceSlugs,
-            difficulty: classification.difficulty,
+            ...(classification.difficulty !== undefined ? { difficulty: classification.difficulty } : {}),
             requiredCapabilities: classification.requiredCapabilities,
-        },
+        }),
         missionObjective: input.spec.objective,
         assignment,
         reviewOnly: input.profile.role === 'reviewer' || input.profile.role === 'supervisor',
         measuredMissionUsd: input.measuredMissionUsd,
-        projectedMissionUsd: input.projectedRemainingUsd,
+        ...(input.projectedRemainingUsd !== undefined ? { projectedMissionUsd: input.projectedRemainingUsd } : {}),
     });
 }

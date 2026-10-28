@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 import { afterEach, describe, expect, it } from 'bun:test';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -54,7 +55,7 @@ describe('session JSONL schema envelope', () => {
       tokenUsage: emptyTokenUsage(),
     });
     // Lazy migration is rollback-safe: disk changes only on the next ordinary save.
-    expect(JSON.parse(readFileSync(path, 'utf8')).schemaVersion).toBeUndefined();
+    expect(parseJsonObject(readFileSync(path, 'utf8'))["schemaVersion"]).toBeUndefined();
   });
 
   it('rejects a future header without rewriting it', () => {
@@ -63,7 +64,7 @@ describe('session JSONL schema envelope', () => {
 
     expect(() => readSessionHeader(path)).toThrow(UnsupportedSessionHeaderVersionError);
     expect(() => readSessionJsonl(path)).toThrow(UnsupportedSessionHeaderVersionError);
-    expect(JSON.parse(readFileSync(path, 'utf8')).schemaVersion).toBe(2);
+    expect(parseJsonObject(readFileSync(path, 'utf8'))["schemaVersion"]).toBe(2);
   });
 
   it('rejects a future header at the direct write boundary without rewriting it', () => {
@@ -140,9 +141,9 @@ describe('session JSONL schema envelope', () => {
       createdAt: 1,
       lastUsedAt: 2,
       messages: [],
-    } as unknown as StoredSession;
+    };
 
-    expect(() => writeSessionJsonl(path, invalidSession)).toThrow(/tokenUsage/);
+    expect(() => { Reflect.apply(writeSessionJsonl, undefined, [path, invalidSession]); }).toThrow(/tokenUsage/);
     expect(() => readFileSync(path, 'utf8')).toThrow();
   });
 });

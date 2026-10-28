@@ -1,3 +1,5 @@
+import en from '../../../../../packages/shared/src/i18n/locales/en/index.ts'
+import fr from '../../../../../packages/shared/src/i18n/locales/fr/index.ts'
 import { describe, expect, it } from 'bun:test'
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, statSync } from 'node:fs'
@@ -23,7 +25,7 @@ describe('Robinswood visible branding', () => {
 
   it('selects the Electron app name from the isolated runtime channel', () => {
     const main = readRepoFile('apps/electron/src/main/index.ts')
-    expect(main).toContain('app.setName(process.env.CRAFT_APP_NAME || getDefaultAppName(APP_CHANNEL))')
+    expect(main).toContain('app.setName(process.env["CRAFT_APP_NAME"] || getDefaultAppName(APP_CHANNEL))')
     expect(main).not.toContain("app.setName(process.env.CRAFT_APP_NAME || 'Craft Agents')")
   })
 
@@ -104,12 +106,12 @@ describe('Robinswood visible branding', () => {
   })
 
   it('uses Robinswood labels in visible locale values and provider labels', () => {
-    const en = readRepoFile('packages/shared/src/i18n/locales/en.json')
-    const fr = readRepoFile('packages/shared/src/i18n/locales/fr.json')
-    expect(en).toContain('Welcome to Robb Agents')
-    expect(fr).toContain('Bienvenue dans Robb Agents')
-    expect(en).toContain('Robb Agents Backend')
-    expect(fr).toContain('Robb Agents Backend')
+    const english = JSON.stringify(en)
+    const french = JSON.stringify(fr)
+    expect(english).toContain('Welcome to Robb Agents')
+    expect(french).toContain('Bienvenue dans Robb Agents')
+    expect(english).toContain('Robb Agents Backend')
+    expect(french).toContain('Robb Agents Backend')
     expect(readRepoFile('apps/electron/src/renderer/components/app-shell/input/model-picker-helpers.ts')).toContain('ROBINSWOOD_BACKEND_NAME')
     expect(readRepoFile('apps/electron/src/renderer/lib/provider-icons.ts')).toContain('ROBINSWOOD_BACKEND_NAME')
   })
@@ -127,11 +129,14 @@ describe('Robinswood visible branding', () => {
 
   it('keeps production data compatible and isolates every development launch', () => {
     const paths = readRepoFile('packages/shared/src/config/paths.ts')
-    expect(paths).toContain('process.env.CRAFT_CONFIG_DIR')
+    expect(paths).toContain('process.env["CRAFT_CONFIG_DIR"]')
     expect(paths).toContain("PRODUCTION_CONFIG_DIR_NAME = '.craft-agent'")
     expect(paths).toContain("DEVELOPMENT_CONFIG_DIR_NAME = '.craft-agent-dev'")
     expect(paths).toContain("channel === 'development'")
     expect(paths).not.toContain("join(homedir(), '.robb-agents')")
+    const server = readRepoFile('apps/electron/src/main/main-embedded-server.ts')
+    expect(server).toContain("join(CONFIG_DIR, 'workspaces', wsId, 'messaging')")
+    expect(server).not.toContain("join(homedir(), '.craft-agent'")
 
     const windowState = readRepoFile('apps/electron/src/main/window-state.ts')
     expect(windowState).toContain("@craft-agent/shared/config/paths")
@@ -146,21 +151,21 @@ describe('Robinswood visible branding', () => {
     expect(electronDev).toContain('Robb Agents Dev.app')
     expect(electronDev).toContain('io.robinswood.robbagents.dev')
     expect(electronDev).toContain('.craft-agent-dev')
-    expect(electronDev).toContain('CRAFT_DEEPLINK_SCHEME: process.env.CRAFT_DEEPLINK_SCHEME || "robbagentsdev"')
+    expect(electronDev).toContain('CRAFT_DEEPLINK_SCHEME: process.env["CRAFT_DEEPLINK_SCHEME"] || "robbagentsdev"')
     expect(electronDev).toContain('Development profile isolation refused')
   })
 
   it('detects stable updates at launch but requires consent before download', () => {
     const updater = readRepoFile('apps/electron/src/main/auto-update.ts')
     const macInstaller = readRepoFile('apps/electron/src/main/auto-update-mac.ts')
-    const main = readRepoFile('apps/electron/src/main/index.ts')
     const updateHook = readRepoFile('apps/electron/src/renderer/hooks/useUpdateChecker.ts')
     expect(updater).toContain('autoUpdater.autoDownload = false')
     expect(updater).toContain('autoUpdater.autoInstallOnAppQuit = false')
     expect(updater).toContain('autoUpdater.allowPrerelease = false')
     expect(updater).toContain('await autoUpdater.downloadUpdate()')
     expect(updater).toContain("void checkForUpdates('automatic')")
-    expect(main).toContain('startAutomaticUpdateChecks()')
+    expect(readRepoFile('apps/electron/src/main/main-ready.ts')).toContain('startAutomaticUpdateChecks()')
+    expect(readRepoFile('apps/electron/src/main/index.ts')).toContain('await startMainProcess(')
     expect(updateHook).toContain('await window.electronAPI.checkForUpdates()')
     expect(updateHook).toContain('onClick: onDownload')
     expect(macInstaller).toContain('/usr/sbin/spctl --assess --type execute')

@@ -127,7 +127,7 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
       if (settings) {
         setLocalMcpEnabled(settings.localMcpEnabled ?? true)
       }
-    }).catch((err) => {
+    }).catch((err: unknown) => {
       console.error('[SourceInfoPage] Failed to load workspace settings:', err)
     })
   }, [workspaceId])

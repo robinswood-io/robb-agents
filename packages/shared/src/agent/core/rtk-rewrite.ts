@@ -94,7 +94,7 @@ export function rewriteBashWithRtk(
   const unchanged = { modified: false, input };
   if (toolName !== 'Bash' || !rtkPath || !isAbsolute(rtkPath)
     || !context.dataFolderPath || !isAbsolute(context.dataFolderPath)) return unchanged;
-  const command = typeof input.command === 'string' ? input.command : '';
+  const command = typeof input["command"] === 'string' ? input["command"] : '';
   const filter = getRtkOutputFilter(command, excludeCommands);
   if (!filter) return unchanged;
 

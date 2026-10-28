@@ -50,15 +50,15 @@ function checkMcp(
     activeSourceSlugs: [sourceSlug],
     allSourceSlugs: [sourceSlug],
     hasSourceActivation: false,
-    externalActionPolicy: options?.externalActionPolicy,
-    objectiveMutationAuthorized: options?.objectiveMutationAuthorized,
-    objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized,
-    objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments,
-    authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments,
-    dataFolderPath: options?.dataFolderPath,
-    declaredToolCapabilities: options?.declaredToolCapabilities,
+    ...(options?.externalActionPolicy !== undefined ? { externalActionPolicy: options?.externalActionPolicy } : {}),
+    ...(options?.objectiveMutationAuthorized !== undefined ? { objectiveMutationAuthorized: options?.objectiveMutationAuthorized } : {}),
+    ...(options?.objectiveSensitiveActionAuthorized !== undefined ? { objectiveSensitiveActionAuthorized: options?.objectiveSensitiveActionAuthorized } : {}),
+    ...(options?.objectiveAuthorizationSegments !== undefined ? { objectiveAuthorizationSegments: options?.objectiveAuthorizationSegments } : {}),
+    ...(options?.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: options?.authenticatedUserAuthorizationSegments } : {}),
+    ...(options?.dataFolderPath !== undefined ? { dataFolderPath: options?.dataFolderPath } : {}),
+    ...(options?.declaredToolCapabilities !== undefined ? { declaredToolCapabilities: options?.declaredToolCapabilities } : {}),
     permissionManager: whitelistedPermissionManager,
-    currentUserRequest,
+    ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
   });
 }
 
@@ -74,9 +74,6 @@ afterEach(() => {
 });
 
 describe('sensitive external action gate across permission modes', () => {
-  const silaeConfirmationObjective = [
-    'Reprends l’objectif explicite d’écrire à Benoît. Vérifie d’abord Sent/Brouillons pour éviter un doublon, exécute le préflight exact vers benoit@example.test, sans fallback navigateur, puis arrête-toi immédiatement avant l’envoi pour la confirmation d’action externe. Après confirmation, envoie une seule fois et vérifie le messageId.',
-  ];
 
   it('redirects a model-supplied Gmail send back to the canonical thread reply', () => {
     const messageId = '1a0aaa36e2769235';
@@ -120,7 +117,7 @@ describe('sensitive external action gate across permission modes', () => {
       objectiveOptions,
     )).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('cannot be used as a fallback'),
+      reason: (expect.stringContaining('cannot be used as a fallback') as unknown),
     });
     expect(checkMcp(
       'allow-all',
@@ -197,7 +194,7 @@ describe('sensitive external action gate across permission modes', () => {
     );
     expect(result).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('does not bind that authorization to this exact messageId'),
+      reason: (expect.stringContaining('does not bind that authorization to this exact messageId') as unknown),
     });
 
     const ambiguous = checkMcp(
@@ -221,7 +218,7 @@ describe('sensitive external action gate across permission modes', () => {
     );
     expect(ambiguous).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('does not bind this contextual Gmail reply to one exact messageId'),
+      reason: (expect.stringContaining('does not bind this contextual Gmail reply to one exact messageId') as unknown),
     });
 
     const bodyReference = `Référence ${selectedMessageId}`;
@@ -262,7 +259,7 @@ describe('sensitive external action gate across permission modes', () => {
       },
     )).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('does not bind that authorization to this exact messageId'),
+      reason: (expect.stringContaining('does not bind that authorization to this exact messageId') as unknown),
     });
   });
 });

@@ -15,8 +15,6 @@ interface useInputPlaceholderInput {
 export function useInputPlaceholder({
   appShellCtx,
   workspaceId,
-  placeholder,
-  compactMode,
   effectivePlaceholderProp,
 }: useInputPlaceholderInput) {
 const sessionStatuses = appShellCtx?.sessionStatuses ?? []
@@ -37,23 +35,11 @@ const appShellContext = useOptionalAppShellContext()
 
 const isFocusedPanel = appShellContext?.isFocusedPanel ?? true
 
-const placeholderOptions = React.useMemo(() => {
-    if (!Array.isArray(placeholder)) return placeholder
-    if (!compactMode) return placeholder
-    return placeholder.filter((entry) => {
-      const lower = entry.toLowerCase()
-      return !lower.includes('shift + tab')
-        && !lower.includes('shift + return')
-        && !lower.includes('toggle the sidebar')
-        && !lower.includes('focus mode')
-        && !lower.includes('⌘')
-        && !lower.includes('ctrl')
-    })
-  }, [placeholder, compactMode])
+
 
 const shuffledPlaceholder = React.useMemo(
     () => Array.isArray(effectivePlaceholderProp) ? shuffleArray(effectivePlaceholderProp) : effectivePlaceholderProp,
-    [] // eslint-disable-line react-hooks/exhaustive-deps -- intentionally shuffle only on mount
+    [effectivePlaceholderProp]
   )
 
 const effectivePlaceholder = isFocusedPanel ? shuffledPlaceholder : ''

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'bun:test'
-import * as React from 'react'
+
 import { createStore, Provider } from 'jotai'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createInstance } from 'i18next'
 import { I18nextProvider } from 'react-i18next'
-import fr from '../../../../../../../packages/shared/src/i18n/locales/fr.json'
+import fr from '../../../../../../../packages/shared/src/i18n/locales/fr/index'
 import { PermissionRecoveryCard } from '../PermissionRecoveryCard'
 
 const i18n = createInstance()

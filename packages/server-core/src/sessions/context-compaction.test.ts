@@ -247,14 +247,14 @@ describe('context compaction', () => {
       compactAtTokens: 80_000,
       objectiveRootId: 'objective-root',
       now: 2_000,
-      previous: measured,
+      ...(measured !== undefined ? { previous: measured } : {}),
     })).toBe(false)
     expect(shouldAttemptContextCompaction({
       contextTokens: 99_000,
       compactAtTokens: 80_000,
       objectiveRootId: 'objective-root',
       now: 2_000,
-      previous: measured,
+      ...(measured !== undefined ? { previous: measured } : {}),
     })).toBe(true)
   })
 

@@ -24,15 +24,15 @@ import { useTransportConnectionState } from "@/hooks/useTransportConnectionState
 import type { Workspace } from "../../../shared/types"
 
 interface WorkspaceSwitcherProps {
-  variant?: 'sidebar' | 'topbar'
-  isCollapsed?: boolean
+  variant?: 'sidebar' | 'topbar' | undefined
+  isCollapsed?: boolean | undefined
   workspaces: Workspace[]
   activeWorkspaceId: string | null
   onSelect: (workspaceId: string, openInNewWindow?: boolean) => void | Promise<void>
-  onWorkspaceCreated?: (workspace: Workspace) => void
-  onWorkspaceRemoved?: () => void
+  onWorkspaceCreated?: ((workspace: Workspace) => void) | undefined
+  onWorkspaceRemoved?: (() => void) | undefined
   /** workspaceId -> has unread */
-  workspaceUnreadMap?: Record<string, boolean>
+  workspaceUnreadMap?: Record<string, boolean> | undefined
 }
 
 /**

@@ -1,4 +1,4 @@
-import { type ActivityItem, type ResponseContent, type TodoItem } from "@craft-agent/ui";
+import { type ActivityItem,type ResponseContent,type TodoItem } from "@craft-agent/ui";
 
 // ============================================================================
 // Sample Data
@@ -232,6 +232,7 @@ function generateManyActivities(count: number): ActivityItem[] {
       })
     } else {
       const toolInfo = toolVariety[i % toolVariety.length]
+      if (!toolInfo) break
       activities.push({
         id: `tool-${i}`,
         type: 'tool',
@@ -250,12 +251,6 @@ function generateManyActivities(count: number): ActivityItem[] {
 /** Pre-generated 75 activities for playground */
 export const manyActivities75 = generateManyActivities(75)
 
-// ============================================================================
-// Sample Todos (for TodoWrite visualization)
-// ============================================================================
-
-/** Empty state - no todos */
-const todosEmpty: TodoItem[] = []
 
 /** All pending - just started planning */
 export const todosAllPending: TodoItem[] = [

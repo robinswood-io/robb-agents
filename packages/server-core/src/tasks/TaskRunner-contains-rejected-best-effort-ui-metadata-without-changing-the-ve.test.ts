@@ -36,7 +36,7 @@ describe('TaskRunner (Conductor)', () => {
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
       now: () => '2026-06-07T00:00:00.000Z',
-      nowMs,
+      ...(nowMs !== undefined ? { nowMs: nowMs } : {}),
       resolveSubagentAutonomyContext: () => autonomyContext,
       ...(executionProofIssuer ? {
         verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),
@@ -124,8 +124,8 @@ describe('TaskRunner (Conductor)', () => {
     const repairedPrompt = host.sent.filter((entry) => entry.sessionId === 'sess-publish').at(-1)?.message;
     expect(repairedPrompt).toContain('publish CONFIRMED INPUT');
     const repairLog = readRunLog(root, 'targeted-repair', 'repair-1');
-    expect(repairLog).toContainEqual(expect.objectContaining({ kind: 'run-replayed', sourceRunId: 'source' }));
-    expect(repairLog).toContainEqual(expect.objectContaining({ kind: 'node-reused', nodeId: 'collect' }));
+    expect<unknown>(repairLog).toContainEqual((expect.objectContaining({ kind: 'run-replayed', sourceRunId: 'source' }) as unknown));
+    expect<unknown>(repairLog).toContainEqual((expect.objectContaining({ kind: 'node-reused', nodeId: 'collect' }) as unknown));
   });
 
   it('refuses a targeted repair while the source run is still active', async () => {

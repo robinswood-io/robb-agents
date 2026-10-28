@@ -98,7 +98,7 @@ export async function handlePrompt(runtimeState: PiRuntimeState, msg: Extract<In
         // Fire prompt — use followUp when session is already streaming so the
         // message is queued instead of throwing "Agent is already processing".
         await session.prompt(msg.message, {
-            images: msg.images && msg.images.length > 0 ? msg.images : undefined,
+            ...(msg.images?.length ? { images: msg.images } : {}),
             streamingBehavior: 'followUp',
             preflightResult: createProviderHandoffPreflight(() => send({ type: 'provider_handoff', id: msg.id })),
         });
@@ -176,7 +176,7 @@ export function handlePreToolUseResponse(runtimeState: PiRuntimeState, msg: Extr
     const pending = runtimeState.pendingPreToolUse.get(msg.requestId);
     if (pending) {
         runtimeState.pendingPreToolUse.delete(msg.requestId);
-        pending.resolve({ action: msg.action, input: msg.input, reason: msg.reason });
+        pending.resolve({ action: msg.action, ...(msg.input !== undefined ? { input: msg.input } : {}), ...(msg.reason !== undefined ? { reason: msg.reason } : {}) });
     }
     else {
         debugLog(`No pending pre_tool_use for requestId: ${msg.requestId}`);

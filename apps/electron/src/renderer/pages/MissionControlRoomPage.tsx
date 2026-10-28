@@ -30,7 +30,7 @@ import type { MissionConnectorApprovalRequestDto, MissionSnapshotDto, TaskApprov
 const PAGE_SIZE = 50
 
 interface MissionControlRoomPageProps {
-  selectedMissionId?: string
+  selectedMissionId?: string | undefined
 }
 
 function upsertMission(current: MissionSnapshotDto[], snapshot: MissionSnapshotDto): MissionSnapshotDto[] {

@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+import type { TaskNodeRunStateDtoSchema, TaskRunSnapshotDtoSchema } from '../dto-contracts.ts';
 import type { PermissionMode } from "../../agent/mode-types";
 import type { DurableTaskSnapshotDto } from './missions.ts';
 
@@ -119,25 +121,9 @@ export interface TaskRepairRequest {
   approveExternalMutations?: boolean
 }
 
-export interface TaskNodeRunStateDto {
-  id: string
-  /** pending | waiting-approval | running | done | failed | cancelled | skipped */
-  state: string
-  sessionId?: string
-  attempt: number
-}
+export type TaskNodeRunStateDto = z.infer<typeof TaskNodeRunStateDtoSchema>
 
-export interface TaskRunSnapshotDto {
-  slug: string
-  runId: string
-  taskId: string
-  /** running | paused | verifying | stopped | completed | failed */
-  status: string
-  orchestratorSessionId?: string
-  nodes: TaskNodeRunStateDto[]
-  /** Sum of each child's (input + output) tokens observed at completion. */
-  tokensUsed: number
-}
+export type TaskRunSnapshotDto = z.infer<typeof TaskRunSnapshotDtoSchema>
 
 export interface TaskApprovalRequestDto {
   requestId: string

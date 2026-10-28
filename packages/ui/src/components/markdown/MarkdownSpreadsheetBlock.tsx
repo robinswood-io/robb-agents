@@ -1,3 +1,5 @@
+import type { ColumnDef, DatatableData as SpreadsheetData, DatatableSpec as SpreadsheetSpec } from './datatable-values'
+import { parseDatatableSpec, parseTabularFile } from './datatable-values'
 /**
  * MarkdownSpreadsheetBlock - Excel-style grid for markdown ```spreadsheet code blocks
  *
@@ -34,26 +36,11 @@ import { useTranslation } from 'react-i18next'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-interface ColumnDef {
-  key: string
-  label: string
-  type?: 'text' | 'number' | 'currency' | 'percent' | 'formula'
-}
 
-interface SpreadsheetData {
-  filename?: string
-  sheetName?: string
-  columns: ColumnDef[]
-  rows: Record<string, unknown>[]
-}
 
-interface SpreadsheetSpec {
-  src?: string
-  filename?: string
-  sheetName?: string
-  columns?: ColumnDef[]
-  rows?: Record<string, unknown>[]
-}
+
+
+
 
 // ── Cell formatting ──────────────────────────────────────────────────────────
 
@@ -99,12 +86,12 @@ class SpreadsheetErrorBoundary extends React.Component<
   { children: React.ReactNode; fallback: React.ReactNode },
   { hasError: boolean }
 > {
-  state = { hasError: false }
+  override state = { hasError: false }
   static getDerivedStateFromError() { return { hasError: true } }
-  componentDidCatch(error: Error) {
+  override componentDidCatch(error: Error) {
     console.warn('[MarkdownSpreadsheetBlock] Render failed, falling back to CodeBlock:', error)
   }
-  render() {
+  override render() {
     if (this.state.hasError) return this.props.fallback
     return this.props.children
   }
@@ -114,7 +101,7 @@ class SpreadsheetErrorBoundary extends React.Component<
 
 export interface MarkdownSpreadsheetBlockProps {
   code: string
-  className?: string
+  className?: string | undefined
 }
 
 export function MarkdownSpreadsheetBlock({ code, className }: MarkdownSpreadsheetBlockProps) {
@@ -123,15 +110,7 @@ export function MarkdownSpreadsheetBlock({ code, className }: MarkdownSpreadshee
 
   // Parse the inline JSON spec (may have src field for file-backed data)
   const spec = React.useMemo<SpreadsheetSpec | null>(() => {
-    try {
-      const raw = JSON.parse(code)
-      if (raw.src || (Array.isArray(raw.columns) && Array.isArray(raw.rows))) {
-        return raw as SpreadsheetSpec
-      }
-      return null
-    } catch {
-      return null
-    }
+    try { return parseDatatableSpec(code) } catch { return null }
   }, [code])
 
   // Load file data when src is present
@@ -146,24 +125,14 @@ export function MarkdownSpreadsheetBlock({ code, className }: MarkdownSpreadshee
     onReadFile(spec.src)
       .then((content) => {
         try {
-          const raw = JSON.parse(content)
-          if (Array.isArray(raw)) {
-            setFileData({ rows: raw, columns: [] })
-          } else if (raw && typeof raw === 'object') {
-            setFileData({
-              filename: raw.filename,
-              sheetName: raw.sheetName,
-              columns: Array.isArray(raw.columns) ? raw.columns : [],
-              rows: Array.isArray(raw.rows) ? raw.rows : [],
-            })
-          } else {
-            setFileError('File does not contain valid spreadsheet data')
-          }
+          const parsed = parseTabularFile(content)
+          if (parsed) setFileData(parsed)
+          else setFileError('File does not contain valid spreadsheet data')
         } catch {
           setFileError('Failed to parse data file as JSON')
         }
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         setFileError(err instanceof Error ? err.message : 'Failed to read data file')
       })
       .finally(() => setFileLoading(false))

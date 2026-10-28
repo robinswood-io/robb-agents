@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import {setOptional, omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { queuedDirectHumanContinuationIndex, persistenceRootFor, formatAuthResultMessage, ordinaryMissionSourceBuildOptions } from '../policy.ts';
 import { basename } from 'path';
@@ -112,19 +114,19 @@ async function sessionOpPerformCompleteAuthRequestIfCurrent(sessionOperationCont
     if (authMessage) {
         authMessage.authStatus = result.success ? 'completed' :
             result.cancelled ? 'cancelled' : 'failed';
-        authMessage.authError = result.error;
-        authMessage.authEmail = result.email;
-        authMessage.authWorkspace = result.workspace;
+        setOptional(authMessage, "authError", result.error);
+        setOptional(authMessage, "authEmail", result.email);
+        setOptional(authMessage, "authWorkspace", result.workspace);
     }
     // Emit auth_completed event to update UI
-    sessionOperationContext.owner["sendEvent"]({
+    sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'auth_completed' }>>({
         type: 'auth_completed',
         sessionId,
         requestId: result.requestId,
         success: result.success,
         cancelled: result.cancelled,
         error: result.error,
-    }, managed.workspace.id);
+    }), managed.workspace.id);
     // Create faked user message with result
     const resultContent = formatAuthResultMessage(result);
     // Auto-enable the source in the session after successful auth
@@ -192,7 +194,7 @@ async function sessionOpPerformCompleteAuthRequestIfCurrent(sessionOperationCont
             const continuationToken = sessionOpMintAuthenticatedInternalContinuation(sessionOperationContext, managed, 'auth-result');
             if (continuationToken) {
                 try {
-                    await sessionOperationContext.owner["sendAuthenticatedInternalContinuation"](managed, resultContent, 'auth-result', continuationToken);
+                    await sessionOperationContext.owner.sendAuthenticatedInternalContinuation(managed, resultContent, 'auth-result', continuationToken);
                 }
                 catch (error) {
                     if (!(error instanceof InternalContinuationSupersededError))

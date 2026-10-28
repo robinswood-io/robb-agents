@@ -12,7 +12,7 @@ export function computeFrontier(transportOwner: ActiveRun, named?: string[]): Se
     const valid = (named ?? []).filter((id) => transportOwner["state"].has(id));
     if (valid.length === 0)
         return new Set(transportOwner["spec"].nodes.map((n) => n.id));
-    const dependents = transportOwner["dependentsMap"]();
+    const dependents = transportOwner.dependentsMap();
     const frontier = new Set<string>();
     const queue = [...valid];
     while (queue.length) {
@@ -29,16 +29,16 @@ export function computeFrontier(transportOwner: ActiveRun, named?: string[]): Se
 
 /** Inverted `edges`: node id → set of nodes that directly depend on it (memoized). */
 export function dependentsMap(transportOwner: ActiveRun): Map<string, Set<string>> {
-    if (transportOwner["dependents"])
-        return transportOwner["dependents"];
+    if (transportOwner.dependents)
+        return transportOwner.dependents;
     const map = new Map<string, Set<string>>();
     for (const n of transportOwner["spec"].nodes)
         map.set(n.id, new Set());
-    for (const [node, upstreams] of transportOwner["edges"]) {
+    for (const [node, upstreams] of transportOwner.edges) {
         for (const u of upstreams)
             map.get(u)?.add(node);
     }
-    transportOwner["dependents"] = map;
+    transportOwner.dependents = map;
     return map;
 }
 
@@ -102,7 +102,7 @@ export function armNodeTimeout(transportOwner: ActiveRun, nodeId: string, sessio
         const st = transportOwner["state"].get(nodeId);
         if (!st || st.state !== 'running' || st.sessionId !== sessionId || st.attempt !== attempt)
             return;
-        void transportOwner["retireTimedOutNode"](nodeId, sessionId, timeoutMs).catch((error) => {
+        void transportOwner.retireTimedOutNode(nodeId, sessionId, timeoutMs).catch((error: unknown) => {
             transportOwner["failForUnexpectedAsyncError"](`timeout retirement ${nodeId}`, error);
         });
     };
@@ -177,7 +177,7 @@ export function armRetry(transportOwner: ActiveRun, nodeId: string, retryAtMs: n
             transportOwner["armRetry"](nodeId, st.retryAtMs);
             return;
         }
-        st.retryAtMs = undefined;
+        delete st.retryAtMs;
         transportOwner["scheduleReady"]();
     }, Math.min(delayMs, 2147483647));
     transportOwner["retryTimeouts"].set(nodeId, timer);
@@ -204,12 +204,12 @@ export function reportAsyncFailure(transportOwner: ActiveRun, operation: string,
      * be visible in logs, but must not rewrite the durable execution verdict. */
 export function bestEffortHostMetadata(transportOwner: ActiveRun, operation: string, sessionId: string, mutation: () => Promise<void>): void {
     try {
-        void mutation().catch((error) => {
-            transportOwner["reportAsyncFailure"](operation, error, { sessionId });
+        void mutation().catch((error: unknown) => {
+            transportOwner.reportAsyncFailure(operation, error, { sessionId });
         });
     }
     catch (error) {
-        transportOwner["reportAsyncFailure"](operation, error, { sessionId });
+        transportOwner.reportAsyncFailure(operation, error, { sessionId });
     }
 }
 
@@ -217,7 +217,7 @@ export function bestEffortHostMetadata(transportOwner: ActiveRun, operation: str
      * safety failure, not best-effort metadata. Convert it into the same durable
      * terminal barrier used by budget, deadline and timeout failures. */
 export function failForUnexpectedAsyncError(transportOwner: ActiveRun, operation: string, error: unknown): void {
-    transportOwner["reportAsyncFailure"](operation, error);
+    transportOwner.reportAsyncFailure(operation, error);
     if (transportOwner["settled"] || transportOwner["terminalIntent"] || transportOwner["isTerminal"]())
         return;
     const reason = `${operation} failed unexpectedly: ${error instanceof Error ? error.message : String(error)}`;
@@ -227,7 +227,7 @@ export function failForUnexpectedAsyncError(transportOwner: ActiveRun, operation
         transportOwner["beginTerminalDrain"]();
     }
     catch (barrierError) {
-        transportOwner["reportAsyncFailure"](`${operation}: terminal barrier setup`, barrierError);
+        transportOwner.reportAsyncFailure(`${operation}: terminal barrier setup`, barrierError);
     }
 }
 

@@ -1,3 +1,5 @@
+import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
+import { isJsonObject, parseJsonObject } from '../../utils/json.ts';
 import { describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -6,8 +8,12 @@ import { spawnSync } from 'node:child_process';
 import { PiAgent } from '../pi-agent.ts';
 import { createSpawnSessionTool } from '../spawn-session-tool.ts';
 import { createMockBackendConfig } from './test-utils.ts';
-import type { PrerequisiteManager } from '../core/prerequisite-manager.ts';
 
+async function invokeStandaloneSpawn(definition: ReturnType<typeof createSpawnSessionTool>, input: unknown) {
+  // Exercise the runtime guard even when SDK input-schema parsing is bypassed.
+  const result: unknown = await Reflect.apply(definition.handler, undefined, [input, undefined]);
+  return CallToolResultSchema.parse(result);
+}
 describe('backend spawn admission', () => {
   it('Pi help exposes explicit reviewer selection without dispatch or reading the real profile', () => {
     const fixture = mkdtempSync(join(tmpdir(), 'spawn-role-help-'));
@@ -27,14 +33,18 @@ describe('backend spawn admission', () => {
         env: { ...process.env, CRAFT_CONFIG_DIR: fixture }, encoding: 'utf8', timeout: 15_000,
       });
       expect(child.status).toBe(0);
-      const result = JSON.parse(child.stdout);
-      expect(result.isError).toBe(false);
-      const help = JSON.parse(result.content);
-      expect(help.roleHelp.defaultRole).toBe('worker');
-      expect(help.roleHelp.reviewerExample).toMatchObject({ role: 'reviewer', permissionMode: 'safe' });
-      expect(help.roleHelp.roles.reviewer).toContain('cannot delegate');
-      expect(help.roleHelp.legacyLabel).toContain('Explicit role always wins');
-      expect(help.defaults.permissionMode).toBe('ask');
+      const result = parseJsonObject(child.stdout);
+      expect(result["isError"]).toBe(false);
+      const content = result["content"];
+      if (typeof content !== "string") throw new Error("Help must return text");
+      const help = parseJsonObject(content);
+      const roleHelp = help["roleHelp"];
+      if (!isJsonObject(roleHelp)) throw new Error("Help must describe roles");
+      expect(roleHelp["defaultRole"]).toBe('worker');
+      expect(roleHelp["reviewerExample"]).toMatchObject({ role: 'reviewer', permissionMode: 'safe' });
+      expect(roleHelp).toMatchObject({ roles: { reviewer: (expect.stringContaining('cannot delegate') as unknown) } });
+      expect(roleHelp["legacyLabel"]).toContain('Explicit role always wins');
+      expect(help).toMatchObject({ defaults: { permissionMode: 'ask' } });
     } finally {
       rmSync(fixture, { recursive: true, force: true });
     }
@@ -48,13 +58,11 @@ describe('backend spawn admission', () => {
       return { sessionId: 'accepted', name: 'accepted', status: 'started' as const };
     };
     agent.onSpawnSession = callback;
-    const backend = agent as unknown as {
+    const backend = (agent) as {
       executeSessionTool(name: string, args: Record<string, unknown>): Promise<{ isError: boolean }>;
     };
     const definition = createSpawnSessionTool({ sessionId: 'test', getSpawnSessionFn: () => callback });
-    const handler = (definition as unknown as {
-      handler(input: unknown): Promise<{ isError?: boolean }>;
-    }).handler;
+    const handler = (input: unknown) => invokeStandaloneSpawn(definition, input);
     for (const dispatch of [
       (input: Record<string, unknown>) => backend.executeSessionTool('spawn_session', input),
       handler,
@@ -74,7 +82,7 @@ describe('backend spawn admission', () => {
       requests.push(request);
       return { sessionId: 'accepted', name: 'accepted', status: 'started' };
     };
-    const backend = agent as unknown as {
+    const backend = (agent) as {
       executeSessionTool(name: string, args: Record<string, unknown>): Promise<{ content: string; isError: boolean }>;
     };
     const rejected = await backend.executeSessionTool('spawn_session', { prompt: 'Inspect evidence', permissionMode: 'read-only' });
@@ -93,12 +101,12 @@ describe('backend spawn admission', () => {
       requests.push(input);
       return { sessionId: 'accepted', name: 'accepted', status: 'started' };
     } });
-    const handler = (definition as unknown as {
-      handler(input: unknown): Promise<{ isError?: boolean; content: Array<{ text: string }> }>;
-    }).handler;
+    const handler = (input: unknown) => invokeStandaloneSpawn(definition, input);
     const rejected = await handler({ prompt: 'Inspect evidence', permissionMode: 'execute' });
     expect(rejected.isError).toBe(true);
-    expect(JSON.parse(rejected.content[0]!.text)).toMatchObject({ code: 'invalid_spawn_session_arguments', retryable: false });
+    const rejection = rejected.content[0];
+    if (rejection?.type !== 'text') throw new Error('Expected a text rejection');
+    expect(JSON.parse(rejection.text)).toMatchObject({ code: 'invalid_spawn_session_arguments', retryable: false });
     expect(requests).toHaveLength(0);
     const accepted = await handler({ prompt: 'Inspect evidence', permissionMode: 'safe', role: 'reviewer', projectId: 'project-1' });
     expect(accepted.isError).not.toBe(true);
@@ -109,15 +117,12 @@ describe('backend spawn admission', () => {
 describe('Pi prerequisite result integration', () => {
   it('credits successful read results, preserving the gate after a start, error or checkpoint', () => {
     const agent = new PiAgent(createMockBackendConfig({ provider: 'pi' }));
-    const backend = agent as unknown as {
-      prerequisiteManager: PrerequisiteManager;
-      handleSubprocessEvent(event: Record<string, unknown>): void;
-    };
-    const manager = backend.prerequisiteManager;
+    const backend = agent;
+    const manager = backend['prerequisiteManager'];
     const path = '/test/workspace/skills/review/SKILL.md';
     manager.registerSkillPrerequisites([path]);
-    const start = (id: string) => backend.handleSubprocessEvent({ type: 'tool_execution_start', toolCallId: id, toolName: 'read', args: { path } });
-    const finish = (id: string, isError: boolean, details = {}) => backend.handleSubprocessEvent({
+    const start = (id: string) => backend['handleSubprocessEvent']({ type: 'tool_execution_start', toolCallId: id, toolName: 'read', args: { path } });
+    const finish = (id: string, isError: boolean, details = {}) => backend['handleSubprocessEvent']({
       type: 'tool_execution_end', toolCallId: id, toolName: 'read', isError,
       result: { content: [{ type: 'text', text: 'Complete instruction document' }], details },
     });

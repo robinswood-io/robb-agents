@@ -110,7 +110,7 @@ if (appState === 'reauth') {
           <WindowCloseHandler />
           <ReauthScreen
             onLogin={handleReauthLogin}
-            onReset={document.documentElement.dataset.robbRuntime === 'web' ? undefined : handleReauthReset}
+            onReset={document.documentElement.dataset["robbRuntime"] === 'web' ? undefined : handleReauthReset}
           />
           <ResetConfirmationDialog
             open={showResetDialog}

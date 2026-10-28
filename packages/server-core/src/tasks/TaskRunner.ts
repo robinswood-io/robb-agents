@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import '@craft-agent/shared/utils';
 import 'node:crypto';
 import 'node:path';
@@ -113,11 +114,11 @@ export class TaskRunner {
         if (externalInFrontier.length > 0 && !approveExternalMutations) {
             throw new Error(`Repair requires explicit approval for external mutation node(s): ${externalInFrontier.join(', ')}`);
         }
-        const plan = planMissionReplay(sourceSpec, sourceRunId, sourceLog, (nodeId) => readNodeOutput(this.deps.workspaceRoot, slug, sourceRunId, nodeId), {
+        const plan = planMissionReplay(sourceSpec, sourceRunId, sourceLog, (nodeId) => readNodeOutput(this.deps.workspaceRoot, slug, sourceRunId, nodeId), omitUndefined({
             approveExternalMutations,
             workspaceId: this.deps.workspaceId,
             verifyExecutionProof: this.deps.verifyExecutionProof,
-        });
+        }));
         const blocked = plan.nodes.filter((node) => node.action === 'block');
         if (blocked.length > 0) {
             throw new Error(`Repair is blocked pending reconciliation: ${blocked.map((node) => `${node.nodeId} (${node.reason})`).join('; ')}`);
@@ -130,10 +131,10 @@ export class TaskRunner {
         }
         const reusedNodes = plan.nodes
             .filter((node) => node.action === 'reuse' && !frontier.has(node.nodeId))
-            .map((node) => ({
-            nodeId: node.nodeId,
-            ...(proofByNode.get(node.nodeId) ? { proofHash: proofByNode.get(node.nodeId) } : {}),
-        }));
+            .map((node) => {
+                const proofHash = proofByNode.get(node.nodeId);
+                return { nodeId: node.nodeId, ...(proofHash !== undefined ? { proofHash } : {}) };
+            });
         const runId = runOptions.runId ?? (this.deps.genRunId ? this.deps.genRunId() : `run-${Date.now()}`);
         if (runId === sourceRunId || listRunIds(this.deps.workspaceRoot, slug).includes(runId)) {
             throw new Error(`Repair run id "${slug}:${runId}" already exists; targeted repair must create a new immutable run`);
@@ -194,7 +195,7 @@ export class TaskRunner {
         const orchestratorSessionId = started && started.kind === 'run-started' ? started.orchestratorSessionId : undefined;
         const context = readRunContextSnapshot(this.deps.workspaceRoot, slug, runId);
         const run = new ActiveRun(spec, slug, runId, {
-            orchestratorSessionId,
+            ...(orchestratorSessionId !== undefined ? { orchestratorSessionId: orchestratorSessionId } : {}),
             params: context?.params ?? resolveParams(spec),
             verifyOnComplete: context?.verifyOnComplete ?? true,
         }, this.deps);

@@ -50,15 +50,15 @@ import { SendResourceToWorkspaceDialog, type SendResourceType } from './SendReso
 
 export interface MainContentPanelProps {
   /** Whether both sidebar and navigator are hidden (focus mode / CMD+.) */
-  isSidebarAndNavigatorHidden?: boolean
+  isSidebarAndNavigatorHidden?: boolean | undefined
   /** Optional className for the container */
-  className?: string
+  className?: string | undefined
   /**
    * Override the navigation state for this panel.
    * When provided, this panel renders based on the override instead of the global NavigationState.
    * Used by PanelSlot to render panels in the panel stack.
    */
-  navStateOverride?: import('../../../shared/types').NavigationState | null
+  navStateOverride?: import('../../../shared/types').NavigationState | null | undefined
 }
 
 export function MainContentPanel({
@@ -166,8 +166,9 @@ export function MainContentPanel({
   }, [selectedIds, sessionMetaMap])
 
   const activeStatusId = useMemo((): SessionStatusId | null => {
-    if (selectedMetas.length === 0) return null
-    const first = (selectedMetas[0].sessionStatus || 'todo') as SessionStatusId
+    const firstMeta = selectedMetas[0]
+    if (!firstMeta) return null
+    const first = (firstMeta.sessionStatus || 'todo') as SessionStatusId
     const allSame = selectedMetas.every(meta => (meta.sessionStatus || 'todo') === first)
     return allSame ? first : null
   }, [selectedMetas])

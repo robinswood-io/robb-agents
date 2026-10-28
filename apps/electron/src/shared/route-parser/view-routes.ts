@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { parseCompoundRoute } from './compound-routes.ts';
 import type { ParsedCompoundRoute, ParsedRoute } from './route-types.ts';
 import { isCompoundRoute } from './route-types.ts';
@@ -26,7 +27,7 @@ export function parseRoute(route: string): ParsedRoute | null {
     }
 
     // Parse action routes: action/{name}[/{id}]
-    const [pathPart, queryPart] = route.split('?')
+    const [pathPart = '', queryPart] = route.split('?')
     const segments = pathPart.split('/').filter(Boolean)
 
     if (segments.length < 2) {
@@ -39,6 +40,7 @@ export function parseRoute(route: string): ParsedRoute | null {
     }
 
     const name = segments[1]
+    if (!name) return null
     const id = segments[2]
 
     // Parse query params
@@ -50,7 +52,7 @@ export function parseRoute(route: string): ParsedRoute | null {
       })
     }
 
-    return { type: 'action', name, id, params }
+    return omitUndefined<ParsedRoute>({ type: 'action', name, id, params })
   } catch {
     return null
   }
@@ -125,12 +127,12 @@ function convertCompoundToViewRoute(compound: ParsedCompoundRoute): ParsedRoute 
         },
       }
     }
-    return {
+    return omitUndefined<ParsedRoute>({
       type: 'view',
       name: filter.kind,
       id: filter.kind === 'state' ? filter.stateId : (filter.kind === 'label' ? filter.labelId : (filter.kind === 'view' ? filter.viewId : undefined)),
       params: {},
-    }
+    })
   }
 
   return { type: 'view', name: 'allSessions', params: {} }

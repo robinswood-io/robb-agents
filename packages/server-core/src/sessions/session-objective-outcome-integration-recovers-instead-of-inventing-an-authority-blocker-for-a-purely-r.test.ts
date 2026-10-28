@@ -1,18 +1,19 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { type AgentEvent, type ObjectiveOutcomeDeclaration } from "@craft-agent/core/types";
 import { clearObjectiveEvidenceGate } from "@craft-agent/shared/agent";
 import { createPendingTurnRecovery } from "./turn-recovery.ts";
-import { type Managed, activeObjective, installAgent, makeHarness, outcomeComment, roots, sessionIds } from "./testing/session-objective-outcome-integration-fixture.ts";
+import { activeObjective, installAgent, makeHarness, outcomeComment, roots, sessionIds } from "./testing/session-objective-outcome-integration-fixture.ts";
 
 beforeEach(() => {
   roots.length = 0
   sessionIds.length = 0
-  process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+  process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
 })
 afterEach(() => {
-  delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+  delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]
   for (const sessionId of sessionIds) clearObjectiveEvidenceGate(sessionId)
   for (const root of roots) rmSync(root, { recursive: true, force: true })
 })
@@ -93,12 +94,12 @@ describe('SessionManager objective outcome integration', () => {
 
     await harness.manager.sendMessage(harness.managed.id, 'Poursuis la mission PLC depuis les résultats déjà vérifiés.')
 
-    expect(harness.managed.pendingTurnRecovery).toMatchObject({
+    expect<unknown>(harness.managed.pendingTurnRecovery).toMatchObject({
       attempts: 1,
       lastCause: 'objective_incomplete',
-      validationGaps: expect.arrayContaining([
+      validationGaps: (expect.arrayContaining([
         'remainingWork claims a pending human confirmation, but no structured question, authentication flow, or permission request is pending',
-      ]),
+      ]) as unknown),
     })
     expect(harness.managed.activeObjective?.lastOutcome).toBeUndefined()
     expect(harness.managed.messageQueue[0]?.message).toContain('no structured question, authentication flow, or permission request is pending')
@@ -153,7 +154,7 @@ ${outcomeComment(receipt)}` },
     })
     expect(harness.managed.messageQueue).toHaveLength(1)
     expect(harness.managed.messages.some(message => message.errorCode === 'objective_validation_failed')).toBe(false)
-    expect(harness.sentEvents.some(event => event.type === 'typed_error')).toBe(false)
+    expect(harness.sentEvents.some(event => event["type"] === 'typed_error')).toBe(false)
   })
 
   it('continues corrective work when high-stakes evidence or review is still pending', async () => {
@@ -181,7 +182,7 @@ ${outcomeComment(receipt)}` },
       continuationOrigin: 'objective_continue',
     })
     expect(harness.managed.messages.some(message => message.errorCode === 'objective_validation_failed')).toBe(false)
-    expect(harness.sentEvents.some(event => event.type === 'typed_error')).toBe(false)
+    expect(harness.sentEvents.some(event => event["type"] === 'typed_error')).toBe(false)
   })
 
   it.each(['app_restart', 'runtime_error', 'stream_ended', 'tool_checkpoint', 'premature_final',
@@ -196,13 +197,7 @@ ${outcomeComment(receipt)}` },
         continuationWork: ['Run the final verification'],
         continuationOrigin: 'objective_continue',
       }
-      const enqueue = (harness.manager as unknown as {
-        enqueueAutomaticTurnRecovery: (
-          managed: Managed,
-          cause: 'app_restart' | 'runtime_error' | 'stream_ended' | 'tool_checkpoint' | 'premature_final'
-            | 'objective_incomplete' | 'evidence_gate',
-        ) => Promise<boolean>
-      }).enqueueAutomaticTurnRecovery.bind(harness.manager)
+      const enqueue = (sessionManagerForTest(harness.manager)).enqueueAutomaticTurnRecovery.bind(harness.manager)
 
       expect(await enqueue(harness.managed, cause)).toBe(true)
       expect(harness.managed.pendingTurnRecovery).toMatchObject({
@@ -298,10 +293,10 @@ ${outcomeComment(receipt)}` },
     })
     expect(harness.managed.activeObjective?.interruptedTurnRecovery?.recovery.exhaustedAt).toBeNumber()
     expect(harness.managed.messages.some(message => message.role === 'error')).toBe(false)
-    expect(harness.sentEvents.some(event => event.type === 'typed_error')).toBe(false)
-    expect(harness.sentEvents).toContainEqual(expect.objectContaining({
-      type: 'info', message: expect.stringContaining('structural tool checkpoint'),
-    }))
+    expect(harness.sentEvents.some(event => event["type"] === 'typed_error')).toBe(false)
+    expect<unknown>(harness.sentEvents).toContainEqual((expect.objectContaining({
+      type: 'info', message: (expect.stringContaining('structural tool checkpoint') as unknown),
+    }) as unknown))
   })
 
   it('does not invent continuation provenance for an unrelated premature final', async () => {
@@ -309,9 +304,7 @@ ${outcomeComment(receipt)}` },
     harness.managed.messages.push({ id: 'premature-root', role: 'user', content: 'Finish the target.', timestamp: 1 })
     harness.managed.activeObjective = activeObjective('premature-root')
     harness.managed.pendingTurnRecovery = createPendingTurnRecovery('premature-root', 1)
-    const enqueue = (harness.manager as unknown as {
-      enqueueAutomaticTurnRecovery: (managed: Managed, cause: 'premature_final') => Promise<boolean>
-    }).enqueueAutomaticTurnRecovery.bind(harness.manager)
+    const enqueue = (sessionManagerForTest(harness.manager)).enqueueAutomaticTurnRecovery.bind(harness.manager)
 
     expect(await enqueue(harness.managed, 'premature_final')).toBe(true)
     expect(harness.managed.pendingTurnRecovery?.continuationOrigin).toBeUndefined()
@@ -334,14 +327,7 @@ ${outcomeComment(receipt)}` },
       harness.managed.messages.push({ id: 'budget-root', role: 'user', content: 'Finish the target.', timestamp: 1 })
       harness.managed.activeObjective = activeObjective('budget-root')
       harness.managed.pendingTurnRecovery = createPendingTurnRecovery('budget-root', 1)
-      const enqueue = (harness.manager as unknown as {
-        enqueueAutomaticTurnRecovery: (
-          managed: Managed,
-          cause: 'objective_continue',
-          gaps: string[],
-          continuationWork: string[],
-        ) => Promise<boolean>
-      }).enqueueAutomaticTurnRecovery.bind(harness.manager)
+      const enqueue = (sessionManagerForTest(harness.manager)).enqueueAutomaticTurnRecovery.bind(harness.manager)
 
       for (let attempt = 0; attempt < maxAutomaticAttempts; attempt += 1) {
         expect(await enqueue(harness.managed, 'objective_continue', [], ['Finish verification'])).toBe(true)
@@ -354,9 +340,9 @@ ${outcomeComment(receipt)}` },
         })
       }
       expect(await enqueue(harness.managed, 'objective_continue', [], ['Finish verification'])).toBe(false)
-      expect(harness.managed.pendingTurnRecovery).toMatchObject({
+      expect<unknown>(harness.managed.pendingTurnRecovery).toMatchObject({
         attempts: maxAutomaticAttempts,
-        exhaustedAt: expect.any(Number),
+        exhaustedAt: (expect.any(Number) as unknown),
         continuationOrigin: 'objective_continue',
       })
     },
@@ -367,14 +353,7 @@ ${outcomeComment(receipt)}` },
     harness.managed.messages.push({ id: 'budget-root', role: 'user', content: 'Finish the target.', timestamp: 1 })
     harness.managed.activeObjective = activeObjective('budget-root')
     harness.managed.pendingTurnRecovery = createPendingTurnRecovery('budget-root', 1)
-    const enqueue = (harness.manager as unknown as {
-      enqueueAutomaticTurnRecovery: (
-        managed: Managed,
-        cause: 'objective_continue',
-        gaps: string[],
-        continuationWork: string[],
-      ) => Promise<boolean>
-    }).enqueueAutomaticTurnRecovery.bind(harness.manager)
+    const enqueue = (sessionManagerForTest(harness.manager)).enqueueAutomaticTurnRecovery.bind(harness.manager)
 
     for (let attempt = 0; attempt < 4; attempt += 1) {
       expect(await enqueue(harness.managed, 'objective_continue', [], ['Finish verification'])).toBe(true)
@@ -388,9 +367,9 @@ ${outcomeComment(receipt)}` },
     }
 
     expect(await enqueue(harness.managed, 'objective_continue', [], ['Finish verification'])).toBe(false)
-    expect(harness.managed.pendingTurnRecovery).toMatchObject({
+    expect<unknown>(harness.managed.pendingTurnRecovery).toMatchObject({
       attempts: 4,
-      exhaustedAt: expect.any(Number),
+      exhaustedAt: (expect.any(Number) as unknown),
       continuationOrigin: 'objective_continue',
     })
   })

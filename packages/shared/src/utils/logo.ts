@@ -214,7 +214,7 @@ async function parseFaviconsFromHtml(url: string): Promise<Array<{href: string, 
     const linkRegex = /<link\s+([^>]*rel=["'](?:[^"']*\s)?(?:icon|apple-touch-icon)(?:\s[^"']*)?["'][^>]*)>/gi;
     const favicons: Array<{href: string, sizes: string | null}> = [];
 
-    let match;
+    let match: RegExpExecArray | null;
     while ((match = linkRegex.exec(head)) !== null) {
       const attrs = match[1];
       if (!attrs) continue;

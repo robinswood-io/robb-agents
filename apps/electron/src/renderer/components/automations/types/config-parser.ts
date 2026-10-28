@@ -78,8 +78,7 @@ export function parseAutomationsConfig(json: unknown): AutomationListItem[] {
     if (!Array.isArray(matchers)) continue
     const event = (allEvents.includes(eventName) ? eventName : eventName) as AutomationTrigger
 
-    for (let matcherIdx = 0; matcherIdx < matchers.length; matcherIdx++) {
-      const matcher = matchers[matcherIdx]
+    for (const [matcherIdx, matcher] of matchers.entries()) {
       const rawActions = matcher.actions
       if (!rawActions || !Array.isArray(rawActions) || rawActions.length === 0) continue
 
@@ -98,14 +97,14 @@ export function parseAutomationsConfig(json: unknown): AutomationListItem[] {
         name: deriveAutomationName(eventName, matcher),
         summary: deriveAutomationSummary(eventName, matcher),
         enabled: matcher.enabled !== false,
-        matcher: matcher.matcher,
-        cron: matcher.cron,
-        timezone: matcher.timezone,
-        permissionMode: matcher.permissionMode,
-        labels: matcher.labels,
-        conditions: matcher.conditions,
+        ...(matcher.matcher !== undefined ? { matcher: matcher.matcher } : {}),
+        ...(matcher.cron !== undefined ? { cron: matcher.cron } : {}),
+        ...(matcher.timezone !== undefined ? { timezone: matcher.timezone } : {}),
+        ...(matcher.permissionMode !== undefined ? { permissionMode: matcher.permissionMode } : {}),
+        ...(matcher.labels !== undefined ? { labels: matcher.labels } : {}),
+        ...(matcher.conditions !== undefined ? { conditions: matcher.conditions } : {}),
         actions,
-        telegramTopic,
+        ...(telegramTopic !== undefined ? { telegramTopic: telegramTopic } : {}),
       })
       index++
     }

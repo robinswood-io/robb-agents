@@ -1,7 +1,7 @@
 import * as React from "react";
 
-import { useRef, useEffect, useCallback } from "react";
-import { useAtomValue, useStore } from "jotai";
+import { useRef,useEffect,useCallback } from "react";
+import { useAtomValue,useStore } from "jotai";
 
 import { isWebUI } from "@/lib/platform";
 
@@ -14,13 +14,13 @@ import { useActionLabel } from "@/actions";
 
 import { useSetAtom } from "jotai";
 
-import { panelStackAtom, panelCountAtom, focusedPanelIdAtom, focusedSessionIdAtom, parseSessionIdFromRoute } from "@/atoms/panel-stack";
+import { panelStackAtom,panelCountAtom,focusedPanelIdAtom,focusedSessionIdAtom,parseSessionIdFromRoute } from "@/atoms/panel-stack";
 
 import { useContainerWidth } from "@/hooks/useContainerWidth";
 
 import * as storage from "@/lib/local-storage";
 
-import { useNavigation, useNavigationState, isSessionsNavigation } from "@/contexts/NavigationContext";
+import { useNavigation,useNavigationState,isSessionsNavigation } from "@/contexts/NavigationContext";
 
 interface useShellLayoutStateInput {
   defaultCollapsed: boolean
@@ -95,7 +95,7 @@ const navState = useNavigationState()
 
 const store = useStore()
 
-const panelStack = useAtomValue(panelStackAtom)
+useAtomValue(panelStackAtom);
 
 const panelCount = useAtomValue(panelCountAtom)
 

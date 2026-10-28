@@ -1,3 +1,5 @@
+import { AutomationsConfigSchema } from '../../automations/schemas.ts';
+import { parseJsonObject } from '../../utils/json.ts';
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import { mkdirSync, rmSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
@@ -50,8 +52,8 @@ it('preserves source and skill content through round-trip', async () => {
       expect(readFileSync(join(dstDir, 'skills', 'my-skill', 'helper.ts'), 'utf-8')).toBe('export function help() {}')
 
       // Imported source config should have auth reset
-      const importedConfig = JSON.parse(readFileSync(join(dstDir, 'sources', 'my-api', 'config.json'), 'utf-8'))
-      expect(importedConfig.isAuthenticated).toBe(false)
+      const importedConfig = parseJsonObject(readFileSync(join(dstDir, 'sources', 'my-api', 'config.json'), 'utf-8'))
+      expect(importedConfig["isAuthenticated"]).toBe(false)
     })
 
 it('preserves automations through round-trip', async () => {
@@ -75,12 +77,12 @@ it('preserves automations through round-trip', async () => {
 
       expect(result.automations.imported).toHaveLength(2)
 
-      const config = JSON.parse(readFileSync(join(dstDir, 'automations.json'), 'utf-8'))
-      expect(config.version).toBe(2)
-      expect(config.automations.UserPromptSubmit).toHaveLength(1)
-      expect(config.automations.UserPromptSubmit[0].name).toBe('Greet')
-      expect(config.automations.SchedulerTick).toHaveLength(1)
-      expect(config.automations.SchedulerTick[0].cron).toBe('0 9 * * 1-5')
+      const config = AutomationsConfigSchema.parse(JSON.parse(readFileSync(join(dstDir, 'automations.json'), 'utf-8')))
+      expect(config["version"]).toBe(2)
+      expect(config.automations["UserPromptSubmit"]).toHaveLength(1)
+      expect(config.automations["UserPromptSubmit"]?.[0]?.name).toBe('Greet')
+      expect(config.automations["SchedulerTick"]).toHaveLength(1)
+      expect(config.automations["SchedulerTick"]?.[0]?.cron).toBe('0 9 * * 1-5')
     })
 });
 });

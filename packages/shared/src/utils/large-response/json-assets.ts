@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../json.ts';
 /**
  * Large Response Handling Utility
  *
@@ -47,20 +48,20 @@ function gmailMessageResultMetadata(parsed: unknown, toolName: string): string |
   const normalizedToolName = toolName.startsWith('functions.')
     ? toolName.slice('functions.'.length)
     : toolName;
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
+  if (!parsed || typeof parsed !== 'object' || isUnknownArray(parsed)) return undefined;
   const envelope = parsed as Record<string, unknown>;
   const isDirectGmailRead = normalizedToolName === 'mcp__google-contacts__gmail_get_message'
     || normalizedToolName === 'mcp__google-contacts__gmail_get_message_by_url';
   const isOrionGmailRead = (normalizedToolName === 'mcp__orion-mcp__orion_mcp_read'
     || normalizedToolName === 'mcp__orion-mcp__orion_mcp_call')
-    && (envelope.tool === 'gmail_get_message' || envelope.tool === 'gmail_get_message_by_url')
-    && envelope.data !== null && typeof envelope.data === 'object' && !Array.isArray(envelope.data);
+    && (envelope["tool"] === 'gmail_get_message' || envelope["tool"] === 'gmail_get_message_by_url')
+    && envelope["data"] !== null && typeof envelope["data"] === 'object' && !isUnknownArray(envelope["data"]);
   if (!isDirectGmailRead && !isOrionGmailRead) return undefined;
-  const rawSource = isOrionGmailRead ? envelope.data as Record<string, unknown> : envelope;
-  const latest = rawSource.latestMessage && typeof rawSource.latestMessage === 'object' && !Array.isArray(rawSource.latestMessage)
-    ? rawSource.latestMessage as Record<string, unknown>
+  const rawSource = isOrionGmailRead ? envelope["data"] as Record<string, unknown> : envelope;
+  const latest = rawSource["latestMessage"] && typeof rawSource["latestMessage"] === 'object' && !isUnknownArray(rawSource["latestMessage"])
+    ? rawSource["latestMessage"] as Record<string, unknown>
     : undefined;
-  const source = typeof rawSource.id === 'string' ? rawSource : (latest ?? rawSource);
+  const source = typeof rawSource["id"] === 'string' ? rawSource : (latest ?? rawSource);
   const metadata: Record<string, unknown> = {};
   for (const key of ['id', 'threadId', 'subject', 'from', 'to', 'cc', 'bcc', 'date', 'messageIdHeader']) {
     const descriptor = Object.getOwnPropertyDescriptor(source, key) ?? Object.getOwnPropertyDescriptor(rawSource, key);
@@ -68,9 +69,10 @@ function gmailMessageResultMetadata(parsed: unknown, toolName: string): string |
       && descriptor.value.length <= 2_048) metadata[key] = descriptor.value;
   }
   const labels = Object.getOwnPropertyDescriptor(source, 'labelIds') ?? Object.getOwnPropertyDescriptor(rawSource, 'labelIds');
-  if (labels && 'value' in labels && Array.isArray(labels.value) && labels.value.length <= 32
-    && labels.value.every(value => typeof value === 'string' && value.length <= 128)) {
-    metadata.labelIds = [...labels.value];
+  const labelIds: unknown = labels && 'value' in labels ? labels.value : undefined;
+  if (isUnknownArray(labelIds) && labelIds.length <= 32
+    && labelIds.every((value: unknown): value is string => typeof value === 'string' && value.length <= 128)) {
+    metadata["labelIds"] = [...labelIds];
   }
   return Object.keys(metadata).length ? JSON.stringify(metadata) : undefined;
 }
@@ -128,7 +130,7 @@ function saveJsonArtifact(
 }
 
 function inferMimeFromContext(container: unknown): string | null {
-  if (!container || typeof container !== 'object' || Array.isArray(container)) return null;
+  if (!container || typeof container !== 'object' || isUnknownArray(container)) return null;
   const obj = container as Record<string, unknown>;
   const keys = ['mimeType', 'media_type', 'mime', 'contentType', 'content_type'];
   for (const key of keys) {
@@ -223,7 +225,7 @@ export function extractAssetsFromStructuredJson(
         },
       };
 
-      if (Array.isArray(parent)) {
+      if (isUnknownArray(parent)) {
         parent[key as number] = replacement;
       } else {
         (parent as Record<string, unknown>)[String(key)] = replacement;
@@ -232,8 +234,8 @@ export function extractAssetsFromStructuredJson(
       return;
     }
 
-    if (Array.isArray(node)) {
-      node.forEach((item, idx) => walk(item, `${path}[${idx}]`, node, idx));
+    if (isUnknownArray(node)) {
+      node.forEach((item: unknown, idx) => walk(item, `${path}[${idx}]`, node, idx));
       return;
     }
 

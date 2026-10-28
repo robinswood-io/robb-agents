@@ -8,8 +8,7 @@
 import * as React from 'react'
 import { useTranslation } from "react-i18next"
 import type { ColumnDef } from '@/components/ui/data-table'
-import { DataTable, SortableHeader } from '@/components/ui/data-table'
-import { Input } from '@/components/ui/input'
+import { DataTable } from '@/components/ui/data-table'
 import { Spinner } from '@craft-agent/ui'
 import { cn } from '@/lib/utils'
 
@@ -24,25 +23,25 @@ export interface Info_DataTableProps<TData extends object> {
     placeholder?: string
     /** Column ID to search (defaults to global search) */
     column?: string
-  }
+  } | undefined
   /** Max height with scroll (similar to Info_Markdown) */
-  maxHeight?: number
+  maxHeight?: number | undefined
   /** Show loading state */
-  loading?: boolean
+  loading?: boolean | undefined
   /** Show error message */
-  error?: string
+  error?: string | undefined
   /** Empty state content */
-  emptyContent?: React.ReactNode
+  emptyContent?: React.ReactNode | undefined
   /**
    * Floating action rendered OVER the table header (e.g., fullscreen button).
    * Uses absolute positioning inside scroll container - appears on hover via group-hover.
    * Parent should have 'group' class for hover detection.
    */
-  floatingAction?: React.ReactNode
+  floatingAction?: React.ReactNode | undefined
   /** Enable tree/hierarchical rows (passed through to DataTable) */
-  getSubRows?: (row: TData) => TData[] | undefined
+  getSubRows?: ((row: TData) => TData[] | undefined) | undefined
   /** Additional class names */
-  className?: string
+  className?: string | undefined
 }
 
 /**
@@ -79,7 +78,7 @@ export function Info_DataTable<TData extends object>({
   className,
 }: Info_DataTableProps<TData>) {
   const { t } = useTranslation()
-  const [searchValue, setSearchValue] = React.useState('')
+  const [searchValue] = React.useState('')
 
   // Parse searchable prop
   const searchConfig = React.useMemo(() => {

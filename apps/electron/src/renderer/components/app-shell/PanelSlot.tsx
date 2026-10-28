@@ -38,9 +38,9 @@ interface PanelSlotProps {
   /** Flex-grow weight for proportional sizing */
   proportion: number
   /** Optional sash element rendered before this panel */
-  sash?: React.ReactNode
+  sash?: React.ReactNode | undefined
   /** Compact (mobile) mode — shows back button in panel header */
-  isCompact?: boolean
+  isCompact?: boolean | undefined
 }
 
 export function PanelSlot({

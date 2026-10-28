@@ -1,3 +1,4 @@
+import { requiredTestValue } from '@craft-agent/shared/testing/fixture-values';
 /**
  * Pure-helper coverage for the model-picker. The helpers are tiny but they
  * back both the desktop dropdown and the compact (drawer) selector — pinning
@@ -110,7 +111,7 @@ describe('groupConnectionsByProvider', () => {
     const b = conn('second', 'anthropic')
     const c = conn('third', 'anthropic')
     const result = groupConnectionsByProvider([a, b, c])
-    expect(result[0][1].map(c => c.slug)).toEqual(['first', 'second', 'third'])
+    expect(requiredTestValue(result[0])[1].map(c => c.slug)).toEqual(['first', 'second', 'third'])
   })
 
   test('places "Anthropic" group before pi groups (display order)', () => {
@@ -137,7 +138,7 @@ describe('groupConnectionsByProvider', () => {
     const result = groupConnectionsByProvider([a])
     // Only "Anthropic" appears; "Local" and "Robb Agents Backend" are dropped.
     expect(result.length).toBe(1)
-    expect(result[0][0]).toBe('Anthropic')
+    expect(requiredTestValue(result[0])[0]).toBe('Anthropic')
   })
 
   test('full mixed input — anthropic + local + remote pi_compat + pi', () => {

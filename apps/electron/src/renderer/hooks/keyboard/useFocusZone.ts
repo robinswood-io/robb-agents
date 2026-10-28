@@ -64,7 +64,7 @@ export function useFocusZone({
     registerZone({
       id: zoneId,
       ref: zoneRef as React.RefObject<HTMLElement | null>,
-      focusFirst,
+      ...(focusFirst !== undefined ? { focusFirst: focusFirst } : {}),
     })
 
     return () => {

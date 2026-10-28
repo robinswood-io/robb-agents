@@ -17,9 +17,9 @@ export class WindowManager {
     private pendingCloseTimeouts: Map<number, NodeJS.Timeout> = new Map(); // Fallback timeouts for window close
     private eventSink: EventSink | null = null;
     private clientResolver: ((wcId: number) => string | undefined) | null = null;
-    private keyboardCloseIntents: Set<number> = new Set(); // webContents.id flagged by Cmd/Ctrl+W before close
-    private keyboardCloseIntentTimeouts: Map<number, NodeJS.Timeout> = new Map(); // Auto-clear stale keyboard-close intents
-    private isAppQuitting = false; // Skip layered close interception during app quit
+    /** @internal */ public keyboardCloseIntents: Set<number> = new Set(); // webContents.id flagged by Cmd/Ctrl+W before close
+    /** @internal */ public keyboardCloseIntentTimeouts: Map<number, NodeJS.Timeout> = new Map(); // Auto-clear stale keyboard-close intents
+    /** @internal */ public isAppQuitting = false; // Skip layered close interception during app quit
     /**
      * Set the event sink and client resolver for pushing events via the RPC server
      * instead of webContents.send. Called after server creation.
@@ -37,7 +37,7 @@ export class WindowManager {
         return this.clientResolver?.(webContentsId);
     }
     /** Push an event to a specific window via the RPC event sink. Falls back to webContents.send. */
-    private pushToWindow(window: BrowserWindow, channel: string, ...args: unknown[]): void {
+    /** @internal */ public pushToWindow(window: BrowserWindow, channel: string, ...args: unknown[]): void {
         if (this.eventSink && this.clientResolver) {
             const clientId = this.clientResolver(window.webContents.id);
             if (clientId) {
@@ -50,7 +50,7 @@ export class WindowManager {
             window.webContents.send(channel, ...args);
         }
     }
-    private isRendererAppUrl(url: string): boolean {
+    /** @internal */ public isRendererAppUrl(url: string): boolean {
         if (VITE_DEV_SERVER_URL) {
             try {
                 const parsed = new URL(url);
@@ -74,7 +74,7 @@ export class WindowManager {
             return false;
         }
     }
-    private openExternalFromRenderer(url: string, context: string, sourceWindow?: BrowserWindow): void {
+    /** @internal */ public openExternalFromRenderer(url: string, context: string, sourceWindow?: BrowserWindow): void {
         const classification = classifyExternalUrl(url);
         if (classification.kind === 'dangerous') {
             windowLog.warn(`[url-safety] Blocked ${context}: ${formatBlockedUrlError(classification)} url=${url}`);
@@ -90,12 +90,12 @@ export class WindowManager {
                 if (!result.success) {
                     windowLog.warn(`[url-safety] Blocked ${context}: unsupported internal deep link url=${url} error=${result.error ?? 'unknown'}`);
                 }
-            }).catch((error) => {
+            }).catch((error: unknown) => {
                 windowLog.warn(`[url-safety] Failed to route internal deep link from ${context}: ${error instanceof Error ? error.message : String(error)}`);
             });
             return;
         }
-        void shell.openExternal(url).catch((error) => {
+        void shell.openExternal(url).catch((error: unknown) => {
             windowLog.warn(`[url-safety] Failed to open external URL from ${context}: ${error instanceof Error ? error.message : String(error)}`);
         });
     }
@@ -334,10 +334,7 @@ export class WindowManager {
         }
         // Fall back to any available window
         const allWindows = this.getAllWindows();
-        if (allWindows.length > 0) {
-            return allWindows[0].window;
-        }
-        return null;
+        return allWindows[0]?.window ?? null;
     }
     /**
      * Show or hide macOS traffic light buttons (close/minimize/maximize).

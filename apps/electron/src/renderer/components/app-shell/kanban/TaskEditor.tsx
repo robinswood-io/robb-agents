@@ -1,3 +1,4 @@
+import { useEffectEvent } from 'react';
 import * as React from 'react';
 import "lucide-react";
 import { toast } from 'sonner';
@@ -58,19 +59,19 @@ export type { TaskEditorTarget } from './types'
 export interface TaskEditorProps {
   workspaceId: string
   /** What the editor points at: create-new or edit an existing tile. Defaults to create. */
-  target?: TaskEditorTarget
+  target?: TaskEditorTarget | undefined
   /** Return to the board. */
   onClose: () => void
   /** Jump to the underlying orchestrator chat session (edit mode only). */
-  onOpenSession?: () => void
+  onOpenSession?: (() => void) | undefined
   /** Jump to a specific child/subtask session (used by Results "Open session" links). */
-  onOpenChildSession?: (sessionId: string) => void
+  onOpenChildSession?: ((sessionId: string) => void) | undefined
   /**
    * Fired after a successful CREATE (never for edit-mode saves) so the host can land the
    * user somewhere useful — e.g. the session list scoped to the task. `taskLabelId` is the
    * RESOLVED reserved-label id from tasks:create (may be 'task-2' after a name collision).
    */
-  onCreated?: (created: { sessionId: string; taskLabelId?: string; projectId?: string }) => void
+  onCreated?: ((created: { sessionId: string; taskLabelId?: string; projectId?: string }) => void) | undefined
   /** Real provider→model groups (from the workspace's LLM connections). */
   modelGroups: KanbanModelProviderGroup[]
   /** model id → connection slug that serves it (so each node routes to the right backend). */
@@ -174,7 +175,7 @@ export function TaskEditor({
         // Quick-add contract: the typed title is the session name AND the dispatch prompt. Preserve the
         // child's explicit model + connection (custom-routed children must not lose their backend).
         const title = child.name?.trim() || getSessionTitle(child)
-        return quickAddChildToSubtask({ sessionId: child.id, title, model: child.model, llmConnection: child.llmConnection })
+        return quickAddChildToSubtask({ sessionId: child.id, title, ...(child.model !== undefined ? { model: child.model } : {}), ...(child.llmConnection !== undefined ? { llmConnection: child.llmConnection } : {}) })
       })
     },
     [store, editSessionId],
@@ -182,7 +183,7 @@ export function TaskEditor({
 
   // Edit-mode prefill: spec-backed tiles load their authored task.yaml; either way the tile's
   // quick-add children merge in as editable rows (adopted into the spec on the next save).
-  React.useEffect(() => {
+  const initializeTaskEditor = useEffectEvent(() => {
     if (target.mode !== 'edit') return
     let cancelled = false
     // The tile's existing project binding (spec-less quick-add tiles have no spec.project, so fall
@@ -237,8 +238,8 @@ export function TaskEditor({
       cancelled = true
     }
     // Prefill runs once per target identity; fallbackModel is stable enough for this load.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target.mode, editSessionId, editSlug, workspaceId])
+  });
+React.useEffect(() => initializeTaskEditor(), [target.mode, editSessionId, editSlug, workspaceId]);
 
   const loadResults = React.useCallback(() => {
     if (!editSlug) return
@@ -296,7 +297,7 @@ export function TaskEditor({
           slug: editSlug,
           sourceRunId: results.runId,
           nodeIds: [nodeId],
-          orchestratorSessionId: editSessionId,
+          ...(editSessionId !== undefined ? { orchestratorSessionId: editSessionId } : {}),
         })
         toast.success(t('tasks.repairStarted'), { description: repaired.runId })
         loadResults()

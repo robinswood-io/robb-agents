@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { delegatedTerminalResultContent as policyDelegatedTerminalResultContent, delegatedTerminalResultDeliveryId as policyDelegatedTerminalResultDeliveryId } from "./SessionManager/policy.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -125,7 +126,7 @@ describe('durable restart recovery', () => {
     expect(parent.messageQueue).toEqual([])
     expect(h.runtime.activeRelevantDelegatedDescendants(parent)).toEqual([])
     const stored = readFileSync(getSessionFilePath(h.rootPath, parent.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(parseRecoveryJournalObservation)
     expect(stored.find(message => message.id === receipt.id))
       .toMatchObject({ isQueued: false, agentDelivery: { status: 'processed' } })
     expect(stored.find(message => message.toolUseId === 'wait-child-tool'))
@@ -197,7 +198,7 @@ describe('durable restart recovery', () => {
 
     expect(question!.status).toBe('cancelled')
     expect(receipt).toMatchObject({ isQueued: false, agentDelivery: { status: 'processed', attempts: 3 } })
-    expect(parent.activeObjective).toMatchObject({ terminalState: 'exhausted', completedAt: expect.any(Number) })
+    expect<unknown>(parent.activeObjective).toMatchObject({ terminalState: 'exhausted', completedAt: (expect.any(Number) as unknown) })
     expect(parent.pendingTurnRecovery).toBeUndefined()
     expect(parent.userInputRequests?.filter((request) => request.status === 'pending')).toEqual([])
     expect(parent.messageQueue).toEqual([])

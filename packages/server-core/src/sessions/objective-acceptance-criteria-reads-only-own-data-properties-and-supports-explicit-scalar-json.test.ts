@@ -1,3 +1,5 @@
+import type { ActiveSessionObjective } from '../../../shared/src/sessions/types/objectives.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from "bun:test";
 import type { Message, ObjectiveAcceptanceCriterion } from "@craft-agent/core/types";
 import { objectiveReviewBinding, transitionObjectiveContract } from "./objective-contract.ts";
@@ -7,7 +9,7 @@ import { criterion, objective, observation, receipt, root } from "./testing/obje
 describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
   it('reads only own data properties and supports explicit scalar JSON roots', () => {
     const input = Object.create({ host: 'dev' }) as Record<string, unknown>;
-    input.timer = 'cleanup';
+    input["timer"] = 'cleanup';
     expect(validateObjectiveAcceptanceCriteria(objective, [root, { ...observation, toolInput: input }], receipt)).toHaveLength(1);
     Object.defineProperty(input, 'host', { get() { throw new Error('must not invoke accessors'); } });
     expect(validateObjectiveAcceptanceCriteria(objective, [root, { ...observation, toolInput: input }], receipt)).toHaveLength(1);
@@ -157,7 +159,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
 
     const merelyAdded = registerObjectiveAcceptanceCriteria(
       objective,
-      [{ ...corrected, supersedes: undefined }],
+      [omitUndefined<ObjectiveAcceptanceCriterion>({ ...corrected, supersedes: undefined })],
       10,
     );
     expect(merelyAdded.acceptanceCriteria?.map(item => item.id)).toEqual([
@@ -361,11 +363,11 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
       [root, marker, preMarkerObservation],
     )).toThrow('already satisfied by exact persisted read-only observations');
 
-    const noContractRequired = {
+    const noContractRequired = omitUndefined<ActiveSessionObjective>({
       ...unregistered,
       requiresAcceptanceCriteria: undefined,
       terminalReconciliation: { messageId: 'reconcile-without-contract', timestamp: 6 },
-    };
+    });
     expect(noContractRequired.requiresAcceptanceCriteria).not.toBe(true);
     expect(() => registerObjectiveAcceptanceCriteria(noContractRequired, [criterion], 7))
       .toThrow('Terminal reconciliation freezes the registered acceptance contract');

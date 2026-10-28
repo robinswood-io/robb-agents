@@ -22,7 +22,7 @@ interface OfflineWorkspaceContentProps {
   searchQuery: string
   setSearchQuery: import("react").Dispatch<import("react").SetStateAction<string>>
   filteredSnapshots: OfflineSessionSnapshotView[]
-  effectiveSelectedId: string
+  effectiveSelectedId: string | null
   selectSnapshot: (sessionId: string, openReader?: boolean) => void
   pinnedTexts: readonly OfflinePinnedTextView[]
   onUnpinText: ((pinId: string) => MaybePromise) | undefined

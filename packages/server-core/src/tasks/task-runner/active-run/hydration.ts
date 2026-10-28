@@ -1,3 +1,4 @@
+import { setOptional } from '@craft-agent/shared/utils/json';
 import { type NodeOutput, type RunLogEntry } from "@craft-agent/shared/tasks";
 import type { RunStatus, PendingTaskApproval } from "../shared.ts";
 import type { ActiveRun } from '../active-run.ts';
@@ -38,7 +39,7 @@ export function hydrate(transportOwner: ActiveRun, log: RunLogEntry[], loadOutpu
             if (st) {
                 st.attempt += 1;
                 st.state = 'running';
-                st.retryAtMs = undefined;
+                delete st.retryAtMs;
             }
         }
         else if (e.kind === 'node-finished') {
@@ -51,7 +52,7 @@ export function hydrate(transportOwner: ActiveRun, log: RunLogEntry[], loadOutpu
             if (st) {
                 st.state = 'pending';
                 st.lastFailure = `Previous attempt failed: ${e.reason}. Address the cause before retrying.`;
-                st.retryAtMs = e.retryAt ? Date.parse(e.retryAt) : undefined;
+                setOptional(st, "retryAtMs", e.retryAt ? Date.parse(e.retryAt) : undefined);
             }
         }
         else if (e.kind === 'node-checkpoint') {
@@ -96,14 +97,14 @@ export function hydrate(transportOwner: ActiveRun, log: RunLogEntry[], loadOutpu
                 nodeId: e.nodeId,
                 reason: e.reason,
                 impact: e.impact,
-                owner: e.owner,
+                ...(e.owner !== undefined ? { owner: e.owner } : {}),
             });
         }
         else if (e.kind === 'approval-resolved') {
             unresolvedApprovals.delete(e.requestId);
             const state = transportOwner["state"].get(e.nodeId);
             if (e.decision === 'approved') {
-                transportOwner["approvedNodes"].add(e.nodeId);
+                transportOwner.approvedNodes.add(e.nodeId);
                 if (state?.state === 'waiting-approval')
                     state.state = 'pending';
             }
@@ -116,12 +117,12 @@ export function hydrate(transportOwner: ActiveRun, log: RunLogEntry[], loadOutpu
             // Reconstruct the durable repair counters so a cross-restart resume honors the cap rather
             // than restarting the budget from zero (the in-memory counters reset on a fresh process).
             if (e.result === 'fail') {
-                transportOwner["repairsUsed"] += 1;
+                transportOwner.repairsUsed += 1;
                 if (e.outputFingerprint) {
-                    transportOwner["rejectedFingerprints"].add(e.outputFingerprint);
-                    transportOwner["stagnantRepeats"] = e.stagnantRepeats ?? transportOwner["stagnantRepeats"];
-                    transportOwner["reflectionHistory"].push({
-                        iteration: transportOwner["repairsUsed"],
+                    transportOwner.rejectedFingerprints.add(e.outputFingerprint);
+                    transportOwner.stagnantRepeats = e.stagnantRepeats ?? transportOwner.stagnantRepeats;
+                    transportOwner.reflectionHistory.push({
+                        iteration: transportOwner.repairsUsed,
                         reason: e.reason ?? 'The verifier rejected the previous result.',
                         frontier: e.frontier ?? e.nodes ?? transportOwner["spec"].nodes.map((node) => node.id),
                         outputFingerprint: e.outputFingerprint,
@@ -129,19 +130,19 @@ export function hydrate(transportOwner: ActiveRun, log: RunLogEntry[], loadOutpu
                 }
             }
             else if (e.result === 'unparsed')
-                transportOwner["unparsedReAsks"] += 1;
+                transportOwner.unparsedReAsks += 1;
             else if (e.result === 'pass')
-                transportOwner["unparsedReAsks"] = 0;
+                transportOwner.unparsedReAsks = 0;
         }
         else if (e.kind === 'usage-updated') {
             transportOwner["tokensUsed"] = e.tokensUsed;
             transportOwner["costUsed"] = e.costUsed ?? transportOwner["costUsed"];
             if (e.sourceSessionId) {
                 if (Number.isFinite(e.cumulativeTokens) && e.cumulativeTokens! >= 0) {
-                    transportOwner["sessionTokens"].set(e.sourceSessionId, Math.max(transportOwner["sessionTokens"].get(e.sourceSessionId) ?? 0, e.cumulativeTokens!));
+                    transportOwner.sessionTokens.set(e.sourceSessionId, Math.max(transportOwner.sessionTokens.get(e.sourceSessionId) ?? 0, e.cumulativeTokens!));
                 }
                 if (Number.isFinite(e.cumulativeCostUsd) && e.cumulativeCostUsd! >= 0) {
-                    transportOwner["sessionCosts"].set(e.sourceSessionId, Math.max(transportOwner["sessionCosts"].get(e.sourceSessionId) ?? 0, e.cumulativeCostUsd!));
+                    transportOwner.sessionCosts.set(e.sourceSessionId, Math.max(transportOwner.sessionCosts.get(e.sourceSessionId) ?? 0, e.cumulativeCostUsd!));
                 }
             }
         }
@@ -223,7 +224,7 @@ export function hydrate(transportOwner: ActiveRun, log: RunLogEntry[], loadOutpu
         if (!st || st.state === 'done' || st.state === 'failed')
             continue;
         st.state = 'waiting-approval';
-        transportOwner["pendingApprovals"].set(approval.requestId, approval);
+        transportOwner.pendingApprovals.set(approval.requestId, approval);
     }
     // Preserve the exact reviewer across every crash window, including after
     // its bounded output changed from pending but before run-completed was
@@ -231,8 +232,8 @@ export function hydrate(transportOwner: ActiveRun, log: RunLogEntry[], loadOutpu
     // fresh reviewer.
     const persistedReviewer = loadOutput('__verdict__');
     const reviewerParams = persistedReviewer?.params;
-    const persistedReviewerSessionIds = Array.isArray(reviewerParams?.reviewerSessionIds)
-        ? reviewerParams.reviewerSessionIds.filter((value): value is string => typeof value === 'string')
+    const persistedReviewerSessionIds = Array.isArray(reviewerParams?.["reviewerSessionIds"])
+        ? reviewerParams["reviewerSessionIds"].filter((value: unknown): value is string => typeof value === 'string')
         : [];
     if (persistedStatus === 'verifying' || transportOwner["terminalIntent"]) {
         for (const sessionId of persistedReviewerSessionIds) {
@@ -240,17 +241,17 @@ export function hydrate(transportOwner: ActiveRun, log: RunLogEntry[], loadOutpu
         }
     }
     if (persistedStatus === 'verifying'
-        && (typeof reviewerParams?.reviewerSessionId === 'string'
+        && (typeof reviewerParams?.["reviewerSessionId"] === 'string'
             || persistedReviewerSessionIds.length > 0)) {
-        transportOwner["reviewerSessionId"] = typeof reviewerParams?.reviewerSessionId === 'string'
-            ? reviewerParams.reviewerSessionId
+        transportOwner["reviewerSessionId"] = typeof reviewerParams?.["reviewerSessionId"] === 'string'
+            ? reviewerParams["reviewerSessionId"]
             : persistedReviewerSessionIds[0];
         if (transportOwner["reviewerSessionId"])
             transportOwner["pendingReviewerSessionIds"].add(transportOwner["reviewerSessionId"]);
         transportOwner["reviewerPending"] = true;
-        transportOwner["recoveredReviewerResultReusable"] = reviewerParams?.reviewerState !== 'invalid';
+        transportOwner.recoveredReviewerResultReusable = reviewerParams?.["reviewerState"] !== 'invalid';
     }
-    transportOwner["runStatus"] = transportOwner["pendingApprovals"].size > 0 ? 'waiting-approval' : persistedStatus;
+    transportOwner["runStatus"] = transportOwner.pendingApprovals.size > 0 ? 'waiting-approval' : persistedStatus;
     if (persistedStatus === 'paused' && !transportOwner["pauseDrainRequired"]) {
         // A crash may occur after run-paused/node-finished but before the strong
         // pause intent was appended. Legacy logs have no explicit drain marker,
@@ -271,7 +272,7 @@ export function activateHydrated(transportOwner: ActiveRun, shouldResume: boolea
     if (transportOwner["unsubscribe"])
         return;
     transportOwner["unsubscribe"] = transportOwner["deps"].host.onSessionComplete((evt) => transportOwner["onSessionComplete"](evt));
-    if (transportOwner["pendingApprovals"].size > 0) {
+    if (transportOwner.pendingApprovals.size > 0) {
         transportOwner["runStatus"] = 'waiting-approval';
     }
     if (transportOwner["terminalIntent"]) {
@@ -284,7 +285,7 @@ export function activateHydrated(transportOwner: ActiveRun, shouldResume: boolea
         transportOwner["stopForKillSwitch"](killSwitch.reason ?? 'Execution stopped by kill switch');
         return;
     }
-    if (transportOwner["pendingApprovals"].size > 0)
+    if (transportOwner.pendingApprovals.size > 0)
         return;
     if (transportOwner["runStatus"] === 'paused') {
         const discoveredWorkers = transportOwner["deps"].host.listTaskWorkerSessions(transportOwner["deps"].workspaceId, transportOwner["slug"], transportOwner["runId"]).map((session) => session.id);
@@ -299,7 +300,7 @@ export function activateHydrated(transportOwner: ActiveRun, shouldResume: boolea
         transportOwner["resumeRequested"] = shouldResume;
         const drain = transportOwner["beginPauseDrain"]();
         if (shouldResume) {
-            void drain.then(() => transportOwner["resumeAfterPauseDrain"](), () => { }).catch((error) => {
+            void drain.then(() => transportOwner["resumeAfterPauseDrain"](), () => { }).catch((error: unknown) => {
                 transportOwner["failForUnexpectedAsyncError"]('resume hydrated pause drain', error);
             });
         }
@@ -309,7 +310,7 @@ export function activateHydrated(transportOwner: ActiveRun, shouldResume: boolea
         return;
     const recoveredWorkers = transportOwner["deps"].host.listTaskWorkerSessions(transportOwner["deps"].workspaceId, transportOwner["slug"], transportOwner["runId"]).map((session) => session.id);
     if (recoveredWorkers.length > 0) {
-        const drain = transportOwner["resumeAfterRecoveredWorkerDrain"](recoveredWorkers);
+        const drain = transportOwner.resumeAfterRecoveredWorkerDrain(recoveredWorkers);
         transportOwner["hydrationWorkerDrain"] = drain;
         void drain.then(() => {
             if (transportOwner["hydrationWorkerDrain"] === drain)
@@ -317,16 +318,16 @@ export function activateHydrated(transportOwner: ActiveRun, shouldResume: boolea
         }, () => {
             if (transportOwner["hydrationWorkerDrain"] === drain)
                 transportOwner["hydrationWorkerDrain"] = undefined;
-        }).catch((error) => {
+        }).catch((error: unknown) => {
             transportOwner["failForUnexpectedAsyncError"]('hydrate recovered worker drain bookkeeping', error);
         });
         return;
     }
-    transportOwner["continueHydratedResume"]();
+    transportOwner.continueHydratedResume();
 }
 
 export async function resumeAfterRecoveredWorkerDrain(transportOwner: ActiveRun, sessionIds: string[]): Promise<void> {
-    const errors = await transportOwner["retireWorkerSessions"](sessionIds);
+    const errors = await transportOwner.retireWorkerSessions(sessionIds);
     if (errors.length > 0) {
         const reason = `recovered worker retirement failed: ${errors.map((error) => error.message).join('; ')}`;
         transportOwner["setTerminalIntent"]({ target: 'failed', cause: 'recovery', reason });
@@ -334,7 +335,7 @@ export async function resumeAfterRecoveredWorkerDrain(transportOwner: ActiveRun,
         transportOwner["beginTerminalDrain"]();
         return;
     }
-    transportOwner["continueHydratedResume"]();
+    transportOwner.continueHydratedResume();
 }
 
 export function continueHydratedResume(transportOwner: ActiveRun): void {

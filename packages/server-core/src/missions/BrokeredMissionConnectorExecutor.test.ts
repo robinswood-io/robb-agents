@@ -1,3 +1,4 @@
+import { SessionManager as FixtureSessionManager } from "../sessions/SessionManager";
 import { offlineMissionRouteOptions } from "./testing/mission-route-fixture.ts";
 import { afterEach, describe, expect, it } from "bun:test";
 import { existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
@@ -124,10 +125,10 @@ describe('BrokeredMissionConnectorExecutor', () => {
       if (attack === 'symlink') symlinkSync(outside, paths.receipt);
       else linkSync(outside, paths.receipt);
 
-      expect(await executor.execute(input, await binding(executor))).toMatchObject({
+      expect<unknown>(await executor.execute(input, await binding(executor))).toMatchObject({
         status: 'failed',
         ambiguousMutation: true,
-        reason: expect.stringContaining('requires recovery reconciliation'),
+        reason: (expect.stringContaining('requires recovery reconciliation') as unknown),
       });
       expect(runtime.mutationCount).toBe(1);
       expect(readFileSync(outside, 'utf8')).toBe('outside-receipt-sentinel\n');
@@ -347,9 +348,9 @@ describe('BrokeredMissionConnectorExecutor', () => {
     const input = executionInput();
     const result = await executor.execute(input, await binding(executor));
     expect(result).toMatchObject({ status: 'failed', ambiguousMutation: true });
-    expect(executor.compensationRequirement(input.mission.id, input.item.id)).toMatchObject({
+    expect<unknown>(executor.compensationRequirement(input.mission.id, input.item.id)).toMatchObject({
       compensation: { strategy: 'manual' },
-      reason: expect.stringContaining('RECONCILIATION_DIVERGED'),
+      reason: (expect.stringContaining('RECONCILIATION_DIVERGED') as unknown),
     });
   });
 
@@ -375,11 +376,11 @@ describe('BrokeredMissionConnectorExecutor', () => {
 
   it('integrates with MissionRuntimeService and resumes only after host approval', async () => {
     const broker = harness();
-    const sessionManager = {
+    const sessionManager = Object.assign(new FixtureSessionManager(), ({
       waitForInit: async () => {},
       getSessions: () => [],
       cancelProcessing: async () => {},
-    } as unknown as ISessionManager;
+    } satisfies Partial<ISessionManager>));
     const service = new MissionRuntimeService({
       ...offlineMissionRouteOptions,
       sessionManager,
@@ -410,9 +411,9 @@ describe('BrokeredMissionConnectorExecutor', () => {
 
   it('recovers a crash after the durable approval decision but before Mission resume', async () => {
     const broker = harness();
-    const sessionManager = {
+    const sessionManager = Object.assign(new FixtureSessionManager(), ({
       waitForInit: async () => {}, getSessions: () => [], cancelProcessing: async () => {},
-    } as unknown as ISessionManager;
+    } satisfies Partial<ISessionManager>));
     const options = {
       sessionManager,
       resolveWorkspace: (id: string) => id === 'workspace-1' ? { id, rootPath: broker.root } : null,

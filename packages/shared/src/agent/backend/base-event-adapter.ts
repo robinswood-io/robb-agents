@@ -191,9 +191,9 @@ export abstract class BaseEventAdapter {
       toolName,
       toolUseId: id,
       input,
-      intent,
-      displayName,
-      turnId: this.currentTurnId || undefined,
+      ...(intent !== undefined ? { intent } : {}),
+      ...(displayName !== undefined ? { displayName } : {}),
+      turnId: this.currentTurnId ?? undefined,
       parentToolUseId,
     };
   }
@@ -218,7 +218,7 @@ export abstract class BaseEventAdapter {
       toolName,
       result,
       isError,
-      turnId: this.currentTurnId || undefined,
+      turnId: this.currentTurnId ?? undefined,
       parentToolUseId,
       ...(input ? { input } : {}),
       ...(continuationRequired ? { continuationRequired: true } : {}),

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { Message } from "@craft-agent/core/types";
 import type { ActiveSessionObjective } from "@craft-agent/shared/sessions";
 import { transitionObjectiveContract } from './transition.ts';
@@ -67,7 +68,7 @@ export function reconstructObjectiveForBranch(input: {
   const rootCopied = input.sourceObjective
     && userMessages.some(message => message.id === input.sourceObjective?.userMessageId);
   if (rootCopied && input.completeSourceHistory) {
-    return { ...input.sourceObjective!, interruptedTurnRecovery: undefined };
+    return omitUndefined<ActiveSessionObjective>({ ...input.sourceObjective!, interruptedTurnRecovery: undefined });
   }
 
   let reconstructed: ActiveSessionObjective | undefined;
@@ -79,18 +80,19 @@ export function reconstructObjectiveForBranch(input: {
       ? input.sourceObjective.originalText ?? message.content
       : message.content;
     reconstructed = transitionObjectiveContract({
-      existing: reconstructed,
+      ...(reconstructed !== undefined ? { existing: reconstructed } : {}),
       messageId: message.id,
       text,
       nowMs: message.timestamp,
-      delegatedRole: input.sourceObjective?.delegatedRole,
+      ...(input.sourceObjective?.delegatedRole !== undefined ? { delegatedRole: input.sourceObjective?.delegatedRole } : {}),
     });
   }
   if (!reconstructed) return undefined;
   if (input.sourceObjective?.userMessageId === reconstructed.userMessageId) {
+    const objectiveId = input.sourceObjective.objectiveId ?? reconstructed.objectiveId;
     reconstructed = {
       ...reconstructed,
-      objectiveId: input.sourceObjective.objectiveId ?? reconstructed.objectiveId,
+      ...(objectiveId !== undefined ? { objectiveId } : {}),
       startedAt: input.sourceObjective.startedAt,
       budgetBaselineUsd: input.sourceObjective.budgetBaselineUsd,
       tokenBaseline: input.sourceObjective.tokenBaseline,

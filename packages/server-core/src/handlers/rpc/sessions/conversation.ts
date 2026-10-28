@@ -51,7 +51,7 @@ export function registerConversationHandlers(server: RpcServer, deps: HandlerDep
             reject(new Error('sendMessage completed without persisting a user message'))
           }
         })
-        .catch(err => {
+        .catch((err: unknown) => {
           log.error('Error in sendMessage:', err)
           if (!acked) {
             // Pre-persist error — surface synchronously to the caller.
@@ -234,7 +234,7 @@ export function registerConversationHandlers(server: RpcServer, deps: HandlerDep
         return sessionManager.updateMessageAnnotation(sessionId, command.messageId, command.annotationId, command.patch)
       default: {
         const _exhaustive: never = command
-        throw new Error(`Unknown session command: ${JSON.stringify(command)}`)
+        throw new Error(`Unknown session command: ${JSON.stringify(_exhaustive)}`)
       }
     }
   })

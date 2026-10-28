@@ -18,20 +18,20 @@ import { stripPiPrefixForDisplay } from "./model-picker-helpers";
 
 export interface CompactModelSelectorProps {
   currentModel: string
-  currentConnection?: string
+  currentConnection?: string | undefined
   onModelChange: (model: string, connection?: string) => void
-  onConnectionChange?: (connectionSlug: string) => void | Promise<void>
-  thinkingLevel?: ThinkingLevel
-  onThinkingLevelChange?: (level: ThinkingLevel) => void
-  isEmptySession?: boolean
-  connectionUnavailable?: boolean
+  onConnectionChange?: ((connectionSlug: string) => void | Promise<void>) | undefined
+  thinkingLevel?: ThinkingLevel | undefined
+  onThinkingLevelChange?: ((level: ThinkingLevel) => void) | undefined
+  isEmptySession?: boolean | undefined
+  connectionUnavailable?: boolean | undefined
   contextStatus?: {
     isCompacting?: boolean
     inputTokens?: number
     contextWindow?: number
-  }
+  } | undefined
   /** Provider handoff is rejected while the current turn is processing. */
-  disabled?: boolean
+  disabled?: boolean | undefined
 }
 
 

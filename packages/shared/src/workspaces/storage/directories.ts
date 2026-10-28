@@ -157,14 +157,14 @@ export function createWorkspaceAtPath(
   // AI settings (model, thinkingLevel, defaultLlmConnection) are left undefined
   // so they fall back to app-level defaults
   const workspaceDefaults: WorkspaceConfig['defaults'] = {
-    model: undefined,
-    thinkingLevel: undefined,
+    
+    
     // defaultLlmConnection: undefined - falls back to app default
     permissionMode: globalDefaults.workspaceDefaults.permissionMode,
     externalActionPolicy: globalDefaults.workspaceDefaults.externalActionPolicy,
     cyclablePermissionModes: globalDefaults.workspaceDefaults.cyclablePermissionModes,
     enabledSourceSlugs: [],
-    workingDirectory: undefined,
+    
     ...defaults, // User-provided defaults override global defaults
   };
 
@@ -173,7 +173,7 @@ export function createWorkspaceAtPath(
     id: `ws_${randomUUID().slice(0, 8)}`,
     name,
     slug,
-    defaults: workspaceDefaults,
+    ...(workspaceDefaults !== undefined ? { defaults: workspaceDefaults } : {}),
     localMcpServers: globalDefaults.workspaceDefaults.localMcpServers,
     createdAt: now,
     updatedAt: now,

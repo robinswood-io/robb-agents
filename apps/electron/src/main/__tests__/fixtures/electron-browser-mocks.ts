@@ -1,16 +1,28 @@
 import { mock } from 'bun:test'
-import type { WebContents, Rectangle } from 'electron'
+import type { WebContents, Rectangle, NativeImage } from 'electron'
 
 export type Listener = (...args: unknown[]) => void
 
-export interface CapturedImage {
-  isEmpty(): boolean
-  getSize(): {width:number;height:number}
-  resize(options: unknown): CapturedImage
-  toPNG(): Buffer
-  toJPEG(quality: number): Buffer
+export type CapturedImage = NativeImage
+export function completeCapturedImage(
+  overrides: Pick<NativeImage, 'isEmpty' | 'getSize' | 'resize' | 'toPNG' | 'toJPEG'>,
+): NativeImage {
+  const unexpected = (): never => { throw new Error('Unexpected image operation in capture test') }
+  return {
+    addRepresentation: unexpected,
+    crop: unexpected,
+    getAspectRatio: unexpected,
+    getBitmap: unexpected,
+    getNativeHandle: unexpected,
+    getScaleFactors: unexpected,
+    isTemplateImage: unexpected,
+    setTemplateImage: unexpected,
+    toBitmap: unexpected,
+    toDataURL: unexpected,
+    isMacTemplateImage: false,
+    ...overrides,
+  }
 }
-
 export type WindowOpenDetails = Parameters<Parameters<WebContents['setWindowOpenHandler']>[0]>[0]
 
 export type WindowOpenHandler = (details: Pick<WindowOpenDetails,'url'> & Partial<WindowOpenDetails>) => ReturnType<Parameters<WebContents['setWindowOpenHandler']>[0]>
@@ -102,16 +114,19 @@ export function createMockWebContents() {
     stop: mock(() => {}),
     setUserAgent: mock(() => {}),
     capturePage: mock(async (_rect?: Rectangle): Promise<CapturedImage> => {
-      const img: CapturedImage = {
+      const img: CapturedImage = completeCapturedImage({
         isEmpty: () => false,
         getSize: () => ({ width: 2400, height: 1800 }),
         resize: (_opts: unknown) => img,
         toPNG: () => Buffer.from('fake-png'),
         toJPEG: (_quality: number) => Buffer.from('fake-jpeg'),
-      }
+      })
       return img
     }),
-    executeJavaScript: mock(async (expr: string) => eval(expr)),
+    executeJavaScript: mock(async (expr: string): Promise<unknown> => {
+      const result: unknown = eval(expr);
+      return result;
+    }),
     focus: mock(() => {}),
     setWindowOpenHandler: mock((_handler: WindowOpenHandler) => {}),
     send: mock((_channel: string, _payload?: unknown) => {}),

@@ -1,4 +1,4 @@
-import type { ProviderDriver, DriverTestConnectionArgs } from "../../driver-types.ts";
+import type { ProviderDriver, DriverTestConnectionArgs, BackendRuntimePayload } from "../../driver-types.ts";
 import type { ModelDefinition } from "../../../../../config/models.ts";
 import { getAllPiModels, getPiModelsForAuthProvider } from "../../../../../config/models-pi.ts";
 import { getPiProviderBaseUrl } from "../../../../../config/models-pi.ts";
@@ -7,29 +7,13 @@ import { fetchCopilotModels } from './copilot-models.ts';
 
 export const piDriver: ProviderDriver = {
   provider: 'pi',
-  buildRuntime: ({ context, providerOptions, resolvedPaths }) => {
+  buildRuntime: ({ context, providerOptions, resolvedPaths }): BackendRuntimePayload => {
     const piAuthProvider = providerOptions?.piAuthProvider || context.connection?.piAuthProvider;
-    return {
-      paths: {
-        // Vibe uses the official ACP bridge but deliberately reuses PiAgent's
-        // established JSONL lifecycle and permission plumbing.
-        piServer: piAuthProvider === 'mistral-vibe'
-          ? resolvedPaths.vibeAcpServerPath
-          : piAuthProvider === 'google-antigravity'
-            ? resolvedPaths.antigravityServerPath
-            : resolvedPaths.piServerPath,
-        vibeAcpServer: resolvedPaths.vibeAcpServerPath,
-        antigravityServer: resolvedPaths.antigravityServerPath,
-        interceptor: piAuthProvider === 'mistral-vibe' || piAuthProvider === 'google-antigravity'
-          ? undefined
-          : resolvedPaths.interceptorBundlePath,
-        node: resolvedPaths.nodeRuntimePath,
-      },
-      piAuthProvider,
-      googleCloudProject: context.connection?.googleCloudProject,
-      baseUrl: context.connection?.baseUrl,
-      customEndpoint: context.connection?.customEndpoint,
-      customModels: context.connection?.models?.map(m => {
+    const piServer = piAuthProvider === 'mistral-vibe' ? resolvedPaths.vibeAcpServerPath
+      : piAuthProvider === 'google-antigravity' ? resolvedPaths.antigravityServerPath : resolvedPaths.piServerPath;
+    const interceptor = piAuthProvider === 'mistral-vibe' || piAuthProvider === 'google-antigravity'
+      ? undefined : resolvedPaths.interceptorBundlePath;
+    const customModels = context.connection?.models?.map(m => {
         if (typeof m === 'string') return m;
         const supportsImages = typeof m.supportsImages === 'boolean'
           ? m.supportsImages
@@ -50,7 +34,22 @@ export const piDriver: ProviderDriver = {
           };
         }
         return m.id;
-      }),
+      });
+    return {
+      paths: {
+        // Vibe uses the official ACP bridge but deliberately reuses PiAgent's
+        // established JSONL lifecycle and permission plumbing.
+        ...(piServer !== undefined ? { piServer } : {}),
+        ...(resolvedPaths.vibeAcpServerPath !== undefined ? { vibeAcpServer: resolvedPaths.vibeAcpServerPath } : {}),
+        ...(resolvedPaths.antigravityServerPath !== undefined ? { antigravityServer: resolvedPaths.antigravityServerPath } : {}),
+        ...(interceptor !== undefined ? { interceptor } : {}),
+        ...(resolvedPaths.nodeRuntimePath !== undefined ? { node: resolvedPaths.nodeRuntimePath } : {}),
+      },
+      ...(piAuthProvider !== undefined ? { piAuthProvider } : {}),
+      ...(context.connection?.googleCloudProject !== undefined ? { googleCloudProject: context.connection?.googleCloudProject } : {}),
+      ...(context.connection?.baseUrl !== undefined ? { baseUrl: context.connection?.baseUrl } : {}),
+      ...(context.connection?.customEndpoint !== undefined ? { customEndpoint: context.connection?.customEndpoint } : {}),
+      ...(customModels !== undefined ? { customModels } : {}),
     };
   },
   fetchModels: async ({ connection, credentials, timeoutMs }) => {
@@ -77,7 +76,7 @@ export const piDriver: ProviderDriver = {
       const timer = setTimeout(() => controller.abort(), Math.min(timeoutMs || 5_000, 5_000));
       try {
         const headers: Record<string, string> = { Accept: 'application/json' };
-        if (credentials.apiKey) headers.Authorization = `Bearer ${credentials.apiKey}`;
+        if (credentials.apiKey) headers["Authorization"] = `Bearer ${credentials.apiKey}`;
 
         const rawIds: string[] = [];
         try {
@@ -245,15 +244,15 @@ export const piDriver: ProviderDriver = {
             await credentialManager.refreshLlmOAuth(slug, {
               accessToken: refreshed.accessToken,
               idToken: refreshed.idToken,
-              refreshToken: refreshed.refreshToken,
-              expiresAt: refreshed.expiresAt,
+              ...(refreshed.refreshToken !== undefined ? { refreshToken: refreshed.refreshToken } : {}),
+              ...(refreshed.expiresAt !== undefined ? { expiresAt: refreshed.expiresAt } : {}),
             });
           } else if (connection.piAuthProvider === 'google-gemini-code-assist') {
             const { refreshGoogleGeminiTokens } = await import("../../../../../auth/google-gemini-oauth.ts");
             const refreshed = await refreshGoogleGeminiTokens(stored.refreshToken);
             await credentialManager.refreshLlmOAuth(slug, {
               accessToken: refreshed.accessToken,
-              idToken: refreshed.idToken,
+              ...(refreshed.idToken !== undefined ? { idToken: refreshed.idToken } : {}),
               refreshToken: refreshed.refreshToken ?? stored.refreshToken,
               expiresAt: refreshed.expiresAt,
             });

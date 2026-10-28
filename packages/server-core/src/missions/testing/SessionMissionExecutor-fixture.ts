@@ -268,7 +268,7 @@ export class FakeHost implements SessionMissionHost {
     onAck?: (messageId: string) => void,
   ): Promise<void> {
     const session = this.sessions.find((candidate) => candidate.id === sessionId)!;
-    this.sent.push({ sessionId, message, options });
+    this.sent.push({ sessionId, message, ...(options !== undefined ? { options: options } : {}) });
     session.messages.push({
       id: 'user-1', role: 'user', content: message, timestamp: Date.now(),
       ...(options?.internalOrigin ? { internalOrigin: options.internalOrigin } : {}),

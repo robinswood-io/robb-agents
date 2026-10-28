@@ -40,21 +40,21 @@ export interface NavigationProviderProps {
   /** Current workspace slug (used for URL ?ws= param and localStorage) */
   workspaceSlug: string | null
   /** Switch to a workspace by slug (called on popstate when ?ws= changes) */
-  onSwitchWorkspaceBySlug?: (slug: string) => void
+  onSwitchWorkspaceBySlug?: ((slug: string) => void) | undefined
   /** Session creation handler */
   onCreateSession: (workspaceId: string, options?: import('../../shared/types').CreateSessionOptions) => Promise<Session>
   /** Input change handler for pre-filling chat input */
-  onInputChange?: (sessionId: string, value: string) => void
+  onInputChange?: ((sessionId: string, value: string) => void) | undefined
   /** Get draft input text for a session (reads from ref, no re-render) */
-  getDraft?: (sessionId: string) => string
+  getDraft?: ((sessionId: string) => string) | undefined
   /** Auto-delete an empty session (no confirmation needed) */
-  onAutoDeleteEmptySession?: (sessionId: string) => void
+  onAutoDeleteEmptySession?: ((sessionId: string) => void) | undefined
   /** Whether the app is ready to navigate */
-  isReady?: boolean
+  isReady?: boolean | undefined
   /** Whether session metadata has been initialized (required for deterministic route restoration) */
-  isSessionsReady?: boolean
+  isSessionsReady?: boolean | undefined
   /** Remote workspace ID — when set, sessions with this ID are also considered part of the workspace */
-  remoteWorkspaceId?: string | null
+  remoteWorkspaceId?: string | null | undefined
 }
 
 export function useNavigation() {

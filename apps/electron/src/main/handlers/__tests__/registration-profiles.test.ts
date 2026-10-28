@@ -1,3 +1,5 @@
+import { OAuthFlowStore } from '@craft-agent/shared/auth';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { beforeEach, describe, expect, it, mock } from 'bun:test'
 import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
@@ -53,8 +55,9 @@ function createMockServer(): RpcServer {
   }
 }
 
+const { BrowserPaneManager } = await import('../../browser-pane-manager');
 function createMockDeps(): HandlerDeps {
-  return {
+  return omitUndefined<HandlerDeps>({
     sessionManager: {} as HandlerDeps['sessionManager'],
     platform: {
       appRootPath: '',
@@ -69,20 +72,9 @@ function createMockDeps(): HandlerDeps {
       },
     },
     windowManager: {} as HandlerDeps['windowManager'],
-    browserPaneManager: {
-      onStateChange: () => {},
-      onRemoved: () => {},
-      onInteracted: () => {},
-    } as unknown as NonNullable<HandlerDeps['browserPaneManager']>,
-    oauthFlowStore: {
-      store: () => {},
-      getByState: () => null,
-      remove: () => {},
-      cleanup: () => {},
-      dispose: () => {},
-      size: 0,
-    } as unknown as HandlerDeps['oauthFlowStore'],
-  }
+    browserPaneManager: new BrowserPaneManager(),
+    oauthFlowStore: new OAuthFlowStore(),
+  })
 }
 
 async function getExpectedCoreChannels(): Promise<Set<string>> {
@@ -107,6 +99,7 @@ async function getExpectedCoreChannels(): Promise<Set<string>> {
     resources,
     transfer,
     missions,
+    operations,
   ] = await Promise.all([
     import('@craft-agent/server-core/handlers/rpc/auth'),
     import('@craft-agent/server-core/handlers/rpc/automations'),
@@ -127,6 +120,7 @@ async function getExpectedCoreChannels(): Promise<Set<string>> {
     import('@craft-agent/server-core/handlers/rpc/resources'),
     import('@craft-agent/server-core/handlers/rpc/transfer'),
     import('@craft-agent/server-core/handlers/rpc/missions'),
+    import('@craft-agent/server-core/handlers/rpc/operations'),
   ])
 
   return new Set([
@@ -149,6 +143,7 @@ async function getExpectedCoreChannels(): Promise<Set<string>> {
     ...resources.HANDLED_CHANNELS,
     ...transfer.HANDLED_CHANNELS,
     ...missions.HANDLED_CHANNELS,
+    ...operations.HANDLED_CHANNELS,
   ])
 }
 

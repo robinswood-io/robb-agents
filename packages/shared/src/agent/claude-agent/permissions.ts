@@ -16,8 +16,8 @@ import type { ClaudeCheckToolPermissionResult } from './protocol.ts';
    * Uses permissionManager for whitelisting.
    */
 export function respondToPermission(transportOwner: ClaudeAgent, requestId: string, allowed: boolean, alwaysAllow: boolean): void {
-    transportOwner["debug"](`respondToPermission: ${requestId}, allowed=${allowed}, alwaysAllow=${alwaysAllow}, pending=${transportOwner["pendingPermissions"].has(requestId)}`);
-    const pending = transportOwner["pendingPermissions"].get(requestId);
+    transportOwner["debug"](`respondToPermission: ${requestId}, allowed=${allowed}, alwaysAllow=${alwaysAllow}, pending=${transportOwner.pendingPermissions.has(requestId)}`);
+    const pending = transportOwner.pendingPermissions.get(requestId);
     if (pending) {
         transportOwner["debug"](`Resolving permission promise for ${requestId}`);
         // If "always allow" was selected, remember it (with special handling for curl/wget)
@@ -36,7 +36,7 @@ export function respondToPermission(transportOwner: ClaudeAgent, requestId: stri
             }
         }
         pending.resolve(allowed);
-        transportOwner["pendingPermissions"].delete(requestId);
+        transportOwner.pendingPermissions.delete(requestId);
     }
     else {
         transportOwner["debug"](`No pending permission found for ${requestId}`);
@@ -50,10 +50,10 @@ export function respondToPermission(transportOwner: ClaudeAgent, requestId: stri
    * stale request or resolve it a second time while teardown is in progress.
    */
 export function denyAllPendingPermissions(transportOwner: ClaudeAgent): void {
-    if (transportOwner["pendingPermissions"].size === 0)
+    if (transportOwner.pendingPermissions.size === 0)
         return;
-    const pendingPermissions = [...transportOwner["pendingPermissions"].values()];
-    transportOwner["pendingPermissions"].clear();
+    const pendingPermissions = [...transportOwner.pendingPermissions.values()];
+    transportOwner.pendingPermissions.clear();
     for (const pending of pendingPermissions) {
         pending.resolve(false);
     }
@@ -64,7 +64,7 @@ export function resolveContextualGmailPromptDecision(transportOwner: ClaudeAgent
     const currentAuthority = transportOwner["config"].getObjectiveMutationAuthority?.(currentRequest);
     return resolveContextualGmailPromptReservation({
         sessionId,
-        toolUseId,
+        ...(toolUseId !== undefined ? { toolUseId } : {}),
         toolName,
         toolInput,
         approved,
@@ -85,12 +85,12 @@ export function resolveContextualGmailPromptDecision(transportOwner: ClaudeAgent
 export async function checkToolPermission(transportOwner: ClaudeAgent, toolName: string, input: Record<string, unknown>, toolUseId: string): Promise<ClaudeCheckToolPermissionResult> {
     // Bash commands require permission
     if (toolName === 'Bash') {
-        const command = typeof input.command === 'string' ? input.command : JSON.stringify(input);
+        const command = typeof input["command"] === 'string' ? input["command"] : JSON.stringify(input);
         const baseCommand = command.trim().split(/\s+/)[0] || command;
         const requestId = `perm-${toolUseId}`;
         // Create a promise that will be resolved when user responds
         const permissionPromise = new Promise<boolean>((resolve) => {
-            transportOwner["pendingPermissions"].set(requestId, {
+            transportOwner.pendingPermissions.set(requestId, {
                 resolve,
                 toolName,
                 command,
@@ -109,7 +109,7 @@ export async function checkToolPermission(transportOwner: ClaudeAgent, toolName:
         }
         else {
             // No permission handler - deny by default for safety
-            transportOwner["pendingPermissions"].delete(requestId);
+            transportOwner.pendingPermissions.delete(requestId);
             return { allowed: false, updatedInput: input };
         }
         // Wait for user response

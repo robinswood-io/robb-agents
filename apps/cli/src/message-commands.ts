@@ -52,14 +52,14 @@ export async function sendAndStream(
 
     switch (ev.type) {
       case 'text_delta':
-        if (!streamJson) process.stdout.write(ev.delta as string)
+        if (!streamJson) process.stdout.write(ev["delta"] as string)
         break
       case 'tool_start':
-        if (!streamJson) process.stdout.write(`\n[tool: ${ev.toolName}${ev.toolIntent ? ` — ${ev.toolIntent}` : ''}]\n`)
+        if (!streamJson) process.stdout.write(`\n[tool: ${ev["toolName"]}${ev["toolIntent"] ? ` — ${ev["toolIntent"]}` : ''}]\n`)
         break
       case 'tool_result': {
         if (!streamJson) {
-          const result = String(ev.result ?? '')
+          const result = String(ev["result"] ?? '')
           if (result.length > 200) {
             process.stdout.write(`${result.slice(0, 200)}...\n`)
           } else if (result) {
@@ -69,7 +69,7 @@ export async function sendAndStream(
         break
       }
       case 'error':
-        if (!streamJson) err(String(ev.error))
+        if (!streamJson) err(String(ev["error"]))
         exitCode = 1
         finished = true
         break
@@ -142,11 +142,11 @@ export async function cmdInvoke(client: CliRpcClient, args: CliArgs): Promise<vo
 
   // Parse remaining args as JSON
   const invokeArgs: unknown[] = []
-  for (let i = 1; i < args.rest.length; i++) {
+  for (const argument of args.rest.slice(1)) {
     try {
-      invokeArgs.push(JSON.parse(args.rest[i]))
+      invokeArgs.push(JSON.parse(argument))
     } catch {
-      invokeArgs.push(args.rest[i])
+      invokeArgs.push(argument)
     }
   }
 

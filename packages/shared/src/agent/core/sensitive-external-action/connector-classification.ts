@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import { toolNameMutationToken } from "../tool-name-semantics.ts";
 import { makeAction } from './action-presentation.ts';
 import { extractInputTargets, uniqueTargets } from './action-targets.ts';
@@ -177,10 +178,10 @@ function exactGmailSendPermissionPreview(
   targets: readonly string[],
 ): string | undefined {
   if (toolName !== GMAIL_SEND_TOOL) return undefined;
-  const sender = safePermissionPromptValue(input.sendAsEmail, '[default account]');
+  const sender = safePermissionPromptValue(input["sendAsEmail"], '[default account]');
   const recipients = targets.filter(target => !UNRESOLVED_TARGET_SENTINELS.has(target)).join(', ')
     || '[unresolved recipient]';
-  const subject = safePermissionPromptValue(input.subject, '[no subject]');
+  const subject = safePermissionPromptValue(input["subject"], '[no subject]');
   return `${toolName} sender=${JSON.stringify(sender)} recipients=${JSON.stringify(recipients)} subject=${JSON.stringify(subject)}`;
 }
 
@@ -188,16 +189,16 @@ function exactAtriaApprovalPermissionPreview(
   endpoint: string,
   input: Record<string, unknown>,
 ): string {
-  const body = input.body as Record<string, unknown>;
+  const body = input["body"] as Record<string, unknown>;
   const ids = ATRIA_APP_CONSENT_APPROVAL_ENDPOINT.exec(endpoint);
   return [
     `${ATRIA_GRAPH_REQUEST_TOOL} PATCH ${endpoint}`,
-    `authMode=${JSON.stringify(String(input.authMode))}`,
+    `authMode=${JSON.stringify(String(input["authMode"]))}`,
     `appConsentRequestId=${JSON.stringify(ids?.[1] ?? '[unresolved]')}`,
     `userConsentRequestId=${JSON.stringify(ids?.[2] ?? '[unresolved]')}`,
     `approvalStageId=${JSON.stringify(ids?.[3] ?? '[unresolved]')}`,
-    `reviewResult=${JSON.stringify(safePermissionPromptValue(body.reviewResult, '[unresolved]'))}`,
-    `justification=${JSON.stringify(safePermissionPromptValue(body.justification, '[REDACTED]'))}`,
+    `reviewResult=${JSON.stringify(safePermissionPromptValue(body["reviewResult"], '[unresolved]'))}`,
+    `justification=${JSON.stringify(safePermissionPromptValue(body["justification"], '[REDACTED]'))}`,
   ].join(' ');
 }
 
@@ -210,28 +211,28 @@ function exactAtriaAppConsentApprovalEndpoint(
     'method', 'endpoint', 'body', 'authMode', '_displayName', '_intent',
   ]);
   if (Object.keys(input).some(key => !allowedRootKeys.has(key))) return undefined;
-  if (typeof input.method !== 'string' || input.method.trim().toUpperCase() !== 'PATCH'
-    || input.authMode !== 'delegated'
-    || typeof input.endpoint !== 'string') return undefined;
+  if (typeof input["method"] !== 'string' || input["method"].trim().toUpperCase() !== 'PATCH'
+    || input["authMode"] !== 'delegated'
+    || typeof input["endpoint"] !== 'string') return undefined;
 
-  const endpoint = input.endpoint.trim();
+  const endpoint = input["endpoint"].trim();
   const match = ATRIA_APP_CONSENT_APPROVAL_ENDPOINT.exec(endpoint);
   // This recovery is deliberately limited to the exact live leaf route. A
   // collection, wildcard, opaque path or differently shaped approval remains
   // blocked so the agent must resolve it with graph_get first.
   if (!match || match[2]?.toLowerCase() !== match[3]?.toLowerCase()) return undefined;
 
-  if (!input.body || typeof input.body !== 'object' || Array.isArray(input.body)) return undefined;
-  const body = input.body as Record<string, unknown>;
+  if (!input["body"] || typeof input["body"] !== 'object' || isUnknownArray(input["body"])) return undefined;
+  const body = input["body"] as Record<string, unknown>;
   if (Object.keys(body).length !== 2
     || !Object.hasOwn(body, 'reviewResult')
     || !Object.hasOwn(body, 'justification')
-    || body.reviewResult !== 'Approve'
-    || typeof body.justification !== 'string'
-    || body.justification.trim().length === 0
-    || body.justification.length > 1_000
-    || /[\0\r\n]/.test(body.justification)) return undefined;
-  const normalizedJustification = normalizeForMatch(body.justification);
+    || body["reviewResult"] !== 'Approve'
+    || typeof body["justification"] !== 'string'
+    || body["justification"].trim().length === 0
+    || body["justification"].length > 1_000
+    || /[\0\r\n]/.test(body["justification"])) return undefined;
+  const normalizedJustification = normalizeForMatch(body["justification"]);
   if (!/\bfranck\b/u.test(normalizedJustification)
     || !/\bchat ?gpt\b/u.test(normalizedJustification)
     || !/\batria\b/u.test(normalizedJustification)) return undefined;
@@ -259,7 +260,7 @@ export function classifyMcp(
   }
 
   const action = normalizedToolAction(toolName.split('__').slice(2).join('_'));
-  const inputActions = [input.action, input.operation]
+  const inputActions = [input["action"], input["operation"]]
     .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
   const inputCategories = [...new Set(inputActions
     .map(value => apiSensitiveCategory(normalizedToolAction(value)))
@@ -267,7 +268,7 @@ export function classifyMcp(
   const inputCategory = inputCategories.length === 1 ? inputCategories[0]! : null;
   const inputCategoryConflict = inputCategories.length > 1;
   const strictInputSend = inputCategories.includes('external_send');
-  const method = typeof input.method === 'string' ? input.method.trim().toUpperCase() : undefined;
+  const method = typeof input["method"] === 'string' ? input["method"].trim().toUpperCase() : undefined;
   const inputMutationToken = inputActions
     .map(value => toolNameMutationToken(value))
     .find((value): value is string => !!value);
@@ -286,9 +287,9 @@ export function classifyMcp(
     const contextualReplyTargets = category === 'external_send'
       && isCanonicalContextualGmailReplyInput(toolName, input)
       ? [
-        String(input.messageId),
+        String(input["messageId"]),
         ...(toolName === CONTEXTUAL_GMAIL_REPLY_TOOL
-          ? [String(input.expectedRecipientEmail)]
+          ? [String(input["expectedRecipientEmail"])]
           : []),
       ]
       : undefined;
@@ -379,9 +380,9 @@ function apiSensitiveCategory(semantic: string): SensitiveExternalActionCategory
 }
 
 export function classifyApi(toolName: string, input: Record<string, unknown>): SensitiveExternalAction | null {
-  const method = typeof input.method === 'string' ? input.method.toUpperCase() : 'GET';
-  const path = typeof input.path === 'string' ? input.path : '';
-  const operation = typeof input.operation === 'string' ? input.operation : '';
+  const method = typeof input["method"] === 'string' ? input["method"].toUpperCase() : 'GET';
+  const path = typeof input["path"] === 'string' ? input["path"] : '';
+  const operation = typeof input["operation"] === 'string' ? input["operation"] : '';
   const operationMutationToken = toolNameMutationToken(operation);
   const operationCategory = apiSensitiveCategory(normalizedToolAction(operation));
   // A transport-level read method cannot override an explicitly mutating API

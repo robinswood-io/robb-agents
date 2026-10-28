@@ -43,7 +43,7 @@ export async function handleStop(transportOwner: Commands, adapter: PlatformAdap
     }
 }
 
-export async function handleHelp(transportOwner: Commands, adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
+export async function handleHelp(_transportOwner: Commands, adapter: PlatformAdapter, msg: IncomingMessage): Promise<void> {
     const bindLine = adapter.platform === 'whatsapp'
         ? '/bind — list recent sessions (then use /bind <number>)\n'
         : '/bind — pick from recent sessions\n';

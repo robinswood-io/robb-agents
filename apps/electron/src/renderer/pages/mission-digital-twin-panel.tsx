@@ -1,3 +1,4 @@
+import { isUnknownArray } from "../../../../../packages/shared/src/utils/json.ts";
 import * as React from 'react'
 import { AlertTriangle, CheckCircle2, GitCompareArrows, Loader2, ShieldQuestion } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -39,7 +40,9 @@ function requestIdentityMatches(
     && left.revision === right.revision
 }
 
-function missionCanReplan(mission: MissionSnapshotDto): boolean {
+function missionCanReplan(mission: Pick<MissionSnapshotDto, 'status'> & {
+  workItems: Record<string, Pick<MissionSnapshotDto['workItems'][string], 'status'>>
+}): boolean {
   if (TERMINAL_MISSION_STATUSES.has(mission.status)) return false
   return !Object.values(mission.workItems).some((item) =>
     item.status === 'reserved' || item.status === 'running')
@@ -86,7 +89,7 @@ function parseProposedWorkItems(value: string): MissionWorkItem[] {
   } catch (error) {
     throw new Error(error instanceof Error ? error.message : 'Invalid JSON')
   }
-  if (!Array.isArray(parsed) || parsed.length < 2) {
+  if (!isUnknownArray(parsed) || parsed.length < 2) {
     throw new Error('A Mission plan requires at least two work items')
   }
   const knownKinds = new Set([
@@ -100,25 +103,25 @@ function parseProposedWorkItems(value: string): MissionWorkItem[] {
   ])
   const ids = new Set<string>()
   for (const [index, item] of parsed.entries()) {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    if (!item || typeof item !== 'object' || isUnknownArray(item)) {
       throw new Error(`Work item ${index + 1} must be an object`)
     }
     const candidate = item as Record<string, unknown>
-    if (typeof candidate.id !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(candidate.id)) {
+    if (typeof candidate["id"] !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(candidate["id"])) {
       throw new Error(`Work item ${index + 1} has an invalid id`)
     }
-    if (ids.has(candidate.id)) throw new Error(`Duplicate work item id "${candidate.id}"`)
-    ids.add(candidate.id)
-    if (typeof candidate.title !== 'string' || candidate.title.trim().length === 0) {
-      throw new Error(`Work item "${candidate.id}" requires a title`)
+    if (ids.has(candidate["id"])) throw new Error(`Duplicate work item id "${candidate["id"]}"`)
+    ids.add(candidate["id"])
+    if (typeof candidate["title"] !== 'string' || candidate["title"].trim().length === 0) {
+      throw new Error(`Work item "${candidate["id"]}" requires a title`)
     }
-    if (typeof candidate.kind !== 'string' || !knownKinds.has(candidate.kind)) {
-      throw new Error(`Work item "${candidate.id}" has an invalid kind`)
+    if (typeof candidate["kind"] !== 'string' || !knownKinds.has(candidate["kind"])) {
+      throw new Error(`Work item "${candidate["id"]}" has an invalid kind`)
     }
-    if (candidate.effect === 'external-mutation' && (
-      !candidate.connectorInvocation
-      || typeof candidate.connectorInvocation !== 'object'
-      || Array.isArray(candidate.connectorInvocation)
+    if (candidate["effect"] === 'external-mutation' && (
+      !candidate["connectorInvocation"]
+      || typeof candidate["connectorInvocation"] !== 'object'
+      || isUnknownArray(candidate["connectorInvocation"])
     )) {
       throw new Error('External mutation work requires a structured brokered connector invocation')
     }

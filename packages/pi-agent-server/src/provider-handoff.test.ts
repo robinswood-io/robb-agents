@@ -101,8 +101,8 @@ describe('Pi provider handoff boundary', () => {
       turnId => acknowledgements.push(turnId),
     );
     const matchesCurrent = (request: Record<string, unknown>) => {
-      const params = request.params as Record<string, unknown> | undefined;
-      return params?.marker === 'current';
+      const params = request["params"] as Record<string, unknown> | undefined;
+      return params?.["marker"] === 'current';
     };
     observed.reserve('current-turn', matchesCurrent);
     const writer = observed.stream.writable.getWriter();

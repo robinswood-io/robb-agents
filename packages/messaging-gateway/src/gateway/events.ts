@@ -16,7 +16,7 @@ export function onSessionEvent(transportOwner: MessagingGateway, channel: string
         (event as {
             statusType?: string;
         }).statusType === 'compaction_complete') {
-        void transportOwner["finishPendingCompactAccept"](event.sessionId);
+        void transportOwner.finishPendingCompactAccept(event.sessionId);
     }
     // Drop stale permission prompts for this session. The agent halts while
     // a permission is pending, so any non-permission_request event implies
@@ -24,7 +24,7 @@ export function onSessionEvent(transportOwner: MessagingGateway, channel: string
     // remember-window auto-approval, etc.). Without this sweep the inline
     // keyboard stays live in Telegram and users keep tapping stale buttons,
     // which is the visible side of #726.
-    transportOwner["sweepStalePermissions"](event);
+    transportOwner.sweepStalePermissions(event);
     const bindings = transportOwner["bindingStore"].findBySession(event.sessionId);
     if (bindings.length === 0)
         return;
@@ -39,7 +39,7 @@ export function onSessionEvent(transportOwner: MessagingGateway, channel: string
             });
             continue;
         }
-        transportOwner["renderer"].handle(event, binding, adapter).catch((err) => {
+        transportOwner.renderer.handle(event, binding, adapter).catch((err: unknown) => {
             transportOwner["log"].error('renderer failed to emit event to chat', {
                 event: 'renderer_failed',
                 sessionId: event.sessionId,

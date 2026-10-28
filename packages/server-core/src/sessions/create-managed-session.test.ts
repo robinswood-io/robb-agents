@@ -83,13 +83,12 @@ describe('resolveCreateSessionRouteProvenance', () => {
   })
 
   it('does not turn an explicitly automatic model snapshot into a connection pin', () => {
-    expect(resolveCreateSessionRouteProvenance({
+    expect<unknown>(resolveCreateSessionRouteProvenance({
       model: 'pi/gpt-5.6-terra',
       modelRoutePinned: false,
       connectionRoutePinned: false,
-    }, 'workspace-default')).toEqual({
+    }, 'workspace-default')).toEqual({llmConnection: undefined, 
       modelRoutePinned: false,
-      llmConnection: undefined,
       connectionRoutePinned: false,
     })
   })
@@ -120,7 +119,7 @@ describe('createManagedSession', () => {
   it('normalizes legacy thinkingLevel=think on restore', () => {
     const managed = createManagedSession({
       id: 'session_legacy',
-      thinkingLevel: 'think' as unknown as Parameters<typeof createManagedSession>[0]['thinkingLevel'],
+      thinkingLevel: 'think' as Parameters<typeof createManagedSession>[0]['thinkingLevel'],
     }, workspace)
 
     expect(managed.thinkingLevel).toBe('medium')
@@ -129,7 +128,7 @@ describe('createManagedSession', () => {
   it('drops invalid thinking levels instead of leaking them into runtime state', () => {
     const managed = createManagedSession({
       id: 'session_invalid',
-      thinkingLevel: 'ultra' as unknown as Parameters<typeof createManagedSession>[0]['thinkingLevel'],
+      thinkingLevel: 'ultra' as Parameters<typeof createManagedSession>[0]['thinkingLevel'],
     }, workspace)
 
     expect(managed.thinkingLevel).toBeUndefined()
@@ -217,10 +216,9 @@ describe('resolveSpawnedSessionRoute', () => {
   }
 
   it('does not inherit an unpinned parent reasoning snapshot', () => {
-    expect(resolveSpawnedSessionRoute({}, parent)).toEqual({
+    expect(resolveSpawnedSessionRoute({}, parent)).toEqual({thinkingLevel: undefined, 
       llmConnection: 'parent-connection',
       model: 'pi/gpt-5.6-sol',
-      thinkingLevel: undefined,
     })
   })
 
@@ -237,20 +235,17 @@ describe('resolveSpawnedSessionRoute', () => {
   })
 
   it('inherits only fields omitted by a partial override', () => {
-    expect(resolveSpawnedSessionRoute({ model: 'pi/gpt-5.6-luna' }, parent)).toEqual({
+    expect(resolveSpawnedSessionRoute({ model: 'pi/gpt-5.6-luna' }, parent)).toEqual({thinkingLevel: undefined, 
       llmConnection: 'parent-connection',
       model: 'pi/gpt-5.6-luna',
-      thinkingLevel: undefined,
     })
   })
 
   it('does not carry a parent model into an explicitly different connection', () => {
     expect(resolveSpawnedSessionRoute({
       llmConnection: 'anthropic-specialist',
-    }, parent)).toEqual({
+    }, parent)).toEqual({model: undefined, thinkingLevel: undefined, 
       llmConnection: 'anthropic-specialist',
-      model: undefined,
-      thinkingLevel: undefined,
     })
   })
 

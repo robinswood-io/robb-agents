@@ -8,7 +8,7 @@ import { type SessionStatusId } from "@/config/session-status-config";
 
 import * as storage from "@/lib/local-storage";
 
-import { navigate, routes } from "@/lib/navigate";
+import { navigate,routes } from "@/lib/navigate";
 
 import type { SettingsSubpage } from "../../../shared/types";
 
@@ -42,7 +42,6 @@ export function useShellSessionActions({
   handleToggleSidebar,
   viewFiltersMap,
   collapsedItems,
-  setOptimisticStatusOrder,
   setReleaseNotesContent,
   setShowWhatsNew,
   setHasUnseenReleaseNotes,
@@ -116,11 +115,7 @@ const handleViewClick = useCallback((viewId: string) => {
     navigate(routes.view.view(viewId))
   }, [])
 
-const handleStatusReorder = useCallback((orderedIds: string[]) => {
-    if (!activeWorkspaceId) return
-    setOptimisticStatusOrder(orderedIds)
-    window.electronAPI.reorderStatuses(activeWorkspaceId, orderedIds)
-  }, [activeWorkspaceId, setOptimisticStatusOrder])
+
 
 const handleSourcesClick = useCallback(() => {
     navigate(routes.view.sources())

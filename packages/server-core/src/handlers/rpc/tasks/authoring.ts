@@ -50,7 +50,7 @@ export function registerTaskAuthoringHandlers(server: RpcServer, deps: HandlerDe
             tasksLog.warn('setSessionSources failed for orchestrator', { orchestratorSessionId, err })
           })
       }
-      return { slug: spec.id, orchestratorSessionId, validation, taskLabelId: applied?.labelId }
+      return { slug: spec.id, orchestratorSessionId, validation, ...(applied?.labelId !== undefined ? { taskLabelId: applied?.labelId } : {}) }
     }
 
     // Edit-mode bind: the user saved this spec onto an existing, visible tile (e.g. a quick-add
@@ -215,7 +215,7 @@ export function registerTaskAuthoringHandlers(server: RpcServer, deps: HandlerDe
         pushTyped(server, RPC_CHANNELS.tasks.GENERATED, { to: 'workspace', workspaceId }, workspaceId, {
           orchestratorSessionId: sessionId,
           slug: parsed.spec?.id ?? '',
-          spec: parsed.spec,
+          ...(parsed.spec !== undefined ? { spec: parsed.spec } : {}),
           yaml,
           validation,
         })

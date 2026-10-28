@@ -70,7 +70,7 @@ export function prepareGoogleOAuth(options: PrepareGoogleOAuthOptions): Prepared
     codeVerifier: pkce.verifier,
     tokenEndpoint: GOOGLE_TOKEN_URL,
     clientId,
-    clientSecret,
+    ...(clientSecret !== undefined ? { clientSecret } : {}),
     redirectUri,
     provider: 'google',
   };
@@ -95,11 +95,11 @@ export async function exchangeGoogleOAuth(params: OAuthExchangeParams): Promise<
     return {
       success: true,
       accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresAt: tokens.expiresIn ? Date.now() + tokens.expiresIn * 1000 : undefined,
+      ...(tokens.refreshToken !== undefined ? { refreshToken: tokens.refreshToken } : {}),
+      ...(tokens.expiresIn ? { expiresAt: Date.now() + tokens.expiresIn * 1000 } : {}),
       email,
       oauthClientId: params.clientId,
-      oauthClientSecret: params.clientSecret,
+      ...(params.clientSecret !== undefined ? { oauthClientSecret: params.clientSecret } : {}),
     };
   } catch (error) {
     return {

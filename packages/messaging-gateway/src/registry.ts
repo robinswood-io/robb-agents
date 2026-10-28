@@ -1,3 +1,4 @@
+import type { PlatformRuntimePatch, TelegramConfigPatch } from './registry/shared.ts';
 import { RPC_CHANNELS } from "@craft-agent/shared/protocol";
 import type { PushTarget } from "@craft-agent/shared/protocol";
 import type { IMessagingGatewayRegistry, MessagingBindingInfo, MessagingConfigInfo } from "@craft-agent/server-core/handlers";
@@ -208,13 +209,13 @@ export class MessagingGatewayRegistry implements IMessagingGatewayRegistry {
     async submitWhatsAppPhone(workspaceId: string, phoneNumber: string): Promise<void> {
         return registryConnections.submitWhatsAppPhone(this, workspaceId, phoneNumber);
     }
-    private async startWhatsAppAdapter(workspaceId: string, state: WorkspaceState, options: {
+    /** @internal */ public async startWhatsAppAdapter(workspaceId: string, state: WorkspaceState, options: {
         persistConfig: boolean;
         reason: 'restore' | 'user_connect';
     }): Promise<void> {
         return registryConnections.startWhatsAppAdapter(this, workspaceId, state, options);
     }
-    private onWhatsAppEvent(workspaceId: string, event: WhatsAppEvent): void {
+    /** @internal */ public onWhatsAppEvent(workspaceId: string, event: WhatsAppEvent): void {
         return registryConnections.onWhatsAppEvent(this, workspaceId, event);
     }
     // -------------------------------------------------------------------------
@@ -248,21 +249,21 @@ export class MessagingGatewayRegistry implements IMessagingGatewayRegistry {
     private async tryConnectTelegram(workspaceId: string, state: WorkspaceState): Promise<void> {
         return registryConnections.tryConnectTelegram(this, workspaceId, state);
     }
-    private setPlatformRuntime(workspaceId: string, state: WorkspaceState, platform: PlatformType, patch: Partial<MessagingPlatformRuntimeInfo>): void {
+    private setPlatformRuntime(workspaceId: string, state: WorkspaceState, platform: PlatformType, patch: PlatformRuntimePatch): void {
         return registryLifecycle.setPlatformRuntime(this, workspaceId, state, platform, patch);
     }
-    private emitBindingChanged(workspaceId: string): void {
+    /** @internal */ public emitBindingChanged(workspaceId: string): void {
         return registryEvents.emitBindingChanged(this, workspaceId);
     }
-    private emitPendingChanged(workspaceId: string): void {
+    /** @internal */ public emitPendingChanged(workspaceId: string): void {
         return registryEvents.emitPendingChanged(this, workspaceId);
     }
-    private patchTelegramConfig(workspaceId: string, patch: Partial<NonNullable<MessagingConfig['platforms']['telegram']>>, options: {
+    private patchTelegramConfig(workspaceId: string, patch: TelegramConfigPatch, options: {
         ensureMessagingEnabled?: boolean;
     } = {}): MessagingConfig {
         return registryConfiguration.patchTelegramConfig(this, workspaceId, patch, options);
     }
-    private async seedFirstOwner(workspaceId: string, platform: PlatformType, candidate: PlatformOwner): Promise<PlatformOwner[]> {
+    /** @internal */ public async seedFirstOwner(workspaceId: string, platform: PlatformType, candidate: PlatformOwner): Promise<PlatformOwner[]> {
         return registryAccess.seedFirstOwner(this, workspaceId, platform, candidate);
     }
     getPlatformOwners(workspaceId: string, platform: PlatformType): PlatformOwner[] {
@@ -277,7 +278,7 @@ export class MessagingGatewayRegistry implements IMessagingGatewayRegistry {
     setPlatformAccessMode(workspaceId: string, platform: PlatformType, mode: PlatformAccessMode): void {
         return registryAccess.setPlatformAccessMode(this, workspaceId, platform, mode);
     }
-    private migrateOpenBindingsToInherit(workspaceId: string): void {
+    /** @internal */ public migrateOpenBindingsToInherit(workspaceId: string): void {
         return registryAccess.migrateOpenBindingsToInherit(this, workspaceId);
     }
     /** Pending senders surface in Settings → Messaging as "Pending requests". */
@@ -325,10 +326,10 @@ export class MessagingGatewayRegistry implements IMessagingGatewayRegistry {
     }): void {
         return registryAccess.setBindingAccess(this, workspaceId, bindingId, access);
     }
-    private emitPlatformStatus(workspaceId: string, platform: PlatformType, status: MessagingPlatformRuntimeInfo): void {
+    /** @internal */ public emitPlatformStatus(workspaceId: string, platform: PlatformType, status: MessagingPlatformRuntimeInfo): void {
         return registryLifecycle.emitPlatformStatus(this, workspaceId, platform, status);
     }
-    private hasWhatsAppAuthState(workspaceId: string): boolean {
+    /** @internal */ public hasWhatsAppAuthState(workspaceId: string): boolean {
         return registryConnections.hasWhatsAppAuthState(this, workspaceId);
     }
     private getWhatsAppAuthStateDir(workspaceId: string): string {

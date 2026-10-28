@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import * as React from "react";
 
 import { Archive, Settings, Flag, Tag, DatabaseZap, Zap, Inbox, Globe, FolderOpen, Cake, ListTodo, Clock, Radio, Bot, FolderKanban } from "lucide-react";
@@ -219,14 +220,14 @@ export function ShellSidebar({
                       onClick: handleFlaggedClick,
                     },
                     // Archived (Archivées)
-                    {
-                      id: "nav:archived",
+                    omitUndefined({
+                      id: "nav:archived" as const,
                       title: t("sidebar.archived"),
                       label: archivedCount > 0 ? String(archivedCount) : undefined,
                       icon: Archive,
                       variant: (sessionFilter?.kind === 'archived' ? "default" : "ghost") as "default" | "ghost",
                       onClick: handleArchivedClick,
-                    },
+                    }),
                     // Labels: navigable header (shows all labeled sessions) + hierarchical tree (drag-and-drop reorder + re-parent)
                     {
                       id: "nav:labels",

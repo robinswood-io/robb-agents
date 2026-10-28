@@ -110,8 +110,8 @@ export function getPermissionModeDiagnostics(sessionId: string): {
 
   return {
     permissionMode: state.permissionMode,
-    previousPermissionMode,
-    transitionDisplay,
+    ...(previousPermissionMode !== undefined ? { previousPermissionMode } : {}),
+    ...(transitionDisplay !== undefined ? { transitionDisplay } : {}),
     modeVersion: state.modeVersion,
     lastChangedAt: state.lastChangedAt,
     lastChangedBy: state.lastChangedBy,

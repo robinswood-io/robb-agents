@@ -88,11 +88,11 @@ export const BUNDLED_THEMES = new Map<string, ThemeFile>(
 
 export interface ThemeProviderProps {
   children: ReactNode
-  defaultMode?: ThemeMode
-  defaultColorTheme?: string
-  defaultFont?: FontFamily
+  defaultMode?: ThemeMode | undefined
+  defaultColorTheme?: string | undefined
+  defaultFont?: FontFamily | undefined
   /** Active workspace ID for workspace-level theme overrides */
-  activeWorkspaceId?: string | null
+  activeWorkspaceId?: string | null | undefined
 }
 
 

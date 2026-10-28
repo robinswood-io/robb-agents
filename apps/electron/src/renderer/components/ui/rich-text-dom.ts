@@ -181,8 +181,8 @@ export function setCursorPosition(element: HTMLElement, targetPosition: number):
         return null
       }
 
-      for (let i = 0; i < el.childNodes.length; i++) {
-        const result = findPosition(el.childNodes[i])
+      for (const child of el.childNodes) {
+        const result = findPosition(child)
         if (result) return result
       }
     }

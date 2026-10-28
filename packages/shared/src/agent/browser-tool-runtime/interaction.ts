@@ -50,7 +50,7 @@ function parseSelectCommand(parts: string[]): ParsedSelectCommand {
   const value = valueTokens.join(' ').trim();
   if (!value) throw new Error('select requires ref and value. Example: select @e3 optionValue');
 
-  return { ref, value, assertText, assertValue, timeoutMs };
+  return { ref, value, ...(assertText !== undefined ? { assertText } : {}), ...(assertValue !== undefined ? { assertValue } : {}), timeoutMs };
 }
 
 function includesNormalized(haystack: string | undefined, needle: string): boolean {
@@ -152,7 +152,7 @@ export async function executeClickBrowserCommand(parts: string[], fns: BrowserPa
 
     const before = await getPageMetrics(fns);
     const started = Date.now();
-    await fns.click(ref, { waitFor, timeoutMs });
+    await fns.click(ref, { ...(waitFor !== undefined ? { waitFor } : {}), ...(timeoutMs !== undefined ? { timeoutMs } : {}) });
     const elapsedMs = Date.now() - started;
     const [after, challenge] = await Promise.all([
       getPageMetrics(fns),
@@ -312,8 +312,8 @@ export async function executeSelectBrowserCommand(parts: string[], fns: BrowserP
       fns,
       ref,
       selectedValue: value,
-      assertText,
-      assertValue,
+      ...(assertText !== undefined ? { assertText } : {}),
+      ...(assertValue !== undefined ? { assertValue } : {}),
       timeoutMs,
     });
 

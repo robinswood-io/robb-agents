@@ -1,3 +1,4 @@
+import { isJsonObject } from '@craft-agent/shared/utils/json';
 /**
  * ChatGPT backend search provider — for ChatGPT Plus / OpenAI OAuth users.
  *
@@ -10,7 +11,7 @@
  */
 
 import type { WebSearchProvider, WebSearchResult } from '../types.ts';
-import { parseResponsesApiResults, type ResponsesApiResponse } from './responses-api-parser.ts';
+import { parseResponsesApiResults, responsesApiResponseSchema, responsesApiEventSchema, type ResponsesApiResponse } from './responses-api-parser.ts';
 import {
   assertUnstableProviderContractEnabled,
   getUnstableProviderContract,
@@ -48,8 +49,13 @@ export function extractChatGptAccountId(accessToken: string): string | null {
     const parts = accessToken.split('.');
     if (parts.length !== 3) return null;
 
-    const payload = JSON.parse(atob(parts[1]!));
-    const accountId = payload?.[JWT_CLAIM_PATH]?.chatgpt_account_id;
+    const encodedPayload = parts[1];
+    if (!encodedPayload) return null;
+    const payload: unknown = JSON.parse(atob(encodedPayload));
+    if (!isJsonObject(payload)) return null;
+    const claim = payload[JWT_CLAIM_PATH];
+    if (!isJsonObject(claim)) return null;
+    const accountId = claim['chatgpt_account_id'];
 
     return typeof accountId === 'string' && accountId.length > 0 ? accountId : null;
   } catch {
@@ -63,7 +69,7 @@ export class ChatGPTBackendSearchProvider implements WebSearchProvider {
   constructor(
     private accessToken: string,
     private accountId: string,
-    private options?: { model?: string },
+    private options?: { model?: string | undefined },
   ) {}
 
   async search(query: string, count: number): Promise<WebSearchResult[]> {
@@ -140,7 +146,7 @@ async function parseResponsePayload(response: Response): Promise<ResponsesApiRes
   }
 
   try {
-    return JSON.parse(raw) as ResponsesApiResponse;
+    return responsesApiResponseSchema.parse(JSON.parse(raw));
   } catch {
     throw new Error(`ChatGPT search response parse failed: expected JSON or SSE payload, got: ${compactErrorText(raw)}`);
   }
@@ -160,16 +166,11 @@ function parseSseResponsePayload(sseText: string): ResponsesApiResponse {
 
     for (const line of dataLines) {
       if (line === '[DONE]') continue;
-      let event: {
-        type?: string;
-        item?: NonNullable<ResponsesApiResponse['output']>[number];
-        response?: ResponsesApiResponse;
-      } | null;
-      try {
-        event = JSON.parse(line);
-      } catch {
-        continue;
-      }
+      let payload: unknown;
+      try { payload = JSON.parse(line); } catch { continue; }
+      const parsedEvent = responsesApiEventSchema.safeParse(payload);
+      if (!parsedEvent.success) continue;
+      const event = parsedEvent.data;
 
       if (event?.type === 'response.output_item.done' && event.item && typeof event.item === 'object') {
         streamedOutput.push(event.item);
@@ -177,7 +178,7 @@ function parseSseResponsePayload(sseText: string): ResponsesApiResponse {
 
       if (event?.type === 'response.completed' || event?.type === 'response.done') {
         if (event.response && typeof event.response === 'object') {
-          completed = event.response as ResponsesApiResponse;
+          completed = event.response;
         }
       }
     }

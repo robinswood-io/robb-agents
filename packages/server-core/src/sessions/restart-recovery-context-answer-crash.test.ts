@@ -1,11 +1,11 @@
-import type { SessionHeader } from "@craft-agent/shared/sessions";
-import { ScriptedSessionAgent, completeSessionAgentFixture } from "./testing/scripted-session-agent.ts";
-import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
-import { afterEach, describe, expect, it } from "bun:test";
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
+import { ScriptedSessionAgent,completeSessionAgentFixture } from "./testing/scripted-session-agent.ts";
+import { sessionRuntimeStateForTest,requiredTestValue } from "./testing/runtime-state-access.ts";
+import { afterEach,describe,expect,it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { getSessionFilePath } from "@craft-agent/shared/sessions/storage";
-import { createPendingTurnRecovery, buildAutomaticTurnRecoveryPrompt, createCleanRecoveryContinuationHandoff } from "./turn-recovery";
-import { cleanupRestartRecovery, deferred, harness, tick } from './testing/restart-recovery-fixture.ts';
+import { createPendingTurnRecovery,buildAutomaticTurnRecoveryPrompt,createCleanRecoveryContinuationHandoff } from "./turn-recovery";
+import { cleanupRestartRecovery,deferred,harness,tick } from './testing/restart-recovery-fixture.ts';
 
 afterEach(cleanupRestartRecovery);
 
@@ -97,13 +97,13 @@ describe('durable restart recovery', () => {
       id: request.requestId, status: 'answered', responseMessageId: accepted.responseMessageId,
     })
     expect(managed.messages.some(message => message.id === accepted.responseMessageId)).toBe(false)
-    expect(managed.pendingTurnRecovery).toMatchObject({
+    expect<unknown>(managed.pendingTurnRecovery).toMatchObject({
       userMessageId: accepted.responseMessageId,
       recoveryDispatch: {
         id: accepted.responseMessageId, attempt: 4, cause: 'user_retry', origin: 'retry',
-        phase: 'allocated', cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-/),
+        phase: 'allocated', cleanContinuationId: (expect.stringMatching(/^clean-continuation-v1-/) as unknown),
         setupFailureCount: 1, lastSetupFailureClass: 'timeout',
-        setupRetryNotBefore: expect.any(Number),
+        setupRetryNotBefore: (expect.any(Number) as unknown),
       },
     })
     expect(managed.pendingTurnRecovery?.recoveryDispatch?.setupRetryBlockedAt).toBeUndefined()
@@ -226,16 +226,16 @@ describe('durable restart recovery', () => {
       const responseMessage = managed.messages.find(message => message.id === accepted.responseMessageId)!
       expect(responseMessage.timestamp).toBeGreaterThan(Date.now())
       const liveRecoveryDispatch = managed.pendingTurnRecovery!.recoveryDispatch!
-      expect(liveRecoveryDispatch).toMatchObject({
+      expect<unknown>(liveRecoveryDispatch).toMatchObject({
         id: responseMessage.id, cause: 'user_retry', origin: 'retry', phase: 'started',
-        cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-/),
+        cleanContinuationId: (expect.stringMatching(/^clean-continuation-v1-/) as unknown),
       })
       expect(liveRecoveryDispatch.allocatedAt).toBe(responseMessage.timestamp)
       expect(liveRecoveryDispatch.startedAt).toBeGreaterThanOrEqual(liveRecoveryDispatch.allocatedAt)
-      const liveHeader = JSON.parse(
+      const liveHeader = parseRecoveryJournalObservation(
         readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8').split('\n')[0]!,
       )
-      expect(liveHeader.pendingTurnRecovery.recoveryDispatch).toEqual(liveRecoveryDispatch)
+      expect(requiredTestValue(liveHeader.pendingTurnRecovery).recoveryDispatch).toEqual(liveRecoveryDispatch)
       expect(liveHeader.providerContextBoundaryMessageId).toBe(responseMessage.id)
 
       const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
@@ -253,9 +253,9 @@ describe('durable restart recovery', () => {
       await cold.runtime.resumePendingTurnAfterRestart(restored.id)
       await coldRuntimeEntered.promise
 
-      expect(restored.userInputRequests).toEqual([expect.objectContaining({
+      expect<unknown>(restored.userInputRequests).toEqual([(expect.objectContaining({
         id: request.requestId, status: 'answered', responseMessageId: responseMessage.id,
-      })])
+      }) as unknown)])
       expect(requiredTestValue(restored.userInputRequests).some((candidate) => candidate.status === 'pending')).toBe(false)
       expect(restored.providerContextBoundaryMessageId).toBe(responseMessage.id)
       expect(restored.sdkSessionId).toBeUndefined()
@@ -264,7 +264,7 @@ describe('durable restart recovery', () => {
         id: responseMessage.id, cause: 'user_retry', origin: 'retry', phase: 'started',
       })
       expect(resumedDispatch.startedAt).toBeGreaterThanOrEqual(resumedDispatch.allocatedAt)
-      const coldHeader: SessionHeader = JSON.parse(
+      const coldHeader = parseRecoveryJournalObservation(
         readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!,
       )
       expect(requiredTestValue(coldHeader.pendingTurnRecovery).recoveryDispatch).toEqual(resumedDispatch)
@@ -358,7 +358,7 @@ describe('durable restart recovery', () => {
     ])
     expect(requiredTestValue(restored.activeObjective).acceptanceCriteria).toHaveLength(1)
     expect(requiredTestValue(requiredTestValue(restored.activeObjective).acceptanceCriteria)[0]).toMatchObject({ id: 'deployed' })
-    expect(requiredTestValue(restored.userInputRequests)[0].status).toBe('pending')
+    expect(requiredTestValue(requiredTestValue(restored.userInputRequests)[0]).status).toBe('pending')
     expect(cold.runtime.retryableContextLimitRequest(restored)).toMatchObject({ id: 'strong-context-question' })
     const debugRemaining = [
       'Resolve host validation gap: required execution evidence is missing',
@@ -397,14 +397,14 @@ describe('durable restart recovery', () => {
       ))
       expect(boundaries).toHaveLength(1)
       expect(boundaries[0]).toMatchObject({ role: 'user', hidden: true })
-      expect(boundaries[0].content).toContain(originalRequest)
-      expect(boundaries[0].content).toContain(implementationRequest)
-      expect(boundaries[0].content).toContain('registered acceptance criterion deployed')
-      expect(boundaries[0].content).not.toContain('OLD_ASSISTANT_PLAN_MUST_NOT_CROSS')
-      const header = JSON.parse(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!)
-      expect(header.userInputRequests[0].status).toBe('cancelled')
+      expect(requiredTestValue(boundaries[0]).content).toContain(originalRequest)
+      expect(requiredTestValue(boundaries[0]).content).toContain(implementationRequest)
+      expect(requiredTestValue(boundaries[0]).content).toContain('registered acceptance criterion deployed')
+      expect(requiredTestValue(boundaries[0]).content).not.toContain('OLD_ASSISTANT_PLAN_MUST_NOT_CROSS')
+      const header = parseRecoveryJournalObservation(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!)
+      expect(requiredTestValue(requiredTestValue(header.userInputRequests)[0]).status).toBe('cancelled')
       expect(header.sdkSessionId).toBeUndefined()
-      expect(header.providerContextBoundaryMessageId).toBe(boundaries[0].id)
+      expect(header.providerContextBoundaryMessageId).toBe(requiredTestValue(boundaries[0]).id)
     } finally {
       release.resolve()
       await dispatch?.catch(() => {})

@@ -34,12 +34,14 @@ export const LatexBlock = Node.create({
   markdownTokenName: 'code',
 
   parseMarkdown: (token, helpers) => {
-    if (!LATEX_LANGUAGES.has((token.lang ?? '').toLowerCase())) return []
+    const language: unknown = token["lang"]
+    if (!LATEX_LANGUAGES.has((typeof language === 'string' ? language : '').toLowerCase())) return []
     return helpers.createNode('latexBlock', { code: token.text ?? '' })
   },
 
   renderMarkdown: (node) => {
-    const code = (node.attrs?.code ?? '').replace(/\n$/, '')
+    const rawCode: unknown = node.attrs?.["code"]
+    const code = (typeof rawCode === 'string' ? rawCode : '').replace(/\n$/, '')
     return `\`\`\`latex\n${code}\n\`\`\``
   },
 
@@ -71,7 +73,7 @@ export const LatexBlock = Node.create({
           }}
         >
           <RichBlockShell onEdit={handleEditClick} editTitle="Edit LaTeX">
-            <MarkdownLatexBlock code={(node.attrs.code as string) ?? ''} />
+            <MarkdownLatexBlock code={(node.attrs["code"] as string) ?? ''} />
           </RichBlockShell>
         </NodeViewWrapper>
       )

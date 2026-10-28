@@ -1,9 +1,11 @@
+import { completeSessionAgentFixture } from "../../../../../packages/server-core/src/sessions/testing/scripted-session-agent.ts";
+import { sessionManagerForTest } from "../../../../../packages/server-core/src/sessions/testing/private-runtime-access.ts";
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionManagerTestView } from '../../../../../packages/server-core/src/sessions/testing/private-runtime-access.ts';
 import type { StoredSession } from '@craft-agent/shared/sessions';
 
 // These legacy storage fixtures and preflight failures intentionally provide only consumed fields.
 type StoredSessionFixture = Omit<Partial<StoredSession>, 'name'> & { id: string; name?: string | null };
-type BranchAgent = NonNullable<Parameters<SessionManagerTestView['getOrCreateAgent']>[0]['agent']>;
 type BranchPool = NonNullable<Parameters<SessionManagerTestView['getOrCreateAgent']>[0]['poolServer']>;
 import { withSessionOperationsForTest } from '../../../../../packages/server-core/src/sessions/testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "../../../../../packages/server-core/src/sessions/testing/runtime-state-access.ts";
@@ -67,11 +69,13 @@ mock.module('../logger', () => {
   }
 })
 
+const actualLoadConfigDefaults = actualSharedConfigModule.loadConfigDefaults;
 mock.module('@craft-agent/shared/config', () => ({
   ...actualSharedConfigModule,
   getWorkspaceByNameOrId: (id: string) => (id === workspace.id ? workspace : null),
   getWorkspaces: () => [workspace],
   loadConfigDefaults: () => ({
+    ...actualLoadConfigDefaults(),
     workspaceDefaults: {
       permissionMode: 'ask',
       thinkingLevel: 'medium',
@@ -222,7 +226,7 @@ mock.module('@craft-agent/shared/sessions', () => ({
   createSession: async (_root: string, opts: Parameters<typeof import('@craft-agent/shared/sessions').createSession>[1]) => {
     const id = `child-${++idCounter}`
     const now = Date.now()
-    const session = {
+    const session = omitUndefined<StoredSessionFixture>({
       id,
       name: opts?.name ?? null,
       messages: [],
@@ -235,7 +239,7 @@ mock.module('@craft-agent/shared/sessions', () => ({
       createdAt: now,
       lastUsedAt: now,
       workspaceRootPath: workspaceRootPath,
-    }
+    })
     storedById.set(id, session)
     return session
   },
@@ -285,7 +289,7 @@ describe('session branch rollback on preflight failure', () => {
     storedById.set('source-1', {
       id: 'source-1',
       workspaceRootPath,
-      llmConnection: undefined,
+
       model: 'claude-sonnet-4-20250514',
       sdkSessionId: 'sdk-parent',
       messages: [
@@ -303,18 +307,15 @@ describe('session branch rollback on preflight failure', () => {
     let disposeCalled = false
     let poolStopCalled = false
 
-    ;(manager as unknown as SessionManagerTestView).ensureMessagesLoaded = async (_managed) => {}
-    ;(manager as unknown as SessionManagerTestView).getOrCreateAgent = async (managed) => {
-      managed.poolServer = { stop: async () => { poolStopCalled = true } } satisfies Pick<BranchPool, 'stop'> as unknown as BranchPool
-      managed.agent = {
-        supportsBranching: true,
-        ensureBranchReady: async () => {
+    ;(sessionManagerForTest(manager)).ensureMessagesLoaded = async (_managed) => {}
+    ;(sessionManagerForTest(manager)).getOrCreateAgent = async (managed) => {
+      managed.poolServer = { stop: async () => { poolStopCalled = true } } satisfies Pick<BranchPool, 'stop'> as BranchPool
+      managed.agent = completeSessionAgentFixture(managed.workspace, {ensureBranchReady: async () => {
           throw new Error('preflight boom')
         },
-        dispose: () => {
+dispose: () => {
           disposeCalled = true
-        },
-      } satisfies Pick<BranchAgent, 'supportsBranching' | 'ensureBranchReady' | 'dispose'> as unknown as BranchAgent
+        }})
       return managed.agent
     }
 
@@ -334,7 +335,7 @@ describe('session branch rollback on preflight failure', () => {
 
   it('fails branch creation when parent claude sdk session id is missing', async () => {
     const source = storedById.get('source-1')!
-    source.sdkSessionId = undefined
+    delete source.sdkSessionId
     storedById.set('source-1', source)
 
     const manager = withSessionOperationsForTest(new SessionManager())
@@ -356,17 +357,14 @@ describe('session branch rollback on preflight failure', () => {
     const manager = withSessionOperationsForTest(new SessionManager())
     let getOrCreateAgentCalled = false
 
-    ;(manager as unknown as SessionManagerTestView).ensureMessagesLoaded = async (_managed) => {}
-    ;(manager as unknown as SessionManagerTestView).getOrCreateAgent = async (managed) => {
+    ;(sessionManagerForTest(manager)).ensureMessagesLoaded = async (_managed) => {}
+    ;(sessionManagerForTest(manager)).getOrCreateAgent = async (managed) => {
       getOrCreateAgentCalled = true
-      managed.poolServer = { stop: async () => {} } satisfies Pick<BranchPool, 'stop'> as unknown as BranchPool
-      managed.agent = {
-        supportsBranching: true,
-        ensureBranchReady: async () => {
+      managed.poolServer = { stop: async () => {} } satisfies Pick<BranchPool, 'stop'> as BranchPool
+      managed.agent = completeSessionAgentFixture(managed.workspace, {ensureBranchReady: async () => {
           throw new Error('pi preflight boom')
         },
-        dispose: () => {},
-      } satisfies Pick<BranchAgent, 'supportsBranching' | 'ensureBranchReady' | 'dispose'> as unknown as BranchAgent
+dispose: () => {}})
       return managed.agent
     }
 

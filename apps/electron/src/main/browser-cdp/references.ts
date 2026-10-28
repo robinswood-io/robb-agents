@@ -5,15 +5,15 @@ import type { ResolvedElementRef } from './shared.ts';
 
 export function allocateRef(transportOwner: BrowserCDP, backendDOMNodeId?: number): string {
     if (backendDOMNodeId !== undefined) {
-        const existing = transportOwner["backendNodeRefMap"].get(backendDOMNodeId);
+        const existing = transportOwner.backendNodeRefMap.get(backendDOMNodeId);
         if (existing) {
             return existing;
         }
     }
-    transportOwner["nextRefCounter"] += 1;
-    const ref = `@e${transportOwner["nextRefCounter"]}`;
+    transportOwner.nextRefCounter += 1;
+    const ref = `@e${transportOwner.nextRefCounter}`;
     if (backendDOMNodeId !== undefined) {
-        transportOwner["backendNodeRefMap"].set(backendDOMNodeId, ref);
+        transportOwner.backendNodeRefMap.set(backendDOMNodeId, ref);
     }
     return ref;
 }
@@ -61,7 +61,7 @@ export async function resolveElementRef(transportOwner: BrowserCDP, ref: string)
     let resolvedRef = ref;
     let backendNodeId = transportOwner["refMap"].get(resolvedRef);
     if (!backendNodeId) {
-        resolvedRef = await transportOwner["recoverRef"](ref);
+        resolvedRef = await transportOwner.recoverRef(ref);
         backendNodeId = transportOwner["refMap"].get(resolvedRef);
     }
     if (!backendNodeId) {
@@ -72,7 +72,7 @@ export async function resolveElementRef(transportOwner: BrowserCDP, ref: string)
         return { ref: resolvedRef, backendNodeId, objectId: object.objectId };
     }
     catch (error) {
-        const recoveredRef = await transportOwner["recoverRef"](ref);
+        const recoveredRef = await transportOwner.recoverRef(ref);
         const recoveredBackendNodeId = transportOwner["refMap"].get(recoveredRef);
         if (!recoveredBackendNodeId)
             throw error;

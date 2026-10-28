@@ -24,16 +24,16 @@ export class ActiveRun {
     private readonly state = new Map<string, NodeStateEntry>();
     private readonly sessionToNode = new Map<string, string>();
     private readonly outputs: Record<string, NodeOutput> = {};
-    private readonly edges: Map<string, Set<string>>;
-    private readonly maxParallel: number;
+    /** @internal */ public readonly edges: Map<string, Set<string>>;
+    /** @internal */ public readonly maxParallel: number;
     private inFlight = 0;
     private tokensUsed = 0;
     private costUsed = 0;
     /** Last observed cumulative (input+output) tokens per child session — for delta accounting. */
-    private readonly sessionTokens = new Map<string, number>();
+    /** @internal */ public readonly sessionTokens = new Map<string, number>();
     /** Last observed cumulative USD cost per child session — for delta accounting. */
-    private readonly sessionCosts = new Map<string, number>();
-    private readonly invalidUsageSessions = new Set<string>();
+    /** @internal */ public readonly sessionCosts = new Map<string, number>();
+    /** @internal */ public readonly invalidUsageSessions = new Set<string>();
     private readonly nodeTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
     /** A timed-out attempt remains a terminality barrier until the host proves
      * that exact child idle or a durable whole-run drain takes ownership. */
@@ -42,67 +42,67 @@ export class ActiveRun {
     /** Session creations are tracked until their returned identity is durably
      * logged, so terminal drainage cannot miss a concurrently-created child. */
     private readonly activeCreations = new Set<Promise<ActiveRunActiveCreations>>();
-    private deadlineTimeout?: ReturnType<typeof setTimeout>;
-    private readonly approvedNodes = new Set<string>();
-    private readonly pendingApprovals = new Map<string, PendingTaskApproval>();
+    private deadlineTimeout?: ReturnType<typeof setTimeout> | undefined;
+    /** @internal */ public readonly approvedNodes = new Set<string>();
+    /** @internal */ public readonly pendingApprovals = new Map<string, PendingTaskApproval>();
     private runStatus: RunStatus = 'running';
-    private unsubscribe?: () => void;
+    private unsubscribe?: (() => void) | undefined;
     /** Detaches the one-shot independent-reviewer listener while a run is `verifying`. */
-    private verdictOff?: () => void;
+    private verdictOff?: (() => void) | undefined;
     /** Exact reviewer identity is persisted alongside its bounded response. */
-    private reviewerSessionId?: string;
+    private reviewerSessionId?: string | undefined;
     /** Every discovered reviewer candidate remains durable until strong
      * retirement succeeds. This also covers create-before-output crash windows. */
     private readonly pendingReviewerSessionIds = new Set<string>();
     private reviewerPending = false;
-    private reviewerTimeout?: ReturnType<typeof setTimeout>;
-    private reviewerContract?: ReviewerContract;
+    private reviewerTimeout?: ReturnType<typeof setTimeout> | undefined;
+    /** @internal */ public reviewerContract?: ReviewerContract | undefined;
     /** Serializes format-only follow-ups behind the provider turn whose
      * completion callback requested them. SessionManager emits completion before
      * its send transaction promise has fully unwound. */
-    private reviewerSend?: Promise<void>;
+    /** @internal */ public reviewerSend?: Promise<void> | undefined;
     /** A terminal reviewer failure is not published until the child is proven
      * idle and its final cumulative usage has been accounted. */
-    private reviewerFailure?: Promise<void>;
+    private reviewerFailure?: Promise<void> | undefined;
     /** Durable terminal intent plus the exact worker identities that must be
      * proven idle before a failed/stopped state can be published. */
-    private terminalIntent?: TerminalIntent;
+    private terminalIntent?: TerminalIntent | undefined;
     /** The in-process strong-retirement barrier. A rejected barrier remains
      * retryable from stop() and from crash recovery via terminalIntent. */
-    private terminalDrain?: Promise<void>;
-    private terminalRetirementAttempts = 0;
-    private terminalRetryTimeout?: ReturnType<typeof setTimeout>;
+    private terminalDrain?: Promise<void> | undefined;
+    /** @internal */ public terminalRetirementAttempts = 0;
+    private terminalRetryTimeout?: ReturnType<typeof setTimeout> | undefined;
     /** Pause uses the same strong worker fence but remains non-terminal. Resume is
      * deferred until this barrier succeeds, preventing duplicate live attempts. */
-    private pauseDrain?: Promise<void>;
+    private pauseDrain?: Promise<void> | undefined;
     private pauseDrainRequired = false;
-    private pauseRetirementAttempts = 0;
-    private pauseRetryTimeout?: ReturnType<typeof setTimeout>;
-    private hydrationWorkerDrain?: Promise<void>;
+    /** @internal */ public pauseRetirementAttempts = 0;
+    private pauseRetryTimeout?: ReturnType<typeof setTimeout> | undefined;
+    private hydrationWorkerDrain?: Promise<void> | undefined;
     private pausedSessionIds: string[] = [];
     private resumeRequested = false;
     /** An `invalid` persisted result is a failed/format-only attempt, never a
      * late receipt that recovery may promote to an accepted verdict. */
-    private recoveredReviewerResultReusable = true;
+    /** @internal */ public recoveredReviewerResultReusable = true;
     /** Invalidates async reviewer callbacks after stop, restart, or finalization. */
     private verificationGeneration = 0;
     /** FAIL verdicts that have triggered a repair pass (bounded by `maxRepairs`). */
-    private repairsUsed = 0;
+    /** @internal */ public repairsUsed = 0;
     /** Malformed-verdict re-asks issued (bounded by MAX_UNPARSED_REASKS); not a repair. */
-    private unparsedReAsks = 0;
+    /** @internal */ public unparsedReAsks = 0;
     /** Resolved repair cap = min(spec.max_iterations ?? DEFAULT, CAP). */
-    private readonly maxRepairs: number;
+    /** @internal */ public readonly maxRepairs: number;
     /** Bounded, verifier-grounded episodic memory injected into later repair attempts. */
-    private readonly reflectionHistory: RepairReflection[] = [];
+    /** @internal */ public readonly reflectionHistory: RepairReflection[] = [];
     /** Rejected result hashes seen in this run, used to detect fixed points and short cycles. */
-    private readonly rejectedFingerprints = new Set<string>();
+    /** @internal */ public readonly rejectedFingerprints = new Set<string>();
     /** Consecutive rejected results that revisit an already-seen result fingerprint. */
-    private stagnantRepeats = 0;
+    /** @internal */ public stagnantRepeats = 0;
     /** Inverted edges: node id → set of nodes that (directly) depend on it. Built lazily for the frontier. */
-    private dependents?: Map<string, Set<string>>;
+    /** @internal */ public dependents?: Map<string, Set<string>> | undefined;
     private settled = false;
     private settleResolvers: ((s: RunSnapshot) => void)[] = [];
-    constructor(private readonly spec: TaskSpec, private readonly slug: string, private readonly runId: string, private readonly opts: Required<Pick<RunOptions, 'verifyOnComplete'>> & RunOptions, private readonly deps: TaskRunnerDeps) {
+    constructor(private readonly spec: TaskSpec, private readonly slug: string, private readonly runId: string, private readonly opts: Omit<RunOptions, 'verifyOnComplete'> & { verifyOnComplete: boolean }, private readonly deps: TaskRunnerDeps) {
         this.edges = materializeDeps(spec);
         this.maxParallel = spec.max_parallel ?? deps.defaultMaxParallel ?? DEFAULT_MAX_PARALLEL;
         // Runner-side clamp (belt-and-suspenders: the schema already caps `max_iterations` at the same
@@ -129,10 +129,10 @@ export class ActiveRun {
     activateHydrated(shouldResume: boolean): void {
         return activeRunHydration.activateHydrated(this, shouldResume);
     }
-    private async resumeAfterRecoveredWorkerDrain(sessionIds: string[]): Promise<void> {
+    /** @internal */ public async resumeAfterRecoveredWorkerDrain(sessionIds: string[]): Promise<void> {
         return activeRunHydration.resumeAfterRecoveredWorkerDrain(this, sessionIds);
     }
-    private continueHydratedResume(): void {
+    /** @internal */ public continueHydratedResume(): void {
         return activeRunHydration.continueHydratedResume(this);
     }
     async stop(): Promise<void> {
@@ -153,16 +153,16 @@ export class ActiveRun {
     private isReady(node: TaskNode): boolean {
         return activeRunScheduling.isReady(this, node);
     }
-    private markRunning(node: TaskNode): void {
+    /** @internal */ public markRunning(node: TaskNode): void {
         return activeRunScheduling.markRunning(this, node);
     }
-    private requiresApproval(node: TaskNode): boolean {
+    /** @internal */ public requiresApproval(node: TaskNode): boolean {
         return activeRunScheduling.requiresApproval(this, node);
     }
-    private requestApproval(node: TaskNode): void {
+    /** @internal */ public requestApproval(node: TaskNode): void {
         return activeRunScheduling.requestApproval(this, node);
     }
-    private completeApprovalNode(node: TaskNode): void {
+    /** @internal */ public completeApprovalNode(node: TaskNode): void {
         return activeRunScheduling.completeApprovalNode(this, node);
     }
     pendingApprovalList(): PendingTaskApproval[] {
@@ -171,13 +171,13 @@ export class ActiveRun {
     resolveApproval(requestId: string, decision: 'approved' | 'rejected', actor: string, comment?: string): void {
         return activeRunScheduling.resolveApproval(this, requestId, decision, actor, comment);
     }
-    private async dispatch(node: TaskNode): Promise<void> {
+    /** @internal */ public async dispatch(node: TaskNode): Promise<void> {
         return activeRunDispatch.dispatch(this, node);
     }
-    private async buildPrompt(node: TaskNode): Promise<ActiveRunBuildPromptResult> {
+    /** @internal */ public async buildPrompt(node: TaskNode): Promise<ActiveRunBuildPromptResult> {
         return activeRunDispatch.buildPrompt(this, node);
     }
-    private buildReflectionMemory(nodeId: string): string {
+    /** @internal */ public buildReflectionMemory(nodeId: string): string {
         return activeRunDispatch.buildReflectionMemory(this, nodeId);
     }
     private accountSessionUsage(evt: SessionCompletionEvent): UsageIssue | null {
@@ -192,7 +192,7 @@ export class ActiveRun {
     private failNode(nodeId: string, reason: string, sessionId?: string, allowRetry = true, failureClass: TaskFailureClass = 'error'): void {
         return activeRunSettlement.failNode(this, nodeId, reason, allowRetry, failureClass, sessionId);
     }
-    private maybeFinish(): void {
+    /** @internal */ public maybeFinish(): void {
         return activeRunSettlement.maybeFinish(this);
     }
     private enterVerifying(): void {
@@ -207,25 +207,25 @@ export class ActiveRun {
     private async sendVerification(generation: number): Promise<void> {
         return activeRunVerification.sendVerification(this, generation);
     }
-    private attachVerdictListener(reviewerSessionId: string, generation: number): void {
+    /** @internal */ public attachVerdictListener(reviewerSessionId: string, generation: number): void {
         return activeRunVerification.attachVerdictListener(this, reviewerSessionId, generation);
     }
-    private async sendToReviewer(reviewerSessionId: string, message: string, generation: number, timeoutMs: number, authenticatedTaskText?: string): Promise<void> {
+    /** @internal */ public async sendToReviewer(reviewerSessionId: string, message: string, generation: number, timeoutMs: number, authenticatedTaskText?: string): Promise<void> {
         return activeRunVerification.sendToReviewer(this, reviewerSessionId, message, generation, timeoutMs, authenticatedTaskText);
     }
-    private handleVerdict(text: string, reviewerSessionId: string): void {
+    /** @internal */ public handleVerdict(text: string, reviewerSessionId: string): void {
         return activeRunVerdict.handleVerdict(this, text, reviewerSessionId);
     }
-    private recordRepairReflection(reason: string, named?: string[]): RepairReflection {
+    /** @internal */ public recordRepairReflection(reason: string, named?: string[]): RepairReflection {
         return activeRunVerdict.recordRepairReflection(this, reason, named);
     }
-    private async reAskVerdict(reviewerSessionId: string, parseFailure?: string, previousResponse = ''): Promise<void> {
+    /** @internal */ public async reAskVerdict(reviewerSessionId: string, parseFailure?: string, previousResponse = ''): Promise<void> {
         return activeRunVerdict.reAskVerdict(this, reviewerSessionId, previousResponse, parseFailure);
     }
-    private createReviewerContract(reviewerSessionId: string): ReviewerContract {
+    /** @internal */ public createReviewerContract(reviewerSessionId: string): ReviewerContract {
         return activeRunReviewerContract.createReviewerContract(this, reviewerSessionId);
     }
-    private buildReviewerPrompt(contract: ReviewerContract): string {
+    /** @internal */ public buildReviewerPrompt(contract: ReviewerContract): string {
         return activeRunReviewerContract.buildReviewerPrompt(this, contract);
     }
     private persistReviewerOutput(reviewerSessionId: string | undefined, reviewerState: 'pending' | 'invalid' | 'pass' | 'fail', response: string, parseFailure?: string, pendingEvidence?: string): void {
@@ -240,43 +240,43 @@ export class ActiveRun {
     private isCurrentReviewer(reviewerSessionId: string, generation: number): boolean {
         return activeRunReviewerRetirement.isCurrentReviewer(this, reviewerSessionId, generation);
     }
-    private settleReviewerSession(reviewerSessionId: string, acceptedResult: boolean): void {
+    /** @internal */ public settleReviewerSession(reviewerSessionId: string, acceptedResult: boolean): void {
         return activeRunReviewerRetirement.settleReviewerSession(this, reviewerSessionId, acceptedResult);
     }
     private failReviewer(reviewerSessionId: string | undefined, reason: string): void {
         return activeRunReviewerRetirement.failReviewer(this, reviewerSessionId, reason);
     }
-    private async retirePendingReviewer(initialSessionIds: string[] = []): Promise<SessionCompletionEvent | undefined> {
+    /** @internal */ public async retirePendingReviewer(initialSessionIds: string[] = []): Promise<SessionCompletionEvent | undefined> {
         return activeRunReviewerRetirement.retirePendingReviewer(this, initialSessionIds);
     }
-    private armReviewerTimeout(reviewerSessionId: string, generation: number, timeoutMs: number): void {
+    /** @internal */ public armReviewerTimeout(reviewerSessionId: string, generation: number, timeoutMs: number): void {
         return activeRunReviewerRetirement.armReviewerTimeout(this, reviewerSessionId, generation, timeoutMs);
     }
     private clearReviewerTimeout(): void {
         return activeRunReviewerRetirement.clearReviewerTimeout(this);
     }
-    private repairForVerdict(reason: string | undefined, named?: string[]): void {
+    /** @internal */ public repairForVerdict(reason: string | undefined, named?: string[]): void {
         return activeRunVerdict.repairForVerdict(this, reason, named);
     }
-    private computeFrontier(named?: string[]): Set<string> {
+    /** @internal */ public computeFrontier(named?: string[]): Set<string> {
         return activeRunRuntime.computeFrontier(this, named);
     }
-    private dependentsMap(): Map<string, Set<string>> {
+    /** @internal */ public dependentsMap(): Map<string, Set<string>> {
         return activeRunRuntime.dependentsMap(this);
     }
-    private tokenBudgetLimit(): number | undefined {
+    /** @internal */ public tokenBudgetLimit(): number | undefined {
         return activeRunBudget.tokenBudgetLimit(this);
     }
-    private costBudgetLimit(): number | undefined {
+    /** @internal */ public costBudgetLimit(): number | undefined {
         return activeRunBudget.costBudgetLimit(this);
     }
-    private schedulingBudgetBreach(): ActiveRunSchedulingBudgetBreachResult | null {
+    /** @internal */ public schedulingBudgetBreach(): ActiveRunSchedulingBudgetBreachResult | null {
         return activeRunBudget.schedulingBudgetBreach(this);
     }
-    private measuredBudgetBreach(): ActiveRunSchedulingBudgetBreachResult | null {
+    /** @internal */ public measuredBudgetBreach(): ActiveRunSchedulingBudgetBreachResult | null {
         return activeRunBudget.measuredBudgetBreach(this);
     }
-    private failForBudget(metric: 'tokens' | 'cost', value: number, limit: number): void {
+    /** @internal */ public failForBudget(metric: 'tokens' | 'cost', value: number, limit: number): void {
         return activeRunBudget.failForBudget(this, metric, value, limit);
     }
     private deadlineExpired(): boolean {
@@ -300,19 +300,19 @@ export class ActiveRun {
     private beginTerminalDrain(): Promise<void> {
         return activeRunDrainage.beginTerminalDrain(this);
     }
-    private scheduleTerminalDrainRetry(): void {
+    /** @internal */ public scheduleTerminalDrainRetry(): void {
         return activeRunDrainage.scheduleTerminalDrainRetry(this);
     }
     private beginPauseDrain(): Promise<void> {
         return activeRunDrainage.beginPauseDrain(this);
     }
-    private schedulePauseDrainRetry(): void {
+    /** @internal */ public schedulePauseDrainRetry(): void {
         return activeRunDrainage.schedulePauseDrainRetry(this);
     }
-    private async retireWorkerSessions(initialSessionIds: string[]): Promise<Error[]> {
+    /** @internal */ public async retireWorkerSessions(initialSessionIds: string[]): Promise<Error[]> {
         return activeRunDrainage.retireWorkerSessions(this, initialSessionIds);
     }
-    private async drainTerminalChildren(initialSessionIds: string[], initialReviewerSessionIds: string[]): Promise<void> {
+    /** @internal */ public async drainTerminalChildren(initialSessionIds: string[], initialReviewerSessionIds: string[]): Promise<void> {
         return activeRunDrainage.drainTerminalChildren(this, initialSessionIds, initialReviewerSessionIds);
     }
     private hasDeferredRetry(): boolean {
@@ -333,10 +333,10 @@ export class ActiveRun {
     private stopForKillSwitch(reason: string): void {
         return activeRunRuntime.stopForKillSwitch(this, reason);
     }
-    private armNodeTimeout(nodeId: string, sessionId: string, attempt: number, timeoutMs: number): void {
+    /** @internal */ public armNodeTimeout(nodeId: string, sessionId: string, attempt: number, timeoutMs: number): void {
         return activeRunRuntime.armNodeTimeout(this, nodeId, sessionId, attempt, timeoutMs);
     }
-    private async retireTimedOutNode(nodeId: string, sessionId: string, timeoutMs: number): Promise<void> {
+    /** @internal */ public async retireTimedOutNode(nodeId: string, sessionId: string, timeoutMs: number): Promise<void> {
         return activeRunRuntime.retireTimedOutNode(this, nodeId, sessionId, timeoutMs);
     }
     private clearNodeTimeout(nodeId: string): void {
@@ -345,10 +345,10 @@ export class ActiveRun {
     private armRetry(nodeId: string, retryAtMs: number): void {
         return activeRunRuntime.armRetry(this, nodeId, retryAtMs);
     }
-    private clearRetryTimeout(nodeId: string): void {
+    /** @internal */ public clearRetryTimeout(nodeId: string): void {
         return activeRunRuntime.clearRetryTimeout(this, nodeId);
     }
-    private reportAsyncFailure(operation: string, error: unknown, context: Record<string, unknown> = {}): void {
+    /** @internal */ public reportAsyncFailure(operation: string, error: unknown, context: Record<string, unknown> = {}): void {
         return activeRunRuntime.reportAsyncFailure(this, operation, error, context);
     }
     private bestEffortHostMetadata(operation: string, sessionId: string, mutation: () => Promise<void>): void {

@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { debug } from "../../utils/debug.ts";
 // Import LLM connection types and constants
 import type { LlmConnection } from "../llm-connections.ts";
@@ -27,46 +28,44 @@ export function migrateCodexCopilotToPi(config: StoredConfig): boolean {
     // Cast to string for legacy providerType values that were removed from LlmProviderType
     // but may still exist on disk in old configs. Cast to record for legacy codexPath field.
     const providerStr = connection.providerType as string;
-    const connRecord = connection as unknown as Record<string, unknown>;
     if (providerStr === 'openai' && connection.authType === 'oauth') {
       connection.providerType = 'pi';
       connection.piAuthProvider = 'openai-codex';
       connection.name = 'ChatGPT Plus (via Pi)';
-      delete connRecord.codexPath;
-      connection.defaultModel = undefined; // reset — backfill picks Pi default
-      connection.models = undefined;
+      Reflect.deleteProperty(connection, 'codexPath');
+      delete connection.defaultModel // reset — backfill picks Pi default
+      delete connection.models
       changed = true;
     } else if (providerStr === 'openai' && (connection.authType === 'api_key' || connection.authType === 'api_key_with_endpoint')) {
       connection.providerType = 'pi';
       connection.piAuthProvider = 'openai';
       connection.name = 'OpenAI API (via Pi)';
-      delete connRecord.codexPath;
-      connection.defaultModel = undefined;
-      connection.models = undefined;
+      Reflect.deleteProperty(connection, 'codexPath');
+      delete connection.defaultModel
+      delete connection.models
       changed = true;
     } else if (providerStr === 'openai_compat') {
       connection.providerType = 'pi';
       connection.piAuthProvider = 'openai';
       // keep baseUrl for custom endpoints
-      delete connRecord.codexPath;
-      connection.defaultModel = undefined;
-      connection.models = undefined;
+      Reflect.deleteProperty(connection, 'codexPath');
+      delete connection.defaultModel
+      delete connection.models
       changed = true;
     } else if (providerStr === 'copilot') {
       connection.providerType = 'pi';
       connection.piAuthProvider = 'github-copilot';
       connection.name = 'GitHub Copilot (via Pi)';
-      delete connRecord.codexPath;
-      connection.defaultModel = undefined;
-      connection.models = undefined;
+      Reflect.deleteProperty(connection, 'codexPath');
+      delete connection.defaultModel
+      delete connection.models
       changed = true;
     }
   }
 
   // Clean up openaiVariant config field (Codex-specific A/B testing, no longer relevant)
-  const configRecord = config as unknown as Record<string, unknown>;
-  if (configRecord.openaiVariant) {
-    delete configRecord.openaiVariant;
+  if ('openaiVariant' in config && config.openaiVariant) {
+    Reflect.deleteProperty(config, 'openaiVariant');
     changed = true;
   }
 
@@ -180,7 +179,7 @@ export function backfillAllConnectionModels(config: StoredConfig): boolean {
       }
     }
 
-    if (defaultModels.length > 0 && (!connection.models || (Array.isArray(connection.models) && connection.models.length === 0))) {
+    if (defaultModels.length > 0 && (!connection.models || (isUnknownArray(connection.models) && connection.models.length === 0))) {
       connection.models = defaultModels;
       changed = true;
     }
@@ -227,7 +226,7 @@ export function migrateLegacyProviderTypes(config: StoredConfig): boolean {
       if (connection.defaultModel) {
         connection.defaultModel = normalizePiBedrockId(connection.defaultModel);
       }
-      if (connection.models && Array.isArray(connection.models)) {
+      if (connection.models && isUnknownArray(connection.models)) {
         for (let i = 0; i < connection.models.length; i++) {
           const model = connection.models[i];
           if (typeof model === 'string') {
@@ -267,7 +266,7 @@ export function migrateLegacyProviderTypes(config: StoredConfig): boolean {
           changed = true;
         }
       }
-      if (connection.models && Array.isArray(connection.models)) {
+      if (connection.models && isUnknownArray(connection.models)) {
         for (let i = 0; i < connection.models.length; i++) {
           const model = connection.models[i];
           if (typeof model === 'string') {

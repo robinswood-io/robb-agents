@@ -34,7 +34,7 @@ export function checkVCRedistInstalled(): VCRedistCheckResult {
   // Well-known paths where vcruntime140.dll is installed by VC++ Redistributable.
   // Covers both x64 and ARM64 host scenarios (ARM64 Windows runs x86_64 via emulation,
   // so the x64 DLL in SysWOW64 or System32 is what matters for onnxruntime).
-  const sysRoot = process.env.SystemRoot ?? 'C:\\Windows'
+  const sysRoot = process.env["SystemRoot"] ?? 'C:\\Windows'
   const dllPaths = [
     join(sysRoot, 'System32', 'vcruntime140.dll'),
     join(sysRoot, 'SysWOW64', 'vcruntime140.dll'),

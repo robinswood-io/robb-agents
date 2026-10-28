@@ -1,3 +1,4 @@
+import { isJsonObject } from '../../../utils/json.ts';
 import { afterAll, beforeEach, describe, expect, it } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -44,11 +45,11 @@ const raw = Array.from({ length: 100 }, (_, i) => `test_${i}: long detailed succ
 const output = join(root, 'fixture.txt');
 writeFileSync(output, raw);
 let run = 0;
-const originalRewriteStatus = process.env.ROBB_REWRITE_STATUS;
-beforeEach(() => { delete process.env.ROBB_REWRITE_STATUS; });
+const originalRewriteStatus = process.env["ROBB_REWRITE_STATUS"];
+beforeEach(() => { delete process.env["ROBB_REWRITE_STATUS"]; });
 afterAll(() => {
-  if (originalRewriteStatus === undefined) delete process.env.ROBB_REWRITE_STATUS;
-  else process.env.ROBB_REWRITE_STATUS = originalRewriteStatus;
+  if (originalRewriteStatus === undefined) delete process.env["ROBB_REWRITE_STATUS"];
+  else process.env["ROBB_REWRITE_STATUS"] = originalRewriteStatus;
   rmSync(root, { recursive: true, force: true });
 });
 
@@ -57,7 +58,7 @@ function fixture(command = 'pytest test_example.py') {
   const input = { command, timeout: 120_000, description: 'Run suite' };
   const rewritten = rewriteBashWithRtk('Bash', input, rtk, [], undefined, { dataFolderPath: data, workingDirectory: root });
   const count = join(root, `count-${run}`);
-  const execute = (extraEnv: Record<string, string> = {}, executable = '/bin/bash') => spawnSync(executable, ['-c', String(rewritten.input.command)], {
+  const execute = (extraEnv: Record<string, string> = {}, executable = '/bin/bash') => spawnSync(executable, ['-c', String(rewritten.input["command"])], {
     cwd: root, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024,
     env: { ...process.env, PATH: `${bin}:/usr/bin:/bin`, ROBB_RUN_COUNT: count, ROBB_STDOUT: output, ...extraEnv },
   });
@@ -75,7 +76,7 @@ describe('RTK lossless execution boundary', () => {
     const f = fixture();
     expect(f.rewritten.modified).toBe(true);
     expect(f.input.command).toBe('pytest test_example.py');
-    expect(f.rewritten.input.timeout).toBe(120_000);
+    expect(f.rewritten.input["timeout"]).toBe(120_000);
     const result = f.execute();
     expect(result.status).toBe(0);
     expect(readFileSync(f.count, 'utf8')).toBe('x');
@@ -102,7 +103,7 @@ describe('RTK lossless execution boundary', () => {
     it(`preserves exact output, stderr and exit without rerun on ${name}`, () => {
       const f = fixture();
       const result = f.execute(env);
-      expect(result.status).toBe(Number((env as Record<string, string>).ROBB_ORIGINAL_STATUS ?? 0));
+      expect(result.status).toBe(Number((env as Record<string, string>)["ROBB_ORIGINAL_STATUS"] ?? 0));
       expect(result.stdout).toBe(raw);
       expect(result.stderr).toBe('original warning on stderr');
       expect(readFileSync(f.count, 'utf8')).toBe('x');
@@ -143,7 +144,7 @@ describe('RTK lossless execution boundary', () => {
   it('keeps denied/unsupported rewrites and missing capture/binary unchanged', () => {
     const input = { command: 'pytest test.py' };
     for (const status of ['1', '2', '7']) {
-      process.env.ROBB_REWRITE_STATUS = status;
+      process.env["ROBB_REWRITE_STATUS"] = status;
       expect(fixture().rewritten.modified).toBe(false);
     }
     expect(rewriteBashWithRtk('Bash', input, rtk, []).input).toBe(input);
@@ -163,7 +164,7 @@ describe('RTK lossless execution boundary', () => {
     expect(result.type).toBe('prompt');
     if (result.type === 'prompt') {
       expect(result.command).toBe('pytest test.py');
-      expect(result.modifiedInput?.command).toContain('RTK_TELEMETRY_DISABLED=1');
+      expect(result.modifiedInput?.["command"]).toContain('RTK_TELEMETRY_DISABLED=1');
     }
   });
 });
@@ -204,7 +205,7 @@ describe('RTK output contract eligibility', () => {
   });
 });
 
-const nativeRtk = process.env.ROBB_TEST_RTK_PATH;
+const nativeRtk = process.env["ROBB_TEST_RTK_PATH"];
 it.skipIf(!nativeRtk)('filters a real pytest fixture with the bundled RTK while retaining exact raw output', () => {
   const nativeOutput = join(root, 'native-pytest.txt');
   const nativeRaw = [
@@ -220,7 +221,7 @@ it.skipIf(!nativeRtk)('filters a real pytest fixture with the bundled RTK while 
   const count = join(root, 'native-count');
   const result = rewriteBashWithRtk('Bash', { command: 'pytest test_example.py' }, nativeRtk!, [], undefined, { dataFolderPath: data, workingDirectory: root });
   expect(result.modified).toBe(true);
-  const executed = spawnSync('/bin/bash', ['-c', String(result.input.command)], {
+  const executed = spawnSync('/bin/bash', ['-c', String(result.input["command"])], {
     cwd: root, encoding: 'utf8',
     env: { ...process.env, PATH: `${bin}:/usr/bin:/bin`, ROBB_RUN_COUNT: count, ROBB_STDOUT: nativeOutput },
   });
@@ -244,7 +245,7 @@ it('applies the same output/permission contract through the Pi subprocess adapte
   resetRtkPathCache();
   expect(getRtkStatus().source).toBe('bundled');
   expect(getRtkGain()?.totalSaved).toBeGreaterThan(0);
-  const profileConfig = join(process.env.CRAFT_CONFIG_DIR!, 'config.json');
+  const profileConfig = join(process.env["CRAFT_CONFIG_DIR"]!, 'config.json');
   writeFileSync(profileConfig, JSON.stringify({ workspaces: [], activeWorkspaceId: null, activeSessionId: null, rtkEnabled: true }));
   const config: BackendConfig = {
     provider: 'pi', workspace: { id: 'rtk-pi', name: 'RTK Pi', rootPath: root } as never,
@@ -252,31 +253,29 @@ it('applies the same output/permission contract through the Pi subprocess adapte
     isHeadless: true,
   };
   const agent = new PiAgent(config);
-  const sent: Record<string, unknown>[] = [];
-  const runtime = agent as unknown as {
-    send: (message: Record<string, unknown>) => void;
-    emitAutomationEvent: () => Promise<void>;
-    handlePreToolUseRequest: (message: Record<string, unknown>) => Promise<void>;
-    subprocessRuntimeContext?: { runtimeId: string; sessionId: string };
-  };
-  runtime.send = message => sent.push(message);
-  runtime.emitAutomationEvent = async () => {};
-  runtime.subprocessRuntimeContext = { runtimeId: 'rtk-pi-runtime', sessionId: 'rtk-pi-child' };
+  const sent: Parameters<PiAgent['send']>[0][] = [];
+  const runtime = agent;
+  runtime['send'] = message => { sent.push(message); return true; };
+  runtime['emitAutomationEvent'] = async () => {};
+  runtime['subprocessRuntimeContext'] = { runtimeId: 'rtk-pi-runtime', sessionId: 'rtk-pi-child' };
   agent.setPermissionMode('allow-all');
   try {
     const request = {
+      type: 'pre_tool_use_request' as const,
       requestId: 'rtk-pi-on', toolCallId: 'rtk-pi-tool-on',
       toolName: 'Bash', input: { command: 'pytest test_example.py' },
     };
-    await runtime.handlePreToolUseRequest(request);
+    await runtime['handlePreToolUseRequest'](request);
     expect(sent.at(-1)).toMatchObject({ action: 'modify' });
-    expect(String((sent.at(-1)?.input as Record<string, unknown>).command)).toContain('RTK full output:');
+    const message: unknown = sent.at(-1);
+    if (!isJsonObject(message) || !isJsonObject(message['input'])) throw new Error('Missing tool modification');
+    expect(String(message['input']['command'])).toContain('RTK full output:');
     expect(request.input.command).toBe('pytest test_example.py');
     writeFileSync(profileConfig, JSON.stringify({ workspaces: [], activeWorkspaceId: null, activeSessionId: null, rtkEnabled: false }));
-    await runtime.handlePreToolUseRequest({
+    await runtime['handlePreToolUseRequest']({
       ...request, requestId: 'rtk-pi-off', toolCallId: 'rtk-pi-tool-off',
     });
-    expect(sent.at(-1)?.action).toBe('allow');
+    expect(sent.at(-1)).toMatchObject({ action: 'allow' });
   } finally {
     agent.destroy();
     resetRtkPathCache();
@@ -305,7 +304,7 @@ it.skipIf(process.platform !== 'darwin')('preserves real macOS bundle protection
   writeFileSync(marker, 'INTACT');
   const profile = buildApplicationProtectionProfile([bundle]);
   const f = fixture();
-  for (const command of [f.input.command, String(f.rewritten.input.command)]) {
+  for (const command of [f.input.command, String(f.rewritten.input["command"])]) {
     const result = spawnSync('/usr/bin/sandbox-exec', ['-p', profile, '/bin/bash', '-c', command], {
       cwd: root, encoding: 'utf8',
       env: { ...process.env, PATH: `${bin}:/usr/bin:/bin`, ROBB_RUN_COUNT: f.count, ROBB_STDOUT: output, ROBB_PROTECTED_TARGET: marker },
@@ -319,14 +318,14 @@ it.skipIf(process.platform !== 'darwin')('preserves real macOS bundle protection
 
 function withHostResourceRoots(physical: string | undefined, server: string | undefined, action: () => void) {
   const original = {
-    CRAFT_RESOURCES_BASE: process.env.CRAFT_RESOURCES_BASE,
-    CRAFT_BUNDLED_ASSETS_ROOT: process.env.CRAFT_BUNDLED_ASSETS_ROOT,
-    PATH: process.env.PATH,
+    CRAFT_RESOURCES_BASE: process.env["CRAFT_RESOURCES_BASE"],
+    CRAFT_BUNDLED_ASSETS_ROOT: process.env["CRAFT_BUNDLED_ASSETS_ROOT"],
+    PATH: process.env["PATH"],
   };
   try {
-    if (physical) process.env.CRAFT_RESOURCES_BASE = physical; else delete process.env.CRAFT_RESOURCES_BASE;
-    if (server) process.env.CRAFT_BUNDLED_ASSETS_ROOT = server; else delete process.env.CRAFT_BUNDLED_ASSETS_ROOT;
-    process.env.PATH = '/usr/bin:/bin';
+    if (physical) process.env["CRAFT_RESOURCES_BASE"] = physical; else delete process.env["CRAFT_RESOURCES_BASE"];
+    if (server) process.env["CRAFT_BUNDLED_ASSETS_ROOT"] = server; else delete process.env["CRAFT_BUNDLED_ASSETS_ROOT"];
+    process.env["PATH"] = '/usr/bin:/bin';
     resetRtkPathCache();
     action();
   } finally {
@@ -357,7 +356,7 @@ it('prefers physical Electron resources over an existing ASAR member and PATH', 
     // The problematic layout is reproduced even outside Electron: an existing
     // virtual-looking member must never win over the actual packaged binary.
     expect(existsSync(virtualBinary)).toBe(true);
-    process.env.PATH = `${join(expected, '..')}:/usr/bin:/bin`;
+    process.env["PATH"] = `${join(expected, '..')}:/usr/bin:/bin`;
     const status = getRtkStatus({ forceRecheck: true });
     expect(status).toEqual({ installed: true, path: expected, version: '0.43.0', source: 'bundled' });
   });
@@ -377,7 +376,7 @@ it('rejects ASAR executable candidates and accepts a physical .asar.unpacked dir
   const virtual = stageDetectorFixture(asar);
   setBundledAssetsRoot(asar);
   withHostResourceRoots(asar, undefined, () => {
-    process.env.PATH = `${join(virtual, '..')}:/usr/bin:/bin`;
+    process.env["PATH"] = `${join(virtual, '..')}:/usr/bin:/bin`;
     expect(getRtkStatus({ forceRecheck: true })).toEqual({ installed: false, path: null, version: null, source: null });
   });
   const unpacked = join(root, 'detector-only', 'app.asar.unpacked');

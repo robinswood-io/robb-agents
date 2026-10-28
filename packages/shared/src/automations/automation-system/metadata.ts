@@ -6,26 +6,26 @@ import { log } from './shared.ts';
 export async function updateSessionMetadata(transportOwner: AutomationSystem, sessionId: string, next: SessionMetadataSnapshot): Promise<AppEvent[]> {
     if (transportOwner["disposed"])
         return [];
-    const sessionToken = transportOwner["getOrCreateSessionMetadataToken"](sessionId);
-    const lifecycleToken = transportOwner["metadataLifecycleToken"];
-    const previous = transportOwner["sessionMetadataUpdateTails"].get(sessionId) ?? Promise.resolve();
-    const operation = previous.catch(() => undefined).then(() => (transportOwner["updateSessionMetadataNow"](sessionId, next, sessionToken, lifecycleToken)));
+    const sessionToken = transportOwner.getOrCreateSessionMetadataToken(sessionId);
+    const lifecycleToken = transportOwner.metadataLifecycleToken;
+    const previous = transportOwner.sessionMetadataUpdateTails.get(sessionId) ?? Promise.resolve();
+    const operation = previous.catch(() => undefined).then(() => (transportOwner.updateSessionMetadataNow(sessionId, next, sessionToken, lifecycleToken)));
     const tail = operation.then(() => undefined, () => undefined);
-    transportOwner["sessionMetadataUpdateTails"].set(sessionId, tail);
+    transportOwner.sessionMetadataUpdateTails.set(sessionId, tail);
     try {
         return await operation;
     }
     finally {
-        if (transportOwner["sessionMetadataUpdateTails"].get(sessionId) === tail) {
-            transportOwner["sessionMetadataUpdateTails"].delete(sessionId);
+        if (transportOwner.sessionMetadataUpdateTails.get(sessionId) === tail) {
+            transportOwner.sessionMetadataUpdateTails.delete(sessionId);
         }
     }
 }
 
 export async function updateSessionMetadataNow(transportOwner: AutomationSystem, sessionId: string, next: SessionMetadataSnapshot, sessionToken: object, lifecycleToken: object): Promise<AppEvent[]> {
     const isCurrent = (): boolean => (!transportOwner["disposed"]
-        && transportOwner["metadataLifecycleToken"] === lifecycleToken
-        && transportOwner["sessionMetadataTokens"].get(sessionId) === sessionToken);
+        && transportOwner.metadataLifecycleToken === lifecycleToken
+        && transportOwner.sessionMetadataTokens.get(sessionId) === sessionToken);
     if (!isCurrent())
         return [];
     const prev = transportOwner["lastKnownMetadata"].get(sessionId) ?? {};
@@ -40,7 +40,7 @@ export async function updateSessionMetadataNow(transportOwner: AutomationSystem,
             return emittedEvents;
         await transportOwner["eventBus"].emit('PermissionModeChange', {
             sessionId,
-            sessionName,
+            ...(sessionName !== undefined ? { sessionName } : {}),
             workspaceId: transportOwner["options"].workspaceId,
             timestamp,
             labels,
@@ -60,7 +60,7 @@ export async function updateSessionMetadataNow(transportOwner: AutomationSystem,
                 return emittedEvents;
             await transportOwner["eventBus"].emit('LabelAdd', {
                 sessionId,
-                sessionName,
+                ...(sessionName !== undefined ? { sessionName } : {}),
                 workspaceId: transportOwner["options"].workspaceId,
                 timestamp,
                 labels: [...nextLabels],
@@ -77,7 +77,7 @@ export async function updateSessionMetadataNow(transportOwner: AutomationSystem,
                 return emittedEvents;
             await transportOwner["eventBus"].emit('LabelRemove', {
                 sessionId,
-                sessionName,
+                ...(sessionName !== undefined ? { sessionName } : {}),
                 workspaceId: transportOwner["options"].workspaceId,
                 timestamp,
                 labels: [...nextLabels],
@@ -96,7 +96,7 @@ export async function updateSessionMetadataNow(transportOwner: AutomationSystem,
             return emittedEvents;
         await transportOwner["eventBus"].emit('FlagChange', {
             sessionId,
-            sessionName,
+            ...(sessionName !== undefined ? { sessionName } : {}),
             workspaceId: transportOwner["options"].workspaceId,
             timestamp,
             labels,
@@ -112,7 +112,7 @@ export async function updateSessionMetadataNow(transportOwner: AutomationSystem,
             return emittedEvents;
         await transportOwner["eventBus"].emit('SessionStatusChange', {
             sessionId,
-            sessionName,
+            ...(sessionName !== undefined ? { sessionName } : {}),
             workspaceId: transportOwner["options"].workspaceId,
             timestamp,
             labels,
@@ -136,7 +136,7 @@ export async function updateSessionMetadataNow(transportOwner: AutomationSystem,
 export function removeSessionMetadata(transportOwner: AutomationSystem, sessionId: string): void {
     // Deleting the opaque token invalidates all older work without retaining a
     // tombstone for every session ever removed.
-    transportOwner["sessionMetadataTokens"].delete(sessionId);
+    transportOwner.sessionMetadataTokens.delete(sessionId);
     transportOwner["lastKnownMetadata"].delete(sessionId);
     log.debug(`[AutomationSystem] Removed metadata for session ${sessionId}`);
 }
@@ -144,16 +144,16 @@ export function removeSessionMetadata(transportOwner: AutomationSystem, sessionI
 export function setInitialSessionMetadata(transportOwner: AutomationSystem, sessionId: string, metadata: SessionMetadataSnapshot): void {
     if (transportOwner["disposed"])
         return;
-    transportOwner["sessionMetadataTokens"].set(sessionId, {});
+    transportOwner.sessionMetadataTokens.set(sessionId, {});
     transportOwner["lastKnownMetadata"].set(sessionId, { ...metadata });
 }
 
 export function getOrCreateSessionMetadataToken(transportOwner: AutomationSystem, sessionId: string): object {
-    const current = transportOwner["sessionMetadataTokens"].get(sessionId);
+    const current = transportOwner.sessionMetadataTokens.get(sessionId);
     if (current)
         return current;
     const token = {};
-    transportOwner["sessionMetadataTokens"].set(sessionId, token);
+    transportOwner.sessionMetadataTokens.set(sessionId, token);
     return token;
 }
 

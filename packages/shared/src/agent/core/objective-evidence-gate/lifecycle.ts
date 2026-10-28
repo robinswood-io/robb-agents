@@ -96,7 +96,7 @@ export function recordObjectiveEvidence(
   if (REVIEW_TOOL_PATTERN.test(toolName)) {
     state.independentReviewAttempted = true;
     state.reviewInvalidatedByMutation = false;
-    state.lastMutationTool = undefined;
+    delete state.lastMutationTool
     const receipt = parseIndependentReviewReceipt(result, reviewContext
       ? { ...reviewContext, toolName }
       : WAIT_SESSIONS_TOOL_PATTERN.test(toolName)
@@ -145,7 +145,7 @@ export function checkObjectiveEvidenceBeforeMutation(
   // stale PASS after a possibly-applied mutation would be a false positive.
   state.independentReviewObserved = false;
   state.independentReviewAttempted = false;
-  state.lastReviewVerdict = undefined;
+  delete state.lastReviewVerdict
   state.reviewInvalidatedByMutation = true;
   state.lastMutationTool = toolName;
   return { allowed: true };

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * WsRpcClient — WebSocket-based RPC client.
  *
@@ -19,49 +20,51 @@ export type { TransportMode, TransportConnectionStatus, TransportConnectionError
 // ---------------------------------------------------------------------------
 // WsRpcClient
 // ---------------------------------------------------------------------------
+export type RpcWebSocket = WebSocket | import('ws').WebSocket;
+
 export class WsRpcClient implements RpcClient {
-    private ws: WebSocket | null = null;
+    private ws: RpcWebSocket | null = null;
     private pending = new Map<string, PendingRequest>();
     private listeners = new Map<string, Set<RpcListener>>();
     private capabilityHandlers = new Map<string, CapabilityHandler>();
     private connectionStateListeners = new Set<(state: TransportConnectionState) => void>();
     private anyEventListeners = new Set<AnyEventListener>();
-    private clientId: string | null = null;
+    /** @internal */ public clientId: string | null = null;
     private _serverVersion: string | null = null;
     private connected = false;
-    private reconnectAttempt = 0;
-    private lastSeenSeq = 0;
-    private ackTimer: ReturnType<typeof setInterval> | null = null;
-    private pendingReconnect: {
+    /** @internal */ public reconnectAttempt = 0;
+    /** @internal */ public lastSeenSeq = 0;
+    /** @internal */ public ackTimer: ReturnType<typeof setInterval> | null = null;
+    /** @internal */ public pendingReconnect: {
         clientId: string;
         lastSeq: number;
     } | null = null;
-    private currentHandshakeWasReconnect = false;
-    private manualReconnectRequested = false;
+    /** @internal */ public currentHandshakeWasReconnect = false;
+    /** @internal */ public manualReconnectRequested = false;
     private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-    private connectTimer: ReturnType<typeof setTimeout> | null = null;
-    private backoffResetTimer: ReturnType<typeof setTimeout> | null = null;
+    /** @internal */ public connectTimer: ReturnType<typeof setTimeout> | null = null;
+    /** @internal */ public backoffResetTimer: ReturnType<typeof setTimeout> | null = null;
     private destroyed = false;
     /** Set when server sends shuttingDown — prevents reconnection attempts. */
-    private permanentlyClosed = false;
-    private connectStarted = false;
+    /** @internal */ public permanentlyClosed = false;
+    /** @internal */ public connectStarted = false;
     private connectError: Error | null = null;
     private readyPromise: Promise<void> | null = null;
-    private resolveReady: (() => void) | null = null;
+    /** @internal */ public resolveReady: (() => void) | null = null;
     private rejectReady: ((error: Error) => void) | null = null;
     private connectionState: TransportConnectionState;
     private serverChannels: Set<string> | null = null;
     private readonly url: string;
-    private workspaceId: string | undefined;
-    private readonly webContentsId: number | undefined;
-    private readonly token: string | undefined;
-    private readonly clientCapabilities: string[];
+    /** @internal */ public workspaceId: string | undefined;
+    /** @internal */ public readonly webContentsId: number | undefined;
+    /** @internal */ public readonly token: string | undefined;
+    /** @internal */ public readonly clientCapabilities: string[];
     private readonly requestTimeout: number;
-    private readonly maxReconnectDelay: number;
-    private readonly autoReconnect: boolean;
-    private readonly connectTimeout: number;
+    /** @internal */ public readonly maxReconnectDelay: number;
+    /** @internal */ public readonly autoReconnect: boolean;
+    /** @internal */ public readonly connectTimeout: number;
     private readonly mode: TransportMode;
-    private readonly tlsRejectUnauthorized: boolean;
+    /** @internal */ public readonly tlsRejectUnauthorized: boolean;
     constructor(url: string, opts?: WsRpcClientOptions) {
         this.url = url;
         this.workspaceId = opts?.workspaceId;
@@ -143,11 +146,11 @@ export class WsRpcClient implements RpcClient {
         return this._serverVersion;
     }
     getConnectionState(): TransportConnectionState {
-        return {
+        return omitUndefined<TransportConnectionState>({
             ...this.connectionState,
             lastError: this.connectionState.lastError ? { ...this.connectionState.lastError } : undefined,
             lastClose: this.connectionState.lastClose ? { ...this.connectionState.lastClose } : undefined,
-        };
+        });
     }
     onConnectionStateChanged(callback: (state: TransportConnectionState) => void): () => void {
         this.connectionStateListeners.add(callback);
@@ -186,7 +189,7 @@ export class WsRpcClient implements RpcClient {
      * to support TLS options (e.g. rejectUnauthorized for self-signed certs).
      * In the renderer (browser), falls back to the global WebSocket.
      */
-    private createWebSocket(url: string): WebSocket {
+    /** @internal */ public createWebSocket(url: string): RpcWebSocket {
         return clientConnection.createWebSocket(this, url);
     }
     connect(): void {
@@ -201,30 +204,30 @@ export class WsRpcClient implements RpcClient {
     // -------------------------------------------------------------------------
     // Message handling
     // -------------------------------------------------------------------------
-    private onMessage(raw: string): void {
+    /** @internal */ public onMessage(raw: string): void {
         return clientMessages.onMessage(this, raw);
     }
-    private async onServerRequest(envelope: MessageEnvelope): Promise<void> {
+    /** @internal */ public async onServerRequest(envelope: MessageEnvelope): Promise<void> {
         return clientMessages.onServerRequest(this, envelope);
     }
     // -------------------------------------------------------------------------
     // Reconnection
     // -------------------------------------------------------------------------
-    private onDisconnect(closeEvent?: {
+    /** @internal */ public onDisconnect(closeEvent?: {
         code?: number;
         reason?: string;
         wasClean?: boolean;
     }): void {
         return clientConnection.onDisconnect(this, closeEvent);
     }
-    private scheduleReconnect(): void {
+    /** @internal */ public scheduleReconnect(): void {
         return clientConnection.scheduleReconnect(this);
     }
-    private scheduleBackoffReset(): void {
+    /** @internal */ public scheduleBackoffReset(): void {
         return clientConnection.scheduleBackoffReset(this);
     }
     /** Best-effort send that skips closing/closed sockets and swallows send races. */
-    private trySendEnvelope(ws: Pick<WebSocket, 'readyState' | 'OPEN' | 'send'> | null, envelope: MessageEnvelope): boolean {
+    private trySendEnvelope(ws: { readyState: number; OPEN: number; send(data: string): void } | null, envelope: MessageEnvelope): boolean {
         if (!ws || ws.readyState !== ws.OPEN)
             return false;
         try {
@@ -236,10 +239,10 @@ export class WsRpcClient implements RpcClient {
         }
     }
     /** Periodically send sequence_ack so server can evict acknowledged events. */
-    private startAckTimer(): void {
+    /** @internal */ public startAckTimer(): void {
         return clientMessages.startAckTimer(this);
     }
-    private createReadyPromise(): void {
+    /** @internal */ public createReadyPromise(): void {
         this.readyPromise = new Promise<void>((resolve, reject) => {
             this.resolveReady = resolve;
             this.rejectReady = reject;
@@ -248,7 +251,7 @@ export class WsRpcClient implements RpcClient {
         // Attach a noop catch to avoid noisy unhandled rejection warnings.
         this.readyPromise.catch(() => { });
     }
-    private failReady(error: Error): void {
+    /** @internal */ public failReady(error: Error): void {
         if (!this.rejectReady)
             return;
         this.rejectReady(error);
@@ -308,7 +311,7 @@ export class WsRpcClient implements RpcClient {
         }
         return 'remote';
     }
-    private setConnectionState(partial: Omit<Partial<TransportConnectionState>, 'mode' | 'url' | 'updatedAt'>): void {
+    /** @internal */ public setConnectionState(partial: Omit<Partial<TransportConnectionState>, 'mode' | 'url' | 'updatedAt'>): void {
         this.connectionState = {
             ...this.connectionState,
             ...partial,
@@ -326,7 +329,7 @@ export class WsRpcClient implements RpcClient {
             }
         }
     }
-    private createConnectionError(kind: TransportConnectionErrorKind, message: string, code?: string): Error {
+    /** @internal */ public createConnectionError(kind: TransportConnectionErrorKind, message: string, code?: string): Error {
         const err: Error & {
             kind?: TransportConnectionErrorKind;
             code?: string;
@@ -336,7 +339,7 @@ export class WsRpcClient implements RpcClient {
             err.code = code;
         return err;
     }
-    private toErrorState(err: Error & {
+    /** @internal */ public toErrorState(err: Error & {
         code?: unknown;
         kind?: unknown;
     }): TransportConnectionError {
@@ -349,7 +352,7 @@ export class WsRpcClient implements RpcClient {
         return {
             kind,
             message: err.message,
-            code,
+            ...(code !== undefined ? { code: code } : {}),
         };
     }
     private classifyErrorKindFromCode(code?: unknown): TransportConnectionErrorKind {

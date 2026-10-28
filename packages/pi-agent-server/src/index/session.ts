@@ -57,7 +57,7 @@ export async function ensureSession(runtimeState: PiRuntimeState): Promise<Agent
     // do not expose external web_search (DuckDuckGo fallback) or web_fetch unless explicitly opted in.
     const isStrictLocalEndpoint = !!runtimeState.initConfig?.baseUrl
         && isLocalhostUrl(runtimeState.initConfig.baseUrl)
-        && process.env.ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS !== '1';
+        && process.env["ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS"] !== '1';
     const webTools = isStrictLocalEndpoint ? [] : [searchTool, webFetchTool];
     // Pi SDK registration contract:
     //   - `customTools` accepts ToolDefinition[] — our hook-wrapped objects go here
@@ -141,7 +141,7 @@ export async function ensureSession(runtimeState: PiRuntimeState): Promise<Agent
     runtimeState.systemPromptController = await createSystemPromptController({
         cwd,
         agentDir: sessionOptions.agentDir ?? getAgentDir(),
-        settingsManager: sessionOptions.settingsManager,
+        ...(sessionOptions.settingsManager !== undefined ? { settingsManager: sessionOptions.settingsManager } : {}),
     });
     sessionOptions.resourceLoader = runtimeState.systemPromptController.resourceLoader;
     // Create the session — tools flow through customTools + allowlist (see comment above).
@@ -166,7 +166,7 @@ export async function ensureSession(runtimeState: PiRuntimeState): Promise<Agent
                 : 0;
         if (needsIntraTurnContextCheckpoint(transformed, compactAtTokens)) {
             debugLog(`Intra-turn context checkpoint: estimated=${estimateIntraTurnContextTokens(transformed)} threshold=${compactAtTokens}`);
-            if (process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT === '1') {
+            if (process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] === '1') {
                 throw new Error(INTRA_TURN_CONTEXT_CHECKPOINT_ERROR);
             }
             return pruneIntraTurnToolResults(transformed, compactAtTokens);
@@ -204,7 +204,7 @@ export async function handleInit(runtimeState: PiRuntimeState, msg: Extract<Inbo
     // Azure OpenAI requires a tenant-specific endpoint URL.
     // The Pi SDK (via Vercel AI SDK) reads AZURE_OPENAI_BASE_URL from env.
     if (msg.piAuth?.provider === 'azure-openai-responses' && msg.baseUrl) {
-        process.env.AZURE_OPENAI_BASE_URL = msg.baseUrl;
+        process.env["AZURE_OPENAI_BASE_URL"] = msg.baseUrl;
         debugLog(`Set AZURE_OPENAI_BASE_URL=${msg.baseUrl}`);
     }
     // Start callback server for call_llm (idempotent — skips if already running)

@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { boundObjectiveForCleanHandoff, nextRecoveryDispatch, classifyAutomaticRecoveryWorkForSession, isImmutableAutomaticRecoveryBlock } from '../policy.ts';
 import { resolveAgentCostControlPolicy } from '@craft-agent/shared/config';
@@ -72,12 +74,12 @@ async function sessionOpEnqueueAutomaticTurnRecovery(sessionOperationContext: Se
         // instruction remains independently dispatchable without creating a new
         // recovery budget or marking its preserved objective exhausted.
         if (pending && (validationGaps !== undefined || continuationWork !== undefined)) {
-            managed.pendingTurnRecovery = {
+            managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
                 ...pending,
                 validationGaps: boundedGaps,
                 continuationWork: nextContinuationWork,
                 continuationOrigin,
-            };
+            });
             sessionOperationContext.owner["persistSession"](managed);
             await sessionOperationContext.owner.flushSession(managed.id);
         }
@@ -87,12 +89,12 @@ async function sessionOpEnqueueAutomaticTurnRecovery(sessionOperationContext: Se
         return false;
     const lineage = inspectAutonomousLineage(managed, id => sessionOperationContext.state.sessions.get(id), false, id => { const session = sessionOperationContext.state.sessions.get(id); return !!session && sessionOpHasPendingDecision(sessionOperationContext, session); });
     if (!lineage.allowed && isImmutableAutomaticRecoveryBlock(lineage.reason)) {
-        managed.pendingTurnRecovery = {
+        managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
             ...pending, lastCause: cause, validationGaps: boundedGaps,
             continuationWork: nextContinuationWork,
             continuationOrigin,
             continuationRequired: true,
-        };
+        });
         await sessionOpTerminalizeImmutableAutomaticRecoveryBlock(sessionOperationContext, managed, lineage);
         // This is a durable terminal handoff. Callers should stop the current
         // generation normally instead of manufacturing another retry/error.
@@ -101,12 +103,12 @@ async function sessionOpEnqueueAutomaticTurnRecovery(sessionOperationContext: Se
     if (!lineage.allowed || sessionOpAutonomousAdmissionBlock(sessionOperationContext, managed, false, false)) {
         sessionOperationContext.state.deferredAutomaticSessions.add(managed.id);
         // Retention is a successful handoff, not a spent retry or contract failure.
-        managed.pendingTurnRecovery = {
+        managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
             ...pending, lastCause: cause, validationGaps: boundedGaps,
             continuationWork: nextContinuationWork,
             continuationOrigin,
             continuationRequired: true,
-        };
+        });
         sessionOperationContext.owner["persistSession"](managed);
         await sessionOperationContext.owner.flushSession(managed.id);
         return true;
@@ -218,21 +220,21 @@ async function sessionOpEnqueueAutomaticTurnRecovery(sessionOperationContext: Se
                     ? turnRecoveryValidationFingerprint(normalizeRecoveryValidationGapsForProgress(effectiveGaps))
                     : turnProgressFingerprint(managed.messages, pending.userMessageId);
     const recoveryAllocatedAt = Date.now();
-    const planningPending: PendingTurnRecovery = {
+    const planningPending: PendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
         ...pending,
         // A structured answer is a new authenticated human input, so an old
         // automatic stop marker may not suppress its first provider delivery.
         // Keep the monotonic attempt count: only the terminal marker is reopened,
         // which leaves at most the existing absolute-budget remainder.
-        ...(authenticatedUserInputRestart ? {
-            exhaustedAt: undefined,
-            validationExhausted: undefined,
-        } : {}),
         lastCause: cause,
         validationGaps: boundedGaps,
         continuationWork: nextContinuationWork,
         continuationOrigin,
-    };
+    });
+    if (authenticatedUserInputRestart) {
+        delete planningPending.exhaustedAt;
+        delete planningPending.validationExhausted;
+    }
     const planInput = {
         cause,
         objective: managed.activeObjective,
@@ -284,10 +286,10 @@ async function sessionOpEnqueueAutomaticTurnRecovery(sessionOperationContext: Se
         if (cleanDispatchPlan.action !== 'dispatch') {
             throw new Error('A clean recovery continuation could not allocate its first bounded dispatch');
         }
-        advanced = {
+        advanced = omitUndefined<PendingTurnRecovery>({
             ...cleanDispatchPlan.recovery,
             cleanContextBoundaryMessageId: undefined,
-        };
+        });
         const dispatchedHandoff = (boundedObjective && remainingWork
             ? createCleanRecoveryContinuationHandoff({
                 objective: boundedObjective.objective,
@@ -305,11 +307,11 @@ async function sessionOpEnqueueAutomaticTurnRecovery(sessionOperationContext: Se
         }
     }
     if (requiresCleanProviderBoundary && !cleanContinuationId) {
-        const cleanPending: PendingTurnRecovery = {
+        const cleanPending: PendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
             ...advanced,
             recoveryDispatch: undefined,
             cleanContextBoundaryMessageId: undefined,
-        };
+        });
         const handoff = sessionOperationContext.owner["createAutonomousContextLimitHandoff"](managed, cleanPending);
         const cleanPrompt = handoff && buildCleanRecoveryContinuationPrompt(handoff);
         if (handoff && cleanPrompt) {
@@ -332,7 +334,7 @@ async function sessionOpEnqueueAutomaticTurnRecovery(sessionOperationContext: Se
             ? { carriedUserInputResponseId: authenticatedUserInputResponse.responseMessageId }
             : {}),
     };
-    managed.pendingTurnRecovery = {
+    managed.pendingTurnRecovery = omitUndefined<PendingTurnRecovery>({
         ...advanced,
         validationGaps: boundedGaps,
         continuationWork: nextContinuationWork,
@@ -341,7 +343,7 @@ async function sessionOpEnqueueAutomaticTurnRecovery(sessionOperationContext: Se
         ...(cleanContinuationId || detachProviderWithoutCleanHandoff
             ? { cleanContextBoundaryMessageId: recoveryDispatch.id }
             : {}),
-    };
+    });
     const recoveryPrompt = sessionOpBuildRecoveryDispatchMessage(sessionOperationContext, managed, managed.pendingTurnRecovery, recoveryDispatch);
     if (cleanContinuationId || detachProviderWithoutCleanHandoff) {
         // The allocation flush is the crash fence for a clean provider handoff.
@@ -373,7 +375,7 @@ async function sessionOpEnqueueAutomaticTurnRecovery(sessionOperationContext: Se
         const checkpoint = demoteLatestCheckpointAssistant(managed.messages, pending.userMessageId);
         if (checkpoint) {
             managed.lastFinalMessageId = latestFinalAssistantId(managed.messages);
-            sessionOperationContext.owner["sendEvent"]({
+            sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'text_complete' }>>({
                 type: 'text_complete', sessionId: managed.id,
                 text: checkpoint.content, isIntermediate: true,
                 turnId: checkpoint.turnId, parentToolUseId: checkpoint.parentToolUseId,
@@ -381,7 +383,7 @@ async function sessionOpEnqueueAutomaticTurnRecovery(sessionOperationContext: Se
                 routingMeta: checkpoint.routingMeta,
                 objectiveOutcome: checkpoint.objectiveOutcome ?? null,
                 objectiveOutcomeError: checkpoint.objectiveOutcomeError ?? null,
-            }, managed.workspace.id);
+            }), managed.workspace.id);
         }
         sessionOpRecordAutonomyEvent(sessionOperationContext, managed, {
             phase: 'fallback',

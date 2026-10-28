@@ -180,9 +180,9 @@ export function validateToolIcons(): ValidationResult {
 
   // Filesystem-specific check: verify referenced icon files exist
   try {
-    const parsed = safeJsonParse(raw) as Record<string, unknown>;
-    if (parsed.tools && Array.isArray(parsed.tools)) {
-      for (const tool of parsed.tools) {
+    const parsed = ToolIconsConfigSchema.safeParse(safeJsonParse(raw));
+    if (parsed.success) {
+      for (const tool of parsed.data.tools) {
         if (tool.icon) {
           const iconPath = join(toolIconsDir, tool.icon);
           if (!existsSync(iconPath)) {

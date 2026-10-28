@@ -77,7 +77,7 @@ describe('bounded automatic admission', () => {
     const entered = deferred(), release = deferred(); let hydrations = 0, preparations = 0
     h.runtime.ensureMessagesLoaded = async () => { if (++hydrations === hydrationIndex) { entered.resolve(); await release.promise } }
     h.runtime.getOrCreateAgent = async () => { preparations++; throw new Error('Must not prepare after Stop') }
-    const retry = h.manager.retryTurn(target.id, `${target.id}-user`).then(() => undefined, error => error)
+    const retry = h.manager.retryTurn(target.id, `${target.id}-user`).then(() => undefined, (error: unknown) => error)
     await entered.promise; await h.manager.cancelProcessing(target.id)
     release.resolve(); const error = await retry
     expect(error).toBeInstanceOf(Error)
@@ -92,7 +92,7 @@ describe('bounded automatic admission', () => {
     const entered = deferred(), release = deferred(); let hydrations = 0, preparations = 0
     h.runtime.ensureMessagesLoaded = async () => { if (++hydrations === 2) { entered.resolve(); await release.promise } }
     h.runtime.getOrCreateAgent = async () => { preparations++; throw new Error('Must not prepare') }
-    const retry = h.manager.retryTurn(target.id, `${target.id}-user`).then(() => undefined, error => error)
+    const retry = h.manager.retryTurn(target.id, `${target.id}-user`).then(() => undefined, (error: unknown) => error)
     await entered.promise
     if (change === 'human') {
       target.messages.push({ id: 'new-human', role: 'user', content: 'Change the objective.', timestamp: 3, isQueued: true })
@@ -118,7 +118,7 @@ describe('bounded automatic admission', () => {
     const flush = h.manager.flushSession.bind(h.manager)
     h.manager.flushSession = async id => { if (++flushes === 1) { entered.resolve(); await release.promise } await flush(id) }
     h.runtime.getOrCreateAgent = async () => { preparations++; throw new Error('Must not prepare') }
-    const retry = h.manager.retryTurn(target.id, `${target.id}-user`).then(() => undefined, error => error)
+    const retry = h.manager.retryTurn(target.id, `${target.id}-user`).then(() => undefined, (error: unknown) => error)
     await entered.promise
     target.messages.push({ id: 'new-human', role: 'user', content: 'Change the objective.', timestamp: 3, isQueued: true })
     target.messageQueue.push({ messageId: 'new-human', message: 'Change the objective.' })

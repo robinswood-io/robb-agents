@@ -19,11 +19,11 @@ export function useAppDrafts({
 const draftSaveTimeoutRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
 useEffect(() => {
+    const pendingDraftTimers = draftSaveTimeoutRef.current;
     return () => {
       // The ref holds the live timer map for this app instance through unmount.
-      draftSaveTimeoutRef.current.forEach(clearTimeout)
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      draftSaveTimeoutRef.current.clear()
+      pendingDraftTimers.forEach(clearTimeout)
+      pendingDraftTimers.clear()
     }
   }, [draftSaveTimeoutRef])
 

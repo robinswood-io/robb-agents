@@ -101,7 +101,7 @@ const appShellContextValue = useMemo<AppShellContextType>(() => ({
     activeWorkspaceId: windowWorkspaceId,
     activeWorkspaceSlug: windowWorkspaceSlug,
     llmConnections,
-    workspaceDefaultLlmConnection,
+    ...(workspaceDefaultLlmConnection !== undefined ? { workspaceDefaultLlmConnection: workspaceDefaultLlmConnection } : {}),
     refreshLlmConnections,
     pendingPermissions,
     pendingCredentials,

@@ -6,7 +6,7 @@ import type { SpecializedProfileService } from '../SpecializedProfileService.ts'
 export async function analyze(transportOwner: SpecializedProfileService, workspaceId: string): Promise<SpecializedProfileAnalysisResult> {
     transportOwner["requireWorkspace"](workspaceId);
     const snapshots = await transportOwner["options"].listMissions(workspaceId);
-    const window = await transportOwner["verifiedAnalysisWindow"](workspaceId, snapshots);
+    const window = await transportOwner.verifiedAnalysisWindow(workspaceId, snapshots);
     const observations = buildMissionSpecializationObservations(window.included);
     return {
         report: detectSpecializationOpportunities(observations.observations),
@@ -33,7 +33,7 @@ export async function verifiedAnalysisWindow(transportOwner: SpecializedProfileS
     included: MissionSnapshot[];
     excludedCount: number;
 }> {
-    const window = transportOwner["analysisWindow"](snapshots);
+    const window = transportOwner.analysisWindow(snapshots);
     if (!transportOwner["options"].missionEvidenceProvider) {
         throw new Error('Specialized profile analysis requires host-authenticated Mission evidence');
     }
@@ -51,7 +51,7 @@ export async function verifiedAnalysisWindow(transportOwner: SpecializedProfileS
             });
             if (verified.snapshot.spec.id !== candidate.spec.id
                 || !['completed', 'failed'].includes(verified.snapshot.status)
-                || transportOwner["analysisWindow"]([verified.snapshot]).included.length !== 1) {
+                || transportOwner.analysisWindow([verified.snapshot]).included.length !== 1) {
                 excludedCount += 1;
                 continue;
             }

@@ -182,7 +182,7 @@ describe('host synthetic objective authority', () => {
     }
     const check = (input: Record<string, unknown>, authority = legacyAuthority) => runPreToolUseChecks({
       toolName: 'mcp__rbw-servers__ssh_execute', input,
-      sessionId: managed.id, toolUseId: `call-${String(input.server)}-${String(input.cwd)}`,
+      sessionId: managed.id, toolUseId: `call-${String(input["server"])}-${String(input["cwd"])}`,
       permissionMode: 'allow-all', workspaceRootPath: managed.workspace.rootPath,
       workspaceId: managed.workspace.id, activeSourceSlugs: ['rbw-servers'],
       allSourceSlugs: ['rbw-servers'], hasSourceActivation: false,

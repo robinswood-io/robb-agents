@@ -4,7 +4,6 @@ import { runShutdownCleanup } from './shutdown-cleanup';
 // This ensures tools like Homebrew, nvm, etc. are available to the agent
 import { loadShellEnv } from './shell-env';
 loadShellEnv()
-
 import { app, BrowserWindow } from 'electron';
 import { createHash } from 'crypto';
 import { hostname, homedir } from 'os';
@@ -25,11 +24,11 @@ const IS_DEVELOPMENT_CHANNEL = APP_CHANNEL === 'development'
 //   2. Re-enable the @sentry/vite-plugin in vite.config.ts (handles renderer maps)
 //   3. Add @sentry/esbuild-plugin to scripts/electron-build-main.ts (handles main process maps)
 Sentry.init({
-  dsn: process.env.SENTRY_ELECTRON_INGEST_URL,
+  dsn: process.env["SENTRY_ELECTRON_INGEST_URL"],
   environment: APP_CHANNEL,
   release: app.getVersion(),
   // Opt-in only (ROBB_ENABLE_SENTRY=1) to preserve strict local confidentiality by default.
-  enabled: !!process.env.SENTRY_ELECTRON_INGEST_URL && process.env.ROBB_ENABLE_SENTRY === '1',
+  enabled: !!process.env["SENTRY_ELECTRON_INGEST_URL"] && process.env["ROBB_ENABLE_SENTRY"] === '1',
 
   // Scrub sensitive data before sending to Sentry.
   // Removes authorization headers, API keys/tokens, and credential-like values.
@@ -84,7 +83,7 @@ if (persistedUiLanguage) {
 
 // Set anonymous machine ID for Sentry user tracking (no PII — just a hash).
 // Uses hostname + homedir to produce a stable per-machine identifier.
-if (process.env.ROBB_ENABLE_SENTRY === '1') {
+if (process.env["ROBB_ENABLE_SENTRY"] === '1') {
   const machineId = createHash('sha256').update(hostname() + homedir()).digest('hex').slice(0, 16)
   Sentry.setUser({ id: machineId })
 }
@@ -145,9 +144,9 @@ mainLog.info('[i18n] startup hydration', {
 
 // Enable debug/perf in dev mode (running from source)
 if (isDebugMode) {
-  process.env.CRAFT_DEBUG = '1'
+  process.env["CRAFT_DEBUG"] = '1'
   // Do not implicitly enable developer feedback in dev mode unless explicitly opted in.
-  process.env.CRAFT_FEATURE_DEVELOPER_FEEDBACK ??= '0'
+  process.env["CRAFT_FEATURE_DEVELOPER_FEEDBACK"] ??= '0'
   enableDebug()
   setPerfEnabled(true)
 }
@@ -173,44 +172,44 @@ const runtimeAppRoot = resolveElectronRuntimeAppRoot(app)
   const fallbackUv = bundledUvExists ? null : 'uv'
 
   // Runtime resolver hints for shared session tools
-  process.env.CRAFT_IS_PACKAGED = app.isPackaged ? '1' : '0'
-  process.env.CRAFT_RESOURCES_BASE = resourcesBase
-  process.env.CRAFT_APP_ROOT = runtimeAppRoot
+  process.env["CRAFT_IS_PACKAGED"] = app.isPackaged ? '1' : '0'
+  process.env["CRAFT_RESOURCES_BASE"] = resourcesBase
+  process.env["CRAFT_APP_ROOT"] = runtimeAppRoot
 
-  process.env.CRAFT_UV = bundledUvExists ? uvBinary : (fallbackUv ?? uvBinary)
+  process.env["CRAFT_UV"] = bundledUvExists ? uvBinary : (fallbackUv ?? uvBinary)
 
   // Bun runtime (packaged builds should prefer bundled runtime over PATH)
   const bunBinary = join(resourcesBase, 'vendor', 'bun', process.platform === 'win32' ? 'bun.exe' : 'bun')
   if (existsSync(bunBinary)) {
-    process.env.CRAFT_BUN = bunBinary
+    process.env["CRAFT_BUN"] = bunBinary
   }
 
-  process.env.CRAFT_SCRIPTS = scriptsDir
-  process.env.CRAFT_COMMANDS_ENTRY = app.isPackaged
+  process.env["CRAFT_SCRIPTS"] = scriptsDir
+  process.env["CRAFT_COMMANDS_ENTRY"] = app.isPackaged
     ? join(runtimeAppRoot, 'packages', 'craft-agents-commands', 'src', 'main.ts')
     : join(process.cwd(), 'packages', 'craft-agents-commands', 'src', 'main.ts')
-  process.env.CRAFT_CLI_ENTRY = app.isPackaged
+  process.env["CRAFT_CLI_ENTRY"] = app.isPackaged
     ? join(runtimeAppRoot, 'packages', 'craft-cli', 'src', 'cli.ts')
     : join(process.cwd(), 'packages', 'craft-cli', 'src', 'cli.ts')
-  process.env.CRAFT_COMMANDS_DOC_PATH = app.isPackaged
+  process.env["CRAFT_COMMANDS_DOC_PATH"] = app.isPackaged
     ? join(resourcesBase, 'resources', 'docs', 'craft-cli.md')
     : join(process.cwd(), 'apps', 'electron', 'resources', 'docs', 'craft-cli.md')
-  process.env.CRAFT_CLI_DOC_PATH = process.env.CRAFT_COMMANDS_DOC_PATH
-  process.env.CRAFT_AGENT_VERSION = app.getVersion()
+  process.env["CRAFT_CLI_DOC_PATH"] = process.env["CRAFT_COMMANDS_DOC_PATH"]
+  process.env["CRAFT_AGENT_VERSION"] = app.getVersion()
   // Prepend both generic wrappers dir and platform uv dir:
   // - binDir exposes wrapper commands (pdf-tool, docx-tool, ...)
   // - uvPlatformDir exposes raw `uv` for direct shell usage / debugging
-  process.env.PATH = `${binDir}${delimiter}${uvPlatformDir}${delimiter}${process.env.PATH}`
+  process.env["PATH"] = `${binDir}${delimiter}${uvPlatformDir}${delimiter}${process.env["PATH"]}`
 
   if (!bundledUvExists) {
     mainLog.warn('Bundled uv binary missing, CLI document tools may fail unless uv is available on PATH.', {
       expectedUvPath: uvBinary,
-      usingCraftUv: process.env.CRAFT_UV,
+      usingCraftUv: process.env["CRAFT_UV"],
     })
   }
 
   if (isDebugMode) {
-    mainLog.info('CLI tools configured:', { uvBinary: process.env.CRAFT_UV, binDir, scriptsDir, bundledUvExists })
+    mainLog.info('CLI tools configured:', { uvBinary: process.env["CRAFT_UV"], binDir, scriptsDir, bundledUvExists })
   }
 }
 
@@ -222,12 +221,12 @@ registerPiModelResolver((piAuthProvider) =>
 
 // Custom URL scheme for deeplinks (e.g., craftagents://auth-complete)
 // Supports multi-instance dev: CRAFT_DEEPLINK_SCHEME env var (craftagents1, craftagents2, etc.)
-const DEEPLINK_SCHEME = process.env.CRAFT_DEEPLINK_SCHEME || getDefaultDeepLinkScheme(APP_CHANNEL)
+const DEEPLINK_SCHEME = process.env["CRAFT_DEEPLINK_SCHEME"] || getDefaultDeepLinkScheme(APP_CHANNEL)
 
 // Set app name early (before app.whenReady) to ensure correct macOS menu bar title
 // Supports isolated development instances while preserving the stable
 // production identity in release builds.
-app.setName(process.env.CRAFT_APP_NAME || getDefaultAppName(APP_CHANNEL))
+app.setName(process.env["CRAFT_APP_NAME"] || getDefaultAppName(APP_CHANNEL))
 
 // Share the established Craft data root (sessions, sources, projects and
 // credentials) while isolating Electron's cache, single-instance lock and
@@ -235,15 +234,16 @@ app.setName(process.env.CRAFT_APP_NAME || getDefaultAppName(APP_CHANNEL))
 // without a data migration.
 const robbRuntimeDir = join(CONFIG_DIR, 'robb-electron')
 app.setPath('userData', robbRuntimeDir)
-process.env.CRAFT_SERVER_LOCK_DIR = robbRuntimeDir
-process.env.CRAFT_CONFIG_DIR = CONFIG_DIR
+process.env["CRAFT_SERVER_LOCK_DIR"] = robbRuntimeDir
+process.env["CRAFT_CONFIG_DIR"] = CONFIG_DIR
 
 // Register as default protocol client for craftagents:// URLs
 // This must be done before app.whenReady() on some platforms
 if (process.defaultApp) {
   // Development mode: need to pass the app path
-  if (process.argv.length >= 2) {
-    app.setAsDefaultProtocolClient(DEEPLINK_SCHEME, process.execPath, [process.argv[1]])
+  const appPath = process.argv[1]
+  if (appPath !== undefined) {
+    app.setAsDefaultProtocolClient(DEEPLINK_SCHEME, process.execPath, [appPath])
   }
 } else {
   // Production mode
@@ -268,17 +268,17 @@ function normalizeOriginForCert(urlStr: string): string {
   return u.origin
 }
 
-if (process.env.CRAFT_SERVER_URL) {
+if (process.env["CRAFT_SERVER_URL"]) {
   let serverOrigin: string | undefined
   let allowSelfSignedCert = false
   try {
-    serverOrigin = normalizeOriginForCert(process.env.CRAFT_SERVER_URL)
+    serverOrigin = normalizeOriginForCert(process.env["CRAFT_SERVER_URL"])
     const parsedHost = new URL(serverOrigin).hostname.replace(/^\[|\]$/g, '').toLowerCase()
     const isLoopbackServer =
       parsedHost === '127.0.0.1' ||
       parsedHost === 'localhost' ||
       parsedHost === '::1'
-    const insecureTlsFlag = process.env.CRAFT_ALLOW_INSECURE_TLS?.trim().toLowerCase()
+    const insecureTlsFlag = process.env["CRAFT_ALLOW_INSECURE_TLS"]?.trim().toLowerCase()
     allowSelfSignedCert =
       isLoopbackServer ||
       insecureTlsFlag === '1' ||
@@ -312,7 +312,7 @@ app.on('open-url', (event, url) => {
   mainLog.info('Received deeplink:', url)
 
   if (mainState.windowManager) {
-    handleDeepLink(url, mainState.windowManager, mainState.moduleSink ?? undefined, mainState.moduleClientResolver ?? undefined).catch(err => {
+    handleDeepLink(url, mainState.windowManager, mainState.moduleSink ?? undefined, mainState.moduleClientResolver ?? undefined).catch((err: unknown) => {
       mainLog.error('Failed to handle deep link:', err)
     })
   } else {
@@ -334,14 +334,14 @@ if (!gotTheLock) {
     const url = commandLine.find(arg => arg.startsWith(`${DEEPLINK_SCHEME}://`))
     if (url && mainState.windowManager) {
       mainLog.info('Received deeplink from second instance:', url)
-      handleDeepLink(url, mainState.windowManager, mainState.moduleSink ?? undefined, mainState.moduleClientResolver ?? undefined).catch(err => {
+      handleDeepLink(url, mainState.windowManager, mainState.moduleSink ?? undefined, mainState.moduleClientResolver ?? undefined).catch((err: unknown) => {
         mainLog.error('Failed to handle deep link:', err)
       })
     } else if (mainState.windowManager) {
       // No deep link - just focus the first window
       const windows = mainState.windowManager.getAllWindows()
-      if (windows.length > 0) {
-        const win = windows[0].window
+      const win = windows[0]?.window
+      if (win) {
         if (win.isMinimized()) win.restore()
         win.focus()
       }
@@ -372,12 +372,12 @@ app.whenReady().then(async () => {
     APP_CHANNEL, IS_DEVELOPMENT_CHANNEL, runtimeAppRoot,
     createInitialWindows, captureAndSaveWindowState,
   })
-}).catch((error) => {
+}).catch((error: unknown) => {
   console.error('[Robb startup] initialization failed:', error)
 })
 
 app.on('window-all-closed', () => {
-  if (process.env.CRAFT_HEADLESS) return  // headless server stays alive
+  if (process.env["CRAFT_HEADLESS"]) return  // headless server stays alive
   // On macOS, apps typically stay active until explicitly quit
   if (process.platform !== 'darwin') {
     app.quit()
@@ -404,7 +404,7 @@ function captureAndSaveWindowState(reason: 'before-quit' | 'pre-update'): number
   const lastFocusedWorkspaceId = focusedWindow
     ? mainState.windowManager.getWorkspaceForWindow(focusedWindow.webContents.id) ?? undefined
     : undefined
-  saveWindowState({ windows, lastFocusedWorkspaceId })
+  saveWindowState({ windows, ...(lastFocusedWorkspaceId !== undefined ? { lastFocusedWorkspaceId: lastFocusedWorkspaceId } : {}) })
   mainLog.info('[window-state] saved', { windowCount: windows.length, reason })
   return windows.length
 }

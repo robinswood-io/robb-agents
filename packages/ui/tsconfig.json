@@ -9,7 +9,6 @@
     "moduleResolution": "bundler",
     "types": [
       "node",
-      "vite/client",
       "bun"
     ],
     "lib": [
@@ -24,7 +23,20 @@
       "@craft-agent/core/*": [
         "../core/src/*"
       ]
-    }
+    },
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "allowJs": false,
+    "skipLibCheck": false,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false
   },
   "include": [
     "src/**/*",

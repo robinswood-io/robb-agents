@@ -116,7 +116,7 @@ it.skipIf(process.platform !== 'darwin')('blocks installed-bundle writes even in
       expect(check({
         toolName, permissionMode: 'allow-all',
         input: { file_path: '/Applications/Robb Agents.app/Contents/Resources/app.asar' },
-      })).toMatchObject({ type: 'block', reason: expect.stringContaining('installed Robb Agents') });
+      })).toMatchObject({ type: 'block', reason: (expect.stringContaining('installed Robb Agents') as unknown) });
     }
   });
 
@@ -132,7 +132,7 @@ it('routes immutable criterion registration to its validator without an unrelate
     // executing the registered tool's command or bypassing real source evidence.
     expect(check({ toolName: 'Write', permissionMode: 'allow-all',
       input: { file_path: '/tmp/legal-document', content: 'changed' },
-    }, 'Corrige ce contrat juridique.')).toMatchObject({ type: 'block', reason: expect.stringContaining('High-stakes evidence gate') });
+    }, 'Corrige ce contrat juridique.')).toMatchObject({ type: 'block', reason: (expect.stringContaining('High-stakes evidence gate') as unknown) });
   });
 
 it('keeps explicit keyboard text a mutation across modes, aliases, batches and trusted-read hints', () => {
@@ -178,7 +178,7 @@ it('blocks browser mutations and unknown commands outside observational objectiv
       });
       expect(result).toMatchObject({
         type: 'block',
-        reason: expect.stringContaining('Objective authority'),
+        reason: (expect.stringContaining('Objective authority') as unknown),
       });
     }
 
@@ -198,7 +198,7 @@ it('blocks browser mutations and unknown commands outside observational objectiv
         permissionMode: 'allow-all',
         externalActionPolicy: 'allow-in-execute',
         objectiveMutationAuthorized: false,
-      })).toMatchObject({ type: 'block', reason: expect.stringContaining('Objective authority') });
+      })).toMatchObject({ type: 'block', reason: (expect.stringContaining('Objective authority') as unknown) });
     }
   });
 
@@ -212,7 +212,7 @@ it('keeps browser mutations blocked in Explore even when the objective authorize
         permissionMode: 'safe',
         objectiveMutationAuthorized: true,
         externalActionPolicy: 'allow-in-execute',
-      })).toMatchObject({ type: 'block', reason: expect.stringContaining('Explore') });
+      })).toMatchObject({ type: 'block', reason: (expect.stringContaining('Explore') as unknown) });
     }
 
     for (const [toolName, input] of [
@@ -231,7 +231,7 @@ it('keeps browser mutations blocked in Explore even when the objective authorize
         permissionMode: 'safe',
         objectiveMutationAuthorized: true,
         externalActionPolicy: 'allow-in-execute',
-      })).toMatchObject({ type: 'block', reason: expect.stringContaining('Explore') });
+      })).toMatchObject({ type: 'block', reason: (expect.stringContaining('Explore') as unknown) });
     }
 
     for (const command of canonicalCommands) {
@@ -316,7 +316,7 @@ it('blocks alternate browser, preflight, planning and model paths during termina
         allSourceSlugs: [...sources],
       })).toMatchObject({
         type: 'block',
-        reason: expect.stringContaining('Terminal reconciliation is host-locked'),
+        reason: (expect.stringContaining('Terminal reconciliation is host-locked') as unknown),
       });
     }
 
@@ -353,7 +353,7 @@ it('blocks alternate browser, preflight, planning and model paths during termina
       declaredToolCapabilities: { readOnly: true, idempotent: true, trusted: true },
     })).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('cannot activate inactive source'),
+      reason: (expect.stringContaining('cannot activate inactive source') as unknown),
     });
     for (const mode of ['first', 'all'] as const) {
       expect(check({
@@ -367,7 +367,7 @@ it('blocks alternate browser, preflight, planning and model paths during termina
         input: {
           sessionIds: ['existing-review'],
           mode,
-          _hostTerminalReconciliationCapability: expect.any(String),
+          _hostTerminalReconciliationCapability: (expect.any(String) as unknown),
         },
       });
     }
@@ -383,7 +383,7 @@ it('blocks alternate browser, preflight, planning and model paths during termina
         prompt: 'Review the exact bound target.',
         role: 'reviewer',
         permissionMode: 'safe',
-        _hostTerminalReconciliationCapability: expect.any(String),
+        _hostTerminalReconciliationCapability: (expect.any(String) as unknown),
       },
     });
 

@@ -1,5 +1,4 @@
-import type { SessionOperations } from './SessionManager/operation-types.ts';
-import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionManagerForTest } from './testing/private-runtime-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it, jest } from 'bun:test';
 import type { AgentEvent } from '@craft-agent/core/types';
@@ -7,9 +6,7 @@ import type { SessionEvent } from '@craft-agent/shared/protocol';
 import { SessionManager, createManagedSession } from './SessionManager.ts';
 
 function harness() {
-  const host = Object.create(SessionManager.prototype) as SessionOperations;
-  Object.defineProperty(host, 'runtimeState', { value: host, configurable: true });
-  withSessionOperationsForTest(host as unknown as SessionManager);
+  const host = sessionManagerForTest(new SessionManager());
   const events: SessionEvent[] = [];
   sessionRuntimeStateForTest(host).pendingDeltas = new Map();
   sessionRuntimeStateForTest(host).deltaFlushTimers = new Map();
@@ -64,9 +61,9 @@ describe('failed Pi stream boundaries', () => {
     await fire({ type: 'text_delta', text: 'ONE', turnId: 'one' });
     await fire({ type: 'text_delta', text: 'TWO', turnId: 'two' });
     jest.advanceTimersByTime(100);
-    expect(events.filter(event => event.type === 'text_delta')).toEqual([
-      expect.objectContaining({ delta: 'ONE', turnId: 'one' }),
-      expect.objectContaining({ delta: 'TWO', turnId: 'two' }),
+    expect<unknown>(events.filter(event => event.type === 'text_delta')).toEqual([
+      (expect.objectContaining({ delta: 'ONE', turnId: 'one' }) as unknown),
+      (expect.objectContaining({ delta: 'TWO', turnId: 'two' }) as unknown),
     ]);
   });
 });

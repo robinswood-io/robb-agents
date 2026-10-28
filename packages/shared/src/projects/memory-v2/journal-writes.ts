@@ -92,7 +92,7 @@ export function setProjectMemoryStatus(
 ): ProjectMemoryEntry {
   const loaded = loadProjectMemoryJournal(workspaceRootPath, projectSlug, {
     strict: true,
-    legacyWorkspaceRootPath: options?.legacyWorkspaceRootPath,
+    ...(options?.legacyWorkspaceRootPath !== undefined ? { legacyWorkspaceRootPath: options?.legacyWorkspaceRootPath } : {}),
   });
   const current = loaded.entries.find((entry) => entry.id === entryId);
   if (!current) {

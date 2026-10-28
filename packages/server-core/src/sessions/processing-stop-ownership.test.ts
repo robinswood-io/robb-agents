@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import type { SessionOperations } from './SessionManager/operation-types.ts';
 import type { SessionEvent } from '@craft-agent/shared/protocol';
 type BrowserManagerFixture = NonNullable<ReturnType<SessionOperations['getBrowserPaneManagerForSession']>>;
@@ -7,7 +8,6 @@ import { SessionManager, createManagedSession } from './SessionManager'
 import { createPendingTurnRecovery } from './turn-recovery'
 import { USER_INPUT_ANSWER_MESSAGE_PREFIX } from '@craft-agent/core'
 import { SessionRuntimeState } from './SessionManager/runtime-state.ts'
-import { withSessionOperationsForTest } from './testing/session-operation-access.ts'
 
 function deferred() {
   let resolve!: () => void
@@ -25,8 +25,8 @@ function harness(boundary?: Boundary, rejectBoundary = false) {
   const effects: string[] = []
   const terminalReasons: string[] = []
   const managed = createManagedSession({ id: 'stop-ownership' }, {
-    id: 'workspace', rootPath: '/tmp/processing-stop-fixture', name: 'Fixture', createdAt: 1,
-  } as never, { messagesLoaded: true })
+    id: 'workspace', slug: 'fixture', rootPath: '/tmp/processing-stop-fixture', name: 'Fixture', createdAt: 1,
+  }, { messagesLoaded: true })
   managed.isProcessing = true
   managed.processingGeneration = 1
   managed.messages = [{ id: 'human', role: 'user', content: 'Fixture request', timestamp: 1 }]
@@ -41,9 +41,10 @@ function harness(boundary?: Boundary, rejectBoundary = false) {
       if (rejectBoundary) throw new Error('Fixture cleanup failed')
     }
   }
+  const unexpectedBrowserCall = (): never => { throw new Error('Unexpected browser capability in stop lifecycle'); };
   let browserCalls = 0
-  const prototype = SessionManager.prototype as unknown as SessionOperations
-  const runtime = ({
+  const prototype = sessionManagerForTest(SessionManager.prototype)
+  const runtime = Object.assign(sessionManagerForTest(new SessionManager()), ({
     ...new SessionRuntimeState(),
     hasConsumedCleanRecoveryDispatch: () => false,
     retryableContextLimitRequest: () => undefined,
@@ -77,29 +78,69 @@ function harness(boundary?: Boundary, rejectBoundary = false) {
     markOrphanedBackgroundTasks: () => effects.push('orphan-backstop'),
     hasRunningBackgroundTasks: () => false,
     disposeManagedAgentRuntime: () => checkpoint('runtime-disposal'),
-    getBrowserPaneManagerForSession: () => (({
-      clearVisualsForSession: () => checkpoint(browserCalls++ === 0 ? 'browser-visuals' : 'browser-release'),
-      unbindAllForSession: () => effects.push('unbind'),
-    } satisfies Pick<BrowserManagerFixture, 'clearVisualsForSession' | 'unbindAllForSession'>) as Partial<BrowserManagerFixture> as BrowserManagerFixture),
+    getBrowserPaneManagerForSession: () => (({setSessionPathResolver: unexpectedBrowserCall,
+destroyForSession: unexpectedBrowserCall,
+getOrCreateForSession: unexpectedBrowserCall,
+getOrCreateForSessionAsync: unexpectedBrowserCall,
+setAgentControl: unexpectedBrowserCall,
+createForSession: unexpectedBrowserCall,
+createForSessionAsync: unexpectedBrowserCall,
+getInstance: unexpectedBrowserCall,
+getInstanceAsync: unexpectedBrowserCall,
+listInstances: unexpectedBrowserCall,
+listInstancesAsync: unexpectedBrowserCall,
+focusBoundForSession: unexpectedBrowserCall,
+focusBoundForSessionAsync: unexpectedBrowserCall,
+bindSession: unexpectedBrowserCall,
+focus: unexpectedBrowserCall,
+destroyInstance: unexpectedBrowserCall,
+hide: unexpectedBrowserCall,
+clearAgentControl: unexpectedBrowserCall,
+clearAgentControlForInstance: unexpectedBrowserCall,
+navigate: unexpectedBrowserCall,
+goBack: unexpectedBrowserCall,
+goForward: unexpectedBrowserCall,
+getAccessibilitySnapshot: unexpectedBrowserCall,
+clickElement: unexpectedBrowserCall,
+clickAtCoordinates: unexpectedBrowserCall,
+drag: unexpectedBrowserCall,
+fillElement: unexpectedBrowserCall,
+typeText: unexpectedBrowserCall,
+selectOption: unexpectedBrowserCall,
+setClipboard: unexpectedBrowserCall,
+getClipboard: unexpectedBrowserCall,
+scroll: unexpectedBrowserCall,
+sendKey: unexpectedBrowserCall,
+uploadFile: unexpectedBrowserCall,
+evaluate: unexpectedBrowserCall,
+screenshot: unexpectedBrowserCall,
+screenshotRegion: unexpectedBrowserCall,
+getConsoleLogs: unexpectedBrowserCall,
+windowResize: unexpectedBrowserCall,
+getNetworkLogs: unexpectedBrowserCall,
+waitFor: unexpectedBrowserCall,
+getDownloads: unexpectedBrowserCall,
+detectSecurityChallenge: unexpectedBrowserCall,
+clearVisualsForSession: () => checkpoint(browserCalls++ === 0 ? 'browser-visuals' : 'browser-release'),
+unbindAllForSession: () => effects.push('unbind')} satisfies BrowserManagerFixture)),
     isSessionBeingViewed: () => true,
     markSessionRead: () => checkpoint('read-marker'),
     flushSession: () => checkpoint('delivery-flush'),
-    setSessionStatus: () => checkpoint('mini-status'),
+    setSessionStatus: (_sessionId: string, _status: string) => checkpoint('mini-status'),
     finishAutomaticSessionStatusLifecycle: (_session: unknown, reason: string) => {
       terminalReasons.push(reason)
       return checkpoint('terminal-status')
     },
     emitObjectiveChanged: () => effects.push('objective'),
     sendEvent: (event: SessionEvent) => events.push(event),
-    executionProofCollector: ({ take: () => { effects.push('take-proof'); return undefined } } satisfies Pick<SessionRuntimeState['executionProofCollector'], 'take'>) as Partial<SessionRuntimeState['executionProofCollector']> as SessionRuntimeState['executionProofCollector'],
+    executionProofCollector: Object.assign(new SessionRuntimeState().executionProofCollector, { take: () => { effects.push('take-proof'); return undefined } }),
     emitSessionComplete: () => effects.push('conductor'),
     persistSession: () => { effects.push('persist'); return true },
     processNextQueuedMessage: () => effects.push('dispatch-queue'),
     isAutonomousMessage: prototype.isAutonomousMessage,
     hasOnlyMachineInbox: prototype.hasOnlyMachineInbox,
-  } satisfies Partial<SessionRuntimeState & SessionOperations>) as Partial<SessionRuntimeState & SessionOperations> as SessionRuntimeState & SessionOperations
+  } satisfies Partial<SessionRuntimeState & SessionOperations>))
   Object.defineProperty(runtime, 'runtimeState', { value: runtime, configurable: true });
-  withSessionOperationsForTest(runtime as unknown as SessionManager)
   if (boundary === 'delivery-flush') {
     managed.lastSentOptions = { internalOrigin: { kind: 'agent-message', deliveryId: 'delivery' } }
     managed.messages.push({ id: 'delivery', role: 'user', content: 'Internal report', timestamp: 2,
@@ -184,7 +225,7 @@ describe('processing stop ownership', () => {
 
   it('prevents the real status setter from publishing an old done status after its flush', async () => {
     const h = harness('mini-status')
-    h.runtime.setSessionStatus = (SessionManager.prototype as unknown as SessionOperations).setSessionStatus
+    h.runtime.setSessionStatus = (sessionManagerForTest(SessionManager.prototype)).setSessionStatus
     h.runtime.setMetadataWriteGuard = () => {}
     sessionRuntimeStateForTest(h.runtime).configWatchers = new Map()
     h.runtime.flushSession = async () => { h.reached.resolve(); await h.release.promise }

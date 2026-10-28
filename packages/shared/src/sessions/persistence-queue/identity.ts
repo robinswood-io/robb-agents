@@ -6,10 +6,10 @@ import { SessionPersistenceRootIdentityError, physicalDirectoryStats, optionalPh
 import type { SessionPersistenceRootIdentity } from './shared.ts';
 
 export function lookupIdentityAlias(transportOwner: SessionPersistenceQueue, workspaceRootPath: string, sessionId: string): string | undefined {
-    const exact = transportOwner["identityAliases"].get(rawIdentityAlias(workspaceRootPath, sessionId));
+    const exact = transportOwner.identityAliases.get(rawIdentityAlias(workspaceRootPath, sessionId));
     const existingCanonicalRoot = existingCanonicalWorkspaceRoot(workspaceRootPath);
     if (exact) {
-        const exactIdentity = transportOwner["identities"].get(exact);
+        const exactIdentity = transportOwner.identities.get(exact);
         // Missing roots use their last proven lexical alias. Live roots must
         // still resolve to the same target; otherwise this alias was retargeted.
         if (!existingCanonicalRoot || exactIdentity?.workspaceRootPath === existingCanonicalRoot) {
@@ -17,34 +17,34 @@ export function lookupIdentityAlias(transportOwner: SessionPersistenceQueue, wor
         }
     }
     const canonicalRoot = existingCanonicalRoot ?? canonicalWorkspaceRoot(workspaceRootPath);
-    const canonicalAlias = transportOwner["caseInsensitiveCanonicalAliases"].get(canonicalCaseFoldedIdentityAlias(canonicalRoot, sessionId));
+    const canonicalAlias = transportOwner.caseInsensitiveCanonicalAliases.get(canonicalCaseFoldedIdentityAlias(canonicalRoot, sessionId));
     if (canonicalAlias)
         return canonicalAlias;
     // A live root with a different canonical path is a different workspace,
     // even if its lexical spelling differs only by case from a known root.
     if (existingCanonicalRoot)
         return undefined;
-    const candidates = transportOwner["caseInsensitiveFallbackAliases"].get(lexicalCaseFoldedIdentityAlias(workspaceRootPath, sessionId));
+    const candidates = transportOwner.caseInsensitiveFallbackAliases.get(lexicalCaseFoldedIdentityAlias(workspaceRootPath, sessionId));
     if (!candidates || candidates.size === 0)
         return undefined;
     if (candidates.size === 1)
         return candidates.values().next().value;
-    const canonicalMatches = [...candidates].filter(key => (transportOwner["identities"].get(key)?.workspaceRootPath === canonicalRoot));
+    const canonicalMatches = [...candidates].filter(key => (transportOwner.identities.get(key)?.workspaceRootPath === canonicalRoot));
     if (canonicalMatches.length === 1)
         return canonicalMatches[0];
     throw new Error(`Ambiguous case-insensitive workspace persistence identity: ${sessionId}`);
 }
 
 export function recordIdentityAliases(transportOwner: SessionPersistenceQueue, workspaceRootPath: string, canonicalRoot: string, sessionId: string, key: string, caseInsensitive: boolean): void {
-    transportOwner["identityAliases"].set(rawIdentityAlias(workspaceRootPath, sessionId), key);
-    transportOwner["identityAliases"].set(rawIdentityAlias(canonicalRoot, sessionId), key);
+    transportOwner.identityAliases.set(rawIdentityAlias(workspaceRootPath, sessionId), key);
+    transportOwner.identityAliases.set(rawIdentityAlias(canonicalRoot, sessionId), key);
     if (caseInsensitive) {
-        transportOwner["caseInsensitiveCanonicalAliases"].set(canonicalCaseFoldedIdentityAlias(canonicalRoot, sessionId), key);
+        transportOwner.caseInsensitiveCanonicalAliases.set(canonicalCaseFoldedIdentityAlias(canonicalRoot, sessionId), key);
         for (const aliasRoot of new Set([workspaceRootPath, canonicalRoot])) {
             const alias = lexicalCaseFoldedIdentityAlias(aliasRoot, sessionId);
-            const candidates = transportOwner["caseInsensitiveFallbackAliases"].get(alias) ?? new Set<string>();
+            const candidates = transportOwner.caseInsensitiveFallbackAliases.get(alias) ?? new Set<string>();
             candidates.add(key);
-            transportOwner["caseInsensitiveFallbackAliases"].set(alias, candidates);
+            transportOwner.caseInsensitiveFallbackAliases.set(alias, candidates);
         }
     }
 }
@@ -58,7 +58,7 @@ export function assertOrBindPersistenceHierarchy(transportOwner: SessionPersiste
     bind: boolean;
     requireSession: boolean;
 }): void {
-    const registered = transportOwner["identities"].get(key);
+    const registered = transportOwner.identities.get(key);
     if (!registered || registered.workspaceRootPath !== workspaceRootPath) {
         throw new SessionPersistenceRootIdentityError(`Session persistence identity is unavailable: ${sessionId}`);
     }
@@ -89,36 +89,36 @@ export function assertOrBindPersistenceHierarchy(transportOwner: SessionPersiste
 
 export function registerIdentity(transportOwner: SessionPersistenceQueue, workspaceRootPath: string, sessionId: string): string {
     validateSessionId(sessionId);
-    const registeredAlias = transportOwner["lookupIdentityAlias"](workspaceRootPath, sessionId);
+    const registeredAlias = transportOwner.lookupIdentityAlias(workspaceRootPath, sessionId);
     if (registeredAlias)
         return registeredAlias;
     const canonicalRoot = canonicalWorkspaceRoot(workspaceRootPath);
-    const caseInsensitive = transportOwner["workspaceRootIsCaseInsensitive"](canonicalRoot);
+    const caseInsensitive = transportOwner.workspaceRootIsCaseInsensitive(canonicalRoot);
     const normalizedSessionId = caseInsensitive ? sessionId.toLowerCase() : sessionId;
     const key = JSON.stringify([canonicalRoot, normalizedSessionId]);
-    transportOwner["identities"].set(key, {
+    transportOwner.identities.set(key, {
         workspaceRootPath: canonicalRoot,
         sessionId,
         normalizedSessionId,
         caseInsensitive,
     });
-    transportOwner["recordIdentityAliases"](workspaceRootPath, canonicalRoot, sessionId, key, caseInsensitive);
+    transportOwner.recordIdentityAliases(workspaceRootPath, canonicalRoot, sessionId, key, caseInsensitive);
     return key;
 }
 
 export function resolveIdentityKey(transportOwner: SessionPersistenceQueue, sessionId: string, workspaceRootPath?: string): string | undefined {
     if (workspaceRootPath !== undefined) {
-        const registeredAlias = transportOwner["lookupIdentityAlias"](workspaceRootPath, sessionId);
+        const registeredAlias = transportOwner.lookupIdentityAlias(workspaceRootPath, sessionId);
         if (registeredAlias)
             return registeredAlias;
         const canonicalRoot = canonicalWorkspaceRoot(workspaceRootPath);
-        const caseInsensitive = transportOwner["workspaceRootIsCaseInsensitive"](canonicalRoot);
+        const caseInsensitive = transportOwner.workspaceRootIsCaseInsensitive(canonicalRoot);
         return JSON.stringify([
             canonicalRoot,
             caseInsensitive ? sessionId.toLowerCase() : sessionId,
         ]);
     }
-    const matches = [...transportOwner["identities"].entries()]
+    const matches = [...transportOwner.identities.entries()]
         .filter(([, identity]) => identity.normalizedSessionId
         === (identity.caseInsensitive ? sessionId.toLowerCase() : sessionId))
         .map(([key]) => key);

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { persistenceRootFor } from '../policy.ts';
 import { createBackendFromConnection } from '@craft-agent/shared/agent/backend';
@@ -207,10 +208,10 @@ async function sessionOpPerformRefreshTitle(sessionOperationContext: SessionOper
             const resolvedMiniModel = connection ? (getMiniModel(connection) ?? connection.defaultModel) : undefined;
             agent = createBackendFromConnection(managed.llmConnection, {
                 workspace: managed.workspace,
-                model: managed.model,
-                thinkingLevel: managed.thinkingLevel,
+                ...(managed.model !== undefined ? { model: managed.model } : {}),
+                ...(managed.thinkingLevel !== undefined ? { thinkingLevel: managed.thinkingLevel } : {}),
                 isModelRoutePinned: () => managed.modelRoutePinned === true,
-                miniModel: resolvedMiniModel,
+                ...(resolvedMiniModel !== undefined ? { miniModel: resolvedMiniModel } : {}),
                 session: {
                     id: `title-${managed.id}`,
                     workspaceRootPath: managed.workspace.rootPath,
@@ -247,7 +248,7 @@ async function sessionOpPerformRefreshTitle(sessionOperationContext: SessionOper
     // Keep legacy event for backward compatibility
     sessionOperationContext.owner["sendEvent"]({ type: 'title_regenerating', sessionId, isRegenerating: true }, managed.workspace.id);
     try {
-        const title = await agent.regenerateTitle(userMessages, assistantResponse, titleOptions);
+        const title = await agent.regenerateTitle(userMessages, assistantResponse, omitUndefined(titleOptions));
         if (!sessionOpOwnsSessionOperation(sessionOperationContext, managed)) {
             return { success: false, error: 'Session is being deleted' };
         }
@@ -348,7 +349,7 @@ function sessionOpUpdateWorkingDirectory(sessionOperationContext: SessionOperati
  * Pass null to clear the session-specific model (will use global config)
  * @param connection - Optional LLM connection slug (only applied if not already locked)
  */
-async function sessionOpUpdateSessionModel(sessionOperationContext: SessionOperationContext, sessionId: string, workspaceId: string, model: string | null, connection?: string): Promise<void> {
+async function sessionOpUpdateSessionModel(sessionOperationContext: SessionOperationContext, sessionId: string, _workspaceId: string, model: string | null, connection?: string): Promise<void> {
     sessionLog.info(`[updateSessionModel] sessionId=${sessionId}, model=${model}, connection=${connection}`);
     const managed = sessionOperationContext.state.sessions.get(sessionId);
     if (!managed)

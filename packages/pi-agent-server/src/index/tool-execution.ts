@@ -73,20 +73,20 @@ export function wrapSingleTool(runtimeState: PiRuntimeState, tool: RuntimeToolDe
             inputObj = normalizeSessionPathTokens(inputObj, sessionPath) as Record<string, unknown>;
         }
         // Extract intent before main process strips metadata (used for summarization)
-        const intent = typeof inputObj._intent === 'string' ? inputObj._intent : undefined;
+        const intent = typeof inputObj["_intent"] === 'string' ? inputObj["_intent"] : undefined;
         // Normalize Pi SDK parameter names: path → file_path
         if ((sdkToolName === 'Write' || sdkToolName === 'Edit' || sdkToolName === 'MultiEdit' || sdkToolName === 'NotebookEdit')
-            && typeof inputObj.path === 'string' && !inputObj.file_path) {
-            inputObj = { ...inputObj, file_path: inputObj.path };
+            && typeof inputObj["path"] === 'string' && !inputObj["file_path"]) {
+            inputObj = { ...inputObj, file_path: inputObj["path"] };
         }
-        if (sdkToolName === 'Edit' && Array.isArray(inputObj.edits)) {
-            const firstEdit = inputObj.edits[0] as {
+        if (sdkToolName === 'Edit' && Array.isArray(inputObj["edits"])) {
+            const firstEdit = inputObj["edits"][0] as {
                 oldText?: unknown;
                 newText?: unknown;
             } | undefined;
             if (firstEdit && typeof firstEdit.oldText === 'string' && typeof firstEdit.newText === 'string') {
-                inputObj.old_string ??= firstEdit.oldText;
-                inputObj.new_string ??= firstEdit.newText;
+                inputObj["old_string"] ??= firstEdit.oldText;
+                inputObj["new_string"] ??= firstEdit.newText;
             }
         }
         // Send to main process for permission checking + transforms
@@ -98,12 +98,12 @@ export function wrapSingleTool(runtimeState: PiRuntimeState, tool: RuntimeToolDe
         const loopDecision = runtimeState.toolLoopBudget.observe(sdkToolName, inputObj);
         if (loopDecision.action === 'block') {
             const reason = loopDecision.message ?? 'Repeated unchanged tool call blocked.';
-            return process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT === '1'
+            return process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] === '1'
                 ? createToolExecutionCheckpointResult(reason)
                 : makeErrorResult(reason);
         }
         const finishResult = (result: AgentToolResult<unknown>) => finishToolLoopResult(result, loopDecision, {
-            session: feedbackSession, isCurrentSession: () => runtimeState.piSession === feedbackSession, toolCallId, signal,
+            session: feedbackSession, isCurrentSession: () => runtimeState.piSession === feedbackSession, toolCallId, ...(signal !== undefined ? { signal: signal } : {}),
             onHint: message => { if (feedbackSession)
                 handleSessionEvent(runtimeState, { type: 'message_end', message }, feedbackSession); },
             onError: error => debugLog(`Tool-loop guidance unavailable: ${error instanceof Error ? error.message : String(error)}`),
@@ -111,7 +111,7 @@ export function wrapSingleTool(runtimeState: PiRuntimeState, tool: RuntimeToolDe
         // Execute original tool with (potentially modified) input
         let result: AgentToolResult<unknown>;
         try {
-            result = await withReadToolTimeout(sdkToolName, originalExecute(toolCallId, inputObj, signal, onUpdate, ctx), resolveReadToolTimeoutMs(process.env.CRAFT_READ_TOOL_TIMEOUT_MS));
+            result = await withReadToolTimeout(sdkToolName, originalExecute(toolCallId, inputObj, signal, onUpdate, ctx), resolveReadToolTimeoutMs(process.env["CRAFT_READ_TOOL_TIMEOUT_MS"]));
         }
         catch (error) {
             if (error instanceof ReadToolTimeoutError) {
@@ -156,7 +156,7 @@ export function wrapSingleTool(runtimeState: PiRuntimeState, tool: RuntimeToolDe
                     context: {
                         toolName: sdkToolName,
                         input: inputObj,
-                        intent,
+                        ...(intent !== undefined ? { intent: intent } : {}),
                         userRequest: runtimeState.currentUserMessage,
                     },
                     // Local deterministic coding tools use zero-LLM-cost head+tail preview +
@@ -164,7 +164,7 @@ export function wrapSingleTool(runtimeState: PiRuntimeState, tool: RuntimeToolDe
                     summarize: isLocalCodingTool
                         ? undefined
                         : async (prompt) => (await queryLlm(runtimeState, { prompt }, { thinkingLevel: 'minimal' })).text,
-                    contextWindow: modelContextWindow,
+                    ...(modelContextWindow !== undefined ? { contextWindow: modelContextWindow } : {}),
                 });
                 if (largeResult) {
                     return finishResult({

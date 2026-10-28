@@ -13,12 +13,12 @@ export async function extractThemeColor(transportOwner: BrowserPaneManager, inst
         return; // already set by did-change-theme-color or observer
     const urlAtStart = instance.currentUrl;
     try {
-        const color = await instance.pageView.webContents.executeJavaScript(`(${THEME_COLOR_EXTRACTOR_FN})()`);
+        const color: unknown = await instance.pageView.webContents.executeJavaScript(`(${THEME_COLOR_EXTRACTOR_FN})()`);
         // Guard: if user navigated away during extraction, discard stale result
         if (instance.currentUrl !== urlAtStart)
             return;
         if (typeof color === 'string' && color.length > 0) {
-            transportOwner["applyThemeColor"](instance, color);
+            transportOwner.applyThemeColor(instance, color);
         }
     }
     catch {
@@ -157,7 +157,7 @@ export function installThemeObserver(transportOwner: BrowserPaneManager, instanc
                 return;
             if (instance.themeObserverToken !== token)
                 return;
-            transportOwner["installThemeObserver"](instance, false);
+            transportOwner.installThemeObserver(instance, false);
         }, 120);
     });
 }
@@ -168,6 +168,6 @@ export function scheduleEarlyThemeExtraction(transportOwner: BrowserPaneManager,
             return;
         if (instance.currentUrl !== urlAtSchedule)
             return;
-        void transportOwner["extractThemeColor"](instance);
+        void transportOwner.extractThemeColor(instance);
     }, EARLY_THEME_EXTRACTION_DELAY_MS);
 }

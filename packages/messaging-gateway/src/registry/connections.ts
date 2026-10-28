@@ -32,7 +32,7 @@ export async function startWhatsAppConnect(transportOwner: MessagingGatewayRegis
         state: 'connecting',
         lastError: undefined,
     });
-    await transportOwner["startWhatsAppAdapter"](workspaceId, state, { persistConfig: true, reason: 'user_connect' });
+    await transportOwner.startWhatsAppAdapter(workspaceId, state, { persistConfig: true, reason: 'user_connect' });
 }
 
 export async function submitWhatsAppPhone(transportOwner: MessagingGatewayRegistry, workspaceId: string, phoneNumber: string): Promise<void> {
@@ -55,14 +55,14 @@ export async function startWhatsAppAdapter(transportOwner: MessagingGatewayRegis
         throw new Error('WhatsApp support is not configured on this server');
     }
     state.whatsappOffEvent?.();
-    state.whatsappOffEvent = undefined;
+    delete state.whatsappOffEvent;
     if (state.whatsapp) {
         await state.whatsapp.destroy().catch(() => { });
         state.whatsapp = null;
     }
     const adapter = new WhatsAppAdapter();
     state.whatsapp = adapter;
-    state.whatsappOffEvent = adapter.onEvent((ev) => transportOwner["onWhatsAppEvent"](workspaceId, ev));
+    state.whatsappOffEvent = adapter.onEvent((ev) => transportOwner.onWhatsAppEvent(workspaceId, ev));
     // selfChatMode: default ON. Persisted to workspace config so it
     // survives restart and can be toggled later if the user wants pure
     // contact-only routing.
@@ -123,7 +123,7 @@ export function onWhatsAppEvent(transportOwner: MessagingGatewayRegistry, worksp
                 configured: true,
                 connected: false,
                 state: event.loggedOut ? 'reconnect_required' : 'disconnected',
-                lastError: event.reason,
+                ...(event.reason !== undefined ? { lastError: event.reason } : {}),
                 identity: undefined,
             });
             return;
@@ -177,7 +177,7 @@ export async function tryConnectLark(transportOwner: MessagingGatewayRegistry, w
         });
         return;
     }
-    await state.gateway.unregisterAdapter('lark').catch((err) => {
+    await state.gateway.unregisterAdapter('lark').catch((err: unknown) => {
         transportOwner["log"].warn('unregisterAdapter(lark) failed (non-fatal)', {
             event: 'lark_unregister_failed',
             workspaceId,
@@ -196,7 +196,8 @@ export async function tryConnectLark(transportOwner: MessagingGatewayRegistry, w
         });
         try {
             const info = await adapter.getBotInfo();
-            state.botUsernames.lark = info?.name;
+            if (info?.name === undefined) delete state.botUsernames.lark;
+            else state.botUsernames.lark = info.name;
         }
         catch {
             // non-fatal
@@ -239,7 +240,7 @@ export async function tryConnectTelegram(transportOwner: MessagingGatewayRegistr
         });
         return;
     }
-    await state.gateway.unregisterAdapter('telegram').catch((err) => {
+    await state.gateway.unregisterAdapter('telegram').catch((err: unknown) => {
         transportOwner["log"].warn('unregisterAdapter(telegram) failed (non-fatal)', {
             event: 'telegram_unregister_failed',
             workspaceId,
@@ -260,7 +261,8 @@ export async function tryConnectTelegram(transportOwner: MessagingGatewayRegistr
         });
         try {
             const info = await adapter.getBotInfo();
-            state.botUsernames.telegram = info?.username;
+            if (info?.username === undefined) delete state.botUsernames.telegram;
+            else state.botUsernames.telegram = info.username;
         }
         catch {
             // non-fatal
@@ -270,7 +272,7 @@ export async function tryConnectTelegram(transportOwner: MessagingGatewayRegistr
             configured: true,
             connected: true,
             state: 'connected',
-            identity: state.botUsernames.telegram,
+            ...(state.botUsernames.telegram !== undefined ? { identity: state.botUsernames.telegram } : {}),
             lastError: undefined,
         });
     }

@@ -9,13 +9,13 @@ import { SessionFilesSection } from '../right-sidebar/SessionFilesSection'
 
 interface SessionInfoPopoverProps {
   sessionId: string
-  sessionFolderPath?: string
+  sessionFolderPath?: string | undefined
   trigger: React.ReactElement
-  side?: 'top' | 'right' | 'bottom' | 'left'
-  align?: 'start' | 'center' | 'end'
-  sideOffset?: number
-  contentClassName?: string
-  presentation?: 'popover' | 'drawer'
+  side?: 'top' | 'right' | 'bottom' | 'left' | undefined
+  align?: 'start' | 'center' | 'end' | undefined
+  sideOffset?: number | undefined
+  contentClassName?: string | undefined
+  presentation?: 'popover' | 'drawer' | undefined
 }
 
 const DEFAULT_POPOVER_CONTENT_CLASS = 'w-[360px] h-[460px] min-w-[200px] max-w-[420px] overflow-hidden rounded-[8px] bg-background text-foreground shadow-modal-small p-0'
@@ -98,7 +98,7 @@ export function SessionInfoPopover({
   )
 }
 
-function SessionInfoPopoverContent({ sessionId, sessionFolderPath }: { sessionId: string; sessionFolderPath?: string }) {
+function SessionInfoPopoverContent({ sessionId, sessionFolderPath }: { sessionId: string; sessionFolderPath?: string | undefined }) {
   const { t } = useTranslation()
   const session = useSession(sessionId)
   const { onRenameSession } = useAppShellContext()

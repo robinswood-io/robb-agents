@@ -1,3 +1,4 @@
+import { omitUndefined, type SnapshotInput } from '@craft-agent/shared/utils/json';
 
 import { Plus } from 'lucide-react';
 
@@ -44,7 +45,7 @@ interface KanbanBoardContentProps {
   handleMoveTask: (taskId: string, toColumn: KanbanColumnId) => void
   columnStatus: Partial<Record<string, string>>
   handleSelectDropStatus: (column: KanbanColumnId, statusId: string) => void
-  handleUpdateColumn: (columnId: string, patch: Partial<KanbanColumnDef>) => void
+  handleUpdateColumn: (columnId: string, patch: Partial<SnapshotInput<KanbanColumnDef>>) => void
   handleRemoveColumn: (columnId: string) => void
   handleAddColumn: () => void
 }
@@ -100,7 +101,7 @@ export function KanbanBoardContent({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setEditorTarget({ mode: 'create', initialProjectId: projectFilter[0] })}
+            onClick={() => setEditorTarget(omitUndefined({ mode: 'create' as const, initialProjectId: projectFilter[0] }))}
             disabled={!activeWorkspaceId}
             className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 text-[12.5px] font-semibold text-foreground transition-colors hover:bg-foreground/[0.03] disabled:opacity-50"
           >

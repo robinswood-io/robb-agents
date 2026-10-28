@@ -10,7 +10,7 @@ import { createRetryTurnAction } from './retry-turn-action'
 /** Restarting the turn asks for a fresh decision; it never grants permission. */
 export function PermissionRecoveryCard({ request, showSessionName = false }: {
   request: SessionPermissionRecovery
-  showSessionName?: boolean
+  showSessionName?: boolean | undefined
 }) {
   const { t } = useTranslation()
   const store = useStore()

@@ -1,12 +1,12 @@
-import * as React from "react"
+
 import * as ResizablePrimitive from "react-resizable-panels"
 import { cn } from "@/lib/utils"
 import { useResizeGradient } from "@/hooks/useResizeGradient"
 
 interface GradientResizeHandleProps {
-  className?: string
+  className?: string | undefined
   /** Height at which to place horizontal connector line (matches header separator) */
-  headerHeight?: number
+  headerHeight?: number | undefined
 }
 
 /**

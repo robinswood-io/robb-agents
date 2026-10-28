@@ -9,12 +9,12 @@ export interface MobileMenuPageProps {
    * When true, the leading control is a back chevron that calls `onBack`.
    * When false, no leading control is shown (root page).
    */
-  showBack?: boolean
-  onBack?: () => void
+  showBack?: boolean | undefined
+  onBack?: (() => void) | undefined
   /** Trailing close X button. Always available. */
   onClose: () => void
   children: React.ReactNode
-  className?: string
+  className?: string | undefined
 }
 
 /**

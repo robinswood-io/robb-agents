@@ -1,3 +1,4 @@
+import { omitUndefined, setOptional } from '@craft-agent/shared/utils/json';
 /**
  * Per-Session State Management with Jotai
  *
@@ -58,10 +59,10 @@ export const updateSessionMetaAtom = atom(
     if (existing) {
       const newMetaMap = new Map(metaMap)
       const updated = { ...existing, ...updates }
-      newMetaMap.set(sessionId, {
+      newMetaMap.set(sessionId, omitUndefined<SessionMeta>({
         ...updated,
         sessionStatus: resolveObjectiveSessionStatus(updated),
-      })
+      }))
       set(sessionMetaMapAtom, newMetaMap)
     }
   }
@@ -393,7 +394,7 @@ export const syncSessionsToAtomsAtom = atom(
       // Preserve isProcessing from atom if atom is processing
       // React state may have stale isProcessing: false during streaming
       const atomSession = get(sessionAtomFamily(session.id))
-      meta.hasPendingUserInput = atomSession?.userInputRequests?.some(request => request.status === 'pending') ?? meta.hasPendingUserInput
+      setOptional(meta, 'hasPendingUserInput', atomSession?.userInputRequests?.some(request => request.status === 'pending') ?? meta.hasPendingUserInput)
       if (atomSession?.isProcessing) {
         meta.isProcessing = true
       }

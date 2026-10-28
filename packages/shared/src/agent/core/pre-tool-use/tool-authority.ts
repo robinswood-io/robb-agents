@@ -82,7 +82,7 @@ export function classifyToolAuthority(
     ? boundedResumedSharePointCreationContract(policyAuthorizationSegments)
     : undefined;
   if (resumedSharePointCreationContract
-    && ['DELETE', 'PATCH', 'POST', 'PUT'].includes(String(input.method).toUpperCase())
+    && ['DELETE', 'PATCH', 'POST', 'PUT'].includes(String(input["method"]).toUpperCase())
     && !boundedResumedSharePointCreation) {
     return {
       type: 'block',

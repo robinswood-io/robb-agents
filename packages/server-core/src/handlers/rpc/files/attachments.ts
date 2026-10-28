@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { writeFile, unlink, mkdir, stat, realpath } from 'fs/promises';
 import { isAbsolute, join } from 'path';
 
@@ -209,7 +210,7 @@ export function registerAttachmentHandlers(server: RpcServer, deps: HandlerDeps)
                 decoded = await deps.platform.imageProcessor.process(decoded, {
                   resize: { width: targetSize.width, height: targetSize.height },
                   format: isPhoto ? 'jpeg' : 'png',
-                  quality: isPhoto ? IMAGE_LIMITS.JPEG_QUALITY_HIGH : undefined,
+                  ...(isPhoto ? { quality: IMAGE_LIMITS.JPEG_QUALITY_HIGH } : {}),
                 })
                 wasResized = true
                 finalSize = decoded.length
@@ -302,7 +303,7 @@ export function registerAttachmentHandlers(server: RpcServer, deps: HandlerDeps)
       // Return StoredAttachment metadata
       // Include wasResized flag so UI can show notification
       // Include resizedBase64 so renderer uses resized image for Claude API
-      return {
+      return omitUndefined<StoredAttachment>({
         id,
         type: attachment.type,
         name: attachment.name,
@@ -310,12 +311,12 @@ export function registerAttachmentHandlers(server: RpcServer, deps: HandlerDeps)
         size: finalSize, // Use final size (may differ if resized)
         originalSize: wasResized ? attachment.size : undefined, // Track original if resized
         storedPath,
-        thumbnailPath,
-        thumbnailBase64,
-        markdownPath,
+        ...(thumbnailPath !== undefined ? { thumbnailPath: thumbnailPath } : {}),
+        ...(thumbnailBase64 !== undefined ? { thumbnailBase64: thumbnailBase64 } : {}),
+        ...(markdownPath !== undefined ? { markdownPath: markdownPath } : {}),
         wasResized,
-        resizedBase64, // Only set when wasResized=true, used for Claude API
-      }
+        ...(resizedBase64 !== undefined ? { resizedBase64: resizedBase64 } : {}), // Only set when wasResized=true, used for Claude API
+      })
     } catch (error) {
       // Clean up any files we've written before the error
       if (filesToCleanup.length > 0) {

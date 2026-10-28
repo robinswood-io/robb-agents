@@ -9,7 +9,7 @@ function createAgent(slug: string, expectedBindingId?: string): PiAgent {
     provider: 'pi',
     authType: 'oauth',
     connectionSlug: slug,
-    expectedLlmCredentialBindingId: expectedBindingId,
+    ...(expectedBindingId !== undefined ? { expectedLlmCredentialBindingId: expectedBindingId } : {}),
     workspace: {
       id: 'ws-oauth-refresh-test',
       name: 'OAuth Refresh Test',
@@ -28,7 +28,7 @@ function createAgent(slug: string, expectedBindingId?: string): PiAgent {
   return new PiAgent(config);
 }
 
-const mutex = PiAgent['globalRefreshMutex'];
+const mutex = PiAgent.globalRefreshMutex;
 
 afterEach(() => {
   mutex.clear();
@@ -68,11 +68,11 @@ describe('PiAgent OAuth refresh mutex', () => {
   it('starts refresh for typed auth errors emitted as provider events', async () => {
     const agent = createAgent('typed-auth-refresh-test');
     let refreshAttempts = 0;
-    agent['refreshAndPushTokens'] = async () => {
+    agent.refreshAndPushTokens = async () => {
       refreshAttempts += 1;
     };
 
-    agent['handleSubprocessEvent']({
+    agent.handleSubprocessEvent({
       type: 'message_end',
       message: {
         role: 'assistant',
@@ -80,7 +80,7 @@ describe('PiAgent OAuth refresh mutex', () => {
         errorMessage: 'Provided authentication token is expired. Please try signing in again.',
       },
     });
-    agent['handleSubprocessEvent']({ type: 'agent_settled', aborted: false });
+    agent.handleSubprocessEvent({ type: 'agent_settled', aborted: false });
     await Promise.resolve();
 
     expect(refreshAttempts).toBe(1);
@@ -97,7 +97,7 @@ describe('PiAgent OAuth refresh mutex', () => {
 
     agent['subprocess'] = new ChildProcess();
     agent['send'] = (message: Record<string, unknown>) => { sent.push(message); return true; };
-    agent['getPiAuth'] = async () => {
+    agent.getPiAuth = async () => {
       credentialReads += 1;
       return {
         provider: 'openai-codex',
@@ -109,7 +109,7 @@ describe('PiAgent OAuth refresh mutex', () => {
       return { refreshed: false, bindingId };
     }));
 
-    await agent['refreshAndPushTokens']();
+    await agent.refreshAndPushTokens();
 
     expect(joinedConcurrentOwner).toBe(true);
     expect(credentialReads).toBe(0);
@@ -130,7 +130,7 @@ describe('PiAgent OAuth refresh mutex', () => {
 
     agent['subprocess'] = new ChildProcess();
     agent['send'] = (message: Record<string, unknown>) => { sent.push(message); return true; };
-    agent['getPiAuth'] = async () => {
+    agent.getPiAuth = async () => {
       throw new Error('waiters must use the successful owner outcome');
     };
     mutex.set(`${slug}\u0000${bindingId}`, Promise.resolve({
@@ -139,7 +139,7 @@ describe('PiAgent OAuth refresh mutex', () => {
       bindingId,
     }));
 
-    await agent['refreshAndPushTokens']();
+    await agent.refreshAndPushTokens();
 
     expect(sent).toEqual([{ type: 'token_update', piAuth: freshAuth }]);
     agent['subprocess'] = null;
@@ -167,7 +167,7 @@ describe('PiAgent OAuth refresh mutex', () => {
       };
     }));
 
-    await agent['refreshAndPushTokens']();
+    await agent.refreshAndPushTokens();
 
     expect(joinedConcurrentOwner).toBe(true);
     expect(sent).toEqual([]);

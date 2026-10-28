@@ -49,7 +49,7 @@ export function maybeFinalizeContextualGmailSessionCleanup(sessionId: string): v
 export function destroyContextualGmailSessionState(sessionId: string): void {
   const inFlight = inFlightContextualGmailReplies.get(sessionId);
   contextualGmailSessionsPendingFinalCleanup.set(sessionId, {
-    runtimeId: inFlight?.runtimeId,
+    ...(inFlight?.runtimeId !== undefined ? { runtimeId: inFlight?.runtimeId } : {}),
     runtimeTeardownConfirmed: !inFlight?.runtimeId,
   });
   invalidateContextualGmailSessionState(sessionId);

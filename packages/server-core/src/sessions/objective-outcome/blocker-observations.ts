@@ -41,17 +41,17 @@ function completedToolBlockerKinds(
         if (pollOperation) return structuredAuthenticationPollBlocker(message)
           ? ['external_authorization']
           : [];
-        const explicitlyNegative = value.pending === true || value.ok === false || value.success === false;
-        const rawCode = [value.code, value.error, value.status]
+        const explicitlyNegative = value["pending"] === true || value["ok"] === false || value["success"] === false;
+        const rawCode = [value["code"], value["error"], value["status"]]
           .find((candidate): candidate is string => typeof candidate === 'string' && candidate.length <= 256);
-        const rawMessage = [value.message, value.error, value.code]
+        const rawMessage = [value["message"], value["error"], value["code"]]
           .filter((candidate): candidate is string => typeof candidate === 'string' && candidate.length <= 4_096)
           .join(' ');
         if (explicitlyNegative && rawMessage) {
           const classified = blockerKindsForFailureSignal(message, rawMessage, rawCode);
           if (classified.length > 0) return classified;
         }
-        if (value.pending === true) return ['external_authorization'];
+        if (value["pending"] === true) return ['external_authorization'];
         // A device-code/auth start can succeed at the transport layer while
         // explicitly handing the next step to a human. Require a strict,
         // machine-shaped receipt from an allowlisted connector operation so a

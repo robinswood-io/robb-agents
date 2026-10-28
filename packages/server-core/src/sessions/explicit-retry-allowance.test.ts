@@ -1,5 +1,7 @@
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import type { AgentBackend } from '@craft-agent/shared/agent/backend/types.ts';
-import type { SessionOperations } from './SessionManager/operation-types.ts';
+
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
@@ -16,7 +18,7 @@ afterEach(async () => { for (const cleanup of cleanups.splice(0)) await cleanup(
 function fixture() {
   const rootPath = mkdtempSync(join(tmpdir(), 'explicit-retry-allowance-'))
   const manager = withSessionOperationsForTest(new SessionManager())
-  const runtime = manager as unknown as SessionOperations
+  const runtime = sessionManagerForTest(manager)
   const managed = createManagedSession({ id: 'retry-fixture', name: 'Retry fixture' },
     { id: 'retry-workspace', name: 'Retry', rootPath, createdAt: 1 } as never, { messagesLoaded: true })
   managed.messages = [
@@ -63,7 +65,7 @@ describe('explicit Retry prospective continuation', () => {
     for (let i = 1; i < 96; i++) checkpoint = budget.observe('Read', { path: `/fixture/${i}` })
     expect(checkpoint.action).toBe('block')
     expect(checkpoint.message).toContain('tool call #96')
-    h.runtime.getOrCreateAgent = async () => (({
+    h.runtime.getOrCreateAgent = async () => (completeSessionAgentFixture(h.managed.workspace, ({
       getModel: () => 'fixture', getSessionId: () => null, setAllSources: () => {}, isProcessing: () => false,
       async *chat() {
         yield { type: 'tool_start', toolName: 'Read', toolUseId: 'fresh-read', input: { path: '/fixture/result' } }
@@ -74,7 +76,7 @@ describe('explicit Retry prospective continuation', () => {
           checkpoint: { schemaVersion: 1, kind: 'tool-call-budget', reason: checkpoint.message! } }
         yield { type: 'complete' }
       },
-    } satisfies Partial<AgentBackend>) as Partial<AgentBackend> as AgentBackend)
+    } satisfies Partial<AgentBackend>)))
     const originalWrite = structuredClone(h.managed.messages[1])
     expect(await h.manager.retryTurn(h.managed.id, 'user')).toEqual({ status: 'started' })
     await h.done()

@@ -26,18 +26,18 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'motion/react';
-import { ChevronDown, ChevronLeft } from 'lucide-react';
+import { ChevronDown,ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { Drawer,DrawerTrigger,DrawerContent,DrawerHeader,DrawerTitle } from '@/components/ui/drawer';
 import "@/components/ui/label-icon";
-import { createLabelMenuItems, type LabelMenuItem } from '@/components/ui/label-menu-utils';
+import { createLabelMenuItems,type LabelMenuItem } from '@/components/ui/label-menu-utils';
 import "@/config/session-status-config";
-import { hasUnreadMeta, hasMessagesMeta } from '@/utils/session';
+import { hasUnreadMeta,hasMessagesMeta } from '@/utils/session';
 import "@/lib/platform";
-import { useMessagingConnect, type MessagingPlatform } from '@/components/messaging/MessagingSessionMenuItem';
+import { useMessagingConnect,type MessagingPlatform } from '@/components/messaging/MessagingSessionMenuItem';
 import { useSessionMenuActions } from '@/hooks/useSessionMenuActions';
 
-import { type View, type CompactSessionMenuProps, RootPane, LabelsPane, SharePane, MessagingPane } from "./compact-session-panes";
+import { type View,type CompactSessionMenuProps,RootPane,LabelsPane,SharePane,MessagingPane } from "./compact-session-panes";
 export { type CompactSessionMenuProps } from "./compact-session-panes";
 
 
@@ -61,7 +61,6 @@ export function CompactSessionMenu({
   badge,
   isRegeneratingTitle,
   item,
-  sessionStatuses,
   labels = [],
   hasRemoteWorkspaces,
   onLabelsChange,
@@ -71,7 +70,6 @@ export function CompactSessionMenu({
   onArchive,
   onUnarchive,
   onMarkUnread,
-  onSessionStatusChange,
   onOpenInNewWindow,
   onSendToWorkspace,
   onDelete,
@@ -113,7 +111,7 @@ export function CompactSessionMenu({
   const _hasMessages = hasMessagesMeta(item)
   const _hasUnread = hasUnreadMeta(item)
 
-  const actions = useSessionMenuActions({ item, onLabelsChange })
+  const actions = useSessionMenuActions({ item, ...(onLabelsChange !== undefined ? { onLabelsChange: onLabelsChange } : {}) })
 
   const flatLabelItems = React.useMemo(
     (): LabelMenuItem[] => createLabelMenuItems(labels),

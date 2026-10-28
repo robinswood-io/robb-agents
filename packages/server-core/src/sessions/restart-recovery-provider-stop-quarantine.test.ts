@@ -39,7 +39,7 @@ describe('provider dispatch write-ahead recovery', () => {
     await h.manager.cancelProcessing(managed.id, false)
     const fenced = managed.messages.find(message => message.id === dispatchedMessageId)!
     expect(fenced.providerDispatch?.state).toBe('acceptance-unknown')
-    expect(fenced.providerDispatch?.userStoppedAt).toEqual(expect.any(Number))
+    expect<unknown>(fenced.providerDispatch?.userStoppedAt).toEqual((expect.any(Number) as unknown))
     expect(managed.pendingTurnRecovery?.userMessageId).toBe(dispatchedMessageId)
     release.resolve(); await run
     await h.manager.flushSession(managed.id)
@@ -61,11 +61,11 @@ describe('provider dispatch write-ahead recovery', () => {
     if (!genericContinuations) await cold.runtime.resumePendingTurnAfterRestart(restored.id)
     expect(providerStarts).toBe(0)
     expect(genericContinuations).toBe(0)
-    expect(restored.messages.find((message: Managed['messages'][number]) => (
+    expect<unknown>(restored.messages.find((message: Managed['messages'][number]) => (
       message.id === dispatchedMessageId
     ))?.providerDispatch).toMatchObject({
       state: 'acceptance-unknown',
-      userStoppedAt: expect.any(Number),
+      userStoppedAt: (expect.any(Number) as unknown),
     })
     expect(h.events.some(event => event.type === 'typed_error'
       && event.error?.title === 'Provider dispatch requires reconciliation')).toBe(true)
@@ -129,7 +129,7 @@ describe('provider dispatch write-ahead recovery', () => {
         await flushSessionDurably(id)
       }
 
-      const retry = h.manager.retryTurn(managed.id, anchorId).catch(error => error)
+      const retry = h.manager.retryTurn(managed.id, anchorId).catch((error: unknown) => error)
       await entered.promise
       await expect(h.manager.sendMessage(managed.id, 'A newer human turn must not cross this Retry fence.'))
         .rejects.toThrow('Provider reconciliation is still being persisted')
@@ -144,13 +144,13 @@ describe('provider dispatch write-ahead recovery', () => {
       ))).toBe(false)
       const stopped = managed.messages.find(message => message.id === anchorId)?.providerDispatch
       if (state === 'accepted') {
-        expect(stopped).toMatchObject({
+        expect<unknown>(stopped).toMatchObject({
           state: 'retired-accepted', retirementReason: 'user-stop-after-provider-ack',
-          userStoppedAt: expect.any(Number),
+          userStoppedAt: (expect.any(Number) as unknown),
         })
       } else {
-        expect(stopped).toMatchObject({
-          state: 'acceptance-unknown', userStoppedAt: expect.any(Number),
+        expect<unknown>(stopped).toMatchObject({
+          state: 'acceptance-unknown', userStoppedAt: (expect.any(Number) as unknown),
         })
       }
 

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { TelegramAdapter } from "../adapters/telegram/index";
 import type { PlatformType } from "../types";
 import type { MessagingGatewayRegistry } from '../registry.ts';
@@ -23,11 +24,11 @@ export function generatePairingCode(transportOwner: MessagingGatewayRegistry, wo
         platform,
         expiresAt: gen.expiresAt,
     });
-    return {
+    return omitUndefined({
         code: gen.code,
         expiresAt: gen.expiresAt,
         botUsername: state.botUsernames[platform],
-    };
+    });
 }
 
 export function generateSupergroupPairingCode(transportOwner: MessagingGatewayRegistry, workspaceId: string, platform: string): {
@@ -53,11 +54,11 @@ export function generateSupergroupPairingCode(transportOwner: MessagingGatewayRe
         platform,
         expiresAt: gen.expiresAt,
     });
-    return {
+    return omitUndefined({
         code: gen.code,
         expiresAt: gen.expiresAt,
         botUsername: state.botUsernames[platform],
-    };
+    });
 }
 
 export async function bindWorkspaceSupergroup(transportOwner: MessagingGatewayRegistry, workspaceId: string, platform: PlatformType, chatId: string, fallbackTitle?: string): Promise<{
@@ -168,7 +169,7 @@ export async function bindAutomationSession(transportOwner: MessagingGatewayRegi
             createTopic: (name) => adapter.createForumTopic(supergroup.chatId, name),
         });
         state.gateway.getBindingStore().bind(args.workspaceId, args.sessionId, 'telegram', entry.chatId, trimmed, undefined, entry.threadId);
-        transportOwner["emitBindingChanged"](args.workspaceId);
+        transportOwner.emitBindingChanged(args.workspaceId);
         return {
             ok: true,
             chatId: entry.chatId,

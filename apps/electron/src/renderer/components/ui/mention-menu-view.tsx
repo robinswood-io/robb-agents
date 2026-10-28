@@ -40,13 +40,13 @@ export interface InlineMentionMenuProps {
   onOpenChange: (open: boolean) => void
   sections: MentionSection[]
   onSelect: (item: MentionItem) => void
-  filter?: string
+  filter?: string | undefined
   position: { x: number; y: number }
-  workspaceId?: string
-  maxWidth?: number
-  className?: string
+  workspaceId?: string | undefined
+  maxWidth?: number | undefined
+  className?: string | undefined
   /** Whether file search is in progress */
-  isSearching?: boolean
+  isSearching?: boolean | undefined
 }
 
 

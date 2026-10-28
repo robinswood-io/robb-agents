@@ -22,18 +22,18 @@ import * as gatewayButtons from './gateway/buttons.ts';
 export type { GatewayOptions } from './gateway/shared.ts';
 
 export class MessagingGateway {
-    private readonly sessionManager: ISessionManager;
-    private readonly workspaceId: string;
+    /** @internal */ public readonly sessionManager: ISessionManager;
+    /** @internal */ public readonly workspaceId: string;
     private readonly bindingStore: BindingStore;
     private readonly pendingStore: PendingSendersStore;
     private readonly router: Router;
     private readonly commands: Commands;
-    private readonly renderer: Renderer;
+    /** @internal */ public readonly renderer: Renderer;
     private readonly planTokens: PlanTokenRegistry;
     private readonly planMessages = new Map<string, PlanMessageRecord>();
     /** Live permission prompts, keyed by `requestId`. See PermissionMessageRecord. */
     private readonly permissionMessages = new Map<string, PermissionMessageRecord>();
-    private readonly pendingCompactAccepts = new Map<string, PendingCompactAccept>();
+    /** @internal */ public readonly pendingCompactAccepts = new Map<string, PendingCompactAccept>();
     private readonly adapters = new Map<PlatformType, PlatformAdapter>();
     private readonly log: MessagingLogger;
     private started = false;
@@ -46,7 +46,7 @@ export class MessagingGateway {
      * out their text-channel reply, and vice versa).
      */
     private readonly accessDeps: AccessControlDeps;
-    private readonly buttonRecentRejectReplies = new Map<string, number>();
+    /** @internal */ public readonly buttonRecentRejectReplies = new Map<string, number>();
     constructor(opts: GatewayOptions) {
         this.sessionManager = opts.sessionManager;
         this.workspaceId = opts.workspaceId;
@@ -132,25 +132,25 @@ export class MessagingGateway {
     onSessionEvent(channel: string, _target: PushTarget, ...args: unknown[]): void {
         return gatewayEvents.onSessionEvent(this, channel, _target, ...args);
     }
-    private sweepStalePermissions(event: SessionEvent): void {
+    /** @internal */ public sweepStalePermissions(event: SessionEvent): void {
         return gatewayPermissions.sweepStalePermissions(this, event);
     }
     private async handleButtonPress(platform: PlatformType, press: ButtonPress): Promise<void> {
         return gatewayButtons.handleButtonPress(this, platform, press);
     }
-    private async handlePermissionButton(adapter: PlatformAdapter, press: ButtonPress): Promise<void> {
+    /** @internal */ public async handlePermissionButton(adapter: PlatformAdapter, press: ButtonPress): Promise<void> {
         return gatewayPermissions.handlePermissionButton(this, adapter, press);
     }
-    private async handlePlanButton(platform: PlatformType, adapter: PlatformAdapter, press: ButtonPress): Promise<void> {
+    /** @internal */ public async handlePlanButton(platform: PlatformType, adapter: PlatformAdapter, press: ButtonPress): Promise<void> {
         return gatewayButtons.handlePlanButton(this, platform, adapter, press);
     }
-    private async gateButtonPress(adapter: PlatformAdapter, press: ButtonPress): Promise<boolean> {
+    /** @internal */ public async gateButtonPress(adapter: PlatformAdapter, press: ButtonPress): Promise<boolean> {
         return gatewayButtons.gateButtonPress(this, adapter, press);
     }
-    private synthesizeMsgForGate(press: ButtonPress): IncomingMessage {
+    /** @internal */ public synthesizeMsgForGate(press: ButtonPress): IncomingMessage {
         return gatewayButtons.synthesizeMsgForGate(this, press);
     }
-    private async finishPendingCompactAccept(sessionId: string): Promise<void> {
+    /** @internal */ public async finishPendingCompactAccept(sessionId: string): Promise<void> {
         return gatewayPermissions.finishPendingCompactAccept(this, sessionId);
     }
     // -------------------------------------------------------------------------

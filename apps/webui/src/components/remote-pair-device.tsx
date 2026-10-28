@@ -31,23 +31,23 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 
 export function isPairingDetails(value: unknown): value is PairingDetails {
   return isRecord(value)
-    && typeof value.pairingUrl === 'string'
-    && typeof value.code === 'string'
-    && typeof value.expiresAt === 'string'
-    && typeof value.hostLabel === 'string'
+    && typeof value["pairingUrl"] === 'string'
+    && typeof value["code"] === 'string'
+    && typeof value["expiresAt"] === 'string'
+    && typeof value["hostLabel"] === 'string'
 }
 
 
 export function isPairingResult(value: unknown): value is PairingResult {
   return isRecord(value)
-    && value.ok === true
-    && typeof value.deviceId === 'string'
-    && typeof value.hostLabel === 'string'
+    && value["ok"] === true
+    && typeof value["deviceId"] === 'string'
+    && typeof value["hostLabel"] === 'string'
 }
 
 
 export function getErrorMessage(value: unknown, fallback: string): string {
-  return isRecord(value) && typeof value.error === 'string' ? value.error : fallback
+  return isRecord(value) && typeof value["error"] === 'string' ? value["error"] : fallback
 }
 
 
@@ -121,7 +121,7 @@ export function readAndScrubPairingCredentials(): { ticket?: string; code: strin
     )
   }
 
-  return { ticket, code }
+  return { ...(ticket === undefined ? {} : { ticket }), code }
 }
 
 
@@ -144,7 +144,7 @@ export function RemoteShell({ children }: { children: React.ReactNode }) {
 }
 
 
-export function BrandHeader({ onBack }: { onBack?: () => void }) {
+export function BrandHeader({ onBack }: { onBack?: (() => void) | undefined }) {
   const { t } = useTranslation()
   return (
     <header className="flex items-center justify-between py-2">
@@ -168,7 +168,7 @@ export function BrandHeader({ onBack }: { onBack?: () => void }) {
 }
 
 
-export function TrustGrid({ className = '' }: { className?: string }) {
+export function TrustGrid({ className = '' }: { className?: string | undefined }) {
   const { t } = useTranslation()
   return (
     <div className={`grid grid-cols-2 gap-3 text-xs text-foreground/70 ${className}`}>

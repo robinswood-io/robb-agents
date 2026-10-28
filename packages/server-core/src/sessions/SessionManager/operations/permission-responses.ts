@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { randomUUID } from 'node:crypto';
 import { requirePermissionMode } from '@craft-agent/shared/agent/mode-types';
@@ -65,15 +67,15 @@ function sessionOpRespondToPermission(sessionOperationContext: SessionOperationC
         if (requestMeta)
             clearTimeout(requestMeta.timeout);
         if (requestMeta?.type === 'admin_approval') {
-            const brokerResult = sessionOperationContext.state.privilegedExecutionBroker.resolveApproval(requestId, allowed, {
+            const brokerResult = sessionOperationContext.state.privilegedExecutionBroker.resolveApproval(requestId, allowed, omitUndefined({
                 expectedCommandHash: requestMeta.commandHash,
                 expectedSessionId: sessionId,
-            });
+            }));
             if (!brokerResult.ok) {
                 sessionLog.warn(`Admin approval rejected by broker for ${requestId}: ${brokerResult.reason}`);
                 // Broker rejection should fail closed.
                 void sessionOpRecordDeniedPermissionBeforeProviderResume(sessionOperationContext, managed, requestMeta)
-                    .catch(error => {
+                    .catch((error: unknown) => {
                     sessionLog.warn('Could not record rejected broker permission', {
                         sessionId,
                         requestId,
@@ -109,11 +111,11 @@ function sessionOpRespondToPermission(sessionOperationContext: SessionOperationC
             managed.externalActionAuthorizations = rememberExternalActionAuthorization(managed.externalActionAuthorizations, {
                 category: requestMeta.sensitiveActionCategory,
                 targetCandidates: requestMeta.sensitiveActionTargets,
-                toolName: requestMeta.toolName,
-                operationHash: requestMeta.sensitiveActionOperationHash,
+                ...(requestMeta.toolName !== undefined ? { toolName: requestMeta.toolName } : {}),
+                ...(requestMeta.sensitiveActionOperationHash !== undefined ? { operationHash: requestMeta.sensitiveActionOperationHash } : {}),
             });
             sessionOperationContext.owner["persistSession"](managed);
-            void sessionOperationContext.owner.flushSession(managed.id).catch(error => {
+            void sessionOperationContext.owner.flushSession(managed.id).catch((error: unknown) => {
                 sessionLog.warn('Failed to persist scoped sensitive-action authorization', {
                     sessionId: managed.id,
                     requestId,
@@ -140,7 +142,7 @@ function sessionOpRespondToPermission(sessionOperationContext: SessionOperationC
         }
         if (!allowed) {
             void sessionOpRecordDeniedPermissionBeforeProviderResume(sessionOperationContext, managed, requestMeta)
-                .catch(error => {
+                .catch((error: unknown) => {
                 sessionLog.warn('Could not record explicit permission denial', {
                     sessionId,
                     requestId,
@@ -284,7 +286,7 @@ function sessionOpSetSessionPermissionMode(sessionOperationContext: SessionOpera
         if (managed.agent) {
             managed.agent.setPermissionMode(mode);
         }
-        sessionOperationContext.owner["sendEvent"]({
+        sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'permission_mode_changed' }>>({
             type: 'permission_mode_changed',
             sessionId: managed.id,
             permissionMode: mode,
@@ -293,7 +295,7 @@ function sessionOpSetSessionPermissionMode(sessionOperationContext: SessionOpera
             changedAt: diagnostics.lastChangedAt,
             previousPermissionMode: diagnostics.previousPermissionMode,
             transitionDisplay: diagnostics.transitionDisplay,
-        }, managed.workspace.id);
+        }), managed.workspace.id);
         // Persist to disk
         sessionOperationContext.owner["persistSession"](managed);
     }
@@ -337,14 +339,14 @@ function sessionOpGetSessionPermissionModeState(sessionOperationContext: Session
         diagnostics = getPermissionModeDiagnostics(sessionId);
     }
     managed.previousPermissionMode = diagnostics.previousPermissionMode;
-    return {
+    return omitUndefined({
         permissionMode: diagnostics.permissionMode,
         previousPermissionMode: diagnostics.previousPermissionMode,
         transitionDisplay: diagnostics.transitionDisplay,
         modeVersion: diagnostics.modeVersion,
         changedAt: diagnostics.lastChangedAt,
         changedBy: diagnostics.lastChangedBy,
-    };
+    });
 }
 
 export { sessionOpRespondToPermission as respondToPermission };

@@ -74,7 +74,9 @@ export type SessionEvent =
       modelRoutePinned?: boolean
     }
   | { type: 'session_status_changed'; sessionId: string; sessionStatus: SessionStatus }
-  | { type: 'session_metadata_changed'; sessionId: string; changes: Partial<Pick<Session, 'taskNodeCount' | 'kanbanColumn' | 'taskDraft' | 'taskSlug' | 'projectId' | 'isProcessing'>> }
+  | { type: 'session_metadata_changed'; sessionId: string; changes:
+      Partial<Pick<Session, 'taskNodeCount' | 'taskDraft' | 'taskSlug' | 'projectId' | 'isProcessing'>>
+      & { kanbanColumn?: NonNullable<Session['kanbanColumn']> | null } }
   | { type: 'session_deleted'; sessionId: string }
   | { type: 'session_created'; sessionId: string }
   | { type: 'session_shared'; sessionId: string; sharedUrl: string }

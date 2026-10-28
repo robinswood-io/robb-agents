@@ -12,9 +12,9 @@ export interface SettingsCardProps {
   /** Card content */
   children: React.ReactNode
   /** Additional className */
-  className?: string
+  className?: string | undefined
   /** Whether to add internal dividers between children */
-  divided?: boolean
+  divided?: boolean | undefined
 }
 
 /**
@@ -58,7 +58,7 @@ export function SettingsCardContent({
   className,
 }: {
   children: React.ReactNode
-  className?: string
+  className?: string | undefined
 }) {
   return <div className={cn('px-4 py-3.5', className)}>{children}</div>
 }
@@ -71,7 +71,7 @@ export function SettingsCardFooter({
   className,
 }: {
   children: React.ReactNode
-  className?: string
+  className?: string | undefined
 }) {
   return (
     <div

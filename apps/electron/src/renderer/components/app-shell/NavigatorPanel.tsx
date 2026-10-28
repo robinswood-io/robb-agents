@@ -18,7 +18,6 @@
 import * as React from 'react'
 import { Panel } from './Panel'
 import { PanelHeader } from './PanelHeader'
-import { cn } from '@/lib/utils'
 
 export interface NavigatorPanelProps {
   /** Panel title (e.g., "Conversations", "Sources") */
@@ -26,11 +25,11 @@ export interface NavigatorPanelProps {
   /** Panel width in pixels */
   width: number
   /** Action buttons rendered in the header (filter, add, etc.) */
-  headerActions?: React.ReactNode
+  headerActions?: React.ReactNode | undefined
   /** Main content (SessionList, SourcesListPanel, etc.) */
   children: React.ReactNode
   /** Optional className for the container */
-  className?: string
+  className?: string | undefined
 }
 
 export function NavigatorPanel({

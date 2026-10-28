@@ -29,19 +29,19 @@ import type { ConfigWatcher } from '../watcher.ts';
    * Scan skills directory to populate known skills
    */
 export function scanSkills(transportOwner: ConfigWatcher): void {
-    if (!existsSync(transportOwner["skillsDir"])) {
-        mkdirSync(transportOwner["skillsDir"], { recursive: true });
+    if (!existsSync(transportOwner.skillsDir)) {
+        mkdirSync(transportOwner.skillsDir, { recursive: true });
         return;
     }
     try {
-        const entries = readdirSync(transportOwner["skillsDir"]);
+        const entries = readdirSync(transportOwner.skillsDir);
         for (const entry of entries) {
-            const entryPath = join(transportOwner["skillsDir"], entry);
+            const entryPath = join(transportOwner.skillsDir, entry);
             if (statSync(entryPath).isDirectory()) {
-                transportOwner["knownSkills"].add(entry);
+                transportOwner.knownSkills.add(entry);
             }
         }
-        debug('[ConfigWatcher] Known skills:', Array.from(transportOwner["knownSkills"]));
+        debug('[ConfigWatcher] Known skills:', Array.from(transportOwner.knownSkills));
     }
     catch (error) {
         debug('[ConfigWatcher] Error scanning skills:', error);
@@ -53,10 +53,10 @@ export function scanSkills(transportOwner: ConfigWatcher): void {
    */
 export function handleSkillsDirChange(transportOwner: ConfigWatcher): void {
     debug('[ConfigWatcher] Skills directory changed');
-    if (!existsSync(transportOwner["skillsDir"])) {
+    if (!existsSync(transportOwner.skillsDir)) {
         // Directory was deleted
-        const removed = Array.from(transportOwner["knownSkills"]);
-        transportOwner["knownSkills"].clear();
+        const removed = Array.from(transportOwner.knownSkills);
+        transportOwner.knownSkills.clear();
         for (const slug of removed) {
             transportOwner["callbacks"].onSkillChange?.(slug, null);
         }
@@ -64,19 +64,19 @@ export function handleSkillsDirChange(transportOwner: ConfigWatcher): void {
         return;
     }
     try {
-        const entries = readdirSync(transportOwner["skillsDir"]);
+        const entries = readdirSync(transportOwner.skillsDir);
         const currentFolders = new Set<string>();
         for (const entry of entries) {
-            const entryPath = join(transportOwner["skillsDir"], entry);
+            const entryPath = join(transportOwner.skillsDir, entry);
             if (statSync(entryPath).isDirectory()) {
                 currentFolders.add(entry);
             }
         }
         // Find added folders
         for (const folder of currentFolders) {
-            if (!transportOwner["knownSkills"].has(folder)) {
+            if (!transportOwner.knownSkills.has(folder)) {
                 debug('[ConfigWatcher] New skill folder:', folder);
-                transportOwner["knownSkills"].add(folder);
+                transportOwner.knownSkills.add(folder);
                 const skill = loadSkill(transportOwner["workspaceDir"], folder);
                 if (skill) {
                     transportOwner["callbacks"].onSkillChange?.(folder, skill);
@@ -84,10 +84,10 @@ export function handleSkillsDirChange(transportOwner: ConfigWatcher): void {
             }
         }
         // Find removed folders
-        for (const folder of transportOwner["knownSkills"]) {
+        for (const folder of transportOwner.knownSkills) {
             if (!currentFolders.has(folder)) {
                 debug('[ConfigWatcher] Removed skill folder:', folder);
-                transportOwner["knownSkills"].delete(folder);
+                transportOwner.knownSkills.delete(folder);
                 transportOwner["callbacks"].onSkillChange?.(folder, null);
             }
         }
@@ -125,7 +125,7 @@ export function handleSkillChange(transportOwner: ConfigWatcher, slug: string): 
                 transportOwner["callbacks"].onSkillChange?.(slug, updatedSkill);
             }
         })
-            .catch((error) => {
+            .catch((error: unknown) => {
             debug('[ConfigWatcher] Icon download failed for skill:', slug, error);
         });
     }

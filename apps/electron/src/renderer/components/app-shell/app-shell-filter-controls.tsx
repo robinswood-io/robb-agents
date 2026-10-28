@@ -17,11 +17,11 @@ export interface AppShellProps {
   /** All data and callbacks - passed directly to AppShellProvider */
   contextValue: AppShellContextType
   /** UI-specific props */
-  defaultLayout?: number[]
-  defaultCollapsed?: boolean
-  menuNewChatTrigger?: number
+  defaultLayout?: number[] | undefined
+  defaultCollapsed?: boolean | undefined
+  menuNewChatTrigger?: number | undefined
   /** Focused mode - hides sidebars, shows only the chat content */
-  isFocusedMode?: boolean
+  isFocusedMode?: boolean | undefined
 }
 
 export const altClickTooltipLabel = isMac ? '⌥ click to exclude' : 'Alt click to exclude'
@@ -101,11 +101,11 @@ export function FilterMenuRow({
   label: React.ReactNode
   accessory?: React.ReactNode
   /** Additional classes for icon container (e.g., for status icon scaling) */
-  iconClassName?: string
+  iconClassName?: string | undefined
   /** Style for icon container (e.g., for status icon color) */
-  iconStyle?: React.CSSProperties
+  iconStyle?: React.CSSProperties | undefined
   /** When true, skip the icon container (for icons that have their own container) */
-  noIconContainer?: boolean
+  noIconContainer?: boolean | undefined
 }) {
   return (
     <>

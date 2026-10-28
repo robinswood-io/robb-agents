@@ -12,7 +12,6 @@
  * - Provide detailed rejection reasons for blocked operations
  */
 
-import { homedir } from 'os';
 import {
   getPermissionMode,
   setPermissionMode,
@@ -133,8 +132,8 @@ export class PermissionManager {
 
     // Use shouldAllowToolInMode which handles all the complex logic
     const result = shouldAllowToolInMode(toolName, toolInput, mode, {
-      plansFolderPath: this.config.plansFolderPath,
-      dataFolderPath: this.config.dataFolderPath,
+      ...(this.config.plansFolderPath !== undefined ? { plansFolderPath: this.config.plansFolderPath } : {}),
+      ...(this.config.dataFolderPath !== undefined ? { dataFolderPath: this.config.dataFolderPath } : {}),
       permissionsContext: this.permissionsContext,
     });
 

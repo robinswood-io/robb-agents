@@ -1,3 +1,5 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { StoredConfigSchema } from '../../../shared/src/config/validators.ts';
 import { withSessionOperationsForTest } from "./testing/session-operation-access.ts";
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, spyOn } from "bun:test";
@@ -32,6 +34,7 @@ let restoreConfig: (() => void) | undefined
 function writeTestConfig(): void {
   mkdirSync(tmpConfigRoot, { recursive: true })
   writeFileSync(join(tmpConfigRoot, 'config.json'), JSON.stringify({
+    schemaVersion: 1,
     workspaces: [],
     activeWorkspaceId: null,
     activeSessionId: null,
@@ -116,14 +119,14 @@ function injectSession(
 
 beforeAll(async () => {
   tmpConfigRoot = mkdtempSync(join(tmpdir(), 'sm-refresh-config-'))
-  process.env.CRAFT_CONFIG_DIR = tmpConfigRoot
+  process.env["CRAFT_CONFIG_DIR"] = tmpConfigRoot
   writeTestConfig()
 
   // An earlier test may have frozen CONFIG_DIR before this fixture existed.
   // Keep real backend resolution while loading only this test's temporary file.
   const storage = await import('@craft-agent/shared/config/storage')
   const configLoader = spyOn(storage, 'loadStoredConfig').mockImplementation(() =>
-    JSON.parse(readFileSync(join(tmpConfigRoot, 'config.json'), 'utf8')),
+    StoredConfigSchema.parse(JSON.parse(readFileSync(join(tmpConfigRoot, 'config.json'), 'utf8'))) as NonNullable<ReturnType<typeof storage.loadStoredConfig>>,
   )
   restoreConfig = () => configLoader.mockRestore()
 
@@ -139,9 +142,9 @@ afterAll(() => {
     rmSync(tmpConfigRoot, { recursive: true, force: true })
   }
   if (originalCraftConfigDir === undefined) {
-    delete process.env.CRAFT_CONFIG_DIR
+    delete process.env["CRAFT_CONFIG_DIR"]
   } else {
-    process.env.CRAFT_CONFIG_DIR = originalCraftConfigDir
+    process.env["CRAFT_CONFIG_DIR"] = originalCraftConfigDir
   }
 })
 
@@ -202,13 +205,11 @@ describe('refreshConnectionRuntime', () => {
     managed.thinkingLevel = 'high'
     managed.thinkingLevelPinned = true
     managed.tokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0, contextTokens: 0, costUsd: 100_000 }
-    const internal = sm as unknown as {
-      tryRefreshAgentRuntime: (session: unknown, reason: string) => Promise<void>
-      getOrCreateAgent: (session: unknown, turn: { message: string }) => Promise<unknown>
-    }
+    const internal = sessionManagerForTest(sm)
     internal.tryRefreshAgentRuntime = jest.fn().mockResolvedValue(undefined)
 
     const result = await internal.getOrCreateAgent(managed, {
+      messageId: 'fixture-dispatch',
       message: 'Audit the architecture, implement a migration, verify the result, and review every security requirement.',
     })
 
@@ -254,13 +255,10 @@ describe('refreshConnectionRuntime', () => {
       capabilityEnvelopeSha256: specializedProfileCapabilityEnvelopeIdentity([]),
       capabilities: [],
     }
-    const internal = sm as unknown as {
-      tryRefreshAgentRuntime: (session: unknown, reason: string) => Promise<void>
-      getOrCreateAgent: (session: unknown, turn: { message: string }) => Promise<unknown>
-    }
+    const internal = sessionManagerForTest(sm)
     internal.tryRefreshAgentRuntime = jest.fn().mockResolvedValue(undefined)
 
-    await expect(internal.getOrCreateAgent(managed, { message: 'Retry.' }))
+    await expect(internal.getOrCreateAgent(managed, { messageId: 'fixture-retry', message: 'Retry.' }))
       .rejects.toThrow('host-attestable credential generation')
     expect(agent.setModel).not.toHaveBeenCalled()
   })

@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { omitUndefined, type SnapshotInput } from '@craft-agent/shared/utils/json';
+import { useState,useEffect,useCallback,useRef,useMemo } from 'react';
 
 import { useTheme } from '@/hooks/useTheme';
-import { themeToCSS, type ThemeOverrides } from '@config/theme';
-import { useAtomValue, useAtom } from 'jotai';
-import type { Session, Workspace, PermissionRequest, CredentialRequest, LlmConnectionWithStatus, PermissionModeState } from '../shared/types';
+import { themeToCSS,type ThemeOverrides } from '@config/theme';
+import { useAtomValue,useAtom } from 'jotai';
+import type { Session,Workspace,PermissionRequest,CredentialRequest,LlmConnectionWithStatus,PermissionModeState } from '../shared/types';
 import type { SessionDraft } from '@craft-agent/shared/config';
 import type { SessionOptions } from './hooks/useSessionOptions';
 import { defaultSessionOptions } from './hooks/useSessionOptions';
@@ -27,12 +28,12 @@ export function useAppSessionState({
 }: useAppSessionStateInput) {
 const updateSessionById = useCallback((
     sessionId: string,
-    updates: Partial<Session> | ((session: Session) => Partial<Session>)
+    updates: Partial<SnapshotInput<Session>> | ((session: Session) => Partial<SnapshotInput<Session>>)
   ) => {
     updateSessionDirect(sessionId, (prev) => {
       if (!prev) return prev
       const partialUpdates = typeof updates === 'function' ? updates(prev) : updates
-      return { ...prev, ...partialUpdates }
+      return omitUndefined<Session>({ ...prev, ...partialUpdates })
     })
   }, [updateSessionDirect])
 
@@ -64,11 +65,9 @@ const [llmConnections, setLlmConnections] = useState<LlmConnectionWithStatus[]>(
 
 const [workspaceDefaultLlmConnection, setWorkspaceDefaultLlmConnection] = useState<string | undefined>()
 
-const [defaultLlmConnectionSlug, setDefaultLlmConnectionSlug] = useState<string | undefined>()
+const [, setDefaultLlmConnectionSlug] = useState<string | undefined>()
 
-const defaultConnection = useMemo(() => {
-    return llmConnections.find(c => c.slug === defaultLlmConnectionSlug) ?? null
-  }, [llmConnections, defaultLlmConnectionSlug])
+
 
 const [menuNewChatTrigger, setMenuNewChatTrigger] = useState(0)
 
@@ -84,7 +83,7 @@ const [appTheme, setAppTheme] = useState<ThemeOverrides | null>(null)
 
 const [showResetDialog, setShowResetDialog] = useState(false)
 
-const updateChecker = useUpdateChecker()
+useUpdateChecker();
 
 const [sessionsLoaded, setSessionsLoaded] = useState(false)
 

@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import { AGENT_RUNTIME_ACTIVITY } from '@craft-agent/core/types';
 import type { AgentEvent as CraftAgentEvent, AgentModelProvenance } from '@craft-agent/core/types';
 import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
@@ -42,7 +43,7 @@ export function* adaptPiMessageEvent(
   event: Extract<AgentSessionEvent, { type: 'message_start' | 'message_update' | 'message_end' }>,
   state: PiMessageState,
   turnId: string | null,
-): Generator<CraftAgentEvent> {
+): Generator<CraftAgentEvent, void, unknown> {
   switch (event.type) {
 case 'message_start':
         // The SDK starts an assistant message when the provider call begins.
@@ -156,7 +157,7 @@ case 'message_end': {
             text: textContent,
             isIntermediate,
             turnId: mTurnId,
-            sdkMessageId,
+            ...(sdkMessageId !== undefined ? { sdkMessageId } : {}),
             ...(modelProvenance ? { modelProvenance } : {}),
           };
           state.hasStreamedDeltas = false;
@@ -169,7 +170,7 @@ case 'message_end': {
             type: 'usage_update',
             usage: {
               inputTokens,
-              contextWindow: state.contextWindow,
+              ...(state.contextWindow !== undefined ? { contextWindow: state.contextWindow } : {}),
             },
           };
         }
@@ -240,7 +241,7 @@ function extractTextFromMessage(message: unknown): string | null {
       return msg.content || null;
     }
 
-    if (Array.isArray(msg.content)) {
+    if (isUnknownArray(msg.content)) {
       const textParts = msg.content
         .filter((c) => c.type === 'text' && c.text)
         .map((c) => c.text!);

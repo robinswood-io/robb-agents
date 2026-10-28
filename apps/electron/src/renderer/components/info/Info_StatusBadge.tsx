@@ -25,9 +25,9 @@ const statusI18nKeys: Record<PermissionStatus, string> = {
 export interface Info_StatusBadgeProps
   extends Omit<React.HTMLAttributes<HTMLSpanElement>, 'children'> {
   /** Status type */
-  status?: PermissionStatus | null
+  status?: PermissionStatus | null | undefined
   /** Override the default label */
-  label?: string
+  label?: string | undefined
 }
 
 export function Info_StatusBadge({

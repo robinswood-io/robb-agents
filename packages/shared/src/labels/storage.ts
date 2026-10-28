@@ -9,7 +9,7 @@
  * Labels are visual by color only (colored circles in the UI).
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import type { WorkspaceLabelConfig, LabelConfig } from './types.ts';
 import { flattenLabels, findLabelById } from './tree.ts';

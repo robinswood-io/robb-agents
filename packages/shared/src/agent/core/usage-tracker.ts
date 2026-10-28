@@ -108,7 +108,7 @@ export class UsageTracker {
 
   constructor(config: UsageTrackerConfig = {}) {
     this.config = config;
-    this.cachedContextWindow = config.contextWindow;
+    if (config.contextWindow === undefined) { delete this.cachedContextWindow } else { this.cachedContextWindow = config.contextWindow }
     this.sessionUsage = {
       totalInputTokens: 0,
       totalOutputTokens: 0,
@@ -275,7 +275,7 @@ export class UsageTracker {
   buildUsageUpdate(): UsageUpdate {
     return {
       inputTokens: this.getCurrentInputTokens(),
-      contextWindow: this.cachedContextWindow,
+      ...(this.cachedContextWindow !== undefined ? { contextWindow: this.cachedContextWindow } : {}),
       cacheHitRate: this.getCacheHitRate(),
     };
   }

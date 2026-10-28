@@ -63,8 +63,8 @@ export async function getPiAuth(transportOwner: PiAgent): Promise<PiAuthPayload 
                         type: 'iam',
                         accessKeyId: iam.accessKeyId,
                         secretAccessKey: iam.secretAccessKey,
-                        region: iam.region,
-                        sessionToken: iam.sessionToken,
+                        ...(iam.region !== undefined ? { region: iam.region } : {}),
+                        ...(iam.sessionToken !== undefined ? { sessionToken: iam.sessionToken } : {}),
                     },
                 };
             }
@@ -114,18 +114,18 @@ export function buildAwsEnv(transportOwner: PiAgent, piAuth: Awaited<ReturnType<
         ? pickExplicitEnvironment(BEDROCK_ENVIRONMENT_AUTH_KEYS)
         : {};
     if (piAuth?.credential.type === 'iam') {
-        env.AWS_ACCESS_KEY_ID = piAuth.credential.accessKeyId;
-        env.AWS_SECRET_ACCESS_KEY = piAuth.credential.secretAccessKey;
+        env["AWS_ACCESS_KEY_ID"] = piAuth.credential.accessKeyId;
+        env["AWS_SECRET_ACCESS_KEY"] = piAuth.credential.secretAccessKey;
         if (piAuth.credential.region)
-            env.AWS_REGION = piAuth.credential.region;
+            env["AWS_REGION"] = piAuth.credential.region;
         if (piAuth.credential.sessionToken)
-            env.AWS_SESSION_TOKEN = piAuth.credential.sessionToken;
+            env["AWS_SESSION_TOKEN"] = piAuth.credential.sessionToken;
         transportOwner["debug"]('Injecting IAM credentials into subprocess env for AWS SDK');
     }
     // Defensive: force HTTP/1.1 for Bedrock. AWS SDK v3 defaults to HTTP/2
     // (NodeHttp2Handler) which can be incompatible with Bun/Electron runtimes.
-    env.AWS_BEDROCK_FORCE_HTTP1 = process.env.AWS_BEDROCK_FORCE_HTTP1
-        || env.AWS_BEDROCK_FORCE_HTTP1
+    env["AWS_BEDROCK_FORCE_HTTP1"] = process.env["AWS_BEDROCK_FORCE_HTTP1"]
+        || env["AWS_BEDROCK_FORCE_HTTP1"]
         || '1';
     return env;
 }
@@ -134,7 +134,7 @@ export function buildAwsEnv(transportOwner: PiAgent, piAuth: Awaited<ReturnType<
    * Preserve non-secret provider bootstrap values only for the provider that
    * consumes them. They are deliberately not part of the generic host env.
    */
-export function buildProviderEnv(transportOwner: PiAgent, runtime: PiBuildProviderEnvRuntimePayload): Record<string, string> {
+export function buildProviderEnv(_transportOwner: PiAgent, runtime: PiBuildProviderEnvRuntimePayload): Record<string, string> {
     return buildPiProviderEnvironment(runtime.piAuthProvider, process.env, runtime.googleCloudProject);
 }
 
@@ -151,7 +151,7 @@ export async function refreshAndPushTokens(transportOwner: PiAgent, agentClass: 
     // Global mutex — if another PiAgent instance on the same connection slug
     // is already refreshing, just wait for that to finish and push the
     // (now-fresh) credentials to our subprocess.
-    const existing = agentClass["globalRefreshMutex"].get(refreshKey);
+    const existing = agentClass.globalRefreshMutex.get(refreshKey);
     if (existing) {
         transportOwner["debug"](`Waiting on existing refresh for slug "${slug}"`);
         const outcome = await existing;
@@ -190,7 +190,7 @@ export async function refreshAndPushTokens(transportOwner: PiAgent, agentClass: 
                 const newTokens = await refreshGoogleGeminiTokens(stored.refreshToken);
                 await credentialManager.refreshLlmOAuth(slug, {
                     accessToken: newTokens.accessToken,
-                    idToken: newTokens.idToken,
+                    ...(newTokens.idToken !== undefined ? { idToken: newTokens.idToken } : {}),
                     refreshToken: newTokens.refreshToken ?? stored.refreshToken,
                     expiresAt: newTokens.expiresAt,
                 }, expectedBindingId);
@@ -201,14 +201,14 @@ export async function refreshAndPushTokens(transportOwner: PiAgent, agentClass: 
                 await credentialManager.refreshLlmOAuth(slug, {
                     accessToken: newTokens.accessToken,
                     idToken: newTokens.idToken,
-                    refreshToken: newTokens.refreshToken,
-                    expiresAt: newTokens.expiresAt,
+                    ...(newTokens.refreshToken !== undefined ? { refreshToken: newTokens.refreshToken } : {}),
+                    ...(newTokens.expiresAt !== undefined ? { expiresAt: newTokens.expiresAt } : {}),
                 }, expectedBindingId);
             }
             transportOwner["debug"]('Token refresh successful');
             // Read only after the credential write completed. The resulting
             // payload is also handed to sibling waiters so none re-read stale data.
-            const piAuth = await transportOwner["getPiAuth"]();
+            const piAuth = await transportOwner.getPiAuth();
             if (!piAuth) {
                 transportOwner["debug"]('Token refresh completed but no fresh credential was available');
                 transportOwner["onBackendAuthRequired"]?.('Token refresh completed without a usable credential — please sign in again');
@@ -218,7 +218,7 @@ export async function refreshAndPushTokens(transportOwner: PiAgent, agentClass: 
                 transportOwner["send"]({ type: 'token_update', piAuth });
                 transportOwner["debug"]('Pushed refreshed credentials to subprocess');
             }
-            return { refreshed: true, piAuth, bindingId: expectedBindingId };
+            return { refreshed: true, piAuth, ...(expectedBindingId !== undefined ? { bindingId: expectedBindingId } : {}) };
         }
         catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
@@ -227,17 +227,15 @@ export async function refreshAndPushTokens(transportOwner: PiAgent, agentClass: 
             return { refreshed: false };
         }
     })();
-    // Store in both instance and global mutex
-    transportOwner["tokenRefreshInProgress"] = refreshPromise;
-    agentClass["globalRefreshMutex"].set(refreshKey, refreshPromise);
+    // Share the refresh promise across instances using this credential.
+    agentClass.globalRefreshMutex.set(refreshKey, refreshPromise);
     try {
         await refreshPromise;
     }
     finally {
-        transportOwner["tokenRefreshInProgress"] = null;
         // Only clear global if it's still our promise (no newer refresh started)
-        if (agentClass["globalRefreshMutex"].get(refreshKey) === refreshPromise) {
-            agentClass["globalRefreshMutex"].delete(refreshKey);
+        if (agentClass.globalRefreshMutex.get(refreshKey) === refreshPromise) {
+            agentClass.globalRefreshMutex.delete(refreshKey);
         }
     }
 }

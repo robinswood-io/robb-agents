@@ -1,4 +1,3 @@
-import type { SourceSensitivity, LegacyAutomaticModelTier } from '../config/selection-provenance.ts';
 /**
  * Workspace Types
  *

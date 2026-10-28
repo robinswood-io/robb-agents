@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { atom, type Atom } from 'jotai'
 import { selectAtom } from 'jotai/utils'
 import type { Session } from '../../shared/types'
@@ -28,7 +29,7 @@ function recoveryAtomFor(sessionId: string): Atom<SessionPermissionRecovery | nu
       const objective = session.activeObjective
       if (objective && (objective.terminalState === 'complete_verified'
         || (recovery.userMessageId !== objective.userMessageId && recovery.userMessageId !== objective.lastUserMessageId))) return null
-      return { sessionId, sessionName: session.name, userMessageId: recovery.userMessageId, requestId: permission.requestId }
+      return omitUndefined({ sessionId, sessionName: session.name, userMessageId: recovery.userMessageId, requestId: permission.requestId })
     }, sameRecovery)
     recoveryAtoms.set(sessionAtom, recoveryAtom)
   }

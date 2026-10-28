@@ -53,7 +53,7 @@ export function registerOnboardingHandlers(server: RpcServer, deps: HandlerDeps)
     try {
       const result = await validateMcpConnection({
         mcpUrl,
-        mcpAccessToken: accessToken,
+        ...(accessToken !== undefined ? { mcpAccessToken: accessToken } : {}),
       })
       return result
     } catch (error) {
@@ -128,15 +128,15 @@ export function registerOnboardingHandlers(server: RpcServer, deps: HandlerDeps)
       // Save to new LLM connection system
       await manager.setLlmOAuth(connectionSlug, {
         accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        expiresAt: tokens.expiresAt,
+        ...(tokens.refreshToken !== undefined ? { refreshToken: tokens.refreshToken } : {}),
+        ...(tokens.expiresAt !== undefined ? { expiresAt: tokens.expiresAt } : {}),
       })
 
       // Also save to legacy key for validation compatibility
       await manager.setClaudeOAuthCredentials({
         accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        expiresAt: tokens.expiresAt,
+        ...(tokens.refreshToken !== undefined ? { refreshToken: tokens.refreshToken } : {}),
+        ...(tokens.expiresAt !== undefined ? { expiresAt: tokens.expiresAt } : {}),
         source: 'native',
       })
 

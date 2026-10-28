@@ -105,8 +105,8 @@ export async function cmdSessionCreate(client: CliRpcClient, args: CliArgs): Pro
   }
 
   const opts: Record<string, unknown> = {}
-  if (name) opts.name = name
-  if (args.mode) opts.permissionMode = args.mode
+  if (name) opts["name"] = name
+  if (args.mode) opts["permissionMode"] = args.mode
 
   const result = await client.invoke('sessions:create', workspaceId, opts)
   out(result, args.json)

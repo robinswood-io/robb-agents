@@ -10,19 +10,19 @@ export function enforceUncertainToolEffectPolicy(managed: ManagedSession, quaran
         };
         const requestedEffect = classifyToolEffect(request.toolName, safeReceiptInput, permissionsContext);
         const isProvenRemoteRead = (toolName: string, input: Record<string, unknown>): boolean => (toolName === 'mcp__rbw-servers__ssh_execute'
-            && input.server === 'dev'
-            && typeof input.cwd === 'string'
-            && /^\/opt\/ia-webdev\/agent-dev\/worktrees\/orion\/[a-z0-9-]+$/.test(input.cwd)
-            && typeof input.command === 'string'
-            && isProvablyReadOnlyShellCommand(input.command));
+            && input["server"] === 'dev'
+            && typeof input["cwd"] === 'string'
+            && /^\/opt\/ia-webdev\/agent-dev\/worktrees\/orion\/[a-z0-9-]+$/.test(input["cwd"])
+            && typeof input["command"] === 'string'
+            && isProvablyReadOnlyShellCommand(input["command"]));
         // A previous literal Bash observation can be classified without a
         // workspace permission file. This applies only to persisted prior
         // receipts, never to admitting the proposed new command.
         const priorReceiptIsRead = (toolName: string, input: Record<string, unknown>): boolean => classifyToolEffect(toolName, input, permissionsContext).kind === 'read'
             || isProvenRemoteRead(toolName, input)
             || toolName === 'Bash'
-                && typeof input.command === 'string'
-                && isProvablyReadOnlyShellCommand(input.command);
+                && typeof input["command"] === 'string'
+                && isProvablyReadOnlyShellCommand(input["command"]);
         if (requestedEffect.kind !== 'read' && !isProvenRemoteRead(request.toolName, safeReceiptInput)) {
             const requestedCanonicalInput = canonicalTerminalReconciliationToolInput(safeReceiptInput);
             const objectiveRootMessageId = managed.activeObjective?.userMessageId;
@@ -70,13 +70,13 @@ export function enforceUncertainToolEffectPolicy(managed: ManagedSession, quaran
                     return false;
                 }
                 if ((message.toolName === 'Bash' || message.toolName === 'mcp__rbw-servers__ssh_execute')
-                    && typeof priorOperationalInput.command === 'string'
-                    && isObjectiveShellEvidenceCommand(priorOperationalInput.command)) {
+                    && typeof priorOperationalInput["command"] === 'string'
+                    && isObjectiveShellEvidenceCommand(priorOperationalInput["command"])) {
                     try {
                         const parsed: unknown = JSON.parse(message.toolResult);
                         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
                             const envelope = parsed as Record<string, unknown>;
-                            if (envelope.success === false || (typeof envelope.code === 'number' && envelope.code !== 0)) {
+                            if (envelope["success"] === false || (typeof envelope["code"] === 'number' && envelope["code"] !== 0)) {
                                 return false;
                             }
                         }

@@ -70,7 +70,7 @@ export function getConfigCliRedirect(
   workspaceRootPath: string,
   workingDirectory?: string,
 ): { message: string } | null {
-  const filePath = input.file_path as string | undefined;
+  const filePath = input["file_path"] as string | undefined;
 
   if (filePath && LABELS_BLOCKED_FILE_TOOLS.has(toolName)) {
     const relativePath = getWorkspaceRelativePath(filePath, workspaceRootPath, workingDirectory)
@@ -116,7 +116,7 @@ export function getConfigDomainBashRedirect(
   workspaceRootPath: string,
   workingDirectory?: string,
 ): { message: string } | null {
-  const command = typeof input.command === 'string' ? input.command.trim() : '';
+  const command = typeof input["command"] === 'string' ? input["command"].trim() : '';
   if (!command) return null;
 
   if (/^craft-agent\s+(label|automation|source|skill)\b/.test(command)) {

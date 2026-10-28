@@ -62,9 +62,9 @@ export interface BaileysModule {
    * not always expose `.default` as the callable function.
    */
   default?: (config: unknown) => unknown
-  makeWASocket: (config: unknown) => unknown
+  makeWASocket?: (config: unknown) => unknown
   useMultiFileAuthState: (dir: string) => Promise<{ state: unknown; saveCreds: () => Promise<void> }>
-  DisconnectReason: Record<string, number>
+  DisconnectReason: { loggedOut: number }
   Browsers: { macOS: (name: string) => [string, string, string] }
   fetchLatestBaileysVersion: () => Promise<{ version: number[]; isLatest: boolean }>
   /**
@@ -80,6 +80,22 @@ export interface BaileysModule {
   ) => Promise<Buffer>
 }
 
+
+/** Validate the dynamically loaded SDK surface before starting a session. */
+export function isBaileysModule(value: unknown): value is BaileysModule {
+  if (!value || typeof value !== 'object') return false
+  if ('makeWASocket' in value && value.makeWASocket !== undefined && typeof value.makeWASocket !== 'function') return false
+  if ('default' in value && value.default !== undefined && typeof value.default !== 'function') return false
+  if (!('makeWASocket' in value && typeof value.makeWASocket === 'function')
+    && !('default' in value && typeof value.default === 'function')) return false
+  return 'useMultiFileAuthState' in value && typeof value.useMultiFileAuthState === 'function'
+    && 'fetchLatestBaileysVersion' in value && typeof value.fetchLatestBaileysVersion === 'function'
+    && 'downloadMediaMessage' in value && typeof value.downloadMediaMessage === 'function'
+    && 'DisconnectReason' in value && !!value.DisconnectReason && typeof value.DisconnectReason === 'object'
+    && 'loggedOut' in value.DisconnectReason && typeof value.DisconnectReason.loggedOut === 'number'
+    && 'Browsers' in value && !!value.Browsers && typeof value.Browsers === 'object'
+    && 'macOS' in value.Browsers && typeof value.Browsers.macOS === 'function'
+}
 
 export type BaileysSock = {
   ev: {

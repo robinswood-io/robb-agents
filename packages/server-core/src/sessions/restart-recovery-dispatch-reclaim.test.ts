@@ -1,12 +1,12 @@
-import type { StoredMessage } from "@craft-agent/shared/sessions";
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { ScriptedSessionAgent } from "./testing/scripted-session-agent.ts";
-import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
-import { afterEach, describe, expect, it } from "bun:test";
-import { readFileSync, writeFileSync } from "node:fs";
+import { sessionRuntimeStateForTest,requiredTestValue } from "./testing/runtime-state-access.ts";
+import { afterEach,describe,expect,it } from "bun:test";
+import { readFileSync,writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { getSessionFilePath } from "@craft-agent/shared/sessions/storage";
 import { buildAutomaticTurnRecoveryPrompt } from "./turn-recovery";
-import { cleanupRestartRecovery, type Managed, bindToolAdmissionTurn, configureSpentDispatchBudget, deferred, harness, tick } from './testing/restart-recovery-fixture.ts';
+import { cleanupRestartRecovery,bindToolAdmissionTurn,configureSpentDispatchBudget,deferred,harness,tick } from './testing/restart-recovery-fixture.ts';
 
 afterEach(cleanupRestartRecovery);
 
@@ -42,10 +42,10 @@ describe('durable restart recovery', () => {
     await h.save(managed)
     const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const preparing = deferred(); const release = deferred()
-    let preparations = 0; let persistedAtPreparation: Managed['pendingTurnRecovery']; let sentPrompt = ''; let dispatch: Promise<void> | undefined
+    let preparations = 0; let persistedAtPreparation: ReturnType<typeof parseRecoveryJournalObservation>['pendingTurnRecovery']; let sentPrompt = ''; let dispatch: Promise<void> | undefined
     cold.runtime.getOrCreateAgent = async () => {
       preparations++
-      persistedAtPreparation = JSON.parse(
+      persistedAtPreparation = parseRecoveryJournalObservation(
         readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!,
       ).pendingTurnRecovery
       preparing.resolve(); await release.promise
@@ -65,16 +65,16 @@ describe('durable restart recovery', () => {
       expect(sentPrompt).toContain('attempt="4"')
       expect(sentPrompt).toContain('<automatic_structured_fallback failed_tool="mcp__session__browser_tool">')
       expect(requiredTestValue(restored.pendingTurnRecovery).attempts).toBe(3)
-      expect(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).toMatchObject({
+      expect<unknown>(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).toMatchObject({
         id: 'restart-dispatch-4', attempt: 4, cause: 'runtime_error', origin: 'automatic', phase: 'started',
         fallbackIntent: { kind: 'structured_fallback', failedToolName: 'mcp__session__browser_tool' },
-        startedAt: expect.any(Number),
+        startedAt: (expect.any(Number) as unknown),
       })
       expect(requiredTestValue(persistedAtPreparation).recoveryDispatch).toEqual(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch)
       expect(restored.messages.filter((message) => message.hidden
         && message.content.includes('attempt="4"'))).toHaveLength(1)
       const persistedRows = readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8')
-        .trim().split('\n').slice(1).map((line): StoredMessage => JSON.parse(line))
+        .trim().split('\n').slice(1).map(parseRecoveryJournalObservation)
       expect(persistedRows.filter((message) => message.type === 'user' && message.hidden
         && message.content.includes('attempt="4"'))).toHaveLength(1)
       await cold.runtime.resumePendingTurnAfterRestart(restored.id)
@@ -125,10 +125,10 @@ describe('durable restart recovery', () => {
 
     const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const preparing = deferred(); const release = deferred()
-    let preparations = 0; let persistedAtPreparation: Managed['pendingTurnRecovery']; let sentPrompt = ''; let dispatch: Promise<void> | undefined
+    let preparations = 0; let persistedAtPreparation: ReturnType<typeof parseRecoveryJournalObservation>['pendingTurnRecovery']; let sentPrompt = ''; let dispatch: Promise<void> | undefined
     cold.runtime.getOrCreateAgent = async () => {
       preparations++
-      persistedAtPreparation = JSON.parse(
+      persistedAtPreparation = parseRecoveryJournalObservation(
         readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!,
       ).pendingTurnRecovery
       preparing.resolve(); await release.promise
@@ -146,7 +146,7 @@ describe('durable restart recovery', () => {
       await preparing.promise
       expect(preparations).toBe(1)
       expect(sentPrompt).toContain('attempt="2"')
-      expect(restored.pendingTurnRecovery).toMatchObject({
+      expect<unknown>(restored.pendingTurnRecovery).toMatchObject({
         attempts: 2,
         recoveryDispatch: {
           id: 'started-no-output-dispatch-2',
@@ -154,7 +154,7 @@ describe('durable restart recovery', () => {
           cause: 'objective_incomplete',
           origin: 'automatic',
           phase: 'started',
-          startedAt: expect.any(Number),
+          startedAt: (expect.any(Number) as unknown),
         },
       })
       expect(requiredTestValue(restored.pendingTurnRecovery).exhaustedAt).toBeUndefined()
@@ -225,9 +225,9 @@ describe('durable restart recovery', () => {
     expect(preparations).toBe(0)
     expect(restored.messageQueue).toEqual([])
     expect(restored.messages.some((message: { id: string }) => message.id === dispatchId)).toBe(true)
-    expect(restored.pendingTurnRecovery).toMatchObject({
+    expect<unknown>(restored.pendingTurnRecovery).toMatchObject({
       attempts: 2,
-      exhaustedAt: expect.any(Number),
+      exhaustedAt: (expect.any(Number) as unknown),
       recoveryDispatch: { id: dispatchId, attempt: 2, phase: 'started' },
     })
     expect(requiredTestValue(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).preToolExecutionReceiptVersion).toBeUndefined()
@@ -296,7 +296,7 @@ describe('durable restart recovery', () => {
         toolInput: { file_path: `/fixture/${provider.toLowerCase()}-post-steer.txt` },
       })
       const stored = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-        .trim().split('\n').map(line => JSON.parse(line))
+        .trim().split('\n').map(parseRecoveryJournalObservation)
       const steeredIndex = stored.findIndex(message => message.id === steered.id)
       const receiptIndex = stored.findIndex(message => (
         message.toolUseId === `${provider.toLowerCase()}-post-steer-read`

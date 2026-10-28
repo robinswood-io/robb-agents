@@ -8,7 +8,11 @@ import { registerLlmConnectionsHandlers } from './llm-connections'
 
 function providerModelsHandler(): HandlerFn<unknown[]> {
   const handlers = new Map<string, HandlerFn<unknown[]>>()
-  const server = { handle: (channel: string, handler: HandlerFn) => handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args])) } as unknown as RpcServer
+  const server = ({handle: (channel, handler) => handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args])),
+push: () => {},
+invokeClient: async () => undefined,
+hasClientCapability: () => false,
+findClientsWithCapability: () => []} satisfies RpcServer)
   registerLlmConnectionsHandlers(server, {} as HandlerDeps)
   return handlers.get(RPC_CHANNELS.pi.GET_PROVIDER_MODELS)!
 }

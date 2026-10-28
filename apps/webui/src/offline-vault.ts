@@ -17,9 +17,9 @@ export { IndexedDbOfflineVaultPersistence } from './offline-vault/persistence.ts
 
 export class OfflineVault {
     private state = emptyState();
-    private key: OfflineVaultKey | null = null;
+    /** @internal */ public key: OfflineVaultKey | null = null;
     private loaded = false;
-    private conflicted = false;
+    /** @internal */ public conflicted = false;
     private generation = 0;
     private recordRevision: string | null = null;
     private queue: Promise<void> = Promise.resolve();
@@ -50,7 +50,7 @@ export class OfflineVault {
     getScopeToken(): OfflineVaultScopeToken | null {
         return offlineVaultScope.getScopeToken(this);
     }
-    private scopeTokenMatches(state: OfflineVaultState, token: OfflineVaultScopeToken | undefined): boolean {
+    /** @internal */ public scopeTokenMatches(state: OfflineVaultState, token: OfflineVaultScopeToken | undefined): boolean {
         return offlineVaultScope.scopeTokenMatches(this, state, token);
     }
     private async persistState(state: OfflineVaultState): Promise<void> {
@@ -59,11 +59,11 @@ export class OfflineVault {
     private invalidateAfterConflict(): void {
         return offlineVaultMutation.invalidateAfterConflict(this);
     }
-    private mutate(update: (state: OfflineVaultState, now: number) => void, expectedScope?: OfflineVaultScopeToken): Promise<boolean> {
+    /** @internal */ public mutate(update: (state: OfflineVaultState, now: number) => void, expectedScope?: OfflineVaultScopeToken): Promise<boolean> {
         return offlineVaultMutation.mutate(this, update, expectedScope);
     }
-    private assertUserMutationCommitted(committed: boolean): void {
-        return offlineVaultMutation.assertUserMutationCommitted(this, committed);
+    /** @internal */ public assertUserMutationCommitted(committed: boolean): void {
+        return offlineVaultMutation.assertUserMutationCommitted(committed);
     }
     enable(scope: OfflineVaultScope): Promise<void> {
         return offlineVaultConsent.enable(this, scope);

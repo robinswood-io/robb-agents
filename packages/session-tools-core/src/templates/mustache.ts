@@ -151,7 +151,8 @@ function renderWithStack(template: string, contextStack: unknown[]): string {
       const value = resolve(key, contextStack);
       if (Array.isArray(value)) {
         // Iterate over array
-        for (const item of value) {
+        const items: unknown[] = value;
+        for (const item of items) {
           result += renderWithStack(innerTemplate, [...contextStack, item]);
         }
       } else if (isTruthy(value)) {

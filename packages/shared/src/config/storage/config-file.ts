@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync, readdirSync } from "fs";
 import { join } from "path";
 import { createWorkspaceAtPath, isValidWorkspace } from "../../workspaces/storage.ts";
@@ -148,18 +149,18 @@ export function saveConfig(config: StoredConfig): void {
   atomicWriteFileSync(CONFIG_FILE, `${JSON.stringify(parsed, null, 2)}\n`);
 }
 
-function migrateStoredConfig(value: unknown): StoredConfig {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+function migrateStoredConfig(value: unknown): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || isUnknownArray(value)) {
     throw new Error('Stored config root must be an object');
   }
   const config = { ...(value as Record<string, unknown>) };
-  const version = config.schemaVersion;
+  const version = config["schemaVersion"];
   if (version !== undefined && version !== STORED_CONFIG_SCHEMA_VERSION) {
     throw new Error(`Unsupported stored config schemaVersion: ${String(version)}`);
   }
-  if (!Array.isArray(config.workspaces)) throw new Error('Stored config workspaces must be an array');
-  config.schemaVersion = STORED_CONFIG_SCHEMA_VERSION;
-  if (!('activeWorkspaceId' in config)) config.activeWorkspaceId = null;
-  if (!('activeSessionId' in config)) config.activeSessionId = null;
-  return config as unknown as StoredConfig;
+  if (!isUnknownArray(config["workspaces"])) throw new Error('Stored config workspaces must be an array');
+  config["schemaVersion"] = STORED_CONFIG_SCHEMA_VERSION;
+  if (!('activeWorkspaceId' in config)) config["activeWorkspaceId"] = null;
+  if (!('activeSessionId' in config)) config["activeSessionId"] = null;
+  return config;
 }

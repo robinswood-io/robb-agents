@@ -9,7 +9,7 @@ import type { BrowserCDP } from '../browser-cdp.ts';
    * Generate a series of intermediate points between two coordinates.
    * Adds slight curve and jitter for realistic mouse movement.
    */
-export function generateTrajectory(transportOwner: BrowserCDP, fromX: number, fromY: number, toX: number, toY: number, steps: number): Array<{
+export function generateTrajectory(_transportOwner: BrowserCDP, fromX: number, fromY: number, toX: number, toY: number, steps: number): Array<{
     x: number;
     y: number;
 }> {
@@ -110,18 +110,18 @@ export async function clickAtCoordinates(transportOwner: BrowserCDP, x: number, 
         // Generate short trajectory to the click target for realism
         const startX = x + (Math.random() - 0.5) * 60;
         const startY = y + (Math.random() - 0.5) * 60;
-        const trajectory = transportOwner["generateTrajectory"](startX, startY, x, y, 3 + Math.floor(Math.random() * 3));
+        const trajectory = transportOwner.generateTrajectory(startX, startY, x, y, 3 + Math.floor(Math.random() * 3));
         for (const point of trajectory) {
-            transportOwner["sendMouseEvent"]('mouseMove', point.x, point.y);
+            transportOwner.sendMouseEvent('mouseMove', point.x, point.y);
             await new Promise(resolve => setTimeout(resolve, 4 + Math.random() * 8));
         }
-        transportOwner["sendMouseEvent"]('mouseDown', Math.round(x), Math.round(y), 'left', 1);
+        transportOwner.sendMouseEvent('mouseDown', Math.round(x), Math.round(y), 'left', 1);
         await new Promise(resolve => setTimeout(resolve, 20 + Math.random() * 40));
-        transportOwner["sendMouseEvent"]('mouseUp', Math.round(x), Math.round(y), 'left', 1);
+        transportOwner.sendMouseEvent('mouseUp', Math.round(x), Math.round(y), 'left', 1);
     }
     catch (error) {
         mainLog.warn(`[browser-cdp] native clickAt failed, falling back to CDP: ${error instanceof Error ? error.message : String(error)}`);
-        await transportOwner["clickAtCDP"](x, y);
+        await transportOwner.clickAtCDP(x, y);
     }
 }
 
@@ -132,18 +132,18 @@ export async function drag(transportOwner: BrowserCDP, x1: number, y1: number, x
         const distance = Math.sqrt(dx * dx + dy * dy);
         const steps = Math.max(5, Math.min(20, Math.round(distance / 20)));
         // Move to start position
-        transportOwner["sendMouseEvent"]('mouseMove', x1, y1);
+        transportOwner.sendMouseEvent('mouseMove', x1, y1);
         await new Promise(resolve => setTimeout(resolve, 10));
         // Press at start position
-        transportOwner["sendMouseEvent"]('mouseDown', x1, y1, 'left', 1);
+        transportOwner.sendMouseEvent('mouseDown', x1, y1, 'left', 1);
         await new Promise(resolve => setTimeout(resolve, 30));
         let lastX = x1;
         let lastY = y1;
         try {
-            const trajectory = transportOwner["generateTrajectory"](x1, y1, x2, y2, steps);
+            const trajectory = transportOwner.generateTrajectory(x1, y1, x2, y2, steps);
             for (let i = 0; i < trajectory.length; i++) {
                 const point = trajectory[i]!;
-                transportOwner["sendMouseEvent"]('mouseMove', point.x, point.y);
+                transportOwner.sendMouseEvent('mouseMove', point.x, point.y);
                 lastX = point.x;
                 lastY = point.y;
                 if (i < trajectory.length - 1) {
@@ -153,14 +153,14 @@ export async function drag(transportOwner: BrowserCDP, x1: number, y1: number, x
         }
         catch (error) {
             // Always release even on error
-            transportOwner["sendMouseEvent"]('mouseUp', lastX, lastY, 'left', 1);
+            transportOwner.sendMouseEvent('mouseUp', lastX, lastY, 'left', 1);
             throw error;
         }
         await new Promise(resolve => setTimeout(resolve, 20));
-        transportOwner["sendMouseEvent"]('mouseUp', lastX, lastY, 'left', 1);
+        transportOwner.sendMouseEvent('mouseUp', lastX, lastY, 'left', 1);
     }
     catch (error) {
         mainLog.warn(`[browser-cdp] native drag failed, falling back to CDP: ${error instanceof Error ? error.message : String(error)}`);
-        await transportOwner["dragCDP"](x1, y1, x2, y2);
+        await transportOwner.dragCDP(x1, y1, x2, y2);
     }
 }

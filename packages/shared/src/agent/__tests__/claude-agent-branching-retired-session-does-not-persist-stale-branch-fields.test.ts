@@ -51,7 +51,7 @@ describe('Branch metadata persistence — pickSessionFields round-trip', () => {
 
     const persisted = pickSessionFields(managed)
 
-    expect(persisted.sdkSessionId).toBe('child-789')
+    expect(persisted["sdkSessionId"]).toBe('child-789')
     for (const field of BRANCH_FIELDS) {
       expect(persisted[field]).toBeUndefined()
       // Verify field is not even present in the persisted object (undefined fields are skipped)
@@ -70,8 +70,8 @@ describe('Branch metadata persistence — pickSessionFields round-trip', () => {
 
     const persisted = pickSessionFields(managed)
 
-    expect(persisted.branchFromSdkSessionId).toBe('parent-123')
-    expect(persisted.branchFromSdkCwd).toBe('/parent/cwd')
-    expect(persisted.branchFromSdkTurnId).toBe('turn-456')
+    expect(persisted["branchFromSdkSessionId"]).toBe('parent-123')
+    expect(persisted["branchFromSdkCwd"]).toBe('/parent/cwd')
+    expect(persisted["branchFromSdkTurnId"]).toBe('turn-456')
   })
 });

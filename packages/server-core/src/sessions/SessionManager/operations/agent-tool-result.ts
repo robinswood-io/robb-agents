@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { randomUUID } from 'node:crypto';
 import type { AgentEvent } from '@craft-agent/shared/agent';
@@ -64,10 +66,10 @@ export async function handleAgentToolResult(sessionOperationContext: SessionOper
         const inferredError = toolWasExecuted
             && (event.isError === true || /^\s*(\[ERROR\]|Error:|error:)/.test(formattedResult));
         if (toolWasExecuted && belongsToActiveObjective) {
-            const sessionIds = managed.messages[startedToolIndex]?.toolInput?.sessionIds;
+            const sessionIds = managed.messages[startedToolIndex]?.toolInput?.["sessionIds"];
             recordObjectiveEvidence(managed.id, toolName, formattedResult, inferredError, managed.activeObjective ? {
                 ...objectiveReviewBinding(managed.activeObjective),
-                ...(Array.isArray(sessionIds) && sessionIds.every(id => typeof id === 'string') ? { sessionIds } : {}),
+                ...(Array.isArray(sessionIds) && sessionIds.every((id: unknown) => typeof id === 'string') ? { sessionIds } : {}),
             } : undefined, managed.messages[startedToolIndex]?.toolInput);
         }
         starts?.calls.delete(event.toolUseId);
@@ -229,7 +231,7 @@ export async function handleAgentToolResult(sessionOperationContext: SessionOper
             const fallbackWorkspaceRootPath = managed.workspace.rootPath;
             const fallbackSources = loadAllSources(fallbackWorkspaceRootPath);
             const fallbackToolDisplayMeta = await resolveToolDisplayMeta(toolName, undefined, fallbackWorkspaceRootPath, fallbackSources);
-            const toolMessage: Message = {
+            const toolMessage: Message = omitUndefined<Message>({
                 id: generateMessageId(),
                 role: 'tool',
                 content: '',
@@ -243,7 +245,7 @@ export async function handleAgentToolResult(sessionOperationContext: SessionOper
                 toolDisplayMeta: fallbackToolDisplayMeta,
                 parentToolUseId,
                 isError: inferredError,
-            };
+            });
             managed.messages.push(toolMessage);
         }
         const completedToolMessage = managed.messages.find(message => message.toolUseId === event.toolUseId);
@@ -255,7 +257,7 @@ export async function handleAgentToolResult(sessionOperationContext: SessionOper
         if (!wasAlreadyComplete || resultChanged) {
             // Use existing tool message timestamp, or fallback message timestamp for ordering
             const toolResultTimestamp = existingToolMsg?.timestamp ?? (managed.messages.find(m => m.toolUseId === event.toolUseId)?.timestamp);
-            sessionOperationContext.owner["sendEvent"]({
+            sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'tool_result' }>>({
                 type: 'tool_result',
                 sessionId,
                 toolUseId: event.toolUseId,
@@ -267,14 +269,14 @@ export async function handleAgentToolResult(sessionOperationContext: SessionOper
                 executed: toolWasExecuted,
                 ...(event.checkpoint ? { checkpoint: event.checkpoint } : {}),
                 timestamp: toolResultTimestamp,
-            }, workspaceId);
+            }), workspaceId);
         }
         if ((!wasAlreadyComplete || previouslyExecuted === false || !previousResult) && toolWasExecuted) {
             const completedAt = Date.now();
             emitOperationsEvent({
                 kind: 'tool.finished', at: new Date(completedAt).toISOString(),
                 workspaceId, sessionId,
-                missionId: managed.missionId, workItemId: managed.missionWorkItemId,
+                ...(managed.missionId !== undefined ? { missionId: managed.missionId } : {}), ...(managed.missionWorkItemId !== undefined ? { workItemId: managed.missionWorkItemId } : {}),
                 toolCallId: event.toolUseId, toolName, isError: inferredError,
             });
             sessionOperationContext.owner["emitExecutionTelemetry"](managed, {
@@ -307,7 +309,7 @@ export async function handleAgentToolResult(sessionOperationContext: SessionOper
                 child.toolStatus = 'completed';
                 child.toolResult = child.toolResult || '';
                 sessionLog.info(`CHILD AUTO-COMPLETED: toolUseId=${child.toolUseId}, toolName=${child.toolName} (parent ${toolName} completed)`);
-                sessionOperationContext.owner["sendEvent"]({
+                sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'tool_result' }>>({
                     type: 'tool_result',
                     sessionId,
                     toolUseId: child.toolUseId!,
@@ -315,7 +317,7 @@ export async function handleAgentToolResult(sessionOperationContext: SessionOper
                     result: child.toolResult || '',
                     turnId: child.turnId,
                     parentToolUseId: event.toolUseId,
-                }, workspaceId);
+                }), workspaceId);
                 sessionOperationContext.owner["emitExecutionTelemetry"](managed, {
                     schemaVersion: 1,
                     eventId: randomUUID(),

@@ -1,3 +1,4 @@
+import { isJsonObject, parseJsonObject, isUnknownArray } from '../utils/json.ts';
 /**
  * Unified fetch interceptor for all AI API requests (Anthropic + OpenAI format).
  *
@@ -42,11 +43,12 @@ async function captureApiError(response: Response, url: string): Promise<void> {
     let isHtmlResponse = false;
 
     try {
-      const errorJson = JSON.parse(errorText);
-      if (errorJson.error?.message) {
-        errorMessage = errorJson.error.message;
-      } else if (errorJson.message) {
-        errorMessage = errorJson.message;
+      const errorJson = parseJsonObject(errorText);
+      const nested = errorJson["error"];
+      if (isJsonObject(nested) && typeof nested["message"] === "string") {
+        errorMessage = nested["message"];
+      } else if (typeof errorJson["message"] === "string") {
+        errorMessage = errorJson["message"];
       }
     } catch {
       if (errorText) {
@@ -121,12 +123,12 @@ async function captureApiError(response: Response, url: string): Promise<void> {
 function headersToCurl(headers: HeadersInitType | undefined): string {
   if (!headers) return '';
 
-  const headerObj: Record<string, string> =
-    headers instanceof Headers
-      ? Object.fromEntries(Array.from(headers as unknown as Iterable<[string, string]>))
-      : Array.isArray(headers)
-        ? Object.fromEntries(headers)
-        : (headers as Record<string, string>);
+  const normalized = isUnknownArray(headers) ? headers.map((pair): [string, string] => {
+    const [name, value] = pair;
+    if (name === undefined || value === undefined) throw new TypeError('Invalid header pair');
+    return [name, value];
+  }) : headers;
+  const headerObj = Object.fromEntries(new Headers(normalized).entries());
 
   const sensitiveKeys = [
     'x-api-key',
@@ -267,30 +269,30 @@ export function rememberLastOutgoingRequest(
   };
 
   if (adapter.name === 'openai') {
-    const messages = body.messages as Array<Record<string, unknown>> | undefined;
-    if (Array.isArray(messages)) {
+    const messages = body["messages"] as Array<Record<string, unknown>> | undefined;
+    if (isUnknownArray(messages)) {
       summary.historyLength = messages.length;
       for (const msg of messages) {
-        if (msg.role === 'assistant' && Array.isArray(msg.tool_calls)) {
-          for (const tc of msg.tool_calls as Array<{ id?: unknown; function?: { name?: unknown } }>) {
+        if (msg["role"] === 'assistant' && isUnknownArray(msg["tool_calls"])) {
+          for (const tc of msg["tool_calls"] as Array<{ id?: unknown; function?: { name?: unknown } }>) {
             if (typeof tc.id === 'string') summary.toolCallIds.push(tc.id);
             const name = typeof tc.function?.name === 'string' ? tc.function.name : '';
             summary.toolNames.push(name || '<empty>');
           }
         }
-        if (msg.role === 'tool') summary.toolResults++;
+        if (msg["role"] === 'tool') summary.toolResults++;
       }
     }
   } else if (adapter.name === 'openai-responses') {
-    const input = body.input as Array<Record<string, unknown>> | undefined;
-    if (Array.isArray(input)) {
+    const input = body["input"] as Array<Record<string, unknown>> | undefined;
+    if (isUnknownArray(input)) {
       summary.historyLength = input.length;
       for (const entry of input) {
-        if (entry.type === 'function_call') {
-          if (typeof entry.call_id === 'string') summary.toolCallIds.push(entry.call_id);
-          const name = typeof entry.name === 'string' ? entry.name : '';
+        if (entry["type"] === 'function_call') {
+          if (typeof entry["call_id"] === 'string') summary.toolCallIds.push(entry["call_id"]);
+          const name = typeof entry["name"] === 'string' ? entry["name"] : '';
           summary.toolNames.push(name || '<empty>');
-        } else if (entry.type === 'function_call_output') {
+        } else if (entry["type"] === 'function_call_output') {
           summary.toolResults++;
         }
       }

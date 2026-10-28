@@ -75,7 +75,7 @@ describe('storage', () => {
     const path = join(runDir(root, 'demo', 'r1'), 'run-log.jsonl');
     const lines = readFileSync(path, 'utf8').trimEnd().split('\n');
     const first = JSON.parse(lines[0]!) as Record<string, unknown>;
-    first.kind = 'run-stopped';
+    first["kind"] = 'run-stopped';
     lines[0] = JSON.stringify(first);
     writeFileSync(path, `${lines.join('\n')}\n`, 'utf8');
 

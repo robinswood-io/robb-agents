@@ -1,3 +1,4 @@
+import type { DurableTaskSnapshotDtoSchema } from '../protocol/dto-contracts.ts';
 import { readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
@@ -53,76 +54,12 @@ export type DurableTaskStatus =
   | 'stopped'
   | 'archived';
 
-export interface DurableTaskGraphNode {
-  id: string;
-  title: string;
-  kind: string;
-  dependsOn: string[];
-  state: NodeRunState;
-  attempt: number;
-  sessionId?: string;
-  model?: string;
-  connectionSlug?: string;
-  effect: 'read' | 'workspace-write' | 'external-mutation';
-  outputAvailable: boolean;
-  evidenceRefs: string[];
-  proofHash?: string;
-  repair: { allowed: boolean; reason: string };
-}
+export type DurableTaskGraphNode = DurableTaskSnapshot['graph']['nodes'][number];
 
-export interface DurableTaskUserEvidence {
-  actionRequested: string;
-  actionAttempted: string[];
-  mutationsApplied: string[];
-  userVerification: string;
-  remainingLimitations: string[];
-}
+export type DurableTaskUserEvidence = DurableTaskSnapshot['userEvidence'];
 
-export interface DurableTaskSnapshot {
-  schemaVersion: 1;
-  id: string;
-  slug: string;
-  revision: number;
-  title: string;
-  description: string;
-  acceptanceCriteria: string;
-  sources: string[];
-  projectId?: string;
-  executor: {
-    runner: 'conduct' | 'orchestrate';
-    agent: string;
-    wrapper: string;
-    model?: string;
-    llmConnection?: string;
-  };
-  status: DurableTaskStatus;
-  archived: boolean;
-  archivedAt?: string;
-  graph: { nodes: DurableTaskGraphNode[]; edges: Array<{ from: string; to: string }> };
-  linkedSessions: {
-    orchestratorSessionId?: string;
-    nodes: Array<{ nodeId: string; sessionId: string }>;
-  };
-  latestRunId?: string;
-  result: {
-    verification: 'not-verified' | 'verified' | 'rejected' | 'inconclusive';
-    summary: string;
-    /** Latest available terminal-node output; evidence refs remain canonical. */
-    output?: string;
-  };
-  evidenceRefs: string[];
-  userEvidence: DurableTaskUserEvidence;
-  nextAction: string;
-  externalRefs: DurableTaskExternalRefs;
-  visualState: {
-    tone: 'neutral' | 'info' | 'warning' | 'success' | 'danger' | 'muted';
-    label: string;
-    progressPercent: number;
-    attentionRequired: boolean;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
+/** The persisted task and its RPC payload share one validated contract. */
+export type DurableTaskSnapshot = z.infer<typeof DurableTaskSnapshotDtoSchema>;
 
 export interface DurableTaskMetadataPatch {
   /** Optimistic concurrency guard for external cockpit synchronizers. */
@@ -280,7 +217,7 @@ export function buildDurableTaskSnapshot(
       state.set(entry.nodeId, 'running');
       sessions.set(entry.nodeId, entry.sessionId);
     } else if (entry.kind === 'node-routed') {
-      routes.set(entry.nodeId, { model: entry.model, connectionSlug: entry.connectionSlug });
+      routes.set(entry.nodeId, { ...(entry.model !== undefined ? { model: entry.model } : {}), ...(entry.connectionSlug !== undefined ? { connectionSlug: entry.connectionSlug } : {}) });
     } else if (entry.kind === 'node-finished') {
       state.set(entry.nodeId, entry.state);
       if (entry.sessionId) sessions.set(entry.nodeId, entry.sessionId);
@@ -298,8 +235,8 @@ export function buildDurableTaskSnapshot(
   }
   const replayPlan = runId
     ? planMissionReplay(spec, runId, log, (nodeId) => readNodeOutput(workspaceRoot, slug, runId, nodeId), {
-        workspaceId: options.workspaceId,
-        verifyExecutionProof: options.verifyExecutionProof,
+        ...(options.workspaceId !== undefined ? { workspaceId: options.workspaceId } : {}),
+        ...(options.verifyExecutionProof !== undefined ? { verifyExecutionProof: options.verifyExecutionProof } : {}),
       })
     : undefined;
   const replayByNode = new Map(replayPlan?.nodes.map((node) => [node.nodeId, node]));
@@ -308,7 +245,7 @@ export function buildDurableTaskSnapshot(
       ? spec.nodes.map((node) => [node.id, readNodeOutput(workspaceRoot, slug, runId, node.id)] as const)
       : [],
   );
-  const graphNodes: DurableTaskGraphNode[] = spec.nodes.map((node) => {
+  const graphNodes: DurableTaskGraphNode[] = spec.nodes.map((node): DurableTaskGraphNode => {
     const replay = replayByNode.get(node.id);
     const outputAvailable = Boolean(nodeOutputs.get(node.id));
     const route = routes.get(node.id);
@@ -392,7 +329,7 @@ export function buildDurableTaskSnapshot(
     archivedAt: metadata.archivedAt,
     graph: { nodes: graphNodes, edges },
     linkedSessions: {
-      orchestratorSessionId,
+      ...(orchestratorSessionId !== undefined ? { orchestratorSessionId } : {}),
       nodes: [...sessions].map(([nodeId, sessionId]) => ({ nodeId, sessionId })),
     },
     latestRunId: runId,

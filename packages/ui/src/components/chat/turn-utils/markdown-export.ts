@@ -75,7 +75,7 @@ export function formatTurnAsMarkdown(turn: AssistantTurn): string {
           const trimmed = activity.content.trim()
           if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
             try {
-              const parsed = JSON.parse(trimmed)
+              const parsed: unknown = JSON.parse(trimmed)
               lines.push('```json')
               lines.push(JSON.stringify(parsed, null, 2))
               lines.push('```')
@@ -170,7 +170,7 @@ export function formatActivityAsMarkdown(activity: ActivityItem): string {
     const trimmed = activity.content.trim()
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
       try {
-        const parsed = JSON.parse(trimmed)
+        const parsed: unknown = JSON.parse(trimmed)
         lines.push('```json')
         lines.push(JSON.stringify(parsed, null, 2))
         lines.push('```')

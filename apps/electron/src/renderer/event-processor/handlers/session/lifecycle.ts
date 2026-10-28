@@ -1,3 +1,5 @@
+import type { Session } from '../../../../../../../packages/shared/src/protocol/dto/sessions.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { isAgentRuntimeActivity } from "@craft-agent/core/types";
 /**
  * Session Event Handlers
@@ -5,9 +7,9 @@ import { isAgentRuntimeActivity } from "@craft-agent/core/types";
  * Handles complete, error, sources_changed, etc.
  * Pure functions that return new state - no side effects.
  */
-import type { SessionState, ProcessResult, CompleteEvent, ErrorEvent, TypedErrorEvent, StatusEvent, InfoEvent, InterruptedEvent, Effect } from "../../types";
+import type { SessionState,ProcessResult,CompleteEvent,ErrorEvent,TypedErrorEvent,StatusEvent,InfoEvent,InterruptedEvent,Effect } from "../../types";
 import type { Message } from "../../../../shared/types";
-import { generateMessageId, appendMessage } from "../../helpers";
+import { generateMessageId,appendMessage } from "../../helpers";
 import { markSessionProcessingState } from "../../../lib/session-processing-state";
 
 /**
@@ -49,7 +51,7 @@ export function handleComplete(
 
   return {
     state: {
-      session: {
+      session: omitUndefined<Session>({
         ...markSessionProcessingState(session),
         messages: updatedMessages,
         isProcessing: false,
@@ -59,7 +61,7 @@ export function handleComplete(
         // Update hasUnread flag from main process (state machine for NEW badge)
         // Only update if explicitly provided - undefined means "don't change"
         ...(event.hasUnread !== undefined && { hasUnread: event.hasUnread }),
-      },
+      }),
       streaming: null,
     },
     effects: [],
@@ -92,12 +94,12 @@ export function handleError(
 
   return {
     state: {
-      session: {
+      session: omitUndefined<Session>({
         ...markSessionProcessingState(session),
         messages: [...messagesWithFailedTools, errorMessage],
         isProcessing: false,
         currentStatus: undefined,  // Clear any lingering status
-      },
+      }),
       streaming: null,
     },
     effects: [],
@@ -120,7 +122,7 @@ export function handleTypedError(
       : m
   )
 
-  const errorMessage: Message = {
+  const errorMessage: Message = omitUndefined<Message>({
     id: generateMessageId(),
     role: 'error',
     content: event.error.title
@@ -129,26 +131,26 @@ export function handleTypedError(
     timestamp: event.timestamp ?? Date.now(),
     errorCode: event.error.code,
     errorTitle: event.error.title,
-    errorDetails: event.error.details,
-    errorOriginal: event.error.originalError,
+    ...(event.error.details !== undefined ? { errorDetails: event.error.details } : {}),
+    ...(event.error.originalError !== undefined ? { errorOriginal: event.error.originalError } : {}),
     errorCanRetry: event.error.canRetry,
-    errorActions: event.error.actions?.map(a => ({
+    errorActions: event.error.actions?.map(a => omitUndefined({
       key: a.key,
       label: a.label,
       action: a.action,
       url: a.url,
       sourceSlug: a.sourceSlug,
     })),
-  }
+  })
 
   return {
     state: {
-      session: {
+      session: omitUndefined<Session>({
         ...markSessionProcessingState(session),
         messages: [...messagesWithFailedTools, errorMessage],
         isProcessing: false,
         currentStatus: undefined,  // Clear any lingering status
-      },
+      }),
       streaming: null,
     },
     effects: [],
@@ -166,10 +168,10 @@ export function handleStatus(
   const { session, streaming } = state
   const runtimePhase = isAgentRuntimeActivity(event.message)
   if (event.message === '') {
-    return { state: { ...state, session: { ...session,
+    return { state: { ...state, session: omitUndefined<Session>({ ...session,
       messages: session.messages.filter(message => message.role !== 'status' || !isAgentRuntimeActivity(message.content)),
       currentStatus: isAgentRuntimeActivity(session.currentStatus?.message) ? undefined : session.currentStatus,
-    } }, effects: [] }
+    }) }, effects: [] }
   }
   if (runtimePhase && session.currentStatus?.message === event.message) {
     return { state: { ...state, session: { ...session } }, effects: [] }
@@ -177,12 +179,13 @@ export function handleStatus(
   const baseSession = runtimePhase ? { ...session, messages: session.messages.filter(message =>
     message.role !== 'status' || !isAgentRuntimeActivity(message.content)) } : session
 
+  const suppliedTimestamp: unknown = Reflect.get(event, 'timestamp')
   const statusMessage: Message = {
     id: generateMessageId(),
     role: 'status',
     content: event.message,
-    timestamp: event.timestamp ?? Date.now(),
-    statusType: event.statusType,
+    timestamp: typeof suppliedTimestamp === 'number' && Number.isFinite(suppliedTimestamp) ? suppliedTimestamp : Date.now(),
+    ...(event.statusType !== undefined ? { statusType: event.statusType } : {}),
   }
 
   const updatedSession = appendMessage(baseSession, statusMessage)
@@ -194,7 +197,7 @@ export function handleStatus(
         // Also store on session for ProcessingIndicator
         currentStatus: {
           message: event.message,
-          statusType: event.statusType,
+          ...(event.statusType !== undefined ? { statusType: event.statusType } : {}),
         },
       },
       streaming,
@@ -216,16 +219,16 @@ export function handleInfo(
   if (event.statusType === 'compaction_complete') {
     const updatedMessages = session.messages.map(m =>
       m.role === 'status' && m.statusType === 'compacting'
-        ? { ...m, role: 'info' as const, content: event.message, statusType: 'compaction_complete' as const, infoLevel: event.level }
+        ? omitUndefined<Message>({ ...m, role: 'info', content: event.message, statusType: 'compaction_complete', infoLevel: event.level })
         : m
     )
     return {
       state: {
-        session: {
+        session: omitUndefined<Session>({
           ...session,
           messages: updatedMessages,
           currentStatus: undefined,  // Clear status from ProcessingIndicator
-        },
+        }),
         streaming,
       },
       effects: [],
@@ -238,7 +241,7 @@ export function handleInfo(
     role: 'info',
     content: event.message,
     timestamp: event.timestamp ?? Date.now(),
-    infoLevel: event.level,
+    ...(event.level !== undefined ? { infoLevel: event.level } : {}),
   }
 
   return {
@@ -309,12 +312,12 @@ export function handleInterrupted(
 
   return {
     state: {
-      session: {
+      session: omitUndefined<Session>({
         ...markSessionProcessingState(session),
         isProcessing: false,
         messages,
         currentStatus: undefined,  // Clear any lingering status
-      },
+      }),
       streaming: null,
     },
     effects,

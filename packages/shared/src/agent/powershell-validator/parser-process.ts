@@ -43,7 +43,7 @@ export function isPowerShellAvailable(): boolean {
   // Spawned subprocesses (e.g. from Electron) may not inherit the full system
   // PATH, so 'powershell' by name can fail even though it's always installed.
   if (process.platform === 'win32') {
-    const systemRoot = process.env.SystemRoot || process.env.SYSTEMROOT || 'C:\\Windows';
+    const systemRoot = process.env["SystemRoot"] || process.env["SYSTEMROOT"] || 'C:\\Windows';
     candidates.push(join(systemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'));
   }
 

@@ -145,7 +145,7 @@ BODY_END`;
       objectiveAuthorizationSegments: [objective, 'Où en es-tu ?', 'Ne modifie plus rien.'],
       declaredToolCapabilities: { destructive: true, readOnly: false, trusted: false },
     })).toMatchObject({
-      type: 'block', reason: expect.stringContaining('does not explicitly authorize'),
+      type: 'block', reason: (expect.stringContaining('does not explicitly authorize') as unknown),
     });
     const phasedMutationObjectives = [
       'Cible exacte : serveur dev et racine /srv/workspace/orion. Utilise exclusivement rbw-servers et ses outils SSH structurés. Inspecte d’abord en lecture seule, puis corrige et déploie la correction durable dans cette racine. Vérifie ensuite en lecture seule la santé, la révision et les tests du service orion-agent-bridge.',
@@ -193,7 +193,7 @@ BODY_END`;
         objectiveAuthorizationSegments: [multiTargetObjective],
         declaredToolCapabilities: { destructive: true, readOnly: false, trusted: false },
       })).toMatchObject({
-        type: 'block', reason: expect.stringContaining('does not explicitly authorize'),
+        type: 'block', reason: (expect.stringContaining('does not explicitly authorize') as unknown),
       });
     }
 
@@ -235,7 +235,7 @@ BODY_END`;
       objectiveAuthorizationSegments: [quotedPunctuationObjective],
       declaredToolCapabilities: { destructive: true, readOnly: false, trusted: false },
     })).toMatchObject({
-      type: 'block', reason: expect.stringContaining('does not explicitly authorize'),
+      type: 'block', reason: (expect.stringContaining('does not explicitly authorize') as unknown),
     });
 
     for (const revokedObjective of [
@@ -252,7 +252,7 @@ BODY_END`;
         objectiveAuthorizationSegments: [revokedObjective],
         declaredToolCapabilities: { destructive: true, readOnly: false, trusted: false },
       })).toMatchObject({
-        type: 'block', reason: expect.stringContaining('does not explicitly authorize'),
+        type: 'block', reason: (expect.stringContaining('does not explicitly authorize') as unknown),
       });
     }
     for (const [negatedObjective, negatedUpload] of [
@@ -280,7 +280,7 @@ BODY_END`;
         objectiveMutationAuthorized: true, objectiveSensitiveActionAuthorized: true,
         objectiveAuthorizationSegments: [negatedObjective],
       })).toMatchObject({
-        type: 'block', reason: expect.stringContaining('does not explicitly authorize'),
+        type: 'block', reason: (expect.stringContaining('does not explicitly authorize') as unknown),
       });
     }
     for (const unauthorizedObjective of [

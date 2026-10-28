@@ -1,3 +1,5 @@
+import type { SessionEvent } from '../../../../../shared/src/protocol/dto/session-events.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import type { PermissionMode } from '@craft-agent/shared/agent';
 import { getDefaultLlmConnection } from '@craft-agent/shared/config';
@@ -12,7 +14,7 @@ import { ownsSessionOperation as sessionOpOwnsSessionOperation, assertSessionOpe
 
 async function sessionOpPerformBindExistingSessionToTask(sessionOperationContext: SessionOperationContext, managed: ManagedSession, taskSlug: string, reconcile?: {
     name?: string;
-    projectId?: string;
+    projectId?: string | undefined;
     workingDirectory?: string;
     model?: string;
     llmConnection?: string;
@@ -101,7 +103,7 @@ async function sessionOpPerformBindExistingSessionToTask(sessionOperationContext
         changes.projectId = reconcile.projectId;
     sessionOperationContext.owner["sendEvent"]({ type: 'session_metadata_changed', sessionId, changes }, managed.workspace.id);
     if (renamed) {
-        sessionOperationContext.owner["sendEvent"]({ type: 'name_changed', sessionId, name: managed.name }, managed.workspace.id);
+        sessionOperationContext.owner["sendEvent"](omitUndefined<Extract<SessionEvent, { type: 'name_changed' }>>({ type: 'name_changed', sessionId, name: managed.name }), managed.workspace.id);
     }
     if (connectionChanged) {
         sessionOperationContext.owner["sendEvent"]({

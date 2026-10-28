@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from "bun:test";
 import type { ActiveSessionObjective } from "@craft-agent/shared/sessions";
 import { objectiveAllowsContentCheckReview, objectiveRequiresExecutionEvidence, projectLegacyObjectiveCompletionRequirements, transitionObjectiveContract } from "./objective-contract.ts";
@@ -408,7 +409,7 @@ describe('durable objective contract', () => {
       expect(objectiveRequiresExecutionEvidence(implementation)).toBe(true);
     }
 
-    const persistedProductionObjective: ActiveSessionObjective = {
+    const persistedProductionObjective: ActiveSessionObjective = omitUndefined<ActiveSessionObjective>({
       ...transitionObjectiveContract({
         messageId: 'persisted-zero-implementation',
         text: 'Procède à leur implantaiotn totale et méthodique selon le plan',
@@ -417,7 +418,7 @@ describe('durable objective contract', () => {
       requiresExecutionEvidence: undefined,
       requiresAcceptanceCriteria: undefined,
       terminalState: 'exhausted',
-    };
+    });
     expect(objectiveRequiresExecutionEvidence(persistedProductionObjective)).toBe(true);
     expect(projectLegacyObjectiveCompletionRequirements(persistedProductionObjective)).toMatchObject({
       requiresExecutionEvidence: true,

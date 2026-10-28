@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 /**
  * Resource Bundle — Export/Import Logic
  *
@@ -96,7 +97,7 @@ export function loadConfinedSourceConfig(sourceDirectory: string): FolderSourceC
     handle.assertStillBound()
     try {
       const parsed = safeJsonParse(raw)
-      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      return parsed && typeof parsed === 'object' && !isUnknownArray(parsed)
         ? parsed as FolderSourceConfig
         : null
     } catch {

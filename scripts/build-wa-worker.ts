@@ -52,19 +52,19 @@ function resolveGitSha(cwd: string): string {
   }
 
   const channel = resolveBuildChannel(
-    process.env.ROBB_BUILD_CHANNEL,
-    process.env.CRAFT_DEV_RUNTIME,
+    process.env["ROBB_BUILD_CHANNEL"],
+    process.env["CRAFT_DEV_RUNTIME"],
   );
-  assertCleanProductionBuild(channel, process.env.ROBB_BUILD_DIRTY, gitPorcelain);
+  assertCleanProductionBuild(channel, process.env["ROBB_BUILD_DIRTY"], gitPorcelain);
   const commit = resolveBuildCommit(
-    process.env.ROBB_BUILD_COMMIT,
+    process.env["ROBB_BUILD_COMMIT"],
     gitCommit,
-    process.env.GITHUB_SHA,
+    process.env["GITHUB_SHA"],
   );
   if (!commit || !/^[0-9a-f]{7,40}$/i.test(commit)) return "unknown";
 
   const shortCommit = commit.slice(0, 12).toLowerCase();
-  const dirty = resolveBuildDirty(process.env.ROBB_BUILD_DIRTY, gitPorcelain);
+  const dirty = resolveBuildDirty(process.env["ROBB_BUILD_DIRTY"], gitPorcelain);
   return dirty ? `${shortCommit}+dirty` : shortCommit;
 }
 
@@ -152,7 +152,7 @@ async function main(): Promise<void> {
   console.log(`✅ WhatsApp worker built (${(size / 1024 / 1024).toFixed(2)} MB) → ${OUTPUT}`);
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   console.error("❌ Unexpected error:", err);
   process.exit(1);
 });

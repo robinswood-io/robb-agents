@@ -56,13 +56,13 @@ export async function authenticateGoogle(transportOwner: SourceCredentialManager
         const serviceName = service || 'Google API';
         callbacks.onStatus(`Starting ${serviceName} OAuth flow...`);
         const options: GoogleOAuthOptions = {
-            service,
-            scopes,
+            ...(service !== undefined ? { service } : {}),
+            ...(scopes !== undefined ? { scopes } : {}),
             appType: 'electron',
             // Pass user-provided OAuth credentials from source config (if available)
-            clientId: api?.googleOAuthClientId,
-            clientSecret: api?.googleOAuthClientSecret,
-            sessionContext,
+            ...(api?.googleOAuthClientId !== undefined ? { clientId: api?.googleOAuthClientId } : {}),
+            ...(api?.googleOAuthClientSecret !== undefined ? { clientSecret: api?.googleOAuthClientSecret } : {}),
+            ...(sessionContext !== undefined ? { sessionContext } : {}),
         };
         const result: GoogleOAuthResult = await startGoogleOAuth(options);
         if (!result.success) {
@@ -71,15 +71,15 @@ export async function authenticateGoogle(transportOwner: SourceCredentialManager
         // Save the credentials (including clientId/clientSecret for token refresh)
         await transportOwner["save"](source, {
             value: result.accessToken!,
-            refreshToken: result.refreshToken,
-            expiresAt: result.expiresAt,
-            clientId: result.clientId,
-            clientSecret: result.clientSecret,
+            ...(result.refreshToken !== undefined ? { refreshToken: result.refreshToken } : {}),
+            ...(result.expiresAt !== undefined ? { expiresAt: result.expiresAt } : {}),
+            ...(result.clientId !== undefined ? { clientId: result.clientId } : {}),
+            ...(result.clientSecret !== undefined ? { clientSecret: result.clientSecret } : {}),
         });
         // Mark source as authenticated in config.json
         markSourceAuthenticated(source.workspaceRootPath, source.config.slug);
         callbacks.onStatus(`${serviceName} authentication successful`);
-        return { success: true, email: result.email };
+        return { success: true, ...(result.email !== undefined ? { email: result.email } : {}) };
     }
     catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -117,10 +117,10 @@ export async function authenticateSlack(transportOwner: SourceCredentialManager,
         const serviceName = service ? `Slack ${service}` : 'Slack';
         callbacks.onStatus(`Starting ${serviceName} OAuth flow...`);
         const options: SlackOAuthOptions = {
-            service,
-            userScopes,
+            ...(service !== undefined ? { service } : {}),
+            ...(userScopes !== undefined ? { userScopes } : {}),
             appType: 'electron',
-            sessionContext,
+            ...(sessionContext !== undefined ? { sessionContext } : {}),
         };
         const result: SlackOAuthResult = await startSlackOAuth(options);
         if (!result.success) {
@@ -129,14 +129,14 @@ export async function authenticateSlack(transportOwner: SourceCredentialManager,
         // Save the credentials
         await transportOwner["save"](source, {
             value: result.accessToken!,
-            refreshToken: result.refreshToken,
-            expiresAt: result.expiresAt,
+            ...(result.refreshToken !== undefined ? { refreshToken: result.refreshToken } : {}),
+            ...(result.expiresAt !== undefined ? { expiresAt: result.expiresAt } : {}),
         });
         // Mark source as authenticated in config.json
         markSourceAuthenticated(source.workspaceRootPath, source.config.slug);
         callbacks.onStatus(`${serviceName} authentication successful`);
         // Use teamName as the identifier (similar to email for Google)
-        return { success: true, email: result.teamName };
+        return { success: true, ...(result.teamName !== undefined ? { email: result.teamName } : {}) };
     }
     catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -180,10 +180,10 @@ export async function authenticateMicrosoft(transportOwner: SourceCredentialMana
         const serviceName = service || 'Microsoft API';
         callbacks.onStatus(`Starting ${serviceName} OAuth flow...`);
         const options: MicrosoftOAuthOptions = {
-            service,
-            scopes,
+            ...(service !== undefined ? { service } : {}),
+            ...(scopes !== undefined ? { scopes } : {}),
             appType: 'electron',
-            sessionContext,
+            ...(sessionContext !== undefined ? { sessionContext } : {}),
         };
         const result: MicrosoftOAuthResult = await startMicrosoftOAuth(options);
         if (!result.success) {
@@ -192,13 +192,13 @@ export async function authenticateMicrosoft(transportOwner: SourceCredentialMana
         // Save the credentials
         await transportOwner["save"](source, {
             value: result.accessToken!,
-            refreshToken: result.refreshToken,
-            expiresAt: result.expiresAt,
+            ...(result.refreshToken !== undefined ? { refreshToken: result.refreshToken } : {}),
+            ...(result.expiresAt !== undefined ? { expiresAt: result.expiresAt } : {}),
         });
         // Mark source as authenticated in config.json
         markSourceAuthenticated(source.workspaceRootPath, source.config.slug);
         callbacks.onStatus(`${serviceName} authentication successful`);
-        return { success: true, email: result.email };
+        return { success: true, ...(result.email !== undefined ? { email: result.email } : {}) };
     }
     catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -211,7 +211,7 @@ export async function authenticateMicrosoft(transportOwner: SourceCredentialMana
    * Authenticate source via generic OAuth flow (CLI/test convenience wrapper).
    * Note: The session-based UI flow goes through prepareOAuth() + exchangeAndStore() instead.
    */
-export async function authenticateGeneric(transportOwner: SourceCredentialManager, source: LoadedSource, _cb: OAuthCallbacks, _sessionContext?: OAuthSessionContext): Promise<AuthResult> {
+export async function authenticateGeneric(_transportOwner: SourceCredentialManager, source: LoadedSource, _cb: OAuthCallbacks, _sessionContext?: OAuthSessionContext): Promise<AuthResult> {
     const oauthConfig = source.config.api?.oauth;
     if (!oauthConfig) {
         return { success: false, error: 'Source missing api.oauth config block' };

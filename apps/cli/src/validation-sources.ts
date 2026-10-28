@@ -53,7 +53,7 @@ export function getSourceValidationSteps(): ValidateStep[] {
       name: 'mcp:stitch-mcp (header-auth)',
       fn: async (client, ctx) => {
         if (!ctx.createdSessionId) return 'skipped (no session)'
-        const apiKey = process.env.STITCH_API_KEY
+        const apiKey = process.env["STITCH_API_KEY"]
         if (!apiKey) return 'skipped (no STITCH_API_KEY)'
         // Inject credential into store (multi-header JSON format, same as API headerNames)
         await client.invoke('sources:saveCredentials', ctx.workspaceId, 'stitch-mcp', JSON.stringify({ 'X-Goog-Api-Key': apiKey }))

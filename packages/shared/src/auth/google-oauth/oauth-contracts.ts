@@ -6,9 +6,9 @@ import { type OAuthSessionContext } from "../types.ts";
 // Installed apps are public OAuth clients and authenticate with PKCE, not an
 // embedded secret. A client secret remains optional for confidential WebUI
 // deployments or explicit user-owned source configurations.
-const GOOGLE_CLIENT_ID_ENV = process.env.GOOGLE_OAUTH_CLIENT_ID || '';
+const GOOGLE_CLIENT_ID_ENV = process.env["GOOGLE_OAUTH_CLIENT_ID"] || '';
 
-const GOOGLE_CLIENT_SECRET_ENV = process.env.GOOGLE_OAUTH_CLIENT_SECRET || '';
+const GOOGLE_CLIENT_SECRET_ENV = process.env["GOOGLE_OAUTH_CLIENT_SECRET"] || '';
 
 export function resolveGoogleOAuthClient(
   clientId?: string,
@@ -16,9 +16,10 @@ export function resolveGoogleOAuthClient(
 ): { clientId: string; clientSecret?: string } {
   const explicitClientId = clientId?.trim();
   const explicitClientSecret = clientSecret?.trim();
+  const resolvedSecret = explicitClientSecret || (explicitClientId ? undefined : GOOGLE_CLIENT_SECRET_ENV.trim() || undefined);
   return {
     clientId: explicitClientId || GOOGLE_CLIENT_ID_ENV.trim(),
-    clientSecret: explicitClientSecret || (explicitClientId ? undefined : GOOGLE_CLIENT_SECRET_ENV.trim() || undefined),
+    ...(resolvedSecret !== undefined ? { clientSecret: resolvedSecret } : {}),
   };
 }
 

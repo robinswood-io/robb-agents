@@ -25,10 +25,10 @@ interface PendingRequest {
 }
 
 export interface CliClientOptions {
-  token?: string
-  workspaceId?: string
-  requestTimeout?: number
-  connectTimeout?: number
+  token?: string | undefined
+  workspaceId?: string | undefined
+  requestTimeout?: number | undefined
+  connectTimeout?: number | undefined
 }
 
 // ---------------------------------------------------------------------------
@@ -74,8 +74,8 @@ export class CliRpcClient {
           id: crypto.randomUUID(),
           type: 'handshake',
           protocolVersion: PROTOCOL_VERSION,
-          workspaceId: this.workspaceId,
-          token: this.token,
+          ...(this.workspaceId !== undefined ? { workspaceId: this.workspaceId } : {}),
+          ...(this.token !== undefined ? { token: this.token } : {}),
         }
         this.ws!.send(serializeEnvelope(handshake))
       }

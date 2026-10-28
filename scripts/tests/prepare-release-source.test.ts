@@ -5,7 +5,7 @@ import { delimiter, join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 
 const root = join(import.meta.dir, '..', '..')
-const script = process.env.ROBB_QA_RELEASE_SOURCE_SCRIPT ?? join(root, 'scripts', 'robinswood-prepare-release-source.sh')
+const script = process.env["ROBB_QA_RELEASE_SOURCE_SCRIPT"] ?? join(root, 'scripts', 'robinswood-prepare-release-source.sh')
 const temporary: string[] = []
 const head = 'a'.repeat(40)
 
@@ -31,7 +31,7 @@ function run(overrides: Record<string, string> = {}) {
   const calls = join(directory, 'calls')
   // Only fake release inputs reach the subprocess; no inherited credentials.
   const env = {
-    PATH: bin + delimiter + (process.env.PATH ?? ''),
+    PATH: bin + delimiter + (process.env["PATH"] ?? ''),
     GITHUB_OUTPUT: output,
     GITHUB_REF_NAME: 'qa-branch',
     GITHUB_REF_TYPE: 'branch',

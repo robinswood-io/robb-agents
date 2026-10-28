@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * MessagingGatewayRegistry — owns per-workspace MessagingGateway instances.
  *
@@ -16,7 +17,7 @@ import { type LarkCredentials } from "../adapters/lark/index";
 import type { MessagingGatewayRegistry } from '../registry.ts';
 import { isKnownPlatform, fetchTelegramBotInfo } from './shared.ts';
 
-export async function testTelegramToken(transportOwner: MessagingGatewayRegistry, token: string): Promise<{
+export async function testTelegramToken(_transportOwner: MessagingGatewayRegistry, token: string): Promise<{
     success: boolean;
     botName?: string;
     botUsername?: string;
@@ -30,11 +31,11 @@ export async function testTelegramToken(transportOwner: MessagingGatewayRegistry
         if (!info.ok) {
             return { success: false, error: info.description ?? 'Invalid token' };
         }
-        return {
+        return omitUndefined({
             success: true,
             botName: info.result.first_name ?? info.result.username ?? 'bot',
             botUsername: info.result.username,
-        };
+        });
     }
     catch (err) {
         return {
@@ -71,7 +72,7 @@ export async function saveTelegramToken(transportOwner: MessagingGatewayRegistry
     await state.gateway.start();
 }
 
-export async function testLarkCredentials(transportOwner: MessagingGatewayRegistry, creds: LarkCredentials): Promise<{
+export async function testLarkCredentials(_transportOwner: MessagingGatewayRegistry, creds: LarkCredentials): Promise<{
     success: boolean;
     botName?: string;
     error?: string;
@@ -143,14 +144,14 @@ export async function disconnectPlatform(transportOwner: MessagingGatewayRegistr
         return;
     if (platform === 'whatsapp') {
         state.whatsappOffEvent?.();
-        state.whatsappOffEvent = undefined;
+        delete state.whatsappOffEvent;
         if (state.whatsapp) {
             await state.whatsapp.destroy().catch(() => { });
             state.whatsapp = null;
         }
     }
     await state.gateway.unregisterAdapter(platform).catch(() => { });
-    state.botUsernames[platform] = undefined;
+    delete state.botUsernames[platform];
     transportOwner["pairing"].clearWorkspace(workspaceId);
     // Preserve per-platform fields (owners / accessMode / supergroup for
     // telegram, selfChatMode for whatsapp, domain for lark) so reconnecting

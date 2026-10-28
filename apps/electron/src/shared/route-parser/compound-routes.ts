@@ -31,7 +31,7 @@ import type { ParsedCompoundRoute } from './route-types.ts';
 export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
   // Compound routes are pure slash-segment paths; defensively strip any query tail
   // so a stray `?x=y` never leaks into segment parsing (e.g. into a labelId).
-  const [pathPart] = route.split('?')
+  const [pathPart = ''] = route.split('?')
   const segments = pathPart.split('/').filter(Boolean)
   if (segments.length === 0) return null
 
@@ -71,7 +71,7 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
 
     // Check for type filter: sources/api, sources/mcp, sources/local
     const validSourceTypes = ['api', 'mcp', 'local']
-    if (validSourceTypes.includes(segments[1])) {
+    if (segments[1] && validSourceTypes.includes(segments[1])) {
       const sourceType = segments[1] as 'api' | 'mcp' | 'local'
       const sourceFilter: SourceFilter = { kind: 'type', sourceType }
 
@@ -152,7 +152,7 @@ export function parseCompoundRoute(route: string): ParsedCompoundRoute | null {
 
     // Check for type filter: automations/scheduled, automations/event, automations/agentic
     const validAutomationTypes = ['scheduled', 'event', 'agentic']
-    if (validAutomationTypes.includes(segments[1])) {
+    if (segments[1] && validAutomationTypes.includes(segments[1])) {
       const automationType = segments[1] as 'scheduled' | 'event' | 'agentic'
       const automationFilter: AutomationFilter = { kind: 'type', automationType }
 

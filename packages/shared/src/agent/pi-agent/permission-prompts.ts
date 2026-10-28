@@ -14,17 +14,17 @@ import type { PiPreToolUsePrompt, PiSendPreToolUseDecisionRequestPayload } from 
 
 export async function handlePreToolUsePrompt(transportOwner: PiAgent, requestId: string, toolName: string, toolInput: Record<string, unknown>, sessionId: string, checkResult: Extract<PreToolUseCheckResult, PiPreToolUsePrompt>, authorizationEpoch: number, toolUseId?: string, runtimeContext?: PiSubprocessRuntimeContext): Promise<void> {
     const respond = (message: Record<string, unknown>) => {
-        transportOwner["sendPreToolUseDecision"]({
+        transportOwner.sendPreToolUseDecision({
             requestId,
             toolName,
-            toolCallId: toolUseId,
+            ...(toolUseId !== undefined ? { toolCallId: toolUseId } : {}),
             originalInput: toolInput,
-            runtimeContext,
+            ...(runtimeContext !== undefined ? { runtimeContext } : {}),
             authorizationEpoch,
         }, message);
     };
     if (!transportOwner["onPermissionRequest"]) {
-        const gmailDecision = transportOwner["resolveContextualGmailPromptDecision"](sessionId, toolName, toolInput, toolUseId, false);
+        const gmailDecision = transportOwner.resolveContextualGmailPromptDecision(sessionId, toolName, toolInput, toolUseId, false);
         if (gmailDecision.applies) {
             respond({
                 type: 'pre_tool_use_response',
@@ -61,7 +61,7 @@ export async function handlePreToolUsePrompt(transportOwner: PiAgent, requestId:
     const permRequestId = `pi-perm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     transportOwner["debug"](`PreToolUse(sessionId=${sessionId}): Prompting user for ${toolName} - ${checkResult.description}`);
     const permissionPromise = new Promise<boolean>((resolve) => {
-        transportOwner["pendingPermissions"].set(permRequestId, {
+        transportOwner.pendingPermissions.set(permRequestId, {
             resolve,
             toolName,
         });
@@ -69,24 +69,24 @@ export async function handlePreToolUsePrompt(transportOwner: PiAgent, requestId:
     transportOwner["onPermissionRequest"]({
         requestId: permRequestId,
         toolName,
-        toolUseId,
-        command: checkResult.command,
+        ...(toolUseId !== undefined ? { toolUseId } : {}),
+        ...(checkResult.command !== undefined ? { command: checkResult.command } : {}),
         description: checkResult.description,
         type: checkResult.promptType,
-        appName: checkResult.appName,
-        reason: checkResult.reason,
-        impact: checkResult.impact,
-        requiresSystemPrompt: checkResult.requiresSystemPrompt,
-        rememberForMinutes: checkResult.rememberForMinutes,
-        commandHash: checkResult.commandHash,
-        approvalTtlSeconds: checkResult.approvalTtlSeconds,
-        sensitiveActionCategory: checkResult.sensitiveActionCategory,
-        sensitiveActionTargets: checkResult.sensitiveActionTargets,
-        sensitiveActionOperationHash: checkResult.sensitiveActionOperationHash,
+        ...(checkResult.appName !== undefined ? { appName: checkResult.appName } : {}),
+        ...(checkResult.reason !== undefined ? { reason: checkResult.reason } : {}),
+        ...(checkResult.impact !== undefined ? { impact: checkResult.impact } : {}),
+        ...(checkResult.requiresSystemPrompt !== undefined ? { requiresSystemPrompt: checkResult.requiresSystemPrompt } : {}),
+        ...(checkResult.rememberForMinutes !== undefined ? { rememberForMinutes: checkResult.rememberForMinutes } : {}),
+        ...(checkResult.commandHash !== undefined ? { commandHash: checkResult.commandHash } : {}),
+        ...(checkResult.approvalTtlSeconds !== undefined ? { approvalTtlSeconds: checkResult.approvalTtlSeconds } : {}),
+        ...(checkResult.sensitiveActionCategory !== undefined ? { sensitiveActionCategory: checkResult.sensitiveActionCategory } : {}),
+        ...(checkResult.sensitiveActionTargets !== undefined ? { sensitiveActionTargets: checkResult.sensitiveActionTargets } : {}),
+        ...(checkResult.sensitiveActionOperationHash !== undefined ? { sensitiveActionOperationHash: checkResult.sensitiveActionOperationHash } : {}),
     });
     const allowed = await permissionPromise;
-    transportOwner["pendingPermissions"].delete(permRequestId);
-    if (!transportOwner["isRuntimeCurrent"](runtimeContext))
+    transportOwner.pendingPermissions.delete(permRequestId);
+    if (!transportOwner.isRuntimeCurrent(runtimeContext))
         return;
     let approvedInput = checkResult.modifiedInput ?? toolInput;
     if (allowed) {
@@ -101,38 +101,35 @@ export async function handlePreToolUsePrompt(transportOwner: PiAgent, requestId:
             toolName,
             input: approvedInput,
             sessionId,
-            toolUseId,
-            runtimeId: runtimeContext?.runtimeId,
+            ...(toolUseId !== undefined ? { toolUseId } : {}),
+            ...(runtimeContext?.runtimeId !== undefined ? { runtimeId: runtimeContext?.runtimeId } : {}),
             permissionApprovalReentry: true,
             permissionMode: transportOwner["permissionManager"].getPermissionMode(),
             workspaceRootPath: rootPath,
             workspaceId: workspaceSlug,
             plansFolderPath: getSessionPlansPath(rootPath, sessionId),
             dataFolderPath: getSessionDataPath(rootPath, sessionId),
-            workingDirectory: transportOwner["config"].session?.workingDirectory,
-            executionIsolation: transportOwner["config"].session?.executionIsolation,
-            missionCapabilityLock: transportOwner["config"].missionCapabilityLock,
+            ...(transportOwner["config"].session?.workingDirectory !== undefined ? { workingDirectory: transportOwner["config"].session?.workingDirectory } : {}),
+            ...(transportOwner["config"].session?.executionIsolation !== undefined ? { executionIsolation: transportOwner["config"].session?.executionIsolation } : {}),
+            ...(transportOwner["config"].missionCapabilityLock !== undefined ? { missionCapabilityLock: transportOwner["config"].missionCapabilityLock } : {}),
             activeSourceSlugs: Array.from(transportOwner["sourceManager"].getActiveSlugs()),
             allSourceSlugs: transportOwner["sourceManager"].getAllSources().map(s => s.config.slug),
             hasSourceActivation: !!transportOwner["onSourceActivationRequest"],
             permissionManager: transportOwner["permissionManager"],
             prerequisiteManager: transportOwner["prerequisiteManager"],
             preloadedSourceGuidePaths: transportOwner["sourceManager"].getPreloadedSourceGuidePaths(),
-            currentUserRequest,
+            ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
             declaredToolCapabilities: transportOwner["mcpPool"]?.getProxyToolCapabilities(toolName),
-            externalActionPolicy: transportOwner["config"].externalActionPolicy,
+            ...(transportOwner["config"].externalActionPolicy !== undefined ? { externalActionPolicy: transportOwner["config"].externalActionPolicy } : {}),
             humanInputAllowed: transportOwner["config"].getHumanInputAllowed?.(),
             objectiveMutationAuthorized: typeof objectiveAuthority === 'boolean'
                 ? objectiveAuthority : objectiveAuthority?.authorized,
             objectiveSensitiveActionAuthorized: typeof objectiveAuthority === 'object'
                 ? objectiveAuthority.sensitiveActionAuthorized : objectiveAuthority,
-            objectiveAuthorizationSegments: typeof objectiveAuthority === 'object'
-                ? objectiveAuthority.authorizationSegments : undefined,
-            authenticatedUserAuthorizationSegments: typeof objectiveAuthority === 'object'
-                ? objectiveAuthority.authenticatedUserAuthorizationSegments : undefined,
-            objectiveTerminalReconciliationPolicy: typeof objectiveAuthority === 'object'
-                ? objectiveAuthority.terminalReconciliationPolicy : undefined,
-            rtkContext,
+            ...(typeof objectiveAuthority === 'object' ? { objectiveAuthorizationSegments: objectiveAuthority.authorizationSegments } : {}),
+            ...(typeof objectiveAuthority === 'object' ? { ...(objectiveAuthority.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: objectiveAuthority.authenticatedUserAuthorizationSegments } : {}) } : {}),
+            ...(typeof objectiveAuthority === 'object' ? { ...(objectiveAuthority.terminalReconciliationPolicy !== undefined ? { objectiveTerminalReconciliationPolicy: objectiveAuthority.terminalReconciliationPolicy } : {}) } : {}),
+            ...(rtkContext !== undefined ? { rtkContext } : {}),
             onDebug: msg => transportOwner["debug"](`PostPermissionPreToolUse(sessionId=${sessionId}): ${msg}`),
         });
         if (approvalCheck.type === 'block' || approvalCheck.type === 'source_activation_needed') {
@@ -152,7 +149,7 @@ export async function handlePreToolUsePrompt(transportOwner: PiAgent, requestId:
             approvedInput = approvalCheck.modifiedInput;
         }
     }
-    const gmailDecision = transportOwner["resolveContextualGmailPromptDecision"](sessionId, toolName, toolInput, toolUseId, allowed);
+    const gmailDecision = transportOwner.resolveContextualGmailPromptDecision(sessionId, toolName, toolInput, toolUseId, allowed);
     if (!allowed) {
         respond({ type: 'pre_tool_use_response', requestId, action: 'block', reason: 'Permission denied by user.' });
     }
@@ -177,10 +174,10 @@ export async function handlePreToolUsePrompt(transportOwner: PiAgent, requestId:
    * serialized into the provider input, transcript, result or diagnostics.
    */
 export function sendPreToolUseDecision(transportOwner: PiAgent, request: PiSendPreToolUseDecisionRequestPayload, decision: Record<string, unknown>): void {
-    const action = decision.action;
+    const action = decision["action"];
     if (action === 'allow' || action === 'modify') {
         const approvedInput = action === 'modify'
-            ? decision.input as Record<string, unknown> | undefined
+            ? decision["input"] as Record<string, unknown> | undefined
             : request.originalInput;
         const sessionId = request.runtimeContext?.sessionId
             ?? transportOwner["config"].session?.id
@@ -189,11 +186,11 @@ export function sendPreToolUseDecision(transportOwner: PiAgent, request: PiSendP
             ?? transportOwner["subprocessRuntimeContext"]?.runtimeId
             ?? '';
         const executionStillCurrent = () => request.authorizationEpoch === transportOwner["promptPreparationRevision"]
-            && transportOwner["isRuntimeCurrent"](request.runtimeContext)
+            && transportOwner.isRuntimeCurrent(request.runtimeContext)
             && sessionId.length > 0 && runtimeId.length > 0
             && !!approvedInput;
         const block = (reason: string) => {
-            transportOwner["sendForRuntime"]({
+            transportOwner.sendForRuntime({
                 type: 'pre_tool_use_response',
                 requestId: request.requestId,
                 action: 'block',
@@ -213,7 +210,7 @@ export function sendPreToolUseDecision(transportOwner: PiAgent, request: PiSendP
                 block('The host could not bind this tool approval to one exact execution. The tool was not executed.');
                 return;
             }
-            transportOwner["sendForRuntime"](decision, request.runtimeContext);
+            transportOwner.sendForRuntime(decision, request.runtimeContext);
         };
         if (!executionStillCurrent()) {
             block('The host could not bind this tool approval to one exact execution. The tool was not executed.');
@@ -224,7 +221,7 @@ export function sendPreToolUseDecision(transportOwner: PiAgent, request: PiSendP
             void (async () => {
                 try {
                     await durabilityBarrier({
-                        toolUseId: request.toolCallId,
+                        ...(request.toolCallId !== undefined ? { toolUseId: request.toolCallId } : {}),
                         toolName: request.toolName,
                         toolInput: approvedInput!,
                     });
@@ -244,23 +241,23 @@ export function sendPreToolUseDecision(transportOwner: PiAgent, request: PiSendP
         admitAndSend();
         return;
     }
-    transportOwner["sendForRuntime"](decision, request.runtimeContext);
+    transportOwner.sendForRuntime(decision, request.runtimeContext);
 }
 
 export function respondToPermission(transportOwner: PiAgent, requestId: string, allowed: boolean, _alwaysAllow?: boolean): void {
-    const pending = transportOwner["pendingPermissions"].get(requestId);
+    const pending = transportOwner.pendingPermissions.get(requestId);
     if (pending) {
-        transportOwner["pendingPermissions"].delete(requestId);
+        transportOwner.pendingPermissions.delete(requestId);
         pending.resolve(allowed);
     }
 }
 
 /** Settle every host permission wait fail-closed before runtime teardown. */
 export function denyAllPendingPermissions(transportOwner: PiAgent): void {
-    if (transportOwner["pendingPermissions"].size === 0)
+    if (transportOwner.pendingPermissions.size === 0)
         return;
-    const pendingPermissions = [...transportOwner["pendingPermissions"].values()];
-    transportOwner["pendingPermissions"].clear();
+    const pendingPermissions = [...transportOwner.pendingPermissions.values()];
+    transportOwner.pendingPermissions.clear();
     for (const pending of pendingPermissions) {
         pending.resolve(false);
     }

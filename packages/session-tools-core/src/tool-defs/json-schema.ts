@@ -40,9 +40,9 @@ export function getToolDefsAsJsonSchema(opts?: {
   includeDeveloperFeedback?: boolean;
 }): JsonSchemaToolDef[] {
   const prefix = opts?.prefix || '';
-  const defs = getSessionToolDefs({ includeDeveloperFeedback: opts?.includeDeveloperFeedback });
+  const defs = getSessionToolDefs({ ...(opts?.includeDeveloperFeedback !== undefined ? { includeDeveloperFeedback: opts?.includeDeveloperFeedback } : {}) });
 
-  return defs.map(def => {
+  return defs.map((def): JsonSchemaToolDef => {
     // Every registry schema is Zod 4. The Zod 3 converter silently emitted {}
     // for 28 tools, hiding required inputs, enums and the reviewer role from Pi.
     const jsonSchema = (def.name === 'set_completion_criteria'
@@ -54,22 +54,22 @@ export function getToolDefsAsJsonSchema(opts?: {
           // Pi tries/coerces anyOf alternatives in order. A typed JSON filter
           // must retain true/1/null rather than matching a different string.
           delete jsonSchema.anyOf;
-          (jsonSchema as Record<string, unknown>).type = ['string', 'number', 'boolean', 'null'];
+          (jsonSchema as Record<string, unknown>)["type"] = ['string', 'number', 'boolean', 'null'];
         },
       })) as Record<string, unknown>;
-    if (jsonSchema.type !== 'object' || !jsonSchema.properties || typeof jsonSchema.properties !== 'object') {
+    if (jsonSchema["type"] !== 'object' || !jsonSchema["properties"] || typeof jsonSchema["properties"] !== 'object') {
       throw new Error(`Session tool ${def.name} did not produce an object input schema`);
     }
     // Strip metadata not needed by MCP/Pi consumers
-    delete jsonSchema.$schema;
-    delete jsonSchema.additionalProperties;
+    delete jsonSchema["$schema"];
+    delete jsonSchema["additionalProperties"];
     return {
       name: prefix + def.name,
       description: def.description,
       inputSchema: jsonSchema,
-      readOnly: def.readOnly,
-      idempotent: def.idempotent,
-      parallelSafe: def.parallelSafe,
+      ...(def.readOnly !== undefined ? { readOnly: def.readOnly } : {}),
+      ...(def.idempotent !== undefined ? { idempotent: def.idempotent } : {}),
+      ...(def.parallelSafe !== undefined ? { parallelSafe: def.parallelSafe } : {}),
     };
   });
 }

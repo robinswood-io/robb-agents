@@ -69,11 +69,11 @@ export function installRuntimeSourceCallbacks(sessionOperationContext: SessionOp
         }
         // Load the source to check if it exists and is ready
         const sources = getSourcesBySlugs(workspaceRootPath, [sourceSlug]);
-        if (sources.length === 0) {
+        const source = sources[0];
+        if (!source) {
             sessionLog.warn(`Source ${sourceSlug} not found in workspace`);
             return false;
         }
-        const source = sources[0];
         // Check if source is usable (enabled and authenticated if auth is required)
         if (!isSourceUsable(source)) {
             sessionLog.warn(`Source ${sourceSlug} is not usable (disabled or requires authentication)`);

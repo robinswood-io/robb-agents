@@ -13,7 +13,7 @@
  */
 
 import { createLogger } from '../utils/debug.ts';
-import type { AppEvent, AgentEvent, AutomationEvent } from './types.ts';
+import type { AutomationEvent } from './types.ts';
 
 const log = createLogger('event-bus');
 
@@ -22,13 +22,13 @@ const log = createLogger('event-bus');
 // ============================================================================
 
 /** Base event payload with common fields */
-export interface BaseEventPayload {
+export type BaseEventPayload = {
   sessionId?: string;
   sessionName?: string;
   workspaceId: string;
   timestamp: number;
   labels?: string[];
-}
+};
 
 /** Label events payload */
 export interface LabelEventPayload extends BaseEventPayload {

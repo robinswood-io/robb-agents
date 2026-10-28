@@ -113,7 +113,7 @@ it('never replays external browser tools during terminal reconciliation', () => 
         declaredToolCapabilities: { readOnly: true, idempotent: true, trusted: true },
       })).toMatchObject({
         type: 'block',
-        reason: expect.stringContaining('Terminal reconciliation is host-locked'),
+        reason: (expect.stringContaining('Terminal reconciliation is host-locked') as unknown),
       });
     }
   });
@@ -140,10 +140,10 @@ it('applies authenticated non-browser constraints to external browser aliases', 
         objectiveAuthorizationSegments,
         activeSourceSlugs: [sourceSlug],
         allSourceSlugs: [sourceSlug],
-        declaredToolCapabilities,
+        ...(declaredToolCapabilities !== undefined ? { declaredToolCapabilities } : {}),
       })).toMatchObject({
         type: 'block',
-        reason: expect.stringContaining('User channel constraint'),
+        reason: (expect.stringContaining('User channel constraint') as unknown),
       });
     }
   });
@@ -159,7 +159,7 @@ it('does not let an observational objective delegate mutation through an existin
         input: { sessionId: 'worker-1', message: 'Publie maintenant le résultat.' },
         permissionMode: 'allow-all',
         objectiveMutationAuthorized: false,
-      })).toMatchObject({ type: 'block', reason: expect.stringContaining('Objective authority') });
+      })).toMatchObject({ type: 'block', reason: (expect.stringContaining('Objective authority') as unknown) });
     }
 
     expect(check({
@@ -221,9 +221,9 @@ it('uses the same hardened Git observation grammar for local and remote permissi
     });
     expect(localRetry).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining(
+      reason: (expect.stringContaining(
         'git --no-optional-locks -c core.fsmonitor=false -c core.hooksPath=/dev/null -c log.showSignature=false -c format.pretty=medium --no-pager',
-      ),
+      ) as unknown),
     });
     const localObjectiveRetry = check({
       toolName: 'Bash',
@@ -236,7 +236,7 @@ it('uses the same hardened Git observation grammar for local and remote permissi
       : '';
     expect(localObjectiveRetry).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('Git status, diff, show and patch/stat log output remain blocked'),
+      reason: (expect.stringContaining('Git status, diff, show and patch/stat log output remain blocked') as unknown),
     });
     expect(localObjectiveRetryText).toContain('target-bound Read/rg/cmp');
     expect(localObjectiveRetryText).not.toContain(
@@ -250,9 +250,9 @@ it('uses the same hardened Git observation grammar for local and remote permissi
     });
     expect(remoteRetry).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining(
+      reason: (expect.stringContaining(
         'git --no-optional-locks -c core.fsmonitor=false -c core.hooksPath=/dev/null -c log.showSignature=false -c format.pretty=medium --no-pager',
-      ),
+      ) as unknown),
     });
 
     for (const command of [
@@ -286,13 +286,13 @@ it('uses the same hardened Git observation grammar for local and remote permissi
         { workspaceRootPath, activeSourceSlugs: ['rbw-servers'] },
       )).toMatchObject({ kind: 'external-mutation' });
       expect(check({ toolName: 'Bash', input: { command }, permissionMode: 'safe' }))
-        .toMatchObject({ type: 'block', reason: expect.stringContaining('Explore') });
+        .toMatchObject({ type: 'block', reason: (expect.stringContaining('Explore') as unknown) });
       expect(check({
         input: { server: 'dev', cwd: '/srv/workspace/orion', command },
         permissionMode: 'allow-all',
         externalActionPolicy: 'allow-in-execute',
         objectiveMutationAuthorized: false,
-      })).toMatchObject({ type: 'block', reason: expect.stringContaining('Objective authority') });
+      })).toMatchObject({ type: 'block', reason: (expect.stringContaining('Objective authority') as unknown) });
     }
   });
 
@@ -308,7 +308,7 @@ it('blocks a Bash SSH retry of a rejected composite remote observation', () => {
     const reason = result.type === 'block' ? String(result.reason) : '';
     expect(result).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('composite remote command'),
+      reason: (expect.stringContaining('composite remote command') as unknown),
     });
     expect(reason).toContain('separate `ssh_execute` calls');
     expect(reason).toContain('Do not bypass a structured SSH refusal');
@@ -350,7 +350,7 @@ it.each(['safe', 'ask', 'allow-all'] as const)(
       });
       expect(result).toMatchObject({
         type: 'block',
-        reason: expect.stringContaining('Local SSH transport through Bash/shell is disabled'),
+        reason: (expect.stringContaining('Local SSH transport through Bash/shell is disabled') as unknown),
       });
     },
   );

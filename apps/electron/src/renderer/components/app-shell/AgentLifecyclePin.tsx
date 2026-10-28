@@ -10,10 +10,10 @@ export type AgentLifecycleState = 'processing' | 'error' | 'pending_prompt' | 'm
 
 export interface AgentLifecyclePinProps {
   item: SessionMeta
-  subagentSummary?: SessionSubagentSummary
-  hasPendingPrompt?: boolean
-  className?: string
-  size?: 'sm' | 'md'
+  subagentSummary?: SessionSubagentSummary | undefined
+  hasPendingPrompt?: boolean | undefined
+  className?: string | undefined
+  size?: 'sm' | 'md' | undefined
 }
 
 export function resolveAgentLifecycleState(

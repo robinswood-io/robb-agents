@@ -90,7 +90,7 @@ function applyExplicitCriterionSupersessions(
     acceptanceHistory: [...(objective.acceptanceHistory ?? []), {
       revision: `criterion-correction:${[...supersededIds].sort().join(',')}`,
       criteria: structuredClone(objective.acceptanceCriteria ?? []),
-      registeredAt: objective.acceptanceRegisteredAt,
+      ...(objective.acceptanceRegisteredAt !== undefined ? { registeredAt: objective.acceptanceRegisteredAt } : {}),
       registeredAtById: structuredClone(objective.acceptanceRegisteredAtById ?? {}),
     }],
   };

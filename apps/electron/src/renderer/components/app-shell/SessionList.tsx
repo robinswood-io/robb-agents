@@ -1,3 +1,5 @@
+import type { UseSessionSearchOptions } from '../../hooks/useSessionSearch/matching.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useSetAtom } from "jotai";
@@ -173,20 +175,20 @@ export function SessionList({
     hasMore,
     collapsedGroupsMeta,
     searchInputRef,
-  } = useSessionSearch({
+  } = useSessionSearch(omitUndefined<UseSessionSearchOptions>({
     items: topLevelSessions,
     searchActive: searchActive ?? false,
     searchQuery,
-    workspaceId,
-    currentFilter,
-    evaluateViews,
-    statusFilter,
-    labelFilterMap,
+    ...(workspaceId !== undefined ? { workspaceId: workspaceId } : {}),
+    ...(currentFilter !== undefined ? { currentFilter: currentFilter } : {}),
+    ...(evaluateViews !== undefined ? { evaluateViews: evaluateViews } : {}),
+    ...(statusFilter !== undefined ? { statusFilter: statusFilter } : {}),
+    ...(labelFilterMap !== undefined ? { labelFilterMap: labelFilterMap } : {}),
     labelConfigs: labels,
     collapsedGroups,
     groupingMode,
     scrollViewportRef,
-  })
+  }))
 
   const rowData = useMemo(() => {
     return buildSessionListRows({
@@ -245,7 +247,7 @@ export function SessionList({
     handleArchiveWithToast,
     handleUnarchiveWithToast,
     handleDeleteWithToast,
-  } = useSessionActions({ onFlag, onUnflag, onArchive, onUnarchive, onDelete })
+  } = useSessionActions({ ...(onFlag !== undefined ? { onFlag: onFlag } : {}), ...(onUnflag !== undefined ? { onUnflag: onUnflag } : {}), ...(onArchive !== undefined ? { onArchive: onArchive } : {}), ...(onUnarchive !== undefined ? { onUnarchive: onUnarchive } : {}), onDelete })
 
   // --- Focus zone ---
   const { focusZone } = useFocusContext()
@@ -269,12 +271,12 @@ export function SessionList({
         }
         onFocusChatInput?.(row.item.id)
       }, [selectionStore.state, navigateToSession, onFocusChatInput]),
-      enabled: isKeyboardEligible,
+      ...(isKeyboardEligible !== undefined ? { enabled: isKeyboardEligible } : {}),
       virtualFocus: searchActive ?? false,
     },
     multiSelect: true,
     selectionStore,
-    selectedIdOverride: focusedSessionId,
+    ...(focusedSessionId !== undefined ? { selectedIdOverride: focusedSessionId } : {}),
   })
 
   // Sync activeIndex when selection changes externally (e.g. from ChatDisplay)
@@ -389,7 +391,7 @@ export function SessionList({
   const handleOpenInNewWindow = useCallback((item: SessionMeta) => onOpenInNewWindow?.(item), [onOpenInNewWindow])
   const resolvedSearchQuery = isSearchMode ? highlightQuery : searchQuery
 
-  const listContext = useMemo((): SessionListContextValue => ({
+  const listContext = useMemo((): SessionListContextValue => (omitUndefined<SessionListContextValue>({
     onRenameClick: handleRenameClick,
     onSessionStatusChange,
     onFlag: onFlag ? handleFlagWithToast : undefined,
@@ -398,10 +400,10 @@ export function SessionList({
     onUnarchive: onUnarchive ? handleUnarchiveWithToast : undefined,
     onMarkUnread,
     onDelete: handleDeleteWithToast,
-    onLabelsChange,
-    onToggleLabelFilter,
-    projects,
-    onSetProjectId,
+    ...(onLabelsChange !== undefined ? { onLabelsChange: onLabelsChange } : {}),
+    ...(onToggleLabelFilter !== undefined ? { onToggleLabelFilter: onToggleLabelFilter } : {}),
+    ...(projects !== undefined ? { projects: projects } : {}),
+    ...(onSetProjectId !== undefined ? { onSetProjectId: onSetProjectId } : {}),
     onSelectSessionById: handleSelectSessionById,
     onOpenInNewWindow: handleOpenInNewWindow,
     onSendToWorkspace: (ids: string[]) => setSendToWorkspace(ids),
@@ -410,14 +412,14 @@ export function SessionList({
     sessionStatuses,
     flatLabels,
     labels,
-    searchQuery: resolvedSearchQuery,
+    ...(resolvedSearchQuery !== undefined ? { searchQuery: resolvedSearchQuery } : {}),
     selectedSessionId: focusedSessionId !== undefined ? focusedSessionId : selectionStore.state.selected,
     isMultiSelectActive,
-    sessionOptions,
+    ...(sessionOptions !== undefined ? { sessionOptions: sessionOptions } : {}),
     contentSearchResults,
-    activeChatMatchInfo,
-    hasPendingPrompt,
-  }), [
+    ...(activeChatMatchInfo !== undefined ? { activeChatMatchInfo: activeChatMatchInfo } : {}),
+    ...(hasPendingPrompt !== undefined ? { hasPendingPrompt: hasPendingPrompt } : {}),
+  })), [
     handleRenameClick, onSessionStatusChange,
     onFlag, handleFlagWithToast, onUnflag, handleUnflagWithToast,
     onArchive, handleArchiveWithToast, onUnarchive, handleUnarchiveWithToast,

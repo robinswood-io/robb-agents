@@ -48,7 +48,7 @@ export { isMultiHeaderCredential } from './credential-manager/shared.ts';
 export class SourceCredentialManager {
     // Track in-flight refresh promises to prevent concurrent refreshes for the same source
     // This prevents race conditions (especially important for Microsoft which rotates refresh tokens)
-    private pendingRefreshes = new Map<string, Promise<string | null>>();
+    /** @internal */ public pendingRefreshes = new Map<string, Promise<string | null>>();
     // ============================================================
     // Core CRUD Operations
     // ============================================================
@@ -78,7 +78,7 @@ export class SourceCredentialManager {
     } | null> {
         return credentialManagerStorage.loadWithIdentity(this, source);
     }
-    private async loadMcpCredentialWithIdentity(source: LoadedSource): Promise<{
+    /** @internal */ public async loadMcpCredentialWithIdentity(source: LoadedSource): Promise<{
         credential: StoredCredential;
         credentialId: CredentialId;
     } | null> {
@@ -131,7 +131,7 @@ export class SourceCredentialManager {
     }> {
         return credentialManagerStorage.loadRuntimeCredentialSnapshot(this, source);
     }
-    private parseApiCredential(source: LoadedSource, cred: StoredCredential | null): ApiCredential | null {
+    /** @internal */ public parseApiCredential(source: LoadedSource, cred: StoredCredential | null): ApiCredential | null {
         return credentialManagerAccess.parseApiCredential(this, source, cred);
     }
     // ============================================================
@@ -223,16 +223,16 @@ export class SourceCredentialManager {
     async authenticate(source: LoadedSource, callbacks?: OAuthCallbacks, sessionContext?: OAuthSessionContext): Promise<AuthResult> {
         return credentialManagerOauth.authenticate(this, source, callbacks, sessionContext);
     }
-    private async authenticateMcp(source: LoadedSource, callbacks: OAuthCallbacks, sessionContext?: OAuthSessionContext): Promise<AuthResult> {
+    /** @internal */ public async authenticateMcp(source: LoadedSource, callbacks: OAuthCallbacks, sessionContext?: OAuthSessionContext): Promise<AuthResult> {
         return credentialManagerOauth.authenticateMcp(this, source, callbacks, sessionContext);
     }
-    private async authenticateGoogle(source: LoadedSource, callbacks: OAuthCallbacks, sessionContext?: OAuthSessionContext): Promise<AuthResult> {
+    /** @internal */ public async authenticateGoogle(source: LoadedSource, callbacks: OAuthCallbacks, sessionContext?: OAuthSessionContext): Promise<AuthResult> {
         return credentialManagerProviders.authenticateGoogle(this, source, callbacks, sessionContext);
     }
-    private async authenticateSlack(source: LoadedSource, callbacks: OAuthCallbacks, sessionContext?: OAuthSessionContext): Promise<AuthResult> {
+    /** @internal */ public async authenticateSlack(source: LoadedSource, callbacks: OAuthCallbacks, sessionContext?: OAuthSessionContext): Promise<AuthResult> {
         return credentialManagerProviders.authenticateSlack(this, source, callbacks, sessionContext);
     }
-    private async authenticateMicrosoft(source: LoadedSource, callbacks: OAuthCallbacks, sessionContext?: OAuthSessionContext): Promise<AuthResult> {
+    /** @internal */ public async authenticateMicrosoft(source: LoadedSource, callbacks: OAuthCallbacks, sessionContext?: OAuthSessionContext): Promise<AuthResult> {
         return credentialManagerProviders.authenticateMicrosoft(this, source, callbacks, sessionContext);
     }
     /**
@@ -249,28 +249,28 @@ export class SourceCredentialManager {
     async refresh(source: LoadedSource): Promise<string | null> {
         return credentialManagerRefresh.refresh(this, source);
     }
-    private async doRefresh(source: LoadedSource): Promise<string | null> {
+    /** @internal */ public async doRefresh(source: LoadedSource): Promise<string | null> {
         return credentialManagerRefresh.doRefresh(this, source);
     }
-    private async refreshApiRenew(source: LoadedSource, cred: StoredCredential): Promise<string | null> {
+    /** @internal */ public async refreshApiRenew(source: LoadedSource, cred: StoredCredential): Promise<string | null> {
         return credentialManagerRefresh.refreshApiRenew(this, source, cred);
     }
-    private async refreshGoogle(source: LoadedSource, cred: StoredCredential): Promise<string | null> {
+    /** @internal */ public async refreshGoogle(source: LoadedSource, cred: StoredCredential): Promise<string | null> {
         return credentialManagerRefresh.refreshGoogle(this, source, cred);
     }
-    private async refreshSlack(source: LoadedSource, cred: StoredCredential): Promise<string | null> {
+    /** @internal */ public async refreshSlack(source: LoadedSource, cred: StoredCredential): Promise<string | null> {
         return credentialManagerRefresh.refreshSlack(this, source, cred);
     }
-    private async refreshMicrosoft(source: LoadedSource, cred: StoredCredential): Promise<string | null> {
+    /** @internal */ public async refreshMicrosoft(source: LoadedSource, cred: StoredCredential): Promise<string | null> {
         return credentialManagerRefresh.refreshMicrosoft(this, source, cred);
     }
-    private async authenticateGeneric(source: LoadedSource, _cb: OAuthCallbacks, _sessionContext?: OAuthSessionContext): Promise<AuthResult> {
+    /** @internal */ public async authenticateGeneric(source: LoadedSource, _cb: OAuthCallbacks, _sessionContext?: OAuthSessionContext): Promise<AuthResult> {
         return credentialManagerProviders.authenticateGeneric(this, source, _cb, _sessionContext);
     }
-    private async refreshGeneric(source: LoadedSource, cred: StoredCredential): Promise<string | null> {
+    /** @internal */ public async refreshGeneric(source: LoadedSource, cred: StoredCredential): Promise<string | null> {
         return credentialManagerRefresh.refreshGeneric(this, source, cred);
     }
-    private async refreshMcp(source: LoadedSource, cred: StoredCredential): Promise<string | null> {
+    /** @internal */ public async refreshMcp(source: LoadedSource, cred: StoredCredential): Promise<string | null> {
         return credentialManagerRefresh.refreshMcp(this, source, cred);
     }
 }

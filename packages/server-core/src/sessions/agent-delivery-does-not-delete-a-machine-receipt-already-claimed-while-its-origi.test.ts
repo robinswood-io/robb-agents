@@ -1,3 +1,6 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { requiredTestValue } from '@craft-agent/shared/testing/fixture-values';
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from "bun:test";
@@ -20,10 +23,7 @@ describe('durable agent inbox — E05 E13', () => {
     managed.activeObjective = transitionObjectiveContract({ messageId: rootMessage.id, text: rootMessage.content, nowMs: 1 });
     managed.isProcessing = true;
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
-    const runtime = manager as unknown as {
-      flushSession(id: string): Promise<void>;
-      persistSession(session: typeof managed): void;
-    };
+    const runtime = sessionManagerForTest(manager);
     const flushSession = runtime.flushSession.bind(manager);
     let claimedMessageId: string | undefined;
     runtime.flushSession = async id => {
@@ -49,7 +49,7 @@ describe('durable agent inbox — E05 E13', () => {
       expect(managed.messages.find(message => message.id === claimedMessageId)?.agentDelivery).toMatchObject({
         id: 'claimed-flush-receipt', status: 'processing', attempts: 1,
       });
-      const disk = readFileSync(getSessionFilePath(root, managed.id), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+      const disk = readFileSync(getSessionFilePath(root, managed.id), 'utf8').trim().split('\n').map(line => parseRecoveryJournalObservation(line));
       expect(disk.some(entry => entry.id === claimedMessageId
         && entry.agentDelivery?.status === 'processing')).toBe(true);
     } finally { runtime.flushSession = flushSession; await manager.flushAllSessions(); rmSync(root, { recursive: true, force: true }); }
@@ -64,9 +64,9 @@ describe('durable agent inbox — E05 E13', () => {
     const options = { hidden: true, internalOrigin: { kind: 'agent-message' as const, senderSessionId: 'source', deliveryId: 'receipt1' } };
     const ids: string[] = [];
     const send = () => manager.sendMessage('inbox', 'Terminal result', undefined, undefined, options, undefined, undefined, id => {
-      const disk = readFileSync(getSessionFilePath(root, 'inbox'), 'utf8').trim().split('\n').map(l => JSON.parse(l));
-      expect(disk[0].pendingAgentDeliveryIds).toContain(id);
-      expect(disk.find(m => m.id === id).internalOrigin).toEqual(options.internalOrigin);
+      const disk = readFileSync(getSessionFilePath(root, 'inbox'), 'utf8').trim().split('\n').map(l => parseRecoveryJournalObservation(l));
+      expect(requiredTestValue(disk[0]).pendingAgentDeliveryIds).toContain(id);
+      expect(requiredTestValue(disk.find(m => m.id === id)).internalOrigin).toEqual(options.internalOrigin);
       ids.push(id);
     });
     try {
@@ -76,7 +76,7 @@ describe('durable agent inbox — E05 E13', () => {
       expect(managed.messageQueue.length).toBe(2);
       // Crash at the queue-to-processing seam: dequeue must not clear disk state.
       managed.isProcessing = false;
-      const runtime = manager as unknown as { processNextQueuedMessage(id: string): void; sendMessage: (...args: unknown[]) => Promise<void> };
+      const runtime = sessionManagerForTest(manager);
       runtime.sendMessage = async () => {};
       runtime.processNextQueuedMessage('inbox');
       runtime.processNextQueuedMessage('inbox');

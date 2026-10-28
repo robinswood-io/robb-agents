@@ -12,12 +12,12 @@ export interface Info_SectionProps {
   /** Section title */
   title: string
   /** Optional description below title */
-  description?: string
+  description?: string | undefined
   /** Optional right-aligned header actions */
-  actions?: React.ReactNode
+  actions?: React.ReactNode | undefined
   /** Section content */
   children: React.ReactNode
-  className?: string
+  className?: string | undefined
 }
 
 export function Info_Section({

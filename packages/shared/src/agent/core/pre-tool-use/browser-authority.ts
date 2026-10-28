@@ -49,7 +49,7 @@ export function classifyBrowserObjectiveAuthority(
   input: Record<string, unknown>,
 ): BrowserObjectiveAuthority {
   if (isCanonicalBrowserToolName(toolName)) {
-    return isObservationalBrowserCommand(input.command)
+    return isObservationalBrowserCommand(input["command"])
       ? 'observational'
       : 'mutation-or-unknown';
   }
@@ -62,14 +62,14 @@ export function classifyBrowserObjectiveAuthority(
     return 'mutation-or-unknown';
   }
   if (operation === 'navigate') {
-    const target = [input.url, input.href, input.target]
+    const target = [input["url"], input["href"], input["target"]]
       .find((value): value is string => typeof value === 'string' && value.trim().length > 0);
     return target && isObservationalBrowserCommand(['navigate', target])
       ? 'observational'
       : 'mutation-or-unknown';
   }
   if (operation === 'downloads') {
-    const action = typeof input.action === 'string' ? input.action.trim().toLowerCase() : 'list';
+    const action = typeof input["action"] === 'string' ? input["action"].trim().toLowerCase() : 'list';
     return action === 'list' || action === 'wait' ? 'observational' : 'mutation-or-unknown';
   }
   return 'observational';

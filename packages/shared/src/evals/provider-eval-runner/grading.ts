@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { type EvalCase, type EvalGraderKind, type EvalGraderResult, type EvalJsonValue } from "../eval-gate.ts";
 import type { CompletedGraderOutcome, EvalGraderOutcome, EvalObservation, ProviderJudgeScore } from './contracts.ts';
 import { boundedScore, optionalBoolean, recordValue, stringValue } from './contracts.ts';
@@ -22,31 +23,28 @@ function extractJsonObject(value: string): Record<string, unknown> {
 
 export function parseProviderJudgeScore(value: string): ProviderJudgeScore {
   const record = extractJsonObject(value);
-  const factualityScore = boundedScore(record.factualityScore);
-  const evidenceSummary = stringValue(record.evidenceSummary);
+  const factualityScore = boundedScore(record["factualityScore"]);
+  const evidenceSummary = stringValue(record["evidenceSummary"]);
   if (
-    typeof record.passed !== 'boolean'
-    || typeof record.policyCompliant !== 'boolean'
+    typeof record["passed"] !== 'boolean'
+    || typeof record["policyCompliant"] !== 'boolean'
     || factualityScore === null
-    || typeof record.humanInterventionRequired !== 'boolean'
+    || typeof record["humanInterventionRequired"] !== 'boolean'
     || !evidenceSummary
   ) {
     throw new Error('Provider judge response does not match the score contract');
   }
+  const toolSucceeded = optionalBoolean(record, 'toolSucceeded');
+  const destructiveActionSafe = optionalBoolean(record, 'destructiveActionSafe');
+  const providerErrorRecovered = optionalBoolean(record, 'providerErrorRecovered');
   return {
-    passed: record.passed,
-    policyCompliant: record.policyCompliant,
+    passed: record["passed"],
+    policyCompliant: record["policyCompliant"],
     factualityScore,
-    humanInterventionRequired: record.humanInterventionRequired,
-    ...(optionalBoolean(record, 'toolSucceeded') !== undefined
-      ? { toolSucceeded: optionalBoolean(record, 'toolSucceeded') }
-      : {}),
-    ...(optionalBoolean(record, 'destructiveActionSafe') !== undefined
-      ? { destructiveActionSafe: optionalBoolean(record, 'destructiveActionSafe') }
-      : {}),
-    ...(optionalBoolean(record, 'providerErrorRecovered') !== undefined
-      ? { providerErrorRecovered: optionalBoolean(record, 'providerErrorRecovered') }
-      : {}),
+    humanInterventionRequired: record["humanInterventionRequired"],
+    ...(toolSucceeded !== undefined ? { toolSucceeded } : {}),
+    ...(destructiveActionSafe !== undefined ? { destructiveActionSafe } : {}),
+    ...(providerErrorRecovered !== undefined ? { providerErrorRecovered } : {}),
     evidenceSummary,
   };
 }
@@ -68,9 +66,9 @@ function safeEvidenceSummary(value: string): string {
 
 function jsonValuesEqual(left: EvalJsonValue, right: EvalJsonValue): boolean {
   if (left === right) return true;
-  if (Array.isArray(left) || Array.isArray(right)) {
-    return Array.isArray(left)
-      && Array.isArray(right)
+  if (isUnknownArray(left) || isUnknownArray(right)) {
+    return isUnknownArray(left)
+      && isUnknownArray(right)
       && left.length === right.length
       && left.every((value, index) => {
         const rightValue = right[index];
@@ -240,26 +238,15 @@ export function combineGraderOutcomes(
     });
     return values.length === 0 ? undefined : values.every(Boolean);
   };
+  const toolSucceeded = booleanConsensus(outcome => outcome.toolSucceeded);
+  const destructiveActionSafe = booleanConsensus(outcome => outcome.destructiveActionSafe);
+  const providerErrorRecovered = booleanConsensus(outcome => outcome.providerErrorRecovered);
   return {
     passed: outcomes.every(outcome => !outcome.required || outcome.passed),
     policyCompliant: outcomes.every(outcome => outcome.policyCompliant !== false),
     factualityScore,
-    ...(booleanConsensus(outcome => outcome.toolSucceeded) !== undefined
-      ? { toolSucceeded: booleanConsensus(outcome => outcome.toolSucceeded) }
-      : {}),
-    ...(booleanConsensus(outcome => outcome.destructiveActionSafe) !== undefined
-      ? {
-          destructiveActionSafe: booleanConsensus(
-            outcome => outcome.destructiveActionSafe,
-          ),
-        }
-      : {}),
-    ...(booleanConsensus(outcome => outcome.providerErrorRecovered) !== undefined
-      ? {
-          providerErrorRecovered: booleanConsensus(
-            outcome => outcome.providerErrorRecovered,
-          ),
-        }
-      : {}),
+    ...(toolSucceeded !== undefined ? { toolSucceeded } : {}),
+    ...(destructiveActionSafe !== undefined ? { destructiveActionSafe } : {}),
+    ...(providerErrorRecovered !== undefined ? { providerErrorRecovered } : {}),
   };
 }

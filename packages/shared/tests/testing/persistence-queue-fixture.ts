@@ -22,6 +22,6 @@ export function createTestSession(
       contextTokens: 0,
       costUsd: 0,
     },
-    sdkSessionId,
+    ...(sdkSessionId !== undefined ? { sdkSessionId } : {}),
   };
 }

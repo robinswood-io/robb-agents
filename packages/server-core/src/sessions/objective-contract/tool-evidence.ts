@@ -8,7 +8,7 @@ import { MUTATION_BASH_PATTERN } from './mutation-vocabulary.ts';
 function stableValue(value: unknown, depth = 0): unknown {
   if (depth >= 5) return '[depth-limit]';
   if (typeof value === 'string') return value.replace(/\s+/g, ' ').trim().slice(0, 2_048);
-  if (Array.isArray(value)) return value.slice(0, 64).map(child => stableValue(child, depth + 1));
+  if (Array.isArray(value)) return value.slice(0, 64).map((child: unknown) => stableValue(child, depth + 1));
   if (!value || typeof value !== 'object') return value;
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>)
@@ -60,10 +60,10 @@ export function isPassiveNoProgressTool(message: Message): boolean {
   const toolName = message.toolName ?? '';
   if (PASSIVE_NO_PROGRESS_TOOL_PATTERN.test(toolName)) return true;
   if (/^(?:write_stdin|read_thread_terminal)$/i.test(toolName)) {
-    const chars = message.toolInput?.chars;
+    const chars = message.toolInput?.["chars"];
     if (chars === undefined || chars === '') return true;
   }
-  const action = [message.toolInput?.action, message.toolInput?.command, message.toolInput?.operation]
+  const action = [message.toolInput?.["action"], message.toolInput?.["command"], message.toolInput?.["operation"]]
     .find((value): value is string => typeof value === 'string');
   return action ? PASSIVE_NO_PROGRESS_ACTION_PATTERN.test(action.trim()) : false;
 }
@@ -101,7 +101,7 @@ export function hasObjectiveSubstantiveToolResult(message: Message): boolean {
 }
 
 function positiveHttpPostTargetMutation(input: Record<string, unknown>): boolean {
-  const target = [input.path, input.url, input.uri, input.endpoint, input.route]
+  const target = [input["path"], input["url"], input["uri"], input["endpoint"], input["route"]]
     .find((value): value is string => typeof value === 'string' && value.trim().length > 0);
   if (!target) return false;
   let pathname = target.trim().split(/[?#]/, 1)[0] ?? '';
@@ -125,10 +125,10 @@ export function isObjectiveMutationTool(message: Message): boolean {
   // name itself is neutral (for example graph_request with method: POST).
   // Inspect only the bounded action/method fields here: arbitrary query and
   // command payloads remain meaningful solely for generic executors below.
-  const action = [input.action, input.operation]
+  const action = [input["action"], input["operation"]]
     .find((value): value is string => typeof value === 'string');
   if (action && classifyToolNameMutationSemantics(action.trim()) === 'mutation') return true;
-  const method = input.method;
+  const method = input["method"];
   if (typeof method === 'string') {
     const normalizedMethod = method.trim();
     if (POSITIVE_MUTATION_HTTP_METHOD_PATTERN.test(normalizedMethod)) return true;
@@ -139,10 +139,10 @@ export function isObjectiveMutationTool(message: Message): boolean {
   if (!usesInputSemantics) {
     return classifyToolNameMutationSemantics(toolName) === 'mutation';
   }
-  const query = [input.query, input.sql, input.statement]
+  const query = [input["query"], input["sql"], input["statement"]]
     .find((value): value is string => typeof value === 'string');
   if (query && MUTATION_SQL_PATTERN.test(query)) return true;
-  const command = [message.toolInput?.command, message.toolInput?.cmd, message.toolInput?.script]
+  const command = [message.toolInput?.["command"], message.toolInput?.["cmd"], message.toolInput?.["script"]]
     .find((value): value is string => typeof value === 'string') ?? '';
   // The AST-backed read-only classifier also recognizes non-editing forms of
   // commands such as `sed -n`; the mutation regex alone flags their name.

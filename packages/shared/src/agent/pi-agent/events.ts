@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 /**
  * Pi Backend (Subprocess RPC Client)
  *
@@ -28,38 +29,37 @@ import type { PiSubprocessRuntimeContext } from './shared.ts';
 export function handleLine(transportOwner: PiAgent, agentClass: typeof PiAgent, line: string, child?: ChildProcess, runtimeContext?: PiSubprocessRuntimeContext): void {
     if (!line.trim())
         return;
-    if (child && (transportOwner["subprocess"] !== child || !transportOwner["isRuntimeCurrent"](runtimeContext))) {
+    if (child && (transportOwner["subprocess"] !== child || !transportOwner.isRuntimeCurrent(runtimeContext))) {
         transportOwner["debug"]('Ignoring output from stale Pi subprocess generation');
         return;
     }
     let msg: Record<string, unknown>;
     try {
-        msg = JSON.parse(line);
+        msg = parseJsonObject(line);
     }
     catch {
         transportOwner["debug"](`Invalid JSONL from subprocess: ${line.slice(0, 200)}`);
         return;
     }
-    const type = msg.type as string;
+    const type = msg["type"] as string;
     if (type !== 'error') {
-        transportOwner["resetSubprocessErrorDedup"]();
+        transportOwner.resetSubprocessErrorDedup();
     }
     switch (type) {
         case 'ready':
             // Subprocess initialized, callback server listening
-            transportOwner["callbackPort"] = (msg.callbackPort as number) || 0;
-            if (msg.sessionId) {
-                transportOwner["piSessionId"] = msg.sessionId as string;
+            if (msg["sessionId"]) {
+                transportOwner["piSessionId"] = msg["sessionId"] as string;
                 transportOwner["config"].onSdkSessionIdUpdate?.(transportOwner["piSessionId"]!);
             }
-            transportOwner["resolveSubprocessReady"]();
+            transportOwner.resolveSubprocessReady();
             break;
         case 'provider_handoff': {
-            const id = typeof msg.id === 'string' ? msg.id : undefined;
-            const acknowledge = id ? transportOwner["pendingProviderHandoffs"].get(id) : undefined;
+            const id = typeof msg["id"] === 'string' ? msg["id"] : undefined;
+            const acknowledge = id ? transportOwner.pendingProviderHandoffs.get(id) : undefined;
             if (id && acknowledge) {
-                transportOwner["pendingProviderHandoffs"].delete(id);
-                transportOwner["pendingProviderDispatchRejections"].delete(id);
+                transportOwner.pendingProviderHandoffs.delete(id);
+                transportOwner.pendingProviderDispatchRejections.delete(id);
                 acknowledge();
             }
             else {
@@ -69,11 +69,11 @@ export function handleLine(transportOwner: PiAgent, agentClass: typeof PiAgent, 
         }
         case 'event':
             // Pi SDK event -- forward through PiEventAdapter
-            transportOwner["handleSubprocessEvent"](msg.event as Record<string, unknown>);
+            transportOwner.handleSubprocessEvent(msg["event"] as Record<string, unknown>);
             break;
         case 'pre_tool_use_request':
             // Subprocess needs permission check + transforms before tool execution
-            void transportOwner["handlePreToolUseRequest"](msg as {
+            void transportOwner.handlePreToolUseRequest(msg as {
                 requestId: string;
                 toolName: string;
                 toolCallId?: string;
@@ -82,7 +82,7 @@ export function handleLine(transportOwner: PiAgent, agentClass: typeof PiAgent, 
             break;
         case 'tool_execute_request':
             // Subprocess wants main process to execute a proxy tool (MCP/API/session)
-            void transportOwner["handleToolExecuteRequest"](msg as {
+            void transportOwner.handleToolExecuteRequest(msg as {
                 requestId: string;
                 toolName: string;
                 toolCallId?: string;
@@ -91,24 +91,24 @@ export function handleLine(transportOwner: PiAgent, agentClass: typeof PiAgent, 
             break;
         case 'session_tool_completed':
             // Session MCP tool completed -- fire callbacks (SubmitPlan, auth, etc.)
-            transportOwner["handleSessionToolCompleted"](msg);
+            transportOwner.handleSessionToolCompleted(msg);
             break;
         case 'mini_completion_result':
             // Response to a mini_completion request
-            transportOwner["handleMiniCompletionResult"](msg);
+            transportOwner.handleMiniCompletionResult(msg);
             break;
         case 'llm_query_result': {
             // Response to an llm_query request
-            const id = msg.id as string;
-            const pending = transportOwner["pendingLlmQueries"].get(id);
+            const id = msg["id"] as string;
+            const pending = transportOwner.pendingLlmQueries.get(id);
             if (pending) {
-                transportOwner["pendingLlmQueries"].delete(id);
-                const result = msg.result as LLMQueryResult | null;
+                transportOwner.pendingLlmQueries.delete(id);
+                const result = msg["result"] as LLMQueryResult | null;
                 if (result) {
                     pending.resolve(result);
                 }
                 else {
-                    const errorMessage = typeof msg.errorMessage === 'string' ? msg.errorMessage : 'llm_query failed';
+                    const errorMessage = typeof msg["errorMessage"] === 'string' ? msg["errorMessage"] : 'llm_query failed';
                     pending.reject(new Error(errorMessage));
                 }
             }
@@ -116,34 +116,34 @@ export function handleLine(transportOwner: PiAgent, agentClass: typeof PiAgent, 
         }
         case 'ensure_session_ready_result':
             // Response to an ensure_session_ready request
-            transportOwner["handleEnsureSessionReadyResult"](msg);
+            transportOwner.handleEnsureSessionReadyResult(msg);
             break;
         case 'compact_result':
             // Response to a compact request
-            transportOwner["handleCompactResult"](msg);
+            transportOwner.handleCompactResult(msg);
             break;
         case 'set_auto_compaction_result':
             // Response to an auto-compaction toggle request
-            transportOwner["handleSetAutoCompactionResult"](msg);
+            transportOwner.handleSetAutoCompactionResult(msg);
             break;
         case 'update_runtime_config_result':
             // Response to a runtime config refresh request
-            transportOwner["handleRuntimeConfigUpdateResult"](msg);
+            transportOwner.handleRuntimeConfigUpdateResult(msg);
             break;
         case 'session_id_update':
             // Pi session ID changed
-            if (msg.sessionId) {
-                transportOwner["piSessionId"] = msg.sessionId as string;
+            if (msg["sessionId"]) {
+                transportOwner["piSessionId"] = msg["sessionId"] as string;
                 transportOwner["config"].onSdkSessionIdUpdate?.(transportOwner["piSessionId"]!);
             }
             break;
         case 'error': {
-            const errorCode = typeof msg.code === 'string' ? msg.code : undefined;
-            const rawMessage = String(msg.message || 'Unknown subprocess error');
-            if (errorCode === 'prompt_error' && typeof msg.id === 'string') {
-                transportOwner["pendingProviderHandoffs"].delete(msg.id);
-                const reject = transportOwner["pendingProviderDispatchRejections"].get(msg.id);
-                transportOwner["pendingProviderDispatchRejections"].delete(msg.id);
+            const errorCode = typeof msg["code"] === 'string' ? msg["code"] : undefined;
+            const rawMessage = String(msg["message"] || 'Unknown subprocess error');
+            if (errorCode === 'prompt_error' && typeof msg["id"] === 'string') {
+                transportOwner.pendingProviderHandoffs.delete(msg["id"]);
+                const reject = transportOwner.pendingProviderDispatchRejections.get(msg["id"]);
+                transportOwner.pendingProviderDispatchRejections.delete(msg["id"]);
                 reject?.();
             }
             transportOwner["debug"](`Subprocess error${errorCode ? ` (${errorCode})` : ''}: ${rawMessage}`);
@@ -156,25 +156,25 @@ export function handleLine(transportOwner: PiAgent, agentClass: typeof PiAgent, 
                 (errorMsg.includes('token') && errorMsg.includes('expired')) ||
                 errorMsg.includes('authentication'))) {
                 transportOwner["debug"]('Auth error detected from subprocess, attempting token refresh');
-                transportOwner["refreshAndPushTokens"]().catch(err => {
+                transportOwner.refreshAndPushTokens().catch((err: unknown) => {
                     transportOwner["debug"](`Token refresh after auth error failed: ${err}`);
                 });
             }
             // Reject any pending mini completions so errors propagate immediately.
             // mini_completion_error is an internal utility-path failure (title/summarization)
             // and should not surface as a user-visible chat error.
-            for (const [id, pending] of transportOwner["pendingMiniCompletions"]) {
+            for (const [id, pending] of transportOwner.pendingMiniCompletions) {
                 pending.reject(new Error(rawMessage));
-                transportOwner["pendingMiniCompletions"].delete(id);
+                transportOwner.pendingMiniCompletions.delete(id);
             }
             // Same treatment for pending llm_query calls. llm_query_error is also an
             // internal utility-path code (call_llm): the dual-emit from the subprocess
             // means a targeted `llm_query_result` is sent alongside this generic `error`
             // to reject the specific pending promise — this loop is the defensive cleanup
             // for queries that never got a targeted result (subprocess crash, etc.).
-            for (const [id, pending] of transportOwner["pendingLlmQueries"]) {
+            for (const [id, pending] of transportOwner.pendingLlmQueries) {
                 pending.reject(new Error(rawMessage));
-                transportOwner["pendingLlmQueries"].delete(id);
+                transportOwner.pendingLlmQueries.delete(id);
             }
             if (errorCode === 'mini_completion_error' || errorCode === 'llm_query_error') {
                 transportOwner["debug"](`Ignoring ${errorCode} subprocess error in chat stream`);
@@ -182,35 +182,35 @@ export function handleLine(transportOwner: PiAgent, agentClass: typeof PiAgent, 
             }
             transportOwner["adapter"].clearPendingError();
             // Reject pending ensure_session_ready requests (used by branch preflight)
-            for (const [id, pending] of transportOwner["pendingEnsureSessionReady"]) {
+            for (const [id, pending] of transportOwner.pendingEnsureSessionReady) {
                 pending.reject(new Error(rawMessage));
-                transportOwner["pendingEnsureSessionReady"].delete(id);
+                transportOwner.pendingEnsureSessionReady.delete(id);
             }
             // Reject pending compact/toggle requests
-            for (const [id, pending] of transportOwner["pendingCompactions"]) {
+            for (const [id, pending] of transportOwner.pendingCompactions) {
                 pending.reject(new Error(rawMessage));
-                transportOwner["pendingCompactions"].delete(id);
+                transportOwner.pendingCompactions.delete(id);
             }
-            for (const [id, pending] of transportOwner["pendingAutoCompactionToggles"]) {
+            for (const [id, pending] of transportOwner.pendingAutoCompactionToggles) {
                 pending.reject(new Error(rawMessage));
-                transportOwner["pendingAutoCompactionToggles"].delete(id);
+                transportOwner.pendingAutoCompactionToggles.delete(id);
             }
-            for (const [id, pending] of transportOwner["pendingRuntimeConfigUpdates"]) {
+            for (const [id, pending] of transportOwner.pendingRuntimeConfigUpdates) {
                 pending.reject(new Error(rawMessage));
-                transportOwner["pendingRuntimeConfigUpdates"].delete(id);
+                transportOwner.pendingRuntimeConfigUpdates.delete(id);
             }
             // Suppress repeated identical errors to prevent a broken subprocess
             // from flooding the user's session (e.g. EFAULT loop).
-            if (rawMessage === transportOwner["lastSubprocessError"]) {
-                transportOwner["subprocessErrorRepeatCount"]++;
-                if (transportOwner["subprocessErrorRepeatCount"] > agentClass["MAX_IDENTICAL_SUBPROCESS_ERRORS"]) {
-                    transportOwner["debug"](`Suppressing repeated subprocess error (${transportOwner["subprocessErrorRepeatCount"]}x): ${rawMessage}`);
+            if (rawMessage === transportOwner.lastSubprocessError) {
+                transportOwner.subprocessErrorRepeatCount++;
+                if (transportOwner.subprocessErrorRepeatCount > agentClass.MAX_IDENTICAL_SUBPROCESS_ERRORS) {
+                    transportOwner["debug"](`Suppressing repeated subprocess error (${transportOwner.subprocessErrorRepeatCount}x): ${rawMessage}`);
                     break;
                 }
             }
             else {
-                transportOwner["lastSubprocessError"] = rawMessage;
-                transportOwner["subprocessErrorRepeatCount"] = 1;
+                transportOwner.lastSubprocessError = rawMessage;
+                transportOwner.subprocessErrorRepeatCount = 1;
             }
             const parsed = parseError(new Error(rawMessage));
             if (parsed.code !== 'unknown_error') {
@@ -238,18 +238,18 @@ export function handleSubprocessEvent(transportOwner: PiAgent, event: Record<str
     // The subprocess sends Pi SDK AgentSessionEvent objects serialized as JSON.
     // Feed them through PiEventAdapter to convert to Craft AgentEvents.
     // Detect session MCP tool completions (same pattern as in-process version)
-    const eventType = event.type as string;
+    const eventType = event["type"] as string;
     let adaptedEvent = event;
     if (eventType === 'tool_execution_start') {
-        const toolName = event.toolName as string;
+        const toolName = event["toolName"] as string;
         if (toolName?.startsWith('session__') || toolName?.startsWith('mcp__session__')) {
             // Session tool tracking is handled by the subprocess; it sends
             // session_tool_completed events when appropriate.
         }
         // Deterministic metadata bridge: if subprocess event lacks toolMetadata,
         // inject metadata captured from pre_tool_use_request before stripping.
-        const toolCallId = event.toolCallId as string | undefined;
-        const existingMeta = event.toolMetadata as {
+        const toolCallId = event["toolCallId"] as string | undefined;
+        const existingMeta = event["toolMetadata"] as {
             intent?: string;
             displayName?: string;
         } | undefined;
@@ -268,15 +268,15 @@ export function handleSubprocessEvent(transportOwner: PiAgent, event: Record<str
             }
         }
     }
-    if (eventType === 'compaction_start' && transportOwner["pendingProviderHandoffs"].size > 0) {
-        for (const [id, acknowledge] of transportOwner["pendingProviderHandoffs"]) {
-            transportOwner["pendingProviderHandoffs"].delete(id);
-            transportOwner["pendingProviderDispatchRejections"].delete(id);
+    if (eventType === 'compaction_start' && transportOwner.pendingProviderHandoffs.size > 0) {
+        for (const [id, acknowledge] of transportOwner.pendingProviderHandoffs) {
+            transportOwner.pendingProviderHandoffs.delete(id);
+            transportOwner.pendingProviderDispatchRejections.delete(id);
             acknowledge();
         }
     }
     if (eventType === 'tool_execution_end') {
-        const toolCallId = event.toolCallId as string | undefined;
+        const toolCallId = event["toolCallId"] as string | undefined;
         if (toolCallId) {
             transportOwner["settleAdmittedToolExecution"](toolCallId);
             transportOwner["preToolMetadataByCallId"].delete(toolCallId);
@@ -291,7 +291,7 @@ export function handleSubprocessEvent(transportOwner: PiAgent, event: Record<str
             // Provider message_end failures do not necessarily arrive through the
             // generic subprocess `error` envelope. Start refresh here as well so
             // SessionManager's replacement runtime can join the same global mutex.
-            void transportOwner["refreshAndPushTokens"]().catch(error => {
+            void transportOwner.refreshAndPushTokens().catch((error: unknown) => {
                 transportOwner["debug"](`Token refresh from typed auth error failed: ${error}`);
             });
         }
@@ -306,11 +306,11 @@ export function handleSubprocessEvent(transportOwner: PiAgent, event: Record<str
             recordContextualGmailToolResult({
                 sessionId: transportOwner["config"].session?.id || transportOwner["_sessionId"],
                 toolUseId: agentEvent.toolUseId,
-                toolName: agentEvent.toolName,
-                toolInput: agentEvent.input,
+                ...(agentEvent.toolName !== undefined ? { toolName: agentEvent.toolName } : {}),
+                ...(agentEvent.input !== undefined ? { toolInput: agentEvent.input } : {}),
                 result: agentEvent.result,
                 isError: agentEvent.isError,
-                executed: agentEvent.executed,
+                ...(agentEvent.executed !== undefined ? { executed: agentEvent.executed } : {}),
                 objectiveAuthorizationSegments: typeof currentAuthority === 'object'
                     ? currentAuthority.authorizationSegments
                     : currentRequest ? [currentRequest] : [],
@@ -325,11 +325,11 @@ export function handleSubprocessEvent(transportOwner: PiAgent, event: Record<str
             const hookEvent = agentEvent.isError ? 'PostToolUseFailure' : 'PostToolUse';
             transportOwner["emitAutomationEvent"](hookEvent, {
                 hook_event_name: hookEvent,
-                tool_name: agentEvent.toolName ?? (event.toolName as string) ?? 'unknown',
-                tool_input: agentEvent.input,
-                ...(agentEvent.isError
-                    ? { error: typeof agentEvent.result === 'string' ? agentEvent.result : undefined }
-                    : { tool_response: typeof agentEvent.result === 'string' ? agentEvent.result : undefined }),
+                tool_name: agentEvent.toolName ?? (event["toolName"] as string) ?? 'unknown',
+                ...(agentEvent.input !== undefined ? { tool_input: agentEvent.input } : {}),
+                ...(typeof agentEvent.result === 'string'
+                    ? agentEvent.isError ? { error: agentEvent.result } : { tool_response: agentEvent.result }
+                    : {}),
             });
         }
         transportOwner["eventQueue"].enqueue(agentEvent);

@@ -21,10 +21,11 @@ export function resolveProjectContext(transportOwner: ClaudeAgent): import("../.
         if (!project)
             return null;
         const slug = project.config.slug;
+        const memoryContent = loadProjectMemory(transportOwner["workspaceRootPath"], slug, 5000, { includeStructured: false });
         return {
             name: project.config.name,
-            description: project.config.description,
-            details: project.config.details,
+            ...(project.config.description !== undefined ? { description: project.config.description } : {}),
+            ...(project.config.details !== undefined ? { details: project.config.details } : {}),
             assetsPath: getProjectAssetsPath(transportOwner["workspaceRootPath"], slug),
             assets: listProjectAssets(transportOwner["workspaceRootPath"], slug).map((a) => ({
                 filename: a.filename,
@@ -32,7 +33,7 @@ export function resolveProjectContext(transportOwner: ClaudeAgent): import("../.
                 sizeBytes: a.sizeBytes,
             })),
             memoryPath: getProjectMemoryPath(transportOwner["workspaceRootPath"], slug),
-            memoryContent: loadProjectMemory(transportOwner["workspaceRootPath"], slug, 5000, { includeStructured: false }) ?? undefined,
+            ...(memoryContent != null ? { memoryContent } : {}),
         };
     }
     catch (error) {
@@ -58,15 +59,15 @@ export async function postInit(transportOwner: ClaudeAgent): Promise<PostInitRes
     // Clear all auth env vars first for clean state.
     // Claude subprocesses must never inherit Bedrock-routing toggles from a
     // previous connection or parent process environment.
-    delete process.env.ANTHROPIC_API_KEY;
-    delete process.env.CLAUDE_CODE_OAUTH_TOKEN;
-    delete process.env.ANTHROPIC_BASE_URL;
+    delete process.env["ANTHROPIC_API_KEY"];
+    delete process.env["CLAUDE_CODE_OAUTH_TOKEN"];
+    delete process.env["ANTHROPIC_BASE_URL"];
     clearClaudeBedrockRoutingEnvVars();
     // Resolve auth env vars via shared utility
     const manager = getCredentialManager();
     const result = await resolveAuthEnvVars(connection, slug, manager, getValidClaudeOAuthToken, transportOwner["config"].expectedLlmCredentialBindingId);
     if (!result.success) {
-        return { authInjected: false, authWarning: result.warning, authWarningLevel: 'error' };
+        return { authInjected: false, ...(result.warning !== undefined ? { authWarning: result.warning } : {}), authWarningLevel: 'error' };
     }
     // Preserve the authenticated per-instance snapshot. SDK options merge
     // these values after process.env, so another agent's postInit cannot swap
@@ -84,7 +85,7 @@ export async function postInit(transportOwner: ClaudeAgent): Promise<PostInitRes
         process.env[key] = value;
     }
     // Built-in content summaries inherit the selected task model.
-    process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = transportOwner["getModel"]();
+    process.env["ANTHROPIC_DEFAULT_HAIKU_MODEL"] = transportOwner["getModel"]();
     return { authInjected: true };
 }
 

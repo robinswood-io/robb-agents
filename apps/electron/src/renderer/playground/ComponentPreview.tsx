@@ -1,3 +1,4 @@
+import { parseJsonObject } from '@craft-agent/shared/utils/json'
 import * as storage from '@/lib/local-storage'
 import * as React from 'react'
 import { cn } from '@/lib/utils'
@@ -18,11 +19,13 @@ function loadSavedSize(): { width: number; height: number } {
   try {
     const saved = storage.getRaw(storage.KEYS.playgroundPreviewSize)
     if (saved) {
-      const parsed = JSON.parse(saved)
-      if (typeof parsed.width === 'number' && typeof parsed.height === 'number') {
+      const parsed = parseJsonObject(saved)
+      const width = parsed['width'], height = parsed['height']
+      if (typeof width === 'number' && Number.isFinite(width)
+        && typeof height === 'number' && Number.isFinite(height)) {
         return {
-          width: Math.max(MIN_WIDTH, parsed.width),
-          height: Math.max(MIN_HEIGHT, parsed.height),
+          width: Math.max(MIN_WIDTH, width),
+          height: Math.max(MIN_HEIGHT, height),
         }
       }
     }

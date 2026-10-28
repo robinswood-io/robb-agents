@@ -1,3 +1,5 @@
+import type { Session } from '../../../../../packages/shared/src/protocol/dto/sessions.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Event Processor
  *
@@ -72,10 +74,10 @@ export function processEvent(
   // them immediately; they must not linger in ProcessingIndicator or Journey.
   if (['text_delta', 'text_complete', 'tool_start', 'tool_result', 'complete', 'error', 'typed_error', 'interrupted'].includes(event.type)
     && isAgentRuntimeActivity(state.session.currentStatus?.message)) {
-    state = { ...state, session: { ...state.session,
+    state = { ...state, session: omitUndefined<Session>({ ...state.session,
       messages: state.session.messages.filter(message => message.role !== 'status' || !isAgentRuntimeActivity(message.content)),
       currentStatus: isAgentRuntimeActivity(state.session.currentStatus?.message) ? undefined : state.session.currentStatus,
-    } }
+    }) }
   }
   switch (event.type) {
     case 'text_delta': {
@@ -247,6 +249,10 @@ export function processEvent(
     case 'auth_completed':
       return handleAuthCompleted(state, event)
 
+    case 'shell_killed':
+      // Background task chips are updated by handleBackgroundTaskEvent in the app event listener.
+      return { state, effects: [] }
+
     case 'source_activated':
       // Server-side handles the auto-retry now (craft-agents-oss#804); the renderer
       // just receives the event for UI feedback. See SessionManager.processEvent.
@@ -258,7 +264,7 @@ export function processEvent(
     default: {
       // Unknown event type - return state unchanged but as new reference
       // to ensure atom sync detects the "change"
-      const _exhaustiveCheck: never = event
+      event satisfies never
       return {
         state: { ...state, session: { ...state.session } },
         effects: [],

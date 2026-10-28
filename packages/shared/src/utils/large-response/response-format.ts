@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../json.ts';
 import { MAX_SUMMARIZATION_INPUT } from './token-budget.ts';
 
 // ============================================================
@@ -115,12 +116,12 @@ export function extractLargeResultMetadataJson(
       jsonText = wrapped[1]!;
     }
     const parsed: unknown = JSON.parse(jsonText);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
+    if (!parsed || typeof parsed !== 'object' || isUnknownArray(parsed)) return undefined;
     const metadata: Record<string, string | number | boolean> = {};
     for (const key of LARGE_RESULT_METADATA_KEYS) {
       const descriptor = Object.getOwnPropertyDescriptor(parsed, key);
       if (!descriptor || !('value' in descriptor)) continue;
-      const value = descriptor.value;
+      const value: unknown = descriptor.value;
       if ((key === 'code' || key === 'exitCode')
         && typeof value === 'number' && Number.isInteger(value) && Math.abs(value) <= 1_000_000) {
         metadata[key] = value;

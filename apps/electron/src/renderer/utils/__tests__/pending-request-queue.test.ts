@@ -68,7 +68,7 @@ describe('pending request queue identity', () => {
     expect(permissionResponseIdentity(old)).toEqual({
       sessionId: old.sessionId,
       requestId: old.requestId,
-      toolUseId: old.toolUseId,
+      ...(old.toolUseId !== undefined ? { toolUseId: old.toolUseId } : {}),
     })
     expect(structuredInputIdentity({ type: 'permission', data: old }))
       .not.toBe(structuredInputIdentity({ type: 'permission', data: current }))

@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 import { describe, expect, it } from 'bun:test'
 import { mkdtempSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
@@ -83,8 +84,8 @@ describe('session draft storage', () => {
       "setSessionDraft('s1', { text: '', attachments: [{ path: '/tmp/a.png', name: 'a.png', base64: 'AAAA', size: 4, type: 'image', mimeType: 'image/png' }] })"
     )
     const draftsPath = join(configDir, 'drafts.json')
-    const raw = JSON.parse(readFileSync(draftsPath, 'utf-8'))
-    expect(raw.drafts.s1.attachments).toEqual([{ path: '/tmp/a.png', name: 'a.png' }])
+    const raw = parseJsonObject(readFileSync(draftsPath, 'utf-8'))
+    expect(raw).toMatchObject({ drafts: { s1: { attachments: [{ path: '/tmp/a.png', name: 'a.png' }] } } })
   })
 
   it('round-trips a draft with a content-backed attachment (paste / web-drag path)', () => {

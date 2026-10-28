@@ -1,6 +1,6 @@
-import type { SDKMessage, SDKAssistantMessageError } from '@anthropic-ai/claude-agent-sdk';
+import type { SDKAssistantMessageError } from '@anthropic-ai/claude-agent-sdk';
 import type { ContentBlock } from '../../tool-matching.ts';
-import type { ClaudeAdapterCallbacks } from '../../backend/claude/event-adapter.ts';
+import type { ClaudeAdapterCallbacks, ClaudeEventAdapter } from '../../backend/claude/event-adapter.ts';
 
 type RecordedUsage = { input_tokens: number; output_tokens?: number;
   cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
@@ -34,13 +34,13 @@ type RecordedClaudeMessage = { session_id: string; parent_tool_use_id?: string |
   | { type: 'unknown_type' }
 );
 
-export function recordedClaudeMessage(message: RecordedClaudeMessage): SDKMessage {
-  // The single fixture boundary for historical, deliberately sparse SDK data.
-  return message as unknown as SDKMessage;
+/** Historical wire payloads reach the real adapter without weakening its current SDK contract. */
+export function adaptRecordedClaudeMessage(adapter: ClaudeEventAdapter, message: RecordedClaudeMessage): ReturnType<ClaudeEventAdapter['adapt']> {
+  return Reflect.apply(adapter.adapt, adapter, [message]) as ReturnType<ClaudeEventAdapter['adapt']>;
 }
 
 export function createCallbacks(overrides?: Partial<ClaudeAdapterCallbacks>): ClaudeAdapterCallbacks {
-  return { onDebug: undefined, mapSDKError: async errorCode => ({
+  return {  mapSDKError: async errorCode => ({
     type: 'typed_error', error: { code: 'unknown_error', title: 'Test Error',
       message: 'Mock error for ' + errorCode, details: [], actions: [], canRetry: false },
   }), ...overrides };

@@ -67,11 +67,11 @@ async function sessionOpDrainDeferredAutomaticSessions(sessionOperationContext: 
                 const allocated = allocatedSetupRecovery;
                 const cleanRetryOwnsProviderBoundary = !!allocated?.cleanContinuationId;
                 if (cleanRetryOwnsProviderBoundary)
-                    await sessionOperationContext.owner["resumePendingTurnAfterRestart"](managed.id);
+                    await sessionOperationContext.owner.resumePendingTurnAfterRestart(managed.id);
                 else if (managed.messageQueue.length)
                     sessionOperationContext.owner["processNextQueuedMessage"](managed.id);
                 else if (managed.pendingTurnRecovery)
-                    await sessionOperationContext.owner["resumePendingTurnAfterRestart"](managed.id);
+                    await sessionOperationContext.owner.resumePendingTurnAfterRestart(managed.id);
                 else
                     sessionOperationContext.state.deferredAutomaticSessions.delete(managed.id);
                 if (managed.isProcessing || sessionOperationContext.state.queuedMessageDispatches.has(managed.id)
@@ -104,7 +104,7 @@ async function sessionOpDrainDeferredAutomaticSessions(sessionOperationContext: 
     }
     finally {
         if (sessionOperationContext.state.automaticAdmissionDrain === operation)
-            sessionOperationContext.state.automaticAdmissionDrain = undefined;
+            delete sessionOperationContext.state.automaticAdmissionDrain;
         if (sessionOperationContext.state.automaticAdmissionDrainWakeRequested) {
             sessionOperationContext.state.automaticAdmissionDrainWakeRequested = false;
             sessionOperationContext.owner["scheduleDeferredAutomaticSessions"]();

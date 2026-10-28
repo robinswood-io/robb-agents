@@ -1,3 +1,7 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import { parseJsonObject } from '@craft-agent/shared/utils/json';
+import type { SessionOperations } from './SessionManager/operation-types.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import "./testing/scripted-session-agent.ts";
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
@@ -14,7 +18,7 @@ import { createPendingTurnRecovery } from './turn-recovery';
 import { transitionObjectiveContract } from './objective-contract';
 import { delegatedReviewFixture } from './__fixtures__/delegated-review';
 
-type Managed = ReturnType<typeof createManagedSession>
+
 const roots: string[] = []
 const ids: string[] = []
 const questions: UserInputQuestion[] = [{ id: 'format', question: 'Quel format souhaites-tu ?', options: [{ id: 'short', label: 'Court' }, { id: 'long', label: 'Détaillé' }] }]
@@ -59,20 +63,9 @@ function harness() {
   const manager = withSessionOperationsForTest(new SessionManager())
   const events: Array<Record<string, unknown>> = []
   const snapshots: Array<Record<string, unknown>> = []
-  const internals = manager as unknown as {
-    sessions: Map<string, Managed>; enqueuePersist: (m: Managed) => void; flushSession: (id: string) => Promise<void>
-    sendEvent: (e: Record<string, unknown>) => void; enqueueAutomaticTurnRecovery: (m: Managed, cause: 'objective_incomplete') => Promise<boolean>
-    resumePendingTurnAfterRestart: (id: string) => Promise<void>; onProcessingStopped: (id: string, reason: 'interrupted') => Promise<void>
-    emitExecutionTelemetry: () => void; startGenerationTelemetry: () => void; finishGenerationTelemetry: () => void
-    beginAutomaticSessionStatusLifecycle: () => Promise<void>; finishAutomaticSessionStatusLifecycle: () => Promise<void>
-    isSessionBeingViewed: () => boolean; markSessionRead: () => Promise<void>; processNextQueuedMessage: (id: string) => void
-    disposeManagedAgentRuntime: () => Promise<void>; getOrCreateAgent: (m: Managed) => Promise<unknown>
-    ensureMessagesLoaded: (m: Managed) => Promise<void>
-    ensureDelegatedTerminalResultDelivery: (child: Managed, deferRecipientDispatch?: boolean) => Promise<boolean>
-    queuedMessageDispatches: Map<string, symbol>
-  }
+  const internals = sessionManagerForTest(manager)
   sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
-  internals.enqueuePersist = m => snapshots.push(JSON.parse(JSON.stringify({ ...pickSessionFields(m), messages: m.messages })))
+  internals.enqueuePersist = m => { snapshots.push(parseJsonObject(JSON.stringify({ ...pickSessionFields(m), messages: m.messages }))); return true }
   internals.flushSession = async () => {}
   internals.sendEvent = e => events.push(e)
   internals.emitExecutionTelemetry = () => {}; internals.startGenerationTelemetry = () => {}; internals.finishGenerationTelemetry = () => {}
@@ -82,8 +75,8 @@ function harness() {
   internals.processNextQueuedMessage = () => {}; internals.disposeManagedAgentRuntime = async () => { managed.agent = null }
   const redirects: string[] = []
   const installAgent = (steer = true, stream: AgentEvent[] = [], beforeChat?: () => void) => {
-    const agent = { redirect: (text: string) => { redirects.push(text); return steer }, getModel: () => 'test', getSessionId: () => null, setAllSources: () => {}, async *chat() { beforeChat?.(); for (const e of stream) yield e } }
-    managed.agent = agent as never; internals.getOrCreateAgent = async m => { m.agent = agent as never; return agent }
+    const agent = completeSessionAgentFixture(managed.workspace, { redirect: (text: string) => { redirects.push(text); return steer }, getModel: () => 'test', getSessionId: () => null, setAllSources: () => {}, async *chat() { beforeChat?.(); for (const e of stream) yield e } })
+    managed.agent = agent; internals.getOrCreateAgent = async m => { m.agent = agent; return agent }
   }
   const restoreQueueProcessing = () => { internals.processNextQueuedMessage = realProcessNextQueuedMessage }
   return { manager, managed, internals, events, snapshots, redirects, installAgent, restoreQueueProcessing }
@@ -136,9 +129,9 @@ it.each([
 
     expect(result).toEqual({ status: 'accepted' })
     expect(providerStarts).toBe(0)
-    expect(h.managed.activeObjective).toMatchObject({
+    expect<unknown>(h.managed.activeObjective).toMatchObject({
       terminalState: 'exhausted',
-      completedAt: expect.any(Number),
+      completedAt: (expect.any(Number) as unknown),
     })
     expect(h.managed.pendingTurnRecovery).toBeUndefined()
     expect(h.managed.messageQueue).toEqual([])
@@ -276,7 +269,7 @@ it('delivers an observed negative review after a human answer without retrying t
     expect(final?.isIntermediate).not.toBe(true)
     expect(h.managed.pendingTurnRecovery).toBeUndefined()
     expect(h.managed.messages.filter(message => message.internalOrigin?.kind === 'user-input')).toHaveLength(1)
-    expect(h.events.some(event => event.type === 'complete')).toBe(true)
+    expect(h.events.some(event => event["type"] === 'complete')).toBe(true)
   })
 
 it('deduplicates identical pending questions, rejects replacement, and restores the header without messages', async () => {
@@ -306,7 +299,7 @@ it('aggregates descendants only in their workspace, preserving the origin and de
     expect(rootDTO?.userInputRequests).toHaveLength(1)
     expect(rootDTO?.userInputRequests?.[0]).toMatchObject({ sessionId: 'child', originWorkspaceId: 'workspace' })
     expect(h.managed.userInputRequests).toBeUndefined()
-    const event = h.events.find(e => e.type === 'user_input_changed' && e.sessionId === h.managed.id)!
+    const event = h.events.find(e => e["type"] === 'user_input_changed' && e["sessionId"] === h.managed.id)!
     await h.manager.respondToUserInput(child.id, { requestId: child.userInputRequests![0]!.id, cancelled: true })
     expect(event).toMatchObject({ requests: [{ status: 'pending' }] })
     expect((await h.manager.getSession(h.managed.id))?.userInputRequests?.[0]?.status).toBe('cancelled')
@@ -327,7 +320,7 @@ it('queues one durable answer under concurrent retries and preserves the objecti
     expect(h.managed.pendingTurnRecovery).toMatchObject({ attempts: 3, stagnantAttempts: 1, startedAt: 1, leaseExpiresAt: 123456, userMessageId: 'objective-root' })
     expect(await h.manager.respondToUserInput(h.managed.id, { requestId, answers })).toMatchObject({ status: 'already_answered', responseMessageId: first.responseMessageId })
     await expect(h.manager.respondToUserInput(h.managed.id, { requestId, answers: [{ questionId: 'format', optionIds: ['long'] }] })).rejects.toThrow('different')
-    const receipt = h.snapshots.find(snapshot => (snapshot.userInputRequests as Array<{status:string}>)?.[0]?.status === 'answered')!
+    const receipt = h.snapshots.find(snapshot => (snapshot["userInputRequests"] as Array<{status:string}>)?.[0]?.status === 'answered')!
     expect(receipt).toMatchObject({ userInputRequests: [{ responseMessageId: first.responseMessageId }], messages: [{}, { id: first.responseMessageId, isQueued: true }] })
   })
 
@@ -374,11 +367,11 @@ for (const resolution of ['answered', 'cancelled'] as const) {
       const parentQuestion = await h.manager.requestUserInput(h.managed.id, questions)
       const childQuestion = await h.manager.requestUserInput(child.id, questions)
       const receipt = await h.manager.respondToUserInput(h.managed.id, { requestId: parentQuestion.requestId, answers })
-      h.internals.processNextQueuedMessage = Object.getPrototypeOf(h.manager).processNextQueuedMessage.bind(h.manager)
+      h.internals.processNextQueuedMessage = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'processNextQueuedMessage'>).processNextQueuedMessage.bind(h.manager)
       await h.internals.onProcessingStopped(h.managed.id, 'interrupted')
       expect(h.managed.isProcessing).toBe(false)
       expect(h.managed.messageQueue.map(item => item.messageId)).toEqual([receipt.responseMessageId])
-      expect(h.events.some(event => event.type === 'complete' && event.sessionId === h.managed.id && event.reason === 'interrupted')).toBe(true)
+      expect(h.events.some(event => event["type"] === 'complete' && event["sessionId"] === h.managed.id && event["reason"] === 'interrupted')).toBe(true)
       let releaseAgent!: () => void
       const ready = new Promise<void>(resolve => { releaseAgent = resolve })
       const prepared: string[] = []

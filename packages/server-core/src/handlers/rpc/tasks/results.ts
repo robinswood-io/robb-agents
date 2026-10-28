@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol';
 
 import type { TaskValidationResultDto, TaskGetResult, TaskResultsDto, TaskResultNodeDto, DurableTaskSnapshotDto, DurableTaskMetadataUpdateRequest, DurableTaskCockpitProjectionsDto } from '@craft-agent/shared/protocol';
@@ -26,7 +27,7 @@ export function registerTaskResultHandlers(server: RpcServer, deps: HandlerDeps,
     }
     const run = runId ? (await runnerFor(workspaceId)).getRunState(slug, runId) : null
     const task = loaded.spec ? await durableTaskFor(workspaceId, slug, runId) : undefined
-    return { slug, validation: toValidationDto(loaded), spec: loaded.spec, run, task }
+    return { slug, validation: toValidationDto(loaded), ...(loaded.spec !== undefined ? { spec: loaded.spec } : {}), run, ...(task !== undefined ? { task: task } : {}) }
   })
 
   // tasks:list — slugs with a task.yaml.
@@ -69,10 +70,10 @@ export function registerTaskResultHandlers(server: RpcServer, deps: HandlerDeps,
       else if (request.archived === false && orchestratorId) await deps.sessionManager.unarchiveSession(orchestratorId)
       try {
         updateDurableTaskMetadata(ws.rootPath, request.slug, {
-          expectedRevision: request.expectedRevision,
-          archived: request.archived,
-          nextAction: request.nextAction,
-          externalRefs: request.externalRefs,
+          ...(request.expectedRevision !== undefined ? { expectedRevision: request.expectedRevision } : {}),
+          ...(request.archived !== undefined ? { archived: request.archived } : {}),
+          ...(request.nextAction !== undefined ? { nextAction: request.nextAction } : {}),
+          ...(request.externalRefs !== undefined ? { externalRefs: request.externalRefs } : {}),
         })
       } catch (error) {
         // Keep the session tile and canonical metadata convergent if a guarded
@@ -116,7 +117,7 @@ export function registerTaskResultHandlers(server: RpcServer, deps: HandlerDeps,
 
     // Fold the append-only log into the latest per-node state + session id, preserving first-seen
     // order. node-spawned/node-finished both carry sessionId; the last one wins.
-    const byId = new Map<string, { id: string; state: string; sessionId?: string }>()
+    const byId = new Map<string, { id: string; state: TaskResultNodeDto['state']; sessionId?: string }>()
     const attemptsById = new Map<string, number>()
     const proofById = new Map<string, string>()
     const ensure = (id: string) => {
@@ -126,7 +127,7 @@ export function registerTaskResultHandlers(server: RpcServer, deps: HandlerDeps,
     }
     const verdicts: NonNullable<TaskResultsDto['verdicts']> = []
     // Recover the terminal run status from the run-log's lifecycle markers (last one wins).
-    let runStatus: string | undefined
+    let runStatus: TaskResultsDto['runStatus']
     for (const entry of log) {
       if (entry.kind === 'node-scheduled' || entry.kind === 'node-spawned') {
         const e = ensure(entry.nodeId)
@@ -198,6 +199,7 @@ export function registerTaskResultHandlers(server: RpcServer, deps: HandlerDeps,
     const nodes: TaskResultNodeDto[] = [...byId.values()].map((e) => {
       const out = readNodeOutput(root, slug, chosen, e.id)
       const replay = replayById.get(e.id)
+      const proofHash = proofById.get(e.id)
       return {
         id: e.id,
         title: titleById.get(e.id) ?? e.id,
@@ -206,7 +208,7 @@ export function registerTaskResultHandlers(server: RpcServer, deps: HandlerDeps,
         ...(out?.text ? { output: out.text } : {}),
         dependsOn: [...(specNodeById.get(e.id)?.depends_on ?? [])],
         attempt: attemptsById.get(e.id) ?? 0,
-        ...(proofById.get(e.id) ? { proofHash: proofById.get(e.id) } : {}),
+        ...(proofHash ? { proofHash } : {}),
         evidenceRefs: [
           `tasks/${slug}/runs/${chosen}/run-log.jsonl#node=${e.id}`,
           ...(out ? [`tasks/${slug}/runs/${chosen}/nodes/${e.id}.json`] : []),
@@ -222,7 +224,7 @@ export function registerTaskResultHandlers(server: RpcServer, deps: HandlerDeps,
       ? `${baseReport}\n## User-visible proof\n\n- Action requested: ${durableTask.userEvidence.actionRequested}\n- Action attempted: ${durableTask.userEvidence.actionAttempted.join('; ') || 'None recorded'}\n- Mutation applied: ${durableTask.userEvidence.mutationsApplied.join('; ') || 'None recorded'}\n- Real verification: ${durableTask.userEvidence.userVerification}\n- Remaining limitation: ${durableTask.userEvidence.remainingLimitations.join('; ') || 'None'}\n`
       : baseReport
 
-    return {
+    return omitUndefined({
       slug,
       runId: chosen,
       runIds,
@@ -236,6 +238,6 @@ export function registerTaskResultHandlers(server: RpcServer, deps: HandlerDeps,
       ...(durableTask ? { task: durableTask } : {}),
       ...(durableTask ? { userEvidence: durableTask.userEvidence } : {}),
       nodes,
-    }
+    })
   })
 }

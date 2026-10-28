@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
@@ -65,10 +66,7 @@ describe('session source deletion fence', () => {
       const event = args[2] as { type?: string } | undefined
       if (event?.type === 'sources_changed') sourceEvents.push(event)
     }) as never)
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      buildSessionSourceServers: typeof gated.buildSessionSourceServers
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     runtime.buildSessionSourceServers = gated.buildSessionSourceServers
 
@@ -117,14 +115,7 @@ describe('session source deletion fence', () => {
       const event = args[2] as { type?: string } | undefined
       if (event?.type === 'sources_changed') sourceEvents.push(event)
     }) as never)
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      retiringSessions: WeakSet<typeof managed>
-      persistSession: (candidate: typeof managed) => boolean
-      buildSessionSourceServers: typeof gated.buildSessionSourceServers
-      deferredAutomaticSessions: Set<string>
-      automaticAdmissionReservations: Set<string>
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     runtime.buildSessionSourceServers = gated.buildSessionSourceServers
     sessionRuntimeStateForTest(manager).deferredAutomaticSessions.add(managed.id)
@@ -137,7 +128,7 @@ describe('session source deletion fence', () => {
     const deletion = manager.deleteSession(managed.id)
     const deletionResult = deletion.then(
       () => undefined,
-      error => error,
+      (error: unknown) => error,
     )
     expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
 
@@ -184,11 +175,7 @@ describe('session source deletion fence', () => {
     const gated = createGatedSourceRuntime()
     managed.agent = gated.agent as never
 
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      buildSessionSourceServers: typeof gated.buildSessionSourceServers
-      reloadSourcesForWorkspace: (workspaceRootPath: string) => Promise<void>
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     runtime.buildSessionSourceServers = gated.buildSessionSourceServers
 

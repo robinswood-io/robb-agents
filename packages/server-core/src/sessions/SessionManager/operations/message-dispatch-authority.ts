@@ -1,3 +1,4 @@
+import { setOptional } from '@craft-agent/shared/utils/json';
 import { generateMessageId } from '@craft-agent/shared/protocol';
 import { DelegatedDispatchSupersededError, InternalContinuationSupersededError } from '../runtime-policy.ts';
 import { hasTerminalObjectiveState as sessionOpHasTerminalObjectiveState } from './repair-legacy-synthetic-objective-authority.ts';
@@ -43,7 +44,7 @@ export function prepareMessageDispatchAuthority(
         }
         queuedAgentDeliveryDispatch.claimed = true;
         queuedAgentDeliveryDispatch.claimDurable = false;
-        queuedAgentDeliveryDispatch.attemptsBeforeClaim = managed.messages.find(message => message.id === existingMessageId)?.agentDelivery?.attempts;
+        setOptional(queuedAgentDeliveryDispatch, "attemptsBeforeClaim", managed.messages.find(message => message.id === existingMessageId)?.agentDelivery?.attempts);
     }
     const assertFreshAgentDeliveryTargetActive = () => {
         if (activeMessageState.options?.internalOrigin?.kind === 'agent-message' && !existingMessageId

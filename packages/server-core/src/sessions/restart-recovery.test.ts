@@ -1,3 +1,4 @@
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
 import { ScriptedSessionAgent, completeSessionAgentFixture } from "./testing/scripted-session-agent.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -55,7 +56,7 @@ describe('authenticated cost checkpoint durability', () => {
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
     expect(restored.pendingTurnRecovery).toMatchObject({ attempts: 2, leaseExpiresAt: before.recovery!.leaseExpiresAt })
     expect(restored.messageQueue).toHaveLength(1)
-    expect(restored.messageQueue[0].message).toContain('Do not repeat an external mutation')
+    expect(requiredTestValue(restored.messageQueue[0]).message).toContain('Do not repeat an external mutation')
     expect(restored.messages.find((m) => m.id === 'already-written')).toEqual(before.receipt)
     expect(requiredTestValue(restored.messages.find((m) => m.toolUseId === 'unexecuted-edit')).toolExecuted).toBe(false)
     expect(restored.activeObjective).toEqual(before.objective)
@@ -116,13 +117,16 @@ describe('authenticated cost checkpoint durability', () => {
       await preparing.promise
       expect(requiredTestValue(restored.pendingTurnRecovery).budgetHistoryUnavailable).toBe(true)
       expect(requiredTestValue(restored.pendingTurnRecovery).exhaustedAt).toBeGreaterThan(0)
-      expect(restored.activeObjective).toEqual({ ...requiredTestValue(before.objective), terminalState: 'active', completedAt: undefined })
+      const expectedObjective = { ...requiredTestValue(before.objective), terminalState: 'active' as const }
+      delete expectedObjective.completedAt
+      expect(restored.activeObjective).toEqual(expectedObjective)
+      expect(Object.hasOwn(requiredTestValue(restored.activeObjective), 'completedAt')).toBe(false)
       expect(restored.messages.filter((m) => m.role === 'tool')).toEqual(before.receipts)
       expect(await cold.runtime.enqueueAutomaticTurnRecovery(restored, 'tool_checkpoint')).toBe(false)
       expect(restored.messageQueue).toEqual([])
       await cold.manager.flushSession(restored.id)
-      const header = JSON.parse(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!)
-      expect(header.pendingTurnRecovery.budgetHistoryUnavailable).toBe(true)
+      const header = parseRecoveryJournalObservation(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!)
+      expect(requiredTestValue(header.pendingTurnRecovery).budgetHistoryUnavailable).toBe(true)
     } finally {
       release.resolve(); await dispatch; await cold.manager.cleanup()
     }
@@ -130,7 +134,7 @@ describe('authenticated cost checkpoint durability', () => {
 
   it.each(['tool_checkpoint', 'objective_incomplete'] as const)(
     'cannot exhaust a newer human objective when Stop finishes during %s persistence', async cause => {
-      process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+      process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
       const h = harness(); const managed = h.make(`checkpoint-stop-race-${cause}`)
       managed.activeObjective!.orchestrationMode = 'mission'
       managed.pendingTurnRecovery = { ...managed.pendingTurnRecovery!, attempts: 99 }
@@ -180,7 +184,7 @@ describe('authenticated cost checkpoint durability', () => {
 
   it.each(['tool_checkpoint', 'objective_incomplete', 'premature_final', 'stream_ended'] as const)(
     'explains unavailable legacy budget after %s without claiming a retry limit was reached', async cause => {
-      process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+      process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
       const h = harness(); const managed = h.make(`legacy-diagnostic-${cause}`)
       managed.activeObjective!.terminalState = 'exhausted'
       managed.activeObjective!.orchestrationMode = 'mission'
@@ -292,16 +296,16 @@ describe('cold automatic recovery lease', () => {
 
     expect(automaticStarts).toBe(0)
     expect(restored.pendingTurnRecovery).toBeUndefined()
-    expect(restored.activeObjective).toMatchObject({
+    expect<unknown>(restored.activeObjective).toMatchObject({
       terminalState: 'exhausted',
-      completedAt: expect.any(Number),
+      completedAt: (expect.any(Number) as unknown),
       interruptedTurnRecovery: {
         objectiveId: `${managed.id}-user`,
         userMessageId: `${managed.id}-user`,
         recovery,
       },
     })
-    expect(restored.messages.find((message: { id: string }) => message.id === receipt.id)).toEqual(receipt)
+    expect(restored.messages.find((message: { id: string }) => message.id === requiredTestValue(receipt).id)).toEqual(receipt)
     expect(sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.has(restored.id)).toBe(false)
     expect(sessionRuntimeStateForTest(cold.runtime).automaticAdmissionReservations.has(restored.id)).toBe(false)
     const header = listSessions(h.rootPath).find(meta => meta.id === managed.id)
@@ -408,8 +412,9 @@ describe('cold automatic recovery lease', () => {
     expect(restored.activeObjective).toMatchObject({
       objectiveId: currentObjective.objectiveId,
       terminalState: 'active',
-      interruptedTurnRecovery: undefined,
     })
+    expect(Object.hasOwn(requiredTestValue(restored.activeObjective), 'interruptedTurnRecovery')).toBe(false)
+    expect(restored.activeObjective?.interruptedTurnRecovery).toBeUndefined()
     expect(restored.activeObjective?.completedAt).toBeUndefined()
   })
 });

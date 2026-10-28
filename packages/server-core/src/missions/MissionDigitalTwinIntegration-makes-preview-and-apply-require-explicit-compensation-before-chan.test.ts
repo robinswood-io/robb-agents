@@ -1,3 +1,5 @@
+import { SessionManager as FixtureSessionManager } from "../sessions/SessionManager";
+import { canonicalOperationValue } from '@craft-agent/shared/governance';
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,11 +19,11 @@ describe('Mission digital twin host integration', () => {
 
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), 'mission-twin-integration-'));
-    sessionManager = {
+    sessionManager = Object.assign(new FixtureSessionManager(), ({
       waitForInit: async () => {},
       getSessions: () => [],
       cancelProcessing: async () => {},
-    } as unknown as ISessionManager;
+    } satisfies Partial<ISessionManager>));
   });
 
   afterEach(() => rmSync(root, { recursive: true, force: true }));
@@ -127,10 +129,10 @@ describe('Mission digital twin host integration', () => {
 
     await service.createAndStart('workspace-1', spec);
     await prepareEntered;
-    expect(preparedInput?.profile).toMatchObject({
+    expect<unknown>(preparedInput?.profile).toMatchObject({
       llmConnection: 'openai',
       model: 'pi/gpt-5.6-terra',
-      thinkingLevel: expect.any(String),
+      thinkingLevel: (expect.any(String) as unknown),
     });
 
     catalogueModels = ['pi/gpt-5.6-sol'];
@@ -139,12 +141,12 @@ describe('Mission digital twin host integration', () => {
       new MissionController({ workspaceRoot: root }).getMission('route-drift').status === 'blocked');
 
     const blocked = new MissionController({ workspaceRoot: root }).getMission('route-drift');
-    expect(blocked.workItems.source?.executionBinding?.missionRoute).toMatchObject({
-      routeDecisionSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+    expect<unknown>(blocked.workItems["source"]?.executionBinding?.missionRoute).toMatchObject({
+      routeDecisionSha256: (expect.stringMatching(/^[a-f0-9]{64}$/) as unknown),
       connectionSlug: 'openai',
       model: 'pi/gpt-5.6-terra',
     });
-    expect(blocked.workItems.source?.statusReason).toContain('drifted after prepare');
+    expect(blocked.workItems["source"]?.statusReason).toContain('drifted after prepare');
     expect(executeCount).toBe(0);
   });
 
@@ -242,10 +244,10 @@ describe('Mission digital twin host integration', () => {
     await initial.createAndStart('workspace-1', spec);
     await eventually(() => Boolean(
       new MissionController({ workspaceRoot: root })
-        .getMission(spec.id).workItems.source?.executionBinding?.missionRoute,
+        .getMission(spec.id).workItems["source"]?.executionBinding?.missionRoute,
     ));
     const route = new MissionController({ workspaceRoot: root })
-      .getMission(spec.id).workItems.source!.executionBinding!.missionRoute!;
+      .getMission(spec.id).workItems["source"]!.executionBinding!.missionRoute!;
     let prepareCount = 0;
     let executedInput: MissionExecutionInput | undefined;
     const service = new MissionRuntimeService({
@@ -272,7 +274,7 @@ describe('Mission digital twin host integration', () => {
       model: route.model,
       thinkingLevel: route.thinkingLevel,
     });
-    expect(executedInput?.ordinaryRoutePin).toEqual(route);
+    expect(canonicalOperationValue(executedInput?.ordinaryRoutePin)).toBe(canonicalOperationValue(route));
   });
 
   it('fails closed on recovery when a legacy reservation has no optional route binding', async () => {
@@ -313,7 +315,7 @@ describe('Mission digital twin host integration', () => {
     await eventually(() =>
       new MissionController({ workspaceRoot: root }).getMission(spec.id).status === 'blocked');
     const blocked = new MissionController({ workspaceRoot: root }).getMission(spec.id);
-    expect(blocked.workItems.source?.statusReason).toContain('missing from the durable dispatch binding');
+    expect(blocked.workItems["source"]?.statusReason).toContain('missing from the durable dispatch binding');
     expect(executeCount).toBe(0);
   });
 

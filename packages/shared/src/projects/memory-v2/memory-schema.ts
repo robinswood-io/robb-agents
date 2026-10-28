@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 
 export const MEMORY_V2_FILENAME = 'memory.v2.jsonl';
 
@@ -267,14 +268,14 @@ export function normalizeStringList(values: string[]): string[] {
 }
 
 export function parseStringList(value: unknown, field: string): string[] {
-  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
+  if (!isUnknownArray(value) || !value.every((item): item is string => typeof item === 'string')) {
     throw new Error(`${field} must be an array of strings`);
   }
   return normalizeStringList(value);
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === 'object' && value !== null && !isUnknownArray(value);
 }
 
 export function clamp01(value: number): number {

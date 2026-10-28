@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { mainLog } from "../logger";
 import type { BrowserPaneManager } from '../browser-pane-manager.ts';
 import type { BrowserPaneGetOrCreateForSessionAsyncOptionsPayload, BrowserPaneCreateForSessionOptionsPayload } from './protocol.ts';
@@ -96,13 +97,13 @@ export function createForSession(transportOwner: BrowserPaneManager, sessionId: 
 }
 
 export function focusBoundForSession(transportOwner: BrowserPaneManager, sessionId: string, options?: BrowserPaneGetOrCreateForSessionAsyncOptionsPayload): string {
-    const id = transportOwner["createForSession"](sessionId, { show: true, workspaceId: options?.workspaceId });
+    const id = transportOwner["createForSession"](sessionId, omitUndefined<BrowserPaneCreateForSessionOptionsPayload>({ show: true, workspaceId: options?.workspaceId }));
     transportOwner["focus"](id);
     return id;
 }
 
 export function getOrCreateForSession(transportOwner: BrowserPaneManager, sessionId: string, options?: BrowserPaneGetOrCreateForSessionAsyncOptionsPayload): string {
-    return transportOwner["createForSession"](sessionId, { show: false, workspaceId: options?.workspaceId });
+    return transportOwner["createForSession"](sessionId, omitUndefined<BrowserPaneCreateForSessionOptionsPayload>({ show: false, workspaceId: options?.workspaceId }));
 }
 
 export function getBoundInstanceId(transportOwner: BrowserPaneManager, sessionId: string): string | null {

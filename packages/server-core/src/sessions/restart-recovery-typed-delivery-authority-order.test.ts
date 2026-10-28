@@ -220,7 +220,7 @@ describe('bounded automatic admission', () => {
       undefined,
       undefined,
       () => { acknowledgements++ },
-    ).then(() => undefined, error => error)
+    ).then(() => undefined, (error: unknown) => error)
 
     await entered.promise
     child.delegation!.parentObjectiveId = 'superseded-during-fresh-hydration'

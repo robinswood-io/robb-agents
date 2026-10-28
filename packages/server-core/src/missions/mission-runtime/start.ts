@@ -6,16 +6,16 @@ import type { MissionRuntimeService } from '../MissionRuntimeService.ts';
 import { normalizedError, missionSpecsMatchIgnoringSpecializedPrompt } from './shared.ts';
 
 export function start(transportOwner: MissionRuntimeService): Promise<string[]> {
-    if (transportOwner["startPromise"])
-        return transportOwner["startPromise"];
-    transportOwner["startPromise"] = transportOwner["startInternal"]();
-    return transportOwner["startPromise"];
+    if (transportOwner.startPromise)
+        return transportOwner.startPromise;
+    transportOwner.startPromise = transportOwner.startInternal();
+    return transportOwner.startPromise;
 }
 
 export async function startInternal(transportOwner: MissionRuntimeService): Promise<string[]> {
     await transportOwner["options"].sessionManager.waitForInit();
     const recovered: string[] = [];
-    for (const workspace of transportOwner["listWorkspaces"]()) {
+    for (const workspace of transportOwner.listWorkspaces()) {
         try {
             const missionIds = listMissionIds(workspace.rootPath);
             if (missionIds.length === 0)
@@ -26,7 +26,7 @@ export async function startInternal(transportOwner: MissionRuntimeService): Prom
                 const snapshot = context.controller.getMission(missionId);
                 try {
                     await context.specializedProfiles.revalidateMissionSpec(snapshot.spec);
-                    transportOwner["assertAdmissible"](workspace, snapshot.spec);
+                    transportOwner.assertAdmissible(workspace, snapshot.spec);
                     admittedMissionIds.add(missionId);
                 }
                 catch (error) {
@@ -60,8 +60,8 @@ export async function startInternal(transportOwner: MissionRuntimeService): Prom
                         recovered.push(`${workspace.id}:${missionId}`);
                     }
                 }
-                if (transportOwner["ensureCompletionPassport"](context, snapshot))
-                    transportOwner["scheduleReport"](context, snapshot);
+                if (transportOwner.ensureCompletionPassport(context, snapshot))
+                    transportOwner.scheduleReport(context, snapshot);
             }
         }
         catch (error) {
@@ -76,7 +76,7 @@ export async function createAndStart(transportOwner: MissionRuntimeService, work
     const context = await transportOwner["contextFor"](workspaceId);
     const parsed = MissionSpecSchema.parse(input);
     const spec = await context.specializedProfiles.bindMissionSpec(parsed);
-    transportOwner["assertAdmissible"](context.workspace, spec);
+    transportOwner.assertAdmissible(context.workspace, spec);
     if (spec.originSessionId) {
         const origin = transportOwner["options"].sessionManager.getSessions(context.workspace.id)
             .find((session) => session.id === spec.originSessionId);
@@ -121,7 +121,7 @@ export async function createAndStartSpecializedEvaluation(transportOwner: Missio
     let created = false;
     try {
         const spec = await context.specializedProfiles.bindEvaluationMissionSpec(parsed, target.profileId, target.stage, reservation.campaignId);
-        transportOwner["assertAdmissible"](context.workspace, spec);
+        transportOwner.assertAdmissible(context.workspace, spec);
         const assigned = spec.workItems.some((item) => {
             if (item.agentProfileId)
                 return item.agentProfileId === target.profileId;

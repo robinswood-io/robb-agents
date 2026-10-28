@@ -51,7 +51,7 @@ export async function validateMcpConnection(
   const mcpClient = new CraftMcpClient({
     transport: 'http',
     url: mcpUrl,
-    headers: Object.keys(headers).length > 0 ? headers : undefined,
+    ...(Object.keys(headers).length > 0 ? { headers: headers } : {}),
   });
 
   try {
@@ -87,7 +87,7 @@ export async function validateMcpConnection(
         success: false,
         error: `Server has ${allInvalidProperties.length} invalid property name(s) in ${toolsWithIssues.length} tool(s): ${toolsWithIssues.join(', ')}. Property names must match ^[a-zA-Z0-9_.-]{1,64}$`,
         errorType: 'invalid-schema',
-        serverInfo,
+        ...(serverInfo !== undefined ? { serverInfo } : {}),
         invalidProperties: allInvalidProperties,
         tools: toolNames,
       };
@@ -95,7 +95,7 @@ export async function validateMcpConnection(
 
     return {
       success: true,
-      serverInfo,
+      ...(serverInfo !== undefined ? { serverInfo } : {}),
       tools: toolNames,
     };
   } catch (err) {

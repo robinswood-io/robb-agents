@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Deep Link Handler
  *
@@ -37,6 +38,19 @@
 import type { BrowserWindow } from 'electron'
 import { mainLog } from './logger'
 import type { WindowManager } from './window-manager'
+type DeepLinkWindow = Pick<BrowserWindow, 'isMinimized' | 'restore' | 'focus' | 'isDestroyed'> & {
+  id?: number;
+  webContents: Pick<BrowserWindow['webContents'], 'id' | 'isLoading' | 'isDestroyed'> & {
+    once(event: 'did-finish-load', listener: () => void): unknown;
+  };
+};
+type DeepLinkWindows = Pick<WindowManager, 'getWorkspaceForWindow' | 'getAllWindows'> & {
+  focusOrCreateWindow(...args: Parameters<WindowManager['focusOrCreateWindow']>): DeepLinkWindow;
+  createWindow(...args: Parameters<WindowManager['createWindow']>): DeepLinkWindow;
+  getFocusedWindow(): DeepLinkWindow | null;
+  getLastActiveWindow(): DeepLinkWindow | null;
+};
+
 import { RPC_CHANNELS } from '../shared/types'
 import type { EventSink } from '@craft-agent/server-core/transport'
 
@@ -122,12 +136,12 @@ export function parseDeepLink(url: string): DeepLinkTarget | null {
     if (COMPOUND_ROUTE_PREFIXES.includes(host)) {
       // Reconstruct the full compound route from host + pathname
       const viewRoute = pathParts.length > 0 ? `${host}/${pathParts.join('/')}` : host
-      return {
+      return omitUndefined<DeepLinkTarget>({
         workspaceId: undefined,
         view: viewRoute,
         windowMode,
         rightSidebar,
-      }
+      })
     }
 
     // craftagents://workspace/{workspaceId}/... (with workspace targeting)
@@ -135,7 +149,7 @@ export function parseDeepLink(url: string): DeepLinkTarget | null {
       const workspaceId = pathParts[0]
       if (!workspaceId) return null
 
-      const result: DeepLinkTarget = { workspaceId, windowMode, rightSidebar }
+      const result: DeepLinkTarget = { workspaceId, ...(windowMode !== undefined ? { windowMode: windowMode } : {}), ...(rightSidebar !== undefined ? { rightSidebar: rightSidebar } : {}) }
 
       // Check what type of route follows the workspace ID
       const routeType = pathParts[1]
@@ -150,11 +164,11 @@ export function parseDeepLink(url: string): DeepLinkTarget | null {
 
       // Parse /action/{actionName}/...
       if (routeType === 'action') {
-        result.action = pathParts[2]
+        if (pathParts[2] !== undefined) result.action = pathParts[2]
         result.actionParams = {}
         // Handle path-based ID (e.g., /action/delete-session/{sessionId})
         if (pathParts[3]) {
-          result.actionParams.id = pathParts[3]
+          result.actionParams["id"] = pathParts[3]
         }
         parsed.searchParams.forEach((value, key) => {
           // Skip the window and sidebar params - they're handled separately
@@ -170,16 +184,16 @@ export function parseDeepLink(url: string): DeepLinkTarget | null {
 
     // craftagents://action/... (no workspace - uses active window)
     if (host === 'action') {
-      const result: DeepLinkTarget = {
-        workspaceId: undefined,
+      const result: DeepLinkTarget = omitUndefined<DeepLinkTarget>({
+
         action: pathParts[0],
         actionParams: {},
-        windowMode,
-        rightSidebar,
-      }
+        ...(windowMode !== undefined ? { windowMode: windowMode } : {}),
+        ...(rightSidebar !== undefined ? { rightSidebar: rightSidebar } : {}),
+      })
 
       if (pathParts[1]) {
-        result.actionParams!.id = pathParts[1]
+        result.actionParams!["id"] = pathParts[1]
       }
 
       parsed.searchParams.forEach((value, key) => {
@@ -202,7 +216,7 @@ export function parseDeepLink(url: string): DeepLinkTarget | null {
 /**
  * Wait for window's renderer to signal ready
  */
-function waitForWindowReady(window: BrowserWindow): Promise<void> {
+function waitForWindowReady(window: DeepLinkWindow): Promise<void> {
   return new Promise((resolve) => {
     if (window.webContents.isLoading()) {
       window.webContents.once('did-finish-load', () => {
@@ -234,7 +248,7 @@ function buildDeepLinkWithoutWindowParam(url: string): string {
  */
 export async function handleDeepLink(
   url: string,
-  windowManager: WindowManager,
+  windowManager: DeepLinkWindows,
   sink?: EventSink,
   resolveClientId?: (webContentsId: number) => string | undefined,
   preferredClientId?: string,
@@ -267,7 +281,7 @@ export async function handleDeepLink(
         const allWindows = windowManager.getAllWindows()
         mainLog.info('[DeepLink] allWindows count:', allWindows.length)
         if (allWindows.length > 0) {
-          wsId = allWindows[0].workspaceId
+          wsId = allWindows[0]?.workspaceId
           mainLog.info('[DeepLink] wsId from first window:', wsId)
         }
       }
@@ -293,7 +307,7 @@ export async function handleDeepLink(
   }
 
   // 1. Get target window (existing behavior for non-window-mode links)
-  let window: BrowserWindow | null = null
+  let window: DeepLinkWindow | null = null
 
   if (target.workspaceId) {
     // Workspace specified - focus or create window for that workspace
@@ -320,9 +334,9 @@ export async function handleDeepLink(
   // 3. Send navigation command to renderer
   if (target.view || target.action) {
     const navigation: DeepLinkNavigation = {
-      view: target.view,
-      action: target.action,
-      actionParams: target.actionParams,
+      ...(target.view !== undefined ? { view: target.view } : {}),
+      ...(target.action !== undefined ? { action: target.action } : {}),
+      ...(target.actionParams !== undefined ? { actionParams: target.actionParams } : {}),
     }
     const wsId = target.workspaceId ?? windowManager.getWorkspaceForWindow(window.webContents.id)
     const resolvedClientId = resolveClientId?.(window.webContents.id)

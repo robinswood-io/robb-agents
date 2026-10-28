@@ -23,9 +23,9 @@ export function resolveBuildChannel(value: string | undefined): RobbBuildChannel
 }
 
 export function resolveConfigDir(
-  override: string | undefined = process.env.CRAFT_CONFIG_DIR,
+  override: string | undefined = process.env["CRAFT_CONFIG_DIR"],
   home: string = homedir(),
-  channel: RobbBuildChannel = resolveBuildChannel(process.env.ROBB_BUILD_CHANNEL),
+  channel: RobbBuildChannel = resolveBuildChannel(process.env["ROBB_BUILD_CHANNEL"]),
 ): string {
   if (override) return override;
   return join(

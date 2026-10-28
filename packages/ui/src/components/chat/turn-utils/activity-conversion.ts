@@ -44,26 +44,26 @@ export function messageToActivity(message: Message, existingActivities: Activity
     id: message.id,
     type: 'tool' as ActivityType,
     status: getToolStatus(message),
-    toolName: message.toolName,
-    toolUseId: message.toolUseId,  // For parent-child matching
-    toolInput: message.toolInput,
+    ...(message.toolName !== undefined ? { toolName: message.toolName } : {}),
+    ...(message.toolUseId !== undefined ? { toolUseId: message.toolUseId } : {}),  // For parent-child matching
+    ...(message.toolInput !== undefined ? { toolInput: message.toolInput } : {}),
     content: message.toolResult || message.content,
-    intent: message.toolIntent,
-    displayName: message.toolDisplayName,  // LLM-generated human-friendly name
-    toolDisplayMeta: message.toolDisplayMeta,  // Embedded metadata with base64 icon for viewer
+    ...(message.toolIntent !== undefined ? { intent: message.toolIntent } : {}),
+    ...(message.toolDisplayName !== undefined ? { displayName: message.toolDisplayName } : {}),  // LLM-generated human-friendly name
+    ...(message.toolDisplayMeta !== undefined ? { toolDisplayMeta: message.toolDisplayMeta } : {}),  // Embedded metadata with base64 icon for viewer
     timestamp: message.timestamp,
     error: message.isError ? stripErrorTags(message.toolResult || message.content) : undefined,
-    executed: message.toolExecuted,
-    checkpoint: message.toolCheckpoint,
+    ...(message.toolExecuted !== undefined ? { executed: message.toolExecuted } : {}),
+    ...(message.toolCheckpoint !== undefined ? { checkpoint: message.toolCheckpoint } : {}),
     // parentId: The toolUseId of the parent tool (e.g., Task subagent).
     // This is tracked by session manager's parentToolStack, NOT the SDK's
     // parent_tool_use_id which is for result-matching, not hierarchy.
-    parentId: message.parentToolUseId,
+    ...(message.parentToolUseId !== undefined ? { parentId: message.parentToolUseId } : {}),
     // Background task fields
-    taskId: message.taskId,
-    shellId: message.shellId,
-    elapsedSeconds: message.elapsedSeconds,
-    isBackground: message.isBackground,
+    ...(message.taskId !== undefined ? { taskId: message.taskId } : {}),
+    ...(message.shellId !== undefined ? { shellId: message.shellId } : {}),
+    ...(message.elapsedSeconds !== undefined ? { elapsedSeconds: message.elapsedSeconds } : {}),
+    ...(message.isBackground !== undefined ? { isBackground: message.isBackground } : {}),
   }
 
   // Calculate depth incrementally using existing activities
@@ -135,8 +135,8 @@ export function extractTodosFromActivities(activities: ActivityItem[]): TodoItem
     // TodoWrite result is typically a success message, but the input contains the todos
     // We need to get the toolInput which has the todos array
     const input = latestActivity.toolInput
-    if (input && Array.isArray(input.todos)) {
-      return input.todos.map((todo: { content: string; status: string; activeForm?: string }) => ({
+    if (input && Array.isArray(input["todos"])) {
+      return input["todos"].map((todo: { content: string; status: string; activeForm?: string }) => ({
         content: todo.content,
         status: todo.status as 'pending' | 'in_progress' | 'completed',
         activeForm: todo.activeForm,

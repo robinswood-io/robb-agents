@@ -23,8 +23,8 @@ import { hasBoundInterruptedTurnRecovery as sessionOpHasBoundInterruptedTurnReco
 import { contextLimitAuthenticatedAnswerEvidence as sessionOpContextLimitAuthenticatedAnswerEvidence } from './context-limit-authenticated-answer-evidence.ts';
 
 function sessionOpBuildObjectiveRuntimePrompt(sessionOperationContext: SessionOperationContext, managed: ManagedSession, objective: ActiveSessionObjective): string {
-    const reviewPrompt = buildDelegatedReviewPrompt({ parentSessionId: managed.parentSessionId, objective,
-        sourceSlugs: managed.enabledSourceSlugs, messages: managed.messages });
+    const reviewPrompt = buildDelegatedReviewPrompt({ ...(managed.parentSessionId !== undefined ? { parentSessionId: managed.parentSessionId } : {}), objective,
+        ...(managed.enabledSourceSlugs !== undefined ? { sourceSlugs: managed.enabledSourceSlugs } : {}), messages: managed.messages });
     if (reviewPrompt)
         return sessionOpIsManagedSessionYolo(sessionOperationContext, managed)
             ? `${reviewPrompt}\n\n${YOLO_AUTONOMY_GUIDANCE}` : reviewPrompt;
@@ -172,7 +172,7 @@ function sessionOpRestorePreAckAgentDeliveryDequeues(sessionOperationContext: Se
             enqueueRecoveredMessageInTranscriptOrder(managed, {
                 message: receipt.content,
                 messageId: receipt.id,
-                storedAttachments: receipt.attachments,
+                ...(receipt.attachments !== undefined ? { storedAttachments: receipt.attachments } : {}),
                 options: recoveredInternalMessageOptions(receipt),
             });
         }
@@ -197,7 +197,7 @@ function sessionOpPartitionQueueForStop(sessionOperationContext: SessionOperatio
             retained.push({
                 message: receipt.content,
                 messageId: receipt.id,
-                storedAttachments: receipt.attachments,
+                ...(receipt.attachments !== undefined ? { storedAttachments: receipt.attachments } : {}),
                 options: recoveredInternalMessageOptions(receipt),
             });
         }

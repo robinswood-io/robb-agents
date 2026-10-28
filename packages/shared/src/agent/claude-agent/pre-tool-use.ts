@@ -28,9 +28,9 @@ export function createPreToolUseHook(transportOwner: ClaudeAgent, sessionId: str
         }
         const input = _hookInput as Required<Pick<typeof _hookInput, 'tool_name' | 'tool_use_id'>> & typeof _hookInput;
         const toolInput = input.tool_input as Record<string, unknown>;
-        const authorizationEpoch = transportOwner["promptPreparationRevision"];
+        const authorizationEpoch = transportOwner.promptPreparationRevision;
         const admit = async (approvedInput: Record<string, unknown>) => {
-            if (authorizationEpoch !== transportOwner["promptPreparationRevision"]) {
+            if (authorizationEpoch !== transportOwner.promptPreparationRevision) {
                 return blockWithReason('The host could not bind this tool approval to one exact current execution. The tool was not executed.');
             }
             try {
@@ -45,7 +45,7 @@ export function createPreToolUseHook(transportOwner: ClaudeAgent, sessionId: str
                     ? error.safeReason
                     : 'The host could not durably record this tool admission. The tool was not executed.');
             }
-            if (authorizationEpoch !== transportOwner["promptPreparationRevision"] || !transportOwner["admitToolExecution"]({
+            if (authorizationEpoch !== transportOwner.promptPreparationRevision || !transportOwner["admitToolExecution"]({
                 toolUseId: input.tool_use_id,
                 toolName: input.tool_name,
                 toolInput: approvedInput,
@@ -129,31 +129,28 @@ export function createPreToolUseHook(transportOwner: ClaudeAgent, sessionId: str
             workspaceRootPath: transportOwner["workspaceRootPath"],
             workspaceId: extractWorkspaceSlug(transportOwner["workspaceRootPath"], transportOwner["config"].workspace.id),
             plansFolderPath: sessionId ? getSessionPlansPath(transportOwner["workspaceRootPath"], sessionId) : undefined,
-            dataFolderPath: sessionId ? getSessionDataPath(transportOwner["workspaceRootPath"], sessionId) : undefined,
-            workingDirectory: transportOwner["config"].session?.workingDirectory,
-            executionIsolation: transportOwner["config"].session?.executionIsolation,
-            missionCapabilityLock: transportOwner["config"].missionCapabilityLock,
+            ...(sessionId ? { dataFolderPath: getSessionDataPath(transportOwner["workspaceRootPath"], sessionId) } : {}),
+            ...(transportOwner["config"].session?.workingDirectory !== undefined ? { workingDirectory: transportOwner["config"].session?.workingDirectory } : {}),
+            ...(transportOwner["config"].session?.executionIsolation !== undefined ? { executionIsolation: transportOwner["config"].session?.executionIsolation } : {}),
+            ...(transportOwner["config"].missionCapabilityLock !== undefined ? { missionCapabilityLock: transportOwner["config"].missionCapabilityLock } : {}),
             activeSourceSlugs: Array.from(transportOwner["sourceManager"].getActiveSlugs()),
             allSourceSlugs: transportOwner["sourceManager"].getAllSources().map(s => s.config.slug),
             hasSourceActivation: !!transportOwner["onSourceActivationRequest"],
             permissionManager: transportOwner["permissionManager"],
             prerequisiteManager: transportOwner["prerequisiteManager"],
             preloadedSourceGuidePaths: transportOwner["sourceManager"].getPreloadedSourceGuidePaths(),
-            currentUserRequest,
+            ...(currentUserRequest !== undefined ? { currentUserRequest } : {}),
             declaredToolCapabilities: transportOwner["config"].mcpPool?.getProxyToolCapabilities(input.tool_name),
-            externalActionPolicy: transportOwner["config"].externalActionPolicy,
+            ...(transportOwner["config"].externalActionPolicy !== undefined ? { externalActionPolicy: transportOwner["config"].externalActionPolicy } : {}),
             humanInputAllowed: transportOwner["config"].getHumanInputAllowed?.(),
             objectiveMutationAuthorized: typeof objectiveAuthority === 'boolean'
                 ? objectiveAuthority : objectiveAuthority?.authorized,
             objectiveSensitiveActionAuthorized: typeof objectiveAuthority === 'object'
                 ? objectiveAuthority.sensitiveActionAuthorized : objectiveAuthority,
-            objectiveAuthorizationSegments: typeof objectiveAuthority === 'object'
-                ? objectiveAuthority.authorizationSegments : undefined,
-            authenticatedUserAuthorizationSegments: typeof objectiveAuthority === 'object'
-                ? objectiveAuthority.authenticatedUserAuthorizationSegments : undefined,
-            objectiveTerminalReconciliationPolicy: typeof objectiveAuthority === 'object'
-                ? objectiveAuthority.terminalReconciliationPolicy : undefined,
-            rtkContext,
+            ...(typeof objectiveAuthority === 'object' ? { objectiveAuthorizationSegments: objectiveAuthority.authorizationSegments } : {}),
+            ...(typeof objectiveAuthority === 'object' ? { ...(objectiveAuthority.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: objectiveAuthority.authenticatedUserAuthorizationSegments } : {}) } : {}),
+            ...(typeof objectiveAuthority === 'object' ? { ...(objectiveAuthority.terminalReconciliationPolicy !== undefined ? { objectiveTerminalReconciliationPolicy: objectiveAuthority.terminalReconciliationPolicy } : {}) } : {}),
+            ...(rtkContext !== undefined ? { rtkContext } : {}),
             onDebug: (msg) => transportOwner["onDebug"]?.(msg),
         });
         // Translate result to SDK format
@@ -243,7 +240,7 @@ export function createPreToolUseHook(transportOwner: ClaudeAgent, sessionId: str
                 const baseCommand = transportOwner["permissionManager"].getBaseCommand(command);
                 debug(`[PreToolUse] Requesting permission for ${input.tool_name}: ${command}`);
                 const permissionPromise = new Promise<boolean>((resolve) => {
-                    transportOwner["pendingPermissions"].set(requestId, {
+                    transportOwner.pendingPermissions.set(requestId, {
                         resolve,
                         toolName: input.tool_name,
                         command,
@@ -258,21 +255,21 @@ export function createPreToolUseHook(transportOwner: ClaudeAgent, sessionId: str
                         command,
                         description: checkResult.description,
                         type: checkResult.promptType,
-                        appName: checkResult.appName,
-                        reason: checkResult.reason,
-                        impact: checkResult.impact,
-                        requiresSystemPrompt: checkResult.requiresSystemPrompt,
-                        rememberForMinutes: checkResult.rememberForMinutes,
-                        commandHash: checkResult.commandHash,
-                        approvalTtlSeconds: checkResult.approvalTtlSeconds,
-                        sensitiveActionCategory: checkResult.sensitiveActionCategory,
-                        sensitiveActionTargets: checkResult.sensitiveActionTargets,
-                        sensitiveActionOperationHash: checkResult.sensitiveActionOperationHash,
+                        ...(checkResult.appName !== undefined ? { appName: checkResult.appName } : {}),
+                        ...(checkResult.reason !== undefined ? { reason: checkResult.reason } : {}),
+                        ...(checkResult.impact !== undefined ? { impact: checkResult.impact } : {}),
+                        ...(checkResult.requiresSystemPrompt !== undefined ? { requiresSystemPrompt: checkResult.requiresSystemPrompt } : {}),
+                        ...(checkResult.rememberForMinutes !== undefined ? { rememberForMinutes: checkResult.rememberForMinutes } : {}),
+                        ...(checkResult.commandHash !== undefined ? { commandHash: checkResult.commandHash } : {}),
+                        ...(checkResult.approvalTtlSeconds !== undefined ? { approvalTtlSeconds: checkResult.approvalTtlSeconds } : {}),
+                        ...(checkResult.sensitiveActionCategory !== undefined ? { sensitiveActionCategory: checkResult.sensitiveActionCategory } : {}),
+                        ...(checkResult.sensitiveActionTargets !== undefined ? { sensitiveActionTargets: checkResult.sensitiveActionTargets } : {}),
+                        ...(checkResult.sensitiveActionOperationHash !== undefined ? { sensitiveActionOperationHash: checkResult.sensitiveActionOperationHash } : {}),
                     });
                 }
                 else {
-                    transportOwner["pendingPermissions"].delete(requestId);
-                    transportOwner["resolveContextualGmailPromptDecision"](sessionId, input.tool_name, toolInput, input.tool_use_id, false);
+                    transportOwner.pendingPermissions.delete(requestId);
+                    transportOwner.resolveContextualGmailPromptDecision(sessionId, input.tool_name, toolInput, input.tool_use_id, false);
                     return {
                         continue: false,
                         decision: 'block' as const,
@@ -295,31 +292,28 @@ export function createPreToolUseHook(transportOwner: ClaudeAgent, sessionId: str
                         workspaceRootPath: transportOwner["workspaceRootPath"],
                         workspaceId: extractWorkspaceSlug(transportOwner["workspaceRootPath"], transportOwner["config"].workspace.id),
                         plansFolderPath: sessionId ? getSessionPlansPath(transportOwner["workspaceRootPath"], sessionId) : undefined,
-                        dataFolderPath: sessionId ? getSessionDataPath(transportOwner["workspaceRootPath"], sessionId) : undefined,
-                        workingDirectory: transportOwner["config"].session?.workingDirectory,
-                        executionIsolation: transportOwner["config"].session?.executionIsolation,
-                        missionCapabilityLock: transportOwner["config"].missionCapabilityLock,
+                        ...(sessionId ? { dataFolderPath: getSessionDataPath(transportOwner["workspaceRootPath"], sessionId) } : {}),
+                        ...(transportOwner["config"].session?.workingDirectory !== undefined ? { workingDirectory: transportOwner["config"].session?.workingDirectory } : {}),
+                        ...(transportOwner["config"].session?.executionIsolation !== undefined ? { executionIsolation: transportOwner["config"].session?.executionIsolation } : {}),
+                        ...(transportOwner["config"].missionCapabilityLock !== undefined ? { missionCapabilityLock: transportOwner["config"].missionCapabilityLock } : {}),
                         activeSourceSlugs: Array.from(transportOwner["sourceManager"].getActiveSlugs()),
                         allSourceSlugs: transportOwner["sourceManager"].getAllSources().map(s => s.config.slug),
                         hasSourceActivation: !!transportOwner["onSourceActivationRequest"],
                         permissionManager: transportOwner["permissionManager"],
                         prerequisiteManager: transportOwner["prerequisiteManager"],
                         preloadedSourceGuidePaths: transportOwner["sourceManager"].getPreloadedSourceGuidePaths(),
-                        currentUserRequest: approvalUserRequest,
+                        ...(approvalUserRequest !== undefined ? { currentUserRequest: approvalUserRequest } : {}),
                         declaredToolCapabilities: transportOwner["config"].mcpPool?.getProxyToolCapabilities(input.tool_name),
-                        externalActionPolicy: transportOwner["config"].externalActionPolicy,
+                        ...(transportOwner["config"].externalActionPolicy !== undefined ? { externalActionPolicy: transportOwner["config"].externalActionPolicy } : {}),
                         humanInputAllowed: transportOwner["config"].getHumanInputAllowed?.(),
                         objectiveMutationAuthorized: typeof approvalAuthority === 'boolean'
                             ? approvalAuthority : approvalAuthority?.authorized,
                         objectiveSensitiveActionAuthorized: typeof approvalAuthority === 'object'
                             ? approvalAuthority.sensitiveActionAuthorized : approvalAuthority,
-                        objectiveAuthorizationSegments: typeof approvalAuthority === 'object'
-                            ? approvalAuthority.authorizationSegments : undefined,
-                        authenticatedUserAuthorizationSegments: typeof approvalAuthority === 'object'
-                            ? approvalAuthority.authenticatedUserAuthorizationSegments : undefined,
-                        objectiveTerminalReconciliationPolicy: typeof approvalAuthority === 'object'
-                            ? approvalAuthority.terminalReconciliationPolicy : undefined,
-                        rtkContext,
+                        ...(typeof approvalAuthority === 'object' ? { objectiveAuthorizationSegments: approvalAuthority.authorizationSegments } : {}),
+                        ...(typeof approvalAuthority === 'object' ? { ...(approvalAuthority.authenticatedUserAuthorizationSegments !== undefined ? { authenticatedUserAuthorizationSegments: approvalAuthority.authenticatedUserAuthorizationSegments } : {}) } : {}),
+                        ...(typeof approvalAuthority === 'object' ? { ...(approvalAuthority.terminalReconciliationPolicy !== undefined ? { objectiveTerminalReconciliationPolicy: approvalAuthority.terminalReconciliationPolicy } : {}) } : {}),
+                        ...(rtkContext !== undefined ? { rtkContext } : {}),
                         onDebug: msg => transportOwner["onDebug"]?.(`PostPermissionPreToolUse: ${msg}`),
                     });
                     if (approvalCheck.type === 'block' || approvalCheck.type === 'source_activation_needed') {
@@ -333,7 +327,7 @@ export function createPreToolUseHook(transportOwner: ClaudeAgent, sessionId: str
                         approvedInput = approvalCheck.modifiedInput;
                     }
                 }
-                const gmailDecision = transportOwner["resolveContextualGmailPromptDecision"](sessionId, input.tool_name, toolInput, input.tool_use_id, allowed);
+                const gmailDecision = transportOwner.resolveContextualGmailPromptDecision(sessionId, input.tool_name, toolInput, input.tool_use_id, allowed);
                 if (!allowed) {
                     return {
                         continue: false,
@@ -345,7 +339,7 @@ export function createPreToolUseHook(transportOwner: ClaudeAgent, sessionId: str
                     return {
                         continue: false,
                         decision: 'block' as const,
-                        reason: gmailDecision.reason,
+                        ...(gmailDecision.reason !== undefined ? { reason: gmailDecision.reason } : {}),
                     };
                 }
                 // User approved — return with modified input if transforms were applied

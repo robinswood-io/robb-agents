@@ -50,7 +50,7 @@ export function SourcesField({
   sources: LoadedSource[]
   values: string[]
   onChange: (next: string[]) => void
-  title?: string
+  title?: string | undefined
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = React.useState(false)
@@ -102,7 +102,7 @@ export function SkillsField({
   values: string[]
   onChange: (next: string[]) => void
   workspaceId: string
-  title?: string
+  title?: string | undefined
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = React.useState(false)

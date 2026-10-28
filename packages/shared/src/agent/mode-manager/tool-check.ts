@@ -40,7 +40,7 @@ export function shouldAllowToolInMode(
 
   if (options?.permissionsContext) {
     // Lazy import to avoid circular dependency
-    const { permissionsConfigCache } = require("../permissions-config.ts");
+    const { permissionsConfigCache } = require("../permissions-config.ts") as typeof import("../permissions-config.ts");
     config = permissionsConfigCache.getMergedConfig(options.permissionsContext);
   } else {
     config = SAFE_MODE_CONFIG;
@@ -77,7 +77,7 @@ export function shouldAllowToolInMode(
   // Uses detailed rejection reasons to provide helpful error messages
   if (toolName === 'Bash') {
     const input = toolInput as Record<string, unknown> | null;
-    const command = input?.command;
+    const command = input?.["command"];
     if (typeof command === 'string') {
       const rejection = getBashRejectionReason(command, config);
       if (!rejection) {
@@ -156,7 +156,7 @@ export function shouldAllowToolInMode(
   // Handle Write/Edit/MultiEdit/NotebookEdit - allow if targeting plans folder or allowedWritePaths
   if (toolName === 'Write' || toolName === 'Edit' || toolName === 'MultiEdit' || toolName === 'NotebookEdit') {
     const input = toolInput as Record<string, unknown> | null;
-    const filePath = (input?.file_path ?? input?.notebook_path) as string | undefined;
+    const filePath = (input?.["file_path"] ?? input?.["notebook_path"]) as string | undefined;
 
     if (filePath) {
       // Check plans folder exception
@@ -253,8 +253,8 @@ export function shouldAllowToolInMode(
     // These need endpoint-level permission checks, not just MCP read-only patterns
     if (toolName.includes('__api_')) {
       const input = toolInput as Record<string, unknown> | null;
-      const method = (input?.method as string) || 'GET';
-      const path = input?.path as string | undefined;
+      const method = (input?.["method"] as string) || 'GET';
+      const path = input?.["path"] as string | undefined;
       if (isApiCallAllowedWithConfig(method, path, config)) {
         return { allowed: true };
       }
@@ -276,8 +276,8 @@ export function shouldAllowToolInMode(
   // Handle API tools - allow GET, block mutations unless endpoint is whitelisted
   if (toolName.startsWith('api_')) {
     const input = toolInput as Record<string, unknown> | null;
-    const method = (input?.method as string) || 'GET';
-    const path = input?.path as string | undefined;
+    const method = (input?.["method"] as string) || 'GET';
+    const path = input?.["path"] as string | undefined;
     if (isApiCallAllowedWithConfig(method, path, config)) {
       return { allowed: true };
     }

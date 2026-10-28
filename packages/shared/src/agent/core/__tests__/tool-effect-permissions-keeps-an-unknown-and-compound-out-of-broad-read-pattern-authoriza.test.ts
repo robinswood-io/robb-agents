@@ -166,8 +166,8 @@ it('requires a generic explicit prompt for an otherwise-authorized unresolved re
     })).toMatchObject({
       type: 'prompt',
       promptType: 'mcp_mutation',
-      description: expect.stringContaining('Modify an external system'),
-      command: expect.stringContaining('touch marker'),
+      description: (expect.stringContaining('Modify an external system') as unknown),
+      command: (expect.stringContaining('touch marker') as unknown),
       sensitiveActionCategory: 'external_mutation',
       sensitiveActionTargets: ['dev', 'zero', 'unresolved remote scope'],
       requiresExplicitConfirmation: true,
@@ -185,7 +185,7 @@ it('blocks unresolved remote scope when host objective authority is false', () =
       objectiveAuthorizationSegments: ['Modifie Zero sur le serveur dev.'],
     })).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('Objective authority'),
+      reason: (expect.stringContaining('Objective authority') as unknown),
     });
   });
 
@@ -197,7 +197,7 @@ it('prompts for unresolved remote scope without explicit objective authority', (
       externalActionPolicy: 'allow-in-execute',
     })).toMatchObject({
       type: 'prompt',
-      sensitiveActionTargets: expect.arrayContaining(['unresolved remote scope']),
+      sensitiveActionTargets: (expect.arrayContaining(['unresolved remote scope']) as unknown),
       requiresExplicitConfirmation: true,
     });
   });
@@ -240,7 +240,7 @@ it.each([
 
     expect(result).toMatchObject({
       type: 'prompt',
-      sensitiveActionTargets: expect.arrayContaining([sentinel]),
+      sensitiveActionTargets: (expect.arrayContaining([sentinel]) as unknown),
       requiresExplicitConfirmation: true,
     });
 
@@ -313,7 +313,7 @@ it('rejects an extra Robb Agents permission question for that Sellsy read handsh
       objectiveMutationAuthorized: false,
     })).toMatchObject({
       type: 'block',
-      reason: expect.stringContaining('already an admitted connector observation'),
+      reason: (expect.stringContaining('already an admitted connector observation') as unknown),
     });
     expect(check({
       toolName: 'mcp__session__request_user_input',

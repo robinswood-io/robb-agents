@@ -81,7 +81,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
   });
 
   it('retains the original request across continuation, reload and missing transcript context', () => {
-    const continued = transitionObjectiveContract({ existing: JSON.parse(JSON.stringify(objective)), messageId: 'u2', text: 'Poursuit' });
+    const continued = transitionObjectiveContract({ existing: JSON.parse(JSON.stringify(objective)) as typeof objective, messageId: 'u2', text: 'Poursuit' });
     expect(findObjectiveText([], continued)).toBe(root.content);
     expect(continued.acceptanceCriteria).toEqual([criterion]);
     expect(buildObjectiveContractPrompt(continued)).toContain(root.content);

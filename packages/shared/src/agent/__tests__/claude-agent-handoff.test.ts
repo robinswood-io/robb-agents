@@ -1,34 +1,76 @@
-import { describe, expect, it, mock } from 'bun:test'
+import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+import { describe, expect, it, mock, spyOn } from 'bun:test'
 import { ClaudeAgent } from '../claude-agent.ts'
 import { AbortReason } from '../backend/types.ts'
 
+type HandoffQuery = NonNullable<ClaudeAgent['currentQuery']>;
+function handoffQuery(interrupt: HandoffQuery['interrupt']): HandoffQuery {
+  const messages: SDKMessage[] = [];
+  const stream = (async function* (): AsyncGenerator<SDKMessage, void, unknown> { yield* messages; })();
+  const unexpected = (): never => { throw new Error('Unexpected SDK operation during auth handoff'); };
+  return Object.assign(stream, {
+    interrupt,
+    setPermissionMode: unexpected,
+    setMcpPermissionModeOverride: unexpected,
+    setModel: unexpected,
+    setMaxThinkingTokens: unexpected,
+    applyFlagSettings: unexpected,
+    updateSettings: unexpected,
+    initializationResult: unexpected,
+    reinitialize: unexpected,
+    supportedCommands: unexpected,
+    supportedModels: unexpected,
+    supportedAgents: unexpected,
+    mcpServerStatus: unexpected,
+    getContextUsage: unexpected,
+    usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET: unexpected,
+    readFile: unexpected,
+    reloadPlugins: unexpected,
+    reloadSkills: unexpected,
+    reloadOutputStyles: unexpected,
+    accountInfo: unexpected,
+    rewindFiles: unexpected,
+    seedReadState: unexpected,
+    reconnectMcpServer: unexpected,
+    toggleMcpServer: unexpected,
+    readMcpResource: unexpected,
+    setMcpServers: unexpected,
+    streamInput: unexpected,
+    stopTask: unexpected,
+    backgroundTasks: unexpected,
+    close: unexpected,
+    [Symbol.asyncDispose]: async () => { await stream.return(); },
+  });
+}
 describe('ClaudeAgent handoff interrupts', () => {
   it('hard-aborts and queues a newer instruction while an old permission is pending', () => {
-    const abort = mock((_reason?: unknown) => {})
+    const abortController = new AbortController()
+    const abort = spyOn(abortController, 'abort')
     const resolvePermission = mock((_allowed: boolean) => {})
     const agent = Object.create(ClaudeAgent.prototype) as ClaudeAgent
 
-    agent["promptPreparationRevision"] = 0
-    agent["pendingPermissions"] = (new Map([['permission-a', { toolName: 'qa-tool', command: 'qa-command', baseCommand: 'qa-command', resolve: resolvePermission }]]) satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"]
-    agent["currentQuery"] = ({} satisfies Partial<NonNullable<ClaudeAgent["currentQuery"]>>) as Partial<NonNullable<ClaudeAgent["currentQuery"]>> as ClaudeAgent["currentQuery"]
-    agent["currentQueryAbortController"] = ({ abort } satisfies Pick<AbortController, 'abort'>) as Partial<NonNullable<ClaudeAgent["currentQueryAbortController"]>> as ClaudeAgent["currentQueryAbortController"]
+    agent.promptPreparationRevision = 0
+    agent.pendingPermissions = (new Map([['permission-a', { toolName: 'qa-tool', command: 'qa-command', baseCommand: 'qa-command', resolve: resolvePermission }]]) satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"]
+    agent["currentQuery"] = ({} satisfies Partial<NonNullable<ClaudeAgent["currentQuery"]>>) as ClaudeAgent["currentQuery"]
+    agent["currentQueryAbortController"] = abortController
     agent["config"] = ({ session: { id: 'claude-pending-permission' } } satisfies { session: Pick<NonNullable<ClaudeAgent['config']['session']>, 'id'> }) as ClaudeAgent["config"]
 
     expect(agent.redirect('Use target B instead.')).toBe(false)
     expect(resolvePermission).toHaveBeenCalledWith(false)
-    expect(agent["pendingPermissions"].size).toBe(0)
+    expect(agent.pendingPermissions.size).toBe(0)
     expect(agent["currentQuery"]).toBeNull()
     expect(abort).toHaveBeenCalledWith(AbortReason.Redirect)
   })
 
   it('hard-aborts and revokes a hook-admitted tool before accepting a newer instruction', () => {
-    const abort = mock((_reason?: unknown) => {})
+    const abortController = new AbortController()
+    const abort = spyOn(abortController, 'abort')
     const agent = Object.create(ClaudeAgent.prototype) as ClaudeAgent
 
-    agent["promptPreparationRevision"] = 0
-    agent["pendingPermissions"] = (new Map() satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"]
-    agent["currentQuery"] = ({} satisfies Partial<NonNullable<ClaudeAgent["currentQuery"]>>) as Partial<NonNullable<ClaudeAgent["currentQuery"]>> as ClaudeAgent["currentQuery"]
-    agent["currentQueryAbortController"] = ({ abort } satisfies Pick<AbortController, 'abort'>) as Partial<NonNullable<ClaudeAgent["currentQueryAbortController"]>> as ClaudeAgent["currentQueryAbortController"]
+    agent.promptPreparationRevision = 0
+    agent.pendingPermissions = (new Map() satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"]
+    agent["currentQuery"] = ({} satisfies Partial<NonNullable<ClaudeAgent["currentQuery"]>>) as ClaudeAgent["currentQuery"]
+    agent["currentQueryAbortController"] = abortController
     agent["config"] = ({ session: { id: 'claude-admitted-tool' } } satisfies { session: Pick<NonNullable<ClaudeAgent['config']['session']>, 'id'> }) as ClaudeAgent["config"]
     expect(agent["admitToolExecution"]({
       toolUseId: 'tool-a',
@@ -46,12 +88,13 @@ describe('ClaudeAgent handoff interrupts', () => {
   })
 
   it('always aborts before asking the host to queue a newer Claude instruction', () => {
-    const abort = mock((_reason?: unknown) => {})
+    const abortController = new AbortController()
+    const abort = spyOn(abortController, 'abort')
     const agent = Object.create(ClaudeAgent.prototype) as ClaudeAgent
-    agent["promptPreparationRevision"] = 0
-    agent["pendingPermissions"] = (new Map() satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"]
-    agent["currentQuery"] = ({} satisfies Partial<NonNullable<ClaudeAgent["currentQuery"]>>) as Partial<NonNullable<ClaudeAgent["currentQuery"]>> as ClaudeAgent["currentQuery"]
-    agent["currentQueryAbortController"] = ({ abort } satisfies Pick<AbortController, 'abort'>) as Partial<NonNullable<ClaudeAgent["currentQueryAbortController"]>> as ClaudeAgent["currentQueryAbortController"]
+    agent.promptPreparationRevision = 0
+    agent.pendingPermissions = (new Map() satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"]
+    agent["currentQuery"] = ({} satisfies Partial<NonNullable<ClaudeAgent["currentQuery"]>>) as ClaudeAgent["currentQuery"]
+    agent["currentQueryAbortController"] = abortController
     agent["config"] = ({ session: { id: 'claude-live-turn' } } satisfies { session: Pick<NonNullable<ClaudeAgent['config']['session']>, 'id'> }) as ClaudeAgent["config"]
 
     expect(agent.redirect('New instruction.')).toBe(false)
@@ -61,16 +104,17 @@ describe('ClaudeAgent handoff interrupts', () => {
 
   it('uses Query.interrupt() for auth handoff instead of aborting the AbortController', async () => {
     const interrupt = mock(async () => undefined)
-    const abort = mock((_reason?: unknown) => {})
+    const abortController = new AbortController()
+    const abort = spyOn(abortController, 'abort')
     const debug = mock((_message: string) => {})
     const resolvePermission = mock((_allowed: boolean) => {})
 
     const agent = Object.create(ClaudeAgent.prototype) as ClaudeAgent
 
-    agent["currentQuery"] = ({ interrupt } satisfies Partial<NonNullable<ClaudeAgent["currentQuery"]>>) as Partial<NonNullable<ClaudeAgent["currentQuery"]>> as ClaudeAgent["currentQuery"]
-    agent["currentQueryAbortController"] = ({ abort } satisfies Pick<AbortController, 'abort'>) as Partial<NonNullable<ClaudeAgent["currentQueryAbortController"]>> as ClaudeAgent["currentQueryAbortController"]
-    agent["pendingPermissions"] = (new Map([['permission-1', { toolName: 'qa-tool', command: 'qa-command', baseCommand: 'qa-command', resolve: resolvePermission }]]) satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"]
-    agent["lastAbortReason"] = null
+    agent["currentQuery"] = handoffQuery(interrupt)
+    agent["currentQueryAbortController"] = abortController
+    agent.pendingPermissions = (new Map([['permission-1', { toolName: 'qa-tool', command: 'qa-command', baseCommand: 'qa-command', resolve: resolvePermission }]]) satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"]
+    agent.lastAbortReason = null
     agent["debug"] = debug
 
     agent.interruptForHandoff(AbortReason.AuthRequest)
@@ -80,23 +124,24 @@ describe('ClaudeAgent handoff interrupts', () => {
     expect(abort).not.toHaveBeenCalled()
     expect(resolvePermission).toHaveBeenCalledTimes(1)
     expect(resolvePermission).toHaveBeenCalledWith(false)
-    expect(agent["pendingPermissions"].size).toBe(0)
-    expect(agent["lastAbortReason"] as ClaudeAgent["lastAbortReason"]).toBe(AbortReason.AuthRequest)
+    expect(agent.pendingPermissions.size).toBe(0)
+    expect(agent.lastAbortReason as ClaudeAgent["lastAbortReason"]).toBe(AbortReason.AuthRequest)
   })
 
   it('logs interrupt failures instead of falling back to AbortController', async () => {
     const interrupt = mock(async () => {
       throw new Error('interrupt failed')
     })
-    const abort = mock((_reason?: unknown) => {})
+    const abortController = new AbortController()
+    const abort = spyOn(abortController, 'abort')
     const debug = mock((_message: string) => {})
 
     const agent = Object.create(ClaudeAgent.prototype) as ClaudeAgent
 
-    agent["currentQuery"] = ({ interrupt } satisfies Partial<NonNullable<ClaudeAgent["currentQuery"]>>) as Partial<NonNullable<ClaudeAgent["currentQuery"]>> as ClaudeAgent["currentQuery"]
-    agent["currentQueryAbortController"] = ({ abort } satisfies Pick<AbortController, 'abort'>) as Partial<NonNullable<ClaudeAgent["currentQueryAbortController"]>> as ClaudeAgent["currentQueryAbortController"]
-    agent["pendingPermissions"] = (new Map() satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"]
-    agent["lastAbortReason"] = null
+    agent["currentQuery"] = handoffQuery(interrupt)
+    agent["currentQueryAbortController"] = abortController
+    agent.pendingPermissions = (new Map() satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"]
+    agent.lastAbortReason = null
     agent["debug"] = debug
 
     agent.interruptForHandoff(AbortReason.PlanSubmitted)
@@ -108,21 +153,22 @@ describe('ClaudeAgent handoff interrupts', () => {
   })
 
   it('settles pending permissions fail-closed before force-aborting the query', () => {
-    const abort = mock((_reason?: unknown) => {})
+    const abortController = new AbortController()
+    const abort = spyOn(abortController, 'abort')
     const resolvePermission = mock((_allowed: boolean) => {})
     const agent = Object.create(ClaudeAgent.prototype) as ClaudeAgent
 
-    agent["promptPreparationRevision"] = 0
-    agent["lastAbortReason"] = null
-    agent["currentQuery"] = ({} satisfies Partial<NonNullable<ClaudeAgent["currentQuery"]>>) as Partial<NonNullable<ClaudeAgent["currentQuery"]>> as ClaudeAgent["currentQuery"]
-    agent["currentQueryAbortController"] = ({ abort } satisfies Pick<AbortController, 'abort'>) as Partial<NonNullable<ClaudeAgent["currentQueryAbortController"]>> as ClaudeAgent["currentQueryAbortController"]
-    agent["pendingPermissions"] = (new Map([['permission-1', { toolName: 'qa-tool', command: 'qa-command', baseCommand: 'qa-command', resolve: resolvePermission }]]) satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"]
+    agent.promptPreparationRevision = 0
+    agent.lastAbortReason = null
+    agent["currentQuery"] = ({} satisfies Partial<NonNullable<ClaudeAgent["currentQuery"]>>) as ClaudeAgent["currentQuery"]
+    agent["currentQueryAbortController"] = abortController
+    agent.pendingPermissions = (new Map([['permission-1', { toolName: 'qa-tool', command: 'qa-command', baseCommand: 'qa-command', resolve: resolvePermission }]]) satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"]
 
     agent.forceAbort(AbortReason.UserStop)
 
     expect(resolvePermission).toHaveBeenCalledTimes(1)
     expect(resolvePermission).toHaveBeenCalledWith(false)
-    expect(agent["pendingPermissions"].size).toBe(0)
+    expect(agent.pendingPermissions.size).toBe(0)
     expect(abort).toHaveBeenCalledWith(AbortReason.UserStop)
     expect(agent["currentQuery"]).toBeNull()
   })
@@ -132,7 +178,7 @@ describe('ClaudeAgent handoff interrupts', () => {
     const resolveSecondPermission = mock((_allowed: boolean) => {})
     const agent = Object.create(ClaudeAgent.prototype) as ClaudeAgent
 
-    agent["pendingPermissions"] = (new Map([
+    agent.pendingPermissions = (new Map([
       ['permission-1', { toolName: 'qa-tool', command: 'qa-command', baseCommand: 'qa-command', resolve: resolveFirstPermission }],
       ['permission-2', { toolName: 'qa-tool', command: 'qa-command', baseCommand: 'qa-command', resolve: resolveSecondPermission }],
     ]) satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"]
@@ -147,6 +193,6 @@ describe('ClaudeAgent handoff interrupts', () => {
     expect(resolveFirstPermission).toHaveBeenCalledWith(false)
     expect(resolveSecondPermission).toHaveBeenCalledTimes(1)
     expect(resolveSecondPermission).toHaveBeenCalledWith(false)
-    expect(agent["pendingPermissions"].size).toBe(0)
+    expect(agent.pendingPermissions.size).toBe(0)
   })
 })

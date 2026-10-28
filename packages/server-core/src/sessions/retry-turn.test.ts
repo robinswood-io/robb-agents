@@ -1,4 +1,7 @@
-import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import type { SessionOperations } from './SessionManager/operation-types.ts';
+import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import { rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -33,7 +36,7 @@ describe('explicit retry of an existing turn', () => {
       },
     }
     const entered = deferred(); const release = deferred(); let permissionResponses = 0
-    const agent = {
+    const agent = completeSessionAgentFixture(h.managed.workspace, {
       getModel: () => 'test/permission-retry', getSessionId: () => null, setAllSources: () => {},
       isProcessing: () => true,
       respondToPermission: () => { permissionResponses++ },
@@ -42,8 +45,8 @@ describe('explicit retry of an existing turn', () => {
         await release.promise
         yield { type: 'complete' as const }
       },
-    }
-    h.internals.getOrCreateAgent = async () => { h.managed.agent = agent as never; return agent }
+    })
+    h.internals.getOrCreateAgent = async () => { h.managed.agent = agent; return agent }
 
     try {
       expect(await h.manager.retryTurn(h.managed.id, 'latest-user')).toEqual({ status: 'started' })
@@ -71,7 +74,7 @@ describe('explicit retry of an existing turn', () => {
       if (++preparations > 1) throw new Error('Fixture next attempt stopped before provider work')
       preparing.resolve()
       await releasePreparation.promise
-      const agent = {
+      const agent = completeSessionAgentFixture(h.managed.workspace, {
         getModel: () => 'test/stale-runtime', getSessionId: () => null, setAllSources: () => {},
         isProcessing: () => backendBusy,
         forceAbort: () => { backendBusy = false; finishProvider.resolve() },
@@ -80,8 +83,8 @@ describe('explicit retry of an existing turn', () => {
           try { await finishProvider.promise; yield { type: 'complete' as const } }
           finally { backendBusy = false }
         },
-      }
-      h.managed.agent = agent as never
+      })
+      h.managed.agent = agent
       return agent
     }
     let initialSettled = false
@@ -114,7 +117,7 @@ describe('explicit retry of an existing turn', () => {
     const finishProvider = deferred()
     let preparations = 0
     let chats = 0
-    const currentAgent = {
+    const currentAgent = completeSessionAgentFixture(h.managed.workspace, {
       getModel: () => 'test/current-runtime', getSessionId: () => null, setAllSources: () => {},
       isProcessing: () => true,
       async *chat() {
@@ -123,15 +126,16 @@ describe('explicit retry of an existing turn', () => {
         await finishProvider.promise
         yield { type: 'complete' as const }
       },
-    }
+    })
     h.internals.getOrCreateAgent = async () => {
       if (++preparations === 1) {
         preparing.resolve()
         await releasePreparation.promise
         if (outcome === 'failed') throw new Error('Old runtime setup failed after its replacement started')
+        if (!h.managed.agent) throw new Error("Expected the replacement fixture runtime");
         return h.managed.agent
       }
-      h.managed.agent = currentAgent as never
+      h.managed.agent = currentAgent
       return currentAgent
     }
     const initial = h.manager.sendMessage(h.managed.id, 'Explique le premier résultat.')
@@ -150,7 +154,7 @@ describe('explicit retry of an existing turn', () => {
       expect(chats).toBe(1)
       expect(h.managed.isProcessing).toBe(true)
       expect(h.managed.processingGeneration).toBe(generation)
-      expect(h.managed.agent).toBe(currentAgent as never)
+      expect(h.managed.agent).toBe(currentAgent)
       expect(h.managed.activeObjective).toEqual(objectiveBefore)
       expect(h.managed.pendingTurnRecovery).toEqual(recoveryBefore)
       expect(h.events).toEqual(eventsBefore)
@@ -184,12 +188,7 @@ describe('explicit retry of an existing turn', () => {
       provider: 'anthropic', authType: 'api_key', resolvedModel: 'test/preparation',
       capabilities: { needsHttpPoolServer: false }, connection: null,
     } as never)
-    const preparation = h.manager as unknown as {
-      loadAgentContextWindowPreference: () => Promise<boolean>
-      applyRoutingPolicyForNextTurn: () => Promise<void>
-      tryRefreshAgentRuntime: () => Promise<void>
-    }
-    preparation.applyRoutingPolicyForNextTurn = async () => {}
+    const preparation = sessionManagerForTest(h.manager)
     preparation.tryRefreshAgentRuntime = async () => {}
     preparation.loadAgentContextWindowPreference = async () => {
       if (seam !== 'postInit') {
@@ -198,7 +197,7 @@ describe('explicit retry of an existing turn', () => {
       }
       return false
     }
-    h.internals.getOrCreateAgent = Object.getPrototypeOf(h.manager).getOrCreateAgent.bind(h.manager)
+    h.internals.getOrCreateAgent = (Object.getPrototypeOf(h.manager) as Pick<SessionOperations, 'getOrCreateAgent'>).getOrCreateAgent.bind(h.manager)
     const initial = h.manager.sendMessage(h.managed.id, 'Explique le premier résultat.')
     try {
       await preparing.promise
@@ -224,12 +223,12 @@ describe('explicit retry of an existing turn', () => {
       await h.internals.onProcessingStopped(h.managed.id, 'timeout', h.managed.processingGeneration)
       // The real getOrCreateAgent is suspended before its factory assignment
       // or callback wiring. A replacement now owns all shared runtime slots.
-      const currentAgent = { isProcessing: () => true }
+      const currentAgent = completeSessionAgentFixture(h.managed.workspace, { isProcessing: () => true })
       const currentPool = { current: true }
       const currentEnv = { TEST_CURRENT_RUNTIME: 'current' }
       h.managed.processingGeneration++
       h.managed.isProcessing = true
-      h.managed.agent = currentAgent as never
+      h.managed.agent = currentAgent
       h.managed.mcpPool = currentPool as never
       h.managed.envOverrides = currentEnv
       h.managed.backendRuntimeSignature = 'current-signature'
@@ -248,7 +247,7 @@ describe('explicit retry of an existing turn', () => {
       releasePreparation.resolve()
       await initial
       expect(factory).toHaveBeenCalledTimes(seam === 'construction' ? 0 : 1)
-      expect(h.managed.agent).toBe(currentAgent as never)
+      expect(h.managed.agent).toBe(currentAgent)
       expect(h.managed.mcpPool).toBe(currentPool as never)
       expect(h.managed.envOverrides).toBe(currentEnv)
       expect(h.managed.backendRuntimeSignature).toBe('current-signature')
@@ -282,7 +281,7 @@ describe('explicit retry of an existing turn', () => {
         if (seam.endsWith('-failure')) throw new Error('Old durable marker failed')
       }
     }
-    const currentAgent = {
+    const currentAgent = completeSessionAgentFixture(h.managed.workspace, {
       getModel: () => 'test/current', getSessionId: () => null, setAllSources: () => {},
       isProcessing: () => true,
       async *chat() {
@@ -290,15 +289,16 @@ describe('explicit retry of an existing turn', () => {
         await finishProvider.promise
         yield { type: 'complete' as const }
       },
-    }
-    h.internals.getOrCreateAgent = async () => { h.managed.agent = currentAgent as never; return currentAgent }
+    })
+    h.internals.getOrCreateAgent = async () => { h.managed.agent = currentAgent; return currentAgent }
     if (!isRetry) h.managed.sessionStatus = 'todo'
     const handlers = new Map<string, HandlerFn<unknown[]>>()
     const rpcEvents: unknown[] = []
-    const server = {
-      handle: (channel: string, handler: HandlerFn) => handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args])),
-      push: (...args: unknown[]) => { rpcEvents.push(args) },
-    } as unknown as RpcServer
+    const server = ({handle: (channel, handler) => handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args])),
+push: (...args: unknown[]) => { rpcEvents.push(args) },
+invokeClient: async () => undefined,
+hasClientCapability: () => false,
+findClientsWithCapability: () => []} satisfies RpcServer)
     registerSessionsHandlers(server, {
       sessionManager: h.manager,
       platform: { logger: { info() {}, warn() {}, error() {}, debug() {} } },
@@ -317,7 +317,7 @@ describe('explicit retry of an existing turn', () => {
     const initial = (isRetry
       ? h.manager.retryTurn(h.managed.id, 'latest-user')
       : Promise.resolve(handlers.get(RPC_CHANNELS.sessions.SEND_MESSAGE)!(context, h.managed.id, 'Explique le premier résultat.'))
-    ).catch(error => error)
+    ).catch((error: unknown) => error)
     let replacement: Promise<void> | undefined
     try {
       await flushing.promise
@@ -336,10 +336,10 @@ describe('explicit retry of an existing turn', () => {
       // Let the actual RPC post-ACK .catch run if the stale send rejected.
       await new Promise<void>(resolve => setImmediate(resolve))
       if (isRetry || seam === 'message-flush') expect(result).toBeInstanceOf(Error)
-      else expect(result).toMatchObject({ accepted: true, messageId: expect.any(String) })
+      else expect<unknown>(result).toMatchObject({ accepted: true, messageId: (expect.any(String) as unknown) })
       expect(h.managed.processingGeneration).toBe(2)
       expect(h.managed.isProcessing).toBe(true)
-      expect(h.managed.agent).toBe(currentAgent as never)
+      expect(h.managed.agent).toBe(currentAgent)
       expect(h.managed.activeObjective).toEqual(objectiveBefore)
       expect(h.managed.pendingTurnRecovery).toEqual(recoveryBefore)
       expect(h.managed.lastSentMessage).toBe(messageBefore)
@@ -408,13 +408,16 @@ describe('explicit retry of an existing turn', () => {
       expect(h.managed.isProcessing).toBe(true)
       expect(h.managed.sessionStatus).toBe('in-progress')
       expect(h.managed.messages).toEqual(originalMessages.map(message => message.id === 'latest-user' ? { ...message, isQueued: false } : message))
-      expect(h.managed.activeObjective).toEqual({ ...previousObjective, terminalState: 'active', completedAt: undefined })
+      const expectedObjective = { ...previousObjective, terminalState: 'active' as const }
+      delete expectedObjective.completedAt
+      expect(h.managed.activeObjective).toEqual(expectedObjective)
+      expect(Object.hasOwn(requiredTestValue(h.managed.activeObjective), 'completedAt')).toBe(false)
       expect(h.managed.pendingTurnRecovery).toMatchObject({ userMessageId: 'latest-user', attempts: 5, stagnantAttempts: 2, exhaustedAt: 5, leaseExpiresAt: 50, userRetryFromMessageCount: 5 })
       expect(h.managed.lastSentMessage).toContain('Do not repeat an external mutation')
       expect(h.managed.lastSentMessage).toContain('original_user_message_id="latest-user"')
       expect(h.managed.lastSentMessage).toContain(h.managed.messages[2]!.content)
       expect(h.managed.lastSentAttachments?.[0]).toMatchObject({ name: 'brief.txt', text: 'The preserved attachment content.', storedPath: attachmentPath })
-      expect(h.events.filter(event => event.type === 'user_message')).toEqual([{ type: 'user_message', sessionId: h.managed.id, message: h.managed.messages[2], status: 'processing' }])
+      expect(h.events.filter(event => event["type"] === 'user_message')).toEqual([{ type: 'user_message', sessionId: h.managed.id, message: h.managed.messages[2], status: 'processing' }])
     } finally { await h.finish() }
     expect(h.managed.isProcessing).toBe(false)
     expect(h.managed.sessionStatus).toBe('blocked')

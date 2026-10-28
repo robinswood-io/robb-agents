@@ -1,3 +1,4 @@
+import {setOptional, omitUndefined } from '@craft-agent/shared/utils/json';
 import { persistenceRootFor } from '../policy.ts';
 import type { AgentEvent } from '@craft-agent/shared/agent';
 import { getObjectiveEvidenceCompletionGap } from '@craft-agent/shared/agent';
@@ -129,7 +130,7 @@ export async function handleProviderTurnEvent(
         // promising that this read-only reviewer will perform them.
         const reviewValidation = managed.activeObjective && finalMessage
             && (emittedTerminalState === 'final-assistant' || emittedTerminalState === 'premature-final-assistant')
-            ? validateDelegatedReviewCompletion({ parentSessionId: managed.parentSessionId, sessionId: managed.id, sourceSlugs: managed.enabledSourceSlugs,
+            ? validateDelegatedReviewCompletion({ ...(managed.parentSessionId !== undefined ? { parentSessionId: managed.parentSessionId } : {}), sessionId: managed.id, ...(managed.enabledSourceSlugs !== undefined ? { sourceSlugs: managed.enabledSourceSlugs } : {}),
                 objective: managed.activeObjective, messages: managed.messages, finalMessage }) : undefined;
         const explicitStructuredTracking = sessionOpHasExplicitStructuredObjectiveTracking(sessionOperationContext, managed);
         const latestTurnTerminalState = reviewValidation
@@ -239,7 +240,7 @@ export async function handleProviderTurnEvent(
                         message: apiError.message,
                         actions: [],
                         canRetry: false,
-                        details: errorMessage.errorDetails,
+                        ...(errorMessage.errorDetails !== undefined ? { details: errorMessage.errorDetails } : {}),
                     },
                 }, managed.workspace.id);
             }
@@ -282,17 +283,17 @@ export async function handleProviderTurnEvent(
                 objective: completionObjective,
                 messages: managed.messages,
                 sessionId: managed.id,
-                extractionError: finalMessage?.objectiveOutcomeError,
-                evidenceGap,
+                ...(finalMessage?.objectiveOutcomeError !== undefined ? { extractionError: finalMessage?.objectiveOutcomeError } : {}),
+                ...(evidenceGap !== undefined ? { evidenceGap: evidenceGap } : {}),
                 executionEvidenceMissing,
-                autonomyEvents: managed.autonomyEvents,
+                ...(managed.autonomyEvents !== undefined ? { autonomyEvents: managed.autonomyEvents } : {}),
                 pendingHumanConfirmation: sessionOperationContext.owner["hasPendingUserInput"](managed) || sessionOpHasPendingDecision(sessionOperationContext, managed),
                 preservedContinueOnLegacyBudget: managed.pendingTurnRecovery?.budgetHistoryUnavailable === true,
             });
             if (finalMessage && outcomeValidation.declaration && !finalMessage.objectiveOutcome) {
                 finalMessage.objectiveOutcome = outcomeValidation.declaration;
             }
-            const objectiveTerminalState = reviewValidation?.state ?? classifyObjectiveTerminalState(finalMessage?.content ?? '', {
+            const objectiveTerminalState = reviewValidation?.state ?? classifyObjectiveTerminalState(finalMessage?.content ?? '', omitUndefined({
                 evidenceGap,
                 executionEvidenceMissing,
                 structuredOutcomeRequired,
@@ -301,7 +302,7 @@ export async function handleProviderTurnEvent(
                     declaredState: outcomeValidation.state,
                     structuredOutcomeValid: outcomeValidation.valid,
                 } : {}),
-            });
+            }));
             // The provider cannot terminalize a parent while a child bound to
             // this exact objective is still running. Keep the objective active
             // and park a bounded continuation behind the child's terminal
@@ -341,7 +342,7 @@ export async function handleProviderTurnEvent(
                 const effectiveContinuation = ('effectiveDeclaration' in outcomeValidation
                     ? outcomeValidation.effectiveDeclaration : undefined) ?? finalMessage?.objectiveOutcome;
                 if (validContinuation)
-                    managed.activeObjective.lastOutcome = effectiveContinuation;
+                    setOptional(managed.activeObjective, "lastOutcome", effectiveContinuation);
                 // Parsing can fail before the validator reaches the independent
                 // evidence gates. Preserve every current reason in the retry and
                 // terminal diagnostic, including those early-return cases.
@@ -406,7 +407,7 @@ export async function handleProviderTurnEvent(
                 managed.activeObjective.terminalState = objectiveTerminalState;
                 if (!reviewValidation && outcomeValidation.valid && outcomeValidation.declaration && finalMessage)
                     sessionOpApplyValidatedNativeOutcome(sessionOperationContext, managed, finalMessage, outcomeValidation.declaration);
-                managed.activeObjective.lastOutcome = reviewValidation?.declaration ?? (outcomeValidation.valid ? finalMessage?.objectiveOutcome : undefined);
+                setOptional(managed.activeObjective, "lastOutcome", reviewValidation?.declaration ?? (outcomeValidation.valid ? finalMessage?.objectiveOutcome : undefined));
                 managed.activeObjective.completedAt = Date.now();
                 sessionOperationContext.owner["persistSession"](managed);
             }

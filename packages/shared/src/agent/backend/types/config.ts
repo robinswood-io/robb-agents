@@ -55,8 +55,9 @@ export interface CoreBackendConfig {
    * objective is observational/response-only. Segments are authenticated human
    * scope and bind sensitive external actions to an explicit action + target. */
   getObjectiveMutationAuthority?: (currentUserRequest?: string) => boolean | {
-    authorized: boolean;
-    sensitiveActionAuthorized: boolean;
+    // Undefined delegates the decision to authenticated segments on ordinary chats.
+    authorized: boolean | undefined;
+    sensitiveActionAuthorized: boolean | undefined;
     authorizationSegments: readonly string[];
     /** Structured-answer authority carried on a host-only provenance channel. */
     authenticatedUserAuthorizationSegments?: readonly string[];

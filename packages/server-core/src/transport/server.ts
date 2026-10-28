@@ -23,14 +23,14 @@ export type { WsRpcTlsOptions, WsRpcServerOptions } from './server/shared.ts';
 // WsRpcServer
 // ---------------------------------------------------------------------------
 export class WsRpcServer implements RpcServer {
-    private wss: WebSocketServer | null = null;
-    private httpServer: HttpServer | null = null;
-    private httpsServer: HttpsServer | null = null;
+    /** @internal */ public wss: WebSocketServer | null = null;
+    /** @internal */ public httpServer: HttpServer | null = null;
+    /** @internal */ public httpsServer: HttpsServer | null = null;
     private clients = new Map<string, ClientConnection>();
     private clientByWs = new WeakMap<WebSocket, ClientConnection>();
     private handlers = new Map<string, HandlerFn>();
     private pendingInvokes = new Map<string, PendingInvoke>();
-    private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+    /** @internal */ public heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     private failedHandshakesByIp = new Map<string, {
         count: number;
         windowStart: number;
@@ -42,25 +42,25 @@ export class WsRpcServer implements RpcServer {
         client: ClientConnection;
         timer: ReturnType<typeof setTimeout>;
     }>();
-    private readonly host: string;
-    private readonly requestedPort: number;
-    private readonly requireAuth: boolean;
-    private readonly validateToken: ((token: string) => Promise<AuthenticationResult>) | null;
-    private readonly validateSessionCookie: ((cookieHeader: string | null) => Promise<AuthenticationResult>) | null;
-    private readonly allowedSessionCookieOrigins: ReadonlySet<string>;
+    /** @internal */ public readonly host: string;
+    /** @internal */ public readonly requestedPort: number;
+    /** @internal */ public readonly requireAuth: boolean;
+    /** @internal */ public readonly validateToken: ((token: string) => Promise<AuthenticationResult>) | null;
+    /** @internal */ public readonly validateSessionCookie: ((cookieHeader: string | null) => Promise<AuthenticationResult>) | null;
+    /** @internal */ public readonly allowedSessionCookieOrigins: ReadonlySet<string>;
     private readonly authorizeRequest: WsRpcServerOptions['authorizeRequest'];
-    private readonly requireAuthoritativePrincipal: boolean;
+    /** @internal */ public readonly requireAuthoritativePrincipal: boolean;
     private readonly serverId: string;
-    private readonly tlsOptions: WsRpcTlsOptions | null;
-    private readonly serverVersion: string;
-    private readonly maxClients: number;
-    private readonly maxPayloadBytes: number;
+    /** @internal */ public readonly tlsOptions: WsRpcTlsOptions | null;
+    /** @internal */ public readonly serverVersion: string;
+    /** @internal */ public readonly maxClients: number;
+    /** @internal */ public readonly maxPayloadBytes: number;
     private readonly maxInFlightRequestsPerClient: number;
-    private readonly maxEventBufferBytes: number;
+    /** @internal */ public readonly maxEventBufferBytes: number;
     private readonly maxFailedHandshakesPerIp: number;
-    private readonly onClientConnected: WsRpcServerOptions['onClientConnected'];
-    private readonly onClientDisconnected: WsRpcServerOptions['onClientDisconnected'];
-    private readonly httpHandler: WsRpcServerOptions['httpHandler'];
+    /** @internal */ public readonly onClientConnected: WsRpcServerOptions['onClientConnected'];
+    /** @internal */ public readonly onClientDisconnected: WsRpcServerOptions['onClientDisconnected'];
+    /** @internal */ public readonly httpHandler: WsRpcServerOptions['httpHandler'];
     constructor(opts?: WsRpcServerOptions) {
         this.host = opts?.host ?? '127.0.0.1';
         this.requestedPort = opts?.port ?? 0;
@@ -167,10 +167,10 @@ export class WsRpcServer implements RpcServer {
     // -------------------------------------------------------------------------
     // Lifecycle
     // -------------------------------------------------------------------------
-    private configureNodeHttpTimeouts(server: HttpServer | HttpsServer): void {
+    /** @internal */ public configureNodeHttpTimeouts(server: HttpServer | HttpsServer): void {
         return serverLifecycle.configureNodeHttpTimeouts(this, server);
     }
-    private isHandshakeIpRateLimited(ip: string): boolean {
+    /** @internal */ public isHandshakeIpRateLimited(ip: string): boolean {
         if (this.maxFailedHandshakesPerIp <= 0)
             return false;
         const entry = this.failedHandshakesByIp.get(ip);
@@ -182,7 +182,7 @@ export class WsRpcServer implements RpcServer {
         }
         return entry.count >= this.maxFailedHandshakesPerIp;
     }
-    private recordFailedHandshake(ip: string): void {
+    /** @internal */ public recordFailedHandshake(ip: string): void {
         if (this.maxFailedHandshakesPerIp <= 0)
             return;
         const now = Date.now();
@@ -207,10 +207,10 @@ export class WsRpcServer implements RpcServer {
     // -------------------------------------------------------------------------
     // Connection handling
     // -------------------------------------------------------------------------
-    private onConnection(ws: WebSocket, upgradeRequestCookie: string | null, upgradeRequestOrigin: string | null, upgradeRequestHost: string | null, remoteAddress = 'direct'): void {
+    /** @internal */ public onConnection(ws: WebSocket, upgradeRequestCookie: string | null, upgradeRequestOrigin: string | null, upgradeRequestHost: string | null, remoteAddress = 'direct'): void {
         return serverConnection.onConnection(this, ws, upgradeRequestCookie, upgradeRequestOrigin, upgradeRequestHost, remoteAddress);
     }
-    private isSessionCookieOriginAllowed(origin: string | null, host: string | null): boolean {
+    /** @internal */ public isSessionCookieOriginAllowed(origin: string | null, host: string | null): boolean {
         return serverConnection.isSessionCookieOriginAllowed(this, origin, host);
     }
     // -------------------------------------------------------------------------
@@ -218,7 +218,7 @@ export class WsRpcServer implements RpcServer {
     // -------------------------------------------------------------------------
     /** Server-side timeout for RPC handler execution (ms). */
     private static readonly HANDLER_TIMEOUT_MS = 60000;
-    private async onRequest(client: ClientConnection, envelope: MessageEnvelope): Promise<void> {
+    /** @internal */ public async onRequest(client: ClientConnection, envelope: MessageEnvelope): Promise<void> {
         const { channel, id, args } = envelope;
         if (!channel) {
             this.sendResponseError(client.ws, id, undefined, 'CHANNEL_NOT_FOUND', 'Missing channel');
@@ -278,25 +278,25 @@ export class WsRpcServer implements RpcServer {
     // -------------------------------------------------------------------------
     // Heartbeat
     // -------------------------------------------------------------------------
-    private startHeartbeat(): void {
+    /** @internal */ public startHeartbeat(): void {
         return serverLifecycle.startHeartbeat(this);
     }
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
     /** Wire up close + pong handlers for a WebSocket ↔ ClientConnection pair. */
-    private setupClientHandlers(ws: WebSocket, client: ClientConnection): void {
+    /** @internal */ public setupClientHandlers(ws: WebSocket, client: ClientConnection): void {
         return serverDelivery.setupClientHandlers(this, ws, client);
     }
     /** Assign a per-client seq, retain the event for replay, and optionally send it immediately. */
-    private bufferAndMaybeSendEvent(client: ClientConnection, channel: string, args: unknown[], timestamp: number, shouldSend: boolean): void {
+    /** @internal */ public bufferAndMaybeSendEvent(client: ClientConnection, channel: string, args: unknown[], timestamp: number, shouldSend: boolean): void {
         return serverDelivery.bufferAndMaybeSendEvent(this, client, channel, args, timestamp, shouldSend);
     }
     /** Evict stale/oversized entries from a client's event buffer via batch splice. */
-    private evictBuffer(client: ClientConnection): void {
+    /** @internal */ public evictBuffer(client: ClientConnection): void {
         return serverDelivery.evictBuffer(this, client);
     }
-    private matchesTarget(client: ClientConnection, target: PushTarget): boolean {
+    /** @internal */ public matchesTarget(client: ClientConnection, target: PushTarget): boolean {
         switch (target.to) {
             case 'all':
                 return target.exclude ? client.id !== target.exclude : true;
@@ -345,7 +345,7 @@ export class WsRpcServer implements RpcServer {
         }
         return disconnected;
     }
-    private findClientByWs(ws: WebSocket): ClientConnection | undefined {
+    /** @internal */ public findClientByWs(ws: WebSocket): ClientConnection | undefined {
         return serverDelivery.findClientByWs(this, ws);
     }
     /** Handler/request errors — sent as type:'response' with error field. */
@@ -353,13 +353,13 @@ export class WsRpcServer implements RpcServer {
         const envelope: MessageEnvelope = {
             id,
             type: 'response',
-            channel,
+            ...(channel !== undefined ? { channel: channel } : {}),
             error: { code, message },
         };
         this.safeSend(ws, serializeEnvelope(envelope));
     }
     /** Protocol-level errors only (handshake rejection, version mismatch). May close connection. */
-    private sendError(ws: WebSocket, id: string, code: ErrorCode, message: string): void {
+    /** @internal */ public sendError(ws: WebSocket, id: string, code: ErrorCode, message: string): void {
         const envelope: MessageEnvelope = {
             id,
             type: 'error',
@@ -367,7 +367,7 @@ export class WsRpcServer implements RpcServer {
         };
         this.safeSend(ws, serializeEnvelope(envelope));
     }
-    private onClientResponse(client: ClientConnection, envelope: MessageEnvelope): void {
+    /** @internal */ public onClientResponse(client: ClientConnection, envelope: MessageEnvelope): void {
         return serverDelivery.onClientResponse(this, client, envelope);
     }
     private rejectPendingInvokesForClient(clientId: string): void {

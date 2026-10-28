@@ -285,11 +285,16 @@ describe('quiet conversation presentation', () => {
       { sessionId: undefined }, { parentSessionId: undefined }, { parentSessionId: '' }, { parentSessionId: 'child' },
       { activeObjective: undefined },
       { activeObjective: objective({ userMessageId: 'another-objective' }) },
-      { activeObjective: { ...objective(), objectiveId: undefined } },
       { activeObjective: objective({ objectiveId: 'another-objective' }) },
     ]) {
       expect(projectConversation([delegated, message('e3', 'error')], { ...options, ...patch }).outcome?.retryUserMessageId).toBeUndefined()
     }
+    const malformedObjective = { ...objective(), objectiveId: undefined }
+    const malformedResult = Reflect.apply(projectConversation, undefined, [
+      [delegated, message('e3', 'error')],
+      { ...options, activeObjective: malformedObjective },
+    ]) as ReturnType<typeof projectConversation>
+    expect(malformedResult.outcome?.retryUserMessageId).toBeUndefined()
     const priorInternal = message('u0', 'user', { timestamp: 0, internalOrigin: { kind: 'agent-message', senderSessionId: 'parent' } })
     expect(projectConversation([priorInternal, delegated], options).outcome?.retryUserMessageId).toBeUndefined()
   })

@@ -59,12 +59,12 @@ export function setupWindowListeners(transportOwner: BrowserPaneManager, instanc
         transportOwner["lastNetworkActivityByWebContentsId"].set(pageWc.id, Date.now());
         transportOwner["emitStateChange"](instance);
         void browserPaneManagerToolbarState.pushToolbarState(transportOwner, instance);
-        void transportOwner["extractThemeColor"](instance);
-        transportOwner["reapplyAgentControlVisual"](instance);
+        void transportOwner.extractThemeColor(instance);
+        transportOwner.reapplyAgentControlVisual(instance);
     });
     pageWc.on('dom-ready', () => {
-        transportOwner["installThemeObserver"](instance);
-        void transportOwner["extractThemeColor"](instance);
+        transportOwner.installThemeObserver(instance);
+        void transportOwner.extractThemeColor(instance);
     });
     pageWc.on('before-input-event', (_event, _input) => {
         if (instance.lockState.active) {
@@ -82,7 +82,7 @@ export function setupWindowListeners(transportOwner: BrowserPaneManager, instanc
         const inputType = input.type || '';
         if (inputType === 'mouseDown' || inputType === 'touchStart' || inputType === 'pointerDown') {
             event.preventDefault();
-            transportOwner["forceCloseToolbarMenu"](instance, 'overlay-tap');
+            transportOwner.forceCloseToolbarMenu(instance, 'overlay-tap');
         }
     });
     pageWc.on('did-navigate', (_event, urlFromEvent) => {
@@ -94,7 +94,7 @@ export function setupWindowListeners(transportOwner: BrowserPaneManager, instanc
         }
         instance.themeObserverToken = null;
         instance.themeColor = null; // reset for new page (batched with state push below)
-        const normalized = transportOwner["normalizePageState"](url, pageWc.getTitle());
+        const normalized = transportOwner.normalizePageState(url, pageWc.getTitle());
         instance.currentUrl = normalized.url;
         instance.title = normalized.title;
         mainLog.info(`[browser-pane] did-navigate id=${instance.id} from=${previousUrl} to=${instance.currentUrl}`);
@@ -105,8 +105,8 @@ export function setupWindowListeners(transportOwner: BrowserPaneManager, instanc
         transportOwner["lastNetworkActivityByWebContentsId"].set(pageWc.id, Date.now());
         transportOwner["emitStateChange"](instance);
         void browserPaneManagerToolbarState.pushToolbarState(transportOwner, instance);
-        transportOwner["scheduleEarlyThemeExtraction"](instance, url);
-        transportOwner["reapplyAgentControlVisual"](instance);
+        transportOwner.scheduleEarlyThemeExtraction(instance, url);
+        transportOwner.reapplyAgentControlVisual(instance);
     });
     pageWc.on('did-redirect-navigation', (_event, url, isInPlace, isMainFrame) => {
         if (!isMainFrame)
@@ -115,12 +115,12 @@ export function setupWindowListeners(transportOwner: BrowserPaneManager, instanc
     });
     pageWc.on('did-navigate-in-page', (_event, urlFromEvent) => {
         const url = typeof pageWc.getURL === 'function' ? pageWc.getURL() : (urlFromEvent || instance.currentUrl);
-        const normalized = transportOwner["normalizePageState"](url, instance.title);
+        const normalized = transportOwner.normalizePageState(url, instance.title);
         instance.currentUrl = normalized.url;
         instance.title = normalized.title;
         instance.canGoBack = pageWc.canGoBack();
         instance.canGoForward = pageWc.canGoForward();
-        void transportOwner["maybeHandleEmptyStateLaunch"](instance, url).then((handled) => {
+        void transportOwner.maybeHandleEmptyStateLaunch(instance, url).then((handled) => {
             if (handled) {
                 transportOwner["emitStateChange"](instance);
                 void browserPaneManagerToolbarState.pushToolbarState(transportOwner, instance);
@@ -133,15 +133,15 @@ export function setupWindowListeners(transportOwner: BrowserPaneManager, instanc
             instance.themeColor = null;
             transportOwner["emitStateChange"](instance);
             void browserPaneManagerToolbarState.pushToolbarState(transportOwner, instance);
-            transportOwner["installThemeObserver"](instance);
-            instance.inPageThemeTimer = setTimeout(() => { void transportOwner["extractThemeColor"](instance); }, 300);
-            transportOwner["reapplyAgentControlVisual"](instance);
-        }).catch((error) => {
+            transportOwner.installThemeObserver(instance);
+            instance.inPageThemeTimer = setTimeout(() => { void transportOwner.extractThemeColor(instance); }, 300);
+            transportOwner.reapplyAgentControlVisual(instance);
+        }).catch((error: unknown) => {
             mainLog.warn(`[browser-pane] empty-state launch handling failed id=${instance.id}: ${error instanceof Error ? error.message : String(error)}`);
         });
     });
     pageWc.on('page-title-updated', (_event, title) => {
-        const normalized = transportOwner["normalizePageState"](pageWc.getURL(), title);
+        const normalized = transportOwner.normalizePageState(pageWc.getURL(), title);
         instance.title = normalized.title;
         transportOwner["emitStateChange"](instance);
         void browserPaneManagerToolbarState.pushToolbarState(transportOwner, instance);
@@ -151,7 +151,7 @@ export function setupWindowListeners(transportOwner: BrowserPaneManager, instanc
         transportOwner["emitStateChange"](instance);
     });
     pageWc.on('did-change-theme-color', (_event, color) => {
-        transportOwner["applyThemeColor"](instance, color ?? null);
+        transportOwner.applyThemeColor(instance, color ?? null);
     });
     pageWc.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
         mainLog.warn(`[browser-pane] did-fail-load id=${instance.id} code=${errorCode} url=${validatedURL} error=${errorDescription}`);
@@ -165,10 +165,10 @@ export function setupWindowListeners(transportOwner: BrowserPaneManager, instanc
                 const value = payload.slice(delimiterIdx + 1).trim();
                 if (token === instance.themeObserverToken) {
                     if (value === THEME_COLOR_NULL_SENTINEL) {
-                        transportOwner["applyThemeColor"](instance, null);
+                        transportOwner.applyThemeColor(instance, null);
                     }
                     else if (value.length > 0) {
-                        transportOwner["applyThemeColor"](instance, value);
+                        transportOwner.applyThemeColor(instance, value);
                     }
                 }
             }
@@ -214,7 +214,7 @@ export function setupWindowListeners(transportOwner: BrowserPaneManager, instanc
     });
     pageWc.on('did-create-window', (popupWindow, details) => {
         const popupUrl = details?.url || popupWindow?.webContents?.getURL?.() || 'about:blank';
-        transportOwner["registerPopupWindow"](instance, popupWindow, popupUrl);
+        transportOwner.registerPopupWindow(instance, popupWindow, popupUrl);
     });
     pageWc.setWindowOpenHandler((details) => {
         mainLog.info(`[browser-pane] window-open requested id=${instance.id} url=${details.url} disposition=${details.disposition ?? 'unknown'} frameName=${details.frameName || 'none'}`);
@@ -256,19 +256,19 @@ export function setupWindowListeners(transportOwner: BrowserPaneManager, instanc
         };
     });
     pageWc.on('focus', () => {
-        transportOwner["interactedCallback"]?.(instance.id);
+        transportOwner.interactedCallback?.(instance.id);
     });
     instance.window.on('focus', () => {
-        transportOwner["interactedCallback"]?.(instance.id);
+        transportOwner.interactedCallback?.(instance.id);
     });
     instance.window.on('show', () => {
         instance.isVisible = true;
         transportOwner["emitStateChange"](instance);
-        transportOwner["reapplyAgentControlVisual"](instance);
+        transportOwner.reapplyAgentControlVisual(instance);
         browserPaneManagerToolbarState.pushToolbarState(transportOwner, instance);
         transportOwner["updateNativeOverlayState"](instance);
         if (!instance.themeColor) {
-            void transportOwner["extractThemeColor"](instance);
+            void transportOwner.extractThemeColor(instance);
         }
     });
     instance.window.on('hide', () => {

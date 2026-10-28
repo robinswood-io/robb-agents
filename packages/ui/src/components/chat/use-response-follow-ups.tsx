@@ -98,7 +98,7 @@ const saveFollowUp = useCallback(async (note: string): Promise<{
       ]
 
       const nextMeta = { ...(activeAnnotation.meta ?? {}) }
-      delete nextMeta.followUp
+      delete nextMeta["followUp"]
 
       try {
         await Promise.resolve(onUpdateAnnotation(messageId, activeAnnotationDetail.annotationId, {
@@ -113,7 +113,7 @@ const saveFollowUp = useCallback(async (note: string): Promise<{
                   updatedAt: Date.now(),
                 },
               }
-            : (Object.keys(nextMeta).length > 0 ? nextMeta : undefined),
+            : nextMeta,
         }))
       } catch {
         return null
@@ -216,8 +216,8 @@ useEffect(() => {
     }
 
     const consumed = consumeExternalOpenRequest(openAnnotationRequest, {
-      messageId,
-      annotations,
+      ...(messageId !== undefined ? { messageId: messageId } : {}),
+      ...(annotations !== undefined ? { annotations: annotations } : {}),
       getNoteText: getAnnotationNoteText,
       fallbackAnchor,
     })

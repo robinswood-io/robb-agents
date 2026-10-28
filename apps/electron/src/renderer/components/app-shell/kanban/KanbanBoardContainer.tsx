@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import * as React from 'react';
 import "lucide-react";
 import "sonner";
@@ -142,7 +143,7 @@ export function KanbanBoardContainer() {
 
   // Every project (with or without a color) is selectable in the header filter.
   const projectOptions = React.useMemo<KanbanProjectFilterOption[]>(
-    () => projects.map(p => ({ id: p.config.id, name: p.config.name, color: p.config.color })),
+    () => projects.map(p => (omitUndefined({ id: p.config.id, name: p.config.name, color: p.config.color }))),
     [projects]
   )
 
@@ -166,7 +167,7 @@ export function KanbanBoardContainer() {
   const activeColumns = React.useMemo<readonly KanbanColumnMeta[]>(() => {
     const custom = editingProject?.config.kanbanColumns
     if (custom?.length) {
-      return custom.map(c => ({ id: c.id, name: c.name, color: c.color, dropStatusId: c.dropStatusId }))
+      return custom.map(c => omitUndefined({ id: c.id, name: c.name, color: c.color, dropStatusId: c.dropStatusId }))
     }
     return KANBAN_COLUMNS
   }, [editingProject])
@@ -209,7 +210,7 @@ export function KanbanBoardContainer() {
           const defaultModel = spec?.defaults?.model
           return [
             slug,
-            (spec?.nodes ?? []).map(n => ({ id: n.id, title: n.title || n.id, model: n.model ?? defaultModel })),
+            (spec?.nodes ?? []).map(n => (omitUndefined({ id: n.id, title: n.title || n.id, model: n.model ?? defaultModel }))),
           ]
         } catch {
           // Unreadable spec → empty node list: the tile falls back to children-only rows.
@@ -242,37 +243,37 @@ export function KanbanBoardContainer() {
       // Validity against the *active* column set is enforced by KanbanBoard (unknown
       // ids fall back to the first column), so no built-in-only guard is needed here.
       const column = meta.kanbanColumn ?? statusToColumn(statusId)
-      const children: SubtaskChildRow[] = (childrenByParent.get(meta.id) ?? []).map(child => ({
+      const children: SubtaskChildRow[] = (childrenByParent.get(meta.id) ?? []).map(child => (omitUndefined({
         id: child.id,
         title: getSessionTitle(child),
         runState: deriveRunState(child, statusesById),
         model: child.model ?? DEFAULT_MODEL,
         taskNodeId: child.taskNodeId,
         createdAt: child.createdAt,
-      }))
+      })))
       // Spec-backed tiles show one row per DAG node (bound to its latest child session,
       // or pending when never run) plus unadopted quick-adds; plain tiles show children.
       const specNodes = meta.taskSlug ? specNodesBySlug.get(meta.taskSlug) : undefined
       const subtasks = mergeSubtaskRows(specNodes, children, DEFAULT_MODEL)
-      result.push({
+      result.push(omitUndefined<KanbanTask>({
         id: meta.id,
         title: getSessionTitle(meta),
         column,
         statusId,
         model: meta.model ?? DEFAULT_MODEL,
-        projectId: meta.projectId,
-        taskSlug: meta.taskSlug,
+        ...(meta.projectId !== undefined ? { projectId: meta.projectId } : {}),
+        ...(meta.taskSlug !== undefined ? { taskSlug: meta.taskSlug } : {}),
         subtasks,
         // With merged spec rows the list already contains every node, so it IS the
         // denominator; the header count only backstops the not-yet-fetched window.
         subtaskTotal: specNodes?.length ? undefined : meta.taskNodeCount,
-        isFlagged: meta.isFlagged,
-        isProcessing: meta.isProcessing,
-        createdAt: meta.createdAt,
-        lastMessageAt: meta.lastMessageAt,
-        messageCount: meta.messageCount,
-        costUsd: meta.tokenUsage?.costUsd,
-      })
+        ...(meta.isFlagged !== undefined ? { isFlagged: meta.isFlagged } : {}),
+        ...(meta.isProcessing !== undefined ? { isProcessing: meta.isProcessing } : {}),
+        ...(meta.createdAt !== undefined ? { createdAt: meta.createdAt } : {}),
+        ...(meta.lastMessageAt !== undefined ? { lastMessageAt: meta.lastMessageAt } : {}),
+        ...(meta.messageCount !== undefined ? { messageCount: meta.messageCount } : {}),
+        ...(meta.tokenUsage?.costUsd !== undefined ? { costUsd: meta.tokenUsage?.costUsd } : {}),
+      }))
     }
     return result
   }, [metaMap, statusesById, specNodesBySlug])
@@ -329,10 +330,10 @@ export function KanbanBoardContainer() {
       const meta = metaMap.get(sessionId)
       const scopeLabelId = resolveTaskScopeLabelId(meta?.labels, labelConfigs)
       if (scopeLabelId && onJumpToTaskSessions) {
-        onJumpToTaskSessions(sessionId, {
+        onJumpToTaskSessions(sessionId, omitUndefined({
           labelId: scopeLabelId,
           projectId: meta?.projectId ?? projectFallbackId,
-        })
+        }))
         return
       }
       navigateToSession(sessionId)
@@ -343,12 +344,12 @@ export function KanbanBoardContainer() {
   const handleEditTask = React.useCallback(
     (taskId: string) => {
       const meta = metaMap.get(taskId)
-      setEditorTarget({
-        mode: 'edit',
+      setEditorTarget(omitUndefined({
+        mode: 'edit' as const,
         sessionId: taskId,
         taskSlug: meta?.taskSlug,
         initialTitle: meta ? getSessionTitle(meta) : undefined,
-      })
+      }))
     },
     [metaMap, setEditorTarget]
   )
@@ -375,7 +376,7 @@ export function KanbanBoardContainer() {
         onCreated={({ sessionId, taskLabelId, projectId: createdProjectId }) => {
           // Same human-clearable scope as a tile click; no label (fail-soft) → plain open.
           if (taskLabelId && onJumpToTaskSessions) {
-            onJumpToTaskSessions(sessionId, { labelId: taskLabelId, projectId: createdProjectId })
+            onJumpToTaskSessions(sessionId, { labelId: taskLabelId, ...(createdProjectId !== undefined ? { projectId: createdProjectId } : {}) })
           } else {
             navigateToSession(sessionId)
           }

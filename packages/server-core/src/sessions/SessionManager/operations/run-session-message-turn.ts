@@ -99,10 +99,10 @@ const localCompactCommand = !attachments?.length
             receipt.lastSetupFailureClass = failure.failureClass;
             if (blocked) {
                 receipt.setupRetryBlockedAt = setupFailureAt;
-                receipt.setupRetryNotBefore = undefined;
+                delete receipt.setupRetryNotBefore;
             }
             else {
-                receipt.setupRetryBlockedAt = undefined;
+                delete receipt.setupRetryBlockedAt;
                 receipt.setupRetryNotBefore = setupFailureAt + Math.min(Math.max(0, setupRetryDelayMs), Number.MAX_SAFE_INTEGER - setupFailureAt);
             }
         }
@@ -122,7 +122,7 @@ const localCompactCommand = !attachments?.length
         if (managed.processingGeneration === myGeneration && managed.isProcessing) {
             sessionOperationContext.owner["setProcessing"](managed, false);
         }
-        receipt.setupPersistenceFencedAt = undefined;
+        delete receipt.setupPersistenceFencedAt;
         if (sessionOperationContext.state.agentDeliverySetupPersistenceFences.get(sessionId) === receipt.id) {
             sessionOperationContext.state.agentDeliverySetupPersistenceFences.delete(sessionId);
         }

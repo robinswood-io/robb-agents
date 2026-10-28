@@ -61,12 +61,12 @@ export class PromptHandler implements AutomationHandler {
     }> = [];
 
     for (const matcher of matchers) {
-      if (!matcherMatches(matcher, event, payload as unknown as Record<string, unknown>)) continue;
+      if (!matcherMatches(matcher, event, payload)) continue;
 
       const prompts: Array<{ prompt: PromptAction; labels?: string[]; permissionMode?: PermissionMode }> = [];
       for (const action of matcher.actions) {
         if (action.type === 'prompt') {
-          prompts.push({ prompt: action, labels: matcher.labels, permissionMode: matcher.permissionMode });
+          prompts.push({ prompt: action, ...(matcher.labels !== undefined ? { labels: matcher.labels } : {}), ...(matcher.permissionMode !== undefined ? { permissionMode: matcher.permissionMode } : {}) });
         }
       }
       if (prompts.length > 0) {
@@ -109,16 +109,16 @@ export class PromptHandler implements AutomationHandler {
 
         pendingPrompts.push({
           sessionId: this.options.sessionId,
-          matcherId,
+          ...(matcherId !== undefined ? { matcherId } : {}),
           automationName,
           prompt: expandedPrompt,
           mentions: references.mentions,
-          labels: expandedLabels,
-          permissionMode,
-          llmConnection: prompt.llmConnection,
-          model: prompt.model,
-          thinkingLevel: prompt.thinkingLevel,
-          telegramTopic: finalTopic,
+          ...(expandedLabels !== undefined ? { labels: expandedLabels } : {}),
+          ...(permissionMode !== undefined ? { permissionMode } : {}),
+          ...(prompt.llmConnection !== undefined ? { llmConnection: prompt.llmConnection } : {}),
+          ...(prompt.model !== undefined ? { model: prompt.model } : {}),
+          ...(prompt.thinkingLevel !== undefined ? { thinkingLevel: prompt.thinkingLevel } : {}),
+          ...(finalTopic !== undefined ? { telegramTopic: finalTopic } : {}),
         });
       }
 

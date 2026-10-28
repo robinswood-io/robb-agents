@@ -54,8 +54,8 @@ export type AgentEvent =
   | { type: 'text_discard'; turnId: string }
   | { type: 'text_complete'; text: string; isIntermediate?: boolean; turnId?: string; parentToolUseId?: string; sdkMessageId?: string; modelProvenance?: AgentModelProvenance }
   | { type: 'pi_turn_anchor'; sdkMessageId: string; sdkTurnAnchor: string }
-  | { type: 'tool_start'; toolName: string; toolUseId: string; input: Record<string, unknown>; intent?: string; displayName?: string; turnId?: string; parentToolUseId?: string; toolDisplayMeta?: ToolDisplayMeta }
-  | { type: 'tool_result'; toolUseId: string; toolName?: string; result: string; isError: boolean; input?: Record<string, unknown>; turnId?: string; parentToolUseId?: string; continuationRequired?: boolean; executed?: boolean; checkpoint?: ToolExecutionCheckpoint }
+  | { type: 'tool_start'; toolName: string; toolUseId: string; input: Record<string, unknown>; intent?: string | undefined; displayName?: string | undefined; turnId?: string | undefined; parentToolUseId?: string | undefined; toolDisplayMeta?: ToolDisplayMeta }
+  | { type: 'tool_result'; toolUseId: string; toolName?: string | undefined; result: string; isError: boolean; input?: Record<string, unknown>; turnId?: string | undefined; parentToolUseId?: string | undefined; continuationRequired?: boolean; executed?: boolean; checkpoint?: ToolExecutionCheckpoint }
   | {
       type: 'permission_request';
       requestId: string;

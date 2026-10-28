@@ -56,7 +56,7 @@ describe('SourceCredentialManager.prepareOAuth relay wrapping', () => {
   const credManager = new SourceCredentialManager();
 
   beforeEach(() => {
-    globalThis.fetch = mock((input: string | URL | Request) => {
+    globalThis.fetch = Object.assign(mock((input: string | URL | Request) => {
       const url = typeof input === 'string'
         ? input
         : input instanceof URL
@@ -69,7 +69,7 @@ describe('SourceCredentialManager.prepareOAuth relay wrapping', () => {
         }));
       }
       return Promise.resolve(new Response('Not Found', { status: 404 }));
-    }) as unknown as typeof fetch;
+    }), { preconnect() {} });
   });
 
   afterEach(() => {

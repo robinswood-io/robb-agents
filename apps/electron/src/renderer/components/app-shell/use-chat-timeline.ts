@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import * as React from "react";
 
 import { useMemo, useCallback } from "react";
@@ -108,14 +109,14 @@ const handleFollowUpChipClick = useCallback((item: {
     }
 
     followUpOpenNonceRef.current += 1
-    setOpenAnnotationRequest({
+    setOpenAnnotationRequest(omitUndefined({
       messageId: item.messageId,
       annotationId: item.annotationId,
-      mode: 'view',
+      mode: 'view' as const,
       anchorX: anchor?.x,
       anchorY: anchor?.y,
       nonce: followUpOpenNonceRef.current,
-    })
+    }))
   }, [assistantTurnIndexByMessageId, allTurns, visibleTurnCount, followUpOpenNonceRef, setOpenAnnotationRequest, setVisibleTurnCount])
 
 const handleFollowUpIndexClick = useCallback((item: {

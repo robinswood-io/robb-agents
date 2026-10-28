@@ -36,11 +36,11 @@ export function onMessage(transportOwner: WsRpcClient, raw: string): void {
     }
     switch (envelope.type) {
         case 'handshake_ack': {
-            const wasReconnectAttempt = transportOwner["currentHandshakeWasReconnect"];
+            const wasReconnectAttempt = transportOwner.currentHandshakeWasReconnect;
             const serverRecognizedReconnect = envelope.reconnected === true;
-            transportOwner["currentHandshakeWasReconnect"] = false;
-            transportOwner["pendingReconnect"] = null;
-            transportOwner["clientId"] = envelope.clientId ?? null;
+            transportOwner.currentHandshakeWasReconnect = false;
+            transportOwner.pendingReconnect = null;
+            transportOwner.clientId = envelope.clientId ?? null;
             transportOwner["_serverVersion"] = envelope.serverVersion ?? null;
             transportOwner["serverChannels"] = envelope.registeredChannels
                 ? new Set(envelope.registeredChannels)
@@ -50,24 +50,24 @@ export function onMessage(transportOwner: WsRpcClient, raw: string): void {
             // Delay backoff reset — only reset after 10s of stable connection.
             // Immediate reset causes rapid reconnect loops when the server
             // accepts the handshake but drops the connection right after.
-            transportOwner["scheduleBackoffReset"]();
+            transportOwner.scheduleBackoffReset();
             if (!serverRecognizedReconnect) {
-                transportOwner["lastSeenSeq"] = 0;
+                transportOwner.lastSeenSeq = 0;
             }
-            if (transportOwner["connectTimer"]) {
-                clearTimeout(transportOwner["connectTimer"]);
-                transportOwner["connectTimer"] = null;
+            if (transportOwner.connectTimer) {
+                clearTimeout(transportOwner.connectTimer);
+                transportOwner.connectTimer = null;
             }
-            transportOwner["setConnectionState"]({
+            transportOwner.setConnectionState({
                 status: 'connected',
                 attempt: 0,
                 nextRetryInMs: undefined,
                 lastError: undefined,
                 lastClose: undefined,
             });
-            transportOwner["startAckTimer"]();
-            transportOwner["resolveReady"]?.();
-            transportOwner["resolveReady"] = null;
+            transportOwner.startAckTimer();
+            transportOwner.resolveReady?.();
+            transportOwner.resolveReady = null;
             transportOwner["rejectReady"] = null;
             transportOwner["readyPromise"] = null;
             // Notify listeners about reconnection AFTER resolveReady
@@ -112,37 +112,37 @@ export function onMessage(transportOwner: WsRpcClient, raw: string): void {
             // No pending request — connection is about to close.
             if (envelope.error?.message) {
                 const kind = transportOwner["classifyErrorKindFromCode"](envelope.error.code);
-                const err = transportOwner["createConnectionError"](kind, envelope.error.message, envelope.error.code);
+                const err = transportOwner.createConnectionError(kind, envelope.error.message, envelope.error.code);
                 transportOwner["connectError"] = err;
-                transportOwner["setConnectionState"]({
+                transportOwner.setConnectionState({
                     status: 'failed',
-                    lastError: transportOwner["toErrorState"](err),
-                    attempt: transportOwner["reconnectAttempt"],
+                    lastError: transportOwner.toErrorState(err),
+                    attempt: transportOwner.reconnectAttempt,
                 });
-                transportOwner["failReady"](err);
+                transportOwner.failReady(err);
             }
             break;
         }
         case 'request': {
             // Server→client capability invocation
             if (envelope.channel) {
-                transportOwner["onServerRequest"](envelope);
+                transportOwner.onServerRequest(envelope);
             }
             break;
         }
         case 'event': {
             // Track sequence numbers for reliable delivery
             if (typeof envelope.seq === 'number') {
-                if (transportOwner["lastSeenSeq"] > 0 && envelope.seq > transportOwner["lastSeenSeq"] + 1) {
-                    console.warn(`[WsRpc] Sequence gap: expected ${transportOwner["lastSeenSeq"] + 1}, got ${envelope.seq}`);
+                if (transportOwner.lastSeenSeq > 0 && envelope.seq > transportOwner.lastSeenSeq + 1) {
+                    console.warn(`[WsRpc] Sequence gap: expected ${transportOwner.lastSeenSeq + 1}, got ${envelope.seq}`);
                 }
-                transportOwner["lastSeenSeq"] = envelope.seq;
+                transportOwner.lastSeenSeq = envelope.seq;
             }
             if (envelope.channel) {
                 // Server is shutting down — stop reconnection before dispatching
                 if (envelope.channel === 'server:shuttingDown') {
-                    transportOwner["permanentlyClosed"] = true;
-                    transportOwner["setConnectionState"]({
+                    transportOwner.permanentlyClosed = true;
+                    transportOwner.setConnectionState({
                         status: 'disconnected',
                         lastError: { kind: 'server', message: 'Server is shutting down', code: 'SERVER_SHUTDOWN' },
                     });
@@ -179,7 +179,7 @@ export async function onServerRequest(transportOwner: WsRpcClient, envelope: Mes
         const response: MessageEnvelope = {
             id: envelope.id,
             type: 'response',
-            channel: envelope.channel,
+            ...(envelope.channel !== undefined ? { channel: envelope.channel } : {}),
             error: { code: 'CHANNEL_NOT_FOUND', message: `No handler for: ${envelope.channel}` },
         };
         transportOwner["trySendEnvelope"](transportOwner["ws"], response);
@@ -190,7 +190,7 @@ export async function onServerRequest(transportOwner: WsRpcClient, envelope: Mes
         const response: MessageEnvelope = {
             id: envelope.id,
             type: 'response',
-            channel: envelope.channel,
+            ...(envelope.channel !== undefined ? { channel: envelope.channel } : {}),
             result,
         };
         transportOwner["trySendEnvelope"](transportOwner["ws"], response);
@@ -204,7 +204,7 @@ export async function onServerRequest(transportOwner: WsRpcClient, envelope: Mes
         const response: MessageEnvelope = {
             id: envelope.id,
             type: 'response',
-            channel: envelope.channel,
+            ...(envelope.channel !== undefined ? { channel: envelope.channel } : {}),
             error: { code, message },
         };
         transportOwner["trySendEnvelope"](transportOwner["ws"], response);
@@ -212,14 +212,14 @@ export async function onServerRequest(transportOwner: WsRpcClient, envelope: Mes
 }
 
 export function startAckTimer(transportOwner: WsRpcClient): void {
-    if (transportOwner["ackTimer"])
-        clearInterval(transportOwner["ackTimer"]);
-    transportOwner["ackTimer"] = setInterval(() => {
-        if (transportOwner["connected"] && transportOwner["lastSeenSeq"] > 0) {
+    if (transportOwner.ackTimer)
+        clearInterval(transportOwner.ackTimer);
+    transportOwner.ackTimer = setInterval(() => {
+        if (transportOwner["connected"] && transportOwner.lastSeenSeq > 0) {
             const ack: MessageEnvelope = {
                 id: crypto.randomUUID(),
                 type: 'sequence_ack',
-                lastSeq: transportOwner["lastSeenSeq"],
+                lastSeq: transportOwner.lastSeenSeq,
             };
             transportOwner["trySendEnvelope"](transportOwner["ws"], ack);
         }

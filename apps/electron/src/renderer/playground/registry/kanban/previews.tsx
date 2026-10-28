@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import * as React from "react";
 import { LayoutGrid, List } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -77,8 +78,8 @@ export function KanbanViewPreview({
   view = 'board',
   treatment = 'stripe-tint',
 }: {
-  view?: KanbanView
-  treatment?: ProjectColorTreatment
+  view?: KanbanView | undefined
+  treatment?: ProjectColorTreatment | undefined
 }) {
   const [activeView, setActiveView] = React.useState<KanbanView>(view)
   React.useEffect(() => setActiveView(view), [view])
@@ -140,7 +141,7 @@ export function KanbanViewPreview({
   }
   const moveTask = (taskId: string, toColumn: KanbanColumnId) => {
     setTasks(prev =>
-      prev.map(t => (t.id === taskId ? { ...t, column: toColumn, statusId: COLUMN_STATUS[toColumn] } : t))
+      prev.map(t => (t.id === taskId ? omitUndefined<KanbanTask>({ ...t, column: toColumn, statusId: COLUMN_STATUS[toColumn] ?? t.statusId }) : t))
     )
   }
 
@@ -202,10 +203,10 @@ export function TaskTilePreview({
   treatment = 'stripe-tint',
   model = 'claude-opus-4-7',
 }: {
-  subtasksExpanded?: boolean
-  statusId?: string
-  treatment?: ProjectColorTreatment
-  model?: string
+  subtasksExpanded?: boolean | undefined
+  statusId?: string | undefined
+  treatment?: ProjectColorTreatment | undefined
+  model?: string | undefined
 }) {
   const [expanded, setExpanded] = React.useState(subtasksExpanded)
   React.useEffect(() => setExpanded(subtasksExpanded), [subtasksExpanded])

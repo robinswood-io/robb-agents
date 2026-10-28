@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { rmSync } from "node:fs";
@@ -13,10 +14,10 @@ import { type Managed, activeObjective, installAgent, makeHarness, outcomeCommen
 beforeEach(() => {
   roots.length = 0
   sessionIds.length = 0
-  process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+  process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1'
 })
 afterEach(() => {
-  delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+  delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]
   for (const sessionId of sessionIds) clearObjectiveEvidenceGate(sessionId)
   for (const root of roots) rmSync(root, { recursive: true, force: true })
 })
@@ -24,9 +25,7 @@ afterEach(() => {
 describe('SessionManager objective outcome integration', () => {
   it('exposes objective and recovery snapshots in the session DTO and publishes nested changes and clears', async () => {
     const harness = makeHarness('objective-snapshots')
-    const persist = () => (harness.manager as unknown as {
-      persistSession: (session: Managed) => void
-    }).persistSession(harness.managed)
+    const persist = () => (sessionManagerForTest(harness.manager)).persistSession(harness.managed)
     persist()
     expect(harness.sentEvents).toEqual([])
 
@@ -54,7 +53,7 @@ describe('SessionManager objective outcome integration', () => {
     persist()
     expect(harness.sentEvents).toHaveLength(2)
     expect(first).toMatchObject({ pendingTurnRecovery: { attempts: 0 } })
-    expect((first.activeObjective as Managed['activeObjective'])?.acceptanceCriteria).toBeUndefined()
+    expect((first["activeObjective"] as Managed['activeObjective'])?.acceptanceCriteria).toBeUndefined()
     expect(harness.sentEvents[1]).toMatchObject({
       activeObjective: { acceptanceCriteria: [{ id: 'delivery' }] },
       pendingTurnRecovery: { attempts: 1 },
@@ -95,7 +94,7 @@ describe('SessionManager objective outcome integration', () => {
       awaitingBaselineAtProviderDispatch = harness.managed.contextCompactionAttempt?.awaitingProviderContextBaseline
       baselineAdmissionDispatchedAtProviderDispatch = harness.managed.contextCompactionAttempt?.providerBaselineAdmissionDispatchedAt
     })
-    const agent = harness.managed.agent as unknown as {
+    const agent = harness.managed.agent as {
       compactContext: () => Promise<{
         summary: string
         firstKeptEntryId: string
@@ -120,10 +119,7 @@ describe('SessionManager objective outcome integration', () => {
         estimatedTokensAfter: 50_000,
       }
     }
-    const internals = harness.manager as unknown as {
-      enqueuePersist: (session: Managed) => boolean
-      flushSession: (sessionId: string) => Promise<void>
-    }
+    const internals = sessionManagerForTest(harness.manager)
     internals.enqueuePersist = session => {
       if (session.contextCompactionAttempt) order.push(`persist:${session.contextCompactionAttempt.outcome}`)
       return true
@@ -144,7 +140,7 @@ describe('SessionManager objective outcome integration', () => {
       ? Math.max(1, Math.ceil('Résume précisément l’état actuel.'.length / 4))
       : 100_000)
     expect(awaitingBaselineAtProviderDispatch).toBe(fails ? undefined : true)
-    expect(baselineAdmissionDispatchedAtProviderDispatch).toEqual(fails ? undefined : expect.any(Number))
+    expect<unknown>(baselineAdmissionDispatchedAtProviderDispatch).toEqual(fails ? undefined : (expect.any(Number) as unknown))
     expect(order.slice(0, 3)).toEqual([
       'compact',
       `persist:${expectedOutcome}`,
@@ -180,7 +176,7 @@ describe('SessionManager objective outcome integration', () => {
         },
       },
     ])
-    const agent = harness.managed.agent as unknown as {
+    const agent = harness.managed.agent as {
       compactContext: () => Promise<{
         summary: string
         firstKeptEntryId: string
@@ -202,9 +198,7 @@ describe('SessionManager objective outcome integration', () => {
       estimatedTokensAfter: 18_000,
     })
     let flushedBaseline: number | undefined
-    ;(harness.manager as unknown as {
-      flushSession: (sessionId: string) => Promise<void>
-    }).flushSession = async () => {
+    ;(sessionManagerForTest(harness.manager)).flushSession = async () => {
       flushedBaseline = harness.managed.contextCompactionAttempt?.providerContextBaselineTokens
     }
 
@@ -375,7 +369,7 @@ describe('SessionManager objective outcome integration', () => {
     expect(harness.managed.messageQueue[0]?.message).toContain('Run the final verification')
     expect(harness.managed.messages.find(message => message.role === 'assistant')?.isIntermediate).toBe(true)
     expect(harness.managed.messages.some(message => message.errorCode === 'objective_validation_failed')).toBe(false)
-    expect(harness.sentEvents.some(event => event.type === 'typed_error')).toBe(false)
+    expect(harness.sentEvents.some(event => event["type"] === 'typed_error')).toBe(false)
   })
 
   it('does not recover after a completed read-only preflight reaches its explicit authority boundary', async () => {
@@ -426,6 +420,6 @@ describe('SessionManager objective outcome integration', () => {
     expect(harness.managed.messageQueue).toEqual([])
     expect(harness.managed.messages.some(message => message.hidden
       && message.content.includes('<automatic_turn_recovery'))).toBe(false)
-    expect(harness.sentEvents.some(event => event.type === 'typed_error')).toBe(false)
+    expect(harness.sentEvents.some(event => event["type"] === 'typed_error')).toBe(false)
   })
 });

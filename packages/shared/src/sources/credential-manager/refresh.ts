@@ -26,16 +26,16 @@ import { substituteTokenInBody, substituteTokenInHeaders } from './shared.ts';
 export async function refresh(transportOwner: SourceCredentialManager, source: LoadedSource): Promise<string | null> {
     const key = source.config.slug;
     // Return existing refresh promise if one is in progress
-    const pending = transportOwner["pendingRefreshes"].get(key);
+    const pending = transportOwner.pendingRefreshes.get(key);
     if (pending) {
         debug(`[SourceCredentialManager] Reusing pending refresh for ${key}`);
         return pending;
     }
     // Create and track new refresh promise
-    const refreshPromise = transportOwner["doRefresh"](source).finally(() => {
-        transportOwner["pendingRefreshes"].delete(key);
+    const refreshPromise = transportOwner.doRefresh(source).finally(() => {
+        transportOwner.pendingRefreshes.delete(key);
     });
-    transportOwner["pendingRefreshes"].set(key, refreshPromise);
+    transportOwner.pendingRefreshes.set(key, refreshPromise);
     return refreshPromise;
 }
 
@@ -52,7 +52,7 @@ export async function doRefresh(transportOwner: SourceCredentialManager, source:
     // These sources may not have a separate refreshToken; they use the current
     // access token for renewal.
     if (hasRenewEndpoint(source)) {
-        return transportOwner["refreshApiRenew"](source, cred);
+        return transportOwner.refreshApiRenew(source, cred);
     }
     // For all other refresh strategies, a refreshToken is required.
     if (!cred.refreshToken) {
@@ -61,31 +61,31 @@ export async function doRefresh(transportOwner: SourceCredentialManager, source:
     }
     // Google API refresh
     if (source.config.provider === 'google') {
-        return transportOwner["refreshGoogle"](source, cred);
+        return transportOwner.refreshGoogle(source, cred);
     }
     // Slack API refresh
     if (source.config.provider === 'slack') {
-        return transportOwner["refreshSlack"](source, cred);
+        return transportOwner.refreshSlack(source, cred);
     }
     // Microsoft API refresh
     if (source.config.provider === 'microsoft') {
-        return transportOwner["refreshMicrosoft"](source, cred);
+        return transportOwner.refreshMicrosoft(source, cred);
     }
     // Generic OAuth refresh
     if (source.config.api?.authType === 'oauth') {
         if (source.config.api?.oauth?.tokenUrl) {
             // Static config: tokenUrl from config.json
-            return transportOwner["refreshGeneric"](source, cred);
+            return transportOwner.refreshGeneric(source, cred);
         }
         // Auto-discovered: re-discover token endpoint from baseUrl via MCP OAuth refresh
         if (source.config.api?.baseUrl && cred.clientId) {
-            return transportOwner["refreshMcp"]({ ...source, config: { ...source.config, type: 'mcp', mcp: { url: source.config.api.baseUrl, authType: 'oauth' } } }, cred);
+            return transportOwner.refreshMcp({ ...source, config: { ...source.config, type: 'mcp', mcp: { url: source.config.api.baseUrl, authType: 'oauth' } } }, cred);
         }
         return null;
     }
     // MCP refresh
     if (source.config.type === 'mcp' && source.config.mcp?.url) {
-        return transportOwner["refreshMcp"](source, cred);
+        return transportOwner.refreshMcp(source, cred);
     }
     return null;
 }
@@ -172,10 +172,12 @@ export async function refreshGoogle(transportOwner: SourceCredentialManager, sou
         // Pass stored credentials (or fall back to env vars via undefined)
         const result = await refreshGoogleToken(cred.refreshToken!, cred.clientId, cred.clientSecret);
         // Update stored credentials
+        const credWithoutOverrides = { ...cred };
+        delete credWithoutOverrides.expiresAt;
         await transportOwner["save"](source, {
-            ...cred,
+            ...credWithoutOverrides,
             value: result.accessToken,
-            expiresAt: result.expiresAt,
+            ...(result.expiresAt !== undefined ? { expiresAt: result.expiresAt } : {}),
         });
         debug(`[SourceCredentialManager] Refreshed Google token for ${source.config.slug}`);
         return result.accessToken;
@@ -195,10 +197,12 @@ export async function refreshSlack(transportOwner: SourceCredentialManager, sour
     try {
         const result = await refreshSlackToken(cred.refreshToken!, cred.clientId);
         // Update stored credentials
+        const credWithoutOverrides2 = { ...cred };
+        delete credWithoutOverrides2.expiresAt;
         await transportOwner["save"](source, {
-            ...cred,
+            ...credWithoutOverrides2,
             value: result.accessToken,
-            expiresAt: result.expiresAt,
+            ...(result.expiresAt !== undefined ? { expiresAt: result.expiresAt } : {}),
         });
         debug(`[SourceCredentialManager] Refreshed Slack token for ${source.config.slug}`);
         return result.accessToken;
@@ -218,11 +222,14 @@ export async function refreshMicrosoft(transportOwner: SourceCredentialManager, 
     try {
         const result = await refreshMicrosoftToken(cred.refreshToken!);
         // Update stored credentials (Microsoft may rotate refresh tokens)
+        const optionalRefreshToken = result.refreshToken || cred.refreshToken;
+        const credWithoutOverrides3 = { ...cred };
+        delete credWithoutOverrides3.expiresAt;
         await transportOwner["save"](source, {
-            ...cred,
+            ...credWithoutOverrides3,
             value: result.accessToken,
-            refreshToken: result.refreshToken || cred.refreshToken,
-            expiresAt: result.expiresAt,
+            ...(optionalRefreshToken !== undefined ? { refreshToken: optionalRefreshToken } : {}),
+            ...(result.expiresAt !== undefined ? { expiresAt: result.expiresAt } : {}),
         });
         debug(`[SourceCredentialManager] Refreshed Microsoft token for ${source.config.slug}`);
         return result.accessToken;
@@ -248,11 +255,14 @@ export async function refreshGeneric(transportOwner: SourceCredentialManager, so
     }
     try {
         const result = await refreshGenericOAuthToken(cred.refreshToken!, oauthConfig.tokenUrl, cred.clientId || oauthConfig.clientId, cred.clientSecret || oauthConfig.clientSecret);
+        const optionalRefreshToken2 = result.refreshToken || cred.refreshToken;
+        const credWithoutOverrides4 = { ...cred };
+        delete credWithoutOverrides4.expiresAt;
         await transportOwner["save"](source, {
-            ...cred,
+            ...credWithoutOverrides4,
             value: result.accessToken,
-            refreshToken: result.refreshToken || cred.refreshToken,
-            expiresAt: result.expiresAt,
+            ...(optionalRefreshToken2 !== undefined ? { refreshToken: optionalRefreshToken2 } : {}),
+            ...(result.expiresAt !== undefined ? { expiresAt: result.expiresAt } : {}),
         });
         debug(`[SourceCredentialManager] Refreshed generic OAuth token for ${source.config.slug}`);
         return result.accessToken;
@@ -287,11 +297,14 @@ export async function refreshMcp(transportOwner: SourceCredentialManager, source
         });
         const tokens = await oauth.refreshAccessToken(cred.refreshToken!, cred.clientId);
         // Update stored credentials
+        const optionalRefreshToken3 = tokens.refreshToken || cred.refreshToken;
+        const credWithoutOverrides5 = { ...cred };
+        delete credWithoutOverrides5.expiresAt;
         await transportOwner["save"](source, {
-            ...cred,
+            ...credWithoutOverrides5,
             value: tokens.accessToken,
-            refreshToken: tokens.refreshToken || cred.refreshToken,
-            expiresAt: tokens.expiresAt,
+            ...(optionalRefreshToken3 !== undefined ? { refreshToken: optionalRefreshToken3 } : {}),
+            ...(tokens.expiresAt !== undefined ? { expiresAt: tokens.expiresAt } : {}),
         });
         debug(`[SourceCredentialManager] Refreshed MCP token for ${source.config.slug}`);
         return tokens.accessToken;

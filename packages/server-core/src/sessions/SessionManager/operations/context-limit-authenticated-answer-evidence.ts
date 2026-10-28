@@ -7,7 +7,7 @@ import { authenticatedUserInputAnswerAuthoritySegments, isExactContextLimitNextS
 /** Build a fresh-context contract solely from accepted human objective state,
  * registered host criteria and host validation gaps. Assistant finals and
  * free-form tool output are deliberately absent. */
-function sessionOpBoundCleanUserInputRequest(sessionOperationContext: SessionOperationContext, managed: ManagedSession, pending: PendingTurnRecovery): UserInputRequest | undefined {
+function sessionOpBoundCleanUserInputRequest(_sessionOperationContext: SessionOperationContext, managed: ManagedSession, pending: PendingTurnRecovery): UserInputRequest | undefined {
     const objective = managed.activeObjective;
     const dispatch = pending.recoveryDispatch;
     if (!objective || !dispatch || (dispatch.phase !== 'allocated' && dispatch.phase !== 'started')

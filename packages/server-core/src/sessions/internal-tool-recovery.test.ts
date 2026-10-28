@@ -1,10 +1,11 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { AgentEvent } from '@craft-agent/core/types'
+
 import { SESSION_TOOL_NAMES } from '@craft-agent/session-tools-core'
 import { decideAutonomyRecovery, isBrowserToolNameOrAlias } from '@craft-agent/shared/agent'
 import { SessionManager, createManagedSession } from './SessionManager.ts'
@@ -84,15 +85,9 @@ describe('internal tool failure recovery boundaries', () => {
       completionCriteria: ['requested-outcome-delivered'],
     }
     managed.pendingTurnRecovery = createPendingTurnRecovery('root-user', 1)
-    const runtime = manager as unknown as {
-      sessions: Map<string, typeof managed>
-      enqueuePersist: () => void
-      sendEvent: () => void
-      emitExecutionTelemetry: () => void
-      processEvent: (session: typeof managed, event: AgentEvent, generation: number) => Promise<void>
-    }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
-    runtime.enqueuePersist = () => {}
+    runtime.enqueuePersist = () => true
     runtime.sendEvent = () => {}
     runtime.emitExecutionTelemetry = () => {}
 
@@ -136,11 +131,9 @@ describe('internal tool failure recovery boundaries', () => {
     managed.pendingTurnRecovery = { ...createPendingTurnRecovery('root-user', 1), attempts: 3,
       stagnantAttempts: 1, lastAttemptAt: 2, leaseExpiresAt: 12345 }
     const before = JSON.stringify({ objective: managed.activeObjective, recovery: managed.pendingTurnRecovery })
-    const runtime = manager as unknown as { sessions: Map<string, typeof managed>;
-      enqueuePersist: () => void; sendEvent: () => void; emitExecutionTelemetry: () => void;
-      processEvent: (session: typeof managed, event: AgentEvent, generation: number) => Promise<void> }
+    const runtime = sessionManagerForTest(manager)
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
-    runtime.enqueuePersist = () => {}
+    runtime.enqueuePersist = () => true
     runtime.sendEvent = () => {}
     runtime.emitExecutionTelemetry = () => {}
     for (const [index, result] of registrationErrors.entries()) {

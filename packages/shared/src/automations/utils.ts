@@ -124,18 +124,18 @@ export function getMatchValue(event: AutomationEvent, data: Record<string, unkno
   switch (event) {
     case 'LabelAdd':
     case 'LabelRemove':
-      return String(data.label ?? '');
+      return String(data["label"] ?? '');
     case 'LabelConfigChange':
       return ''; // Always matches
     case 'PermissionModeChange':
-      return String(data.newMode ?? '');
+      return String(data["newMode"] ?? '');
     case 'FlagChange':
-      return String(data.isFlagged ?? false);
+      return String(data["isFlagged"] ?? false);
     case 'SessionStatusChange':
-      return String(data.newStatus ?? data.newState ?? '');
+      return String(data["newStatus"] ?? data["newState"] ?? '');
     case 'PreToolUse':
     case 'PostToolUse':
-      return String(data.toolName ?? (data.data as Record<string, unknown>)?.tool_name ?? '');
+      return String(data["toolName"] ?? (data["data"] as Record<string, unknown>)?.["tool_name"] ?? '');
     case 'SchedulerTick':
       // SchedulerTick uses cron matching, not regex
       return '';
@@ -208,9 +208,10 @@ export function matcherMatchesWithContext(
   if (!matchesBasePredicate(matcher, event, context.matchValue)) return false;
 
   if (matcher.conditions?.length) {
+    const optionalMatcherTimezone = context.matcherTimezone ?? matcher.timezone;
     return evaluateConditions(matcher.conditions, {
       payload: context.payload,
-      matcherTimezone: context.matcherTimezone ?? matcher.timezone,
+      ...(optionalMatcherTimezone !== undefined ? { matcherTimezone: optionalMatcherTimezone } : {}),
     });
   }
 
@@ -224,7 +225,7 @@ export function matcherMatches(matcher: AutomationMatcher, event: AutomationEven
   return matcherMatchesWithContext(matcher, event, {
     matchValue: getMatchValue(event, data),
     payload: data,
-    matcherTimezone: matcher.timezone,
+    ...(matcher.timezone !== undefined ? { matcherTimezone: matcher.timezone } : {}),
   });
 }
 
@@ -234,8 +235,8 @@ export function matcherMatches(matcher: AutomationMatcher, event: AutomationEven
 export function matcherMatchesSdk(matcher: AutomationMatcher, event: AgentEvent, input: SdkAutomationInput): boolean {
   return matcherMatchesWithContext(matcher, event, {
     matchValue: getMatchValueForSdkInput(event, input),
-    payload: input as unknown as Record<string, unknown>,
-    matcherTimezone: matcher.timezone,
+    payload: input,
+    ...(matcher.timezone !== undefined ? { matcherTimezone: matcher.timezone } : {}),
   });
 }
 
@@ -267,27 +268,28 @@ function buildBaseEventEnv(event: AutomationEvent, payload: BaseEventPayload): R
     CRAFT_EVENT_DATA: JSON.stringify(payload),
   };
 
-  if (payload.sessionId) env.CRAFT_SESSION_ID = payload.sessionId;
-  if (payload.sessionName) env.CRAFT_SESSION_NAME = payload.sessionName;
-  if (payload.workspaceId) env.CRAFT_WORKSPACE_ID = payload.workspaceId;
+  if (payload.sessionId) env["CRAFT_SESSION_ID"] = payload.sessionId;
+  if (payload.sessionName) env["CRAFT_SESSION_NAME"] = payload.sessionName;
+  if (payload.workspaceId) env["CRAFT_WORKSPACE_ID"] = payload.workspaceId;
 
   // Session metadata as JSON
   const sessionMetadata: Record<string, string> = {};
-  if (payload.sessionId) sessionMetadata.id = payload.sessionId;
-  if (payload.sessionName) sessionMetadata.name = payload.sessionName;
+  if (payload.sessionId) sessionMetadata["id"] = payload.sessionId;
+  if (payload.sessionName) sessionMetadata["name"] = payload.sessionName;
   if (Object.keys(sessionMetadata).length > 0) {
-    env.CRAFT_SESSION_METADATA = JSON.stringify(sessionMetadata);
+    env["CRAFT_SESSION_METADATA"] = JSON.stringify(sessionMetadata);
   }
 
   // Local time for scheduler events
   if (event === 'SchedulerTick') {
     const now = new Date();
-    env.CRAFT_LOCAL_TIME = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
-    env.CRAFT_LOCAL_DATE = now.toISOString().split('T')[0]!;
+    env["CRAFT_LOCAL_TIME"] = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+    env["CRAFT_LOCAL_DATE"] = now.toISOString().split('T')[0]!;
   }
 
   // Payload fields as CRAFT_ vars (raw — callers apply sanitization if needed)
-  for (const [key, value] of Object.entries(payload)) {
+  const payloadEntries: Array<[string, unknown]> = Object.entries(payload);
+  for (const [key, value] of payloadEntries) {
     if (PAYLOAD_SKIP_KEYS.has(key)) continue;
     const envKey = `CRAFT_${toSnakeCase(key).toUpperCase()}`;
     env[envKey] = typeof value === 'string' ? value : String(value);
@@ -305,10 +307,11 @@ export function buildEnvFromPayload(event: AutomationEvent, payload: BaseEventPa
   const env: Record<string, string> = { ...cleanEnv(), ...base };
 
   // Sanitize session name for shell context
-  if (payload.sessionName) env.CRAFT_SESSION_NAME = sanitizeForShell(payload.sessionName);
+  if (payload.sessionName) env["CRAFT_SESSION_NAME"] = sanitizeForShell(payload.sessionName);
 
   // Sanitize payload field values for shell context
-  for (const [key, value] of Object.entries(payload)) {
+  const payloadEntries: Array<[string, unknown]> = Object.entries(payload);
+  for (const [key, value] of payloadEntries) {
     if (PAYLOAD_SKIP_KEYS.has(key)) continue;
     const envKey = `CRAFT_${toSnakeCase(key).toUpperCase()}`;
     env[envKey] = typeof value === 'string' ? sanitizeForShell(value) : String(value);

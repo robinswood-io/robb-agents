@@ -291,7 +291,7 @@ describe('financial reconciliation vertical pack', () => {
     expect([...runtime.mutationCount.values()]).toEqual([1]);
     if (completed.status !== 'submission') throw new Error('Expected submission');
     const receiptUri = completed.submission.evidence[0]!.uri;
-    const mutationReceipt = JSON.parse(readFileSync(join(root, receiptUri), 'utf8'));
+    const mutationReceipt: unknown = JSON.parse(readFileSync(join(root, receiptUri), 'utf8'));
     expect(mutationReceipt).toMatchObject({
       kind: 'brokered-connector-mutation',
       connectorPack: 'microsoft365',
@@ -311,7 +311,7 @@ describe('financial reconciliation vertical pack', () => {
       destinationOrigin: 'https://graph.microsoft.com',
       policy: egressPolicy,
     });
-    expect(prepared.payload.approvedBy).toMatch(/^psn_/);
+    expect(prepared.payload["approvedBy"]).toMatch(/^psn_/);
     expect(JSON.stringify(prepared.payload)).not.toContain('finance.validator@example.test');
     const privacyReceipt = firewall.issueReceipt({
       prepared,
@@ -358,9 +358,9 @@ describe('financial reconciliation vertical pack', () => {
     runtime.divergeForNodes.add(input.item.id);
     const result = await executor.execute(input, await preparedBinding(executor, input));
     expect(result).toMatchObject({ status: 'failed', retryable: false, ambiguousMutation: true });
-    expect(executor.compensationRequirement(spec.id, input.item.id)).toMatchObject({
+    expect<unknown>(executor.compensationRequirement(spec.id, input.item.id)).toMatchObject({
       compensation: { strategy: 'manual' },
-      reason: expect.stringContaining('RECONCILIATION_DIVERGED'),
+      reason: (expect.stringContaining('RECONCILIATION_DIVERGED') as unknown),
     });
     expect([...runtime.mutationCount.values()]).toEqual([1]);
   });

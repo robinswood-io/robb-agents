@@ -48,7 +48,7 @@ export async function codeAssistFetch(method: string, accessToken: string, body:
       ...contract.staticHeaders,
     },
     body: JSON.stringify(body),
-    signal,
+    ...(signal !== undefined ? { signal } : {}),
   });
 
   if (!res.ok) {
@@ -70,7 +70,7 @@ export async function codeAssistGet(operationName: string, accessToken: string, 
       'Authorization': `Bearer ${accessToken}`,
       ...contract.staticHeaders,
     },
-    signal,
+    ...(signal !== undefined ? { signal } : {}),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);

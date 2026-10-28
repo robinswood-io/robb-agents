@@ -1,3 +1,5 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import type { TelegramConfigPatch } from './shared.ts';
 import type { MessagingBindingInfo, MessagingConfigInfo } from "@craft-agent/server-core/handlers";
 import type { MessagingConfig, PlatformType } from "../types";
 import type { MessagingGatewayRegistry } from '../registry.ts';
@@ -29,7 +31,7 @@ export async function updateConfig(transportOwner: MessagingGatewayRegistry, wor
         await state.gateway.unregisterAdapter('whatsapp').catch(() => { });
         await state.gateway.unregisterAdapter('lark').catch(() => { });
         state.whatsappOffEvent?.();
-        state.whatsappOffEvent = undefined;
+        delete state.whatsappOffEvent;
         state.whatsapp = null;
         transportOwner["setPlatformRuntime"](workspaceId, state, 'telegram', {
             configured: false,
@@ -61,7 +63,7 @@ export async function updateConfig(transportOwner: MessagingGatewayRegistry, wor
         }
         if (!configured && platform === 'whatsapp') {
             state.whatsappOffEvent?.();
-            state.whatsappOffEvent = undefined;
+            delete state.whatsappOffEvent;
             state.whatsapp = null;
         }
         if (!configured) {
@@ -91,7 +93,7 @@ export function unbindSession(transportOwner: MessagingGatewayRegistry, workspac
         .getBindingStore()
         .unbindSession(sessionId, platform as PlatformType | undefined);
     if (removed > 0)
-        transportOwner["emitBindingChanged"](workspaceId);
+        transportOwner.emitBindingChanged(workspaceId);
 }
 
 export function unbindBinding(transportOwner: MessagingGatewayRegistry, workspaceId: string, bindingId: string): boolean {
@@ -100,7 +102,7 @@ export function unbindBinding(transportOwner: MessagingGatewayRegistry, workspac
         return false;
     const removed = state.gateway.getBindingStore().unbindById(bindingId);
     if (removed)
-        transportOwner["emitBindingChanged"](workspaceId);
+        transportOwner.emitBindingChanged(workspaceId);
     return removed;
 }
 
@@ -120,7 +122,7 @@ export function unbindBinding(transportOwner: MessagingGatewayRegistry, workspac
    * (used by save-token / connect flows). When false, `enabled` is
    * preserved as-is.
    */
-export function patchTelegramConfig(transportOwner: MessagingGatewayRegistry, workspaceId: string, patch: Partial<NonNullable<MessagingConfig['platforms']['telegram']>>, options: {
+export function patchTelegramConfig(transportOwner: MessagingGatewayRegistry, workspaceId: string, patch: TelegramConfigPatch, options: {
     ensureMessagingEnabled?: boolean;
 }): MessagingConfig {
     const state = transportOwner["workspaces"].get(workspaceId) ?? transportOwner["bootstrapWorkspace"](workspaceId);
@@ -130,7 +132,7 @@ export function patchTelegramConfig(transportOwner: MessagingGatewayRegistry, wo
         enabled: options.ensureMessagingEnabled ? true : cfg.enabled,
         platforms: {
             ...cfg.platforms,
-            telegram: { ...tg, ...patch },
+            telegram: omitUndefined<NonNullable<MessagingConfig['platforms']['telegram']>>({ ...tg, ...patch }),
         },
     });
 }
