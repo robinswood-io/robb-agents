@@ -96,9 +96,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes xvfb libgtk-3-0 libnss3 libasound2t64 libxss1 libgbm1
-      - name: Diagnose Linux recovery admission before qualification
-        run: >-
-          status=0; for attempt in 1 2 3; do find packages/server-core -name "*.test.ts" ! -name "*.e2e.test.ts" ! -name "refresh-connection-runtime.test.ts" | sort | xargs bun test --timeout 10000 || status=$?; done; exit "$status"
       - name: Validate source, installers and canonical quality
         run: xvfb-run -a python3 scripts/robinswood_quality_ci.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

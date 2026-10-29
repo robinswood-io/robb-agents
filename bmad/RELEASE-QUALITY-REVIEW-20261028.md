@@ -257,3 +257,22 @@ amont Bun. Son contrôle canonique a refusé la revue périmée, comme attendu.
 L’étape de diagnostic temporaire est retirée. La qualification globale de ce nouveau
 contenu reste obligatoire. Référence technique consultée :
 https://github.com/oven-sh/bun/issues/37189 (problème analogue, pas preuve de même cause).
+
+## Correction causale du 29 octobre
+Le run global40782672913 invalide l’hypothèse du matcher. Le diagnostic40865259495
+reproduit trois fois le même rejet : PowerShell validator root not set. Le détecteur
+reconnaissait new-target dans touch /fixture/new-target comme un cmdlet. Sur Linux
+avec pwsh disponible, cette erreur de routage appelait le parseur non initialisé.
+Le correctif borne les motifs de cmdlets et alias aux positions de commande et
+supprime le motif redondant non borné. Aucune nouvelle dépendance, couche,
+permission ou exception ; les validateurs Bash/PowerShell et les protections contre
+les mutations incertaines restent exigés. Les commandes PowerShell réelles,
+pipelines et opérateurs restent reconnus. Les quinze tests de régression ont
+été exécutés avec Bun1.4.4 : neuf passent et six échouent sur la source antérieure,
+les quinze passent sur le correctif. La suite globale et ses contrôles de sécurité
+restent obligatoires ; aucun timeout, test ignoré ou seuil n’est ajouté.
+L’étape de diagnostic est retirée. Les preuves publiques portent uniquement les
+tests synthétiques. La copie isolée est issue du commit poussé3d41e3d ; les lectures
+du checkout Documents sont bloquées, sans modification de celui-ci. Toute intégration
+attend sa relecture et la vérification des changements concurrents. Les fenêtres
+natives ne sont pas exposées par l’outil actuel : aucun parcours local revendiqué.

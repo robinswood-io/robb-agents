@@ -29,8 +29,8 @@ export function getElementText(node: ASTNode): string | null {
  */
 export function looksLikePowerShell(command: string): boolean {
   const psPatterns = [
-    // Cmdlet pattern: Verb-Noun
-    /\b(Get|Set|New|Remove|Add|Clear|Write|Read|Out|ConvertTo|ConvertFrom|Test|Select|Where|ForEach|Sort|Group|Measure|Compare|Format|Export|Import|Start|Stop|Invoke|Enable|Disable|Register|Unregister|Update|Find|Install|Uninstall|Save|Publish|Push|Pop)-\w+/i,
+    // Match command positions, never a hyphenated filename or plain argument.
+    /(?:^|[;&|({])\s*(Get|Set|New|Remove|Add|Clear|Write|Read|Out|ConvertTo|ConvertFrom|Test|Select|Where|ForEach|Sort|Group|Measure|Compare|Format|Export|Import|Start|Stop|Invoke|Enable|Disable|Register|Unregister|Update|Find|Install|Uninstall|Save|Publish|Push|Pop)-\w+/i,
 
     // PowerShell variables in pipeline
     /\$\w+\s*\|/,
@@ -42,11 +42,8 @@ export function looksLikePowerShell(command: string): boolean {
     /@\([^)]*\)/,
     /@\{[^}]*\}/,
 
-    // PowerShell specific cmdlets
-    /\b(Where-Object|Select-Object|ForEach-Object|Sort-Object|Group-Object|Measure-Object)\b/i,
-
     // Common PowerShell aliases that differ from Unix
-    /\b(gci|gcm|gps|gsv|gjb)\b/i,
+    /(?:^|[;&|({])\s*(gci|gcm|gps|gsv|gjb)\b/i,
   ];
 
   return psPatterns.some(p => p.test(command));

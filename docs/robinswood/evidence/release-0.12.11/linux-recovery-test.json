@@ -6,5 +6,26 @@
   "assertions": 14643,
   "files": 292,
   "change": "Await the same admission promise before toBeUndefined; preserve persisted-receipt assertion and all rejection cases",
-  "limits": "Matcher/timing issue inferred, not an established upstream Bun diagnosis. Full canonical CI qualification still required."
+  "limits": "Matcher/timing issue inferred, not an established upstream Bun diagnosis. Full canonical CI qualification still required.",
+  "followup_20261029": {
+    "baseline_global_run": 40782672913,
+    "diagnostic_run": 40865259495,
+    "reproductions": 3,
+    "failure": "PowerShell validator root not set",
+    "cause": "A cmdlet-name regex matched new-target inside a Bash filename; a Linux runner with pwsh then called the uninitialized PowerShell parser.",
+    "correction": "Recognize cmdlets and aliases only at command positions; remove the redundant unbounded cmdlet pattern.",
+    "regression_tests": {
+      "runtime": "Bun 1.4.4",
+      "baseline": {
+        "pass": 9,
+        "fail": 6
+      },
+      "corrected": {
+        "pass": 15,
+        "fail": 0
+      }
+    },
+    "hypothesis_superseded": "The assertion matcher was not the root cause.",
+    "validation_limit": "Full canonical run/verify and native local acceptance remain required."
+  }
 }
