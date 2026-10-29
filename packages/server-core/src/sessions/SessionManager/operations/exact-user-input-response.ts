@@ -52,8 +52,12 @@ function sessionOpAutonomousAdmissionBlock(sessionOperationContext: SessionOpera
     if (!checkCapacity)
         return undefined;
     const occupied = new Set([...sessionOperationContext.state.sessions.values()].filter(s => s.isProcessing).map(s => s.id));
-    for (const id of sessionOperationContext.state.automaticAdmissionReservations)
-        occupied.add(id);
+    for (const id of sessionOperationContext.state.automaticAdmissionReservations) {
+        const reserved = sessionOperationContext.state.sessions.get(id);
+        if (!reserved || reserved.isProcessing || reserved.pendingTurnRecovery !== undefined || reserved.sessionStatus !== 'blocked') {
+            occupied.add(id);
+        }
+    }
     if (!spawning)
         occupied.delete(managed.id);
     const reviewerParentsToDiscount = new Set<string>();

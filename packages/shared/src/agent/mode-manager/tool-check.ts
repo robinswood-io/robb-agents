@@ -328,9 +328,15 @@ function getBlockReasonWithConfig(toolName: string, config: ToolCheckConfig): st
  * @param reason - The reason for blocking (from shouldAllowToolInMode)
  */
 export function blockWithReason(reason: string) {
+  const formatted = `[ERROR] ${reason}`;
   return {
-    continue: false,
+    continue: true,
     decision: 'block' as const,
-    reason: `[ERROR] ${reason}`,
+    reason: formatted,
+    hookSpecificOutput: {
+      hookEventName: 'PreToolUse' as const,
+      permissionDecision: 'deny' as const,
+      permissionDecisionReason: formatted,
+    },
   };
 }

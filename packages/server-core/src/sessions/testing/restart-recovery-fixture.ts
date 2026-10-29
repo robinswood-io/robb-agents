@@ -5,7 +5,7 @@ import { sessionRuntimeStateForTest } from "./runtime-state-access.ts";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { clearObjectiveEvidenceGate } from "@craft-agent/shared/agent";
+import { clearObjectiveEvidenceGate, permissionsConfigCache } from "@craft-agent/shared/agent";
 import { listSessions } from "@craft-agent/shared/sessions/storage";
 import { SessionManager, createManagedSession } from "../SessionManager";
 import { createPendingTurnRecovery, buildAutomaticTurnRecoveryPrompt } from "../turn-recovery";
@@ -56,6 +56,7 @@ export function configureSpentDispatchBudget(h: ReturnType<typeof harness>): voi
 }
 
 export function harness() {
+  permissionsConfigCache.clear();
   const rootPath = mkdtempSync(join(tmpdir(), 'restart-recovery-'))
   roots.push(rootPath)
   const workspace = { id: `restart-${roots.length}`, slug: `restart-${roots.length}`, rootPath, name: 'Restart test', createdAt: 1 }
@@ -243,6 +244,7 @@ export function setAutomaticToolFallback(
   }
 
 export async function cleanupRestartRecovery() {
+  permissionsConfigCache.clear();
   delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]
   spies.splice(0).forEach(spy => spy.mockRestore())
   for (const manager of managers.splice(0)) {

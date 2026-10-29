@@ -198,7 +198,7 @@ export function createPreToolUseHook(transportOwner: ClaudeAgent, sessionId: str
                         }
                         else {
                             return {
-                                continue: false,
+                                continue: true,
                                 decision: 'block' as const,
                                 reason: `Source "${sourceSlug}" could not be activated. It may require authentication. Please check the source status and authenticate if needed.`,
                             };
@@ -206,7 +206,7 @@ export function createPreToolUseHook(transportOwner: ClaudeAgent, sessionId: str
                     }
                     catch (error) {
                         return {
-                            continue: false,
+                            continue: true,
                             decision: 'block' as const,
                             reason: `Failed to activate source "${sourceSlug}": ${error instanceof Error ? error.message : 'Unknown error'}`,
                         };
@@ -214,14 +214,14 @@ export function createPreToolUseHook(transportOwner: ClaudeAgent, sessionId: str
                 }
                 else if (sourceExists) {
                     return {
-                        continue: false,
+                        continue: true,
                         decision: 'block' as const,
                         reason: `Source "${sourceSlug}" is available but not enabled for this session. Please enable it in the sources panel.`,
                     };
                 }
                 else {
                     return {
-                        continue: false,
+                        continue: true,
                         decision: 'block' as const,
                         reason: `Source "${sourceSlug}" could not be connected. It may need re-authentication, or the server may be unreachable. Check the source in the sidebar for details.`,
                     };
@@ -271,7 +271,7 @@ export function createPreToolUseHook(transportOwner: ClaudeAgent, sessionId: str
                     transportOwner.pendingPermissions.delete(requestId);
                     transportOwner.resolveContextualGmailPromptDecision(sessionId, input.tool_name, toolInput, input.tool_use_id, false);
                     return {
-                        continue: false,
+                        continue: true,
                         decision: 'block' as const,
                         reason: 'No permission handler available',
                     };
@@ -329,15 +329,18 @@ export function createPreToolUseHook(transportOwner: ClaudeAgent, sessionId: str
                 }
                 const gmailDecision = transportOwner.resolveContextualGmailPromptDecision(sessionId, input.tool_name, toolInput, input.tool_use_id, allowed);
                 if (!allowed) {
+                    const deniedReason = transportOwner["config"].getHumanInputAllowed?.() === false
+                        ? 'YOLO policy refused an unexpected interactive permission handoff'
+                        : 'User denied permission';
                     return {
-                        continue: false,
+                        continue: true,
                         decision: 'block' as const,
-                        reason: 'User denied permission',
+                        reason: deniedReason,
                     };
                 }
                 if (gmailDecision.applies && !gmailDecision.allowed) {
                     return {
-                        continue: false,
+                        continue: true,
                         decision: 'block' as const,
                         ...(gmailDecision.reason !== undefined ? { reason: gmailDecision.reason } : {}),
                     };

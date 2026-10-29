@@ -181,6 +181,7 @@ class PrivatePushGuardTests(unittest.TestCase):
 
     def test_grafts_rejected(self) -> None:
         grafts = self.repo / ".git/info/grafts"
+        grafts.parent.mkdir(parents=True, exist_ok=True)
         grafts.write_text(self.private_tip + "\n")
         try:
             with self.assertRaises(GUARD.GuardError):

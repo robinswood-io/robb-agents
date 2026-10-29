@@ -133,7 +133,13 @@ async function sessionOpSpawnDelegatedSession(sessionOperationContext: SessionOp
         sessionOperationContext.state.terminalReviewDispatchReservations.add(terminalReviewReservation);
     }
     try {
-        const sourceSlugs = request.enabledSourceSlugs ?? managed.enabledSourceSlugs;
+        const workspaceDefaultsForSources = managed.workspace.rootPath
+            ? loadWorkspaceConfig(managed.workspace.rootPath)?.defaults?.enabledSourceSlugs
+            : undefined;
+        const inheritedSourceSlugs = managed.enabledSourceSlugs !== undefined || workspaceDefaultsForSources !== undefined
+            ? [...new Set([...(managed.enabledSourceSlugs ?? []), ...(workspaceDefaultsForSources ?? [])])]
+            : undefined;
+        const sourceSlugs = request.enabledSourceSlugs ?? inheritedSourceSlugs;
         const enforceLegacyReviewContract = !!objective && (isLegacyHostObjectiveContractEnabled(managed)
             || !!objective.acceptanceCriteria?.length
             || !!objective.terminalReconciliation);

@@ -1,4 +1,25 @@
-import { canonicalTerminalReconciliationToolInput } from "../core/pre-tool-use.ts";
+import { SESSION_TOOL_REGISTRY } from "@craft-agent/session-tools-core";
+import { canonicalTerminalReconciliationToolInput, stripToolMetadata } from "../core/pre-tool-use.ts";
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function canonicalAdmittedToolInput(toolName: string, toolInput: Record<string, unknown>): string | undefined {
+    const sessionMatch = /^(?:mcp__session__|session__)(.+)$/u.exec(toolName);
+    const baseToolName = sessionMatch?.[1];
+    if (baseToolName) {
+        const def = SESSION_TOOL_REGISTRY.get(baseToolName);
+        if (def?.inputSchema) {
+            const stripped = stripToolMetadata(toolName, toolInput).input;
+            const parsed = def.inputSchema.safeParse(stripped);
+            if (parsed.success && isPlainRecord(parsed.data)) {
+                return canonicalTerminalReconciliationToolInput(parsed.data);
+            }
+        }
+    }
+    return canonicalTerminalReconciliationToolInput(toolInput);
+}
 import type { BaseAgent } from '../base-agent.ts';
 import type { BaseAgentPendingSourceActivationRestart, BaseAgentAdmitToolExecutionInputPayload, BaseAgentBeginAdmittedToolExecutionBySignatureInputPayload } from './protocol.ts';
 
@@ -35,7 +56,7 @@ export function admitToolExecution(transportOwner: BaseAgent, input: BaseAgentAd
     transportOwner["admittedToolExecutions"] ??= new Map();
     if (!input.toolUseId || transportOwner["admittedToolExecutions"].has(input.toolUseId))
         return false;
-    const inputJson = canonicalTerminalReconciliationToolInput(input.toolInput);
+    const inputJson = canonicalAdmittedToolInput(input.toolName, input.toolInput);
     if (inputJson === undefined)
         return false;
     transportOwner["admittedToolExecutions"].set(input.toolUseId, {
@@ -55,7 +76,7 @@ export function beginAdmittedToolExecution(transportOwner: BaseAgent, input: Bas
     if (!input.toolUseId)
         return false;
     const admission = transportOwner["admittedToolExecutions"].get(input.toolUseId);
-    const inputJson = canonicalTerminalReconciliationToolInput(input.toolInput);
+    const inputJson = canonicalAdmittedToolInput(input.toolName, input.toolInput);
     if (!admission || admission.state !== 'admitted' || inputJson === undefined
         || admission.toolName !== input.toolName || admission.inputJson !== inputJson
         || admission.sessionId !== input.sessionId || admission.runtimeId !== input.runtimeId
@@ -74,7 +95,7 @@ export function beginAdmittedToolExecution(transportOwner: BaseAgent, input: Bas
    */
 export function beginAdmittedToolExecutionBySignature(transportOwner: BaseAgent, input: BaseAgentBeginAdmittedToolExecutionBySignatureInputPayload): string | undefined {
     transportOwner["admittedToolExecutions"] ??= new Map();
-    const inputJson = canonicalTerminalReconciliationToolInput(input.toolInput);
+    const inputJson = canonicalAdmittedToolInput(input.toolName, input.toolInput);
     if (inputJson === undefined)
         return undefined;
     const matches = [...transportOwner["admittedToolExecutions"].entries()].filter(([, admission]) => (admission.state === 'admitted'
