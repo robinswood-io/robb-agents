@@ -30,9 +30,9 @@ export function readBunLockWorkspaceVersion(
 function main(): void {
   if (process.argv.includes('--runtime')) {
     const runtimes = [
-      ['Node', execFileSync('node', ['--version'], { encoding: 'utf8' }).trim(), 'v26.12.1'],
+      ['Node', execFileSync('node', ['--version'], { encoding: 'utf8' }).trim(), 'v26.13.0'],
       ['Bun', Bun.version, '1.4.4'],
-      ['Python', execFileSync('python3', ['--version'], { encoding: 'utf8' }).trim(), 'Python 3.14.6'],
+      ['Python', execFileSync('python3', ['--version'], { encoding: 'utf8' }).trim(), 'Python 3.15.2'],
       ['RTK', execFileSync('rtk', ['--version'], { encoding: 'utf8' }).trim(), 'rtk '+readVersion(join(rootDir, 'scripts/vendor/rtk-manifest.json'))],
       ['uv', execFileSync('uv', ['--version'], { encoding: 'utf8' }).trim().split(/\s+/)[1], UV_VERSION],
     ] as const

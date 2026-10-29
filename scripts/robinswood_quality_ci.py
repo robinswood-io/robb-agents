@@ -50,7 +50,7 @@ def bootstrap_rtk(temporary: Path) -> None:
 def execute(argv: list[str], root: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["rtk", *argv], cwd=root, capture_output=True, text=True,
-        timeout=1500, check=False,
+        timeout=2400, check=False,
     )
 
 

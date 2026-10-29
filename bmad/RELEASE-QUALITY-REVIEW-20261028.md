@@ -242,7 +242,7 @@ enterprise/rules.md mise à jour28/10/vérifiée02/08 et security-policies31/05 
 ces documents historiques ne créent aucune autorisation. Cible Mac réutilisée,
 aucun Orion, aucun sous-agent, aucun changement de configuration Codex.
 Les36tests ciblés du prévol et de l’intégrité de release passent après ce delta.
-Les runners de packaging utilisent explicitement Node26.12.1, comme le contrat.
+Les runners de packaging utilisent explicitement Node26.13.0, comme le contrat.
 
 ## Diagnostic Linux de la reprise durable
 Le run40778880825 passe typage, lint, environnement, dépendances et politique TypeScript ;
@@ -267,3 +267,4 @@ https://github.com/oven-sh/bun/issues/37189 (problème analogue, pas preuve de m
 - Cause racine exacte de l'echec Linux CI prior-read (run 40865259495) identifiee et corrigee : sur ubuntu-latest, /usr/bin/pwsh est installe et /fixture/new-target activait looksLikePowerShell sans setPowerShellValidatorRoot. command-syntax.ts exclut les segments de chemin/options, parser-process.ts resout powershell-parser.ps1 hors Electron, et restart-recovery-fixture.ts vide permissionsConfigCache.
 - Dependances mises a jour aux dernieres versions stables publiees au 29/10/2026 : lucide-react 1.64.0, react-resizable-panels 4.15.1, @rolldown/plugin-babel 0.3.0 (patch Babel 8 mis a jour), qs 6.17.1, jose 6.2.14.
 - Isolation env du test sandbox-env.test.ts vis-a-vis de UV_CACHE_DIR injecte par astral-sh/setup-uv sur runner GitHub Actions (seul echec du run 40868755481 apres passage de typecheck, lint, environment, dependencies et typescript_policy).
+- Headless Linux CI (`release.yml` / `robinswood_quality_ci.py`) : configuration `root:root` mode `04755` du binaire officiel `chrome-sandbox` d'Electron pour `browser-canvas-capture.isolated.ts` sous Ubuntu 24.04 (`sandbox: true` conservé), alignement runtimes stables Node 26.13.0 / Python 3.15.2 et garde externe `timeout=2400`.
