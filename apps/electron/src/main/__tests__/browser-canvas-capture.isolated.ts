@@ -2,7 +2,7 @@ import { z } from 'zod'
 // run-workspace-tests.sh gives .isolated.ts suites a fresh process: the manager
 // suite mocks both BrowserCDP and electron, while this suite needs their real exports.
 import { afterEach, describe, expect, it, mock } from 'bun:test'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
@@ -91,7 +91,11 @@ it('captures real hidden Electron canvases without capturePage, page mutation or
   const timeout = setTimeout(() => child.kill(), 35_000)
   const [exit, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()])
   clearTimeout(timeout)
-  const result = z.object({ checks: z.array(z.string()) }).passthrough().parse(JSON.parse(readFileSync(join(dir, 'result.json'), 'utf8')))
+  const resultPath = join(dir, 'result.json')
+  const hasResult = existsSync(resultPath)
+  expect({ exit, hasResult, stderr: exit === 0 && hasResult ? '' : stderr.slice(-4000) })
+    .toEqual({ exit: 0, hasResult: true, stderr: '' })
+  const result = z.object({ checks: z.array(z.string()) }).passthrough().parse(JSON.parse(readFileSync(resultPath, 'utf8')))
   expect({ exit, result, stderr: exit === 0 ? '' : stderr.slice(-1500) }).toMatchObject({ exit: 0, result: { ok: true, realProfileUsed: false } })
   expect(result.checks.length).toBeGreaterThanOrEqual(18)
   process.stdout.write(`Canvas Electron fixture receipt: ${JSON.stringify(result)}\n`)

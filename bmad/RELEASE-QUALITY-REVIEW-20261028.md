@@ -43,6 +43,11 @@ Le run 40880912320 expose encore deux fixtures PowerShell dont le répertoire au
 n’existe pas. Le contrôle de chemin refuse correctement un ancêtre hors de cette racine.
 Les tests créent maintenant un vrai répertoire temporaire, le suppriment en afterAll,
 et testent la casse sur cette même racine. Aucune règle de confinement n’est assouplie.
+Le run 40882333697 valide ces fixtures et les dépendances. Le test Electron échoue
+encore avec Xvfb : la cause n’est donc pas établie par l’affichage seul. Son assertion
+contrôle maintenant code de sortie, présence du reçu et stderr avant de lire le JSON.
+Le diagnostic préalable cible ce seul obstacle ; le gate conserve la suite complète.
+Les quatre pins Python du workflow Robinswood Validate sont aussi alignés sur 3.15.2.
 
 ## Périmètre, garanties et preuves
 
