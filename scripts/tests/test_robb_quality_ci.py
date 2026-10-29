@@ -48,7 +48,7 @@ class ReleaseQualityTests(unittest.TestCase):
 
     def pipeline(
         self, *, check_code: int = 0, validation_code: int = 0, source: str = "a" * 40,
-        gate_timeout: bool = False,
+        gate_timeout: bool = False, check_name: str = "lint",
     ) -> tuple[int, str, list[tuple[str, ...]]]:
         calls: list[tuple[str, ...]] = []
         with tempfile.TemporaryDirectory() as directory:
@@ -80,7 +80,8 @@ class ReleaseQualityTests(unittest.TestCase):
                 if argv[0] == "python3" and argv[-2:] == ["run", str(root)]:
                     report = {
                         "state": "FAIL" if check_code else "PASS",
-                        "checks": [{"name": "lint", "exit_code": check_code}],
+                        "checks": [{"name": check_name, "exit_code": check_code,
+                                    "summary": check_name + " diagnostic"}],
                         "rules": {"private-rule": "PRIVATE_RULE_CONTENT"},
                     }
                     (root / "bmad/quality-evidence.json").write_text(json.dumps(report))
@@ -100,7 +101,17 @@ class ReleaseQualityTests(unittest.TestCase):
             ):
                 code = CI.main()
             self.assertTrue((temporary / "robb-release-validation.log").is_file())
+            if check_name == "dependencies":
+                diagnostic = temporary / "robb-public-quality/dependencies-summary.txt"
+                self.assertEqual(diagnostic.read_text(), "dependencies diagnostic")
             return code, output.getvalue(), calls
+
+    def test_dependency_failure_is_visible_without_private_rule_contents(self) -> None:
+        code, output, calls = self.pipeline(check_code=1, check_name="dependencies")
+        self.assertEqual(code, 1)
+        self.assertIn("dependencies diagnostic", output)
+        self.assertNotIn("PRIVATE_RULE_CONTENT", output)
+        self.assertFalse(any(len(call) > 2 and call[2] == "verify" for call in calls))
 
     def test_gate_timeout_preserves_failure_and_never_verifies(self) -> None:
         code, output, calls = self.pipeline(gate_timeout=True)

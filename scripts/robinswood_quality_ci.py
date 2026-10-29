@@ -169,12 +169,12 @@ def main() -> int:
                 summary.append({"name": check.get("name"), "exit_code": check.get("exit_code")})
     if isinstance(checks, list):
         for check in checks:
-            if isinstance(check, dict) and check.get("name") == "tests":
+            if isinstance(check, dict) and check.get("name") in ("tests", "dependencies"):
                 diagnostic = check.get("summary")
                 if isinstance(diagnostic, str):
-                    (public / "tests-summary.txt").write_text(diagnostic)
+                    (public / f"{check['name']}-summary.txt").write_text(diagnostic)
                     if check.get("exit_code") != 0:
-                        print("Synthetic test failure:\n" + diagnostic)
+                        print(f"Quality check {check['name']} failed:\n" + diagnostic)
     workers = root / "bmad/quality-logs/typescript-workers.jsonl"
     if workers.is_file() and not workers.is_symlink():
         (public / "typescript-workers.jsonl").write_bytes(workers.read_bytes())

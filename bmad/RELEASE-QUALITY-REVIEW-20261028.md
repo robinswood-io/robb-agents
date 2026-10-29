@@ -417,3 +417,17 @@ ses tests : deux fichiers réussis sur DEV. L’import dynamique du module de te
 est remplacé par son import normal. Ruff et les douze tests restent verts.
 Le run 40915615001, devenu obsolète, est annulé pour ne pas cumuler les suites ;
 la prochaine relance vise le commit contenant ces tests typés.
+
+La CI 40916448584 passe typage, lint, tests (dont le vrai canvas Electron),
+environnement et politique TypeScript. Seul l’audit de dépendances échoue.
+Le registre publie désormais Babel 8.0.10 ; la mise à jour est préparée sur DEV
+avec Bun 1.4.4 vérifié. Le contrôle des 278 dépendances et bun audit passent ;
+la transformation Jotai vérifie debugLabel et le cache de hot reload avec Babel 8.0.10.
+Les 79 exclusions existantes conservent leur périmètre et leur justification ;
+leurs octets sont liés à un manifeste local versionné, qui conserve les références
+historiques. Le hash du lockfile régénéré est actualisé. Aucun code maintenu ajouté
+aux exclusions. Le contrôleur actuel doit confirmer la disparition des 79 refus.
+Les diagnostics publics incluent désormais aussi l’échec des dépendances ;
+les règles et le rapport canonique complet restent privés. Treize tests ciblés,
+MyPy strict sans expressions Any et Ruff passent sur les deux fichiers du pilote.
+La validation publique 40918583030 est verte sur 80d90f2d (sept jobs), avant ce lot.
