@@ -342,3 +342,15 @@ fa57af45 (tooling/quality-controller), avec rapport PASS. Elle qualifie seulemen
 les transitives npm contraintes par leur parent actuel, avec arbre et audit valides ;
 elle ne vaut pas dérogation générale pour Robb. Le contrôle de dépendances Robb
 utilise Bun et passait déjà : aucune nouvelle exception ou substitution n’est ajoutée.
+
+## Correction des deux contrôles de plateforme — 29 octobre
+Le run 40885516394 révèle le refus du helper SUID livré avec Electron sous Linux.
+La CI utilise désormais le helper Chrome déjà installé sur le runner, après
+vérification de son propriétaire root et de son mode 4755. Cette méthode est
+documentée par Chromium dans sa recommandation sur les restrictions AppArmor.
+Aucun droit système modifié, aucune sandbox désactivée, aucun test ignoré.
+Le run 40883934833 construit Windows mais mesure 1,02 Gio pour un budget de 1 Gio.
+Le paquet Windows conserve les huit langues Electron correspondant au registre
+Robb : en-US, es, zh-CN, ja, hu, de, pl et fr. Le budget reste inchangé.
+Les sept tests du contrôleur CI passent localement. Les deux contrôles réels,
+le gate canonique et le staging natif restent à vérifier sur ce nouveau contenu.

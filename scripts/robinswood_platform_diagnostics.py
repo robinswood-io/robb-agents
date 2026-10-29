@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import stat
 import subprocess
 from pathlib import Path
 from robinswood_quality_ci import bootstrap_rtk, git_value
@@ -10,6 +11,11 @@ from robinswood_quality_ci import bootstrap_rtk, git_value
 def main() -> int:
     root = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
     temporary = Path(os.environ["RUNNER_TEMP"]).resolve()
+    helper = Path(os.environ["CHROME_DEVEL_SANDBOX"])
+    metadata = helper.stat()
+    if not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != 0 or stat.S_IMODE(metadata.st_mode) != 0o4755:
+        raise RuntimeError("The preinstalled Chromium sandbox helper is not safely configured")
+    print("Preinstalled Chromium sandbox helper verified", flush=True)
     bootstrap_rtk(temporary)
     exclude = Path(git_value(["rev-parse", "--git-path", "info/exclude"], root))
     if not exclude.is_absolute():

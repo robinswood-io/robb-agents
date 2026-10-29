@@ -207,6 +207,8 @@ dmg:
     height: 380
 
 win:
+  # Match the eight supported UI languages; avoid shipping unused Chromium locales.
+  electronLanguages: [en-US, es, zh-CN, ja, hu, de, pl, fr]
   icon: resources/robinswood-icon.ico
   target:
     - target: nsis
