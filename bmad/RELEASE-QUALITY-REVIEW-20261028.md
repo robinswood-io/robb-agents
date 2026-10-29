@@ -354,3 +354,14 @@ Le paquet Windows conserve les huit langues Electron correspondant au registre
 Robb : en-US, es, zh-CN, ja, hu, de, pl et fr. Le budget reste inchangé.
 Les sept tests du contrôleur CI passent localement. Les deux contrôles réels,
 le gate canonique et le staging natif restent à vérifier sur ce nouveau contenu.
+
+## Résultats de plateforme et correction du chemin de scan
+Le run 40887729222 valide les contrats sur Linux, macOS et Windows ainsi que
+le parcours complet de l’installateur Windows avec les huit locales conservées.
+Le scanner CI appelait Gitleaks avec /repo : ses chemins absolus ne correspondaient
+pas aux six chemins relatifs des exceptions. Reproduction locale : dix alertes
+en chemin absolu, zéro depuis la racine avec `dir .`. Le conteneur définit donc
+son répertoire de travail à /repo puis scanne `.` ; aucune exception élargie.
+Le run 40887724048 constate que le helper Chrome préinstallé ne possède pas
+les droits requis. La correction de droits sur runner éphémère est préparée,
+mais attend l’autorisation sensible. Aucun succès Electron ni gate revendiqué.
