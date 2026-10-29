@@ -2,23 +2,18 @@
 from __future__ import annotations
 
 import contextlib
-import importlib.util
 import io
 import json
 import os
+import platform
 import subprocess
 import tempfile
 import unittest
+import urllib.request
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-SPEC = importlib.util.spec_from_file_location(
-    "robb_quality_ci", Path(__file__).resolve().parents[1] / "robinswood_quality_ci.py"
-)
-if SPEC is None or SPEC.loader is None:
-    raise RuntimeError("Release quality runner is missing")
-CI = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(CI)
+from scripts import robinswood_quality_ci as CI
 
 
 class ReleaseQualityTests(unittest.TestCase):
@@ -43,9 +38,9 @@ class ReleaseQualityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             with (
-                patch.object(CI.platform, "system", return_value="Linux"),
-                patch.object(CI.platform, "machine", return_value="x86_64"),
-                patch.object(CI.urllib.request, "urlopen", return_value=io.BytesIO(b"tampered")),
+                patch.object(platform, "system", return_value="Linux"),
+                patch.object(platform, "machine", return_value="x86_64"),
+                patch.object(urllib.request, "urlopen", return_value=io.BytesIO(b"tampered")),
                 self.assertRaisesRegex(ValueError, "integrity"),
             ):
                 CI.bootstrap_rtk(root)
@@ -140,24 +135,26 @@ class ReleaseQualityTests(unittest.TestCase):
 
 class ElectronSandboxPreparationTests(unittest.TestCase):
     def test_failed_runtime_installation_never_changes_permissions(self) -> None:
+        execute: MagicMock
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             installer = root / "node_modules/electron/install.js"
             installer.parent.mkdir(parents=True)
             installer.write_text("fixture")
             with (
-                patch.dict(os.environ, {"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": "github-hosted"}),
-                patch.object(CI.platform, "system", return_value="Linux"),
-                patch.object(CI, "execute", return_value=subprocess.CompletedProcess([], 1, "", "download failed")) as execute,
+                patch.dict(os.environ, dict[str, str](GITHUB_ACTIONS="true", RUNNER_ENVIRONMENT="github-hosted")),
+                patch.object(platform, "system", return_value="Linux"),
+                patch.object(CI, "execute", return_value=subprocess.CompletedProcess[str](list[str](), 1, "", "download failed")) as execute,
                 self.assertRaisesRegex(RuntimeError, "runtime installation failed"),
             ):
                 CI.prepare_electron_sandbox(root)
-            execute.assert_called_once_with(["node", str(installer)], root)
+            execute.assert_called_once_with(list[str](("node", str(installer))), root)
 
     def test_refuses_local_or_self_hosted_execution(self) -> None:
+        execute: MagicMock
         for host in ("", "self-hosted"):
             with (
-                patch.dict(os.environ, {"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": host}),
+                patch.dict(os.environ, dict[str, str](GITHUB_ACTIONS="true", RUNNER_ENVIRONMENT=host)),
                 patch.object(CI, "execute") as execute,
                 self.assertRaisesRegex(ValueError, "ephemeral GitHub Linux"),
             ):
@@ -165,6 +162,7 @@ class ElectronSandboxPreparationTests(unittest.TestCase):
             execute.assert_not_called()
 
     def test_rejects_external_symlink_before_changing_permissions(self) -> None:
+        execute: MagicMock
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory).resolve()
             root = base / "checkout"
@@ -174,8 +172,8 @@ class ElectronSandboxPreparationTests(unittest.TestCase):
             outside.write_text("fixture")
             helper.symlink_to(outside)
             with (
-                patch.dict(os.environ, {"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": "github-hosted"}),
-                patch.object(CI.platform, "system", return_value="Linux"),
+                patch.dict(os.environ, dict[str, str](GITHUB_ACTIONS="true", RUNNER_ENVIRONMENT="github-hosted")),
+                patch.object(platform, "system", return_value="Linux"),
                 patch.object(CI, "execute") as execute,
                 self.assertRaisesRegex(ValueError, "inside the checkout"),
             ):
@@ -183,19 +181,20 @@ class ElectronSandboxPreparationTests(unittest.TestCase):
             execute.assert_not_called()
 
     def test_stops_on_permission_command_failure(self) -> None:
+        execute: MagicMock
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory).resolve()
             helper = root / "node_modules/electron/dist/chrome-sandbox"
             helper.parent.mkdir(parents=True)
             helper.write_text("fixture")
             with (
-                patch.dict(os.environ, {"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": "github-hosted"}),
-                patch.object(CI.platform, "system", return_value="Linux"),
-                patch.object(CI, "execute", return_value=subprocess.CompletedProcess([], 1, "", "refused")) as execute,
+                patch.dict(os.environ, dict[str, str](GITHUB_ACTIONS="true", RUNNER_ENVIRONMENT="github-hosted")),
+                patch.object(platform, "system", return_value="Linux"),
+                patch.object(CI, "execute", return_value=subprocess.CompletedProcess[str](list[str](), 1, "", "refused")) as execute,
                 self.assertRaisesRegex(RuntimeError, "preparation failed"),
             ):
                 CI.prepare_electron_sandbox(root)
-            execute.assert_called_once_with(["sudo", "chown", "root:root", "--", str(helper)], root)
+            execute.assert_called_once_with(list[str](("sudo", "chown", "root:root", "--", str(helper))), root)
 
 
 if __name__ == "__main__":

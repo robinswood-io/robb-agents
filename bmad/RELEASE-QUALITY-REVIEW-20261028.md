@@ -411,3 +411,9 @@ avec interdiction des expressions Any et Ruff passent ; les douze tests ciblés
 incluent la propagation du budget et le refus de verify après expiration.
 Ces résultats ne remplacent pas le gate global ni la qualification des autres
 langages et des règles actuelles, encore absente dans le contrat Robb.
+
+Le même contrôle MyPy strict sans expressions Any couvre désormais le pilote ET
+ses tests : deux fichiers réussis sur DEV. L’import dynamique du module de tests
+est remplacé par son import normal. Ruff et les douze tests restent verts.
+Le run 40915615001, devenu obsolète, est annulé pour ne pas cumuler les suites ;
+la prochaine relance vise le commit contenant ces tests typés.
