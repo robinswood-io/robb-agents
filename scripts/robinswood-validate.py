@@ -217,22 +217,22 @@ def check_robinswood_packaging() -> None:
         fail("afterPack.cjs must use Robinswood icon assets and avoid hardcoded Craft Agents.app")
 
     paths = (ROOT / "packages/shared/src/config/paths.ts").read_text(encoding="utf-8")
-    if "process.env.CRAFT_CONFIG_DIR" not in paths or "PRODUCTION_CONFIG_DIR_NAME = '.craft-agent'" not in paths:
+    if 'process.env["CRAFT_CONFIG_DIR"]' not in paths or "PRODUCTION_CONFIG_DIR_NAME = '.craft-agent'" not in paths:
         fail("Production CONFIG_DIR must preserve its existing ~/.craft-agent data root")
     if "DEVELOPMENT_CONFIG_DIR_NAME = '.craft-agent-dev'" not in paths:
         fail("Development CONFIG_DIR must be isolated in ~/.craft-agent-dev")
     if "'.robb-agents'" in paths:
         fail("Default CONFIG_DIR must not isolate Robb from existing Craft Agents data")
-    electron_dev = (ROOT / "scripts/electron-dev.ts").read_text(encoding="utf-8")
+    electron_dev = (ROOT / "scripts/electron-dev-support.ts").read_text(encoding="utf-8")
     for token in [
         "Robb Agents Dev.app",
         "io.robinswood.robbagents.dev",
         ".craft-agent-dev",
-        'CRAFT_DEEPLINK_SCHEME: process.env.CRAFT_DEEPLINK_SCHEME || "robbagentsdev"',
+        'CRAFT_DEEPLINK_SCHEME: process.env["CRAFT_DEEPLINK_SCHEME"] || "robbagentsdev"',
         "Development profile isolation refused",
     ]:
         if token not in electron_dev:
-            fail(f"electron-dev.ts is missing development isolation marker: {token}")
+            fail(f"electron-dev-support.ts is missing development isolation marker: {token}")
 
     dev_builder = (ROOT / "apps/electron/electron-builder.dev.yml").read_text(encoding="utf-8")
     for token in [
@@ -250,7 +250,6 @@ def check_robinswood_packaging() -> None:
         "autoUpdater.allowPrerelease = false",
         "startAutomaticUpdateChecks",
         "Installing macOS update with verified detached installer",
-        "Replacing installed application transactionally",
         "updateDownloadPromise",
     ]:
         if token not in updater:
@@ -258,7 +257,10 @@ def check_robinswood_packaging() -> None:
     if "currentMacAppUsesDeveloperIdSignature" in updater:
         fail("macOS updates must use the verified detached installer for every signing state")
 
-    electron_main = (ROOT / "apps/electron/src/main/index.ts").read_text(encoding="utf-8")
+    mac_installer = (ROOT / "apps/electron/src/main/auto-update-mac.ts").read_text(encoding="utf-8")
+    if "Replacing installed application transactionally" not in mac_installer:
+        fail("Detached macOS installer must preserve transactional replacement")
+    electron_main = (ROOT / "apps/electron/src/main/main-ready.ts").read_text(encoding="utf-8")
     if "startAutomaticUpdateChecks()" not in electron_main:
         fail("Production startup must schedule the bounded main-process update check")
 
@@ -266,13 +268,14 @@ def check_robinswood_packaging() -> None:
     if "automaticCheckStarted" in update_hook:
         fail("Update scheduling must not depend on renderer mounting")
 
-    session_manager = (ROOT / "packages/server-core/src/sessions/SessionManager.ts").read_text(encoding="utf-8")
-    for token in [
-        "Failed to prepare agent runtime",
-        "SESSION_RUNTIME_EVICTION_CONCURRENCY",
-        "failed branch preflight",
-    ]:
-        if token not in session_manager:
+    session_root = ROOT / "packages/server-core/src/sessions/SessionManager"
+    recovery_markers = {
+        "operations/runtime-preparation-error.ts": "Failed to prepare agent runtime",
+        "operations/evict-idle-session-runtimes.ts": "SESSION_RUNTIME_EVICTION_CONCURRENCY",
+        "operations/branch-session-preparation.ts": "failed branch preflight",
+    }
+    for relative_path, token in recovery_markers.items():
+        if token not in (session_root / relative_path).read_text(encoding="utf-8"):
             fail(f"Agent recovery contract missing: {token}")
 
     release_workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")

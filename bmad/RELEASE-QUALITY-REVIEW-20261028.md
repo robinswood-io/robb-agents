@@ -369,3 +369,14 @@ Le diagnostic temporaire est retiré après identification de la cause : il fais
 double emploi avec les contrôles canoniques et empêchait les contrôles indépendants
 de démarrer. Le vrai test Electron reste dans la suite obligatoire ; son échec
 bloque toujours le gate et la publication. Aucun droit système n’est modifié.
+
+## Contrôles OSS adaptés au découpage existant
+Le scan CI passe sur 266c4765. Le contrôle suivant échouait sur des marqueurs
+restés associés aux anciens fichiers monolithiques et à la syntaxe process.env
+par point. Le validateur lit maintenant les modules explicites responsables de
+l’isolation Dev, du remplacement macOS, du démarrage et de la reprise de session.
+Aucune exigence n’est supprimée. La validation légère complète passe localement.
+Les quatre tests fonctionnels des chemins de profils passent sous Bun 1.4.4.
+Sept contrôles négatifs retirent en mémoire chacun des marqueurs critiques
+dans son module réel : les sept suppressions sont refusées par le validateur.
+Aucun fichier applicatif ou profil utilisateur n’est modifié par ces contrôles.
