@@ -39,6 +39,10 @@ sans ignorer le test. Les versions stables des runtimes sont vérifiées directe
 https://nodejs.org/en/download/current (26.13.0) et https://www.python.org/downloads/
 (3.15.2), le 29 octobre. Contrat, vérification runtime et CI sont alignés ; le vieux
 .node-version 24.19.0 est également corrigé. Aucun runtime système du Mac n’est remplacé.
+Le run 40880912320 expose encore deux fixtures PowerShell dont le répertoire autorisé
+n’existe pas. Le contrôle de chemin refuse correctement un ancêtre hors de cette racine.
+Les tests créent maintenant un vrai répertoire temporaire, le suppriment en afterAll,
+et testent la casse sur cette même racine. Aucune règle de confinement n’est assouplie.
 
 ## Périmètre, garanties et preuves
 

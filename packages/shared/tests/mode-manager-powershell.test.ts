@@ -4,10 +4,10 @@
  * These tests verify that dangerous shell commands are blocked in Safe (Explore) mode
  * while legitimate read-only commands are allowed.
  */
-import { beforeAll, describe, it, expect } from 'bun:test';
+import { afterAll, beforeAll, describe, it, expect } from 'bun:test';
 import { join, resolve } from 'node:path';
-import "fs";
-import "os";
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { looksLikePowerShell, isPowerShellAvailable, setPowerShellValidatorRoot } from '../src/agent/powershell-validator.ts';
 import { shouldAllowToolInMode, type CompiledBashPattern } from '../src/agent/mode-manager.ts';
 import { validatePowerShellCommand } from '../src/agent/powershell-validator.ts';
@@ -341,9 +341,8 @@ describe('unwrapPowerShellCommand', () => {
 
 describe('PowerShell plans folder exception', () => {
   const psAvailable = isPowerShellAvailable();
-  const windowsPlansFolderPath = 'C:\\Users\\test\\.craft-agent\\workspaces\\ws\\sessions\\s1\\plans';
-  const plansFolderPath = process.platform === 'win32'
-    ? windowsPlansFolderPath : '/tmp/robb-powershell-test/plans';
+  const plansFolderPath = mkdtempSync(join(tmpdir(), 'robb-powershell-plans-'));
+  afterAll(() => rmSync(plansFolderPath, { recursive: true, force: true }));
 
   describe('should allow Out-File to plans folder', () => {
     it('allows Out-File with -FilePath to plans folder', () => {
@@ -356,7 +355,7 @@ describe('PowerShell plans folder exception', () => {
         'safe',
         { plansFolderPath }
       );
-      expect(result.allowed).toBe(true);
+      expect(result).toMatchObject({ allowed: true });
     });
 
     it('allows Set-Content to plans folder', () => {
@@ -369,7 +368,7 @@ describe('PowerShell plans folder exception', () => {
         'safe',
         { plansFolderPath }
       );
-      expect(result.allowed).toBe(true);
+      expect(result).toMatchObject({ allowed: true });
     });
   });
 
@@ -405,13 +404,12 @@ describe('PowerShell plans folder exception', () => {
     it('accepts Windows case differences only on the Windows host', () => {
       if (!psAvailable) return;
 
-      // plansFolderPath uses lowercase 'test', command uses 'Test'
-      const command = `@('plan') | Out-File -FilePath 'C:\\Users\\Test\\.craft-agent\\workspaces\\ws\\sessions\\s1\\plans\\plan.md'`;
+      const command = `@('plan') | Out-File -FilePath '${join(plansFolderPath.toUpperCase(), 'plan.md')}'`;
       const result = shouldAllowToolInMode(
         'Bash',
         { command },
         'safe',
-        { plansFolderPath: windowsPlansFolderPath }
+        { plansFolderPath }
       );
       expect(result.allowed).toBe(process.platform === 'win32');
     });
