@@ -65,6 +65,8 @@ describe('sandbox-env', () => {
     const env = createScriptRuntimeEnv({
       language: 'node',
       dataDir,
+    }, {
+      SAFE_VAR: 'ok',
     });
 
     expect(env["TMPDIR"]).toBe(join(dataDir, '.tmp'));
