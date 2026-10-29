@@ -5,6 +5,12 @@ ni le gate global réussi, ni l'application installée, ni les installateurs dis
 Les résultats exécutés restent dans les reçus du contrôleur sur le checkout exact.
 Une ligne reviewed indique une revue des exigences ; aucun résultat futur n'est inventé.
 
+Le 29 octobre, le run 40873520149 échoue sur neuf tests shared et l’audit dépendances,
+avec typage, lint, environnement et politique TypeScript réussis. Le diagnostic Linux
+temporaire conserve les sorties complètes de quatre fichiers de tests synthétiques et
+du script public de dépendances, dans un profil QA isolé. Aucun rapport canonique privé
+n’est publié ; le code de sortie est conservé et aucun contrôle obligatoire n’est retiré.
+
 ## Périmètre, garanties et preuves
 
 - Environnement, mandat et prévol : ENVIRONMENT.md et AGENTS.md. Cible locale imposée,

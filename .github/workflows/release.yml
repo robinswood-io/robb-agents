@@ -96,6 +96,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes xvfb libgtk-3-0 libnss3 libasound2t64 libxss1 libgbm1
+      - name: Diagnose Linux tests and dependencies
+        run: python3 scripts/robinswood_platform_diagnostics.py
       - name: Validate source, installers and canonical quality
         run: xvfb-run -a python3 scripts/robinswood_quality_ci.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -1,0 +1,40 @@
+"""Capture the failing Linux checks before the full canonical qualification."""
+from __future__ import annotations
+
+import os
+import subprocess
+from pathlib import Path
+
+
+def main() -> int:
+    root = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
+    temporary = Path(os.environ["RUNNER_TEMP"]).resolve()
+    output = temporary / "robb-public-quality"
+    output.mkdir(mode=0o700, exist_ok=True)
+    environment = dict(os.environ)
+    environment["CRAFT_CONFIG_DIR"] = str(temporary / "robb-platform-test-profile")
+    commands = {
+        "linux-platform-tests": [
+            "bun", "test", "--timeout", "10000",
+            "packages/shared/src/agent/backend/__tests__/read-patterns.test.ts",
+            "packages/shared/src/agent/__tests__/permissions-default-hardening.test.ts",
+            "packages/shared/tests/mode-manager-powershell.test.ts",
+            "packages/shared/tests/persistence-queue-uses-one-fence-for-lexical-and-symlink-aliases-of-the-same-worksp.test.ts",
+        ],
+        "dependencies": ["python3", "scripts/check_workspace_dependencies.py"],
+    }
+    failed = 0
+    for name, command in commands.items():
+        result = subprocess.run(
+            command, cwd=root, env=environment, capture_output=True, text=True,
+            timeout=600, check=False,
+        )
+        (output / (name + ".log")).write_text(result.stdout + result.stderr)
+        print(name, "exit_code", result.returncode, flush=True)
+        if result.returncode:
+            failed = result.returncode
+    return failed
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
