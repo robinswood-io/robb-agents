@@ -6,6 +6,7 @@ import json
 import os
 import platform
 import re
+import stat
 import subprocess
 import tarfile
 import urllib.request
@@ -61,6 +62,29 @@ def git_value(args: list[str], root: Path) -> str:
     return result.stdout.strip()
 
 
+def prepare_electron_sandbox(root: Path) -> None:
+    if (
+        os.environ.get("GITHUB_ACTIONS") != "true"
+        or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted"
+        or platform.system() != "Linux"
+    ):
+        raise ValueError("Electron sandbox preparation requires an ephemeral GitHub Linux runner")
+    helper = (root / "node_modules/electron/dist/chrome-sandbox").resolve(strict=True)
+    if not helper.is_relative_to(root.resolve()) or not helper.is_file():
+        raise ValueError("Electron sandbox helper must be a regular file inside the checkout")
+    for command in (
+        ["sudo", "chown", "root:root", "--", str(helper)],
+        ["sudo", "chmod", "4755", "--", str(helper)],
+    ):
+        result = execute(command, root)
+        if result.returncode:
+            raise RuntimeError("Electron sandbox permission preparation failed")
+    metadata = helper.stat()
+    if metadata.st_uid != 0 or stat.S_IMODE(metadata.st_mode) != 0o4755:
+        raise RuntimeError("Electron sandbox owner or permissions could not be verified")
+    print("Verified Electron sandbox helper: root owner, mode 4755")
+
+
 def main() -> int:
     root = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
     temporary = Path(os.environ["RUNNER_TEMP"]).resolve()
@@ -86,6 +110,7 @@ def main() -> int:
         print("Release source/installer validation failed; publication remains blocked.")
         print((validation.stdout + validation.stderr)[-4000:])
         return validation.returncode
+    prepare_electron_sandbox(root)
     gate = controller / "scripts/bmad/quality_gate.py"
     result = execute(["python3", str(gate), "run", str(root)], root)
     # Private rule contents and the full report stay out of public build logs/artifacts.

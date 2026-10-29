@@ -70,7 +70,7 @@ jobs:
     needs: preflight
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    env: {CHROME_DEVEL_SANDBOX: "/opt/google/chrome/chrome-sandbox", NODE_OPTIONS: "--max-old-space-size=8192", ROBB_RULEBOOK_COMMIT: "109991b8a6b3967bab6c7860af4f5c0cafdff404", ROBB_EXPECTED_SOURCE_COMMIT: "${{ needs.preflight.outputs.source_commit }}"}
+    env: {NODE_OPTIONS: "--max-old-space-size=8192", ROBB_RULEBOOK_COMMIT: "109991b8a6b3967bab6c7860af4f5c0cafdff404", ROBB_EXPECTED_SOURCE_COMMIT: "${{ needs.preflight.outputs.source_commit }}"}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: {ref: "${{ needs.preflight.outputs.source_commit }}", persist-credentials: false}

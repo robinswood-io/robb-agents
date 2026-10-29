@@ -95,6 +95,7 @@ class ReleaseQualityTests(unittest.TestCase):
             with (
                 patch.dict(os.environ, environment),
                 patch.object(CI, "bootstrap_rtk"),
+                patch.object(CI, "prepare_electron_sandbox"),
                 patch.object(CI, "execute", side_effect=execute),
                 contextlib.redirect_stdout(output),
             ):
@@ -125,6 +126,51 @@ class ReleaseQualityTests(unittest.TestCase):
     def test_wrong_source_commit_is_rejected_before_validation(self) -> None:
         with self.assertRaisesRegex(ValueError, "differs from preflight"):
             self.pipeline(source="c" * 40)
+
+
+class ElectronSandboxPreparationTests(unittest.TestCase):
+    def test_refuses_local_or_self_hosted_execution(self) -> None:
+        for host in ("", "self-hosted"):
+            with (
+                patch.dict(os.environ, {"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": host}),
+                patch.object(CI, "execute") as execute,
+                self.assertRaisesRegex(ValueError, "ephemeral GitHub Linux"),
+            ):
+                CI.prepare_electron_sandbox(Path.cwd())
+            execute.assert_not_called()
+
+    def test_rejects_external_symlink_before_changing_permissions(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory).resolve()
+            root = base / "checkout"
+            helper = root / "node_modules/electron/dist/chrome-sandbox"
+            helper.parent.mkdir(parents=True)
+            outside = base / "outside"
+            outside.write_text("fixture")
+            helper.symlink_to(outside)
+            with (
+                patch.dict(os.environ, {"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": "github-hosted"}),
+                patch.object(CI.platform, "system", return_value="Linux"),
+                patch.object(CI, "execute") as execute,
+                self.assertRaisesRegex(ValueError, "inside the checkout"),
+            ):
+                CI.prepare_electron_sandbox(root)
+            execute.assert_not_called()
+
+    def test_stops_on_permission_command_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            helper = root / "node_modules/electron/dist/chrome-sandbox"
+            helper.parent.mkdir(parents=True)
+            helper.write_text("fixture")
+            with (
+                patch.dict(os.environ, {"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": "github-hosted"}),
+                patch.object(CI.platform, "system", return_value="Linux"),
+                patch.object(CI, "execute", return_value=subprocess.CompletedProcess([], 1, "", "refused")) as execute,
+                self.assertRaisesRegex(RuntimeError, "preparation failed"),
+            ):
+                CI.prepare_electron_sandbox(root)
+            execute.assert_called_once_with(["sudo", "chown", "root:root", "--", str(helper)], root)
 
 
 if __name__ == "__main__":

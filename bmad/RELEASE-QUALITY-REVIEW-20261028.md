@@ -380,3 +380,16 @@ Les quatre tests fonctionnels des chemins de profils passent sous Bun 1.4.4.
 Sept contrôles négatifs retirent en mémoire chacun des marqueurs critiques
 dans son module réel : les sept suppressions sont refusées par le validateur.
 Aucun fichier applicatif ou profil utilisateur n’est modifié par ces contrôles.
+
+## Helper Electron CI — autorisation et périmètre, 29 octobre
+Thibault autorise explicitement le helper Electron en root:root / 4755 sur le
+runner GitHub éphémère. La préparation refuse les hôtes locaux ou auto-hébergés,
+résout le chemin et exige un fichier régulier dans le checkout avant toute commande.
+Elle contrôle le propriétaire et le mode après modification, puis laisse le vrai
+test Electron et le gate obligatoires décider du résultat. Aucune sandbox désactivée.
+La variable CHROME_DEVEL_SANDBOX inefficace est retirée. Dix tests ciblés passent,
+dont refus de l’hôte non autorisé, du lien extérieur et d’un échec de commande.
+Le contrôleur épinglé reste provisoirement celui du précédent run : son résultat
+ne suffit pas à qualifier les quatre règles modifiées par la diffusion globale 3.
+Le contrôleur partagé retourne encore quality_rules_changed ; sa requalification
+et l’alignement des revues restent nécessaires avant intégration ou livraison.
