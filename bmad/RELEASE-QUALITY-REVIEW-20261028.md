@@ -32,6 +32,13 @@ audit sécurité du lock : zéro entrée, code 0. Arbre installé, types et buil
 Le diagnostic préalable lance désormais la commande de tests complète du projet,
 avec sortie conservée, pour détecter les erreurs Linux restantes avant les contrôles
 de typage coûteux. Le gate canonique reste inchangé et obligatoire sur le commit exact.
+Le run 40879890233 confirme zéro anomalie sur les 278 entrées de dépendances et
+zéro échec dans tous les groupes ordinaires, dont les 5 386 tests shared. Le test
+Electron isolé du diagnostic nécessite le même xvfb-run que le gate ; il est rétabli,
+sans ignorer le test. Les versions stables des runtimes sont vérifiées directement :
+https://nodejs.org/en/download/current (26.13.0) et https://www.python.org/downloads/
+(3.15.2), le 29 octobre. Contrat, vérification runtime et CI sont alignés ; le vieux
+.node-version 24.19.0 est également corrigé. Aucun runtime système du Mac n’est remplacé.
 
 ## Périmètre, garanties et preuves
 

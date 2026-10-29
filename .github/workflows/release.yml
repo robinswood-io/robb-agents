@@ -38,7 +38,7 @@ jobs:
           ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with: {python-version: "3.14.6"}
+        with: {python-version: "3.15.2"}
       - id: policy
         name: Validate tag, version and signing material
         env:
@@ -75,13 +75,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with: {ref: "${{ needs.preflight.outputs.source_commit }}", persist-credentials: false}
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with: {python-version: "3.14.6"}
+        with: {python-version: "3.15.2"}
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: {bun-version: "1.4.4"}
       - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with: {version: "0.13.6"}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with: {node-version: "26.12.1"}
+        with: {node-version: "26.13.0"}
       - name: Install immutable workspace dependencies
         run: bun install --frozen-lockfile
         env:
@@ -97,7 +97,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes xvfb libgtk-3-0 libnss3 libasound2t64 libxss1 libgbm1
       - name: Diagnose Linux tests and dependencies
-        run: python3 scripts/robinswood_platform_diagnostics.py
+        run: xvfb-run -a python3 scripts/robinswood_platform_diagnostics.py
       - name: Validate source, installers and canonical quality
         run: xvfb-run -a python3 scripts/robinswood_quality_ci.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -117,9 +117,9 @@ jobs:
         with:
           ref: ${{ needs.preflight.outputs.source_commit }}
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with: {python-version: "3.14.6"}
+        with: {python-version: "3.15.2"}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with: {node-version: "26.12.1"}
+        with: {node-version: "26.13.0"}
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: {bun-version: "1.4.4"}
       - name: Exercise macOS installer update contract
@@ -191,11 +191,11 @@ jobs:
         with:
           ref: ${{ needs.preflight.outputs.source_commit }}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with: {node-version: "26.12.1"}
+        with: {node-version: "26.13.0"}
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: {bun-version: "1.4.4"}
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with: {python-version: "3.14.6"}
+        with: {python-version: "3.15.2"}
       - name: Exercise Windows installer update contract
         run: python3 scripts/tests/test_installers.py
       - name: Build and validate Windows installer
@@ -281,9 +281,9 @@ jobs:
         with:
           ref: ${{ needs.preflight.outputs.source_commit }}
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with: {python-version: "3.14.6"}
+        with: {python-version: "3.15.2"}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with: {node-version: "26.12.1"}
+        with: {node-version: "26.13.0"}
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: {bun-version: "1.4.4"}
       - name: Exercise Linux installer update contract

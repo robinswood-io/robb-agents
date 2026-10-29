@@ -10,7 +10,7 @@ Le module commercial local est préservé et exclu du paquet public demandé.
 
 ## Runtimes
 
-Node 26.12.1, Bun 1.4.4, Python 3.14.6, RTK OSS 1.1.0, uv 0.13.6.
+Node 26.13.0, Bun 1.4.4, Python 3.15.2, RTK OSS 1.1.0, uv 0.13.6.
 Compilation TypeScript native 7.0.2 ; API 6.0.3 pour le lint uniquement.
 Les deux seules exceptions approuvées sont dans dependency-exceptions.json.
 Les commandes et vérifications résolues sont dans quality-policy.json.
