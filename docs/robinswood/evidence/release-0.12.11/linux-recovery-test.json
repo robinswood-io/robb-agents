@@ -27,5 +27,18 @@
     },
     "hypothesis_superseded": "The assertion matcher was not the root cause.",
     "validation_limit": "Full canonical run/verify and native local acceptance remain required."
+  },
+  "sandbox_environment_regression": {
+    "global_run": 40868793064,
+    "failure": "Node test inherited UV_CACHE_DIR from setup-uv while expecting it absent",
+    "reproduction": "UV_CACHE_DIR=/tmp/robb-ci-cache-fixture bun test sandbox-env.test.ts: 2 pass, 1 fail",
+    "correction": "Explicit empty environment and separate inherited-cache preservation test; production code unchanged",
+    "targeted_result": {
+      "pass": 19,
+      "fail": 0,
+      "assertions": 48,
+      "runtime": "Bun 1.4.4"
+    },
+    "canonical_gate": "required on new content"
   }
 }

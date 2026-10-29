@@ -65,11 +65,29 @@ describe('sandbox-env', () => {
     const env = createScriptRuntimeEnv({
       language: 'node',
       dataDir,
-    });
+    }, {});
 
     expect(env["TMPDIR"]).toBe(join(dataDir, '.tmp'));
     expect(env["UV_CACHE_DIR"]).toBeUndefined();
     expect(env["XDG_CACHE_HOME"]).toBeUndefined();
     expect(env["PYTHONPYCACHEPREFIX"]).toBeUndefined();
+  });
+
+  it('preserves existing host cache vars for node without creating Python caches', () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'sandbox-env-node-host-'));
+    createdDirs.push(dataDir);
+    const base = {
+      UV_CACHE_DIR: '/host/uv-cache',
+      XDG_CACHE_HOME: '/host/cache',
+      PYTHONPYCACHEPREFIX: '/host/pycache',
+    };
+
+    const env = createScriptRuntimeEnv({ language: 'node', dataDir }, base);
+
+    expect(env).toMatchObject(base);
+    expect(env["TMPDIR"]).toBe(join(dataDir, '.tmp'));
+    for (const name of ['.uv-cache', '.cache', '.pycache']) {
+      expect(existsSync(join(dataDir, name))).toBe(false);
+    }
   });
 });

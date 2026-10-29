@@ -276,3 +276,17 @@ tests synthétiques. La copie isolée est issue du commit poussé3d41e3d ; les l
 du checkout Documents sont bloquées, sans modification de celui-ci. Toute intégration
 attend sa relecture et la vérification des changements concurrents. Les fenêtres
 natives ne sont pas exposées par l’outil actuel : aucun parcours local revendiqué.
+
+## Isolation de l’environnement des tests
+Le run40868793064 atteint session-tools-core après le groupe serveur. Le cas Node
+de sandbox-env héritait process.env tout en exigeant l’absence de UV_CACHE_DIR,
+variable définie par setup-uv en CI. Le même échec est reproduit avec une variable
+synthétique sur Mac. Le test passe désormais un environnement vide explicite ;
+un cas complémentaire prouve que les variables existantes sont conservées et
+qu’aucun cache Python n’est créé pour Node. Le code produit n’est pas modifié.
+Les dix-neuf tests ciblés passent avec Bun1.4.4 et UV_CACHE_DIR préexistant.
+La qualification upstream_pinned_transitive est constatée dans le contrôleur DEV
+fa57af45 (tooling/quality-controller), avec rapport PASS. Elle qualifie seulement
+les transitives npm contraintes par leur parent actuel, avec arbre et audit valides ;
+elle ne vaut pas dérogation générale pour Robb. Le contrôle de dépendances Robb
+utilise Bun et passait déjà : aucune nouvelle exception ou substitution n’est ajoutée.
