@@ -19,6 +19,16 @@ sont extraits pour garder shared.ts sous 500 lignes. Les 24 tests ciblés passen
 la qualification Linux réelle et le gate global restent obligatoires.
 Le premier diagnostic dépendances n’avait pas initialisé RTK : il réutilise désormais
 le bootstrap vérifié existant et exclut le checkout privé avant l’inventaire public.
+Le run 40878294709 valide la reprise physique et le parseur, mais révèle trois fixtures
+de chemins Windows utilisées sur Linux et six entrées obsolètes (cinq paquets).
+Les tests emploient désormais les chemins natifs ; le cas de casse Windows vérifie
+aussi le refus sur les autres hôtes, sans skip ajouté. Versions registre vérifiées :
+lucide-react 1.64.0, react-resizable-panels 4.15.1, @rolldown/plugin-babel 0.3.0,
+qs 6.17.1 et jose 6.2.14. Le patch Babel 8 existant est porté sur le nouveau fichier
+de déclarations upstream, archive officielle vérifiée par son intégrité npm.
+Le lockfile Bun 1.4.4 est régénéré sans installation globale ni exécution de scripts ;
+audit sécurité du lock : zéro entrée, code 0. Arbre installé, types et build restent
+à qualifier sur CI. Les deux exceptions humaines restent strictement inchangées.
 
 ## Périmètre, garanties et preuves
 

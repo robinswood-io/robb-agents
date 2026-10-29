@@ -5,7 +5,7 @@
  * while legitimate read-only commands are allowed.
  */
 import { beforeAll, describe, it, expect } from 'bun:test';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import "fs";
 import "os";
 import { looksLikePowerShell, isPowerShellAvailable, setPowerShellValidatorRoot } from '../src/agent/powershell-validator.ts';
@@ -341,13 +341,15 @@ describe('unwrapPowerShellCommand', () => {
 
 describe('PowerShell plans folder exception', () => {
   const psAvailable = isPowerShellAvailable();
-  const plansFolderPath = 'C:\\Users\\test\\.craft-agent\\workspaces\\ws\\sessions\\s1\\plans';
+  const windowsPlansFolderPath = 'C:\\Users\\test\\.craft-agent\\workspaces\\ws\\sessions\\s1\\plans';
+  const plansFolderPath = process.platform === 'win32'
+    ? windowsPlansFolderPath : '/tmp/robb-powershell-test/plans';
 
   describe('should allow Out-File to plans folder', () => {
     it('allows Out-File with -FilePath to plans folder', () => {
       if (!psAvailable) return;
 
-      const command = `@('# Sample Plan','','## Goal','Test') | Out-File -FilePath '${plansFolderPath}\\sample-plan.md' -Encoding utf8`;
+      const command = `@('# Sample Plan','','## Goal','Test') | Out-File -FilePath '${join(plansFolderPath, 'sample-plan.md')}' -Encoding utf8`;
       const result = shouldAllowToolInMode(
         'Bash',
         { command },
@@ -360,7 +362,7 @@ describe('PowerShell plans folder exception', () => {
     it('allows Set-Content to plans folder', () => {
       if (!psAvailable) return;
 
-      const command = `'# Plan content' | Set-Content -Path '${plansFolderPath}\\plan.md'`;
+      const command = `'# Plan content' | Set-Content -Path '${join(plansFolderPath, 'plan.md')}'`;
       const result = shouldAllowToolInMode(
         'Bash',
         { command },
@@ -375,7 +377,7 @@ describe('PowerShell plans folder exception', () => {
     it('blocks Out-File to temp folder', () => {
       if (!psAvailable) return;
 
-      const command = `@('data') | Out-File -FilePath 'C:\\temp\\evil.txt' -Encoding utf8`;
+      const command = `@('data') | Out-File -FilePath '${resolve(plansFolderPath, '..', 'evil.txt')}' -Encoding utf8`;
       const result = shouldAllowToolInMode(
         'Bash',
         { command },
@@ -388,7 +390,7 @@ describe('PowerShell plans folder exception', () => {
     it('blocks Set-Content outside plans folder', () => {
       if (!psAvailable) return;
 
-      const command = `'content' | Set-Content -Path 'C:\\Users\\test\\Desktop\\file.txt'`;
+      const command = `'content' | Set-Content -Path '${resolve(plansFolderPath, '..', 'file.txt')}'`;
       const result = shouldAllowToolInMode(
         'Bash',
         { command },
@@ -400,7 +402,7 @@ describe('PowerShell plans folder exception', () => {
   });
 
   describe('case-insensitive path matching on Windows', () => {
-    it('allows write when path case differs from plansFolderPath', () => {
+    it('accepts Windows case differences only on the Windows host', () => {
       if (!psAvailable) return;
 
       // plansFolderPath uses lowercase 'test', command uses 'Test'
@@ -409,9 +411,9 @@ describe('PowerShell plans folder exception', () => {
         'Bash',
         { command },
         'safe',
-        { plansFolderPath }
+        { plansFolderPath: windowsPlansFolderPath }
       );
-      expect(result.allowed).toBe(true);
+      expect(result.allowed).toBe(process.platform === 'win32');
     });
   });
 
