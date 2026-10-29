@@ -29,6 +29,9 @@ de déclarations upstream, archive officielle vérifiée par son intégrité npm
 Le lockfile Bun 1.4.4 est régénéré sans installation globale ni exécution de scripts ;
 audit sécurité du lock : zéro entrée, code 0. Arbre installé, types et build restent
 à qualifier sur CI. Les deux exceptions humaines restent strictement inchangées.
+Le diagnostic préalable lance désormais la commande de tests complète du projet,
+avec sortie conservée, pour détecter les erreurs Linux restantes avant les contrôles
+de typage coûteux. Le gate canonique reste inchangé et obligatoire sur le commit exact.
 
 ## Périmètre, garanties et preuves
 

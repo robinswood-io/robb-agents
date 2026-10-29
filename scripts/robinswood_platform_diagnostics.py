@@ -21,15 +21,7 @@ def main() -> int:
     environment = dict(os.environ)
     environment["CRAFT_CONFIG_DIR"] = str(temporary / "robb-platform-test-profile")
     commands = {
-        "linux-platform-tests": [
-            "bun", "test", "--timeout", "10000",
-            "packages/shared/src/sessions/persistence-queue/directory-identity.test.ts",
-            "packages/shared/src/agent/powershell-validator/command-syntax.test.ts",
-            "packages/shared/src/agent/backend/__tests__/read-patterns.test.ts",
-            "packages/shared/src/agent/__tests__/permissions-default-hardening.test.ts",
-            "packages/shared/tests/mode-manager-powershell.test.ts",
-            "packages/shared/tests/persistence-queue-uses-one-fence-for-lexical-and-symlink-aliases-of-the-same-worksp.test.ts",
-        ],
+        "linux-platform-tests": ["bun", "run", "test"],
         "dependencies": ["python3", "scripts/check_workspace_dependencies.py"],
     }
     failed = 0
