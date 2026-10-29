@@ -28,9 +28,17 @@ export function getElementText(node: ASTNode): string | null {
  * Used to determine whether to use PowerShell or bash validation.
  */
 export function looksLikePowerShell(command: string): boolean {
+  const unwrapped = unwrapPowerShellCommand(command);
+  if (unwrapped !== null) {
+    return true;
+  }
+
   const psPatterns = [
-    // Cmdlet pattern: Verb-Noun
-    /(?<![/\\.-])\b(Get|Set|New|Remove|Add|Clear|Write|Read|Out|ConvertTo|ConvertFrom|Test|Select|Where|ForEach|Sort|Group|Measure|Compare|Format|Export|Import|Start|Stop|Invoke|Enable|Disable|Register|Unregister|Update|Find|Install|Uninstall|Save|Publish|Push|Pop)-\w+/i,
+    // Explicit PowerShell executable invocation in command position
+    /(?:^|[|;&({\r\n])\s*(?:"[^"]*[/\\]?(?:powershell|pwsh)(?:\.exe)?"|(?:[^\s"|;&]+[/\\])?(?:powershell|pwsh)(?:\.exe)?)\b/i,
+
+    // Cmdlet pattern: Verb-Noun in command position (not Unix subcommands/arguments like `git remote get-url` or `rg "get-url"`)
+    /(?:^|[|;&({\r\n]|\$\w+\s*=)\s*(Get|Set|New|Remove|Add|Clear|Write|Read|Out|ConvertTo|ConvertFrom|Test|Select|Where|ForEach|Sort|Group|Measure|Compare|Format|Export|Import|Start|Stop|Invoke|Enable|Disable|Register|Unregister|Update|Find|Install|Uninstall|Save|Publish|Push|Pop)-\w+/i,
 
     // PowerShell variables in pipeline
     /\$\w+\s*\|/,
@@ -42,11 +50,11 @@ export function looksLikePowerShell(command: string): boolean {
     /@\([^)]*\)/,
     /@\{[^}]*\}/,
 
-    // PowerShell specific cmdlets
-    /\b(Where-Object|Select-Object|ForEach-Object|Sort-Object|Group-Object|Measure-Object)\b/i,
+    // PowerShell specific cmdlets in command position
+    /(?:^|[|;&({\r\n]|\$\w+\s*=)\s*(Where-Object|Select-Object|ForEach-Object|Sort-Object|Group-Object|Measure-Object)\b/i,
 
-    // Common PowerShell aliases that differ from Unix
-    /\b(gci|gcm|gps|gsv|gjb)\b/i,
+    // Common PowerShell aliases that differ from Unix, in command position
+    /(?:^|[|;&({\r\n]|\$\w+\s*=)\s*(gci|gcm|gps|gsv|gjb)\b/i,
   ];
 
   return psPatterns.some(p => p.test(command));

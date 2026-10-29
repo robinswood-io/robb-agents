@@ -339,11 +339,12 @@ describe('unwrapPowerShellCommand', () => {
 
 describe('PowerShell plans folder exception', () => {
   const psAvailable = isPowerShellAvailable();
+  const isWindows = process.platform === 'win32';
   const plansFolderPath = 'C:\\Users\\test\\.craft-agent\\workspaces\\ws\\sessions\\s1\\plans';
 
   describe('should allow Out-File to plans folder', () => {
     it('allows Out-File with -FilePath to plans folder', () => {
-      if (!psAvailable) return;
+      if (!psAvailable || !isWindows) return;
 
       const command = `@('# Sample Plan','','## Goal','Test') | Out-File -FilePath '${plansFolderPath}\\sample-plan.md' -Encoding utf8`;
       const result = shouldAllowToolInMode(
@@ -356,7 +357,7 @@ describe('PowerShell plans folder exception', () => {
     });
 
     it('allows Set-Content to plans folder', () => {
-      if (!psAvailable) return;
+      if (!psAvailable || !isWindows) return;
 
       const command = `'# Plan content' | Set-Content -Path '${plansFolderPath}\\plan.md'`;
       const result = shouldAllowToolInMode(
@@ -399,7 +400,7 @@ describe('PowerShell plans folder exception', () => {
 
   describe('case-insensitive path matching on Windows', () => {
     it('allows write when path case differs from plansFolderPath', () => {
-      if (!psAvailable) return;
+      if (!psAvailable || !isWindows) return;
 
       // plansFolderPath uses lowercase 'test', command uses 'Test'
       const command = `@('plan') | Out-File -FilePath 'C:\\Users\\Test\\.craft-agent\\workspaces\\ws\\sessions\\s1\\plans\\plan.md'`;
@@ -414,7 +415,6 @@ describe('PowerShell plans folder exception', () => {
   });
 
   describe('powershell.exe -Command wrapper targeting plans folder', () => {
-    const isWindows = process.platform === 'win32';
 
     it.skipIf(!isWindows)('should allow Set-Content inside powershell.exe -Command wrapper targeting plans folder', () => {
       // This is the exact pattern that was failing: Codex wraps Set-Content in powershell.exe -Command "..."

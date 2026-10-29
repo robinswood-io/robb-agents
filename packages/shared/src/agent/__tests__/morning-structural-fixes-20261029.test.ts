@@ -208,6 +208,8 @@ describe('morning structural fixes (2026-10-29)', () => {
     expect(looksLikePowerShell('touch /fixture/new-target')).toBe(false);
     expect(looksLikePowerShell('git push --set-upstream origin main')).toBe(false);
     expect(looksLikePowerShell('cat ./get-status.json')).toBe(false);
+    expect(looksLikePowerShell('git remote get-url origin')).toBe(false);
+    expect(looksLikePowerShell('rg "get-url" packages/')).toBe(false);
     expect(looksLikePowerShell('Get-Process')).toBe(true);
     expect(looksLikePowerShell('powershell.exe -Command "Set-Content -Path foo"')).toBe(true);
     expect(existsSync(resolveParserScriptPath())).toBe(true);

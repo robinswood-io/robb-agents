@@ -169,8 +169,10 @@ describe('SessionPersistenceQueue', () => {
       identity,
     );
 
+    const replacementSessionPath = join(workspace, 'sessions', `${sessionId}-replacement`);
+    mkdirSync(replacementSessionPath, { recursive: true });
     rmSync(sessionPath, { recursive: true });
-    mkdirSync(sessionPath, { recursive: true });
+    renameSync(replacementSessionPath, sessionPath);
     await expect(queue.flush(sessionId, identity.workspaceRootPath))
       .rejects.toThrow(`Session directory for ${sessionId} was replaced`);
     expect(existsSync(join(sessionPath, 'session.jsonl'))).toBe(false);
