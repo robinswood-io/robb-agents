@@ -393,3 +393,10 @@ Le contrôleur épinglé reste provisoirement celui du précédent run : son ré
 ne suffit pas à qualifier les quatre règles modifiées par la diffusion globale 3.
 Le contrôleur partagé retourne encore quality_rules_changed ; sa requalification
 et l’alignement des revues restent nécessaires avant intégration ou livraison.
+
+La relance 40908746377 s’arrête avant toute mutation de droits : le paquet Electron
+est installé mais son répertoire dist manque. La préparation exécute désormais
+l’installateur officiel du paquet verrouillé uniquement si le helper manque.
+Un échec de téléchargement bloque les commandes de droits ; onze tests ciblés
+passent. Le contrôle final exige propriétaire et groupe root, ainsi que le mode
+4755. Le parcours réel CI reste obligatoire pour qualifier cette préparation.

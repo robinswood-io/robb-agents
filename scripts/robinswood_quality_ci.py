@@ -69,7 +69,17 @@ def prepare_electron_sandbox(root: Path) -> None:
         or platform.system() != "Linux"
     ):
         raise ValueError("Electron sandbox preparation requires an ephemeral GitHub Linux runner")
-    helper = (root / "node_modules/electron/dist/chrome-sandbox").resolve(strict=True)
+    helper = (root / "node_modules/electron/dist/chrome-sandbox").resolve()
+    if not helper.is_relative_to(root.resolve()):
+        raise ValueError("Electron sandbox helper must be a regular file inside the checkout")
+    if not helper.exists():
+        installer = (root / "node_modules/electron/install.js").resolve(strict=True)
+        if not installer.is_relative_to(root.resolve()) or not installer.is_file():
+            raise ValueError("Electron installer must be a regular file inside the checkout")
+        result = execute(["node", str(installer)], root)
+        if result.returncode:
+            raise RuntimeError("Official Electron runtime installation failed")
+    helper = helper.resolve(strict=True)
     if not helper.is_relative_to(root.resolve()) or not helper.is_file():
         raise ValueError("Electron sandbox helper must be a regular file inside the checkout")
     for command in (
@@ -80,7 +90,7 @@ def prepare_electron_sandbox(root: Path) -> None:
         if result.returncode:
             raise RuntimeError("Electron sandbox permission preparation failed")
     metadata = helper.stat()
-    if metadata.st_uid != 0 or stat.S_IMODE(metadata.st_mode) != 0o4755:
+    if metadata.st_uid != 0 or metadata.st_gid != 0 or stat.S_IMODE(metadata.st_mode) != 0o4755:
         raise RuntimeError("Electron sandbox owner or permissions could not be verified")
     print("Verified Electron sandbox helper: root owner, mode 4755")
 

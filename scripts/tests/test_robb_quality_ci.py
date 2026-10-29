@@ -129,6 +129,21 @@ class ReleaseQualityTests(unittest.TestCase):
 
 
 class ElectronSandboxPreparationTests(unittest.TestCase):
+    def test_failed_runtime_installation_never_changes_permissions(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            installer = root / "node_modules/electron/install.js"
+            installer.parent.mkdir(parents=True)
+            installer.write_text("fixture")
+            with (
+                patch.dict(os.environ, {"GITHUB_ACTIONS": "true", "RUNNER_ENVIRONMENT": "github-hosted"}),
+                patch.object(CI.platform, "system", return_value="Linux"),
+                patch.object(CI, "execute", return_value=subprocess.CompletedProcess([], 1, "", "download failed")) as execute,
+                self.assertRaisesRegex(RuntimeError, "runtime installation failed"),
+            ):
+                CI.prepare_electron_sandbox(root)
+            execute.assert_called_once_with(["node", str(installer)], root)
+
     def test_refuses_local_or_self_hosted_execution(self) -> None:
         for host in ("", "self-hosted"):
             with (
