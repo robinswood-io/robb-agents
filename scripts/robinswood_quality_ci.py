@@ -11,12 +11,30 @@ import subprocess
 import tarfile
 import urllib.request
 from pathlib import Path
+from typing import Protocol, cast, runtime_checkable
 
 RTK_URL = (
     "https://github.com/rtk-ai/rtk/releases/download/v1.1.0/"
     "rtk-oss-x86_64-unknown-linux-musl.tar.gz"
 )
 RTK_SHA256 = "4dec94a64035e08189ae82fd5408fe4ae9ae27a665fc07e3e3ec3c4c2d8e8a3e"
+
+
+@runtime_checkable
+class DownloadResponse(Protocol):
+    def read(self) -> bytes: ...
+    def close(self) -> None: ...
+
+
+def record(value: object) -> dict[str, object]:
+    if not isinstance(value, dict):
+        raise TypeError("Expected a JSON object")
+    result: dict[str, object] = {}
+    for key, item in cast(dict[object, object], value).items():
+        if not isinstance(key, str):
+            raise TypeError("Expected a string JSON key")
+        result[key] = item
+    return result
 
 
 def require_commit(value: str) -> str:
@@ -31,8 +49,13 @@ def bootstrap_rtk(temporary: Path) -> None:
     directory = temporary / "robb-quality-rtk"
     directory.mkdir(mode=0o700, exist_ok=True)
     archive = directory / "rtk.tar.gz"
-    with urllib.request.urlopen(RTK_URL, timeout=60) as response:
+    response: object = urllib.request.urlopen(RTK_URL, timeout=60)
+    if not isinstance(response, DownloadResponse):
+        raise TypeError("Invalid download response")
+    try:
         archive.write_bytes(response.read())
+    finally:
+        response.close()
     if hashlib.sha256(archive.read_bytes()).hexdigest() != RTK_SHA256:
         raise ValueError("RTK archive integrity failure")
     with tarfile.open(archive) as bundle:
@@ -48,10 +71,10 @@ def bootstrap_rtk(temporary: Path) -> None:
     os.environ["PATH"] = str(directory) + os.pathsep + os.environ["PATH"]
 
 
-def execute(argv: list[str], root: Path) -> subprocess.CompletedProcess[str]:
+def execute(argv: list[str], root: Path, *, timeout: int = 1500) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["rtk", *argv], cwd=root, capture_output=True, text=True,
-        timeout=1500, check=False,
+        timeout=timeout, check=False,
     )
 
 
@@ -122,21 +145,28 @@ def main() -> int:
         return validation.returncode
     prepare_electron_sandbox(root)
     gate = controller / "scripts/bmad/quality_gate.py"
-    result = execute(["python3", str(gate), "run", str(root)], root)
+    public = temporary / "robb-public-quality"
+    public.mkdir(mode=0o700, exist_ok=True)
+    try:
+        result = execute(["python3", str(gate), "run", str(root)], root, timeout=2100)
+    except subprocess.TimeoutExpired:
+        (public / "timeout.json").write_text('{"state":"TIMEOUT","exit_code":124,"seconds":2100}\n')
+        print("Canonical quality exceeded 35 minutes; no verification or publication.")
+        return 124
     # Private rule contents and the full report stay out of public build logs/artifacts.
     report_text = (root / "bmad/quality-evidence.json").read_text()
     (temporary / "robb-canonical-quality.json").write_text(report_text)
-    report: object = json.loads(report_text)
-    if not isinstance(report, dict):
-        raise TypeError("Canonical controller returned an invalid report")
-    checks = report.get("checks")
-    summary = []
+    decoded: object = json.loads(report_text)
+    report = record(decoded)
+    raw_checks = report.get("checks")
+    if not isinstance(raw_checks, list):
+        raise TypeError("Canonical controller returned invalid checks")
+    checks = [record(item) for item in cast(list[object], raw_checks)]
+    summary: list[dict[str, object]] = []
     if isinstance(checks, list):
         for check in checks:
             if isinstance(check, dict):
                 summary.append({"name": check.get("name"), "exit_code": check.get("exit_code")})
-    public = temporary / "robb-public-quality"
-    public.mkdir(mode=0o700, exist_ok=True)
     if isinstance(checks, list):
         for check in checks:
             if isinstance(check, dict) and check.get("name") == "tests":
@@ -148,7 +178,8 @@ def main() -> int:
     workers = root / "bmad/quality-logs/typescript-workers.jsonl"
     if workers.is_file() and not workers.is_symlink():
         (public / "typescript-workers.jsonl").write_bytes(workers.read_bytes())
-    print(json.dumps({"state": report.get("state"), "checks": summary}))
+    public_summary: dict[str, object] = {"state": report.get("state"), "checks": summary}
+    print(json.dumps(public_summary))
     if result.returncode:
         print("Canonical quality run failed; publication remains blocked.")
         return result.returncode
@@ -160,8 +191,9 @@ def main() -> int:
         return verified.returncode
     if git_value(["rev-parse", "HEAD"], root) != expected:
         raise ValueError("Release commit changed during checks")
-    print(json.dumps({"state": "PASS", "source_commit": expected,
-                      "controller_commit": controller_commit}))
+    receipt: dict[str, str] = {"state": "PASS", "source_commit": expected,
+                               "controller_commit": controller_commit}
+    print(json.dumps(receipt))
     return 0
 
 

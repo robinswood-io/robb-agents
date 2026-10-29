@@ -53,6 +53,7 @@ class ReleaseQualityTests(unittest.TestCase):
 
     def pipeline(
         self, *, check_code: int = 0, validation_code: int = 0, source: str = "a" * 40,
+        gate_timeout: bool = False,
     ) -> tuple[int, str, list[tuple[str, ...]]]:
         calls: list[tuple[str, ...]] = []
         with tempfile.TemporaryDirectory() as directory:
@@ -67,8 +68,11 @@ class ReleaseQualityTests(unittest.TestCase):
                 "ROBB_EXPECTED_SOURCE_COMMIT": "a" * 40, "ROBB_RULEBOOK_COMMIT": "b" * 40,
             }
 
-            def execute(argv: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+            def execute(argv: list[str], cwd: Path, *, timeout: int = 1500) -> subprocess.CompletedProcess[str]:
+                self.assertEqual(timeout, 2100 if len(argv) > 2 and argv[2] == "run" else 1500)
                 calls.append(tuple(argv))
+                if gate_timeout and len(argv) > 2 and argv[2] == "run":
+                    raise subprocess.TimeoutExpired(argv, timeout)
                 if argv == ["git", "rev-parse", "HEAD"]:
                     head = "b" * 40 if cwd == controller else source
                     return subprocess.CompletedProcess(argv, 0, head + "\n", "")
@@ -102,6 +106,12 @@ class ReleaseQualityTests(unittest.TestCase):
                 code = CI.main()
             self.assertTrue((temporary / "robb-release-validation.log").is_file())
             return code, output.getvalue(), calls
+
+    def test_gate_timeout_preserves_failure_and_never_verifies(self) -> None:
+        code, output, calls = self.pipeline(gate_timeout=True)
+        self.assertEqual(code, 124)
+        self.assertIn("exceeded 35 minutes", output)
+        self.assertFalse(any(len(call) > 2 and call[2] == "verify" for call in calls))
 
     def test_full_boundary_uses_report_file_and_verifies_exact_commit(self) -> None:
         code, output, calls = self.pipeline()

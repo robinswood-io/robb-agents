@@ -400,3 +400,14 @@ l’installateur officiel du paquet verrouillé uniquement si le helper manque.
 Un échec de téléchargement bloque les commandes de droits ; onze tests ciblés
 passent. Le contrôle final exige propriétaire et groupe root, ainsi que le mode
 4755. Le parcours réel CI reste obligatoire pour qualifier cette préparation.
+
+La CI 40910542224 vérifie le helper puis expire à la limite de 1 500 secondes
+du pilote, avant le reçu global. La limite du gate passe explicitement à
+2 100 secondes, dans le budget du job de 40 minutes ; mémoire et contrôles
+individuels inchangés. Une expiration conserve le code 124 et une preuve publique
+minimale, sans publier les règles privées ni appeler verify.
+Les entrées HTTP et JSON du pilote sont validées et typées. Sur DEV, MyPy strict
+avec interdiction des expressions Any et Ruff passent ; les douze tests ciblés
+incluent la propagation du budget et le refus de verify après expiration.
+Ces résultats ne remplacent pas le gate global ni la qualification des autres
+langages et des règles actuelles, encore absente dans le contrat Robb.
