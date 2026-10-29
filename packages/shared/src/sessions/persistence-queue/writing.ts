@@ -33,6 +33,7 @@ export function enqueue(transportOwner: SessionPersistenceQueue, session: Stored
         const root = lstatSync(verifiedRoot, { bigint: true });
         persistenceRootIdentity.device ??= root.dev.toString();
         persistenceRootIdentity.inode ??= root.ino.toString();
+        persistenceRootIdentity.birthtimeNs ??= root.birthtimeNs.toString();
     }
     const key = transportOwner.registerIdentity(persistenceRootPath, session.id);
     if (transportOwner.retired.has(key)) {

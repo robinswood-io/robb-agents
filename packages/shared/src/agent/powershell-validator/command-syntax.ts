@@ -39,8 +39,8 @@ export function looksLikePowerShell(command: string): boolean {
     /\s-(?:eq|ne|gt|lt|ge|le|like|notlike|match|notmatch|contains|notcontains|in|notin|replace|split|join)\s/i,
 
     // Array/hashtable literals
-    /@\([^)]*\)/,
-    /@\{[^}]*\}/,
+    /(?:^|[\s=;|(&])@\([^)]*\)/,
+    /(?:^|[\s=;|(&])@\{[^}]*\}/,
 
     // Common PowerShell aliases that differ from Unix
     /(?:^|[;&|({])\s*(gci|gcm|gps|gsv|gjb)\b/i,

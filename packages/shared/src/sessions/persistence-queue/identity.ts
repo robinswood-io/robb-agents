@@ -64,17 +64,18 @@ export function assertOrBindPersistenceHierarchy(transportOwner: SessionPersiste
     }
     const sessionsPath = join(workspaceRootPath, 'sessions');
     const sessions = physicalDirectoryStats(sessionsPath, 'Session persistence directory');
-    assertDirectoryIdentityPair(sessionsPath, 'Session persistence directory', sessions, registered.sessionsDevice, registered.sessionsInode);
+    assertDirectoryIdentityPair(sessionsPath, 'Session persistence directory', sessions, registered.sessionsDevice, registered.sessionsInode, registered.sessionsBirthtimeNs);
     if (options.bind) {
         registered.sessionsDevice ??= sessions.dev.toString();
         registered.sessionsInode ??= sessions.ino.toString();
+        registered.sessionsBirthtimeNs ??= sessions.birthtimeNs.toString();
         if (persistenceRootIdentity) {
             bindSessionContainerIdentity(persistenceRootIdentity, workspaceRootPath);
         }
     }
     const sessionPath = getSessionPath(workspaceRootPath, sessionId);
     const session = optionalPhysicalDirectoryStats(sessionPath, `Session directory for ${sessionId}`);
-    assertDirectoryIdentityPair(sessionPath, `Session directory for ${sessionId}`, session, registered.sessionDevice, registered.sessionInode);
+    assertDirectoryIdentityPair(sessionPath, `Session directory for ${sessionId}`, session, registered.sessionDevice, registered.sessionInode, registered.sessionBirthtimeNs);
     if (!session) {
         if (options.requireSession) {
             throw new SessionPersistenceRootIdentityError(`Session directory is unavailable: ${sessionPath}`);
@@ -84,6 +85,7 @@ export function assertOrBindPersistenceHierarchy(transportOwner: SessionPersiste
     if (options.bind) {
         registered.sessionDevice ??= session.dev.toString();
         registered.sessionInode ??= session.ino.toString();
+        registered.sessionBirthtimeNs ??= session.birthtimeNs.toString();
     }
 }
 

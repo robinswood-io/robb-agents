@@ -4,16 +4,18 @@
  * These tests verify that dangerous shell commands are blocked in Safe (Explore) mode
  * while legitimate read-only commands are allowed.
  */
-import { describe, it, expect } from 'bun:test';
-import "path";
+import { beforeAll, describe, it, expect } from 'bun:test';
+import { resolve } from 'node:path';
 import "fs";
 import "os";
-import { looksLikePowerShell, isPowerShellAvailable } from '../src/agent/powershell-validator.ts';
+import { looksLikePowerShell, isPowerShellAvailable, setPowerShellValidatorRoot } from '../src/agent/powershell-validator.ts';
 import { shouldAllowToolInMode, type CompiledBashPattern } from '../src/agent/mode-manager.ts';
 import { validatePowerShellCommand } from '../src/agent/powershell-validator.ts';
 import { extractPowerShellWriteTarget, unwrapPowerShellCommand } from '../src/agent/powershell-validator.ts';
 import "../src/agent/powershell-validator.ts";
 import "../src/agent/mode-manager.ts";
+
+beforeAll(() => setPowerShellValidatorRoot(resolve(import.meta.dir, '../src/agent')));
 
 describe('looksLikePowerShell', () => {
   describe('should detect PowerShell cmdlet patterns', () => {

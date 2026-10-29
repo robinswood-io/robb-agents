@@ -9,6 +9,8 @@ describe('PowerShell command detection', () => {
     'cat /tmp/gci/report.txt',
     'echo New-Item',
     'echo "Get-Content"',
+    'git reflog delete HEAD@{0}',
+    'git show main@{yesterday}',
   ])('keeps Bash paths and arguments in the Bash validator: %s', command => {
     expect(looksLikePowerShell(command)).toBe(false);
   });
@@ -23,6 +25,8 @@ describe('PowerShell command detection', () => {
     'gci C:\\',
     '$value -eq 5',
     '@{key = "value"}',
+    '$value=@(1, 2)',
+    '$value=@{key = "value"}',
   ])('retains PowerShell syntax detection: %s', command => {
     expect(looksLikePowerShell(command)).toBe(true);
   });

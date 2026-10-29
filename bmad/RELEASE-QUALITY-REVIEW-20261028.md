@@ -10,6 +10,15 @@ avec typage, lint, environnement et politique TypeScript réussis. Le diagnostic
 temporaire conserve les sorties complètes de quatre fichiers de tests synthétiques et
 du script public de dépendances, dans un profil QA isolé. Aucun rapport canonique privé
 n’est publié ; le code de sortie est conservé et aucun contrôle obligatoire n’est retiré.
+Le diagnostic 40877157371 confirme le parseur PowerShell non initialisé dans les tests
+et une écriture admise après remplacement d’un répertoire. Les fixtures initialisent
+le vrai parseur ; les références Git HEAD@{0} restent classées Bash. L’identité des
+répertoires ajoute leur date de création nanoseconde aux device/inode pour détecter
+leur réutilisation ; les anciens instantanés restent compatibles. Les types seuls
+sont extraits pour garder shared.ts sous 500 lignes. Les 24 tests ciblés passent ;
+la qualification Linux réelle et le gate global restent obligatoires.
+Le premier diagnostic dépendances n’avait pas initialisé RTK : il réutilise désormais
+le bootstrap vérifié existant et exclut le checkout privé avant l’inventaire public.
 
 ## Périmètre, garanties et preuves
 

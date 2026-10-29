@@ -4,11 +4,18 @@ from __future__ import annotations
 import os
 import subprocess
 from pathlib import Path
+from robinswood_quality_ci import bootstrap_rtk, git_value
 
 
 def main() -> int:
     root = Path(os.environ["GITHUB_WORKSPACE"]).resolve()
     temporary = Path(os.environ["RUNNER_TEMP"]).resolve()
+    bootstrap_rtk(temporary)
+    exclude = Path(git_value(["rev-parse", "--git-path", "info/exclude"], root))
+    if not exclude.is_absolute():
+        exclude = root / exclude
+    with exclude.open("a") as stream:
+        stream.write("\n/.quality-rulebook/\n")
     output = temporary / "robb-public-quality"
     output.mkdir(mode=0o700, exist_ok=True)
     environment = dict(os.environ)
@@ -16,6 +23,8 @@ def main() -> int:
     commands = {
         "linux-platform-tests": [
             "bun", "test", "--timeout", "10000",
+            "packages/shared/src/sessions/persistence-queue/directory-identity.test.ts",
+            "packages/shared/src/agent/powershell-validator/command-syntax.test.ts",
             "packages/shared/src/agent/backend/__tests__/read-patterns.test.ts",
             "packages/shared/src/agent/__tests__/permissions-default-hardening.test.ts",
             "packages/shared/tests/mode-manager-powershell.test.ts",

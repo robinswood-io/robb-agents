@@ -3,6 +3,8 @@ import { closeSync, fstatSync, lstatSync, openSync, realpathSync, unlinkSync, ty
 import { randomUUID } from "crypto";
 import { basename, dirname, join, resolve } from "path";
 import type { StoredSession, SessionHeader } from "../types.js";
+import type { SessionPersistenceRootIdentity } from './identity-types.ts';
+export type { SessionPersistenceIdentity, SessionPersistenceRootIdentity } from './identity-types.ts';
 
 export interface PendingWrite {
     data: StoredSession;
@@ -15,29 +17,9 @@ export interface PendingWrite {
     durable: boolean;
 }
 
-export interface SessionPersistenceIdentity {
-    sessionId: string;
-    normalizedSessionId: string;
-    workspaceRootPath: string;
-    caseInsensitive: boolean;
-    sessionsDevice?: string;
-    sessionsInode?: string;
-    sessionDevice?: string;
-    sessionInode?: string;
-}
-
 export const canonicalWorkspaceRoots = new Map<string, string>();
 
 export const caseInsensitiveSessionsDirectories = new Map<string, boolean>();
-
-export interface SessionPersistenceRootIdentity {
-    workspaceRootPath: string;
-    device?: string;
-    inode?: string;
-    /** Physical `sessions/` object, bound as soon as it exists. */
-    sessionsDevice?: string;
-    sessionsInode?: string;
-}
 
 export class SessionPersistenceRootIdentityError extends Error {
     constructor(message: string) {
@@ -77,7 +59,7 @@ export function optionalPhysicalDirectoryStats(path: string, label: string): Big
     }
 }
 
-export function assertDirectoryIdentityPair(path: string, label: string, directory: BigIntStats | undefined, device: string | undefined, inode: string | undefined): void {
+export function assertDirectoryIdentityPair(path: string, label: string, directory: Pick<BigIntStats, 'dev' | 'ino' | 'birthtimeNs'> | undefined, device: string | undefined, inode: string | undefined, birthtimeNs?: string): void {
     if ((device === undefined) !== (inode === undefined)) {
         throw new SessionPersistenceRootIdentityError(`${label} identity is incomplete: ${path}`);
     }
@@ -85,7 +67,8 @@ export function assertDirectoryIdentityPair(path: string, label: string, directo
         return;
     if (!directory
         || directory.dev.toString() !== device
-        || directory.ino.toString() !== inode) {
+        || directory.ino.toString() !== inode
+        || (birthtimeNs !== undefined && directory.birthtimeNs.toString() !== birthtimeNs)) {
         throw new SessionPersistenceRootIdentityError(`${label} was replaced: ${path}`);
     }
 }
@@ -93,9 +76,10 @@ export function assertDirectoryIdentityPair(path: string, label: string, directo
 export function bindSessionContainerIdentity(identity: SessionPersistenceRootIdentity, canonicalRoot: string): BigIntStats {
     const sessionsPath = join(canonicalRoot, 'sessions');
     const sessions = physicalDirectoryStats(sessionsPath, 'Session persistence directory');
-    assertDirectoryIdentityPair(sessionsPath, 'Session persistence directory', sessions, identity.sessionsDevice, identity.sessionsInode);
+    assertDirectoryIdentityPair(sessionsPath, 'Session persistence directory', sessions, identity.sessionsDevice, identity.sessionsInode, identity.sessionsBirthtimeNs);
     identity.sessionsDevice ??= sessions.dev.toString();
     identity.sessionsInode ??= sessions.ino.toString();
+    identity.sessionsBirthtimeNs ??= sessions.birthtimeNs.toString();
     return sessions;
 }
 
@@ -165,7 +149,8 @@ export function captureSessionPersistenceRootIdentity(workspaceRootPath: string)
             workspaceRootPath: canonicalRoot,
             device: root.dev.toString(),
             inode: root.ino.toString(),
-            ...(sessions ? { sessionsDevice: sessions.dev.toString(), sessionsInode: sessions.ino.toString() } : {}),
+            birthtimeNs: root.birthtimeNs.toString(),
+            ...(sessions ? { sessionsDevice: sessions.dev.toString(), sessionsInode: sessions.ino.toString(), sessionsBirthtimeNs: sessions.birthtimeNs.toString() } : {}),
         };
     }
     catch (error) {
@@ -214,12 +199,13 @@ export function assertSessionPersistenceRootIdentity(identity: SessionPersistenc
         throw new SessionPersistenceRootIdentityError(`Session persistence root is no longer a physical directory: ${identity.workspaceRootPath}`);
     }
     if ((identity.device !== undefined && root.dev.toString() !== identity.device)
-        || (identity.inode !== undefined && root.ino.toString() !== identity.inode)) {
+        || (identity.inode !== undefined && root.ino.toString() !== identity.inode)
+        || (identity.birthtimeNs !== undefined && root.birthtimeNs.toString() !== identity.birthtimeNs)) {
         throw new SessionPersistenceRootIdentityError(`Session persistence root was replaced: ${identity.workspaceRootPath}`);
     }
     const sessionsPath = join(canonicalRoot, 'sessions');
     const sessions = optionalPhysicalDirectoryStats(sessionsPath, 'Session persistence directory');
-    assertDirectoryIdentityPair(sessionsPath, 'Session persistence directory', sessions, identity.sessionsDevice, identity.sessionsInode);
+    assertDirectoryIdentityPair(sessionsPath, 'Session persistence directory', sessions, identity.sessionsDevice, identity.sessionsInode, identity.sessionsBirthtimeNs);
     return canonicalRoot;
 }
 
