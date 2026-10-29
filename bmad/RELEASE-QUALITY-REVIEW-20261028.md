@@ -365,3 +365,7 @@ son répertoire de travail à /repo puis scanne `.` ; aucune exception élargie.
 Le run 40887724048 constate que le helper Chrome préinstallé ne possède pas
 les droits requis. La correction de droits sur runner éphémère est préparée,
 mais attend l’autorisation sensible. Aucun succès Electron ni gate revendiqué.
+Le diagnostic temporaire est retiré après identification de la cause : il faisait
+double emploi avec les contrôles canoniques et empêchait les contrôles indépendants
+de démarrer. Le vrai test Electron reste dans la suite obligatoire ; son échec
+bloque toujours le gate et la publication. Aucun droit système n’est modifié.
