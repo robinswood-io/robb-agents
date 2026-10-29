@@ -21,7 +21,7 @@ def main() -> int:
     environment = dict(os.environ)
     environment["CRAFT_CONFIG_DIR"] = str(temporary / "robb-platform-test-profile")
     commands = {
-        "linux-platform-tests": ["bun", "test", "apps/electron/src/main/__tests__/browser-canvas-capture.isolated.ts"],
+        "linux-platform-tests": ["bun", "test", "./apps/electron/src/main/__tests__/browser-canvas-capture.isolated.ts"],
         "dependencies": ["python3", "scripts/check_workspace_dependencies.py"],
     }
     failed = 0

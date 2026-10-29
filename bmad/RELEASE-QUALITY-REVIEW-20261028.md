@@ -48,6 +48,14 @@ encore avec Xvfb : la cause n’est donc pas établie par l’affichage seul. So
 contrôle maintenant code de sortie, présence du reçu et stderr avant de lire le JSON.
 Le diagnostic préalable cible ce seul obstacle ; le gate conserve la suite complète.
 Les quatre pins Python du workflow Robinswood Validate sont aussi alignés sur 3.15.2.
+Le diagnostic ciblé doit préfixer le fichier .isolated.ts par ./ pour que Bun le lance
+comme chemin ; l’absence de test correspondant est restée un échec, jamais une réussite.
+Le scanner de la validation OSS signale dix lignes SHA-256 dans six preuves historiques,
+pas des identifiants. La configuration reconnaît uniquement huit lignes/valeurs exactes,
+dans ces six chemins et pour generic-api-key. Scan réel du dépôt : dix puis zéro alerte.
+Deux contrôles négatifs restent rouges : valeur différente au même emplacement, ou
+ligne connue hors des preuves autorisées. Résultats versionnés dans
+docs/robinswood/evidence/release-0.12.11/secret-scan-digest-proof.json.
 
 ## Périmètre, garanties et preuves
 
