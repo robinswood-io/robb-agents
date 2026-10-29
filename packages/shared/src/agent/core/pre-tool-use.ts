@@ -37,6 +37,24 @@ import { claimGmailToolUse } from './pre-tool-use/gmail-claims.ts';
 import { checkRemoteTransportAdmission } from './pre-tool-use/remote-transport.ts';
 import { getRobbOperationsExtension } from '../../operations/index.ts';
 
+const SHELL_RESERVED_PREFLIGHT_TOKENS = new Set([
+  'for', 'in', 'if', 'then', 'elif', 'else', 'fi',
+  'while', 'until', 'do', 'done', 'case', 'esac',
+  'select', 'function', 'time', 'coproc', '{', '}', '!', '[[', ']]',
+]);
+
+function isFalsePositiveShellKeywordPreflightBlock(toolName: string, reason: string): boolean {
+  if (toolName !== 'Bash') return false;
+  const match = /^Shell preflight: executable "([^"]+)" was not found on PATH\.$/u.exec(reason);
+  const token = match?.[1]?.trim();
+  if (!token) return false;
+  return SHELL_RESERVED_PREFLIGHT_TOKENS.has(token)
+    || token.startsWith('(')
+    || token.startsWith('{')
+    || token.startsWith('[')
+    || token.startsWith('!');
+}
+
 export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult {
   const {
     toolName,
@@ -380,7 +398,9 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     if ('input' in decision && decision.input) {
       return { type: 'block', reason: 'Robb Operations cannot rewrite tool input at this admission point.' };
     }
-    if (decision.decision === 'block') return { type: 'block', reason: decision.reason };
+    if (decision.decision === 'block' && !isFalsePositiveShellKeywordPreflightBlock(toolName, decision.reason)) {
+      return { type: 'block', reason: decision.reason };
+    }
     if (decision.decision === 'require-approval' && !permissionApprovalReentry) {
       if (effectivePermissionMode === 'safe' || ctx.humanInputAllowed === false) {
         return { type: 'block', reason: decision.reason };

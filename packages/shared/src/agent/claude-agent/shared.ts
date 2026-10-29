@@ -120,7 +120,8 @@ export function resolveClaudeMiniCompletionRoute(input: {
     thinkingOptions: Partial<Options>;
 } { return { model: input.activeModel, thinkingOptions: resolveClaudeThinkingOptions({ thinkingLevel: input.activeThinkingLevel, model: input.activeModel, providerType: input.providerType, minimizeThinking: false }) }; }
 
-export interface ClaudeAgentConfig {
+export interface ClaudeAgentConfig extends Omit<BackendConfig, 'provider'> {
+    provider?: BackendConfig['provider'] | undefined;
     workspace: Workspace;
     session?: Session; // Current session (primary isolation boundary)
     mcpToken?: string; // Override token (for testing)
@@ -360,31 +361,9 @@ export const buildWindowsSkillsDirError = buildWindowsSkillsDirErrorFn;
 
 export function createClaudeBackendConfig(config: ClaudeAgentConfig, model: string): BackendConfig {
     return {
+        ...config,
         provider: 'anthropic',
-        workspace: config.workspace,
-        ...(config.session !== undefined ? { session: config.session } : {}),
         model,
-        ...(config.thinkingLevel !== undefined ? { thinkingLevel: config.thinkingLevel } : {}),
-        ...(config.isModelRoutePinned !== undefined ? { isModelRoutePinned: config.isModelRoutePinned } : {}),
-        ...(config.mcpToken !== undefined ? { mcpToken: config.mcpToken } : {}),
-        ...(config.isHeadless !== undefined ? { isHeadless: config.isHeadless } : {}),
-        ...(config.skipConfigWatcher !== undefined ? { skipConfigWatcher: config.skipConfigWatcher } : {}),
-        ...(config.debugMode !== undefined ? { debugMode: config.debugMode } : {}),
-        ...(config.systemPromptPreset !== undefined ? { systemPromptPreset: config.systemPromptPreset } : {}),
-        ...(config.onSdkSessionIdUpdate !== undefined ? { onSdkSessionIdUpdate: config.onSdkSessionIdUpdate } : {}),
-        ...(config.onSdkSessionIdCleared !== undefined ? { onSdkSessionIdCleared: config.onSdkSessionIdCleared } : {}),
-        ...(config.onBranchForkInvalidated !== undefined ? { onBranchForkInvalidated: config.onBranchForkInvalidated } : {}),
-        ...(config.getRecoveryMessages !== undefined ? { getRecoveryMessages: config.getRecoveryMessages } : {}),
-        ...(config.getBranchFallbackMessages !== undefined ? { getBranchFallbackMessages: config.getBranchFallbackMessages } : {}),
-        ...(config.getBranchSeedMessages !== undefined ? { getBranchSeedMessages: config.getBranchSeedMessages } : {}),
-        ...(config.markBranchSeedApplied !== undefined ? { markBranchSeedApplied: config.markBranchSeedApplied } : {}),
-        ...(config.getTransferredSessionSummary !== undefined ? { getTransferredSessionSummary: config.getTransferredSessionSummary } : {}),
-        ...(config.markTransferredSessionSummaryApplied !== undefined ? { markTransferredSessionSummaryApplied: config.markTransferredSessionSummaryApplied } : {}),
-        ...(config.envOverrides !== undefined ? { envOverrides: config.envOverrides } : {}),
-        ...(config.miniModel !== undefined ? { miniModel: config.miniModel } : {}),
-        ...(config.mcpPool !== undefined ? { mcpPool: config.mcpPool } : {}),
-        ...(config.connectionSlug !== undefined ? { connectionSlug: config.connectionSlug } : {}),
-        ...(config.automationSystem !== undefined ? { automationSystem: config.automationSystem } : {}),
     };
 }
 

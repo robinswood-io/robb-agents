@@ -30,7 +30,7 @@ export function getElementText(node: ASTNode): string | null {
 export function looksLikePowerShell(command: string): boolean {
   const psPatterns = [
     // Cmdlet pattern: Verb-Noun
-    /\b(Get|Set|New|Remove|Add|Clear|Write|Read|Out|ConvertTo|ConvertFrom|Test|Select|Where|ForEach|Sort|Group|Measure|Compare|Format|Export|Import|Start|Stop|Invoke|Enable|Disable|Register|Unregister|Update|Find|Install|Uninstall|Save|Publish|Push|Pop)-\w+/i,
+    /(?<![/\\.-])\b(Get|Set|New|Remove|Add|Clear|Write|Read|Out|ConvertTo|ConvertFrom|Test|Select|Where|ForEach|Sort|Group|Measure|Compare|Format|Export|Import|Start|Stop|Invoke|Enable|Disable|Register|Unregister|Update|Find|Install|Uninstall|Save|Publish|Push|Pop)-\w+/i,
 
     // PowerShell variables in pipeline
     /\$\w+\s*\|/,

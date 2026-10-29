@@ -14,7 +14,9 @@
  * - ScriptBlockExpressionAst: { ... } script blocks
  */
 import { spawnSync } from "child_process";
-import { join } from "path";
+import { existsSync } from "fs";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 import { debug } from "../../utils/debug.ts";
 import type { ParseResult } from './ast-types.ts';
 import { _validatorRoot } from './parser-location.ts';
@@ -76,13 +78,27 @@ export function isPowerShellAvailable(): boolean {
  * Get the path to the PowerShell parser script.
  * Requires setPowerShellValidatorRoot() to have been called at startup.
  */
-function getParserScriptPath(): string {
-  if (!_validatorRoot) {
-    throw new Error(
-      'PowerShell validator root not set. Call setPowerShellValidatorRoot() at startup.'
-    );
+export function resolveParserScriptPath(): string {
+  if (_validatorRoot) {
+    return join(_validatorRoot, 'powershell-parser.ps1');
   }
-  return join(_validatorRoot, 'powershell-parser.ps1');
+  const moduleDir = dirname(fileURLToPath(import.meta.url));
+  for (const candidate of [
+    join(moduleDir, '..', 'powershell-parser.ps1'),
+    join(moduleDir, 'powershell-parser.ps1'),
+    join(moduleDir, 'resources', 'powershell-parser.ps1'),
+  ]) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  throw new Error(
+    'PowerShell validator root not set. Call setPowerShellValidatorRoot() at startup.'
+  );
+}
+
+function getParserScriptPath(): string {
+  return resolveParserScriptPath();
 }
 
 /**

@@ -1,11 +1,9 @@
-diff --git a/dist/index.d.mts b/dist/index.d.mts
-index cc2cce021d798cda95606a4a2f30c92d88043016..7eee62ae3db6f5cd2437c8a1ddc36608c165d778 100644
---- a/dist/index.d.mts
-+++ b/dist/index.d.mts
-@@ -5,25 +5,12 @@ declare namespace babelCompat_d_exports {
-   export { FileResult, InputOptions, PluginObject, PresetItem, loadOptionsAsync };
- }
- import * as import__babel_core from "@babel/core";
+diff --git a/dist/babelCompat-ag_0o5ff.d.mts b/dist/babelCompat-ag_0o5ff.d.mts
+index b6e3fac2e763dc51267d69ca5d84e8295cfb9ced..1be4a101e108e2cffb61bd28c6293610c7577131 100644
+--- a/dist/babelCompat-ag_0o5ff.d.mts
++++ b/dist/babelCompat-ag_0o5ff.d.mts
+@@ -1,18 +1,7 @@
+ import * as babel from "@babel/core";
 -type IsAny<T> = boolean extends (T extends never ? true : false) ? true : false;
 -/** **When using babel 7, install `@types/babel__core` to get proper types.** */
 -type InputOptionsFallback = {
@@ -16,21 +14,15 @@ index cc2cce021d798cda95606a4a2f30c92d88043016..7eee62ae3db6f5cd2437c8a1ddc36608
 -};
 -type InputOptions8 = babel.InputOptions;
 -type PresetItem8 = babel.PresetItem;
--type PluginObject8<T> = babel.PluginObject<T>;
 -type FileResult8 = babel.FileResult;
 -type TransformOptions = babel.TransformOptions;
--type PluginObj<T> = babel.PluginObj<T>;
 -type BabelFileResult = babel.BabelFileResult;
 -type InputOptions = IsAny<InputOptions8> extends false ? InputOptions8 : IsAny<TransformOptions> extends false ? TransformOptions : InputOptionsFallback;
 -type PresetItem = IsAny<PresetItem8> extends false ? PresetItem8 : babel.PluginItem;
--type PluginObject<T = babel.PluginPass> = IsAny<PluginObject8<T>> extends false ? PluginObject8<T> : PluginObj<T>;
 -type FileResult = IsAny<FileResult8> extends false ? FileResult8 : BabelFileResult;
 +// This workspace uses Babel 8, which ships its own native declarations.
 +// Do not reference removed Babel 7 type-only exports from the fallback branch.
 +type InputOptions = babel.InputOptions;
 +type PresetItem = babel.PresetItem;
-+type PluginObject<T extends babel.PluginPass = babel.PluginPass> = babel.PluginObject<T>;
 +type FileResult = babel.FileResult;
- declare const loadOptionsAsync: (options?: InputOptions) => Promise<InputOptions & {
-   plugins: babel.PluginItem[];
- }>;
+ export { InputOptions as n, PresetItem as r, FileResult as t };

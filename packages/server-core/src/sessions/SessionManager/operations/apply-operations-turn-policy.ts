@@ -1,14 +1,69 @@
 import { omitUndefined } from '@craft-agent/shared/utils/json';
-import { getDefaultLlmConnection, getLlmConnections, getMiniModel } from '@craft-agent/shared/config';
+import {
+  getDefaultLlmConnection,
+  getLlmConnections,
+  getMiniModel,
+  resolveAgentCostControlPolicy,
+} from '@craft-agent/shared/config';
 import { getRobbOperationsExtension } from '@craft-agent/shared/operations';
 import { CodedError } from '@craft-agent/shared/protocol';
+import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces';
 import type { ManagedSession } from '../managed-session.ts';
-import type { SessionOperationContext } from '../operation-context.ts';
+
+export interface OperationsTurnPolicyOwner {
+  setSessionConnection(sessionId: string, connectionSlug: string): Promise<void> | void;
+  updateSessionModel(sessionId: string, workspaceId: string, model: string | null): Promise<void> | void;
+  setSessionThinkingLevel(sessionId: string, level: NonNullable<ManagedSession['thinkingLevel']>): void;
+}
+
+export type OperationsTurnPolicySession = Pick<
+  ManagedSession,
+  | 'id'
+  | 'workspace'
+  | 'llmConnection'
+  | 'model'
+  | 'thinkingLevel'
+  | 'missionId'
+  | 'missionWorkItemId'
+  | 'missionRole'
+  | 'messages'
+  | 'tokenUsage'
+  | 'enabledSourceSlugs'
+  | 'missionRouteLockSha256'
+  | 'isProcessing'
+  | 'connectionRoutePinned'
+  | 'modelRoutePinned'
+  | 'thinkingLevelPinned'
+>;
+
+function modelCapabilityTierRank(modelId: string): number {
+  const lower = modelId.toLowerCase();
+  if (/(?:opus|fable|pro-high|gpt-5\.4-pro)/u.test(lower)) return 0;
+  if (/(?:sonnet|terra|medium|pro-low|gpt-5)/u.test(lower)) return 1;
+  if (/(?:haiku|luna|mini|flash|spark|nano)/u.test(lower)) return 2;
+  return 1;
+}
+
+function orderConnectionModelsByCapability(
+  models: readonly string[] | undefined,
+  defaultModel: string | undefined,
+): string[] | undefined {
+  if (!models || models.length <= 1) return models ? [...models] : undefined;
+  return [...models].sort((left, right) => {
+    const rankDiff = modelCapabilityTierRank(left) - modelCapabilityTierRank(right);
+    if (rankDiff !== 0) return rankDiff;
+    if (defaultModel) {
+      if (left === defaultModel && right !== defaultModel) return -1;
+      if (right === defaultModel && left !== defaultModel) return 1;
+    }
+    return 0;
+  });
+}
 
 /** Run the optional commercial policy before a fresh user turn is persisted. */
 export async function applyOperationsTurnPolicy(
-  context: SessionOperationContext,
-  managed: ManagedSession,
+  context: { readonly owner: OperationsTurnPolicyOwner },
+  managed: OperationsTurnPolicySession,
   message: string,
 ): Promise<string> {
   const extension = getRobbOperationsExtension();
@@ -50,14 +105,17 @@ export async function applyOperationsTurnPolicy(
       ...(managed.model !== undefined ? { currentModel: managed.model } : {}),
       ...(managed.thinkingLevel !== undefined ? { currentThinkingLevel: managed.thinkingLevel } : {}),
       enabledSourceSlugs: managed.enabledSourceSlugs ?? [],
-      connections: candidates.map(connection => omitUndefined({
-        slug: connection.slug,
-        providerType: connection.providerType,
-        defaultModel: connection.defaultModel,
-        models: connection.models?.map(model => typeof model === 'string' ? model : model.id),
-        miniModel: getMiniModel(connection) ?? undefined,
-        modelSelectionMode: connection.modelSelectionMode,
-      })),
+      connections: candidates.map(connection => {
+        const rawModels = connection.models?.map(model => typeof model === 'string' ? model : model.id);
+        return omitUndefined({
+          slug: connection.slug,
+          providerType: connection.providerType,
+          defaultModel: connection.defaultModel,
+          models: orderConnectionModelsByCapability(rawModels, connection.defaultModel),
+          miniModel: getMiniModel(connection) ?? undefined,
+          modelSelectionMode: connection.modelSelectionMode,
+        });
+      }),
     });
   } catch (error) {
     throw new CodedError('OPERATIONS_POLICY_BLOCKED',
@@ -86,15 +144,24 @@ export async function applyOperationsTurnPolicy(
   }
 
   // Mission routes are sealed by the host before dispatch. Commercial routing
-  // may select a model only for ordinary, idle chats.
-  if (!managed.missionRouteLockSha256 && !managed.isProcessing) {
-    if (selected.slug !== managed.llmConnection) {
+  // may select a model only for ordinary, idle chats where automatic routing is active
+  // and the user has not explicitly pinned the session route.
+  const workspaceConfig = managed.workspace.rootPath
+    ? loadWorkspaceConfig(managed.workspace.rootPath)
+    : null;
+  const legacyWorkspaceRoutingFlag: unknown = workspaceConfig
+    ? Reflect.get(workspaceConfig, "automaticRoutingEnabled")
+    : undefined;
+  const automaticRoutingEnabled = legacyWorkspaceRoutingFlag !== false
+    && resolveAgentCostControlPolicy(workspaceConfig?.costControl).automaticRoutingEnabled;
+  if (!managed.missionRouteLockSha256 && !managed.isProcessing && automaticRoutingEnabled) {
+    if (!managed.connectionRoutePinned && selected.slug !== managed.llmConnection) {
       await context.owner.setSessionConnection(managed.id, selected.slug);
     }
-    if (decision.model && decision.model !== managed.model) {
+    if (!managed.modelRoutePinned && decision.model && decision.model !== managed.model) {
       await context.owner.updateSessionModel(managed.id, managed.workspace.id, decision.model);
     }
-    if (decision.thinkingLevel && decision.thinkingLevel !== managed.thinkingLevel) {
+    if (!managed.thinkingLevelPinned && decision.thinkingLevel && decision.thinkingLevel !== managed.thinkingLevel) {
       context.owner.setSessionThinkingLevel(managed.id, decision.thinkingLevel);
     }
   }

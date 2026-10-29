@@ -257,3 +257,12 @@ amont Bun. Son contrôle canonique a refusé la revue périmée, comme attendu.
 L’étape de diagnostic temporaire est retirée. La qualification globale de ce nouveau
 contenu reste obligatoire. Référence technique consultée :
 https://github.com/oven-sh/bun/issues/37189 (problème analogue, pas preuve de même cause).
+
+## Correctifs structurels des sessions du 29/10/2026 et cause racine Linux pwsh
+- createClaudeBackendConfig conserve desormais l'integralite de BackendConfig (YOLO getHumanInputAllowed, externalActionPolicy, getObjectiveMutationAuthority, beforeToolExecution, authType, missionCapabilityLock).
+- Les refus d'outil recuperables (blockWithReason et claude-agent/pre-tool-use.ts) renvoient continue: true + decision: block + hookSpecificOutput (permissionDecision: deny) afin de ne plus interrompre le flux SDK Claude en plein tour ; continue: false reste reserve a source_activation_needed.
+- agent-runtime-permission-callbacks.ts honore hasMatchingExternalActionAuthorization avant refus YOLO automatique, et le message YOLO distingue explicitement la politique non interactive d'un refus utilisateur.
+- core/pre-tool-use.ts evite les faux positifs du prevol shell Robb Operations sur les mots reserves POSIX/zsh (for, if, while, until, case, function, time, accolades, negation, doubles crochets, sous-shells) tout en conservant le blocage des binaires reellement absents.
+- applyOperationsTurnPolicy trie les modeles candidats par capacite decroissante (Opus/Pro -> Sonnet -> Haiku/Mini) et respecte automaticRoutingEnabled: false ainsi que les routes epinglees ; spawn-delegated-session.ts fusionne defaults.enabledSourceSlugs ; exact-user-input-response.ts ignore les reservations d'enfants bloques inactifs ; admission.ts normalise les entrees session via leur schema Zod (request_user_input).
+- Cause racine exacte de l'echec Linux CI prior-read (run 40865259495) identifiee et corrigee : sur ubuntu-latest, /usr/bin/pwsh est installe et /fixture/new-target activait looksLikePowerShell sans setPowerShellValidatorRoot. command-syntax.ts exclut les segments de chemin/options, parser-process.ts resout powershell-parser.ps1 hors Electron, et restart-recovery-fixture.ts vide permissionsConfigCache.
+- Dependances mises a jour aux dernieres versions stables publiees au 29/10/2026 : lucide-react 1.64.0, react-resizable-panels 4.15.1, @rolldown/plugin-babel 0.3.0 (patch Babel 8 mis a jour), qs 6.17.1, jose 6.2.14.

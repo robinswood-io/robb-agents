@@ -42,6 +42,17 @@ export function installRuntimePermissionCallbacks(sessionOperationContext: Sessi
         }
         if (sessionOpRejectPermissionRequestOutsideActiveGeneration(sessionOperationContext, managed, request, createdAgent))
             return;
+        const nowForYoloCheck = Date.now();
+        const activeAuthorizationsForYolo = pruneExternalActionAuthorizations(managed.externalActionAuthorizations, nowForYoloCheck);
+        if (hasMatchingExternalActionAuthorization(activeAuthorizationsForYolo, {
+            ...(request.sensitiveActionCategory !== undefined ? { category: request.sensitiveActionCategory } : {}),
+            ...(request.sensitiveActionTargets !== undefined ? { targetCandidates: request.sensitiveActionTargets } : {}),
+            toolName: request.toolName,
+            ...(request.sensitiveActionOperationHash !== undefined ? { operationHash: request.sensitiveActionOperationHash } : {}),
+        }, nowForYoloCheck)) {
+            createdAgent.respondToPermission(request.requestId, true, false);
+            return;
+        }
         if (sessionOpIsManagedSessionYolo(sessionOperationContext, managed)) {
             sessionOpRecordAutonomyEvent(sessionOperationContext, managed, { phase: 'diagnosis', toolName: request.toolName,
                 message: 'YOLO refused an unexpected interactive permission handoff. No tool was approved or executed; diagnose the exact policy conflict and continue independent work.' });
