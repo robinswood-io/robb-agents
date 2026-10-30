@@ -57,7 +57,7 @@ describe('shouldAllowToolInMode - Bash plans folder exception', () => {
     });
 
     it.skipIf(!isWindows)('should allow PowerShell Out-File to plans folder', () => {
-      const windowsPlansFolderPath = 'C:\\Users\\test\\.craft-agent\\workspaces\\ws\\sessions\\s1\\plans';
+      const windowsPlansFolderPath = plansFolderPath;
       const command = `@('# Plan', '', '## Steps', '1. Do thing') | Out-File -FilePath '${windowsPlansFolderPath}\\plan.md' -Encoding utf8`;
       const result = shouldAllowToolInMode(
         'Bash',
@@ -65,11 +65,11 @@ describe('shouldAllowToolInMode - Bash plans folder exception', () => {
         'safe',
         { plansFolderPath: windowsPlansFolderPath }
       );
-      expect(result.allowed).toBe(true);
+      expect(result.allowed, JSON.stringify(result)).toBe(true);
     });
 
     it.skipIf(!isWindows)('should allow PowerShell Set-Content to plans folder', () => {
-      const windowsPlansFolderPath = 'C:\\Users\\test\\.craft-agent\\workspaces\\ws\\sessions\\s1\\plans';
+      const windowsPlansFolderPath = plansFolderPath;
       const command = `'# Plan content' | Set-Content -Path '${windowsPlansFolderPath}\\plan.md'`;
       const result = shouldAllowToolInMode(
         'Bash',
@@ -77,58 +77,58 @@ describe('shouldAllowToolInMode - Bash plans folder exception', () => {
         'safe',
         { plansFolderPath: windowsPlansFolderPath }
       );
-      expect(result.allowed).toBe(true);
+      expect(result.allowed, JSON.stringify(result)).toBe(true);
     });
 
     it.skipIf(!isWindows)('should allow Bash write with different case in path (Windows compatibility)', () => {
       // On Windows, paths are case-insensitive. The system might report "C:\Users\Balin\..."
       // but the command might use "C:\Users\balin\..." - both should work.
-      const plansFolderPath = 'C:\\Users\\Balin\\.craft-agent\\workspaces\\ws\\sessions\\s1\\plans';
-      const command = `@('# Plan') | Out-File -FilePath 'C:\\Users\\balin\\.craft-agent\\workspaces\\ws\\sessions\\s1\\plans\\plan.md' -Encoding utf8`;
+      const expectedPlansFolderPath = plansFolderPath.toUpperCase();
+      const command = `@('# Plan') | Out-File -FilePath '${plansFolderPath.toLowerCase()}\\plan.md' -Encoding utf8`;
       const result = shouldAllowToolInMode(
         'Bash',
         { command },
         'safe',
-        { plansFolderPath }
+        { plansFolderPath: expectedPlansFolderPath }
       );
-      expect(result.allowed).toBe(true);
+      expect(result.allowed, JSON.stringify(result)).toBe(true);
     });
 
     it.skipIf(!isWindows)('should allow Unix redirect with different case in path (Windows compatibility)', () => {
-      const plansFolderPath = 'C:\\Users\\Balin\\.craft-agent\\plans';
-      const command = `printf '# Plan' > "C:\\Users\\balin\\.craft-agent\\plans\\plan.md"`;
+      const expectedPlansFolderPath = plansFolderPath.toUpperCase();
+      const command = `printf '# Plan' > "${plansFolderPath.toLowerCase()}\\plan.md"`;
       const result = shouldAllowToolInMode(
         'Bash',
         { command },
         'safe',
-        { plansFolderPath }
+        { plansFolderPath: expectedPlansFolderPath }
       );
-      expect(result.allowed).toBe(true);
+      expect(result.allowed, JSON.stringify(result)).toBe(true);
     });
   });
 
   describe('should allow Write/Edit to plans folder with case-insensitive paths', () => {
     it.skipIf(!isWindows)('should allow Write with different case in path (Windows compatibility)', () => {
       // Simulating Windows where system reports "C:\Users\Balin\..." but tool uses "C:\Users\balin\..."
-      const plansFolderPath = 'C:\\Users\\Balin\\.craft-agent\\workspaces\\ws\\sessions\\s1\\plans';
+      const expectedPlansFolderPath = plansFolderPath.toUpperCase();
       const result = shouldAllowToolInMode(
         'Write',
-        { file_path: 'C:\\Users\\balin\\.craft-agent\\workspaces\\ws\\sessions\\s1\\plans\\plan.md', content: '# Plan' },
+        { file_path: `${plansFolderPath.toLowerCase()}\\plan.md`, content: '# Plan' },
         'safe',
-        { plansFolderPath }
+        { plansFolderPath: expectedPlansFolderPath }
       );
-      expect(result.allowed).toBe(true);
+      expect(result.allowed, JSON.stringify(result)).toBe(true);
     });
 
     it.skipIf(!isWindows)('should allow Edit with different case in path (Windows compatibility)', () => {
-      const plansFolderPath = 'C:\\Users\\Balin\\.craft-agent\\plans';
+      const expectedPlansFolderPath = plansFolderPath.toUpperCase();
       const result = shouldAllowToolInMode(
         'Edit',
-        { file_path: 'C:\\Users\\balin\\.craft-agent\\plans\\plan.md', old_string: 'old', new_string: 'new' },
+        { file_path: `${plansFolderPath.toLowerCase()}\\plan.md`, old_string: 'old', new_string: 'new' },
         'safe',
-        { plansFolderPath }
+        { plansFolderPath: expectedPlansFolderPath }
       );
-      expect(result.allowed).toBe(true);
+      expect(result.allowed, JSON.stringify(result)).toBe(true);
     });
   });
 

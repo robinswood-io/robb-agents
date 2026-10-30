@@ -292,3 +292,19 @@ typecheck and ESLint with zero warnings pass; native macOS enforcement runs all
 19 tests successfully. Exact Windows CI and a new canonical gate remain required.
 Gate attempt6 was stopped without a PASS when this source correction became needed;
 its partial execution is not reused as a completed qualification.
+
+
+## Real directories for six Windows positive permission fixtures (30 October 2026)
+
+CI 41127885201 completes the native Windows suite in 22.49 seconds after the
+root-termination fix. Six positive cases still reference absent example directories
+under C:\Users\test or Balin. The existing symlink-safe containment check correctly
+requires a real allowed root; these examples were never created by the fixture.
+Use the existing temporary plans directory for Out-File, Set-Content, Unix redirect,
+Write and Edit. Derive upper/lowercase variants from the same real Windows path.
+All six allowed=true expectations remain, now including the result as a diagnostic.
+Negative cases, platform skips, production permissions and command parsing are
+unchanged. Review confirms no new abstraction, dependency, exception or guard bypass.
+Focused DEV tests, shared typecheck, ESLint with zero warnings and diff-check pass.
+The Windows-only cases must pass in native CI; DEV skips are not their qualification.
+Gate attempt7 was not launched because CI was red; exact run/verify remains required.
