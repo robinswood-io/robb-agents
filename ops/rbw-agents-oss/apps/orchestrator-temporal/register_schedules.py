@@ -1,16 +1,20 @@
 from __future__ import annotations
-import asyncio
+
 import argparse
-import base64
+import asyncio
 import json
+import logging
 import subprocess
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
+from activity_compaction import JSON_ADAPTER, JsonObject
+from pydantic import JsonValue, TypeAdapter, ValidationError
+from schedule_archive import schedule_archive_row as _schedule_archive_row
 
 sys.path.insert(0, "/srv/rbw-agents-oss/scripts")
 from lib.config_mutation import ConfigMutation
-
 from temporalio.client import (
     Client,
     Schedule,
@@ -20,11 +24,33 @@ from temporalio.client import (
 )
 from workflows import RbwAutomationWorkflow
 
+__all__ = ["_policy_task_queue", "_run_timeout_seconds", "upsert_schedules"]
+
 WORKER_SERVICE = "rbw-agents-oss-worker.service"
 ROOT = Path('/srv/rbw-agents-oss')
 ADMIN_QUEUE_POLICY = ROOT / 'config' / 'admin-wrapper-queue-policy.json'
 READY_SCHEDULES = ROOT / 'config' / 'temporal' / 'ready-schedules.json'
 ARCHIVE_ROOT = ROOT / 'archive'
+logger = logging.getLogger(__name__)
+OBJECT_ADAPTER = TypeAdapter(JsonObject)
+ROWS_ADAPTER = TypeAdapter(list[JsonObject])
+
+def _payload(item: JsonObject) -> JsonObject:
+    value = item.get("payload")
+    return value if isinstance(value, dict) else {}
+
+def _required_text(value: JsonValue) -> str:
+    if not isinstance(value, str):
+        raise TypeError("Schedule field must be text")
+    return value
+
+class Arguments(argparse.Namespace):
+    manifest: str = "/srv/rbw-agents-oss/config/temporal/schedules.json"
+    no_replace: bool = False
+    inspect_orphans: bool = False
+    prune_orphans: bool = False
+    skip_worker_restart: bool = False
+
 DEFAULT_LLM_CONNECTION = "openrouter"
 DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"
 
@@ -75,11 +101,11 @@ CRITICAL_MAIL_AUTONOMY_SCHEDULES = [
 ]
 
 
-def _manifest_rows(path: Path) -> list[dict]:
+def _manifest_rows(path: Path) -> list[JsonObject]:
     if not path.exists():
         return []
-    data = json.loads(path.read_text())
-    rows: list[dict] = []
+    data = JSON_ADAPTER.validate_json(path.read_bytes())
+    rows: list[JsonObject] = []
     if isinstance(data, dict):
         for value in data.values():
             if isinstance(value, list):
@@ -101,11 +127,11 @@ def _timeout_lookup() -> dict[str, int]:
     return out
 
 
-def _run_timeout_seconds(item: dict, timeouts: dict[str, int]) -> int:
+def _run_timeout_seconds(item: JsonObject, timeouts: dict[str, int]) -> int:
     explicit = item.get('run_timeout_seconds')
     if isinstance(explicit, int) and explicit > 0:
         return explicit
-    payload = item.get('payload') if isinstance(item.get('payload'), dict) else {}
+    payload = _payload(item)
     legacy_id = payload.get('legacy_id')
     wrapper_timeout = timeouts.get(str(legacy_id), 900)
     # Give the workflow room to record completion/failure and alerts, but keep
@@ -113,23 +139,23 @@ def _run_timeout_seconds(item: dict, timeouts: dict[str, int]) -> int:
     return max(600, min(int(wrapper_timeout) + 900, 3600))
 
 
-def _load_json(path: Path) -> dict:
+def _load_json(path: Path) -> JsonObject:
     if not path.exists():
         return {}
     try:
-        data = json.loads(path.read_text())
+        data = JSON_ADAPTER.validate_json(path.read_bytes())
         return data if isinstance(data, dict) else {}
-    except Exception:
+    except (OSError, UnicodeError, ValidationError):
         return {}
 
 
-def _write_json(path: Path, data: dict) -> None:
+def _write_json(path: Path, data: JsonObject) -> None:
     with ConfigMutation('register-schedules') as mutation:
         mutation.write_json(path, data)
 
 
-def _load_admin_queue_policy() -> dict:
-    defaults = {
+def _load_admin_queue_policy() -> JsonObject:
+    defaults: JsonObject = {
         'defaults': {'adminTaskQueue': 'watchdog'},
         'watchdogQueueWrappers': ['temporal-register-schedules'],
     }
@@ -138,21 +164,21 @@ def _load_admin_queue_policy() -> dict:
         return defaults
     out = defaults.copy()
     out.update(data)
-    merged_defaults = dict(defaults.get('defaults') or {})
-    merged_defaults.update(data.get('defaults') or {})
+    merged_defaults = OBJECT_ADAPTER.validate_python(defaults.get('defaults') or {})
+    merged_defaults.update(OBJECT_ADAPTER.validate_python(data.get('defaults') or {}))
     out['defaults'] = merged_defaults
     return out
 
 
-def _policy_task_queue(item: dict, policy: dict) -> tuple[str, str]:
-    payload = item.get('payload') if isinstance(item.get('payload'), dict) else {}
+def _policy_task_queue(item: JsonObject, policy: JsonObject) -> tuple[str, str]:
+    payload = _payload(item)
     legacy_id = str(payload.get('legacy_id') or item.get('legacy_id') or '')
-    if legacy_id and legacy_id in set(policy.get('watchdogQueueWrappers') or []):
-        return str((policy.get('defaults') or {}).get('adminTaskQueue') or 'watchdog'), 'admin-wrapper-queue-policy'
+    if legacy_id and legacy_id in TypeAdapter(list[str]).validate_python(policy.get('watchdogQueueWrappers') or []):
+        return str(OBJECT_ADAPTER.validate_python(policy.get('defaults') or {}).get('adminTaskQueue') or 'watchdog'), 'admin-wrapper-queue-policy'
     return str(item.get('task_queue') or 'default'), 'schedule-config'
 
 
-def _ensure_critical_mail_autonomy_entries() -> dict:
+def _ensure_critical_mail_autonomy_entries() -> JsonObject:
     """Validate critical mail schedules and self-heal ready-schedules only.
 
     V8 invariant: register_schedules must not mutate schedules.json. The only
@@ -220,41 +246,15 @@ def _ensure_critical_mail_autonomy_entries() -> dict:
         _write_json(ready_path, ready_data)
 
     return {
-        'missingSchedules': missing_schedules,
+        'missingSchedules': list[JsonValue](missing_schedules),
         'addedSchedules': [],
-        'addedReadySchedules': added_ready_schedules,
-        'addedReadyItems': added_ready_items,
+        'addedReadySchedules': list[JsonValue](added_ready_schedules),
+        'addedReadyItems': list[JsonValue](added_ready_items),
         'schedulesJsonMutated': False,
     }
 
 
-def _schedule_archive_row(schedule_id: str, desc) -> dict:
-    action = desc.schedule.action
-    spec = desc.schedule.spec
-    state = desc.schedule.state
-    raw = desc.raw_description.SerializeToString() if getattr(desc, 'raw_description', None) is not None else b''
-    args = []
-    for payload in list(getattr(action, 'args', None) or []):
-        metadata = {str(k): bytes(v).decode('utf-8', errors='replace') for k, v in dict(payload.metadata).items()}
-        args.append({'metadata': metadata, 'dataBase64': base64.b64encode(bytes(payload.data)).decode('ascii')})
-    return {
-        'scheduleId': schedule_id,
-        'workflowId': getattr(action, 'id', None),
-        'workflowType': str(getattr(action, 'workflow', None) or ''),
-        'taskQueue': getattr(action, 'task_queue', None),
-        'runTimeoutSeconds': int(getattr(action, 'run_timeout', timedelta(0)).total_seconds()) if getattr(action, 'run_timeout', None) else None,
-        'taskTimeoutSeconds': int(getattr(action, 'task_timeout', timedelta(0)).total_seconds()) if getattr(action, 'task_timeout', None) else None,
-        'args': args,
-        'cronExpressions': list(getattr(spec, 'cron_expressions', None) or []),
-        'calendarsRepr': repr(list(getattr(spec, 'calendars', None) or [])),
-        'timeZone': getattr(spec, 'time_zone_name', None),
-        'paused': bool(getattr(state, 'paused', False)),
-        'note': getattr(state, 'note', None),
-        'rawDescriptionProtoBase64': base64.b64encode(raw).decode('ascii'),
-    }
-
-
-def _prune_ready_schedule_ids(schedule_ids: set[str]) -> dict:
+def _prune_ready_schedule_ids(schedule_ids: set[str]) -> JsonObject:
     data = _load_json(READY_SCHEDULES)
     if not data or not schedule_ids:
         return {'changed': False, 'removed': 0}
@@ -263,7 +263,7 @@ def _prune_ready_schedule_ids(schedule_ids: set[str]) -> dict:
         rows = data.get(key)
         if not isinstance(rows, list):
             continue
-        kept = []
+        kept: list[JsonValue] = []
         for row in rows:
             if isinstance(row, dict) and str(row.get('schedule_id') or '') in schedule_ids:
                 removed += 1
@@ -271,36 +271,38 @@ def _prune_ready_schedule_ids(schedule_ids: set[str]) -> dict:
                 kept.append(row)
         data[key] = kept
     if removed:
-        data['updatedAt'] = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        data['updatedAt'] = datetime.now(UTC).isoformat().replace('+00:00', 'Z')
         data['updatedBy'] = 'register-schedules-prune-orphans'
         _write_json(READY_SCHEDULES, data)
     return {'changed': bool(removed), 'removed': removed}
 
 
-async def prune_orphan_schedules(client: Client, configured_ids: set[str], apply: bool) -> dict:
+async def prune_orphan_schedules(client: Client, configured_ids: set[str], apply: bool) -> JsonObject:
     iterator = await client.list_schedules()
     live_ids = {row.id async for row in iterator}
     orphan_ids = sorted(live_ids - configured_ids)
-    archive_rows = []
-    inspect_errors = []
+    archive_rows: list[JsonValue] = []
+    inspect_errors: list[JsonValue] = []
     for schedule_id in orphan_ids:
         try:
             desc = await client.get_schedule_handle(schedule_id).describe()
             archive_rows.append(_schedule_archive_row(schedule_id, desc))
         except Exception as exc:
+            logger.exception("Unable to inspect schedule before reconciliation")
             inspect_errors.append({'scheduleId': schedule_id, 'error': repr(exc)})
-    stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
-    archive_path = ARCHIVE_ROOT / datetime.now(timezone.utc).strftime('%Y-%m') / 'temporal-schedule-reconcile' / f'{stamp}-orphans.json'
+    stamp = datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')
+    archive_path = ARCHIVE_ROOT / datetime.now(UTC).strftime('%Y-%m') / 'temporal-schedule-reconcile' / f'{stamp}-orphans.json'
     archive_path.parent.mkdir(parents=True, exist_ok=True)
-    archive_path.write_text(json.dumps({'generatedAt': datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z'), 'configuredCount': len(configured_ids), 'liveCountBefore': len(live_ids), 'orphanScheduleIds': orphan_ids, 'schedules': archive_rows, 'inspectErrors': inspect_errors}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    deleted = []
-    delete_errors = []
+    _ = archive_path.write_text(json.dumps({'generatedAt': datetime.now(UTC).isoformat().replace('+00:00', 'Z'), 'configuredCount': len(configured_ids), 'liveCountBefore': len(live_ids), 'orphanScheduleIds': list[JsonValue](orphan_ids), 'schedules': archive_rows, 'inspectErrors': inspect_errors}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    deleted: list[str] = []
+    delete_errors: list[JsonValue] = []
     if apply and not inspect_errors:
         for schedule_id in orphan_ids:
             try:
                 await client.get_schedule_handle(schedule_id).delete()
                 deleted.append(schedule_id)
             except Exception as exc:
+                logger.exception("Unable to remove archived schedule")
                 delete_errors.append({'scheduleId': schedule_id, 'error': repr(exc)})
     live_after = set(live_ids)
     for _ in range(20 if deleted else 1):
@@ -309,15 +311,15 @@ async def prune_orphan_schedules(client: Client, configured_ids: set[str], apply
         if not (live_after - configured_ids):
             break
         await asyncio.sleep(0.5)
-    ready_cleanup = _prune_ready_schedule_ids(set(deleted)) if deleted and not delete_errors else {'changed': False, 'removed': 0}
+    ready_cleanup: JsonObject = _prune_ready_schedule_ids(set(deleted)) if deleted and not delete_errors else {'changed': False, 'removed': 0}
     return {
         'apply': apply,
         'configuredCount': len(configured_ids),
         'liveCountBefore': len(live_ids),
         'liveCountAfter': len(live_after),
-        'orphanScheduleIds': orphan_ids,
-        'deleted': deleted,
-        'remainingOrphans': sorted(live_after - configured_ids),
+        'orphanScheduleIds': list[JsonValue](orphan_ids),
+        'deleted': list[JsonValue](deleted),
+        'remainingOrphans': list[JsonValue](sorted(live_after - configured_ids)),
         'inspectErrors': inspect_errors,
         'deleteErrors': delete_errors,
         'readyScheduleCleanup': ready_cleanup,
@@ -326,21 +328,21 @@ async def prune_orphan_schedules(client: Client, configured_ids: set[str], apply
     }
 
 
-async def upsert_schedules(manifest_path: Path, replace: bool = True, prune_orphans: bool = False, inspect_orphans: bool = False) -> dict:
+async def upsert_schedules(manifest_path: Path, replace: bool = True, prune_orphans: bool = False, inspect_orphans: bool = False) -> JsonObject:
     client = await Client.connect("127.0.0.1:57233")
-    data = json.loads(manifest_path.read_text())
-    schedules = data.get("schedules", [])
+    data = OBJECT_ADAPTER.validate_json(manifest_path.read_bytes())
+    schedules = ROWS_ADAPTER.validate_python(data.get("schedules", []))
     timeouts = _timeout_lookup()
     queue_policy = _load_admin_queue_policy()
     created = 0
     replaced = 0
     skipped = 0
     failed = 0
-    policy_forced_queues: list[dict] = []
+    policy_forced_queues: list[JsonObject] = []
 
     for item in schedules:
-        sid = item["schedule_id"]
-        payload = item.get("payload", {})
+        sid = _required_text(item["schedule_id"])
+        payload = OBJECT_ADAPTER.validate_python(item.get("payload", {}))
         task_queue, queue_source = _policy_task_queue(item, queue_policy)
         if queue_source == 'admin-wrapper-queue-policy' and task_queue != item.get('task_queue'):
             policy_forced_queues.append({
@@ -352,48 +354,50 @@ async def upsert_schedules(manifest_path: Path, replace: bool = True, prune_orph
         action = ScheduleActionStartWorkflow(
             RbwAutomationWorkflow.run,
             payload,
-            id=item["workflow_id"],
+            id=_required_text(item["workflow_id"]),
             task_queue=task_queue,
             run_timeout=timedelta(seconds=_run_timeout_seconds(item, timeouts)),
             task_timeout=timedelta(seconds=30),
         )
         spec = ScheduleSpec(
-            cron_expressions=[item["cron"]],
-            time_zone_name=item.get("timezone", "Europe/Paris"),
+            cron_expressions=[_required_text(item["cron"]) ],
+            time_zone_name=_required_text(item.get("timezone", "Europe/Paris")),
         )
         state = ScheduleState(paused=not bool(item.get("enabled", True)))
         sch = Schedule(action=action, spec=spec, state=state)
 
         try:
             handle = client.get_schedule_handle(sid)
-            await handle.describe()
+            _ = await handle.describe()
             if replace:
                 await handle.delete()
-                await client.create_schedule(sid, sch)
+                _ = await client.create_schedule(sid, sch)
                 replaced += 1
             else:
                 skipped += 1
         except Exception:
+            logger.exception("Unable to read or replace schedule; attempting creation")
             try:
-                await client.create_schedule(sid, sch)
+                _ = await client.create_schedule(sid, sch)
                 created += 1
             except Exception:
+                logger.exception("Unable to create schedule")
                 failed += 1
 
-    result = {
+    result: JsonObject = {
         "total": len(schedules),
         "created": created,
         "replaced": replaced,
         "skipped": skipped,
         "failed": failed,
-        "policyForcedQueues": policy_forced_queues,
+        "policyForcedQueues": list[JsonValue](policy_forced_queues),
     }
     if prune_orphans or inspect_orphans:
         result['pruneOrphans'] = await prune_orphan_schedules(client, {str(item['schedule_id']) for item in schedules}, apply=prune_orphans)
     return result
 
 
-def restart_worker_service() -> dict:
+def restart_worker_service() -> JsonObject:
     """Restart worker after schedule/worker changes.
 
     This admin wrapper is run outside Temporal by the OSS MCP source. Restarting
@@ -406,12 +410,13 @@ def restart_worker_service() -> dict:
     ]
     last = None
     for cmd in attempts:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False)
         last = proc
         if proc.returncode == 0:
             status = subprocess.run(
                 ["systemctl", "is-active", WORKER_SERVICE],
                 capture_output=True,
+                check=False,
                 text=True,
                 timeout=20,
             )
@@ -435,15 +440,15 @@ def restart_worker_service() -> dict:
 
 async def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
+    _ = parser.add_argument(
         "--manifest",
         default="/srv/rbw-agents-oss/config/temporal/schedules.json",
     )
-    parser.add_argument("--no-replace", action="store_true")
-    parser.add_argument("--inspect-orphans", action="store_true", help="Archive and report live schedules absent from the authoritative manifest without deleting")
-    parser.add_argument("--prune-orphans", action="store_true", help="Archive and delete live schedules absent from the authoritative manifest")
-    parser.add_argument("--skip-worker-restart", action="store_true")
-    args = parser.parse_args()
+    _ = parser.add_argument("--no-replace", action="store_true")
+    _ = parser.add_argument("--inspect-orphans", action="store_true", help="Archive and report live schedules absent from the authoritative manifest without deleting")
+    _ = parser.add_argument("--prune-orphans", action="store_true", help="Archive and delete live schedules absent from the authoritative manifest")
+    _ = parser.add_argument("--skip-worker-restart", action="store_true")
+    args = parser.parse_args(namespace=Arguments())
 
     ensure_result = _ensure_critical_mail_autonomy_entries()
     result = await upsert_schedules(Path(args.manifest), replace=not args.no_replace, prune_orphans=args.prune_orphans, inspect_orphans=args.inspect_orphans)
@@ -451,7 +456,8 @@ async def main() -> None:
     if not args.skip_worker_restart:
         result["workerRestart"] = restart_worker_service()
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    prune_result = result.get('pruneOrphans') if isinstance(result.get('pruneOrphans'), dict) else {}
+    raw_prune = result.get('pruneOrphans')
+    prune_result = raw_prune if isinstance(raw_prune, dict) else {}
     if result.get('failed') or (prune_result and not prune_result.get('ok')):
         raise SystemExit(1)
 

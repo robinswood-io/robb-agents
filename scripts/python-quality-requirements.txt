@@ -1,0 +1,20 @@
+# Tools and import dependencies for all maintained Python sources.
+basedpyright==1.40.2
+ruff==0.17.3
+Pillow==13.0.0
+click==8.5.0
+icalendar==7.3.0
+img2pdf==0.6.3
+openpyxl==3.1.5
+pypdf==6.21.4
+pypdfium2==5.14.0
+python-dateutil==3.0.0
+python-docx==1.2.0
+python-pptx==1.0.2
+requests==2.34.2
+temporalio==1.35.0
+httpx==0.28.1
+pydantic==2.14.2
+python-dotenv==1.2.4
+nats-py==2.16.0
+playwright==1.64.1

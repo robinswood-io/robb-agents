@@ -35,6 +35,7 @@ import { homedir } from 'node:os'
 import { readFileSync, existsSync } from 'node:fs'
 import { version as packageVersion } from '../package.json'
 import { enableDebug } from '@craft-agent/shared/utils/debug'
+import { setPowerShellValidatorRoot } from '@craft-agent/shared/agent'
 import { bootstrapServer, startHealthHttpServer, generateServerToken, type ServerBootstrapOptions } from '@craft-agent/server-core/bootstrap'
 import {
   validateSession,
@@ -61,6 +62,8 @@ import { SessionManager, setSessionPlatform, setSessionRuntimeHooks } from '@cra
 import { initModelRefreshService, setFetcherPlatform } from '@craft-agent/server-core/model-fetchers'
 import { setSearchPlatform, setImageProcessor } from '@craft-agent/server-core/services'
 import type { HandlerDeps } from '@craft-agent/server-core/handlers'
+
+setPowerShellValidatorRoot(join(import.meta.dir, '..', '..', 'shared', 'src', 'agent'))
 
 process.env["CRAFT_IS_PACKAGED"] ??= 'false'
 

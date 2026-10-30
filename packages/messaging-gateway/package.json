@@ -10,7 +10,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit"
+    "typecheck": "node ../../scripts/run-typescript.ts native --noEmit"
   },
   "dependencies": {
     "@craft-agent/core": "workspace:*",

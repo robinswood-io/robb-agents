@@ -136,8 +136,8 @@ function buildMainProcess(config: BuildConfig): void {
     // Replace grammY's bundled polyfills (node-fetch@2 + abort-controller@3)
     // with native Node globals. Keeps parity with electron-dev.ts,
     // electron-build-main.ts, and apps/electron/package.json build:main.
-    '--alias:node-fetch=./apps/electron/src/main/shims/node-fetch.cjs',
-    '--alias:abort-controller=./apps/electron/src/main/shims/abort-controller.cjs',
+    '--alias:node-fetch=./apps/electron/src/main/shims/node-fetch.ts',
+    '--alias:abort-controller=./apps/electron/src/main/shims/abort-controller.ts',
   ];
 
   // Add OAuth defines if env vars are set

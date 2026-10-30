@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-import json
 import os
 import signal
 import subprocess
 import time
 from pathlib import Path
-from pydantic import JsonValue
 
+from pydantic import JsonValue, ValidationError
+
+from .json_support import JSON_VALUE_ADAPTER, _is_json_object
 from .models import ExecutionResult, PolicyDecision
 
 
@@ -23,10 +24,10 @@ def _extract_json_status(stdout: str) -> dict[str, JsonValue]:
     candidates.extend(line.strip() for line in text.splitlines()[::-1] if line.strip().startswith("{") )
     for raw in candidates[:10]:
         try:
-            parsed = json.loads(raw)
-        except Exception:
+            parsed = JSON_VALUE_ADAPTER.validate_json(raw)
+        except ValidationError:
             continue
-        if isinstance(parsed, dict):
+        if _is_json_object(parsed):
             return parsed
     return {}
 
@@ -77,17 +78,17 @@ def execute_argv(
         try:
             os.killpg(proc.pid, signal.SIGTERM)
             stdout, stderr = proc.communicate(timeout=10)
-        except Exception:
+        except (OSError, subprocess.TimeoutExpired):
             try:
                 os.killpg(proc.pid, signal.SIGKILL)
-            except Exception:
-                pass
+            except OSError:
+                timed_out = True
             stdout, stderr = proc.communicate()
 
     stdout = stdout or ""
     stderr = stderr or ""
     json_status = _extract_json_status(stdout)
-    business_failure = json_status.get("ok") is False if isinstance(json_status, dict) else False
+    business_failure = json_status.get("ok") is False
     exit_code = 124 if timed_out else int(proc.returncode or 0)
     if business_failure and exit_code == 0:
         exit_code = 1

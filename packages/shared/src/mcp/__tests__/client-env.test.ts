@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const FIXTURE = join(HERE, 'fixtures', 'mcp-server-env-probe.mjs');
+const FIXTURE = join(HERE, 'fixtures', 'mcp-server-env-probe.ts');
 const CLIENT_MODULE = pathToFileURL(join(HERE, '..', 'client.ts')).href;
 
 const PROBE_KEYS = [

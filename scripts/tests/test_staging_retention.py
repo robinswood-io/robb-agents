@@ -1,44 +1,42 @@
 import datetime
-import importlib.util
 import io
 import json
 import os
-from pathlib import Path
 import plistlib
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
-from unittest import mock
 from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
+from typing import cast
+from unittest import mock
 
+from scripts.robb_retention_files import is_record
 
-spec = importlib.util.spec_from_file_location(
-    'staging_retention',
-    Path(__file__).parents[1] / 'staging-retention.py',
-)
-retention = importlib.util.module_from_spec(spec)
-assert spec.loader is not None
-spec.loader.exec_module(retention)
-
-
+sys.path.insert(0, str(Path(__file__).parents[1]))
+try:
+    import staging_retention as retention
+finally:
+    _ = sys.path.pop(0)
 COMMIT = 'a' * 40
-ALLOW_SIGNATURE = lambda _bundle: True
+def allow_signature(_bundle: Path) -> bool:
+    return True
 
 
-def completed(stdout='', stderr='', returncode=0):
+def completed(stdout: str = '', stderr: str = '', returncode: int = 0) -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess([], returncode, stdout, stderr)
 
 
-def create_bundle(app, *, bundle_id=retention.APP_ID):
+def create_bundle(app: Path, *, bundle_id: str = retention.APP_ID) -> None:
     contents = app / 'Contents'
     executable = contents / 'MacOS/Robb Agents'
     archive = contents / 'Resources/app.asar'
     executable.parent.mkdir(parents=True)
     archive.parent.mkdir(parents=True)
-    executable.write_bytes(b'arm64 executable fixture')
-    archive.write_bytes(b'asar fixture')
+    _ = executable.write_bytes(b'arm64 executable fixture')
+    _ = archive.write_bytes(b'asar fixture')
     with (contents / 'Info.plist').open('wb') as stream:
         plistlib.dump({
             'CFBundleIdentifier': bundle_id,
@@ -47,7 +45,7 @@ def create_bundle(app, *, bundle_id=retention.APP_ID):
         }, stream)
 
 
-def bundle_fingerprint(app):
+def bundle_fingerprint(app: Path) -> dict[str, str]:
     return {
         'bundleIdentifier': retention.APP_ID,
         'executable': 'Robb Agents',
@@ -64,19 +62,19 @@ def bundle_fingerprint(app):
     }
 
 
-def create_checkpoint(root, created, *, version=2, bundle_id=retention.APP_ID):
-    created = created.astimezone(datetime.timezone.utc)
+def create_checkpoint(root: Path, created: datetime.datetime, *, version: int = 2, bundle_id: str = retention.APP_ID) -> Path:
+    created = created.astimezone(datetime.UTC)
     checkpoint = root / created.strftime('%Y%m%d-%H%M%S-%f')
     app = checkpoint / retention.APP_NAME
     create_bundle(app, bundle_id=bundle_id)
-    manifest = {
+    manifest: dict[str, object] = {
         'version': version,
         'createdAt': created.isoformat(),
         'source': '/Applications/Robb Agents.app',
     }
     if version == 2:
         manifest['validation'] = retention.strong_validation_manifest(bundle_fingerprint(app))
-    (checkpoint / 'backup.json').write_text(json.dumps(manifest), encoding='utf-8')
+    _ = (checkpoint / 'backup.json').write_text(json.dumps(manifest), encoding='utf-8')
     return checkpoint
 
 
@@ -85,11 +83,11 @@ class StagingRetentionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
             victim = base / 'victim'
-            victim.write_text('must remain intact')
+            _ = victim.write_text('must remain intact')
             lock_path = base / 'retention.lock'
             lock_path.symlink_to(victim)
             with self.assertRaises((OSError, ValueError)):
-                retention.open_lock(lock_path)
+                _ = retention.open_lock(lock_path)
             self.assertEqual(victim.read_text(), 'must remain intact')
 
     def test_backup_can_defer_pruning_for_stronger_caller_validation(self):
@@ -155,10 +153,9 @@ class StagingRetentionTests(unittest.TestCase):
                     str(root),
                 ]),
                 redirect_stdout(io.StringIO()),
-                redirect_stderr(io.StringIO()),
+                redirect_stderr(io.StringIO()),self.assertRaises(SystemExit)
             ):
-                with self.assertRaises(SystemExit):
-                    retention.main()
+                retention.main()
             self.assertFalse(root.exists())
 
     def test_main_rejects_a_symlinked_backup_parent_before_writing(self):
@@ -173,24 +170,23 @@ class StagingRetentionTests(unittest.TestCase):
                 '--apply',
                 '--root',
                 str(alias_parent / 'backups'),
-            ]):
-                with self.assertRaisesRegex(ValueError, 'component must not be a symlink'):
-                    retention.main()
+            ]), self.assertRaisesRegex(ValueError, 'component must not be a symlink'):
+                retention.main()
             self.assertFalse((real_parent / 'backups').exists())
 
     def test_keeps_two_newest_strongly_validated_checkpoints_only(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            start = datetime.datetime(2026, 9, 1, tzinfo=datetime.timezone.utc)
+            start = datetime.datetime(2026, 9, 1, tzinfo=datetime.UTC)
             checkpoints = [
                 create_checkpoint(root, start + datetime.timedelta(days=index, microseconds=index + 1))
                 for index in range(4)
             ]
             (root / '.partial-current').mkdir()
             (root / 'notes').mkdir()
-            preview = retention.prune(root, signature_verifier=ALLOW_SIGNATURE)
+            preview = retention.prune(root, signature_verifier=allow_signature)
             self.assertEqual(preview['removed'], [checkpoints[1].name, checkpoints[0].name])
-            result = retention.prune(root, True, signature_verifier=ALLOW_SIGNATURE)
+            result = retention.prune(root, True, signature_verifier=allow_signature)
             self.assertEqual(result['kept'], [checkpoints[3].name, checkpoints[2].name])
             self.assertFalse(checkpoints[0].exists())
             self.assertFalse(checkpoints[1].exists())
@@ -200,21 +196,21 @@ class StagingRetentionTests(unittest.TestCase):
     def test_never_prunes_arbitrary_dated_or_legacy_v1_directories(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            start = datetime.datetime(2026, 9, 1, tzinfo=datetime.timezone.utc)
+            start = datetime.datetime(2026, 9, 1, tzinfo=datetime.UTC)
             valid = [
                 create_checkpoint(root, start + datetime.timedelta(days=index, microseconds=index + 1))
                 for index in range(3)
             ]
             arbitrary = root / '20260910-120000-000001'
             arbitrary.mkdir()
-            (arbitrary / 'personal-notes').write_text('never delete', encoding='utf-8')
+            _ = (arbitrary / 'personal-notes').write_text('never delete', encoding='utf-8')
             legacy_v1 = create_checkpoint(
                 root,
-                datetime.datetime(2026, 9, 11, 12, 0, 0, 2, tzinfo=datetime.timezone.utc),
+                datetime.datetime(2026, 9, 11, 12, 0, 0, 2, tzinfo=datetime.UTC),
                 version=1,
             )
 
-            result = retention.prune(root, True, signature_verifier=ALLOW_SIGNATURE)
+            result = retention.prune(root, True, signature_verifier=allow_signature)
 
             self.assertEqual(result['removed'], [valid[0].name])
             self.assertTrue(arbitrary.exists())
@@ -223,19 +219,19 @@ class StagingRetentionTests(unittest.TestCase):
     def test_strong_proof_is_rechecked_against_bundle_bytes_and_identity(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            created = datetime.datetime(2026, 9, 1, 1, 2, 3, 4, tzinfo=datetime.timezone.utc)
+            created = datetime.datetime(2026, 9, 1, 1, 2, 3, 4, tzinfo=datetime.UTC)
             checkpoint = create_checkpoint(root, created)
-            self.assertIsNotNone(retention.managed_checkpoint(checkpoint, ALLOW_SIGNATURE))
+            self.assertIsNotNone(retention.managed_checkpoint(checkpoint, allow_signature))
 
-            (checkpoint / retention.APP_NAME / 'Contents/Resources/app.asar').write_bytes(b'tampered')
-            self.assertIsNone(retention.managed_checkpoint(checkpoint, ALLOW_SIGNATURE))
+            _ = (checkpoint / retention.APP_NAME / 'Contents/Resources/app.asar').write_bytes(b'tampered')
+            self.assertIsNone(retention.managed_checkpoint(checkpoint, allow_signature))
 
             wrong_identity = create_checkpoint(
                 root,
                 created + datetime.timedelta(days=1),
                 bundle_id='com.example.not-production',
             )
-            self.assertIsNone(retention.managed_checkpoint(wrong_identity, ALLOW_SIGNATURE))
+            self.assertIsNone(retention.managed_checkpoint(wrong_identity, allow_signature))
 
             runtime_changed = create_checkpoint(
                 root,
@@ -245,8 +241,8 @@ class StagingRetentionTests(unittest.TestCase):
                 runtime_changed / retention.APP_NAME / 'Contents/Resources/app/dist/interceptor.cjs'
             )
             external_runtime.parent.mkdir(parents=True)
-            external_runtime.write_text('changed after validation', encoding='utf-8')
-            self.assertIsNone(retention.managed_checkpoint(runtime_changed, ALLOW_SIGNATURE))
+            _ = external_runtime.write_text('changed after validation', encoding='utf-8')
+            self.assertIsNone(retention.managed_checkpoint(runtime_changed, allow_signature))
 
     def test_backup_publishes_version_two_proof_only_after_strong_copy_match(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -256,64 +252,70 @@ class StagingRetentionTests(unittest.TestCase):
             source = base / retention.APP_NAME
             create_bundle(source)
 
-            def runner(args, **_kwargs):
+            def runner(args: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
                 if args[0] == '/usr/bin/ditto':
-                    shutil.copytree(Path(args[1]), Path(args[2]))
+                    _ = shutil.copytree(Path(args[1]), Path(args[2]))
                 return completed()
 
-            with mock.patch.object(retention.subprocess, 'run', side_effect=runner):
+            with mock.patch.object(subprocess, 'run', side_effect=runner):
                 checkpoint = retention.backup(
                     root,
                     fingerprint_validator=bundle_fingerprint,
                     source=source,
                 )
 
-            manifest = json.loads((checkpoint / 'backup.json').read_text(encoding='utf-8'))
+            manifest = cast(object, json.loads((checkpoint / 'backup.json').read_text(encoding='utf-8')))
+            assert is_record(manifest)
             self.assertEqual(manifest['version'], 2)
+            validation = manifest['validation']
+            assert is_record(validation)
             self.assertEqual(
-                manifest['validation']['contract'],
+                validation['contract'],
                 retention.STRONG_VALIDATION_CONTRACT,
             )
             # The production helper always records /Applications; the injected
             # source path above exists only to keep this unit test hermetic.
             manifest['source'] = '/Applications/Robb Agents.app'
-            (checkpoint / 'backup.json').write_text(json.dumps(manifest), encoding='utf-8')
-            self.assertIsNotNone(retention.managed_checkpoint(checkpoint, ALLOW_SIGNATURE))
+            _ = (checkpoint / 'backup.json').write_text(json.dumps(manifest), encoding='utf-8')
+            self.assertIsNotNone(retention.managed_checkpoint(checkpoint, allow_signature))
 
     def test_new_backup_stays_newest_when_the_clock_moves_backwards(self):
         with tempfile.TemporaryDirectory() as temp:
             base = Path(temp)
             root = base / 'backups'
             root.mkdir()
-            future = datetime.datetime(2030, 1, 1, tzinfo=datetime.timezone.utc)
+            future = datetime.datetime(2030, 1, 1, tzinfo=datetime.UTC)
             older = create_checkpoint(root, future)
             newer = create_checkpoint(root, future + datetime.timedelta(seconds=1))
             source = base / retention.APP_NAME
             create_bundle(source)
 
-            def runner(args, **_kwargs):
+            def runner(args: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
                 if args[0] == '/usr/bin/ditto':
-                    shutil.copytree(Path(args[1]), Path(args[2]))
+                    _ = shutil.copytree(Path(args[1]), Path(args[2]))
                 return completed()
 
-            with mock.patch.object(retention.subprocess, 'run', side_effect=runner):
+            with mock.patch.object(subprocess, 'run', side_effect=runner):
                 created = retention.backup(
                     root,
                     fingerprint_validator=bundle_fingerprint,
                     source=source,
-                    clock=lambda: datetime.datetime(2020, 1, 1, tzinfo=datetime.timezone.utc),
-                    signature_verifier=ALLOW_SIGNATURE,
+                    clock=lambda: datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC),
+                    signature_verifier=allow_signature,
                 )
-            manifest = json.loads((created / 'backup.json').read_text(encoding='utf-8'))
+            manifest = cast(object, json.loads((created / 'backup.json').read_text(encoding='utf-8')))
+            assert is_record(manifest)
+            created_at = manifest['createdAt']
+            assert isinstance(created_at, str)
             self.assertGreater(
-                datetime.datetime.fromisoformat(manifest['createdAt']),
+                datetime.datetime.fromisoformat(created_at),
                 future + datetime.timedelta(seconds=1),
             )
             # Keep the production source constraint for managed/prune validation.
             manifest['source'] = '/Applications/Robb Agents.app'
-            (created / 'backup.json').write_text(json.dumps(manifest), encoding='utf-8')
+            _ = (created / 'backup.json').write_text(json.dumps(manifest), encoding='utf-8')
 
-            result = retention.prune(root, True, signature_verifier=ALLOW_SIGNATURE)
+            result = retention.prune(root, True, signature_verifier=allow_signature)
 
             self.assertTrue(created.exists())
             self.assertTrue(newer.exists())
@@ -329,13 +331,13 @@ class StagingRetentionTests(unittest.TestCase):
             outside.mkdir()
             (root / '20260901-120000-000001').symlink_to(outside, target_is_directory=True)
             self.assertEqual(
-                retention.prune(root, True, signature_verifier=ALLOW_SIGNATURE)['removed'],
+                retention.prune(root, True, signature_verifier=allow_signature)['removed'],
                 [],
             )
             alias = base / 'root-alias'
             alias.symlink_to(root, target_is_directory=True)
             with self.assertRaisesRegex(ValueError, 'component must not be a symlink'):
-                retention.prune(alias, True, signature_verifier=ALLOW_SIGNATURE)
+                _ = retention.prune(alias, True, signature_verifier=allow_signature)
 
     def test_prune_session_scratch_dry_run_and_apply(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -343,27 +345,27 @@ class StagingRetentionTests(unittest.TestCase):
             session = workspaces / 'ws-1/sessions/session-123'
             data = session / 'data'
             data.mkdir(parents=True)
-            (session / 'session.jsonl').write_text('{"id":"session-123"}\n', encoding='utf-8')
+            _ = (session / 'session.jsonl').write_text('{"id":"session-123"}\n', encoding='utf-8')
             (session / 'plans').mkdir()
-            (session / 'plans/plan.md').write_text('# Plan', encoding='utf-8')
+            _ = (session / 'plans/plan.md').write_text('# Plan', encoding='utf-8')
 
             # 1. Old large directory (150MB, 20 days old)
             old_large = data / 'old-large-clone'
             old_large.mkdir()
             old_file = old_large / 'build.bin'
-            old_file.write_bytes(b'x' * (150 * 1024)) # 150KB fixture for test, we'll set min_size_bytes to 100KB
+            _ = old_file.write_bytes(b'x' * (150 * 1024)) # 150KB fixture for test, we'll set min_size_bytes to 100KB
 
             # 2. Recent large directory (150MB, 2 days old)
             recent_large = data / 'recent-large-clone'
             recent_large.mkdir()
             recent_file = recent_large / 'build.bin'
-            recent_file.write_bytes(b'x' * (150 * 1024))
+            _ = recent_file.write_bytes(b'x' * (150 * 1024))
 
             # 3. Old small file (10KB, 20 days old)
             old_small = data / 'small.json'
-            old_small.write_bytes(b'x' * 1024)
+            _ = old_small.write_bytes(b'x' * 1024)
 
-            now = datetime.datetime.now(datetime.timezone.utc)
+            now = datetime.datetime.now(datetime.UTC)
             twenty_days_ago = (now - datetime.timedelta(days=20)).timestamp()
             two_days_ago = (now - datetime.timedelta(days=2)).timestamp()
 
@@ -404,4 +406,4 @@ class StagingRetentionTests(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    _ = unittest.main()

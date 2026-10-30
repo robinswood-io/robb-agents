@@ -11,8 +11,11 @@ import subprocess
 import sys
 import tomllib
 import urllib.request
+from http.client import HTTPResponse
 from pathlib import Path
-from typing import TypedDict
+from typing import TypedDict, cast
+
+from json_sources import object_list, object_mapping
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -33,7 +36,7 @@ class Metadata(TypedDict):
 
 
 def fields(value: object) -> dict[str, object]:
-    if not isinstance(value, dict):
+    if not object_mapping(value):
         raise TypeError("Expected a registry/manifest object")
     result: dict[str, object] = {}
     for key, item in value.items():
@@ -44,13 +47,13 @@ def fields(value: object) -> dict[str, object]:
 
 
 def strings(value: object) -> list[str]:
-    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+    if not object_list(value) or not all(isinstance(item, str) for item in value):
         raise ValueError("Expected a string list")
     return [str(item) for item in value]
 
 
 def read_json(path: Path) -> dict[str, object]:
-    value: object = json.loads(path.read_text())
+    value = cast(object, json.loads(path.read_text()))
     return fields(value)
 
 
@@ -64,7 +67,7 @@ def command(args: list[str]) -> str:
 
 
 def npm_json(package: str, properties: list[str]) -> object:
-    value: object = json.loads(command(["npm", "view", package, *properties, "--json"]))
+    value = cast(object, json.loads(command(["npm", "view", package, *properties, "--json"])))
     return value
 
 
@@ -155,7 +158,7 @@ def compatibility_exceptions() -> set[tuple[str, str, str]]:
     if document.get("approved_by") != "Thibault" or not document.get("authorization_reference"):
         raise ValueError("Missing explicit human authorization reference")
     entries = document.get("dependencies")
-    if not isinstance(entries, list):
+    if not object_list(entries):
         raise TypeError("Invalid compatibility exceptions")
     allowed = {
         ("package.json", "typescript", "6.0.3"),
@@ -179,17 +182,26 @@ def python_pins(names: list[str]) -> dict[str, str]:
     result: dict[str, str] = {}
     for name in names:
         path = ROOT / name
-        if path.suffix != ".py" or not path.is_file():
+        if not path.is_file():
             continue
-        match = re.search(r"(?ms)^# /// script\n(.*?)^# ///", path.read_text())
-        if not match:
+        specs: list[str]
+        if path.name == "requirements.txt" or path.name.endswith("-requirements.txt"):
+            specs = [line.strip() for line in path.read_text().splitlines()
+                     if line.strip() and not line.lstrip().startswith("#")]
+        elif path.suffix == ".py":
+            match = re.search(r"(?ms)^# /// script\n(.*?)^# ///", path.read_text())
+            if not match:
+                continue
+            header = "\n".join(line.removeprefix("# ") for line in match.group(1).splitlines())
+            specs = strings(fields(cast(object, tomllib.loads(header))).get("dependencies", []))
+        else:
             continue
-        header = "\n".join(line.removeprefix("# ") for line in match.group(1).splitlines())
-        for spec in strings(tomllib.loads(header).get("dependencies", [])):
+        for spec in specs:
             pinned = re.fullmatch(r"([\w.-]+)(?:\[[^]]+\])?==([\w.]+)", spec)
             if not pinned:
                 raise ValueError("Python runtime dependency must be pinned: " + name)
             package, version = pinned.groups()
+            package = re.sub(r"[-_.]+", "-", package).lower()
             if package in result and result[package] != version:
                 raise ValueError("Inconsistent Python runtime pin: " + package)
             result[package] = version
@@ -198,8 +210,8 @@ def python_pins(names: list[str]) -> dict[str, str]:
 
 def check_python(pin: tuple[str, str]) -> str | None:
     package, version = pin
-    with urllib.request.urlopen("https://pypi.org/pypi/" + package + "/json", timeout=30) as response:
-        value: object = json.load(response)
+    with cast(HTTPResponse, urllib.request.urlopen("https://pypi.org/pypi/" + package + "/json", timeout=30)) as response:
+        value = cast(object, json.load(response))
     latest = fields(fields(value).get("info")).get("version")
     return None if latest == version else "python_not_latest_stable:" + package
 
@@ -212,12 +224,12 @@ def binary_issues() -> list[str]:
         if not match:
             raise ValueError("Missing binary runtime pin: " + constant)
         versions[repository] = match.group(1)
-    issues = []
+    issues: list[str] = []
     for repository, expected in versions.items():
         request = urllib.request.Request("https://api.github.com/repos/" + repository + "/releases/latest",
                                          headers={"User-Agent": "Robb-release-quality"})
-        with urllib.request.urlopen(request, timeout=30) as response:
-            value: object = json.load(response)
+        with cast(HTTPResponse, urllib.request.urlopen(request, timeout=30)) as response:
+            value = cast(object, json.load(response))
         if fields(value).get("tag_name") != expected:
             issues.append("binary_not_latest_stable:" + repository)
     return issues
@@ -278,7 +290,7 @@ def main() -> int:
     }
     destination = ROOT / "bmad/quality-logs/dependencies.json"
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(json.dumps(report, indent=2) + "\n")
+    _ = destination.write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps({"dependencies": len(rows), "issues": issues,
                       "off_platform_binaries": len(nonlocal_binaries)}))
     return 1 if issues else 0

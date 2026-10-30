@@ -3,21 +3,22 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import sys
 from pathlib import Path
-from typing import TypeAlias
+
+from pydantic import JsonValue, TypeAdapter
 
 ROOT = Path("/srv/rbw-agents-oss")
 sys.path.insert(0, str(ROOT / "packages"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from lib.agent_runtime import OPS, standard_report, write_report_and_history
-from lib.config_mutation import atomic_write_text
+from lib.config_mutation import atomic_write_text, expected_manifest_count
 from rbw_agent_runtime.catalog import CatalogCompiler, flatten_manifest, read_json
+from rbw_agent_runtime.json_support import _integer, _to_json_object
 from rbw_agent_runtime.policy import PolicyEngine
 
-JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
 
 OUT_JSON = OPS / "oss-architecture-v2-guard-last.json"
 OUT_MD = OPS / "oss-architecture-v2-guard-last.md"
@@ -46,12 +47,13 @@ CRITICAL_AGENT_TASK_CRONS = {
 
 def schedule_rows() -> list[dict[str, JsonValue]]:
     data = read_json(SCHEDULES, {})
-    rows = data.get("schedules", []) if isinstance(data, dict) else []
-    return [row for row in rows if isinstance(row, dict)]
+    rows: JsonValue = data.get("schedules", []) if isinstance(data, dict) else []
+    return [row for row in TypeAdapter(list[JsonValue]).validate_python(rows) if isinstance(row, dict)]
 
 
 def schedule_legacy(row: dict[str, JsonValue]) -> str | None:
-    payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
+    payload_value = row.get("payload")
+    payload = payload_value if isinstance(payload_value, dict) else {}
     value = row.get("legacy_id") or payload.get("legacy_id") or row.get("capability_id")
     return str(value) if value else None
 
@@ -96,7 +98,7 @@ def sensitive_permission_issues() -> list[dict[str, JsonValue]]:
         for path in base.rglob("*"):
             try:
                 mode = path.stat().st_mode & 0o777
-            except Exception:
+            except OSError:
                 continue
             if path.is_dir() and mode & 0o077:
                 out.append({"path": str(path.relative_to(ROOT)), "mode": oct(mode), "type": "directory"})
@@ -111,12 +113,16 @@ def sensitive_permission_issues() -> list[dict[str, JsonValue]]:
 def main() -> None:
     errors: list[str] = []
     warnings: list[str] = []
+    approved_count: int | None = None
+    try:
+        approved_count = expected_manifest_count(ROOT)
+    except (OSError, ValueError, TypeError):
+        errors.append('approved_manifest_baseline_missing_or_invalid')
     compiler = CatalogCompiler(ROOT)
     validation = compiler.validate()
-    errors.extend(validation.get("errors") or [])
+    errors.extend(TypeAdapter(list[str]).validate_python(validation.get("errors") or []))
 
     manifest_rows = flatten_manifest(read_json(MANIFEST, {}))
-    ids = {str(row.get("legacy_id")) for row in manifest_rows}
     rows = schedule_rows()
     baseline = read_json(BASELINE, {})
     current_fp = schedule_fingerprint(rows)
@@ -125,7 +131,7 @@ def main() -> None:
     if expected_count is None or expected_fp is None:
         errors.append("architecture_v2_baseline_missing")
     else:
-        if len(rows) != int(expected_count):
+        if len(rows) != _integer(expected_count):
             errors.append(f"schedule_count_drift:{len(rows)}!={expected_count}")
         if current_fp != expected_fp:
             errors.append("schedule_fingerprint_drift")
@@ -156,11 +162,11 @@ def main() -> None:
     if unknown.allowed or "unknown_automation_id" not in unknown.strict_reasons:
         errors.append("unknown_id_not_fail_closed")
 
-    selftest = read_json(SELFTEST, {})
-    if selftest.get("ok") is not True or int((selftest.get("counts") or {}).get("catalogArgv") or 0) != 193:
+    selftest = JSON_OBJECT.validate_python(read_json(SELFTEST, {}))
+    if selftest.get("ok") is not True or _integer(JSON_OBJECT.validate_python(selftest.get("counts") or {}).get("catalogArgv") or 0) != approved_count:
         errors.append("runtime_v2_selftest_not_verified")
-    queue_canaries = {queue: read_json(path, {}) for queue, path in QUEUE_CANARIES.items()}
-    canary_ok = all(report.get("ok") is True and (report.get("checks") or {}).get("executionBackend") == "argv" for report in queue_canaries.values())
+    queue_canaries = {queue: JSON_OBJECT.validate_python(read_json(path, {})) for queue, path in QUEUE_CANARIES.items()}
+    canary_ok = all(report.get("ok") is True and JSON_OBJECT.validate_python(report.get("checks") or {}).get("executionBackend") == "argv" for report in queue_canaries.values())
     if not canary_ok:
         errors.append("runtime_v2_five_queue_argv_canary_not_verified")
 
@@ -171,28 +177,28 @@ def main() -> None:
     if permission_issues:
         errors.append(f"sensitive_permission_issues:{len(permission_issues)}")
 
-    catalog_counts = validation.get("counts") or {}
-    if int(catalog_counts.get("agents") or 0) != len(manifest_rows):
+    catalog_counts = JSON_OBJECT.validate_python(validation.get("counts") or {})
+    if _integer(catalog_counts.get("agents") or 0) != len(manifest_rows):
         errors.append("catalog_manifest_parity_failed")
-    if int(catalog_counts.get("cards") or 0) != len(manifest_rows):
+    if _integer(catalog_counts.get("cards") or 0) != len(manifest_rows):
         errors.append("agent_card_coverage_failed")
-    if int(catalog_counts.get("argv") or 0) != 193 or int(catalog_counts.get("legacyShell") or 0) != 0:
+    if _integer(catalog_counts.get("argv") or 0) != approved_count or _integer(catalog_counts.get("legacyShell") or 0) != 0:
         errors.append(f"catalog_not_argv_only:{catalog_counts.get('argv')}/{catalog_counts.get('legacyShell')}")
-    if len(manifest_rows) != 193:
-        warnings.append(f"manifest_count_changed_from_approved_baseline:{len(manifest_rows)}")
+    if len(manifest_rows) != approved_count:
+        errors.append(f"manifest_count_changed_from_approved_baseline:{len(manifest_rows)}")
 
     ok = not errors
-    counts = {
+    counts: dict[str, JsonValue] = {
         "manifestAgents": len(manifest_rows),
-        "catalogAgents": int(catalog_counts.get("agents") or 0),
-        "agentCards": int(catalog_counts.get("cards") or 0),
+        "catalogAgents": _integer(catalog_counts.get("agents") or 0),
+        "agentCards": _integer(catalog_counts.get("cards") or 0),
         "schedules": len(rows),
         "activeBackups": len(backups),
         "sensitivePermissionIssues": len(permission_issues),
         "workerArgvCanary": int(canary_ok),
-        "queueArgvCanaries": sum(1 for report in queue_canaries.values() if report.get("ok") is True and (report.get("checks") or {}).get("executionBackend") == "argv"),
-        "catalogArgv": int(catalog_counts.get("argv") or 0),
-        "catalogLegacyShell": int(catalog_counts.get("legacyShell") or 0),
+        "queueArgvCanaries": sum(1 for report in queue_canaries.values() if report.get("ok") is True and JSON_OBJECT.validate_python(report.get("checks") or {}).get("executionBackend") == "argv"),
+        "catalogArgv": _integer(catalog_counts.get("argv") or 0),
+        "catalogLegacyShell": _integer(catalog_counts.get("legacyShell") or 0),
         "errors": len(errors),
         "warnings": len(warnings),
     }
@@ -205,27 +211,27 @@ def main() -> None:
         blocking_reasons=errors,
         warning_reasons=warnings,
         artifacts={"reportJson": str(OUT_JSON), "reportMd": str(OUT_MD), "historyJsonl": str(HISTORY), "catalog": str(ROOT / "config" / "agents-v2" / "catalog-v2.json")},
-        checks={
+        checks=JSON_OBJECT.validate_python({
             "catalogValidation": validation,
             "baseline": baseline,
             "currentScheduleFingerprint": current_fp,
-            "unknownIdDecision": unknown.model_dump(mode="json"),
+            "unknownIdDecision": _to_json_object(unknown.model_dump_json()),
             "selftest": {"ok": selftest.get("ok"), "status": selftest.get("status"), "counts": selftest.get("counts"), "summary": selftest.get("summary")},
             "queueCanaries": {queue: {"ok": report.get("ok"), "status": report.get("status"), "summary": report.get("summary"), "checks": report.get("checks")} for queue, report in queue_canaries.items()},
             "activeBackupSample": backups[:50],
             "permissionIssueSample": permission_issues[:50],
-        },
+        }),
         updated_by="oss-architecture-v2-guard",
     )
     write_report_and_history(OUT_JSON, HISTORY, report)
     atomic_write_text(
         OUT_MD,
         "# OSS Architecture v2 Guard\n\n"
-        f"- status: {report['status']}\n"
-        f"- manifest / catalog / cards: {counts['manifestAgents']} / {counts['catalogAgents']} / {counts['agentCards']}\n"
-        f"- schedules: {counts['schedules']}\n"
-        f"- argv canary: {bool(counts['workerArgvCanary'])}\n"
-        f"- errors: {', '.join(errors) or 'none'}\n",
+        + f"- status: {report['status']}\n"
+        + f"- manifest / catalog / cards: {counts['manifestAgents']} / {counts['catalogAgents']} / {counts['agentCards']}\n"
+        + f"- schedules: {counts['schedules']}\n"
+        + f"- argv canary: {bool(counts['workerArgvCanary'])}\n"
+        + f"- errors: {', '.join(errors) or 'none'}\n",
     )
     print(json.dumps({"ok": report["ok"], "status": report["status"], "summary": report["summary"], "counts": counts, "reportJson": str(OUT_JSON)}, ensure_ascii=False))
     raise SystemExit(0 if ok else 1)

@@ -13,7 +13,8 @@ else
   exit 127
 fi
 
-export PATH="$(dirname "$RESOLVED_BUN_BIN"):$PATH"
+PATH="$(dirname "$RESOLVED_BUN_BIN"):$PATH"
+export PATH
 E2E_TEST_LIST="$(mktemp -t robb-live-e2e-tests.XXXXXX)"
 trap 'rm -f "$E2E_TEST_LIST"' EXIT
 

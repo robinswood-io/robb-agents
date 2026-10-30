@@ -3,39 +3,44 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from pathlib import Path
 import secrets
 import subprocess
-from typing import TypeAlias, Callable, Sequence
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Literal, TypeGuard, cast
 
-from robb_retention_files import (
-    JsonValue,
-    LABEL,
-    Runner,
-    LAUNCHCTL_NOT_FOUND,
-    LAUNCHCTL_NO_SUCH_PROCESS,
-    JOURNAL_NAME,
-    JOURNAL_CONTRACT,
-    JOURNAL_VERSION,
-    JOURNAL_PHASES,
-    TOKEN_RE,
-    IDENTITY_KEYS,
-    ARTIFACT_KEYS,
-    JOURNAL_KEYS,
-    FileIdentity,
-    FileSnapshot,
-    sha256_bytes,
-    snapshot_regular_file,
-    fsync_directory,
-)
 from robb_retention_atomic import (
     quarantine_path,
     verified_replace,
     write_owned_file,
 )
+from robb_retention_files import (
+    ARTIFACT_KEYS,
+    IDENTITY_KEYS,
+    JOURNAL_CONTRACT,
+    JOURNAL_KEYS,
+    JOURNAL_NAME,
+    JOURNAL_PHASES,
+    JOURNAL_VERSION,
+    LABEL,
+    LAUNCHCTL_NO_SUCH_PROCESS,
+    LAUNCHCTL_NOT_FOUND,
+    TOKEN_RE,
+    FileIdentity,
+    FileSnapshot,
+    IdentityRecord,
+    JournalArtifact,
+    RetentionJournal,
+    Runner,
+    fsync_directory,
+    is_record,
+    sha256_bytes,
+    snapshot_regular_file,
+)
+
 
 def launchctl(runner: Runner, arguments: Sequence[str], *, check: bool,
-              capture_output: bool = False) -> subprocess.CompletedProcess:
+              capture_output: bool = False) -> subprocess.CompletedProcess[str]:
     return runner(['launchctl', *arguments], check=check, capture_output=capture_output)
 
 def service_is_loaded(runner: Runner, target: str) -> bool:
@@ -45,8 +50,8 @@ def service_is_loaded(runner: Runner, target: str) -> bool:
     if result.returncode == LAUNCHCTL_NOT_FOUND:
         return False
     raise RuntimeError(
-        f'Cannot determine whether LaunchAgent is loaded '
-        f'(launchctl print exited {result.returncode})'
+        'Cannot determine whether LaunchAgent is loaded '
+        + f'(launchctl print exited {result.returncode})'
     )
 
 def unload_for_rollback(runner: Runner, target: str) -> None:
@@ -56,36 +61,47 @@ def unload_for_rollback(runner: Runner, target: str) -> None:
     if service_is_loaded(runner, target):
         raise RuntimeError('LaunchAgent remains loaded after bootout')
 
-def _is_plain_int(value: JsonValue) -> bool:
+def _is_plain_int(value: object) -> TypeGuard[int]:
     return isinstance(value, int) and not isinstance(value, bool)
 
-def validate_identity_record(value: JsonValue, *, allow_unpublished: bool) -> dict[str, JsonValue]:
-    if not isinstance(value, dict) or set(value) != IDENTITY_KEYS:
+def validate_identity_record(value: object, *, allow_unpublished: bool) -> IdentityRecord:
+    if not is_record(value) or set(value) != IDENTITY_KEYS:
         raise RuntimeError('Transaction journal contains an invalid file identity')
+    integers: dict[str, int] = {}
     for key in ('owner', 'group', 'mode', 'flags', 'size'):
-        if not _is_plain_int(value[key]) or value[key] < 0:
+        item = value[key]
+        if not _is_plain_int(item) or item < 0:
             raise RuntimeError('Transaction journal contains an invalid file identity')
+        integers[key] = item
     device, inode = value['device'], value['inode']
     if allow_unpublished and device is None and inode is None:
         pass
     elif not (_is_plain_int(device) and device >= 0 and _is_plain_int(inode) and inode > 0):
         raise RuntimeError('Transaction journal contains an invalid file identity')
+    digests: dict[str, str] = {}
     for key in ('sha256', 'xattrsSha256'):
         digest = value[key]
         if not isinstance(digest, str) or len(digest) != 64 or any(
             character not in '0123456789abcdef' for character in digest
         ):
             raise RuntimeError('Transaction journal contains an invalid file hash')
-    if value['owner'] != os.getuid():
+        digests[key] = digest
+    if integers['owner'] != os.getuid():
         raise RuntimeError('Transaction journal references a file owned by another user')
-    return value
+    return {
+        'device': device, 'inode': inode,
+        'owner': integers['owner'], 'group': integers['group'],
+        'mode': integers['mode'], 'flags': integers['flags'], 'size': integers['size'],
+        'sha256': digests['sha256'], 'xattrsSha256': digests['xattrsSha256'],
+    }
 
-def identity_matches(identity: FileIdentity, record: dict[str, JsonValue], *,
+def identity_matches(identity: FileIdentity, record: IdentityRecord, *,
                      require_inode: bool) -> bool:
-    fields = ('owner', 'group', 'mode', 'flags', 'size', 'sha256') if require_inode else (
+    fields: tuple[Literal['owner', 'group', 'mode', 'flags', 'size', 'sha256'], ...] = ('owner', 'group', 'mode', 'flags', 'size', 'sha256') if require_inode else (
         'owner', 'mode', 'size', 'sha256',
     )
-    if any(getattr(identity, field) != record[field] for field in fields):
+    actual = identity.to_record()
+    if any(actual[field] != record[field] for field in fields):
         return False
     if require_inode and identity.xattrs_sha256 != record['xattrsSha256']:
         return False
@@ -93,7 +109,7 @@ def identity_matches(identity: FileIdentity, record: dict[str, JsonValue], *,
         record['device'], record['inode'],
     )
 
-def replacement_expectation(data: bytes, mode: int) -> dict[str, JsonValue]:
+def replacement_expectation(data: bytes, mode: int) -> IdentityRecord:
     return {
         'device': None, 'inode': None, 'owner': os.getuid(),
         'group': os.getgid(), 'mode': mode, 'flags': 0,
@@ -117,7 +133,7 @@ def transaction_paths(support: Path, agents: Path, token: str) -> dict[str, Path
 def new_journal(*, support: Path, agents: Path, domain: str, target: str,
                 previous_loaded: bool, previous_script: FileSnapshot | None,
                 previous_plist: FileSnapshot | None, script_bytes: bytes,
-                plist_bytes: bytes) -> dict[str, JsonValue]:
+                plist_bytes: bytes) -> RetentionJournal:
     token = secrets.token_hex(16)
     paths = transaction_paths(support, agents, token)
     return {
@@ -139,58 +155,69 @@ def new_journal(*, support: Path, agents: Path, domain: str, target: str,
         },
     }
 
-def validate_journal(value: JsonValue, *, support: Path, agents: Path) -> dict[str, JsonValue]:
-    if not isinstance(value, dict) or set(value) != JOURNAL_KEYS:
+def validate_artifact(value: object, *, prefix: str, phase: str,
+                      paths: dict[str, Path]) -> JournalArtifact:
+    if not is_record(value) or set(value) != ARTIFACT_KEYS:
+        raise RuntimeError(f'Retention installer journal has an invalid {prefix} record')
+    for field, suffix in (('target', 'Target'), ('backup', 'Backup'), ('staged', 'Staged')):
+        if value[field] != str(paths[f'{prefix}{suffix}']):
+            raise RuntimeError(f'Retention installer journal has an unsafe {prefix} path')
+    previous = validate_identity_record(value['previous'], allow_unpublished=False) if value['previous'] is not None else None
+    replacement = validate_identity_record(value['replacement'], allow_unpublished=phase == 'initializing')
+    if phase != 'initializing' and replacement['device'] is None:
+        raise RuntimeError('Prepared transaction has no replacement inode')
+    return {
+        'target': str(paths[f'{prefix}Target']), 'backup': str(paths[f'{prefix}Backup']),
+        'staged': str(paths[f'{prefix}Staged']), 'previous': previous, 'replacement': replacement,
+    }
+
+
+def validate_journal(value: object, *, support: Path, agents: Path) -> RetentionJournal:
+    if not is_record(value) or set(value) != JOURNAL_KEYS:
         raise RuntimeError('Retention installer transaction journal has an invalid schema')
     if value['contract'] != JOURNAL_CONTRACT or value['version'] != JOURNAL_VERSION:
         raise RuntimeError('Retention installer transaction journal has an unknown contract')
     token = value['token']
     if not isinstance(token, str) or TOKEN_RE.fullmatch(token) is None:
         raise RuntimeError('Retention installer transaction journal has an invalid token')
-    if value['phase'] not in JOURNAL_PHASES:
+    phase = value['phase']
+    if not isinstance(phase, str) or phase not in JOURNAL_PHASES:
         raise RuntimeError('Retention installer transaction journal has an invalid phase')
     domain = f'gui/{os.getuid()}'
     target = f'{domain}/{LABEL}'
+    previous_loaded = value['previousLoaded']
     if (value['label'] != LABEL or value['domain'] != domain
-            or value['target'] != target or not isinstance(value['previousLoaded'], bool)):
+            or value['target'] != target or not isinstance(previous_loaded, bool)):
         raise RuntimeError('Retention installer transaction journal has an unexpected identity')
     paths = transaction_paths(support, agents, token)
     if value['nextJournal'] != str(paths['nextJournal']):
         raise RuntimeError('Retention installer journal next path is outside its transaction')
-    for name, prefix in (('script', 'script'), ('plist', 'plist')):
-        artifact = value[name]
-        if not isinstance(artifact, dict) or set(artifact) != ARTIFACT_KEYS:
-            raise RuntimeError(f'Retention installer journal has an invalid {name} record')
-        for field, suffix in (('target', 'Target'), ('backup', 'Backup'), ('staged', 'Staged')):
-            if artifact[field] != str(paths[f'{prefix}{suffix}']):
-                raise RuntimeError(f'Retention installer journal has an unsafe {name} path')
-        if artifact['previous'] is not None:
-            validate_identity_record(artifact['previous'], allow_unpublished=False)
-        replacement = validate_identity_record(
-            artifact['replacement'], allow_unpublished=value['phase'] == 'initializing',
-        )
-        if value['phase'] != 'initializing' and replacement['device'] is None:
-            raise RuntimeError('Prepared transaction has no replacement inode')
-    return value
+    return {
+        'contract': JOURNAL_CONTRACT, 'version': JOURNAL_VERSION, 'token': token,
+        'phase': phase, 'label': LABEL, 'domain': domain, 'target': target,
+        'previousLoaded': previous_loaded, 'nextJournal': str(paths['nextJournal']),
+        'script': validate_artifact(value['script'], prefix='script', phase=phase, paths=paths),
+        'plist': validate_artifact(value['plist'], prefix='plist', phase=phase, paths=paths),
+    }
 
-def journal_bytes(journal: dict[str, JsonValue]) -> bytes:
+def journal_bytes(journal: RetentionJournal) -> bytes:
     return (json.dumps(journal, sort_keys=True, separators=(',', ':')) + '\n').encode()
 
-def load_journal_file(path: Path, *, support: Path, agents: Path) -> dict[str, JsonValue]:
+def load_journal_file(path: Path, *, support: Path, agents: Path) -> RetentionJournal:
     snapshot = snapshot_regular_file(path, require_owner=True)
     if snapshot is None:
         raise FileNotFoundError(path)
     if snapshot.identity.size > 64 * 1024:
         raise RuntimeError(f'Retention installer journal is unexpectedly large: {path}')
     try:
-        value = json.loads(snapshot.data)
+        value = cast(object, json.loads(snapshot.data))
     except (UnicodeDecodeError, json.JSONDecodeError) as error:
         raise RuntimeError(f'Retention installer journal is invalid JSON: {path}') from error
     return validate_journal(value, support=support, agents=agents)
 
-def write_journal(journal: dict[str, JsonValue], *, support: Path, agents: Path,
+def write_journal(journal: RetentionJournal, *, support: Path, agents: Path,
                   initial: bool = False) -> None:
-    validate_journal(journal, support=support, agents=agents)
+    _ = validate_journal(journal, support=support, agents=agents)
     journal_path = support / JOURNAL_NAME
     next_path = Path(journal['nextJournal'])
     if next_path.exists() or next_path.is_symlink():
@@ -217,7 +244,7 @@ def write_journal(journal: dict[str, JsonValue], *, support: Path, agents: Path,
         operation='publish-journal',
     )
 
-def load_pending_journal(*, support: Path, agents: Path) -> dict[str, JsonValue] | None:
+def load_pending_journal(*, support: Path, agents: Path) -> RetentionJournal | None:
     journal_path = support / JOURNAL_NAME
     if journal_path.exists() or journal_path.is_symlink():
         return load_journal_file(journal_path, support=support, agents=agents)
@@ -229,7 +256,7 @@ def load_pending_journal(*, support: Path, agents: Path) -> dict[str, JsonValue]
     candidates = list(support.glob(f'{JOURNAL_NAME}.next-*'))
     if not candidates:
         return None
-    valid_candidates: list[tuple[Path, dict[str, JsonValue]]] = []
+    valid_candidates: list[tuple[Path, RetentionJournal]] = []
     for candidate in candidates:
         try:
             candidate_journal = load_journal_file(
@@ -259,7 +286,7 @@ def load_pending_journal(*, support: Path, agents: Path) -> dict[str, JsonValue]
     )
     return journal
 
-def create_backup(target: Path, backup: Path, expected: dict[str, JsonValue]) -> None:
+def create_backup(target: Path, backup: Path, expected: IdentityRecord) -> None:
     if backup.exists() or backup.is_symlink():
         raise RuntimeError(f'Transaction backup already exists: {backup}')
     os.link(target, backup, follow_symlinks=False)

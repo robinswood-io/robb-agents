@@ -50,7 +50,8 @@
   },
   "include": [
     "src/**/*",
-    "tests/**/*"
+    "tests/**/*",
+    "eslint-rules/**/*.ts"
   ],
   "exclude": [
     "node_modules",

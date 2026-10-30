@@ -26,24 +26,13 @@ Validation note:
     return explicit errors instead of being silently ignored.
 """
 
-from pdf_common import (
-    PAGE_SIZES,
-    write_output,
-    write_pdf,
-    parse_page_range,
-    check_output_differs,
-    parse_color,
-    _render_page_to_pil,
-    _make_watermark_pdf,
-    _pdf_escape,
-    _make_text_overlay_pdf,
-    _pil_to_image_pdf_page,
-    cli,
-)
-from pdf_organize import extract, info, merge, split, rotate, reorder, duplicate
-from pdf_edit import watermark, fill_form, compress, crop, resize, flatten, header_footer
-from pdf_security import encrypt, decrypt, redact, sanitize
-from pdf_convert import to_image, from_image, to_docx, to_pptx
+from importlib import import_module
+
+from pdf_common import cli
+
+# Import command modules so their Click decorators register on the shared group.
+for _module_name in ("pdf_convert", "pdf_edit", "pdf_organize", "pdf_security"):
+    _ = import_module(_module_name)
 
 if __name__ == "__main__":
     cli()

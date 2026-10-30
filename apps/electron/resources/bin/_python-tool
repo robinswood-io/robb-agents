@@ -4,7 +4,7 @@ set -eu
 tool_script=${1:?missing bundled Python tool script name}
 shift
 
-bin_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+bin_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 scripts_dir=${CRAFT_SCRIPTS:-"$bin_dir/../scripts"}
 
 if [ -n "${CRAFT_UV:-}" ]; then

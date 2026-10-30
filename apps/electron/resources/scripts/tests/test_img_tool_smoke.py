@@ -1,16 +1,22 @@
 from __future__ import annotations
 
 import base64
-import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from typing import ClassVar, override
 
-from ._tool_test_harness import build_env, run_tool
+from ._tool_test_harness import build_env, parse_json_object, run_tool
 
 
 class ImgToolSmokeTests(unittest.TestCase):
+    env: ClassVar[dict[str, str]]
+    tmpdir_obj: ClassVar[tempfile.TemporaryDirectory[str]]
+    tmpdir: ClassVar[Path]
+    input_png: ClassVar[Path]
     @classmethod
+    @override
     def setUpClass(cls) -> None:
         cls.env = build_env()
         cls.tmpdir_obj = tempfile.TemporaryDirectory(prefix="img-tool-smoke-")
@@ -20,19 +26,20 @@ class ImgToolSmokeTests(unittest.TestCase):
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5n2WQAAAAASUVORK5CYII="
         )
         cls.input_png = cls.tmpdir / "input.png"
-        cls.input_png.write_bytes(png_bytes)
+        _ = cls.input_png.write_bytes(png_bytes)
 
     @classmethod
+    @override
     def tearDownClass(cls) -> None:
         cls.tmpdir_obj.cleanup()
 
-    def run_tool(self, *args: str):
+    def run_tool(self, *args: str) -> subprocess.CompletedProcess[str]:
         return run_tool("img-tool", *args, env=self.env)
 
     def test_info_resize_convert(self) -> None:
         info = self.run_tool("info", str(self.input_png))
         self.assertEqual(info.returncode, 0, msg=info.stderr)
-        meta = json.loads(info.stdout)
+        meta = parse_json_object(info.stdout)
         self.assertEqual(meta["format"], "PNG")
 
         resized = self.tmpdir / "resized.png"
@@ -53,4 +60,4 @@ class ImgToolSmokeTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    _ = unittest.main()

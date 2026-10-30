@@ -2,7 +2,6 @@ import "node:crypto";
 import "./claude-process.ts";
 import "@anthropic-ai/claude-agent-sdk";
 import "./options.ts";
-import "zod";
 import "../prompts/system.ts";
 import { BaseAgent, type MiniAgentConfig } from "./base-agent.ts";
 import "./backend/types.ts";

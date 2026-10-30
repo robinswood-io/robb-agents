@@ -1,24 +1,18 @@
-from .robb_local_staging_fixtures import patch_staging
-import importlib.util
 import io
-import json
 import os
-from pathlib import Path
-import plistlib
 import shutil
-import subprocess
 import tempfile
-import time
-import unittest
+from pathlib import Path
+from typing import override
 from unittest import mock
 
 from .robb_local_staging_fixtures import (
-    staging,
     COMMIT,
-    completed,
-    fingerprint,
-    GitRunner,
     LocalStagingTestCase,
+    fingerprint,
+    patch_staging,
+    staging,
+    validation_fingerprint,
 )
 
 
@@ -26,19 +20,17 @@ class LocalStagingActivationTests(LocalStagingTestCase):
     def test_backup_mismatch_aborts_before_quit_or_swap(self):
         with tempfile.TemporaryDirectory() as temp:
             installer, target, candidate, checkpoint, stage_candidate = self.make_transaction(Path(temp))
-            (checkpoint / staging.APP_NAME / "marker").write_text("different", encoding="utf-8")
+            _ = (checkpoint / staging.APP_NAME / "marker").write_text("different", encoding="utf-8")
             with (
-                patch_staging("verify_clean_checkout", return_value=COMMIT),
-                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
-                patch_staging("backup_current_app", return_value=checkpoint),
-                patch_staging("publish_checkpoint_best_effort",
-                    return_value=(checkpoint, True, None, None, None),
-                ) as publish,
-                patch_staging("quit_application") as stop,
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
+                patch_staging('verify_clean_checkout', return_value=COMMIT),
+                patch_staging('validate_bundle', side_effect=validation_fingerprint),
+                patch_staging('backup_current_app', return_value=checkpoint),
+                patch_staging('publish_checkpoint_best_effort', return_value=(checkpoint, True, None, None, None)) as publish,
+                patch_staging('quit_application') as stop,
+                mock.patch.object(installer, 'stage_candidate', side_effect=stage_candidate),
+                self.assertRaisesRegex(staging.StagingError, 'Managed rollback checkpoint differs'),
             ):
-                with self.assertRaisesRegex(staging.StagingError, "Managed rollback checkpoint differs"):
-                    installer.install(candidate, COMMIT)
+                _ = installer.install(candidate, COMMIT)
 
             stop.assert_not_called()
             publish.assert_called_once()
@@ -55,15 +47,15 @@ class LocalStagingActivationTests(LocalStagingTestCase):
             installer, target, candidate, checkpoint, stage_candidate = self.make_transaction(Path(temp))
             real_rmtree = shutil.rmtree
 
-            def selective_rmtree(path, *args, **kwargs):
+            def selective_rmtree(path: Path, *_args: object, **_kwargs: object) -> None:
                 path = Path(path)
                 if path.name.startswith(".partial-robb-staging-"):
                     raise OSError("fixture cleanup denied")
-                return real_rmtree(path, *args, **kwargs)
+                return real_rmtree(path)
 
             with (
                 patch_staging("verify_clean_checkout", return_value=COMMIT),
-                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
+                patch_staging("validate_bundle", side_effect=validation_fingerprint),
                 patch_staging("backup_current_app", return_value=checkpoint),
                 patch_staging("publish_checkpoint_best_effort",
                     return_value=(
@@ -78,14 +70,16 @@ class LocalStagingActivationTests(LocalStagingTestCase):
                 patch_staging("launch_and_verify_runtime",
                     return_value={"pid": 123, "startedAt": 456, "command": "new"},
                 ) as launch,
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
+                mock.patch.object(installer, "stage_candidate", side_effect=stage_candidate),
                 mock.patch.object(staging.shutil, "rmtree", side_effect=selective_rmtree),
             ):
                 result = installer.install(candidate, COMMIT)
 
             self.assertEqual((target / "marker").read_text(encoding="utf-8"), "new")
             publish.assert_called_once()
-            self.assertIn("fixture cleanup denied", result["transactionCleanupWarning"])
+            warning_text = result["transactionCleanupWarning"]
+            assert isinstance(warning_text, str)
+            self.assertIn('fixture cleanup denied', warning_text)
             self.assertEqual(len(list(target.parent.glob(".partial-robb-staging-*"))), 1)
             launch.assert_called_once()
 
@@ -94,7 +88,7 @@ class LocalStagingActivationTests(LocalStagingTestCase):
             installer, target, candidate, checkpoint, stage_candidate = self.make_transaction(Path(temp))
             with (
                 patch_staging("verify_clean_checkout", return_value=COMMIT),
-                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
+                patch_staging("validate_bundle", side_effect=validation_fingerprint),
                 patch_staging("backup_current_app", return_value=checkpoint),
                 patch_staging("publish_checkpoint_best_effort",
                     return_value=(checkpoint, False, "checkpoint lost", None, "validated"),
@@ -103,7 +97,7 @@ class LocalStagingActivationTests(LocalStagingTestCase):
                 patch_staging("launch_and_verify_runtime",
                     return_value={"pid": 123, "startedAt": 456, "command": "new"},
                 ),
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
+                mock.patch.object(installer, "stage_candidate", side_effect=stage_candidate),
             ):
                 result = installer.install(candidate, COMMIT)
 
@@ -119,13 +113,13 @@ class LocalStagingActivationTests(LocalStagingTestCase):
         with tempfile.TemporaryDirectory() as temp:
             installer, target, candidate, checkpoint, stage_candidate = self.make_transaction(Path(temp))
 
-            def cleanup_then_lose_confirmation(*_args, **kwargs):
-                shutil.rmtree(kwargs["transaction_partial"])
+            def cleanup_then_lose_confirmation(*_args: object, transaction_partial: Path, **_kwargs: object):
+                shutil.rmtree(transaction_partial)
                 return checkpoint, False, "post-rename confirmation failed", None, "absent"
 
             with (
                 patch_staging("verify_clean_checkout", return_value=COMMIT),
-                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
+                patch_staging("validate_bundle", side_effect=validation_fingerprint),
                 patch_staging("backup_current_app", return_value=checkpoint),
                 patch_staging("publish_checkpoint_best_effort",
                     side_effect=cleanup_then_lose_confirmation,
@@ -134,7 +128,7 @@ class LocalStagingActivationTests(LocalStagingTestCase):
                 patch_staging("launch_and_verify_runtime",
                     return_value={"pid": 123, "startedAt": 456, "command": "new"},
                 ),
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
+                mock.patch.object(installer, "stage_candidate", side_effect=stage_candidate),
             ):
                 result = installer.install(candidate, COMMIT)
 
@@ -142,15 +136,19 @@ class LocalStagingActivationTests(LocalStagingTestCase):
             self.assertEqual(list(target.parent.glob(".partial-robb-staging-*")), [])
             self.assertFalse(result["transactionPartialPreserved"])
             self.assertIsNone(result["transactionPartialRecoveryPath"])
-            self.assertIn("transaction copy was removed", result["transactionCleanupWarning"])
-            self.assertNotIn("Immediate previous app preserved", result["transactionCleanupWarning"])
+            warning_text = result["transactionCleanupWarning"]
+            assert isinstance(warning_text, str)
+            self.assertIn('transaction copy was removed', warning_text)
+            warning_text = result["transactionCleanupWarning"]
+            assert isinstance(warning_text, str)
+            self.assertNotIn('Immediate previous app preserved', warning_text)
 
     def test_partial_cleanup_damage_is_reported_as_unverified_evidence(self):
         with tempfile.TemporaryDirectory() as temp:
-            installer, target, candidate, checkpoint, stage_candidate = self.make_transaction(Path(temp))
+            installer, _target, candidate, checkpoint, stage_candidate = self.make_transaction(Path(temp))
 
-            def leave_incomplete_evidence(*_args, **kwargs):
-                partial = kwargs["transaction_partial"]
+            def leave_incomplete_evidence(*_args: object, transaction_partial: Path, **_kwargs: object):
+                partial = transaction_partial
                 (partial / staging.APP_NAME / "marker").unlink()
                 return (
                     checkpoint,
@@ -162,7 +160,7 @@ class LocalStagingActivationTests(LocalStagingTestCase):
 
             with (
                 patch_staging("verify_clean_checkout", return_value=COMMIT),
-                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
+                patch_staging("validate_bundle", side_effect=validation_fingerprint),
                 patch_staging("backup_current_app", return_value=checkpoint),
                 patch_staging("publish_checkpoint_best_effort",
                     side_effect=leave_incomplete_evidence,
@@ -171,7 +169,7 @@ class LocalStagingActivationTests(LocalStagingTestCase):
                 patch_staging("launch_and_verify_runtime",
                     return_value={"pid": 123, "startedAt": 456, "command": "new"},
                 ),
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
+                mock.patch.object(installer, "stage_candidate", side_effect=stage_candidate),
             ):
                 result = installer.install(candidate, COMMIT)
 
@@ -179,33 +177,31 @@ class LocalStagingActivationTests(LocalStagingTestCase):
             self.assertTrue(result["transactionPartialExists"])
             self.assertIsNone(result["transactionPartialRecoveryPath"])
             self.assertIsNotNone(result["transactionPartialEvidencePath"])
-            self.assertIn("incomplete", result["transactionCleanupWarning"])
+            warning_text = result["transactionCleanupWarning"]
+            assert isinstance(warning_text, str)
+            self.assertIn('incomplete', warning_text)
 
     def test_interrupt_after_commit_never_retries_cleanup_from_a_stale_checkpoint_path(self):
         with tempfile.TemporaryDirectory() as temp:
             installer, target, candidate, checkpoint, stage_candidate = self.make_transaction(Path(temp))
             published = checkpoint.parent / "20260911-120000-000001"
 
-            def interrupt_after_checkpoint_rename(*_args, **_kwargs):
+            def interrupt_after_checkpoint_rename(*_args: object, **_kwargs: object) -> None:
                 os.replace(checkpoint, published)
                 raise KeyboardInterrupt("finalization interrupted after checkpoint rename")
 
             with (
-                patch_staging("verify_clean_checkout", return_value=COMMIT),
-                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
-                patch_staging("backup_current_app", return_value=checkpoint),
-                patch_staging("publish_checkpoint_best_effort",
-                    side_effect=interrupt_after_checkpoint_rename,
-                ) as publish,
-                patch_staging("quit_application"),
-                patch_staging("launch_and_verify_runtime",
-                    return_value={"pid": 123, "startedAt": 456, "command": "new"},
-                ),
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
-                mock.patch.object(staging.sys, "stderr", io.StringIO()),
+                patch_staging('verify_clean_checkout', return_value=COMMIT),
+                patch_staging('validate_bundle', side_effect=validation_fingerprint),
+                patch_staging('backup_current_app', return_value=checkpoint),
+                patch_staging('publish_checkpoint_best_effort', side_effect=interrupt_after_checkpoint_rename) as publish,
+                patch_staging('quit_application'),
+                patch_staging('launch_and_verify_runtime', return_value={'pid': 123, 'startedAt': 456, 'command': 'new'}),
+                mock.patch.object(installer, 'stage_candidate', side_effect=stage_candidate),
+                mock.patch.object(staging.sys, 'stderr', io.StringIO()),
+                self.assertRaisesRegex(staging.StagingError, 'finalization interrupted'),
             ):
-                with self.assertRaisesRegex(staging.StagingError, "finalization interrupted"):
-                    installer.install(candidate, COMMIT)
+                _ = installer.install(candidate, COMMIT)
 
             partials = list(target.parent.glob(".partial-robb-staging-*"))
             self.assertEqual((target / "marker").read_text(encoding="utf-8"), "new")
@@ -220,10 +216,11 @@ class LocalStagingActivationTests(LocalStagingTestCase):
             publish_calls = 0
 
             class InterruptOnComparison:
-                def __eq__(self, _other):
+                @override
+                def __eq__(self, _other: object) -> bool:
                     raise KeyboardInterrupt("interrupted after confirmed finalization")
 
-            def publish(*_args, **_kwargs):
+            def publish(*_args: object, **_kwargs: object):
                 nonlocal publish_calls
                 publish_calls += 1
                 if publish_calls == 1:
@@ -231,21 +228,17 @@ class LocalStagingActivationTests(LocalStagingTestCase):
                 return checkpoint, True, None, None, None
 
             with (
-                patch_staging("verify_clean_checkout", return_value=COMMIT),
-                patch_staging("validate_bundle",
-                    side_effect=lambda _repo, app, **_kwargs: fingerprint(app),
-                ),
-                patch_staging("backup_current_app", return_value=checkpoint),
-                patch_staging("publish_checkpoint_best_effort", side_effect=publish),
-                patch_staging("quit_application"),
-                patch_staging("launch_and_verify_runtime",
-                    return_value={"pid": 123, "startedAt": 456, "command": "new"},
-                ),
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
-                mock.patch.object(staging.sys, "stderr", io.StringIO()),
+                patch_staging('verify_clean_checkout', return_value=COMMIT),
+                patch_staging('validate_bundle', side_effect=validation_fingerprint),
+                patch_staging('backup_current_app', return_value=checkpoint),
+                patch_staging('publish_checkpoint_best_effort', side_effect=publish),
+                patch_staging('quit_application'),
+                patch_staging('launch_and_verify_runtime', return_value={'pid': 123, 'startedAt': 456, 'command': 'new'}),
+                mock.patch.object(installer, 'stage_candidate', side_effect=stage_candidate),
+                mock.patch.object(staging.sys, 'stderr', io.StringIO()),
+                self.assertRaisesRegex(staging.StagingError, 'confirmed finalization'),
             ):
-                with self.assertRaisesRegex(staging.StagingError, "confirmed finalization"):
-                    installer.install(candidate, COMMIT)
+                _ = installer.install(candidate, COMMIT)
 
             self.assertEqual(publish_calls, 2)
             self.assertEqual((target / "marker").read_text(encoding="utf-8"), "new")
@@ -258,25 +251,20 @@ class LocalStagingActivationTests(LocalStagingTestCase):
             installer, target, candidate, checkpoint, stage_candidate = self.make_transaction(Path(temp))
             launches = [staging.StagingError("new runtime failed")]
 
-            def launch(*_args, **_kwargs):
-                outcome = launches.pop(0)
-                if isinstance(outcome, Exception):
-                    raise outcome
-                return outcome
+            def launch(*_args: object, **_kwargs: object):
+                raise launches.pop(0)
 
             with (
-                patch_staging("verify_clean_checkout", return_value=COMMIT),
-                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
-                patch_staging("backup_current_app", return_value=checkpoint),
-                patch_staging("publish_checkpoint_best_effort",
-                    return_value=(checkpoint, True, None, None, None),
-                ),
-                patch_staging("quit_application"),
-                patch_staging("launch_and_verify_runtime", side_effect=launch),
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
+                patch_staging('verify_clean_checkout', return_value=COMMIT),
+                patch_staging('validate_bundle', side_effect=validation_fingerprint),
+                patch_staging('backup_current_app', return_value=checkpoint),
+                patch_staging('publish_checkpoint_best_effort', return_value=(checkpoint, True, None, None, None)),
+                patch_staging('quit_application'),
+                patch_staging('launch_and_verify_runtime', side_effect=launch),
+                mock.patch.object(installer, 'stage_candidate', side_effect=stage_candidate),
+                self.assertRaisesRegex(staging.StagingError, 'intentionally left stopped'),
             ):
-                with self.assertRaisesRegex(staging.StagingError, "intentionally left stopped"):
-                    installer.install(candidate, COMMIT)
+                _ = installer.install(candidate, COMMIT)
 
             self.assertEqual((target / "marker").read_text(encoding="utf-8"), "old")
             failed = list(target.parent.glob(".Robb Agents.app.failed-*"))
@@ -288,25 +276,23 @@ class LocalStagingActivationTests(LocalStagingTestCase):
         with tempfile.TemporaryDirectory() as temp:
             installer, target, candidate, checkpoint, stage_candidate = self.make_transaction(Path(temp))
 
-            def validate(_repo, app, **_kwargs):
+            def validate(_repo: Path, app: Path, **_kwargs: object) -> dict[str, str]:
                 identity = fingerprint(app)
                 if app == target and (app / "marker").read_text(encoding="utf-8") == "new":
                     raise staging.StagingError("post-swap static validation failed after external open")
                 return identity
 
             with (
-                patch_staging("verify_clean_checkout", return_value=COMMIT),
-                patch_staging("validate_bundle", side_effect=validate),
-                patch_staging("backup_current_app", return_value=checkpoint),
-                patch_staging("publish_checkpoint_best_effort",
-                    return_value=(checkpoint, True, None, None, None),
-                ),
-                patch_staging("quit_application"),
-                patch_staging("launch_and_verify_runtime") as launch,
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
+                patch_staging('verify_clean_checkout', return_value=COMMIT),
+                patch_staging('validate_bundle', side_effect=validate),
+                patch_staging('backup_current_app', return_value=checkpoint),
+                patch_staging('publish_checkpoint_best_effort', return_value=(checkpoint, True, None, None, None)),
+                patch_staging('quit_application'),
+                patch_staging('launch_and_verify_runtime') as launch,
+                mock.patch.object(installer, 'stage_candidate', side_effect=stage_candidate),
+                self.assertRaisesRegex(staging.StagingError, 'intentionally left stopped'),
             ):
-                with self.assertRaisesRegex(staging.StagingError, "intentionally left stopped"):
-                    installer.install(candidate, COMMIT)
+                _ = installer.install(candidate, COMMIT)
 
             self.assertEqual((target / "marker").read_text(encoding="utf-8"), "old")
             launch.assert_not_called()
@@ -323,20 +309,16 @@ class LocalStagingActivationTests(LocalStagingTestCase):
             ]
 
             with (
-                patch_staging("verify_clean_checkout", side_effect=checkout_results),
-                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
-                patch_staging("backup_current_app", return_value=checkpoint),
-                patch_staging("publish_checkpoint_best_effort",
-                    return_value=(checkpoint, True, None, None, None),
-                ),
-                patch_staging("quit_application"),
-                patch_staging("launch_and_verify_runtime",
-                    return_value={"pid": 123, "startedAt": 456, "command": "new"},
-                ) as launch,
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
+                patch_staging('verify_clean_checkout', side_effect=checkout_results),
+                patch_staging('validate_bundle', side_effect=validation_fingerprint),
+                patch_staging('backup_current_app', return_value=checkpoint),
+                patch_staging('publish_checkpoint_best_effort', return_value=(checkpoint, True, None, None, None)),
+                patch_staging('quit_application'),
+                patch_staging('launch_and_verify_runtime', return_value={'pid': 123, 'startedAt': 456, 'command': 'new'}) as launch,
+                mock.patch.object(installer, 'stage_candidate', side_effect=stage_candidate),
+                self.assertRaisesRegex(staging.StagingError, 'intentionally left stopped'),
             ):
-                with self.assertRaisesRegex(staging.StagingError, "intentionally left stopped"):
-                    installer.install(candidate, COMMIT)
+                _ = installer.install(candidate, COMMIT)
 
             self.assertEqual((target / "marker").read_text(encoding="utf-8"), "old")
             launch.assert_called_once()
@@ -345,24 +327,18 @@ class LocalStagingActivationTests(LocalStagingTestCase):
         with tempfile.TemporaryDirectory() as temp:
             installer, target, candidate, checkpoint, stage_candidate = self.make_transaction(Path(temp))
             with (
-                patch_staging("verify_clean_checkout", return_value=COMMIT),
-                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
-                patch_staging("backup_current_app", return_value=checkpoint),
-                patch_staging("publish_checkpoint_best_effort",
-                    return_value=(checkpoint, True, None, None, None),
-                ),
-                patch_staging("quit_application"),
-                patch_staging("assert_application_stopped",
-                    side_effect=staging.StagingError("application reopened"),
-                ),
-                patch_staging("verify_runtime",
-                    return_value={"pid": 123, "startedAt": 456, "command": "old"},
-                ) as verify_existing,
-                patch_staging("launch_and_verify_runtime") as launch,
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
+                patch_staging('verify_clean_checkout', return_value=COMMIT),
+                patch_staging('validate_bundle', side_effect=validation_fingerprint),
+                patch_staging('backup_current_app', return_value=checkpoint),
+                patch_staging('publish_checkpoint_best_effort', return_value=(checkpoint, True, None, None, None)),
+                patch_staging('quit_application'),
+                patch_staging('assert_application_stopped', side_effect=staging.StagingError('application reopened')),
+                patch_staging('verify_runtime', return_value={'pid': 123, 'startedAt': 456, 'command': 'old'}) as verify_existing,
+                patch_staging('launch_and_verify_runtime') as launch,
+                mock.patch.object(installer, 'stage_candidate', side_effect=stage_candidate),
+                self.assertRaisesRegex(staging.StagingError, 'application reopened'),
             ):
-                with self.assertRaisesRegex(staging.StagingError, "application reopened"):
-                    installer.install(candidate, COMMIT)
+                _ = installer.install(candidate, COMMIT)
 
             self.assertEqual((target / "marker").read_text(encoding="utf-8"), "old")
             self.assertEqual(list(target.parent.glob(".Robb Agents.app.failed-*")), [])
@@ -379,24 +355,16 @@ class LocalStagingActivationTests(LocalStagingTestCase):
                 staging.StagingError("checkout changed after stop"),
             ]
             with (
-                patch_staging("verify_clean_checkout",
-                    side_effect=checkout_results,
-                ),
-                patch_staging("validate_bundle",
-                    side_effect=lambda _repo, app, **_kwargs: fingerprint(app),
-                ),
-                patch_staging("backup_current_app", return_value=checkpoint),
-                patch_staging("publish_checkpoint_best_effort",
-                    return_value=(checkpoint, True, None, None, None),
-                ),
-                patch_staging("quit_application"),
-                patch_staging("launch_and_verify_runtime",
-                    return_value={"pid": 321, "startedAt": 654, "command": "old"},
-                ) as launch,
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
+                patch_staging('verify_clean_checkout', side_effect=checkout_results),
+                patch_staging('validate_bundle', side_effect=validation_fingerprint),
+                patch_staging('backup_current_app', return_value=checkpoint),
+                patch_staging('publish_checkpoint_best_effort', return_value=(checkpoint, True, None, None, None)),
+                patch_staging('quit_application'),
+                patch_staging('launch_and_verify_runtime', return_value={'pid': 321, 'startedAt': 654, 'command': 'old'}) as launch,
+                mock.patch.object(installer, 'stage_candidate', side_effect=stage_candidate),
+                self.assertRaisesRegex(staging.StagingError, 'checkout changed after stop'),
             ):
-                with self.assertRaisesRegex(staging.StagingError, "checkout changed after stop"):
-                    installer.install(candidate, COMMIT)
+                _ = installer.install(candidate, COMMIT)
 
             self.assertEqual((target / "marker").read_text(encoding="utf-8"), "old")
             launch.assert_called_once_with(

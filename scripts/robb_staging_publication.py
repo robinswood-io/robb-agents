@@ -1,27 +1,31 @@
 from __future__ import annotations
 
+import logging
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Callable, Iterator, Mapping, Sequence
 
+from robb_staging_bundles import (
+    assert_same_bundle_copy,
+    validate_bundle,
+)
+from robb_staging_checkpoints import (
+    checkpoint_directory_identity,
+    find_checkpoint_by_identity,
+    is_confirmed_managed_checkpoint,
+    prune_backups,
+    republish_rollback_checkpoint_locked,
+    retention_lock_file,
+)
 from robb_staging_common import (
     APP_NAME,
     Runner,
-    resolve_managed_backup_root,
-    exclusive_file_lock,
     cleanup_partial_best_effort,
+    exclusive_file_lock,
+    resolve_managed_backup_root,
 )
-from robb_staging_bundles import (
-    validate_bundle,
-    assert_same_bundle_copy,
-)
-from robb_staging_checkpoints import (
-    retention_lock_file,
-    is_confirmed_managed_checkpoint,
-    republish_rollback_checkpoint_locked,
-    prune_backups,
-    checkpoint_directory_identity,
-    find_checkpoint_by_identity,
-)
+
+logger = logging.getLogger(__name__)
+
 
 def publish_checkpoint_best_effort(
     repo: Path,
@@ -52,6 +56,7 @@ def publish_checkpoint_best_effort(
         try:
             identity = checkpoint_directory_identity(checkpoint)
         except BaseException as error:
+            logger.exception("Failure during publish_checkpoint_best_effort")
             return checkpoint, False, f"Checkpoint is missing before finalization: {error}", None, partial_state
 
         # Revalidate while retention is excluded. When this is an install
@@ -69,11 +74,12 @@ def publish_checkpoint_best_effort(
                 description="Protected managed rollback checkpoint",
             )
         except BaseException as error:
+            logger.exception("Failure during publish_checkpoint_best_effort")
             return checkpoint, False, f"Checkpoint at {checkpoint} could not be revalidated: {error}", None, partial_state
 
         try:
             if checkpoint.name.startswith(".rollback-held-"):
-                republish_rollback_checkpoint_locked(
+                _ = republish_rollback_checkpoint_locked(
                     checkpoint,
                     root,
                     original=checkpoint,
@@ -81,6 +87,7 @@ def publish_checkpoint_best_effort(
                     reason=reason,
                 )
         except BaseException as error:
+            logger.exception("Failure during publish_checkpoint_best_effort")
             operation_error = error
 
         # os.replace may have committed even when the call raised/interrupted.
@@ -88,6 +95,7 @@ def publish_checkpoint_best_effort(
         try:
             recovered = find_checkpoint_by_identity(root, identity)
         except BaseException as error:
+            logger.exception("Failure during publish_checkpoint_best_effort")
             detail = operation_error or error
             return checkpoint, False, f"Cannot recover checkpoint identity after finalization: {detail}", cleanup_warning, partial_state
         if recovered is None:
@@ -107,6 +115,7 @@ def publish_checkpoint_best_effort(
                 description="Finalized managed rollback checkpoint",
             )
         except BaseException as error:
+            logger.exception("Failure during publish_checkpoint_best_effort")
             return surviving, False, f"Checkpoint at {surviving} could not be revalidated: {error}", cleanup_warning, partial_state
         if not is_confirmed_managed_checkpoint(surviving, surviving_fingerprint):
             detail = f" after {operation_error}" if operation_error else ""
@@ -135,6 +144,7 @@ def publish_checkpoint_best_effort(
             runner=runner,
         )
     except BaseException as error:
+        logger.exception("Failure during publish_checkpoint_best_effort")
         warnings.append(f"Checkpoint is valid but retention pruning failed: {error}")
 
     # Reacquire the common lock after pruning and prove that this exact inode is
@@ -209,12 +219,14 @@ def publish_checkpoint_best_effort(
                         )
                         partial_state = "validated"
                     except BaseException as error:
+                        logger.exception("Failure during publish_checkpoint_best_effort")
                         partial_state = "present-unverified"
                         detail = f"remaining transaction copy is incomplete or unverified: {error}"
                         cleanup_warning = (
                             f"{cleanup_warning}; {detail}" if cleanup_warning else detail
                         )
     except BaseException as error:
+        logger.exception("Failure during publish_checkpoint_best_effort")
         return (
             surviving,
             False,

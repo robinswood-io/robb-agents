@@ -1,24 +1,24 @@
-from .robb_local_staging_fixtures import patch_staging
-import importlib.util
+import functools
 import io
 import json
-import os
-from pathlib import Path
-import plistlib
 import shutil
-import subprocess
 import tempfile
-import time
-import unittest
+from pathlib import Path
+from typing import cast
 from unittest import mock
 
+from scripts.robb_retention_files import is_record
+
 from .robb_local_staging_fixtures import (
-    staging,
     COMMIT,
-    completed,
-    fingerprint,
-    GitRunner,
     LocalStagingTestCase,
+    checkpoint_listing,
+    completed,
+    completed_command,
+    fingerprint,
+    patch_staging,
+    staging,
+    validation_fingerprint,
 )
 
 
@@ -28,20 +28,16 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             installer, target, candidate, checkpoint, stage_candidate = self.make_transaction(Path(temp))
             installer.swapper = mock.Mock(side_effect=OSError("atomic swap denied"))
             with (
-                patch_staging("verify_clean_checkout", return_value=COMMIT),
-                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
-                patch_staging("backup_current_app", return_value=checkpoint),
-                patch_staging("publish_checkpoint_best_effort",
-                    return_value=(checkpoint, True, None, None, None),
-                ),
-                patch_staging("quit_application"),
-                patch_staging("launch_and_verify_runtime",
-                    return_value={"pid": 321, "startedAt": 654, "command": "old"},
-                ) as launch,
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
+                patch_staging('verify_clean_checkout', return_value=COMMIT),
+                patch_staging('validate_bundle', side_effect=validation_fingerprint),
+                patch_staging('backup_current_app', return_value=checkpoint),
+                patch_staging('publish_checkpoint_best_effort', return_value=(checkpoint, True, None, None, None)),
+                patch_staging('quit_application'),
+                patch_staging('launch_and_verify_runtime', return_value={'pid': 321, 'startedAt': 654, 'command': 'old'}) as launch,
+                mock.patch.object(installer, 'stage_candidate', side_effect=stage_candidate),
+                self.assertRaisesRegex(staging.StagingError, 'atomic swap denied'),
             ):
-                with self.assertRaisesRegex(staging.StagingError, "atomic swap denied"):
-                    installer.install(candidate, COMMIT)
+                _ = installer.install(candidate, COMMIT)
 
             self.assertEqual((target / "marker").read_text(encoding="utf-8"), "old")
             self.assertEqual(list(target.parent.glob(".partial-robb-staging-*")), [])
@@ -53,7 +49,7 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             working_swapper = installer.swapper
             swaps = 0
 
-            def interrupt_after_first_swap(left, right):
+            def interrupt_after_first_swap(left: Path, right: Path) -> None:
                 nonlocal swaps
                 swaps += 1
                 working_swapper(left, right)
@@ -62,20 +58,16 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
 
             installer.swapper = interrupt_after_first_swap
             with (
-                patch_staging("verify_clean_checkout", return_value=COMMIT),
-                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
-                patch_staging("backup_current_app", return_value=checkpoint),
-                patch_staging("publish_checkpoint_best_effort",
-                    return_value=(checkpoint, True, None, None, None),
-                ),
-                patch_staging("quit_application"),
-                patch_staging("launch_and_verify_runtime",
-                    return_value={"pid": 321, "startedAt": 654, "command": "old"},
-                ) as launch,
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
+                patch_staging('verify_clean_checkout', return_value=COMMIT),
+                patch_staging('validate_bundle', side_effect=validation_fingerprint),
+                patch_staging('backup_current_app', return_value=checkpoint),
+                patch_staging('publish_checkpoint_best_effort', return_value=(checkpoint, True, None, None, None)),
+                patch_staging('quit_application'),
+                patch_staging('launch_and_verify_runtime', return_value={'pid': 321, 'startedAt': 654, 'command': 'old'}) as launch,
+                mock.patch.object(installer, 'stage_candidate', side_effect=stage_candidate),
+                self.assertRaisesRegex(staging.StagingError, 'previous app was restored'),
             ):
-                with self.assertRaisesRegex(staging.StagingError, "previous app was restored"):
-                    installer.install(candidate, COMMIT)
+                _ = installer.install(candidate, COMMIT)
 
             self.assertEqual(swaps, 2)
             self.assertEqual((target / "marker").read_text(encoding="utf-8"), "old")
@@ -88,7 +80,7 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             working_swapper = installer.swapper
             swaps = 0
 
-            def fail_second_swap(left, right):
+            def fail_second_swap(left: Path, right: Path) -> None:
                 nonlocal swaps
                 swaps += 1
                 if swaps == 2:
@@ -97,21 +89,17 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
 
             installer.swapper = fail_second_swap
             with (
-                patch_staging("verify_clean_checkout", return_value=COMMIT),
-                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
-                patch_staging("backup_current_app", return_value=checkpoint),
-                patch_staging("publish_checkpoint_best_effort",
-                    return_value=(checkpoint, True, None, None, None),
-                ) as publish,
-                patch_staging("quit_application"),
-                patch_staging("launch_and_verify_runtime",
-                    side_effect=staging.StagingError("new runtime failed"),
-                ),
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
-                mock.patch.object(staging.sys, "stderr", io.StringIO()),
+                patch_staging('verify_clean_checkout', return_value=COMMIT),
+                patch_staging('validate_bundle', side_effect=validation_fingerprint),
+                patch_staging('backup_current_app', return_value=checkpoint),
+                patch_staging('publish_checkpoint_best_effort', return_value=(checkpoint, True, None, None, None)) as publish,
+                patch_staging('quit_application'),
+                patch_staging('launch_and_verify_runtime', side_effect=staging.StagingError('new runtime failed')),
+                mock.patch.object(installer, 'stage_candidate', side_effect=stage_candidate),
+                mock.patch.object(staging.sys, 'stderr', io.StringIO()),
+                self.assertRaisesRegex(staging.StagingError, 'automatic rollback also failed'),
             ):
-                with self.assertRaisesRegex(staging.StagingError, "automatic rollback also failed"):
-                    installer.install(candidate, COMMIT)
+                _ = installer.install(candidate, COMMIT)
 
             self.assertEqual((target / "marker").read_text(encoding="utf-8"), "new")
             publish.assert_not_called()
@@ -123,18 +111,16 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
         with tempfile.TemporaryDirectory() as temp:
             installer, target, candidate, checkpoint, stage_candidate = self.make_transaction(Path(temp))
             with (
-                patch_staging("verify_clean_checkout", return_value=COMMIT),
-                patch_staging("validate_bundle", side_effect=lambda _repo, app, **_kwargs: fingerprint(app)),
-                patch_staging("backup_current_app", return_value=checkpoint),
-                patch_staging("publish_checkpoint_best_effort",
-                    return_value=(checkpoint, True, None, None, None),
-                ),
-                patch_staging("quit_application"),
-                patch_staging("launch_and_verify_runtime", side_effect=KeyboardInterrupt()),
-                mock.patch.object(installer, "_stage_candidate", side_effect=stage_candidate),
+                patch_staging('verify_clean_checkout', return_value=COMMIT),
+                patch_staging('validate_bundle', side_effect=validation_fingerprint),
+                patch_staging('backup_current_app', return_value=checkpoint),
+                patch_staging('publish_checkpoint_best_effort', return_value=(checkpoint, True, None, None, None)),
+                patch_staging('quit_application'),
+                patch_staging('launch_and_verify_runtime', side_effect=KeyboardInterrupt()),
+                mock.patch.object(installer, 'stage_candidate', side_effect=stage_candidate),
+                self.assertRaisesRegex(staging.StagingError, 'previous app was restored'),
             ):
-                with self.assertRaisesRegex(staging.StagingError, "previous app was restored"):
-                    installer.install(candidate, COMMIT)
+                _ = installer.install(candidate, COMMIT)
 
             self.assertEqual((target / "marker").read_text(encoding="utf-8"), "old")
 
@@ -142,16 +128,18 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
         with tempfile.TemporaryDirectory() as temp:
             installer, target, candidate, _checkpoint, _stage_candidate = self.make_transaction(Path(temp))
 
-            def runner(args, **_kwargs):
+            def runner(args: list[str], **_kwargs: object):
                 if args[0] == "/usr/bin/ditto":
-                    shutil.copytree(Path(args[1]), Path(args[2]))
+                    _ = shutil.copytree(Path(args[1]), Path(args[2]))
                     return completed()
                 raise AssertionError(args)
 
             installer.runner = runner
-            with patch_staging("validate_bundle", side_effect=staging.StagingError("invalid staged copy")):
-                with self.assertRaisesRegex(staging.StagingError, "invalid staged copy"):
-                    installer._stage_candidate(candidate, COMMIT)
+            with (
+                patch_staging('validate_bundle', side_effect=staging.StagingError('invalid staged copy')),
+                self.assertRaisesRegex(staging.StagingError, 'invalid staged copy'),
+            ):
+                _ = installer.stage_candidate(candidate, COMMIT)
 
             self.assertEqual((target / "marker").read_text(encoding="utf-8"), "old")
             self.assertEqual(list(target.parent.glob(".partial-robb-staging-*")), [])
@@ -161,8 +149,8 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             root = Path(temp) / "backups"
             checkpoint = root / "20260901-old"
             (checkpoint / staging.APP_NAME).mkdir(parents=True)
-            (checkpoint / staging.APP_NAME / "marker").write_text("old", encoding="utf-8")
-            (checkpoint / "backup.json").write_text(
+            _ = (checkpoint / staging.APP_NAME / "marker").write_text("old", encoding="utf-8")
+            _ = (checkpoint / "backup.json").write_text(
                 json.dumps({
                     "version": 1,
                     "createdAt": "2026-09-01T00:00:00+00:00",
@@ -182,11 +170,14 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             )
             self.assertTrue((published / staging.APP_NAME).is_dir())
             self.assertFalse(held.exists())
-            manifest = json.loads((published / "backup.json").read_text(encoding="utf-8"))
-            self.assertEqual(Path(manifest["refreshedFrom"]).name, checkpoint.name)
+            manifest = cast(object, json.loads((published / "backup.json").read_text(encoding="utf-8")))
+            assert is_record(manifest)
+            refreshed_from, validation = manifest["refreshedFrom"], manifest["validation"]
+            assert isinstance(refreshed_from, str) and is_record(validation)
+            self.assertEqual(Path(refreshed_from).name, checkpoint.name)
             self.assertEqual(manifest["version"], 2)
             self.assertEqual(
-                manifest["validation"]["contract"],
+                validation["contract"],
                 staging.STRONG_VALIDATION_CONTRACT,
             )
 
@@ -196,8 +187,8 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             checkpoint = root / "20260901-old"
             app = checkpoint / staging.APP_NAME
             app.mkdir(parents=True)
-            (app / "marker").write_text("old", encoding="utf-8")
-            (checkpoint / "backup.json").write_text(
+            _ = (app / "marker").write_text("old", encoding="utf-8")
+            _ = (checkpoint / "backup.json").write_text(
                 json.dumps({
                     "version": 1,
                     "createdAt": "2026-09-01T00:00:00+00:00",
@@ -206,15 +197,14 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
                 encoding="utf-8",
             )
 
-            def validate(_repo, held_app, **_kwargs):
+            def validate(_repo: Path, held_app: Path, **_kwargs: object) -> dict[str, str]:
                 self.assertFalse(checkpoint.exists())
                 self.assertTrue(held_app.parent.name.startswith(".rollback-held-"))
-                with self.assertRaisesRegex(staging.StagingError, "holds"):
-                    with staging.exclusive_file_lock(
-                        staging.retention_lock_file(root),
-                        timeout=0,
-                    ):
-                        self.fail("validation must retain the exclusion lock")
+                with (
+                    self.assertRaisesRegex(staging.StagingError, 'holds'),
+                    staging.exclusive_file_lock(staging.retention_lock_file(root), timeout=0),
+                ):
+                    self.fail("validation must retain the exclusion lock")
                 return fingerprint(held_app)
 
             with patch_staging("validate_bundle", side_effect=validate):
@@ -224,7 +214,7 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
                     root,
                     expected_commit=COMMIT,
                     timeout=0.1,
-                    runner=lambda *_args, **_kwargs: completed(),
+                    runner=completed_command,
                 )
             self.assertTrue(held.exists())
             self.assertEqual(selected, fingerprint(held / staging.APP_NAME))
@@ -236,16 +226,15 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             (checkpoint / staging.APP_NAME).mkdir(parents=True)
             with patch_staging("validate_bundle",
                 side_effect=staging.StagingError("invalid fuses"),
-            ):
-                with self.assertRaisesRegex(staging.StagingError, "remains protected"):
-                    staging.protect_and_validate_rollback_checkpoint(
-                        Path(temp) / "repo",
-                        checkpoint,
-                        root,
-                        expected_commit=COMMIT,
-                        timeout=0.1,
-                        runner=lambda *_args, **_kwargs: completed(),
-                    )
+            ), self.assertRaisesRegex(staging.StagingError, "remains protected"):
+                _ = staging.protect_and_validate_rollback_checkpoint(
+                    Path(temp) / "repo",
+                    checkpoint,
+                    root,
+                    expected_commit=COMMIT,
+                    timeout=0.1,
+                    runner=completed_command,
+                )
             self.assertFalse(checkpoint.exists())
             held = list(root.glob(".rollback-held-*"))
             self.assertEqual(len(held), 1)
@@ -256,17 +245,19 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             checkpoint = root / "20260901-old"
             app = checkpoint / staging.APP_NAME
             app.mkdir(parents=True)
-            (app / "marker").write_text("old", encoding="utf-8")
-            with patch_staging("validate_bundle", return_value=fingerprint(app)):
-                with self.assertRaisesRegex(staging.StagingError, "manifest is missing or invalid"):
-                    staging.protect_and_validate_rollback_checkpoint(
-                        Path(temp) / "repo",
-                        checkpoint,
-                        root,
-                        expected_commit=COMMIT,
-                        timeout=0.1,
-                        runner=lambda *_args, **_kwargs: completed(),
-                    )
+            _ = (app / "marker").write_text("old", encoding="utf-8")
+            with (
+                patch_staging('validate_bundle', return_value=fingerprint(app)),
+                self.assertRaisesRegex(staging.StagingError, 'manifest is missing or invalid'),
+            ):
+                _ = staging.protect_and_validate_rollback_checkpoint(
+                    Path(temp) / "repo",
+                    checkpoint,
+                    root,
+                    expected_commit=COMMIT,
+                    timeout=0.1,
+                    runner=completed_command,
+                )
             self.assertFalse(checkpoint.exists())
             self.assertEqual(len(list(root.glob(".rollback-held-*"))), 1)
 
@@ -277,8 +268,8 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             held = root / ".rollback-held-backup-fixture"
             app = held / staging.APP_NAME
             app.mkdir(parents=True)
-            (app / "marker").write_text("old", encoding="utf-8")
-            (held / "backup.json").write_text(
+            _ = (app / "marker").write_text("old", encoding="utf-8")
+            _ = (held / "backup.json").write_text(
                 json.dumps({
                     "version": 1,
                     "createdAt": "2026-09-01T00:00:00+00:00",
@@ -288,31 +279,23 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             )
             partial = base / "Applications/.partial-robb-staging-fixture"
             (partial / staging.APP_NAME).mkdir(parents=True)
-            (partial / staging.APP_NAME / "marker").write_text("old", encoding="utf-8")
+            _ = (partial / staging.APP_NAME / "marker").write_text("old", encoding="utf-8")
             expected = fingerprint(app)
             real_cleanup = staging.cleanup_partial_best_effort
 
-            def cleanup_while_locked(path, parent):
-                with self.assertRaisesRegex(staging.StagingError, "holds"):
-                    with staging.exclusive_file_lock(
-                        staging.retention_lock_file(root),
-                        timeout=0,
-                    ):
-                        self.fail("cleanup must retain the exclusion lock")
+            def cleanup_while_locked(path: Path, parent: Path) -> str | None:
+                with (
+                    self.assertRaisesRegex(staging.StagingError, 'holds'),
+                    staging.exclusive_file_lock(staging.retention_lock_file(root), timeout=0),
+                ):
+                    self.fail("cleanup must retain the exclusion lock")
                 return real_cleanup(path, parent)
 
             with (
                 patch_staging("validate_bundle", return_value=expected),
                 patch_staging("cleanup_partial_best_effort", side_effect=cleanup_while_locked),
                 patch_staging("prune_backups",
-                    side_effect=lambda *_args, **_kwargs: {
-                        "apply": True,
-                        "kept": [
-                            path.name
-                            for path in root.iterdir()
-                            if staging.CHECKPOINT_NAME_RE.fullmatch(path.name)
-                        ],
-                    },
+                    side_effect=functools.partial(checkpoint_listing, root),
                 ),
             ):
                 path, confirmed, warning, cleanup_warning, partial_state = staging.publish_checkpoint_best_effort(
@@ -320,7 +303,7 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
                     held,
                     root,
                     timeout=0.1,
-                    runner=lambda *_args, **_kwargs: completed(),
+                    runner=completed_command,
                     reason="test",
                     expected_fingerprint=expected,
                     qualified_helper=base / "qualified-retention.py",
@@ -343,8 +326,8 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             held = root / ".rollback-held-backup-fixture"
             app = held / staging.APP_NAME
             app.mkdir(parents=True)
-            (app / "marker").write_text("old", encoding="utf-8")
-            (held / "backup.json").write_text(
+            _ = (app / "marker").write_text("old", encoding="utf-8")
+            _ = (held / "backup.json").write_text(
                 json.dumps({
                     "version": 1,
                     "createdAt": "2026-09-01T00:00:00+00:00",
@@ -354,7 +337,7 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
             )
             partial = base / "Applications/.partial-robb-staging-fixture"
             (partial / staging.APP_NAME).mkdir(parents=True)
-            (partial / staging.APP_NAME / "marker").write_text("old", encoding="utf-8")
+            _ = (partial / staging.APP_NAME / "marker").write_text("old", encoding="utf-8")
             expected = fingerprint(app)
 
             with (
@@ -370,7 +353,7 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
                         held,
                         root,
                         timeout=0.1,
-                        runner=lambda *_args, **_kwargs: completed(),
+                        runner=completed_command,
                         reason="test",
                         expected_fingerprint=expected,
                         qualified_helper=base / "qualified-retention.py",
@@ -383,6 +366,7 @@ class LocalStagingRecoveryTests(LocalStagingTestCase):
 
             self.assertTrue(path.exists())
             self.assertFalse(confirmed)
+            assert isinstance(warning, str)
             self.assertIn("did not keep", warning)
             self.assertIsNone(cleanup_warning)
             self.assertEqual(partial_state, "present-unverified")

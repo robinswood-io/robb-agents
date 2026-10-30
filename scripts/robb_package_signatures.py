@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import pathlib
 import sys
+from typing import Never
 
 
-def fail(message: str) -> None:
+def fail(message: str) -> Never:
     print(f"::error::{message}", file=sys.stderr)
     raise SystemExit(1)
 

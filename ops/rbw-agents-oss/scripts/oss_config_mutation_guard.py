@@ -1,16 +1,14 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import re
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import TypeAlias
 
 from lib.wrapper_sdk import now_iso, write_report
+from pydantic import JsonValue, TypeAdapter
 
-JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
 
 ROOT = Path('/srv/rbw-agents-oss')
 CONFIG = ROOT / 'config'
@@ -36,8 +34,8 @@ WRITE_PATTERNS = [
 
 def load_json(path: Path, default: JsonValue) -> JsonValue:
     try:
-        return json.loads(path.read_text(encoding='utf-8'))
-    except Exception:
+        return TypeAdapter(JsonValue).validate_json(path.read_bytes())
+    except (OSError, ValueError):
         return default
 
 
@@ -45,7 +43,7 @@ def is_active_backup(path: Path) -> bool:
     if not path.is_file() or '/archive/' in path.as_posix():
         return False
     name = path.name
-    return '.bak' in name or name.endswith('~') or name.endswith('.old')
+    return '.bak' in name or name.endswith(('~', '.old'))
 
 
 def rel(path: Path) -> str:
@@ -64,7 +62,7 @@ def scan_active_backups() -> list[str]:
 def script_text(path: Path) -> str:
     try:
         return path.read_text(encoding='utf-8', errors='ignore')
-    except Exception:
+    except OSError:
         return ''
 
 
@@ -84,18 +82,25 @@ def scan_config_writers() -> list[dict[str, JsonValue]]:
         if not write_hits:
             continue
         uses_helper = 'lib.config_mutation' in text or 'from config_mutation' in text or 'ConfigMutation' in text
-        candidates.append({'path': r, 'protectedNames': touched[:20], 'writePatterns': write_hits, 'usesConfigMutationHelper': uses_helper})
+        candidates.append({'path': r, 'protectedNames': list(touched[:20]), 'writePatterns': list(write_hits), 'usesConfigMutationHelper': uses_helper})
     return candidates
 
 
-def approved_read_only_consumers(policy: dict, root: Path) -> tuple[set[str], list[dict]]:
-    accepted = set(policy.get('acceptedReadOnlyProtectedConfigConsumers', []))
-    reviewed = {}
-    for row in policy.get('reviewedReadOnlyProtectedConfigConsumers', []):
-        if isinstance(row, dict) and row.get('path') and row.get('sha256'):
-            reviewed.setdefault(row['path'], set()).add(row['sha256'])
-    errors = []
-    for path in accepted & reviewed.keys():
+def approved_read_only_consumers(policy: dict[str, JsonValue], root: Path) -> tuple[set[str], list[dict[str, JsonValue]]]:
+    accepted = set(TypeAdapter(list[str]).validate_python(policy.get('acceptedReadOnlyProtectedConfigConsumers', [])))
+    reviewed: dict[str, set[str]] = {}
+    rows = TypeAdapter(list[JsonValue]).validate_python(policy.get('reviewedReadOnlyProtectedConfigConsumers', []))
+    for row in rows:
+        if isinstance(row, dict):
+            path, digest = row.get('path'), row.get('sha256')
+            if isinstance(path, str) and path and isinstance(digest, str) and digest:
+                reviewed.setdefault(path, set()).add(digest)
+    errors: list[dict[str, JsonValue]] = []
+    for path in sorted(accepted):
+        if path not in reviewed:
+            accepted.discard(path)
+            errors.append({'code': 'read_only_consumer_review_missing', 'path': path})
+            continue
         try:
             digest = hashlib.sha256((root / path).read_bytes()).hexdigest()
         except OSError:
@@ -107,17 +112,16 @@ def approved_read_only_consumers(policy: dict, root: Path) -> tuple[set[str], li
 
 
 def main() -> dict[str, JsonValue]:
-    policy = load_json(POLICY, {})
-    accepted = set(policy.get('acceptedLegacyConfigWriters', [])) if isinstance(policy, dict) else set()
+    policy = JSON_OBJECT.validate_python(load_json(POLICY, {}))
+    accepted = set(TypeAdapter(list[str]).validate_python(policy.get('acceptedLegacyConfigWriters', [])))
     accepted_read_only, read_only_errors = approved_read_only_consumers(policy, ROOT)
-    accepted_backups = set(policy.get('acceptedLegacyBackupPatternScripts', [])) if isinstance(policy, dict) else set()
     active_backups = scan_active_backups()
     writers = scan_config_writers()
     unclassified = [
         w for w in writers
         if not w.get('usesConfigMutationHelper')
-        and w['path'] not in accepted
-        and w['path'] not in accepted_read_only
+        and str(w['path']) not in accepted
+        and str(w['path']) not in accepted_read_only
     ]
     helper_missing = not (SCRIPTS / 'lib/config_mutation.py').exists()
     errors: list[dict[str, JsonValue]] = list(read_only_errors)
@@ -125,24 +129,24 @@ def main() -> dict[str, JsonValue]:
     if helper_missing:
         errors.append({'code': 'config_mutation_helper_missing', 'path': 'scripts/lib/config_mutation.py'})
     if active_backups:
-        errors.append({'code': 'active_backup_files', 'count': len(active_backups), 'sample': active_backups[:50]})
+        errors.append({'code': 'active_backup_files', 'count': len(active_backups), 'sample': list(active_backups[:50])})
     if unclassified:
-        errors.append({'code': 'unclassified_config_writers', 'count': len(unclassified), 'sample': unclassified[:30]})
-    accepted_legacy = [w for w in writers if w['path'] in accepted]
-    read_only_consumers = [w for w in writers if w['path'] in accepted_read_only]
+        errors.append({'code': 'unclassified_config_writers', 'count': len(unclassified), 'sample': list(unclassified[:30])})
+    accepted_legacy = [w for w in writers if str(w['path']) in accepted]
+    read_only_consumers = [w for w in writers if str(w['path']) in accepted_read_only]
     if accepted_legacy:
-        warnings.append({'code': 'accepted_legacy_config_writers', 'count': len(accepted_legacy), 'sample': accepted_legacy[:20]})
+        warnings.append({'code': 'accepted_legacy_config_writers', 'count': len(accepted_legacy), 'sample': list(accepted_legacy[:20])})
     helper_users = [w for w in writers if w.get('usesConfigMutationHelper')]
     ok = not errors
-    payload = {
+    payload = JSON_OBJECT.validate_python({
         'ok': ok,
         'status': 'passed' if ok and not warnings else 'warning' if ok else 'failed',
         'generatedAt': now_iso(),
         'summary': 'Config mutation guard enforces archive-backed locked config edits and blocks new active-tree backups/new unclassified config writers.',
         'policy': {
             'path': str(POLICY),
-            'loaded': isinstance(policy, dict) and bool(policy),
-            'version': policy.get('schemaVersion') or policy.get('version') if isinstance(policy, dict) else None,
+            'loaded': bool(policy),
+            'version': policy.get('schemaVersion') or policy.get('version'),
         },
         'counts': {
             'activeBackupFiles': len(active_backups),
@@ -162,13 +166,13 @@ def main() -> dict[str, JsonValue]:
             'classifiedReadOnlyConsumers': read_only_consumers[:30],
         },
         'artifacts': {},
-    }
+    })
     artifacts = write_report(SLUG, payload, title='OSS Config Mutation Guard')
-    payload['artifacts'] = artifacts
-    write_report(SLUG, payload, title='OSS Config Mutation Guard')
+    payload['artifacts'] = dict(artifacts)
+    _ = write_report(SLUG, payload, title='OSS Config Mutation Guard')
     print(json.dumps({'ok': payload['ok'], 'status': payload['status'], 'counts': payload['counts'], 'artifacts': artifacts}, ensure_ascii=False))
     return payload
 
 
 if __name__ == '__main__':
-    main()
+    _ = main()

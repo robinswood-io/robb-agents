@@ -22,8 +22,8 @@ export const DIST_DIR = join(ELECTRON_DIR, "dist");
 // every Telegram API call with a TypeError. Kept in sync with
 // `apps/electron/package.json` build:main and `scripts/electron-build-main.ts`.
 export const MAIN_PROCESS_ALIAS: Record<string, string> = {
-  "node-fetch": join(ROOT_DIR, "apps/electron/src/main/shims/node-fetch.cjs"),
-  "abort-controller": join(ROOT_DIR, "apps/electron/src/main/shims/abort-controller.cjs"),
+  "node-fetch": join(ROOT_DIR, "apps/electron/src/main/shims/node-fetch.ts"),
+  "abort-controller": join(ROOT_DIR, "apps/electron/src/main/shims/abort-controller.ts"),
 };
 
 

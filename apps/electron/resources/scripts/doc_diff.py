@@ -1,11 +1,11 @@
 # /// script
-# requires-python = ">=3.12"
-# dependencies = ["markitdown==0.1.9", "python-docx==1.2.0", "diff-match-patch==20241021", "click==8.5.0"]
+# requires-python = ">=3.15"
+# dependencies = ["python-docx==1.2.0", "openpyxl==3.1.5", "python-pptx==1.0.2", "pypdf==6.21.4", "Pillow==13.0.0", "click==8.5.0"]
 # ///
 """Document comparison tool.
 
-Converts two documents to Markdown using markitdown, then computes and
-displays differences using diff-match-patch.
+Converts two documents to text using the shared local extractor, then computes and
+displays differences using the standard library difflib.
 
 Usage:
     uv run doc_diff.py [OPTIONS] FILE1 FILE2
@@ -13,66 +13,24 @@ Usage:
 
 import difflib
 import sys
-import warnings
 from pathlib import Path
 
-# Suppress pydub/ffmpeg warning from markitdown[all] — irrelevant for document conversion
-warnings.filterwarnings("ignore", message="Couldn't find ffmpeg", category=RuntimeWarning)
-
 import click
-from diff_match_patch import diff_match_patch
+from document_text import CONVERSION_ERRORS, convert_document
 
 
 def write_output(text: str, output_path: str | None) -> None:
     """Write text to file or stdout."""
     if output_path:
-        Path(output_path).write_text(text, encoding="utf-8")
+        _ = Path(output_path).write_text(text, encoding="utf-8")
         click.echo(f"Output written to {output_path}", err=True)
     else:
         click.echo(text)
 
 
-def _extract_docx_text(path: Path) -> str:
-    from docx import Document
-
-    doc = Document(str(path))
-    parts: list[str] = []
-    for p in doc.paragraphs:
-        if p.text:
-            parts.append(p.text)
-    for table in doc.tables:
-        for row in table.rows:
-            cells = [cell.text.strip() for cell in row.cells]
-            parts.append(" | ".join(cells))
-    return "\n".join(parts)
-
-
 def convert_to_text(file_path: str) -> str:
-    """Convert a file to text/markdown. Plain text files are read directly."""
-    path = Path(file_path)
-    ext = path.suffix.lower()
-
-    # For plain text, read directly
-    plain_text_exts = {".txt", ".md", ".rst", ".csv", ".tsv", ".log"}
-    if ext in plain_text_exts:
-        return path.read_text(encoding="utf-8", errors="replace")
-
-    # DOCX fallback path independent of MarkItDown native dependencies.
-    if ext == ".docx":
-        return _extract_docx_text(path)
-
-    try:
-        from markitdown import MarkItDown  # Lazy import to keep CLI startup resilient
-    except Exception as e:
-        raise click.ClickException(
-            "MarkItDown backend unavailable for non-text files. "
-            "Install Microsoft Visual C++ Redistributable and retry. "
-            f"Details: {e}"
-        ) from e
-
-    converter = MarkItDown()
-    result = converter.convert(str(path))
-    return result.text_content or ""
+    """Use exactly the same extraction as Robb's document conversion command."""
+    return convert_document(Path(file_path))
 
 
 def format_unified(text1: str, text2: str, name1: str, name2: str) -> str:
@@ -124,10 +82,15 @@ def format_side_by_side(text1: str, text2: str, name1: str, name2: str, width: i
 
 def format_summary(text1: str, text2: str, name1: str, name2: str, word_level: bool = False) -> str:
     """Generate a summary of differences."""
-    dmp = diff_match_patch()
-
-    diffs = dmp.diff_main(text1, text2)
-    dmp.diff_cleanupSemantic(diffs)
+    diffs: list[tuple[int, str]] = []
+    for tag, start1, end1, start2, end2 in difflib.SequenceMatcher(None, text1, text2).get_opcodes():
+        if tag == "equal":
+            diffs.append((0, text1[start1:end1]))
+        else:
+            if tag in ("delete", "replace"):
+                diffs.append((-1, text1[start1:end1]))
+            if tag in ("insert", "replace"):
+                diffs.append((1, text2[start2:end2]))
 
     lines1 = text1.splitlines()
     lines2 = text2.splitlines()
@@ -163,18 +126,18 @@ def format_summary(text1: str, text2: str, name1: str, name2: str, word_level: b
 
     summary_parts = [
         f"Comparison: {name1} vs {name2}",
-        f"",
+        "",
         f"File 1: {len(lines1)} lines, {len(text1)} characters",
         f"File 2: {len(lines2)} lines, {len(text2)} characters",
-        f"",
+        "",
         f"Similarity: {similarity:.1f}%",
-        f"",
-        f"Line changes:",
+        "",
+        "Line changes:",
         f"  Added lines:   {added_lines}",
         f"  Removed lines: {removed_lines}",
         f"  Changed lines: {changed_lines}",
-        f"",
-        f"Character-level changes:",
+        "",
+        "Character-level changes:",
         f"  Insertions: {insertions} ({insert_chars} characters)",
         f"  Deletions:  {deletions} ({delete_chars} characters)",
     ]
@@ -212,7 +175,7 @@ def format_summary(text1: str, text2: str, name1: str, name2: str, word_level: b
 def main(file1: str, file2: str, fmt: str, word_level: bool, output: str | None) -> None:
     """Compare two documents by converting them to Markdown first.
 
-    Supports any format that markitdown can handle: .docx, .xlsx, .pptx, .pdf,
+    Supports the local document converter formats: .docx, .xlsx, .pptx, .pdf,
     .html, .ipynb, .xml, .txt, .md, and more.
     """
     name1 = Path(file1).name
@@ -224,7 +187,7 @@ def main(file1: str, file2: str, fmt: str, word_level: bool, output: str | None)
 
         click.echo(f"Converting {name2}...", err=True)
         text2 = convert_to_text(file2)
-    except Exception as e:
+    except CONVERSION_ERRORS as e:
         click.echo(f"Error converting files: {e}", err=True)
         sys.exit(1)
 

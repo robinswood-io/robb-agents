@@ -12,7 +12,7 @@ describe('validateStdioMcpConnection', () => {
     async () => {
       const result = await validateStdioMcpConnection({
         command: 'node',
-        args: [FIXTURE('mcp-server-modern.mjs')],
+        args: [FIXTURE('mcp-server-modern.ts')],
         timeout: 8000,
       })
       expect(result.success).toBe(true)
@@ -27,7 +27,7 @@ describe('validateStdioMcpConnection', () => {
     async () => {
       const result = await validateStdioMcpConnection({
         command: 'node',
-        args: [FIXTURE('mcp-server-good.mjs')],
+        args: [FIXTURE('mcp-server-good.ts')],
         timeout: 8000,
       })
       expect(result.success).toBe(true)
@@ -42,7 +42,7 @@ describe('validateStdioMcpConnection', () => {
     async () => {
       const result = await validateStdioMcpConnection({
         command: 'node',
-        args: [FIXTURE('mcp-server-lsp.mjs')],
+        args: [FIXTURE('mcp-server-lsp.ts')],
         // Generous outer budget — the connect phase should fail well before this
         // either via timeout or via parse error → "Connection closed".
         timeout: 12000,
@@ -68,7 +68,7 @@ describe('validateStdioMcpConnection', () => {
     async () => {
       const result = await validateStdioMcpConnection({
         command: 'node',
-        args: [FIXTURE('mcp-server-slow.mjs')],
+        args: [FIXTURE('mcp-server-slow.ts')],
         // Generous outer budget: the slow fixture takes ~12s of stderr noise
         // before it starts speaking MCP. The idle watchdog (default 8s) must
         // be reset by each stderr line, otherwise this test fails.
@@ -86,7 +86,7 @@ describe('validateStdioMcpConnection', () => {
     async () => {
       const result = await validateStdioMcpConnection({
         command: 'node',
-        args: [FIXTURE('mcp-server-noisy-stuck.mjs')],
+        args: [FIXTURE('mcp-server-noisy-stuck.ts')],
         // Use a short outer budget so the ceiling fires quickly. With
         // timeout=10000: connectIdleMs=5000, connectCeilingMs=8000.
         timeout: 10000,

@@ -1,32 +1,41 @@
+from pypdf.errors import PyPdfError
+
 """Native PDF commands, registered on the shared Click group."""
 
+from collections.abc import Mapping
+from numbers import Real
+from typing import cast
+
 from pdf_common import (
-    io,
-    json,
-    math,
-    sys,
-    zlib,
     Path,
-    click,
-    pdfium,
     PdfReader,
     PdfWriter,
-    BooleanObject,
-    NameObject,
     RectangleObject,
-    PAGE_SIZES,
+    check_output_differs,
+    cli,
+    click,
+    json,
+    parse_page_range,
+    pdfium,
+    sys,
     write_output,
     write_pdf,
-    parse_page_range,
-    check_output_differs,
-    parse_color,
-    _render_page_to_pil,
-    _make_watermark_pdf,
-    _pdf_escape,
-    _make_text_overlay_pdf,
-    _pil_to_image_pdf_page,
-    cli,
 )
+
+
+def _page_dimensions(page: object) -> tuple[float, float]:
+    box = getattr(page, "mediabox", None)
+    if not isinstance(box, RectangleObject):
+        raise TypeError("PDF page has no readable media box")
+    coordinates = cast(tuple[object, ...], tuple(box))
+    if len(coordinates) != 4 or not all(isinstance(value, Real) for value in coordinates):
+        raise ValueError("PDF media box must contain four numeric coordinates")
+    numeric = cast(tuple[Real, ...], coordinates)
+    return float(numeric[2]) - float(numeric[0]), float(numeric[3]) - float(numeric[1])
+
+
+
+_PDF_OPERATION_ERRORS = (OSError, ValueError, TypeError, RuntimeError, KeyError, IndexError, PyPdfError)
 
 
 @cli.command()
@@ -51,7 +60,7 @@ def extract(file: str, pages: str | None, output: str | None) -> None:
             parts.append(f"--- Page {idx + 1} ---\n{text}")
 
         write_output("\n".join(parts), output)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -92,7 +101,7 @@ def info(file: str, output: str | None, set_mode: bool, title: str | None, autho
                 sys.exit(1)
             writer.add_metadata(meta)
             write_pdf(writer, output)
-        except Exception as e:
+        except _PDF_OPERATION_ERRORS as e:
             click.echo(f"Error: {e}", err=True)
             sys.exit(1)
         return
@@ -127,28 +136,35 @@ def info(file: str, output: str | None, set_mode: bool, title: str | None, autho
             # Page dimensions from first page
             if reader.pages:
                 page = reader.pages[0]
-                box = page.mediabox
+                width, height = _page_dimensions(page)
                 info_dict["page_size"] = {
-                    "width": float(box.width),
-                    "height": float(box.height),
-                    "width_inches": round(float(box.width) / 72, 2),
-                    "height_inches": round(float(box.height) / 72, 2),
+                    "width": width,
+                    "height": height,
+                    "width_inches": round(width / 72, 2),
+                    "height_inches": round(height / 72, 2),
                 }
 
             # Form fields
-            fields = reader.get_fields()
-            if fields:
-                field_info = []
-                for name, field in fields.items():
+            fields_value: object = reader.get_fields()
+            if isinstance(fields_value, dict):
+                field_info: list[dict[str, str]] = []
+                fields = cast(dict[object, object], fields_value)
+                for name, raw_field in fields.items():
+                    field: object = raw_field
+                    field_mapping: Mapping[str, object] = {}
+                    if isinstance(field, dict):
+                        field_entries = cast(dict[object, object], field)
+                        if all(isinstance(key, str) for key in field_entries):
+                            field_mapping = cast(Mapping[str, object], field_entries)
                     field_info.append({
-                        "name": name,
-                        "type": str(field.get("/FT", "Unknown")),
-                        "value": str(field.get("/V", "")),
+                        "name": str(name),
+                        "type": str(field_mapping.get("/FT", "Unknown")),
+                        "value": str(field_mapping.get("/V", "")),
                     })
                 info_dict["form_fields"] = field_info
 
         write_output(json.dumps(info_dict, indent=2, default=str), output)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -176,10 +192,10 @@ def merge(files: tuple[str, ...], output: str) -> None:
         for f in files:
             reader = PdfReader(f)
             for page in reader.pages:
-                writer.add_page(page)
+                _ = writer.add_page(page)
 
         write_pdf(writer, output)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -210,10 +226,10 @@ def split(file: str, pages: str, exclude: bool, output: str) -> None:
 
         writer = PdfWriter()
         for idx in page_indices:
-            writer.add_page(reader.pages[idx])
+            _ = writer.add_page(reader.pages[idx])
 
         write_pdf(writer, output)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -233,10 +249,10 @@ def rotate(file: str, angle: str, pages: str | None, output: str) -> None:
         target = set(parse_page_range(pages, total)) if pages else set(range(total))
         for i, page in enumerate(reader.pages):
             if i in target:
-                page.rotate(int(angle))
-            writer.add_page(page)
+                _ = page.rotate(int(angle))
+            _ = writer.add_page(page)
         write_pdf(writer, output)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -261,6 +277,8 @@ def reorder(file: str, order: str | None, reverse: bool, output: str) -> None:
         if reverse:
             indices = list(reversed(range(total)))
         else:
+            if order is None:
+                raise ValueError("Page order is required")
             indices = [int(x.strip()) - 1 for x in order.split(",")]
             for idx in indices:
                 if idx < 0 or idx >= total:
@@ -268,12 +286,12 @@ def reorder(file: str, order: str | None, reverse: bool, output: str) -> None:
                     sys.exit(1)
         writer = PdfWriter()
         for idx in indices:
-            writer.add_page(reader.pages[idx])
+            _ = writer.add_page(reader.pages[idx])
         write_pdf(writer, output)
     except ValueError:
         click.echo("Error: --order must be comma-separated page numbers.", err=True)
         sys.exit(1)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -292,11 +310,11 @@ def duplicate(file: str, pages: str, copies: int, output: str) -> None:
         dup_set = set(parse_page_range(pages, total))
         writer = PdfWriter()
         for i, page in enumerate(reader.pages):
-            writer.add_page(page)
+            _ = writer.add_page(page)
             if i in dup_set:
                 for _ in range(copies - 1):
-                    writer.add_page(page)
+                    _ = writer.add_page(page)
         write_pdf(writer, output)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)

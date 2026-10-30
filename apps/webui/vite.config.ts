@@ -4,7 +4,7 @@ import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'path'
-import { resolveReactPdfWorker } from '../../scripts/pdf-worker-resolution'
+import { resolveReactPdfWorker } from '../../scripts/pdf-worker-resolution.ts'
 
 const configDir = import.meta.dirname
 const webBaselineTargets = ['chrome111', 'edge111', 'firefox114', 'safari16.4']

@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'bun:test'
-import { Linter, type Rule } from 'eslint'
-import { createRequire } from 'node:module'
+import { Linter } from 'eslint'
 
-const require = createRequire(import.meta.url)
-const rule = require('../no-floating-z-tokens-in-island.cjs') as Rule.RuleModule
+import rule from '../no-floating-z-tokens-in-island.ts'
 
 function runRule(code: string, filename: string) {
   const linter = new Linter({ cwd: '/repo' })

@@ -1,24 +1,18 @@
-from .robb_local_staging_fixtures import patch_staging
-import importlib.util
-import io
+import functools
 import json
-import os
-from pathlib import Path
-import plistlib
-import shutil
-import subprocess
 import tempfile
-import time
-import unittest
+from collections.abc import Mapping
+from pathlib import Path
 from unittest import mock
 
 from .robb_local_staging_fixtures import (
-    staging,
     COMMIT,
-    completed,
-    fingerprint,
-    GitRunner,
     LocalStagingTestCase,
+    checkpoint_listing,
+    completed_command,
+    fingerprint,
+    patch_staging,
+    staging,
 )
 
 
@@ -28,8 +22,8 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
             base = Path(temp)
             held = base / "backups/.rollback-held-backup-fixture"
             (held / staging.APP_NAME).mkdir(parents=True)
-            (held / staging.APP_NAME / "marker").write_text("old", encoding="utf-8")
-            (held / "backup.json").write_text(
+            _ = (held / staging.APP_NAME / "marker").write_text("old", encoding="utf-8")
+            _ = (held / "backup.json").write_text(
                 json.dumps({
                     "version": 1,
                     "createdAt": "2026-09-01T00:00:00+00:00",
@@ -40,8 +34,10 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
             expected = fingerprint(held / staging.APP_NAME)
             real_republish = staging.republish_rollback_checkpoint_locked
 
-            def interrupt_after_rename(*args, **kwargs):
-                real_republish(*args, **kwargs)
+            def interrupt_after_rename(held: Path, backup_root: Path, *, original: Path,
+                                       validated_fingerprint: Mapping[str, str], reason: str = "explicit-rollback") -> None:
+                _ = real_republish(held, backup_root, original=original,
+                                   validated_fingerprint=validated_fingerprint, reason=reason)
                 raise KeyboardInterrupt("fixture interrupt after rename")
 
             with (
@@ -50,14 +46,7 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
                     side_effect=interrupt_after_rename,
                 ),
                 patch_staging("prune_backups",
-                    side_effect=lambda *_args, **_kwargs: {
-                        "apply": True,
-                        "kept": [
-                            path.name
-                            for path in held.parent.iterdir()
-                            if staging.CHECKPOINT_NAME_RE.fullmatch(path.name)
-                        ],
-                    },
+                    side_effect=functools.partial(checkpoint_listing, held.parent),
                 ),
             ):
                 path, confirmed, warning, cleanup_warning, partial_state = staging.publish_checkpoint_best_effort(
@@ -65,7 +54,7 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
                     held,
                     held.parent,
                     timeout=0.1,
-                    runner=lambda *_args, **_kwargs: completed(),
+                    runner=completed_command,
                     reason="test",
                     expected_fingerprint=expected,
                     qualified_helper=base / "qualified-retention.py",
@@ -77,6 +66,7 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
             self.assertTrue(path.exists())
             self.assertFalse(held.exists())
             self.assertTrue(confirmed)
+            assert isinstance(warning, str)
             self.assertIn("fixture interrupt after rename", warning)
             self.assertIsNone(cleanup_warning)
             self.assertIsNone(partial_state)
@@ -87,7 +77,7 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
             held = base / "backups/.rollback-held-missing-manifest"
             app = held / staging.APP_NAME
             app.mkdir(parents=True)
-            (app / "marker").write_text("old", encoding="utf-8")
+            _ = (app / "marker").write_text("old", encoding="utf-8")
             expected = fingerprint(app)
             with (
                 patch_staging("validate_bundle", return_value=expected),
@@ -98,7 +88,7 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
                     held,
                     held.parent,
                     timeout=0.1,
-                    runner=lambda *_args, **_kwargs: completed(),
+                    runner=completed_command,
                     reason="test",
                     expected_fingerprint=expected,
                     qualified_helper=base / "qualified-retention.py",
@@ -109,6 +99,7 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
             self.assertEqual(path, held.resolve())
             self.assertTrue(path.exists())
             self.assertFalse(confirmed)
+            assert isinstance(warning, str)
             self.assertIn("outside the prunable managed inventory", warning)
             prune.assert_not_called()
 
@@ -122,7 +113,7 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
             (held / staging.APP_NAME).mkdir(parents=True)
             (retained / staging.APP_NAME).mkdir(parents=True)
             selected = fingerprint(checkpoint / staging.APP_NAME)
-            retention_hash = staging.sha256_file(installer.repo / "scripts/staging-retention.py")
+            retention_hash = staging.sha256_file(installer.repo / "scripts/staging_retention.py")
             with (
                 patch_staging("verify_clean_checkout", return_value=COMMIT),
                 patch_staging("protect_and_validate_rollback_checkpoint",
@@ -177,7 +168,7 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
         with tempfile.TemporaryDirectory() as temp:
             installer, _target, _candidate, checkpoint, _stage_candidate = self.make_transaction(Path(temp))
             with self.assertRaisesRegex(staging.StagingError, "compatibility confirmation"):
-                installer.rollback(checkpoint, COMMIT, "b" * 40, profile_compatible=False)
+                _ = installer.rollback(checkpoint, COMMIT, "b" * 40, profile_compatible=False)
 
     def test_rollback_checkpoint_must_be_a_direct_managed_child(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -189,11 +180,13 @@ class LocalStagingCheckpointsTests(LocalStagingTestCase):
                 backup_root=base / "backups",
             )
             outside = base / "outside"
-            with patch_staging("verify_clean_checkout", return_value=COMMIT):
-                with self.assertRaisesRegex(staging.StagingError, "direct child"):
-                    installer.rollback(
-                        outside,
-                        COMMIT,
-                        "b" * 40,
-                        profile_compatible=True,
-                    )
+            with (
+                patch_staging('verify_clean_checkout', return_value=COMMIT),
+                self.assertRaisesRegex(staging.StagingError, 'direct child'),
+            ):
+                _ = installer.rollback(
+                    outside,
+                    COMMIT,
+                    "b" * 40,
+                    profile_compatible=True,
+                )

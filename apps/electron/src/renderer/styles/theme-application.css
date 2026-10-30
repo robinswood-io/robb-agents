@@ -69,7 +69,7 @@ html[data-font="inter"] {
   --color-info: var(--info);
   --color-success: var(--success);
   --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-foreground: var(--background);
 
   /* === MIX VARIANTS (solid interpolation) === */
   --color-foreground-1\.5: var(--foreground-1\.5);
@@ -102,7 +102,6 @@ html[data-font="inter"] {
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  --color-destructive-foreground: var(--background);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);

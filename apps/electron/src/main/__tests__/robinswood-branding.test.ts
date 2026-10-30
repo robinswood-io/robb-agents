@@ -70,7 +70,7 @@ describe('Robinswood visible branding', () => {
     expect(readRepoFile('apps/electron/scripts/build-dmg.sh')).toContain('Robb-Agents-${ARCH}.dmg')
     expect(readRepoFile('apps/electron/scripts/build-linux.sh')).toContain('Robb-Agents-${ARCH}.AppImage')
     expect(readRepoFile('apps/electron/scripts/build-win.ps1')).toContain('Building Robb Agents Windows Installer')
-    const afterPack = readRepoFile('apps/electron/scripts/afterPack.cjs')
+    const afterPack = readRepoFile('apps/electron/scripts/afterPack.ts')
     expect(afterPack).toContain('productFilename')
     expect(afterPack).toContain('robinswood-Assets.car')
     expect(afterPack).not.toContain("'Craft Agents.app'")

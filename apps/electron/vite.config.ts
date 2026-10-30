@@ -54,6 +54,8 @@ export default defineConfig({
     dedupe: ['react', 'react-dom']
   },
   optimizeDeps: {
+    // Scan linked UI dependencies before navigation triggers a second prebundle.
+    entries: ['*.html', '../../../../packages/ui/src/index.ts'],
     include: ['react', 'react-dom', 'jotai', 'pdfjs-dist'],
     exclude: ['@craft-agent/ui', 'pdfjs-dist/build/pdf.worker.min.mjs?url'],
     rolldownOptions: {

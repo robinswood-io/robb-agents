@@ -5,12 +5,15 @@ import json
 import math
 import os
 from collections import defaultdict, deque
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from statistics import mean
-from typing import TypeAlias
 
-JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
+from pydantic import JsonValue, TypeAdapter
+
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
+NUMBER = TypeAdapter(str | int | float)
+INTEGER = TypeAdapter(int)
 
 ROOT = Path("/srv/rbw-agents-oss")
 OPS = Path("/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops")
@@ -22,13 +25,13 @@ ARCHITECTURE_V2_BASELINE = ROOT / "config" / "agents-v2" / "baseline.json"
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def parse_ts(value: JsonValue) -> datetime | None:
     try:
-        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except Exception:
+        return datetime.fromisoformat(str(value)).astimezone(UTC)
+    except (OSError, ValueError):
         return None
 
 
@@ -43,8 +46,8 @@ def tail_jsonl(path: Path, limit: int = 12000) -> list[dict[str, JsonValue]]:
     out: list[dict[str, JsonValue]] = []
     for raw in rows:
         try:
-            value = json.loads(raw)
-        except Exception:
+            value = TypeAdapter(JsonValue).validate_json(raw)
+        except (OSError, ValueError):
             continue
         if isinstance(value, dict):
             out.append(value)
@@ -61,25 +64,25 @@ def percentile(values: list[float], pct: float) -> float:
 
 def main() -> None:
     horizon_hours = float(os.getenv("TEMPORAL_PERFORMANCE_SLO_HORIZON_HOURS", "2"))
-    horizon_cutoff = datetime.now(timezone.utc) - timedelta(hours=horizon_hours)
+    horizon_cutoff = datetime.now(UTC) - timedelta(hours=horizon_hours)
     cutover_at = parse_ts(os.getenv("TEMPORAL_PERFORMANCE_SLO_CUTOVER_AT"))
     if cutover_at is None and ARCHITECTURE_V2_BASELINE.exists():
         try:
-            baseline = json.loads(ARCHITECTURE_V2_BASELINE.read_text(encoding="utf-8"))
+            baseline = JSON_OBJECT.validate_json(ARCHITECTURE_V2_BASELINE.read_bytes())
             cutover_at = parse_ts(baseline.get("generatedAt"))
-        except Exception:
+        except (OSError, ValueError):
             cutover_at = None
     cutoff = max(horizon_cutoff, cutover_at) if cutover_at is not None else horizon_cutoff
     pre_cutover_runs_excluded = 0
-    rows = []
+    rows: list[tuple[str, datetime, dict[str, JsonValue], dict[str, JsonValue]]] = []
     for row in tail_jsonl(RUN_LOG):
         ts = parse_ts(row.get("completedAt") or row.get("ts"))
         if ts is not None and cutover_at is not None and horizon_cutoff <= ts < cutover_at:
             pre_cutover_runs_excluded += 1
         if ts is None or ts < cutoff:
             continue
-        result = row.get("result") if isinstance(row.get("result"), dict) else {}
-        payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
+        result = JSON_OBJECT.validate_python(row.get("result") or {})
+        payload = JSON_OBJECT.validate_python(row.get("payload") or {})
         legacy_id = row.get("legacyId") or payload.get("legacy_id")
         if not legacy_id:
             continue
@@ -92,20 +95,19 @@ def main() -> None:
     profiles: list[dict[str, JsonValue]] = []
     actions: list[dict[str, JsonValue]] = []
     for legacy_id, values in sorted(grouped.items()):
-        durations = [float(result.get("durationSeconds") or row.get("durationSeconds") or 0) for _ts, result, row in values]
-        business_failures = sum(1 for _ts, result, _row in values if result.get("businessFailure"))
+        durations = [float(NUMBER.validate_python(result.get("durationSeconds") or row.get("durationSeconds") or 0)) for _ts, result, row in values]
+        business_failures = sum(1 for _ts, result, _row in values if result.get("businessFailure") and not result.get("timeout") and not result.get("errorType"))
         timeouts = sum(1 for _ts, result, _row in values if result.get("timeout"))
         technical_failures = sum(
             1
             for _ts, result, _row in values
-            if not result.get("businessFailure")
-            and (
+            if (
                 result.get("timeout")
                 or result.get("errorType")
-                or (result.get("ok") is False and int(result.get("exitCode") or 0) != 0)
+                or (not result.get("businessFailure") and result.get("ok") is False and INTEGER.validate_python(result.get("exitCode") or 0) != 0)
             )
         )
-        profile = {
+        profile: dict[str, JsonValue] = {
             "legacyId": legacy_id,
             "runs": len(values),
             "technicalFailures": technical_failures,
@@ -118,7 +120,7 @@ def main() -> None:
         }
         profiles.append(profile)
         if timeouts >= 2 or technical_failures >= 3:
-            reasons = []
+            reasons: list[str] = []
             if timeouts >= 2:
                 reasons.append("repeated_activity_timeouts")
             if technical_failures >= 3:
@@ -133,32 +135,33 @@ def main() -> None:
                 "severity": "high" if timeouts else "medium",
                 "actionableNow": True,
                 "target": legacy_id,
-                "reasons": reasons,
+                "reasons": list(reasons),
                 "metrics": profile,
                 "doneCondition": "Two consecutive technical-success runs with no timeout and no worker starvation evidence.",
             })
 
     generated_at = now_iso()
-    status = "watch" if actions else "processed"
-    report = {
+    ok = RUN_LOG.is_file()
+    status = "missing_source" if not ok else "watch" if actions else "processed"
+    report = JSON_OBJECT.validate_python({
         "generatedAt": generated_at,
         "contractVersion": "temporal-performance-slo-guard-v2",
         "capabilityId": "temporal-performance-slo-guard",
-        "ok": True,
+        "ok": ok,
         "status": status,
         "summary": f"temporal_performance_slo_v2: horizonHours={horizon_hours:g} runs={len(rows)} wrappers={len(profiles)} technicalActions={len(actions)}",
         "counts": {
             "horizonHours": horizon_hours,
             "runs": len(rows),
             "wrappers": len(profiles),
-            "technicalFailures": sum(int(profile["technicalFailures"]) for profile in profiles),
-            "businessFailuresExcluded": sum(int(profile["businessFailures"]) for profile in profiles),
-            "timeouts": sum(int(profile["timeouts"]) for profile in profiles),
+            "technicalFailures": sum(INTEGER.validate_python(profile["technicalFailures"]) for profile in profiles),
+            "businessFailuresExcluded": sum(INTEGER.validate_python(profile["businessFailures"]) for profile in profiles),
+            "timeouts": sum(INTEGER.validate_python(profile["timeouts"]) for profile in profiles),
             "actions": len(actions),
             "watchActions": len(actions),
             "preCutoverRunsExcluded": pre_cutover_runs_excluded,
         },
-        "blockingReasons": [],
+        "blockingReasons": [] if ok else ["workflow_run_log_missing"],
         "warningReasons": ["technical_slo_actions_present"] if actions else [],
         "actions": actions,
         "artifacts": {
@@ -179,20 +182,20 @@ def main() -> None:
         },
         "data": {"profiles": profiles},
         "updatedBy": "temporal-performance-slo-core-v2",
-    }
+    })
     OPS.mkdir(parents=True, exist_ok=True)
-    OUT_JSON.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    ACTION_QUEUE.write_text(json.dumps({"generatedAt": generated_at, "items": actions, "recoveredItems": [], "counts": {"items": len(actions), "recoveredItems": 0}}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    OUT_MD.write_text(
-        "# Temporal Performance SLO v2\n\n"
-        f"- status: {status}\n"
-        f"- horizon: {horizon_hours:g}h\n"
-        f"- runs / wrappers: {len(rows)} / {len(profiles)}\n"
-        f"- technical actions: {len(actions)}\n"
-        f"- business failures excluded: {report['counts']['businessFailuresExcluded']}\n",
-        encoding="utf-8",
-    )
-    print(json.dumps({"ok": True, "status": status, "summary": report["summary"], "counts": report["counts"], "reportJson": str(OUT_JSON)}, ensure_ascii=False))
+    _ = OUT_JSON.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _ = ACTION_QUEUE.write_text(json.dumps({"generatedAt": generated_at, "items": actions, "recoveredItems": [], "counts": {"items": len(actions), "recoveredItems": 0}}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    counts = JSON_OBJECT.validate_python(report['counts'])
+    _ = OUT_MD.write_text(f"""# Temporal Performance SLO v2
+
+- status: {status}
+- horizon: {horizon_hours:g}h
+- runs / wrappers: {len(rows)} / {len(profiles)}
+- technical actions: {len(actions)}
+- business failures excluded: {counts['businessFailuresExcluded']}
+""", encoding="utf-8")
+    print(json.dumps({"ok": ok, "status": status, "summary": report["summary"], "counts": report["counts"], "reportJson": str(OUT_JSON)}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

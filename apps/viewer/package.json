@@ -9,7 +9,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit",
+    "typecheck": "node ../../scripts/run-typescript.ts native --noEmit",
     "test": "bun test"
   },
   "dependencies": {
@@ -26,8 +26,8 @@
     "@vitejs/plugin-react": "^6.1.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.64.0",
-    "motion": "^14.7.1",
+    "lucide-react": "1.65.0",
+    "motion": "^14.9.0",
     "react-markdown": "^10.1.0",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1",

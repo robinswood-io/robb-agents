@@ -9,6 +9,7 @@
  */
 import { describe, it, expect } from 'bun:test';
 import { join } from 'node:path';
+import { applyAnthropicRuntimeBootstrap } from '../internal/runtime-resolver.ts';
 import {
   detectProvider,
   createBackend,
@@ -251,15 +252,19 @@ describe('phase4 backend abstraction APIs', () => {
     })).not.toThrow();
   });
 
-  // Skip: resolveClaudeCliPath finds the CLI via node_modules traversal even from dist/, so this
-  // only fails in a truly isolated packaged environment, not in the dev monorepo.
-  it.skip('initializeBackendHostRuntime throws for dist-style host root in dev', () => {
+  it('initializes a dist-style development host before provider session preparation', () => {
     expect(() => initializeBackendHostRuntime({
       hostRuntime: {
         appRootPath: join(process.cwd(), 'apps', 'electron', 'dist'),
         isPackaged: false,
       },
-    })).toThrow('Claude Code SDK not found');
+    })).not.toThrow();
+  });
+  it('rejects missing Claude executables during strict session runtime preparation', () => {
+    expect(() => applyAnthropicRuntimeBootstrap({
+      appRootPath: '/qa/missing-provider-runtime',
+      isPackaged: true,
+    }, {})).toThrow('Claude Agent SDK native binary not found');
   });
 
   it('resolveSetupTestConnectionHint maps provider/baseUrl/piAuthProvider correctly', () => {

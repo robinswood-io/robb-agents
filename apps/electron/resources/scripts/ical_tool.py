@@ -13,13 +13,97 @@ Usage:
 import json
 import re
 import sys
-from datetime import datetime, date, timedelta, timezone
+from collections.abc import Iterator
+from datetime import UTC, date, datetime, timedelta
+from importlib import import_module
 from pathlib import Path
+from typing import Protocol, cast
 
 import click
 from dateutil.parser import parse as parse_date
 from dateutil.tz import tzlocal
-from icalendar import Calendar, Event
+
+_ICAL_OPERATION_ERRORS = (OSError, ValueError, TypeError, RuntimeError, KeyError, IndexError, OverflowError)
+
+
+class _ICalendarComponentLike(Protocol):
+    name: str
+
+    def get(self, key: str, default: object = None) -> object: ...
+
+    def add(self, key: str, value: object) -> None: ...
+
+    def to_ical(self) -> bytes: ...
+
+
+class _CalendarLike(_ICalendarComponentLike, Protocol):
+    def walk(self) -> Iterator[_ICalendarComponentLike]: ...
+
+    def add_component(self, component: _ICalendarComponentLike) -> None: ...
+
+
+class _EventFactoryLike(Protocol):
+    def __call__(self) -> _ICalendarComponentLike: ...
+
+
+class _CalendarFactoryLike(Protocol):
+    def __call__(self) -> _CalendarLike: ...
+
+    def from_ical(self, content: bytes) -> object: ...
+
+
+def _calendar_factory() -> _CalendarFactoryLike:
+    module = import_module("icalendar")
+    factory = getattr(module, "Calendar", None)
+    if not callable(factory) or not callable(getattr(factory, "from_ical", None)):
+        raise TypeError("icalendar has no Calendar factory")
+    return cast(_CalendarFactoryLike, factory)
+
+
+def _event_factory() -> _EventFactoryLike:
+    factory = getattr(import_module("icalendar"), "Event", None)
+    if not callable(factory):
+        raise TypeError("icalendar has no Event factory")
+    return cast(_EventFactoryLike, factory)
+
+
+def _parse_calendar(content: bytes) -> _CalendarLike:
+    value = _calendar_factory().from_ical(content)
+    if not callable(getattr(value, "walk", None)) or not callable(getattr(value, "to_ical", None)):
+        raise TypeError("icalendar returned an invalid calendar")
+    return cast(_CalendarLike, value)
+
+
+def _parse_json(text: str) -> object:
+    return cast(object, json.loads(text))
+
+
+def _event_data(value: object) -> list[dict[str, object]]:
+    if not isinstance(value, list):
+        raise TypeError("JSON must be an array of event objects.")
+    events: list[dict[str, object]] = []
+    for item in cast(list[object], value):
+        if not isinstance(item, dict):
+            raise TypeError("Each event must be an object.")
+        raw_event = cast(dict[object, object], item)
+        if not all(isinstance(key, str) for key in raw_event):
+            raise ValueError("Event fields must have string names.")
+        events.append(cast(dict[str, object], raw_event))
+    return events
+
+
+def _ical_property_datetime(value: object) -> object:
+    return getattr(value, "dt", value)
+
+
+def _ical_bytes(value: object) -> bytes:
+    method = getattr(value, "to_ical", None)
+    if not callable(method):
+        raise TypeError("Calendar property cannot be serialized")
+    result: object = method()
+    if not isinstance(result, bytes):
+        raise TypeError("Calendar property serialization did not return bytes")
+    return result
 
 
 def _is_date_only(date_str: str) -> bool:
@@ -33,13 +117,13 @@ def _is_date_only(date_str: str) -> bool:
 def write_output(text: str, output_path: str | None) -> None:
     """Write text to file or stdout."""
     if output_path:
-        Path(output_path).write_text(text, encoding="utf-8")
+        _ = Path(output_path).write_text(text, encoding="utf-8")
         click.echo(f"Output written to {output_path}", err=True)
     else:
         click.echo(text)
 
 
-def dt_to_datetime(dt_val) -> datetime | None:
+def dt_to_datetime(dt_val: object) -> datetime | None:
     """Convert an icalendar date/datetime to a Python datetime.
 
     All-day events (date objects) are converted to midnight in the local timezone,
@@ -47,7 +131,7 @@ def dt_to_datetime(dt_val) -> datetime | None:
     """
     if dt_val is None:
         return None
-    dt = dt_val.dt if hasattr(dt_val, "dt") else dt_val
+    dt: object = _ical_property_datetime(dt_val)
     if isinstance(dt, datetime):
         return dt
     elif isinstance(dt, date):
@@ -55,7 +139,7 @@ def dt_to_datetime(dt_val) -> datetime | None:
     return None
 
 
-def format_event(event, idx: int | None = None) -> dict[str, object]:
+def format_event(event: _ICalendarComponentLike, idx: int | None = None) -> dict[str, object]:
     """Format a VEVENT component as a dictionary."""
     result: dict[str, object] = {}
     if idx is not None:
@@ -67,14 +151,14 @@ def format_event(event, idx: int | None = None) -> dict[str, object]:
     dtend = event.get("DTEND")
     if dtstart:
         start_dt = dt_to_datetime(dtstart)
-        result["start"] = start_dt.isoformat() if start_dt else str(dtstart.dt)
+        result["start"] = start_dt.isoformat() if start_dt else str(_ical_property_datetime(dtstart))
     if dtend:
         end_dt = dt_to_datetime(dtend)
-        result["end"] = end_dt.isoformat() if end_dt else str(dtend.dt)
+        result["end"] = end_dt.isoformat() if end_dt else str(_ical_property_datetime(dtend))
 
     duration = event.get("DURATION")
     if duration and not dtend:
-        result["duration"] = str(duration.dt)
+        result["duration"] = str(_ical_property_datetime(duration))
 
     location = event.get("LOCATION")
     if location:
@@ -95,13 +179,13 @@ def format_event(event, idx: int | None = None) -> dict[str, object]:
     attendees = event.get("ATTENDEE")
     if attendees:
         if isinstance(attendees, list):
-            result["attendees"] = [str(a) for a in attendees]
+            result["attendees"] = [str(a) for a in cast(list[object], attendees)]
         else:
             result["attendees"] = [str(attendees)]
 
     rrule = event.get("RRULE")
     if rrule:
-        result["recurrence"] = str(rrule.to_ical().decode("utf-8"))
+        result["recurrence"] = _ical_bytes(rrule).decode("utf-8")
 
     uid = event.get("UID")
     if uid:
@@ -113,7 +197,6 @@ def format_event(event, idx: int | None = None) -> dict[str, object]:
 @click.group()
 def cli() -> None:
     """Calendar (.ics) file operations tool."""
-    pass
 
 
 @cli.command()
@@ -124,12 +207,12 @@ def read(file: str, fmt: str, output: str | None) -> None:
     """Read and display events from an .ics calendar file."""
     try:
         cal_text = Path(file).read_bytes()
-        cal = Calendar.from_ical(cal_text)
+        cal = _parse_calendar(cal_text)
 
         # Calendar metadata
         cal_name = str(cal.get("X-WR-CALNAME", cal.get("PRODID", "Unknown")))
 
-        events = []
+        events: list[dict[str, object]] = []
         event_idx = 0
         for component in cal.walk():
             if component.name == "VEVENT":
@@ -164,7 +247,7 @@ def read(file: str, fmt: str, output: str | None) -> None:
                 lines.append("")
             write_output("\n".join(lines), output)
 
-    except Exception as e:
+    except _ICAL_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -194,28 +277,27 @@ def create(data: str, cal_name: str, output: str | None) -> None:
     try:
         # Parse data
         data_path = Path(data)
+        events_value: object
         if data_path.exists() and data_path.is_file():
-            events_data = json.loads(data_path.read_text(encoding="utf-8"))
+            events_value = _parse_json(data_path.read_text(encoding="utf-8"))
         else:
-            events_data = json.loads(data)
+            events_value = _parse_json(data)
+        events_data = _event_data(events_value)
 
-        if not isinstance(events_data, list):
-            click.echo("Error: JSON must be an array of event objects.", err=True)
-            sys.exit(1)
-
-        cal = Calendar()
+        cal = _calendar_factory()()
         cal.add("PRODID", "-//ical_tool.py//EN")
         cal.add("VERSION", "2.0")
         cal.add("X-WR-CALNAME", cal_name)
 
         for i, ev_data in enumerate(events_data):
-            event = Event()
+            event = _event_factory()()
 
-            summary = ev_data.get("summary", f"Event {i + 1}")
+            summary = str(ev_data.get("summary", f"Event {i + 1}"))
             event.add("SUMMARY", summary)
 
             # Start time
-            start_str = ev_data.get("start")
+            start_value = ev_data.get("start")
+            start_str = start_value if isinstance(start_value, str) else None
             if start_str:
                 start_dt = parse_date(start_str)
                 if _is_date_only(start_str):
@@ -226,7 +308,8 @@ def create(data: str, cal_name: str, output: str | None) -> None:
                     event.add("DTSTART", start_dt)
 
             # End time
-            end_str = ev_data.get("end")
+            end_value = ev_data.get("end")
+            end_str = end_value if isinstance(end_value, str) else None
             if end_str:
                 end_dt = parse_date(end_str)
                 if _is_date_only(end_str):
@@ -242,29 +325,31 @@ def create(data: str, cal_name: str, output: str | None) -> None:
 
             # Optional fields
             if "location" in ev_data:
-                event.add("LOCATION", ev_data["location"])
+                event.add("LOCATION", str(ev_data["location"]))
             if "description" in ev_data:
-                event.add("DESCRIPTION", ev_data["description"])
+                event.add("DESCRIPTION", str(ev_data["description"]))
             if "status" in ev_data:
-                event.add("STATUS", ev_data["status"].upper())
+                event.add("STATUS", str(ev_data["status"]).upper())
 
             # Attendees
-            attendees = ev_data.get("attendees", [])
-            for attendee in attendees:
+            attendees_value = ev_data.get("attendees", [])
+            attendees = cast(list[object], attendees_value) if isinstance(attendees_value, list) else []
+            for attendee_value in attendees:
+                attendee = str(attendee_value)
                 if not attendee.startswith("mailto:"):
                     attendee = f"mailto:{attendee}"
                 event.add("ATTENDEE", attendee)
 
             # UID
-            uid = ev_data.get("uid", f"event-{i + 1}-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}@ical-tool")
+            uid = str(ev_data.get("uid", f"event-{i + 1}-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}@ical-tool"))
             event.add("UID", uid)
-            event.add("DTSTAMP", datetime.now(timezone.utc))
+            event.add("DTSTAMP", datetime.now(UTC))
 
             cal.add_component(event)
 
-        ics_bytes = cal.to_ical()
+        ics_bytes = _ical_bytes(cal)
         if output:
-            Path(output).write_bytes(ics_bytes)
+            _ = Path(output).write_bytes(ics_bytes)
             click.echo(f"Output written to {output}", err=True)
         else:
             click.echo(ics_bytes.decode("utf-8"))
@@ -272,7 +357,7 @@ def create(data: str, cal_name: str, output: str | None) -> None:
     except json.JSONDecodeError as e:
         click.echo(f"Error parsing JSON: {e}", err=True)
         sys.exit(1)
-    except Exception as e:
+    except _ICAL_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -299,10 +384,10 @@ def filter(file: str, start_str: str, end_str: str, fmt: str, output: str | None
             filter_end = filter_end.replace(tzinfo=tzlocal())
 
         cal_text = Path(file).read_bytes()
-        cal = Calendar.from_ical(cal_text)
+        cal = _parse_calendar(cal_text)
 
-        matching_events = []
-        matching_components = []
+        matching_events: list[dict[str, object]] = []
+        matching_components: list[_ICalendarComponentLike] = []
 
         for component in cal.walk():
             if component.name != "VEVENT":
@@ -326,7 +411,7 @@ def filter(file: str, start_str: str, end_str: str, fmt: str, output: str | None
 
         if fmt == "ics":
             # Output as new .ics
-            new_cal = Calendar()
+            new_cal = _calendar_factory()()
             new_cal.add("PRODID", "-//ical_tool.py//EN")
             new_cal.add("VERSION", "2.0")
             # Copy timezone definitions from source calendar
@@ -335,7 +420,7 @@ def filter(file: str, start_str: str, end_str: str, fmt: str, output: str | None
                     new_cal.add_component(comp)
             for comp in matching_components:
                 new_cal.add_component(comp)
-            write_output(new_cal.to_ical().decode("utf-8"), output)
+            write_output(_ical_bytes(new_cal).decode("utf-8"), output)
 
         elif fmt == "json":
             result_dict = {
@@ -363,7 +448,7 @@ def filter(file: str, start_str: str, end_str: str, fmt: str, output: str | None
                 lines.append("")
             write_output("\n".join(lines), output)
 
-    except Exception as e:
+    except _ICAL_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 

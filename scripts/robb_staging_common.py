@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
 import ctypes
 import fcntl
 import hashlib
+import logging
 import math
 import os
-from pathlib import Path
 import re
 import shutil
 import stat
@@ -14,8 +13,12 @@ import subprocess
 import sys
 import tempfile
 import time
-from typing import Callable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Generator, Mapping, Sequence
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Protocol, TypedDict, cast
 
+logger = logging.getLogger(__name__)
 
 APP_ID = "io.robinswood.robbagents"
 
@@ -117,7 +120,7 @@ def require_positive_timeout(value: float, name: str) -> float:
     return value
 
 @contextmanager
-def exclusive_file_lock(lock_path: Path, *, timeout: float = 0) -> Iterator[None]:
+def exclusive_file_lock(lock_path: Path, *, timeout: float = 0) -> Generator[None]:
     """Acquire a process-wide advisory lock without an unbounded wait."""
     timeout = max(0, timeout)
     try:
@@ -164,7 +167,7 @@ def atomic_swap_bundles(left: Path, right: Path) -> None:
     renamex_np.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint]
     renamex_np.restype = ctypes.c_int
     rename_swap = 0x00000002
-    result = renamex_np(os.fsencode(left), os.fsencode(right), rename_swap)
+    result = cast(int, renamex_np(os.fsencode(left), os.fsencode(right), rename_swap))
     if result != 0:
         error_number = ctypes.get_errno()
         raise OSError(error_number, os.strerror(error_number), f"{left} <-> {right}")
@@ -273,5 +276,41 @@ def cleanup_partial_best_effort(path: Path, target_parent: Path) -> str | None:
     try:
         safe_remove_partial(path, target_parent)
     except BaseException as error:
+        logger.exception("Failure during cleanup_partial_best_effort")
         return f"Transaction directory remains at {path}: {error}"
     return None
+
+
+class StagingPreflight(TypedDict):
+    checkoutCommit: str
+    artifactCommit: str
+    candidate: str
+    candidateIdentity: dict[str, str]
+    target: str
+    currentIdentity: dict[str, str]
+    profile: str
+    retentionHelperSha256: str
+
+
+class StagingTransaction(Protocol):
+    repo: Path
+    target_app: Path
+    profile_root: Path
+    backup_root: Path
+    installed_retention_script: Path
+    @property
+    def lock_file(self) -> Path: ...
+    quit_timeout: float
+    launch_timeout: float
+    retention_lock_timeout: float
+    runner: Runner
+    swapper: Swapper
+
+    def preflight(
+        self, candidate_app: Path, expected_commit: str,
+        artifact_commit: str | None = None, *, require_candidate_developer_id: bool = True,
+    ) -> StagingPreflight: ...
+
+    def stage_candidate(
+        self, candidate_app: Path, artifact_commit: str,
+    ) -> tuple[Path, Path, dict[str, str]]: ...

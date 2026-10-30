@@ -1,11 +1,9 @@
-#!/usr/bin/env python3
 """Cross-platform contract tests for the public Robb installers."""
 from __future__ import annotations
 
 import contextlib
 import functools
 import http.server
-import json
 import os
 import pathlib
 import platform
@@ -14,8 +12,10 @@ import subprocess
 import tempfile
 import threading
 import unittest
-from collections.abc import Iterator
+from collections.abc import Generator
+from typing import cast, override
 
+from scripts.json_sources import read_json
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SHELL_INSTALLER = ROOT / "scripts" / "install-app.sh"
@@ -36,18 +36,19 @@ PLATFORM_BUILD_SCRIPTS = (
 
 
 class QuietRequestHandler(http.server.SimpleHTTPRequestHandler):
-    def log_message(self, format_string: str, *args: object) -> None:
-        del format_string, args
+    @override
+    def log_message(self, format: str, *args: object) -> None:
+        del format, args
 
 
 @contextlib.contextmanager
-def serve_directory(directory: pathlib.Path) -> Iterator[str]:
+def serve_directory(directory: pathlib.Path) -> Generator[str]:
     handler = functools.partial(QuietRequestHandler, directory=str(directory))
     server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
-        host, port = server.server_address
+        host, port = cast(tuple[str, int], server.server_address)
         yield f"http://{host}:{port}"
     finally:
         server.shutdown()
@@ -56,7 +57,7 @@ def serve_directory(directory: pathlib.Path) -> Iterator[str]:
 
 
 def write_manifest(path: pathlib.Path, artifact: str) -> None:
-    path.write_text(
+    _ = path.write_text(
         "\n".join(
             [
                 f"version: {VERSION}",
@@ -136,13 +137,13 @@ class InstallerContractTests(unittest.TestCase):
         self.assertIn("~/.craft-agent and must never be distributed", mac_build)
         self.assertIn("export ROBB_BUILD_CHANNEL=production", mac_build)
         self.assertIn("export ROBB_BUILD_CHANNEL=development", mac_build)
-        self.assertIn("releaseIntegrity.cjs", mac_build)
+        self.assertIn("releaseIntegrity.ts", mac_build)
         self.assertIn("--config.mac.forceCodeSigning=true", mac_build)
         self.assertIn("--config.mac.forceCodeSigning=false", mac_build)
         self.assertIn("--config.mac.identity=-", mac_build)
         self.assertIn('$env:ROBB_BUILD_CHANNEL = "production"', windows_build)
         self.assertIn('$env:ROBB_BUILD_CHANNEL = "development"', windows_build)
-        self.assertIn("releaseIntegrity.cjs", windows_build)
+        self.assertIn("releaseIntegrity.ts", windows_build)
         self.assertIn('$BunVersion = "bun-v1.4.4"', windows_build)
         self.assertIn('bun-version: "1.4.4"', validation_workflow)
         self.assertIn("export ROBB_BUILD_CHANNEL=production", linux_build)
@@ -159,8 +160,8 @@ class InstallerContractTests(unittest.TestCase):
 
         release_builder = (ROOT / "apps" / "electron" / "electron-builder.yml").read_text(encoding="utf-8")
         development_builder = (ROOT / "apps" / "electron" / "electron-builder.dev.yml").read_text(encoding="utf-8")
-        self.assertIn("beforePack: scripts/releaseIntegrity.cjs", release_builder)
-        self.assertIn("afterSign: scripts/afterSign.cjs", release_builder)
+        self.assertIn("beforePack: scripts/releaseIntegrity.ts", release_builder)
+        self.assertIn("afterSign: scripts/afterSign.ts", release_builder)
         self.assertIn("forceCodeSigning: true", release_builder)
         self.assertIn("forceCodeSigning: false", development_builder)
         self.assertIn("asar: true", release_builder)
@@ -177,11 +178,14 @@ class InstallerContractTests(unittest.TestCase):
                 str(script),
             )
 
-        package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
+        package = read_json(ROOT / "package.json")
+        assert isinstance(package, dict)
+        development, overrides = package["devDependencies"], package["overrides"]
+        assert isinstance(development, dict) and isinstance(overrides, dict)
         for dependency in ("postcss", "tar"):
             self.assertEqual(
-                package["devDependencies"][dependency],
-                package["overrides"][dependency],
+                development[dependency],
+                overrides[dependency],
                 f"{dependency} must be pinned to the same spec as its npm override",
             )
 
@@ -198,9 +202,9 @@ class InstallerContractTests(unittest.TestCase):
         self.assertIn(r"resources\app\resources\bin\win32-x64\rtk.exe", source)
         self.assertIn("[System.Net.Sockets.TcpListener]::new", source)
         self.assertIn("Get-AvailableLoopbackPort", source)
-        self.assertIn("Get-InstalledAppProcesses", source)
+        self.assertIn("Get-InstalledAppProcess", source)
         self.assertIn("[System.StringComparison]::OrdinalIgnoreCase", source)
-        self.assertIn("Write-StartupDiagnostics $InstallDir $SmokeConfig", source)
+        self.assertIn("Write-StartupDiagnostic $InstallDir $SmokeConfig", source)
         self.assertIn("[switch]$RequireAuthenticode", source)
         self.assertIn("Get-AuthenticodeSignature $app", source)
         self.assertIn("Installed executable Authenticode verification failed", source)
@@ -217,10 +221,10 @@ class InstallerContractTests(unittest.TestCase):
         workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
 
         unpacked_build_check = (
-            'Require-ValidAuthenticodeSignature $UnpackedBinary "unpacked Electron binary"'
+            'Assert-ValidAuthenticodeSignature $UnpackedBinary "unpacked Electron binary"'
         )
         installer_build_check = (
-            'Require-ValidAuthenticodeSignature $Installer.FullName "NSIS installer"'
+            'Assert-ValidAuthenticodeSignature $Installer.FullName "NSIS installer"'
         )
         self.assertIn("Get-AuthenticodeSignature $Path", windows_build)
         self.assertIn(unpacked_build_check, windows_build)
@@ -396,4 +400,4 @@ class InstallerContractTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    _ = unittest.main()

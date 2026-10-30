@@ -1,36 +1,41 @@
 from __future__ import annotations
 
 import datetime as dt
-from pathlib import Path
+import logging
 import sys
+from pathlib import Path
 
+from robb_staging_bundles import (
+    assert_same_bundle_copy,
+    backup_current_app,
+    bundle_fingerprint_mismatches,
+    cleanup_qualified_retention_helper,
+    create_qualified_retention_helper,
+    validate_bundle,
+)
 from robb_staging_common import (
     APP_NAME,
     StagingError,
-    verify_clean_checkout,
+    StagingTransaction,
     cleanup_partial_best_effort,
-)
-from robb_staging_bundles import (
-    create_qualified_retention_helper,
-    cleanup_qualified_retention_helper,
-    validate_bundle,
-    assert_same_bundle_copy,
-    bundle_fingerprint_mismatches,
-    backup_current_app,
+    verify_clean_checkout,
 )
 from robb_staging_publication import (
     publish_checkpoint_best_effort,
 )
 from robb_staging_runtime import (
     assert_application_stopped,
-    quit_application,
-    verify_runtime,
     launch_and_verify_runtime,
+    quit_application,
     rollback_exchange,
+    verify_runtime,
 )
 
+logger = logging.getLogger(__name__)
+
+
 def install_locked(
-    self,
+    self: StagingTransaction,
     candidate_app: Path,
     expected_commit: str,
     artifact_commit: str,
@@ -47,8 +52,6 @@ def install_locked(
     bundle_commit = str(preflight["artifactCommit"])
     candidate_fingerprint = preflight["candidateIdentity"]
     current_fingerprint = preflight["currentIdentity"]
-    if not isinstance(candidate_fingerprint, dict) or not isinstance(current_fingerprint, dict):
-        raise StagingError("Internal preflight did not return bundle fingerprints")
     retention_helper_sha256 = str(preflight["retentionHelperSha256"])
     qualified_snapshot_root, qualified_helper = create_qualified_retention_helper(
         self.repo,
@@ -68,11 +71,11 @@ def install_locked(
     current_stop_attempted = False
     checkpoint: Path | None = None
     backup_fingerprint: dict[str, str] | None = None
-    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d-%H%M%S-%f")
+    stamp = dt.datetime.now(dt.UTC).strftime("%Y%m%d-%H%M%S-%f")
     failed = self.target_app.parent / f".Robb Agents.app.failed-{stamp}"
     try:
         # Stage on the destination volume before stopping the application.
-        partial_root, staged_app, staged_fingerprint = self._stage_candidate(
+        partial_root, staged_app, staged_fingerprint = self.stage_candidate(
             candidate_app,
             bundle_commit,
         )
@@ -108,7 +111,7 @@ def install_locked(
         partial_cleanup_authorized = True
 
         # Close the race between the first preflight and the actual swap.
-        verify_clean_checkout(self.repo, checkout_commit, self.runner)
+        _ = verify_clean_checkout(self.repo, checkout_commit, self.runner)
 
         current_stop_attempted = True
         quit_application(
@@ -128,13 +131,10 @@ def install_locked(
             stopped_current_fingerprint,
             description="Stopped installed application",
         )
-        verify_clean_checkout(self.repo, checkout_commit, self.runner)
-        try:
-            assert_application_stopped(self.target_app, self.lock_file, self.runner)
-        except BaseException:
-            # The old runtime has already reopened itself; never launch a
-            # second copy from the recovery path.
-            raise
+        _ = verify_clean_checkout(self.repo, checkout_commit, self.runner)
+        # If the old runtime reopened itself, propagate the failure so the
+        # recovery path never launches a second copy.
+        assert_application_stopped(self.target_app, self.lock_file, self.runner)
 
         # Both paths are on /Applications' volume. renamex_np(RENAME_SWAP)
         # guarantees that a crash cannot expose a missing target path.
@@ -173,12 +173,10 @@ def install_locked(
         )
         # This is the transaction commit point. A concurrent source edit
         # before it causes an automatic bundle rollback.
-        verify_clean_checkout(self.repo, checkout_commit, self.runner)
+        _ = verify_clean_checkout(self.repo, checkout_commit, self.runner)
         swapped = False
         previous = None
 
-        if checkpoint is None:
-            raise StagingError("Internal error: verified backup checkpoint is missing")
         (
             checkpoint,
             checkpoint_confirmed,
@@ -296,16 +294,17 @@ def install_locked(
                 else:
                     exchange_uncertain = True
             except BaseException:
+                logger.exception("Failure during install_locked")
                 exchange_uncertain = True
         if exchange_uncertain:
             swapped = True  # suppress destructive cleanup of either bundle
             raise StagingError(
                 f"Atomic exchange outcome is uncertain after {install_error}; preserve "
-                f"target {self.target_app}, transaction directory {partial_root}, and "
-                f"managed checkpoint {checkpoint}."
+                + f"target {self.target_app}, transaction directory {partial_root}, and "
+                + f"managed checkpoint {checkpoint}."
             ) from install_error
         if swapped and previous is not None:
-            rollback_error: Exception | None = None
+            rollback_error: BaseException | None = None
             old_runtime: dict[str, int | str] | None = None
             try:
                 quit_application(
@@ -340,11 +339,12 @@ def install_locked(
                     )
                 swapped = False
             except BaseException as error:
+                logger.exception("Failure during install_locked")
                 rollback_error = error
             if rollback_error:
                 raise StagingError(
                     f"Installation failed ({install_error}); automatic rollback also failed ({rollback_error}). "
-                    f"Preserve {previous or failed} and restore checkpoint {checkpoint} manually."
+                    + f"Preserve {previous or failed} and restore checkpoint {checkpoint} manually."
                 ) from install_error
             checkpoint_warning: str | None = None
             if checkpoint is not None and checkpoint.exists() and backup_fingerprint is not None:
@@ -363,11 +363,11 @@ def install_locked(
                 )
                 partial_cleanup_authorized = checkpoint_confirmed
             raise StagingError(
-                f"Installation failed and the previous app was restored. "
-                f"Failed candidate preserved at {failed}. "
+                "Installation failed and the previous app was restored. "
+                + f"Failed candidate preserved at {failed}. "
                 + (
                     "The restored app was intentionally left stopped because the candidate was launched; "
-                    "inspect profile-schema compatibility before reopening. "
+                    + "inspect profile-schema compatibility before reopening. "
                     if candidate_launch_attempted
                     else f"The restored runtime was relaunched as pid {old_runtime and old_runtime.get('pid')}. "
                 )
@@ -400,7 +400,7 @@ def install_locked(
                     # The unchanged old runtime may have reopened after the
                     # earlier stop proof. Verify it instead of issuing a
                     # second open request.
-                    verify_runtime(
+                    _ = verify_runtime(
                         self.target_app,
                         self.lock_file,
                         launched_after_ms=0,
@@ -408,16 +408,17 @@ def install_locked(
                         runner=self.runner,
                     )
                 else:
-                    launch_and_verify_runtime(
+                    _ = launch_and_verify_runtime(
                         self.target_app,
                         self.profile_root,
                         timeout=self.launch_timeout,
                         runner=self.runner,
                     )
             except BaseException as recovery_error:
+                logger.exception("Failure during install_locked")
                 raise StagingError(
                     f"Installation failed ({install_error}); unchanged previous app "
-                    f"could not be relaunched ({recovery_error})."
+                    + f"could not be relaunched ({recovery_error})."
                 ) from install_error
         checkpoint_warning = None
         if checkpoint is not None and checkpoint.exists() and backup_fingerprint is not None:
@@ -467,6 +468,7 @@ def install_locked(
         try:
             cleanup_qualified_retention_helper(qualified_snapshot_root)
         except BaseException as error:
+            logger.exception("Failure during install_locked")
             print(
                 f"WARNING: qualified retention helper snapshot remains at {qualified_snapshot_root}: {error}",
                 file=sys.stderr,

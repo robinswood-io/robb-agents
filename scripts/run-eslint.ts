@@ -16,7 +16,7 @@ if (inventory.status !== 0) {
   process.exit(inventory.status ?? 1);
 }
 const extensions = new Set(['.ts', '.tsx', '.mts', '.cts', '.js', '.mjs', '.cjs']);
-const eslint = new ESLint({ cwd: root, overrideConfigFile: resolve(root, 'eslint.config.mjs') });
+const eslint = new ESLint({ cwd: root, overrideConfigFile: resolve(root, 'eslint.config.ts') });
 const groups = new Map<string, string[]>();
 for (const file of [...new Set(inventory.stdout.split('\0'))].sort()) {
   if (!extensions.has(extname(file)) || !existsSync(resolve(root, file))) continue;
@@ -38,7 +38,7 @@ for (const [group, files] of groups) {
     console.log(`Lint ${group}: ${offset + 1}-${offset + batch.length}/${files.length}`);
     const result = spawnSync(process.execPath, [
       resolve(root, 'node_modules/eslint/bin/eslint.js'),
-      '--config', 'eslint.config.mjs', '--max-warnings', '0', ...batch,
+      '--config', 'eslint.config.ts', '--max-warnings', '0', ...batch,
     ], { cwd: root, stdio: 'inherit' });
     if (result.error) throw result.error;
     if (result.signal) {

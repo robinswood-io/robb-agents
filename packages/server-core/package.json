@@ -25,10 +25,10 @@
     "./webui": "./src/webui/index.ts"
   },
   "scripts": {
-    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit"
+    "typecheck": "node ../../scripts/run-typescript.ts native --noEmit"
   },
   "dependencies": {
-    "@agentclientprotocol/sdk": "^2.1.0",
+    "@agentclientprotocol/sdk": "^2.2.0",
     "@craft-agent/core": "workspace:*",
     "@craft-agent/session-tools-core": "workspace:*",
     "@craft-agent/shared": "workspace:*",

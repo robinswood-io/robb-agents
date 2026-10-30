@@ -1,30 +1,105 @@
-"""PDF operations tool.
+"""Shared helpers for PDF commands with strict page-range validation."""
 
-Commands:
-  Organize:  extract, info, merge, split, rotate, reorder, duplicate
-  Edit:      watermark, fill-form, compress, crop, resize, flatten, header-footer
-  Security:  encrypt, decrypt, redact, sanitize
-  Convert:   to-image, from-image, to-docx, to-pptx
-
-Usage:
-    uv run pdf_tool.py COMMAND [OPTIONS]
-
-Validation note:
-    Page range parsing is strict. Out-of-range pages and malformed --pages input now
-    return explicit errors instead of being silently ignored.
-"""
-
+import copy
 import io
 import json
 import math
+import re
 import sys
 import zlib
+from importlib import import_module
 from pathlib import Path
+from typing import IO, Protocol, Self, TypedDict, runtime_checkable
 
 import click
-import pypdfium2 as pdfium
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import BooleanObject, NameObject, RectangleObject
+
+
+class _ImageLike(Protocol):
+    size: tuple[int, int]
+
+    def convert(self, mode: str) -> Self: ...
+
+    def tobytes(self) -> bytes: ...
+
+    def save(self, file: str | IO[bytes], format: str | None = None, **params: int) -> None: ...
+
+
+class _PdfBitmapLike(Protocol):
+    def to_pil(self) -> _ImageLike: ...
+
+
+class _PdfTextSearcherLike(Protocol):
+    def get_next(self) -> tuple[int, int] | None: ...
+
+
+class _PdfTextPageLike(Protocol):
+    def get_text_bounded(self) -> str: ...
+
+    def search(self, text: str) -> _PdfTextSearcherLike: ...
+
+    def get_charbox(self, index: int) -> tuple[float, float, float, float]: ...
+
+
+class _PdfPageLike(Protocol):
+    def render(self, scale: float = 1.0) -> _PdfBitmapLike: ...
+
+    def get_textpage(self) -> _PdfTextPageLike: ...
+
+    def get_size(self) -> tuple[float, float]: ...
+
+
+class _PdfDocumentLike(Protocol):
+    def __len__(self) -> int: ...
+
+    def __getitem__(self, index: int) -> _PdfPageLike: ...
+
+    def close(self) -> None: ...
+
+
+@runtime_checkable
+class _PdfiumModuleLike(Protocol):
+    def PdfDocument(self, file: str) -> _PdfDocumentLike: ...
+
+
+def _load_pdfium() -> _PdfiumModuleLike:
+    """Load pypdfium2 through its documented document factory interface."""
+    module = import_module("pypdfium2")
+    if not isinstance(module, _PdfiumModuleLike):
+        raise TypeError("pypdfium2 does not expose the PdfDocument interface")
+    return module
+
+
+pdfium = _load_pdfium()
+
+__all__ = [
+    "PAGE_SIZES",
+    "BooleanObject",
+    "NameObject",
+    "Path",
+    "PdfReader",
+    "PdfWriter",
+    "RectangleObject",
+    "_TextOverlay",
+    "_make_text_overlay_pdf",
+    "_make_watermark_pdf",
+    "_pil_to_image_pdf_page",
+    "_render_page_to_pil",
+    "check_output_differs",
+    "cli",
+    "click",
+    "copy",
+    "io",
+    "json",
+    "math",
+    "parse_page_range",
+    "pdfium",
+    "re",
+    "sys",
+    "write_output",
+    "write_pdf",
+]
 
 # Standard page sizes in points (width x height)
 PAGE_SIZES: dict[str, tuple[float, float]] = {
@@ -43,7 +118,7 @@ PAGE_SIZES: dict[str, tuple[float, float]] = {
 def write_output(text: str, output_path: str | None) -> None:
     """Write text to file or stdout."""
     if output_path:
-        Path(output_path).write_text(text, encoding="utf-8")
+        _ = Path(output_path).write_text(text, encoding="utf-8")
         click.echo(f"Output written to {output_path}", err=True)
     else:
         click.echo(text)
@@ -52,7 +127,7 @@ def write_output(text: str, output_path: str | None) -> None:
 def write_pdf(writer: PdfWriter, output_path: str) -> None:
     """Write a PdfWriter to a file."""
     with open(output_path, "wb") as f:
-        writer.write(f)
+        _ = writer.write(f)
     click.echo(f"PDF written to {output_path}", err=True)
 
 
@@ -150,7 +225,7 @@ def parse_color(color: str) -> tuple[float, float, float]:
     return color_map.get(color.lower(), (0.5, 0.5, 0.5))
 
 
-def _render_page_to_pil(page: pdfium.PdfPage, dpi: int = 150):
+def _render_page_to_pil(page: _PdfPageLike, dpi: int = 150) -> _ImageLike:
     """Render a pypdfium2 page to a PIL Image at the given DPI."""
     scale = dpi / 72
     bitmap = page.render(scale=scale)
@@ -197,8 +272,10 @@ def _make_watermark_pdf(width: float, height: float, text: str, font_size: float
     objects.append("2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj")
     # 3: Page
     objects.append(
-        f"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {width:.2f} {height:.2f}] "
-        f"/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> /ExtGState << /GS1 6 0 R >> >> >>\nendobj"
+        "".join((
+            f"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {width:.2f} {height:.2f}] ",
+            "/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> /ExtGState << /GS1 6 0 R >> >> >>\nendobj",
+        ))
     )
     # 4: Content stream
     objects.append(
@@ -224,53 +301,54 @@ def _make_watermark_pdf(width: float, height: float, text: str, font_size: float
 
     # Rebuild properly with stream
     output = io.BytesIO()
-    output.write(b"%PDF-1.4\n")
+    _ = output.write(b"%PDF-1.4\n")
 
     obj_offsets: list[int] = []
 
     # Obj 1: Catalog
     obj_offsets.append(output.tell())
-    output.write(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n")
+    _ = output.write(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n")
 
     # Obj 2: Pages
     obj_offsets.append(output.tell())
-    output.write(b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n")
+    _ = output.write(b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n")
 
     # Obj 3: Page
     obj_offsets.append(output.tell())
-    output.write(
-        f"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {width:.2f} {height:.2f}] "
-        f"/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> /ExtGState << /GS1 6 0 R >> >> >>\nendobj\n"
-        .encode("latin-1")
+    _ = output.write(
+        "".join((
+            f"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {width:.2f} {height:.2f}] ",
+            "/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> /ExtGState << /GS1 6 0 R >> >> >>\nendobj\n",
+        )).encode("latin-1")
     )
 
     # Obj 4: Content stream
     obj_offsets.append(output.tell())
-    output.write(f"4 0 obj\n<< /Length {len(stream_bytes)} >>\nstream\n".encode("latin-1"))
-    output.write(stream_bytes)
-    output.write(b"\nendstream\nendobj\n")
+    _ = output.write(f"4 0 obj\n<< /Length {len(stream_bytes)} >>\nstream\n".encode("latin-1"))
+    _ = output.write(stream_bytes)
+    _ = output.write(b"\nendstream\nendobj\n")
 
     # Obj 5: Font
     obj_offsets.append(output.tell())
-    output.write(b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n")
+    _ = output.write(b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n")
 
     # Obj 6: ExtGState
     obj_offsets.append(output.tell())
-    output.write(f"6 0 obj\n<< /Type /ExtGState /ca {opacity:.2f} /CA {opacity:.2f} >>\nendobj\n".encode("latin-1"))
+    _ = output.write(f"6 0 obj\n<< /Type /ExtGState /ca {opacity:.2f} /CA {opacity:.2f} >>\nendobj\n".encode("latin-1"))
 
     # Cross-reference table
     xref_offset = output.tell()
-    output.write(b"xref\n")
-    output.write(f"0 {len(obj_offsets) + 1}\n".encode("latin-1"))
-    output.write(b"0000000000 65535 f \n")
+    _ = output.write(b"xref\n")
+    _ = output.write(f"0 {len(obj_offsets) + 1}\n".encode("latin-1"))
+    _ = output.write(b"0000000000 65535 f \n")
     for off in obj_offsets:
-        output.write(f"{off:010d} 00000 n \n".encode("latin-1"))
+        _ = output.write(f"{off:010d} 00000 n \n".encode("latin-1"))
 
     # Trailer
-    output.write(f"trailer\n<< /Size {len(obj_offsets) + 1} /Root 1 0 R >>\n".encode("latin-1"))
-    output.write(b"startxref\n")
-    output.write(f"{xref_offset}\n".encode("latin-1"))
-    output.write(b"%%EOF\n")
+    _ = output.write(f"trailer\n<< /Size {len(obj_offsets) + 1} /Root 1 0 R >>\n".encode("latin-1"))
+    _ = output.write(b"startxref\n")
+    _ = output.write(f"{xref_offset}\n".encode("latin-1"))
+    _ = output.write(b"%%EOF\n")
 
     return output.getvalue()
 
@@ -280,7 +358,15 @@ def _pdf_escape(text: str) -> str:
     return text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
 
-def _make_text_overlay_pdf(width: float, height: float, texts: list[dict]) -> bytes:
+class _TextOverlay(TypedDict):
+    x: float
+    y: float
+    text: str
+    font_size: float
+    color: tuple[float, float, float]
+
+
+def _make_text_overlay_pdf(width: float, height: float, texts: list[_TextOverlay]) -> bytes:
     """Generate a single-page PDF with positioned text elements.
 
     Each text dict: {"x": float, "y": float, "text": str, "font_size": float, "color": (r,g,b)}
@@ -300,47 +386,48 @@ def _make_text_overlay_pdf(width: float, height: float, texts: list[dict]) -> by
     stream_bytes = "".join(parts).encode("latin-1")
 
     output = io.BytesIO()
-    output.write(b"%PDF-1.4\n")
+    _ = output.write(b"%PDF-1.4\n")
 
     obj_offsets: list[int] = []
 
     obj_offsets.append(output.tell())
-    output.write(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n")
+    _ = output.write(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n")
 
     obj_offsets.append(output.tell())
-    output.write(b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n")
+    _ = output.write(b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n")
 
     obj_offsets.append(output.tell())
-    output.write(
-        f"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {width:.2f} {height:.2f}] "
-        f"/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n"
-        .encode("latin-1")
+    _ = output.write(
+        "".join((
+            f"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {width:.2f} {height:.2f}] ",
+            "/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n",
+        )).encode("latin-1")
     )
 
     obj_offsets.append(output.tell())
-    output.write(f"4 0 obj\n<< /Length {len(stream_bytes)} >>\nstream\n".encode("latin-1"))
-    output.write(stream_bytes)
-    output.write(b"\nendstream\nendobj\n")
+    _ = output.write(f"4 0 obj\n<< /Length {len(stream_bytes)} >>\nstream\n".encode("latin-1"))
+    _ = output.write(stream_bytes)
+    _ = output.write(b"\nendstream\nendobj\n")
 
     obj_offsets.append(output.tell())
-    output.write(b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n")
+    _ = output.write(b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n")
 
     xref_offset = output.tell()
-    output.write(b"xref\n")
-    output.write(f"0 {len(obj_offsets) + 1}\n".encode("latin-1"))
-    output.write(b"0000000000 65535 f \n")
+    _ = output.write(b"xref\n")
+    _ = output.write(f"0 {len(obj_offsets) + 1}\n".encode("latin-1"))
+    _ = output.write(b"0000000000 65535 f \n")
     for off in obj_offsets:
-        output.write(f"{off:010d} 00000 n \n".encode("latin-1"))
+        _ = output.write(f"{off:010d} 00000 n \n".encode("latin-1"))
 
-    output.write(f"trailer\n<< /Size {len(obj_offsets) + 1} /Root 1 0 R >>\n".encode("latin-1"))
-    output.write(b"startxref\n")
-    output.write(f"{xref_offset}\n".encode("latin-1"))
-    output.write(b"%%EOF\n")
+    _ = output.write(f"trailer\n<< /Size {len(obj_offsets) + 1} /Root 1 0 R >>\n".encode("latin-1"))
+    _ = output.write(b"startxref\n")
+    _ = output.write(f"{xref_offset}\n".encode("latin-1"))
+    _ = output.write(b"%%EOF\n")
 
     return output.getvalue()
 
 
-def _pil_to_image_pdf_page(img) -> bytes:
+def _pil_to_image_pdf_page(img: _ImageLike) -> bytes:
     """Convert a PIL Image to a single-page PDF with the image embedded (raw RGB, flate-compressed).
 
     Returns raw PDF bytes. Used for flatten and redact where we need to replace
@@ -354,52 +441,54 @@ def _pil_to_image_pdf_page(img) -> bytes:
     # The caller should set the page size; we use pixel dimensions as points here
     # and let the caller scale appropriately.
     output = io.BytesIO()
-    output.write(b"%PDF-1.4\n")
+    _ = output.write(b"%PDF-1.4\n")
 
     obj_offsets: list[int] = []
 
     obj_offsets.append(output.tell())
-    output.write(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n")
+    _ = output.write(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n")
 
     obj_offsets.append(output.tell())
-    output.write(b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n")
+    _ = output.write(b"2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n")
 
     # Content stream: draw image scaled to full page
     cs = f"q\n{width_px} 0 0 {height_px} 0 0 cm\n/Im1 Do\nQ\n".encode("latin-1")
 
     obj_offsets.append(output.tell())
-    output.write(
-        f"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {width_px} {height_px}] "
-        f"/Contents 4 0 R /Resources << /XObject << /Im1 5 0 R >> >> >>\nendobj\n"
-        .encode("latin-1")
+    _ = output.write(
+        "".join((
+            f"3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {width_px} {height_px}] ",
+            "/Contents 4 0 R /Resources << /XObject << /Im1 5 0 R >> >> >>\nendobj\n",
+        )).encode("latin-1")
     )
 
     obj_offsets.append(output.tell())
-    output.write(f"4 0 obj\n<< /Length {len(cs)} >>\nstream\n".encode("latin-1"))
-    output.write(cs)
-    output.write(b"\nendstream\nendobj\n")
+    _ = output.write(f"4 0 obj\n<< /Length {len(cs)} >>\nstream\n".encode("latin-1"))
+    _ = output.write(cs)
+    _ = output.write(b"\nendstream\nendobj\n")
 
     obj_offsets.append(output.tell())
-    output.write(
-        f"5 0 obj\n<< /Type /XObject /Subtype /Image /Width {width_px} /Height {height_px} "
-        f"/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode "
-        f"/Length {len(compressed)} >>\nstream\n"
-        .encode("latin-1")
+    _ = output.write(
+        "".join((
+            f"5 0 obj\n<< /Type /XObject /Subtype /Image /Width {width_px} /Height {height_px} ",
+            "/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode ",
+            f"/Length {len(compressed)} >>\nstream\n",
+        )).encode("latin-1")
     )
-    output.write(compressed)
-    output.write(b"\nendstream\nendobj\n")
+    _ = output.write(compressed)
+    _ = output.write(b"\nendstream\nendobj\n")
 
     xref_offset = output.tell()
-    output.write(b"xref\n")
-    output.write(f"0 {len(obj_offsets) + 1}\n".encode("latin-1"))
-    output.write(b"0000000000 65535 f \n")
+    _ = output.write(b"xref\n")
+    _ = output.write(f"0 {len(obj_offsets) + 1}\n".encode("latin-1"))
+    _ = output.write(b"0000000000 65535 f \n")
     for off in obj_offsets:
-        output.write(f"{off:010d} 00000 n \n".encode("latin-1"))
+        _ = output.write(f"{off:010d} 00000 n \n".encode("latin-1"))
 
-    output.write(f"trailer\n<< /Size {len(obj_offsets) + 1} /Root 1 0 R >>\n".encode("latin-1"))
-    output.write(b"startxref\n")
-    output.write(f"{xref_offset}\n".encode("latin-1"))
-    output.write(b"%%EOF\n")
+    _ = output.write(f"trailer\n<< /Size {len(obj_offsets) + 1} /Root 1 0 R >>\n".encode("latin-1"))
+    _ = output.write(b"startxref\n")
+    _ = output.write(f"{xref_offset}\n".encode("latin-1"))
+    _ = output.write(b"%%EOF\n")
 
     return output.getvalue()
 
@@ -407,4 +496,3 @@ def _pil_to_image_pdf_page(img) -> bytes:
 @click.group()
 def cli() -> None:
     """PDF operations tool."""
-    pass

@@ -23,7 +23,7 @@ const typedExtension = /\.[cm]?[jt]sx?$/;
 function inspectPythonSources(sources: readonly { file: string; content: string }[]): SourceQualityIssue[] {
   if (!sources.length) return [];
   const python = process.env["ROBB_PYTHON"] ?? (process.platform === 'win32' ? 'python' : 'python3');
-  const output = execFileSync(python, ['-I', resolve(import.meta.dir, 'source-quality-python.py')], {
+  const output = execFileSync(python, ['-I', resolve(import.meta.dir, 'source_quality_python.py')], {
     input: JSON.stringify(sources), encoding: 'utf8',
   });
   return JSON.parse(output) as SourceQualityIssue[];
@@ -53,12 +53,16 @@ export function inspectSource(file: string, content: string, inspectPythonTypes 
   return issues;
 }
 
-export function inspectRepository(repo: string) {
+export function maintainedSourceFiles(repo: string): string[] {
   const files = [...new Set(execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'],
     { cwd: repo, encoding: 'utf8' }).split('\0'))]
     .filter(file => codeExtension.test(file) && !sourceArtifacts.has(file) && existsSync(resolve(repo, file)))
     .sort();
   if (!files.length) throw new Error('No maintained source files found');
+  return files;
+}
+export function inspectRepository(repo: string) {
+  const files = maintainedSourceFiles(repo);
   const sources = files.map(file => ({ file, content: readFileSync(resolve(repo, file), 'utf8') }));
   const issues = sources.flatMap(({ file, content }) => inspectSource(file, content, false));
   issues.push(...inspectPythonSources(sources.filter(source => source.file.endsWith('.py'))));

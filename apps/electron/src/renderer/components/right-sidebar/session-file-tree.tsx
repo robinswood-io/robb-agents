@@ -138,8 +138,6 @@ export const WEB_PREVIEWABLE_EXTENSIONS = new Set([
 ])
 
 
-/** True when running in web UI (browser) rather than Electron. */
-export const isWebMode = window.electronAPI.getRuntimeEnvironment() === 'web'
 
 
 /**
@@ -162,6 +160,8 @@ export function getThumbnailUrl(filePath: string): string {
  * If loading fails, the icon stays visible — no layout shift, no error state.
  */
 export const FileThumbnail = memo(function FileThumbnail({ file }: { file: SessionFile }) {
+  // Read the host API after bootstrap, when the component actually renders.
+  const isWebMode = window.electronAPI.getRuntimeEnvironment() === 'web'
   const [loaded, setLoaded] = useState(false)
   const [failed, setFailed] = useState(false)
   const [dataUrl, setDataUrl] = useState<string | null>(null)
@@ -187,7 +187,7 @@ export const FileThumbnail = memo(function FileThumbnail({ file }: { file: Sessi
       if (!cancelled) setFailed(true)
     })
     return () => { cancelled = true }
-  }, [file.path, canPreview, failed])
+  }, [file.path, canPreview, failed, isWebMode])
 
   // Fall back to regular icon if not previewable or thumbnail failed
   if (!canPreview || failed) {

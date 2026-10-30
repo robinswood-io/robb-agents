@@ -2,18 +2,20 @@ from __future__ import annotations
 
 import ctypes
 import os
-from pathlib import Path
 import stat
 import sys
+from pathlib import Path
+from typing import cast
 
 from robb_retention_files import (
-    RENAME_SWAP,
     RENAME_EXCL,
+    RENAME_SWAP,
     FileIdentity,
     FileSnapshot,
-    snapshot_regular_file,
     fsync_directory,
+    snapshot_regular_file,
 )
+
 
 def before_verified_path_mutation(_operation: str, _path: Path) -> None:
     """Test seam immediately before fd-relative mutation revalidation."""
@@ -81,13 +83,13 @@ def renameatx_np(
     rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p,
                        ctypes.c_uint]
     rename.restype = ctypes.c_int
-    result = rename(
+    result = cast(int, rename(
         directory_descriptor,
         os.fsencode(source_name),
         directory_descriptor,
         os.fsencode(destination_name),
         flags,
-    )
+    ))
     if result != 0:
         error_number = ctypes.get_errno()
         raise OSError(error_number, os.strerror(error_number), source_name, destination_name)
@@ -95,7 +97,7 @@ def renameatx_np(
 def quarantine_path(path: Path) -> Path:
     return path.with_name(f'{path.name}.transaction-quarantine')
 
-def _delete_verified_quarantine(
+def delete_verified_quarantine(
     path: Path,
     snapshot: FileSnapshot,
     *,
@@ -141,7 +143,7 @@ def quarantine_and_unlink(
             raise RuntimeError(f'Both transaction file and quarantine exist: {path}')
         if existing_quarantine.identity != snapshot.identity:
             raise RuntimeError(f'Refusing unowned transaction quarantine: {quarantine}')
-        _delete_verified_quarantine(
+        delete_verified_quarantine(
             quarantine, existing_quarantine, operation=operation,
         )
         return
@@ -156,7 +158,7 @@ def quarantine_and_unlink(
             description='Transaction delete source',
         )
         try:
-            os.stat(quarantine.name, dir_fd=directory_descriptor, follow_symlinks=False)
+            _ = os.stat(quarantine.name, dir_fd=directory_descriptor, follow_symlinks=False)
         except FileNotFoundError:
             pass
         else:
@@ -185,7 +187,7 @@ def quarantine_and_unlink(
         finally:
             os.close(directory_descriptor)
         raise RuntimeError(f'Transaction delete source changed before quarantine: {path}')
-    _delete_verified_quarantine(quarantine, moved, operation=operation)
+    delete_verified_quarantine(quarantine, moved, operation=operation)
 
 def swap_verified(
     source: Path,
@@ -263,29 +265,15 @@ def verified_replace(
             description='Transaction replace source',
         )
         try:
-            destination_info = os.stat(
+            _ = os.stat(
                 destination.name,
                 dir_fd=directory_descriptor,
                 follow_symlinks=False,
             )
         except FileNotFoundError:
-            if destination_snapshot is not None:
-                raise RuntimeError(
-                    f'Transaction replace destination disappeared: {destination}'
-                )
+            pass
         else:
-            if destination_snapshot is None or (
-                not stat.S_ISREG(destination_info.st_mode)
-                or destination_info.st_uid != os.getuid()
-                or (destination_info.st_dev, destination_info.st_ino)
-                != (
-                    destination_snapshot.identity.device,
-                    destination_snapshot.identity.inode,
-                )
-            ):
-                raise RuntimeError(
-                    f'Transaction replace destination changed: {destination}'
-                )
+            raise RuntimeError(f'Transaction replace destination changed: {destination}')
         before_atomic_rename(operation, source, destination)
         renameatx_np(
             directory_descriptor, source.name, destination.name, RENAME_EXCL,
@@ -311,7 +299,7 @@ def write_owned_file(path: Path, data: bytes, mode: int) -> FileIdentity:
         os.fchmod(descriptor, mode)
         with os.fdopen(descriptor, 'wb') as stream:
             descriptor = -1
-            stream.write(data)
+            _ = stream.write(data)
             stream.flush()
             os.fsync(stream.fileno())
     except Exception:

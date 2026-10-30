@@ -244,8 +244,6 @@
   "toast.upToDate": "Vous êtes à jour",
   "toast.updateAvailable": "Mise à jour v{{version}} disponible",
   "toast.updateReady": "Mise à jour v{{version}} prête",
-  "toast.vcRedistNotFound": "Microsoft Visual C++ Redistributable introuvable",
-  "toast.vcRedistNotFoundDesc": "Les outils de document (PDF, PPTX, DOCX, XLSX) en ont besoin pour fonctionner. Redémarrez après l'installation.",
   "toast.versionIsLatest": "La version {{version}} est la plus récente.",
   "toast.webhookReplayCompleted": "Relecture du webhook terminée",
   "toast.workspaceReconnected": "Espace de travail reconnecté",

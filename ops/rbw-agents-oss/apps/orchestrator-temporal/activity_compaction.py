@@ -1,15 +1,37 @@
 from __future__ import annotations
 
-import os
 import json
+import os
 import re
 from collections import Counter
 from pathlib import Path
 
+from pydantic import JsonValue, TypeAdapter, ValidationError
+
+type JsonObject = dict[str, JsonValue]
+JSON_ADAPTER = TypeAdapter(JsonValue)
+
+def _integer(value: JsonValue, default: int) -> int:
+    value = value or default
+    if not isinstance(value, (str, int, float)):
+        raise TypeError("Expected a JSON number or numeric string")
+    return int(value)
+
+def _text(value: JsonValue) -> str:
+    value = value or ""
+    if not isinstance(value, str):
+        raise TypeError("Expected text output")
+    return value
+
+__all__ = ['RTK_TOKEN_CONFIG', '_compact_lines', '_compact_result_observation',
+           '_compact_temporal_return_payload', '_estimate_tokens', '_hard_cap_json_status',
+           '_json_compact', '_load_rtk_token_config', '_rtk_metrics_payload',
+           '_rtk_optimize_output', '_tail_text', '_try_parse_json_blob']
+
 RTK_TOKEN_CONFIG = Path('/srv/rbw-agents-oss/config/temporal/rtk-token-optimization.json')
 
-def _load_rtk_token_config() -> dict:
-    defaults = {
+def _load_rtk_token_config() -> JsonObject:
+    defaults: JsonObject = {
         'enabled': True,
         'version': 'rtk-temporal-v1',
         'previewCharBudget': 900,
@@ -24,23 +46,23 @@ def _load_rtk_token_config() -> dict:
     }
     try:
         if RTK_TOKEN_CONFIG.exists():
-            loaded = json.loads(RTK_TOKEN_CONFIG.read_text(encoding='utf-8'))
+            loaded = JSON_ADAPTER.validate_json(RTK_TOKEN_CONFIG.read_bytes())
             if isinstance(loaded, dict):
                 defaults.update(loaded)
-    except Exception:
+    except (OSError, UnicodeError, ValidationError):
         pass
     if os.getenv('RBW_TEMPORAL_RTK_TOKEN_OPTIMIZATION', '').lower() in {'0', 'false', 'no', 'off'}:
         defaults['enabled'] = False
     return defaults
 
-def _estimate_tokens(text: str, cfg: dict) -> int:
-    chars_per_token = int(cfg.get('estimateCharsPerToken') or 4) or 4
+def _estimate_tokens(text: str, cfg: JsonObject) -> int:
+    chars_per_token = _integer(cfg.get('estimateCharsPerToken'), 4) or 4
     return max(0, int((len(text or '') + chars_per_token - 1) / chars_per_token))
 
-def _json_compact(value, cfg: dict, depth: int = 0):
-    string_limit = int(cfg.get('jsonStringLimit') or 220)
-    array_sample = int(cfg.get('jsonArraySample') or 3)
-    max_keys = int(cfg.get('maxObjectKeys') or 24)
+def _json_compact(value: JsonValue, cfg: JsonObject, depth: int = 0) -> JsonValue:
+    string_limit = _integer(cfg.get('jsonStringLimit'), 220)
+    array_sample = _integer(cfg.get('jsonArraySample'), 3)
+    max_keys = _integer(cfg.get('maxObjectKeys'), 24)
     if depth > 4:
         return '<depth-limit>'
     if isinstance(value, str):
@@ -53,30 +75,28 @@ def _json_compact(value, cfg: dict, depth: int = 0):
             'count': len(value),
             'sample': [_json_compact(v, cfg, depth + 1) for v in value[:array_sample]],
         }
-    if isinstance(value, dict):
-        priority = [
-            'ok', 'status', 'summary', 'counts', 'blockingReasons', 'generatedAt',
-            'capabilityId', 'legacyId', 'name', 'mode', 'exitCode', 'timeout',
-            'businessFailure', 'jsonStatus', 'artifacts', 'reportJson', 'reportMd',
-            'nextActions', 'actionQueue', 'workflowResults', 'checks', 'error', 'errorType',
-        ]
-        keys = []
-        for key in priority:
-            if key in value and key not in keys:
-                keys.append(key)
-        for key in sorted(value.keys(), key=lambda x: str(x)):
-            if key not in keys:
-                keys.append(key)
-            if len(keys) >= max_keys:
-                break
-        out = {str(k): _json_compact(value.get(k), cfg, depth + 1) for k in keys}
-        omitted = max(0, len(value) - len(keys))
-        if omitted:
-            out['_omittedKeys'] = omitted
-        return out
-    return str(value)[:string_limit]
+    priority = [
+        'ok', 'status', 'summary', 'counts', 'blockingReasons', 'generatedAt',
+        'capabilityId', 'legacyId', 'name', 'mode', 'exitCode', 'timeout',
+        'businessFailure', 'jsonStatus', 'artifacts', 'reportJson', 'reportMd',
+        'nextActions', 'actionQueue', 'workflowResults', 'checks', 'error', 'errorType',
+    ]
+    keys: list[str] = []
+    for key in priority:
+        if key in value and key not in keys:
+            keys.append(key)
+    for key in sorted(value.keys(), key=lambda x: str(x)):
+        if key not in keys:
+            keys.append(key)
+        if len(keys) >= max_keys:
+            break
+    out: JsonObject = {str(k): _json_compact(value.get(k), cfg, depth + 1) for k in keys}
+    omitted = max(0, len(value) - len(keys))
+    if omitted:
+        out['_omittedKeys'] = omitted
+    return out
 
-def _try_parse_json_blob(text: str):
+def _try_parse_json_blob(text: str) -> JsonValue:
     raw = (text or '').strip()
     if not raw:
         return None
@@ -84,21 +104,21 @@ def _try_parse_json_blob(text: str):
     candidates.extend([line.strip() for line in raw.splitlines()[::-1] if line.strip().startswith(('{', '['))][:8])
     for candidate in candidates:
         try:
-            return json.loads(candidate)
-        except Exception:
+            return JSON_ADAPTER.validate_json(candidate)
+        except ValidationError:
             continue
     return None
 
-def _hard_cap_json_status(value, max_bytes: int = 8192):
+def _hard_cap_json_status(value: JsonValue, max_bytes: int = 8192) -> JsonValue:
     if not isinstance(value, dict):
         return value
     try:
         if len(json.dumps(value, ensure_ascii=False).encode('utf-8')) <= max_bytes:
             return value
-    except Exception:
+    except (TypeError, ValueError, UnicodeError):
         pass
-    compact_cfg = {'jsonStringLimit': 300, 'jsonArraySample': 4, 'jsonDictKeys': 24}
-    out = {
+    compact_cfg: JsonObject = {'jsonStringLimit': 300, 'jsonArraySample': 4, 'jsonDictKeys': 24}
+    out: JsonObject = {
         'ok': value.get('ok'),
         'status': value.get('status'),
         'summary': value.get('summary'),
@@ -113,28 +133,28 @@ def _hard_cap_json_status(value, max_bytes: int = 8192):
         if len(json.dumps(out, ensure_ascii=False).encode('utf-8')) > max_bytes:
             out['checks'] = _json_compact(out.get('checks') or {}, {'jsonStringLimit': 180, 'jsonArraySample': 2, 'jsonDictKeys': 12})
             out['artifacts'] = _json_compact(out.get('artifacts') or {}, {'jsonStringLimit': 180, 'jsonArraySample': 2, 'jsonDictKeys': 12})
-    except Exception:
+    except (TypeError, ValueError, UnicodeError):
         pass
     return {k: v for k, v in out.items() if v not in (None, {}, [], '')}
 
-def _compact_lines(text: str, cfg: dict, budget: int, stream: str) -> tuple[str, str]:
+def _compact_lines(text: str, cfg: JsonObject, budget: int, stream: str) -> tuple[str, str]:
     raw_lines = [line.rstrip() for line in (text or '').splitlines() if line.strip()]
     if not raw_lines:
         return '', 'empty'
-    important_re = re.compile(r'(traceback|error|exception|failed|fatal|timeout|warning|denied|not found|module|syntax|runtimeerror|applicationerror)', re.I)
+    important_re = re.compile(r'(traceback|error|exception|failed|fatal|timeout|warning|denied|not found|module|syntax|runtimeerror|applicationerror)', re.IGNORECASE)
     important = [line for line in raw_lines if important_re.search(line)]
     counts = Counter(raw_lines)
     duplicate_groups = [(line, count) for line, count in counts.items() if count > 1]
-    lines = []
+    lines: list[str] = []
     if important:
         lines.append(f'[rtk:{stream}:important_lines count={len(important)}]')
-        lines.extend(important[: int(cfg.get('importantLineLimit') or 30)])
+        lines.extend(important[: _integer(cfg.get('importantLineLimit'), 30)])
     if duplicate_groups:
         lines.append(f'[rtk:{stream}:deduplicated repeats={len(duplicate_groups)}]')
         for line, count in duplicate_groups[:12]:
             lines.append(f'{count}× {line[:220]}')
-    head = int(cfg.get('lineHead') or 18)
-    tail = int(cfg.get('lineTail') or 12)
+    head = _integer(cfg.get('lineHead'), 18)
+    tail = _integer(cfg.get('lineTail'), 12)
     lines.append(f'[rtk:{stream}:shape lines={len(raw_lines)} chars={len(text or "")}]')
     lines.extend(raw_lines[:head])
     if len(raw_lines) > head + tail:
@@ -146,7 +166,7 @@ def _compact_lines(text: str, cfg: dict, budget: int, stream: str) -> tuple[str,
         preview = preview[: max(0, budget - 80)] + f'\n…<rtk preview truncated to {budget} chars>'
     return preview, 'line_filter_dedupe'
 
-def _rtk_optimize_output(text: str, *, stream: str, command: str = '', legacy_id: str | None = None, ok: bool | None = None) -> dict:
+def _rtk_optimize_output(text: str, *, stream: str, command: str = '', legacy_id: str | None = None, ok: bool | None = None) -> JsonObject:
     cfg = _load_rtk_token_config()
     text = text or ''
     original_bytes = len(text.encode('utf-8', errors='ignore'))
@@ -164,9 +184,9 @@ def _rtk_optimize_output(text: str, *, stream: str, command: str = '', legacy_id
             'estimatedPreviewTokens': _estimate_tokens(preview, cfg),
             'estimatedSavedTokens': max(0, _estimate_tokens(text, cfg) - _estimate_tokens(preview, cfg)),
         }
-    budget = int(cfg.get('previewCharBudget') or 900)
+    budget = _integer(cfg.get('previewCharBudget'), 900)
     if stream == 'stderr' or ok is False:
-        budget = int(cfg.get('errorPreviewCharBudget') or 1400)
+        budget = _integer(cfg.get('errorPreviewCharBudget'), 1400)
     parsed = _try_parse_json_blob(text)
     if parsed is not None:
         compact = {
@@ -209,7 +229,7 @@ def _rtk_optimize_output(text: str, *, stream: str, command: str = '', legacy_id
         'estimatedSavingsPct': round((max(0, original_tokens - preview_tokens) / original_tokens) * 100, 1) if original_tokens else 0.0,
     }
 
-def _rtk_metrics_payload(*stream_results: tuple[str, dict]) -> dict | None:
+def _rtk_metrics_payload(*stream_results: tuple[str, JsonObject]) -> JsonObject | None:
     """Return only useful RTK metrics for Temporal payloads.
 
     V2 omits zero-savings metadata so small successful runs do not pay a token
@@ -218,15 +238,13 @@ def _rtk_metrics_payload(*stream_results: tuple[str, dict]) -> dict | None:
     """
     cfg = _load_rtk_token_config()
     include_zero = bool(cfg.get('includeZeroSavingsMetrics'))
-    min_saved = int(cfg.get('metricsMinSavedTokens') or 1)
-    out: dict[str, dict] = {}
+    min_saved = _integer(cfg.get('metricsMinSavedTokens'), 1)
+    out: JsonObject = {}
     total_original = total_preview = total_saved = 0
     for name, stats in stream_results:
-        if not isinstance(stats, dict):
-            continue
-        saved = int(stats.get('estimatedSavedTokens') or 0)
-        original = int(stats.get('estimatedOriginalTokens') or 0)
-        preview = int(stats.get('estimatedPreviewTokens') or 0)
+        saved = _integer(stats.get('estimatedSavedTokens'), 0)
+        original = _integer(stats.get('estimatedOriginalTokens'), 0)
+        preview = _integer(stats.get('estimatedPreviewTokens'), 0)
         total_original += original
         total_preview += preview
         total_saved += saved
@@ -243,16 +261,16 @@ def _rtk_metrics_payload(*stream_results: tuple[str, dict]) -> dict | None:
     }
     return out
 
-def _compact_result_observation(result: dict) -> dict:
+def _compact_result_observation(result: JsonObject) -> JsonObject:
     """Compact workflow-runs result logs without changing semantics.
 
     Missing boolean/empty fields are interpreted as their defaults by existing
     consumers. Failures keep diagnostic fields; success paths omit zero/false
     noise that dominates high-frequency small wrappers.
     """
-    out = {
+    out: JsonObject = {
         'ok': bool(result.get('ok')),
-        'exitCode': int(result.get('exitCode') or 0),
+        'exitCode': _integer(result.get('exitCode'), 0),
     }
     if result.get('timeout'):
         out['timeout'] = True
@@ -270,8 +288,8 @@ def _compact_result_observation(result: dict) -> dict:
         out['stdoutPreview'] = stdout_preview
     if stderr_preview:
         out['stderrPreview'] = stderr_preview
-    stdout_bytes = int(result.get('stdoutBytes') or len((result.get('stdout') or '').encode('utf-8', errors='ignore')) or 0)
-    stderr_bytes = int(result.get('stderrBytes') or len((result.get('stderr') or '').encode('utf-8', errors='ignore')) or 0)
+    stdout_bytes = _integer(result.get('stdoutBytes'), len(_text(result.get('stdout')).encode('utf-8', errors='ignore')))
+    stderr_bytes = _integer(result.get('stderrBytes'), len(_text(result.get('stderr')).encode('utf-8', errors='ignore')))
     if stdout_bytes:
         out['stdoutBytes'] = stdout_bytes
     if stderr_bytes:
@@ -284,7 +302,7 @@ def _compact_result_observation(result: dict) -> dict:
         out['rtkTokenOptimization'] = result.get('rtkTokenOptimization')
     return out
 
-def _compact_temporal_return_payload(base: dict, result: dict, *, legacy_id: str | None, name: str | None, command: str | None) -> dict:
+def _compact_temporal_return_payload(base: JsonObject, result: JsonObject, *, legacy_id: str | None, name: str | None, command: str | None) -> JsonObject:
     """Build the compact activity return stored in Temporal history.
 
     Keep the fields the workflow and operators need, omit defaults on success,
@@ -295,22 +313,20 @@ def _compact_temporal_return_payload(base: dict, result: dict, *, legacy_id: str
     if not compact_enabled:
         return base
     ok = bool(result.get('ok'))
-    out = {
+    out: JsonObject = {
         'ok': ok,
         'legacyId': legacy_id,
-        'exitCode': int(result.get('exitCode') or 0),
+        'exitCode': _integer(result.get('exitCode'), 0),
     }
     if base.get('completedAt'):
         out['completedAt'] = base.get('completedAt')
     if result.get('durationSeconds') is not None:
         out['durationSeconds'] = result.get('durationSeconds')
     # Preserve operator context on failures; omit repeated static fields on success.
-    if (not ok) or cfg.get('includeSuccessNameInTemporalResult'):
-        if name:
-            out['name'] = name
-    if (not ok) or cfg.get('includeSuccessCommandInTemporalResult'):
-        if command:
-            out['command'] = command
+    if name and ((not ok) or cfg.get('includeSuccessNameInTemporalResult')):
+        out['name'] = name
+    if command and ((not ok) or cfg.get('includeSuccessCommandInTemporalResult')):
+        out['command'] = command
     if result.get('timeout'):
         out['timeout'] = True
     if result.get('businessFailure'):
@@ -329,7 +345,7 @@ def _compact_temporal_return_payload(base: dict, result: dict, *, legacy_id: str
             out[key] = observation[key]
     return out
 
-def _tail_text(value, limit: int = 2000) -> str:
+def _tail_text(value: JsonValue, limit: int = 2000) -> str:
     text = str(value or '')
     if len(text) <= limit:
         return text

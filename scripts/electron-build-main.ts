@@ -385,6 +385,8 @@ async function main(): Promise<void> {
       "--platform=node",
       "--format=cjs",
       "--outfile=apps/electron/dist/main.cjs",
+      // Preserve module-relative resource lookup in the CommonJS bundle.
+      "--define:import.meta.dirname=__dirname",
       "--external:electron",
       // Claude Agent SDK is pure ESM (sdk.mjs) and calls `createRequire(import.meta.url)`
       // at module init. esbuild's CJS bundling leaves the synthesized `import_meta.url`
@@ -398,8 +400,8 @@ async function main(): Promise<void> {
       // `class AbortSignal` to `_AbortSignal` to dodge collision with the
       // global, which then breaks node-fetch@2's `constructor.name` check and
       // fails every Telegram API call with a TypeError.
-      "--alias:node-fetch=./apps/electron/src/main/shims/node-fetch.cjs",
-      "--alias:abort-controller=./apps/electron/src/main/shims/abort-controller.cjs",
+      "--alias:node-fetch=./apps/electron/src/main/shims/node-fetch.ts",
+      "--alias:abort-controller=./apps/electron/src/main/shims/abort-controller.ts",
       ...buildDefines,
     ],
     cwd: ROOT_DIR,

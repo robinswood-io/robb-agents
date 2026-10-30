@@ -3,31 +3,34 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
-from pathlib import Path
 import re
 import stat
 import sys
 import time
-from typing import Callable, Iterator, Mapping, Sequence
+from collections.abc import Mapping
+from pathlib import Path
+from typing import cast
 
+from robb_retention_files import is_record
+from robb_staging_bundles import (
+    validate_bundle,
+    verify_qualified_source_state,
+)
 from robb_staging_common import (
     APP_NAME,
-    STRONG_VALIDATION_CONTRACT,
+    CHECKPOINT_NAME_RE,
     FINGERPRINT_KEYS,
     LEGACY_BACKUP_PREFIXES,
-    CHECKPOINT_NAME_RE,
-    StagingError,
+    STRONG_VALIDATION_CONTRACT,
     Runner,
-    resolve_managed_backup_root,
+    StagingError,
     exclusive_file_lock,
-    run_command,
     require_bundle,
+    resolve_managed_backup_root,
+    run_command,
     sha256_file,
 )
-from robb_staging_bundles import (
-    verify_qualified_source_state,
-    validate_bundle,
-)
+
 
 def retention_lock_file(backup_root: Path) -> Path:
     root = resolve_managed_backup_root(backup_root)
@@ -49,8 +52,8 @@ def protect_rollback_checkpoint_locked(checkpoint: Path, root: Path) -> Path:
     """Rename a checkpoint while the caller holds the retention lock."""
     if checkpoint.parent != root or checkpoint.is_symlink():
         raise StagingError(f"Rollback checkpoint must be one direct child of {root}")
-    require_bundle(checkpoint / APP_NAME)
-    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d-%H%M%S-%f")
+    _ = require_bundle(checkpoint / APP_NAME)
+    stamp = dt.datetime.now(dt.UTC).strftime("%Y%m%d-%H%M%S-%f")
     held = root / f".rollback-held-{stamp}-{os.getpid()}"
     if held.exists():
         raise StagingError(f"Rollback hold path already exists: {held}")
@@ -85,10 +88,10 @@ def protect_and_validate_rollback_checkpoint(
             if manifest_path.is_symlink():
                 raise StagingError(f"Rollback checkpoint manifest must not be a symlink: {manifest_path}")
             try:
-                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                manifest = cast(object, json.loads(manifest_path.read_text(encoding="utf-8")))
             except (OSError, json.JSONDecodeError) as error:
                 raise StagingError(f"Rollback checkpoint manifest is missing or invalid: {manifest_path}") from error
-            if not isinstance(manifest, dict) or not valid_backup_source(manifest.get("source")):
+            if not is_record(manifest) or not valid_backup_source(manifest.get("source")):
                 raise StagingError(
                     f"Rollback checkpoint manifest has no recognized /Applications source: {manifest_path}"
                 )
@@ -108,18 +111,18 @@ def next_checkpoint_time(backup_root: Path) -> dt.datetime:
         timestamp: float
         manifest_path = path / "backup.json"
         try:
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            created_at = manifest.get("createdAt") if isinstance(manifest, dict) else None
+            manifest = cast(object, json.loads(manifest_path.read_text(encoding="utf-8")))
+            created_at = manifest.get("createdAt") if is_record(manifest) else None
             if not isinstance(created_at, str):
-                raise ValueError("createdAt missing")
+                raise TypeError("createdAt missing")
             timestamp = dt.datetime.fromisoformat(created_at).timestamp()
-        except (OSError, ValueError, json.JSONDecodeError):
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
             stat = path.stat()
             timestamp = getattr(stat, "st_birthtime", stat.st_mtime)
         latest = max(latest, timestamp)
-    return dt.datetime.fromtimestamp(latest + 0.001, dt.timezone.utc)
+    return dt.datetime.fromtimestamp(latest + 0.001, dt.UTC)
 
-def strong_validation_manifest(fingerprint: Mapping[str, str]) -> dict[str, object]:
+def strong_validation_manifest(fingerprint: Mapping[str, object]) -> dict[str, object]:
     if set(fingerprint) != FINGERPRINT_KEYS or any(
         not isinstance(value, str) or not value for value in fingerprint.values()
     ):
@@ -147,8 +150,8 @@ def is_confirmed_managed_checkpoint(
     if match is None or checkpoint.is_symlink() or manifest_path.is_symlink():
         return False
     try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        if not isinstance(manifest, dict) or manifest.get("version") != 2:
+        manifest = cast(object, json.loads(manifest_path.read_text(encoding="utf-8")))
+        if not is_record(manifest) or manifest.get("version") != 2:
             return False
         if not valid_backup_source(manifest.get("source")):
             return False
@@ -158,14 +161,14 @@ def is_confirmed_managed_checkpoint(
         created = dt.datetime.fromisoformat(created_at)
         if created.tzinfo is None:
             return False
-        created_utc = created.astimezone(dt.timezone.utc)
+        created_utc = created.astimezone(dt.UTC)
         if created_utc.strftime("%Y%m%d-%H%M%S") != f"{match.group('date')}-{match.group('time')}":
             return False
         suffix = match.group("suffix")
         if suffix.isdigit() and suffix != f"{created_utc.microsecond:06d}":
             return False
         return manifest.get("validation") == strong_validation_manifest(fingerprint)
-    except (OSError, ValueError, json.JSONDecodeError):
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
         return False
 
 def republish_rollback_checkpoint_locked(
@@ -181,14 +184,14 @@ def republish_rollback_checkpoint_locked(
     held = held.resolve()
     if held.parent != root or not held.name.startswith(".rollback-held-"):
         raise StagingError(f"Unexpected rollback hold path: {held}")
-    require_bundle(held / APP_NAME)
+    _ = require_bundle(held / APP_NAME)
     now = next_checkpoint_time(root)
     manifest_path = held / "backup.json"
     manifest: dict[str, object] = {}
     if manifest_path.is_file():
         try:
-            loaded = json.loads(manifest_path.read_text(encoding="utf-8"))
-            if isinstance(loaded, dict):
+            loaded = cast(object, json.loads(manifest_path.read_text(encoding="utf-8")))
+            if is_record(loaded):
                 manifest.update(loaded)
         except (OSError, json.JSONDecodeError) as error:
             raise StagingError(f"Cannot refresh rollback checkpoint manifest: {error}") from error
@@ -198,7 +201,7 @@ def republish_rollback_checkpoint_locked(
             f"Rollback checkpoint manifest has no recognized /Applications source: {manifest_path}"
         )
     if isinstance(previous_created_at, str):
-        manifest.setdefault("originalCreatedAt", previous_created_at)
+        _ = manifest.setdefault("originalCreatedAt", previous_created_at)
     manifest.update({
         "version": 2,
         "createdAt": now.isoformat(),
@@ -210,7 +213,7 @@ def republish_rollback_checkpoint_locked(
     try:
         with temporary_manifest.open("x", encoding="utf-8") as stream:
             json.dump(manifest, stream, sort_keys=True)
-            stream.write("\n")
+            _ = stream.write("\n")
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary_manifest, manifest_path)
@@ -280,10 +283,10 @@ def prune_backups(
     payloads: list[dict[str, object]] = []
     for line in result.stdout.splitlines():
         try:
-            payload = json.loads(line)
+            payload = cast(object, json.loads(line))
         except json.JSONDecodeError:
             continue
-        if isinstance(payload, dict):
+        if is_record(payload):
             payloads.append(payload)
     if not payloads or payloads[-1].get("apply") is not True:
         raise StagingError("staging-retention did not confirm applied retention")

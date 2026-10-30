@@ -2,8 +2,14 @@
   "package": "sprintf-js",
   "base_version": "1.1.3",
   "base_source_sha256": "95add43f116385be221745307fae02d06751b01d4f939df1debb17dbe2ebf4eb",
-  "patched_source_sha256": "fee916f51a137a5c222b27313ee77bbf3a8ca052ada2c175dc5daf36023e206a",
+  "patched_source_sha256": "db4a58aefe91a16758a2a8134b5c2fb9b00decb03935a17e9ee257595934c989",
   "source": "https://registry.npmjs.org/sprintf-js/-/sprintf-js-1.1.3.tgz",
   "reason": "Latest stable upstream plus existing local GHSA-hp3w-g68c-fv3c width, precision and cache bounds; version 1.1.4 is local, not a registry release.",
-  "regression_test": "packages/shared/src/__tests__/security-hardening.test.ts"
+  "regression_test": "packages/shared/src/__tests__/security-hardening.test.ts",
+  "typescript_source_sha256": "925a6974662f23e73bffd2fd81e16539cf7542ef96c62a9264d8ef3fe2ebdf64",
+  "generator_command": [
+    "bun",
+    "run",
+    "scripts/build-sprintf-vendor.ts"
+  ]
 }

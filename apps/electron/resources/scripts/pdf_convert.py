@@ -1,32 +1,69 @@
+from pypdf.errors import PyPdfError
+
 """Native PDF commands, registered on the shared Click group."""
 
+from collections.abc import Sequence
+from importlib import import_module
+from io import BytesIO
+from typing import Protocol, cast
+
 from pdf_common import (
-    io,
-    json,
-    math,
-    sys,
-    zlib,
     Path,
-    click,
-    pdfium,
-    PdfReader,
-    PdfWriter,
-    BooleanObject,
-    NameObject,
-    RectangleObject,
-    PAGE_SIZES,
-    write_output,
-    write_pdf,
-    parse_page_range,
-    check_output_differs,
-    parse_color,
     _render_page_to_pil,
-    _make_watermark_pdf,
-    _pdf_escape,
-    _make_text_overlay_pdf,
-    _pil_to_image_pdf_page,
     cli,
+    click,
+    io,
+    parse_page_range,
+    pdfium,
+    sys,
 )
+
+_PDF_OPERATION_ERRORS = (OSError, ValueError, TypeError, RuntimeError, KeyError, IndexError, ImportError, PyPdfError)
+
+class _DocxDocumentLike(Protocol):
+    def add_paragraph(self, text: str) -> object: ...
+
+    def add_page_break(self) -> object: ...
+
+    def save(self, path: str) -> None: ...
+
+
+class _PictureCollectionLike(Protocol):
+    def add_picture(self, image: BytesIO, left: object, top: object, width: object, height: object) -> object: ...
+
+
+class _SlideLike(Protocol):
+    shapes: _PictureCollectionLike
+
+
+class _SlideCollectionLike(Protocol):
+    def add_slide(self, layout: object) -> _SlideLike: ...
+
+
+class _PresentationLike(Protocol):
+    slide_width: int
+    slide_height: int
+    slide_layouts: Sequence[object]
+    slides: _SlideCollectionLike
+
+    def save(self, path: str) -> None: ...
+
+
+def _as_presentation(value: object) -> _PresentationLike:
+    """Adapt python-pptx after checking its runtime presentation surface."""
+    if not callable(getattr(value, "save", None)):
+        raise TypeError("Presentation does not expose save")
+    if not all(hasattr(value, name) for name in ("slide_width", "slide_height", "slide_layouts", "slides")):
+        raise TypeError("Presentation is missing slide collections")
+    return cast(_PresentationLike, value)
+
+
+def _as_docx_document(value: object) -> _DocxDocumentLike:
+    """Adapt python-docx after checking its runtime document surface."""
+    if not all(callable(getattr(value, name, None)) for name in ("add_paragraph", "add_page_break", "save")):
+        raise TypeError("Document does not implement the python-docx conversion interface")
+    return cast(_DocxDocumentLike, value)
+
 
 
 @cli.command("to-image")
@@ -56,7 +93,7 @@ def to_image(file: str, fmt: str, dpi: int, pages: str | None, output: str) -> N
             click.echo(f"Saved {out_path}", err=True)
 
         click.echo(f"Converted {len(indices)} pages to {fmt.upper()} in {output}", err=True)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -70,16 +107,17 @@ def from_image(files: tuple[str, ...], output: str) -> None:
     Each image becomes one page. Supports PNG, JPG, BMP, GIF, TIFF, WebP.
     """
     try:
-        import img2pdf
-
-        img_data = []
-        for img_path in files:
-            img_data.append(Path(img_path).read_bytes())
-
-        pdf_bytes = img2pdf.convert(img_data)
-        Path(output).write_bytes(pdf_bytes)
+        module = import_module("img2pdf")
+        converter: object = getattr(module, "convert", None)
+        if not callable(converter):
+            raise TypeError("img2pdf does not expose convert")
+        img_data: list[bytes] = [Path(img_path).read_bytes() for img_path in files]
+        pdf_bytes: object = converter(img_data)
+        if not isinstance(pdf_bytes, bytes):
+            raise TypeError("img2pdf.convert did not return bytes")
+        _ = Path(output).write_bytes(pdf_bytes)
         click.echo(f"PDF written to {output} ({len(files)} pages from images)", err=True)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -97,20 +135,20 @@ def to_docx(file: str, pages: str | None, output: str) -> None:
         total = len(pdf)
         indices = parse_page_range(pages, total) if pages else list(range(total))
 
-        docx_doc = DocxDocument()
+        docx_doc = _as_docx_document(cast(object, DocxDocument()))
         for i, idx in enumerate(indices):
             page = pdf[idx]
             textpage = page.get_textpage()
             text = textpage.get_text_bounded()
             for line in text.splitlines():
                 if line.strip():
-                    docx_doc.add_paragraph(line.strip())
+                    _ = docx_doc.add_paragraph(line.strip())
             if i < len(indices) - 1:
-                docx_doc.add_page_break()
+                _ = docx_doc.add_page_break()
 
         docx_doc.save(output)
         click.echo(f"DOCX written to {output}", err=True)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -123,7 +161,7 @@ def to_docx(file: str, pages: str | None, output: str) -> None:
 def to_pptx(file: str, dpi: int, pages: str | None, output: str) -> None:
     """Convert PDF pages to PowerPoint slides (image-based)."""
     from pptx import Presentation
-    from pptx.util import Emu
+    from pptx.util import Emu, Inches
 
     try:
         pdf = pdfium.PdfDocument(file)
@@ -134,7 +172,7 @@ def to_pptx(file: str, dpi: int, pages: str | None, output: str) -> None:
             click.echo("Error: no pages selected for conversion.", err=True)
             sys.exit(1)
 
-        prs = Presentation()
+        prs = _as_presentation(cast(object, Presentation()))
 
         # Set slide size to match first page aspect ratio (points -> EMU: 1pt = 12700 EMU)
         first_page = pdf[indices[0]]
@@ -149,16 +187,16 @@ def to_pptx(file: str, dpi: int, pages: str | None, output: str) -> None:
 
             img_buffer = io.BytesIO()
             img.save(img_buffer, format="PNG")
-            img_buffer.seek(0)
+            _ = img_buffer.seek(0)
 
             slide = prs.slides.add_slide(blank_layout)
-            slide.shapes.add_picture(
-                img_buffer, 0, 0,
+            _ = slide.shapes.add_picture(
+                img_buffer, Inches(0), Inches(0),
                 prs.slide_width, prs.slide_height,
             )
 
         prs.save(output)
         click.echo(f"PPTX written to {output} ({len(indices)} slides)", err=True)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)

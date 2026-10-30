@@ -1,39 +1,49 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+import logging
 import plistlib
-from typing import TypeAlias, Callable, Sequence
+from collections.abc import Sequence
+from pathlib import Path
+from typing import cast
 
-from robb_retention_files import (
-    JsonValue,
-    LABEL,
-    Runner,
-    Checkpoint,
-    JOURNAL_NAME,
-    JOURNAL_CONTRACT,
-    snapshot_regular_file,
-    fsync_directory,
-    _mark,
-)
 from robb_retention_atomic import (
-    quarantine_path,
-    _delete_verified_quarantine,
+    delete_verified_quarantine,
     quarantine_and_unlink,
+    quarantine_path,
     swap_verified,
     verified_replace,
 )
+from robb_retention_files import (
+    ARTIFACT_NAMES,
+    JOURNAL_CONTRACT,
+    JOURNAL_NAME,
+    LABEL,
+    ArtifactState,
+    Checkpoint,
+    IdentityRecord,
+    JournalArtifact,
+    RetentionJournal,
+    Runner,
+    fsync_directory,
+    is_record,
+    mark_checkpoint,
+    snapshot_regular_file,
+)
 from robb_retention_journal import (
-    launchctl,
-    service_is_loaded,
-    unload_for_rollback,
     identity_matches,
+    launchctl,
     load_journal_file,
     load_pending_journal,
+    service_is_loaded,
+    unload_for_rollback,
 )
 
-def _artifact_state(artifact: dict[str, JsonValue], *, require_restore_backup: bool,
-                    allow_partial_staged: bool = False) -> dict[str, JsonValue]:
+logger = logging.getLogger(__name__)
+
+
+def _artifact_state(artifact: JournalArtifact, *, require_restore_backup: bool,
+                    allow_partial_staged: bool = False) -> ArtifactState:
     previous = artifact['previous']
     replacement = artifact['replacement']
     replacement_has_inode = replacement['device'] is not None
@@ -99,23 +109,23 @@ def _artifact_state(artifact: dict[str, JsonValue], *, require_restore_backup: b
         'stagedOwnedPartial': staged_owned_partial,
     }
 
-def validate_transaction_state(journal: dict[str, JsonValue]) -> dict[str, dict[str, JsonValue]]:
+def validate_transaction_state(journal: RetentionJournal) -> dict[str, ArtifactState]:
     require_restore_backup = journal['phase'] != 'committed'
     return {
         name: _artifact_state(
             journal[name], require_restore_backup=require_restore_backup,
             allow_partial_staged=journal['phase'] == 'initializing',
-        ) for name in ('script', 'plist')
+        ) for name in ARTIFACT_NAMES
     }
 
 def _unlink_known(
     path: Path,
-    expected: dict[str, JsonValue],
+    expected: IdentityRecord,
     *,
     require_inode: bool,
     quarantine: Path | None = None,
     operation: str = 'cleanup',
-    alternatives: Sequence[tuple[dict[str, JsonValue], bool]] = (),
+    alternatives: Sequence[tuple[IdentityRecord, bool]] = (),
     allow_owned_partial: bool = False,
 ) -> None:
     quarantine = quarantine or quarantine_path(path)
@@ -139,7 +149,7 @@ def _unlink_known(
     if not matched:
         raise RuntimeError(f'Refusing to delete unowned transaction file: {path}')
     if from_quarantine:
-        _delete_verified_quarantine(quarantine, snapshot, operation=operation)
+        delete_verified_quarantine(quarantine, snapshot, operation=operation)
         return
     quarantine_and_unlink(
         path,
@@ -149,8 +159,8 @@ def _unlink_known(
     )
 
 def unlink_staged_artifact(
-    artifact: dict[str, JsonValue],
-    state: dict[str, JsonValue],
+    artifact: JournalArtifact,
+    state: ArtifactState,
 ) -> None:
     staged = Path(artifact['staged'])
     replacement = artifact['replacement']
@@ -169,6 +179,8 @@ def unlink_staged_artifact(
         )
     else:
         expected = previous if state['stagedKind'] == 'displacedPrevious' else replacement
+        if expected is None:
+            raise RuntimeError('Displaced staged file has no recorded previous identity')
         alternatives = (
             ((previous, True),) if previous is not None and expected is replacement else ()
         )
@@ -186,7 +198,7 @@ def unlink_staged_artifact(
             allow_owned_partial=replacement['device'] is None,
         )
 
-def publish_artifact(artifact: dict[str, JsonValue]) -> None:
+def publish_artifact(artifact: JournalArtifact) -> None:
     state = _artifact_state(artifact, require_restore_backup=True)
     target = Path(artifact['target'])
     staged = Path(artifact['staged'])
@@ -214,13 +226,13 @@ def publish_artifact(artifact: dict[str, JsonValue]) -> None:
     if published['targetKind'] != 'replacement':
         raise RuntimeError(f'Transaction publication did not install replacement: {target}')
 
-def restore_artifact(artifact: dict[str, JsonValue], *, allow_partial_staged: bool) -> None:
+def restore_artifact(artifact: JournalArtifact, *, allow_partial_staged: bool) -> None:
     state = _artifact_state(
         artifact,
         require_restore_backup=True,
         allow_partial_staged=allow_partial_staged,
     )
-    target, backup, staged = map(Path, (
+    target, backup, _staged = map(Path, (
         artifact['target'], artifact['backup'], artifact['staged'],
     ))
     previous, replacement = artifact['previous'], artifact['replacement']
@@ -277,7 +289,7 @@ def restore_artifact(artifact: dict[str, JsonValue], *, allow_partial_staged: bo
         )
     unlink_staged_artifact(artifact, state)
 
-def remove_reserved_next_journal(journal: dict[str, JsonValue]) -> None:
+def remove_reserved_next_journal(journal: RetentionJournal) -> None:
     path = Path(journal['nextJournal'])
     candidate = path if path.exists() or path.is_symlink() else quarantine_path(path)
     snapshot = snapshot_regular_file(candidate, require_owner=True)
@@ -287,10 +299,10 @@ def remove_reserved_next_journal(journal: dict[str, JsonValue]) -> None:
             or path.parent != Path(journal['script']['target']).parent):
         raise RuntimeError(f'Refusing to delete unowned journal staging file: {path}')
     try:
-        candidate_journal = json.loads(snapshot.data)
+        candidate_journal = cast(object, json.loads(snapshot.data))
     except (UnicodeDecodeError, json.JSONDecodeError):
         candidate_journal = None
-    if isinstance(candidate_journal, dict) and (
+    if is_record(candidate_journal) and (
         candidate_journal.get('token') != journal['token']
         or candidate_journal.get('contract') != JOURNAL_CONTRACT
     ):
@@ -304,11 +316,11 @@ def remove_reserved_next_journal(journal: dict[str, JsonValue]) -> None:
             path, snapshot, operation='cleanup-next-journal',
         )
     else:
-        _delete_verified_quarantine(
+        delete_verified_quarantine(
             candidate, snapshot, operation='cleanup-next-journal',
         )
 
-def remove_main_journal(journal: dict[str, JsonValue], *, support: Path, agents: Path) -> None:
+def remove_main_journal(journal: RetentionJournal, *, support: Path, agents: Path) -> None:
     path = support / JOURNAL_NAME
     candidate = path if path.exists() or path.is_symlink() else quarantine_path(path)
     current = load_journal_file(candidate, support=support, agents=agents)
@@ -322,15 +334,15 @@ def remove_main_journal(journal: dict[str, JsonValue], *, support: Path, agents:
             path, snapshot, operation='cleanup-main-journal',
         )
     else:
-        _delete_verified_quarantine(
+        delete_verified_quarantine(
             candidate, snapshot, operation='cleanup-main-journal',
         )
 
-def cleanup_transaction_artifacts(journal: dict[str, JsonValue], *, support: Path,
+def cleanup_transaction_artifacts(journal: RetentionJournal, *, support: Path,
                                   agents: Path,
                                   checkpoint: Checkpoint | None = None) -> None:
     states = validate_transaction_state(journal)
-    for name in ('script', 'plist'):
+    for name in ARTIFACT_NAMES:
         artifact = journal[name]
         previous, replacement = artifact['previous'], artifact['replacement']
         if previous is not None:
@@ -344,12 +356,12 @@ def cleanup_transaction_artifacts(journal: dict[str, JsonValue], *, support: Pat
         elif Path(artifact['backup']).exists() or Path(artifact['backup']).is_symlink():
             raise RuntimeError(f'Refusing unexpected transaction backup: {artifact["backup"]}')
         unlink_staged_artifact(artifact, states[name])
-        _mark(checkpoint, f'cleanup_{name}_artifacts')
+        mark_checkpoint(checkpoint, f'cleanup_{name}_artifacts')
     remove_reserved_next_journal(journal)
-    _mark(checkpoint, 'cleanup_next_journal')
-    _mark(checkpoint, 'before_journal_remove')
+    mark_checkpoint(checkpoint, 'cleanup_next_journal')
+    mark_checkpoint(checkpoint, 'before_journal_remove')
     remove_main_journal(journal, support=support, agents=agents)
-    _mark(checkpoint, 'journal_removed')
+    mark_checkpoint(checkpoint, 'journal_removed')
 
 def recover_pending_installation(*, support: Path, agents: Path, runner: Runner,
                                  checkpoint: Checkpoint | None = None) -> str | None:
@@ -359,7 +371,7 @@ def recover_pending_installation(*, support: Path, agents: Path, runner: Runner,
     target, domain = journal['target'], journal['domain']
     states = validate_transaction_state(journal)
     if journal['phase'] == 'committed':
-        if any(states[name]['targetKind'] != 'replacement' for name in ('script', 'plist')):
+        if any(states[name]['targetKind'] != 'replacement' for name in ARTIFACT_NAMES):
             raise RuntimeError('Committed retention installation no longer matches its journal')
         if not service_is_loaded(runner, target):
             raise RuntimeError('Committed retention LaunchAgent is not loaded')
@@ -370,11 +382,11 @@ def recover_pending_installation(*, support: Path, agents: Path, runner: Runner,
 
     expected_kinds = {
         name: 'previous' if journal[name]['previous'] is not None else 'absent'
-        for name in ('script', 'plist')
+        for name in ARTIFACT_NAMES
     }
     pair_is_previous = all(
         states[name]['targetKind'] == expected_kinds[name]
-        for name in ('script', 'plist')
+        for name in ARTIFACT_NAMES
     )
     if pair_is_previous:
         loaded = service_is_loaded(runner, target)
@@ -384,7 +396,7 @@ def recover_pending_installation(*, support: Path, agents: Path, runner: Runner,
             # restoration so a process death after target -> quarantine on a
             # first install cannot orphan the replacement when both targets
             # now look absent.
-            for name in ('script', 'plist'):
+            for name in ARTIFACT_NAMES:
                 restore_artifact(
                     journal[name],
                     allow_partial_staged=journal['phase'] == 'initializing',
@@ -400,13 +412,15 @@ def recover_pending_installation(*, support: Path, agents: Path, runner: Runner,
     try:
         unload_for_rollback(runner, target)
     except Exception as error:
+        logger.exception("Failure during recover_pending_installation")
         errors.append(f'cannot unload failed LaunchAgent: {error}')
-    for name in ('script', 'plist'):
+    for name in ARTIFACT_NAMES:
         try:
             restore_artifact(
                 journal[name], allow_partial_staged=journal['phase'] == 'initializing',
             )
         except Exception as error:
+            logger.exception("Failure during recover_pending_installation")
             errors.append(f'cannot restore {journal[name]["target"]}: {error}')
 
     restored_pair = False
@@ -414,7 +428,7 @@ def recover_pending_installation(*, support: Path, agents: Path, runner: Runner,
         final_states = validate_transaction_state(journal)
         restored_pair = all(
             final_states[name]['targetKind'] == expected_kinds[name]
-            for name in ('script', 'plist')
+            for name in ARTIFACT_NAMES
         )
         if not restored_pair:
             errors.append('helper/plist pair did not return to its previous state')
@@ -422,6 +436,7 @@ def recover_pending_installation(*, support: Path, agents: Path, runner: Runner,
             fsync_directory(Path(journal['script']['target']).parent)
             fsync_directory(Path(journal['plist']['target']).parent)
     except Exception as error:
+        logger.exception("Failure during recover_pending_installation")
         errors.append(f'cannot verify restored transaction state: {error}')
 
     # Never bootstrap against a partly restored helper/plist pair.
@@ -432,18 +447,20 @@ def recover_pending_installation(*, support: Path, agents: Path, runner: Runner,
             )
             if plist_snapshot is None:
                 raise RuntimeError('previous LaunchAgent plist is missing')
-            configuration = plistlib.loads(plist_snapshot.data)
-            if not isinstance(configuration, dict) or configuration.get('Label') != LABEL:
+            configuration = cast(object, plistlib.loads(plist_snapshot.data))
+            if not is_record(configuration) or configuration.get('Label') != LABEL:
                 raise RuntimeError('previous LaunchAgent plist has an unexpected identity')
-            launchctl(runner, ['bootstrap', domain, journal['plist']['target']], check=True)
-            launchctl(runner, ['print', target], check=True)
+            _ = launchctl(runner, ['bootstrap', domain, journal['plist']['target']], check=True)
+            _ = launchctl(runner, ['print', target], check=True)
         except Exception as error:
+            logger.exception("Failure during recover_pending_installation")
             errors.append(f'cannot rebootstrap previous LaunchAgent: {error}')
     elif restored_pair:
         try:
             if service_is_loaded(runner, target):
                 errors.append('failed LaunchAgent remains loaded after rollback')
         except Exception as error:
+            logger.exception("Failure during recover_pending_installation")
             errors.append(f'cannot confirm unloaded rollback state: {error}')
     if errors:
         raise RuntimeError('; '.join(errors))

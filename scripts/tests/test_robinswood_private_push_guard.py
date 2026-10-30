@@ -1,48 +1,57 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
-import importlib.util
 import json
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
+from typing import ClassVar, override
 from unittest.mock import patch
 
-
-SCRIPT = Path(__file__).resolve().parents[1] / "robinswood-private-push-guard.py"
-SPEC = importlib.util.spec_from_file_location("private_push_guard", SCRIPT)
-assert SPEC and SPEC.loader
-GUARD = importlib.util.module_from_spec(SPEC)
-sys.modules[SPEC.name] = GUARD
-SPEC.loader.exec_module(GUARD)
+SCRIPT = Path(__file__).resolve().parents[1] / "robinswood_private_push_guard.py"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+try:
+    import robinswood_private_push_guard as GUARD
+finally:
+    _ = sys.path.pop(0)
 PUBLIC_URL = "https://github.com/robinswood-io/robb-agents.git"
 PRIVATE_URL = "https://github.com/robinswood-io/robb-agents-private.git"
 ZERO = "0" * 40
 
 
 class PrivatePushGuardTests(unittest.TestCase):
+    temp: ClassVar[tempfile.TemporaryDirectory[str]]
+    repo: ClassVar[Path]
+    base: ClassVar[str]
+    private_root: ClassVar[str]
+    private_tip: ClassVar[str]
+    private_tag: ClassVar[str]
+    public_tip: ClassVar[str]
+    public_tag: ClassVar[str]
+    boundary: ClassVar[GUARD.PrivateBoundary]
+
     @classmethod
+    @override
     def setUpClass(cls) -> None:
         cls.temp = tempfile.TemporaryDirectory(prefix="robb-push-guard-")
         cls.repo = Path(cls.temp.name)
-        cls.git("init", "-q")
-        cls.git("config", "user.name", "Boundary test")
-        cls.git("config", "user.email", "boundary@example.invalid")
-        cls.git("commit", "--allow-empty", "-qm", "public base")
+        _ = cls.git("init", "-q")
+        _ = cls.git("config", "user.name", "Boundary test")
+        _ = cls.git("config", "user.email", "boundary@example.invalid")
+        _ = cls.git("commit", "--allow-empty", "-qm", "public base")
         cls.base = cls.git("rev-parse", "HEAD")
-        cls.git("checkout", "-qb", "private-work")
-        cls.git("commit", "--allow-empty", "-qm", "private root")
+        _ = cls.git("checkout", "-qb", "private-work")
+        _ = cls.git("commit", "--allow-empty", "-qm", "private root")
         cls.private_root = cls.git("rev-parse", "HEAD")
-        cls.git("commit", "--allow-empty", "-qm", "private descendant")
+        _ = cls.git("commit", "--allow-empty", "-qm", "private descendant")
         cls.private_tip = cls.git("rev-parse", "HEAD")
-        cls.git("tag", "-am", "private annotated tag", "private-tag")
+        _ = cls.git("tag", "-am", "private annotated tag", "private-tag")
         cls.private_tag = cls.git("rev-parse", "refs/tags/private-tag")
-        cls.git("checkout", "-qb", "public-fix", cls.base)
-        cls.git("commit", "--allow-empty", "-qm", "trivial public fix")
+        _ = cls.git("checkout", "-qb", "public-fix", cls.base)
+        _ = cls.git("commit", "--allow-empty", "-qm", "trivial public fix")
         cls.public_tip = cls.git("rev-parse", "HEAD")
-        cls.git("tag", "-am", "public annotated tag", "public-tag")
+        _ = cls.git("tag", "-am", "public annotated tag", "public-tag")
         cls.public_tag = cls.git("rev-parse", "refs/tags/public-tag")
         cls.boundary = {
             "version": 1,
@@ -57,6 +66,7 @@ class PrivatePushGuardTests(unittest.TestCase):
         }
 
     @classmethod
+    @override
     def tearDownClass(cls) -> None:
         cls.temp.cleanup()
 
@@ -67,7 +77,7 @@ class PrivatePushGuardTests(unittest.TestCase):
     def record(self, sha: str, local: str = "refs/heads/fix", remote: str = "refs/heads/fix") -> str:
         return f"{local} {sha} {remote} {ZERO}\n"
 
-    def validate(self, records: str, location: str = PUBLIC_URL, boundary: dict | None = None) -> None:
+    def validate(self, records: str, location: str = PUBLIC_URL, boundary: GUARD.PrivateBoundary | None = None) -> None:
         GUARD.validate_push(location, records, cwd=self.repo, boundary=boundary or self.boundary)
 
     def test_trivial_public_branch_allowed_without_network(self) -> None:
@@ -76,7 +86,7 @@ class PrivatePushGuardTests(unittest.TestCase):
             verify.assert_not_called()
 
     def test_public_clone_does_not_need_private_commit_objects(self) -> None:
-        boundary = {**self.boundary, "privateCommitRoots": ["9" * 40]}
+        boundary: GUARD.PrivateBoundary = {**self.boundary, "privateCommitRoots": ["9" * 40]}
         self.validate(self.record(self.public_tip), boundary=boundary)
 
     def test_named_private_branches_rejected_even_before_private_commit(self) -> None:
@@ -139,18 +149,23 @@ class PrivatePushGuardTests(unittest.TestCase):
                 self.validate(self.record(self.private_tip), location=url)
 
     def test_unverifiable_private_destination_rejected(self) -> None:
-        with patch.object(GUARD, "verify_private_repository", side_effect=GUARD.GuardError("unavailable")):
-            with self.assertRaises(GUARD.GuardError):
-                self.validate(self.record(self.private_tip), location=PRIVATE_URL)
+        with (
+            patch.object(GUARD, 'verify_private_repository', side_effect=GUARD.GuardError('unavailable')),
+            self.assertRaises(GUARD.GuardError),
+        ):
+            self.validate(self.record(self.private_tip), location=PRIVATE_URL)
 
     def test_github_identity_and_visibility_must_both_match(self) -> None:
         valid = {"private": True, "visibility": "private", "full_name": "robinswood-io/robb-agents-private"}
         with patch.object(GUARD, "command", return_value=json.dumps(valid)):
             GUARD.verify_private_repository(self.boundary["privateRepository"], cwd=self.repo)
         for invalid in ({**valid, "private": False}, {**valid, "visibility": "public"}, {**valid, "full_name": "other/repo"}, "bad"):
-            with self.subTest(invalid=invalid), patch.object(GUARD, "command", return_value=json.dumps(invalid)):
-                with self.assertRaises(GUARD.GuardError):
-                    GUARD.verify_private_repository(self.boundary["privateRepository"], cwd=self.repo)
+            with (
+                self.subTest(invalid=invalid),
+                patch.object(GUARD, 'command', return_value=json.dumps(invalid)),
+                self.assertRaises(GUARD.GuardError),
+            ):
+                GUARD.verify_private_repository(self.boundary["privateRepository"], cwd=self.repo)
 
     def test_malformed_input_rejected(self) -> None:
         for record in ("broken", "\n", self.record("not-an-object"), "ref " + self.base + " ref bad\n"):
@@ -158,9 +173,11 @@ class PrivatePushGuardTests(unittest.TestCase):
                 self.validate(record)
 
     def test_shallow_history_rejected(self) -> None:
-        with patch.object(GUARD, "command", return_value="true"):
-            with self.assertRaises(GUARD.GuardError):
-                self.validate(self.record(self.public_tip))
+        with (
+            patch.object(GUARD, 'command', return_value='true'),
+            self.assertRaises(GUARD.GuardError),
+        ):
+            self.validate(self.record(self.public_tip))
 
     def test_missing_commit_rejected(self) -> None:
         with self.assertRaises(GUARD.GuardError):
@@ -172,17 +189,17 @@ class PrivatePushGuardTests(unittest.TestCase):
             self.validate(self.record(tree))
 
     def test_replace_ref_cannot_hide_private_parent(self) -> None:
-        self.git("replace", self.private_tip, self.public_tip)
+        _ = self.git("replace", self.private_tip, self.public_tip)
         try:
             with self.assertRaises(GUARD.GuardError):
                 self.validate(self.record(self.private_tip))
         finally:
-            self.git("replace", "-d", self.private_tip)
+            _ = self.git("replace", "-d", self.private_tip)
 
     def test_grafts_rejected(self) -> None:
         grafts = self.repo / ".git/info/grafts"
         grafts.parent.mkdir(parents=True, exist_ok=True)
-        grafts.write_text(self.private_tip + "\n")
+        _ = grafts.write_text(self.private_tip + "\n")
         try:
             with self.assertRaises(GUARD.GuardError):
                 self.validate(self.record(self.private_tip))
@@ -192,11 +209,11 @@ class PrivatePushGuardTests(unittest.TestCase):
     def test_missing_or_invalid_manifest_rejected(self) -> None:
         path = self.repo / "boundary.json"
         with self.assertRaises(GUARD.GuardError):
-            GUARD.load_boundary(path)
+            _ = GUARD.load_boundary(path)
         for content in ("bad", "[]", json.dumps({**self.boundary, "privateCommitRoots": []})):
-            path.write_text(content)
+            _ = path.write_text(content)
             with self.assertRaises(GUARD.GuardError):
-                GUARD.load_boundary(path)
+                _ = GUARD.load_boundary(path)
 
     def test_checked_in_manifest_is_valid(self) -> None:
         boundary = GUARD.load_boundary(GUARD.MANIFEST)
@@ -206,4 +223,4 @@ class PrivatePushGuardTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    _ = unittest.main()

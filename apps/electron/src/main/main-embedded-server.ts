@@ -26,10 +26,10 @@ import { CONFIG_DIR, getWorkspaces, getWorkspaceByNameOrId } from '@craft-agent/
 import { resolveAllowedSessionCookieOrigins, resolveSecureRemoteHost } from './remote-access-security';
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces';
 
-import { isDebugMode, mainLog, messagingGatewayLog } from './logger';
+import { mainLog, messagingGatewayLog } from './logger';
 import { updateBadgeCount } from './notifications';
 
-import { validateGitBashPath, checkVCRedistInstalled } from '@craft-agent/server-core/services';
+import { validateGitBashPath } from '@craft-agent/server-core/services';
 
 import { createWebuiHandler, nodeHttpAdapter, RemoteDeviceRegistry, createWebuiRpcAuthorizer, validateSession } from '@craft-agent/server-core/webui';
 
@@ -58,22 +58,6 @@ if (!isClientOnly) {
             delete process.env["CLAUDE_CODE_GIT_BASH_PATH"]
             mainLog.warn(`Cleared invalid persisted Git Bash path: ${gitBashPath}`)
           }
-        }
-      }
-
-      // Check for VC++ Redistributable on Windows (required by onnxruntime / markitdown).
-      // Without it, document conversion tools (PDF, PPTX, DOCX, XLSX) crash with DLL errors.
-      // Sets env var so renderer can show an actionable toast with install button.
-      if (process.platform === 'win32') {
-        const vcCheck = checkVCRedistInstalled()
-        if (!vcCheck.installed) {
-          mainLog.warn('[vcredist]', vcCheck.message)
-          process.env["CRAFT_VCREDIST_MISSING"] = '1'
-          if (vcCheck.downloadUrl) {
-            process.env["CRAFT_VCREDIST_URL"] = vcCheck.downloadUrl
-          }
-        } else if (isDebugMode) {
-          mainLog.info('[vcredist]', vcCheck.message)
         }
       }
 

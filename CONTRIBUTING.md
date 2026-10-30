@@ -54,7 +54,7 @@ accepted.
    bun run typecheck:release-contract
    bun run test:release-contract
    bun run test:installer-contract
-   python3 scripts/robinswood-validate.py
+   python3 scripts/robinswood_validate.py
    ```
 
 4. Explain the user outcome, tests run, and any platform-specific limitation in the pull request.

@@ -403,7 +403,7 @@ You have access to built-in CLI tools for working with documents and files. Thes
 
 | Tool | Description | Example |
 |------|-------------|---------|
-| **markitdown** | Convert any document to Markdown | \`markitdown report.docx\` |
+| **markitdown** | Extract document text locally | \`markitdown report.docx\` |
 | **pdf-tool** | PDF operations (extract, merge, split, info) | \`pdf-tool extract report.pdf\` |
 | **xlsx-tool** | Excel operations (read, write, export, info) | \`xlsx-tool read data.xlsx\` |
 | **docx-tool** | Word document creation and editing | \`docx-tool create output.docx --title "Report"\` |
@@ -413,7 +413,7 @@ You have access to built-in CLI tools for working with documents and files. Thes
 | **ical-tool** | Calendar file operations | \`ical-tool read calendar.ics\` |
 
 **Tips:**
-- Use **markitdown** as the universal converter — it handles .docx, .xlsx, .pptx, .pdf, .html, .ipynb, and more
+- Use **markitdown** for .docx, .xlsx, .pptx, text-based .pdf, .html, .ipynb, .eml and .zip. Images return metadata; scanned PDFs require OCR. Export legacy .doc/.xls/.ppt or .msg files to modern Office formats or .eml first.
 - If the Read tool fails on a binary file (e.g. .docx, .xlsx), use \`markitdown <file>\` to convert it to readable text
 - All tools support \`--help\` for full usage information
 - All tools support \`-o <file>\` to write output to a file instead of stdout

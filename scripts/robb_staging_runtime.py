@@ -2,24 +2,27 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 import time
+from pathlib import Path
+from typing import cast
 
+from robb_retention_files import is_record
 from robb_staging_common import (
     APP_ID,
-    StagingError,
     Runner,
+    StagingError,
     Swapper,
     run_command,
 )
 
+
 def parse_runtime_lock(lock_file: Path) -> tuple[int, int]:
     try:
-        payload = json.loads(lock_file.read_text(encoding="utf-8"))
+        payload = cast(object, json.loads(lock_file.read_text(encoding="utf-8")))
     except (OSError, json.JSONDecodeError) as error:
         raise StagingError(f"Runtime lock is missing or invalid: {lock_file}: {error}") from error
-    pid = payload.get("pid") if isinstance(payload, dict) else None
-    started_at = payload.get("startedAt") if isinstance(payload, dict) else None
+    pid = payload.get("pid") if is_record(payload) else None
+    started_at = payload.get("startedAt") if is_record(payload) else None
     if not isinstance(pid, int) or pid <= 0 or not isinstance(started_at, int) or started_at <= 0:
         raise StagingError(f"Runtime lock has invalid pid/startedAt: {lock_file}")
     return pid, started_at
@@ -57,7 +60,7 @@ def assert_application_stopped(app: Path, lock_file: Path, runner: Runner = run_
     if processes or lock_active:
         raise StagingError(
             "Robb Agents reopened before the atomic exchange; transaction aborted. "
-            f"Remaining processes={processes}, runtimeLockActive={lock_active}"
+            + f"Remaining processes={processes}, runtimeLockActive={lock_active}"
         )
 
 def wait_until_stopped(
@@ -75,8 +78,8 @@ def wait_until_stopped(
     processes = bundle_processes(app, runner)
     raise StagingError(
         "Robb Agents did not stop cleanly; no files were exchanged. "
-        f"Remaining processes={[(pid, command) for pid, command in processes]}, "
-        f"runtimeLockActive={runtime_lock_is_active(lock_file)}"
+        + f"Remaining processes={[(pid, command) for pid, command in processes]}, "
+        + f"runtimeLockActive={runtime_lock_is_active(lock_file)}"
     )
 
 def quit_application(
@@ -96,7 +99,7 @@ def quit_application(
             # merely by sending it an Apple Event.
             live_lock = False
     if bundle_processes(app, runner) or live_lock:
-        runner(
+        _ = runner(
             ["/usr/bin/osascript", "-e", f'tell application id "{APP_ID}" to quit'],
             check=False,
             timeout=max(5, timeout),
@@ -140,7 +143,7 @@ def launch_and_verify_runtime(
 ) -> dict[str, int | str]:
     lock_file = profile_root.resolve() / "robb-electron/.server.lock"
     launched_after_ms = int(time.time() * 1000)
-    runner(["/usr/bin/open", str(app.resolve())])
+    _ = runner(["/usr/bin/open", str(app.resolve())])
     return verify_runtime(
         app,
         lock_file,

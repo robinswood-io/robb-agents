@@ -40,7 +40,7 @@ export const TEXT_EXTENSIONS = new Set([
   '.csv', '.log', '.conf', '.ini', '.cfg',
 ]);
 
-// Office file extensions (will be converted to markdown via markitdown-js)
+// Office attachments: modern formats use the bundled local converter; legacy formats need export.
 export const OFFICE_EXTENSIONS: Record<string, string> = {
   '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

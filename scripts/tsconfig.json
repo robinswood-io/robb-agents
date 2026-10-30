@@ -24,10 +24,17 @@
       ],
       "@craft-agent/shared/*": [
         "../packages/shared/src/*"
+      ],
+      "@config/*": [
+        "../packages/shared/src/config/*"
       ]
     }
   },
   "include": [
-    "**/*.ts"
+    "**/*.ts",
+    "../eslint.config.ts",
+    "../apps/electron/eslint.rules.ts",
+    "../packages/*/eslint.rules.ts",
+    "../apps/electron/scripts/*.ts"
   ]
 }

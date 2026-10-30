@@ -244,8 +244,6 @@
   "toast.upToDate": "Naprakész vagy",
   "toast.updateAvailable": "A v{{version}} frissítés elérhető",
   "toast.updateReady": "A v{{version}} frissítés készen áll",
-  "toast.vcRedistNotFound": "Microsoft Visual C++ Redistributable nem található",
-  "toast.vcRedistNotFoundDesc": "A dokumentumeszközök (PDF, PPTX, DOCX, XLSX) működéséhez szükséges. Telepítés után indítsd újra az alkalmazást.",
   "toast.versionIsLatest": "A {{version}} verzió a legújabb.",
   "toast.webhookReplayCompleted": "Webhook visszajátszás befejezve",
   "toast.workspaceReconnected": "Munkaterület újracsatlakoztatva",

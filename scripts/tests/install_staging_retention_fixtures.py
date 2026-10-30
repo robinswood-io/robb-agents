@@ -1,31 +1,24 @@
 from __future__ import annotations
 
-import importlib.util
 import os
-from pathlib import Path
 import plistlib
 import subprocess
 import sys
 import tempfile
 import unittest
+from collections.abc import Callable
+from pathlib import Path
+from typing import cast, override
 from unittest import mock
 
-
-spec = importlib.util.spec_from_file_location(
-    'install_staging_retention',
-    Path(__file__).parents[1] / 'install-staging-retention.py',
-)
-installer = importlib.util.module_from_spec(spec)
-assert spec.loader is not None
-sys.modules[spec.name] = installer
 sys.path.insert(0, str(Path(__file__).parents[1]))
 try:
-    spec.loader.exec_module(installer)
+    import install_staging_retention as installer
+    import robb_retention_atomic as atomic
+    import robb_retention_journal as journal
+    import robb_retention_recovery as recovery
 finally:
-    sys.path.pop(0)
-atomic = sys.modules['robb_retention_atomic']
-journal = sys.modules['robb_retention_journal']
-recovery = sys.modules['robb_retention_recovery']
+    _ = sys.path.pop(0)
 production_renameatx_np = installer.renameatx_np
 
 
@@ -46,7 +39,7 @@ def emulate_renameatx_np(
     global _emulated_rename_counter
     if flags == installer.RENAME_EXCL:
         try:
-            os.stat(
+            _ = os.stat(
                 destination_name,
                 dir_fd=directory_descriptor,
                 follow_symlinks=False,
@@ -99,12 +92,12 @@ class LaunchctlRunner:
         fail_print_call: int | None = None,
         fail_print_from_call: int | None = None,
     ) -> None:
-        self.loaded = loaded
-        self.fail_bootstrap_call = fail_bootstrap_call
-        self.fail_print_call = fail_print_call
-        self.fail_print_from_call = fail_print_from_call
-        self.bootstrap_calls = 0
-        self.print_calls = 0
+        self.loaded: bool = loaded
+        self.fail_bootstrap_call: int | None = fail_bootstrap_call
+        self.fail_print_call: int | None = fail_print_call
+        self.fail_print_from_call: int | None = fail_print_from_call
+        self.bootstrap_calls: int = 0
+        self.print_calls: int = 0
         self.calls: list[list[str]] = []
 
     def __call__(
@@ -113,7 +106,7 @@ class LaunchctlRunner:
         *,
         check: bool,
         capture_output: bool = False,
-    ) -> subprocess.CompletedProcess:
+    ) -> subprocess.CompletedProcess[str]:
         del capture_output
         self.calls.append(arguments)
         action = arguments[1]
@@ -145,50 +138,82 @@ class LaunchctlRunner:
             raise AssertionError(f'Unexpected launchctl action: {action}')
         if check and returncode:
             raise subprocess.CalledProcessError(returncode, arguments)
-        return subprocess.CompletedProcess(arguments, returncode)
+        return subprocess.CompletedProcess[str](arguments, returncode)
 
 
 class InstallStagingRetentionTestCase(unittest.TestCase):
+    temporary: tempfile.TemporaryDirectory[str] | None = None
+
+    @property
+    def root(self) -> Path:
+        if self.temporary is None:
+            raise RuntimeError("Retention fixture is not set up")
+        return Path(self.temporary.name)
+
+    @property
+    def source(self) -> Path:
+        return self.root / 'repository-staging-retention.py'
+
+    @property
+    def support(self) -> Path:
+        return self.root / 'Library/Application Support/Robb Agents/Maintenance'
+
+    @property
+    def agents(self) -> Path:
+        return self.root / 'Library/LaunchAgents'
+
+    @property
+    def script(self) -> Path:
+        return self.support / 'staging-retention.py'
+
+    @property
+    def plist(self) -> Path:
+        return self.agents / f'{installer.LABEL}.plist'
+
+    @property
+    def old_script(self) -> bytes:
+        return b'#!/usr/bin/env python3\nprint("old")\n'
+
+    @property
+    def old_configuration(self) -> dict[str, object]:
+        return {'Label': installer.LABEL,
+                'ProgramArguments': ['/old/python', str(self.script), '--apply'],
+                'RunAtLoad': True}
+
+    @property
+    def old_plist(self) -> bytes:
+        return plistlib.dumps(self.old_configuration)
+
+
+    @override
     def setUp(self) -> None:
-        self.renameatx_patch = None
         if sys.platform != 'darwin':
-            self.renameatx_patch = mock.patch.object(
+            renameatx_patch = mock.patch.object(
                 atomic,
                 'renameatx_np',
                 side_effect=emulate_renameatx_np,
             )
-            self.renameatx_patch.start()
+            _ = cast(object, renameatx_patch.start())
+            self.addCleanup(renameatx_patch.stop)
         self.temporary = tempfile.TemporaryDirectory()
-        self.root = Path(self.temporary.name)
-        self.source = self.root / 'repository-staging-retention.py'
-        self.source.write_bytes(b'#!/usr/bin/env python3\nprint("new")\n')
-        self.support = self.root / 'Library/Application Support/Robb Agents/Maintenance'
-        self.agents = self.root / 'Library/LaunchAgents'
+        _ = self.source.write_bytes(b'#!/usr/bin/env python3\nprint("new")\n')
         self.support.mkdir(parents=True)
         self.agents.mkdir(parents=True)
-        self.script = self.support / 'staging-retention.py'
-        self.plist = self.agents / f'{installer.LABEL}.plist'
-        self.old_script = b'#!/usr/bin/env python3\nprint("old")\n'
-        self.old_configuration = {
-            'Label': installer.LABEL,
-            'ProgramArguments': ['/old/python', str(self.script), '--apply'],
-            'RunAtLoad': True,
-        }
-        self.old_plist = plistlib.dumps(self.old_configuration)
-        self.script.write_bytes(self.old_script)
+        _ = self.script.write_bytes(self.old_script)
         self.script.chmod(0o700)
-        self.plist.write_bytes(self.old_plist)
+        _ = self.plist.write_bytes(self.old_plist)
 
+    @override
     def tearDown(self) -> None:
-        self.temporary.cleanup()
-        if self.renameatx_patch is not None:
-            self.renameatx_patch.stop()
+        if self.temporary is not None:
+            self.temporary.cleanup()
+            self.temporary = None
 
     def run_install(
         self,
         runner: LaunchctlRunner,
         *,
-        checkpoint=None,
+        checkpoint: Callable[[str], None] | None = None,
     ) -> dict[str, str]:
         return installer.install(
             source_script=self.source,
@@ -215,7 +240,7 @@ class InstallStagingRetentionTestCase(unittest.TestCase):
         self,
         runner: LaunchctlRunner,
         *,
-        checkpoint=None,
+        checkpoint: Callable[[str], None] | None = None,
     ) -> str | None:
         lock_path = self.support / installer.INSTALL_LOCK_NAME
         with installer.open_install_lock(lock_path) as lock:
@@ -241,3 +266,15 @@ class InstallStagingRetentionTestCase(unittest.TestCase):
         self.assertTrue(runner.loaded)
         self.assertGreaterEqual(runner.bootstrap_calls, minimum_bootstraps)
         self.assert_no_transaction_artifacts()
+
+__all__ = [
+    'InstallStagingRetentionTestCase',
+    'LaunchctlRunner',
+    'SimulatedProcessDeath',
+    'atomic',
+    'installer',
+    'journal',
+    'production_renameatx_np',
+    'recovery',
+    'stat_mode',
+]

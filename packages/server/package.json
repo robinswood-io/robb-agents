@@ -22,7 +22,7 @@
   "scripts": {
     "start": "bun run src/index.ts",
     "generate-token": "bun run src/index.ts --generate-token",
-    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit"
+    "typecheck": "node ../../scripts/run-typescript.ts native --noEmit"
   },
   "dependencies": {
     "@craft-agent/core": "workspace:*",

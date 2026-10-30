@@ -14,8 +14,8 @@ import type { ClientConnection } from '../transport/server/shared.ts';
 import { IncomingMessage, type ServerResponse } from 'node:http';
 
 function fixtureSocket(readyState: number, onSend: (data: string) => void = () => {}): WebSocket {
-  // Bun needs server-only options that ws exposes only on its client overload.
-  const socket: unknown = Reflect.construct(WebSocket, [null, undefined, {}]);
+  // This unit-test double only exposes readyState/send; no transport is opened.
+  const socket: unknown = Object.create(WebSocket.prototype);
   if (!(socket instanceof WebSocket)) throw new TypeError('Expected a fixture WebSocket');
   Object.defineProperty(socket, 'readyState', { value: readyState });
   socket.send = data => { onSend(String(data)); };

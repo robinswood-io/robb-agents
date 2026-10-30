@@ -108,13 +108,13 @@
   transform: scale(var(--task-checkbox-active-scale));
 }
 
-.tiptap-editor .tiptap-prose ul[data-type="taskList"] li > label input[type='checkbox']:focus-visible + span {
-  box-shadow: 0 0 0 var(--task-checkbox-ring-size) color-mix(in oklch, var(--foreground) 18%, transparent);
-}
 
 .tiptap-editor .tiptap-prose ul[data-type="taskList"] li[data-checked='true'] > label > span {
   background-color: var(--foreground);
   border-color: transparent;
+}
+.tiptap-editor .tiptap-prose ul[data-type="taskList"] li > label input[type='checkbox']:focus-visible + span {
+  box-shadow: 0 0 0 var(--task-checkbox-ring-size) color-mix(in oklch, var(--foreground) 18%, transparent);
 }
 
 .tiptap-editor .tiptap-prose ul[data-type="taskList"] li[data-checked='false'] > label > span .tiptap-task-checkbox-path {

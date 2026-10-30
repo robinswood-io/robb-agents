@@ -10,7 +10,7 @@
   },
   "scripts": {
     "start": "bun run src/index.ts",
-    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit",
+    "typecheck": "node ../../scripts/run-typescript.ts native --noEmit",
     "test": "bun test src/"
   },
   "dependencies": {

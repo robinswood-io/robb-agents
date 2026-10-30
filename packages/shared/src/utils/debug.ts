@@ -29,28 +29,11 @@ function detectEnvironment(): Environment {
 }
 
 type DebugSink = { info: (message: string) => void };
-function isDebugSink(value: unknown): value is DebugSink {
-  return value !== null && typeof value === 'object' && 'info' in value && typeof value.info === 'function';
+let debugSink: DebugSink | null = null;
+/** Register the host logger at startup; shared browser code never imports Electron. */
+export function setDebugSink(sink: DebugSink | null): void {
+  debugSink = sink;
 }
-let electronLog: DebugSink | null = null;
-let electronLogChecked = false;
-
-function getElectronLog(): DebugSink | null {
-  if (electronLogChecked) {
-    return electronLog;
-  }
-  electronLogChecked = true;
-  try {
-    // Optional dependency - only available in Electron main process.
-    const loaded: unknown = require('electron-log/main');
-    const candidate = loaded !== null && typeof loaded === 'object' && 'default' in loaded && loaded.default != null ? loaded.default : loaded;
-    electronLog = isDebugSink(candidate) ? candidate : null;
-  } catch {
-    electronLog = null;
-  }
-  return electronLog;
-}
-
 /**
  * Enable debug logging. Call this when --debug flag is passed.
  */
@@ -109,10 +92,7 @@ function output(formatted: string): void {
   const env = detectEnvironment();
 
   // Mirror debug logs into electron-log when available so they appear in main.log.
-  if (env === 'electron-main') {
-    const log = getElectronLog();
-    log?.info?.(formatted.trim());
-  }
+  debugSink?.info(formatted.trim());
 
   if (env === 'electron-renderer') {
     // Use console.log in renderer for DevTools

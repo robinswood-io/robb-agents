@@ -1,61 +1,49 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import hashlib
 import json
+import logging
 import os
 import shutil
-import subprocess
-import sys
-import uuid
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import TypeAlias
+from datetime import UTC, datetime
 
-from lib.config_mutation import ConfigMutation, PROTECTED_CONFIG_FILES
+from lib.config_mutation import expected_manifest_count
 from oss_architecture_v2_policy import (
-    JsonValue,
-    ROOT,
-    CONFIG,
-    SCRIPTS,
+    ACTIVITIES,
     APPS,
-    OPS,
+    ARCHIVE,
+    BASELINE,
+    CONFIG,
+    MAKEFILE,
     MANIFEST,
     MAPPING,
-    SCHEDULES,
-    SIDE_EFFECTS,
-    MANIFEST_ONLY,
-    SCRIPT_COVERAGE,
-    BASELINE,
-    ACTIVITIES,
-    RELEASE_GATE,
-    SLO_WRAPPER,
-    README,
-    MAKEFILE,
+    OPS,
     P0_SCRIPT,
+    README,
+    RELEASE_GATE,
     REPORT_JSON,
     REPORT_MD,
-    STAMP,
-    ARCHIVE,
-    NEW_HELPERS,
-    CONSERVATIVE_MANUAL_HELPERS,
-    now_iso,
-    load_json,
-    archive_copy,
+    ROOT,
+    SCHEDULES,
+    SCRIPTS,
+    SLO_WRAPPER,
     atomic_write,
-    write_json,
+    load_json,
+    manifest_rows,
+    now_iso,
     replace_once,
     run,
-    manifest_rows,
-    mapping_rows,
-    schedule_rows,
-    schedule_legacy,
     schedule_fingerprint,
-    classify_side_effect,
-    update_side_effect_policy,
+    schedule_rows,
     update_manifest_only_policy,
     update_script_coverage,
+    update_side_effect_policy,
+    write_json,
 )
+from pydantic import JsonValue, TypeAdapter
+
+logger = logging.getLogger(__name__)
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
 
 
 def patch_activities(changes: list[dict[str, JsonValue]]) -> None:
@@ -86,7 +74,7 @@ def patch_activities(changes: list[dict[str, JsonValue]]) -> None:
     required = ("runtime_v2_bridge", "preflight_invocation", "run_structured_invocation", "unknown_automation_id")
     if not all(marker in text for marker in required) or "skeleton dispatch only" in text:
         raise RuntimeError("activities v2 integration markers incomplete")
-    atomic_write(ACTIVITIES, text, changes)
+    _ = atomic_write(ACTIVITIES, text, changes)
 
 
 def patch_release_gate(changes: list[dict[str, JsonValue]]) -> None:
@@ -117,7 +105,7 @@ def patch_release_gate(changes: list[dict[str, JsonValue]]) -> None:
     text = text.replace("updated_by='oss-release-gate-p8-effective-slo'", "updated_by='oss-release-gate-p9-runtime-v2'")
     if "'id':'architecture_v2'" not in text or "architectureV2Runs" not in text:
         raise RuntimeError("release gate v2 integration incomplete")
-    atomic_write(RELEASE_GATE, text, changes)
+    _ = atomic_write(RELEASE_GATE, text, changes)
 
 
 def patch_slo_wrapper(changes: list[dict[str, JsonValue]]) -> None:
@@ -128,13 +116,14 @@ def patch_slo_wrapper(changes: list[dict[str, JsonValue]]) -> None:
         text = replace_once(text, old, new, "slo-core")
     if new not in text:
         raise RuntimeError("SLO wrapper canonical core patch missing")
-    atomic_write(SLO_WRAPPER, text, changes)
+    _ = atomic_write(SLO_WRAPPER, text, changes)
 
 
 def patch_docs(changes: list[dict[str, JsonValue]]) -> None:
+    approved_count = expected_manifest_count(ROOT)
     readme = README.read_text(encoding="utf-8")
     begin, end = "<!-- ARCHITECTURE_V2_BEGIN -->", "<!-- ARCHITECTURE_V2_END -->"
-    section = f'''\n{begin}\n## Architecture agents v2 — 2026-07-12\n\n- Runtime typé : `packages/rbw_agent_runtime/` (Pydantic 2).\n- Catalogue modulaire : `config/agents-v2/catalog-v2.json` et fragments par domaine.\n- CLI : `PYTHONPATH=/srv/rbw-agents-oss/packages /srv/rbw-agents-oss/.venv/bin/python -m rbw_agent_runtime doctor`.\n- Temporal : cache mtime, policy preflight, backend `argv` pour les nouvelles specs et adaptateur `legacy_shell` explicite.\n- Inconnu/non-script : fail-closed, jamais de succès skeleton.\n- Guard : `scripts/oss_architecture_v2_guard.py`, intégré au release gate.\n- Baseline migrée : 193 wrappers et 139 schedules, sans changement de cadence.\n{end}\n'''
+    section = f'''\n{begin}\n## Architecture agents v2 — 2026-07-12\n\n- Runtime typé : `packages/rbw_agent_runtime/` (Pydantic 2).\n- Catalogue modulaire : `config/agents-v2/catalog-v2.json` et fragments par domaine.\n- CLI : `PYTHONPATH=/srv/rbw-agents-oss/packages /srv/rbw-agents-oss/.venv/bin/python -m rbw_agent_runtime doctor`.\n- Temporal : cache mtime, policy preflight, backend `argv` uniquement.\n- Inconnu/non-script : fail-closed, jamais de succès skeleton.\n- Guard : `scripts/oss_architecture_v2_guard.py`, intégré au release gate.\n- Baseline migrée : {approved_count} wrappers et 139 schedules, sans changement de cadence.\n{end}\n'''
     if begin in readme and end in readme:
         prefix = readme.split(begin, 1)[0]
         suffix = readme.split(end, 1)[1]
@@ -143,15 +132,15 @@ def patch_docs(changes: list[dict[str, JsonValue]]) -> None:
         readme = readme.rstrip() + "\n" + section
     readme = readme.replace("**Schedules prêts déclarés** : 29", "**Schedules configurés et contrôlés** : 139")
     readme = readme.replace("**Schedules actifs live** : 29 / 29", "**Schedules actifs live** : 139 / 139")
-    readme = readme.replace("**Couverture wrappers `standard-v1`** : 33 / 33", "**Wrappers au manifeste** : 193 / 193 catalogués en v2")
-    atomic_write(README, readme, changes)
+    readme = readme.replace("**Couverture wrappers `standard-v1`** : 33 / 33", f"**Wrappers au manifeste** : {approved_count} / {approved_count} catalogués en v2")
+    _ = atomic_write(README, readme, changes)
 
     makefile = MAKEFILE.read_text(encoding="utf-8")
     marker = "# Architecture agents v2"
     block = '''\n# Architecture agents v2\ncatalog-v2:\n\tPYTHONPATH=/srv/rbw-agents-oss/packages /srv/rbw-agents-oss/.venv/bin/python -m rbw_agent_runtime catalog build\n\nvalidate-v2:\n\tPYTHONPATH=/srv/rbw-agents-oss/packages /srv/rbw-agents-oss/.venv/bin/python -m rbw_agent_runtime catalog validate\n\ndoctor-v2:\n\tPYTHONPATH=/srv/rbw-agents-oss/packages /srv/rbw-agents-oss/.venv/bin/python -m rbw_agent_runtime doctor\n\nguard-v2:\n\t/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_architecture_v2_guard.py\n\nselftest-v2:\n\t/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_architecture_v2_selftest.py\n'''
     if marker not in makefile:
         makefile = makefile.rstrip() + "\n" + block
-    atomic_write(MAKEFILE, makefile, changes)
+    _ = atomic_write(MAKEFILE, makefile, changes)
 
 
 def restore_p0_bootstrap(changes: list[dict[str, JsonValue]]) -> dict[str, JsonValue]:
@@ -169,7 +158,7 @@ def restore_p0_bootstrap(changes: list[dict[str, JsonValue]]) -> dict[str, JsonV
         return {"ok": False, "error": "original_p0_backup_not_found", "candidates": [str(path) for path in candidates]}
     target = ARCHIVE / "bootstrap" / P0_SCRIPT.name
     target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(P0_SCRIPT, target)
+    _ = shutil.copy2(P0_SCRIPT, target)
     os.replace(selected, P0_SCRIPT)
     P0_SCRIPT.chmod(0o755)
     changes.append({"action": "restore_bootstrap", "path": str(P0_SCRIPT), "from": str(selected), "bootstrapArchive": str(target)})
@@ -189,10 +178,10 @@ def archive_active_backups(changes: list[dict[str, JsonValue]]) -> list[str]:
             relative = path.relative_to(ROOT)
             target = ARCHIVE / "active-backups" / relative
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(path), str(target))
+            _ = shutil.move(str(path), str(target))
             moved.append(str(relative))
     if moved:
-        changes.append({"action": "archive_active_backups", "count": len(moved), "paths": moved})
+        changes.append({"action": "archive_active_backups", "count": len(moved), "paths": list(moved)})
     return moved
 
 
@@ -229,30 +218,32 @@ def fix_secret_permissions(changes: list[dict[str, JsonValue]]) -> list[dict[str
 def _main_impl() -> None:
     ARCHIVE.mkdir(parents=True, exist_ok=True)
     changes: list[dict[str, JsonValue]] = []
-    steps: dict[str, JsonValue] = {}
+    steps: dict[str, dict[str, JsonValue]] = {}
     blockers: list[str] = []
 
-    manifest = load_json(MANIFEST, {})
+    manifest = JSON_OBJECT.validate_python(load_json(MANIFEST, {}))
     mapping = load_json(MAPPING, [])
     schedules_data = load_json(SCHEDULES, {})
     schedules = schedule_rows(schedules_data)
-    if len(manifest_rows(manifest)) != 193:
-        raise RuntimeError(f"unexpected manifest baseline: {len(manifest_rows(manifest))}, expected 193")
-    if any((row.get("execution") or {}).get("backend") != "argv" for row in manifest_rows(manifest)):
+    approved_count = expected_manifest_count(ROOT)
+    if len(manifest_rows(manifest)) != approved_count:
+        raise RuntimeError(f"unexpected manifest baseline: {len(manifest_rows(manifest))}, expected {approved_count}")
+    if any(JSON_OBJECT.validate_python(row.get("execution") or {}).get("backend") != "argv" for row in manifest_rows(manifest)):
         raise RuntimeError("legacy_manifest_requires_oss_architecture_v2_debt_zero_migrate")
     if len(schedules) != 139:
         raise RuntimeError(f"unexpected schedule baseline: {len(schedules)}, expected 139")
 
-    baseline = {
+    baseline: dict[str, JsonValue] = {
+        **JSON_OBJECT.validate_python(load_json(BASELINE, {})),
         "schemaVersion": "oss-architecture-v2-baseline-v1",
         "generatedAt": now_iso(),
-        "manifestCount": len(manifest_rows(manifest)),
+        "manifestCount": approved_count,
         "scheduleCount": len(schedules),
         "scheduleFingerprint": schedule_fingerprint(schedules),
         "sourceManifestUpdatedAt": manifest.get("updatedAt"),
         "agentTaskCadencePreserved": True,
     }
-    write_json(BASELINE, baseline, changes)
+    _ = write_json(BASELINE, baseline, changes)
 
     patch_activities(changes)
     patch_release_gate(changes)
@@ -298,7 +289,7 @@ def _main_impl() -> None:
     if blockers:
         raise RuntimeError("predeploy_validation_failed:" + ",".join(blockers))
 
-    unit = f"rbw-architecture-v2-restart-{datetime.now(timezone.utc).strftime('%H%M%S')}"
+    unit = f"rbw-architecture-v2-restart-{datetime.now(UTC).strftime('%H%M%S')}"
     worker_units = [
         "rbw-agents-oss-worker.service",
         "rbw-agents-oss-worker-watchdog.service",
@@ -310,7 +301,7 @@ def _main_impl() -> None:
         "sudo", "-n", "/usr/bin/systemd-run", f"--unit={unit}", "--on-active=20s",
         "/bin/systemctl", "restart", *worker_units,
     ], timeout=30)
-    steps["restartScheduled"]["workerUnits"] = worker_units
+    steps["restartScheduled"]["workerUnits"] = list(worker_units)
     if not steps["restartScheduled"].get("ok"):
         raise RuntimeError("worker_restart_not_scheduled")
 
@@ -321,9 +312,9 @@ def _main_impl() -> None:
         "capabilityId": "oss-architecture-v2-install",
         "ok": ok,
         "status": "installed_argv_only" if ok else "installed_with_blockers",
-        "summary": f"architecture_v2_install: manifest=193 schedules=139 changes={len(changes)} archivedBackups={len(archived)} permissionsFixed={len(permissions)} blockers={len(blockers)}",
+        "summary": f"architecture_v2_install: manifest={approved_count} schedules=139 changes={len(changes)} archivedBackups={len(archived)} permissionsFixed={len(permissions)} blockers={len(blockers)}",
         "counts": {
-            "manifest": 193,
+            "manifest": approved_count,
             "schedules": 139,
             "changes": len(changes),
             "archivedBackups": len(archived),
@@ -344,15 +335,15 @@ def _main_impl() -> None:
         "updatedBy": "oss-architecture-v2-install",
     }
     OPS.mkdir(parents=True, exist_ok=True)
-    REPORT_JSON.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    REPORT_MD.write_text(
+    _ = REPORT_JSON.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _ = REPORT_MD.write_text(
         "# OSS Architecture v2 Install\n\n"
-        f"- status: {report['status']}\n"
-        f"- manifest / schedules: 193 / 139\n"
-        f"- archived backups: {len(archived)}\n"
-        f"- permissions fixed: {len(permissions)}\n"
-        f"- blockers: {', '.join(blockers) or 'none'}\n"
-        f"- restart scheduled: {steps['restartScheduled'].get('ok')}\n",
+        + f"- status: {report['status']}\n"
+        + f"- manifest / schedules: {approved_count} / 139\n"
+        + f"- archived backups: {len(archived)}\n"
+        + f"- permissions fixed: {len(permissions)}\n"
+        + f"- blockers: {', '.join(blockers) or 'none'}\n"
+        + f"- restart scheduled: {steps['restartScheduled'].get('ok')}\n",
         encoding="utf-8",
     )
     print(json.dumps({"ok": ok, "status": report["status"], "summary": report["summary"], "counts": report["counts"], "blockingReasons": blockers, "reportJson": str(REPORT_JSON), "restartScheduled": steps["restartScheduled"].get("ok")}, ensure_ascii=False))
@@ -369,7 +360,7 @@ def rollback_from_archive() -> list[str]:
             relative = archived.relative_to(before)
             target = ROOT / relative
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(archived, target)
+            _ = shutil.copy2(archived, target)
             restored.append(str(relative))
     return restored
 
@@ -380,6 +371,7 @@ def main() -> None:
     except SystemExit:
         raise
     except Exception as exc:
+        logger.exception("Architecture installation failed; restoring archive")
         ARCHIVE.mkdir(parents=True, exist_ok=True)
         restored = rollback_from_archive()
         bootstrap = restore_p0_bootstrap([])
@@ -399,8 +391,8 @@ def main() -> None:
             "updatedBy": "oss-architecture-v2-install-rollback",
         }
         OPS.mkdir(parents=True, exist_ok=True)
-        REPORT_JSON.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        REPORT_MD.write_text(f"# OSS Architecture v2 Install\n\n- status: rolled back\n- error: {report['blockingReasons'][0]}\n- restored files: {len(restored)}\n", encoding="utf-8")
+        _ = REPORT_JSON.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        _ = REPORT_MD.write_text(f"# OSS Architecture v2 Install\n\n- status: rolled back\n- error: {exc.__class__.__name__}:{str(exc)[:500]}\n- restored files: {len(restored)}\n", encoding="utf-8")
         print(json.dumps({"ok": False, "status": report["status"], "blockingReasons": report["blockingReasons"], "restoredFiles": len(restored), "reportJson": str(REPORT_JSON)}, ensure_ascii=False))
         raise SystemExit(1)
 

@@ -1,35 +1,12 @@
 {
-  "files": [],
+  "extends": "./tsconfig.json",
   "compilerOptions": {
     "target": "ES2022",
-    "lib": [
-      "ESNext",
-      "DOM",
-      "DOM.Iterable"
-    ],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "moduleDetection": "force",
     "types": [
       "node"
     ],
-    "jsx": "react-jsx",
-    "jsxImportSource": "react",
-    "allowJs": false,
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "verbatimModuleSyntax": true,
-    "strict": true,
-    "skipLibCheck": false,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noPropertyAccessFromIndexSignature": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitOverride": true,
-    "noImplicitReturns": true,
-    "allowUnreachableCode": false,
-    "allowUnusedLabels": false
+    "allowImportingTsExtensions": false,
+    "noEmit": false,
+    "paths": {}
   }
 }

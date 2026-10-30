@@ -1,4 +1,3 @@
-import { useEffectEvent } from 'react';
 import React,{ useEffect,useCallback } from 'react';
 
 import { type ThemeOverrides } from '@config/theme';
@@ -133,26 +132,12 @@ const { showSessionNotification } = useNotifications({
     enabled: notificationsEnabled,
   })
 
-const translateStartupEvent = useEffectEvent(t);
 useEffect(() => {
     if (appState !== 'ready') return
 
     window.electronAPI.getWorkspaces().then(setWorkspaces)
     window.electronAPI.getNotificationsEnabled().then(setNotificationsEnabled).catch(() => {})
 
-    // Show actionable toast for missing system dependencies (Windows only)
-    window.electronAPI.getSystemWarnings().then((warnings) => {
-      if (warnings.vcredistMissing) {
-        toast.warning(translateStartupEvent('toast.vcRedistNotFound'), {
-          description: translateStartupEvent('toast.vcRedistNotFoundDesc'),
-          duration: Infinity,
-          action: {
-            label: 'Install',
-            onClick: () => window.electronAPI.openUrl(warnings.downloadUrl ?? 'https://aka.ms/vs/17/release/vc_redist.x64.exe'),
-          },
-        })
-      }
-    }).catch(() => { /* non-fatal startup check */ })
     void loadSessionsFromServer()
     // Load LLM connections with authentication status
     window.electronAPI.listLlmConnectionsWithStatus().then((connections) => {
@@ -169,8 +154,6 @@ useEffect(() => {
     })
     // Load app-level theme
     window.electronAPI.getAppTheme().then(setAppTheme)
-  // Startup loading must not repeat solely because the translation function
-  // changes language; it is used here only for the one-time warning toast.
   }, [appState, loadSessionsFromServer, resolveDefaultConnectionSlug, sessionDraftsRef, setAppTheme, setDefaultLlmConnectionSlug, setLlmConnections, setNotificationsEnabled, setWorkspaces])
 
 useEffect(() => {

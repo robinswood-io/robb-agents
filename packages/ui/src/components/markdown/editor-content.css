@@ -163,10 +163,10 @@
   transition: opacity 0.12s ease;
 }
 
+.ProseMirror-selectednode .tiptap-hover-actions,
 .tiptap-hover-actions-host:hover .tiptap-hover-actions,
 .tiptap-hover-actions-host:focus-within .tiptap-hover-actions,
-.tiptap-hover-actions-host[data-actions-open='true'] .tiptap-hover-actions,
-.ProseMirror-selectednode .tiptap-hover-actions {
+.tiptap-hover-actions-host[data-actions-open='true'] .tiptap-hover-actions {
   opacity: 1;
   pointer-events: auto;
 }

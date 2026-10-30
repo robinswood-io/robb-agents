@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import os
-from pathlib import Path
 import re
 import stat
 import subprocess
 import sys
-from typing import TypeAlias, Callable, Sequence
-
+from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Literal, TypeAlias, TypedDict, TypeGuard, cast
 
 JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
 
@@ -19,7 +19,7 @@ SUPPORT = Path.home() / 'Library/Application Support/Robb Agents/Maintenance'
 
 AGENTS = Path.home() / 'Library/LaunchAgents'
 
-Runner = Callable[..., subprocess.CompletedProcess]
+Runner = Callable[..., subprocess.CompletedProcess[str]]
 
 Checkpoint = Callable[[str], None]
 
@@ -72,7 +72,7 @@ class FileIdentity:
     sha256: str
     xattrs_sha256: str
 
-    def to_record(self) -> dict[str, int | str]:
+    def to_record(self) -> IdentityRecord:
         return {
             'device': self.device, 'inode': self.inode, 'owner': self.owner,
             'group': self.group, 'mode': self.mode, 'flags': self.flags,
@@ -197,6 +197,57 @@ def fsync_directory(directory: Path) -> None:
     finally:
         os.close(descriptor)
 
-def _mark(checkpoint: Checkpoint | None, name: str) -> None:
+def mark_checkpoint(checkpoint: Checkpoint | None, name: str) -> None:
     if checkpoint is not None:
         checkpoint(name)
+
+
+class IdentityRecord(TypedDict):
+    device: int | None
+    inode: int | None
+    owner: int
+    group: int
+    mode: int
+    flags: int
+    size: int
+    sha256: str
+    xattrsSha256: str
+
+
+class JournalArtifact(TypedDict):
+    target: str
+    backup: str
+    staged: str
+    previous: IdentityRecord | None
+    replacement: IdentityRecord
+
+
+class RetentionJournal(TypedDict):
+    contract: str
+    version: int
+    token: str
+    phase: str
+    label: str
+    domain: str
+    target: str
+    previousLoaded: bool
+    nextJournal: str
+    script: JournalArtifact
+    plist: JournalArtifact
+
+
+class ArtifactState(TypedDict):
+    target: FileSnapshot | None
+    targetKind: str
+    backup: FileSnapshot | None
+    backupKind: str
+    staged: FileSnapshot | None
+    stagedKind: str
+    stagedOwnedPartial: bool
+
+
+ARTIFACT_NAMES: tuple[Literal['script'], Literal['plist']] = ('script', 'plist')
+
+
+def is_record(value: object) -> TypeGuard[dict[str, object]]:
+    return isinstance(value, dict) and all(isinstance(key, str) for key in cast(dict[object, object], value))

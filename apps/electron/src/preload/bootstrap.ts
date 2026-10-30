@@ -290,12 +290,7 @@ api.relaunchApp = () => ipcRenderer.invoke('app:relaunch')
   return () => { ipcRenderer.removeListener('transfer:progress', handler) }
 }
 
-// System warnings — expose env-based flags set during main process startup
-// (preload-only: reads env var directly, no IPC round-trip needed)
-;api.getSystemWarnings = async () => omitUndefined({
-  vcredistMissing: process.env["CRAFT_VCREDIST_MISSING"] === '1',
-  downloadUrl: process.env["CRAFT_VCREDIST_URL"],
-})
+
 
 // i18n: sync language changes to main process (for native menus/dialogs)
 ;api.changeLanguage = (lang: string) => ipcRenderer.invoke('i18n:changeLanguage', lang)

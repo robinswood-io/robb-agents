@@ -62,8 +62,8 @@ export const IMAGE_READ_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp
 export const CONVERTIBLE_FILE_HINTS: Record<string, string> = {
     pdf: 'markitdown or pdf-tool extract',
     docx: 'markitdown', xlsx: 'markitdown or xlsx-tool read', pptx: 'markitdown or pptx-tool extract',
-    doc: 'markitdown', xls: 'markitdown', ppt: 'markitdown',
-    msg: 'markitdown', eml: 'markitdown', rtf: 'markitdown',
+    doc: 'export to .docx, then markitdown', xls: 'export to .xlsx, then markitdown', ppt: 'export to .pptx, then markitdown',
+    msg: 'export to .eml, then markitdown', eml: 'markitdown', rtf: 'export to .txt or .docx, then markitdown',
     ics: 'ical-tool read',
 };
 

@@ -193,7 +193,7 @@ try {
     saveSourceConfig(workspace!.rootPath, {
       id: qaSourceSlug, slug: qaSourceSlug, name: 'Disposable local autonomy QA',
       provider: 'qa-local', type: 'mcp', enabled: true, isAuthenticated: false,
-      mcp: { transport: 'stdio', command: process.execPath, args: [join(import.meta.dir, 'robb-qa-local-source.mjs')], authType: 'none' },
+      mcp: { transport: 'stdio', command: process.execPath, args: [join(import.meta.dir, 'robb-qa-local-source.ts')], authType: 'none' },
       tagline: 'Read-only synthetic arithmetic fixture; qa_sum has no side effects.',
     });
     writeFileSync(join(qaSourcePath, 'guide.md'), '# QA local source\n\nRead-only synthetic fixture. Use qa_sum with a and b; result has sum and fixture. No authentication, filesystem writes or network.\n');

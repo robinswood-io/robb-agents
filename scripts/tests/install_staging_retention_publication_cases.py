@@ -1,23 +1,24 @@
 from __future__ import annotations
-from .install_staging_retention_fixtures import atomic, journal, recovery
-import importlib.util
-import os
-from pathlib import Path
+
 import plistlib
 import subprocess
-import sys
 import tempfile
-import unittest
+from pathlib import Path
+from typing import cast
 from unittest import mock
 
+from scripts.robb_retention_files import FileSnapshot, is_record
+
 from .install_staging_retention_fixtures import (
-    installer,
-    production_renameatx_np,
-    SimulatedProcessDeath,
-    emulate_renameatx_np,
-    stat_mode,
-    LaunchctlRunner,
     InstallStagingRetentionTestCase,
+    LaunchctlRunner,
+    SimulatedProcessDeath,
+    atomic,
+    installer,
+    journal,
+    production_renameatx_np,
+    recovery,
+    stat_mode,
 )
 
 
@@ -28,7 +29,8 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
         result = self.run_install(runner)
 
         self.assertEqual(self.script.read_bytes(), self.source.read_bytes())
-        configuration = plistlib.loads(self.plist.read_bytes())
+        configuration = cast(object, plistlib.loads(self.plist.read_bytes()))
+        assert is_record(configuration)
         self.assertEqual(
             configuration['ProgramArguments'],
             ['/new/python', str(self.script), '--apply'],
@@ -39,9 +41,11 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
         self.assert_no_transaction_artifacts()
 
     def test_production_rename_fails_closed_outside_macos(self) -> None:
-        with mock.patch.object(installer.sys, 'platform', 'linux'):
-            with self.assertRaisesRegex(RuntimeError, 'requires macOS'):
-                production_renameatx_np(-1, 'source', 'destination', installer.RENAME_EXCL)
+        with (
+            mock.patch.object(installer.sys, 'platform', 'linux'),
+            self.assertRaisesRegex(RuntimeError, 'requires macOS'),
+        ):
+            production_renameatx_np(-1, 'source', 'destination', installer.RENAME_EXCL)
 
     def test_write_failure_happens_before_bootout_and_leaves_old_state_untouched(self) -> None:
         runner = LaunchctlRunner(loaded=True)
@@ -55,9 +59,9 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
         with (
             mock.patch.object(installer, 'write_owned_file', side_effect=fail_plist_stage),
             mock.patch.object(journal, 'write_owned_file', side_effect=fail_plist_stage),
+            self.assertRaisesRegex(OSError, 'simulated plist write failure'),
         ):
-            with self.assertRaisesRegex(OSError, 'simulated plist write failure'):
-                self.run_install(runner)
+            _ = self.run_install(runner)
 
         self.assertEqual(self.script.read_bytes(), self.old_script)
         self.assertEqual(self.plist.read_bytes(), self.old_plist)
@@ -73,8 +77,8 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
         def fail_new_plist_swap(
             source: Path,
             destination: Path,
-            source_snapshot,
-            destination_snapshot,
+            source_snapshot: FileSnapshot,
+            destination_snapshot: FileSnapshot,
             *,
             operation: str,
         ) -> None:
@@ -99,9 +103,9 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
         with (
             mock.patch.object(atomic, 'swap_verified', side_effect=fail_new_plist_swap),
             mock.patch.object(recovery, 'swap_verified', side_effect=fail_new_plist_swap),
+            self.assertRaisesRegex(OSError, 'simulated atomic plist publication failure'),
         ):
-            with self.assertRaisesRegex(OSError, 'simulated atomic plist publication failure'):
-                self.run_install(runner)
+            _ = self.run_install(runner)
 
         self.assertTrue(failed)
         self.assert_previous_state_restored(runner)
@@ -109,7 +113,7 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
     def test_quarantine_rejects_substitution_after_revalidation_without_deleting_it(self) -> None:
         path = self.support / 'known-cleanup-artifact'
         held = self.support / 'held-known-cleanup-artifact'
-        path.write_bytes(b'known transaction bytes')
+        _ = path.write_bytes(b'known transaction bytes')
         path.chmod(0o600)
         snapshot = installer.snapshot_regular_file(path, require_owner=True)
         assert snapshot is not None
@@ -117,25 +121,24 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
         def substitute_after_revalidation(
             operation: str,
             source: Path,
-            destination: Path,
+            _destination: Path,
         ) -> None:
             if operation != 'test-delete-race':
                 return
-            source.rename(held)
-            source.write_bytes(b'external bytes')
+            _ = source.rename(held)
+            _ = source.write_bytes(b'external bytes')
             source.chmod(0o600)
 
         with mock.patch.object(
             atomic,
             'before_atomic_rename',
             side_effect=substitute_after_revalidation,
-        ):
-            with self.assertRaisesRegex(RuntimeError, 'changed before quarantine'):
-                installer.quarantine_and_unlink(
-                    path,
-                    snapshot,
-                    operation='test-delete-race',
-                )
+        ), self.assertRaisesRegex(RuntimeError, 'changed before quarantine'):
+            installer.quarantine_and_unlink(
+                path,
+                snapshot,
+                operation='test-delete-race',
+            )
 
         self.assertEqual(held.read_bytes(), b'known transaction bytes')
         self.assertEqual(path.read_bytes(), b'external bytes')
@@ -145,8 +148,8 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
         source = self.support / 'known-swap-source'
         destination = self.support / 'known-swap-destination'
         held = self.support / 'held-swap-destination'
-        source.write_bytes(b'source bytes')
-        destination.write_bytes(b'destination bytes')
+        _ = source.write_bytes(b'source bytes')
+        _ = destination.write_bytes(b'destination bytes')
         source_snapshot = installer.snapshot_regular_file(source, require_owner=True)
         destination_snapshot = installer.snapshot_regular_file(
             destination, require_owner=True,
@@ -161,22 +164,21 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
         ) -> None:
             if operation != 'test-swap-race':
                 return
-            swap_destination.rename(held)
-            swap_destination.write_bytes(b'external bytes')
+            _ = swap_destination.rename(held)
+            _ = swap_destination.write_bytes(b'external bytes')
 
         with mock.patch.object(
             atomic,
             'before_atomic_rename',
             side_effect=substitute_after_revalidation,
-        ):
-            with self.assertRaisesRegex(RuntimeError, 'swap verification failed'):
-                installer.swap_verified(
-                    source,
-                    destination,
-                    source_snapshot,
-                    destination_snapshot,
-                    operation='test-swap-race',
-                )
+        ), self.assertRaisesRegex(RuntimeError, 'swap verification failed'):
+            installer.swap_verified(
+                source,
+                destination,
+                source_snapshot,
+                destination_snapshot,
+                operation='test-swap-race',
+            )
 
         self.assertEqual(destination.read_bytes(), b'source bytes')
         self.assertEqual(source.read_bytes(), b'external bytes')
@@ -184,7 +186,7 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
 
     def test_process_death_after_quarantine_move_resumes_verified_deletion(self) -> None:
         path = self.support / 'known-crash-cleanup-artifact'
-        path.write_bytes(b'known transaction bytes')
+        _ = path.write_bytes(b'known transaction bytes')
         path.chmod(0o600)
         snapshot = installer.snapshot_regular_file(path, require_owner=True)
         assert snapshot is not None
@@ -197,13 +199,12 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
             atomic,
             'after_atomic_rename',
             side_effect=die_after_move,
-        ):
-            with self.assertRaises(SimulatedProcessDeath):
-                installer.quarantine_and_unlink(
-                    path,
-                    snapshot,
-                    operation='test-quarantine-crash',
-                )
+        ), self.assertRaises(SimulatedProcessDeath):
+            installer.quarantine_and_unlink(
+                path,
+                snapshot,
+                operation='test-quarantine-crash',
+            )
 
         self.assertFalse(path.exists())
         self.assertTrue(installer.quarantine_path(path).exists())
@@ -236,9 +237,8 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
             atomic,
             'after_atomic_rename',
             side_effect=die_after_second_rollback_quarantine,
-        ):
-            with self.assertRaises(SimulatedProcessDeath):
-                self.run_install(runner)
+        ), self.assertRaises(SimulatedProcessDeath):
+            _ = self.run_install(runner)
 
         journal = installer.load_pending_journal(
             support=self.support,
@@ -260,7 +260,7 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
         runner = LaunchctlRunner(loaded=True, fail_bootstrap_call=1)
 
         with self.assertRaises(subprocess.CalledProcessError):
-            self.run_install(runner)
+            _ = self.run_install(runner)
 
         self.assert_previous_state_restored(runner, minimum_bootstraps=2)
 
@@ -270,7 +270,7 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
         runner = LaunchctlRunner(loaded=False, fail_bootstrap_call=1)
 
         with self.assertRaises(subprocess.CalledProcessError):
-            self.run_install(runner)
+            _ = self.run_install(runner)
 
         self.assertFalse(self.script.exists())
         self.assertFalse(self.plist.exists())
@@ -282,7 +282,7 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
         runner = LaunchctlRunner(loaded=True, fail_print_call=2)
 
         with self.assertRaises(subprocess.CalledProcessError):
-            self.run_install(runner)
+            _ = self.run_install(runner)
 
         self.assert_previous_state_restored(runner, minimum_bootstraps=2)
         self.assertGreaterEqual(
@@ -296,7 +296,7 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
         runner = LaunchctlRunner(loaded=False, fail_print_from_call=2)
 
         with self.assertRaisesRegex(RuntimeError, 'rollback incomplete'):
-            self.run_install(runner)
+            _ = self.run_install(runner)
 
         self.assertFalse(runner.loaded)
         self.assertFalse(self.script.exists())
@@ -311,7 +311,7 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
         runner = LaunchctlRunner(loaded=True)
 
         with self.assertRaisesRegex(RuntimeError, 'no complete restorable files'):
-            self.run_install(runner)
+            _ = self.run_install(runner)
 
         self.assertEqual(self.script.read_bytes(), self.old_script)
         self.assertTrue(runner.loaded)
@@ -324,7 +324,7 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
         with installer.open_install_lock(lock_path) as lock:
             installer.fcntl.flock(lock, installer.fcntl.LOCK_EX | installer.fcntl.LOCK_NB)
             with self.assertRaisesRegex(RuntimeError, 'already running'):
-                self.run_install(runner)
+                _ = self.run_install(runner)
 
         self.assertEqual(self.script.read_bytes(), self.old_script)
         self.assertEqual(self.plist.read_bytes(), self.old_plist)
@@ -360,10 +360,10 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
                 agents.mkdir(parents=True)
                 script = support / 'staging-retention.py'
                 plist = agents / f'{installer.LABEL}.plist'
-                source.write_bytes(self.source.read_bytes())
-                script.write_bytes(self.old_script)
+                _ = source.write_bytes(self.source.read_bytes())
+                _ = script.write_bytes(self.old_script)
                 script.chmod(0o751)
-                plist.write_bytes(plistlib.dumps({
+                _ = plist.write_bytes(plistlib.dumps({
                     'Label': installer.LABEL,
                     'ProgramArguments': ['/old/python', str(script), '--apply'],
                 }))
@@ -373,13 +373,13 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
                 runner = LaunchctlRunner(loaded=True)
                 seen: list[str] = []
 
-                def die_at_boundary(name: str) -> None:
-                    seen.append(name)
-                    if name == phase:
+                def die_at_boundary(name: str, expected_phase: str = phase, recorded: list[str] = seen) -> None:
+                    recorded.append(name)
+                    if name == expected_phase:
                         raise SimulatedProcessDeath(name)
 
                 with self.assertRaises(SimulatedProcessDeath):
-                    installer.install(
+                    _ = installer.install(
                         source_script=source,
                         support=support,
                         agents=agents,
@@ -430,9 +430,8 @@ class InstallStagingRetentionTests(InstallStagingRetentionTestCase):
             atomic,
             'after_atomic_rename',
             side_effect=die_after_publish_swap,
-        ):
-            with self.assertRaises(SimulatedProcessDeath):
-                self.run_install(runner)
+        ), self.assertRaises(SimulatedProcessDeath):
+            _ = self.run_install(runner)
 
         self.assertEqual(self.script.read_bytes(), self.source.read_bytes())
         self.assertEqual(self.recover_under_lock(runner), 'rolled_back')

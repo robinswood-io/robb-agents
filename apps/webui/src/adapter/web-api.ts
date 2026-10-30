@@ -193,7 +193,6 @@ export function createWebApi(options: WebApiOptions): {
     // System info
     getVersions: () => ({ node: 'n/a', chrome: navigator.userAgent, electron: 'web' }),
     getRuntimeEnvironment: () => 'web',
-    getSystemWarnings: () => Promise.resolve({ vcredistMissing: false }),
     isDebugMode: () => {
       const environment: unknown = import.meta.env
       return Promise.resolve(isJsonObject(environment) && environment['DEV'] === true)

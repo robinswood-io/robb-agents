@@ -244,8 +244,6 @@
   "toast.upToDate": "已是最新版本",
   "toast.updateAvailable": "更新 v{{version}} 可用",
   "toast.updateReady": "更新 v{{version}} 已就绪",
-  "toast.vcRedistNotFound": "未找到 Microsoft Visual C++ Redistributable",
-  "toast.vcRedistNotFoundDesc": "文档工具 (PDF、PPTX、DOCX、XLSX) 需要它才能运行。安装后请重启。",
   "toast.versionIsLatest": "版本 {{version}} 已是最新。",
   "toast.webhookReplayCompleted": "Webhook 回放完成",
   "toast.workspaceReconnected": "Workspace 已重新连接",

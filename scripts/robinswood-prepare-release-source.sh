@@ -25,7 +25,7 @@ if [[ "$mode" == "publish-signed" ]]; then
     echo "::error::Checked-out source $checked_out_commit does not match immutable tag $tag ($tag_commit)"
     exit 1
   }
-  python3 scripts/robinswood-signing-preflight.py --ci --strict
+  python3 scripts/robinswood_signing_preflight.py --ci --strict
 
   if [[ "${WINDOWS_SIGNING_MODE}" == "unsigned" ]]; then
     echo "::notice::Windows will be published unsigned with explicit provenance and checksum verification."
@@ -49,15 +49,17 @@ if [[ "$mode" == "publish-signed" ]]; then
   fi
   publish=true
 elif [[ "$mode" == "stage-signed" ]]; then
-  python3 scripts/robinswood-signing-preflight.py --ci --strict
+  python3 scripts/robinswood_signing_preflight.py --ci --strict
   tag="stage-${source_commit::12}"
   echo "::notice::Signed macOS staging artifacts stay in CI; no GitHub Release is created."
 else
   tag="test-${source_commit::12}"
   echo "::notice::Test artifacts will be retained in CI only; no GitHub Release will be created."
 fi
-echo "publish=$publish" >> "$GITHUB_OUTPUT"
-echo "tag=$tag" >> "$GITHUB_OUTPUT"
-echo "version=$version" >> "$GITHUB_OUTPUT"
-echo "source_commit=$source_commit" >> "$GITHUB_OUTPUT"
-echo "release_mode=$mode" >> "$GITHUB_OUTPUT"
+{
+  echo "publish=$publish"
+  echo "tag=$tag"
+  echo "version=$version"
+  echo "source_commit=$source_commit"
+  echo "release_mode=$mode"
+} >> "$GITHUB_OUTPUT"

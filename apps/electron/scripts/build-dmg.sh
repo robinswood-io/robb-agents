@@ -76,7 +76,7 @@ if [[ "$RELEASE_BUILD" == true ]]; then
   # Refuse dirty source before dependency installation or any generated-file
   # cleanup. The Electron main build and electron-builder hook repeat this
   # check so source cannot become dirty between preflight and packaging.
-  RELEASE_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.cjs" --check-source "$ROOT_DIR")"
+  RELEASE_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.ts" --check-source "$ROOT_DIR")"
   export ROBB_BUILD_CHANNEL=production
   export ROBB_BUILD_COMMIT="$RELEASE_COMMIT"
   export ROBB_BUILD_DIRTY=false
@@ -94,7 +94,7 @@ if [[ "$RELEASE_BUILD" == true ]]; then
 elif [[ "$LOCAL_PRODUCTION_BUILD" == true ]]; then
   command -v git >/dev/null || { echo "ERROR: --local-production requires Git to verify source integrity." >&2; exit 1; }
   command -v node >/dev/null || { echo "ERROR: --local-production requires Node.js to verify source integrity." >&2; exit 1; }
-  LOCAL_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.cjs" --check-source "$ROOT_DIR")"
+  LOCAL_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.ts" --check-source "$ROOT_DIR")"
   export ROBB_BUILD_CHANNEL=production
   export ROBB_BUILD_COMMIT="$LOCAL_COMMIT"
   export ROBB_BUILD_DIRTY=false
@@ -241,14 +241,14 @@ CHECKSUM_PATH="$ELECTRON_DIR/release/SHA256SUMS-macos-${ARCH}.txt"
 cd "$ROOT_DIR"
 if [[ "$RELEASE_BUILD" == true ]]; then
   if [[ "${ROBB_PACKAGE_LAUNCH_SMOKE:-0}" == "1" ]]; then
-    python3 scripts/robinswood-packaged-smoke.py --arch "$ARCH" --require-release-signing --launch --launch-seconds 12
+    python3 scripts/robinswood_packaged_smoke.py --arch "$ARCH" --require-release-signing --launch --launch-seconds 12
   else
-    python3 scripts/robinswood-packaged-smoke.py --arch "$ARCH" --require-release-signing
+    python3 scripts/robinswood_packaged_smoke.py --arch "$ARCH" --require-release-signing
   fi
 elif [[ "${ROBB_PACKAGE_LAUNCH_SMOKE:-0}" == "1" ]]; then
-  python3 scripts/robinswood-packaged-smoke.py --arch "$ARCH" --launch --launch-seconds 12
+  python3 scripts/robinswood_packaged_smoke.py --arch "$ARCH" --launch --launch-seconds 12
 else
-  python3 scripts/robinswood-packaged-smoke.py --arch "$ARCH"
+  python3 scripts/robinswood_packaged_smoke.py --arch "$ARCH"
 fi
 
 echo "=== Build complete ==="

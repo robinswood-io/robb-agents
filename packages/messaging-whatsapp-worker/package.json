@@ -10,7 +10,7 @@
     "./worker": "./src/worker.ts"
   },
   "scripts": {
-    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit"
+    "typecheck": "node ../../scripts/run-typescript.ts native --noEmit"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "7.0.0-rc14",

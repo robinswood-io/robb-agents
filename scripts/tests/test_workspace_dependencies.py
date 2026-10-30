@@ -6,24 +6,51 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from typing import cast, override
 from unittest.mock import patch
 
 from scripts import check_workspace_dependencies as audit
 
 
 class DependencyBoundaryTests(unittest.TestCase):
+    temporary: tempfile.TemporaryDirectory[str] | None = None
+
+    @property
+    def root(self) -> Path:
+        if self.temporary is None:
+            raise RuntimeError("Fixture is not set up")
+        return Path(self.temporary.name)
+
+    @override
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
-        self.root = Path(self.temporary.name)
-        self.patch = patch.object(audit, "ROOT", self.root)
-        self.patch.start()
-        self.addCleanup(self.patch.stop)
+        patcher = patch.object(audit, "ROOT", self.root)
+        _ = cast(object, patcher.start())
+        self.addCleanup(patcher.stop)
         self.write("package.json", {"version": "0.12.11"})
+    def test_python_quality_and_runtime_requirement_files_are_audited(self) -> None:
+        quality = self.root / "python-quality-requirements.txt"
+        runtime = self.root / "requirements.txt"
+        _ = quality.write_text("# quality tools\nPillow==13.0.0\n\n")
+        _ = runtime.write_text("requests==2.34.2\n")
+        self.assertEqual(audit.python_pins([quality.name, runtime.name]),
+                         {"pillow": "13.0.0", "requests": "2.34.2"})
+
+    def test_python_requirement_files_reject_unpinned_and_conflicting_versions(self) -> None:
+        quality = self.root / "python-quality-requirements.txt"
+        runtime = self.root / "requirements.txt"
+        _ = quality.write_text("python-dateutil==3.0.0\n")
+        for spec in ("requests>=2", "Python_Dateutil==2.9.0"):
+            with self.subTest(spec=spec):
+                _ = runtime.write_text(spec + "\n")
+                with self.assertRaises(ValueError):
+                    _ = audit.python_pins([quality.name, runtime.name])
+
     def write(self, name: str, value: object) -> None:
         path = self.root / name
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(value))
+        _ = path.write_text(json.dumps(value))
     def authorization(self) -> dict[str, object]:
         return {"release": "0.12.11", "approved_by": "Thibault",
                 "authorization_reference": "Synthetic test fixture; grants no real authorization",
@@ -34,35 +61,35 @@ class DependencyBoundaryTests(unittest.TestCase):
         self.assertEqual(audit.compatibility_exceptions(), {("package.json", "typescript", "6.0.3")})
         self.write("package.json", {"version": "0.12.12"})
         with self.assertRaisesRegex(ValueError, "do not apply"):
-            audit.compatibility_exceptions()
+            _ = audit.compatibility_exceptions()
     def test_missing_reference_and_unapproved_version_are_rejected(self) -> None:
         value = self.authorization()
         value["authorization_reference"] = ""
         self.write("bmad/dependency-exceptions.json", value)
         with self.assertRaisesRegex(ValueError, "human authorization"):
-            audit.compatibility_exceptions()
+            _ = audit.compatibility_exceptions()
         value = self.authorization()
         value["dependencies"] = [{"manifest": "package.json", "package": "typescript",
                                   "version": "5.0.0", "reason": "Unapproved fixture"}]
         self.write("bmad/dependency-exceptions.json", value)
         with self.assertRaisesRegex(ValueError, "outside"):
-            audit.compatibility_exceptions()
+            _ = audit.compatibility_exceptions()
     def test_local_patch_requires_latest_base_and_exact_installed_bytes(self) -> None:
         vendor = self.root / "scripts/vendor/sprintf-js/src/sprintf.js"
         installed = self.root / "node_modules/sprintf-js/src/sprintf.js"
         for path in [vendor, installed]:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(b"bounded fixture")
+            _ = path.write_bytes(b"bounded fixture")
         self.write("scripts/vendor/sprintf-js/upstream.json",
                    {"base_version": "1.1.3", "patched_source_sha256": hashlib.sha256(vendor.read_bytes()).hexdigest()})
         row: audit.Dependency = {"manifest": "package.json", "group": "overrides", "package": "sprintf-js",
                                  "registry_name": "sprintf-js", "spec": "file:./scripts/vendor/sprintf-js", "installed": "1.1.4"}
         self.assertTrue(audit.verified_sprintf_patch(row, "1.1.3"))
         self.assertFalse(audit.verified_sprintf_patch(row, "1.1.5"))
-        installed.write_bytes(b"tampered installed fixture")
+        _ = installed.write_bytes(b"tampered installed fixture")
         self.assertFalse(audit.verified_sprintf_patch(row, "1.1.3"))
-        installed.write_bytes(vendor.read_bytes())
-        vendor.write_bytes(b"tampered vendor fixture")
+        _ = installed.write_bytes(vendor.read_bytes())
+        _ = vendor.write_bytes(b"tampered vendor fixture")
         self.assertFalse(audit.verified_sprintf_patch(row, "1.1.3"))
 if __name__ == "__main__":
-    unittest.main()
+    _ = unittest.main()

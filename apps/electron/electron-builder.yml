@@ -2,14 +2,14 @@ appId: io.robinswood.robbagents
 productName: Robb Agents
 copyright: Copyright © 2026 Robinswood
 
-electronVersion: "45.0.0"
+electronVersion: "45.2.0"
 
 # Hook to compile macOS 26+ Liquid Glass icon after packaging
-afterPack: scripts/afterPack.cjs
+afterPack: scripts/afterPack.ts
 # Every production package fails closed on dirty source before packing. macOS
 # additionally verifies Developer ID signing plus notarization after signing.
-beforePack: scripts/releaseIntegrity.cjs
-afterSign: scripts/afterSign.cjs
+beforePack: scripts/releaseIntegrity.ts
+afterSign: scripts/afterSign.ts
 
 directories:
   output: release
@@ -137,7 +137,7 @@ mac:
   # electron-builder.dev.yml and build-dmg.sh's non-release path override this.
   forceCodeSigning: true
   # macOS 26+ Liquid Glass: Tell macOS to look for icon in Assets.car
-  # The value must match --app-icon used in actool (see afterPack.cjs)
+  # The value must match --app-icon used in actool (see afterPack.ts)
   extendInfo:
     CFBundleIconName: AppIcon
     NSCameraUsageDescription: "Robb Agents uses the camera only when an agent-controlled secure website you selected requires it."

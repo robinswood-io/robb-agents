@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 import os
 import platform
 import shutil
 import subprocess
 from pathlib import Path
+from typing import cast
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
 BIN_DIR = REPO_ROOT / "apps" / "electron" / "resources" / "bin"
@@ -80,3 +82,47 @@ def run_tool(tool_name: str, *args: str, env: dict[str, str] | None = None) -> s
         text=True,
         check=False,
     )
+
+
+def parse_json_object(text: str) -> dict[str, object]:
+    """Decode a JSON object into values safe for strict test assertions."""
+    decoded: object = cast(object, json.loads(text))
+    return require_json_object(decoded)
+
+def parse_json_array(text: str) -> list[object]:
+    """Decode a JSON array into values safe for strict test assertions."""
+    decoded: object = cast(object, json.loads(text))
+    if not isinstance(decoded, list):
+        raise TypeError("Expected a JSON array")
+    return [_normalize_json_value(item) for item in cast(list[object], decoded)]
+
+def require_json_object(value: object) -> dict[str, object]:
+    """Validate and normalize an already decoded JSON object."""
+    if not isinstance(value, dict):
+        raise TypeError("Expected a JSON object")
+    result: dict[str, object] = {}
+    for key, item in cast(dict[object, object], value).items():
+        if not isinstance(key, str):
+            raise TypeError("Expected JSON object keys to be strings")
+        result[key] = _normalize_json_value(item)
+    return result
+
+def require_json_array(value: object) -> list[object]:
+    """Validate and normalize an already decoded JSON array."""
+    if not isinstance(value, list):
+        raise TypeError("Expected a JSON array")
+    return [_normalize_json_value(item) for item in cast(list[object], value)]
+
+def _normalize_json_value(value: object) -> object:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, list):
+        return [_normalize_json_value(item) for item in cast(list[object], value)]
+    if isinstance(value, dict):
+        result: dict[str, object] = {}
+        for key, item in cast(dict[object, object], value).items():
+            if not isinstance(key, str):
+                raise TypeError("Expected JSON object keys to be strings")
+            result[key] = _normalize_json_value(item)
+        return result
+    raise TypeError("Decoded JSON contains an unsupported value")

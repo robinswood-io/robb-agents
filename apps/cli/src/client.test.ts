@@ -1,5 +1,8 @@
 import type { ServerWebSocket } from 'bun'
 import { describe, it, expect, afterEach } from 'bun:test'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { CliRpcClient } from './client.ts'
 import {
   serializeEnvelope,
@@ -359,11 +362,6 @@ describe('CliRpcClient', () => {
 
   it('rejects an untrusted self-signed wss:// certificate', async () => {
     const tls = generateSelfSignedCert()
-    if (!tls) {
-      // openssl not available — skip TLS test
-      console.log('  (skipped: openssl not available)')
-      return
-    }
     server = createMockServer({ tls })
 
     const client = new CliRpcClient(server.url)
@@ -377,23 +375,38 @@ describe('CliRpcClient', () => {
 // TLS cert helper — generates a real self-signed cert via openssl
 // ---------------------------------------------------------------------------
 
-function generateSelfSignedCert(): { cert: string; key: string } | null {
+function generateSelfSignedCert(): { cert: string; key: string } {
+  const directory = mkdtempSync(join(tmpdir(), 'robb-cli-rpc-tls-'))
+  const certPath = join(directory, 'certificate.pem')
+  const keyPath = join(directory, 'private-key.pem')
+
   try {
-    const keyResult = Bun.spawnSync({
-      cmd: ['openssl', 'req', '-x509', '-newkey', 'rsa:2048',
-        '-keyout', '/dev/stdout', '-out', '/dev/stdout',
-        '-days', '1', '-nodes', '-subj', '/CN=localhost', '-batch'],
-      stderr: 'pipe',
-    })
-    if (keyResult.exitCode !== 0) return null
+    let result: ReturnType<typeof Bun.spawnSync>
+    try {
+      result = Bun.spawnSync({
+        cmd: [
+          'openssl', 'req', '-x509', '-newkey', 'rsa:2048',
+          '-keyout', keyPath, '-out', certPath,
+          '-days', '1', '-nodes', '-subj', '/CN=localhost', '-batch',
+        ],
+        stdout: 'pipe',
+        stderr: 'pipe',
+      })
+    } catch (error: unknown) {
+      const detail = error instanceof Error ? error.message : String(error)
+      throw new Error(`OpenSSL is required to exercise TLS certificate rejection: ${detail}`, { cause: error })
+    }
 
-    const pem = keyResult.stdout.toString()
-    const certMatch = pem.match(/(-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----)/)
-    const keyMatch = pem.match(/(-----BEGIN (?:EC )?PRIVATE KEY-----[\s\S]+?-----END (?:EC )?PRIVATE KEY-----)/)
-    if (!certMatch?.[1] || !keyMatch?.[1]) return null
+    if (result.exitCode !== 0) {
+      const detail = result.stderr?.toString('utf8').trim() ?? ''
+      throw new Error(`OpenSSL failed to generate the TLS fixture: ${detail}`)
+    }
 
-    return { cert: certMatch[1], key: keyMatch[1] }
-  } catch {
-    return null
+    return {
+      cert: readFileSync(certPath, 'utf8'),
+      key: readFileSync(keyPath, 'utf8'),
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true })
   }
 }

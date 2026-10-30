@@ -65,42 +65,37 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash scripts/robinswood-prepare-release-source.sh
   quality:
-    name: Release source quality gate
+    name: Release source quality gate on DEV
     permissions: {contents: read}
     needs: preflight
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    env: {NODE_OPTIONS: "--max-old-space-size=8192", ROBB_RULEBOOK_COMMIT: "109991b8a6b3967bab6c7860af4f5c0cafdff404", ROBB_EXPECTED_SOURCE_COMMIT: "${{ needs.preflight.outputs.source_commit }}"}
+    runs-on: [self-hosted, Linux, X64, robb-release]
+    timeout-minutes: 70
+    defaults:
+      run:
+        working-directory: /home/ubuntu/robb-local-reconcile-20261029
+    env:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      ROBB_RULEBOOK_COMMIT: "fb80719345513a7486d0b47e7fd6018c717dcc2d"
+      ROBB_EXPECTED_SOURCE_COMMIT: "${{ needs.preflight.outputs.source_commit }}"
+      ROBB_QUALITY_CHECKOUT: /home/ubuntu/robb-local-reconcile-20261029
+      ROBB_RULEBOOK_CHECKOUT: /opt/ia-webdev/rulebook-ai
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with: {ref: "${{ needs.preflight.outputs.source_commit }}", persist-credentials: false}
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with: {python-version: "3.15.2"}
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with: {bun-version: "1.4.4"}
-      - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
-        with: {version: "0.13.6"}
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with: {node-version: "26.13.0"}
-      - name: Install immutable workspace dependencies
-        run: bun install --frozen-lockfile
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+      # The runner verifies the prepared checkout; it never resets or replaces it.
+      - name: Verify immutable prepared source
+        run: |
+          robb_source_head="$(rtk git rev-parse HEAD)"
+          test "$robb_source_head" = "$ROBB_EXPECTED_SOURCE_COMMIT"
+          robb_source_status="$(rtk git status --porcelain)"
+          test -z "$robb_source_status"
       - name: Verify public source boundary
         run: |
-          python3 scripts/robinswood-public-source-boundary.py
-          python3 -m unittest scripts/tests/test_robinswood_public_source_boundary.py
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with: {repository: Aoleon/rulebook-ai, ref: "${{ env.ROBB_RULEBOOK_COMMIT }}", path: .quality-rulebook, ssh-key: "${{ secrets.ROBB_RULEBOOK_READONLY_SSH_KEY }}", persist-credentials: false}
-      - name: Prepare headless Electron runtime
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes xvfb libgtk-3-0 libnss3 libasound2t64 libxss1 libgbm1
+          rtk python3 scripts/robinswood_public_source_boundary.py
+          rtk python3 -m unittest scripts/tests/test_robinswood_public_source_boundary.py
       - name: Validate source, installers and canonical quality
-        run: xvfb-run -a python3 scripts/robinswood_quality_ci.py
+        run: xvfb-run -a rtk python3 scripts/robinswood_quality_ci.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
-        with: {name: release-quality-diagnostics, path: "${{ runner.temp }}/robb-public-quality/", if-no-files-found: ignore}
+        with: {name: release-quality-diagnostics, path: "${{ runner.temp }}/robb-public-quality/", if-no-files-found: warn}
   macos:
     timeout-minutes: 90
     name: macOS ${{ matrix.arch }}

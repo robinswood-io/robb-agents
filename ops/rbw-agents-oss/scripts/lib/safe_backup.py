@@ -1,40 +1,39 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path('/srv/rbw-agents-oss')
 
 
 def utc_stamp() -> str:
-    return datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+    return datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')
 
 
 def archive_path_for(source: Path, label: str = 'manual') -> Path:
     source = Path(source)
     try:
         rel = source.relative_to(ROOT)
-    except Exception:
+    except ValueError:
         rel = Path(source.name)
-    month = datetime.now(timezone.utc).strftime('%Y-%m')
+    month = datetime.now(UTC).strftime('%Y-%m')
     return ROOT / 'archive' / month / label / rel.with_name(rel.name + '.' + utc_stamp() + '.bak')
 
 
 def copy_to_archive(source: Path, label: str = 'manual') -> Path:
     source = Path(source)
     dest = archive_path_for(source, label)
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, dest)
+    _ = dest.parent.mkdir(parents=True, exist_ok=True)
+    _ = shutil.copy2(source, dest)
     return dest
 
 
 def move_to_archive(source: Path, label: str = 'manual') -> Path:
     source = Path(source)
     dest = archive_path_for(source, label)
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(source), str(dest))
+    _ = dest.parent.mkdir(parents=True, exist_ok=True)
+    _ = shutil.move(str(source), str(dest))
     return dest
 
 

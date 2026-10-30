@@ -1,25 +1,21 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, TypeAlias
 
 from lib.wrapper_sdk import now_iso, write_report
+from pydantic import JsonValue, TypeAdapter
+from temporalio.client import Client, WorkflowExecution, WorkflowExecutionStatus
 
-JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
-
-if TYPE_CHECKING:
-    from temporalio.client import WorkflowExecution, WorkflowExecutionStatus
-
-
-try:
-    from temporalio.client import Client
-except Exception:  # pragma: no cover
-    Client = None
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
+JSON_ROWS = TypeAdapter(list[dict[str, JsonValue]])
+NUMBER = TypeAdapter(int | float | str)
+INTEGER = TypeAdapter(int)
+STRING = TypeAdapter(str)
 
 ROOT = Path('/srv/rbw-agents-oss')
 CONFIG = ROOT / 'config'
@@ -42,8 +38,8 @@ BAD_STATUSES = {'FAILED', 'TERMINATED', 'TIMED_OUT'}
 
 def load_json(path: Path, default: JsonValue) -> JsonValue:
     try:
-        return json.loads(path.read_text(encoding='utf-8'))
-    except Exception:
+        return TypeAdapter(JsonValue).validate_json(path.read_bytes())
+    except (OSError, ValueError):
         return default
 
 
@@ -51,14 +47,14 @@ def dt_iso(value: datetime | str | None) -> str | None:
     if value is None:
         return None
     if isinstance(value, datetime):
-        return value.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z')
+        return value.astimezone(UTC).isoformat().replace('+00:00', 'Z')
     return str(value)
 
 
 def age_minutes(value: datetime | None, now: datetime) -> float | None:
     if not isinstance(value, datetime):
         return None
-    return round((now - value.astimezone(timezone.utc)).total_seconds() / 60, 2)
+    return round((now - value.astimezone(UTC)).total_seconds() / 60, 2)
 
 
 def status_name(value: WorkflowExecutionStatus | int | str | None) -> str:
@@ -69,32 +65,30 @@ def status_name(value: WorkflowExecutionStatus | int | str | None) -> str:
 
 
 def wf_item(wf: WorkflowExecution, now: datetime) -> dict[str, JsonValue]:
-    status = status_name(getattr(wf, 'status', None))
-    start = getattr(wf, 'start_time', None)
-    close = getattr(wf, 'close_time', None)
+    status = status_name(wf.status)
+    start = wf.start_time
+    close = wf.close_time
     return {
-        'workflowId': getattr(wf, 'id', None),
-        'runId': getattr(wf, 'run_id', None),
-        'workflowType': str(getattr(wf, 'workflow_type', '')),
-        'taskQueue': getattr(wf, 'task_queue', None),
+        'workflowId': wf.id,
+        'runId': wf.run_id,
+        'workflowType': wf.workflow_type,
+        'taskQueue': wf.task_queue,
         'status': status,
         'startTime': dt_iso(start),
         'closeTime': dt_iso(close),
         'ageMinutes': age_minutes(start, now) if status == 'RUNNING' else None,
-        'durationSeconds': round((close.astimezone(timezone.utc) - start.astimezone(timezone.utc)).total_seconds(), 3) if isinstance(start, datetime) and isinstance(close, datetime) else None,
-        'historyLength': getattr(wf, 'history_length', None),
+        'durationSeconds': round((close.astimezone(UTC) - start.astimezone(UTC)).total_seconds(), 3) if close is not None else None,
+        'historyLength': wf.history_length,
     }
 
 
 async def collect(policy: dict[str, JsonValue]) -> dict[str, JsonValue]:
-    if Client is None:
-        raise RuntimeError('temporalio client import failed')
-    target_host = policy.get('targetHost', '127.0.0.1:57233')
-    namespace = policy.get('namespace', 'default')
-    max_recent = int(policy.get('maxRecentWorkflows', 200))
-    max_running = int(policy.get('maxRunningWorkflows', 100))
+    target_host = STRING.validate_python(policy.get('targetHost', '127.0.0.1:57233'))
+    namespace = STRING.validate_python(policy.get('namespace', 'default'))
+    max_recent = INTEGER.validate_python(policy.get('maxRecentWorkflows', 200))
+    max_running = INTEGER.validate_python(policy.get('maxRunningWorkflows', 100))
     client = await Client.connect(target_host, namespace=namespace)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     running: list[dict[str, JsonValue]] = []
     async for wf in client.list_workflows(query='ExecutionStatus="Running"'):
         running.append(wf_item(wf, now))
@@ -105,20 +99,18 @@ async def collect(policy: dict[str, JsonValue]) -> dict[str, JsonValue]:
         recent.append(wf_item(wf, now))
         if len(recent) >= max_recent:
             break
-    return {'running': running, 'recent': recent, 'targetHost': target_host, 'namespace': namespace}
+    return {'running': list(running), 'recent': list(recent), 'targetHost': target_host, 'namespace': namespace}
 
 
 def accepted_business_entries(policy: dict[str, JsonValue]) -> dict[str, dict[str, JsonValue]]:
-    entries = policy.get('acceptedNonOkReports') if isinstance(policy, dict) else []
-    return {str(entry.get('legacy_id')): entry for entry in entries or [] if isinstance(entry, dict) and entry.get('legacy_id') and 'business_failed' in [str(value) for value in entry.get('statuses') or []]}
+    entries = JSON_ROWS.validate_python(policy.get('acceptedNonOkReports') or [])
+    return {str(entry.get('legacy_id')): entry for entry in entries if entry.get('legacy_id') and 'business_failed' in [str(value) for value in TypeAdapter(list[str]).validate_python(entry.get('statuses') or [])]}
 
 
 def workflow_legacy_id(workflow_id: JsonValue, known_ids: set[str] | None = None) -> str:
     raw = str(workflow_id or '')
-    if raw.startswith('rbw.'):
-        raw = raw[4:]
-    if raw.startswith('manual-'):
-        raw = raw[7:]
+    raw = raw.removeprefix('rbw.')
+    raw = raw.removeprefix('manual-')
     if known_ids:
         matches = [legacy_id for legacy_id in known_ids if raw == legacy_id or raw.startswith(legacy_id + '-')]
         if matches:
@@ -139,10 +131,10 @@ def runtime_evidence_candidates(legacy_id: str, runtime_dir: Path) -> list[dict[
             all_lines = history_path.read_text(encoding='utf-8').splitlines()
             lines = all_lines[-500:]
             for line_number, line in enumerate(lines, start=max(1, len(all_lines) - len(lines) + 1)):
-                row = json.loads(line)
+                row = TypeAdapter(JsonValue).validate_json(line)
                 if isinstance(row, dict):
                     candidates.append({'source': 'history', 'path': str(history_path), 'historyLine': line_number, 'generatedAt': row.get('ts') or row.get('generatedAt'), **row})
-        except Exception:
+        except (OSError, ValueError):
             pass
     return candidates
 
@@ -157,24 +149,24 @@ def controlled_business_failure(item: dict[str, JsonValue], max_evidence_distanc
     if str(item.get('status') or '') != 'FAILED':
         return None
     runtime_dir = runtime_dir or (OPS / 'runtime-v2')
-    runtime_status_policy = runtime_status_policy if isinstance(runtime_status_policy, dict) else load_json(RUNTIME_STATUS_POLICY, {})
+    runtime_status_policy = runtime_status_policy if runtime_status_policy is not None else JSON_OBJECT.validate_python(load_json(RUNTIME_STATUS_POLICY, {}))
     entries = accepted_business_entries(runtime_status_policy)
     legacy_id = workflow_legacy_id(item.get('workflowId'), set(entries))
     if not legacy_id or legacy_id not in entries:
         return None
     try:
-        started_at = datetime.fromisoformat(str(item.get('startTime') or '').replace('Z', '+00:00')).astimezone(timezone.utc)
-    except Exception:
+        started_at = datetime.fromisoformat(str(item.get('startTime') or '')).astimezone(UTC)
+    except (OSError, ValueError):
         return None
     nearest: tuple[float, dict[str, JsonValue]] | None = None
     for report in runtime_evidence_candidates(legacy_id, runtime_dir):
-        counts = report.get('counts') if isinstance(report.get('counts'), dict) else {}
-        if report.get('status') != 'business_failed' or int(counts.get('businessFailures') or 0) <= 0 or int(counts.get('technicalFailures') or 0) != 0:
+        counts = JSON_OBJECT.validate_python(report.get('counts') or {})
+        if report.get('status') != 'business_failed' or INTEGER.validate_python(counts.get('businessFailures') or 0) <= 0 or INTEGER.validate_python(counts.get('technicalFailures') or 0) != 0:
             continue
         try:
-            report_at = datetime.fromisoformat(str(report.get('generatedAt') or '').replace('Z', '+00:00')).astimezone(timezone.utc)
+            report_at = datetime.fromisoformat(str(report.get('generatedAt') or '')).astimezone(UTC)
             distance = abs((report_at - started_at).total_seconds())
-        except Exception:
+        except (OSError, ValueError):
             continue
         if distance <= max_evidence_distance_seconds and (nearest is None or distance < nearest[0]):
             nearest = (distance, report)
@@ -185,59 +177,62 @@ def controlled_business_failure(item: dict[str, JsonValue], max_evidence_distanc
 
 
 def main() -> dict[str, JsonValue]:
-    policy = load_json(POLICY, {})
-    now = datetime.now(timezone.utc)
+    policy = JSON_OBJECT.validate_python(load_json(POLICY, {}))
     errors: list[dict[str, JsonValue]] = []
     warnings: list[dict[str, JsonValue]] = []
     data: dict[str, JsonValue] = {'running': [], 'recent': [], 'targetHost': None, 'namespace': None}
-    try:
-        data = asyncio.run(collect(policy if isinstance(policy, dict) else {}))
-    except Exception as exc:
-        errors.append({'code': 'temporal_sdk_connect_or_list_failed', 'message': repr(exc)})
-    max_running_age = float(policy.get('maxRunningAgeMinutes', 90.0)) if isinstance(policy, dict) else 90.0
-    old_running = [r for r in data.get('running', []) if r.get('ageMinutes') is not None and r['ageMinutes'] > max_running_age]
+    if not policy:
+        errors.append({'code': 'temporal_slo_policy_missing_or_invalid'})
+    else:
+        try:
+            data = asyncio.run(collect(policy))
+        except Exception as exc:
+            logging.getLogger(__name__).exception('Temporal connectivity or listing failed')
+            errors.append({'code': 'temporal_sdk_connect_or_list_failed', 'message': repr(exc)})
+    max_running_age = float(NUMBER.validate_python(policy.get('maxRunningAgeMinutes', 90.0)))
+    old_running = [r for r in JSON_ROWS.validate_python(data.get('running', [])) if r.get('ageMinutes') is not None and float(NUMBER.validate_python(r['ageMinutes'])) > max_running_age]
     recent_rate_scope = [
-        r for r in data.get('recent', [])
+        r for r in JSON_ROWS.validate_python(data.get('recent', []))
         if not str(r.get('workflowId') or '').startswith('rbw.oss-temporal-execution-slo-guard')
     ]
-    self_cycle_excluded = len(data.get('recent', [])) - len(recent_rate_scope)
+    self_cycle_excluded = len(JSON_ROWS.validate_python(data.get('recent', []))) - len(recent_rate_scope)
     controlled_business_failures: list[dict[str, JsonValue]] = []
     technical_rate_scope: list[dict[str, JsonValue]] = []
-    exclude_business = bool(policy.get('excludeVerifiedBusinessFailuresFromTechnicalRate', True)) if isinstance(policy, dict) else True
-    runtime_status_policy = load_json(RUNTIME_STATUS_POLICY, {})
+    exclude_business = bool(policy.get('excludeVerifiedBusinessFailuresFromTechnicalRate', True))
+    runtime_status_policy = JSON_OBJECT.validate_python(load_json(RUNTIME_STATUS_POLICY, {}))
     for row in recent_rate_scope:
         evidence = controlled_business_failure(row, runtime_status_policy=runtime_status_policy) if exclude_business else None
         if evidence:
             controlled_business_failures.append({**row, 'businessFailureEvidence': evidence})
         else:
             technical_rate_scope.append(row)
-    bad_recent = [r for r in technical_rate_scope if r.get('status') in BAD_STATUSES]
+    bad_recent = [r for r in technical_rate_scope if str(r.get('status')) in BAD_STATUSES]
     terminal_recent = [r for r in technical_rate_scope if r.get('status') != 'RUNNING']
     bad_terminal_rate = round(len(bad_recent) / len(terminal_recent), 4) if terminal_recent else 0.0
-    recent_bad_mode = str(policy.get('recentBadTerminalMode') or 'warning') if isinstance(policy, dict) else 'warning'
-    max_bad_terminal_rate = float(policy.get('maxRecentBadTerminalRate', 0.05)) if isinstance(policy, dict) else 0.05
+    recent_bad_mode = str(policy.get('recentBadTerminalMode') or 'warning')
+    max_bad_terminal_rate = float(NUMBER.validate_python(policy.get('maxRecentBadTerminalRate', 0.05)))
     if old_running:
-        errors.append({'code': 'old_running_workflows', 'count': len(old_running), 'maxRunningAgeMinutes': max_running_age, 'sample': old_running[:30]})
+        errors.append({'code': 'old_running_workflows', 'count': len(old_running), 'maxRunningAgeMinutes': max_running_age, 'sample': list(old_running[:30])})
     if bad_recent:
-        finding = {'code': 'recent_failed_or_terminated_workflows', 'count': len(bad_recent), 'rate': bad_terminal_rate, 'maxRate': max_bad_terminal_rate, 'sample': bad_recent[:40]}
+        finding: dict[str, JsonValue] = {'code': 'recent_failed_or_terminated_workflows', 'count': len(bad_recent), 'rate': bad_terminal_rate, 'maxRate': max_bad_terminal_rate, 'sample': list(bad_recent[:40])}
         if recent_bad_mode == 'error_above_rate' and bad_terminal_rate > max_bad_terminal_rate:
             errors.append(finding)
         else:
             warnings.append(finding)
     status_counts: dict[str, int] = {}
-    for item in data.get('recent', []):
-        status_counts[item.get('status', 'UNKNOWN')] = status_counts.get(item.get('status', 'UNKNOWN'), 0) + 1
+    for item in JSON_ROWS.validate_python(data.get('recent', [])):
+        status_counts[str(item.get('status', 'UNKNOWN'))] = status_counts.get(str(item.get('status', 'UNKNOWN')), 0) + 1
     ok = not errors
-    payload = {
+    payload = JSON_OBJECT.validate_python({
         'capabilityId': SLUG,
         'ok': ok,
         'status': 'passed' if ok and not warnings else 'warning' if ok else 'failed',
         'generatedAt': now_iso(),
         'summary': 'Temporal execution SLO guard checks SDK connectivity, old running workflows, and recent failed/terminated/timed-out executions.',
-        'policy': {'path': str(POLICY), 'loaded': isinstance(policy, dict) and bool(policy), 'version': policy.get('schemaVersion') if isinstance(policy, dict) else None, 'runtimeStatusPolicyPath': str(RUNTIME_STATUS_POLICY), 'runtimeStatusPolicyLoaded': isinstance(runtime_status_policy, dict) and bool(runtime_status_policy), 'runtimeStatusPolicyVersion': runtime_status_policy.get('version') if isinstance(runtime_status_policy, dict) else None},
+        'policy': {'path': str(POLICY), 'loaded': bool(policy), 'version': policy.get('schemaVersion'), 'runtimeStatusPolicyPath': str(RUNTIME_STATUS_POLICY), 'runtimeStatusPolicyLoaded': bool(runtime_status_policy), 'runtimeStatusPolicyVersion': runtime_status_policy.get('version')},
         'counts': {
-            'runningWorkflowsSampled': len(data.get('running', [])),
-            'recentWorkflowsSampled': len(data.get('recent', [])),
+            'runningWorkflowsSampled': len(JSON_ROWS.validate_python(data.get('running', []))),
+            'recentWorkflowsSampled': len(JSON_ROWS.validate_python(data.get('recent', []))),
             'oldRunningWorkflows': len(old_running),
             'recentBadTerminalWorkflows': len(bad_recent),
             'recentTerminalWorkflows': len(terminal_recent),
@@ -251,17 +246,17 @@ def main() -> dict[str, JsonValue]:
         'statusCountsRecent': status_counts,
         'errors': errors,
         'warnings': warnings,
-        'runningSample': data.get('running', [])[:80],
+        'runningSample': JSON_ROWS.validate_python(data.get('running', []))[:80],
         'controlledBusinessFailureSample': controlled_business_failures[:40],
-        'recentSample': data.get('recent', [])[:80],
+        'recentSample': JSON_ROWS.validate_python(data.get('recent', []))[:80],
         'artifacts': {},
-    }
+    })
     artifacts = write_report(SLUG, payload, title='OSS Temporal Execution SLO Guard')
-    payload['artifacts'] = artifacts
-    write_report(SLUG, payload, title='OSS Temporal Execution SLO Guard')
+    payload['artifacts'] = dict(artifacts)
+    _ = write_report(SLUG, payload, title='OSS Temporal Execution SLO Guard')
     print(json.dumps({'ok': payload['ok'], 'status': payload['status'], 'counts': payload['counts'], 'artifacts': artifacts}, ensure_ascii=False))
     return payload
 
 
 if __name__ == '__main__':
-    main()
+    _ = main()

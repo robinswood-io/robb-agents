@@ -90,7 +90,7 @@ describe.skipIf(process.platform === 'win32')('native release source preflight',
     expect(result.status).toBe(0)
     expect(result.output).toContain('publish=true\n')
     expect(result.output).toContain('tag=v1.2.3\n')
-    expect(result.calls).toContain('python3 scripts/robinswood-signing-preflight.py --ci --strict')
+    expect(result.calls).toContain('python3 scripts/robinswood_signing_preflight.py --ci --strict')
     expect(result.calls).toContain('gh release view v1.2.3 --repo qa/release')
   })
 
@@ -149,7 +149,7 @@ describe('signed macOS staging', () => {
   it('requires signing preflight without a tag or publication', () => {
     const result = run({ REQUESTED_MODE: 'stage-signed' })
     expect(result.status).toBe(0)
-    expect(result.calls).toContain('python3 scripts/robinswood-signing-preflight.py --ci --strict')
+    expect(result.calls).toContain('python3 scripts/robinswood_signing_preflight.py --ci --strict')
     expect(result.calls).not.toContain('gh release')
     expect(result.calls).not.toContain('git rev-list')
     expect(result.output).toContain('publish=false')

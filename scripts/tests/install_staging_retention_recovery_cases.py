@@ -1,23 +1,21 @@
 from __future__ import annotations
-from .install_staging_retention_fixtures import atomic, journal, recovery
-import importlib.util
+
 import os
-from pathlib import Path
 import plistlib
 import subprocess
 import sys
 import tempfile
-import unittest
+from pathlib import Path
 from unittest import mock
 
 from .install_staging_retention_fixtures import (
-    installer,
-    production_renameatx_np,
-    SimulatedProcessDeath,
-    emulate_renameatx_np,
-    stat_mode,
-    LaunchctlRunner,
     InstallStagingRetentionTestCase,
+    LaunchctlRunner,
+    SimulatedProcessDeath,
+    atomic,
+    installer,
+    journal,
+    stat_mode,
 )
 
 
@@ -32,7 +30,7 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
                 raise SimulatedProcessDeath(name)
 
         with self.assertRaises(SimulatedProcessDeath):
-            self.run_install(runner, checkpoint=die_after_script_publication)
+            _ = self.run_install(runner, checkpoint=die_after_script_publication)
 
         def die_after_rollback_swap(
             operation: str,
@@ -46,9 +44,8 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
             atomic,
             'after_atomic_rename',
             side_effect=die_after_rollback_swap,
-        ):
-            with self.assertRaises(SimulatedProcessDeath):
-                self.recover_under_lock(runner)
+        ), self.assertRaises(SimulatedProcessDeath):
+            _ = self.recover_under_lock(runner)
 
         self.assertEqual(self.script.read_bytes(), self.old_script)
         self.assertEqual(self.recover_under_lock(runner), 'rolled_back')
@@ -76,9 +73,8 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
             atomic,
             'after_atomic_rename',
             side_effect=die_after_second_journal_publish,
-        ):
-            with self.assertRaises(SimulatedProcessDeath):
-                self.run_install(runner)
+        ), self.assertRaises(SimulatedProcessDeath):
+            _ = self.run_install(runner)
 
         self.assertEqual(journal_swaps, 2)
         self.assertEqual(self.recover_under_lock(runner), 'rolled_back')
@@ -88,15 +84,15 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
         runner = LaunchctlRunner(loaded=True)
         original_write = installer.write_owned_file
         journal_writes = 0
-        partial_path: Path | None = None
+        partial_paths: list[Path] = []
 
         def die_mid_second_journal_write(path: Path, data: bytes, mode: int):
-            nonlocal journal_writes, partial_path
+            nonlocal journal_writes
             path = Path(path)
             if installer.JOURNAL_NAME in path.name and '.next-' in path.name:
                 journal_writes += 1
                 if journal_writes == 2:
-                    partial_path = path
+                    partial_paths.append(path)
                     descriptor = os.open(
                         path,
                         os.O_WRONLY | os.O_CREAT | os.O_EXCL,
@@ -104,7 +100,7 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
                     )
                     try:
                         os.fchmod(descriptor, mode)
-                        os.write(descriptor, data[:8])
+                        _ = os.write(descriptor, data[:8])
                         os.fsync(descriptor)
                     finally:
                         os.close(descriptor)
@@ -114,13 +110,13 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
         with (
             mock.patch.object(installer, 'write_owned_file', side_effect=die_mid_second_journal_write),
             mock.patch.object(journal, 'write_owned_file', side_effect=die_mid_second_journal_write),
+            self.assertRaises(SimulatedProcessDeath),
         ):
-            with self.assertRaises(SimulatedProcessDeath):
-                self.run_install(runner)
+            _ = self.run_install(runner)
 
         self.assertEqual(journal_writes, 2)
-        self.assertIsNotNone(partial_path)
-        assert partial_path is not None
+        self.assertEqual(len(partial_paths), 1)
+        partial_path = partial_paths[0]
         self.assertTrue(partial_path.exists())
         self.assertEqual(self.recover_under_lock(runner), 'rolled_back')
         self.assertFalse(partial_path.exists())
@@ -145,18 +141,18 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
                 agents.mkdir(parents=True)
                 script = support / 'staging-retention.py'
                 plist = agents / f'{installer.LABEL}.plist'
-                source.write_bytes(self.source.read_bytes())
-                script.write_bytes(self.old_script)
+                _ = source.write_bytes(self.source.read_bytes())
+                _ = script.write_bytes(self.old_script)
                 script.chmod(0o700)
-                plist.write_bytes(self.old_plist)
+                _ = plist.write_bytes(self.old_plist)
                 runner = LaunchctlRunner(loaded=True)
 
-                def die_at_boundary(name: str) -> None:
-                    if name == phase:
+                def die_at_boundary(name: str, expected_phase: str = phase) -> None:
+                    if name == expected_phase:
                         raise SimulatedProcessDeath(name)
 
                 with self.assertRaises(SimulatedProcessDeath):
-                    installer.install(
+                    _ = installer.install(
                         source_script=source,
                         support=support,
                         agents=agents,
@@ -196,11 +192,11 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
                 raise SimulatedProcessDeath(name)
 
         with self.assertRaises(SimulatedProcessDeath):
-            self.run_install(runner, checkpoint=die_after_script_replace)
-        self.script.write_bytes(b'externally-replaced-state\n')
+            _ = self.run_install(runner, checkpoint=die_after_script_replace)
+        _ = self.script.write_bytes(b'externally-replaced-state\n')
 
         with self.assertRaisesRegex(RuntimeError, 'unowned transaction target'):
-            self.recover_under_lock(runner)
+            _ = self.recover_under_lock(runner)
 
         self.assertEqual(self.script.read_bytes(), b'externally-replaced-state\n')
         self.assertTrue((self.support / installer.JOURNAL_NAME).exists())
@@ -215,7 +211,7 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
                 descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
                 try:
                     os.fchmod(descriptor, mode)
-                    os.write(descriptor, data[: max(1, len(data) // 2)])
+                    _ = os.write(descriptor, data[: max(1, len(data) // 2)])
                     os.fsync(descriptor)
                 finally:
                     os.close(descriptor)
@@ -225,9 +221,9 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
         with (
             mock.patch.object(installer, 'write_owned_file', side_effect=die_mid_script_write),
             mock.patch.object(journal, 'write_owned_file', side_effect=die_mid_script_write),
+            self.assertRaises(SimulatedProcessDeath),
         ):
-            with self.assertRaises(SimulatedProcessDeath):
-                self.run_install(runner)
+            _ = self.run_install(runner)
 
         self.assertEqual(self.recover_under_lock(runner), 'rolled_back')
         self.assert_previous_state_restored(runner, minimum_bootstraps=0)
@@ -235,17 +231,16 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
     def test_unproven_partial_initial_journal_is_preserved_but_does_not_block(self) -> None:
         runner = LaunchctlRunner(loaded=True)
         original_write = installer.write_owned_file
-        partial_path: Path | None = None
+        partial_paths: list[Path] = []
 
         def die_mid_initial_journal(path: Path, data: bytes, mode: int):
-            nonlocal partial_path
             path = Path(path)
             if installer.JOURNAL_NAME in path.name and '.next-' in path.name:
-                partial_path = path
+                partial_paths.append(path)
                 descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, mode)
                 try:
                     os.fchmod(descriptor, mode)
-                    os.write(descriptor, data[:8])
+                    _ = os.write(descriptor, data[:8])
                     os.fsync(descriptor)
                 finally:
                     os.close(descriptor)
@@ -255,12 +250,12 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
         with (
             mock.patch.object(installer, 'write_owned_file', side_effect=die_mid_initial_journal),
             mock.patch.object(journal, 'write_owned_file', side_effect=die_mid_initial_journal),
+            self.assertRaises(SimulatedProcessDeath),
         ):
-            with self.assertRaises(SimulatedProcessDeath):
-                self.run_install(runner)
+            _ = self.run_install(runner)
 
-        self.assertIsNotNone(partial_path)
-        assert partial_path is not None
+        self.assertEqual(len(partial_paths), 1)
+        partial_path = partial_paths[0]
         original_partial = partial_path.read_bytes()
         result = self.run_install(runner)
 
@@ -275,12 +270,12 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
         self.plist.chmod(0o640)
         attribute = 'com.robinswood.staging-retention-test'
         try:
-            subprocess.run(
+            _ = subprocess.run(
                 ['/usr/bin/xattr', '-w', attribute, 'helper-value', str(self.script)],
                 check=True,
                 capture_output=True,
             )
-            subprocess.run(
+            _ = subprocess.run(
                 ['/usr/bin/xattr', '-w', attribute, 'plist-value', str(self.plist)],
                 check=True,
                 capture_output=True,
@@ -292,7 +287,7 @@ class InstallStagingRetentionRecoveryTests(InstallStagingRetentionTestCase):
         runner = LaunchctlRunner(loaded=True, fail_bootstrap_call=1)
 
         with self.assertRaises(subprocess.CalledProcessError):
-            self.run_install(runner)
+            _ = self.run_install(runner)
 
         self.assertEqual(self.script.stat().st_ino, script_inode)
         self.assertEqual(self.plist.stat().st_ino, plist_inode)

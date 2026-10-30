@@ -20,13 +20,9 @@ import type { FileAttachment, LoadedSource, PermissionMode } from '../../shared/
  * Call this in playground component wrappers before rendering components
  * that depend on electronAPI.
  *
- * IMPORTANT: this also runs as a top-level side effect when this module is
- * imported (see below), so that consumers relying on a synchronous
- * `window.electronAPI.*` read at module-load time (e.g.
- * `SessionFilesSection.tsx`'s top-level `getRuntimeEnvironment()` call) see
- * the mock before their module is evaluated. The entry `playground.tsx`
- * must import this module before any component chain that touches
- * `window.electronAPI` at import time.
+ * This also runs when the module is imported by playground.tsx, so the host API
+ * is installed before React mounts components. Host-dependent modules should read
+ * the API during rendering or callbacks, not while their imports are evaluated.
  */
 export function ensureMockElectronAPI() {
   try {

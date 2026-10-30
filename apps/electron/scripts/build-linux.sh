@@ -66,7 +66,7 @@ if [[ "$RELEASE_BUILD" == true ]]; then
     command -v git >/dev/null || { echo "ERROR: --release requires Git to verify source integrity." >&2; exit 1; }
     # Refuse dirty source before dependency installation or generated cleanup.
     # The electron-builder beforePack hook repeats this check.
-    RELEASE_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.cjs" --check-source "$ROOT_DIR")"
+    RELEASE_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.ts" --check-source "$ROOT_DIR")"
     export ROBB_BUILD_CHANNEL=production
     export ROBB_BUILD_COMMIT="$RELEASE_COMMIT"
     export ROBB_BUILD_DIRTY=false
@@ -109,7 +109,7 @@ fi
 
 # Create temp directory to avoid race conditions
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 # Download binary and checksums
 curl -fSL "https://github.com/oven-sh/bun/releases/download/${BUN_VERSION}/${BUN_DOWNLOAD}.zip" -o "$TEMP_DIR/${BUN_DOWNLOAD}.zip"
@@ -147,8 +147,8 @@ if [ ! -d "$SDK_BIN_SOURCE" ]; then
     (
         cd "$PKG_TMP"
         npm pack "@anthropic-ai/${SDK_BIN_PKG}@${SDK_VERSION}" >/dev/null
-        TARBALL=$(ls anthropic-ai-*.tgz | head -1)
-        tar -xzf "$TARBALL"
+        TARBALLS=(anthropic-ai-*.tgz)
+        tar -xzf "${TARBALLS[0]}"
     )
     mkdir -p "$SDK_BIN_SOURCE"
     cp -r "$PKG_TMP/package/." "$SDK_BIN_SOURCE/"
@@ -210,7 +210,7 @@ cd "$ELECTRON_DIR"
 # Note: electron-builder may build both archs due to config, but we only use the requested one
 # Publishing is handled only by an explicit release workflow, never by
 # electron-builder's CI auto-detection.
-bun x --bun electron-builder --config electron-builder.yml --linux --${ARCH} --publish never
+bun x --bun electron-builder --config electron-builder.yml --linux "--${ARCH}" --publish never
 
 bun "$ROOT_DIR/scripts/validate-electron-package-security.ts" \
     --binary "$ELECTRON_DIR/release/linux-unpacked/robb-agents" \
@@ -259,4 +259,4 @@ SMOKE_ARGS=(--appimage "$APPIMAGE_PATH")
 if [[ "${ROBB_PACKAGE_LAUNCH_SMOKE:-0}" == "1" ]]; then
     SMOKE_ARGS+=(--launch --launch-timeout 45)
 fi
-python3 "$ROOT_DIR/scripts/robinswood-linux-packaged-smoke.py" "${SMOKE_ARGS[@]}"
+python3 "$ROOT_DIR/scripts/robinswood_linux_packaged_smoke.py" "${SMOKE_ARGS[@]}"

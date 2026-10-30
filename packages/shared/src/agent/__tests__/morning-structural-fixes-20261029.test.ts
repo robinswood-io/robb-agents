@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it } from 'bun:test';
 import { randomUUID } from 'node:crypto';
+import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { looksLikePowerShell } from '../powershell-validator/command-syntax.ts';
 import { resolveParserScriptPath } from '../powershell-validator/parser-process.ts';
+import { setPowerShellValidatorRoot } from '../powershell-validator.ts';
 import { ClaudeAgent } from '../claude-agent.ts';
 import { createClaudeBackendConfig } from '../claude-agent/shared.ts';
 import { blockWithReason, cleanupModeState, initializeModeState } from '../mode-manager.ts';
@@ -204,7 +206,7 @@ describe('morning structural fixes (2026-10-29)', () => {
     expect(claimedId).toBe('toolu_req_1');
   });
 
-  it('avoids false-positive PowerShell classification on POSIX paths/flags and resolves parser script without Electron init', () => {
+  it('avoids false positives and requires an initialized parser root', () => {
     expect(looksLikePowerShell('touch /fixture/new-target')).toBe(false);
     expect(looksLikePowerShell('git push --set-upstream origin main')).toBe(false);
     expect(looksLikePowerShell('cat ./get-status.json')).toBe(false);
@@ -212,6 +214,13 @@ describe('morning structural fixes (2026-10-29)', () => {
     expect(looksLikePowerShell('rg "get-url" packages/')).toBe(false);
     expect(looksLikePowerShell('Get-Process')).toBe(true);
     expect(looksLikePowerShell('powershell.exe -Command "Set-Content -Path foo"')).toBe(true);
-    expect(existsSync(resolveParserScriptPath())).toBe(true);
+
+    expect(() => resolveParserScriptPath()).toThrow('PowerShell validator root not set');
+
+    const parserRoot = resolve(import.meta.dir, '..');
+    setPowerShellValidatorRoot(parserRoot);
+    const parserScript = resolveParserScriptPath();
+    expect(parserScript).toBe(resolve(parserRoot, 'powershell-parser.ps1'));
+    expect(existsSync(parserScript)).toBe(true);
   });
 });

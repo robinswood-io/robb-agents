@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import os
+from typing import Literal
+
 from pydantic import JsonValue
 
-from .models import AgentSpec, ExecutionBackend, Invocation, PolicyDecision
+from .json_support import _is_json_object
+from .models import AgentSpec, ExecutionBackend, PolicyDecision
 
 APPROVAL_KEYS = (
     "approved",
@@ -21,7 +24,8 @@ def _truthy(value: JsonValue) -> bool:
 
 
 def _approval_present(payload: dict[str, JsonValue]) -> bool:
-    approval = payload.get("approval") if isinstance(payload.get("approval"), dict) else {}
+    approval_value = payload.get("approval")
+    approval = approval_value if _is_json_object(approval_value) else {}
     return any(_truthy(payload.get(key)) or _truthy(approval.get(key)) for key in APPROVAL_KEYS)
 
 
@@ -44,7 +48,7 @@ class PolicyEngine:
 
     def __init__(self, mode: str | None = None):
         requested = str(mode or os.getenv("RBW_RUNTIME_V2_POLICY_MODE", "shadow")).strip().lower()
-        self.mode = "enforce" if requested == "enforce" else "shadow"
+        self.mode: Literal["shadow", "enforce"] = "enforce" if requested == "enforce" else "shadow"
 
     def evaluate(
         self,
@@ -83,9 +87,7 @@ class PolicyEngine:
             cwd = spec.execution.cwd
             risk_class = spec.risk_class
 
-            if backend != ExecutionBackend.ARGV:
-                strict.append("unsupported_execution_backend")
-            elif not argv:
+            if not argv:
                 strict.append("argv_backend_missing_argv")
             elif not argv[0].startswith("/"):
                 strict.append("argv_executable_must_be_absolute")

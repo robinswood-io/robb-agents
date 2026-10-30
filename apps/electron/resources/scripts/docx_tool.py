@@ -13,23 +13,130 @@ Usage:
 import json
 import re
 import sys
+from collections.abc import Iterator
 from pathlib import Path
+from typing import Protocol, cast
 
 import click
 from docx import Document
+from docx.opc.exceptions import OpcError, PackageNotFoundError
 from docx.shared import Pt
+
+_DOCX_OPERATION_ERRORS = (OSError, ValueError, TypeError, RuntimeError, KeyError, IndexError, PackageNotFoundError, OpcError)
+
+
+class _RunLike(Protocol):
+    text: str
+    bold: bool | None
+    italic: bool | None
+
+
+class _FontLike(Protocol):
+    size: object
+
+
+class _StyleLike(Protocol):
+    name: str | None
+    font: _FontLike
+
+
+class _ParagraphLike(Protocol):
+    text: str
+    runs: list[_RunLike]
+    style: _StyleLike
+
+    def clear(self) -> None: ...
+
+    def add_run(self, text: str) -> _RunLike: ...
+
+
+class _CellLike(Protocol):
+    text: str
+    paragraphs: list[_ParagraphLike]
+
+
+class _RowLike(Protocol):
+    cells: list[_CellLike]
+
+
+class _TableLike(Protocol):
+    rows: list[_RowLike]
+
+
+class _HeaderFooterLike(Protocol):
+    is_linked_to_previous: bool
+    paragraphs: list[_ParagraphLike]
+
+
+class _SectionLike(Protocol):
+    header: _HeaderFooterLike
+    footer: _HeaderFooterLike
+
+
+class _PropertiesLike(Protocol):
+    author: str
+    title: str
+    subject: str
+    created: object
+    modified: object
+    last_modified_by: str
+    revision: int
+
+
+class _StylesLike(Protocol):
+    def __getitem__(self, name: str) -> _StyleLike: ...
+
+    def __iter__(self) -> Iterator[_StyleLike]: ...
+
+
+class _DocumentLike(Protocol):
+    paragraphs: list[_ParagraphLike]
+    tables: list[_TableLike]
+    sections: list[_SectionLike]
+    styles: _StylesLike
+    core_properties: _PropertiesLike
+
+    def add_page_break(self) -> _ParagraphLike: ...
+
+    def add_heading(self, text: str, level: int = 1) -> _ParagraphLike: ...
+
+    def add_paragraph(self, text: str = "", style: str | None = None) -> _ParagraphLike: ...
+
+    def save(self, path: str) -> None: ...
+
+
+def _as_document(value: object) -> _DocumentLike:
+    """Adapt python-docx documents after checking their runtime entry points."""
+    required = ("add_page_break", "add_heading", "add_paragraph", "save")
+    if not all(callable(getattr(value, name, None)) for name in required):
+        raise TypeError("Document does not implement the python-docx interface")
+    if not all(hasattr(value, name) for name in ("paragraphs", "tables", "sections", "styles", "core_properties")):
+        raise TypeError("Document is missing python-docx data collections")
+    return cast(_DocumentLike, value)
+
+
+def _parse_template_data(text: str) -> dict[str, object]:
+    decoded: object = cast(object, json.loads(text))
+    if not isinstance(decoded, dict):
+        raise TypeError("JSON data must be an object")
+    result: dict[str, object] = {}
+    for key, value in cast(dict[object, object], decoded).items():
+        if not isinstance(key, str):
+            raise TypeError("JSON object keys must be strings")
+        result[key] = value
+    return result
 
 
 def write_output(text: str, output_path: str | None) -> None:
     """Write text to file or stdout."""
     if output_path:
-        Path(output_path).write_text(text, encoding="utf-8")
+        _ = Path(output_path).write_text(text, encoding="utf-8")
         click.echo(f"Output written to {output_path}", err=True)
     else:
         click.echo(text)
 
 
-def markdown_to_docx(md_text: str, doc: Document) -> None:
+def markdown_to_docx(md_text: str, doc: _DocumentLike) -> None:
     """Convert simple markdown text to docx paragraphs.
 
     Supports: # headings (h1-h6), **bold**, *italic*, - bullet lists,
@@ -43,7 +150,7 @@ def markdown_to_docx(md_text: str, doc: Document) -> None:
 
         # Page break
         if stripped in ("---", "***", "___"):
-            doc.add_page_break()
+            _ = doc.add_page_break()
             i += 1
             continue
 
@@ -52,7 +159,7 @@ def markdown_to_docx(md_text: str, doc: Document) -> None:
         if heading_match:
             level = len(heading_match.group(1))
             text = heading_match.group(2)
-            doc.add_heading(text, level=level)
+            _ = doc.add_heading(text, level=level)
             i += 1
             continue
 
@@ -85,7 +192,7 @@ def markdown_to_docx(md_text: str, doc: Document) -> None:
         i += 1
 
 
-def _apply_inline_formatting(paragraph, text: str) -> None:
+def _apply_inline_formatting(paragraph: _ParagraphLike, text: str) -> None:
     """Apply bold and italic inline formatting to a paragraph."""
     # Clear any default runs
     paragraph.clear()
@@ -105,13 +212,12 @@ def _apply_inline_formatting(paragraph, text: str) -> None:
             run = paragraph.add_run(match.group(4))
             run.italic = True
         elif match.group(5):  # plain text
-            paragraph.add_run(match.group(5))
+            _ = paragraph.add_run(match.group(5))
 
 
 @click.group()
 def cli() -> None:
     """Word document (.docx) creation and editing tool."""
-    pass
 
 
 @cli.command()
@@ -131,14 +237,14 @@ def create(from_file: str | None, text: str | None, title: str | None, font_size
         sys.exit(1)
 
     try:
-        doc = Document()
+        doc = _as_document(cast(object, Document()))
 
         # Set default font size
         style = doc.styles["Normal"]
         style.font.size = Pt(font_size)
 
         if title:
-            doc.add_heading(title, level=0)
+            _ = doc.add_heading(title, level=0)
 
         if from_file:
             content = Path(from_file).read_text(encoding="utf-8")
@@ -149,7 +255,7 @@ def create(from_file: str | None, text: str | None, title: str | None, font_size
 
         doc.save(output)
         click.echo(f"Document created: {output}", err=True)
-    except Exception as e:
+    except _DOCX_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -168,15 +274,12 @@ def template(template_file: str, data: str, output: str) -> None:
         # Parse data
         data_path = Path(data)
         if data_path.exists() and data_path.is_file():
-            template_data = json.loads(data_path.read_text(encoding="utf-8"))
+            template_data = _parse_template_data(data_path.read_text(encoding="utf-8"))
         else:
-            template_data = json.loads(data)
+            template_data = _parse_template_data(data)
 
-        if not isinstance(template_data, dict):
-            click.echo("Error: JSON data must be an object.", err=True)
-            sys.exit(1)
 
-        doc = Document(template_file)
+        doc = _as_document(cast(object, Document(template_file)))
 
         # Replace in paragraphs
         for paragraph in doc.paragraphs:
@@ -201,12 +304,12 @@ def template(template_file: str, data: str, output: str) -> None:
     except json.JSONDecodeError as e:
         click.echo(f"Error parsing JSON: {e}", err=True)
         sys.exit(1)
-    except Exception as e:
+    except _DOCX_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
 
-def _replace_in_paragraph(paragraph, data: dict[str, str]) -> None:
+def _replace_in_paragraph(paragraph: _ParagraphLike, data: dict[str, object]) -> None:
     """Replace {{key}} placeholders in a paragraph while preserving formatting."""
     full_text = paragraph.text
     if "{{" not in full_text:
@@ -214,7 +317,7 @@ def _replace_in_paragraph(paragraph, data: dict[str, str]) -> None:
 
     # Single-pass replacement to avoid cascading (a replacement value containing
     # {{other_key}} should not be substituted again).
-    def _replacer(match: re.Match) -> str:
+    def _replacer(match: re.Match[str]) -> str:
         key = match.group(1)
         if key in data:
             return str(data[key])
@@ -236,7 +339,7 @@ def _replace_in_paragraph(paragraph, data: dict[str, str]) -> None:
 def info(file: str, output: str | None) -> None:
     """Show document information: paragraphs, sections, tables, styles."""
     try:
-        doc = Document(file)
+        doc = _as_document(cast(object, Document(file)))
 
         # Count elements
         paragraph_count = len(doc.paragraphs)
@@ -244,10 +347,10 @@ def info(file: str, output: str | None) -> None:
         section_count = len(doc.sections)
 
         # Styles used
-        styles_used = set()
+        styles_used: set[str] = set()
         for p in doc.paragraphs:
             if p.style and p.style.name:
-                styles_used.add(p.style.name)
+                styles_used.add(str(p.style.name))
 
         # Word count
         word_count = sum(len(p.text.split()) for p in doc.paragraphs)
@@ -273,7 +376,7 @@ def info(file: str, output: str | None) -> None:
         }
 
         # Template placeholders
-        placeholders = set()
+        placeholders: set[str] = set()
         for p in doc.paragraphs:
             for match in re.finditer(r"\{\{(\w+)\}\}", p.text):
                 placeholders.add(match.group(1))
@@ -281,7 +384,7 @@ def info(file: str, output: str | None) -> None:
             info_dict["template_placeholders"] = sorted(placeholders)
 
         write_output(json.dumps(info_dict, indent=2, default=str), output)
-    except Exception as e:
+    except _DOCX_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -295,7 +398,7 @@ def info(file: str, output: str | None) -> None:
 def replace(file: str, find: str, replace_with: str, case_sensitive: bool, output: str) -> None:
     """Find and replace text in a Word document."""
     try:
-        doc = Document(file)
+        doc = _as_document(cast(object, Document(file)))
         count = 0
 
         for paragraph in doc.paragraphs:
@@ -319,12 +422,12 @@ def replace(file: str, find: str, replace_with: str, case_sensitive: bool, outpu
 
         doc.save(output)
         click.echo(f"Replaced {count} occurrence(s). Saved to {output}", err=True)
-    except Exception as e:
+    except _DOCX_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
 
-def _find_replace_paragraph(paragraph, find: str, replace_with: str, case_sensitive: bool) -> int:
+def _find_replace_paragraph(paragraph: _ParagraphLike, find: str, replace_with: str, case_sensitive: bool) -> int:
     """Replace text in a paragraph, returns count of replacements."""
     full_text = paragraph.text
     check_text = full_text if case_sensitive else full_text.lower()
@@ -358,16 +461,17 @@ def _find_replace_paragraph(paragraph, find: str, replace_with: str, case_sensit
 def extract(file: str, include_tables: bool, output: str | None) -> None:
     """Extract all text content from a Word document."""
     try:
-        doc = Document(file)
+        doc = _as_document(cast(object, Document(file)))
         parts: list[str] = []
 
         for paragraph in doc.paragraphs:
             text = paragraph.text.strip()
             if text:
                 # Add heading markers
-                if paragraph.style and paragraph.style.name.startswith("Heading"):
+                style_name = paragraph.style.name
+                if style_name is not None and style_name.startswith("Heading"):
                     try:
-                        level = int(paragraph.style.name.split()[-1])
+                        level = int(style_name.split()[-1])
                         text = "#" * level + " " + text
                     except (ValueError, IndexError):
                         pass
@@ -381,7 +485,7 @@ def extract(file: str, include_tables: bool, output: str | None) -> None:
                     parts.append(" | ".join(cells))
 
         write_output("\n".join(parts), output)
-    except Exception as e:
+    except _DOCX_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 

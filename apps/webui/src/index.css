@@ -1,4 +1,13 @@
 @import "tailwindcss" source(none);
+/*
+ * Import the Electron renderer's full CSS (theme variables, base styles, animations).
+ * This ensures visual parity with the desktop app.
+ *
+ * The import brings in @property declarations, :root themes, and utility styles.
+ * We re-declare @source below because Tailwind v4 source(none) scoping doesn't
+ * inherit across @import boundaries.
+ */
+@import "../../electron/src/renderer/index.css";
 @plugin "@tailwindcss/typography";
 
 /* Scan the Electron renderer components (shared via @ alias) */
@@ -17,15 +26,6 @@
 @source "./App.tsx";
 @source "./main.tsx";
 
-/*
- * Import the Electron renderer's full CSS (theme variables, base styles, animations).
- * This ensures visual parity with the desktop app.
- *
- * The import brings in @property declarations, :root themes, and utility styles.
- * We re-declare @source above because Tailwind v4 source(none) scoping doesn't
- * inherit across @import boundaries.
- */
-@import "../../electron/src/renderer/index.css";
 
 /* Browser/PWA viewport contract. The Electron renderer assumes a fixed app
  * viewport; use dynamic viewport units without scaling the entire layout or

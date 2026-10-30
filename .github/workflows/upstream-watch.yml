@@ -24,7 +24,7 @@ jobs:
           git update-ref refs/remotes/upstream/main FETCH_HEAD
       - name: Generate non-mutating review report
         run: |
-          python3 scripts/robinswood-upstream-watch.py \
+          python3 scripts/robinswood_upstream_watch.py \
             --baseline docs/robinswood/upstream-watch-baseline.json \
             --upstream-ref upstream/main \
             --output upstream-watch-report.md

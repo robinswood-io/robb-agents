@@ -6,12 +6,19 @@ import os
 import shutil
 import subprocess
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TypeAlias
-from lib.config_mutation import ConfigMutation, PROTECTED_CONFIG_FILES
 
-JsonValue: TypeAlias = str | int | float | bool | None | list["JsonValue"] | dict[str, "JsonValue"]
+from lib.config_mutation import PROTECTED_CONFIG_FILES, ConfigMutation
+from pydantic import JsonValue, TypeAdapter, ValidationError
+
+type JsonObject = dict[str, JsonValue]
+JSON_ADAPTER = TypeAdapter(JsonValue)
+OBJECT_ADAPTER = TypeAdapter(JsonObject)
+ROWS_ADAPTER = TypeAdapter(list[JsonObject])
+
+def _policy_rows(value: JsonValue) -> list[JsonObject]:
+    return ROWS_ADAPTER.validate_python(value) if isinstance(value, list) else []
 
 ROOT = Path("/srv/rbw-agents-oss")
 
@@ -53,7 +60,7 @@ REPORT_JSON = OPS / "oss-architecture-v2-install-last.json"
 
 REPORT_MD = OPS / "oss-architecture-v2-install-last.md"
 
-STAMP = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+STAMP = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
 
 ARCHIVE = ROOT / "archive" / "2026-07" / "architecture-v2" / STAMP
 
@@ -66,7 +73,7 @@ NEW_HELPERS = {
     "scripts/oss_p0_structural_patch.py": "one_shot_structural_migration",
 }
 
-CONSERVATIVE_MANUAL_HELPERS = {
+CONSERVATIVE_MANUAL_HELPERS: dict[str, tuple[str, str, list[str]]] = {
     "scripts/drive_audio_transcription_autopilot.original.py": ("retained_original_reference", "medium_manual_reference", ["manual_direct_after_review"]),
     "scripts/oss_security_audit_guard.py": ("manual_observability_or_builder_tool", "low_observability", ["manual_direct", "parent_observability_pipeline"]),
     "scripts/speaker_voice_profile_tool.py": ("manual_editorial_audio_helper", "medium_human_approval_required", ["manual_direct_after_explicit_review", "approved_content_pipeline"]),
@@ -96,12 +103,12 @@ CONSERVATIVE_MANUAL_HELPERS = {
 }
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 def load_json(path: Path, default: JsonValue) -> JsonValue:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
+        return JSON_ADAPTER.validate_json(path.read_bytes())
+    except (OSError, UnicodeError, ValidationError):
         return default
 
 def archive_copy(path: Path, label: str = "before") -> str | None:
@@ -110,7 +117,7 @@ def archive_copy(path: Path, label: str = "before") -> str | None:
     relative = path.relative_to(ROOT)
     target = ARCHIVE / label / relative
     target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(path, target)
+    _ = shutil.copy2(path, target)
     return str(target)
 
 def atomic_write(path: Path, content: str, changes: list[dict[str, JsonValue]], *, archive_label: str = "before") -> bool:
@@ -126,8 +133,8 @@ def atomic_write(path: Path, content: str, changes: list[dict[str, JsonValue]], 
     else:
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
-        tmp.write_text(content, encoding="utf-8")
-        tmp.replace(path)
+        _ = tmp.write_text(content, encoding="utf-8")
+        _ = tmp.replace(path)
         helper_backup = None
     changes.append({"action": "write", "path": str(path), "bytes": len(content.encode("utf-8")), "archive": backup, "configMutationArchive": helper_backup})
     return True
@@ -146,10 +153,10 @@ def run(command: list[str], timeout: int = 180, env: dict[str, str] | None = Non
     if env:
         merged.update(env)
     try:
-        proc = subprocess.run(command, cwd=str(ROOT), env=merged, text=True, capture_output=True, timeout=timeout)
-        return {"ok": proc.returncode == 0, "returnCode": proc.returncode, "command": command, "stdout": proc.stdout[-2500:], "stderr": proc.stderr[-2500:]}
-    except Exception as exc:
-        return {"ok": False, "returnCode": None, "command": command, "stdout": "", "stderr": repr(exc)}
+        proc = subprocess.run(command, cwd=str(ROOT), env=merged, text=True, capture_output=True, timeout=timeout, check=False)
+        return {"ok": proc.returncode == 0, "returnCode": proc.returncode, "command": list[JsonValue](command), "stdout": proc.stdout[-2500:], "stderr": proc.stderr[-2500:]}
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"ok": False, "returnCode": None, "command": list[JsonValue](command), "stdout": "", "stderr": repr(exc)}
 
 def manifest_rows(data: JsonValue) -> list[dict[str, JsonValue]]:
     if not isinstance(data, dict):
@@ -164,11 +171,12 @@ def mapping_rows(data: JsonValue) -> list[dict[str, JsonValue]]:
     return []
 
 def schedule_rows(data: JsonValue) -> list[dict[str, JsonValue]]:
-    rows = data.get("schedules", []) if isinstance(data, dict) else []
-    return [row for row in rows if isinstance(row, dict)]
+    rows: JsonValue = data.get("schedules", []) if isinstance(data, dict) else []
+    return _policy_rows(rows)
 
 def schedule_legacy(row: dict[str, JsonValue]) -> str | None:
-    payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
+    raw_payload = row.get("payload")
+    payload = raw_payload if isinstance(raw_payload, dict) else {}
     value = row.get("legacy_id") or payload.get("legacy_id") or row.get("capability_id")
     return str(value) if value else None
 
@@ -192,7 +200,10 @@ def classify_side_effect(row: dict[str, JsonValue], scheduled: bool) -> dict[str
     legacy_id = str(row.get("legacy_id"))
     risk = str(row.get("riskClass") or "medium_unclassified")
     command = str(row.get("command") or "").lower()
-    effects = [str(value) for value in row.get("sideEffects", []) if value]
+    raw_effects = row.get("sideEffects", [])
+    if not isinstance(raw_effects, list):
+        raise TypeError("sideEffects must be an array")
+    effects = [str(value) for value in raw_effects if value]
     text = " ".join([legacy_id, risk, command] + effects).lower()
     is_test = "test" in legacy_id or "guardrail_tests" in risk
     is_finance_apply = any(token in text for token in ("inqom", "rubypayeur", "financial")) and any(token in text for token in ("--apply", "mutation", "executor", "dispatch"))
@@ -227,18 +238,16 @@ def classify_side_effect(row: dict[str, JsonValue], scheduled: bool) -> dict[str
         "requiresExplicitReviewBeforeRiskIncrease": True,
         "requiresHumanApprovalForApply": bool(is_finance_apply or is_outbound),
         "requiresHumanApprovalForExternalSend": bool(is_outbound),
-        "sideEffects": effects or ["filesystem-write:ops-report"],
+        "sideEffects": list[JsonValue](effects) or ["filesystem-write:ops-report"],
         "updatedAt": now_iso(),
         "updatedBy": "oss-architecture-v2-install",
         "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated.",
     }
 
 def update_side_effect_policy(manifest: dict[str, JsonValue], schedules: list[dict[str, JsonValue]], changes: list[dict[str, JsonValue]]) -> None:
-    data = load_json(SIDE_EFFECTS, {})
-    rows = data.get("capabilities", []) if isinstance(data, dict) else []
-    if not isinstance(rows, list):
-        rows = []
-    by_id = {str(row.get("legacy_id") or row.get("capability_id")): row for row in rows if isinstance(row, dict) and (row.get("legacy_id") or row.get("capability_id"))}
+    data = OBJECT_ADAPTER.validate_python(load_json(SIDE_EFFECTS, {}))
+    rows = _policy_rows(data.get("capabilities", []))
+    by_id = {str(row.get("legacy_id") or row.get("capability_id")): row for row in rows if (row.get("legacy_id") or row.get("capability_id"))}
     scheduled_ids = {schedule_legacy(row) for row in schedules}
     for row in manifest_rows(manifest):
         legacy_id = str(row["legacy_id"])
@@ -246,32 +255,31 @@ def update_side_effect_policy(manifest: dict[str, JsonValue], schedules: list[di
             classified = classify_side_effect(row, legacy_id in scheduled_ids)
             rows.append(classified)
             by_id[legacy_id] = classified
-    data["capabilities"] = sorted(rows, key=lambda row: str(row.get("legacy_id") or row.get("capability_id")))
+    ordered: list[JsonObject] = sorted(rows, key=lambda row: str(row.get("legacy_id") or row.get("capability_id")))
+    data["capabilities"] = list[JsonValue](ordered)
     data["updatedAt"] = now_iso()
     data["updatedBy"] = "oss-architecture-v2-install"
     data["counts"] = {
         "manifestRows": len(manifest_rows(manifest)),
-        "classifiedCapabilities": len({str(row.get('legacy_id') or row.get('capability_id')) for row in rows if isinstance(row, dict)}),
+        "classifiedCapabilities": len({str(row.get('legacy_id') or row.get('capability_id')) for row in rows}),
         "highRisk": sum(1 for row in rows if str(row.get("riskClass", "")).startswith("high")),
         "requiresHumanApprovalForApply": sum(1 for row in rows if row.get("requiresHumanApprovalForApply")),
     }
-    write_json(SIDE_EFFECTS, data, changes)
+    _ = write_json(SIDE_EFFECTS, data, changes)
 
 def update_manifest_only_policy(manifest: dict[str, JsonValue], mapping: JsonValue, schedules: list[dict[str, JsonValue]], changes: list[dict[str, JsonValue]]) -> None:
-    data = load_json(MANIFEST_ONLY, {})
-    rows = data.get("acceptedManifestOnly", []) if isinstance(data, dict) else []
-    if not isinstance(rows, list):
-        rows = []
-    by_id = {str(row.get("legacy_id")): row for row in rows if isinstance(row, dict) and row.get("legacy_id")}
+    data = OBJECT_ADAPTER.validate_python(load_json(MANIFEST_ONLY, {}))
+    rows = _policy_rows(data.get("acceptedManifestOnly", []))
+    by_id = {str(row.get("legacy_id")): row for row in rows if row.get("legacy_id")}
     mapped = {str(row.get("legacy_id")) for row in mapping_rows(mapping) if row.get("legacy_id")}
-    scheduled = {schedule_legacy(row) for row in schedules}
+    _ = schedules  # Manual-only entries remain unscheduled regardless of live schedules.
     for manifest_row in manifest_rows(manifest):
         legacy_id = str(manifest_row["legacy_id"])
         if legacy_id in mapped or legacy_id in by_id:
             continue
         is_test = "test" in legacy_id or "guardrail_tests" in str(manifest_row.get("riskClass") or "")
         is_outbound = "linkedin" in legacy_id or "dispatch" in legacy_id
-        row = {
+        row: JsonObject = {
             "legacy_id": legacy_id,
             "accepted": True,
             "mappingExpectation": "manifest_only_manual_or_test",
@@ -289,24 +297,23 @@ def update_manifest_only_policy(manifest: dict[str, JsonValue], mapping: JsonVal
         rows.append(row)
         by_id[legacy_id] = row
     current_manifest_only = {str(row["legacy_id"]) for row in manifest_rows(manifest)} - mapped
-    data["acceptedManifestOnly"] = sorted(rows, key=lambda row: str(row.get("legacy_id")))
+    ordered: list[JsonObject] = sorted(rows, key=lambda row: str(row.get("legacy_id")))
+    data["acceptedManifestOnly"] = list[JsonValue](ordered)
     data["updatedAt"] = now_iso()
     data["updatedBy"] = "oss-architecture-v2-install"
     data["counts"] = {"acceptedManifestOnly": len(rows), "currentManifestOnly": len(current_manifest_only), "staleRetainedForAudit": len(set(by_id) - current_manifest_only)}
-    write_json(MANIFEST_ONLY, data, changes)
+    _ = write_json(MANIFEST_ONLY, data, changes)
 
 def update_script_coverage(changes: list[dict[str, JsonValue]]) -> None:
-    data = load_json(SCRIPT_COVERAGE, {})
-    key = "acceptedOrphanScripts" if isinstance(data, dict) and isinstance(data.get("acceptedOrphanScripts"), list) else "rows"
-    rows = data.get(key, []) if isinstance(data, dict) else []
-    if not isinstance(rows, list):
-        rows = []
-    by_path = {str(row.get("path")): row for row in rows if isinstance(row, dict) and row.get("path")}
+    data = OBJECT_ADAPTER.validate_python(load_json(SCRIPT_COVERAGE, {}))
+    key = "acceptedOrphanScripts" if isinstance(data.get("acceptedOrphanScripts"), list) else "rows"
+    rows = _policy_rows(data.get(key, []))
+    by_path = {str(row.get("path")): row for row in rows if row.get("path")}
     for path, policy_class in NEW_HELPERS.items():
         if path in by_path:
             continue
         is_test = "selftest" in path
-        row = {
+        row: JsonObject = {
             "path": path,
             "accepted": True,
             "manifestCommandExpected": False,
@@ -334,15 +341,18 @@ def update_script_coverage(changes: list[dict[str, JsonValue]]) -> None:
             "requiresExplicitReviewBeforeAutomation": True,
             "policyClass": policy_class,
             "riskClass": risk_class,
-            "allowedInvocation": allowed_invocation,
+            "allowedInvocation": list[JsonValue](allowed_invocation),
             "updatedAt": now_iso(),
             "updatedBy": "oss-architecture-v2-install",
             "rationale": "Classified conservatively during runtime-v2 migration; browser/dispatch helpers remain manual, unscheduled and review-gated.",
         }
         rows.append(row)
         by_path[path] = row
-    data[key] = sorted(rows, key=lambda row: str(row.get("path")))
+    ordered: list[JsonObject] = sorted(rows, key=lambda row: str(row.get("path")))
+    data[key] = list[JsonValue](ordered)
     data["updatedAt"] = now_iso()
     data["updatedBy"] = "oss-architecture-v2-install"
-    data.setdefault("counts", {})["acceptedOrphanScripts"] = len(rows)
-    write_json(SCRIPT_COVERAGE, data, changes)
+    counts = OBJECT_ADAPTER.validate_python(data.setdefault("counts", {}))
+    counts["acceptedOrphanScripts"] = len(rows)
+    data["counts"] = counts
+    _ = write_json(SCRIPT_COVERAGE, data, changes)

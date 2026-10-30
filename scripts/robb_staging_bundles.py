@@ -2,43 +2,48 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 import plistlib
 import re
 import shutil
 import sys
 import tempfile
-from typing import Callable, Iterator, Mapping, Sequence
+from collections.abc import Mapping
+from pathlib import Path
+from typing import cast
 
+from robb_retention_files import is_record
 from robb_staging_common import (
     APP_ID,
     APP_NAME,
     MAIN_COMMIT_PROBE,
-    StagingError,
     Runner,
+    StagingError,
+    require_bundle,
+    require_exact_commit,
     resolve_managed_backup_root,
     run_command,
-    require_exact_commit,
-    verify_clean_checkout,
-    require_bundle,
     sha256_file,
     sha256_tree,
+    verify_clean_checkout,
 )
+
 
 def read_bundle_identity(app: Path) -> dict[str, str]:
     app = require_bundle(app)
     plist_path = app / "Contents/Info.plist"
     try:
         with plist_path.open("rb") as stream:
-            plist = plistlib.load(stream)
+            plist = cast(object, plistlib.load(stream))
     except (OSError, plistlib.InvalidFileException) as error:
         raise StagingError(f"Cannot read application identity from {plist_path}: {error}") from error
+    if not is_record(plist):
+        raise StagingError(f"Application identity must be a plist dictionary: {plist_path}")
     identity = plist.get("CFBundleIdentifier")
     executable = plist.get("CFBundleExecutable")
-    if identity != APP_ID or executable != "Robb Agents":
+    if not isinstance(identity, str) or not isinstance(executable, str) or identity != APP_ID or executable != "Robb Agents":
         raise StagingError(
             f"Unexpected application identity at {app}: "
-            f"CFBundleIdentifier={identity!r}, CFBundleExecutable={executable!r}"
+            + f"CFBundleIdentifier={identity!r}, CFBundleExecutable={executable!r}"
         )
     return {
         "bundleIdentifier": identity,
@@ -47,19 +52,19 @@ def read_bundle_identity(app: Path) -> dict[str, str]:
     }
 
 def verify_installed_retention_helper(repo: Path, installed_script: Path) -> str:
-    source = repo.resolve() / "scripts/staging-retention.py"
+    source = repo.resolve() / "scripts/staging_retention.py"
     if source.is_symlink() or not source.is_file():
         raise StagingError(f"Missing repository retention helper: {source}")
     if installed_script.is_symlink() or not installed_script.is_file():
         raise StagingError(
             "The retention LaunchAgent helper is missing or unsafe; run "
-            "python3 scripts/install-staging-retention.py before staging"
+            + "python3 scripts/install_staging_retention.py before staging"
         )
     source_hash = sha256_file(source)
     if sha256_file(installed_script) != source_hash:
         raise StagingError(
             "The installed retention helper is stale; run "
-            "python3 scripts/install-staging-retention.py and retry"
+            + "python3 scripts/install_staging_retention.py and retry"
         )
     return source_hash
 
@@ -71,7 +76,7 @@ def verify_qualified_source_state(
     installed_script: Path,
     runner: Runner,
 ) -> None:
-    verify_clean_checkout(repo, expected_commit, runner)
+    _ = verify_clean_checkout(repo, expected_commit, runner)
     current_hash = verify_installed_retention_helper(repo, installed_script)
     if current_hash != expected_helper_sha256:
         raise StagingError(
@@ -97,7 +102,7 @@ def create_qualified_retention_helper(
     snapshot_root = Path(tempfile.mkdtemp(prefix=".robb-qualified-retention-"))
     snapshot = snapshot_root / "staging-retention.py"
     try:
-        shutil.copyfile(repo.resolve() / "scripts/staging-retention.py", snapshot)
+        _ = shutil.copyfile(repo.resolve() / "scripts/staging_retention.py", snapshot)
         snapshot.chmod(0o500)
         if snapshot.is_symlink() or sha256_file(snapshot) != expected_helper_sha256:
             raise StagingError("Qualified retention helper snapshot failed hash verification")
@@ -130,7 +135,7 @@ def validate_bundle(
     if not validator.is_file():
         raise StagingError(f"Missing package security validator: {validator}")
 
-    runner(["/usr/bin/codesign", "--verify", "--deep", "--strict", "--verbose=2", str(app)])
+    _ = runner(["/usr/bin/codesign", "--verify", "--deep", "--strict", "--verbose=2", str(app)])
     signature_result = runner(["/usr/bin/codesign", "-dv", "--verbose=4", str(app)])
     signature_details = f"{signature_result.stdout}\n{signature_result.stderr}"
     if "Signature=adhoc" in signature_details:
@@ -145,8 +150,8 @@ def validate_bundle(
     if expected_commit:
         validator_env["ROBB_BUILD_COMMIT"] = require_exact_commit(expected_commit)
     else:
-        validator_env.pop("ROBB_BUILD_COMMIT", None)
-    runner(
+        _ = validator_env.pop("ROBB_BUILD_COMMIT", None)
+    _ = runner(
         [
             "bun",
             str(validator),
@@ -171,10 +176,10 @@ def validate_bundle(
         cwd=repo.resolve(),
     )
     try:
-        provenance = json.loads(commit_probe.stdout)
+        provenance = cast(object, json.loads(commit_probe.stdout))
     except json.JSONDecodeError as error:
         raise StagingError("Packaged main process returned invalid build provenance") from error
-    if not isinstance(provenance, dict):
+    if not is_record(provenance):
         raise StagingError("Packaged main process returned invalid build provenance")
     embedded_commit = require_exact_commit(str(provenance.get("buildCommit", "")))
     if provenance.get("buildChannel") != "production" or provenance.get("buildDirty") is not False:
@@ -230,12 +235,14 @@ def parse_created_backup(stdout: str, backup_root: Path) -> Path:
     created: str | None = None
     for line in stdout.splitlines():
         try:
-            payload = json.loads(line)
+            payload = cast(object, json.loads(line))
         except json.JSONDecodeError:
             continue
-        if isinstance(payload, dict) and isinstance(payload.get("created"), str):
-            created = payload["created"]
-            break
+        if is_record(payload):
+            candidate = payload.get("created")
+            if isinstance(candidate, str):
+                created = candidate
+                break
     if not created:
         raise StagingError("staging-retention did not report the created checkpoint")
     raw_checkpoint = Path(created).expanduser()
@@ -245,7 +252,7 @@ def parse_created_backup(stdout: str, backup_root: Path) -> Path:
     if checkpoint.parent != root or checkpoint.is_symlink():
         raise StagingError(f"Backup checkpoint escaped the managed backup root: {checkpoint}")
     backup_app = checkpoint / APP_NAME
-    require_bundle(backup_app)
+    _ = require_bundle(backup_app)
     return checkpoint
 
 def backup_current_app(

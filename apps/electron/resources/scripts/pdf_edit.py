@@ -1,32 +1,60 @@
+from pypdf.errors import PyPdfError
+
 """Native PDF commands, registered on the shared Click group."""
 
+from typing import cast
+
 from pdf_common import (
-    io,
-    json,
-    math,
-    sys,
-    zlib,
+    PAGE_SIZES,
     Path,
-    click,
-    pdfium,
     PdfReader,
     PdfWriter,
-    BooleanObject,
-    NameObject,
     RectangleObject,
-    PAGE_SIZES,
-    write_output,
-    write_pdf,
-    parse_page_range,
-    check_output_differs,
-    parse_color,
-    _render_page_to_pil,
-    _make_watermark_pdf,
-    _pdf_escape,
     _make_text_overlay_pdf,
+    _make_watermark_pdf,
     _pil_to_image_pdf_page,
+    _render_page_to_pil,
+    _TextOverlay,
+    check_output_differs,
     cli,
+    click,
+    io,
+    json,
+    parse_color,
+    parse_page_range,
+    pdfium,
+    sys,
+    write_pdf,
 )
+
+
+def _page_box(page: object) -> tuple[float, float, float, float, float, float]:
+    """Read and validate a pypdf page media box through its public interface."""
+    box: object = cast(object, getattr(page, "mediabox", None))
+    if box is None:
+        raise ValueError("PDF page has no media box")
+    values: list[float] = []
+    for name in ("left", "bottom", "right", "top", "width", "height"):
+        value: object = cast(object, getattr(box, name, None))
+        if not isinstance(value, (int, float)):
+            raise TypeError(f"PDF page media box has invalid {name}")
+        values.append(float(value))
+    return (values[0], values[1], values[2], values[3], values[4], values[5])
+
+
+def _parse_form_fields(text: str) -> dict[str, str]:
+    decoded: object = cast(object, json.loads(text))
+    if not isinstance(decoded, dict):
+        raise TypeError("Form data must be a JSON object")
+    fields: dict[str, str] = {}
+    for key, value in cast(dict[object, object], decoded).items():
+        if not isinstance(key, str):
+            raise TypeError("Form field names must be strings")
+        fields[key] = str(value)
+    return fields
+
+
+_PDF_OPERATION_ERRORS = (OSError, ValueError, TypeError, RuntimeError, KeyError, IndexError, PyPdfError)
 
 
 @cli.command()
@@ -47,20 +75,18 @@ def watermark(file: str, text: str, font_size: float, opacity: float, angle: flo
         rgb = parse_color(color)
 
         for page in reader.pages:
-            box = page.mediabox
-            w = float(box.width)
-            h = float(box.height)
+            _, _, _, _, w, h = _page_box(page)
 
             wm_bytes = _make_watermark_pdf(w, h, text, font_size, opacity, angle, rgb)
             wm_reader = PdfReader(io.BytesIO(wm_bytes))
             wm_page = wm_reader.pages[0]
 
             page.merge_page(wm_page)
-            writer.add_page(page)
+            _ = writer.add_page(page)
 
         write_pdf(writer, output)
         click.echo(f"Watermarked PDF written to {output}", err=True)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -78,13 +104,9 @@ def fill_form(file: str, data: str, output: str) -> None:
         # Parse data - either JSON string or file path
         data_path = Path(data)
         if data_path.exists() and data_path.is_file():
-            field_data = json.loads(data_path.read_text(encoding="utf-8"))
+            field_data = _parse_form_fields(data_path.read_text(encoding="utf-8"))
         else:
-            field_data = json.loads(data)
-
-        if not isinstance(field_data, dict):
-            click.echo("Error: JSON data must be an object mapping field names to values.", err=True)
-            sys.exit(1)
+            field_data = _parse_form_fields(data)
 
         reader = PdfReader(file)
         writer = PdfWriter()
@@ -95,14 +117,13 @@ def fill_form(file: str, data: str, output: str) -> None:
             writer.update_page_form_field_values(writer.pages[page_num], field_data)
 
         # Flatten if possible by setting NeedAppearances
-        if "/AcroForm" in writer._root_object:
-            writer._root_object["/AcroForm"][NameObject("/NeedAppearances")] = BooleanObject(True)
+        writer.set_need_appearances_writer()
 
         write_pdf(writer, output)
     except json.JSONDecodeError as e:
         click.echo(f"Error parsing JSON data: {e}", err=True)
         sys.exit(1)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -122,7 +143,7 @@ def compress(file: str, output: str) -> None:
             page.compress_content_streams()
 
         with open(output, "wb") as f:
-            writer.write(f)
+            _ = writer.write(f)
 
         original = Path(file).stat().st_size
         compressed = Path(output).stat().st_size
@@ -131,7 +152,7 @@ def compress(file: str, output: str) -> None:
             f"Compressed: {original:,} -> {compressed:,} bytes ({ratio:.1f}% reduction). Written to {output}",
             err=True,
         )
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -154,16 +175,16 @@ def crop(file: str, left: float, right: float, top: float, bottom: float, pages:
         target = set(parse_page_range(pages, total)) if pages else set(range(total))
         for i, page in enumerate(reader.pages):
             if i in target:
-                box = page.mediabox
+                media_left, media_bottom, media_right, media_top, _, _ = _page_box(page)
                 page.cropbox = RectangleObject([
-                    float(box.left) + left,
-                    float(box.bottom) + bottom,
-                    float(box.right) - right,
-                    float(box.top) - top,
+                    media_left + left,
+                    media_bottom + bottom,
+                    media_right - right,
+                    media_top - top,
                 ])
-            writer.add_page(page)
+            _ = writer.add_page(page)
         write_pdf(writer, output)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -184,15 +205,14 @@ def resize(file: str, size: str, pages: str | None, output: str) -> None:
         target_pages = set(parse_page_range(pages, total)) if pages else set(range(total))
         for i, page in enumerate(reader.pages):
             if i in target_pages:
-                current_w = float(page.mediabox.width)
-                current_h = float(page.mediabox.height)
+                _, _, _, _, current_w, current_h = _page_box(page)
                 sx = target_w / current_w if current_w else 1
                 sy = target_h / current_h if current_h else 1
                 page.scale(float(sx), float(sy))
                 page.mediabox = RectangleObject([0, 0, target_w, target_h])
-            writer.add_page(page)
+            _ = writer.add_page(page)
         write_pdf(writer, output)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -224,17 +244,16 @@ def flatten(file: str, output: str) -> None:
             img_page = img_reader.pages[0]
 
             # Scale the image page to match original point dimensions
-            img_w = float(img_page.mediabox.width)
-            img_h = float(img_page.mediabox.height)
+            _, _, _, _, img_w, img_h = _page_box(img_page)
             if img_w > 0 and img_h > 0:
                 img_page.scale(w_pt / img_w, h_pt / img_h)
                 img_page.mediabox = RectangleObject([0, 0, w_pt, h_pt])
 
-            writer.add_page(img_page)
+            _ = writer.add_page(img_page)
 
         write_pdf(writer, output)
         click.echo(f"Flattened PDF written to {output}", err=True)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -264,32 +283,30 @@ def header_footer(file: str, header_text: str | None, footer_text: str | None, f
         rgb = parse_color(color)
 
         for i, page in enumerate(reader.pages):
-            box = page.mediabox
-            w = float(box.width)
-            h = float(box.height)
+            _, _, _, _, w, h = _page_box(page)
             page_num = i + 1
 
-            texts: list[dict] = []
+            texts: list[_TextOverlay] = []
             if header_text:
                 text = header_text.replace("{n}", str(page_num)).replace("{total}", str(total))
                 approx_width = len(text) * font_size * 0.5
                 x = (w - approx_width) / 2
                 y = h - margin
-                texts.append({"x": x, "y": y, "text": text, "font_size": font_size, "color": rgb})
+                texts.append(_TextOverlay(x=x, y=y, text=text, font_size=font_size, color=rgb))
             if footer_text:
                 text = footer_text.replace("{n}", str(page_num)).replace("{total}", str(total))
                 approx_width = len(text) * font_size * 0.5
                 x = (w - approx_width) / 2
                 y = margin - font_size
-                texts.append({"x": x, "y": y, "text": text, "font_size": font_size, "color": rgb})
+                texts.append(_TextOverlay(x=x, y=y, text=text, font_size=font_size, color=rgb))
 
             overlay_bytes = _make_text_overlay_pdf(w, h, texts)
             overlay_reader = PdfReader(io.BytesIO(overlay_bytes))
             page.merge_page(overlay_reader.pages[0])
-            writer.add_page(page)
+            _ = writer.add_page(page)
 
         write_pdf(writer, output)
         click.echo(f"Header/footer added, written to {output}", err=True)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)

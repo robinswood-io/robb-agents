@@ -13,13 +13,15 @@ import {
   safeSerializeLogValue,
   sanitizeLogValue,
 } from './log-sanitizer'
-import { redactSecretLikeMaterial } from '@craft-agent/shared/utils'
+import { redactSecretLikeMaterial, setDebugSink } from '@craft-agent/shared/utils'
 import {
   ensurePrivateLogDirectory,
   ensurePrivateLogFilePath,
   sanitizeExistingLogFile,
 } from './log-file-security'
 
+// Explicit host wiring keeps Electron dependencies out of the shared renderer utilities.
+setDebugSink(log)
 /**
  * Resolve debug mode deterministically across runtimes.
  *

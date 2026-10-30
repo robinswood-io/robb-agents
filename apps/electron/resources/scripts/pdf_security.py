@@ -1,32 +1,39 @@
+from pypdf.errors import PyPdfError
+
 """Native PDF commands, registered on the shared Click group."""
 
+from numbers import Real
+from typing import cast
+
 from pdf_common import (
-    io,
-    json,
-    math,
-    sys,
-    zlib,
-    Path,
-    click,
-    pdfium,
     PdfReader,
     PdfWriter,
-    BooleanObject,
-    NameObject,
     RectangleObject,
-    PAGE_SIZES,
-    write_output,
-    write_pdf,
-    parse_page_range,
-    check_output_differs,
-    parse_color,
-    _render_page_to_pil,
-    _make_watermark_pdf,
-    _pdf_escape,
-    _make_text_overlay_pdf,
     _pil_to_image_pdf_page,
+    _render_page_to_pil,
+    check_output_differs,
     cli,
+    click,
+    io,
+    pdfium,
+    sys,
+    write_pdf,
 )
+
+
+def _page_dimensions(page: object) -> tuple[float, float]:
+    box = getattr(page, "mediabox", None)
+    if not isinstance(box, RectangleObject):
+        raise TypeError("PDF page has no readable media box")
+    coordinates = cast(tuple[object, ...], tuple(box))
+    if len(coordinates) != 4 or not all(isinstance(value, Real) for value in coordinates):
+        raise ValueError("PDF media box must contain four numeric coordinates")
+    numeric = cast(tuple[Real, ...], coordinates)
+    return float(numeric[2]) - float(numeric[0]), float(numeric[3]) - float(numeric[1])
+
+
+
+_PDF_OPERATION_ERRORS = (OSError, ValueError, TypeError, RuntimeError, KeyError, IndexError, PyPdfError)
 
 
 @cli.command()
@@ -42,7 +49,7 @@ def encrypt(file: str, password: str, output: str) -> None:
         writer.append(reader)
         writer.encrypt(user_password=password, owner_password=password)
         write_pdf(writer, output)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -57,12 +64,12 @@ def decrypt(file: str, password: str, output: str) -> None:
     try:
         reader = PdfReader(file, password=password)
         if reader.is_encrypted:
-            reader.decrypt(password)
+            _ = reader.decrypt(password)
         writer = PdfWriter()
         writer.append(reader)
         write_pdf(writer, output)
         click.echo(f"Decrypted PDF written to {output}", err=True)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -127,7 +134,7 @@ def redact(file: str, texts: tuple[str, ...], areas: tuple[str, ...], output: st
                     raise ValueError("Need 4 coordinates")
                 if page_num < 0 or page_num >= total:
                     raise ValueError(f"Page {page_num + 1} out of range")
-                page_redactions.setdefault(page_num, []).append(tuple(coords))
+                page_redactions.setdefault(page_num, []).append((coords[0], coords[1], coords[2], coords[3]))
             except (ValueError, IndexError) as e:
                 click.echo(f"Error: invalid area spec '{area_spec}': {e}", err=True)
                 sys.exit(1)
@@ -145,6 +152,10 @@ def redact(file: str, texts: tuple[str, ...], areas: tuple[str, ...], output: st
 
                 img = _render_page_to_pil(page, dpi=dpi)
 
+                from PIL import Image
+
+                if not isinstance(img, Image.Image):
+                    raise TypeError("PDF renderer did not return a Pillow image")
                 draw = ImageDraw.Draw(img)
                 for rect in page_redactions[idx]:
                     # Convert PDF points to pixel coords
@@ -166,22 +177,21 @@ def redact(file: str, texts: tuple[str, ...], areas: tuple[str, ...], output: st
                 img_page = img_reader.pages[0]
 
                 # Scale to original page dimensions
-                img_w = float(img_page.mediabox.width)
-                img_h = float(img_page.mediabox.height)
+                img_w, img_h = _page_dimensions(img_page)
                 if img_w > 0 and img_h > 0:
                     img_page.scale(w_pt / img_w, h_pt / img_h)
                     img_page.mediabox = RectangleObject([0, 0, w_pt, h_pt])
 
-                writer.add_page(img_page)
+                _ = writer.add_page(img_page)
             else:
                 # Pass through unmodified pages
-                writer.add_page(reader.pages[idx])
+                _ = writer.add_page(reader.pages[idx])
 
         write_pdf(writer, output)
         click.echo(f"Redacted PDF written to {output}", err=True)
     except SystemExit:
         raise
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -216,8 +226,11 @@ def sanitize(file: str, output: str) -> None:
         })
 
         # Remove XMP metadata if present
-        if "/Metadata" in writer._root_object:
-            del writer._root_object["/Metadata"]
+        root = getattr(writer, "_root_object", None)
+        if not isinstance(root, dict):
+            raise TypeError("PDF writer has no readable document root")
+        if "/Metadata" in root:
+            del root["/Metadata"]
 
         # Compress content streams
         for page in writer.pages:
@@ -225,6 +238,6 @@ def sanitize(file: str, output: str) -> None:
 
         write_pdf(writer, output)
         click.echo(f"Sanitized PDF written to {output}", err=True)
-    except Exception as e:
+    except _PDF_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)

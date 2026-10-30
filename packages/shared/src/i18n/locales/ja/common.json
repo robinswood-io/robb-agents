@@ -244,8 +244,6 @@
   "toast.upToDate": "最新の状態です",
   "toast.updateAvailable": "アップデート v{{version}} が利用可能です",
   "toast.updateReady": "アップデート v{{version}} の準備が完了しました",
-  "toast.vcRedistNotFound": "Microsoft Visual C++ Redistributableが見つかりません",
-  "toast.vcRedistNotFoundDesc": "ドキュメントツール（PDF、PPTX、DOCX、XLSX）の動作に必要です。インストール後に再起動してください。",
   "toast.versionIsLatest": "バージョン {{version}} は最新です。",
   "toast.webhookReplayCompleted": "Webhookリプレイが完了しました",
   "toast.workspaceReconnected": "Workspaceが再接続されました",

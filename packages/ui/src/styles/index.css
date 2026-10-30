@@ -193,10 +193,8 @@
    * The border-radius value should be set on the element using this class.
    */
   .smooth-corners {
-    /* Standard property (future CSS spec) */
-    corner-shape: superellipse;
-    /* WebKit prefix for Safari */
-    -webkit-corner-shape: superellipse;
+    /* CSS Borders 4; unsupported browsers retain the border-radius fallback. */
+    corner-shape: superellipse(2);
   }
 
   /* Unified popover styling */
