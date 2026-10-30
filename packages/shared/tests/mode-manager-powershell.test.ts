@@ -12,6 +12,7 @@ import { looksLikePowerShell, isPowerShellAvailable, setPowerShellValidatorRoot 
 import { shouldAllowToolInMode, type CompiledBashPattern } from '../src/agent/mode-manager.ts';
 import { validatePowerShellCommand } from '../src/agent/powershell-validator.ts';
 import { extractPowerShellWriteTarget, unwrapPowerShellCommand } from '../src/agent/powershell-validator.ts';
+import { parseCommand } from '../src/agent/powershell-validator/parser-process.ts';
 
 beforeAll(() => setPowerShellValidatorRoot(resolve(import.meta.dir, '../src/agent')));
 
@@ -225,20 +226,19 @@ describe('extractPowerShellWriteTarget', () => {
   });
 
   describe('non-write commands', () => {
-    it('should return null for read-only commands', () => {
+    it.each([
+      'Get-Process',
+      'Get-ChildItem',
+      'Get-Content file.txt',
+      'Get-Process | Select-Object Name',
+      'Get-ChildItem | Where-Object { $_.Length -gt 1000 }',
+    ])('returns null for a parsed non-write command: %s', (command) => {
       if (!psAvailable) return;
-
-      expect(extractPowerShellWriteTarget('Get-Process')).toBeNull();
-      expect(extractPowerShellWriteTarget('Get-ChildItem')).toBeNull();
-      expect(extractPowerShellWriteTarget('Get-Content file.txt')).toBeNull();
-    });
-
-    it('should return null for non-file-writing pipelines', () => {
-      if (!psAvailable) return;
-
-      expect(extractPowerShellWriteTarget('Get-Process | Select-Object Name')).toBeNull();
-      expect(extractPowerShellWriteTarget('Get-ChildItem | Where-Object { $_.Length -gt 1000 }')).toBeNull();
-    });
+      // Two bounded 10-second parses plus cleanup; a parse failure is not evidence of no write.
+      const parsed = parseCommand(command);
+      expect(parsed.success, JSON.stringify(parsed)).toBe(true);
+      expect(extractPowerShellWriteTarget(command)).toBeNull();
+    }, 25_000);
   });
 
   describe('powershell.exe -Command wrapper unwrapping', () => {

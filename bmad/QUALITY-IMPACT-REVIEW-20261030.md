@@ -308,3 +308,25 @@ unchanged. Review confirms no new abstraction, dependency, exception or guard by
 Focused DEV tests, shared typecheck, ESLint with zero warnings and diff-check pass.
 The Windows-only cases must pass in native CI; DEV skips are not their qualification.
 Gate attempt7 was not launched because CI was red; exact run/verify remains required.
+
+
+## Bounded native-test deadlines and completed-denial evidence (30 October 2026)
+
+CI 41129918369 validates all native Windows cases (91 pass, 17 platform skips),
+including the six corrected plan fixtures. Its macOS encoded-Python denial test is
+interrupted by Bun at 5000 ms although the sandbox child has a 15000 ms timeout.
+The earlier CI 41120867004 also interrupted the two-pipeline PowerShell test after
+9648 ms under the same 5000 ms default; each parser invocation is bounded at 10000 ms.
+Align only these native-test deadlines: 20000 ms around the two sandbox-run test
+families and 25000 ms per separately tested non-write PowerShell command. The five
+existing command expectations remain. Each now requires successful parsing before
+asserting no write target, so a parse failure cannot masquerade as a successful test.
+Sandbox deny cases now assert no process error or signal before the nonzero exit,
+permission-denial diagnostic and unchanged archive. The action table uses its exact
+literal union, removing an unnecessary non-null assertion. No production deadline,
+job timeout, platform skip, permission, dependency or guard is relaxed or changed.
+
+Native local macOS sandbox enforcement: 19 pass, zero fail. Focused DEV native tests,
+shared/session typechecks, ESLint with zero warnings and diff-check pass. This small
+change adds no layer and preserves cleanup. Exact CI and the canonical run/verify
+remain mandatory; the failed CI and unstarted gate attempt8 are not a qualification.

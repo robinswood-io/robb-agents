@@ -63,6 +63,7 @@ describe('application protection hard-link verification', () => {
 });
 
 describe.skipIf(process.platform !== 'darwin')('application protection — real macOS enforcement', () => {
+  // Let the 15-second sandbox child deadline complete before the test deadline.
   it('allows reads and ordinary project writes', () => {
     const f = fixture();
     const out = join(f.dir, 'result.txt');
@@ -70,7 +71,7 @@ describe.skipIf(process.platform !== 'darwin')('application protection — real 
     expect(result.stderr).toBe('');
     expect(result.status).toBe(0);
     expect(readFileSync(out, 'utf8')).toBe('INTACT');
-  });
+  }, 20_000);
 
   for (const action of ['overwrite', 'unlink', 'chmod', 'rename-bundle', 'rename-parent', 'hardlink', 'symlink', 'descendant', 'encoded-python', 'nested-sandbox'] as const) {
     it(`denies ${action} without touching the archive`, () => {
@@ -78,7 +79,7 @@ describe.skipIf(process.platform !== 'darwin')('application protection — real 
       const archive = JSON.stringify(f.archive);
       const alias = join(f.dir, 'alias');
       symlinkSync(f.app, alias);
-      const scripts: Record<typeof action | string, string> = {
+      const scripts: Record<typeof action, string> = {
         overwrite: `require('fs').writeFileSync(${archive}, 'BROKEN')`,
         unlink: `require('fs').unlinkSync(${archive})`,
         chmod: `require('fs').chmodSync(${archive}, 0)`,
@@ -90,11 +91,13 @@ describe.skipIf(process.platform !== 'darwin')('application protection — real 
         'encoded-python': `require('child_process').execFileSync('/usr/bin/python3', ['-c', ${JSON.stringify(`import base64; exec(base64.b64decode('${Buffer.from(`open(${JSON.stringify(f.archive)}, 'w').write('BROKEN')`).toString('base64')}'))`)}])`,
         'nested-sandbox': `require('child_process').execFileSync('/usr/bin/sandbox-exec', ['-p', '(version 1) (allow default)', '/bin/sh', '-c', ${JSON.stringify(`printf BROKEN > '${f.archive.replace(/'/g, "'\\''")}'`)}])`,
       };
-      const result = f.run(scripts[action]!);
+      const result = f.run(scripts[action]);
+      expect(result.error).toBeUndefined();
+      expect(result.signal).toBeNull();
       expect(result.status).not.toBe(0);
       expect(result.stderr).toMatch(/not permitted|denied|EPERM|EACCES/i);
       expect(readFileSync(f.archive, 'utf8')).toBe('INTACT');
-    });
+    }, 20_000);
   }
 
   it('cannot bypass path checks with a symlink or a future file', () => {
