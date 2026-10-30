@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, symlinkSync, existsSync, linkSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { join } from 'node:path';
+import { join, parse, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { assertNoProtectedApplicationHardlinks, buildApplicationProtectionProfile, isProtectedApplicationPath, protectApplicationCommand } from './application-protection.ts';
 
@@ -28,6 +28,19 @@ describe('application protection hard-link verification', () => {
   it('always denies launchd job creation in the generated profile', () => {
     const f = fixture();
     expect(f.profile).toContain('(deny job-creation)');
+    const filesystemRoot = parse(resolve(f.app)).root;
+    expect(f.profile).not.toContain(`(literal ${JSON.stringify(filesystemRoot)})`);
+  });
+
+  it('rejects the filesystem root on every host', () => {
+    expect(() => buildApplicationProtectionProfile(['/'])).toThrow('Invalid application protection root');
+  });
+
+  it('preserves the full name of a missing bundle below the filesystem root', () => {
+    const root = `/robb-missing-${randomUUID()}/Robb Agents.app`;
+    const profile = buildApplicationProtectionProfile([root]);
+    expect(profile).toContain(`(subpath ${JSON.stringify(resolve(root))})`);
+    expect(profile.match(/\(subpath /g)).toHaveLength(1);
   });
 
   it('fails closed when a protected file already has an external hard link', () => {

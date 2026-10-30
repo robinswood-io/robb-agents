@@ -269,3 +269,26 @@ observé ne se reproduit ni sur le test ciblé ni sur les six fichiers natifs Ma
 avec PowerShell 7.6.9 réel (95 succès, 11 cas Windows ignorés, zéro échec). Aucun
 délai de test relevé, aucune assertion supprimée. Les garanties applicatives,
 permissions, dépendances et langages restent inchangés ; la portée est renouvelée.
+
+
+## Windows filesystem-root termination correction (30 October 2026)
+
+Evidence: CI 41124465630 job 124299279096 completes all PowerShell cases,
+then stops in the first application-protection test until the 20-minute job limit.
+The ancestor traversal compared only with `/`; Windows `dirname(D:\)` is a
+fixed point, so the loop did not terminate. Stop at the native dirname fixed point
+and reject a filesystem-root input before building the Seatbelt profile. Replace
+manual path slicing with `basename` when rebuilding a missing canonical path.
+This preserves POSIX/macOS behavior and avoids dropping the first component
+character after a Windows drive root. The API still accepts POSIX input for its
+macOS Seatbelt purpose; no Windows sandbox capability is claimed or added.
+
+Review: no new layer, dependency, permission, provider effect or guard bypass.
+Protection against ancestor deletion, application writes, links, launchd and
+pre-existing hard links remains in place. Dedicated tests reject a root, exclude
+a literal filesystem-root deny and retain the full missing-bundle name. Independent
+read-only review found no regression in this delta. DEV focused boundaries, session
+typecheck and ESLint with zero warnings pass; native macOS enforcement runs all
+19 tests successfully. Exact Windows CI and a new canonical gate remain required.
+Gate attempt6 was stopped without a PASS when this source correction became needed;
+its partial execution is not reused as a completed qualification.
