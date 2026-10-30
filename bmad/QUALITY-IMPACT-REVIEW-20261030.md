@@ -330,3 +330,21 @@ Native local macOS sandbox enforcement: 19 pass, zero fail. Focused DEV native t
 shared/session typechecks, ESLint with zero warnings and diff-check pass. This small
 change adds no layer and preserves cleanup. Exact CI and the canonical run/verify
 remain mandatory; the failed CI and unstarted gate attempt8 are not a qualification.
+
+## Diffusion 9 controller admission (30 October 2026)
+The user-provided diffusion 9 pins controller
+386f4e73dc1d9c3c11c93103f6871adf83519073. Contracts 48/50 and the canonical
+rule index are byte-identical to diffusion 8. The reviewed controller delta
+keeps the complete source snapshot and generated-declaration admission before
+selecting lintable batches. Workers retain before/after snapshot checks and
+error/exit propagation; batch digest maps contain only that batch's sources.
+Added controller tests reject unknown declarations and changes outside a batch,
+and cover complete maintained-source inventory and declaration-only revalidation.
+The other diffusion changes concern controller repository dependency manifests,
+locks and their review evidence, not Robb's runtime or dependency lock.
+Only the immutable release controller reference and this review/attestation change.
+No Robb application source, test assertion, permission, exclusion, timeout or
+quality command is changed. Existing functional evidence on 487f3fb remains
+attributed to that commit: all seven CI jobs succeeded. The new exact candidate
+still requires its CI and quality gate run/verify under diffusion 9 before
+integration. This static impact review does not assert that the gate has passed.
