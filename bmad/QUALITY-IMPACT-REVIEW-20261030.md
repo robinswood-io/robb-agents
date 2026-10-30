@@ -249,3 +249,23 @@ indépendante confirme cette marge proportionnée ; le prochain job réel devra
 la mesurer. Ce changement de workflow renouvelle la portée et son attestation,
 sans nouvelle analyse des règles ou langages dont les obligations sont inchangées.
 Le gate run puis verify est renouvelé avant intégration de cet arbre.
+
+Le run CI 41120867004 du commit 345942f6 valide OSS, upstream et le parcours
+installateur Windows, mais révèle des prérequis de tests incomplets. Le job
+campagne installe désormais requests et pydantic sous les contraintes du manifeste
+Python existant ; les tests installateurs sont invoqués comme module Python.
+Un environnement Python 3.15.2 neuf valide les quatre suites campagne et ces
+tests installateurs, sans ResourceWarning ; aucun effet externe métier exécuté.
+Les fixtures Bash initialisent explicitement leur racine de parseur PowerShell.
+Les tests de hardlinks Windows utilisent toujours leurs vrais fichiers ; seul le
+profil Seatbelt, format POSIX, reçoit une racine adaptée. Les trois commandes
+PowerShell historiques ciblent le dossier temporaire existant : une racine
+inexistante reste refusée par le code de sécurité, inchangé. Quotes, payloads
+et assertions sont conservés ; une assertion vérifie la substitution du chemin.
+Les imports latéraux redondants des tests sont retirés. Contrats de release,
+typage shared/session-tools-core et lint ciblé passent sur DEV avec PowerShell
+7.6.9 disponible. Les cas Windows exigent encore la nouvelle CI. Le timeout Mac
+observé ne se reproduit ni sur le test ciblé ni sur les six fichiers natifs Mac
+avec PowerShell 7.6.9 réel (95 succès, 11 cas Windows ignorés, zéro échec). Aucun
+délai de test relevé, aucune assertion supprimée. Les garanties applicatives,
+permissions, dépendances et langages restent inchangés ; la portée est renouvelée.

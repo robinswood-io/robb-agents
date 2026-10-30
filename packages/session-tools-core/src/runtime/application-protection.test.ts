@@ -17,7 +17,9 @@ function fixture() {
   mkdirSync(join(app, 'Contents', 'Resources'), { recursive: true });
   const archive = join(app, 'Contents', 'Resources', 'app.asar');
   writeFileSync(archive, 'INTACT');
-  const profile = buildApplicationProtectionProfile([app]);
+  // Seatbelt profiles require POSIX roots; hard-link scans below still use the real fixture path.
+  const profileRoot = process.platform === 'win32' ? '/Applications/Robb Agents.app' : app;
+  const profile = buildApplicationProtectionProfile([profileRoot]);
   const run = (script: string) => spawnSync('/usr/bin/sandbox-exec', ['-p', profile, process.execPath, '-e', `try { ${script} } catch (error) { console.error(String(error)); process.exitCode = 23; }`], { encoding: 'utf8', timeout: 15_000 });
   return { dir, app, parent, archive, profile, run };
 }

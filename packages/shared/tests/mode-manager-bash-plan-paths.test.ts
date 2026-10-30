@@ -8,12 +8,8 @@ import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import { join } from 'path';
 import { mkdirSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
-import "../src/agent/powershell-validator.ts";
+import { setPowerShellValidatorRoot } from "../src/agent/powershell-validator.ts";
 import { shouldAllowToolInMode } from '../src/agent/mode-manager.ts';
-import "../src/agent/powershell-validator.ts";
-import "../src/agent/powershell-validator.ts";
-import "../src/agent/powershell-validator.ts";
-import "../src/agent/mode-manager.ts";
 
 // ============================================================
 // shouldAllowToolInMode - Bash Plans Folder Exception Tests
@@ -27,6 +23,7 @@ describe('shouldAllowToolInMode - Bash plans folder exception', () => {
   const plansFolderPath = join(testRoot, 'plans');
 
   beforeAll(() => {
+    setPowerShellValidatorRoot(join(import.meta.dir, '../src/agent'));
     mkdirSync(plansFolderPath, { recursive: true });
   });
 
