@@ -14,7 +14,7 @@ Node 26.13.0, Bun 1.4.4, Python 3.15.2, RTK OSS 1.1.0, uv 0.13.6.
 Compilation TypeScript native 7.0.2 ; API 6.0.3 pour le lint uniquement.
 Les deux seules exceptions approuvées sont dans dependency-exceptions.json.
 Les commandes et vérifications résolues sont dans quality-policy.json.
-Règle 48 v2.4.0 : la cible Mac autorisée et le contrat desktop priment sur
+Règle 48 v2.5.0 : la cible Mac autorisée et le contrat desktop priment sur
 les recettes Docker de déploiement. DEV sert au développement et aux validations lourdes ;
 le staging desktop et sa signature restent une étape distincte sur le Mac.
 Le thème desktop et ses tokens existants sont conservés sous le contrat projet ;

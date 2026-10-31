@@ -243,17 +243,21 @@ describe('provider dispatch write-ahead recovery', () => {
       return runtimeAgent
     }
 
+    const newerObjectiveCompleted = deferred()
+    const removeCompletionListener = h.manager.onSessionComplete(event => {
+      if (event.sessionId === managed.id
+        && event.reason === 'complete'
+        && event.finalText === 'Completed the newer human objective.') {
+        newerObjectiveCompleted.resolve()
+      }
+    })
     const firstRun = h.manager.sendMessage(managed.id, 'Potentially mutate objective A exactly once.')
     await firstWritten.promise
     await h.manager.sendMessage(managed.id, 'Continue instead with durable human objective B.')
     releaseFirst.resolve()
     await firstRun
-    for (let attempt = 0; attempt < 100 && prompts.length < 2; attempt++) {
-      await new Promise<void>(resolve => setTimeout(resolve, 10))
-    }
-    for (let attempt = 0; attempt < 100 && managed.isProcessing; attempt++) {
-      await new Promise<void>(resolve => setTimeout(resolve, 10))
-    }
+    await newerObjectiveCompleted.promise
+    removeCompletionListener()
 
     expect(prompts).toHaveLength(2)
     expect(prompts[1]).not.toBe('Continue instead with durable human objective B.')

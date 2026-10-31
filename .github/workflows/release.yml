@@ -75,10 +75,10 @@ jobs:
         working-directory: /home/ubuntu/robb-local-reconcile-20261029
     env:
       NODE_OPTIONS: "--max-old-space-size=4096"
-      ROBB_RULEBOOK_COMMIT: "977c4d0263be04197c7f5dba9f1219224508ac99"
+      ROBB_RULEBOOK_COMMIT: "aa499d6689353a00689d2eb943e3db6c8e118fda"
       ROBB_EXPECTED_SOURCE_COMMIT: "${{ needs.preflight.outputs.source_commit }}"
       ROBB_QUALITY_CHECKOUT: /home/ubuntu/robb-local-reconcile-20261029
-      ROBB_RULEBOOK_CHECKOUT: /home/ubuntu/robb-release-controllers/977c4d0263be04197c7f5dba9f1219224508ac99
+      ROBB_RULEBOOK_CHECKOUT: /home/ubuntu/robb-release-controllers/aa499d6689353a00689d2eb943e3db6c8e118fda
     steps:
       # The runner verifies the prepared checkout; it never resets or replaces it.
       - name: Verify immutable prepared source

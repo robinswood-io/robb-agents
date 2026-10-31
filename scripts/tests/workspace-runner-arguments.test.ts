@@ -4,6 +4,8 @@ import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os';
 import { delimiter, join, resolve } from 'node:path';
 
+const recoverySuite = 'TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts';
+
 function runFixture(extraArgs: string | undefined): string[][] {
   const root = mkdtempSync(join(tmpdir(), 'robb runner args '));
   try {
@@ -13,6 +15,9 @@ function runFixture(extraArgs: string | undefined): string[][] {
     for (const directory of [scripts, bin, workspace]) mkdirSync(directory, { recursive: true });
     copyFileSync(resolve(import.meta.dir, '../run-workspace-tests.sh'), join(scripts, 'run-workspace-tests.sh'));
     writeFileSync(join(workspace, 'sample.test.ts'), '// Source discovery fixture.\n');
+    const taskDirectory = join(root, 'packages', 'server-core', 'src', 'tasks');
+    mkdirSync(taskDirectory, { recursive: true });
+    writeFileSync(join(taskDirectory, recoverySuite), '// Isolated recovery discovery fixture.\n');
     writeFileSync(join(root, 'glob-canary'), 'Must never expand into a test argument.\n');
     const log = join(root, 'arguments.log');
     const bun = join(bin, 'bun');
@@ -41,6 +46,11 @@ function runFixture(extraArgs: string | undefined): string[][] {
 }
 
 describe('workspace runner argument boundaries', () => {
+  test('executes the durable recovery suite exactly once in its own process', () => {
+    const path = `./packages/server-core/src/tasks/${recoverySuite}`;
+    const calls = runFixture(undefined).filter(args => args.includes(path));
+    expect(calls).toEqual([['test', '--timeout', '10000', path]]);
+  });
   for (const value of [undefined, '']) {
     test(`accepts ${value === undefined ? 'unset' : 'empty'} extra arguments with nounset enabled`, () => {
       expect(runFixture(value)[0]).toEqual([

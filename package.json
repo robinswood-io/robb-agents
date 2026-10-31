@@ -274,7 +274,7 @@
     "@tiptap/core": "3.32.2",
     "@tiptap/extension-text-style": "3.32.2",
     "@tiptap/pm": "3.32.2",
-    "prosemirror-view": "1.42.8",
+    "prosemirror-view": "1.42.9",
     "zod": "4.6.7",
     "glob@>=9.0.0 <14.0.2": "14.0.3",
     "minimatch": "11.0.3"

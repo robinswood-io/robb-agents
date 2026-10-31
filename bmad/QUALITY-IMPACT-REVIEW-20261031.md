@@ -102,3 +102,56 @@ permissions and application architecture are unchanged. Reuse earlier analyses
 of unchanged rules after this diff review; bind the renewed scope and evidence
 to the exact final source. Canonical run/verify, signed builds, official preflight
 and the three native missions remain mandatory before publication.
+
+## Published policy generation12
+The user explicitly activates generation12/92a699aa during the preceding CI run.
+Load quality50v1.5.0 and governance48v2.5.0; update the exact controller pin and
+its independent private clone, without modifying the shared central repository.
+Review the changes to rules48/50 and quality_adaptations: the new test_suite
+classification permits only individually reviewed coherent suites. Robb uses no
+such adaptation and keeps every maintained test at500 lines or fewer. Strict
+typing, no-any, lint, functional tests, dependency and safety checks are unchanged.
+The controller runtime package-lock is unchanged and npm ci succeeds in the new
+clone. Renew the two canonical rule hashes, environment evidence and reviewed
+source scope after the full candidate diff review. Historical proofs retain their
+original controller and commit; they do not attest the new policy generation.
+The preceding run passes typecheck, lint, environment, dependencies, shell and
+TypeScript policy, but fails five runtime tests; investigate their complete
+failures before rerunning. No timeout or assertion is relaxed by this migration.
+
+## Published policy generation13 and runtime test stability
+Generation13/aa499d6689353a00689d2eb943e3db6c8e118fda supersedes generation12
+by explicit user instruction. Governance48v2.5.0 and quality50v1.5.0 are unchanged.
+The controller diff only extends its Git inventory/read timeout from2s to10s,
+with its own regression tests and review evidence. The private independent clone
+is clean and its unchanged runtime lockfile installs successfully. The exact CI
+pin now selects generation13. No central checkout or shared permissions change.
+Run41182902740 onca60ff7 passes six canonical checks and fails five runtime tests.
+All five pass in isolation with unchanged deadlines:23 tests in14.32s, then the
+1,000-checkpoint test in166.82s under its original300s timeout, with no dispatch.
+That stress process uses1percent CPU, indicating waiting rather than CPU work;
+this does not alone establish a production defect or an interference root cause.
+The retry test now shares the existing injected clock across restart, checks the
+persisted retry deadline and no premature dispatch, then advances to that deadline.
+The supersession test awaits the existing completion event for the second result,
+filtered by session, complete reason and final text. It keeps all terminal assertions.
+The synchronous durable recovery suite runs in its own Bun process through the
+existing isolated list. A runner test proves discovery exactly once in that process.
+No fsync, checkpoint,1,000-case count, assertion or test timeout is removed or raised.
+The initial27-test check used a default Bun and is not the qualified runtime proof.
+The repeated qualified Bun1.4.4 check passes38 tests across8 files in9.61s,
+including the editor identity/helpers/menu suites. The24 CI regression tests and
+shell syntax/lint pass; the fresh286-dependency audit reports zero issues.
+The full canonical suite
+remains required; isolated success is not represented as global qualification.
+Impact concerns test synchronization and process isolation, rules27/48/50 and the
+CI environment pin. Application runtime code, data, connectors,
+permissions and production architecture are unchanged. Reuse unchanged rule reviews
+only after this diff review; renew their content scope and evidence hashes. No new
+orchestrator, wrapper service or production abstraction is introduced.
+
+The fresh registry audit finds prosemirror-view1.42.9 published on2026-10-31 at
+08:49:50UTC after the previous successful audit. Update only its compatible patch
+override from1.42.8 and the resolved Bun lock/tree. Preserve the existing editor
+API and all compatibility checks; the canonical typecheck, tests and native UI
+missions cover the installed candidate. No further version exception is added.

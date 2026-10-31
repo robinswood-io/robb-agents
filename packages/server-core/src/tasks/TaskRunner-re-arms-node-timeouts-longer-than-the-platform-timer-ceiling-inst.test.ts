@@ -123,6 +123,7 @@ describe('TaskRunner (Conductor)', () => {
   });
 
   it('restores the durable retry deadline after a process restart', async () => {
+    let clockMs = Date.now();
     saveTaskSpec(
       root,
       specOf({
@@ -167,11 +168,17 @@ describe('TaskRunner (Conductor)', () => {
         connectionRoutePinned: true, modelRoutePinned: true, thinkingLevelPinned: true,
       }),
       resolveNodeRoute: resolvePinnedRoute,
+      nowMs: () => clockMs,
     });
     first.run('backoff-restart', { runId: 'r1', verifyOnComplete: false });
     await tick();
     host.complete('a', { reason: 'error' });
     await tick();
+    const retry = readRunLog(root, 'backoff-restart', 'r1').find((entry) => entry.kind === 'node-retry');
+    if (retry?.kind !== 'node-retry' || !retry.retryAt) throw new Error('retry deadline was not durably recorded');
+    expect(retry.delayMs).toBe(300);
+    const retryDeadlineMs = Date.parse(retry.retryAt);
+    expect(Number.isFinite(retryDeadlineMs)).toBe(true);
     first.pause('backoff-restart', 'r1');
 
     const recoveredHost = new MockHost();
@@ -182,12 +189,15 @@ describe('TaskRunner (Conductor)', () => {
       getKillSwitch: inactiveKillSwitch,
       getModelDefaults: () => ({ llmConnection: 'secondary', model: 'other-model', thinkingLevel: 'high' }),
       resolveNodeRoute: resolvePinnedRoute,
+      nowMs: () => clockMs,
     });
     recovered.resume('backoff-restart', 'r1');
     await tick();
+    expect(clockMs).toBeLessThan(retryDeadlineMs);
     expect(recoveredHost.created).toHaveLength(0);
 
-    await new Promise<void>((resolve) => setTimeout(resolve, 340));
+    clockMs = retryDeadlineMs;
+    await waitUntil(() => recoveredHost.dispatchedNames().length === 1, 2000);
     expect(recoveredHost.dispatchedNames()).toEqual(['a']);
     expect(recoveredHost.created[0]?.options).toMatchObject({
       llmConnection: 'primary', model: 'primary-model', thinkingLevel: 'low', modelRoutePinned: true,
