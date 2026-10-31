@@ -1,0 +1,596 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Services de missions, persistance, MCP, identifiants, configuration et automatisations",
+  "changes": [
+    "Neuf classes et 233 implémentations réparties par responsabilité, sans ajouter d’état ni de moteur.",
+    "Champs, constructeurs, API publiques, corps exécutables et ordre des membres vérifiés ; chemins des types relatifs résolus vers les mêmes cibles.",
+    "Factories et singletons conservés dans leurs modules d’origine ; contrôles canoniques d’authentification conservés à leur point d’entrée.",
+    "La méthode publique delete reste inchangée ; les fonctions internes correspondantes portent le nom légal deleteOperation."
+  ],
+  "files": [
+    {
+      "file": "packages/server-core/src/missions/MissionController.ts",
+      "lines": 146,
+      "sha256": "5267a6d412e02ed4fa867fb6c230b8e6c25394fe9b6a553260ae871685f33af2"
+    },
+    {
+      "file": "packages/server-core/src/missions/MissionRuntimeService.ts",
+      "lines": 255,
+      "sha256": "97cd3ba71856ab206b936d1855230d62e5a5222f5be98c8ec74dc6df0a8019d8"
+    },
+    {
+      "file": "packages/server-core/src/missions/SessionMissionExecutor.ts",
+      "lines": 80,
+      "sha256": "d4b693289cb628b20f9d6116539a171dca9bd60a7b75809753b337cf5bee63d1"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-controller/dispatch.ts",
+      "lines": 130,
+      "sha256": "b639018419f449a7d08c6c9eae8bafeb6551bc8c7d829510622ba868ecca8efc"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-controller/report.ts",
+      "lines": 58,
+      "sha256": "d5a8d5f3e32f16c8b737b111dbe2c5e4d87752c054b7f7e859417b0e4a9498de"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-controller/results.ts",
+      "lines": 141,
+      "sha256": "0944d620c9e7df6d9b437cd914a2778d0b4004a54182c6c4d5d90b8f8d2e2b0e"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-controller/review.ts",
+      "lines": 244,
+      "sha256": "6ab0a08cd560676744e60b7c9c7b7c2c956eefa363732a039d3038fff0195d4f"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-controller/shared.ts",
+      "lines": 175,
+      "sha256": "e875cd345871e28ca229f7657df4d4123cc43733189bd1529b5860aec806d6e3"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-controller/workflow.ts",
+      "lines": 93,
+      "sha256": "c871b77acd8c19a08eb024f82c88fd1e0eb7f2eab1f0b7c8c8051b5173802025"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-runtime/admission.ts",
+      "lines": 116,
+      "sha256": "76a3b1fa101c5c321f601eb7166751d782ef1fe87d77b3456a59973966f63fe1"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-runtime/budget.ts",
+      "lines": 155,
+      "sha256": "80d62a8ee5d324c7e4b7693376dd95dc1b3c20992a9f54f7046f810e849b88a9"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-runtime/connectors.ts",
+      "lines": 84,
+      "sha256": "2ff53d517a2fb28e6cf301e39fb4afd3fed73324f7b8e9ab2d34957cae8aab82"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-runtime/lifecycle.ts",
+      "lines": 152,
+      "sha256": "c56d309f176c13494f3d378e5eb4e11ac95ed3f18dd9c94cc89b2989f299df2f"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-runtime/preflight.ts",
+      "lines": 227,
+      "sha256": "56576db70f1d1c3ef6db43a459ee09795fb2c945b2a1f7b78a929b6dbb1b1cf3"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-runtime/profiles.ts",
+      "lines": 212,
+      "sha256": "40305f5bbb1a94c8ab9a9a8dad1e6a2078f4f207d0904259ddd8147e0f2d9b76"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-runtime/replan.ts",
+      "lines": 51,
+      "sha256": "24b21e874598400a556922d4847d195bec37e922c8dc56eb1f75dbaa5ded46d1"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-runtime/report.ts",
+      "lines": 130,
+      "sha256": "ecd29a1e6ac970d8ac68b687bced6a9f38048b9f5d5a99222ba5e8640f7c93e7"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-runtime/routes.ts",
+      "lines": 279,
+      "sha256": "eab01002469e42936754014c24dcf9f0d5fbdad4e933d1f487fc4d19889186a3"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-runtime/shared.ts",
+      "lines": 351,
+      "sha256": "8e56ba953844009099590e09712e5c4f66e95885300d2f9244f1233b78ccad21"
+    },
+    {
+      "file": "packages/server-core/src/missions/mission-runtime/start.ts",
+      "lines": 154,
+      "sha256": "f069f02897fd57806e6ee60501da76fd9a42a5e24ddc5236e9f3ed2b29d56a0b"
+    },
+    {
+      "file": "packages/server-core/src/missions/session-mission-executor/execution.ts",
+      "lines": 337,
+      "sha256": "6f2aab1318eea144ac20849e6642edd7ab50f386beedefac198c03afd5232523"
+    },
+    {
+      "file": "packages/server-core/src/missions/session-mission-executor/preflight.ts",
+      "lines": 159,
+      "sha256": "207893234c766945e9ebe788913aa5923244280358bbdd23eab4d31b92671732"
+    },
+    {
+      "file": "packages/server-core/src/missions/session-mission-executor/shared.ts",
+      "lines": 379,
+      "sha256": "a52503f6afcd4b14367c1626643ce47e5492ea72c42473d41a691583e6b92e63"
+    },
+    {
+      "file": "packages/shared/src/automations/automation-system.ts",
+      "lines": 216,
+      "sha256": "d3544751311b36149cd626e00a4bb8b44d769946d531d3c33ed38f4463068f9c"
+    },
+    {
+      "file": "packages/shared/src/automations/automation-system/configuration.ts",
+      "lines": 152,
+      "sha256": "ccf3941b71b16c5969bee90a3afeff5e0d365e80e3d2d5c30d860762dff6512f"
+    },
+    {
+      "file": "packages/shared/src/automations/automation-system/execution.ts",
+      "lines": 23,
+      "sha256": "5504ac1614fb73bdab03a476ef3205f7a0a3576ff4519b0d2dbbe5efbf7398f6"
+    },
+    {
+      "file": "packages/shared/src/automations/automation-system/lifecycle.ts",
+      "lines": 33,
+      "sha256": "15cfd24beefeca897bbc59e47f2a92263856cbfbcb51891a209a686fb91534d1"
+    },
+    {
+      "file": "packages/shared/src/automations/automation-system/metadata.ts",
+      "lines": 165,
+      "sha256": "6b7b88e2a330b040c87aa2a75a80c9e29afa79b964eec9b3c7313a97f1e7454e"
+    },
+    {
+      "file": "packages/shared/src/automations/automation-system/scheduling.ts",
+      "lines": 68,
+      "sha256": "479e6ed0e959de18d4642ad3609cc55a5778aef9ee4e66062ef2b088ff2a2b11"
+    },
+    {
+      "file": "packages/shared/src/automations/automation-system/shared.ts",
+      "lines": 28,
+      "sha256": "8f21d6ec751900f6809eadf978521a6d535524a4fc6f2555721359db2b5079d8"
+    },
+    {
+      "file": "packages/shared/src/config/watcher.ts",
+      "lines": 176,
+      "sha256": "811c49ba30413d078f0d6eb1f2b4b9c2d7525f854622197f7aa15ff2578e3240"
+    },
+    {
+      "file": "packages/shared/src/config/watcher/lifecycle.ts",
+      "lines": 174,
+      "sha256": "6aa35399ed7c8b2523d5b9562b64ce1cac542840c6b598ade4a71b73464fc6a2"
+    },
+    {
+      "file": "packages/shared/src/config/watcher/shared.ts",
+      "lines": 155,
+      "sha256": "0f965699bcca75293b2cdbe91b4890391ab348546417b6fdeef5cbcf50c7aedd"
+    },
+    {
+      "file": "packages/shared/src/config/watcher/skills.ts",
+      "lines": 132,
+      "sha256": "a304d412fddde60ad3159570184b18cab0b5f804dbb8abb25eb7eda8042529e4"
+    },
+    {
+      "file": "packages/shared/src/config/watcher/sources.ts",
+      "lines": 163,
+      "sha256": "b512433224cd17cc22a1241aa90b41b5d987dec1d20c29e54b5822bf539e2191"
+    },
+    {
+      "file": "packages/shared/src/config/watcher/themes.ts",
+      "lines": 151,
+      "sha256": "7b1ba4d2c9bfd3a146693ad5af7bc10e56da43d43d11ec13b3bc7bc84284f18a"
+    },
+    {
+      "file": "packages/shared/src/config/watcher/workspace.ts",
+      "lines": 266,
+      "sha256": "e2f80be529cadb4790ef66648e2916cd33f1d0dfb2ce8707ae2414562dbd456c"
+    },
+    {
+      "file": "packages/shared/src/credentials/manager.ts",
+      "lines": 363,
+      "sha256": "cdd6b96ebbef7ff6b05f63bb9bdc433c88d2b28c09ffbfed9dcfcb9f42972029"
+    },
+    {
+      "file": "packages/shared/src/credentials/manager/health.ts",
+      "lines": 83,
+      "sha256": "0aaf0bcd560299690c1fe3c747c4655dde81c27ea7bf9e0a73ef15be5a378992"
+    },
+    {
+      "file": "packages/shared/src/credentials/manager/llm-oauth.ts",
+      "lines": 70,
+      "sha256": "b507bca6e4b1869e53d1b1f000cf38ca32969b372c9a78d75013dfd776ee899c"
+    },
+    {
+      "file": "packages/shared/src/credentials/manager/llm.ts",
+      "lines": 128,
+      "sha256": "6b2143215e5f57c765f8552d05960424b8a23a043fc0aac045b0846e957a196d"
+    },
+    {
+      "file": "packages/shared/src/credentials/manager/oauth.ts",
+      "lines": 86,
+      "sha256": "e1b43072876f1ec50cd01687ceb45bdd6477c77e770312b0456db7408bcce428"
+    },
+    {
+      "file": "packages/shared/src/credentials/manager/service-accounts.ts",
+      "lines": 76,
+      "sha256": "89fab43e63142604119f3f2ba361d4635b909650c67b0fa6c922857fc3c8247e"
+    },
+    {
+      "file": "packages/shared/src/credentials/manager/shared.ts",
+      "lines": 8,
+      "sha256": "6cd9c414ef7cc490d80ce132381e9efd1a006a46fc1afdd4f029f71231f307b7"
+    },
+    {
+      "file": "packages/shared/src/credentials/manager/storage.ts",
+      "lines": 225,
+      "sha256": "fcac3b29697e77559f6a34ca792a82fab290a101f9e618a80b905b69c24ef412"
+    },
+    {
+      "file": "packages/shared/src/mcp/mcp-pool.ts",
+      "lines": 201,
+      "sha256": "0da44c21395e53b14e57e4c4a1916799041345247526343a0a14a1030386f76e"
+    },
+    {
+      "file": "packages/shared/src/mcp/mcp-pool/connection.ts",
+      "lines": 169,
+      "sha256": "f18b4c797ab61313c3585c2d70eaa69f0aed354bfb6186080cdff54485e38491"
+    },
+    {
+      "file": "packages/shared/src/mcp/mcp-pool/execution.ts",
+      "lines": 180,
+      "sha256": "04d6fadb418dd7dddfa67732e83a34b9e7276ae614055b1abf5bfc22d3434f87"
+    },
+    {
+      "file": "packages/shared/src/mcp/mcp-pool/proxy.ts",
+      "lines": 61,
+      "sha256": "e3c6e64cf349f7a27987b06f707b2a363851d1e31113ed74b2a02f5f7a0ce6a4"
+    },
+    {
+      "file": "packages/shared/src/mcp/mcp-pool/shared.ts",
+      "lines": 178,
+      "sha256": "9d9d596c318cb6077450f0f98f6bff150e8242734d33c7da9cd40babbead7d45"
+    },
+    {
+      "file": "packages/shared/src/sessions/persistence-queue.ts",
+      "lines": 166,
+      "sha256": "3ff4d5594688413c5d3b18d4f5ee375cfc63c6d99a01152e72c8326f135fe83e"
+    },
+    {
+      "file": "packages/shared/src/sessions/persistence-queue/flush.ts",
+      "lines": 78,
+      "sha256": "4f57045e71da94f0532cded53ca0245785e5d40f4fe5d76378da86362e16c00c"
+    },
+    {
+      "file": "packages/shared/src/sessions/persistence-queue/identity.ts",
+      "lines": 129,
+      "sha256": "6532b9ca079fd752ef8bcfb82d5d33142c5b97d3416916ba7c9f0d8a49fa9618"
+    },
+    {
+      "file": "packages/shared/src/sessions/persistence-queue/lifecycle.ts",
+      "lines": 75,
+      "sha256": "ad8f9adf1997fea2a8b405f29a1c1d7e63f738af74b6027c4052cd879a8cf974"
+    },
+    {
+      "file": "packages/shared/src/sessions/persistence-queue/shared.ts",
+      "lines": 489,
+      "sha256": "adc2c7530f22296d185761baba0d77873f3f75d89182071d50269a31ffdec6a9"
+    },
+    {
+      "file": "packages/shared/src/sessions/persistence-queue/writing.ts",
+      "lines": 220,
+      "sha256": "94648614a07b6ad7d20f2c02f571aaca4e5b9859b6708a87dc1d4d99e102211d"
+    },
+    {
+      "file": "packages/shared/src/sources/credential-manager.ts",
+      "lines": 345,
+      "sha256": "13bbaeeb36f450a67bda18f11f43f02f7c6b387042e897c6284d2c82f4699bc5"
+    },
+    {
+      "file": "packages/shared/src/sources/credential-manager/access.ts",
+      "lines": 175,
+      "sha256": "7d7517eb17626e58d93007eb469f3f6c023f20774338d07de1a69ffe47bf9060"
+    },
+    {
+      "file": "packages/shared/src/sources/credential-manager/oauth.ts",
+      "lines": 233,
+      "sha256": "f615be32fb0cb45553905c7d5addbf57ec9feb37a658ce39bcf97c58ecfa255c"
+    },
+    {
+      "file": "packages/shared/src/sources/credential-manager/providers.ts",
+      "lines": 222,
+      "sha256": "999e11ab0ae66fbd1d28290cda3917f0d3af9e9f920e8b37503df074fc2a0212"
+    },
+    {
+      "file": "packages/shared/src/sources/credential-manager/refresh.ts",
+      "lines": 305,
+      "sha256": "117a2acf8166d23e5488d11d0231d92c125156899614aa715e881b7cb5284cf1"
+    },
+    {
+      "file": "packages/shared/src/sources/credential-manager/shared.ts",
+      "lines": 77,
+      "sha256": "b9b80f793a88c06c9d80d5a3876d19fb55d37d4263d8067719909e6d0021bc55"
+    },
+    {
+      "file": "packages/shared/src/sources/credential-manager/storage.ts",
+      "lines": 129,
+      "sha256": "d79b3ee5f164ebb5a13deabca4cbdb616d7c0686414d324900e313efd21dc70b"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 17.23,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/core-services-class-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 8.35,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/core-services-class-compat-shared.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 11.59,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/core-services-class-compat-server.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/server-core/src/missions/MissionController.ts",
+        "packages/server-core/src/missions/mission-controller",
+        "packages/server-core/src/missions/MissionRuntimeService.ts",
+        "packages/server-core/src/missions/mission-runtime",
+        "packages/server-core/src/missions/SessionMissionExecutor.ts",
+        "packages/server-core/src/missions/session-mission-executor",
+        "packages/shared/src/automations/automation-system.ts",
+        "packages/shared/src/automations/automation-system",
+        "packages/shared/src/config/watcher.ts",
+        "packages/shared/src/config/watcher",
+        "packages/shared/src/credentials/manager.ts",
+        "packages/shared/src/credentials/manager",
+        "packages/shared/src/mcp/mcp-pool.ts",
+        "packages/shared/src/mcp/mcp-pool",
+        "packages/shared/src/sessions/persistence-queue.ts",
+        "packages/shared/src/sessions/persistence-queue",
+        "packages/shared/src/sources/credential-manager.ts",
+        "packages/shared/src/sources/credential-manager",
+        "--format",
+        "json",
+        "--output-file",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/core-services-class-lint-report.json",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.4,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/core-services-class-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 16.14,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/core-services-class-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/server-core/src/missions"
+      ],
+      "exitCode": 0,
+      "seconds": 6.45,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/core-services-class-mission-tests.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 141.2,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/core-services-class-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "classes": [
+      {
+        "source": "packages/server-core/src/missions/MissionController.ts",
+        "nativeMethodBodies": 31,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/server-core/src/missions/MissionRuntimeService.ts",
+        "nativeMethodBodies": 44,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/server-core/src/missions/SessionMissionExecutor.ts",
+        "nativeMethodBodies": 3,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/shared/src/automations/automation-system.ts",
+        "nativeMethodBodies": 18,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/shared/src/config/watcher.ts",
+        "nativeMethodBodies": 30,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/shared/src/credentials/manager.ts",
+        "nativeMethodBodies": 41,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 1,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/shared/src/mcp/mcp-pool.ts",
+        "nativeMethodBodies": 12,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/shared/src/sessions/persistence-queue.ts",
+        "nativeMethodBodies": 21,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/shared/src/sources/credential-manager.ts",
+        "nativeMethodBodies": 33,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      }
+    ],
+    "runtimeImportCycles": 0,
+    "maximumFileLines": 490
+  },
+  "fullTestSummary": {
+    "pass": 10741,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "core-services-class-mission-tests": {
+      "pass": 123,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "sourceGate": {
+    "max-lines": 99,
+    "no-explicit-any": 366
+  },
+  "globalLint": {
+    "files": 3353,
+    "errors": 435,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 347,
+      "max-lines": 88,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [
+    {
+      "cause": "Le nom delete, légal pour une méthode, est réservé pour une déclaration de fonction.",
+      "fix": "Fonction interne deleteOperation et API de classe inchangée.",
+      "originalResult": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/core-services-class-types-before-delete-operation-fix-result.json",
+      "originalRawLog": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/core-services-class-types-before-delete-operation-fix.log"
+    }
+  ],
+  "limits": [
+    "99 fichiers trop longs et 366 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-25T19:09:55.261966+00:00"
+}

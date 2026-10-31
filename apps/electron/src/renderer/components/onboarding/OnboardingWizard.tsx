@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils"
 import { WelcomeStep } from "./WelcomeStep"
 import type { ApiSetupMethod } from "./APISetupStep"
-import { ProviderSelectStep, type ProviderChoice } from "./ProviderSelectStep"
-import { CredentialsStep, type CredentialStatus } from "./CredentialsStep"
-import { LocalModelStep, type LocalModelSubmitData } from "./LocalModelStep"
+import { ProviderSelectStep,type ProviderChoice } from "./ProviderSelectStep"
+import { CredentialsStep,type CredentialStatus } from "./CredentialsStep"
+import { LocalModelStep,type LocalModelSubmitData } from "./LocalModelStep"
 import { CompletionStep } from "./CompletionStep"
-import { GitBashWarning, type GitBashStatus } from "./GitBashWarning"
+import { GitBashWarning,type GitBashStatus } from "./GitBashWarning"
 import type { ApiKeySubmitData } from "../apisetup"
 import type { CustomEndpointApi } from '@config/llm-connections'
 
@@ -43,30 +43,30 @@ interface OnboardingWizardProps {
   onBack: () => void
   onSelectApiSetupMethod: (method: ApiSetupMethod) => void
   onSubmitCredential: (data: ApiKeySubmitData) => void
-  onStartOAuth?: (methodOverride?: ApiSetupMethod, connectionSlugOverride?: string, googleCloudProject?: string) => void
+  onStartOAuth?: ((methodOverride?: ApiSetupMethod, connectionSlugOverride?: string, googleCloudProject?: string) => void) | undefined
   onFinish: () => void
 
   // Claude OAuth (two-step flow)
-  isWaitingForCode?: boolean
-  onSubmitAuthCode?: (code: string) => void
-  onCancelOAuth?: () => void
+  isWaitingForCode?: boolean | undefined
+  onSubmitAuthCode?: ((code: string) => void) | undefined
+  onCancelOAuth?: (() => void) | undefined
 
   // Copilot device flow
-  copilotDeviceCode?: { userCode: string; verificationUri: string }
+  copilotDeviceCode?: { userCode: string; verificationUri: string } | undefined
 
   // Git Bash (Windows)
-  onBrowseGitBash?: () => Promise<string | null>
-  onUseGitBashPath?: (path: string) => void
-  onRecheckGitBash?: () => void
-  onClearError?: () => void
+  onBrowseGitBash?: (() => Promise<string | null>) | undefined
+  onUseGitBashPath?: ((path: string) => void) | undefined
+  onRecheckGitBash?: (() => void) | undefined
+  onClearError?: (() => void) | undefined
 
   // Provider select (new flow)
-  onSelectProvider?: (choice: ProviderChoice) => void
+  onSelectProvider?: ((choice: ProviderChoice) => void) | undefined
   /** Called when user chooses "Setup later" on provider select */
-  onSkipSetup?: () => void
+  onSkipSetup?: (() => void) | undefined
 
   // Local model
-  onSubmitLocalModel?: (data: LocalModelSubmitData) => void
+  onSubmitLocalModel?: ((data: LocalModelSubmitData) => void) | undefined
 
   // Edit mode (pre-fill existing connection values)
   editInitialValues?: {
@@ -77,9 +77,9 @@ interface OnboardingWizardProps {
     models?: string[]
     customApi?: CustomEndpointApi
     googleCloudProject?: string
-  }
+  } | undefined
 
-  className?: string
+  className?: string | undefined
 }
 
 /**
@@ -95,7 +95,6 @@ export function OnboardingWizard({
   state,
   onContinue,
   onBack,
-  onSelectApiSetupMethod,
   onSubmitCredential,
   onStartOAuth,
   onFinish,

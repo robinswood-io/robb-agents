@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'bun:test'
 import { resolveNodeStatePill } from '../node-state-pill'
-import en from '../../../../../../../../packages/shared/src/i18n/locales/en.json'
+import en from '../../../../../../../../packages/shared/src/i18n/locales/en/index'
 
 const messages = en as Record<string, string>
 

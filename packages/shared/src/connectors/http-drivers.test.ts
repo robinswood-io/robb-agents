@@ -130,7 +130,7 @@ function createHarness(
   }
 
   const options: ConnectorDriverOptions = {
-    baseUrl: manifest.allowedOrigins[0],
+    ...(manifest.allowedOrigins[0] !== undefined ? { baseUrl: manifest.allowedOrigins[0] } : {}),
     secretReference,
     resolveSecret: async (reference, leaseRequest) => ({
       value: 'test-token-not-persisted',
@@ -291,7 +291,7 @@ describe('priority connector HTTP drivers', () => {
         reconciliation: { status: 'confirmed' },
       },
     })
-    const proof = SignedExecutionProofSchema.parse(result.executionProof)
+    const proof = SignedExecutionProofSchema.parse(result["executionProof"])
     expect(harness.executionProofIssuer.verifyForTask(proof, {
       workspaceId: 'workspace-1',
       missionId: 'mission-1',
@@ -361,7 +361,7 @@ describe('priority connector HTTP drivers', () => {
         },
       },
     })
-    expect(harness.executionProofIssuer.verifyForTask(result.executionProof, {
+    expect(harness.executionProofIssuer.verifyForTask(result["executionProof"], {
       workspaceId: 'workspace-1',
       missionId: 'mission-1',
       nodeId: 'node-1',

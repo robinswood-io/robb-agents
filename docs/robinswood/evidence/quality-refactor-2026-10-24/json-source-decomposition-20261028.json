@@ -1,0 +1,98 @@
+{
+  "scope": "Maintained source partitions and semantically identical derived JSON; runtime consumers and output files unchanged by capture",
+  "command": "python3 scripts/json_sources.py check",
+  "generator": "scripts/json_sources.py",
+  "generatorSha256": "a59f29e3c141f7a3cd63dd83a1dd29effef7efb0252fb075823e653a6278a16a",
+  "datasets": [
+    {
+      "output": "apps/electron/resources/permissions/default.json",
+      "sourceManifest": "config-sources/default-permissions/manifest.json",
+      "sourceFiles": 6,
+      "maxSourceLines": 450,
+      "sourceTreeSha256": "6acef64bd2efffa895b67b17e8cd6abeda10e48d76473521daec890e8f0ffab8",
+      "outputSha256": "8e312b0df9d6c82e8692df2c045e76aefcda77421ad5c02ecd9d9432eac7a95d",
+      "canonicalSha256": "c0ebd19559b96c8feaf84c91910763b1ff1f132061b11526e287deaaebdab9e9",
+      "reconstructionMatches": true
+    },
+    {
+      "output": "ops/rbw-agents-oss/config/automation-mapping.json",
+      "sourceManifest": "config-sources/automation-mapping/manifest.json",
+      "sourceFiles": 7,
+      "maxSourceLines": 446,
+      "sourceTreeSha256": "73c442a4cce694bc2281a8e7c348a37a3554481efd31dbf21ca0b29de7b7fe88",
+      "outputSha256": "a1ef117c24ef647496c4ad303dc22aaf322a5b6d04d8470f91345d59b12ac0a6",
+      "canonicalSha256": "fcc28fa48307712ca7e4a22d4c0d4ce6db44eb27ebc83d340dfd4dce6d5b1ca6",
+      "reconstructionMatches": true
+    },
+    {
+      "output": "ops/rbw-agents-oss/config/command-manifest.json",
+      "sourceManifest": "config-sources/command-manifest/manifest.json",
+      "sourceFiles": 17,
+      "maxSourceLines": 447,
+      "sourceTreeSha256": "012c45fb66495c919f2aea3905330aa5a3d288c646259f51d8c6f8d4d150e65f",
+      "outputSha256": "6a1111e9fa8f2d7b93b0e3ca20f49013e51adbcddd2e6702a04e58167a678e12",
+      "canonicalSha256": "7d988728f7e2a0c85c3a350bbb2d9d718d626ed2fad4f52203ceb12b219cd78d",
+      "reconstructionMatches": true
+    },
+    {
+      "output": "ops/rbw-agents-oss/config/registry/manifest-only-policy.json",
+      "sourceManifest": "config-sources/manifest-only-policy/manifest.json",
+      "sourceFiles": 5,
+      "maxSourceLines": 448,
+      "sourceTreeSha256": "d31f57f823060c39759e19c51b8d27758b83768f12d3a953ce90ecea6cfe77b8",
+      "outputSha256": "f93ef8c1d0ee0b52b2e909c08f17e88c6a32cbaa773f11b257734a60ff246111",
+      "canonicalSha256": "af342f8568dee7c3ecc72bf8251feceb30ae771f267303d43e24fbb29895a4c9",
+      "reconstructionMatches": true
+    },
+    {
+      "output": "ops/rbw-agents-oss/config/registry/script-coverage-policy.json",
+      "sourceManifest": "config-sources/script-coverage-policy/manifest.json",
+      "sourceFiles": 12,
+      "maxSourceLines": 450,
+      "sourceTreeSha256": "9efd1f4a35af4ff13ccdadea9522287feb9262b1cf9c726ac21f59a39c38411a",
+      "outputSha256": "9209f2cba75c1e2fa5e970063a2cde004b51330ef5028407a3b48e8f8153c478",
+      "canonicalSha256": "42c1d1b92eaa71d6c971e356e95747b07c3108435b84a6e103923c183a9360c4",
+      "reconstructionMatches": true
+    },
+    {
+      "output": "ops/rbw-agents-oss/config/registry/side-effects-policy.json",
+      "sourceManifest": "config-sources/side-effects-policy/manifest.json",
+      "sourceFiles": 10,
+      "maxSourceLines": 446,
+      "sourceTreeSha256": "738489e9aaf5b2f74253ab68585ed4bfee6fc70071411c7b048e7998cbfaa608",
+      "outputSha256": "11d1fc4e39d3d1f31be5c8daa85d457465b5b0eb024d8b5a7df0349ecc7ffabd",
+      "canonicalSha256": "b6e296bfd3bafcb34a58e9ac6a5b5068b0bd8380dac19c4760b72643f5f724bc",
+      "reconstructionMatches": true
+    },
+    {
+      "output": "ops/rbw-agents-oss/config/temporal/ready-schedules.json",
+      "sourceManifest": "config-sources/ready-schedules/manifest.json",
+      "sourceFiles": 13,
+      "maxSourceLines": 450,
+      "sourceTreeSha256": "bb8c6c2b5f32ee62e7c1cc3d704b6ff778f8dc437a94f5198d17b7b63b055478",
+      "outputSha256": "6fc2f3f334b29cf3e5ae56e5943e19fb7c2fe2b7ce00c31022941bcd04ea1f57",
+      "canonicalSha256": "10675a97d059c7f7114d4a137d7a046244c077fa45716723208edec4f0455ced",
+      "reconstructionMatches": true
+    },
+    {
+      "output": "ops/rbw-agents-oss/config/temporal/schedules.json",
+      "sourceManifest": "config-sources/schedules/manifest.json",
+      "sourceFiles": 7,
+      "maxSourceLines": 450,
+      "sourceTreeSha256": "f1a9b6e258cad69496822d8fa73b11a29142cef31c0bf9e322aa1fea613763fd",
+      "outputSha256": "f29c2a654b1a00305fb6ce7ad3740fea7b67c254cf38e3547f5db31d21a11c5f",
+      "canonicalSha256": "515336f0d9d41e3b5a0016a07ab8d4e8db60a7372cafa625419730ce071493ac",
+      "reconstructionMatches": true
+    },
+    {
+      "output": "packages/server-core/src/sessions/__fixtures__/yolo-local-evidence-20260930.json",
+      "sourceManifest": "config-sources/yolo-local-evidence-20260930/manifest.json",
+      "sourceFiles": 3,
+      "maxSourceLines": 396,
+      "sourceTreeSha256": "044b199a51b6bd4bbea14da2fc41a7f178d4123854b1af25a48150efcde5db22",
+      "outputSha256": "0ce3c774e2216402e30118d5a97c9a0b416c7f7a865f2e5dfae75466a4c3b955",
+      "canonicalSha256": "3dbdee619e9da565ee5b341f6efb7309adf787581e62b2e0da52f29b707058ca",
+      "reconstructionMatches": true
+    }
+  ]
+}

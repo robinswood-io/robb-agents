@@ -17,11 +17,11 @@ import { PATH_SEP, getPathBasename } from '@/lib/platform'
 import { cn } from '@/lib/utils'
 
 export interface CompactWorkingDirectorySelectorProps {
-  workingDirectory?: string
+  workingDirectory?: string | undefined
   onWorkingDirectoryChange: (path: string) => void
-  sessionFolderPath?: string
-  isEmptySession?: boolean
-  workspaceId?: string
+  sessionFolderPath?: string | undefined
+  isEmptySession?: boolean | undefined
+  workspaceId?: string | undefined
 }
 
 /**

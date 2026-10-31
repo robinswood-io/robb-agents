@@ -1,0 +1,85 @@
+{
+  "status": "passed",
+  "cases": [
+    "empty task cannot reach create IPC",
+    "title alone cannot create a task without subtasks",
+    "generation sends existing model and connection routing",
+    "unrelated generation event cannot overwrite the active draft",
+    "matching generation fills goal acceptance criteria and authored node",
+    "create and run adopts draft without deleting it and notifies host",
+    "closing an unadopted generated draft retires only that draft"
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "calls": [
+    {
+      "method": "generate",
+      "args": [
+        "qa-workspace",
+        {
+          "goal": "QA requested mission",
+          "title": "QA requested mission",
+          "model": "claude-sonnet-4-6",
+          "llmConnection": "qa-provider",
+          "permissionMode": "allow-all"
+        }
+      ]
+    },
+    {
+      "method": "create",
+      "args": [
+        "qa-workspace",
+        {
+          "yaml": "{\n  \"id\": \"qa-generated-mission\",\n  \"title\": \"QA Generated Mission\",\n  \"description\": \"QA isolated task\",\n  \"goal\": \"Produce a complete QA artifact\",\n  \"mission\": {\n    \"inputs\": [],\n    \"deliverables\": [\n      {\n        \"name\": \"result\",\n        \"description\": \"Artifact exists and hash is verified\",\n        \"format\": \"markdown\"\n      }\n    ],\n    \"policy\": {\n      \"impact_level\": \"medium\",\n      \"require_high_impact_approval\": true,\n      \"replay_external_mutations\": false\n    }\n  },\n  \"acceptance_criteria\": \"Artifact exists and hash is verified\",\n  \"defaults\": {\n    \"model\": \"claude-sonnet-4-6\",\n    \"llmConnection\": \"qa-provider\",\n    \"permissionMode\": \"ask\"\n  },\n  \"nodes\": [\n    {\n      \"id\": \"qa-step\",\n      \"title\": \"QA step\",\n      \"model\": \"claude-sonnet-4-6\",\n      \"llmConnection\": \"qa-provider\",\n      \"prompt\": \"Create the QA artifact and verify its hash\"\n    }\n  ]\n}",
+          "orchestratorSessionId": "qa-generated-draft"
+        }
+      ]
+    },
+    {
+      "method": "run",
+      "args": [
+        "qa-workspace",
+        {
+          "slug": "qa-authored-task",
+          "orchestratorSessionId": "qa-generated-draft"
+        }
+      ]
+    },
+    {
+      "method": "close",
+      "args": []
+    },
+    {
+      "method": "created",
+      "args": [
+        {
+          "sessionId": "qa-generated-draft",
+          "taskLabelId": "qa-label"
+        }
+      ]
+    },
+    {
+      "method": "generate",
+      "args": [
+        "qa-workspace",
+        {
+          "goal": "QA discard mission",
+          "title": "QA discard mission",
+          "model": "claude-sonnet-4-6",
+          "llmConnection": "qa-provider",
+          "permissionMode": "allow-all"
+        }
+      ]
+    },
+    {
+      "method": "close",
+      "args": []
+    },
+    {
+      "method": "delete",
+      "args": [
+        "qa-generated-draft"
+      ]
+    }
+  ]
+}

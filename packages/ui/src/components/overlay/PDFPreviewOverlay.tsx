@@ -33,12 +33,12 @@ export interface PDFPreviewOverlayProps {
   /** Absolute file path for the PDF (single item / backward compat) */
   filePath: string
   /** Multiple items for arrow navigation */
-  items?: PreviewItem[]
+  items?: PreviewItem[] | undefined
   /** Initial active item index (defaults to 0) */
-  initialIndex?: number
+  initialIndex?: number | undefined
   /** Async loader that returns PDF data as Uint8Array */
   loadPdfData: (path: string) => Promise<Uint8Array>
-  theme?: 'light' | 'dark'
+  theme?: 'light' | 'dark' | undefined
 }
 
 export function PDFPreviewOverlay({
@@ -90,7 +90,7 @@ export function PDFPreviewOverlay({
           setIsLoading(false)
         }
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load PDF')
           setIsLoading(false)

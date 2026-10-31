@@ -1,0 +1,27 @@
+{
+  "valid": true,
+  "source": "packages/server-core/src/sessions/objective-contract.test.ts",
+  "testDeclarationsPreserved": 124,
+  "sharedDeclarationsPreserved": 2,
+  "setupPreservedInEverySuite": true,
+  "importsPreserved": true,
+  "maximumLines": 440,
+  "currentSourceHashes": {
+    "packages/server-core/src/sessions/objective-contract.test.ts": "c65f9d9e2566369dc1323aede1f9715f41c756d1cc8f51756c57a0d5acbfaa1e",
+    "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts": "935becdbdf3a35135e6ed07ef3089052958098e2fa6610db07be9e2ba5987335",
+    "packages/server-core/src/sessions/objective-contract-preserves-a-later-independent-imperative-after-an-analytical-deci.test.ts": "9002b14503cea31e232f51d078d50e7a11df343de6e99bd93578311d14cc5d68",
+    "packages/server-core/src/sessions/objective-contract-guards-an-authoritative-medical-treatment-mutation-with-medical-e.test.ts": "17423b5ebffcd5a12f38702f04743cf9ffdcbbc1a4fff7349c767f29e539882c",
+    "packages/server-core/src/sessions/objective-contract-lets-a-new-substantive-amendment-replace-an-older-clarified-secur.test.ts": "194d54d5b65c3568a9c95bacfe1c4c69fb493ee2399c128cd8ce604498fc846c",
+    "packages/server-core/src/sessions/objective-contract-does-not-turn-read-only-negated-reported-or-chat-response-wording.test.ts": "5d582351bca73275a8e7f815411133106059652a27c60351be64196fbf2bb3e9",
+    "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts": "9818477391e7a64fca158466fc4c2b9da0180cdeb331b2bd95e1613cc01eb620",
+    "packages/server-core/src/sessions/objective-contract-starts-a-new-objective-for-a-fresh-request-after-completion.test.ts": "cc0070c4d1c28b232984159ab8074b97929af51e48a0ca41b0c747885b319bbd",
+    "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts": "dbaaf80d907881547eadda25300527b1425070fc537a0259f5f4c99f46532fd0",
+    "packages/server-core/src/sessions/objective-contract-advances-evidence-when-the-bounded-result-changes-for-the-same-no.test.ts": "d18f422d3cdc4a473fbaa22ae68d51fb00b86ce9c3c7844d03d0958ecd860920",
+    "packages/server-core/src/sessions/objective-contract-keeps-the-exact-body-as-payload-while-excluding-it-from-risk-and.test.ts": "c49788e9163b95199b79125081d3264e149a46d9fe2e7992fe655e49a8d78100",
+    "packages/server-core/src/sessions/objective-contract-uses-a-signed-preflight-for-an-authorized-thread-reply-without-as.test.ts": "156705b646ac086f6e691bb61235b22c8f62f09d43edcf4ed84fd8352b183af9",
+    "packages/server-core/src/sessions/objective-contract-recovers-an-authenticated-repair-command-while-preserving-explici.test.ts": "f83a0e9ebeddd2403ce8ab9996d64d7fdac568a26e66dc99cd7c0ca58a25d20d",
+    "packages/server-core/src/sessions/objective-contract-never-counts-a-plan-update-as-target-mutation-evidence-or-objecti.test.ts": "b41a21142080a7d6765007f660d359359ed2b39d0980d13b2a9f274c04265600",
+    "packages/server-core/src/sessions/testing/objective-contract-fixture.ts": "bafaf753d3af013d5089a066abaee8a5b9c767247193f13edfc4ee6554360aa6"
+  },
+  "issues": []
+}

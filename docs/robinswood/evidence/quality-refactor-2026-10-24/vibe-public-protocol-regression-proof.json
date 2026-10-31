@@ -1,0 +1,39 @@
+{
+  "status": "passed",
+  "before": {
+    "command": [
+      "rtk",
+      "bun",
+      "test",
+      "packages/pi-agent-server/src/vibe-acp-public-protocol.test.ts"
+    ],
+    "exitCode": 1,
+    "seconds": 0.61,
+    "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/vibe-public-protocol-regression-before.log"
+  },
+  "observedFailure": "idle replay must stay outside the next turnfresh turn 1",
+  "after": {
+    "command": [
+      "rtk",
+      "bun",
+      "test",
+      "packages/pi-agent-server/src/vibe-acp-server.test.ts",
+      "packages/pi-agent-server/src/provider-handoff.test.ts",
+      "packages/pi-agent-server/src/vibe-subprocess.test.ts",
+      "packages/pi-agent-server/src/vibe-acp-public-protocol.test.ts"
+    ],
+    "exitCode": 0,
+    "seconds": 3.3,
+    "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/vibe-public-protocol-targeted.log"
+  },
+  "coverage": [
+    "Restored session retained across two prompt turns",
+    "Idle and foreign-session chunks excluded",
+    "Native permission callbacks, provider handoff, tool, thought and usage events",
+    "Native reported context capacity",
+    "Existing pre-write rejection, child exit and allow/block/modify behavior"
+  ],
+  "limits": [
+    "Serveur ACP local simulé ; aucun binaire Vibe ni compte réel utilisé."
+  ]
+}

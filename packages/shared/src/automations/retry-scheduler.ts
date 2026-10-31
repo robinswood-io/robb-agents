@@ -126,7 +126,7 @@ export class RetryScheduler {
       deferredAttempt: 0,
       nextRetryAt: Date.now() + DEFERRED_DELAYS_MS[0]!,
       createdAt: Date.now(),
-      lastError,
+      ...(lastError !== undefined ? { lastError } : {}),
     };
 
     const queuePath = join(this.workspaceRootPath, AUTOMATIONS_RETRY_QUEUE_FILE);
@@ -201,7 +201,7 @@ export class RetryScheduler {
           const historyEntry = createWebhookHistoryEntry({
             matcherId: entry.matcherId,
             ok: true,
-            method: entry.action.method,
+            ...(entry.action.method !== undefined ? { method: entry.action.method } : {}),
             url: entry.redactedUrl,
             statusCode: result.statusCode,
             durationMs: result.durationMs ?? 0,
@@ -219,7 +219,7 @@ export class RetryScheduler {
           const historyEntry = createWebhookHistoryEntry({
             matcherId: entry.matcherId,
             ok: false,
-            method: entry.action.method,
+            ...(entry.action.method !== undefined ? { method: entry.action.method } : {}),
             url: entry.redactedUrl,
             statusCode: result.statusCode,
             durationMs: result.durationMs ?? 0,
@@ -246,11 +246,13 @@ export class RetryScheduler {
         } else {
           // Still retryable — schedule next deferred attempt
           const nextDelay = DEFERRED_DELAYS_MS[entry.deferredAttempt + 1]!;
+          const entryWithoutOverrides = { ...entry };
+          delete entryWithoutOverrides.lastError;
           remaining.push({
-            ...entry,
+            ...entryWithoutOverrides,
             deferredAttempt: entry.deferredAttempt + 1,
             nextRetryAt: Date.now() + nextDelay,
-            lastError: result.error,
+            ...(result.error !== undefined ? { lastError: result.error } : {}),
           });
           log.debug(`[RetryScheduler] ${entry.id} failed — next retry in ${nextDelay / 60_000}m`);
         }

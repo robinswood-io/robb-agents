@@ -1,0 +1,32 @@
+{
+  "status": "passed",
+  "source": "scripts/build-server.ts",
+  "nativeSourceHash": "4e7f0ec76614e22000e55362ff02a84e0e2f17893e67e9986d26ae22bb3cf856",
+  "nativeDeclarations": 16,
+  "extractedDeclarations": 11,
+  "nativeBodiesStateAndEffectOrderPreserved": true,
+  "nativePublicExportsAndImportedBindingsPreserved": true,
+  "nativeExternalImportOrder": [
+    "util",
+    "path",
+    "url",
+    "fs",
+    "bun",
+    "./build/common"
+  ],
+  "runtimeImportCycles": 0,
+  "newStateOrWorkflowAdded": false,
+  "maximumFileLines": 483,
+  "files": [
+    {
+      "file": "scripts/build-server.ts",
+      "lines": 483,
+      "sha256": "606ff6d2ead5d15aeac4b204ba1dc1c2b438648047a218cfd0a38ac8a4255cf4"
+    },
+    {
+      "file": "scripts/server-build-resources.ts",
+      "lines": 436,
+      "sha256": "a85b5e058cb7112a42315e5db4b240512f299f376becfbcec58c122563009cd9"
+    }
+  ]
+}

@@ -1,3 +1,6 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import { NOOP_LOGGER, DEFAULT_SEND_TIMEOUT_MS, isSafeWorkerDiagnostic, type PendingEntry, type WhatsAppConfig, type WhatsAppEvent, type EventHandler } from "./protocol";
+export { type WhatsAppConfig, type WhatsAppEvent } from "./protocol";
 /**
  * WhatsAppAdapter — out-of-process adapter that spawns the
  * `@craft-agent/messaging-whatsapp-worker` subprocess.
@@ -16,113 +19,28 @@
  * may stop working at any time. Account bans are possible.
  */
 
-import { spawn, type ChildProcess } from 'node:child_process'
-import { Buffer } from 'node:buffer'
-import {
-  registerLongRunningProcess,
-  type LongRunningProcessHandle,
-} from '@craft-agent/shared/processes'
-import {
-  encodeMessage,
-  parseFrames,
-  type WorkerCommand,
-  type WorkerEvent,
-} from '@craft-agent/messaging-whatsapp-worker'
-import type {
-  PlatformAdapter,
-  PlatformConfig,
-  AdapterCapabilities,
-  IncomingMessage,
-  IncomingAttachment,
-  SendOptions,
-  SentMessage,
-  InlineButton,
-  ButtonPress,
-  MessagingLogger,
-} from '../../types'
-
-const NOOP_LOGGER: MessagingLogger = {
-  info: () => {},
-  warn: () => {},
-  error: () => {},
-  child: () => NOOP_LOGGER,
-}
-
 /**
- * Hard ceiling for `sendText`/`sendFile` awaits. If the worker wedges
- * between command dispatch and `send_result` (Baileys deadlock, infinite
- * retry, stalled socket) we surface a real error to the caller instead
- * of letting the renderer's `text_complete` path hang indefinitely and
- * freeze the chat. Chosen to comfortably exceed the worst-case Baileys
- * round-trip on a slow network; shorter would starve legitimate sends.
- * Tests pass a much smaller value via `WhatsAppConfig.sendTimeoutMs`.
+ * WhatsAppAdapter — out-of-process adapter that spawns the
+ * `@craft-agent/messaging-whatsapp-worker` subprocess.
+ *
+ * WhatsApp has no official bot API usable by us. Baileys reimplements the
+ * WA multi-device protocol — it runs in a child process so that:
+ *   (a) a Baileys crash/segfault can't take down the Electron main process,
+ *   (b) Baileys can run under Node even when the host runtime is Bun,
+ *   (c) memory isolation: auth state, signal ratchets, etc.
+ *
+ * The worker contract is defined in @craft-agent/messaging-whatsapp-worker.
+ * This adapter owns the process lifecycle + translates events to the
+ * PlatformAdapter interface.
+ *
+ * Unofficial API disclaimer: Baileys is not endorsed by WhatsApp/Meta and
+ * may stop working at any time. Account bans are possible.
  */
-const DEFAULT_SEND_TIMEOUT_MS = 30_000
-
-const SAFE_WORKER_DIAGNOSTIC_PATTERNS = [
-  /^\[wa-worker\] starting — build=\S+ sha=\S+ provenance=\S+ selfChatMode=(?:true|false) pairingMode=(?:qr|code)$/,
-  /^\[wa-worker\] upsert type=(?:notify|append) count=\d+$/,
-  /^\[wa-worker\] upsert skip: history \(ts=\d+ cutoff=\d+\)$/,
-  /^\[wa-worker\] upsert msg fromMe=(?:true|false) remoteJid=\S+ selfJid=\S+ selfLid=\S+ bareRemote=\S+ msgKeys=(?:<no message>|\S*)$/,
-  /^\[wa-worker\] upsert skip: (?:malformed|own_echo_id|own_echo_prefix|own_outbound|non_self_chat_inbound|empty)$/,
-  /^\[wa-worker\] upsert emit: channelId=\S+ textLen=\d+ attachments=\d+$/,
-] as const
-
-function isSafeWorkerDiagnostic(line: string): boolean {
-  return SAFE_WORKER_DIAGNOSTIC_PATTERNS.some((pattern) => pattern.test(line))
-}
-
-type PendingEntry = {
-  resolve: (r: { ok: boolean; messageId?: string; error?: string }) => void
-  timer: ReturnType<typeof setTimeout>
-}
-
-// ---------------------------------------------------------------------------
-// Config
-// ---------------------------------------------------------------------------
-
-export interface WhatsAppConfig extends PlatformConfig {
-  /** Directory Baileys persists multi-file auth state into. Required. */
-  authStateDir: string
-  /** Absolute path to the worker entry script. Required. */
-  workerEntry: string
-  /** Node binary path. Defaults to 'node'. */
-  nodeBin?: string
-  /** Pairing flow: 'qr' (default) or 'code' (phone-number based 8-char code). */
-  pairingMode?: 'qr' | 'code'
-  /**
-   * Accept messages sent from this account's other devices (phone/WA
-   * Desktop/WA Web) in the self-chat. Agent echoes are filtered by
-   * sent-ID tracking + the response prefix. See `WorkerCommand.StartCommand`
-   * for mechanics.
-   */
-  selfChatMode?: boolean
-  /** Prefix tagged onto outbound self-chat messages. Defaults to 🤖. */
-  responsePrefix?: string
-  /**
-   * Override the default per-send timeout (30s). Used by tests; not
-   * exposed through the registry or UI. Shorter values help surface
-   * worker deadlocks faster but risk rejecting legitimate sends on
-   * slow networks.
-   */
-  sendTimeoutMs?: number
-  /** Maximum worker silence before the supervisor terminates its process tree. */
-  workerIdleTimeoutMs?: number
-}
-
-// ---------------------------------------------------------------------------
-// Event bus (adapter-level, surfaced via registry)
-// ---------------------------------------------------------------------------
-
-export type WhatsAppEvent =
-  | { type: 'qr'; qr: string }
-  | { type: 'pairing_code'; code: string }
-  | { type: 'connected'; jid?: string; name?: string }
-  | { type: 'disconnected'; loggedOut: boolean; reason?: string }
-  | { type: 'unavailable'; reason: string; message: string }
-  | { type: 'error'; message: string }
-
-type EventHandler = (event: WhatsAppEvent) => void
+import { spawn, type ChildProcess } from 'node:child_process';
+import { Buffer } from 'node:buffer';
+import { registerLongRunningProcess, type LongRunningProcessHandle } from '@craft-agent/shared/processes';
+import { encodeMessage, parseFrames, type WorkerCommand, type WorkerEvent } from '@craft-agent/messaging-whatsapp-worker';
+import type { PlatformAdapter, PlatformConfig, AdapterCapabilities, IncomingMessage, IncomingAttachment, SendOptions, SentMessage, InlineButton, ButtonPress, MessagingLogger } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Adapter
@@ -146,7 +64,6 @@ export class WhatsAppAdapter implements PlatformAdapter {
   private started = false
   private log: MessagingLogger = NOOP_LOGGER
   private messageHandler: ((msg: IncomingMessage) => Promise<void>) | null = null
-  private buttonHandler: ((press: ButtonPress) => Promise<void>) | null = null
   private eventHandlers = new Set<EventHandler>()
   private pending = new Map<string, PendingEntry>()
   private nextCmdId = 1
@@ -236,13 +153,13 @@ export class WhatsAppAdapter implements PlatformAdapter {
       }
     })
 
-    const startCmd: WorkerCommand = {
+    const startCmd: WorkerCommand = omitUndefined<Extract<WorkerCommand, { type: 'start' }>>({
       type: 'start',
       authStateDir: cfg.authStateDir,
       pairingMode: cfg.pairingMode ?? 'qr',
       selfChatMode: cfg.selfChatMode ?? false,
       responsePrefix: cfg.responsePrefix,
-    }
+    })
     this.sendCommand(startCmd)
     this.started = true
   }
@@ -293,8 +210,8 @@ export class WhatsAppAdapter implements PlatformAdapter {
     this.messageHandler = handler
   }
 
-  onButtonPress(handler: (press: ButtonPress) => Promise<void>): void {
-    this.buttonHandler = handler
+  onButtonPress(_handler: (press: ButtonPress) => Promise<void>): void {
+    // WhatsApp does not support inline buttons.
   }
 
   /** Subscribe to adapter-level events (QR, pairing code, unavailable, errors). */
@@ -359,14 +276,14 @@ export class WhatsAppAdapter implements PlatformAdapter {
     _opts?: SendOptions,
   ): Promise<SentMessage> {
     const id = String(this.nextCmdId++)
-    const result = await this.sendWithResult({
+    const result = await this.sendWithResult(omitUndefined<Extract<WorkerCommand, { type: 'send_file' }>>({
       id,
       type: 'send_file',
       channelId,
       dataBase64: file.toString('base64'),
       filename,
       caption,
-    })
+    }))
     if (!result.ok) throw new Error(result.error ?? 'Send failed')
     return {
       platform: 'whatsapp',
@@ -475,7 +392,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
           jid: ev.jid,
           name: ev.name,
         })
-        this.fireEvent({ type: 'connected', jid: ev.jid, name: ev.name })
+        this.fireEvent(omitUndefined<Extract<WhatsAppEvent, { type: 'connected' }>>({ type: 'connected', jid: ev.jid, name: ev.name }))
         return
       case 'disconnected':
         this.connected = false
@@ -484,7 +401,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
           loggedOut: ev.loggedOut,
           reason: ev.reason,
         })
-        this.fireEvent({ type: 'disconnected', loggedOut: ev.loggedOut, reason: ev.reason })
+        this.fireEvent(omitUndefined<Extract<WhatsAppEvent, { type: 'disconnected' }>>({ type: 'disconnected', loggedOut: ev.loggedOut, reason: ev.reason }))
         return
       case 'incoming':
         if (this.messageHandler) {
@@ -492,7 +409,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
           // for traceability. The worker has already written the bytes to
           // `localPath`, so the router can wrap each attachment via
           // `readFileAttachment()` directly.
-          const attachments: IncomingAttachment[] | undefined = ev.attachments?.map((a) => ({
+          const attachments: IncomingAttachment[] | undefined = ev.attachments?.map((a) => omitUndefined<IncomingAttachment>({
             type: a.type,
             fileId: ev.messageId,
             fileName: a.fileName,
@@ -505,9 +422,9 @@ export class WhatsAppAdapter implements PlatformAdapter {
             channelId: ev.channelId,
             messageId: ev.messageId,
             senderId: ev.senderId,
-            senderName: ev.senderName,
+            ...(ev.senderName !== undefined ? { senderName: ev.senderName } : {}),
             text: ev.text,
-            attachments,
+            ...(attachments !== undefined ? { attachments: attachments } : {}),
             timestamp: ev.timestamp,
             raw: ev,
           }
@@ -519,7 +436,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
         if (entry) {
           clearTimeout(entry.timer)
           this.pending.delete(ev.id)
-          entry.resolve({ ok: ev.ok, messageId: ev.messageId, error: ev.error })
+          entry.resolve({ ok: ev.ok, ...(ev.messageId !== undefined ? { messageId: ev.messageId } : {}), ...(ev.error !== undefined ? { error: ev.error } : {}) })
         }
         if (!ev.ok) {
           this.log.error('WhatsApp send failed', {

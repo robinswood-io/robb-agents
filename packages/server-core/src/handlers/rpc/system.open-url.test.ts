@@ -7,13 +7,13 @@ import type { HandlerDeps } from '../handler-deps'
 import { registerSystemCoreHandlers } from './system'
 
 function createTestHarness(overrides?: { workspaceId?: string | null }) {
-  const handlers = new Map<string, HandlerFn>()
+  const handlers = new Map<string, HandlerFn<unknown[]>>()
   const invokeClientCalls: Array<{ clientId: string; channel: string; args: unknown[] }> = []
   const pushCalls: Array<{ channel: string; target: PushTarget; args: unknown[] }> = []
 
   const server: RpcServer = {
     handle(channel, handler) {
-      handlers.set(channel, handler)
+      handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args]))
     },
     push(channel, target, ...args) {
       pushCalls.push({ channel, target, args })

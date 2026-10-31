@@ -1,0 +1,20 @@
+{
+  "status": "passed",
+  "source": "packages/server-core/src/sessions/processing-stop-ownership.test.ts",
+  "retiredBoundaryIsAbsentFromAllTestInputs": true,
+  "retiredBoundaryOccurrences": [
+    {
+      "line": 15,
+      "owner": "fixture boundary type"
+    },
+    {
+      "line": 90,
+      "owner": "private fixture helper"
+    },
+    {
+      "line": 109,
+      "owner": "private fixture helper"
+    }
+  ],
+  "removedOnlyUnexercisedFallbackSetup": true
+}

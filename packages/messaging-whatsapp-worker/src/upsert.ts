@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Per-message upsert pipeline used by the WA worker's `messages.upsert`
  * listener.
@@ -15,7 +16,7 @@ export interface UpsertSession {
   selfChatMode: boolean
   responsePrefix: string
   sentIds: Set<string>
-  baileys: BaileysModule
+  baileys: Pick<BaileysModule, 'downloadMediaMessage'>
 }
 
 export interface UpsertContext {
@@ -54,13 +55,13 @@ export async function processUpsertMessage(
 
   // Debug context: surface the exact signals classifyInbound uses so
   // silent-skip cases ('own_outbound', 'empty') are visible.
-  const dbgKey = (msg.key ?? {}) as {
+  const dbgKey = (msg["key"] ?? {}) as {
     remoteJid?: string
     fromMe?: boolean
     id?: string
   }
-  const msgKeys = msg.message
-    ? Object.keys(msg.message as Record<string, unknown>).join(',')
+  const msgKeys = msg["message"]
+    ? Object.keys(msg["message"] as Record<string, unknown>).join(',')
     : '<no message>'
   log(
     `upsert msg fromMe=${!!dbgKey.fromMe} remoteJid=${dbgKey.remoteJid ?? '?'} ` +
@@ -89,18 +90,18 @@ export async function processUpsertMessage(
     return
   }
 
-  const key = msg.key as { remoteJid?: string; id?: string }
+  const key = msg["key"] as { remoteJid?: string; id?: string }
   log(
     `upsert emit: channelId=${key.remoteJid} textLen=${text.length} attachments=${attachments.length}`,
   )
-  emit({
+  emit(omitUndefined<IncomingEvent>({
     type: 'incoming',
     channelId: key.remoteJid!,
     messageId: key.id!,
     senderId: key.remoteJid!,
-    senderName: (msg.pushName as string | undefined) ?? undefined,
+    senderName: (msg["pushName"] as string | undefined) ?? undefined,
     text,
     attachments: attachments.length > 0 ? attachments : undefined,
-    timestamp: Number(msg.messageTimestamp) * 1000 || Date.now(),
-  })
+    timestamp: Number(msg["messageTimestamp"]) * 1000 || Date.now(),
+  }))
 }

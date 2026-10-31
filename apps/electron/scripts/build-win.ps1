@@ -13,25 +13,25 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ElectronDir = Split-Path -Parent $ScriptDir
 $RootDir = Split-Path -Parent (Split-Path -Parent $ElectronDir)
-$BunVersion = "bun-v1.3.14"
+$BunVersion = "bun-v1.4.4"
 
-function Require-Path([string]$Path, [string]$Description) {
+function Assert-Path([string]$Path, [string]$Description) {
     if (-not (Test-Path $Path)) { throw "Missing ${Description}: $Path" }
 }
 
-function Require-Environment([string]$Name) {
+function Assert-Environment([string]$Name) {
     if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable($Name))) {
         throw "-Release requires $Name"
     }
 }
 
-function Require-ValidAuthenticodeSignature([string]$Path, [string]$Description) {
-    Require-Path $Path $Description
+function Assert-ValidAuthenticodeSignature([string]$Path, [string]$Description) {
+    Assert-Path $Path $Description
     $Signature = Get-AuthenticodeSignature $Path
     if ($Signature.Status -ne 'Valid') {
         throw "Release $Description Authenticode verification failed: $($Signature.Status) $($Signature.StatusMessage)"
     }
-    Write-Host "Verified Authenticode signature for ${Description}: $($Signature.SignerCertificate.Subject)" -ForegroundColor Green
+    Write-Information -InformationAction Continue "Verified Authenticode signature for ${Description}: $($Signature.SignerCertificate.Subject)"
 }
 
 foreach ($command in @("bun", "node", "python")) {
@@ -43,7 +43,7 @@ foreach ($command in @("bun", "node", "python")) {
 if ($Release) {
     # Verify the exact clean source before any generated-path cleanup, then
     # force production provenance for both the build and beforePack hook.
-    $ReleaseCommitOutput = & node "$ScriptDir\releaseIntegrity.cjs" --check-source "$RootDir"
+    $ReleaseCommitOutput = & node "$ScriptDir\releaseIntegrity.ts" --check-source "$RootDir"
     if ($LASTEXITCODE -ne 0) { throw "Release source integrity validation failed" }
     $ReleaseCommit = ($ReleaseCommitOutput | Select-Object -Last 1).Trim()
     if ($ReleaseCommit -notmatch '^[0-9a-fA-F]{40}$') {
@@ -63,7 +63,7 @@ if ($Release) {
             throw "PFX release signing requires CSC_LINK or CSC_NAME."
         }
         if (-not [string]::IsNullOrWhiteSpace($env:CSC_LINK)) {
-            Require-Environment "CSC_KEY_PASSWORD"
+            Assert-Environment "CSC_KEY_PASSWORD"
         }
     } elseif ($SigningMode -eq "azure") {
         foreach ($name in @(
@@ -75,7 +75,7 @@ if ($Release) {
             "AZURE_CLIENT_ID",
             "AZURE_CLIENT_SECRET"
         )) {
-            Require-Environment $name
+            Assert-Environment $name
         }
     }
 } else {
@@ -84,7 +84,7 @@ if ($Release) {
     $SigningMode = "unsigned"
 }
 
-Write-Host "=== Building Robb Agents Windows Installer ($Arch, release=$Release) ===" -ForegroundColor Cyan
+Write-Information -InformationAction Continue "=== Building Robb Agents Windows Installer ($Arch, release=$Release) ==="
 
 # Clean exclusively generated/staged paths. Do not terminate unrelated tools.
 foreach ($path in @(
@@ -103,7 +103,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "RTK preparation failed" }
     bun scripts/prepare-uv.ts --platform win32 --arch $Arch --refresh
     if ($LASTEXITCODE -ne 0) { throw "uv preparation failed" }
-    Require-Path "$ElectronDir\resources\bin\win32-$Arch\uv.exe" "bundled uv runtime"
+    Assert-Path "$ElectronDir\resources\bin\win32-$Arch\uv.exe" "bundled uv runtime"
 } finally {
     Pop-Location
 }
@@ -132,10 +132,12 @@ try {
 $SdkSource = "$RootDir\node_modules\@anthropic-ai\claude-agent-sdk"
 $SdkBinarySource = "$RootDir\node_modules\@anthropic-ai\claude-agent-sdk-win32-x64"
 $RipgrepSource = "$RootDir\node_modules\@vscode\ripgrep"
-Require-Path $SdkSource "Claude Agent SDK core"
-Require-Path "$RootDir\packages\shared\src\interceptor-request-utils.ts" "network interceptor request utilities"
-Require-Path "$SdkBinarySource\claude.exe" "Claude Agent SDK native binary"
-Require-Path "$RipgrepSource\bin\rg.exe" "ripgrep binary"
+$RipgrepBinary = "$RootDir\node_modules\@vscode\ripgrep-win32-x64\bin\rg.exe"
+Assert-Path $SdkSource "Claude Agent SDK core"
+Assert-Path "$RootDir\packages\shared\src\interceptor-request-utils.ts" "network interceptor request utilities"
+Assert-Path "$SdkBinarySource\claude.exe" "Claude Agent SDK native binary"
+Assert-Path $RipgrepSource "ripgrep package"
+Assert-Path $RipgrepBinary "ripgrep binary"
 
 $AnthropicDest = "$ElectronDir\node_modules\@anthropic-ai"
 New-Item -ItemType Directory -Force -Path $AnthropicDest | Out-Null
@@ -146,6 +148,8 @@ Copy-Item -Recurse -Force "$SdkBinarySource\*" $SdkAliasDest
 $VscodeDest = "$ElectronDir\node_modules\@vscode"
 New-Item -ItemType Directory -Force -Path $VscodeDest | Out-Null
 Copy-Item -Recurse -Force $RipgrepSource $VscodeDest
+New-Item -ItemType Directory -Force -Path "$VscodeDest\ripgrep\bin" | Out-Null
+Copy-Item -Force $RipgrepBinary "$VscodeDest\ripgrep\bin\rg.exe"
 
 # Use the shared build pipeline: it stages assets and Pi/Vibe subprocesses.
 Push-Location $RootDir
@@ -171,7 +175,7 @@ try {
         Remove-Item Env:CSC_NAME -ErrorAction SilentlyContinue
         $env:CSC_IDENTITY_AUTO_DISCOVERY = "false"
     }
-    Write-Host "Windows signing mode: $SigningMode" -ForegroundColor Cyan
+    Write-Information -InformationAction Continue "Windows signing mode: $SigningMode"
     bun x --bun electron-builder --config $BuilderConfig --win --x64 --publish never
     if ($LASTEXITCODE -ne 0) { throw "electron-builder failed" }
 } finally {
@@ -180,7 +184,7 @@ try {
 
 $UnpackedApp = "$ElectronDir\release\win-unpacked"
 $UnpackedBinary = "$UnpackedApp\Robb Agents.exe"
-Require-Path $UnpackedBinary "unpacked Electron binary"
+Assert-Path $UnpackedBinary "unpacked Electron binary"
 bun "$RootDir\scripts\validate-electron-package-security.ts" --binary $UnpackedBinary --resources-dir "$UnpackedApp\resources"
 if ($LASTEXITCODE -ne 0) { throw "Electron ASAR/fuse security validation failed" }
 
@@ -190,8 +194,8 @@ if (-not $Installer) { throw "Expected Robb Agents NSIS installer was not produc
 if ($Release -and $SigningMode -ne "unsigned") {
     # Signed Windows release modes remain fail-closed for both the packaged
     # application executable and the NSIS installer.
-    Require-ValidAuthenticodeSignature $UnpackedBinary "unpacked Electron binary"
-    Require-ValidAuthenticodeSignature $Installer.FullName "NSIS installer"
+    Assert-ValidAuthenticodeSignature $UnpackedBinary "unpacked Electron binary"
+    Assert-ValidAuthenticodeSignature $Installer.FullName "NSIS installer"
 }
 
 $ChecksumPath = "$ElectronDir\release\SHA256SUMS-windows-x64.txt"
@@ -199,12 +203,12 @@ $ChecksumPath = "$ElectronDir\release\SHA256SUMS-windows-x64.txt"
 
 Push-Location $RootDir
 try {
-    python scripts/robinswood-windows-packaged-smoke.py --installer $Installer.FullName --checksums $ChecksumPath
+    python scripts/robinswood_windows_packaged_smoke.py --installer $Installer.FullName --checksums $ChecksumPath
     if ($LASTEXITCODE -ne 0) { throw "Windows installer validation failed" }
 } finally {
     Pop-Location
 }
 
-Write-Host "=== Build complete ===" -ForegroundColor Green
-Write-Host "Installer: $($Installer.FullName)"
-Write-Host "Checksums: $ChecksumPath"
+Write-Information -InformationAction Continue "=== Build complete ==="
+Write-Information -InformationAction Continue "Installer: $($Installer.FullName)"
+Write-Information -InformationAction Continue "Checksums: $ChecksumPath"

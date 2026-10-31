@@ -17,7 +17,7 @@ describe('PiAgent subprocess environment boundary', () => {
         debugEnabled: false,
       },
       {
-        PATH: process.env.PATH || '/usr/bin',
+        PATH: process.env["PATH"] || '/usr/bin',
         LANG: 'fr_FR.UTF-8',
         LC_ALL: 'fr_FR.UTF-8',
         LC_SENTINEL_SECRET: 'must-not-leak',
@@ -38,22 +38,23 @@ describe('PiAgent subprocess environment boundary', () => {
 
     expect(probe.status).toBe(0);
     const childEnv = JSON.parse(probe.stdout) as Record<string, string>;
-    expect(childEnv.PATH).toBe(env.PATH);
-    expect(childEnv.LANG).toBe('fr_FR.UTF-8');
-    expect(childEnv.LC_ALL).toBe('fr_FR.UTF-8');
-    expect(childEnv.HTTPS_PROXY).toBe('http://stored-proxy.test:8080');
-    expect(childEnv.CRAFT_WORKSPACE_PATH).toBe('/workspace');
-    expect(childEnv.CRAFT_SESSION_DIR).toBe('/workspace/sessions/session-test');
-    expect(childEnv.EXPLICIT_PROVIDER_VALUE).toBe('granted');
-    expect(childEnv.GOOGLE_CLOUD_PROJECT).toBe('project-id');
-    expect(childEnv.CRAFT_DEBUG).toBe('0');
+    expect(childEnv["PATH"]).toBe(env["PATH"]);
+    expect(childEnv["LANG"]).toBe('fr_FR.UTF-8');
+    expect(childEnv["LC_ALL"]).toBe('fr_FR.UTF-8');
+    expect(childEnv["HTTPS_PROXY"]).toBe('http://stored-proxy.test:8080');
+    expect(childEnv["CRAFT_WORKSPACE_PATH"]).toBe('/workspace');
+    expect(childEnv["CRAFT_SESSION_DIR"]).toBe('/workspace/sessions/session-test');
+    expect(childEnv["EXPLICIT_PROVIDER_VALUE"]).toBe('granted');
+    expect(childEnv["GOOGLE_CLOUD_PROJECT"]).toBe('project-id');
+    expect(childEnv["CRAFT_DEBUG"]).toBe('0');
+    expect(childEnv["RTK_TELEMETRY_DISABLED"]).toBe('1');
 
-    expect(childEnv.ROBB_SENTINEL_SECRET).toBeUndefined();
-    expect(childEnv.LC_SENTINEL_SECRET).toBeUndefined();
-    expect(childEnv.SSH_AUTH_SOCK).toBeUndefined();
-    expect(childEnv.CI_JOB_TOKEN).toBeUndefined();
-    expect(childEnv.AWS_SECRET_ACCESS_KEY).toBeUndefined();
-    expect(childEnv.AZURE_CLIENT_SECRET).toBeUndefined();
+    expect(childEnv["ROBB_SENTINEL_SECRET"]).toBeUndefined();
+    expect(childEnv["LC_SENTINEL_SECRET"]).toBeUndefined();
+    expect(childEnv["SSH_AUTH_SOCK"]).toBeUndefined();
+    expect(childEnv["CI_JOB_TOKEN"]).toBeUndefined();
+    expect(childEnv["AWS_SECRET_ACCESS_KEY"]).toBeUndefined();
+    expect(childEnv["AZURE_CLIENT_SECRET"]).toBeUndefined();
   });
 });
 

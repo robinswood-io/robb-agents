@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 /**
  * Structured failure classification shared by autonomous recovery paths.
  *
@@ -239,29 +240,29 @@ function isObjectiveAuthorityRefusal(message: string): boolean {
   if (!raw.startsWith('{') || !raw.endsWith('}')) return false
   try {
     const parsed = JSON.parse(raw) as unknown
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return false
+    if (!parsed || typeof parsed !== 'object' || isUnknownArray(parsed)) return false
     const record = parsed as Record<string, unknown>
     const keys = Object.keys(record)
     const allowedKeys = new Set(['error', 'message', 'code', 'name', 'status', 'success'])
     const payloadKeys = ['error', 'message'].filter(key => Object.hasOwn(record, key))
     if (keys.length === 0 || keys.length > allowedKeys.size
       || payloadKeys.length !== 1 || keys.some(key => !allowedKeys.has(key))) return false
-    if ('success' in record && record.success !== false) return false
+    if ('success' in record && record["success"] !== false) return false
     if ('status' in record) {
-      const statusValid = typeof record.status === 'number'
-        ? Number.isInteger(record.status) && record.status >= 400 && record.status <= 599
-        : typeof record.status === 'string' && /^[45]\d\d$/.test(record.status)
+      const statusValid = typeof record["status"] === 'number'
+        ? Number.isInteger(record["status"]) && record["status"] >= 400 && record["status"] <= 599
+        : typeof record["status"] === 'string' && /^[45]\d\d$/.test(record["status"])
       if (!statusValid) return false
     }
-    if ('code' in record && typeof record.code !== 'string' && typeof record.code !== 'number') return false
-    if ('name' in record && typeof record.name !== 'string') return false
+    if ('code' in record && typeof record["code"] !== 'string' && typeof record["code"] !== 'number') return false
+    if ('name' in record && typeof record["name"] !== 'string') return false
     const payloadKey = payloadKeys[0]!
     const rawPayload = record[payloadKey]
     const payload = typeof rawPayload === 'string'
       ? rawPayload
-      : payloadKey === 'error' && rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)
-        && Object.keys(rawPayload).length === 1 && typeof (rawPayload as Record<string, unknown>).message === 'string'
-        ? (rawPayload as Record<string, string>).message
+      : payloadKey === 'error' && rawPayload && typeof rawPayload === 'object' && !isUnknownArray(rawPayload)
+        && Object.keys(rawPayload).length === 1 && typeof (rawPayload as Record<string, unknown>)["message"] === 'string'
+        ? (rawPayload as Record<string, string>)["message"]
         : undefined
     return typeof payload === 'string' && wrappedDirect(payload)
   } catch {

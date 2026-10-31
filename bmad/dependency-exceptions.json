@@ -1,0 +1,19 @@
+{
+  "release": "0.12.11",
+  "approved_by": "Thibault",
+  "authorization_reference": "Réponse utilisateur explicite du 2026-10-28 dans ce chat : Autoriser ces deux exceptions ciblées.",
+  "dependencies": [
+    {
+      "manifest": "package.json",
+      "package": "typescript",
+      "version": "6.0.3",
+      "reason": "API requise par typescript-eslint 8.72.1 (<6.1.0) ; compilation native 7.0.2."
+    },
+    {
+      "manifest": "packages/messaging-whatsapp-worker/package.json",
+      "package": "@whiskeysockets/baileys",
+      "version": "7.0.0-rc14",
+      "reason": "Compatibilité WhatsApp préexistante autorisée pour la publication 0.12.11."
+    }
+  ]
+}

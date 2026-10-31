@@ -59,9 +59,9 @@ export function createScriptRuntimeEnv(
   mkdirSync(tmpDir, { recursive: true });
 
   // Shared temp override (helps avoid host temp paths that may be blocked by FS isolation)
-  env.TMPDIR = tmpDir;
-  env.TMP = tmpDir;
-  env.TEMP = tmpDir;
+  env["TMPDIR"] = tmpDir;
+  env["TMP"] = tmpDir;
+  env["TEMP"] = tmpDir;
 
   if (options.language === 'python3') {
     const uvCacheDir = join(dataDir, '.uv-cache');
@@ -72,9 +72,9 @@ export function createScriptRuntimeEnv(
     mkdirSync(xdgCacheHome, { recursive: true });
     mkdirSync(pythonPyCachePrefix, { recursive: true });
 
-    env.UV_CACHE_DIR = uvCacheDir;
-    env.XDG_CACHE_HOME = xdgCacheHome;
-    env.PYTHONPYCACHEPREFIX = pythonPyCachePrefix;
+    env["UV_CACHE_DIR"] = uvCacheDir;
+    env["XDG_CACHE_HOME"] = xdgCacheHome;
+    env["PYTHONPYCACHEPREFIX"] = pythonPyCachePrefix;
   }
 
   return env;

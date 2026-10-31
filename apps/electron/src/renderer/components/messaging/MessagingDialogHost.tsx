@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * MessagingDialogHost
  *
@@ -66,14 +67,14 @@ export function MessagingDialogHost() {
     })
     try {
       const result = await window.electronAPI.generateMessagingPairingCode(sessionId, platform)
-      setState({
-        kind: 'pairing',
+      setState(omitUndefined({
+        kind: 'pairing' as const,
         platform,
         sessionId,
         code: result.code,
         expiresAt: result.expiresAt,
         botUsername: result.botUsername,
-      })
+      }))
     } catch (err) {
       setState({
         kind: 'pairing',

@@ -42,8 +42,8 @@ describe('safeSerializeLogValue', () => {
       refreshToken?: string
     }
     error.refreshToken = refreshToken
-    value.error = error
-    value.self = value
+    value["error"] = error
+    value["self"] = value
 
     const serialized = safeSerializeLogValue(value)
     const parsed = JSON.parse(serialized) as Record<string, unknown> & {
@@ -55,16 +55,16 @@ describe('safeSerializeLogValue', () => {
     expect(serialized).not.toContain(bearerToken)
     expect(serialized).not.toContain(refreshToken)
     expect(serialized).not.toContain('database-password')
-    expect(parsed.apiKey).toBe(REDACTED_LOG_VALUE)
-    expect(parsed.authorization).toBe(REDACTED_LOG_VALUE)
-    expect(parsed.error.refreshToken).toBe(REDACTED_LOG_VALUE)
+    expect(parsed["apiKey"]).toBe(REDACTED_LOG_VALUE)
+    expect(parsed["authorization"]).toBe(REDACTED_LOG_VALUE)
+    expect(parsed.error["refreshToken"]).toBe(REDACTED_LOG_VALUE)
     expect(parsed.tokenUsage).toEqual({
       inputTokens: 12,
       outputTokens: 4,
       maxTokens: 1_024,
     })
-    expect(parsed.count).toBe('9n')
-    expect(parsed.self).toBe('[Circular]')
+    expect(parsed["count"]).toBe('9n')
+    expect(parsed["self"]).toBe('[Circular]')
   })
 
   it('redacts structured OAuth artifacts and callback URL parameters', () => {
@@ -90,17 +90,17 @@ describe('safeSerializeLogValue', () => {
     for (const secret of [authorizationCode, oauthState, codeVerifier, idToken, clientInfo, sessionState]) {
       expect(serialized).not.toContain(secret)
     }
-    expect(parsed.authorizationCode).toBe(REDACTED_LOG_VALUE)
-    expect(parsed.oauthState).toBe(REDACTED_LOG_VALUE)
-    expect(parsed.codeVerifier).toBe(REDACTED_LOG_VALUE)
-    expect(parsed.idToken).toBe(REDACTED_LOG_VALUE)
-    expect(parsed.clientInfo).toBe(REDACTED_LOG_VALUE)
-    expect(parsed.sessionState).toBe(REDACTED_LOG_VALUE)
-    expect(parsed.state).toBe('ready')
-    expect(parsed.code).toBe('ERR_CONNECTION_RESET')
-    expect(parsed.callbackUrl).toContain('code=[REDACTED]')
-    expect(parsed.callbackUrl).toContain('state=[REDACTED]')
-    expect(parsed.callbackUrl).toContain('workspace=workspace-a')
+    expect(parsed["authorizationCode"]).toBe(REDACTED_LOG_VALUE)
+    expect(parsed["oauthState"]).toBe(REDACTED_LOG_VALUE)
+    expect(parsed["codeVerifier"]).toBe(REDACTED_LOG_VALUE)
+    expect(parsed["idToken"]).toBe(REDACTED_LOG_VALUE)
+    expect(parsed["clientInfo"]).toBe(REDACTED_LOG_VALUE)
+    expect(parsed["sessionState"]).toBe(REDACTED_LOG_VALUE)
+    expect(parsed["state"]).toBe('ready')
+    expect(parsed["code"]).toBe('ERR_CONNECTION_RESET')
+    expect(parsed["callbackUrl"]).toContain('code=[REDACTED]')
+    expect(parsed["callbackUrl"]).toContain('state=[REDACTED]')
+    expect(parsed["callbackUrl"]).toContain('workspace=workspace-a')
   })
 
   it('does not invoke sensitive getters and survives throwing getters', () => {
@@ -126,8 +126,8 @@ describe('safeSerializeLogValue', () => {
     const parsed = JSON.parse(serialized) as Record<string, unknown>
 
     expect(passwordReads).toBe(0)
-    expect(parsed.password).toBe(REDACTED_LOG_VALUE)
-    expect(parsed.details).toBe('[Thrown getter: [REDACTED]]')
+    expect(parsed["password"]).toBe(REDACTED_LOG_VALUE)
+    expect(parsed["details"]).toBe('[Thrown getter: [REDACTED]]')
     expect(serialized).not.toContain(bearerToken)
   })
 

@@ -1,0 +1,98 @@
+{
+  "status": "testé dans le candidat local, non intégré",
+  "scope": "Quatre dernières gardes d’admission : claim Gmail, canal navigateur, transport distant et autorité de l’objectif",
+  "mainFileLines": 417,
+  "newModules": {
+    "gmail-claims": 123,
+    "dispatch-admission": 222,
+    "remote-transport": 136
+  },
+  "proof": "Analyse indépendante des entrées et sorties de chaque groupe ; corps des instructions, valeurs déjà lues, références aux claims et ordre des appels conservés",
+  "checks": {
+    "pretool-admission-types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 1.59,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-admission-types.log"
+    },
+    "pretool-admission-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-browser-channel.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-admission.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-input-transforms.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-ask-gate.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-pipeline-ordering.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-resume-authority.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-checks.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.03,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-admission-tests.log"
+    },
+    "pretool-admission-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/shared/src/agent/core/pre-tool-use.ts",
+        "packages/shared/src/agent/core/pre-tool-use",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.49,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-admission-lint.log"
+    },
+    "pretool-admission-all-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 21.78,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-admission-all-types.log"
+    },
+    "pretool-admission-full-suite": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 142.56,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-admission-full-suite.log"
+    },
+    "pretool-admission-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 20.26,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-admission-build.log"
+    }
+  },
+  "completedDomain": "Tous les fichiers du domaine pre-tool-use sont sous 500 lignes et sans any explicite ; lint du domaine sans avertissement",
+  "remaining": {
+    "oversizedCodeFiles": 208,
+    "explicitAny": 708
+  },
+  "installedApplication": "Inchangée"
+}

@@ -1,0 +1,41 @@
+{
+  "scenarios": 80,
+  "unchangedScenarioBodies": true,
+  "modules": [
+    {
+      "file": "packages/shared/src/agent/__tests__/pi-event-adapter.test.ts",
+      "lines": 254,
+      "group": "lifecycle"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/pi-event-adapter.messages.test.ts",
+      "lines": 385,
+      "group": "messages"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/pi-event-adapter.correlation.test.ts",
+      "lines": 170,
+      "group": "correlation"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/pi-event-adapter.errors.test.ts",
+      "lines": 186,
+      "group": "errors"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/pi-event-adapter.tool-metadata.test.ts",
+      "lines": 273,
+      "group": "tool-metadata"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/pi-event-adapter.tool-results.test.ts",
+      "lines": 368,
+      "group": "tool-results"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/pi-event-adapter.compaction.test.ts",
+      "lines": 435,
+      "group": "compaction"
+    }
+  ]
+}

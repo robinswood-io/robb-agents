@@ -1,0 +1,443 @@
+[
+  {
+    "legacy_id": "robinswood-media-contact-base-2026",
+    "accepted": true,
+    "policyClass": "business_or_observability_wrapper",
+    "riskClass": "prepare_only_contact_database_no_outbound",
+    "mutationMode": "prepare_only_or_read_only",
+    "scheduleAllowed": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "sideEffects": [
+      "read_existing_oss_contact_sources",
+      "read_public_wikipedia_categories",
+      "write_contact_base_json_csv_md",
+      "no_external_outbound_message",
+      "no_crm_mutation"
+    ],
+    "updatedAt": "2026-07-12T17:38:30.031910Z",
+    "updatedBy": "oss-architecture-v2-install",
+    "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+  },
+  {
+    "legacy_id": "robinswood-media-contact-base-2026-tests",
+    "accepted": true,
+    "policyClass": "test_guardrail",
+    "riskClass": "low_test_guardrail",
+    "mutationMode": "observability_report_only",
+    "scheduleAllowed": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "sideEffects": [
+      "rebuild_contact_base_prepare_only",
+      "write_test_report",
+      "no_external_outbound_message"
+    ],
+    "updatedAt": "2026-07-12T17:38:30.031917Z",
+    "updatedBy": "oss-architecture-v2-install",
+    "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+  },
+  {
+    "legacy_id": "robinswood-media-contact-enrichment-2026",
+    "accepted": true,
+    "policyClass": "business_or_observability_wrapper",
+    "riskClass": "prepare_only_contact_enrichment_no_outbound",
+    "mutationMode": "prepare_only_or_read_only",
+    "scheduleAllowed": true,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "sideEffects": [
+      "read_media_contact_base",
+      "read_public_wikipedia_pages",
+      "bounded_hunter_lookup_or_verify",
+      "write_enriched_contact_base",
+      "write_review_queue",
+      "no_external_outbound_message",
+      "no_crm_mutation"
+    ],
+    "updatedAt": "2026-07-12T17:38:30.031927Z",
+    "updatedBy": "oss-architecture-v2-install",
+    "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+  },
+  {
+    "legacy_id": "robinswood-media-contact-enrichment-2026-tests",
+    "accepted": true,
+    "policyClass": "test_guardrail",
+    "riskClass": "low_test_guardrail",
+    "mutationMode": "observability_report_only",
+    "scheduleAllowed": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "sideEffects": [
+      "run_zero_hunter_prepare_only_enrichment_test",
+      "write_test_report",
+      "no_external_outbound_message"
+    ],
+    "updatedAt": "2026-07-12T17:38:30.031934Z",
+    "updatedBy": "oss-architecture-v2-install",
+    "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-audited-mailer",
+    "accepted": true,
+    "riskClass": "high_guarded_campaign_or_outbound",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "external-communication",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "human_approved_apply_only",
+    "requiresHumanApprovalForApply": true,
+    "requiresHumanApprovalForExternalSend": true,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316580Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-campaign-safety-guard",
+    "accepted": true,
+    "riskClass": "medium_campaign_or_contact_ops",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "external-communication",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "human_approved_apply_only",
+    "requiresHumanApprovalForApply": true,
+    "requiresHumanApprovalForExternalSend": true,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316385Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-company-brief-generator",
+    "accepted": true,
+    "riskClass": "medium_campaign_or_contact_ops",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317555Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-contact-review-pipeline",
+    "accepted": true,
+    "riskClass": "medium_campaign_or_contact_ops",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "external-api:sellsy-or-crm",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315895Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-domain-context-verifier",
+    "accepted": true,
+    "riskClass": "medium_campaign_or_contact_ops",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316001Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-full-pilot-enrichment-loop",
+    "accepted": true,
+    "riskClass": "medium_campaign_or_contact_ops",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315965Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-hunter-batch-discovery",
+    "accepted": true,
+    "riskClass": "medium_campaign_or_contact_ops",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315939Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-launch-readiness",
+    "accepted": true,
+    "riskClass": "medium_campaign_or_contact_ops",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316480Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-performance-optimizer",
+    "accepted": true,
+    "riskClass": "medium_campaign_or_contact_ops",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316976Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-pre-send-gate",
+    "accepted": true,
+    "riskClass": "high_guarded_campaign_or_outbound",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "external-communication",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "human_approved_apply_only",
+    "requiresHumanApprovalForApply": true,
+    "requiresHumanApprovalForExternalSend": true,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316560Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-reply-unsubscribe-loop",
+    "accepted": true,
+    "riskClass": "high_guarded_campaign_or_outbound",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "external-communication",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "guarded_external_prepare_or_send",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316611Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-sellsy-crm-sync",
+    "accepted": true,
+    "policyClass": "outbound_governance",
+    "riskClass": "high_guarded_campaign_or_outbound",
+    "mutationMode": "guarded_external_prepare_or_send",
+    "scheduleAllowed": true,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "requiresHumanApprovalForApply": true,
+    "requiresHumanApprovalForExternalSend": true,
+    "sideEffects": [
+      "read_hdf_campaign_contact_artifacts",
+      "read_hdf_mailer_and_reply_ledgers",
+      "find_or_create_sellsy_company",
+      "find_or_create_sellsy_contact",
+      "create_sellsy_crm_task_notes",
+      "write_sync_state_and_report",
+      "no_external_outbound_message"
+    ],
+    "updatedAt": "2026-07-12T17:38:30.031771Z",
+    "updatedBy": "oss-architecture-v2-install",
+    "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+  },
+  {
+    "legacy_id": "rubypayeur-recouvrement-auth-check",
+    "accepted": true,
+    "riskClass": "medium_finance_prepare_only",
+    "sideEffects": [
+      "external-api:inqom-or-finance",
+      "external-api:rubypayeur",
+      "filesystem-write:ops-report",
+      "finance-operation"
+    ],
+    "mutationMode": "human_approved_apply_only",
+    "requiresHumanApprovalForApply": true,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316094Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "rubypayeur-recouvrement-candidate-scan",
+    "accepted": true,
+    "riskClass": "medium_finance_prepare_only",
+    "sideEffects": [
+      "external-api:inqom-or-finance",
+      "external-api:rubypayeur",
+      "external-api:sellsy-or-crm",
+      "filesystem-write:ops-report",
+      "finance-operation"
+    ],
+    "mutationMode": "human_approved_apply_only",
+    "requiresHumanApprovalForApply": true,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316154Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "rubypayeur-recouvrement-queue",
+    "accepted": true,
+    "riskClass": "high_human_approval_required",
+    "sideEffects": [
+      "external-api:inqom-or-finance",
+      "external-api:rubypayeur",
+      "filesystem-write:ops-report",
+      "finance-operation"
+    ],
+    "mutationMode": "human_approved_apply_only",
+    "requiresHumanApprovalForApply": true,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316123Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "schedule-drift-watchdog",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315082Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "scraper-trigger-hebdo",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314265Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "sellsy-business-kpi-export",
+    "accepted": true,
+    "riskClass": "medium_campaign_or_contact_ops",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "external-api:sellsy-or-crm",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317686Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "sellsy-cash-collection-board",
+    "accepted": true,
+    "riskClass": "medium_finance_prepare_only",
+    "sideEffects": [
+      "external-api:inqom-or-finance",
+      "external-api:rubypayeur",
+      "external-api:sellsy-or-crm",
+      "filesystem-write:ops-report",
+      "finance-operation"
+    ],
+    "mutationMode": "human_approved_apply_only",
+    "requiresHumanApprovalForApply": true,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316289Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "sellsy-cash-collection-board-tests",
+    "accepted": true,
+    "riskClass": "low_test_guardrail",
+    "sideEffects": [
+      "filesystem-write:test-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316315Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "sellsy-linkedin-connection-dispatch",
+    "accepted": true,
+    "policyClass": "outbound_governance",
+    "riskClass": "high_guarded_campaign_or_outbound",
+    "mutationMode": "guarded_external_prepare_or_send",
+    "scheduleAllowed": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "requiresHumanApprovalForApply": true,
+    "requiresHumanApprovalForExternalSend": true,
+    "sideEffects": [
+      "read_oss_action_queue",
+      "write_ledger",
+      "no_linkedin_invites_unless_contract_allows"
+    ],
+    "updatedAt": "2026-07-12T17:38:30.031951Z",
+    "updatedBy": "oss-architecture-v2-install",
+    "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+  }
+]

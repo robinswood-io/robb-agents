@@ -20,23 +20,23 @@ export interface AnnotationIslandMenuProps {
   replayNonce: number
   isVisible: boolean
   /** Render via React portal to document.body (default). Disable inside modal/dialog contexts. */
-  usePortal?: boolean
+  usePortal?: boolean | undefined
   activeView: AnnotationIslandView
   mode: AnnotationIslandMode
   draft: string
   onDraftChange: (next: string) => void
   onOpenFollowUp: () => void
   onCancel: () => void
-  onRequestBack?: () => boolean
+  onRequestBack?: (() => boolean) | undefined
   onRequestEdit: () => void
   onSubmit: (value: string) => void
-  onSubmitAndSend?: (value: string) => void
-  onDelete?: () => void
-  sendMessageKey?: 'enter' | 'cmd-enter'
+  onSubmitAndSend?: ((value: string) => void) | undefined
+  onDelete?: (() => void) | undefined
+  sendMessageKey?: 'enter' | 'cmd-enter' | undefined
   transitionConfig: IslandTransitionConfig
-  onExitComplete?: () => void
-  zIndex?: React.CSSProperties['zIndex']
-  overlayZIndex?: React.CSSProperties['zIndex']
+  onExitComplete?: (() => void) | undefined
+  zIndex?: React.CSSProperties['zIndex'] | undefined
+  overlayZIndex?: React.CSSProperties['zIndex'] | undefined
 }
 
 export function AnnotationIslandMenu({

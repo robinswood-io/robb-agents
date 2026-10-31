@@ -1,3 +1,32 @@
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import "@craft-agent/shared/i18n";
+import "@/components/app-shell/PanelHeader";
+import "@/components/ui/scroll-area";
+import "@/components/ui/HeaderMenu";
+import "@/lib/utils";
+import "@/components/ui/EditPopover";
+import { useTheme } from '@/context/ThemeContext';
+import { useAppShellContext } from '@/context/AppShellContext';
+import "@/lib/navigate";
+import "lucide-react";
+import "@/components/settings";
+import { useAtom } from 'jotai';
+import * as storage from '@/lib/local-storage';
+import { useWorkspaceIcons } from '@/hooks/useWorkspaceIcon';
+import "@/components/ui/workspace-avatar";
+import "@/components/ui/color-picker";
+import { workspaceAvatarColorsAtom } from '@/atoms/workspace-avatar-colors';
+import { kanbanColumnColorsAtom, kanbanColumnStatusAtom, kanbanLivePulseAtom } from '@/atoms/kanban';
+import { showBackgroundFinishedChipAtom } from '@/atoms/background-finished';
+import "@/components/app-shell/kanban/status-column";
+import "@/components/app-shell/kanban/kanban-colors";
+import { setProjectColorTreatment, useProjectColorTreatment } from '@/hooks/useProjectColorTreatment';
+import "@/utils/project-colors";
+import { SortableHeader } from '@/components/info/Info_DataTable';
+import { Info_Badge } from '@/components/info/Info_Badge';
+
+import { AppearanceSettingsContent, type PaletteField } from "./appearance-settings-content";
 /**
  * AppearanceSettingsPage
  *
@@ -5,59 +34,37 @@
  * workspace-specific theme overrides, and CLI tool icon mappings.
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
-import { LANGUAGES, type LanguageCode } from '@craft-agent/shared/i18n'
-import type { ColumnDef } from '@tanstack/react-table'
-import { PanelHeader } from '@/components/app-shell/PanelHeader'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { HeaderMenu } from '@/components/ui/HeaderMenu'
-import { cn } from '@/lib/utils'
-import { EditPopover, EditButton, getEditConfig } from '@/components/ui/EditPopover'
-import { useTheme } from '@/context/ThemeContext'
-import { useAppShellContext } from '@/context/AppShellContext'
-import { routes } from '@/lib/navigate'
-import { Monitor, Sun, Moon } from 'lucide-react'
-import type { DetailsPageMeta } from '@/lib/navigation-registry'
-import type { ToolIconMapping } from '../../../shared/types'
+/**
+ * AppearanceSettingsPage
+ *
+ * Visual customization settings: theme mode, color theme, font,
+ * workspace-specific theme overrides, and CLI tool icon mappings.
+ */
 
-import {
-  SettingsSection,
-  SettingsCard,
-  SettingsRow,
-  SettingsSegmentedControl,
-  SettingsMenuSelect,
-  SettingsToggle,
-} from '@/components/settings'
-import { useAtom } from 'jotai'
-import * as storage from '@/lib/local-storage'
-import { useWorkspaceIcons } from '@/hooks/useWorkspaceIcon'
-import { WorkspaceAvatar } from '@/components/ui/workspace-avatar'
-import { ColorPicker } from '@/components/ui/color-picker'
-import { workspaceAvatarColorsAtom } from '@/atoms/workspace-avatar-colors'
-import { kanbanColumnColorsAtom, kanbanColumnStatusAtom, kanbanLivePulseAtom } from '@/atoms/kanban'
-import { showBackgroundFinishedChipAtom } from '@/atoms/background-finished'
-import { KANBAN_COLUMNS } from '@/components/app-shell/kanban/status-column'
-import { DEFAULT_KANBAN_COLUMN_COLORS } from '@/components/app-shell/kanban/kanban-colors'
-import type { KanbanColumnId } from '@/components/app-shell/kanban/types'
-import { setProjectColorTreatment, useProjectColorTreatment } from '@/hooks/useProjectColorTreatment'
-import { PROJECT_COLOR_PALETTE, type ProjectColorTreatment } from '@/utils/project-colors'
-import { Info_DataTable, SortableHeader } from '@/components/info/Info_DataTable'
-import { Info_Badge } from '@/components/info/Info_Badge'
-import type { PresetTheme, ThemeOverrides } from '@config/theme'
 
-const PALETTE_FIELDS = [
-  'background',
-  'paper',
-  'navigator',
-  'foreground',
-  'accent',
-  'info',
-  'success',
-  'destructive',
-] as const
 
-type PaletteField = typeof PALETTE_FIELDS[number]
+import type { ColumnDef } from '@/components/ui/data-table';
+
+
+
+
+import type { DetailsPageMeta } from '@/lib/navigation-registry';
+import type { ToolIconMapping } from '../../../shared/types';
+
+
+
+
+
+
+
+
+
+import type { KanbanColumnId } from '@/components/app-shell/kanban/types';
+
+import { type ProjectColorTreatment } from '@/utils/project-colors';
+
+
+import type { PresetTheme, ThemeOverrides } from '@config/theme';
 
 export const meta: DetailsPageMeta = {
   navigator: 'settings',
@@ -355,334 +362,54 @@ export default function AppearanceSettingsPage() {
   }, [colorTheme, presetThemes])
 
   return (
-    <div className="h-full flex flex-col">
-      <PanelHeader
-        title={t("settings.appearance.title")}
-        actions={<HeaderMenu route={routes.view.settings('appearance')} helpFeature="themes" />}
-      />
-      <div className="flex-1 min-h-0 mask-fade-y">
-        <ScrollArea className="h-full">
-          <div className="px-5 py-7 max-w-3xl mx-auto">
-            <div className="space-y-8">
-
-              {/* Default Theme */}
-              <SettingsSection title={t("settings.appearance.defaultTheme")}>
-                <SettingsCard>
-                  <SettingsRow label={t("settings.appearance.mode")}>
-                    <SettingsSegmentedControl
-                      value={mode}
-                      onValueChange={setMode}
-                      options={[
-                        { value: 'system', label: t("settings.appearance.system"), icon: <Monitor className="w-4 h-4" /> },
-                        { value: 'light', label: t("settings.appearance.light"), icon: <Sun className="w-4 h-4" /> },
-                        { value: 'dark', label: t("settings.appearance.dark"), icon: <Moon className="w-4 h-4" /> },
-                      ]}
-                    />
-                  </SettingsRow>
-                  <SettingsRow label={t("settings.appearance.colorTheme")}>
-                    <SettingsMenuSelect
-                      value={colorTheme}
-                      onValueChange={setColorTheme}
-                      options={themeOptions}
-                    />
-                  </SettingsRow>
-                  <SettingsRow label={t("settings.appearance.font")}>
-                    <SettingsSegmentedControl
-                      value={font}
-                      onValueChange={setFont}
-                      options={[
-                        { value: 'inter', label: t("settings.appearance.fontInter") },
-                        { value: 'system', label: t("settings.appearance.fontSystem") },
-                      ]}
-                    />
-                  </SettingsRow>
-                  <SettingsRow label={t("settings.appearance.language")}>
-                    <SettingsMenuSelect
-                      value={(i18n.resolvedLanguage ?? i18n.language) as LanguageCode}
-                      onValueChange={(value) => {
-                        console.info('[i18n] Appearance dropdown change', {
-                          from: i18n.resolvedLanguage ?? null,
-                          to: value,
-                        })
-                        i18n.changeLanguage(value)
-                        window.electronAPI?.changeLanguage?.(value)
-                      }}
-                      options={Object.entries(LANGUAGES).map(([code, config]) => ({
-                        value: code,
-                        label: config.nativeName,
-                      }))}
-                    />
-                  </SettingsRow>
-                </SettingsCard>
-                {themeLoadError && (
-                  <p className="mt-2 text-xs text-info">
-                    {t("settings.appearance.themeWarning")} {themeLoadError} ({themeResolvedFrom === 'fallback' ? t("settings.appearance.usingBundledFallback") : t("settings.appearance.usingDefaultTheme")})
-                  </p>
-                )}
-              </SettingsSection>
-
-              <SettingsSection title={t('settings.appearance.themeGallery')} description={t('settings.appearance.themeGalleryDesc')}>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {presetThemes
-                    .filter(({ id }) => ['default', 'robinswood', 'nord', 'tokyo-night', 'catppuccin', 'gruvbox', 'pierre'].includes(id))
-                    .map(({ id, theme }) => {
-                      const preview = theme.dark?.background ?? theme.background ?? '#1E1D21'
-                      const accent = theme.dark?.accent ?? theme.accent ?? '#A78BFA'
-                      const selected = colorTheme === id
-                      return (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => setColorTheme(id)}
-                          onMouseEnter={() => setPreviewColorTheme(id)}
-                          onMouseLeave={() => setPreviewColorTheme(null)}
-                          onFocus={() => setPreviewColorTheme(id)}
-                          onBlur={() => setPreviewColorTheme(null)}
-                          className={cn(
-                            'rounded-md border p-3 text-left transition-colors',
-                            selected ? 'border-accent ring-1 ring-accent' : 'border-foreground/10 hover:border-foreground/30',
-                          )}
-                          aria-pressed={selected}
-                        >
-                          <div className="mb-2 flex h-8 overflow-hidden rounded-sm" style={{ backgroundColor: preview }}>
-                            <span className="w-2/3" />
-                            <span className="w-1/3" style={{ backgroundColor: accent }} />
-                          </div>
-                          <span className="text-xs font-medium">{theme.name || id}</span>
-                        </button>
-                      )
-                    })}
-                </div>
-              </SettingsSection>
-
-              {/* Global custom palette — persisted as ~/.craft-agent/theme.json */}
-              <SettingsSection
-                title={t('settings.appearance.customPalette')}
-                description={t('settings.appearance.customPaletteDesc')}
-              >
-                <SettingsCard>
-                  <SettingsRow label={t('settings.appearance.paletteMode')}>
-                    <SettingsSegmentedControl
-                      value={paletteMode}
-                      onValueChange={(value) => setPaletteMode(value as 'light' | 'dark')}
-                      options={[
-                        { value: 'light', label: t('settings.appearance.light'), icon: <Sun className="w-4 h-4" /> },
-                        { value: 'dark', label: t('settings.appearance.dark'), icon: <Moon className="w-4 h-4" /> },
-                      ]}
-                    />
-                  </SettingsRow>
-                  {PALETTE_FIELDS.map((key) => {
-                    const label = t(`settings.appearance.palette${key.charAt(0).toUpperCase()}${key.slice(1)}`)
-                    const override = paletteMode === 'dark' ? customTheme?.dark?.[key] : customTheme?.[key]
-                    const fallback = paletteMode === 'dark' ? resolvedTheme.dark?.[key] : resolvedTheme[key]
-                    return (
-                      <SettingsRow key={key} label={label}>
-                        <ColorPicker
-                          value={override ?? fallback ?? ''}
-                          fallbackColor={paletteMode === 'dark' ? '#1E1D21' : '#FAF9FB'}
-                          onChange={(color) => updatePaletteColor(key, color)}
-                          onClear={override ? () => clearPaletteColor(key) : undefined}
-                          clearLabel={t('settings.appearance.paletteRestoreColor')}
-                          presets={PROJECT_COLOR_PALETTE}
-                          ariaLabel={t('settings.appearance.paletteColorAria', { label })}
-                          align="end"
-                        />
-                      </SettingsRow>
-                    )
-                  })}
-                  {customTheme && (
-                    <div className="flex justify-end pt-2">
-                      <button
-                        type="button"
-                        onClick={resetCustomPalette}
-                        className="text-xs text-foreground/50 hover:text-foreground transition-colors"
-                      >
-                        {t('settings.appearance.paletteReset')}
-                      </button>
-                    </div>
-                  )}
-                </SettingsCard>
-              </SettingsSection>
-
-              {/* Workspace Themes */}
-              {workspaces.length > 0 && (
-                <SettingsSection
-                  title={t("settings.appearance.workspaceThemes")}
-                  description={t("settings.appearance.workspaceThemesDesc")}
-                >
-                  <SettingsCard>
-                    {workspaces.map((workspace) => {
-                      const wsTheme = workspaceThemes[workspace.id]
-                      const hasCustomTheme = wsTheme !== undefined
-                      return (
-                        <SettingsRow
-                          key={workspace.id}
-                          label={
-                            <div className="flex items-center gap-2">
-                              <ColorPicker
-                                value={workspaceAvatarColors[workspace.id] || ''}
-                                onChange={(hex) => setWorkspaceAvatarColor(workspace.id, hex)}
-                                onClear={() => clearWorkspaceAvatarColor(workspace.id)}
-                                clearLabel={t("settings.appearance.workspaceAvatarReset")}
-                                presets={PROJECT_COLOR_PALETTE}
-                                ariaLabel={t("settings.appearance.workspaceAvatarColor")}
-                                trigger={
-                                  <button
-                                    type="button"
-                                    className="cursor-pointer rounded hover:ring-2 hover:ring-foreground/20 transition-shadow"
-                                    aria-label={t("settings.appearance.workspaceAvatarColor")}
-                                  >
-                                    <WorkspaceAvatar
-                                      workspaceId={workspace.id}
-                                      workspaceName={workspace.name}
-                                      src={workspaceIconMap.get(workspace.id)}
-                                      className="w-4 h-4 rounded"
-                                    />
-                                  </button>
-                                }
-                              />
-                              <span>{workspace.name}</span>
-                            </div>
-                          }
-                        >
-                          <SettingsMenuSelect
-                            value={hasCustomTheme ? wsTheme : 'default'}
-                            onValueChange={(value) => handleWorkspaceThemeChange(workspace.id, value)}
-                            options={[
-                              { value: 'default', label: appDefaultLabel ? t("settings.appearance.useDefaultWithTheme", { theme: appDefaultLabel }) : t("settings.appearance.useDefault") },
-                              ...presetThemes
-                                .filter(t => t.id !== 'default')
-                                .map(t => ({
-                                  value: t.id,
-                                  label: t.theme.name || t.id,
-                                })),
-                            ]}
-                          />
-                        </SettingsRow>
-                      )
-                    })}
-                  </SettingsCard>
-                </SettingsSection>
-              )}
-
-              {/* Interface */}
-              <SettingsSection title={t("settings.appearance.interface")}>
-                <SettingsCard>
-                  <SettingsToggle
-                    label={t("settings.appearance.connectionIcons")}
-                    description={t("settings.appearance.connectionIconsDesc")}
-                    checked={showConnectionIcons}
-                    onCheckedChange={handleConnectionIconsChange}
-                  />
-                  <SettingsToggle
-                    label={t("settings.appearance.richToolDescriptions")}
-                    description={t("settings.appearance.richToolDescriptionsDesc")}
-                    checked={richToolDescriptions}
-                    onCheckedChange={handleRichToolDescriptionsChange}
-                  />
-                  <SettingsToggle
-                    label={t("settings.appearance.backgroundFinishedChip")}
-                    description={t("settings.appearance.backgroundFinishedChipDesc")}
-                    checked={showBackgroundFinishedChip}
-                    onCheckedChange={setShowBackgroundFinishedChip}
-                  />
-                  <SettingsRow
-                    label={t("settings.appearance.projectColorTreatment")}
-                    description={t("settings.appearance.projectColorTreatmentDesc")}
-                  >
-                    <SettingsMenuSelect
-                      value={projectColorTreatment}
-                      onValueChange={handleProjectColorTreatmentChange}
-                      options={[
-                        { value: 'stripe', label: t("settings.appearance.projectColorStripe") },
-                        { value: 'stripe-tint', label: t("settings.appearance.projectColorStripeTint") },
-                      ]}
-                    />
-                  </SettingsRow>
-                </SettingsCard>
-              </SettingsSection>
-
-              {/* Kanban board — column colors + live-pulse toggle */}
-              <SettingsSection
-                title={t("settings.appearance.kanbanBoard")}
-                description={t("settings.appearance.kanbanBoardDesc")}
-              >
-                <SettingsCard>
-                  {KANBAN_COLUMNS.map(column => {
-                    const merged = kanbanColumnColors[column.id] ?? DEFAULT_KANBAN_COLUMN_COLORS[column.id]
-                    return (
-                      <SettingsRow key={column.id} label={t(column.labelKey)}>
-                        <ColorPicker
-                          value={merged}
-                          onChange={(hex) => setKanbanColumnColor(column.id, hex)}
-                          onClear={kanbanColumnColors[column.id] ? () => resetKanbanColumnColor(column.id) : undefined}
-                          clearLabel={t("settings.appearance.kanbanColumnColorReset")}
-                          presets={PROJECT_COLOR_PALETTE}
-                          ariaLabel={t("settings.appearance.kanbanColumnColor", { column: t(column.labelKey) })}
-                          align="end"
-                        />
-                      </SettingsRow>
-                    )
-                  })}
-                  <SettingsToggle
-                    label={t("settings.appearance.kanbanLivePulse")}
-                    description={t("settings.appearance.kanbanLivePulseDesc")}
-                    checked={kanbanLivePulse}
-                    onCheckedChange={setKanbanLivePulse}
-                  />
-                </SettingsCard>
-              </SettingsSection>
-
-              {/* Kanban status automation — status applied on drag into a column */}
-              <SettingsSection
-                title={t("settings.appearance.kanbanColumnStatus")}
-                description={t("settings.appearance.kanbanColumnStatusDesc")}
-              >
-                <SettingsCard>
-                  {KANBAN_COLUMNS.map(column => (
-                    <SettingsRow key={column.id} label={t(column.labelKey)}>
-                      <SettingsMenuSelect
-                        value={kanbanColumnStatus[column.id] ?? ''}
-                        onValueChange={(value) => setColumnStatus(column.id, value)}
-                        options={columnStatusOptions}
-                      />
-                    </SettingsRow>
-                  ))}
-                </SettingsCard>
-              </SettingsSection>
-
-              {/* Tool Icons — shows the command → icon mapping used in turn cards */}
-              <SettingsSection
-                title={t("settings.appearance.toolIcons")}
-                description={t("settings.appearance.toolIconsDesc")}
-                action={
-                  toolIconsJsonPath ? (
-                    <EditPopover
-                      trigger={<EditButton />}
-                      {...getEditConfig('edit-tool-icons', toolIconsJsonPath)}
-                      secondaryAction={{
-                        label: t("settings.appearance.editFile"),
-                        filePath: toolIconsJsonPath,
-                      }}
-                    />
-                  ) : undefined
-                }
-              >
-                <SettingsCard>
-                  <Info_DataTable
-                    columns={toolIconColumns}
-                    data={toolIcons}
-                    searchable={{ placeholder: t("settings.appearance.searchTools") }}
-                    maxHeight={480}
-                    emptyContent={t("settings.appearance.noToolIcons")}
-                  />
-                </SettingsCard>
-              </SettingsSection>
-
-            </div>
-          </div>
-        </ScrollArea>
-      </div>
-    </div>
+    <AppearanceSettingsContent
+      t={t}
+      mode={mode}
+      setMode={setMode}
+      colorTheme={colorTheme}
+      setColorTheme={setColorTheme}
+      themeOptions={themeOptions}
+      font={font}
+      setFont={setFont}
+      i18n={i18n}
+      themeLoadError={themeLoadError}
+      themeResolvedFrom={themeResolvedFrom}
+      presetThemes={presetThemes}
+      setPreviewColorTheme={setPreviewColorTheme}
+      paletteMode={paletteMode}
+      setPaletteMode={setPaletteMode}
+      customTheme={customTheme}
+      resolvedTheme={resolvedTheme}
+      updatePaletteColor={updatePaletteColor}
+      clearPaletteColor={clearPaletteColor}
+      resetCustomPalette={resetCustomPalette}
+      workspaces={workspaces}
+      workspaceThemes={workspaceThemes}
+      workspaceAvatarColors={workspaceAvatarColors}
+      setWorkspaceAvatarColor={setWorkspaceAvatarColor}
+      clearWorkspaceAvatarColor={clearWorkspaceAvatarColor}
+      workspaceIconMap={workspaceIconMap}
+      handleWorkspaceThemeChange={handleWorkspaceThemeChange}
+      appDefaultLabel={appDefaultLabel}
+      showConnectionIcons={showConnectionIcons}
+      handleConnectionIconsChange={handleConnectionIconsChange}
+      richToolDescriptions={richToolDescriptions}
+      handleRichToolDescriptionsChange={handleRichToolDescriptionsChange}
+      showBackgroundFinishedChip={showBackgroundFinishedChip}
+      setShowBackgroundFinishedChip={setShowBackgroundFinishedChip}
+      projectColorTreatment={projectColorTreatment}
+      handleProjectColorTreatmentChange={handleProjectColorTreatmentChange}
+      kanbanColumnColors={kanbanColumnColors}
+      setKanbanColumnColor={setKanbanColumnColor}
+      resetKanbanColumnColor={resetKanbanColumnColor}
+      kanbanLivePulse={kanbanLivePulse}
+      setKanbanLivePulse={setKanbanLivePulse}
+      kanbanColumnStatus={kanbanColumnStatus}
+      setColumnStatus={setColumnStatus}
+      columnStatusOptions={columnStatusOptions}
+      toolIconsJsonPath={toolIconsJsonPath}
+      toolIconColumns={toolIconColumns}
+      toolIcons={toolIcons}
+    />
   )
 }

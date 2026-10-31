@@ -33,7 +33,7 @@ export function WorkspacePicker({ onSelectWorkspace }: WorkspacePickerProps) {
         setWorkspaces(ws)
         setLoading(false)
       })
-      .catch(err => {
+      .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : 'Failed to load workspaces')
         setLoading(false)
       })

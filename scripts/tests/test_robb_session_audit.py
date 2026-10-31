@@ -1,33 +1,37 @@
-import importlib.util
 import json
 import os
-from pathlib import Path
+import sys
 import tempfile
 import unittest
+from collections.abc import Sequence
+from pathlib import Path
 
-SPEC = importlib.util.spec_from_file_location("session_audit", Path(__file__).parents[1] / "robb-session-audit.py")
-AUDIT = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(AUDIT)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+try:
+    import robb_session_audit as AUDIT
+finally:
+    _ = sys.path.pop(0)
 
 
 class SessionAuditTests(unittest.TestCase):
-    def write_session(self, root, ident, created, messages=(), **extra):
+    def write_session(self, root: Path, ident: str, created: int | str,
+                      messages: Sequence[dict[str, object]] = (), **extra: object) -> Path:
         path = root / "workspaces" / "workspace" / "sessions" / ident / "session.jsonl"
         path.parent.mkdir(parents=True)
         header = {"id": ident, "createdAt": created, "workspaceRootPath": "workspace", **extra}
-        path.write_text("\n".join(json.dumps(row) for row in [header, *messages]) + "\n")
+        _ = path.write_text("\n".join(json.dumps(row) for row in [header, *messages]) + "\n")
         return path
 
     def test_creation_order_includes_empty_and_children_excludes_backup(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             old = self.write_session(root, "old", 1000)
-            self.write_session(root, "child", 2000, parentSessionId="old")
-            self.write_session(root, "new-empty", 3000)
+            _ = self.write_session(root, "child", 2000, parentSessionId="old")
+            _ = self.write_session(root, "new-empty", 3000)
             os.utime(old, (99999999, 99999999))
             backup = root / "backups/workspaces/workspace/sessions/copied/session.jsonl"
             backup.parent.mkdir(parents=True)
-            backup.write_text('{"id":"copied","createdAt":9000}\n')
+            _ = backup.write_text('{"id":"copied","createdAt":9000}\n')
             selected, count = AUDIT.load_profile(root, 2)
             self.assertEqual(count, 3)
             self.assertEqual([row["header"]["id"] for row in selected], ["new-empty", "child"])
@@ -39,7 +43,7 @@ class SessionAuditTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             secret = "UNIQUE_SECRET_NEVER_EXPORT"
-            self.write_session(root, "private-session", 1000, [
+            _ = self.write_session(root, "private-session", 1000, [
                 {"type": "user", "content": secret},
                 {"type": "tool", "toolName": "private-tool", "toolInput": {"token": secret},
                  "toolResult": secret, "toolStatus": "completed"},
@@ -52,7 +56,7 @@ class SessionAuditTests(unittest.TestCase):
     def test_failed_quota_session_is_not_inferred_success_from_done(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            self.write_session(root, "quota", 1000, [
+            _ = self.write_session(root, "quota", 1000, [
                 {"type": "user", "content": "Do the work"},
                 {"type": "error", "content": "Codex error: The usage limit has been reached"},
             ], sessionStatus="done")
@@ -64,7 +68,7 @@ class SessionAuditTests(unittest.TestCase):
     def test_continuation_excludes_initial_and_hidden_and_uses_result_field(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            self.write_session(root, "test", 1000, [
+            _ = self.write_session(root, "test", 1000, [
                 {"type": "user", "content": "Reprend"},
                 {"type": "user", "content": "Poursuit", "hidden": True},
                 {"type": "user", "content": "Go"},
@@ -81,10 +85,10 @@ class SessionAuditTests(unittest.TestCase):
     def test_invalid_creation_timestamp_fails_instead_of_silent_exclusion(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            self.write_session(root, "bad", "yesterday")
+            _ = self.write_session(root, "bad", "yesterday")
             with self.assertRaises(ValueError):
-                AUDIT.load_profile(root, 1)
+                _ = AUDIT.load_profile(root, 1)
 
 
 if __name__ == "__main__":
-    unittest.main()
+    _ = unittest.main()

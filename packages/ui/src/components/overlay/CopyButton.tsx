@@ -5,7 +5,7 @@
  * Used in overlay headers for copying content.
  */
 
-import * as React from 'react'
+
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Copy, Check } from 'lucide-react'
@@ -15,11 +15,11 @@ export interface CopyButtonProps {
   /** Content to copy to clipboard */
   content: string
   /** Optional label (default: "Copy") */
-  label?: string
+  label?: string | undefined
   /** Optional tooltip for the button */
-  title?: string
+  title?: string | undefined
   /** Optional className override */
-  className?: string
+  className?: string | undefined
 }
 
 export function CopyButton({ content, title, className }: CopyButtonProps) {

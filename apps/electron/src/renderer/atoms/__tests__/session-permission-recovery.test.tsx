@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import * as React from 'react'
+
 import { createStore, Provider } from 'jotai'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Session } from '../../../shared/types'

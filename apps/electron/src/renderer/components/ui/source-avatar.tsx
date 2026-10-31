@@ -28,13 +28,13 @@ interface SourceAvatarProps {
   /** LoadedSource object */
   source: LoadedSource
   /** Size variant (default: 'md') */
-  size?: IconSize
+  size?: IconSize | undefined
   /** Fill parent container (h-full w-full). Overrides size. */
-  fluid?: boolean
+  fluid?: boolean | undefined
   /** Show connection status indicator (auto-derived from source) */
-  showStatus?: boolean
+  showStatus?: boolean | undefined
   /** Additional className overrides */
-  className?: string
+  className?: string | undefined
 }
 
 // ============================================================================
@@ -148,7 +148,7 @@ export function SourceAvatar({ source, size = 'md', fluid, showStatus, className
     entityType: 'source',
     identifier: source.config.slug,
     iconDir: `sources/${source.config.slug}`,
-    iconValue: source.config.icon,
+    ...(source.config.icon !== undefined ? { iconValue: source.config.icon } : {}),
   })
 
   // Source-specific: favicon as secondary fallback when no local icon found

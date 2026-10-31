@@ -1,0 +1,32 @@
+
+packages/pi-agent-server/src/tools/web-fetch-pdf.test.ts:
+Warning: Please use the `legacy` build in Node.js environments.
+51 |     expect(text).toContain('ROBB OFFLINE PDF COMPLETE');
+52 |     const files = readdirSync(join(root, 'long_responses'));
+53 |     expect(files).toHaveLength(1);
+54 |     expect(readFileSync(join(root, 'long_responses', files[0]!))).toEqual(bytes);
+55 |     const point = new DOMMatrix([2, 0, 0, 3, 4, 5]).transformPoint({ x: 2, y: 3 });
+56 |     expect({ x: point.x, y: point.y }).toEqual({ x: 8, y: 14 });
+                                            ^
+error: expect(received).toEqual(expected)
+
+  {
+-   "x": 8,
+-   "y": 14,
++   "x": 2,
++   "y": 3,
+  }
+
+- Expected  - 2
++ Received  + 2
+
+      at <anonymous> (/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/packages/pi-agent-server/src/tools/web-fetch-pdf.test.ts:56:40)
+(fail) web_fetch native PDF pipeline > saves the exact PDF and extracts its text with a working native matrix [145.33ms]
+Warning: Indexing all PDF objects
+(pass) web_fetch native PDF pipeline > reports an invalid PDF explicitly while preserving the downloaded bytes [2.90ms]
+
+ 1 pass
+ 1 fail
+ 8 expect() calls
+Ran 2 tests across 1 file. [302.00ms]
+bun test v1.4.4 (38afee6c8)

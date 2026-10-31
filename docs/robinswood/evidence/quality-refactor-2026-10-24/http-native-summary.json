@@ -1,0 +1,118 @@
+{
+  "status": "tested; final quality completion and local integration pending",
+  "files": [
+    {
+      "file": "packages/server-core/src/webui/http-server.ts",
+      "lines": 332,
+      "sha256": "55f22c8e7c87507e79ff1f3382388b5d502c07028b8ca95cc86d9d13f31aa30a"
+    },
+    {
+      "file": "packages/server-core/src/webui/http-request-context.ts",
+      "lines": 309,
+      "sha256": "9ba1ca2f56c262f989888b35c349ff3b7801eda96c4c7154077e5bcc85239b94"
+    },
+    {
+      "file": "packages/server-core/src/webui/http-request-router.ts",
+      "lines": 474,
+      "sha256": "14639729598da4f1c44b2441748d2e4cb70359617a077523d0ac6189c7e1715c"
+    }
+  ],
+  "changes": "Move the unchanged request handler closure and native primitives to two sibling modules; preserve timer, authentication, body limits, route order, cookies and file serving",
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/server-core/src/webui/http-server.ts",
+        "packages/server-core/src/webui/http-request-router.ts",
+        "packages/server-core/src/webui/http-request-context.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.0,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/http-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 1.57,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/http-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 11.41,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/http-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/server-core/src/webui/__tests__/http-server.test.ts",
+        "packages/server-core/src/webui/__tests__/node-adapter.test.ts",
+        "packages/server-core/src/webui/__tests__/remote-rpc-policy.test.ts",
+        "packages/server-core/src/webui/__tests__/remote-pairing.test.ts",
+        "packages/server-core/src/webui/__tests__/oauth-callback.test.ts",
+        "packages/server-core/src/webui/__tests__/remote-device-registry.test.ts",
+        "packages/server-core/src/webui/__tests__/http-server-fails-closed-for-session-apis-and-pairing-links-without-https.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.2,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/http-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 14.42,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/http-native-build.log"
+    }
+  },
+  "targetedTests": {
+    "pass": 37,
+    "fail": 0
+  },
+  "sourceGate": {
+    "max-lines": 9
+  },
+  "globalLint": {
+    "files": 3685,
+    "errors": 9,
+    "warnings": 61,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 9,
+      "react-hooks/exhaustive-deps": 61
+    }
+  },
+  "limits": [
+    "No global suite rerun; PreToolUse forbids it",
+    "Other oversized files and hooks warnings remain",
+    "No final install or real-model mission claim"
+  ]
+}

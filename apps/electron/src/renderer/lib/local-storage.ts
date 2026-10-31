@@ -1,3 +1,5 @@
+import { createJSONStorage } from 'jotai/utils'
+
 /**
  * Centralized localStorage utility for the Electron renderer.
  * Provides type-safe access with consistent key prefixing.
@@ -10,6 +12,12 @@ const PREFIX = 'craft-'
  * Centralized here to avoid magic strings and key collisions.
  */
 export const KEYS = {
+  // Preserve the playground's existing unprefixed keys.
+  playgroundPreviewSize: 'playground-preview-size',
+  playgroundSelectedComponent: 'playground-selected-component',
+  playgroundVariantsSidebarOpen: 'playground-variants-sidebar-open',
+  playgroundExpandedCategories: 'playground-expanded-categories',
+
   // Chat sidebar
   sidebarVisible: 'sidebar-visible',
   sidebarWidth: 'sidebar-width',
@@ -85,7 +93,7 @@ export function isWebEphemeralStorageKey(key: StorageKey): boolean {
 
 function shouldUsePersistentStorage(key: StorageKey): boolean {
   const isRemoteWeb = typeof document !== 'undefined'
-    && document.documentElement.dataset.robbRuntime === 'web'
+    && document.documentElement.dataset["robbRuntime"] === 'web'
   return !isRemoteWeb || !isWebEphemeralStorageKey(key)
 }
 
@@ -93,8 +101,8 @@ function shouldUsePersistentStorage(key: StorageKey): boolean {
  * Build the full prefixed key.
  * Supports dynamic suffixes like 'panel-layout:chat' or 'tabs-workspace123'
  */
-function buildKey(key: string, suffix?: string): string {
-  const base = `${PREFIX}${key}`
+function buildKey(key: StorageKey, suffix?: string): string {
+  const base = key.startsWith('playground-') ? key : `${PREFIX}${key}`
   return suffix ? `${base}:${suffix}` : base
 }
 
@@ -154,4 +162,25 @@ export function setRaw(key: StorageKey, value: string, suffix?: string): void {
  */
 export function getKeyString(key: StorageKey, suffix?: string): string {
   return buildKey(key, suffix)
+}
+
+type SyncStorage<Value> = ReturnType<typeof createJSONStorage<Value>>
+type SyncStringStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
+
+const volatileStringStorage: SyncStringStorage = {
+  getItem: (_key: string) => null,
+  setItem: (_key: string, _value: string) => {},
+  removeItem: (_key: string) => {},
+}
+
+/**
+ * Jotai storage for metadata which may identify host workspaces or statuses.
+ * The desktop app keeps its existing persistence; Remote keeps it in memory.
+ */
+export function createWebSafeAtomStorage<Value>(): SyncStorage<Value> {
+  return createJSONStorage<Value>(() : SyncStringStorage => {
+    const remoteWeb = typeof document !== 'undefined'
+      && document.documentElement.dataset["robbRuntime"] === 'web'
+    return remoteWeb ? volatileStringStorage : window.localStorage
+  })
 }

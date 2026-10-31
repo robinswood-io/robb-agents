@@ -47,7 +47,7 @@ export function handleErrorMessageAction(
     if (onRetry) {
       onRetry()
     } else {
-      onRetryFocus({ sessionId })
+      onRetryFocus(sessionId !== undefined ? { sessionId } : {})
     }
     return
   }

@@ -1,3 +1,4 @@
+import type { ElectronAPI } from "../../../shared/types.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { createStore } from 'jotai'
 import type { UserInputRequest } from '@craft-agent/core/types'
@@ -52,7 +53,7 @@ describe('persisted user question snapshots', () => {
   it('preserves an answer received while an older history response is in flight', async () => {
     const store = createStore()
     let resolve!: (value: Session) => void
-    globalThis.window = { electronAPI: { getSessionMessages: () => new Promise<Session>(done => { resolve = done }) } } as unknown as typeof window
+    Object.defineProperty(globalThis, 'window', { configurable: true, writable: true, value: { electronAPI: ({ getSessionMessages: () => new Promise<Session>(done => { resolve = done }) } satisfies Partial<ElectronAPI>) } })
     store.set(sessionAtomFamily('input-load'), session('input-load'))
     const loading = store.set(ensureSessionMessagesLoadedAtom, 'input-load')
     store.set(sessionAtomFamily('input-load'), session('input-load', answered))

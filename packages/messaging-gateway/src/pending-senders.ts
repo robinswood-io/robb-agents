@@ -1,3 +1,5 @@
+import { isUnknownArray } from '@craft-agent/shared/utils/json';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * PendingSendersStore — bounded record of senders the access-control layer
  * recently rejected.
@@ -112,7 +114,7 @@ export class PendingSendersStore {
     let merged: PendingSender
     if (idx >= 0) {
       const existing = this.entries[idx]!
-      merged = {
+      merged = omitUndefined<PendingSender>({
         ...existing,
         // Refresh metadata if the new attempt brought better info.
         displayName: input.senderName ?? existing.displayName,
@@ -124,15 +126,15 @@ export class PendingSendersStore {
         ...(input.sessionId ? { sessionId: input.sessionId } : {}),
         ...(input.channelId ? { channelId: input.channelId } : {}),
         ...(input.threadId !== undefined ? { threadId: input.threadId } : {}),
-      }
+      })
       this.entries.splice(idx, 1)
       this.entries.unshift(merged)
     } else {
       merged = {
         platform: input.platform,
         userId: input.senderId,
-        displayName: input.senderName,
-        username: input.senderUsername,
+        ...(input.senderName !== undefined ? { displayName: input.senderName } : {}),
+        ...(input.senderUsername !== undefined ? { username: input.senderUsername } : {}),
         lastAttemptAt: now,
         attemptCount: 1,
         reason,
@@ -204,8 +206,8 @@ export class PendingSendersStore {
     try {
       if (!existsSync(this.filePath)) return
       const raw = readFileSync(this.filePath, 'utf-8')
-      const parsed = JSON.parse(raw)
-      if (!Array.isArray(parsed)) return
+      const parsed: unknown = JSON.parse(raw)
+      if (!isUnknownArray(parsed)) return
       const now = Date.now()
       this.entries = parsed
         .filter(isPendingSender)
@@ -241,9 +243,9 @@ function isPendingSender(value: unknown): value is PendingSender {
   if (typeof value !== 'object' || value === null) return false
   const v = value as Record<string, unknown>
   return (
-    (v.platform === 'telegram' || v.platform === 'whatsapp' || v.platform === 'lark') &&
-    typeof v.userId === 'string' &&
-    typeof v.lastAttemptAt === 'number' &&
-    typeof v.attemptCount === 'number'
+    (v["platform"] === 'telegram' || v["platform"] === 'whatsapp' || v["platform"] === 'lark') &&
+    typeof v["userId"] === 'string' &&
+    typeof v["lastAttemptAt"] === 'number' &&
+    typeof v["attemptCount"] === 'number'
   )
 }

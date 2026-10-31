@@ -1,0 +1,350 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Contrats du worker WhatsApp, valeurs Antigravity, contexte du serveur MCP de session",
+  "sourceGate": {
+    "max-lines": 126,
+    "no-explicit-any": 403
+  },
+  "changes": [
+    "32 déclarations déplacées ; corps, dépendances et exports publics conservés",
+    "Classes, états mutables et démarrage conservés dans leurs propriétaires existants",
+    "Lignes de démarrage des deux exécutables préservées en tête des fichiers",
+    "Aucune modification de configuration de connecteur ni de données comptables"
+  ],
+  "decompositions": [
+    {
+      "source": "packages/messaging-gateway/src/adapters/whatsapp/index.ts",
+      "destination": "packages/messaging-gateway/src/adapters/whatsapp/protocol.ts",
+      "sourceHash": "d84e1a94cbcf490a4fbccba3b13f3766b8f5eeccf5a1d27a8aa0bb8f9f965fa5",
+      "names": [
+        {
+          "name": "NOOP_LOGGER",
+          "typeOnly": false
+        },
+        {
+          "name": "DEFAULT_SEND_TIMEOUT_MS",
+          "typeOnly": false
+        },
+        {
+          "name": "SAFE_WORKER_DIAGNOSTIC_PATTERNS",
+          "typeOnly": false
+        },
+        {
+          "name": "isSafeWorkerDiagnostic",
+          "typeOnly": false
+        },
+        {
+          "name": "PendingEntry",
+          "typeOnly": true
+        },
+        {
+          "name": "WhatsAppConfig",
+          "typeOnly": true
+        },
+        {
+          "name": "WhatsAppEvent",
+          "typeOnly": true
+        },
+        {
+          "name": "EventHandler",
+          "typeOnly": true
+        }
+      ],
+      "publicNames": [
+        {
+          "name": "WhatsAppConfig",
+          "typeOnly": true
+        },
+        {
+          "name": "WhatsAppEvent",
+          "typeOnly": true
+        }
+      ],
+      "files": [
+        {
+          "file": "packages/messaging-gateway/src/adapters/whatsapp/index.ts",
+          "lines": 467,
+          "hash": "0cc6540fc8c57c82cfe76af794ef38bb6390f5ca3d02383eac186efbe5a6409a"
+        },
+        {
+          "file": "packages/messaging-gateway/src/adapters/whatsapp/protocol.ts",
+          "lines": 92,
+          "hash": "587410ea82be741487148237e406381b836a93ba907693a7e8fec515d80f11ea"
+        }
+      ]
+    },
+    {
+      "source": "packages/pi-agent-server/src/antigravity-server.ts",
+      "destination": "packages/pi-agent-server/src/antigravity-values.ts",
+      "sourceHash": "4f3f6df400a25a564f8cbbafe4b21b462c43c447faccd8dae6e4370d1fee20a2",
+      "names": [
+        {
+          "name": "InitMessage",
+          "typeOnly": true
+        },
+        {
+          "name": "InboundMessage",
+          "typeOnly": true
+        },
+        {
+          "name": "AntigravityUsage",
+          "typeOnly": true
+        },
+        {
+          "name": "ActiveTurn",
+          "typeOnly": true
+        },
+        {
+          "name": "SETUP_GUIDANCE",
+          "typeOnly": false
+        },
+        {
+          "name": "AntigravityPromptRejectedBeforeWriteError",
+          "typeOnly": false
+        },
+        {
+          "name": "emptyUsage",
+          "typeOnly": false
+        },
+        {
+          "name": "asRecord",
+          "typeOnly": false
+        },
+        {
+          "name": "stringValue",
+          "typeOnly": false
+        },
+        {
+          "name": "numericValue",
+          "typeOnly": false
+        },
+        {
+          "name": "normalizeUsage",
+          "typeOnly": false
+        },
+        {
+          "name": "toolOutput",
+          "typeOnly": false
+        },
+        {
+          "name": "classifyResultError",
+          "typeOnly": false
+        },
+        {
+          "name": "mapEffort",
+          "typeOnly": false
+        }
+      ],
+      "publicNames": [],
+      "files": [
+        {
+          "file": "packages/pi-agent-server/src/antigravity-server.ts",
+          "lines": 465,
+          "hash": "04f03e6aef92f21289028a3ba8f441d574cc993fbc387806a474e9bd6bd2426f"
+        },
+        {
+          "file": "packages/pi-agent-server/src/antigravity-values.ts",
+          "lines": 136,
+          "hash": "ad30a24a3da423a0dc9661068d1c0ec84deae178881ae321845fe94b9f0ed51a"
+        }
+      ]
+    },
+    {
+      "source": "packages/session-mcp-server/src/index.ts",
+      "destination": "packages/session-mcp-server/src/session-context.ts",
+      "sourceHash": "1703da452592c851b4dad3cb235b5aa8105b034e03156c866bdd0d50699067ce",
+      "names": [
+        {
+          "name": "SessionConfig",
+          "typeOnly": true
+        },
+        {
+          "name": "CALLBACK_TOOL_TIMEOUT_MS",
+          "typeOnly": false
+        },
+        {
+          "name": "sendCallback",
+          "typeOnly": false
+        },
+        {
+          "name": "CredentialCacheEntry",
+          "typeOnly": true
+        },
+        {
+          "name": "isSafeSingleSegment",
+          "typeOnly": false
+        },
+        {
+          "name": "getCredentialCachePath",
+          "typeOnly": false
+        },
+        {
+          "name": "readCredentialCache",
+          "typeOnly": false
+        },
+        {
+          "name": "createCredentialManager",
+          "typeOnly": false
+        },
+        {
+          "name": "createCodexContext",
+          "typeOnly": false
+        },
+        {
+          "name": "createSessionTools",
+          "typeOnly": false
+        }
+      ],
+      "publicNames": [],
+      "files": [
+        {
+          "file": "packages/session-mcp-server/src/index.ts",
+          "lines": 374,
+          "hash": "1d63419d691521608aab889feac8d70cebf84d47ec1e605f368889232bcfdaca"
+        },
+        {
+          "file": "packages/session-mcp-server/src/session-context.ts",
+          "lines": 264,
+          "hash": "c361d6f68ccb5b7b05ba09c752791de6b6cc2b74db4f398b22dd6070a757d3c5"
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 17.25,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/entrypoints-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/messaging-gateway/src/adapters/whatsapp/index.ts",
+        "packages/messaging-gateway/src/adapters/whatsapp/protocol.ts",
+        "packages/pi-agent-server/src/antigravity-server.ts",
+        "packages/pi-agent-server/src/antigravity-values.ts",
+        "packages/session-mcp-server/src/index.ts",
+        "packages/session-mcp-server/src/session-context.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.11,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/entrypoints-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 16.3,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/entrypoints-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/messaging-gateway",
+        "--reporter=junit",
+        "--reporter-outfile=/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/entrypoints-after-gateway.xml"
+      ],
+      "exitCode": 0,
+      "seconds": 1.28,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/entrypoints-after-gateway.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/pi-agent-server/src/antigravity-server.test.ts",
+        "./packages/pi-agent-server/src/antigravity-subprocess.test.ts",
+        "--reporter=junit",
+        "--reporter-outfile=/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/entrypoints-after-antigravity.xml"
+      ],
+      "exitCode": 0,
+      "seconds": 1.74,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/entrypoints-after-antigravity.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/session-mcp-server",
+        "--reporter=junit",
+        "--reporter-outfile=/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/entrypoints-after-session-mcp.xml"
+      ],
+      "exitCode": 0,
+      "seconds": 0.08,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/entrypoints-after-session-mcp.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 138.42,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/entrypoints-full-suite.log"
+    }
+  ],
+  "regressionParity": [
+    {
+      "component": "gateway",
+      "cases": 230,
+      "assertions": 582,
+      "identical": true
+    },
+    {
+      "component": "antigravity",
+      "cases": 8,
+      "assertions": 20,
+      "identical": true
+    },
+    {
+      "component": "session-mcp",
+      "cases": 5,
+      "assertions": 10,
+      "identical": true
+    }
+  ],
+  "maximumOutputLines": 467,
+  "globalLintInventory": {
+    "files": 3074,
+    "errors": 499,
+    "warnings": 139,
+    "fatalErrors": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 384,
+      "max-lines": 115,
+      "react-hooks/exhaustive-deps": 98,
+      "directives": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 8
+    }
+  },
+  "installedApplication": "inchangée",
+  "limits": [
+    "126 fichiers dépassent encore 500 lignes et 403 any restent à supprimer",
+    "Lint global non conforme ; inventaire réel conservé",
+    "Interface et missions réelles finales non encore vérifiées"
+  ],
+  "additionalVerification": "Un espace final dans un import a été retiré après les tests ; AST TypeScript complète identique avant/après."
+}

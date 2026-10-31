@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import { getWorkspaceByNameOrId } from '@craft-agent/shared/config'
-import { loadSource, loadWorkspaceSources, getSourceCredentialManager } from '@craft-agent/shared/sources'
-import { createPendingFlow } from '@craft-agent/shared/auth'
+import { loadSource, loadWorkspaceSources, getSourceCredentialManager, type LoadedSource } from '@craft-agent/shared/sources'
+import { createPendingFlow, type PendingOAuthFlow } from '@craft-agent/shared/auth'
 import { assertRequestWorkspace, pushTyped, type RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
 
@@ -12,6 +12,23 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.oauth.CANCEL,
   RPC_CHANNELS.oauth.REVOKE,
 ] as const
+
+export interface OAuthFlowRecord {
+  flowId: string
+  state: string
+  codeVerifier?: string
+  redirectUri?: string
+  source?: unknown
+  clientId?: string
+  clientSecret?: string
+  tokenEndpoint?: string
+  provider?: string
+  ownerClientId?: string
+  workspaceId?: string
+  sourceSlug?: string
+  sessionId?: string
+  authRequestId?: string
+}
 
 /**
  * Complete an OAuth flow: validate state, exchange code for tokens, store credentials.
@@ -25,13 +42,29 @@ export const HANDLED_CHANNELS = [
 export async function completeOAuthFlow(opts: {
   code: string
   state: string
-  flowStore: { getByState(state: string): any; remove(state: string): void }
-  credManager: { exchangeAndStore(...args: any[]): Promise<any> }
+  flowStore: { getByState(state: string): OAuthFlowRecord | null | undefined; remove(state: string): void }
+  credManager: {
+    exchangeAndStore(
+      source: LoadedSource,
+      provider: PendingOAuthFlow['provider'],
+      params: {
+        code: string
+        codeVerifier: string
+        tokenEndpoint: string
+        clientId: string
+        clientSecret?: string
+        redirectUri: string
+      },
+    ): Promise<{ success: boolean; error?: string; email?: string }>
+  }
   sessionManager: {
-    completeAuthRequest(...args: any[]): Promise<void>
-    isPendingOAuthRequest?(sessionId: string, requestId: string, sourceSlug: string, workspaceId: string): boolean
-    claimPendingOAuthRequest?(sessionId: string, requestId: string, sourceSlug: string, workspaceId: string, flowId: string, expiresAt?: number): boolean
-    releasePendingOAuthRequest?(sessionId: string, requestId: string, flowId: string): void
+    completeAuthRequest(
+      sessionId: string,
+      result: { requestId: string; sourceSlug: string; success: boolean; email?: string; error?: string },
+    ): Promise<void>
+    isPendingOAuthRequest?(sessionId: string | undefined, requestId: string | undefined, sourceSlug: string, workspaceId: string): boolean
+    claimPendingOAuthRequest?(sessionId: string | undefined, requestId: string | undefined, sourceSlug: string, workspaceId: string, flowId: string, expiresAt?: number): boolean
+    releasePendingOAuthRequest?(sessionId: string | undefined, requestId: string | undefined, flowId: string): void
   }
   pushSourcesChanged: (workspaceId: string) => void
   logger: { info(msg: string): void; }
@@ -51,14 +84,16 @@ export async function completeOAuthFlow(opts: {
     if (flow.workspaceId !== opts.workspaceId) throw new Error('Workspace mismatch')
   }
 
+  const workspaceId = flow.workspaceId ?? ''
+  const sourceSlug = flow.sourceSlug ?? ''
   const hasSessionBinding = flow.sessionId !== undefined || flow.authRequestId !== undefined
   const boundRequestIsCurrent = (): boolean => !hasSessionBinding || (
     !!flow.sessionId && !!flow.authRequestId
     && sessionManager.isPendingOAuthRequest?.(
       flow.sessionId,
       flow.authRequestId,
-      flow.sourceSlug,
-      flow.workspaceId,
+      sourceSlug,
+      workspaceId,
     ) === true
   )
   if (!boundRequestIsCurrent()) {
@@ -70,8 +105,8 @@ export async function completeOAuthFlow(opts: {
     sessionManager.claimPendingOAuthRequest?.(
       flow.sessionId,
       flow.authRequestId,
-      flow.sourceSlug,
-      flow.workspaceId,
+      sourceSlug,
+      workspaceId,
       flow.flowId,
     ) === true
   )
@@ -83,20 +118,24 @@ export async function completeOAuthFlow(opts: {
   // or a second caller can never exchange/store the same flow twice.
   flowStore.remove(state)
   try {
-    const result = await credManager.exchangeAndStore(flow.source, flow.provider, {
-      code,
-      codeVerifier: flow.codeVerifier,
-      tokenEndpoint: flow.tokenEndpoint,
-      clientId: flow.clientId,
-      clientSecret: flow.clientSecret,
-      redirectUri: flow.redirectUri,
-    })
+    const result = await credManager.exchangeAndStore(
+      flow.source as LoadedSource,
+      flow.provider as PendingOAuthFlow['provider'],
+      {
+        code,
+        codeVerifier: flow.codeVerifier ?? '',
+        tokenEndpoint: flow.tokenEndpoint ?? '',
+        clientId: flow.clientId ?? '',
+        ...(flow.clientSecret !== undefined ? { clientSecret: flow.clientSecret } : {}),
+        redirectUri: flow.redirectUri ?? '',
+      },
+    )
 
     // A human continuation or replacement auth request may win while the token
     // exchange is in flight. The provider write cannot be cancelled, but the old
     // card must never be completed or activated afterward.
     if (!boundRequestIsCurrent()) {
-      pushSourcesChanged(flow.workspaceId)
+      pushSourcesChanged(workspaceId)
       return { success: false, error: 'OAuth authentication request is no longer pending' }
     }
 
@@ -104,17 +143,17 @@ export async function completeOAuthFlow(opts: {
     if (flow.sessionId && flow.authRequestId) {
       await sessionManager.completeAuthRequest(flow.sessionId, {
         requestId: flow.authRequestId,
-        sourceSlug: flow.sourceSlug,
+        sourceSlug,
         success: result.success,
-        email: result.email,
-        error: result.error,
+        ...(result.email !== undefined ? { email: result.email } : {}),
+        ...(result.error !== undefined ? { error: result.error } : {}),
       })
     }
 
     // Push source status update to all clients in this workspace
-    pushSourcesChanged(flow.workspaceId)
+    pushSourcesChanged(workspaceId)
 
-    logger.info(`[OAuth] Flow complete for ${flow.sourceSlug} (success=${result.success})`)
+    logger.info(`[OAuth] Flow complete for ${sourceSlug} (success=${result.success})`)
     return result
   } finally {
     if (hasSessionBinding) {
@@ -165,7 +204,7 @@ export function registerOAuthHandlers(server: RpcServer, deps: HandlerDeps): voi
       throw new Error(`Source not found: ${sourceSlug}`)
     }
 
-    const prepared = await credManager.prepareOAuth(source, { callbackPort, callbackUrl })
+    const prepared = await credManager.prepareOAuth(source, { ...(callbackPort !== undefined ? { callbackPort: callbackPort } : {}), ...(callbackUrl !== undefined ? { callbackUrl: callbackUrl } : {}) })
 
     if (sessionId && authRequestId
       && !deps.sessionManager.isPendingOAuthRequest(sessionId, authRequestId, sourceSlug, ctx.workspaceId)) {
@@ -180,14 +219,14 @@ export function registerOAuthHandlers(server: RpcServer, deps: HandlerDeps): voi
       redirectUri: prepared.redirectUri,
       source,
       clientId: prepared.clientId,
-      clientSecret: prepared.clientSecret,
+      ...(prepared.clientSecret !== undefined ? { clientSecret: prepared.clientSecret } : {}),
       tokenEndpoint: prepared.tokenEndpoint,
       provider: prepared.provider,
       ownerClientId: ctx.clientId,
       workspaceId: ctx.workspaceId,
       sourceSlug,
-      sessionId,
-      authRequestId,
+      ...(sessionId !== undefined ? { sessionId: sessionId } : {}),
+      ...(authRequestId !== undefined ? { authRequestId: authRequestId } : {}),
     })
     if (sessionId && authRequestId
       && !deps.sessionManager.claimPendingOAuthRequest(

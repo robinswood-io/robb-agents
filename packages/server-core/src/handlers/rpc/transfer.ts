@@ -28,7 +28,7 @@ interface TransferState {
   chunkCount: number
   received: Set<number>
   channel: string
-  args: any[]
+  args: unknown[]
   largeArgIndex: number
   checksum?: string
   timer: ReturnType<typeof setTimeout> | null
@@ -52,7 +52,7 @@ const activeTransfers = new Map<string, TransferState>()
 const transferableHandlers = new Map<string, HandlerFn>()
 
 function getTransferTtlMs(): number {
-  const raw = Number(process.env.CRAFT_TRANSFER_TTL_MS)
+  const raw = Number(process.env["CRAFT_TRANSFER_TTL_MS"])
   return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_TRANSFER_TTL_MS
 }
 
@@ -99,7 +99,7 @@ function assertTransferOwner(ctx: RequestContext, transfer: TransferState): void
   }
 }
 
-export function setTransferableHandler(channel: string, handler: HandlerFn): void {
+export function setTransferableHandler<Arguments extends unknown[]>(channel: string, handler: HandlerFn<Arguments>): void {
   transferableHandlers.set(channel, handler)
 }
 
@@ -116,7 +116,7 @@ export function registerTransferHandlers(server: RpcServer): void {
     totalBytes: number
     chunkCount: number
     channel: string
-    args: any[]
+    args: unknown[]
     largeArgIndex: number
     checksum?: string
   }) => {
@@ -161,7 +161,7 @@ export function registerTransferHandlers(server: RpcServer): void {
       channel: opts.channel,
       args: opts.args,
       largeArgIndex: opts.largeArgIndex,
-      checksum: opts.checksum,
+      ...(opts.checksum !== undefined ? { checksum: opts.checksum } : {}),
       timer: null,
       timerGeneration: 0,
     }
@@ -251,7 +251,7 @@ export function registerTransferHandlers(server: RpcServer): void {
       console.log(`[Transfer:server] Checksum verified: ${actual.slice(0, 12)}...`)
     }
 
-    let payload: any
+    let payload: unknown
     try {
       payload = JSON.parse(reassembled.toString('utf-8'))
     } catch {
@@ -274,7 +274,7 @@ export function registerTransferHandlers(server: RpcServer): void {
     await cleanupTransfer(transfer.id)
 
     try {
-      const result = await handler(ctx, ...args)
+      const result: unknown = await Reflect.apply(handler, undefined, [ctx, ...args])
       console.log(`[Transfer:server] Handler ${transfer.channel} completed successfully`)
       return result
     } catch (err) {

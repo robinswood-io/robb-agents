@@ -21,6 +21,6 @@ describe('session persistence: previousPermissionMode', () => {
     const picked = pickSessionFields(source);
     expect(picked.permissionMode).toBe('allow-all');
     expect(picked.previousPermissionMode).toBe('safe');
-    expect((picked as Record<string, unknown>).ignoredRuntimeField).toBeUndefined();
+    expect((picked as Record<string, unknown>)["ignoredRuntimeField"]).toBeUndefined();
   });
 });

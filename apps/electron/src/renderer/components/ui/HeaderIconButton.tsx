@@ -14,7 +14,7 @@ interface HeaderIconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEle
   /** Icon as React element - caller controls size/styling */
   icon: React.ReactNode
   /** Optional tooltip text */
-  tooltip?: string
+  tooltip?: string | undefined
 }
 
 export const HeaderIconButton = forwardRef<HTMLButtonElement, HeaderIconButtonProps>(

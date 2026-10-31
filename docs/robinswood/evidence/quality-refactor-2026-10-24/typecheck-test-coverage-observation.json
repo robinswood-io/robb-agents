@@ -1,0 +1,361 @@
+{
+  "status": "observed",
+  "configs": [
+    {
+      "config": "packages/core/tsconfig.json",
+      "include": [
+        "src/**/*"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 2,
+      "configuredTestFiles": 0,
+      "excludedTests": [
+        "packages/core/tests/provider-contracts.test.ts",
+        "packages/core/tests/user-input.test.ts"
+      ]
+    },
+    {
+      "config": "packages/shared/tsconfig.json",
+      "include": [
+        "src/**/*"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist",
+        "src/automations/**/*.test.ts"
+      ],
+      "testFiles": 378,
+      "configuredTestFiles": 348,
+      "excludedTests": [
+        "packages/shared/src/automations/automation-system.test.ts",
+        "packages/shared/src/automations/conditions-should-work-with-time-conditions.test.ts",
+        "packages/shared/src/automations/conditions.test.ts",
+        "packages/shared/src/automations/cron-matcher.test.ts",
+        "packages/shared/src/automations/event-bus.test.ts",
+        "packages/shared/src/automations/execution-policy.test.ts",
+        "packages/shared/src/automations/history-store.test.ts",
+        "packages/shared/src/automations/name-utils.test.ts",
+        "packages/shared/src/automations/resolve-config-path.test.ts",
+        "packages/shared/src/automations/retry-scheduler.test.ts",
+        "packages/shared/src/automations/sdk-bridge.test.ts",
+        "packages/shared/src/automations/security.test.ts",
+        "packages/shared/src/automations/utils.test.ts",
+        "packages/shared/src/automations/validation.test.ts",
+        "packages/shared/src/automations/webhook-utils.test.ts",
+        "packages/shared/src/automations/handlers/event-log-handler.test.ts",
+        "packages/shared/src/automations/handlers/prompt-handler-should-leave-llmconnection-undefined-when-not-specified.test.ts",
+        "packages/shared/src/automations/handlers/prompt-handler.test.ts",
+        "packages/shared/tests/content-validators.test.ts",
+        "packages/shared/tests/default-reviewer-integrity-permissions.test.ts",
+        "packages/shared/tests/llm-connections.test.ts",
+        "packages/shared/tests/mcp-pool.test.ts",
+        "packages/shared/tests/mode-manager.test.ts",
+        "packages/shared/tests/models-pi.test.ts",
+        "packages/shared/tests/models.test.ts",
+        "packages/shared/tests/permissions-craft-agent-sync.test.ts",
+        "packages/shared/tests/persistence-queue-uses-one-fence-for-lexical-and-symlink-aliases-of-the-same-worksp.test.ts",
+        "packages/shared/tests/persistence-queue.test.ts",
+        "packages/shared/tests/session-validation.test.ts",
+        "packages/shared/tests/shellguard-corpus.test.ts"
+      ]
+    },
+    {
+      "config": "packages/server-core/tsconfig.json",
+      "include": [
+        "src/**/*",
+        "../shared/src/agent/bash-parser.d.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 279,
+      "configuredTestFiles": 279,
+      "excludedTests": []
+    },
+    {
+      "config": "packages/server/tsconfig.json",
+      "include": [
+        "src/**/*",
+        "../shared/src/agent/bash-parser.d.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 1,
+      "configuredTestFiles": 1,
+      "excludedTests": []
+    },
+    {
+      "config": "packages/session-tools-core/tsconfig.json",
+      "include": [
+        "src/**/*.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 27,
+      "configuredTestFiles": 27,
+      "excludedTests": []
+    },
+    {
+      "config": "packages/session-mcp-server/tsconfig.json",
+      "include": [
+        "src/**/*.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 1,
+      "configuredTestFiles": 1,
+      "excludedTests": []
+    },
+    {
+      "config": "packages/messaging-gateway/tsconfig.json",
+      "include": [
+        "src"
+      ],
+      "testFiles": 30,
+      "configuredTestFiles": 30,
+      "excludedTests": []
+    },
+    {
+      "config": "packages/messaging-whatsapp-worker/tsconfig.json",
+      "include": [
+        "src/**/*.ts"
+      ],
+      "testFiles": 3,
+      "configuredTestFiles": 3,
+      "excludedTests": []
+    },
+    {
+      "config": "packages/pi-agent-server/tsconfig.typecheck.json",
+      "include": [
+        "src/**/*"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist",
+        "**/*.test.ts"
+      ],
+      "testFiles": 44,
+      "configuredTestFiles": 0,
+      "excludedTests": [
+        "packages/pi-agent-server/src/antigravity-server.test.ts",
+        "packages/pi-agent-server/src/antigravity-subprocess.test.ts",
+        "packages/pi-agent-server/src/authenticated-model-runtime.test.ts",
+        "packages/pi-agent-server/src/catalog-model-registration.test.ts",
+        "packages/pi-agent-server/src/compact-selected-model.test.ts",
+        "packages/pi-agent-server/src/craft-metadata-schema.test.ts",
+        "packages/pi-agent-server/src/custom-endpoint-models.test.ts",
+        "packages/pi-agent-server/src/google-code-assist-auth.test.ts",
+        "packages/pi-agent-server/src/google-code-assist-provider.test.ts",
+        "packages/pi-agent-server/src/google-code-assist-wire.test.ts",
+        "packages/pi-agent-server/src/incomplete-tool-tail-recovery.test.ts",
+        "packages/pi-agent-server/src/intra-turn-context-guard.test.ts",
+        "packages/pi-agent-server/src/mistral-provider-contract.test.ts",
+        "packages/pi-agent-server/src/model-resolution.test.ts",
+        "packages/pi-agent-server/src/native-settlement.test.ts",
+        "packages/pi-agent-server/src/overflow-recovery.test.ts",
+        "packages/pi-agent-server/src/provider-contract-guard.test.ts",
+        "packages/pi-agent-server/src/provider-handoff.test.ts",
+        "packages/pi-agent-server/src/proxy-tool-precheck-contract.test.ts",
+        "packages/pi-agent-server/src/proxy-tool-response-watchdog.test.ts",
+        "packages/pi-agent-server/src/proxy-tool-result.test.ts",
+        "packages/pi-agent-server/src/query-model.test.ts",
+        "packages/pi-agent-server/src/read-tool-timeout.test.ts",
+        "packages/pi-agent-server/src/selected-thinking-level.test.ts",
+        "packages/pi-agent-server/src/session-path-normalization.test.ts",
+        "packages/pi-agent-server/src/session-tool-registration.test.ts",
+        "packages/pi-agent-server/src/source-tool-activation.test.ts",
+        "packages/pi-agent-server/src/system-prompt-override.test.ts",
+        "packages/pi-agent-server/src/token-update.test.ts",
+        "packages/pi-agent-server/src/tool-approval-abort.test.ts",
+        "packages/pi-agent-server/src/tool-execution-checkpoint.test.ts",
+        "packages/pi-agent-server/src/tool-loop-budget.test.ts",
+        "packages/pi-agent-server/src/tool-loop-feedback-integration.test.ts",
+        "packages/pi-agent-server/src/tool-loop-feedback.test.ts",
+        "packages/pi-agent-server/src/turn-history.test.ts",
+        "packages/pi-agent-server/src/vibe-acp-server.test.ts",
+        "packages/pi-agent-server/src/vibe-subprocess.test.ts",
+        "packages/pi-agent-server/src/tools/web-fetch-pdf.test.ts",
+        "packages/pi-agent-server/src/tools/web-fetch.test.ts",
+        "packages/pi-agent-server/src/tools/__tests__/web-fetch.test.ts",
+        "packages/pi-agent-server/src/tools/search/create-search-tool.test.ts",
+        "packages/pi-agent-server/src/tools/search/resolve-provider.test.ts",
+        "packages/pi-agent-server/src/tools/search/providers/chatgpt.test.ts",
+        "packages/pi-agent-server/src/tools/search/providers/openai.test.ts"
+      ]
+    },
+    {
+      "config": "packages/ui/tsconfig.json",
+      "include": [
+        "src/**/*"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist",
+        "src/**/__tests__"
+      ],
+      "testFiles": 45,
+      "configuredTestFiles": 0,
+      "excludedTests": [
+        "packages/ui/eslint-rules/__tests__/no-floating-z-tokens-in-island.test.ts",
+        "packages/ui/eslint-rules/__tests__/no-hardcoded-z-index.test.ts",
+        "packages/ui/src/components/annotations/__tests__/annotation-core.test.ts",
+        "packages/ui/src/components/annotations/__tests__/annotation-host-config.test.ts",
+        "packages/ui/src/components/annotations/__tests__/interaction-policy.test.ts",
+        "packages/ui/src/components/annotations/__tests__/interaction-state-machine.test.ts",
+        "packages/ui/src/components/annotations/__tests__/island-dismiss-policy.test.ts",
+        "packages/ui/src/components/annotations/__tests__/island-motion.test.ts",
+        "packages/ui/src/components/annotations/__tests__/selection-restore.test.ts",
+        "packages/ui/src/components/annotations/__tests__/use-annotation-island-events.test.ts",
+        "packages/ui/src/components/annotations/__tests__/use-annotation-island-presentation.test.ts",
+        "packages/ui/src/components/chat/__tests__/accept-plan-chevron-group.test.ts",
+        "packages/ui/src/components/chat/__tests__/assistant-ui-key.test.ts",
+        "packages/ui/src/components/chat/__tests__/conversation-presentation-extracts-only-the-latest-successful-parent-todowrite-or-update-pl.test.ts",
+        "packages/ui/src/components/chat/__tests__/conversation-presentation-keeps-the-live-mcp-checklist-through-composing-failed-updates-and.test.ts",
+        "packages/ui/src/components/chat/__tests__/conversation-presentation-removes-completed-connection-details-from-the-ordinary-conversati.test.ts",
+        "packages/ui/src/components/chat/__tests__/conversation-presentation.test.ts",
+        "packages/ui/src/components/chat/__tests__/journey-activity.test.ts",
+        "packages/ui/src/components/chat/__tests__/turn-lifecycle.test.ts",
+        "packages/ui/src/components/chat/__tests__/turn-phase.test.ts",
+        "packages/ui/src/components/chat/__tests__/turn-utils-grouping.test.ts",
+        "packages/ui/src/components/chat/__tests__/turn-utils-plan-annotations.test.ts",
+        "packages/ui/src/components/chat/__tests__/user-input-timeline.test.ts",
+        "packages/ui/src/components/markdown/__tests__/annotation-resolver.test.ts",
+        "packages/ui/src/components/markdown/__tests__/diff-normalize.test.ts",
+        "packages/ui/src/components/markdown/__tests__/linkify.test.ts",
+        "packages/ui/src/components/markdown/__tests__/markdown-link-routing.test.ts",
+        "packages/ui/src/components/markdown/__tests__/markdown-preview-helpers.test.ts",
+        "packages/ui/src/components/markdown/__tests__/math-options.test.ts",
+        "packages/ui/src/components/markdown/__tests__/official-markdown-math-foundation.test.ts",
+        "packages/ui/src/components/markdown/__tests__/safe-components.test.ts",
+        "packages/ui/src/components/markdown/__tests__/table-export.test.ts",
+        "packages/ui/src/components/markdown/__tests__/tiptap-mermaid-input-helpers.test.ts",
+        "packages/ui/src/components/markdown/__tests__/tiptap-slash-menu.test.ts",
+        "packages/ui/src/components/overlay/__tests__/fullscreen-overlay-escape-stack.test.ts",
+        "packages/ui/src/components/overlay/__tests__/rich-block-parity.test.ts",
+        "packages/ui/src/components/overlay/__tests__/useRichBlockInteractions.test.ts",
+        "packages/ui/src/components/ui/__tests__/Island.escape.test.ts",
+        "packages/ui/src/components/ui/__tests__/styled-dropdown.test.ts",
+        "packages/ui/src/lib/__tests__/tool-parsers-cards.test.ts",
+        "packages/ui/src/components/chat/__tests__/JourneyOutcome.test.tsx",
+        "packages/ui/src/components/chat/__tests__/JourneyProgress.test.tsx",
+        "packages/ui/src/components/chat/__tests__/UserInputCard.test.tsx",
+        "packages/ui/src/components/chat/__tests__/tool-checkpoint-render.test.tsx",
+        "packages/ui/src/components/chat/__tests__/turncard-codex-presentation.test.tsx"
+      ]
+    },
+    {
+      "config": "apps/cli/tsconfig.json",
+      "include": [
+        "src/**/*",
+        "../../packages/shared/src/**/*.d.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 4,
+      "configuredTestFiles": 4,
+      "excludedTests": []
+    },
+    {
+      "config": "apps/electron/tsconfig.json",
+      "include": [
+        "src/**/*",
+        "../../packages/shared/src/**/*.d.ts",
+        "../../scripts/robb-completion-live-check.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 155,
+      "configuredTestFiles": 154,
+      "excludedTests": [
+        "apps/electron/eslint-rules/__tests__/no-hardcoded-z-index.test.ts"
+      ]
+    },
+    {
+      "config": "apps/viewer/tsconfig.json",
+      "include": [
+        "src"
+      ],
+      "testFiles": 0,
+      "configuredTestFiles": 0,
+      "excludedTests": []
+    },
+    {
+      "config": "apps/viewer/tsconfig.node.json",
+      "include": [
+        "vite.config.ts",
+        "../../scripts/pdf-worker-resolution.ts"
+      ],
+      "testFiles": 0,
+      "configuredTestFiles": 0,
+      "excludedTests": []
+    },
+    {
+      "config": "apps/webui/tsconfig.json",
+      "include": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "../electron/src/renderer/**/*.ts",
+        "../electron/src/renderer/**/*.tsx",
+        "../electron/src/shared/**/*.ts",
+        "../electron/src/transport/**/*.ts",
+        "../../packages/shared/src/**/*.d.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 12,
+      "configuredTestFiles": 12,
+      "excludedTests": []
+    },
+    {
+      "config": "scripts/tsconfig.json",
+      "include": [
+        "apply-minimatch-compat.ts",
+        "generate-github-update-manifests.ts",
+        "robb-provider-canaries.ts",
+        "validate-electron-package-security.ts",
+        "validate-release-bundle.ts",
+        "verify-proof-passport.ts",
+        "verify-github-release-assets.ts",
+        "tests/apply-minimatch-compat.test.ts",
+        "tests/generate-github-update-manifests.test.ts",
+        "tests/provider-canaries.test.ts",
+        "tests/validate-workspace-versions.test.ts",
+        "tests/validate-release-bundle.test.ts",
+        "tests/verify-proof-passport.test.ts",
+        "tests/verify-github-release-assets.test.ts",
+        "validate-workspace-versions.ts",
+        "robb-human-benchmark.ts",
+        "robb-autonomy-acceptance.ts",
+        "test-autonomy-audit.ts"
+      ],
+      "testFiles": 15,
+      "configuredTestFiles": 7,
+      "excludedTests": [
+        "scripts/robb-recovery-campaign.test.ts",
+        "scripts/__tests__/pdf-worker-resolution.test.ts",
+        "scripts/tests/after-pack-uv.test.ts",
+        "scripts/tests/build-provenance.test.ts",
+        "scripts/tests/prepare-rtk.test.ts",
+        "scripts/tests/prepare-uv.test.ts",
+        "scripts/tests/release-integrity.test.ts",
+        "scripts/tests/source-quality.test.ts"
+      ]
+    }
+  ]
+}

@@ -21,11 +21,11 @@ interface ConnectionIconProps {
   /** The connection to display an icon for */
   connection: Pick<LlmConnectionWithStatus, 'name' | 'providerType' | 'baseUrl' | 'piAuthProvider'> & { type?: string; defaultModel?: string }
   /** Size in pixels (default: 16) */
-  size?: number
+  size?: number | undefined
   /** Additional CSS classes */
-  className?: string
+  className?: string | undefined
   /** Show tooltip with connection name + model on hover (default: false) */
-  showTooltip?: boolean
+  showTooltip?: boolean | undefined
 }
 
 export function ConnectionIcon({ connection, size = 16, className = '', showTooltip = false }: ConnectionIconProps) {

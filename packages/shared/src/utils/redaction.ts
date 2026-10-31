@@ -1,3 +1,4 @@
+import { isUnknownArray } from './json.ts';
 const SECRET_PATTERNS: ReadonlyArray<{ pattern: RegExp; replacement: string }> = [
   { pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g, replacement: '[REDACTED]' },
   { pattern: /\b(?:sk|sk-proj|sk-ant|ghp|github_pat)_[A-Za-z0-9_-]{12,}\b/g, replacement: '[REDACTED]' },
@@ -33,10 +34,10 @@ export function redactSecretLikeMaterial(content: string): string {
 /** Recursively redact JSON-compatible session/tool data without changing its shape. */
 export function redactStructuredSecrets<T>(value: T): T {
   if (typeof value === 'string') return redactSecretLikeMaterial(value) as T;
-  if (Array.isArray(value)) return value.map((item) => redactStructuredSecrets(item)) as T;
+  if (isUnknownArray(value)) return value.map((item: unknown) => redactStructuredSecrets(item)) as T;
   if (typeof value === 'object' && value !== null) {
     const redacted = Object.fromEntries(
-      Object.entries(value).map(([key, nested]) => [key, redactStructuredSecrets(nested)]),
+      Object.entries(value as Record<string, unknown>).map(([key, nested]) => [key, redactStructuredSecrets(nested)]),
     );
     return redacted as T;
   }

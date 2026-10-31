@@ -9,27 +9,9 @@
  */
 import { describe, expect, it } from 'bun:test';
 import { PiAgent } from '../pi-agent.ts';
-import type { BackendConfig } from '../backend/types.ts';
+import { createPiAgentTestConfig } from './fixtures/pi-agent-config.ts';
 import type { LLMQueryRequest, LLMQueryResult } from '../llm-tool.ts';
 
-function createConfig(overrides: Partial<BackendConfig> = {}): BackendConfig {
-  return {
-    provider: 'pi',
-    workspace: {
-      id: 'ws-test',
-      name: 'Test Workspace',
-      rootPath: '/tmp/craft-agent-test',
-    } as any,
-    session: {
-      id: 'session-test',
-      workspaceRootPath: '/tmp/craft-agent-test',
-      createdAt: Date.now(),
-      lastUsedAt: Date.now(),
-    } as any,
-    isHeadless: true,
-    ...overrides,
-  };
-}
 
 /**
  * Install a minimal subprocess stub so ensureSubprocess() resolves immediately
@@ -37,9 +19,10 @@ function createConfig(overrides: Partial<BackendConfig> = {}): BackendConfig {
  */
 function installFakeSubprocess(agent: PiAgent): { sent: Array<Record<string, unknown>> } {
   const sent: Array<Record<string, unknown>> = [];
-  (agent as any).ensureSubprocess = async () => {};
-  (agent as any).send = (cmd: Record<string, unknown>) => {
+  agent.ensureSubprocess = async () => {};
+  agent['send'] = (cmd: Record<string, unknown>) => {
     sent.push(cmd);
+    return true;
   };
   return { sent };
 }
@@ -55,14 +38,14 @@ async function flushMicrotasks(): Promise<void> {
 
 describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
   it('inherits the current selected model instead of the configured metadata mini model', async () => {
-    const agent = new PiAgent(createConfig({ model: 'pi/gpt-5.5', miniModel: 'pi/gpt-5-mini' }));
+    const agent = new PiAgent(createPiAgentTestConfig({ model: 'pi/gpt-5.5', miniModel: 'pi/gpt-5-mini' }));
     const { sent } = installFakeSubprocess(agent);
     agent.setModel('pi/gpt-5.6-sol');
     const pending = agent.queryLlm({ prompt: 'Review the task result' });
     await flushMicrotasks();
-    expect((sent[0]!.request as LLMQueryRequest).model).toBe('pi/gpt-5.6-sol');
-    (agent as any).handleLine(JSON.stringify({
-      type: 'llm_query_result', id: sent[0]!.id,
+    expect((sent[0]!["request"] as LLMQueryRequest).model).toBe('pi/gpt-5.6-sol');
+    agent.handleLine(JSON.stringify({
+      type: 'llm_query_result', id: sent[0]!["id"],
       result: { text: 'reviewed', model: 'pi/gpt-5.6-sol' },
     }));
     expect((await pending).text).toBe('reviewed');
@@ -70,7 +53,7 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
   });
 
   it('propagates the full LLMQueryRequest shape over the llm_query RPC unchanged', async () => {
-    const agent = new PiAgent(createConfig({ model: 'pi/gpt-5-mini' }));
+    const agent = new PiAgent(createPiAgentTestConfig({ model: 'pi/gpt-5-mini' }));
     const { sent } = installFakeSubprocess(agent);
 
     const request: LLMQueryRequest = {
@@ -88,19 +71,19 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
 
     expect(sent).toHaveLength(1);
     const outbound = sent[0]!;
-    expect(outbound.type).toBe('llm_query');
-    expect(typeof outbound.id).toBe('string');
-    expect(outbound.allowModelSubstitution).toBe(false);
+    expect(outbound["type"]).toBe('llm_query');
+    expect(typeof outbound["id"]).toBe('string');
+    expect(outbound["allowModelSubstitution"]).toBe(false);
 
     // DRIFT GUARD: the outbound envelope must carry the entire request shape
     // byte-for-byte. If someone adds a field to LLMQueryRequest but doesn't
     // propagate it, this fails — prompting them to revisit queryLlm.
-    expect(JSON.stringify(outbound.request)).toBe(JSON.stringify(request));
+    expect(JSON.stringify(outbound["request"])).toBe(JSON.stringify(request));
 
     // Resolve the pending query so the test doesn't hang.
-    (agent as any).handleLine(JSON.stringify({
+    agent.handleLine(JSON.stringify({
       type: 'llm_query_result',
-      id: outbound.id,
+      id: outbound["id"],
       result: { text: 'ok', model: 'pi/gpt-5-mini' },
     }));
 
@@ -111,7 +94,7 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
   });
 
   it('drops a model override and inherits the active model for the public selected-model contract', async () => {
-    const agent = new PiAgent(createConfig({
+    const agent = new PiAgent(createPiAgentTestConfig({
       model: 'pi/gpt-5.6-sol',
 
     }));
@@ -121,9 +104,9 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
     await flushMicrotasks();
 
     const outbound = sent[0]!;
-    expect((outbound.request as LLMQueryRequest).model).toBe('pi/gpt-5.6-sol');
-    (agent as any).handleLine(JSON.stringify({
-      type: 'llm_query_result', id: outbound.id,
+    expect((outbound["request"] as LLMQueryRequest).model).toBe('pi/gpt-5.6-sol');
+    agent.handleLine(JSON.stringify({
+      type: 'llm_query_result', id: outbound["id"],
       result: { text: 'ok', model: 'pi/gpt-5.6-sol' },
     }));
     expect(await pending).toEqual({ text: 'ok', model: 'pi/gpt-5.6-sol' });
@@ -131,7 +114,7 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
   });
 
   it('keeps the active model when the model is pinned', async () => {
-    const agent = new PiAgent(createConfig({
+    const agent = new PiAgent(createPiAgentTestConfig({
       model: 'pi/gpt-5.6-sol',
 
       isModelRoutePinned: () => true,
@@ -142,10 +125,10 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
     await flushMicrotasks();
 
     const outbound = sent[0]!;
-    expect(outbound.allowModelSubstitution).toBe(false);
-    expect((outbound.request as LLMQueryRequest).model).toBe('pi/gpt-5.6-sol');
-    (agent as any).handleLine(JSON.stringify({
-      type: 'llm_query_result', id: outbound.id,
+    expect(outbound["allowModelSubstitution"]).toBe(false);
+    expect((outbound["request"] as LLMQueryRequest).model).toBe('pi/gpt-5.6-sol');
+    agent.handleLine(JSON.stringify({
+      type: 'llm_query_result', id: outbound["id"],
       result: { text: 'ok', model: 'pi/gpt-5.6-sol' },
     }));
     expect(await pending).toEqual({ text: 'ok', model: 'pi/gpt-5.6-sol' });
@@ -154,7 +137,7 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
 
   it('rechecks a false-to-true pin transition after an awaited provider fence', async () => {
     let pinned = false;
-    const agent = new PiAgent(createConfig({
+    const agent = new PiAgent(createPiAgentTestConfig({
       model: 'pi/gpt-5.6-sol',
 
       isModelRoutePinned: () => pinned,
@@ -169,10 +152,10 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
     await flushMicrotasks();
 
     const outbound = sent[0]!;
-    expect(outbound.allowModelSubstitution).toBe(false);
-    expect((outbound.request as LLMQueryRequest).model).toBe('pi/gpt-5.6-sol');
-    (agent as any).handleLine(JSON.stringify({
-      type: 'llm_query_result', id: outbound.id,
+    expect(outbound["allowModelSubstitution"]).toBe(false);
+    expect((outbound["request"] as LLMQueryRequest).model).toBe('pi/gpt-5.6-sol');
+    agent.handleLine(JSON.stringify({
+      type: 'llm_query_result', id: outbound["id"],
       result: { text: 'ok', model: 'pi/gpt-5.6-sol' },
     }));
     await pending;
@@ -180,7 +163,7 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
   });
 
   it('marks mini completions as non-substitutable under a manual model pin', async () => {
-    const agent = new PiAgent(createConfig({
+    const agent = new PiAgent(createPiAgentTestConfig({
       model: 'pi/gpt-5.6-sol',
       miniModel: 'pi/gpt-5-mini',
 
@@ -192,22 +175,22 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
     await flushMicrotasks();
 
     const outbound = sent[0]!;
-    expect(outbound.type).toBe('mini_completion');
-    expect(outbound.allowModelSubstitution).toBe(false);
-    (agent as any).handleLine(JSON.stringify({
-      type: 'mini_completion_result', id: outbound.id, text: 'Title',
+    expect(outbound["type"]).toBe('mini_completion');
+    expect(outbound["allowModelSubstitution"]).toBe(false);
+    agent.handleLine(JSON.stringify({
+      type: 'mini_completion_result', id: outbound["id"], text: 'Title',
     }));
     expect(await pending).toBe('Title');
     agent.destroy();
   });
 
   it('resolves queryLlm with the exact returned text and model', async () => {
-    const agent = new PiAgent(createConfig());
+    const agent = new PiAgent(createPiAgentTestConfig());
     const { sent } = installFakeSubprocess(agent);
 
     const pending = agent.queryLlm({ prompt: 'hi' });
     await flushMicrotasks();
-    const id = sent[0]!.id as string;
+    const id = sent[0]!["id"] as string;
 
     const expected: LLMQueryResult = {
       text: 'hello world',
@@ -216,7 +199,7 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
       outputTokens: 3,
     };
 
-    (agent as any).handleLine(JSON.stringify({
+    agent.handleLine(JSON.stringify({
       type: 'llm_query_result',
       id,
       result: expected,
@@ -224,18 +207,18 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
 
     const result = await pending;
     expect(result).toEqual(expected);
-    expect((agent as any).pendingLlmQueries.size).toBe(0);
+    expect(agent.pendingLlmQueries.size).toBe(0);
 
     agent.destroy();
   });
 
   it('rejects queryLlm and fires refreshAndPushTokens on auth errors for OAuth connections', async () => {
-    const agent = new PiAgent(createConfig({ authType: 'oauth' }));
+    const agent = new PiAgent(createPiAgentTestConfig({ authType: 'oauth' }));
     const { sent } = installFakeSubprocess(agent);
 
     // Stub refreshAndPushTokens so we can observe the auth-refresh attempt.
     let refreshAttempts = 0;
-    (agent as any).refreshAndPushTokens = async () => {
+    agent.refreshAndPushTokens = async () => {
       refreshAttempts++;
     };
 
@@ -246,7 +229,7 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
     // Simulate the subprocess dual-emit: generic `error` first (triggers
     // centralized auth refresh), then the targeted `llm_query_result` that
     // rejects the specific promise.
-    (agent as any).handleLine(JSON.stringify({
+    agent.handleLine(JSON.stringify({
       type: 'error',
       code: 'llm_query_error',
       message: 'HTTP 401: Unauthorized',
@@ -267,20 +250,20 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
     // Yield once so the async refresh closure schedules.
     await new Promise((r) => setTimeout(r, 0));
     expect(refreshAttempts).toBe(1);
-    expect((agent as any).pendingLlmQueries.size).toBe(0);
+    expect(agent.pendingLlmQueries.size).toBe(0);
 
     agent.destroy();
   });
 
   it('rejects queryLlm with a timeout message when no result arrives in time', async () => {
-    const agent = new PiAgent(createConfig());
+    const agent = new PiAgent(createPiAgentTestConfig());
     installFakeSubprocess(agent);
 
     // Shrink the wait so we don't actually block for 120s in the test.
     // The implementation uses LLM_QUERY_TIMEOUT_MS via setTimeout; we intercept
     // setTimeout to fire the timer synchronously-ish.
     const originalSetTimeout = globalThis.setTimeout;
-    (globalThis as any).setTimeout = ((fn: () => void) => {
+    globalThis.setTimeout = ((fn: () => void) => {
       return originalSetTimeout(fn, 1);
     }) as typeof setTimeout;
 
@@ -294,33 +277,35 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
 
       expect(rejection).not.toBeNull();
       expect(rejection!.message).toMatch(/timed out/i);
-      expect((agent as any).pendingLlmQueries.size).toBe(0);
+      expect(agent.pendingLlmQueries.size).toBe(0);
     } finally {
-      (globalThis as any).setTimeout = originalSetTimeout;
+      globalThis.setTimeout = originalSetTimeout;
     }
 
     agent.destroy();
   });
 
   it('rejects all pending queryLlm calls when the subprocess exits', async () => {
-    const agent = new PiAgent(createConfig());
+    const agent = new PiAgent(createPiAgentTestConfig());
     installFakeSubprocess(agent);
 
     const p1 = agent.queryLlm({ prompt: 'one' });
     const p2 = agent.queryLlm({ prompt: 'two' });
     await flushMicrotasks();
 
-    expect((agent as any).pendingLlmQueries.size).toBe(2);
+    expect(agent.pendingLlmQueries.size).toBe(2);
 
     // Simulate subprocess death (the exit handler clears pending queries).
-    (agent as any).handleSubprocessExit(1, null);
+    agent.handleSubprocessExit(1, null);
 
     const [r1, r2] = await Promise.allSettled([p1, p2]);
     expect(r1.status).toBe('rejected');
     expect(r2.status).toBe('rejected');
-    expect((r1 as PromiseRejectedResult).reason.message).toMatch(/subprocess exited/i);
-    expect((r2 as PromiseRejectedResult).reason.message).toMatch(/subprocess exited/i);
-    expect((agent as any).pendingLlmQueries.size).toBe(0);
+    const reason1: unknown = r1.status === "rejected" ? r1.reason : undefined;
+    const reason2: unknown = r2.status === "rejected" ? r2.reason : undefined;
+    expect(reason1).toMatchObject({ message: (expect.stringMatching(/subprocess exited/i) as unknown) });
+    expect(reason2).toMatchObject({ message: (expect.stringMatching(/subprocess exited/i) as unknown) });
+    expect(agent.pendingLlmQueries.size).toBe(0);
 
     agent.destroy();
   });

@@ -18,7 +18,6 @@ import {
 } from '../../config/watcher.ts';
 import type { LoadedSource } from '../../sources/types.ts';
 import type { LoadedSkill } from '../../skills/types.ts';
-import type { ValidationResult } from '../../config/validators.ts';
 import { debug } from '../../utils/debug.ts';
 
 // ============================================================

@@ -11,10 +11,12 @@ export interface ToolLoopHintMessage {
   details: { schemaVersion: 1; toolCallId: string };
 }
 export interface ToolLoopFeedbackChannel {
-  session: Pick<AgentSession, 'isStreaming' | 'agent'> | null;
+  session: (Pick<AgentSession, 'isStreaming'> & {
+    agent: { transformContext?: AgentSession['agent']['transformContext'] | undefined };
+  }) | null;
   isCurrentSession: () => boolean;
   toolCallId: string;
-  signal?: AbortSignal;
+  signal?: AbortSignal | undefined;
   onHint?: (message: ToolLoopHintMessage) => void;
   onError?: (error: unknown) => void;
 }
@@ -52,7 +54,7 @@ export function installToolLoopFeedback(session: NonNullable<ToolLoopFeedbackCha
 }
 
 /** Return the exact authoritative result; model/UI guidance travels separately. */
-export async function finishToolLoopResult<T extends AgentToolResult<any>>(
+export async function finishToolLoopResult<T extends AgentToolResult<unknown>>(
   result: T, decision: ToolLoopDecision, channel: ToolLoopFeedbackChannel,
 ): Promise<T> {
   const { session, signal } = channel;

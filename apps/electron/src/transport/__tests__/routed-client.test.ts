@@ -3,30 +3,28 @@
  */
 
 import { describe, it, expect, mock } from 'bun:test'
-import { RoutedClient } from '../routed-client'
-import type { WsRpcClient, TransportConnectionState } from '../client'
+import { RoutedClient, type RoutedTransportClient } from '../routed-client'
+import type { TransportConnectionState } from '../client'
+import type { RpcListener, CapabilityHandler } from '@craft-agent/server-core/transport'
 
 // ---------------------------------------------------------------------------
 // Minimal WsRpcClient stub
 // ---------------------------------------------------------------------------
 
-function stubClient(overrides?: Partial<WsRpcClient>): WsRpcClient {
-  const listeners = new Map<string, Set<(...args: any[]) => void>>()
-  const capabilities = new Map<string, (...args: any[]) => any>()
+function stubClient(overrides?: Partial<RoutedTransportClient>): RoutedTransportClient {
+  const listeners = new Map<string, Set<RpcListener>>()
 
   return {
     connect: mock(() => {}),
     destroy: mock(() => {}),
     invoke: mock(async () => undefined),
-    on: mock((channel: string, cb: (...args: any[]) => void) => {
+    on: mock((channel: string, cb: RpcListener) => {
       let set = listeners.get(channel)
       if (!set) { set = new Set(); listeners.set(channel, set) }
       set.add(cb)
       return () => { set!.delete(cb) }
     }),
-    handleCapability: mock((channel: string, handler: (...args: any[]) => any) => {
-      capabilities.set(channel, handler)
-    }),
+    handleCapability: mock((_channel: string, _handler: CapabilityHandler) => {}),
     isChannelAvailable: mock(() => true),
     getConnectionState: mock((): TransportConnectionState => ({
       mode: 'local', status: 'connected', url: 'ws://127.0.0.1:9000', attempt: 0, updatedAt: Date.now(),
@@ -40,14 +38,11 @@ function stubClient(overrides?: Partial<WsRpcClient>): WsRpcClient {
       const set = listeners.get('__transport:reconnected')
       if (!set) return
       for (const cb of set) {
-        try { cb(isStale) } catch { /* listener errors must not break transport */ }
+        try { (cb as RpcListener<[boolean]>)(isStale) } catch { /* listener errors must not break transport */ }
       }
     }),
-    // expose internals for assertions
-    _listeners: listeners,
-    _capabilities: capabilities,
     ...overrides,
-  } as any
+  }
 }
 
 // Use real channel constants — RoutedClient routes based on isLocalOnly()
@@ -90,7 +85,7 @@ describe('RoutedClient', () => {
       routed.on(LOCAL_CHANNEL, cb)
 
       expect(local.on).toHaveBeenCalledWith(LOCAL_CHANNEL, cb)
-      expect(workspace.on).not.toHaveBeenCalledWith(LOCAL_CHANNEL, expect.any(Function))
+      expect<unknown>(workspace.on).not.toHaveBeenCalledWith(LOCAL_CHANNEL, (expect.any(Function) as unknown))
     })
 
     it('routes REMOTE_ELIGIBLE listeners to workspaceClient', () => {

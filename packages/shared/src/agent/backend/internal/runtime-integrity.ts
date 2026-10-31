@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../../utils/json.ts';
 import { createHash } from 'node:crypto';
 import { lstatSync, readFileSync } from 'node:fs';
 import { relative, resolve, sep } from 'node:path';
@@ -7,7 +8,6 @@ export const RUNTIME_INTEGRITY_MANIFEST_ASAR_PATH = 'dist/runtime-integrity-mani
 export const REQUIRED_PACKAGED_EXTERNAL_RUNTIME_PATHS = [
   'app/dist/interceptor.cjs',
   'app/node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs',
-  'app/resources/bridge-mcp-server/index.js',
   'app/resources/pi-agent-server/antigravity-server.js',
   'app/resources/pi-agent-server/index.js',
   'app/resources/pi-agent-server/vibe-acp-server.js',
@@ -53,21 +53,21 @@ function assertSafeManifestPath(path: unknown): asserts path is string {
 }
 
 function parseEntry(value: unknown): RuntimeIntegrityEntry {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+  if (!value || typeof value !== 'object' || isUnknownArray(value)) {
     throw new Error('Runtime integrity entry must be an object');
   }
   const record = value as Record<string, unknown>;
-  assertSafeManifestPath(record.path);
-  if (!Number.isSafeInteger(record.size) || (record.size as number) < 0) {
-    throw new Error(`Runtime integrity entry has invalid size: ${record.path}`);
+  assertSafeManifestPath(record["path"]);
+  if (!Number.isSafeInteger(record["size"]) || (record["size"] as number) < 0) {
+    throw new Error(`Runtime integrity entry has invalid size: ${record["path"]}`);
   }
-  if (typeof record.sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(record.sha256)) {
-    throw new Error(`Runtime integrity entry has invalid SHA-256: ${record.path}`);
+  if (typeof record["sha256"] !== 'string' || !/^[0-9a-f]{64}$/.test(record["sha256"])) {
+    throw new Error(`Runtime integrity entry has invalid SHA-256: ${record["path"]}`);
   }
   return {
-    path: record.path,
-    size: record.size as number,
-    sha256: record.sha256,
+    path: record["path"],
+    size: record["size"] as number,
+    sha256: record["sha256"],
   };
 }
 
@@ -75,20 +75,20 @@ export function parseRuntimeIntegrityManifest(value: unknown): RuntimeIntegrityM
   const parsedValue = typeof value === 'string' || Buffer.isBuffer(value)
     ? JSON.parse(value.toString()) as unknown
     : value;
-  if (!parsedValue || typeof parsedValue !== 'object' || Array.isArray(parsedValue)) {
+  if (!parsedValue || typeof parsedValue !== 'object' || isUnknownArray(parsedValue)) {
     throw new Error('Runtime integrity manifest must be an object');
   }
   const record = parsedValue as Record<string, unknown>;
-  if (record.schemaVersion !== RUNTIME_INTEGRITY_MANIFEST_SCHEMA_VERSION) {
-    throw new Error(`Unsupported runtime integrity manifest version: ${String(record.schemaVersion)}`);
+  if (record["schemaVersion"] !== RUNTIME_INTEGRITY_MANIFEST_SCHEMA_VERSION) {
+    throw new Error(`Unsupported runtime integrity manifest version: ${String(record["schemaVersion"])}`);
   }
-  if (record.algorithm !== 'sha256') {
-    throw new Error(`Unsupported runtime integrity algorithm: ${String(record.algorithm)}`);
+  if (record["algorithm"] !== 'sha256') {
+    throw new Error(`Unsupported runtime integrity algorithm: ${String(record["algorithm"])}`);
   }
-  if (!Array.isArray(record.entries) || record.entries.length === 0 || record.entries.length > 10_000) {
+  if (!isUnknownArray(record["entries"]) || record["entries"].length === 0 || record["entries"].length > 10_000) {
     throw new Error('Runtime integrity manifest entries must be a non-empty bounded array');
   }
-  const entries = record.entries.map(parseEntry);
+  const entries = record["entries"].map(parseEntry);
   for (let index = 1; index < entries.length; index += 1) {
     if (entries[index - 1]!.path >= entries[index]!.path) {
       throw new Error('Runtime integrity manifest entries must be unique and sorted by path');
@@ -156,7 +156,7 @@ export function verifyRuntimeIntegrityManifest(
     if (!relativePath || relativePath === '..' || relativePath.startsWith(`..${sep}`)) {
       throw new Error(`Runtime integrity path escapes resources root: ${entry.path}`);
     }
-    let stat;
+    let stat: import('node:fs').Stats;
     try {
       stat = lstatSync(filePath);
     } catch {

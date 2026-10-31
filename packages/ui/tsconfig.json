@@ -7,13 +7,44 @@
     "declarationDir": "./dist",
     "jsx": "react-jsx",
     "moduleResolution": "bundler",
-    "types": ["node", "vite/client"],
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": [
+      "node",
+      "bun"
+    ],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "paths": {
-      "@craft-agent/core": ["../core/src/index.ts"],
-      "@craft-agent/core/*": ["../core/src/*"]
-    }
+      "@craft-agent/core": [
+        "../core/src/index.ts"
+      ],
+      "@craft-agent/core/*": [
+        "../core/src/*"
+      ]
+    },
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "allowJs": false,
+    "skipLibCheck": false,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "src/**/__tests__"]
+  "include": [
+    "src/**/*",
+    "eslint-rules/**/*.ts",
+    "tests/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

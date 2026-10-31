@@ -24,7 +24,7 @@ describe('sandbox-env', () => {
 
     const sanitized = createSanitizedEnv(base);
 
-    expect(sanitized.SAFE_VAR).toBe('ok');
+    expect(sanitized["SAFE_VAR"]).toBe('ok');
     for (const key of BLOCKED_ENV_VARS) {
       expect(sanitized[key]).toBeUndefined();
     }
@@ -42,20 +42,20 @@ describe('sandbox-env', () => {
       OPENAI_API_KEY: 'secret',
     });
 
-    expect(env.SAFE_VAR).toBe('ok');
-    expect(env.OPENAI_API_KEY).toBeUndefined();
+    expect(env["SAFE_VAR"]).toBe('ok');
+    expect(env["OPENAI_API_KEY"]).toBeUndefined();
 
-    expect(env.TMPDIR).toBe(join(dataDir, '.tmp'));
-    expect(env.TMP).toBe(join(dataDir, '.tmp'));
-    expect(env.TEMP).toBe(join(dataDir, '.tmp'));
-    expect(env.UV_CACHE_DIR).toBe(join(dataDir, '.uv-cache'));
-    expect(env.XDG_CACHE_HOME).toBe(join(dataDir, '.cache'));
-    expect(env.PYTHONPYCACHEPREFIX).toBe(join(dataDir, '.pycache'));
+    expect(env["TMPDIR"]).toBe(join(dataDir, '.tmp'));
+    expect(env["TMP"]).toBe(join(dataDir, '.tmp'));
+    expect(env["TEMP"]).toBe(join(dataDir, '.tmp'));
+    expect(env["UV_CACHE_DIR"]).toBe(join(dataDir, '.uv-cache'));
+    expect(env["XDG_CACHE_HOME"]).toBe(join(dataDir, '.cache'));
+    expect(env["PYTHONPYCACHEPREFIX"]).toBe(join(dataDir, '.pycache'));
 
-    expect(existsSync(env.TMPDIR!)).toBe(true);
-    expect(existsSync(env.UV_CACHE_DIR!)).toBe(true);
-    expect(existsSync(env.XDG_CACHE_HOME!)).toBe(true);
-    expect(existsSync(env.PYTHONPYCACHEPREFIX!)).toBe(true);
+    expect(existsSync(env["TMPDIR"]!)).toBe(true);
+    expect(existsSync(env["UV_CACHE_DIR"]!)).toBe(true);
+    expect(existsSync(env["XDG_CACHE_HOME"]!)).toBe(true);
+    expect(existsSync(env["PYTHONPYCACHEPREFIX"]!)).toBe(true);
   });
 
   it('does not add python-specific cache vars for node runtime', () => {
@@ -65,11 +65,31 @@ describe('sandbox-env', () => {
     const env = createScriptRuntimeEnv({
       language: 'node',
       dataDir,
+    }, {
+      SAFE_VAR: 'ok',
     });
 
-    expect(env.TMPDIR).toBe(join(dataDir, '.tmp'));
-    expect(env.UV_CACHE_DIR).toBeUndefined();
-    expect(env.XDG_CACHE_HOME).toBeUndefined();
-    expect(env.PYTHONPYCACHEPREFIX).toBeUndefined();
+    expect(env["TMPDIR"]).toBe(join(dataDir, '.tmp'));
+    expect(env["UV_CACHE_DIR"]).toBeUndefined();
+    expect(env["XDG_CACHE_HOME"]).toBeUndefined();
+    expect(env["PYTHONPYCACHEPREFIX"]).toBeUndefined();
+  });
+
+  it('preserves existing host cache vars for node without creating Python caches', () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'sandbox-env-node-host-'));
+    createdDirs.push(dataDir);
+    const base = {
+      UV_CACHE_DIR: '/host/uv-cache',
+      XDG_CACHE_HOME: '/host/cache',
+      PYTHONPYCACHEPREFIX: '/host/pycache',
+    };
+
+    const env = createScriptRuntimeEnv({ language: 'node', dataDir }, base);
+
+    expect(env).toMatchObject(base);
+    expect(env["TMPDIR"]).toBe(join(dataDir, '.tmp'));
+    for (const name of ['.uv-cache', '.cache', '.pycache']) {
+      expect(existsSync(join(dataDir, name))).toBe(false);
+    }
   });
 });

@@ -1,0 +1,2540 @@
+{
+  "source": "packages/server-core/src/sessions/SessionManager.ts",
+  "methods": 422,
+  "facadeMethods": 152,
+  "runtimeStatePreserved": true,
+  "nativeBodiesAndParameters": [
+    {
+      "name": "setProcessing",
+      "nativeBodyHash": "16c9d9efd171711a24fdecfd69bbf74dbf68f07128e02a6683dceb8c3af9ae42",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "emitExecutionTelemetry",
+      "nativeBodyHash": "4b6555d2e9e6ae57e326575fb4521048792441c386690d6c84d364e486c47cd0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "startGenerationTelemetry",
+      "nativeBodyHash": "84c7e55174d1805685106d7b99d6c92773d0aedf2f9fce0e55d7f759e20668cf",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "finishGenerationTelemetry",
+      "nativeBodyHash": "0863135477dfd9f32c09c124adc3e21bb82cb1fe5ae39846c5fddf4598a653c8",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "finishAllGenerationTelemetry",
+      "nativeBodyHash": "84616cc2687bcceb77a239dd2d9a6e57a5a09260bdb5e58787b109d4b0198e2b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "recordRetryTelemetry",
+      "nativeBodyHash": "04f059c51d76ccf74256b70bd8c49f00ad59b616cc6c88b6ace8df4001743e56",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "finishCompactionTelemetry",
+      "nativeBodyHash": "db3d3965ad17e2a286fa72ea04b2962c52cb6ed913c47b73134bd6cc47b5753e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "waitForInit",
+      "nativeBodyHash": "0f3a85174726e22d1383289ed414b1a98189b33b9fe952bec3f84803d5b14f06",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setAutomationBinder",
+      "nativeBodyHash": "5d1b461cdf11642ebe08066a851057b105be744bd671fbf0fb4300816f0e48ae",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setEventSink",
+      "nativeBodyHash": "22beb80bd829f5838fb597eb0d744587396ab7abb97a03ed5af6064969f6a041",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setBrowserPaneManager",
+      "nativeBodyHash": "90a2292a6d60e85153aa221ae007b60df4e1f979f5754996fa1a2321a93c070b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setRpcServer",
+      "nativeBodyHash": "2dbd92445926e3183cc4c314c1f31b8a2ec0b41c77ee832f58fbbae8fd60e455",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getBrowserPaneManagerForSession",
+      "nativeBodyHash": "1a4c643d3d6f7d57ddf0c121fbb757d5545e32464d34eff7e5872170f35083e8",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setLastMessageClientId",
+      "nativeBodyHash": "f121b620fde47cf521cb848c5294a84ac9646e4fc9922849f4cb281199d71b90",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "onClientDisconnected",
+      "nativeBodyHash": "26549bdce50ae3a289e6358fb2fba762a7f864c41d8257ba59c4869304d98f98",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getBrowserHostClient",
+      "nativeBodyHash": "0ac4f4e103420af5225f9d09b269785aec37df2bd6ed3dd30496dd3a36cf2a8e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "monotonic",
+      "nativeBodyHash": "c9e9d3f894a10446febb4030ac6273e96ea99810ab8f824ca76eaf5510be2dcd",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasActiveAdminRememberApproval",
+      "nativeBodyHash": "6f657d45ef60846a6a9a8ef3ec774638414707331a2a6e64e8d300990c9eb06a",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "storeAdminRememberApproval",
+      "nativeBodyHash": "91b7df1cdbee333622d68079d7d1b1fbc10d90b12dc14dde6806631db596bbd0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "clearAdminRememberApprovalsForSession",
+      "nativeBodyHash": "2ee3284479692ceb4063386f0841fdbda70c7d7a59e2b56a65944acf848f868d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "clearPendingPermissionRequestsForSession",
+      "nativeBodyHash": "81e330c2fede9b4d4412baeda07882a6e0727f5c5b312a3b4e5c805640cb4761",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "rejectPendingPrivilegedApproval",
+      "nativeBodyHash": "8f0637f114b50d93e1deacef36c8d72168ab86d2e2adbe655686cc248cc83364",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "denyPermissionOnRecordedRuntime",
+      "nativeBodyHash": "ed8dbdfacf2d6b61e2a6b5511ff3ded94857109c4024ded5f56e64b3117005fb",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "expirePendingPermissionRequest",
+      "nativeBodyHash": "f8c7aa7b9e7b8d86f24bd6a967dba1787c127d07bd212f368e091d07514d6c19",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "markPermissionToolNotExecuted",
+      "nativeBodyHash": "ce697f7b1df35712fb481e9a7d6c88ee106a429fd82729c1edfa981b01e94082",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "recordDeniedPermissionBeforeProviderResume",
+      "nativeBodyHash": "ad171aae931ccce54106b6e8841e5837c1a91b0b568e6cb2b7f9af2abcb2c254",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "denyPermissionRequestDuringShutdown",
+      "nativeBodyHash": "5d6b71bd81b0ff2eb4bf0f04104b803970e6450f6bd580718d5d657aeec1dcdf",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "terminalizeExpiredPermissionWait",
+      "nativeBodyHash": "46924328fd86e0d36153a49c1051516651ea94ab875176b084bad623758c414f",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "finishExpiredPermissionWait",
+      "nativeBodyHash": "b8ea38490ef4578b99f1a20f3f57f683c22c66cf1e2e6402d6216e9c2c60ca72",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "pendingPermissionWatchdogRemainingMs",
+      "nativeBodyHash": "cb7f5c4ed2b2e33490ae4dc61babc7b46acc43fad4b9070c247787987a08717b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "notifyConfigFileChange",
+      "nativeBodyHash": "8a246b9df10af0286ac3c90fbba86867d533fa8a3ef703b264878f2080bef5f2",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "rejectPermissionRequestOutsideActiveGeneration",
+      "nativeBodyHash": "a2531ec5eb8ca967749f05dff787f290261b0c48df221d32469d8c33816be249",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "closePendingPermissionRequestsForStop",
+      "nativeBodyHash": "b02525b68e8d88e4fbc4c97544c66591d80044678fcbbca17676d7bdd9717779",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "replayPendingPermissionRequests",
+      "nativeBodyHash": "fa59975b590cef9010424cf5995dc98d756614a408c8e0ad18b4a08de469f660",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "applyExternalSessionMetadata",
+      "nativeBodyHash": "11c48a74ac4cb5f87245cad18e7d5f033c9dbeca86a052b6d88d6bb3d28b1538",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setupConfigWatcher",
+      "nativeBodyHash": "041002669bd52f4d0f0e88145fd1015ef99ceb607c6020554664e57f8618898b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "reloadSourcesForWorkspace",
+      "nativeBodyHash": "a32962a316e9d64de54d973f9b5e679dddfc3eb7597755e12f499b337fafbe5b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "broadcastSourcesChanged",
+      "nativeBodyHash": "1dee02428a720c200003733d5fd4e7663757fee83aa5bb4f6ee812c9cd1496ae",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "broadcastStatusesChanged",
+      "nativeBodyHash": "3c65961ef0cd276b9b8cd811a7adb42ed312eec98b5d1ac7edc4b042295fe070",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "broadcastLabelsChanged",
+      "nativeBodyHash": "5f6da1d88fc34fffcde96a04760db95759131ffd34f48d5ebf5adf456fcf4953",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "broadcastAutomationsChanged",
+      "nativeBodyHash": "ca4671d290cc9c46943196cd6a9349b72cc3738def71755f05c2eb7371505145",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "broadcastAppThemeChanged",
+      "nativeBodyHash": "a11349d636d63fd20f3ca9eab24b12d5e3e2b5416591bb2d28b1fe22151dccfe",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "broadcastLlmConnectionsChanged",
+      "nativeBodyHash": "d7d1feed0ef41f4204f37968fbbe3445def066aa48e00fa7655530ef76851b1e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "broadcastSkillsChanged",
+      "nativeBodyHash": "95e5461b23e5c27a6bb049523b8999fe8894aa09a1d1528e14d297a668027de0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "broadcastDefaultPermissionsChanged",
+      "nativeBodyHash": "148eab25a5fe134500a0791a0d1fc2953b7f2bab4dc3efa9ec995354db140932",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "reloadSessionSources",
+      "nativeBodyHash": "5833e973a0d28b5566fe471f04dad13603a600d21be44cc105c308a2eb0fccd2",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "reloadSessionSourcesWithinOperation",
+      "nativeBodyHash": "04da0f4fe469854baae7d4d1e916e9b685e9b4992cc5df87631f728a2de1d50b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "buildSessionSourceServers",
+      "nativeBodyHash": "9fcb59f662e7dba7edf1049a56b9e51faabb45c6df2fe1058c77e759f7c2c7c9",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "reinitializeAuth",
+      "nativeBodyHash": "77bcb06f54dd65c505c1341af354d0025bce46ffb628537e946d496094c62dc5",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "initialize",
+      "nativeBodyHash": "ce30abf69d35c963edd8716d444c0ba6a9d000d21e2fa03596b6186ec10180f3",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "loadSessionsFromDisk",
+      "nativeBodyHash": "081f76a81e877061aeec2fa57b62cc68a438bcc15da311b81d977e8c8a5adaec",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getUserInputRequests",
+      "nativeBodyHash": "7ba45b01a3a48c90aa9cbb2d62e7ae262ade1bd85334007024cf0239ef865a5d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasPendingUserInput",
+      "nativeBodyHash": "78065336dafa9b864085a24e172bb59b49291ad44e55cb05e42dabdd33643ce4",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasQueuedUserInput",
+      "nativeBodyHash": "c78738859ae6cb3fe9ad7947a267cc8a2e7b64cceb8ff058a653013052cf90c4",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "enqueueUnscheduledQueuedUserInputAnswers",
+      "nativeBodyHash": "04ee7e8d06cd50515ba14f4fd6da1f1986060e884f37db81c35eaeb2c67788cf",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "emitUserInputChanged",
+      "nativeBodyHash": "a715f718579bf9a82ea892b74d4f468df2aef54eefbdb6eed8c394ddce730b78",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "contextLimitHostAdmissionBoundary",
+      "nativeBodyHash": "fbd82e7f22026fc73b757281b3b096bc87d3f21325da9fa06a523faf6325367b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "cancelPendingUserInput",
+      "nativeBodyHash": "7f56912eaa47734d97a00d9dd01d93a04c0fdb5602d3f68e94c1be90fbedd12d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "requestUserInput",
+      "nativeBodyHash": "4b176d929d3a662bb929482c16883636db3a9beb251091a436d058c4de37a19e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performRequestUserInput",
+      "nativeBodyHash": "cf549b54225a9c2ac145fc74be9892d4cb11a12c643a75440e012ac37b634f3a",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "wakeQueuedQuestionAncestors",
+      "nativeBodyHash": "8084333a9a1f860df26441881d15cb8b3805bdf2211d3c2d445ba82a339d3268",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "wakeDeferredDelegatedTerminalResultRetries",
+      "nativeBodyHash": "2e4662d2904df1007b410f1edeaca42bf016b51ff0ade1369a34672e1dbb3354",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "isExactRepurposedUserInputCleanBoundary",
+      "nativeBodyHash": "5279907381203b2f36bcc5b9f8f352d5babca36110bfd90d800085a3f90f76a9",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "consumeQueuedCostLimitContinuation",
+      "nativeBodyHash": "a5a94353279aa6de3b494e517d599f67e1823294b48108260c181dad67349826",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "deliverUserInputAnswer",
+      "nativeBodyHash": "750555dda4a58244615d35cd4985612f8fb0839524ae1f5a672342817a5004fd",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "respondToUserInput",
+      "nativeBodyHash": "b04b001de098311600b8ec6f198c1919d2ad1b4ad211a90379e98ae7bf341d0f",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performRespondToUserInput",
+      "nativeBodyHash": "91256ce1b42e66dd1e4161b5ce42fdb4ad36e8af0daecad3e4c7de8c9ed0bf2d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getPendingUserInputResponse",
+      "nativeBodyHash": "17cb8a63f46fdd14f90b1d5bd2ee47dc72cebc7d341e93bb1e8aa08fdaae5dc2",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "applyValidatedNativeOutcome",
+      "nativeBodyHash": "e2592947c51e87b151be1cea276d16bc0dd83224cf80e7953e1dcb7607215d87",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "movePendingRecoveryToExplicitRetrySnapshot",
+      "nativeBodyHash": "6527e2e433881e2944734a026503b51f1c74f847c771d156b769af1c3fd211b3",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "clearPendingTurnRecovery",
+      "nativeBodyHash": "e6fe256219267340fa633b70cb5e88dbcfd3044895496a641bf3b8320ad9ebec",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "releaseSettledMissionRecoveryOwnership",
+      "nativeBodyHash": "ad2359e8e9fbb7c963391d315ac914dfd138539f797de6681376d4276415a857",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "preserveInterruptedObjectiveContinuation",
+      "nativeBodyHash": "ddcf6a0c33a0e885b7c9795e3481a7093115c1e22f95b90abfc11fb5e61c6d90",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasPreservedInterruptedObjectiveContinuation",
+      "nativeBodyHash": "7e2093947240b0442f83f346eccb44f9d1c56c7c7edd7bcfc39af829b5ad917b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasBoundInterruptedTurnRecovery",
+      "nativeBodyHash": "2f478aa8a535b1ea23c7042618264d6a36eb96b26ad519834e53a8bf8f7b2def",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getInterruptedTurnRecovery",
+      "nativeBodyHash": "da2576f4de3642e99a7390a9abedd315658a38702fcd79e3eeebe469ac6a83b5",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "retireAmbiguousProviderDispatchesForRetry",
+      "nativeBodyHash": "0a069d6d4b300465802d02711ba04bfa1fadc0f0175335bfd83595b3c4095900",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "reconcileProviderAcceptanceUnknownForRetry",
+      "nativeBodyHash": "916aac5c48b23b3d87a1775aa5462b79bcf2e10bc771934aa985358dd316e1b7",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasExhaustedValidation",
+      "nativeBodyHash": "1545e6fc12d451f9d48fceb2429f6eed787980a89e64a9bbe89f20c5129c5d7e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasValidationExhaustionMarker",
+      "nativeBodyHash": "f8c0f568bf52a36c45460320b04e409bbe30ffa4a9f18d18b0f9ac711133d8c0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "runLiveProviderDispatchReconciliation",
+      "nativeBodyHash": "5e6312bd03e66d023d99bef18738ffd67e214bd85dc1c2f42b52c166f3e63774",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "trackSyntheticAutomaticMessage",
+      "nativeBodyHash": "ed74b35cca77a5872deb195af577cd2585098cc788337c0dbb42f0f68cc2c802",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "reconcileLiveProviderDispatchUncertainty",
+      "nativeBodyHash": "bad2e2a4d7bbe04a53a3ce98446ac330bd11f1415a8369bf888bfe1c0fe8f206",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "untrackSyntheticAutomaticMessage",
+      "nativeBodyHash": "7086ec355dc24f9c0c2f085f60fbd79635c22974270f186146a2fe5608c768ea",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "providerDispatchAcceptanceUnknown",
+      "nativeBodyHash": "8ac61e6546b297eefb7b9b0b94d3f819d263b99859962403606996d9de671b59",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "providerDispatchAdmissionBarrier",
+      "nativeBodyHash": "34f69e54b725d23c6481d6cb958fa162ed16c39b4e9506681f6a26eaddd8c27c",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "removeInFlightSyntheticAutomaticMessages",
+      "nativeBodyHash": "bb2b3fd945b6173f6fff5e69cfea77e81311160b9840808c71a9f7715af27524",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "isManagedSessionYolo",
+      "nativeBodyHash": "164424e8d765e044d059a619b6ae4e53f5b8e14d3b4696e28e3477eeea61ad75",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "reportBackendAuthUnavailable",
+      "nativeBodyHash": "26c20ccd60391178ef9a30dc6877149a3314e89e492a22f3bdb5b9ed305199dd",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "stopYoloHumanHandoff",
+      "nativeBodyHash": "af4e50e22bfc174bb3e9ec4f2ad76fe2d69befc32f8c11edca1e432f61bfab14",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getSessionToolInfo",
+      "nativeBodyHash": "7a26de22a06645f3e1844b483bb8ea3c3144f1abee1dff32b579a08f2e572fef",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "retireYoloHumanHandoffs",
+      "nativeBodyHash": "d5581a378df22ca25b5d180ca9f96476b64c36df20ccc778da238ccb2302363e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "buildObjectiveRuntimePrompt",
+      "nativeBodyHash": "dfe06834f5a355f99cacac1f21c3c4bf3ab10192883b085984fd200bbd05142a",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasOnlyMachineInbox",
+      "nativeBodyHash": "00744fb62993fabba34dadfa8d1e905c093c12ba0128da8cd07c1d6ab33ca799",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "canRetryRetainedMachineInbox",
+      "nativeBodyHash": "a217345b28a5987efadf338d0dfc30ef8e9580373acef6d3aefbabf0f418fa76",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "exactQueuedAgentDeliveryReceipt",
+      "nativeBodyHash": "8c8e0869fb026182092b5c5ff1cee2f63e888ca45a3c533556c02155063ecd29",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "restorePreAckAgentDeliveryDequeues",
+      "nativeBodyHash": "b080f1c766b582359e49d2fd75b774960d80e5382daf7e3c6138db9650c14443",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "partitionQueueForStop",
+      "nativeBodyHash": "29a1fcbb2d32bbb483757b75f6ca0abca04fa348c7f8458a36694b3bae5592d2",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "quarantineUnboundStoppedAgentDeliveries",
+      "nativeBodyHash": "b68532826a6327b549b3a03202958b960deb1984fa83f013bcd6636d7931844f",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasAnyRetainedStoppedAgentDelivery",
+      "nativeBodyHash": "0e37f1cd205e04f3113ba5de62e7f0ec2f74239b33c8b24657bf43b84c9ae470",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "resumeOrphanedContextAnswerAfterRestart",
+      "nativeBodyHash": "9113307713d5c650af3d9ebf5e9c65a8825989db322ec0230808625a7dbc6505",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "retireProvenObsoleteReadAmendmentQuestion",
+      "nativeBodyHash": "f3273ec41b7500df1b4d6ad9701c16c17929b6215e4eea67f16260fa664d30d7",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "retryableContextLimitRequest",
+      "nativeBodyHash": "aeea6628a7a9a60fcfe43e37632d9106e44c0885ba997acc0f32f4398b7a19e8",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "boundCleanUserInputRequest",
+      "nativeBodyHash": "8344b09cb66c0c0751889d1e2ac1ab7a6e1fac0f0ce8d43ee803c1ba9eacfe16",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "contextLimitAuthenticatedAnswerEvidence",
+      "nativeBodyHash": "794bb105e9884eb057751db3592ccfd98dc0a046074fae90ab08e835f2bb2547",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "createContextLimitRetryHandoff",
+      "nativeBodyHash": "0648c258f2044b1adb61e576b622c83942860284914b2c588b8d1ff0f3e60e3d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "createAutonomousContextLimitHandoff",
+      "nativeBodyHash": "173dfeaee938b7b7b76a0dcfe7610ad4922fc3aebbb051b3ebbf308bc93bf8ed",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "assertRetryTurnUnblocked",
+      "nativeBodyHash": "08c87ae473618f8a05072ee09e2493f8b7265493c226033302d037c0633050c9",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "retryTurn",
+      "nativeBodyHash": "563dc98592da949c789af5b2499979c06e02cf5f5553cdf11c377b0a6aa290a2",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasAcceptedHumanContinuationQueued",
+      "nativeBodyHash": "2f9b40c33ff6ac014dd7ecb40c18c5c3689f7c337f3f613413eaa9fe3e3ac13d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "grantLiveDirectHumanContinuation",
+      "nativeBodyHash": "f9854e8b767362844f675cc0413414dd4c5858c7018963db90b33e737bcdd192",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "liveDirectHumanContinuationIndex",
+      "nativeBodyHash": "e420af46619479a0aa2419e8d59f9e25f6a88f7ae4e8592f19506ceac6f5466e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "consumeLiveDirectHumanContinuation",
+      "nativeBodyHash": "791e12648cc3a1f7f2dc9dd152873a413f2af2d48f22209c440408c3d88975cc",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "cancelSupersededAutomaticRecoveries",
+      "nativeBodyHash": "fe921d8998432ed79858b6a3af9f1736bee9e199390550ecc2a4aa8ad3ba2155",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasConsumedCleanRecoveryDispatch",
+      "nativeBodyHash": "5e5b4b59a021f3c6a1190fe90de317e4bace37aa98145d267a0a14fc65b722ac",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "reclaimableUnobservedStartedRecoveryDispatch",
+      "nativeBodyHash": "1d53004fd1893378449170586ab8942de48815daecdd32cf8841ab3db39dff01",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "resumePendingTurnsAfterRestart",
+      "nativeBodyHash": "f610898624725bc8b89203c7b693345be4a38cf9399343245cf5dcc7266f6a7a",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "retryTurnInternal",
+      "nativeBodyHash": "d8e2af764e02d0f3c7f481372e5405db4ad3b4a46dac9bcc5354718272e760f9",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "reclaimableUnobservedStartedCleanUserInputRetry",
+      "nativeBodyHash": "8e32d27eaecfbdf1f3b1332ae051638ec5033d157c31e7708b5894697bb476d3",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "revokeStaleColdRecovery",
+      "nativeBodyHash": "e53c16d4ba775025ebfc335d46330ec19b0d50c2a9b13a58f744c91b6a6ef7c9",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "startRecoveryDispatch",
+      "nativeBodyHash": "7890fa96160ca89aedbb9eb6b7cc8d7888ed44878f103899d38c28fe3684b2d4",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "buildRecoveryDispatchMessage",
+      "nativeBodyHash": "6435fe7181c6664837bb70f7d6d33e2447e413a1014eeb12a258cdbbb527e98b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "isExactQueuedCleanRecoveryDispatch",
+      "nativeBodyHash": "005e2f016e883b26e0847832863722d4d092b7eee2efdbe3383c57c7b774da2b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "stripDisabledAllocatedRoutingFallback",
+      "nativeBodyHash": "b992ab06fb2111470e2e8c123dbfd25a571fc114685ea2d254bbff783ec0f39f",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "requeueAllocatedRecoveryDispatch",
+      "nativeBodyHash": "c26e4f71123c9475886b7862a2f728f757e558c78c3bd910762baa8306459f40",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "coldAutomaticRecoveryLeaseExpired",
+      "nativeBodyHash": "fa316b0cd3aa64e6a69911e39209090e51301fed33435f801d2f83007f184240",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "clearDeferredAutomaticRetry",
+      "nativeBodyHash": "23132fb06ac07686a36d19d323e39385502bd8263cf0052e1086bc7122c60472",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "scheduleDeferredAutomaticRetry",
+      "nativeBodyHash": "731caf028dc4a7832fdc43fcdaa1d22bbdcea5ff1fb8302342285fb663e2cee6",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "isCleanSetupPersistenceFenced",
+      "nativeBodyHash": "39149743e14fb9e36b513532097cf1ed8ef19be4f06dea225d6a6872e7089979",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "fenceCleanSetupPersistence",
+      "nativeBodyHash": "e1dc1e1689d4f55ff43490bc3b91ed663d3e5ac79512fc70679a805cc70948ec",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "dispatchAllocatedCleanRetry",
+      "nativeBodyHash": "5d5a325c874a2b78d8ccdeea4c5011ffe534461b5b26961e1b0136ef4b91b219",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "resumeAllocatedRecoveryDispatch",
+      "nativeBodyHash": "a7b2a52811a719ab07d76933fb31d75581f30e804c9f7e682cef59dc4d8a28b5",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "quarantineExpiredColdAutomaticRecovery",
+      "nativeBodyHash": "6d3a8f822584628a1fa1bb11cc7a0418fb6bb2d725d41e12075b48454985f340",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "continueObservedContextLimitQuestionAfterRestart",
+      "nativeBodyHash": "730ad7f511918e735ff5bf3f164f8ec7e588ac0f5f63b0cf0b7678f93cc87029",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "terminalizeImmutableAutomaticRecoveryBlock",
+      "nativeBodyHash": "b0f881f06ab32f4b385444e8f1315e786b13039086570c64cd32fab2affd4bbb",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "enqueueAutomaticTurnRecovery",
+      "nativeBodyHash": "8470d73ddc3c091d0a9e589cb22b645e0ddaafde08dbcd58b25fa07acb9e0574",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "resumePendingTurnAfterRestart",
+      "nativeBodyHash": "3dbe336b1e797de90ab263cad5380d58838ff59db0fd2251e4bac9f068384439",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "retainFailedCleanRetrySetup",
+      "nativeBodyHash": "0917ac6a51e4dcd650a0d386efd5cd8363665510861ad423e67b27a26be64ccd",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "reconcileRecoveredTerminalStatus",
+      "nativeBodyHash": "7803bc428c342211e1efa84c728953817b2e4caf88aa1100f48cf44099ee0194",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "healPendingContextLimitQuestionAfterRestart",
+      "nativeBodyHash": "c85894b7dd32630fbf96ced7c478dce97b3a06b976d23f34b12a6cbe8d8f7969",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "repairLegacyCleanRetryCauseAfterRestart",
+      "nativeBodyHash": "34efd3f0635dea2154d067df45234502b000b63ef943415d3f0bd45f99ab72dc",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "resumePendingTurnAfterRestartOnce",
+      "nativeBodyHash": "150abc10dfb39b65150a3927552267d8349573fcd7ad1b6cf0c1760fa22638db",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "isCleanSetupRetryBlocked",
+      "nativeBodyHash": "91c9c49248fb6239f33e1d84849af14212e7c424dd270b9c7cad9ccbb357e4e2",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "pendingRecoveryBelongsToCurrentObjective",
+      "nativeBodyHash": "ea38f8c38c0d2783f37ccd6ffa950c5567b595302061a8f265567ec316c078dd",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "stopImmutableRestartRecovery",
+      "nativeBodyHash": "7136b20c74a087e01c07f4a1a9449ff01c34da3bd104a17c6638e22703888f19",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "autonomousAdmissionBlock",
+      "nativeBodyHash": "6d6fe0304eee8dd3629e172300e86e21c2c5b3962eb7c042bde0bd55a4c0c4ac",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasQueuedHumanAuthority",
+      "nativeBodyHash": "71b2e8d82b043daab7615b1a9e135ca118a4a828c34e1977b7a5bdcdac6fb9b4",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "authenticatedUserInputRestartPrompt",
+      "nativeBodyHash": "09a83cb7d532e5c79a6798870ad9cb247b983d3492d213a2d0cb8535b3402083",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "exactUserInputResponse",
+      "nativeBodyHash": "892fe24ccb826635fa7d413d725a2d4011bceea3bd7267d32a517be0e0f439ab",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "queuedHumanIndex",
+      "nativeBodyHash": "ab15f2b4cbfdf4c34b17138a3c007a8b1308c0c38f642c34b4a009e77156f8dd",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "authenticatedTypedAgentDeliverySender",
+      "nativeBodyHash": "94d6068f6a8192d903cc71671344f08dd507d770fe58dd9e7a8cac8f341293bd",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "isAutonomousMessage",
+      "nativeBodyHash": "4a28a095cf00c16f880b7b9b532458cf83759f4d76e752f5188255c405633fa8",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "isCurrentDelegatedDescendant",
+      "nativeBodyHash": "22eb779f947c7ee756626bbfa7b735ce5727c8129da9908967f6be268bf6db67",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "currentDelegatedSenderPath",
+      "nativeBodyHash": "f04b13a12add2ccb8f4aad2e76942ef11d782ba82b13cba895516eb7d0ddb7cf",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "actionableUpwardAgentDeliverySenderId",
+      "nativeBodyHash": "db0b081647eeb0ffc3ef0f04efb7f4e31a5c78b74f47711b31cc69446f7a3c4a",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "isStaleTypedUpwardAgentDelivery",
+      "nativeBodyHash": "70ab8c40e795dca9a211c04e504f93b254486ab3ade6c74b4e2d333eb10897fb",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "isFreshStaleTypedUpwardAgentDelivery",
+      "nativeBodyHash": "b719aec238fb26451cdd191b37304f58919aa89c66bfe9bd92e954c89aa1a838",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "quarantineStaleTypedUpwardAgentDelivery",
+      "nativeBodyHash": "8840046b3a837a947599c5e08b6e14bd727aed851643f2b107b9cf0054667af4",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "releasableUpwardAgentDeliverySenderId",
+      "nativeBodyHash": "70e6f66c667db5b6ddb58813b7c158dd507e7f5b7c8398ed5049a3009e1303c8",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasConsumedDelegatedTerminalResult",
+      "nativeBodyHash": "86174fec506a616eef959efac5cd442abd21ca42accb0bbabdeb523d809f98c7",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasDurableDelegatedTerminalResultDelivery",
+      "nativeBodyHash": "ca7d170926fb1e6ad297ede1b5cee4ff64011a6cde62c09d5efa7e4829a533e3",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "consumeDelegatedTerminalReceiptsFromWaitResult",
+      "nativeBodyHash": "6d4c4b19bc7808ea871044cb073ef462e04d287112a4ac6bed0d55ac87345d3e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "activeRelevantDelegatedDescendants",
+      "nativeBodyHash": "fd9d4210f97b0b1038a37f43278f91ae201a9e7ddffd2105a40d1fb024a5c8e3",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "queuedRelevantDelegatedDeliverySenderIds",
+      "nativeBodyHash": "910886aa2ba46df4953d827e1c411be141d2732ba20b36d62f0ccb6e4abaa8b9",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "placeCurrentRecoveryAfterDelegatedDeliveries",
+      "nativeBodyHash": "fba3814c1c1875f8a23fb12612d830861d2b9d5355049ed1292caf1c3cfe7d3c",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "delegatedTerminalResultReceipt",
+      "nativeBodyHash": "3b66de974a1e3b90f1e62ee88d67e124616026bfa3b69ab632c1b505adcde509",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "ensureDelegatedTerminalResultDelivery",
+      "nativeBodyHash": "bd581579fc6ae4704c326b79c2617500fbe2ad66325473c0b217508b6d44ec09",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "clearDelegatedTerminalResultRetry",
+      "nativeBodyHash": "301c965e4a38c65846a3a8e18449a7edaf2a3ffb5010ac0bc87396c094103548",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "scheduleDelegatedTerminalResultRetry",
+      "nativeBodyHash": "a63a468de2190ec557ece2d441e7cc35c8e2de82779dcf564c37ccd692df7ad7",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "deferTerminalOutcomeForActiveDelegations",
+      "nativeBodyHash": "f6ea2b2901f009c4a1f9a790654db21ea8220ffdb6cf42f13e26cdac2adbca9f",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "reserveSpawnAdmission",
+      "nativeBodyHash": "9a3814cc15d9865f0d02bc90f5038dfbe4c12a2b72106ed3ccbd6c5d536ef5c6",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "claimAutomaticAdmission",
+      "nativeBodyHash": "144b52827ffcc1a6d9079f577aa51ecdd28657388a3ae16ae6d50f0c2f0699af",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "scheduleDeferredAutomaticSessions",
+      "nativeBodyHash": "5cb78e11a2e0069f4bb2084b81579b2af840f585db601fe5cf68f7b20ae87539",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setMetadataWriteGuard",
+      "nativeBodyHash": "bf4bd840b5db733ee4d75a78f74d6b5d6e37520260c28fa1bc80a7a64571e9c6",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "assertPersistenceSessionPath",
+      "nativeBodyHash": "e8b8dba0151b4fb8104f697cb2dbba7f90f51790dafdb1d7d5b14e4376406a5b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "persistSession",
+      "nativeBodyHash": "3133fc8de7b1d0e2e92cdace6b4153f326d7156262d333602932e3ce25a7f462",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "emitObjectiveChanged",
+      "nativeBodyHash": "50a4c06299c26a14bc45ca8b985d023fa29b7ab1cff894e2a7352961abd7b1c2",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "drainDeferredAutomaticSessions",
+      "nativeBodyHash": "18f7d4d58457f2e45b7214216c9e75c76c69690ae3458a28fa795c44aca305b8",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hydrateMessagesForColdPersist",
+      "nativeBodyHash": "b2da53c569188b669f7cbc00835e1fc9aca257060e67fc2d151269418e4bccae",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "scheduleSourceActivationDispatch",
+      "nativeBodyHash": "22e2bcf4c3557e1b74d26522f70348faf8decbf2821073998da5ea1b733c1d39",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "invalidateSourceActivationRestart",
+      "nativeBodyHash": "ee66bf9ebd0de4604eb27e274e2b33668e60f61907caa80ff558236ccfa070c1",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "dropDeferredSourceActivations",
+      "nativeBodyHash": "8abce6507a845c51c6245bc74ff916963cb6eeeed19845bd18390f4ae5ae53e0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "authenticatedObjectiveAuthorizationSegments",
+      "nativeBodyHash": "24f8a801e337648ebe929c1633fdfd0f0363392ad9f8503907d92d62971410db",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "mintTerminalInvocationCapabilityKey",
+      "nativeBodyHash": "9a80050a3f1f0c779c4f08660a2d6ec5f0d414dd057d954fec30c46a7346ca79",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "consumeTerminalInvocationCapability",
+      "nativeBodyHash": "716575911690f59a6eca162af7ff9a1763809e9a9482acea599ade8110f61320",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "repairLegacySyntheticObjectiveAuthority",
+      "nativeBodyHash": "09f2c7e305d8ab5dcfaa97ed9070abc3091b81556aba623e6bc2ab6f6c228fbf",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasTerminalObjectiveState",
+      "nativeBodyHash": "ccaa87589d578a4015f80c55bdfa93f645faefba9760a4e6a09b55ef6029ab4e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasPendingDecision",
+      "nativeBodyHash": "ce8a3d593c0bb122b81ad48bfe7caee5f68f9dd6cb9803c9d1b88cbae3f9f47c",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "revokePendingToolPermissionsForDirectContinuation",
+      "nativeBodyHash": "5c43ce4ee737193b791b6fc3a26f504cc4abd960fdb81558d13161626297acea",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "resolveObjectiveMutationAuthority",
+      "nativeBodyHash": "45ba3d66f75721d533fb651c0e5d0a151a9ebce5a7e59352401cc87cbfa5de6f",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "resolveRuntimeObjectiveMutationAuthority",
+      "nativeBodyHash": "3721a40473992f70858de2b31d61215f272c18f9ddcf2a2e3f65be1490ccc6df",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "reconcileRetainedTerminalMachineInbox",
+      "nativeBodyHash": "5e6e1c3ef49648911746804290d3287c617e3905303214499ce8d76bfa1ad8c7",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "supersedeHumanHandoffsForDirectContinuation",
+      "nativeBodyHash": "92598c4f3850bdc63eda93e0f2d21adc2d4617a516eacbc7073de72f105679ad",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "restoreDurableRuntimeState",
+      "nativeBodyHash": "a8fc1e31f4f302bd099c67f97f4733961288238adf2704c428a1a71c3c76a69f",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "cancelPendingAuthForHumanContinuation",
+      "nativeBodyHash": "793ded9419659670276978099abfbfbe7ae555add15a90bca70b5e9a2be0c306",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "downgradeColdAuthResumePermission",
+      "nativeBodyHash": "9d66dffb4992049cb06de42d19bdaba1d415f17f5acee7d506f4eded69642ec2",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "clearPermissionWait",
+      "nativeBodyHash": "b7a0373de45acbf6175bb6ab0a5a9bcdc45e08cf51f147c4d5c3dfde3f1c70d5",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "enqueuePersist",
+      "nativeBodyHash": "0539544e572deea1ba2bf55f69838dbdfeab234860755743510b3fb72894b9e0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "flushSession",
+      "nativeBodyHash": "8686f92afd654218d681fc6c3849be0ab43cf791eede389dac88b54854971e62",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "flushSessionDurably",
+      "nativeBodyHash": "55b1539d697711873909c15fe55b002f1fdee5f7d38c2d6048885c096e5713ad",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "flushSessionPersistenceInBackground",
+      "nativeBodyHash": "122d29d8fd5b3d242e29dd76d78120e9687b549c8ab3506bc9784fb5cf71cf09",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "flushAllSessions",
+      "nativeBodyHash": "a63aa2f054b01d473770dea89dbec6faa574be282f4a3dc8f7aeaf51d3e66f70",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "sendAuthenticatedInternalContinuation",
+      "nativeBodyHash": "4a7ce99cf4e319e9b7bc78dd8c98b2593dbd2a751f895ba24eb59c8968b28f6f",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "isExactPendingAuthRequest",
+      "nativeBodyHash": "2415bc7678de38f380a470d2127f250d57ade746fb85fd3b49510172d156e348",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "isPendingOAuthRequest",
+      "nativeBodyHash": "ffe90c9b8236c49fe354d3e3a693c5a1294adae602978569130035f4346f649f",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "claimPendingOAuthRequest",
+      "nativeBodyHash": "a61f70da61438596ed680abd7f018750b2bb3b02436cbe286e460b747a95cfa9",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "releasePendingOAuthRequest",
+      "nativeBodyHash": "769d239a070837fff231ab453fdce83172f57a4a188e5b47611326416eedeba4",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "completeAuthRequestIfCurrent",
+      "nativeBodyHash": "b9ade16f793fdb27b3780e8caa4d61c6c83f21c04ca734719eaae8a5f5f354fe",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performCompleteAuthRequestIfCurrent",
+      "nativeBodyHash": "9742d70a436243b9c869642bb7516787d613445b5e096b6258f471b861b010c5",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "completeAuthRequest",
+      "nativeBodyHash": "f396b32fc4753be2f5b03542c76cd06a610068efde947fa8099e636f8d364906",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "handleCredentialInput",
+      "nativeBodyHash": "b3c839d4e42419a397d510d0c73c0be21a5dcd01e4693c91f38b9c2ab500cf05",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getWorkspaces",
+      "nativeBodyHash": "5b639a01a948040834e66848572772606d5a5e6f61aabbacb6854beb043f7e6a",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getWorkspacesInfo",
+      "nativeBodyHash": "3ce52ff954d84d0f6ee11aed44fa1810ce100220683dbf74a61eb1e466465290",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getActiveSessionCount",
+      "nativeBodyHash": "d0f56b328af1f749a0415ea5c966694b9b1112d43864457451a5079dbabaafbd",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getWorkspaceAutomationSummary",
+      "nativeBodyHash": "0ae9170218ce158f5a3a5ee068f43e225ff090c4f30fa617fdfdca0cdf203b4c",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getActiveSessionsInfo",
+      "nativeBodyHash": "25cbd918efc584750a37264c47d7cf4970c95e31b21a8c1b1633ebdf6c572c26",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "reloadSessions",
+      "nativeBodyHash": "787d9d46182f3d626d1cf0e1e1a16fe6f854580ad0b0471fccb17c7b822d1674",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getSessions",
+      "nativeBodyHash": "a2035274ba522a23f2eb073a8f1047fcc52278c9c253cfb5f61ad56e05273b32",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getSessionWorkspaceId",
+      "nativeBodyHash": "c07ed160a684f2bd4e77ae1244edcd15dee0fecd9f407b01dbbc6d4f7cf65e4d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getUnreadSummary",
+      "nativeBodyHash": "44cff0068b37d3867374f8ccde193f816c41728d913e3dfd2f6f4abcaf349a76",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "refreshBadge",
+      "nativeBodyHash": "99ad7406bac2264b8ff4364b985285658ba2a96eef3bf65fe91e2202aed96d98",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "emitUnreadSummaryChanged",
+      "nativeBodyHash": "1d3dfde96196f94af30b3e00d7ee170adc6a3a216cd1f8456eeb0c2c9c00fef5",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getSession",
+      "nativeBodyHash": "141c0dbefdcae57d9901a2999cc7ede15d3635ca96c38b7b8d31bd69e5633071",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "missionPendingTurnRecoveryClaimMismatch",
+      "nativeBodyHash": "9d1cad6561630e2dee78c26fcc8b7e26941f6068f2f6e093bf8e987ac37e25d0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "claimAndResumePendingMissionTurn",
+      "nativeBodyHash": "4580812facc8ba40223eeffed96956a5c5a6e2ea9efa26ebbef3f9bd3954bb8d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performClaimAndResumePendingMissionTurn",
+      "nativeBodyHash": "35974321bdbda93f7619783e61318e0d3f2527ad4594628bd7e515815db54341",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "assertMissionOwnedRecoveryProviderFence",
+      "nativeBodyHash": "aa439b2e817e988326bfe337145c42d00a294b44b91e42c90296eddd5c8484e0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "resolveMissionEnabledSourceSlugs",
+      "nativeBodyHash": "0af52e53774e5b6c9daa37511a7191b48f1919a383fc92eeec39a4ed52618f57",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "loadMissionSourceToolCatalog",
+      "nativeBodyHash": "fc70d93c00a949b171e26aa8a3dd18f0803d7e55d8b5fdde387edc84cb25361f",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "loadMissionDocsToolCatalog",
+      "nativeBodyHash": "7340b78f9ce194d65fe33df9c474496ce084d7181037f659fb21b6754e1d7dc0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "preflightMissionToolInvocation",
+      "nativeBodyHash": "0294a6c9a32513def59a1db49143cb13507f81c28cbdede7a878fa939a639c70",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "preflightMissionToolInvocations",
+      "nativeBodyHash": "8102cbd1a33ce08bb2067d90dea92806bfba1c43a90354cb0812b89ff877f1bd",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "preflightMissionToolInvocationWithCatalog",
+      "nativeBodyHash": "6c2c2c46a9533d4b0609d463d4dd9ce595b9dc5673635bde955d1b260351ac64",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "bindSpecializedMissionCapabilityLock",
+      "nativeBodyHash": "abf1ecc85b81fa3b5fd248404edbabb49a251d6b6f1a25764e80138375aafde9",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performBindSpecializedMissionCapabilityLock",
+      "nativeBodyHash": "d02dc6271b5788dcc36eb253b5db0a7ba6789d13ca8a2d040e679307ed682f00",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "assertSpecializedMissionCapabilities",
+      "nativeBodyHash": "dc01ecfff54f0ec5de29e599ba6f53a21b8dcc8bb1ac6e535df68c5df1d17e91",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "resolveSpecializedMissionRouteSnapshot",
+      "nativeBodyHash": "488aff981659a2ef67d296912e9a863f04823d0ba9d4dd90a6f65242eb71514b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "assertOrdinaryMissionSourceBindingAtTransport",
+      "nativeBodyHash": "cb934bb93de22b5971ecdc64e399255a39caaa718045a505c7d44009cb3ed22c",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "resolveOrdinaryMissionRouteSnapshot",
+      "nativeBodyHash": "b04b989c73e0f9cd55a92988f577dbcf68c45004489d951e20e60e02fde0f97e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "assertMissionProviderExecution",
+      "nativeBodyHash": "68bad1e58adcc319fcc67ce7b10e815d712d8fb298cb5c37a1496d64957f1532",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "ensureMessagesLoaded",
+      "nativeBodyHash": "9d3dd4a4afcdf4baddb024633fa6f73c82f7ba69479ae01803dbff1b9d894e2d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "loadMessagesFromDisk",
+      "nativeBodyHash": "019cb828cb53e8b3a25cdc1d2e6160e7ae43122698b5cce83f99cc1f28d8e3c5",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getSessionPath",
+      "nativeBodyHash": "30ddc82eabd54328a627b09bad26272c4d207291d62ddd9835f186e13e3e8964",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "createSession",
+      "nativeBodyHash": "fcf2368a162b5d311823bc683b5312f258697d81764d4585026d6cfb523909ff",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "notifySessionCreated",
+      "nativeBodyHash": "8669a1d17ef8d305b6e1e9f9ec06de474504819eede6652779d43b8b99729c81",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getSessionWorkingDirectory",
+      "nativeBodyHash": "918c13890d924650cc6993972d20fd532dc196902a2b282cc5efdc23bd584020",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "listTaskReviewerSessions",
+      "nativeBodyHash": "960b9aac32e4d154c5abb02730b52e909ac80f40c30818c34e2b981ddf75899e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "listTaskWorkerSessions",
+      "nativeBodyHash": "91f4eda0cc9f0bca18e625aa8f3e9b583ff2ec0e2c18087ac295e422274f4b3c",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performCreateSession",
+      "nativeBodyHash": "a33c5f1e8ae0356a4c73b50bc4fe38881602038074dabc4e03baebe0aa2e126e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "assertStrongCancellationAdmissionOpen",
+      "nativeBodyHash": "8e41ed660c89141eaf626ccde65a963ee6e428c8e96c619c8b5066f3e05d75bc",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "cancelProcessingAndWait",
+      "nativeBodyHash": "324b194633e9475203d6f7aefbc3a4414e73ab6c168979b0837b4202e3044d19",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performCancelProcessingAndWait",
+      "nativeBodyHash": "07ddc54ca028cf086a6ce5052fa4bdf70457defa967f53413c74bad90bf793a0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "disposeManagedAgentRuntime",
+      "nativeBodyHash": "dccfbb0887edc600f38a12cca92a24507ed0f88c2b7328e442df03a72315bbfd",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "trackManagedAgentRuntimeDisposal",
+      "nativeBodyHash": "99d7d94a68aa913fcaf6b72b88fbf29ba55961e734f9cfc1b1286047d720c7e4",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "createManagedAgentRuntimeDisposalBarrier",
+      "nativeBodyHash": "b34f53f879a908f7f04e8b30e5cd5cf0e310d9d4314a3299fd36660d9694e583",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "runManagedAgentRuntimeDisposalBarrier",
+      "nativeBodyHash": "34f867e763a04353a073fdb6904006117dd48e6a19373ede27bc4a538fd9a967",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "retryManagedAgentRuntimeDisposals",
+      "nativeBodyHash": "adca82acd2f4e88e3d3efb03935dd39707a9ef32a23a5be806aa26cf27c83e4d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "proveRuntimeDisposalsForCleanup",
+      "nativeBodyHash": "0ec2511df5b715a22433a61bd8c3284c41a22a7648a30f922e18037e422332d4",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performManagedAgentRuntimeDisposal",
+      "nativeBodyHash": "9224eb2787a9e5c4b7cf206e3b28d5b59e2eaf8559baac82d3ce0fde57b34be8",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "finishManagedAgentRuntimeDisposal",
+      "nativeBodyHash": "e9a9cd449cc99897067c79353c0952ba1c70546aff4a54368c9bfb36ed59bd8b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasRunningBackgroundTasks",
+      "nativeBodyHash": "84fc9bdf3a97b48041e3430f03ab4287cef030383278a469041ba3438827d1c2",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "evictIdleSessionRuntimes",
+      "nativeBodyHash": "9f9ad07a8e74d2ca87fa3c02a5099e21755ab7c9d850b5d8df8cd90955c26b53",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "startRuntimeEvictionSweep",
+      "nativeBodyHash": "07d49ce0c92ea943a87ca34b9327c4ca28ed80db2a871c2d1a70f3cd686c9e06",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getCollectionCacheScope",
+      "nativeBodyHash": "3840028f555d543b2eefc79cccd267bb7e4942ed5641bdc80e6dc78cc16a36d1",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getCollectionSummarizer",
+      "nativeBodyHash": "1de6c9f4b0cc27ea16c37b98e6f182054704d47b6eca5f0430236eea60fc6b1b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "tryRefreshAgentRuntime",
+      "nativeBodyHash": "0e1497278eeb549f5ea28e02c7a46a00fefc036ac6c7af149a5b69f8437df8e4",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "runAgentRuntimeRefresh",
+      "nativeBodyHash": "7be6f02107f818a0aabd277dc4798b044f37168a01bb3eecdaa3267035faa98e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "refreshConnectionRuntime",
+      "nativeBodyHash": "a54675972b414523c015cf1d8928de659d3dd478858c861efba4da5db40c9d8a",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performRefreshConnectionRuntime",
+      "nativeBodyHash": "5a831aac2b3284d0938d138d6a4f27785e0e3107f5ce24d2bdc111ffd27a6a50",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "applyExternalActionPolicyToRuntime",
+      "nativeBodyHash": "b711fa674beb2b12737d9e80df42983f6873fb3e7ee32469b6a92c1128bc5578",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "refreshWorkspaceExternalActionPolicy",
+      "nativeBodyHash": "49aa1aeedef901c2e65d5d01eb16dd64dac1089a2d0764f9e632adb49d4d9ca7",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performRefreshWorkspaceExternalActionPolicy",
+      "nativeBodyHash": "c7bb36be5586c98cdee0fb59fb18aa2f6d0c1163675969251d91bf0c1d17ddb4",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "restartAgentRuntime",
+      "nativeBodyHash": "3cb50c49d71423fb0d35bb03d59efbd1afa0388c98d330b4953ee9e66eb73368",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performRestartAgentRuntime",
+      "nativeBodyHash": "011a1515a4ba4ca312c92733dc899dc03f85362e0670bc1b0932f4e6ad6737af",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "objectiveContractTextFor",
+      "nativeBodyHash": "25bff8632c43d486cbd8f0ea5fe5b07c997196e82201117fc222c8d461d4f563",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "loadAgentContextWindowPreference",
+      "nativeBodyHash": "27ebd5e6163252b02e44fcde558018de70d5ff71d806458c6c8a8a327b74ac60",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getOrCreateAgent",
+      "nativeBodyHash": "ac67586cb7a9f3becd30c04e1716bb1d9c71e0144a3cf428e2fe3fcf4e13eb59",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "flagSession",
+      "nativeBodyHash": "5bbfb6b22b3c57e7b4da3b534226f40c331193fa9a95cd532dcb026df410ee30",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "unflagSession",
+      "nativeBodyHash": "eaa7663187b65b5ca0dfd938bfa3b8e76a34f790825a2547a96eb8d20354abd4",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "archiveSession",
+      "nativeBodyHash": "53cb517f51fa6980ae1588698584e898741c9b61b14da55cc0f626b946009fbf",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "unarchiveSession",
+      "nativeBodyHash": "3736501909ffd74785af72bdc5ab5557fddf287a6949812d4f0477795c57c35b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setSessionStatus",
+      "nativeBodyHash": "abd02d13c5ced32874e0a6382c763bbd367ba36766ca5b1f00065a239e752f5b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "startCompletedChatRetention",
+      "nativeBodyHash": "f9fd12e40bf3ede8f38dd2e97412104ad0c9f98ab2fa1cfd0516dc5d8f551ecc",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "scheduleCompletedChatRetention",
+      "nativeBodyHash": "581c00e2257098ef38c06d8cd0ebf085ebfdb031184114c31b795827d5552161",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "canRetainCompletedChat",
+      "nativeBodyHash": "4e33edd16fdd8ae8cf7d10b2e2d21d5b06ce3bfd07273a8c3972d90448f57614",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "sweepCompletedChats",
+      "nativeBodyHash": "c896ab696e3ff31b948dc10fe658491d358e0904a194e34d922f0fedc1633259",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "beginAutomaticSessionStatusLifecycle",
+      "nativeBodyHash": "0af9e3287dee2b9be2eee2a75a1c9004c9d817bc7e5a7644c2c30a6012f09878",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "finishAutomaticSessionStatusLifecycle",
+      "nativeBodyHash": "14357d33160527687f39bcdd3f3cf595f1fccafb294e5b21c83aa3277eead9e8",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setSessionConnection",
+      "nativeBodyHash": "153c8ee1e9af4f44a046670ee0f1ee1fcd211ac232f7841a5bf597eb96149121",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performSetSessionConnection",
+      "nativeBodyHash": "258ee726127fbea1a9df9831108a23859c526a4cbb878f56175755542bec683a",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setPendingPlanExecution",
+      "nativeBodyHash": "c4573b64d6931003f22139359177aa56b2ab8b08a28b3c8fd66e6e7f7cd93059",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "markCompactionComplete",
+      "nativeBodyHash": "0710f97c6fa5b75120c818bb331e4545e9afdb0614c44d08b185250aa4323be0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "markPendingPlanExecutionDispatched",
+      "nativeBodyHash": "b4105b0350cdeb6c0bde4770c0cb676d25322b28c078deb0dd0839f5ca8f3cab",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "clearPendingPlanExecution",
+      "nativeBodyHash": "990b14bf9daabcec9421e7bb6a9b71f15d593208b74e5d4cb2d6e53557d93169",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getPendingPlanExecution",
+      "nativeBodyHash": "8b05fefe0e2f596553c519c58c5931e1b90df951293eddb3f9ce557c051ae07d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "acceptPlan",
+      "nativeBodyHash": "3d0c17aadd08b3d84a633fc082c0a2215367c0365c940a99634a9a2e0ab3192a",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "shareToViewer",
+      "nativeBodyHash": "9d6deebe87ccfb8ba1587a75abf04bf0426b47260fb55ae634ca3efbaacf4ba6",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performShareToViewer",
+      "nativeBodyHash": "efe23435bb76d902ff3071a59f14f2878fb023c70799c1d835df8bd7b7533c30",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "updateShare",
+      "nativeBodyHash": "82f2dc334febf7e09c92c027207d7a4c88ad031cdaa1128e2e8aa287690c86c7",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performUpdateShare",
+      "nativeBodyHash": "2d136b01127d3252f3285bdbba25d831870f08b47e20efe57308b1e96d2bb9d2",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "revokeShare",
+      "nativeBodyHash": "275209f78fff9ef0147f5f04fa11a111eeec7593ba40527f8a4f064b099a6fac",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performRevokeShare",
+      "nativeBodyHash": "10242708165fa9f7ef2f0cba56241178a70f8829669e6b716c8cf5c317c99f80",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setSessionSources",
+      "nativeBodyHash": "5cb4f9ca2ce9e6c4a0cada4411441c07e96ff3af4c0510424d07a8248fc65aae",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setSessionSourcesWithinOperation",
+      "nativeBodyHash": "537cda2daf0eed097d26612a21c9dabf3e83ab66ac9bd3379e95323623f95fb9",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getSessionSources",
+      "nativeBodyHash": "06c84fb792903e1aad99dae01e34df9208dfc3d2194930f3c780ea672b01f045",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getLastFinalAssistantMessageId",
+      "nativeBodyHash": "cc965c2d1a827bf000d32010167c6599c558f93291a3da5f05deb2dc5a047609",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getSessionFinalText",
+      "nativeBodyHash": "63b5529f77d97a177a1feb88a5d47e56b14eaca158d0e08e2546aa490b5fffb2",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setActiveViewingSession",
+      "nativeBodyHash": "747299925b049ef4b21e3ede9c9036ed9052bd81b0069dee633471774245d2bd",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "clearActiveViewingSession",
+      "nativeBodyHash": "8bbe34fee74cc20311f9a807852bec2767fe4bddd3b4364a25b647758c6b535b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "isSessionBeingViewed",
+      "nativeBodyHash": "da348f236fad8f696a6dd796848c55906e5a5510e0e96ce631e1a78fffaf6df2",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "markSessionRead",
+      "nativeBodyHash": "4c85102ecf50bb036a330dd2f64fda65ba2e3f09086a1437a05fb50fd2975ffe",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "markSessionUnread",
+      "nativeBodyHash": "a68f11a5771337c134c8bb15d9ab2a06283095fa9a4bcd3d268a5308b9573446",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "markAllSessionsRead",
+      "nativeBodyHash": "4cfe85d2912431884e0cfbc56473ed9c9a9ba4095ec9226bc5353f3883c0f116",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "renameSession",
+      "nativeBodyHash": "d98b9918b607c2db9e46a24645deac87ff46cb27a96bcfa68d8dc263c3456a1e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "refreshTitle",
+      "nativeBodyHash": "d24e0f13f4c98b3e91fae02071e9206e62d6673da3bb644a49b0fa526a2c07d2",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performRefreshTitle",
+      "nativeBodyHash": "7e464a80ca03af79c793704cb3e4ba205a91a2b5f7e51132dd5e80187b8836d0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "updateWorkingDirectory",
+      "nativeBodyHash": "4ef6c783f8ada0b227f6b75866e192f92016921014cd9c7e024ed4cff9936e57",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "updateSessionModel",
+      "nativeBodyHash": "e23050cbbcc06dc07aa74ab3485cd086c93e449087d1004addfcb23b6670a9c8",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "updateMessageContent",
+      "nativeBodyHash": "ed4a601a9a14023bd87849c09d6b72567d66f801f6fc468781ef86f3b0b8dd52",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performUpdateSessionModel",
+      "nativeBodyHash": "f136441d78329f8a7b1a4de69a86dd123b6e49cc479d1c0a0a86ab2eea2e0609",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "addMessageAnnotation",
+      "nativeBodyHash": "f3d7065c1c3d3b0164a6737297f9f78dcd3ee4bf15132ae582e80feb95cc9a7d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "updateMessageAnnotation",
+      "nativeBodyHash": "ed5e8a7fce5cb6459fafac44ea089d4f25724ae4aa1e51ae8e533e41c1d8b2e0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "removeMessageAnnotation",
+      "nativeBodyHash": "8c8dad63eea781615b138163f8fbc3549940ad71214d61aa7783b290194785bd",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "sendAgentMessageToSession",
+      "nativeBodyHash": "b7600cb00753c72fe8f6761d6e1cc44e2ece9676efbf9e27255e5ef161778ae8",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "ownsSessionOperation",
+      "nativeBodyHash": "0894260f60451a512ca82ab8be20ddda12cc85c8c6c5c39bcdad37876b3f0f3b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "assertSessionOperationOwner",
+      "nativeBodyHash": "bdb8bfcc1999be80f4315e850d19224347d7964cb932ecc3cb7a02878594f0a0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "assertSessionMutationAdmissionOpen",
+      "nativeBodyHash": "1ebc8040a740413423bac71462d36d4773376d910dff833b028bd365ead88f7b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "assertSessionRuntimeOperationOwner",
+      "nativeBodyHash": "eb80b05de3a9bd9bac4c0c22ca6be6ba788a5bdb9be33723386377fc38264dbb",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "trackSessionOperation",
+      "nativeBodyHash": "c9c4e44f278f53485e244b7315ae9306054228439b61237d9354cac4316235db",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "trackManagerOperation",
+      "nativeBodyHash": "bf7da5d7fe0cca99f2d833c3bae1b3063b6523e58547949a1d20eb7d48f00e9a",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "drainManagerOperations",
+      "nativeBodyHash": "f5900253516aa2dcd66d826b42deee93aa3fa391e734a02ef536ca18e7099e0b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "drainRestartRecoveries",
+      "nativeBodyHash": "9249f9be6d88a15e6fbff6db740456db3bc67e010c72136949e8169b473225df",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "drainStrongCancellationStops",
+      "nativeBodyHash": "29f750843225899edbeac1dd8cf4c02763ffc2e8bfe76e4db03e11f954da8c56",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "drainSessionOperations",
+      "nativeBodyHash": "d81b3d7bac5dfdfed5cd8407f231e6091506ea915d16f2c44c47fbe90976de84",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "drainAllSessionOperations",
+      "nativeBodyHash": "87d822168e6a59542760303b564268c0327b8d00c39f6b7a7f516c88d7d0144b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "quiesceSessionForDeletion",
+      "nativeBodyHash": "fbd839f18d4f4dd73d27a6f9956d67550d6ff05109b16f359735939fe9612d9d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "deleteSession",
+      "nativeBodyHash": "cdf4478f500c433b4a59f906af1e9db16d87b780c440e1cd35751afd85d9b9a2",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performSessionDeletion",
+      "nativeBodyHash": "d696229ac04181de69fed00480828daa9364a70d7935df2055159271db10ddef",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "sessionProjectLearningTarget",
+      "nativeBodyHash": "15d6413b9dca58c90a193dad98bd1c277ee1af8401805760782d97d6b27131ce",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "loadSessionPlaybook",
+      "nativeBodyHash": "b2d07431911fc3a433f6392c092f5b3c073a6d249c7e2f287d488515ee4a7778",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "assertSessionProjectLearningTarget",
+      "nativeBodyHash": "c6daa32d8e20db906cab397aa9fddbfdbe921f2c6512d8b591eb2b482eb33ebe",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "handleSessionProjectLearning",
+      "nativeBodyHash": "eaf109bf78c4898d8e15a917530873cb636b1c2124c919c8465e23eee01bd2aa",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "loadSessionProjectMemoryContext",
+      "nativeBodyHash": "e6a3d63c916d089e1efea0aa8ba06b3f770f30a2b4ac5f51a5a741c02d015d7c",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "captureSessionTerminalLearning",
+      "nativeBodyHash": "51891f91b24f146bfc6a55007ec6302e5c7a63c5cb2d2882a048fe8e32864c41",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "captureUserCorrection",
+      "nativeBodyHash": "11fdfe5a0a52802e59e2ee81e6f6bfb515719910a7eea2924ee4b90428ec3e92",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "hasExplicitStructuredObjectiveTracking",
+      "nativeBodyHash": "644867fa7dd983dcd7553034b8e0bdd20dde59a51c206d1e2068ce1412a1f5e4",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "sendMessage",
+      "nativeBodyHash": "237ebbc201607e681ec467e766f925aa7b807e063831dcfa978daf43d129a0bd",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performSendMessage",
+      "nativeBodyHash": "7cc803324cf5a27340d4e820fc303d25c6cdc2072bc19e32f46b796fb7c3e558",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "cancelProcessing",
+      "nativeBodyHash": "f457da6ceafefa6c4fbe89f6b73685435caefcb99697be67e70d9045ea948a85",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performCancelProcessing",
+      "nativeBodyHash": "b0ea303d51841f24aac79dbe0eba6077c845b74b10dd15f115d9a232006c744d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "attemptAuthRetry",
+      "nativeBodyHash": "db94365f21b491a81863a8835f5c08c472f97bf459baa5253f3fc52347ded695",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "recordDelegatedDispatchFailure",
+      "nativeBodyHash": "704f7d6b9ab68ef2d766658bf31a1c5b22562311ab31580c285085887a80573d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "sendDelegatedDispatch",
+      "nativeBodyHash": "6004c7b7ff02e7009599a2ddd93eddb3cc754981e35db001bcf8bb3fafea809d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "onSessionComplete",
+      "nativeBodyHash": "d99a534bef809a7765ba751732d62000ca0e95b23126d20805fb64ee5bb003c4",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "spawnDelegatedSession",
+      "nativeBodyHash": "ccf97681484bfe3e4d7e7858491f78187fcbb0cc162e966502e1956c6a4fa4cf",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "recordExecutionProof",
+      "nativeBodyHash": "9ba966630fe4176584f124e39793ae6651664942d225707bc9604224d481858c",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "emitSessionComplete",
+      "nativeBodyHash": "7dc77f3e4bc3c68c56ee37666f9111a4aa98cbfa06831924f5a3a31ab1f9aac7",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "waitForDelegatedSessions",
+      "nativeBodyHash": "08964f3d71f99316aba29de0cec7cb21eaae41762e63762d74f3f3388b4d4555",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "onProcessingStopped",
+      "nativeBodyHash": "de7e2ec3f309ecf63bf1aa7b421eaa2bf532b1928d118c152766330e407ef7a7",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "settleQueuedAgentDeliveryDispatch",
+      "nativeBodyHash": "08a311d2376ec2f4455496b9430c703e46f63463707990ed189da36beceffd3d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "completeQueuedAgentDeliveryDispatch",
+      "nativeBodyHash": "364098328f6b19cc8c5329f318b54d373b245c1ea9a78580558e58a48aaa8899",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "finishAgentDeliveryAppend",
+      "nativeBodyHash": "83803ff3df6db9587f949a0e310e18da3a6dd92783d2d5caa2a158d7e2e6ac93",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "serializeDirectHumanSupersession",
+      "nativeBodyHash": "bfc796c48ae8d5271ace4351a333c65b69eb7ec22a21316e6564081289c046bf",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "serializeSourceActivation",
+      "nativeBodyHash": "b24e39cc60c22a48167d7a68dcb34bebef783ce5e6604f95af82e92264f268b1",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "mintDelegatedDispatchContinuation",
+      "nativeBodyHash": "315402e34ab7a5f759b161d0bbab502b532e8d4834d0be6a97b5a9a13c97e698",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "delegatedDispatchContinuationCurrent",
+      "nativeBodyHash": "4e1de1a4a68d1ebe9aee033a8925ec2a2aedee3573bcc99bc5a445c51763ff87",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "consumeDelegatedDispatchContinuation",
+      "nativeBodyHash": "b9eaca9dc4598ac443da103d59bdac2039f299a18186c0909ca189d58b3124d6",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "mintAuthenticatedInternalContinuation",
+      "nativeBodyHash": "ab0ff912c361a863315a466bf78513c7f979811a8a6967d1ce0417667cb9fa8b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "authenticatedInternalContinuationCurrent",
+      "nativeBodyHash": "a98a9921ecf1c08ce5104993d7622618dd4379932f35e001216f02eb1f085f52",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "claimAuthenticatedInternalContinuation",
+      "nativeBodyHash": "255197dd16a92954f0892424985c5a087f24bb77d5c730ad4d6dc6d6bd3c2e28",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "consumeAuthenticatedInternalContinuation",
+      "nativeBodyHash": "31aa8a0c454a8ed683ff7cecc24a43ea8304c7f79885a83c30a221daecce1f54",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "deniedPermissionToolUseIds",
+      "nativeBodyHash": "333c6cec6ea8fb2065435e5bf93fad3fdc4aa47842b783c79d09464393f33beb",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "processNextQueuedMessage",
+      "nativeBodyHash": "4c8c0eef32370ea8eab392fdb730fd7026a0ef3c7854759cc532281845bea56d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "killShell",
+      "nativeBodyHash": "e416a88d93f2c40e592a2532d1ddbae3bc4d6d1267862bd6902cd6429e8cdbc8",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performKillShell",
+      "nativeBodyHash": "64451ab5c6cadd6c886de39596f078bc7e89cba6ab4fac7396b51c07eb788af6",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "evictStaleBackgroundTasks",
+      "nativeBodyHash": "49802efbcbc891df60ce246f0abefff4f160566b9aa8a09f0c7f2806fbbb63ae",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "markOrphanedBackgroundTasks",
+      "nativeBodyHash": "e3a6264abde7e8a1eecfc8239d020199551ceb80b98b97446152336100ab4726",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "listBackgroundTasks",
+      "nativeBodyHash": "876e822d5d92d25071a26aae4f968e11bf373a323cb50524ae623f6c05d48d14",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getTaskSessionId",
+      "nativeBodyHash": "462757cd0e1d628de4e6a34c29a7c0fe5b4b0dcde382984f780cf186b999655b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getTaskOutput",
+      "nativeBodyHash": "ed9b8e255f4beff1434e8a1b12939b9ae79a069335eb91bc24613e3d0c0b6b32",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "respondToPermission",
+      "nativeBodyHash": "0cb2227061dbfb22eabe62012de1eab8a6d5f3ba2fb3b7930e9ffab61744dff0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "respondToCredential",
+      "nativeBodyHash": "95f705faeb6a5d56c20112b3141cc236c4372e3c345973e714bcd46f51844fef",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setSessionPermissionMode",
+      "nativeBodyHash": "f9b6f8d6a2b9d79c1280a4bc45e99b6bf120016f7f7ae78f6e7b10c9de313d46",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "getSessionPermissionModeState",
+      "nativeBodyHash": "d6b76f4b102beeff70733fbaa16f8dde53a2f563fee2e2b3b6b057671bbdda84",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "evaluateAndApplyAutoLabels",
+      "nativeBodyHash": "3cf4b5e08b60967fa5996d6e8b49816bfb14550111625de55d6956f89f945e39",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setSessionLabels",
+      "nativeBodyHash": "9ee2e69452016d4bd8d1e7d5058edb4be55041525aa54899918ccfa871114cab",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "applyTaskLabel",
+      "nativeBodyHash": "8ef6ef376168e1f379d669afea9497a1af4d35e3d14f92b70849033018ce3cc1",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setSessionProjectId",
+      "nativeBodyHash": "5ee1a61f2601686c9342efd1eb9c04254e7b40b10ab6b8447eced75373963504",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setKanbanColumn",
+      "nativeBodyHash": "c8d47af07e97837ce0118239ed469f15ad806f9f59e9b1546c72af0b6c734bda",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setTaskNodeCount",
+      "nativeBodyHash": "d4016b46ffc7eafc0a26e47118c2c91ed67c383464b8c6fcb8ec0523b5162705",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "adoptGeneratedTaskOrchestrator",
+      "nativeBodyHash": "e13cf46fb67717966370000b6328239ae234f6c3e35249a69c365617e43d0be9",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performAdoptGeneratedTaskOrchestrator",
+      "nativeBodyHash": "5887375b5658b84447c9b0e23168ec2f45bc30d503dff161e0663b56e7bc0c7d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "bindExistingSessionToTask",
+      "nativeBodyHash": "468cb7396b676e5b29094ed05e13986a41c274dfdef025a47084360ce8f03ca1",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performBindExistingSessionToTask",
+      "nativeBodyHash": "26c8752c79123a33f76d8c0eeb4c1373ad97637da2455095e5856a455316947a",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "setSessionThinkingLevel",
+      "nativeBodyHash": "66cbeba0576a9d3718667464e832e6850356f62f0522d90e7995b63e7fc02be6",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "scheduleTitleGeneration",
+      "nativeBodyHash": "490db3ea8087ef753e25a430d8110f5d3f4133d1ec60f107f7aa35beaa96cfe0",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "generateTitle",
+      "nativeBodyHash": "e0038e4cbbcbd5a91421cea2055d7b534a85480ca4d0bdf00e4d999d42af8e7c",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "persistRegisteredObjectiveForCurrentTurn",
+      "nativeBodyHash": "ec064e162d719d6b5daecf239dadcf93887818541bb57d2c945bad38cb7301d2",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "recordAutonomyEvent",
+      "nativeBodyHash": "db6c1675ed379085313746e71ba93e42165f6832a49410961aaae758fca3dd88",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "durablyRecordAutomaticRecoveryToolAdmission",
+      "nativeBodyHash": "90979039a4fdb3e46e5e76c6254647402a86b0eddf4e75e1c17856b87264a092",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "captureCompactionProviderBaseline",
+      "nativeBodyHash": "a24e70ba610188b6e0a6cdd7a2736bf97a490df28d3e4d00082c1d358b20cd18",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "persistToolResultAfterPermissionExpiry",
+      "nativeBodyHash": "9b9595fbb65a2bb2ab58ce3c995f59e63acf931a33d56f8e744dbde667296249",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "admitBackendToolExecution",
+      "nativeBodyHash": "781229a0794bf87e449b4a743a4a246f3aa5bfee9dfbd98f16fb2890dbd9847b",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "durablyRecordAutomaticRecoveryToolAdmissionLocked",
+      "nativeBodyHash": "51cdff95663921309ff26cf250e82cc9e86c1406780bbfe4b548f05e8a5c1b79",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "redirectAutomaticToolFallback",
+      "nativeBodyHash": "c875f79eddb0cb1b992dbe68eede3c5c7162f9068cfa2037aa02381ce8a4f26e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "sendEvent",
+      "nativeBodyHash": "df31363de2713e17ec659c462dd18169385a432d6192ab2b978687d0b23ce2f9",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "queueDelta",
+      "nativeBodyHash": "d1d29f3bbc39f1ebef3abe1d0409bb74d7f8d3023b952222dab471bea564c77f",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "flushDelta",
+      "nativeBodyHash": "7f1f35fed62f24274e605ee3ae0899561fd13c5d0d7689c0cafba6fb4116166d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "processEvent",
+      "nativeBodyHash": "11feebba31244f8a3ad65f552cf29a0890ebd384bbff70d35a7878e2867857cd",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "processEventImpl",
+      "nativeBodyHash": "25a2eac0bca3fb6e3fc5410380ef9006c75830831584aeaf09fd3366a2a1ff61",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "executePromptAutomation",
+      "nativeBodyHash": "b0f4eeba6ad261c6dca484affa7e82930ff48628cb013a4a8b37f6afa5674e7d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performExecutePromptAutomation",
+      "nativeBodyHash": "6446e5f6f08fb7ad38020b56909520fa2498cec2b28b9c2a1d8462bc8df8cb53",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "generateRemoteTransferSummary",
+      "nativeBodyHash": "6ec04180dd581009505657746d626dc862377897bbfcea5ac65fcd6e9de53540",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "exportRemoteSessionTransfer",
+      "nativeBodyHash": "2e397fb0ee7ceba6e90d32faf3061910ae19b2d3cb99011d3a9f9d2d9bbbc118",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performExportRemoteSessionTransfer",
+      "nativeBodyHash": "cf226cf65584fbea9d2db68b33b7a787505c6cd9e4389780d0a32df02f793b05",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "importRemoteSessionTransfer",
+      "nativeBodyHash": "355d6c89926e0e5cc573bec0211207a655746dab80c12be3e7897a3654440a83",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performImportRemoteSessionTransfer",
+      "nativeBodyHash": "f2689a7646d2a3328a002a9c446bbd886fa0e4f2d8d81f1554b304c915cf3871",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "exportSession",
+      "nativeBodyHash": "b3bbf79cd8927c32777e03c16d972c8b45cb461efa96ee4aff08f852446b0b3d",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "importSession",
+      "nativeBodyHash": "a8adb2b9aa5f65b4f28036d609908558da959021ede77eed368804239239b916",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "performImportSession",
+      "nativeBodyHash": "32f7113905743941e090eb4cfbe4c913a67151a8d12b52d5e412d382be25a822",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "cleanup",
+      "nativeBodyHash": "64920bcfaa254ba4a39694af671793dfbc6fb81f7b37ba8e99c9002859a51097",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    },
+    {
+      "name": "cleanupResources",
+      "nativeBodyHash": "45dadf29d4259c75ad77c671a3df10fb3a445f05c19b4e416c70a2e147002d1e",
+      "parametersPreserved": true,
+      "asyncPreserved": true
+    }
+  ]
+}

@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import fcntl
 import json
+import logging
 import sys
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+
+from pydantic import JsonValue, TypeAdapter
 
 ROOT = Path("/srv/rbw-agents-oss")
 PACKAGES = ROOT / "packages"
@@ -15,9 +17,11 @@ if str(PACKAGES) not in sys.path:
 
 from rbw_agent_runtime.catalog import CatalogRepository
 from rbw_agent_runtime.execution import execute_argv
+from rbw_agent_runtime.json_support import _integer, _optional_string, _to_json_object
 from rbw_agent_runtime.policy import PolicyEngine
 from rbw_agent_runtime.telemetry import append_event, runtime_attributes
 
+logger = logging.getLogger(__name__)
 _REPOSITORY = CatalogRepository(ROOT)
 _POLICY = PolicyEngine()
 _TELEMETRY = ROOT / "logs" / "runtime-v2-events.jsonl"
@@ -26,7 +30,7 @@ _RUNTIME_REPORTS = _OPS / "runtime-v2"
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
 def runtime_report_path(legacy_id: str) -> Path:
@@ -34,7 +38,7 @@ def runtime_report_path(legacy_id: str) -> Path:
     return _RUNTIME_REPORTS / f"{safe_id or 'unknown'}-last.json"
 
 
-def _write_runtime_report(decision: dict[str, Any], result: dict[str, Any], *, stage: str) -> dict[str, Any]:
+def _write_runtime_report(decision: dict[str, JsonValue], result: dict[str, JsonValue], *, stage: str) -> dict[str, JsonValue]:
     legacy_id = str(decision.get("legacy_id") or "unknown")
     report_path = runtime_report_path(legacy_id)
     history_path = report_path.with_name(report_path.name.replace("-last.json", "-history.jsonl"))
@@ -53,7 +57,9 @@ def _write_runtime_report(decision: dict[str, Any], result: dict[str, Any], *, s
     else:
         status = "technical_failed"
     technical_reason = str(result.get("errorType") or result.get("error") or "nonzero_exit")
-    report = {
+    sorted_env_keys = sorted(TypeAdapter(dict[str, JsonValue]).validate_python(decision.get("env") or {}))
+    env_keys: list[JsonValue] = list(sorted_env_keys)
+    report: dict[str, JsonValue] = {
         "generatedAt": generated_at,
         "contractVersion": "runtime-v2-execution-report-v1",
         "capabilityId": legacy_id,
@@ -62,12 +68,12 @@ def _write_runtime_report(decision: dict[str, Any], result: dict[str, Any], *, s
         "summary": f"runtime_v2_execution: id={legacy_id} stage={stage} backend={decision.get('backend')} status={status} exitCode={result.get('exitCode')}",
         "counts": {
             "runs": 1,
-            "exitCode": int(result.get("exitCode") or 0),
+            "exitCode": _integer(result.get("exitCode") or 0),
             "timeouts": int(timeout),
             "businessFailures": int(business_failure),
             "technicalFailures": int(not ok and not timeout and not business_failure),
-            "stdoutBytes": int(result.get("stdoutBytes") or 0),
-            "stderrBytes": int(result.get("stderrBytes") or 0),
+            "stdoutBytes": _integer(result.get("stdoutBytes") or 0),
+            "stderrBytes": _integer(result.get("stderrBytes") or 0),
         },
         "blockingReasons": [] if ok or business_failure else [technical_reason],
         "warningReasons": ["business_result_non_ok"] if business_failure else [],
@@ -78,7 +84,7 @@ def _write_runtime_report(decision: dict[str, Any], result: dict[str, Any], *, s
             "policyMode": decision.get("policy_mode"),
             "policyDecision": decision.get("decision"),
             "specHash": decision.get("spec_hash"),
-            "manifestEnvKeys": sorted((decision.get("env") or {}).keys()),
+            "manifestEnvKeys": env_keys,
             "timeout": timeout,
             "businessFailure": business_failure,
             "durationSeconds": result.get("durationSeconds"),
@@ -88,37 +94,37 @@ def _write_runtime_report(decision: dict[str, Any], result: dict[str, Any], *, s
     }
     report_path.parent.mkdir(parents=True, exist_ok=True)
     tmp = report_path.with_name(f".{report_path.name}.{uuid.uuid4().hex}.tmp")
-    tmp.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    json.loads(tmp.read_text(encoding="utf-8"))
-    tmp.replace(report_path)
+    _ = tmp.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    _ = _to_json_object(tmp.read_text(encoding="utf-8"))
+    _ = tmp.replace(report_path)
     line = json.dumps({"ts": generated_at, "capabilityId": legacy_id, "ok": ok, "status": status, "counts": report["counts"]}, ensure_ascii=False) + "\n"
     with history_path.open("a", encoding="utf-8") as handle:
         fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
-        handle.write(line)
+        _ = handle.write(line)
         handle.flush()
         fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
     return report
 
 
-def load_manifest_entries() -> dict[str, dict[str, Any]]:
+def load_manifest_entries() -> dict[str, dict[str, JsonValue]]:
     """Return an mtime-cached, duplicate-checked manifest index."""
     return _REPOSITORY.manifest_entries()
 
 
-def preflight_invocation(payload: dict[str, Any], entry: dict[str, Any] | None) -> dict[str, Any]:
+def preflight_invocation(payload: dict[str, JsonValue], entry: dict[str, JsonValue] | None) -> dict[str, JsonValue]:
     legacy_id = payload.get("legacy_id")
     spec = _REPOSITORY.spec(str(legacy_id)) if legacy_id else None
     decision = _POLICY.evaluate(payload, entry, spec, spec_hash=_REPOSITORY.spec_hash(str(legacy_id)) if legacy_id else None)
-    data = decision.model_dump(mode="json")
+    data = _to_json_object(decision.model_dump_json())
     append_event(
         _TELEMETRY,
         "rbw.agent.preflight",
         runtime_attributes(
-            legacy_id=data.get("legacy_id"),
-            backend=data.get("backend"),
-            policy_mode=data.get("policy_mode") or "shadow",
-            decision=data.get("decision") or "block",
-            risk_class=data.get("risk_class"),
+            legacy_id=_optional_string(data.get("legacy_id")),
+            backend=_optional_string(data.get("backend")),
+            policy_mode=_optional_string(data.get("policy_mode")) or "shadow",
+            decision=_optional_string(data.get("decision")) or "block",
+            risk_class=_optional_string(data.get("risk_class")),
         ),
         strictReasons=data.get("strict_reasons", []),
         shadowReasons=data.get("shadow_reasons", []),
@@ -126,22 +132,24 @@ def preflight_invocation(payload: dict[str, Any], entry: dict[str, Any] | None) 
         cache=_REPOSITORY.cache_state(),
     )
     if not data.get("allowed") and data.get("legacy_id"):
-        _write_runtime_report(data, {
+        _ = _write_runtime_report(data, {
             "ok": False,
             "exitCode": 2,
             "timeout": False,
             "businessFailure": False,
             "errorType": "RuntimeV2PreflightBlocked",
-            "error": ",".join(data.get("strict_reasons") or ["preflight_blocked"]),
+            "error": ",".join(TypeAdapter(list[str]).validate_python(data.get("strict_reasons") or ["preflight_blocked"])),
             "durationSeconds": 0.0,
         }, stage="preflight")
     return data
 
 
-def run_structured_invocation(decision: dict[str, Any], extra_env: dict[str, Any] | None = None) -> dict[str, Any]:
+def run_structured_invocation(decision: dict[str, JsonValue], extra_env: dict[str, JsonValue] | None = None) -> dict[str, JsonValue]:
+    result: dict[str, JsonValue]
     try:
         result = execute_argv(decision, extra_env=extra_env)
     except Exception as exc:
+        logger.exception("Structured invocation failed")
         result = {
             "ok": False,
             "exitCode": 127,
@@ -161,16 +169,16 @@ def run_structured_invocation(decision: dict[str, Any], extra_env: dict[str, Any
             "errorType": exc.__class__.__name__,
             "error": str(exc),
         }
-    _write_runtime_report(decision, result, stage="execution")
+    _ = _write_runtime_report(decision, result, stage="execution")
     append_event(
         _TELEMETRY,
         "rbw.agent.execution.completed",
         runtime_attributes(
-            legacy_id=decision.get("legacy_id"),
+            legacy_id=_optional_string(decision.get("legacy_id")),
             backend="argv",
-            policy_mode=decision.get("policy_mode") or "shadow",
-            decision=decision.get("decision") or "allow",
-            risk_class=decision.get("risk_class"),
+            policy_mode=_optional_string(decision.get("policy_mode")) or "shadow",
+            decision=_optional_string(decision.get("decision")) or "allow",
+            risk_class=_optional_string(decision.get("risk_class")),
         ),
         ok=result.get("ok"),
         exitCode=result.get("exitCode"),
@@ -180,3 +188,5 @@ def run_structured_invocation(decision: dict[str, Any], extra_env: dict[str, Any
         stderrBytes=result.get("stderrBytes"),
     )
     return result
+
+__all__ = ["_write_runtime_report", "load_manifest_entries", "preflight_invocation", "run_structured_invocation", "runtime_report_path"]

@@ -1,0 +1,40 @@
+{
+  "checkedAt": "2026-10-28T09:58:05.148873+00:00",
+  "generator": "ops/rbw-agents-oss/packages/rbw_agent_runtime/catalog.py:283",
+  "python": "3.14.6 (main, Jun 10 2026, 10:03:53) [Clang 21.0.0 (clang-2100.0.123.102)]",
+  "pydantic": "2.14.1",
+  "sourceUnchanged": true,
+  "canonicalization": [
+    "Fixed generation clock to stored artifact time",
+    "Canonical /srv path retained in provenance before calculating spec hashes"
+  ],
+  "inputs": {
+    "config/command-manifest.json": "6a1111e9fa8f2d7b93b0e3ca20f49013e51adbcddd2e6702a04e58167a678e12",
+    "config/automation-mapping.json": "a1ef117c24ef647496c4ad303dc22aaf322a5b6d04d8470f91345d59b12ac0a6",
+    "config/temporal/schedules.json": "f29c2a654b1a00305fb6ce7ad3740fea7b67c254cf38e3547f5db31d21a11c5f",
+    "config/temporal/ready-schedules.json": "6fc2f3f334b29cf3e5ae56e5943e19fb7c2fe2b7ce00c31022941bcd04ea1f57",
+    "config/registry/side-effects-policy.json": "11d1fc4e39d3d1f31be5c8daa85d457465b5b0eb024d8b5a7df0349ecc7ffabd",
+    "packages/rbw_agent_runtime/catalog.py": "58d8606d0a2b5f9b528a16565148c1eb96e2cf88d6ca763f7b57673400aa97fb",
+    "packages/rbw_agent_runtime/models.py": "d9604aea4b2825a617c522a01dc4bc6bce818b6d0a7ee284740788fa41749571"
+  },
+  "comparisons": [
+    {
+      "file": "ops/rbw-agents-oss/config/agents-v2/catalog-v2.json",
+      "semanticEqual": true,
+      "originalSha256": "eb6c35c3d521f981077c02e612ef3bae94ec246e4a436916c8b84d804934a579",
+      "reproducedSha256": "eb6c35c3d521f981077c02e612ef3bae94ec246e4a436916c8b84d804934a579"
+    },
+    {
+      "file": "ops/rbw-agents-oss/config/agents-v2/agent-cards-v2.json",
+      "semanticEqual": true,
+      "originalSha256": "673819fbb1813a4c030e7805b49cc39b59ce906f68b0a5535f3e61aec66430e4",
+      "reproducedSha256": "673819fbb1813a4c030e7805b49cc39b59ce906f68b0a5535f3e61aec66430e4"
+    }
+  ],
+  "generatorStatus": "processed",
+  "scope": "Read-only reproduction of existing generated catalogs; writes captured outside the source checkout",
+  "commands": [
+    "CatalogCompiler.build(write_fragments=False) with captured writes",
+    "Generation clock fixed to stored generatedAt; canonical /srv paths retained before hashing"
+  ]
+}

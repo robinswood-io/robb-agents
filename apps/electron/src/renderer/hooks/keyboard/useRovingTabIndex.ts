@@ -6,25 +6,25 @@ interface UseRovingTabIndexOptions<T> {
   /** Get unique ID for each item (item, index) => id */
   getId: (item: T, index: number) => string
   /** Navigation direction (affects arrow key behavior) */
-  orientation?: 'vertical' | 'horizontal' | 'both'
+  orientation?: 'vertical' | 'horizontal' | 'both' | undefined
   /** Wrap around at ends */
-  wrap?: boolean
+  wrap?: boolean | undefined
   /** Called when user navigates with arrow keys - use for scrolling into view */
-  onNavigate?: (item: T, index: number) => void
+  onNavigate?: ((item: T, index: number) => void) | undefined
   /** Called when Enter/Space is pressed on focused item - use for selection */
-  onActivate?: (item: T, index: number) => void
+  onActivate?: ((item: T, index: number) => void) | undefined
   /** Called when Delete/Backspace is pressed */
-  onDelete?: (item: T, index: number) => void
+  onDelete?: ((item: T, index: number) => void) | undefined
   /** Initial active index */
-  initialIndex?: number
+  initialIndex?: number | undefined
   /** Whether navigation is enabled (typically when zone is focused) */
-  enabled?: boolean
+  enabled?: boolean | undefined
   /** Called to open context menu on focused item */
-  onContextMenu?: (item: T, index: number, element: HTMLElement) => void
+  onContextMenu?: ((item: T, index: number, element: HTMLElement) => void) | undefined
   /** Whether to move focus to items on navigation (default: true). Set false to keep focus elsewhere (e.g., search input) */
-  moveFocus?: boolean
+  moveFocus?: boolean | undefined
   /** Called when Shift+Arrow extends selection (for multi-select support) */
-  onExtendSelection?: (toIndex: number) => void
+  onExtendSelection?: ((toIndex: number) => void) | undefined
 }
 
 interface UseRovingTabIndexReturn<T> {
@@ -97,7 +97,7 @@ export function useRovingTabIndex<T>({
       const newIndex = Math.max(0, items.length - 1)
       setActiveIndexState(newIndex)
     }
-  }, [items.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [items.length, activeIndex])
 
   // Programmatic index setter - only syncs state, no callbacks
   // Callbacks are only for user-initiated keyboard navigation
@@ -109,7 +109,7 @@ export function useRovingTabIndex<T>({
 
   const focusActiveItem = useCallback(() => {
     const item = items[activeIndex]
-    if (item) {
+    if (item !== undefined) {
       const id = getId(item, activeIndex)
       const element = itemRefs.current.get(id)
       element?.focus()
@@ -117,13 +117,14 @@ export function useRovingTabIndex<T>({
   }, [activeIndex, items, getId])
 
   const navigateToIndex = useCallback((nextIndex: number) => {
-    if (nextIndex >= 0 && nextIndex < items.length && nextIndex !== activeIndex) {
+    const item = items[nextIndex]
+    if (item !== undefined && nextIndex >= 0 && nextIndex < items.length && nextIndex !== activeIndex) {
       setActiveIndexState(nextIndex)
-      onNavigate?.(items[nextIndex], nextIndex)
+      onNavigate?.(item, nextIndex)
       // Focus new item after state update (unless moveFocus is false)
       if (moveFocus) {
         requestAnimationFrame(() => {
-          const id = getId(items[nextIndex], nextIndex)
+          const id = getId(item, nextIndex)
           itemRefs.current.get(id)?.focus()
         })
       }
@@ -137,6 +138,7 @@ export function useRovingTabIndex<T>({
     const isHorizontal = orientation === 'horizontal' || orientation === 'both'
     const isShiftKey = e.shiftKey
 
+    const activeItem = items[activeIndex]
     let nextIndex = activeIndex
     let handled = false
     let isExtendSelection = false
@@ -197,15 +199,15 @@ export function useRovingTabIndex<T>({
       case 'Enter':
       case ' ':
         e.preventDefault()
-        onActivate?.(items[activeIndex], activeIndex)
+        if (activeItem !== undefined) onActivate?.(activeItem, activeIndex)
         handled = true
         break
 
       case 'Delete':
       case 'Backspace':
-        if (onDelete) {
+        if (onDelete && activeItem !== undefined) {
           e.preventDefault()
-          onDelete(items[activeIndex], activeIndex)
+          onDelete(activeItem, activeIndex)
           handled = true
         }
         break
@@ -214,13 +216,12 @@ export function useRovingTabIndex<T>({
       case 'ContextMenu':
       case 'F10':
         if (e.key === 'F10' && !e.shiftKey) break // Only Shift+F10 triggers context menu
-        if (onContextMenu) {
+        if (onContextMenu && activeItem !== undefined) {
           e.preventDefault()
-          const item = items[activeIndex]
-          const id = getId(item, activeIndex)
+          const id = getId(activeItem, activeIndex)
           const element = itemRefs.current.get(id)
           if (element) {
-            onContextMenu(item, activeIndex, element)
+            onContextMenu(activeItem, activeIndex, element)
           }
           handled = true
         }
@@ -238,8 +239,10 @@ export function useRovingTabIndex<T>({
           setActiveIndexState(nextIndex)
           // Focus new item if moveFocus is enabled
           if (moveFocus) {
+            const item = items[nextIndex]
+            if (item === undefined) return
             requestAnimationFrame(() => {
-              const id = getId(items[nextIndex], nextIndex)
+              const id = getId(item, nextIndex)
               itemRefs.current.get(id)?.focus()
             })
           }
@@ -279,11 +282,14 @@ export function useRovingTabIndex<T>({
     }
   }, [activeIndex, getId, handleKeyDown])
 
-  const getContainerProps = useCallback(() => ({
-    role: 'listbox' as const,
-    'aria-activedescendant': items[activeIndex] ? `item-${getId(items[activeIndex], activeIndex)}` : undefined,
-    onKeyDown: handleKeyDown,
-  }), [items, activeIndex, getId, handleKeyDown])
+  const getContainerProps = useCallback(() => {
+    const item = items[activeIndex]
+    return {
+      role: 'listbox' as const,
+      'aria-activedescendant': item !== undefined ? `item-${getId(item, activeIndex)}` : undefined,
+      onKeyDown: handleKeyDown,
+    }
+  }, [items, activeIndex, getId, handleKeyDown])
 
   return {
     activeIndex,

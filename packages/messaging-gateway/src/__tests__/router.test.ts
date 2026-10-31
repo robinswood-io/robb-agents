@@ -85,15 +85,15 @@ function makeFakeAdapter(): PlatformAdapter {
     sendButtons: noop,
     sendTyping: async () => {},
     sendFile: noop,
-  } as unknown as PlatformAdapter
+  } as PlatformAdapter
 }
 
-function makeFakeSessionManager(): { sendMessage: ReturnType<typeof mock> } {
-  return { sendMessage: mock(async () => {}) }
+function makeFakeSessionManager() {
+  return { sendMessage: mock<ConstructorParameters<typeof Router>[0]['sendMessage']>(async () => {}) }
 }
 
-function makeFakeCommands(): { handle: ReturnType<typeof mock> } {
-  return { handle: mock(async () => {}) }
+function makeFakeCommands() {
+  return { handle: mock<Commands['handle']>(async () => {}) }
 }
 
 function makeRouter() {
@@ -101,8 +101,7 @@ function makeRouter() {
   store.bind('ws1', 'sess-A', 'telegram', 'chat-1')
   const sessionManager = makeFakeSessionManager()
   const commands = makeFakeCommands()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const router = new Router(sessionManager as any, store, commands as unknown as Commands)
+  const router = new Router(sessionManager, store, commands)
   return { router, store, sessionManager, commands }
 }
 
@@ -208,8 +207,7 @@ describe('Router', () => {
 
     const sessionManager = makeFakeSessionManager()
     const commands = makeFakeCommands()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const router = new Router(sessionManager as any, store, commands as unknown as Commands)
+      const router = new Router(sessionManager, store, commands)
     const adapter = makeFakeAdapter()
 
     await router.route(adapter, baseMsg({ channelId: '-1001', threadId: 5, text: 'hi from t5' }))
@@ -226,8 +224,7 @@ describe('Router', () => {
     store.bind('ws1', 'sess-A', 'telegram', '-1001', undefined, undefined, 5)
     const sessionManager = makeFakeSessionManager()
     const commands = makeFakeCommands()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const router = new Router(sessionManager as any, store, commands as unknown as Commands)
+      const router = new Router(sessionManager, store, commands)
 
     await router.route(makeFakeAdapter(), baseMsg({ channelId: '-1001', threadId: 7, text: '/help' }))
     expect(sessionManager.sendMessage).not.toHaveBeenCalled()

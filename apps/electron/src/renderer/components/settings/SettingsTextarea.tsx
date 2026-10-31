@@ -12,27 +12,27 @@ import { settingsUI } from './SettingsUIConstants'
 
 export interface SettingsTextareaProps {
   /** Textarea label */
-  label?: string
+  label?: string | undefined
   /** Optional description below label */
-  description?: string
+  description?: string | undefined
   /** Current value */
   value: string
   /** Change handler */
   onChange: (value: string) => void
   /** Placeholder text */
-  placeholder?: string
+  placeholder?: string | undefined
   /** Maximum character length */
-  maxLength?: number
+  maxLength?: number | undefined
   /** Number of visible rows */
-  rows?: number
+  rows?: number | undefined
   /** Disabled state */
-  disabled?: boolean
+  disabled?: boolean | undefined
   /** Error message */
-  error?: string
+  error?: string | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
   /** Whether inside a card */
-  inCard?: boolean
+  inCard?: boolean | undefined
 }
 
 /**

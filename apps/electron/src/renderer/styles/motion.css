@@ -1,0 +1,287 @@
+/* =============================================================================
+   DISABLE ANIMATIONS FOR DIALOGS, DROPDOWNS, AND POPOVERS
+
+   Radix UI (used by shadcn/ui) applies animations via data-state attributes.
+   This globally disables enter/exit animations for overlay components.
+
+   To re-enable for specific components, use: animation: revert !important;
+============================================================================= */
+
+/* Dialog overlay (backdrop) */
+[data-radix-dialog-overlay] {
+  animation: none !important;
+}
+
+/* Dialog content */
+[role="dialog"][data-state],
+[data-radix-dialog-content] {
+  animation: none !important;
+}
+
+/* Dropdown menu content */
+[data-radix-menu-content],
+[data-radix-dropdown-menu-content] {
+  animation: none !important;
+}
+
+/* Popover content */
+[data-radix-popover-content] {
+  animation: none !important;
+}
+
+/* Select content */
+[data-radix-select-content] {
+  animation: none !important;
+}
+
+/* Tooltip content (if you want tooltips instant too) */
+[data-radix-tooltip-content] {
+  animation: none !important;
+}
+
+/* Context menu content */
+[data-radix-context-menu-content] {
+  animation: none !important;
+}
+
+/* Alert dialog */
+[data-radix-alert-dialog-overlay],
+[data-radix-alert-dialog-content] {
+  animation: none !important;
+}
+
+/* Fix ScrollArea internal div preventing content shrink
+   Radix injects a div with min-width: 100%; display: table; which prevents shrinking */
+[data-radix-scroll-area-viewport] > div {
+  min-width: 0 !important;
+  display: block !important;
+}
+
+/* =============================================================================
+   ONBOARDING STEP STYLES
+
+   Global styles for onboarding components using CSS custom properties.
+   Change the variables in :root to update all steps at once.
+============================================================================= */
+
+@layer components {
+  .step-icon {
+    width: var(--step-icon-size);
+    height: var(--step-icon-size);
+    border-radius: var(--step-icon-radius);
+  }
+
+  .step-icon > div {
+    width: var(--step-icon-inner-size);
+    height: var(--step-icon-inner-size);
+  }
+
+  .step-title {
+    font-size: var(--step-title-size);
+  }
+
+  .step-description {
+    max-width: var(--step-description-max-width);
+  }
+
+  .step-actions {
+    margin-top: var(--step-actions-margin);
+    gap: var(--step-actions-gap);
+  }
+
+  .feature-bullet {
+    background-color: var(--foreground);
+  }
+}
+
+
+/* =============================================================================
+   SESSION LIST - SEPARATOR VISIBILITY
+
+   Hide separators when session items are hovered or selected.
+   Uses :has() to target adjacent sibling separators.
+============================================================================= */
+
+/* Hide own separator when item is hovered or selected */
+.session-item:hover > .session-separator,
+.session-item[data-selected] > .session-separator {
+  opacity: 0;
+}
+
+/* Hide next item's separator when current item is hovered or selected */
+.session-item:hover + .session-item > .session-separator,
+.session-item[data-selected] + .session-item > .session-separator {
+  opacity: 0;
+}
+
+/* =============================================================================
+   SOURCES LIST - SEPARATOR VISIBILITY
+
+   Hide separators when source items are hovered or selected.
+   Same logic as session list.
+============================================================================= */
+
+/* Hide own separator when item is hovered or selected */
+.source-item:hover > .source-separator,
+.source-item[data-selected] > .source-separator {
+  opacity: 0;
+}
+
+/* Hide next item's separator when current item is hovered or selected */
+.source-item:hover + .source-item > .source-separator,
+.source-item[data-selected] + .source-item > .source-separator {
+  opacity: 0;
+}
+
+/* =============================================================================
+   IMPORT LIST - SEPARATOR VISIBILITY
+
+   Hide separators when import items are hovered or selected.
+   Same logic as session list.
+============================================================================= */
+
+/* Hide own separator when item is hovered or selected */
+.import-item:hover > .import-separator,
+.import-item[data-selected] > .import-separator {
+  opacity: 0;
+}
+
+/* Hide next item's separator when current item is hovered or selected */
+.import-item:hover + .import-item > .import-separator,
+.import-item[data-selected] + .import-item > .import-separator {
+  opacity: 0;
+}
+
+/* =============================================================================
+   LOADING INDICATOR - SPINKIT GRID SPINNER
+
+   3x3 grid spinner based on SpinKit Grid.
+   - Uses currentColor (inherits text color)
+   - Uses em units (scales with font-size)
+   - Pure CSS animation with staggered delays
+
+   https://github.com/tobiasahlin/SpinKit
+============================================================================= */
+
+.spinner {
+  display: inline-grid;
+  grid-template-columns: repeat(3, 1fr);
+  width: 1em;
+  height: 1em;
+  gap: 0.08em;
+}
+
+.spinner-cube {
+  background-color: currentColor;
+  animation: spinner-grid 1.3s infinite ease-in-out;
+  transform: scale3d(0.5, 0.5, 1);
+}
+
+.spinner-cube:nth-child(1) { animation-delay: 0.2s; }
+.spinner-cube:nth-child(2) { animation-delay: 0.3s; }
+.spinner-cube:nth-child(3) { animation-delay: 0.4s; }
+.spinner-cube:nth-child(4) { animation-delay: 0.1s; }
+.spinner-cube:nth-child(5) { animation-delay: 0.2s; }
+.spinner-cube:nth-child(6) { animation-delay: 0.3s; }
+.spinner-cube:nth-child(7) { animation-delay: 0s; }
+.spinner-cube:nth-child(8) { animation-delay: 0.1s; }
+.spinner-cube:nth-child(9) { animation-delay: 0.2s; }
+
+@keyframes spinner-grid {
+  0%, 70%, 100% {
+    transform: scale3d(0.5, 0.5, 1);
+  }
+  35% {
+    transform: scale3d(0, 0, 1);
+  }
+}
+
+/* Toast animation - scale and fade in */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: scale(0.75);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* =============================================================================
+   SHIMMER ANIMATION FOR OPTIMISTIC UI
+
+   Subtle shimmer effect for messages awaiting backend confirmation.
+   Uses a gradient sweep to indicate pending state without being distracting.
+============================================================================= */
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(from var(--foreground) l c h / 0.06) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Browser loading line — accent gradient sliding left→right */
+@keyframes shimmer-loading {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer-loading {
+  animation: shimmer-loading 1.2s linear infinite;
+}
+
+/* Text shimmer - subtle opacity pulse for inline text (title regeneration, etc.) */
+.animate-shimmer-text {
+  animation: shimmer-text 1.2s ease-in-out infinite;
+}
+
+@keyframes shimmer-text {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* =============================================================================
+   SHAKE ANIMATION
+
+   Horizontal shake for invalid actions (e.g., trying to disable last mode).
+============================================================================= */
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+  20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+@keyframes editPopoverFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

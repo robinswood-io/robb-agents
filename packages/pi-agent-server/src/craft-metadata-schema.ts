@@ -16,9 +16,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function cloneWithDescriptors<T extends object>(value: T): T {
-  const clone = Object.create(Object.getPrototypeOf(value));
+  const prototype: object | null = Object.getPrototypeOf(value) as object | null;
+  const clone: object = Object.create(prototype) as object;
   Object.defineProperties(clone, Object.getOwnPropertyDescriptors(value));
-  return clone;
+  return clone as T;
 }
 
 /**
@@ -33,7 +34,7 @@ function cloneWithDescriptors<T extends object>(value: T): T {
 export function allowCraftMetadataProperties<T>(schema: T, sdkToolName?: string): T {
   if (!isRecord(schema)) return schema;
 
-  const properties = schema.properties;
+  const properties = schema["properties"];
   if (!isRecord(properties)) return schema;
 
   const nextSchema = cloneWithDescriptors(schema);
@@ -52,9 +53,9 @@ export function allowCraftMetadataProperties<T>(schema: T, sdkToolName?: string)
   // so both shapes must be accepted at the schema boundary and normalized
   // immediately before calling Pi.
   if (sdkToolName === 'Edit') {
-    nextProperties.file_path ??= { type: 'string', description: 'Compatibility alias for path.' };
-    nextProperties.old_string ??= { type: 'string', description: 'Compatibility alias for edits[0].oldText.' };
-    nextProperties.new_string ??= { type: 'string', description: 'Compatibility alias for edits[0].newText.' };
+    nextProperties["file_path"] ??= { type: 'string', description: 'Compatibility alias for path.' };
+    nextProperties["old_string"] ??= { type: 'string', description: 'Compatibility alias for edits[0].oldText.' };
+    nextProperties["new_string"] ??= { type: 'string', description: 'Compatibility alias for edits[0].newText.' };
 
     Object.defineProperty(nextSchema, 'required', {
       value: [],
@@ -88,21 +89,21 @@ export function normalizeForPiTool<T>(sdkToolName: string, input: T): T {
   if (!['Write', 'Edit', 'MultiEdit', 'NotebookEdit'].includes(sdkToolName)) return input;
 
   const normalized: Record<string, unknown> = { ...input };
-  if (typeof normalized.file_path === 'string') {
-    normalized.path = normalized.file_path;
+  if (typeof normalized["file_path"] === 'string') {
+    normalized["path"] = normalized["file_path"];
   }
 
-  if (sdkToolName === 'Edit' && !Array.isArray(normalized.edits)
-      && typeof normalized.old_string === 'string'
-      && typeof normalized.new_string === 'string') {
-    normalized.edits = [{ oldText: normalized.old_string, newText: normalized.new_string }];
+  if (sdkToolName === 'Edit' && !Array.isArray(normalized["edits"])
+      && typeof normalized["old_string"] === 'string'
+      && typeof normalized["new_string"] === 'string') {
+    normalized["edits"] = [{ oldText: normalized["old_string"], newText: normalized["new_string"] }];
   }
 
-  delete normalized.file_path;
-  delete normalized.old_string;
-  delete normalized.new_string;
-  delete normalized.oldText;
-  delete normalized.newText;
+  delete normalized["file_path"];
+  delete normalized["old_string"];
+  delete normalized["new_string"];
+  delete normalized["oldText"];
+  delete normalized["newText"];
   return normalized as T;
 }
 

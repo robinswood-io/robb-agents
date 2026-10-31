@@ -1,32 +1,29 @@
 name: Build desktop release
-
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
       release_mode:
-        description: "test-artifacts uploads unsigned CI artifacts only; publish-signed requires signed macOS and Windows artifacts"
+        description: "test-artifacts: unsigned; stage-signed: signed macOS QA only; publish-signed: public release"
         required: true
         default: test-artifacts
         type: choice
-        options: [test-artifacts, publish-signed]
+        options: [test-artifacts, stage-signed, publish-signed]
       tag:
         description: "Existing vX.Y.Z tag; required for publish modes"
         required: false
         type: string
-
 permissions:
   contents: write
   attestations: write
   id-token: write
-
 concurrency:
   group: robb-release-${{ github.ref }}
   cancel-in-progress: false
-
 jobs:
   preflight:
+    timeout-minutes: 10
     name: Release policy preflight
     runs-on: ubuntu-latest
     outputs:
@@ -36,13 +33,12 @@ jobs:
       source_commit: ${{ steps.policy.outputs.source_commit }}
       release_mode: ${{ steps.policy.outputs.release_mode }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: {python-version: "3.15.2"}
       - id: policy
         name: Validate tag, version and signing material
         env:
@@ -67,112 +63,64 @@ jobs:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          version="$(node -p "require('./apps/electron/package.json').version")"
-          root_version="$(node -p "require('./package.json').version")"
-          [[ "$version" == "$root_version" ]] || { echo "::error::Electron version $version must match root version $root_version"; exit 1; }
-          source_commit="$(git rev-parse HEAD)"
-          tag="${REQUESTED_TAG:-${GITHUB_REF_NAME}}"
-          mode="${REQUESTED_MODE:-test-artifacts}"
-          # A pushed stable tag is always a release-grade publication request.
-          # macOS remains signed and notarized; Windows follows the explicit
-          # unsigned, PFX, or Azure signing policy below.
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then mode="${REQUESTED_MODE:-publish-signed}"; fi
-          if [[ "$mode" != "test-artifacts" && "$mode" != "publish-signed" ]]; then
-            echo "::error::Unknown release mode: $mode"; exit 1
-          fi
-
-          publish=false
-          if [[ "$mode" == "publish-signed" ]]; then
-            [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Only stable X.Y.Z versions can be published: $version"; exit 1; }
-            [[ "$tag" == "v${version}" ]] || { echo "::error::Tag $tag must match Electron version v${version}"; exit 1; }
-            tag_commit="$(git rev-list -n 1 "$tag")"
-            checked_out_commit="$(git rev-parse HEAD)"
-            [[ -n "$tag_commit" && "$tag_commit" == "$checked_out_commit" ]] || {
-              echo "::error::Checked-out source $checked_out_commit does not match immutable tag $tag ($tag_commit)"
-              exit 1
-            }
-            python3 scripts/robinswood-signing-preflight.py --ci --strict
-
-            if [[ "${WINDOWS_SIGNING_MODE}" == "unsigned" ]]; then
-              echo "::notice::Windows will be published unsigned with explicit provenance and checksum verification."
-            elif [[ "${WINDOWS_SIGNING_MODE}" == "pfx" ]]; then
-              [[ -n "${WINDOWS_CSC_LINK:-}" && -n "${WINDOWS_CSC_KEY_PASSWORD:-}" ]] || {
-                echo "::error::publish-signed requires WINDOWS_CSC_LINK and WINDOWS_CSC_KEY_PASSWORD when WINDOWS_SIGNING_MODE=pfx"
-                exit 1
-              }
-            elif [[ "${WINDOWS_SIGNING_MODE}" == "azure" ]]; then
-              missing=()
-              for name in WINDOWS_AZURE_ENDPOINT WINDOWS_AZURE_ACCOUNT_NAME WINDOWS_AZURE_CERTIFICATE_PROFILE_NAME WINDOWS_AZURE_PUBLISHER_NAME AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET; do
-                [[ -n "${!name:-}" ]] || missing+=("$name")
-              done
-              ((${#missing[@]} == 0)) || { printf "::error::publish-signed Azure signing is missing: %s\n" "${missing[*]}"; exit 1; }
-            else
-              echo "::error::Unsupported WINDOWS_SIGNING_MODE: ${WINDOWS_SIGNING_MODE}; expected unsigned, pfx, or azure"; exit 1
-            fi
-
-            if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-              echo "::error::GitHub Release $tag already exists; refusing to overwrite it"; exit 1
-            fi
-            publish=true
-          else
-            tag="test-${source_commit::12}"
-            echo "::notice::Test artifacts will be retained in CI only; no GitHub Release will be created."
-          fi
-          echo "publish=$publish" >> "$GITHUB_OUTPUT"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "source_commit=$source_commit" >> "$GITHUB_OUTPUT"
-          echo "release_mode=$mode" >> "$GITHUB_OUTPUT"
-
+        run: bash scripts/robinswood-prepare-release-source.sh
   quality:
-    name: Release source quality gate
+    name: Release source quality gate on DEV
+    permissions: {contents: read}
     needs: preflight
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: [self-hosted, Linux, X64, robb-release]
+    timeout-minutes: 70
+    defaults:
+      run:
+        working-directory: /home/ubuntu/robb-local-reconcile-20261029
+    env:
+      NODE_OPTIONS: "--max-old-space-size=4096"
+      ROBB_RULEBOOK_COMMIT: "aa499d6689353a00689d2eb943e3db6c8e118fda"
+      ROBB_EXPECTED_SOURCE_COMMIT: "${{ needs.preflight.outputs.source_commit }}"
+      ROBB_QUALITY_CHECKOUT: /home/ubuntu/robb-local-reconcile-20261029
+      ROBB_RULEBOOK_CHECKOUT: /home/ubuntu/robb-release-controllers/aa499d6689353a00689d2eb943e3db6c8e118fda
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.preflight.outputs.source_commit }}
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.3.14"
-      - uses: astral-sh/setup-uv@v5
-      - name: Install immutable workspace dependencies
-        run: bun install --frozen-lockfile
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+      # The runner verifies the prepared checkout; it never resets or replaces it.
+      - name: Verify immutable prepared source
+        run: |
+          robb_source_head="$(rtk git rev-parse HEAD)"
+          test "$robb_source_head" = "$ROBB_EXPECTED_SOURCE_COMMIT"
+          robb_source_status="$(rtk git status --porcelain)"
+          test -z "$robb_source_status"
       - name: Verify public source boundary
         run: |
-          python3 scripts/robinswood-public-source-boundary.py
-          python3 -m unittest scripts/tests/test_robinswood_public_source_boundary.py
-      - name: Validate source, updater and installer contracts
-        run: bun run validate:ci
-
+          rtk python3 scripts/robinswood_public_source_boundary.py
+          rtk python3 -m unittest scripts/tests/test_robinswood_public_source_boundary.py
+      - name: Validate source, installers and canonical quality
+        run: xvfb-run -a rtk python3 scripts/robinswood_quality_ci.py
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with: {name: release-quality-diagnostics, path: "${{ runner.temp }}/robb-public-quality/", if-no-files-found: warn}
   macos:
+    timeout-minutes: 90
     name: macOS ${{ matrix.arch }}
     needs: [preflight, quality]
-    runs-on: macos-14
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        arch: [arm64, x64]
+        include:
+          - arch: arm64
+            runner: macos-26
+          - arch: x64
+            runner: macos-26-intel
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.preflight.outputs.source_commit }}
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.3.14"
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: {python-version: "3.15.2"}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: {node-version: "26.13.0"}
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with: {bun-version: "1.4.4"}
       - name: Exercise macOS installer update contract
-        run: python3 scripts/tests/test_installers.py
+        run: python3 -m unittest scripts.tests.test_installers scripts.tests.test_ripgrep_packaging
       - name: Build and validate macOS artifact
         env:
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
@@ -189,14 +137,13 @@ jobs:
           ROBB_PACKAGE_LAUNCH_SMOKE: "1"
         run: |
           args=("${{ matrix.arch }}")
-          if [[ "${{ needs.preflight.outputs.publish }}" == "true" ]]; then
+          if [[ "${{ needs.preflight.outputs.release_mode }}" != "test-artifacts" ]]; then
             if [[ -n "${APPLE_API_KEY_BASE64:-}" ]]; then
               export APPLE_API_KEY="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
               python3 - <<'PY'
           import base64
           import os
           from pathlib import Path
-
           Path(os.environ["APPLE_API_KEY"]).write_bytes(
               base64.b64decode(os.environ["APPLE_API_KEY_BASE64"], validate=True)
           )
@@ -218,9 +165,9 @@ jobs:
           source_commit=${{ needs.preflight.outputs.source_commit }}
           release_tag=${{ needs.preflight.outputs.tag }}
           platform=macos-${{ matrix.arch }}
-          signing=$([[ "${{ needs.preflight.outputs.publish }}" == "true" ]] && echo verified-developer-id-and-notarized || echo unsigned-test-artifact)
+          signing=$([[ "${{ needs.preflight.outputs.release_mode }}" != "test-artifacts" ]] && echo verified-developer-id-and-notarized || echo unsigned-test-artifact)
           EOF
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: macos-${{ matrix.arch }}
           retention-days: 14
@@ -230,23 +177,24 @@ jobs:
             apps/electron/release/SHA256SUMS-macos-${{ matrix.arch }}.txt
             apps/electron/release/PROVENANCE-macos-${{ matrix.arch }}.txt
           if-no-files-found: error
-
   windows:
+    if: needs.preflight.outputs.release_mode != 'stage-signed'
+    timeout-minutes: 60
     name: Windows x64
     needs: [preflight, quality]
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.preflight.outputs.source_commit }}
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.3.14"
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: {node-version: "26.13.0"}
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with: {bun-version: "1.4.4"}
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: {python-version: "3.15.2"}
       - name: Exercise Windows installer update contract
-        run: python3 scripts/tests/test_installers.py
+        run: python3 -m unittest scripts.tests.test_installers scripts.tests.test_ripgrep_packaging
       - name: Build and validate Windows installer
         env:
           WINDOWS_SIGNING_MODE: ${{ vars.WINDOWS_SIGNING_MODE || 'unsigned' }}
@@ -310,7 +258,7 @@ jobs:
           if ('${{ needs.preflight.outputs.publish }}' -eq 'true' -and '${{ vars.WINDOWS_SIGNING_MODE || 'unsigned' }}' -ne 'unsigned') { $e2eArgs += '-RequireAuthenticode' }
           & powershell @e2eArgs
           if ($LASTEXITCODE -ne 0) { throw 'Isolated Windows installer journey failed' }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: windows-x64
           retention-days: 14
@@ -319,23 +267,24 @@ jobs:
             apps/electron/release/SHA256SUMS-windows-x64.txt
             apps/electron/release/PROVENANCE-windows-x64.txt
           if-no-files-found: error
-
   linux:
+    if: needs.preflight.outputs.release_mode != 'stage-signed'
+    timeout-minutes: 45
     name: Linux x64
     needs: [preflight, quality]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.preflight.outputs.source_commit }}
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.3.14"
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with: {python-version: "3.15.2"}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: {node-version: "26.13.0"}
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with: {bun-version: "1.4.4"}
       - name: Exercise Linux installer update contract
-        run: python3 scripts/tests/test_installers.py
+        run: python3 -m unittest scripts.tests.test_installers scripts.tests.test_ripgrep_packaging
       - name: Install Linux desktop smoke dependencies
         run: |
           sudo apt-get update
@@ -364,7 +313,7 @@ jobs:
           platform=linux-x64
           signing=checksum-and-provenance-verified
           EOF
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linux-x64
           retention-days: 14
@@ -373,8 +322,8 @@ jobs:
             apps/electron/release/SHA256SUMS-linux-x64.txt
             apps/electron/release/PROVENANCE-linux-x64.txt
           if-no-files-found: error
-
   publish:
+    timeout-minutes: 20
     name: Publish GitHub Release
     if: needs.preflight.outputs.publish == 'true'
     needs: [preflight, macos, windows, linux]
@@ -386,14 +335,13 @@ jobs:
       name: release
       url: https://github.com/${{ github.repository }}/releases/tag/${{ needs.preflight.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.preflight.outputs.source_commit }}
           fetch-depth: 0
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.3.14"
-      - uses: actions/download-artifact@v8
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with: {bun-version: "1.4.4"}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: release-assets
           merge-multiple: true
@@ -433,7 +381,7 @@ jobs:
             --release-dir release-assets \
             --version "${{ needs.preflight.outputs.version }}"
       - name: Generate release SBOM
-        uses: anchore/sbom-action@v0
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
         with:
           path: release-assets
           format: spdx-json
@@ -464,8 +412,9 @@ jobs:
       # soon as the intended public OSS visibility is enabled.
       - name: Attest public release artifacts
         if: github.event.repository.private == false
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
+          create-storage-record: false
           subject-checksums: release-assets/SHA256SUMS.txt
       - name: Upload verified GitHub Release draft
         env:
@@ -489,7 +438,6 @@ jobs:
           bun run scripts/verify-github-release-assets.ts \
             --release-dir release-assets \
             --assets-json "$published_assets"
-
           published_feed="$RUNNER_TEMP/published-updater-feed"
           verified=false
           for attempt in 1 2 3 4 5 6; do
@@ -509,7 +457,6 @@ jobs:
             sleep 5
           done
           [[ "$verified" == true ]] || { echo "::error::Published updater manifests do not match the validated release bundle"; exit 1; }
-
       - name: Publish immutable latest release
         env:
           GH_TOKEN: ${{ github.token }}

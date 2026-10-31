@@ -54,12 +54,12 @@ function AvatarFallback({
  * Both elements are layered so the transition is smooth.
  */
 interface CrossfadeAvatarProps {
-  src?: string | null
-  alt?: string
+  src?: string | null | undefined
+  alt?: string | undefined
   fallback: React.ReactNode
-  className?: string
-  fallbackClassName?: string
-  imageClassName?: string
+  className?: string | undefined
+  fallbackClassName?: string | undefined
+  imageClassName?: string | undefined
 }
 
 function CrossfadeAvatar({
@@ -97,7 +97,7 @@ function CrossfadeAvatar({
 
   // Callback ref to check if image is cached immediately when element mounts
   const imgCallbackRef = React.useCallback((node: HTMLImageElement | null) => {
-    if (node && node.complete && node.naturalWidth > 0) {
+    if (node && src && node.complete && node.naturalWidth > 0) {
       // Image is already cached/loaded
       setIsLoaded(true)
     }

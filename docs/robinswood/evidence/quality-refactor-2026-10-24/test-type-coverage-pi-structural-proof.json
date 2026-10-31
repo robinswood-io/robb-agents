@@ -1,0 +1,104 @@
+{
+  "status": "passed",
+  "files": [
+    {
+      "file": "packages/pi-agent-server/src/authenticated-model-runtime.test.ts",
+      "lines": 50,
+      "sha256": "a7dd65b13e7b8aa6b4137688386a41fe5f91ce13aa9cff028c2cece50a20b0c9"
+    },
+    {
+      "file": "packages/pi-agent-server/src/compact-selected-model.test.ts",
+      "lines": 25,
+      "sha256": "2fc9b3405ab0a5343c02a4f398068ae2101d5509d61947717b2a4c586746e1f1"
+    },
+    {
+      "file": "packages/pi-agent-server/src/craft-metadata-schema.test.ts",
+      "lines": 141,
+      "sha256": "cd6e9122551d87ba9b0d78fcd9e2642366a3e9a12a40a06c2794b9ae99437fd2"
+    },
+    {
+      "file": "packages/pi-agent-server/src/google-code-assist-auth.test.ts",
+      "lines": 20,
+      "sha256": "b2ae127d6eadfb9b80d9aa610f4b0dd14ee32fede9ab48d0eae33b840ec55204"
+    },
+    {
+      "file": "packages/pi-agent-server/src/native-settlement.test.ts",
+      "lines": 115,
+      "sha256": "da27d99a87599fe49940530e7440a99628262b3cd598f56a9916cb8e4eacae44"
+    },
+    {
+      "file": "packages/pi-agent-server/src/proxy-tool-result.test.ts",
+      "lines": 152,
+      "sha256": "922768abb0b25277f8178e6d5b691573d9c79a9801b625b1710fb2b5f1ce22ea"
+    },
+    {
+      "file": "packages/pi-agent-server/src/system-prompt-override.test.ts",
+      "lines": 54,
+      "sha256": "ddb0c9c641dbdaec362b14ea01c04d8d5cec9f8aa581ad96ca2eee330fba6f18"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tool-loop-feedback-integration.test.ts",
+      "lines": 113,
+      "sha256": "334ef79ba6967184ae9a8532ef62c62a94724e27a66ca7408909f1555f50b2c5"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tools/__tests__/web-fetch.test.ts",
+      "lines": 201,
+      "sha256": "bef18238c8d8e0c737adad36f838982d73b75a4d915e4f59da4ac5d5835759e5"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tools/search/create-search-tool.test.ts",
+      "lines": 103,
+      "sha256": "d7d4788c9c763ac3cd23e3a85c6dea3a64b9d0b9bd130fc908be98e3f9616639"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tools/search/providers/chatgpt.test.ts",
+      "lines": 344,
+      "sha256": "886f62cfd19f2a41555e9738ed46f92062a40371f6cce9a84fa0f9c325d9926b"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tools/search/providers/openai.test.ts",
+      "lines": 209,
+      "sha256": "48f66755c570a82acf19a68e7c68240849867ceaa012739b0a49988593764418"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tools/web-fetch-pdf.test.ts",
+      "lines": 68,
+      "sha256": "dd544d0a2da80117005295fa81fa487e7beb26ad18419660e6722d6c43170d0b"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tools/web-fetch.test.ts",
+      "lines": 44,
+      "sha256": "3b142d1d7057dc819433a64af4dbf20699f05dd2d5118020a859051a75f9d9ac"
+    },
+    {
+      "file": "packages/pi-agent-server/tsconfig.typecheck.json",
+      "lines": 37,
+      "sha256": "44eec2a42b79bf4a069013f9c2db3426e3c3bb8a7fcb53820e6d920f501434cc"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tools/search/create-search-tool.ts",
+      "lines": 115,
+      "sha256": "a522d834445d471411ee897a0c8df44d20e12eef0a63b8a8ee8fccad22332514"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tools/web-fetch/factory.ts",
+      "lines": 166,
+      "sha256": "a95f6dec50ca8ae044259a6c8eaebe50ce5e868bd98706e007400a0ed2b5d833"
+    },
+    {
+      "file": "packages/pi-agent-server/src/compact-selected-model.ts",
+      "lines": 12,
+      "sha256": "66731c9c3ccffeba18cb19ed35fa0a1ce6eb9de922d96beb84b072dc6d455cf5"
+    }
+  ],
+  "productionJavaScriptUnchanged": true,
+  "completedFetchMocks": 17,
+  "removedExplicitAny": 14,
+  "controlledTestChanges": [
+    "Required native compaction receipt fields",
+    "Unused SDK context arguments removed from one fixture call",
+    "Native system message text and text-block content handled"
+  ],
+  "otherTestJavaScriptUnchanged": true
+}

@@ -1,0 +1,443 @@
+{
+  "status": "testé localement, travail global en cours",
+  "scope": "Contrats Python, dépendances du runtime et scénarios natifs des installeurs",
+  "changes": [
+    "272 types opaques Python supprimés, contrats JSON et Temporal explicites",
+    "5 dépendances du runtime vérifiées sur PyPI",
+    "Validation JSON native sur sept champs des modèles",
+    "68 scénarios des deux installeurs conservés ; modules de tests de 454 lignes maximum"
+  ],
+  "sourceGate": {
+    "max-lines": 34,
+    "no-explicit-any": 4
+  },
+  "globalLint": {
+    "errorCount": 29,
+    "warningCount": 100,
+    "fatalErrorCount": 0
+  },
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "env",
+        "RBW_OSS_ROOT=/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/ops/rbw-agents-oss",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-runtime-venv/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ops/rbw-agents-oss/tests",
+        "-p",
+        "test_runtime_v2.py",
+        "-v"
+      ],
+      "exitCode": 0,
+      "seconds": 0.73,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-runtime-before.log",
+      "testSummaries": [
+        "Ran 10 tests in 0.026s"
+      ]
+    },
+    {
+      "command": [
+        "rtk",
+        "env",
+        "RBW_OSS_ROOT=/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/ops/rbw-agents-oss",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-runtime-venv/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ops/rbw-agents-oss/tests",
+        "-p",
+        "test_runtime_v2.py",
+        "-v"
+      ],
+      "exitCode": 0,
+      "seconds": 0.25,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-runtime-after.log",
+      "testSummaries": [
+        "Ran 12 tests in 0.032s"
+      ]
+    },
+    {
+      "command": [
+        "rtk",
+        "env",
+        "RBW_OSS_ROOT=/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/ops/rbw-agents-oss",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-runtime-venv/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ops/rbw-agents-oss/tests",
+        "-p",
+        "test_watchdog_recovery.py",
+        "-v"
+      ],
+      "exitCode": 0,
+      "seconds": 0.17,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-wire-before.log",
+      "testSummaries": [
+        "Ran 10 tests in 0.020s"
+      ]
+    },
+    {
+      "command": [
+        "rtk",
+        "env",
+        "RBW_OSS_ROOT=/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/ops/rbw-agents-oss",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-runtime-venv/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ops/rbw-agents-oss/tests",
+        "-v"
+      ],
+      "exitCode": 0,
+      "seconds": 0.27,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-wire-after.log",
+      "testSummaries": [
+        "Ran 22 tests in 0.050s"
+      ]
+    },
+    {
+      "command": [
+        "rtk",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-runtime-venv/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "ops/rbw-agents-oss/scripts/tests",
+        "-v"
+      ],
+      "exitCode": 0,
+      "seconds": 0.96,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-canary-contracts.log",
+      "testSummaries": [
+        "Ran 6 tests in 0.001s"
+      ]
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "-m",
+        "unittest",
+        "scripts.tests.test_install_staging_retention",
+        "-v"
+      ],
+      "exitCode": 0,
+      "seconds": 16.76,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-retention-contracts.log",
+      "testSummaries": [
+        "Ran 24 tests in 16.626s"
+      ]
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 141.0,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-contracts-full.log",
+      "testSummaries": [
+        "\n 80 pass",
+        " 0 fail",
+        "Ran 80 tests across 4 files. [760.00ms]",
+        "\n 1209 pass",
+        " 0 fail",
+        "Ran 1209 tests across 155 files. [19.11s]",
+        "\n 60 pass",
+        " 0 fail",
+        "Ran 60 tests across 12 files. [93.00ms]",
+        "\n 5 pass",
+        " 0 fail",
+        "Ran 5 tests across 1 file. [89.00ms]",
+        "\n 12 pass",
+        " 0 fail",
+        "Ran 12 tests across 2 files. [6.00ms]",
+        "\n 230 pass",
+        " 0 fail",
+        "Ran 230 tests across 30 files. [1292.00ms]",
+        "\n 39 pass",
+        " 0 fail",
+        "Ran 39 tests across 3 files. [19.00ms]",
+        "\n 243 pass",
+        " 0 fail",
+        "Ran 243 tests across 45 files. [5.60s]",
+        "\n 4 pass",
+        " 0 fail",
+        "Ran 4 tests across 1 file. [8.49s]",
+        "\n 2732 pass",
+        " 0 fail",
+        "Ran 2732 tests across 282 files. [33.70s]",
+        "\n 5 pass",
+        " 0 fail",
+        "Ran 5 tests across 1 file. [57.00ms]",
+        "\n 173 pass",
+        " 0 fail",
+        "Ran 173 tests across 27 files. [1.57s]",
+        "\n 5281 pass",
+        " 12 skip",
+        " 0 fail",
+        "Ran 5293 tests across 399 files. [59.52s]",
+        "\n 409 pass",
+        " 0 fail",
+        "Ran 409 tests across 47 files. [667.00ms]",
+        "\n 88 pass",
+        " 0 fail",
+        "Ran 88 tests across 16 files. [1.93s]",
+        "\n 7 pass",
+        " 0 fail",
+        "Ran 7 tests across 1 file. [3.07s]",
+        "\n 2 pass",
+        " 0 fail",
+        "Ran 2 tests across 1 file. [300.00ms]",
+        "\n 3 pass",
+        " 0 fail",
+        "Ran 3 tests across 1 file. [536.00ms]",
+        "\n 3 pass",
+        " 0 fail",
+        "Ran 3 tests across 1 file. [440.00ms]",
+        "\n 24 pass",
+        " 0 fail",
+        "Ran 24 tests across 1 file. [34.00ms]",
+        "\n 1 pass",
+        " 0 fail",
+        "Ran 1 test across 1 file. [427.00ms]",
+        "\n 16 pass",
+        " 0 fail",
+        "Ran 16 tests across 1 file. [203.00ms]",
+        "\n 7 pass",
+        " 0 fail",
+        "Ran 7 tests across 1 file. [196.00ms]",
+        "\n 11 pass",
+        " 0 fail",
+        "Ran 11 tests across 1 file. [233.00ms]",
+        "\n 24 pass",
+        " 0 fail",
+        "Ran 24 tests across 1 file. [194.00ms]",
+        "\n 18 pass",
+        " 0 fail",
+        "Ran 18 tests across 1 file. [213.00ms]",
+        "\n 14 pass",
+        " 0 fail",
+        "Ran 14 tests across 1 file. [213.00ms]",
+        "\n 5 pass",
+        " 0 fail",
+        "Ran 5 tests across 1 file. [838.00ms]",
+        "\n 35 pass",
+        " 0 fail",
+        "Ran 35 tests across 1 file. [122.00ms]",
+        "\n 14 pass",
+        " 0 fail",
+        "Ran 14 tests across 1 file. [487.00ms]"
+      ]
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "-m",
+        "unittest",
+        "scripts.tests.test_robb_local_staging",
+        "scripts.tests.test_install_staging_retention",
+        "-v"
+      ],
+      "exitCode": 0,
+      "seconds": 16.57,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/python-native-installer-scenarios.log",
+      "testSummaries": [
+        "Ran 68 tests in 16.407s"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "file": "ops/rbw-agents-oss/apps/orchestrator-temporal/requirements.txt",
+      "lines": 5,
+      "sha256": "fc830828d15a93c3b797ae87fb2747c458b2ede3bdaffe60fc2cc92fc867d09b"
+    },
+    {
+      "file": "ops/rbw-agents-oss/apps/orchestrator-temporal/runtime_v2_bridge.py",
+      "lines": 182,
+      "sha256": "1c550006fd8b6240914eca9ddd368b5eecaa08ecf6e9dafdd1a0900befea348a"
+    },
+    {
+      "file": "ops/rbw-agents-oss/packages/rbw_agent_runtime/catalog.py",
+      "lines": 485,
+      "sha256": "58d8606d0a2b5f9b528a16565148c1eb96e2cf88d6ca763f7b57673400aa97fb"
+    },
+    {
+      "file": "ops/rbw-agents-oss/packages/rbw_agent_runtime/execution.py",
+      "lines": 111,
+      "sha256": "7cd9e14211e913614af1c1b7ab13ef9325cc6a4b42fb09efcf580bcd1cb28a15"
+    },
+    {
+      "file": "ops/rbw-agents-oss/packages/rbw_agent_runtime/models.py",
+      "lines": 191,
+      "sha256": "d9604aea4b2825a617c522a01dc4bc6bce818b6d0a7ee284740788fa41749571"
+    },
+    {
+      "file": "ops/rbw-agents-oss/packages/rbw_agent_runtime/policy.py",
+      "lines": 122,
+      "sha256": "44867a700f00944b82b9f3e324a97cca2e445cc3385f5db3b690d2fa47f7694c"
+    },
+    {
+      "file": "ops/rbw-agents-oss/packages/rbw_agent_runtime/telemetry.py",
+      "lines": 33,
+      "sha256": "16fa394b9014ec46e0a02983ddd90ce01acc532eb0fa3f85dbab92a87bfbe2e6"
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/agent_task_model_outcome_canary.py",
+      "lines": 254,
+      "sha256": "b2dabc4217e839601913e16f985e5796229ea11d0db18d89d1bf99d7acbc9fbb"
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/build_temporal_schedule_manifest.py",
+      "lines": 185,
+      "sha256": "da9f8941db7d582a3bc1eda92aaa5ed02f1a0f8227f30159c1f761f1048bb36d"
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/lib/agent_runtime.py",
+      "lines": 115,
+      "sha256": "3f9c261a2c749d6560053d07b36277d6d6e8e6a6c7e72cb0270aadb9f2cc7763"
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/lib/config_mutation.py",
+      "lines": 167,
+      "sha256": "fd670d853fdf01806c9bb04dba2c99acb6e8226cbe2ae1f39ba4be2b24cca24f"
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/lib/wrapper_sdk.py",
+      "lines": 76,
+      "sha256": "d17e351f31e90d48b6e8665e73dc23ad7be1d36c7962ef353e82a2db73f3ca95"
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_architecture_v2_debt_zero_guard.py",
+      "lines": 152,
+      "sha256": "56859efa28ca61864a5445582f3f3f7e7f0d3aa8e1e4f38d2b762c18c1706343"
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_architecture_v2_debt_zero_migrate.py",
+      "lines": 307,
+      "sha256": "83911ce84908d27cd7169e7557380c953b9152ca54ab5e8c51b25fc67c73180b"
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_architecture_v2_guard.py",
+      "lines": 235,
+      "sha256": "421a4207acce594db586236b583795df92269cd121c28820856b3db02bb833fd"
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_architecture_v2_install.py",
+      "lines": 697,
+      "sha256": "306fc5130818443bce35921e4dbc757672f5b4e545b324e357fd425b368b32a2"
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_config_mutation_guard.py",
+      "lines": 174,
+      "sha256": "f3d26a6dafb11f8028fc5e01652ecf7b5685ca490dd800d6ce4e4014245d0215"
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_infrastructure_observation.py",
+      "lines": 289,
+      "sha256": "e67736ff9df099d9526d76dcaee04e411269ed58e94a4beab171c3e7547e8cd0"
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_runtime_warning_processor.py",
+      "lines": 220,
+      "sha256": "1c3d9e763dc17ae6c6cf5dcbc486adb9039b806267cead625cd40cade3557d7a"
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/oss_temporal_execution_slo_guard.py",
+      "lines": 267,
+      "sha256": "a586a352614fe440bd631b5f4b3e93658f4728a568610598481227758cfe5198"
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/robinswood_media_contact_enrichment_2026.py",
+      "lines": 188,
+      "sha256": "4424c93c6da204861f3cab91f9428278794b08a58c8e6a7c550425b8fcdf9115"
+    },
+    {
+      "file": "ops/rbw-agents-oss/scripts/temporal_performance_slo_core.py",
+      "lines": 199,
+      "sha256": "4e5232fc8a6ea9cc99242707e7f340bd872997a3de7ae56bdc525e54ee38d778"
+    },
+    {
+      "file": "ops/rbw-agents-oss/tests/test_runtime_v2.py",
+      "lines": 153,
+      "sha256": "b870fb35d914b9068e2a8870d023388f3317e652511b524990f5250a973a7256"
+    },
+    {
+      "file": "ops/rbw-agents-oss/tests/test_watchdog_recovery.py",
+      "lines": 121,
+      "sha256": "7c020c47f0596e9042316b714596d563d3506bea63f3601c5d541977b233b476"
+    },
+    {
+      "file": "scripts/install-staging-retention.py",
+      "lines": 1357,
+      "sha256": "09252abf3108c3d1c82accb62306fcedb4f369c69d93d9432ba934b7acbd0abd"
+    },
+    {
+      "file": "scripts/tests/install_staging_retention_fixtures.py",
+      "lines": 236,
+      "sha256": "15b9636768b05a7d3cd3d196025c82b0bc5affa523bc7038fc8e1987ed29518b"
+    },
+    {
+      "file": "scripts/tests/install_staging_retention_publication_cases.py",
+      "lines": 434,
+      "sha256": "0a9adf918cd14df55244b320fe357913263a7aa0dc0f9b289cbb93e3bf6b0034"
+    },
+    {
+      "file": "scripts/tests/install_staging_retention_recovery_cases.py",
+      "lines": 318,
+      "sha256": "e7e2ac5195ed39b36ecc8c8467e48ecf43c2c0bf0a7aadab4821ba725dcbff89"
+    },
+    {
+      "file": "scripts/tests/robb_local_staging_activation_cases.py",
+      "lines": 454,
+      "sha256": "8cd7337e7b5819a1c98b58adb18343363c12059f75d934081ec64d7862fa04af"
+    },
+    {
+      "file": "scripts/tests/robb_local_staging_checkpoints_cases.py",
+      "lines": 208,
+      "sha256": "670fd0b96b9b0a22799aeb8df16a235954a2db5360156dc208700e53064911cf"
+    },
+    {
+      "file": "scripts/tests/robb_local_staging_fixtures.py",
+      "lines": 102,
+      "sha256": "faa1c8d6e62542625fdb8dcf9941ddcbf4f548a6d04afc552050d76aa787649e"
+    },
+    {
+      "file": "scripts/tests/robb_local_staging_preflight_cases.py",
+      "lines": 446,
+      "sha256": "b3c723e025f552e84df181241a8c21969ca36c7bcedc39b5b12b840be8557cfd"
+    },
+    {
+      "file": "scripts/tests/robb_local_staging_recovery_cases.py",
+      "lines": 409,
+      "sha256": "90e5e05b0d57a2c4a41960af480dd5c069f8ceb989ac116ad3c925987c04c4e7"
+    },
+    {
+      "file": "scripts/tests/test_install_staging_retention.py",
+      "lines": 10,
+      "sha256": "b72f22646047800eaf388c980125c0a07316522acd30472df2e4d3546a922f17"
+    },
+    {
+      "file": "scripts/tests/test_robb_local_staging.py",
+      "lines": 12,
+      "sha256": "6bbfb137844d8b508e77455cb8126cf757463a82ce78672d4eeaa409af2eaf0b"
+    }
+  ],
+  "limits": [
+    "34 fichiers à découper, 4 any TS et 100 avertissements de lint restent à corriger",
+    "Application installée inchangée ; aucune opération comptable ni connexion Temporal distante"
+  ]
+}

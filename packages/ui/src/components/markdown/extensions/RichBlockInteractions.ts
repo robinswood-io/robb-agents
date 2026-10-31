@@ -26,8 +26,8 @@ function syncImageLoadingState(root: ParentNode): void {
     if (!src) return
 
     const markLoaded = (loadedSrc: string) => {
-      image.dataset.loading = 'false'
-      image.dataset.loadTrackedSrc = loadedSrc
+      image.dataset["loading"] = 'false'
+      image.dataset["loadTrackedSrc"] = loadedSrc
     }
 
     if (image.complete) {
@@ -35,11 +35,11 @@ function syncImageLoadingState(root: ParentNode): void {
       return
     }
 
-    image.dataset.loading = 'true'
+    image.dataset["loading"] = 'true'
 
-    if (image.dataset.loadTrackedSrc === src) return
+    if (image.dataset["loadTrackedSrc"] === src) return
 
-    image.dataset.loadTrackedSrc = src
+    image.dataset["loadTrackedSrc"] = src
 
     const handleDone = () => {
       const latestSrc = image.currentSrc || image.src
@@ -129,7 +129,7 @@ export const RichBlockInteractions = Extension.create({
             if (!(selection instanceof NodeSelection)) return false
             if (!isEditableRichBlockNode(selection.node)) return false
 
-            ;(this.editor as any).emit(RICH_BLOCK_EDIT_EVENT)
+            ;this.editor.emit(RICH_BLOCK_EDIT_EVENT)
             return true
           },
 
@@ -138,12 +138,12 @@ export const RichBlockInteractions = Extension.create({
               const { selection } = view.state
               if (selection instanceof NodeSelection && selection.node.type.name === 'inlineMath') {
                 event.preventDefault()
-                ;(this.editor as any).emit(INLINE_MATH_EDIT_EVENT)
+                ;this.editor.emit(INLINE_MATH_EDIT_EVENT)
                 return true
               }
               if (selection instanceof NodeSelection && isEditableRichBlockNode(selection.node)) {
                 event.preventDefault()
-                ;(this.editor as any).emit(RICH_BLOCK_EDIT_EVENT)
+                ;this.editor.emit(RICH_BLOCK_EDIT_EVENT)
                 return true
               }
               return false

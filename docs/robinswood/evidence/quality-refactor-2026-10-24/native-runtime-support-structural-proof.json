@@ -1,0 +1,173 @@
+{
+  "status": "passed",
+  "sources": 3,
+  "nativeDeclarations": 83,
+  "nativeBodiesStateEntryEffectsAndPublicExportsPreserved": true,
+  "nativeExternalInitializationOrderPreserved": true,
+  "additionalStateOrWorkflow": 0,
+  "runtimeImportCycles": 0,
+  "files": [
+    {
+      "file": "scripts/build/common/binary-downloads.ts",
+      "lines": 261,
+      "sha256": "b6d398c67100dcc3c96e3b162662f257e2c6156850b63e5126d9e58a0f5e4fde"
+    },
+    {
+      "file": "scripts/build/common.ts",
+      "lines": 240,
+      "sha256": "48c667a34b3cf91923be80883a6b79e3d8468c764aff5f9c870c2b148e0459f5"
+    },
+    {
+      "file": "scripts/build/common/runtime-assets.ts",
+      "lines": 270,
+      "sha256": "d0c8f081cc5bfda08ff0b6ac6cf4477a9aefac19221baf026fbf9297fa42dc65"
+    },
+    {
+      "file": "scripts/robb-provider-canaries/contracts.ts",
+      "lines": 125,
+      "sha256": "5b2d81d1ce3dbc75650224ea71039084cd129fb74e21cb4acac564071b2b5b19"
+    },
+    {
+      "file": "scripts/robb-provider-canaries/chatgpt.ts",
+      "lines": 140,
+      "sha256": "efb1b785b6a8b94dbbec41197f8d49cbfe13d2a2ba2063abd8b12cc69b8fc7a1"
+    },
+    {
+      "file": "scripts/robb-provider-canaries/copilot.ts",
+      "lines": 112,
+      "sha256": "6e9e8ac9e0c954ffb3bce7eb98bd705bed3b48fa9b91ebb701e20641590a03b3"
+    },
+    {
+      "file": "scripts/robb-provider-canaries/google.ts",
+      "lines": 112,
+      "sha256": "3fa8a624f129f1c701be14e94503d59c8f44f03f05d85c8771a0b66e4f0ca9e5"
+    },
+    {
+      "file": "scripts/robb-provider-canaries.ts",
+      "lines": 67,
+      "sha256": "638ef4de558f6a24c376b22686e772587a61a13c746eb54a5be2d131fdb63cbe"
+    },
+    {
+      "file": "packages/messaging-whatsapp-worker/src/worker.ts",
+      "lines": 461,
+      "sha256": "261109467271109f3bb76f0b281d00b650fc27b433c9116dd2fd36b7c4d4dfe6"
+    },
+    {
+      "file": "packages/messaging-whatsapp-worker/src/worker-protocol.ts",
+      "lines": 96,
+      "sha256": "e366d4f81d1823c67e75948e34161e1c65dd4d701c8498c0e71f7947f9bc8c91"
+    }
+  ],
+  "proofs": [
+    {
+      "status": "passed",
+      "source": "scripts/build/common.ts",
+      "nativeSourceHash": "13ff08c52eab5846812751717cf666d571583d9d631fdc67cd42b02cbd310422",
+      "nativeDeclarations": 32,
+      "nativeBodiesModelsAndSingleStatePreserved": true,
+      "nativePublicExports": true,
+      "nativeRetainedEntryAndEffectsPreserved": true,
+      "nativeExternalImportOrder": [
+        "bun",
+        "child_process",
+        "fs",
+        "path",
+        "crypto"
+      ],
+      "noAdditionalMutableStateOrWorkflow": true,
+      "runtimeImportCycles": 0,
+      "maximumFileLines": 270,
+      "files": [
+        {
+          "file": "scripts/build/common/binary-downloads.ts",
+          "lines": 261,
+          "sha256": "b6d398c67100dcc3c96e3b162662f257e2c6156850b63e5126d9e58a0f5e4fde"
+        },
+        {
+          "file": "scripts/build/common.ts",
+          "lines": 240,
+          "sha256": "48c667a34b3cf91923be80883a6b79e3d8468c764aff5f9c870c2b148e0459f5"
+        },
+        {
+          "file": "scripts/build/common/runtime-assets.ts",
+          "lines": 270,
+          "sha256": "d0c8f081cc5bfda08ff0b6ac6cf4477a9aefac19221baf026fbf9297fa42dc65"
+        }
+      ]
+    },
+    {
+      "status": "passed",
+      "source": "scripts/robb-provider-canaries.ts",
+      "nativeSourceHash": "a3e8330c1342ab5e65522d41d218a0bc2edf17c724a62525bd2aa9cbaa73f25b",
+      "nativeDeclarations": 29,
+      "nativeBodiesModelsAndSingleStatePreserved": true,
+      "nativePublicExports": true,
+      "nativeRetainedEntryAndEffectsPreserved": true,
+      "nativeExternalImportOrder": [
+        "../packages/core/src/provider-contracts.ts"
+      ],
+      "noAdditionalMutableStateOrWorkflow": true,
+      "runtimeImportCycles": 0,
+      "maximumFileLines": 140,
+      "files": [
+        {
+          "file": "scripts/robb-provider-canaries/contracts.ts",
+          "lines": 125,
+          "sha256": "5b2d81d1ce3dbc75650224ea71039084cd129fb74e21cb4acac564071b2b5b19"
+        },
+        {
+          "file": "scripts/robb-provider-canaries/chatgpt.ts",
+          "lines": 140,
+          "sha256": "efb1b785b6a8b94dbbec41197f8d49cbfe13d2a2ba2063abd8b12cc69b8fc7a1"
+        },
+        {
+          "file": "scripts/robb-provider-canaries/copilot.ts",
+          "lines": 112,
+          "sha256": "6e9e8ac9e0c954ffb3bce7eb98bd705bed3b48fa9b91ebb701e20641590a03b3"
+        },
+        {
+          "file": "scripts/robb-provider-canaries/google.ts",
+          "lines": 112,
+          "sha256": "3fa8a624f129f1c701be14e94503d59c8f44f03f05d85c8771a0b66e4f0ca9e5"
+        },
+        {
+          "file": "scripts/robb-provider-canaries.ts",
+          "lines": 67,
+          "sha256": "638ef4de558f6a24c376b22686e772587a61a13c746eb54a5be2d131fdb63cbe"
+        }
+      ]
+    },
+    {
+      "status": "passed",
+      "source": "packages/messaging-whatsapp-worker/src/worker.ts",
+      "nativeSourceHash": "83e0a401a35c168d648d0fce5e12b2c41116ebdca99d2351fcf2dbc44c743d50",
+      "nativeDeclarations": 22,
+      "extractedDeclarations": 6,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "node:fs",
+        "node:buffer",
+        "./protocol",
+        "./filter",
+        "./upsert"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 461,
+      "files": [
+        {
+          "file": "packages/messaging-whatsapp-worker/src/worker.ts",
+          "lines": 461,
+          "sha256": "261109467271109f3bb76f0b281d00b650fc27b433c9116dd2fd36b7c4d4dfe6"
+        },
+        {
+          "file": "packages/messaging-whatsapp-worker/src/worker-protocol.ts",
+          "lines": 96,
+          "sha256": "e366d4f81d1823c67e75948e34161e1c65dd4d701c8498c0e71f7947f9bc8c91"
+        }
+      ]
+    }
+  ],
+  "maximumFileLines": 461
+}

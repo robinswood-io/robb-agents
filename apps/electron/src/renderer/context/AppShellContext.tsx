@@ -7,32 +7,31 @@
  */
 
 import * as React from 'react'
-import { createContext, useContext, useCallback } from 'react'
+import { createContext,useContext,useCallback } from 'react'
 import { useAtomValue } from 'jotai'
 import type { ChatDisplayHandle } from '@/components/app-shell/ChatDisplay'
 import type {
-  Session,
-  Workspace,
-  FileAttachment,
-  PermissionRequest,
-  CredentialRequest,
-  CredentialResponse,
-  PermissionMode,
-  SessionStatus,
-  LoadedSource,
-  LoadedSkill,
-  NewChatActionParams,
-  LlmConnectionWithStatus,
-  TestAutomationResult,
+Session,
+Workspace,
+FileAttachment,
+PermissionRequest,
+CredentialRequest,
+CredentialResponse,
+PermissionMode,
+SessionStatus,
+LoadedSource,
+LoadedSkill,
+NewChatActionParams,
+LlmConnectionWithStatus
 } from '../../shared/types'
 import type { SessionStatus as SessionStatusConfig } from '@/config/session-status-config'
-import type { SessionOptions, SessionOptionUpdates } from '../hooks/useSessionOptions'
+import type { SessionOptions,SessionOptionUpdates } from '../hooks/useSessionOptions'
 import { defaultSessionOptions } from '../hooks/useSessionOptions'
-import { sessionAtomFamily, sessionMetaMapAtom } from '../atoms/sessions'
-import { pendingSessionAuthRequestsAtom, type PendingSessionAuthRequest } from '../atoms/session-auth-requests'
-import { sessionPermissionRecoveryRequestsAtom, type SessionPermissionRecovery } from '../atoms/session-permission-recovery'
+import { sessionAtomFamily,sessionMetaMapAtom } from '../atoms/sessions'
+import { pendingSessionAuthRequestsAtom,type PendingSessionAuthRequest } from '../atoms/session-auth-requests'
+import { sessionPermissionRecoveryRequestsAtom,type SessionPermissionRecovery } from '../atoms/session-permission-recovery'
 import { conversationAgentActivityAtom } from '../atoms/session-journey-activity'
-import { findPendingRequestForConversation, getActiveSessionDescendantIds, getUserFacingSessionId } from '../utils/session-visibility'
+import { findPendingRequestForConversation,getActiveSessionDescendantIds,getUserFacingSessionId } from '../utils/session-visibility'
 
 export interface AppShellContextType {
   // Data
@@ -161,7 +160,7 @@ export interface AppShellContextType {
   /** Callback to update session list search query */
   setSessionListSearchQuery?: (query: string) => void
   /** Ref to ChatDisplay for navigation between matches */
-  chatDisplayRef?: React.RefObject<ChatDisplayHandle>
+  chatDisplayRef?: React.RefObject<ChatDisplayHandle | null>
   /** Callback when ChatDisplay match info changes (for immediate UI updates) */
   onChatMatchInfoChange?: (info: { sessionId: string | null; count: number; index: number; isHighlighting: boolean }) => void
 

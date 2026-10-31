@@ -12,7 +12,7 @@
  */
 
 import { homedir } from 'os';
-import { resolve, isAbsolute, normalize as normalizePosix, basename, dirname } from 'path';
+import { resolve, isAbsolute, basename, dirname } from 'path';
 import {
   expandPath,
   normalizePath,

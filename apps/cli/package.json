@@ -1,6 +1,6 @@
 {
   "name": "@craft-agent/cli",
-  "version": "0.12.10",
+  "version": "0.12.11",
   "license": "MIT",
   "description": "Terminal client for Craft Agent server",
   "type": "module",
@@ -10,7 +10,7 @@
   },
   "scripts": {
     "start": "bun run src/index.ts",
-    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit",
+    "typecheck": "node ../../scripts/run-typescript.ts native --noEmit",
     "test": "bun test src/"
   },
   "dependencies": {
@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "typescript": "~7.0.2",
-    "@types/node": "^26.2.0",
-    "@types/bun": "1.4.0"
+    "@types/node": "^26.6.6",
+    "@types/bun": "1.4.4"
   }
 }

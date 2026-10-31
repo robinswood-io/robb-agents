@@ -108,10 +108,10 @@ function normalizeProportions(stack: PanelStackEntry[]): PanelStackEntry[] {
 export function parseSessionIdFromRoute(route: ViewRoute): string | null {
   // Strip any query string first — a `?x=y` tail on the last segment would otherwise
   // leak into the extracted session id and poison every focused-session consumer.
-  const segments = route.split('?')[0].split('/')
+  const segments = (route.split('?', 1)[0] ?? route).split('/')
   const idx = segments.indexOf('session')
   if (idx >= 0 && idx + 1 < segments.length) {
-    return segments[idx + 1]
+    return segments[idx + 1] ?? null
   }
   return null
 }
@@ -186,13 +186,14 @@ export const reconcilePanelStackAtom = atom(
     entries: { route: ViewRoute; proportion: number }[]
     focusedIndex?: number
   }): boolean => {
-    if (entries.length === 0) return false
+    const firstEntry = entries[0]
+    if (!firstEntry) return false
 
     const current = get(panelStackAtom)
     const used = new Set<string>()
 
     const requestedFocusIndex = Math.min(focusedIndex ?? 0, entries.length - 1)
-    const requestedFocusRoute = entries[requestedFocusIndex]?.route ?? entries[0].route
+    const requestedFocusRoute = entries[requestedFocusIndex]?.route ?? firstEntry.route
 
     const newStack = entries.map((target, i) => {
       const positional = current[i]
@@ -223,13 +224,12 @@ export const reconcilePanelStackAtom = atom(
 
     if (
       normalized.length === current.length &&
-      normalized.every((p, i) =>
-        p.id === current[i].id &&
-        p.route === current[i].route &&
-        p.laneId === current[i].laneId &&
-        p.panelType === current[i].panelType &&
-        Math.abs(p.proportion - current[i].proportion) < 0.001
-      )
+      normalized.every((p, i) => {
+        const previous = current[i]
+        return previous !== undefined && p.id === previous.id && p.route === previous.route
+          && p.laneId === previous.laneId && p.panelType === previous.panelType
+          && Math.abs(p.proportion - previous.proportion) < 0.001
+      })
     ) {
       const targetFocusId =
         normalized[Math.min(requestedFocusIndex, normalized.length - 1)]?.id ??
@@ -286,6 +286,7 @@ export const updateFocusedPanelRouteAtom = atom(
 
     const focusedId = get(focusedPanelIdAtom)
     const focused = stack.find(p => p.id === focusedId) ?? stack[0]
+    if (!focused) return
 
     const updated = stack.map((p) =>
       p.id === focused.id
@@ -305,7 +306,8 @@ export const focusNextPanelAtom = atom(
     if (stack.length <= 1) return
     const currentIdx = get(focusedPanelIndexAtom)
     const nextIdx = (currentIdx + 1) % stack.length
-    set(focusedPanelIdAtom, stack[nextIdx].id)
+    const next = stack[nextIdx]
+    if (next) set(focusedPanelIdAtom, next.id)
   }
 )
 
@@ -316,6 +318,7 @@ export const focusPrevPanelAtom = atom(
     if (stack.length <= 1) return
     const currentIdx = get(focusedPanelIndexAtom)
     const prevIdx = (currentIdx - 1 + stack.length) % stack.length
-    set(focusedPanelIdAtom, stack[prevIdx].id)
+    const previous = stack[prevIdx]
+    if (previous) set(focusedPanelIdAtom, previous.id)
   }
 )

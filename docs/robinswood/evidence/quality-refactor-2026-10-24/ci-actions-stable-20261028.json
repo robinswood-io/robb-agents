@@ -1,0 +1,252 @@
+{
+  "checkedAt": "2026-10-28T05:15:32.210Z",
+  "scope": "Latest stable official action releases pinned to immutable commits; installer provenance retained; no permissions, secrets, triggers or other workflow semantics changed",
+  "ciExecuted": false,
+  "storageRecord": false,
+  "actions": [
+    {
+      "action": "actions/checkout",
+      "targetAction": "actions/checkout",
+      "repository": "actions/checkout",
+      "previousRefs": [
+        "v4"
+      ],
+      "latestStable": "v7.0.1",
+      "commitSha": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+      "releaseUrl": "https://github.com/actions/checkout/releases/tag/v7.0.1",
+      "publishedAt": "2026-07-20T15:10:05Z",
+      "runtime": "node24",
+      "usedInputs": [
+        "ref",
+        "fetch-depth"
+      ],
+      "usedOutputs": [],
+      "missingInputs": [],
+      "missingOutputs": []
+    },
+    {
+      "action": "github/codeql-action/init",
+      "targetAction": "github/codeql-action/init",
+      "repository": "github/codeql-action",
+      "previousRefs": [
+        "v4"
+      ],
+      "latestStable": "v4.39.1",
+      "commitSha": "9b3254085494b55a0f7c4c2b3d2d52cc712ce370",
+      "releaseUrl": "https://github.com/github/codeql-action/releases/tag/v4.39.1",
+      "publishedAt": "2026-10-21T15:48:42Z",
+      "runtime": "node24",
+      "usedInputs": [
+        "languages",
+        "build-mode"
+      ],
+      "usedOutputs": [],
+      "missingInputs": [],
+      "missingOutputs": []
+    },
+    {
+      "action": "github/codeql-action/analyze",
+      "targetAction": "github/codeql-action/analyze",
+      "repository": "github/codeql-action",
+      "previousRefs": [
+        "v4"
+      ],
+      "latestStable": "v4.39.1",
+      "commitSha": "9b3254085494b55a0f7c4c2b3d2d52cc712ce370",
+      "releaseUrl": "https://github.com/github/codeql-action/releases/tag/v4.39.1",
+      "publishedAt": "2026-10-21T15:48:42Z",
+      "runtime": "node24",
+      "usedInputs": [
+        "category"
+      ],
+      "usedOutputs": [],
+      "missingInputs": [],
+      "missingOutputs": []
+    },
+    {
+      "action": "oven-sh/setup-bun",
+      "targetAction": "oven-sh/setup-bun",
+      "repository": "oven-sh/setup-bun",
+      "previousRefs": [
+        "v2"
+      ],
+      "latestStable": "v2.2.0",
+      "commitSha": "0c5077e51419868618aeaa5fe8019c62421857d6",
+      "releaseUrl": "https://github.com/oven-sh/setup-bun/releases/tag/v2.2.0",
+      "publishedAt": "2026-03-14T09:38:33Z",
+      "runtime": "node24",
+      "usedInputs": [
+        "bun-version"
+      ],
+      "usedOutputs": [],
+      "missingInputs": [],
+      "missingOutputs": []
+    },
+    {
+      "action": "actions/upload-artifact",
+      "targetAction": "actions/upload-artifact",
+      "repository": "actions/upload-artifact",
+      "previousRefs": [
+        "v4"
+      ],
+      "latestStable": "v7.0.2",
+      "commitSha": "cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+      "releaseUrl": "https://github.com/actions/upload-artifact/releases/tag/v7.0.2",
+      "publishedAt": "2026-10-07T10:08:14Z",
+      "runtime": "node24",
+      "usedInputs": [
+        "name",
+        "path",
+        "if-no-files-found",
+        "retention-days"
+      ],
+      "usedOutputs": [],
+      "missingInputs": [],
+      "missingOutputs": [],
+      "archiveDefault": "true"
+    },
+    {
+      "action": "actions/setup-python",
+      "targetAction": "actions/setup-python",
+      "repository": "actions/setup-python",
+      "previousRefs": [
+        "v7"
+      ],
+      "latestStable": "v7.1.0",
+      "commitSha": "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+      "releaseUrl": "https://github.com/actions/setup-python/releases/tag/v7.1.0",
+      "publishedAt": "2026-10-22T02:56:04Z",
+      "runtime": "node24",
+      "usedInputs": [
+        "python-version"
+      ],
+      "usedOutputs": [],
+      "missingInputs": [],
+      "missingOutputs": []
+    },
+    {
+      "action": "astral-sh/setup-uv",
+      "targetAction": "astral-sh/setup-uv",
+      "repository": "astral-sh/setup-uv",
+      "previousRefs": [
+        "v5"
+      ],
+      "latestStable": "v10.3.2",
+      "commitSha": "07a047e608db84b3d8c06cd9a7c7dcc9c355c18e",
+      "releaseUrl": "https://github.com/astral-sh/setup-uv/releases/tag/v10.3.2",
+      "publishedAt": "2026-10-22T08:47:11Z",
+      "runtime": "node24",
+      "usedInputs": [],
+      "usedOutputs": [],
+      "missingInputs": [],
+      "missingOutputs": []
+    },
+    {
+      "action": "actions/download-artifact",
+      "targetAction": "actions/download-artifact",
+      "repository": "actions/download-artifact",
+      "previousRefs": [
+        "v8"
+      ],
+      "latestStable": "v8.0.2",
+      "commitSha": "9000827ccba6bdab643e8b6fd33ac0654aef8333",
+      "releaseUrl": "https://github.com/actions/download-artifact/releases/tag/v8.0.2",
+      "publishedAt": "2026-10-07T10:09:51Z",
+      "runtime": "node24",
+      "usedInputs": [
+        "path",
+        "merge-multiple"
+      ],
+      "usedOutputs": [],
+      "missingInputs": [],
+      "missingOutputs": []
+    },
+    {
+      "action": "anchore/sbom-action",
+      "targetAction": "anchore/sbom-action",
+      "repository": "anchore/sbom-action",
+      "previousRefs": [
+        "v0"
+      ],
+      "latestStable": "v0.24.3",
+      "commitSha": "66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c",
+      "releaseUrl": "https://github.com/anchore/sbom-action/releases/tag/v0.24.3",
+      "publishedAt": "2026-10-02T15:35:43Z",
+      "runtime": "node24",
+      "usedInputs": [
+        "path",
+        "format",
+        "output-file",
+        "artifact-name",
+        "upload-artifact",
+        "upload-release-assets"
+      ],
+      "usedOutputs": [],
+      "missingInputs": [],
+      "missingOutputs": []
+    },
+    {
+      "action": "actions/attest-build-provenance",
+      "targetAction": "actions/attest",
+      "repository": "actions/attest",
+      "previousRefs": [
+        "v2"
+      ],
+      "latestStable": "v4.2.2",
+      "commitSha": "1e69f48acb82d1966a394da916b4c1698aa569d6",
+      "releaseUrl": "https://github.com/actions/attest/releases/tag/v4.2.2",
+      "publishedAt": "2026-08-04T20:36:29Z",
+      "runtime": "node24",
+      "usedInputs": [
+        "subject-checksums",
+        "create-storage-record"
+      ],
+      "usedOutputs": [],
+      "missingInputs": [],
+      "missingOutputs": [],
+      "storageRecordDefault": true
+    }
+  ],
+  "workflows": [
+    {
+      "file": ".github/workflows/codeql.yml",
+      "replacements": 3,
+      "normalizedSha256": "459e6bbeeffa825b0a7d879f1b9d747d7fcb41080d3aa24a746fc1ce40084067"
+    },
+    {
+      "file": ".github/workflows/provider-contract-canaries.yml",
+      "replacements": 5,
+      "normalizedSha256": "94ed8bb17efc66bc19eb02312c4e00cce680ea16856b59573c45e91797453cc3"
+    },
+    {
+      "file": ".github/workflows/release.yml",
+      "replacements": 23,
+      "normalizedSha256": "49eadc290647c734845cccf5f7967ea443e6f09b5772d017b81614e2aec4ed5b"
+    },
+    {
+      "file": ".github/workflows/robinswood-evals.yml",
+      "replacements": 2,
+      "normalizedSha256": "1f0549e7e93e9c14362c567cbc9d30f9d87365ab0670caaeb0e5fc165aa7e85f"
+    },
+    {
+      "file": ".github/workflows/robinswood-validate.yml",
+      "replacements": 14,
+      "normalizedSha256": "f19053cec5f6c5b0e991651d18702ee08ed305630d6923e9dbee71ebb66608d9"
+    },
+    {
+      "file": ".github/workflows/upstream-watch.yml",
+      "replacements": 2,
+      "normalizedSha256": "66b70b1e7144f6f7fb72803d314166107cb4a05bcfd1bcbc1bd4686f3db419f4"
+    },
+    {
+      "file": ".github/workflows/validate-server.yml",
+      "replacements": 2,
+      "normalizedSha256": "443bb46d1fd7dc883c9aa8a6d4cf994c92a6e330fdbe407e9e6f5c12d0080729"
+    },
+    {
+      "file": ".github/workflows/validate.yml",
+      "replacements": 3,
+      "normalizedSha256": "5ca11de094cc290b8bdf2e6d4e2c1fec1d19e89663bcb6a1f0aa40d13b26ccc8"
+    }
+  ]
+}

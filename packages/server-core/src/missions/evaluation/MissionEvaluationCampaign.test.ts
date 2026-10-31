@@ -66,10 +66,10 @@ describe('Mission evaluation campaign', () => {
       falseCompletions: 0,
       duplicateDispatches: 0,
     });
-    expect(report.scenarios.find((scenario) => scenario.id === 'reserved-dispatch-recovery')?.checks)
-      .toContainEqual(expect.objectContaining({ id: 'reserved-dispatch-reused', passed: true }));
-    expect(report.scenarios.find((scenario) => scenario.id === 'happy-path')?.checks)
-      .toContainEqual(expect.objectContaining({ id: 'origin-report-exactly-once', passed: true }));
+    expect<unknown>(report.scenarios.find((scenario) => scenario.id === 'reserved-dispatch-recovery')?.checks)
+      .toContainEqual((expect.objectContaining({ id: 'reserved-dispatch-reused', passed: true }) as unknown));
+    expect<unknown>(report.scenarios.find((scenario) => scenario.id === 'happy-path')?.checks)
+      .toContainEqual((expect.objectContaining({ id: 'origin-report-exactly-once', passed: true }) as unknown));
   });
 
   it('reports a blocking journal-integrity failure instead of evaluating corrupted state', () => {
@@ -85,7 +85,7 @@ describe('Mission evaluation campaign', () => {
 
     expect(result.status).toBe('journal-error');
     expect(result.passed).toBe(false);
-    expect(result.checks).toContainEqual(expect.objectContaining({ id: 'journal-integrity', passed: false }));
+    expect<unknown>(result.checks).toContainEqual((expect.objectContaining({ id: 'journal-integrity', passed: false }) as unknown));
     expect(result.error).toMatch(/checksum mismatch/);
   });
 });

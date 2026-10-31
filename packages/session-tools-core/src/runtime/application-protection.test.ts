@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, symlinkSync, existsSync, linkSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { join } from 'node:path';
+import { join, parse, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { assertNoProtectedApplicationHardlinks, buildApplicationProtectionProfile, isProtectedApplicationPath, protectApplicationCommand } from './application-protection.ts';
 
@@ -17,7 +17,9 @@ function fixture() {
   mkdirSync(join(app, 'Contents', 'Resources'), { recursive: true });
   const archive = join(app, 'Contents', 'Resources', 'app.asar');
   writeFileSync(archive, 'INTACT');
-  const profile = buildApplicationProtectionProfile([app]);
+  // Seatbelt profiles require POSIX roots; hard-link scans below still use the real fixture path.
+  const profileRoot = process.platform === 'win32' ? '/Applications/Robb Agents.app' : app;
+  const profile = buildApplicationProtectionProfile([profileRoot]);
   const run = (script: string) => spawnSync('/usr/bin/sandbox-exec', ['-p', profile, process.execPath, '-e', `try { ${script} } catch (error) { console.error(String(error)); process.exitCode = 23; }`], { encoding: 'utf8', timeout: 15_000 });
   return { dir, app, parent, archive, profile, run };
 }
@@ -26,6 +28,19 @@ describe('application protection hard-link verification', () => {
   it('always denies launchd job creation in the generated profile', () => {
     const f = fixture();
     expect(f.profile).toContain('(deny job-creation)');
+    const filesystemRoot = parse(resolve(f.app)).root;
+    expect(f.profile).not.toContain(`(literal ${JSON.stringify(filesystemRoot)})`);
+  });
+
+  it('rejects the filesystem root on every host', () => {
+    expect(() => buildApplicationProtectionProfile(['/'])).toThrow('Invalid application protection root');
+  });
+
+  it('preserves the full name of a missing bundle below the filesystem root', () => {
+    const root = `/robb-missing-${randomUUID()}/Robb Agents.app`;
+    const profile = buildApplicationProtectionProfile([root]);
+    expect(profile).toContain(`(subpath ${JSON.stringify(resolve(root))})`);
+    expect(profile.match(/\(subpath /g)).toHaveLength(1);
   });
 
   it('fails closed when a protected file already has an external hard link', () => {
@@ -48,6 +63,7 @@ describe('application protection hard-link verification', () => {
 });
 
 describe.skipIf(process.platform !== 'darwin')('application protection — real macOS enforcement', () => {
+  // Let the 15-second sandbox child deadline complete before the test deadline.
   it('allows reads and ordinary project writes', () => {
     const f = fixture();
     const out = join(f.dir, 'result.txt');
@@ -55,7 +71,7 @@ describe.skipIf(process.platform !== 'darwin')('application protection — real 
     expect(result.stderr).toBe('');
     expect(result.status).toBe(0);
     expect(readFileSync(out, 'utf8')).toBe('INTACT');
-  });
+  }, 20_000);
 
   for (const action of ['overwrite', 'unlink', 'chmod', 'rename-bundle', 'rename-parent', 'hardlink', 'symlink', 'descendant', 'encoded-python', 'nested-sandbox'] as const) {
     it(`denies ${action} without touching the archive`, () => {
@@ -63,7 +79,7 @@ describe.skipIf(process.platform !== 'darwin')('application protection — real 
       const archive = JSON.stringify(f.archive);
       const alias = join(f.dir, 'alias');
       symlinkSync(f.app, alias);
-      const scripts: Record<typeof action | string, string> = {
+      const scripts: Record<typeof action, string> = {
         overwrite: `require('fs').writeFileSync(${archive}, 'BROKEN')`,
         unlink: `require('fs').unlinkSync(${archive})`,
         chmod: `require('fs').chmodSync(${archive}, 0)`,
@@ -75,11 +91,13 @@ describe.skipIf(process.platform !== 'darwin')('application protection — real 
         'encoded-python': `require('child_process').execFileSync('/usr/bin/python3', ['-c', ${JSON.stringify(`import base64; exec(base64.b64decode('${Buffer.from(`open(${JSON.stringify(f.archive)}, 'w').write('BROKEN')`).toString('base64')}'))`)}])`,
         'nested-sandbox': `require('child_process').execFileSync('/usr/bin/sandbox-exec', ['-p', '(version 1) (allow default)', '/bin/sh', '-c', ${JSON.stringify(`printf BROKEN > '${f.archive.replace(/'/g, "'\\''")}'`)}])`,
       };
-      const result = f.run(scripts[action]!);
+      const result = f.run(scripts[action]);
+      expect(result.error).toBeUndefined();
+      expect(result.signal).toBeNull();
       expect(result.status).not.toBe(0);
       expect(result.stderr).toMatch(/not permitted|denied|EPERM|EACCES/i);
       expect(readFileSync(f.archive, 'utf8')).toBe('INTACT');
-    });
+    }, 20_000);
   }
 
   it('cannot bypass path checks with a symlink or a future file', () => {

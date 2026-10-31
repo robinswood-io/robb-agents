@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "allOtherAppShellRuntimeAndSidebarItemsPreserved": true,
+  "sidebarContract": "Native LeftSidebar LinkItem",
+  "persistedDataContract": "Unknown JSON decoded at the storage boundary, including mixed legacy/current formats and incomplete entries.",
+  "regressions": [
+    "Current filters/projects/grouping preserved",
+    "Every legacy view migrated",
+    "Global legacy fallback retained",
+    "Malformed entries survive startup",
+    "Identifiers cannot alter object prototypes"
+  ],
+  "limits": "AppShell still requires decomposition; final installed Electron mission checks pending."
+}

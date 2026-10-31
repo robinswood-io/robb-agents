@@ -6,7 +6,7 @@
  * Uses the Info_ component system for consistent styling with SourceInfoPage.
  */
 
-import * as React from 'react'
+
 import { useTranslation } from 'react-i18next'
 import { useEffect, useState, useCallback } from 'react'
 import { Check, X, Minus } from 'lucide-react'
@@ -28,7 +28,7 @@ import type { LoadedSkill } from '../../shared/types'
 interface SkillInfoPageProps {
   skillSlug: string
   workspaceId: string
-  workingDirectory?: string
+  workingDirectory?: string | undefined
 }
 
 export default function SkillInfoPage({ skillSlug, workspaceId, workingDirectory }: SkillInfoPageProps) {
@@ -81,7 +81,7 @@ export default function SkillInfoPage({ skillSlug, workspaceId, workingDirectory
       isMounted = false
       unsubscribe?.()
     }
-  }, [workspaceId, skillSlug, workingDirectory])
+  }, [workspaceId, skillSlug, workingDirectory, t])
 
   // Handle open in finder
   const handleOpenInFinder = useCallback(async () => {
@@ -110,7 +110,7 @@ export default function SkillInfoPage({ skillSlug, workspaceId, workingDirectory
         description: err instanceof Error ? err.message : undefined,
       })
     }
-  }, [skill, workspaceId, skillSlug])
+  }, [skill, workspaceId, skillSlug, t])
 
   // Handle opening in new window
   const handleOpenInNewWindow = useCallback(() => {

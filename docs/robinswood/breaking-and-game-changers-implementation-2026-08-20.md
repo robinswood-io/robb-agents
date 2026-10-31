@@ -101,3 +101,5 @@ Campagne close le 21 août 2026 sur macOS arm64, Bun 1.3.14 :
 - `git diff --check`, contrôle des espaces finaux des fichiers non suivis et scan des marqueurs de conflit : verts après la campagne finale.
 
 Windows/Linux n'ont pas été assemblés localement, les canaris fournisseurs n'ont pas été exécutés avec secrets réels, et aucun tenant, IdP ni essai distribué deux hôtes n'a été engagé. Ce bilan ne transforme aucun de ces gates externes en preuve de production.
+
+Mise à jour du 24 octobre 2026 : le candidat SDK MCP 2.4.0 corrige la collision décrite ci-dessus. Le test positif `mcp-tasks-sdk-compat.test.ts` couvre désormais les méthodes modernes et historiques ; cela n’active pas de nouveau service Tasks applicatif.

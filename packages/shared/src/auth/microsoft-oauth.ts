@@ -29,7 +29,7 @@ export type { MicrosoftService };
 // These are baked into the build at compile time
 // Used for all Microsoft services (Outlook, OneDrive, Calendar, Teams, etc.)
 // Uses pure PKCE flow - no client_secret needed for public clients (desktop/mobile apps)
-const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_OAUTH_CLIENT_ID || '';
+const MICROSOFT_CLIENT_ID = process.env["MICROSOFT_OAUTH_CLIENT_ID"] || '';
 
 // Microsoft OAuth endpoints (using "common" tenant for multi-tenant support)
 // "common" supports both personal Microsoft accounts and work/school accounts
@@ -158,8 +158,8 @@ async function exchangeCodeForTokens(
 
   return {
     accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-    expiresIn: data.expires_in,
+    ...(data.refresh_token !== undefined ? { refreshToken: data.refresh_token } : {}),
+    ...(data.expires_in !== undefined ? { expiresIn: data.expires_in } : {}),
   };
 }
 
@@ -218,8 +218,8 @@ export async function refreshMicrosoftToken(refreshToken: string): Promise<{
   return {
     accessToken: data.access_token,
     // Microsoft may return a new refresh token (rotation)
-    refreshToken: data.refresh_token,
-    expiresAt: data.expires_in ? Date.now() + data.expires_in * 1000 : undefined,
+    ...(data.refresh_token !== undefined ? { refreshToken: data.refresh_token } : {}),
+    ...(data.expires_in ? { expiresAt: Date.now() + data.expires_in * 1000 } : {}),
   };
 }
 
@@ -321,8 +321,8 @@ export async function exchangeMicrosoftOAuth(params: OAuthExchangeParams): Promi
     return {
       success: true,
       accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresAt: tokens.expiresIn ? Date.now() + tokens.expiresIn * 1000 : undefined,
+      ...(tokens.refreshToken !== undefined ? { refreshToken: tokens.refreshToken } : {}),
+      ...(tokens.expiresIn ? { expiresAt: Date.now() + tokens.expiresIn * 1000 } : {}),
       email,
     };
   } catch (error) {
@@ -376,7 +376,7 @@ export async function startMicrosoftOAuth(
     // Start callback server with deeplink for returning to chat session
     const appType = options.appType || 'electron';
     const deeplinkUrl = buildOAuthDeeplinkUrl(options.sessionContext);
-    const callbackServer = await createCallbackServer({ appType, deeplinkUrl });
+    const callbackServer = await createCallbackServer({ appType, ...(deeplinkUrl !== undefined ? { deeplinkUrl } : {}) });
     const redirectUri = `${callbackServer.url}/callback`;
 
     // Build authorization URL
@@ -400,7 +400,7 @@ export async function startMicrosoftOAuth(
     const callback = await callbackServer.promise;
 
     // Verify state
-    if (callback.query.state !== state) {
+    if (callback.query["state"] !== state) {
       return {
         success: false,
         error: 'OAuth state mismatch - possible CSRF attack',
@@ -408,15 +408,15 @@ export async function startMicrosoftOAuth(
     }
 
     // Check for error
-    if (callback.query.error) {
+    if (callback.query["error"]) {
       return {
         success: false,
-        error: callback.query.error_description || callback.query.error,
+        error: callback.query["error_description"] || callback.query["error"],
       };
     }
 
     // Get authorization code
-    const code = callback.query.code;
+    const code = callback.query["code"];
     if (!code) {
       return {
         success: false,
@@ -433,8 +433,8 @@ export async function startMicrosoftOAuth(
     return {
       success: true,
       accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresAt: tokens.expiresIn ? Date.now() + tokens.expiresIn * 1000 : undefined,
+      ...(tokens.refreshToken !== undefined ? { refreshToken: tokens.refreshToken } : {}),
+      ...(tokens.expiresIn ? { expiresAt: Date.now() + tokens.expiresIn * 1000 } : {}),
       email,
     };
   } catch (error) {

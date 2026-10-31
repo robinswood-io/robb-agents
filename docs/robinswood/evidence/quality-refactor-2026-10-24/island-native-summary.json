@@ -1,0 +1,128 @@
+{
+  "status": "tested; local integration pending remaining quality work",
+  "scope": "island-native",
+  "files": [
+    {
+      "file": "packages/ui/src/components/ui/Island.tsx",
+      "lines": 439,
+      "sha256": "91f7e82d29b00b915d00c21f69e9c8a42b53eb6b26b7fccf03df293e668b2677"
+    },
+    {
+      "file": "packages/ui/src/components/ui/island-layout-primitives.tsx",
+      "lines": 292,
+      "sha256": "940b70b244ff4fd1d20d076161be7ab6dc5546169b6ad84493f54a0c157d0bfa"
+    },
+    {
+      "file": "packages/ui/src/components/ui/use-island-content-layout.ts",
+      "lines": 164,
+      "sha256": "64994a067fd43f1b83daca44b02ce1efc21d13dc80ca729dd03e9eba249b6bdf"
+    }
+  ],
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/ui/src/components/ui/Island.tsx",
+        "packages/ui/src/components/ui/use-island-content-layout.ts",
+        "packages/ui/src/components/ui/island-layout-primitives.tsx",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 2.25,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/island-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "packages/ui/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 2.69,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/island-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/ui/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 10.43,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/island-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/ui/src/components/ui/__tests__/Island.escape.test.ts",
+        "packages/ui/src/components/annotations/__tests__/island-motion.test.ts",
+        "packages/ui/src/components/annotations/__tests__/island-dismiss-policy.test.ts",
+        "packages/ui/src/components/annotations/__tests__/use-annotation-island-presentation.test.ts",
+        "packages/ui/src/components/annotations/__tests__/interaction-policy.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.38,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/island-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 22.38,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/island-native-build.log"
+    }
+  },
+  "targetedTests": {
+    "pass": 19,
+    "fail": 0
+  },
+  "browser": {
+    "before": 5,
+    "after": 5,
+    "nativeCallbackPayloadsEqual": true,
+    "errors": 0
+  },
+  "sourceGate": {
+    "max-lines": 14
+  },
+  "globalLint": {
+    "files": 3668,
+    "errors": 14,
+    "warnings": 71,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 14,
+      "react-hooks/exhaustive-deps": 71
+    }
+  },
+  "limits": [
+    "Other historical files and lint findings remain",
+    "No installation or final real-model mission claim",
+    "Global suite rerun prohibited by PreToolUse; last full suite f521166: 10759 passed"
+  ],
+  "additionalIntegration": {
+    "annotationBrowserBefore": 7,
+    "annotationBrowserAfter": 7,
+    "nativePayloadsEqual": true,
+    "normalization": "Generated annotation IDs and timestamps only; raw values retained"
+  }
+}

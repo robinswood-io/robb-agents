@@ -18,9 +18,9 @@ const proposal = async () => await handleProjectLearning(root, slug, 'source', [
   action: 'propose', content: 'Run the PDF render verification before delivering a PDF.', tags: ['pdf'], evidenceIds: ['origin'],
 }) as { id: string; status: string };
 async function reviewFor(id: string, overrides = {}) {
-  const pending = (await handleProjectLearning(root, slug, 'reviewer', [], { action: 'list' }) as Array<Record<string, unknown>>).find(p => p.id === id)!;
+  const pending = (await handleProjectLearning(root, slug, 'reviewer', [], { action: 'list' }) as Array<Record<string, unknown>>).find(p => p["id"] === id)!;
   return evidence('review', 'mcp__llm__call_llm', JSON.stringify({
-    proposalId: id, contentSha256: pending.contentSha256, sourceEvidenceSha256: pending.sourceEvidenceSha256,
+    proposalId: id, contentSha256: pending["contentSha256"], sourceEvidenceSha256: pending["sourceEvidenceSha256"],
     verdict: 'PASS', findings: [], replayEvidenceIds: ['replay'], ...overrides,
   }), Date.now() + 1);
 }

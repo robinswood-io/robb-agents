@@ -1,0 +1,25 @@
+{
+  "valid": true,
+  "source": "packages/server-core/src/tasks/TaskRunner.test.ts",
+  "testDeclarationsPreserved": 119,
+  "sharedDeclarationsPreserved": 8,
+  "setupPreservedInEverySuite": true,
+  "importsPreserved": true,
+  "maximumLines": 436,
+  "currentSourceHashes": {
+    "packages/server-core/src/tasks/TaskRunner.test.ts": "57775713ef4f6539790ac7090fd006de3ad3c6b696ca6ce1d1ab11c7634b80fe",
+    "packages/server-core/src/tasks/TaskRunner-injects-a-stable-idempotency-key-and-isolation-envelope-into-the.test.ts": "9432c11f2724ba2eaeea52f75fb592d48dba89f4805faaadb3ce7914da12d778",
+    "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts": "2e8a3255dbcc108d7dabfa9b039d2c6253bee30fb4d4b0e7946af7fa6a768afe",
+    "packages/server-core/src/tasks/TaskRunner-discovers-a-create-before-log-worker-before-a-drained-paused-run.test.ts": "5adee222714c5cbd32ad4cfc0a49a78e344e157ef66fe3427778309c7e677584",
+    "packages/server-core/src/tasks/TaskRunner-recovers-resolved-run-params-and-verification-behavior-exactly-af.test.ts": "159e91f72cb8b6649708a9a2f305a37c45517abc8fa99f5cf2c1f6b370017434",
+    "packages/server-core/src/tasks/TaskRunner-re-arms-node-timeouts-longer-than-the-platform-timer-ceiling-inst.test.ts": "42bd30ef422a0d4e416dbc0f4bd0fd9d710d4138e69ec2882ff0bfbc20dbc4f0",
+    "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts": "7675ae66054773ce350adcbf52cc40dc53607d820d400d7c87a2f888c83956df",
+    "packages/server-core/src/tasks/TaskRunner-gates-the-run-on-an-independent-durable-reviewer-and-includes-acc.test.ts": "958b50e3c5a3909a7c9db0f52a9a773c314f821837e1781bdfec2cbd528bed9d",
+    "packages/server-core/src/tasks/TaskRunner-completes-through-the-real-sessionmanager-host-review-contract-an.test.ts": "ab554c53c7cc4d33b9f6d325ca872cfe02d433c0ad07667908b072eadfa35514",
+    "packages/server-core/src/tasks/TaskRunner-restores-reviewer-usage-high-water-marks-and-does-not-charge-a-re.test.ts": "d0f38bcff9969e64e55b0df1c762db670af6b087cfe425e7ea64503d8ea0b606",
+    "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts": "51d7f10cbbb46d5bfe49db5087d230b1778cbd2e73b0f489688a3d0c36aea383",
+    "packages/server-core/src/tasks/TaskRunner-contains-rejected-best-effort-ui-metadata-without-changing-the-ve.test.ts": "2e028d7e947be2723af0273d38f705ba4224ec8093b46ba26b2f97687109065f",
+    "packages/server-core/src/tasks/testing/TaskRunner-fixture.ts": "34704f8c9f8bda3a4b5030a74da845eb706d2910182f057c5ecf61ad701e81c6"
+  },
+  "issues": []
+}

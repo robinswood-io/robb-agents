@@ -1,3 +1,6 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
@@ -25,7 +28,7 @@ describe('background task completion surfacing (idle keep-alive)', () => {
 
   beforeEach(() => {
     tmpRoot = mkdtempSync(join(tmpdir(), 'sm-bgsurface-'))
-    sm = new SessionManager()
+    sm = withSessionOperationsForTest(new SessionManager())
   })
 
   afterEach(() => {
@@ -36,17 +39,15 @@ describe('background task completion surfacing (idle keep-alive)', () => {
     const workspace = { id: 'ws_test', name: 'Test Workspace', rootPath: tmpRoot, createdAt: Date.now() }
     const managed = createManagedSession({ id, name: 'bg surface test' }, workspace as never, { messagesLoaded: true })
     managed.isProcessing = opts?.processing ?? false
-    ;(sm as unknown as { sessions: Map<string, unknown> }).sessions.set(id, managed)
+    ;sessionRuntimeStateForTest(sm).sessions.set(id, managed)
     // keepBackgroundTasksAlive is a readonly field resolved from env at construction;
     // override it per-test to exercise both flag states deterministically.
-    ;(sm as unknown as { keepBackgroundTasksAlive: boolean }).keepBackgroundTasksAlive = opts?.keepAlive ?? true
+    ;sessionRuntimeStateForTest(sm).keepBackgroundTasksAlive = opts?.keepAlive ?? true
     return managed
   }
 
   function registerRunningTask(sessionId: string, taskId: string, intent?: string) {
-    const managed = (sm as unknown as {
-      sessions: Map<string, { backgroundTaskRegistry: Map<string, unknown> }>
-    }).sessions.get(sessionId)!
+    const managed = sessionRuntimeStateForTest(sm).sessions.get(sessionId)!
     managed.backgroundTaskRegistry.set(taskId, {
       taskId,
       startTime: Date.now(),
@@ -57,17 +58,15 @@ describe('background task completion surfacing (idle keep-alive)', () => {
 
   function spyOnSendMessage() {
     const calls: Array<{ msg: string; hidden?: boolean }> = []
-    ;(sm as unknown as {
-      sendMessage: (id: string, msg: string, a?: unknown, s?: unknown, opts?: { hidden?: boolean }) => Promise<void>
-    }).sendMessage = async (_id, msg, _a, _s, opts) => {
-      calls.push({ msg, hidden: opts?.hidden })
+    ;(sessionManagerForTest(sm)).sendMessage = async (_id, msg, _a, _s, opts) => {
+      calls.push({ msg, ...(opts?.hidden !== undefined ? { hidden: opts?.hidden } : {}) })
     }
     return calls
   }
 
   async function fireTaskCompleted(sessionId: string, event: TaskCompletedEvent) {
-    const managed = (sm as unknown as { sessions: Map<string, unknown> }).sessions.get(sessionId)!
-    await (sm as unknown as { processEvent: (m: unknown, e: unknown) => Promise<void> }).processEvent(managed, event)
+    const managed = sessionRuntimeStateForTest(sm).sessions.get(sessionId)!
+    await (sessionManagerForTest(sm)).processEvent(managed, event)
   }
 
   it('surfaces a completed task to an idle keep-alive session with intent + output file', async () => {

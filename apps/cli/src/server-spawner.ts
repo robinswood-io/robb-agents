@@ -6,7 +6,6 @@
  */
 
 import { resolve, join } from 'node:path'
-import type { Subprocess } from 'bun'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -20,13 +19,13 @@ export interface SpawnedServer {
 
 export interface SpawnServerOptions {
   /** Path to the server entry file. Auto-detected from monorepo root if omitted. */
-  serverEntry?: string
+  serverEntry?: string | undefined
   /** Extra env vars to pass to the server process. */
-  env?: Record<string, string>
+  env?: Record<string, string> | undefined
   /** How long to wait for the server to print its URL (ms). Default: 30000. */
-  startupTimeout?: number
+  startupTimeout?: number | undefined
   /** Suppress server stderr output (useful for validation where only test output matters). */
-  quiet?: boolean
+  quiet?: boolean | undefined
 }
 
 // ---------------------------------------------------------------------------
@@ -60,7 +59,7 @@ export async function spawnServer(opts?: SpawnServerOptions): Promise<SpawnedSer
   // Strip CLAUDECODE to avoid the Claude Agent SDK's nesting guard rejecting
   // subprocess launches when the CLI is invoked from within a Claude Code session.
   const { CLAUDECODE: _, ...parentEnv } = process.env
-  const proc: Subprocess = Bun.spawn(['bun', 'run', serverEntry], {
+  const proc = Bun.spawn(['bun', 'run', serverEntry], {
     env: {
       ...parentEnv,
       ...opts?.env,
@@ -75,7 +74,6 @@ export async function spawnServer(opts?: SpawnServerOptions): Promise<SpawnedSer
   // Pipe server stderr to our stderr so --debug logs are visible (unless quiet)
   if (proc.stderr && !opts?.quiet) {
     ;(async () => {
-      // @ts-expect-error — Bun Subprocess types don't narrow stderr to ReadableStream when stderr: 'pipe'
       const reader = proc.stderr.getReader()
       try {
         while (true) {
@@ -126,7 +124,6 @@ export async function spawnServer(opts?: SpawnServerOptions): Promise<SpawnedSer
     }
 
     ;(async () => {
-      // @ts-expect-error — Bun Subprocess types don't narrow stdout to ReadableStream when stdout: 'pipe'
       const reader = proc.stdout.getReader()
       const decoder = new TextDecoder()
       try {

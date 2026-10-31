@@ -110,7 +110,7 @@ function TiptapCodeBlockView({ node, updateAttributes }: TiptapCodeBlockViewProp
   const languageFilterInputRef = React.useRef<HTMLInputElement>(null)
   const languageOptionRefs = React.useRef<Array<HTMLButtonElement | null>>([])
 
-  const currentLanguage = normalizeLanguage((node.attrs.language as string | undefined) ?? null)
+  const currentLanguage = normalizeLanguage((node.attrs["language"] as string | undefined) ?? null)
   const languageLabel = getLanguageLabel(currentLanguage)
 
   const filteredLanguageOptions = React.useMemo(() => {
@@ -201,6 +201,8 @@ function TiptapCodeBlockView({ node, updateAttributes }: TiptapCodeBlockViewProp
     }
 
     setLanguageFilter('')
+  
+    return undefined;
   }, [languageDropdownOpen])
 
   return (
@@ -286,8 +288,9 @@ export const tiptapCodeBlock = CodeBlockShiki.extend({
   // Official @tiptap/markdown integration for fenced code blocks.
   markdownTokenName: 'code',
 
-  parseMarkdown: (token: any, helpers: any) => {
-    const lang = (token.lang ?? '').toLowerCase()
+  parseMarkdown: (token, helpers) => {
+    const language: unknown = token["lang"]
+    const lang = (typeof language === 'string' ? language : '').toLowerCase()
 
     // Dedicated rich block nodes handle these fenced languages.
     if (lang === 'mermaid' || lang === 'latex' || lang === 'math' || lang === 'tex' || lang === 'katex') {
@@ -296,7 +299,7 @@ export const tiptapCodeBlock = CodeBlockShiki.extend({
 
     return helpers.createNode(
       'codeBlock',
-      { language: token.lang ?? null },
+      { language: typeof language === 'string' ? language : null },
       token.text
         ? [
             {
@@ -308,13 +311,10 @@ export const tiptapCodeBlock = CodeBlockShiki.extend({
     )
   },
 
-  renderMarkdown: (
-    node: { attrs?: { language?: string | null }; content?: unknown[]; textContent?: string },
-    helpers: { renderChildren: (content: unknown[]) => string }
-  ) => {
-    const language = node.attrs?.language ?? ''
-    const code = node.textContent ?? helpers.renderChildren(node.content ?? [])
-    const langPart = language ? String(language) : ''
+  renderMarkdown: (node, helpers) => {
+    const language: unknown = node.attrs?.['language']
+    const code = helpers.renderChildren(node.content ?? [])
+    const langPart = typeof language === 'string' ? language : ''
 
     return `\`\`\`${langPart}\n${code}\n\`\`\``
   },

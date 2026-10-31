@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import { Linter } from 'eslint'
-import { createRequire } from 'node:module'
 
-const require = createRequire(import.meta.url)
-const rule = require('../no-hardcoded-z-index.cjs')
+import rule from '../no-hardcoded-z-index.ts'
 
 function runRule(code: string) {
   const linter = new Linter()

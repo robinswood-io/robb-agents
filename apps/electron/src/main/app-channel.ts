@@ -9,7 +9,7 @@ export const DEVELOPMENT_DEEPLINK_SCHEME = 'robbagentsdev'
 
 export function resolveAppChannel(
   isPackaged: boolean,
-  declaredChannel: string | undefined = process.env.ROBB_BUILD_CHANNEL,
+  declaredChannel: string | undefined = process.env["ROBB_BUILD_CHANNEL"],
 ): RobbAppChannel {
   if (declaredChannel === 'development') return 'development'
   return isPackaged ? 'production' : 'development'

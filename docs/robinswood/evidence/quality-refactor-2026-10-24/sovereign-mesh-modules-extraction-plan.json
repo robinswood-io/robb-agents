@@ -1,0 +1,297 @@
+{
+  "source": "packages/shared/src/governance/sovereign-team-mesh.ts",
+  "units": [
+    {
+      "names": [
+        "SHA256"
+      ],
+      "group": "contracts",
+      "bodySha256": "d220f484386df14aa7675ec342eee1e9e0275e4c5024bcfa6051d1a10d3a67fd"
+    },
+    {
+      "names": [
+        "MAX_LEASE_MS"
+      ],
+      "group": "contracts",
+      "bodySha256": "94bb2b098878284c5dea2a188e03750959214a1ad2c451bc183d5094e79808e9"
+    },
+    {
+      "names": [
+        "LOCK_STALE_MS"
+      ],
+      "group": "contracts",
+      "bodySha256": "65fb012ea8588ee4c32c3762b8c7ba09795920198de9a1283673f28275488ed8"
+    },
+    {
+      "names": [
+        "capability"
+      ],
+      "group": "contracts",
+      "bodySha256": "3ad5b5ae0db7eeb5be7eb35df35ae80f39b4e30ee3f735708b00c0247544f91b"
+    },
+    {
+      "names": [
+        "MeshCapabilitySetSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "2c1c03115fef31e0cb9c2465c5ad2321a08027bf5b64d32e48cbdec4c6eab31b"
+    },
+    {
+      "names": [
+        "VerifiedMachineCapabilityAttestationSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "948336270297ea581f340e32b529817201bbb2b9a37104aa70792472e40caa08"
+    },
+    {
+      "names": [
+        "VerifiedMachineCapabilityAttestation"
+      ],
+      "group": "contracts",
+      "bodySha256": "f337214d3088a3f0a8598ba62b535afcd27c194f0f200901386c66a2c2221940"
+    },
+    {
+      "names": [
+        "MeshIdentitySchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "33c96165a0215a5aef7531238e4f8e2b893e7d01bb5815223a5e9f4dc7ae468c"
+    },
+    {
+      "names": [
+        "MeshIdentity"
+      ],
+      "group": "contracts",
+      "bodySha256": "d150f2e0662d5adf1b5eabead19d515ec3f130edcb9850140416bb5dee54874d"
+    },
+    {
+      "names": [
+        "MeshIdentityResolver"
+      ],
+      "group": "contracts",
+      "bodySha256": "1ff2c1c4d5cd1d44e3d0cf84849f09ab94baa889735ee75c20d9c8965b5ae3fa"
+    },
+    {
+      "names": [
+        "MeshMachineIdentity"
+      ],
+      "group": "contracts",
+      "bodySha256": "cbc29ba845add19d4be963bd0bfcc03e929b80c7e9efc37a103097057e563fdd"
+    },
+    {
+      "names": [
+        "TrustedMachineCapabilityResolver"
+      ],
+      "group": "contracts",
+      "bodySha256": "c7cea1fd3d74420e770cdcf66b7d41065c863d01626d03224a59f5945d4ce2f4"
+    },
+    {
+      "names": [
+        "TrustedHumanIdentityResolver"
+      ],
+      "group": "contracts",
+      "bodySha256": "f7fad9dad1a0edb467ffe9cadf70d3e16778e427d214ee198db237cf7989112a"
+    },
+    {
+      "names": [
+        "VerifiedFederatedClaims"
+      ],
+      "group": "contracts",
+      "bodySha256": "efa8c322f2c539b587b6504e4d5d0ba7c31fbffd313ff615b98fae4c22cd39fc"
+    },
+    {
+      "names": [
+        "MissionQueueEnvelopeSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "d24534c5ee870a5830ade65cc35d08d1aca287faf48ad4ba480b19a7b865f9da"
+    },
+    {
+      "names": [
+        "MissionQueueEnvelope"
+      ],
+      "group": "contracts",
+      "bodySha256": "1e4567dc05be12fffc3e508f56b68210c8ccb0e7592c1c4385ee1991a707b5df"
+    },
+    {
+      "names": [
+        "MissionQueueEnqueueInputSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "4de8b5d8c87efb179d6f8b8a50d9fd55f3f00ee6c438a824bb196716a8f340bf"
+    },
+    {
+      "names": [
+        "MissionQueueEnqueueInput"
+      ],
+      "group": "contracts",
+      "bodySha256": "c4c1405bf79524cef5e3a4a1e19e66b17f016f2b736f2337ca426859ef651aa6"
+    },
+    {
+      "names": [
+        "MeshLeaseSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "ea7565135bb04a6f9c5480ae2e3e7c5d7122b77c78eec656c81e083b3d1b7f00"
+    },
+    {
+      "names": [
+        "MeshMissionLease"
+      ],
+      "group": "contracts",
+      "bodySha256": "d20ae9c5e5fc74f0e83b9d911b130033b061cb4262083364b83d38b7ef922fb8"
+    },
+    {
+      "names": [
+        "MeshClaimInputSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "e88c69b7235120fc4f0ce8e7a1524dacd83cbc2b93e6c998c0e49518d2c73072"
+    },
+    {
+      "names": [
+        "QueueRecordSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "5d00c11679a08842b581a3e8ffda86fc501cba0db5fc1f6c56abacdc7d70bf66"
+    },
+    {
+      "names": [
+        "MeshSnapshotSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "b74c9915ee4114e5c150dede253842558c295af294fb8975c3e4dcce8cbfbfc7"
+    },
+    {
+      "names": [
+        "MeshSnapshot"
+      ],
+      "group": "contracts",
+      "bodySha256": "fd74db67623fe7cd4bcbd086a951cf3906a814e9e2fa3052ac9c010a1bba4280"
+    },
+    {
+      "names": [
+        "identityFromVerifiedFederation"
+      ],
+      "group": "identity",
+      "bodySha256": "3b111e431de4dd2ba77aac2c6351c493c41c8ebf7765d307d025a94e42aa2c3e"
+    },
+    {
+      "names": [
+        "ScimUserSchema"
+      ],
+      "group": "identity",
+      "bodySha256": "0c7bd6586727556133ee720788bf2e4cee0defb9faca89d3c039a70c2fade84d"
+    },
+    {
+      "names": [
+        "identityFromVerifiedScim"
+      ],
+      "group": "identity",
+      "bodySha256": "62b3eddb7a817ccbc36856d89514930c0502b723f1c2f7d3168e1361c4a5d5d5"
+    },
+    {
+      "names": [
+        "identityFromVerifiedDeviceAttestation"
+      ],
+      "group": "identity",
+      "bodySha256": "48a141da6cf6d3e23a07a7e24d2021b4d825378dd88ea9ba3cf6023a0cb77eb7"
+    },
+    {
+      "names": [
+        "delegateMissionAgentIdentity"
+      ],
+      "group": "identity",
+      "bodySha256": "84197ccb0ea33eba2b5a7dbedfb670fe62378d0fcad1aa3ae65bc9968e496dc8"
+    },
+    {
+      "names": [
+        "emptySnapshot"
+      ],
+      "group": "mission-queue",
+      "bodySha256": "859bb077a45c3d7c002369e4e5b3a3e19d3beffa1d433396b5cdc75a4d0bc808"
+    },
+    {
+      "names": [
+        "SovereignMissionQueue"
+      ],
+      "group": "mission-queue",
+      "bodySha256": "f5a24c49039ed65204287d2c5aea1090fe5b007e029d0014cb96ff94a17e82b8"
+    },
+    {
+      "names": [
+        "requireRecord"
+      ],
+      "group": "mission-queue",
+      "bodySha256": "fe3707566737a374df94e87149b0774287422cd5629760acfcc21500ba43d5ec"
+    },
+    {
+      "names": [
+        "assertRequiredMachineCapabilities"
+      ],
+      "group": "mission-queue",
+      "bodySha256": "8b7ccce0dc2874f4deb1bed735996074580293d750c98c890fe8a3d2c170e67a"
+    },
+    {
+      "names": [
+        "resolveEligibleLeaseOwner"
+      ],
+      "group": "mission-queue",
+      "bodySha256": "b6728167d1e71d34c037195ee47a98682f4d9bdb4eb1a29b67c277043d4dee76"
+    },
+    {
+      "names": [
+        "assertActiveLease"
+      ],
+      "group": "mission-queue",
+      "bodySha256": "97780faab6eb960e5731c30f692b6ae0d8dfc86cd4e85b6654a7426c9dc5631b"
+    },
+    {
+      "names": [
+        "withLock"
+      ],
+      "group": "mission-queue",
+      "bodySha256": "6e4b713034b86d3b94103849ae76d7c76594587dd544be6db63f8b0560be61f8"
+    },
+    {
+      "names": [
+        "errorCode"
+      ],
+      "group": "mission-queue",
+      "bodySha256": "3e36aaee7f8e94a8d78f0b6821eddf7ad2852d7acdbb962db2ae7f1b5f2520b0"
+    },
+    {
+      "names": [
+        "sha256"
+      ],
+      "group": "mission-queue",
+      "bodySha256": "5c0c4e025a53ba4318fc4f8dc1b2c5199ccc493c91e04246b207c08717965ee7"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 138
+    },
+    {
+      "name": "identity",
+      "lines": 130
+    },
+    {
+      "name": "mission-queue",
+      "lines": 320
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "identity": [
+      "contracts",
+      "mission-queue"
+    ],
+    "mission-queue": [
+      "contracts"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

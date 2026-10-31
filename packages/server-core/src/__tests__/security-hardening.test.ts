@@ -8,7 +8,27 @@ import { WsRpcServer } from '../transport/server.ts';
 import { RateLimiter } from '../webui/auth.ts';
 import { resolveWebSocketUrl } from '../webui/http-server.ts';
 import { nodeHttpAdapter } from '../webui/node-adapter.ts';
-import { Readable } from 'node:stream';
+import { Socket } from 'node:net';
+import { WebSocket } from 'ws';
+import type { ClientConnection } from '../transport/server/shared.ts';
+import { IncomingMessage, type ServerResponse } from 'node:http';
+
+function fixtureSocket(readyState: number, onSend: (data: string) => void = () => {}): WebSocket {
+  // This unit-test double only exposes readyState/send; no transport is opened.
+  const socket: unknown = Object.create(WebSocket.prototype);
+  if (!(socket instanceof WebSocket)) throw new TypeError('Expected a fixture WebSocket');
+  Object.defineProperty(socket, 'readyState', { value: readyState });
+  socket.send = data => { onSend(String(data)); };
+  return socket;
+}
+function fixtureClient(id: string, ws = fixtureSocket(0)): ClientConnection {
+  return { id, ws, workspaceId: 'ws-1', webContentsId: null,
+    capabilities: new Set(), actorId: 'local-owner', roles: ['owner'],
+    authorizationGeneration: 0, allowedWorkspaceIds: '*', missedPongs: 0,
+    alive: true, eventBuffer: [], bufferedBytes: 0, inFlightRequests: 0,
+    lastAckedSeq: 0, lastSentSeq: 0 };
+}
+
 
 describe('Server-Core Security Hardening Regressions', () => {
   describe('Sensitive File Path Guards', () => {
@@ -58,9 +78,10 @@ describe('Server-Core Security Hardening Regressions', () => {
   describe('WsRpcServer Client Response Spoofing, Memory Caps & DoS Guards', () => {
     it('ignores invoke responses sent by a different client than the target clientId', () => {
       const server = new WsRpcServer({ host: '127.0.0.1', port: 0, requireAuth: false });
+      const internal = server;
       let resolvedValue: unknown = null;
 
-      (server as any).pendingInvokes.set('req-1', {
+      internal["pendingInvokes"].set('req-1', {
         clientId: 'legit-client',
         resolve: (val: unknown) => {
           resolvedValue = val;
@@ -69,25 +90,25 @@ describe('Server-Core Security Hardening Regressions', () => {
         timeout: setTimeout(() => {}, 10_000),
       });
 
-      const attackerClient = { id: 'attacker-client' } as any;
-      (server as any).onClientResponse(attackerClient, {
+      const attackerClient = fixtureClient('attacker-client');
+      internal["onClientResponse"](attackerClient, {
         id: 'req-1',
         type: 'response',
         result: 'spoofed',
       });
 
       expect(resolvedValue).toBeNull();
-      expect((server as any).pendingInvokes.has('req-1')).toBe(true);
+      expect(internal["pendingInvokes"].has('req-1')).toBe(true);
 
-      const legitClient = { id: 'legit-client' } as any;
-      (server as any).onClientResponse(legitClient, {
+      const legitClient = fixtureClient('legit-client');
+      internal["onClientResponse"](legitClient, {
         id: 'req-1',
         type: 'response',
         result: 'authentic',
       });
 
       expect(resolvedValue).toBe('authentic');
-      expect((server as any).pendingInvokes.has('req-1')).toBe(false);
+      expect(internal["pendingInvokes"].has('req-1')).toBe(false);
     });
 
     it('enforces maxEventBufferBytes per client to prevent memory exhaustion', () => {
@@ -97,29 +118,13 @@ describe('Server-Core Security Hardening Regressions', () => {
         requireAuth: false,
         maxEventBufferBytes: 1024,
       });
+      const internal = server;
 
-      const fakeClient = {
-        id: 'client-buf',
-        ws: { readyState: 0, OPEN: 1, send: () => {} },
-        workspaceId: 'ws-1',
-        webContentsId: null,
-        capabilities: new Set<string>(),
-        actorId: 'local-owner',
-        roles: ['owner'],
-        authorizationGeneration: 0,
-        allowedWorkspaceIds: '*' as const,
-        missedPongs: 0,
-        alive: true,
-        eventBuffer: [],
-        bufferedBytes: 0,
-        inFlightRequests: 0,
-        lastAckedSeq: 0,
-        lastSentSeq: 0,
-      };
+      const fakeClient = fixtureClient('client-buf');
 
       const chunk = 'x'.repeat(400);
       for (let i = 0; i < 10; i++) {
-        (server as any).bufferAndMaybeSendEvent(fakeClient, 'test:event', [chunk], Date.now(), false);
+        internal["bufferAndMaybeSendEvent"](fakeClient, 'test:event', [chunk], Date.now(), false);
       }
 
       expect(fakeClient.bufferedBytes).toBeLessThanOrEqual(1024);
@@ -135,6 +140,7 @@ describe('Server-Core Security Hardening Regressions', () => {
         maxInFlightRequestsPerClient: 1,
         maxFailedHandshakesPerIp: 2,
       });
+      const internal = server;
 
       let releaseHandler!: () => void;
       server.handle('slow:op', async () => {
@@ -145,36 +151,15 @@ describe('Server-Core Security Hardening Regressions', () => {
       });
 
       const sentMessages: string[] = [];
-      const fakeClient = {
-        id: 'client-inflight',
-        ws: {
-          readyState: 1,
-          OPEN: 1,
-          send: (data: string) => sentMessages.push(data),
-        },
-        workspaceId: 'ws-1',
-        webContentsId: null,
-        capabilities: new Set<string>(),
-        actorId: 'local-owner',
-        roles: ['owner'],
-        authorizationGeneration: 0,
-        allowedWorkspaceIds: '*' as const,
-        missedPongs: 0,
-        alive: true,
-        eventBuffer: [],
-        bufferedBytes: 0,
-        inFlightRequests: 0,
-        lastAckedSeq: 0,
-        lastSentSeq: 0,
-      };
+      const fakeClient = fixtureClient('client-inflight', fixtureSocket(1, data => { sentMessages.push(data); }));
 
-      const req1 = (server as any).onRequest(fakeClient, {
+      const req1 = internal["onRequest"](fakeClient, {
         id: 'r1',
         type: 'request',
         channel: 'slow:op',
         args: [],
       });
-      await (server as any).onRequest(fakeClient, {
+      await internal["onRequest"](fakeClient, {
         id: 'r2',
         type: 'request',
         channel: 'slow:op',
@@ -188,10 +173,10 @@ describe('Server-Core Security Hardening Regressions', () => {
       await req1;
       expect(fakeClient.inFlightRequests).toBe(0);
 
-      expect((server as any).isHandshakeIpRateLimited('203.0.113.9')).toBe(false);
-      (server as any).recordFailedHandshake('203.0.113.9');
-      (server as any).recordFailedHandshake('203.0.113.9');
-      expect((server as any).isHandshakeIpRateLimited('203.0.113.9')).toBe(true);
+      expect(internal["isHandshakeIpRateLimited"]('203.0.113.9')).toBe(false);
+      internal["recordFailedHandshake"]('203.0.113.9');
+      internal["recordFailedHandshake"]('203.0.113.9');
+      expect(internal["isHandshakeIpRateLimited"]('203.0.113.9')).toBe(true);
     });
   });
 
@@ -201,7 +186,7 @@ describe('Server-Core Security Hardening Regressions', () => {
       for (let i = 0; i < 100; i++) {
         expect(limiter.check(`198.51.100.${i}`)).toBe(true);
       }
-      expect((limiter as any).entries.size).toBeLessThanOrEqual(16);
+      expect((limiter)["entries"].size).toBeLessThanOrEqual(16);
     });
 
     it('sanitizes spoofed X-Forwarded-Host containing userinfo, paths, or fragments', () => {
@@ -234,14 +219,16 @@ describe('Server-Core Security Hardening Regressions', () => {
         return new Response('ok', { status: 200 });
       });
 
-      const fakeReq = Object.assign(Readable.from([]), {
+      const socket = new Socket();
+      Object.defineProperties(socket, { encrypted: { value: false }, remoteAddress: { value: '127.0.0.1' } });
+      const fakeReq = Object.assign(new IncomingMessage(socket), {
         method: 'GET',
         url: '/api/health',
         headers: { host: 'user:pass@evil.example.com/bad path' },
         rawHeaders: ['Host', 'user:pass@evil.example.com/bad path'],
-        socket: { encrypted: false, remoteAddress: '127.0.0.1' },
       });
 
+      fakeReq.push(null);
       let statusCode = 0;
       let bodyText = '';
       await new Promise<void>((resolve) => {
@@ -256,7 +243,10 @@ describe('Server-Core Security Hardening Regressions', () => {
             resolve();
           },
         };
-        adapter(fakeReq as any, fakeRes as any);
+        adapter(
+          fakeReq,
+          fakeRes as ServerResponse,
+        );
       });
 
       expect(statusCode).toBe(200);

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Network proxy manager — configures both Node.js (undici) and Electron session proxies.
  *
@@ -51,7 +52,7 @@ class ProtocolProxyDispatcher extends Dispatcher {
     this.rules = parseNoProxyRules(opts.noProxy);
   }
 
-  dispatch(opts: Dispatcher.DispatchOptions, handler: Dispatcher.DispatchHandler): boolean {
+  override dispatch(opts: Dispatcher.DispatchOptions, handler: Dispatcher.DispatchHandler): boolean {
     const url = typeof opts.origin === 'string' ? opts.origin : opts.origin?.toString();
 
     // If URL matches bypass rules, go direct
@@ -70,7 +71,7 @@ class ProtocolProxyDispatcher extends Dispatcher {
     return this.direct.dispatch(opts, handler);
   }
 
-  async close(): Promise<void> {
+  override async close(): Promise<void> {
     await Promise.all([
       this.httpProxy?.close(),
       this.httpsProxy?.close(),
@@ -78,7 +79,7 @@ class ProtocolProxyDispatcher extends Dispatcher {
     ]);
   }
 
-  async destroy(): Promise<void> {
+  override async destroy(): Promise<void> {
     await Promise.all([
       this.httpProxy?.destroy(),
       this.httpsProxy?.destroy(),
@@ -106,11 +107,11 @@ function resolveEffectiveProxySettings(
   settings: NetworkProxySettings | undefined,
 ): NetworkProxySettings | undefined {
   if (settings?.enabled && (settings.httpProxy || settings.httpsProxy)) {
-    return {
+    return omitUndefined<NetworkProxySettings>({
       ...settings,
       httpProxy: normalizeProxyUrl(settings.httpProxy),
       httpsProxy: normalizeProxyUrl(settings.httpsProxy),
-    };
+    });
   }
   return readWindowsSystemProxySettings();
 }
@@ -168,9 +169,9 @@ function configureNodeProxy(settings: NetworkProxySettings | undefined): void {
   }
 
   const dispatcher = new ProtocolProxyDispatcher({
-    httpProxy: settings.httpProxy,
-    httpsProxy: settings.httpsProxy,
-    noProxy: settings.noProxy,
+    ...(settings.httpProxy !== undefined ? { httpProxy: settings.httpProxy } : {}),
+    ...(settings.httpsProxy !== undefined ? { httpsProxy: settings.httpsProxy } : {}),
+    ...(settings.noProxy !== undefined ? { noProxy: settings.noProxy } : {}),
   });
 
   setGlobalDispatcher(dispatcher);
@@ -215,9 +216,7 @@ function buildElectronProxyConfig(settings: NetworkProxySettings): Electron.Prox
   return {
     mode: 'fixed_servers',
     proxyRules: rules.join(';'),
-    proxyBypassRules: settings.noProxy
-      ? splitCommaSeparated(settings.noProxy).join(',')
-      : undefined,
+    ...(settings.noProxy ? { proxyBypassRules: splitCommaSeparated(settings.noProxy).join(',') } : {}),
   };
 }
 

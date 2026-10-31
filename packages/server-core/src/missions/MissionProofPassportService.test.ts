@@ -1,3 +1,4 @@
+import { parseJsonObject } from '@craft-agent/shared/utils/json';
 import { createHash, generateKeyPairSync } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -124,8 +125,10 @@ describe('MissionProofPassportService', () => {
     expect(passport.evidence[0]).toMatchObject({ uri: 'workspace:///test-a.txt' });
 
     const path = join(root, 'missions', 'mission-demo', 'proof-passport.json');
-    const altered = JSON.parse(readFileSync(path, 'utf8'));
-    altered.missionRevision += 1;
+    const altered = parseJsonObject(readFileSync(path, 'utf8'));
+    const revision = altered['missionRevision'];
+    if (typeof revision !== 'number') throw new Error('Fixture passport revision is missing');
+    altered['missionRevision'] = revision + 1;
     writeFileSync(path, JSON.stringify(altered));
     expect(() => service.issue(completed)).toThrow('signature is invalid');
   });
@@ -246,18 +249,18 @@ describe('MissionProofPassportService', () => {
     expect(correctlyScopedService.read('mission-alpha')).toEqual(passport);
     expect(correctlyScopedService.verify('mission-alpha')).toMatchObject({ valid: true });
     expect(() => correctlyScopedService.read('mission-beta')).toThrow('mission binding is invalid');
-    expect(correctlyScopedService.verify('mission-beta')).toMatchObject({
+    expect<unknown>(correctlyScopedService.verify('mission-beta')).toMatchObject({
       valid: false,
-      reason: expect.stringContaining('mission binding is invalid'),
+      reason: (expect.stringContaining('mission binding is invalid') as unknown),
     });
 
     const foreignWorkspaceService = new MissionProofPassportService({
       workspaceId: 'workspace-beta', workspaceRoot: root, privateKey,
     });
     expect(() => foreignWorkspaceService.read('mission-alpha')).toThrow('workspace binding is invalid');
-    expect(foreignWorkspaceService.verify('mission-alpha')).toMatchObject({
+    expect<unknown>(foreignWorkspaceService.verify('mission-alpha')).toMatchObject({
       valid: false,
-      reason: expect.stringContaining('workspace binding is invalid'),
+      reason: (expect.stringContaining('workspace binding is invalid') as unknown),
     });
   });
 });

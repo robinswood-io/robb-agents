@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Electron platform factory — creates PlatformServices from Electron APIs.
  *
@@ -83,14 +84,14 @@ export function createElectronPlatform(opts: ElectronPlatformOptions): PlatformS
   const { app, nativeImage, shell, nativeTheme, logger } = opts
   const resourcesPath = opts.resourcesPath ?? process.resourcesPath
 
-  return {
+  return omitUndefined<PlatformServices>({
     appRootPath: opts.runtimeAppRoot ?? resolveElectronRuntimeAppRoot(app, resourcesPath),
     resourcesPath,
     isPackaged: app.isPackaged,
     appVersion: app.getVersion(),
     buildCommit: opts.buildCommit?.trim() || undefined,
     buildChannel: opts.buildChannel?.trim() || undefined,
-    buildDirty: opts.buildDirty,
+    ...(opts.buildDirty !== undefined ? { buildDirty: opts.buildDirty } : {}),
     openExternal: (url) => shell.openExternal(url),
     openPath: (p) => shell.openPath(p).then(() => {}),
     showItemInFolder: (p) => shell.showItemInFolder(p),
@@ -132,6 +133,6 @@ export function createElectronPlatform(opts: ElectronPlatformOptions): PlatformS
     logger,
     isDebugMode: opts.isDebugMode,
     getLogFilePath: opts.getLogFilePath,
-    captureError: opts.captureError,
-  }
+    ...(opts.captureError !== undefined ? { captureError: opts.captureError } : {}),
+  })
 }

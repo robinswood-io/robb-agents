@@ -1,0 +1,100 @@
+{
+  "source": "packages/shared/src/automations/validation.ts",
+  "units": [
+    {
+      "names": [
+        "validateAutomationsConfig"
+      ],
+      "group": "content-validation",
+      "bodySha256": "cfd12aeaf43b95a8a8a71167935b440f9e3e648516ff0123dc29faf5e1780dea"
+    },
+    {
+      "names": [
+        "runMatcherSemanticValidations"
+      ],
+      "group": "content-validation",
+      "bodySha256": "f3e717317dafb259c0c77eca3303bb1d65d51abdb061d08f1a006a69ee4cc6c7"
+    },
+    {
+      "names": [
+        "validateAutomationsContent"
+      ],
+      "group": "content-validation",
+      "bodySha256": "ef59bf7a25f077e58afce63a83099d8a8eb55b31cceec2d24204d2b8082886d9"
+    },
+    {
+      "names": [
+        "validateAutomations"
+      ],
+      "group": "file-validation",
+      "bodySha256": "84a0ddb5ef6e421cd219bfbc4be6bf92611f570014afdc6602f236b143bc8aac"
+    },
+    {
+      "names": [
+        "VALID_WEEKDAYS"
+      ],
+      "group": "conditions",
+      "bodySha256": "4fe8df61a6d55365ebe21392b2cbddb493f9cce20160a0b9acd41ab90749c2ad"
+    },
+    {
+      "names": [
+        "HH_MM_RE"
+      ],
+      "group": "conditions",
+      "bodySha256": "ae83e0dacdd950484539f5fdeefd41933785de9aacdcb87617df3f8c41f5cbf1"
+    },
+    {
+      "names": [
+        "TRANSITION_EVENTS"
+      ],
+      "group": "conditions",
+      "bodySha256": "cf6c6ecd1905968e180be7451a17012a3ae081acb35fa242fa4115eeeddd5024"
+    },
+    {
+      "names": [
+        "validateConditionsArray"
+      ],
+      "group": "conditions",
+      "bodySha256": "92d42977581280767a60b2f371f5b733b99e5054211ca19747ff165ccc71d99f"
+    },
+    {
+      "names": [
+        "validateTimeCondition"
+      ],
+      "group": "conditions",
+      "bodySha256": "bfc8edae47c56aa77e8170aca824cb715faf58619b911b168dc4ee397b37a68b"
+    },
+    {
+      "names": [
+        "validateStateCondition"
+      ],
+      "group": "conditions",
+      "bodySha256": "480c0ab697b9e432e6458872209bdfd6011c349b69d61aa1867ed20c708a6aa7"
+    }
+  ],
+  "modules": [
+    {
+      "name": "content-validation",
+      "lines": 248
+    },
+    {
+      "name": "file-validation",
+      "lines": 163
+    },
+    {
+      "name": "conditions",
+      "lines": 141
+    }
+  ],
+  "dependencies": {
+    "content-validation": [
+      "conditions"
+    ],
+    "file-validation": [
+      "content-validation"
+    ],
+    "conditions": []
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

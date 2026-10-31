@@ -12,35 +12,35 @@
  * the compact-mode drawer to keep behaviour in one place.
  */
 
-import * as React from 'react'
+
 import { useTranslation } from "react-i18next"
 import {
-  Archive,
-  ArchiveRestore,
-  Trash2,
-  Pencil,
-  Flag,
-  FlagOff,
-  MailOpen,
-  FolderOpen,
-  Copy,
-  AppWindow,
-  Columns2,
-  CloudUpload,
-  RefreshCw,
-  Tag,
-  Send,
-  FolderKanban,
-  Check,
+Archive,
+ArchiveRestore,
+Trash2,
+Pencil,
+Flag,
+FlagOff,
+MailOpen,
+FolderOpen,
+Copy,
+AppWindow,
+Columns2,
+CloudUpload,
+RefreshCw,
+Tag,
+Send,
+FolderKanban,
+Check,
 } from 'lucide-react'
 import { useMenuComponents } from '@/components/ui/menu-context'
-import { getStateColor, getStateIcon, type SessionStatusId } from '@/config/session-status-config'
+import { type SessionStatusId } from '@/config/session-status-config'
 import type { SessionStatus } from '@/config/session-status-config'
 import type { LabelConfig } from '@craft-agent/shared/labels'
-import { LabelMenuItems, StatusMenuItems, ShareMenuItems } from './SessionMenuParts'
+import { LabelMenuItems,ShareMenuItems } from './SessionMenuParts'
 import { getFileManagerName } from '@/lib/platform'
 import type { SessionMeta } from '@/atoms/sessions'
-import { getSessionStatus, hasUnreadMeta, hasMessagesMeta } from '@/utils/session'
+import { hasUnreadMeta,hasMessagesMeta } from '@/utils/session'
 import { MessagingSessionMenuItem } from '@/components/messaging/MessagingSessionMenuItem'
 import { useSessionMenuActions } from '@/hooks/useSessionMenuActions'
 
@@ -56,15 +56,15 @@ export interface SessionMenuProps {
   /** Available todo states */
   sessionStatuses: SessionStatus[]
   /** All available label configs (tree structure) for the labels submenu */
-  labels?: LabelConfig[]
+  labels?: LabelConfig[] | undefined
   /** Callback when labels are toggled (receives full updated labels array) */
-  onLabelsChange?: (labels: string[]) => void
+  onLabelsChange?: ((labels: string[]) => void) | undefined
   /** Whether multiple workspaces exist (enables "Send to Workspace" item) */
-  hasRemoteWorkspaces?: boolean
+  hasRemoteWorkspaces?: boolean | undefined
   /** Workspace projects (omit to hide the submenu) */
-  projects?: SessionMenuProjectOption[]
+  projects?: SessionMenuProjectOption[] | undefined
   /** Callback for binding/unbinding the session to a project. `null` = unbind. */
-  onSetProjectId?: (projectId: string | null) => void
+  onSetProjectId?: ((projectId: string | null) => void) | undefined
   /** Callbacks */
   onRename: () => void
   onFlag: () => void
@@ -74,7 +74,7 @@ export interface SessionMenuProps {
   onMarkUnread: () => void
   onSessionStatusChange: (state: SessionStatusId) => void
   onOpenInNewWindow: () => void
-  onSendToWorkspace?: () => void
+  onSendToWorkspace?: (() => void) | undefined
   onDelete: () => void
 }
 
@@ -84,7 +84,6 @@ export interface SessionMenuProps {
  */
 export function SessionMenu({
   item,
-  sessionStatuses,
   labels = [],
   onLabelsChange,
   onRename,
@@ -93,7 +92,6 @@ export function SessionMenu({
   onArchive,
   onUnarchive,
   onMarkUnread,
-  onSessionStatusChange,
   onOpenInNewWindow,
   onSendToWorkspace,
   onDelete,
@@ -107,12 +105,12 @@ export function SessionMenu({
   const isFlagged = item.isFlagged ?? false
   const isArchived = item.isArchived ?? false
   const sharedUrl = item.sharedUrl
-  const currentSessionStatus = getSessionStatus(item)
+  
   const sessionLabels = item.labels ?? []
   const _hasMessages = hasMessagesMeta(item)
   const _hasUnread = hasUnreadMeta(item)
 
-  const actions = useSessionMenuActions({ item, onLabelsChange })
+  const actions = useSessionMenuActions({ item, ...(onLabelsChange !== undefined ? { onLabelsChange: onLabelsChange } : {}) })
 
   // Get menu components from context (works with both DropdownMenu and ContextMenu)
   const { MenuItem, Separator, Sub, SubTrigger, SubContent } = useMenuComponents()

@@ -29,13 +29,13 @@ export interface ActiveTasksBarProps {
   /** Session ID for opening preview windows */
   sessionId: string
   /** Callback when kill button is clicked */
-  onKillTask?: (taskId: string) => void
+  onKillTask?: ((taskId: string) => void) | undefined
   /** Callback to insert message into input field */
-  onInsertMessage?: (text: string) => void
+  onInsertMessage?: ((text: string) => void) | undefined
   /** Callback to show terminal output overlay */
-  onShowTerminalOverlay?: (data: TerminalOverlayData) => void
+  onShowTerminalOverlay?: ((data: TerminalOverlayData) => void) | undefined
   /** Additional class name */
-  className?: string
+  className?: string | undefined
 }
 
 /**

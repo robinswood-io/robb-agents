@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "classes": [
+    {
+      "source": "apps/electron/src/main/browser-cdp.ts",
+      "nativeMethodBodies": 27,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [
+        "send",
+        "sendMouseEvent"
+      ],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    }
+  ],
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 399
+}

@@ -1,0 +1,372 @@
+[
+  {
+    "file": "apps/electron/src/main/__tests__/session-branch-rollback.isolated.ts",
+    "wrappedConstructors": 3,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "apps/electron/src/main/__tests__/sessions-annotations.isolated.ts",
+    "wrappedConstructors": 0,
+    "prototypeFixtures": 1
+  },
+  {
+    "file": "packages/server-core/src/handlers/rpc/remote-user-input.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/__tests__/reinitialize-auth.isolated.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/adopt-task-draft.test.ts",
+    "wrappedConstructors": 10,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/agent-delivery-does-not-delete-a-machine-receipt-already-claimed-while-its-origi.test.ts",
+    "wrappedConstructors": 3,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/agent-delivery.test.ts",
+    "wrappedConstructors": 9,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/background-task-surface.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/cold-session-metadata.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/collection-cache-runtime.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/combined-delegation-guards.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/completed-chat-retention.test.ts",
+    "wrappedConstructors": 12,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/credential-response-concurrency.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/delegation-host.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/execute-prompt-automation-test-mode.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/explicit-retry-allowance.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/external-action-authorization.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/external-action-policy-refresh.test.ts",
+    "wrappedConstructors": 2,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/internal-tool-recovery.test.ts",
+    "wrappedConstructors": 2,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/mission-ordinary-route-fence.test.ts",
+    "wrappedConstructors": 2,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/model-provenance.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/native-question-completion.runtime.test.ts",
+    "wrappedConstructors": 3,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/native-question-retry.test.ts",
+    "wrappedConstructors": 2,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/objective-amendment-evidence.test.ts",
+    "wrappedConstructors": 2,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/objective-legacy-context.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/pi-retry-streaming.test.ts",
+    "wrappedConstructors": 0,
+    "prototypeFixtures": 1
+  },
+  {
+    "file": "packages/server-core/src/sessions/project-learning-runtime.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/refresh-connection-runtime.test.ts",
+    "wrappedConstructors": 2,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/response-app-provenance.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/restart-recovery-auth-permission-recovery.test.ts",
+    "wrappedConstructors": 3,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/restart-recovery-completion-reconciliation.test.ts",
+    "wrappedConstructors": 3,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/restart-recovery-context-business-answers.test.ts",
+    "wrappedConstructors": 2,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/restart-recovery-continuation-exhaustion.test.ts",
+    "wrappedConstructors": 3,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/restart-recovery-evidence-shutdown-rehydration.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/restart-recovery-human-continuation-fifo.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/review-delegation-integration.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/reviewer-collection-cache.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/runtime-error-receipts.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/runtime-interruption-recovery.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/selected-model-persistence.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/sendmessage-durability.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/sendmessage-oauth-refresh.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/session-app-provenance-persist.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/session-auth-request-snapshot.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/session-created-notify.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/session-delete-external-operations.test.ts",
+    "wrappedConstructors": 5,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/session-delete-persistence-preserves-every-source-byte-when-the-atomic-move-cannot-start.test.ts",
+    "wrappedConstructors": 8,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/session-delete-persistence.test.ts",
+    "wrappedConstructors": 7,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/session-permission-alias.test.ts",
+    "wrappedConstructors": 0,
+    "prototypeFixtures": 2
+  },
+  {
+    "file": "packages/server-core/src/sessions/session-persistence-root-identity.test.ts",
+    "wrappedConstructors": 5,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/session-processing-events.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/session-runtime-eviction.test.ts",
+    "wrappedConstructors": 8,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/session-shutdown-fences.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/session-source-delete-fence.test.ts",
+    "wrappedConstructors": 3,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/session-wait-diagnostic.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/session-wait-integration.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/source-activated-auto-retry-basic-re-send-fires-sendmessage-with-slug-activated-suffix.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/source-activated-auto-retry-releases-an-uncommitted-claim-after-the-first-flush-fails-and-ret.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/source-activated-auto-retry-restores-a-queued-source-activation-continuation-with-durable-pro.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/testing/credential-response-concurrency-fixture.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/testing/permission-request-broker-cleanup-fixture.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/testing/restart-recovery-fixture.ts",
+    "wrappedConstructors": 2,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/testing/retry-turn-fixture.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/testing/session-objective-outcome-integration-fixture.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/testing/session-persistence-root-identity-fixture.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/testing/synthetic-objective-authority-fixture.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/tool-execution-truth.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/tool-start-durability.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/transient-network-recovery.test.ts",
+    "wrappedConstructors": 3,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/user-input-lifecycle.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/workflow-task-progress.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/sessions/yolo-runtime.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/tasks/TaskRunner-completes-through-the-real-sessionmanager-host-review-contract-an.test.ts",
+    "wrappedConstructors": 1,
+    "prototypeFixtures": 0
+  },
+  {
+    "file": "packages/server-core/src/tasks/TaskRunner-gates-the-run-on-an-independent-durable-reviewer-and-includes-acc.test.ts",
+    "wrappedConstructors": 6,
+    "prototypeFixtures": 0
+  }
+]

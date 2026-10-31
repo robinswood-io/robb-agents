@@ -1,0 +1,26 @@
+{
+  "status": "passed",
+  "nativeDeclarationsIncludingMutableGlobalsAndDisplayNamePreserved": 28,
+  "nativeComponentAndContextIdentityPreserved": true,
+  "nativeFullIslandStateHooksEffectsAndJSXReinlinedExactly": true,
+  "nativeImportsAndPublicExportsPreserved": true,
+  "oneScrollLockOwner": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "packages/ui/src/components/ui/Island.tsx",
+      "lines": 439,
+      "sha256": "91f7e82d29b00b915d00c21f69e9c8a42b53eb6b26b7fccf03df293e668b2677"
+    },
+    {
+      "file": "packages/ui/src/components/ui/island-layout-primitives.tsx",
+      "lines": 292,
+      "sha256": "940b70b244ff4fd1d20d076161be7ab6dc5546169b6ad84493f54a0c157d0bfa"
+    },
+    {
+      "file": "packages/ui/src/components/ui/use-island-content-layout.ts",
+      "lines": 164,
+      "sha256": "64994a067fd43f1b83daca44b02ce1efc21d13dc80ca729dd03e9eba249b6bdf"
+    }
+  ]
+}

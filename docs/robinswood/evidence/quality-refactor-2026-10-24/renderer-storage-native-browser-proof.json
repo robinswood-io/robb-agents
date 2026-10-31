@@ -1,0 +1,38 @@
+{
+  "status": "passed",
+  "cases": [
+    {
+      "name": "restores existing unprefixed component and preview-size keys",
+      "status": "passed"
+    },
+    {
+      "name": "sidebar category changes retain the existing key and restore after reload",
+      "status": "passed"
+    },
+    {
+      "name": "component selection persists to its original key",
+      "status": "passed"
+    },
+    {
+      "name": "variants sidebar preference survives a full reload",
+      "status": "passed"
+    },
+    {
+      "name": "native resize stores and restores the preview dimensions",
+      "status": "passed"
+    },
+    {
+      "name": "reset removes the original preview-size key",
+      "status": "passed"
+    },
+    {
+      "name": "no replacement namespace is created for legacy playground keys",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "browser": "145.0.7632.6",
+  "url": "http://127.0.0.1:6184/playground.html",
+  "scope": "native production playground; disposable browser context only"
+}

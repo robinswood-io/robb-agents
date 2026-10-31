@@ -31,22 +31,22 @@ function useAccentColor(): string {
 }
 
 export interface BrowserShaderProps {
-  className?: string
-  rounded?: boolean
-  borderRadius?: string
+  className?: string | undefined
+  rounded?: boolean | undefined
+  borderRadius?: string | undefined
   maskImage: string
-  opacity?: number
+  opacity?: number | undefined
 
   // TurnCard+HDR shader params
-  colorBack?: string
-  colorFront?: string
-  shape?: 'warp' | 'simplex' | 'dots' | 'wave' | 'ripple' | 'swirl' | 'sphere'
-  type?: '2x2' | '4x4' | '8x8' | 'random'
-  size?: number
-  speed?: number
-  scale?: number
-  maxPixelCount?: number
-  minPixelRatio?: number
+  colorBack?: string | undefined
+  colorFront?: string | undefined
+  shape?: 'warp' | 'simplex' | 'dots' | 'wave' | 'ripple' | 'swirl' | 'sphere' | undefined
+  type?: '2x2' | '4x4' | '8x8' | 'random' | undefined
+  size?: number | undefined
+  speed?: number | undefined
+  scale?: number | undefined
+  maxPixelCount?: number | undefined
+  minPixelRatio?: number | undefined
 }
 
 export function BrowserShader({

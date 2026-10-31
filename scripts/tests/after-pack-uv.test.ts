@@ -3,12 +3,7 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const afterPack = require('../../apps/electron/scripts/afterPack.cjs') as {
-  verifyPackagedUvMatchesStaged: (
-    context: { arch: string | number; packager: { projectDir: string } },
-    resourcesDir: string,
-  ) => void;
-};
+import { verifyPackagedUvMatchesStaged } from '../../apps/electron/scripts/afterPack.ts';
 
 const scratch: string[] = [];
 
@@ -34,14 +29,14 @@ function fixture(payload = 'checksum-verified uv payload') {
 
 it('accepts an exact uv copy before electron-builder signs nested binaries', () => {
   const { context, resourcesDir } = fixture();
-  expect(() => afterPack.verifyPackagedUvMatchesStaged(context, resourcesDir)).not.toThrow();
+  expect(() => verifyPackagedUvMatchesStaged(context, resourcesDir)).not.toThrow();
 });
 
 it('fails closed when the packaged uv payload differs before signing', () => {
   const { context, resourcesDir, packagedUv } = fixture();
   writeFileSync(packagedUv, 'mutated uv payload');
   chmodSync(packagedUv, 0o755);
-  expect(() => afterPack.verifyPackagedUvMatchesStaged(context, resourcesDir)).toThrow(
+  expect(() => verifyPackagedUvMatchesStaged(context, resourcesDir)).toThrow(
     'Packaged uv runtime differs from the checksum-verified staged binary',
   );
 });

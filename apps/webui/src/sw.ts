@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'robb-agents-pwa-'
-const SHELL_CACHE = `${CACHE_PREFIX}shell-${import.meta.env.PWA_CACHE_VERSION}`
+const SHELL_CACHE = `${CACHE_PREFIX}shell-${import.meta.env["PWA_CACHE_VERSION"]}`
 const SHELL_READY_URL = '/__robb_pwa_shell_ready__'
 const NAVIGATION_TIMEOUT_MS = 8_000
 
@@ -35,7 +35,9 @@ interface ServiceWorkerRuntime {
   addEventListener(type: string, listener: (event: Event) => void): void
 }
 
-const worker = globalThis as unknown as ServiceWorkerRuntime
+// This entry point runs in the service worker global, separate from the window.
+declare const self: ServiceWorkerRuntime
+const worker = self
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -177,17 +179,17 @@ worker.addEventListener('activate', (rawEvent) => {
 
 worker.addEventListener('message', (rawEvent) => {
   const event = rawEvent as MessageWorkerEvent
-  if (!isRecord(event.data) || typeof event.data.type !== 'string') return
+  if (!isRecord(event.data) || typeof event.data["type"] !== 'string') return
 
-  if (event.data.type === 'SKIP_WAITING') {
+  if (event.data["type"] === 'SKIP_WAITING') {
     event.waitUntil(worker.skipWaiting())
     return
   }
 
-  if (event.data.type === 'WARM_SHELL' && Array.isArray(event.data.urls)) {
+  if (event.data["type"] === 'WARM_SHELL' && Array.isArray(event.data["urls"])) {
     event.waitUntil(warmShellResources(
-      event.data.urls,
-      Array.isArray(event.data.requiredUrls) ? event.data.requiredUrls : [],
+      event.data["urls"],
+      Array.isArray(event.data["requiredUrls"]) ? event.data["requiredUrls"] : [],
     ))
   }
 })

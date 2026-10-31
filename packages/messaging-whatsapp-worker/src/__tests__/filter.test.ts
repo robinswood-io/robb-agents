@@ -43,7 +43,7 @@ function makeMsg(opts: {
     fromMe: opts.fromMe ?? false,
   }
   const message: Record<string, unknown> = {}
-  if (opts.text !== undefined) message.conversation = opts.text
+  if (opts.text !== undefined) message["conversation"] = opts.text
   if (opts.caption !== undefined) {
     const field = opts.captionField ?? 'imageMessage'
     message[field] = { caption: opts.caption }

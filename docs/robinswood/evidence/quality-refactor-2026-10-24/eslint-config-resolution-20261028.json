@@ -1,0 +1,96 @@
+{
+  "eslintVersion": "10.13.0",
+  "before": {
+    "automaticUnsafeAssignment": null,
+    "canonicalUnsafeAssignment": 2
+  },
+  "after": [
+    {
+      "file": "packages/server-core/src/handlers/rpc/automations.ts",
+      "automaticAndCanonicalRulesMatch": true,
+      "enforcedRules": [
+        "no-explicit-any",
+        "no-unsafe-assignment",
+        "no-unsafe-member-access",
+        "no-unsafe-argument",
+        "no-unsafe-return",
+        "no-unsafe-call"
+      ]
+    },
+    {
+      "file": "apps/electron/src/main/browser-cdp.ts",
+      "automaticAndCanonicalRulesMatch": true,
+      "enforcedRules": [
+        "no-explicit-any",
+        "no-unsafe-assignment",
+        "no-unsafe-member-access",
+        "no-unsafe-argument",
+        "no-unsafe-return",
+        "no-unsafe-call"
+      ]
+    },
+    {
+      "file": "packages/shared/src/docs/index.ts",
+      "automaticAndCanonicalRulesMatch": true,
+      "enforcedRules": [
+        "no-explicit-any",
+        "no-unsafe-assignment",
+        "no-unsafe-member-access",
+        "no-unsafe-argument",
+        "no-unsafe-return",
+        "no-unsafe-call"
+      ]
+    },
+    {
+      "file": "packages/ui/src/index.ts",
+      "automaticAndCanonicalRulesMatch": true,
+      "enforcedRules": [
+        "no-explicit-any",
+        "no-unsafe-assignment",
+        "no-unsafe-member-access",
+        "no-unsafe-argument",
+        "no-unsafe-return",
+        "no-unsafe-call"
+      ]
+    }
+  ],
+  "scope": "configuration resolution only; global lint still fails",
+  "negativeProbes": {
+    "sourceSha256": "42e73000f2cff7028d1d0af23e614f579fe0ac074e990351c55bc83e6cbccfbe",
+    "temporaryFilesRemoved": true,
+    "results": [
+      {
+        "folder": "apps/electron",
+        "exitCode": 1,
+        "rules": [
+          "@typescript-eslint/no-unsafe-assignment",
+          "@typescript-eslint/no-unsafe-member-access"
+        ]
+      },
+      {
+        "folder": "packages/shared",
+        "exitCode": 1,
+        "rules": [
+          "@typescript-eslint/no-unsafe-assignment",
+          "@typescript-eslint/no-unsafe-member-access"
+        ]
+      },
+      {
+        "folder": "packages/server-core",
+        "exitCode": 1,
+        "rules": [
+          "@typescript-eslint/no-unsafe-assignment",
+          "@typescript-eslint/no-unsafe-member-access"
+        ]
+      },
+      {
+        "folder": "packages/ui",
+        "exitCode": 1,
+        "rules": [
+          "@typescript-eslint/no-unsafe-assignment",
+          "@typescript-eslint/no-unsafe-member-access"
+        ]
+      }
+    ]
+  }
+}

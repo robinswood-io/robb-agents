@@ -17,29 +17,29 @@ export interface SessionSearchHeaderProps {
   /** Current search query value */
   searchQuery: string
   /** Called when search query changes */
-  onSearchChange?: (query: string) => void
+  onSearchChange?: ((query: string) => void) | undefined
   /** Called when search is closed (X button) */
-  onSearchClose?: () => void
+  onSearchClose?: (() => void) | undefined
   /** Called on keydown in the search input */
-  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
+  onKeyDown?: ((e: React.KeyboardEvent<HTMLInputElement>) => void) | undefined
   /** Called when input gains focus */
-  onFocus?: () => void
+  onFocus?: (() => void) | undefined
   /** Called when input loses focus */
-  onBlur?: () => void
+  onBlur?: (() => void) | undefined
   /** Whether content search is in progress */
-  isSearching?: boolean
+  isSearching?: boolean | undefined
   /** Whether the search service is unavailable (e.g. ripgrep not found) */
-  isUnavailable?: boolean
+  isUnavailable?: boolean | undefined
   /** Number of results to display (when not searching) */
-  resultCount?: number
+  resultCount?: number | undefined
   /** Whether the result count exceeded the display limit (shows "100+" instead of exact count) */
-  exceededLimit?: boolean
+  exceededLimit?: boolean | undefined
   /** Ref for the input element (for focus management) */
-  inputRef?: React.RefObject<HTMLInputElement>
+  inputRef?: React.RefObject<HTMLInputElement | null> | undefined
   /** Placeholder text */
-  placeholder?: string
+  placeholder?: string | undefined
   /** Whether the input is read-only (for playground demos) */
-  readOnly?: boolean
+  readOnly?: boolean | undefined
 }
 
 export function SessionSearchHeader({

@@ -1,156 +1,28 @@
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { createDefaultWorkspaceGovernance } from '@craft-agent/shared/governance';
-import {
-  MissionSpecSchema,
-  missionJournalPath,
-  readMissionEvents,
-  type MissionExecutionBinding,
-  type MissionSnapshot,
-  type MissionSpec,
-  type MissionWorkItem,
-  type StructuredMissionVerdict,
-} from '@craft-agent/shared/missions';
-import { saveWorkspaceConfig } from '@craft-agent/shared/workspaces';
-import { saveSourceConfig } from '@craft-agent/shared/sources';
-import type { ISessionManager } from '../handlers/session-manager-interface.ts';
-import { MissionController } from './MissionController.ts';
-import {
-  MissionRuntime,
-  type MissionExecutionInput,
-  type MissionExecutionResult,
-  type MissionWorkExecutor,
-} from './MissionRuntime.ts';
-import { MissionRuntimeService } from './MissionRuntimeService.ts';
-import { ordinaryMissionConnectionIdentity } from './mission-route-identity.ts';
-
-function routeConnection(slug: string, models = ['pi/gpt-5.6-luna', 'pi/gpt-5.6-terra', 'pi/gpt-5.6-sol']) {
-  return {
-    slug,
-    providerType: 'pi' as const,
-    piAuthProvider: 'openai',
-    models,
-    defaultModel: models[1] ?? models[0],
-  };
-}
-
-function fixture(id = 'twin-integration'): MissionSpec {
-  return MissionSpecSchema.parse({
-    schemaVersion: 2,
-    id,
-    title: 'Mission twin integration',
-    objective: 'Replan safely',
-    acceptanceCriteria: [{ id: 'mission-ok', description: 'Mission complete' }],
-    plannerProfileId: 'planner',
-    defaultWorkerProfileId: 'worker',
-    reviewerProfileId: 'reviewer',
-    supervisorProfileId: 'supervisor',
-    agentProfiles: [
-      { id: 'planner', role: 'planner', specialty: 'plan', systemPrompt: 'Plan.' },
-      { id: 'worker', role: 'worker', specialty: 'work', systemPrompt: 'Work.' },
-      { id: 'reviewer', role: 'reviewer', specialty: 'review', systemPrompt: 'Review.' },
-      { id: 'supervisor', role: 'supervisor', specialty: 'supervise', systemPrompt: 'Supervise.' },
-    ],
-    policy: { maxConcurrentAgents: 3, maxWorkItems: 40 },
-    workItems: [
-      {
-        id: 'objective', kind: 'objective', title: 'Objective',
-        acceptanceCriteria: [{ id: 'objective-ok', description: 'Objective complete' }],
-      },
-      {
-        id: 'source', kind: 'task', title: 'Source', prompt: 'Read source', objectiveId: 'objective',
-        acceptanceCriteria: [{ id: 'source-ok', description: 'Source complete' }],
-      },
-      {
-        id: 'dependent', kind: 'task', title: 'Dependent', prompt: 'Use source', objectiveId: 'objective',
-        dependsOn: ['source'], acceptanceCriteria: [{ id: 'dependent-ok', description: 'Dependent complete' }],
-      },
-      {
-        id: 'independent', kind: 'task', title: 'Independent', prompt: 'Independent work', objectiveId: 'objective',
-        acceptanceCriteria: [{ id: 'independent-ok', description: 'Independent complete' }],
-      },
-    ],
-  });
-}
-
-function externalFixture(id = 'twin-external'): MissionSpec {
-  const base = fixture(id);
-  return MissionSpecSchema.parse({
-    ...base,
-    workItems: base.workItems.map((item) => item.id === 'source' ? {
-      ...item,
-      effect: 'external-mutation',
-      requiredEvidence: [{ id: 'mutation-receipt', description: 'Mutation receipt', kind: 'receipt' }],
-      connectorInvocation: {
-        schemaVersion: 1,
-        pack: 'googleWorkspace',
-        operationId: 'drive.update',
-        resourceType: 'file',
-        resourceId: 'file-1',
-        payload: { name: 'report.xlsx' },
-        autonomy: 'A3',
-        receiptRequirementId: 'mutation-receipt',
-        compensation: { strategy: 'manual' },
-      },
-    } : item),
-  });
-}
-
-function expectPreviewRefusalWithoutWrites(
-  workspaceRoot: string,
-  controller: MissionController,
-  snapshot: MissionSnapshot,
-  proposedWorkItems: MissionWorkItem[],
-  expected: RegExp,
-): void {
-  const missionId = snapshot.spec.id;
-  const eventsBefore = readMissionEvents(workspaceRoot, missionId);
-  expect(() => controller.previewReplan(
-    missionId,
-    snapshot.revision,
-    proposedWorkItems,
-  )).toThrow(expected);
-  expect(readMissionEvents(workspaceRoot, missionId)).toEqual(eventsBefore);
-}
-
-function objectivePass(_missionId: string): StructuredMissionVerdict {
-  return {
-    targetType: 'objective',
-    targetId: 'objective',
-    result: 'pass',
-    summary: 'Objective passed',
-    criteria: [{
-      criterionId: 'objective-ok',
-      result: 'pass',
-      evidenceRefs: ['workspace:///objective-proof.json'],
-      explanation: 'All work passed',
-    }],
-    affectedWorkItemIds: [],
-    corrections: [],
-  };
-}
-
-async function eventually(assertion: () => boolean, timeoutMs = 1_000): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (!assertion()) {
-    if (Date.now() >= deadline) throw new Error('Timed out waiting for Mission runtime');
-    await new Promise((resolve) => setTimeout(resolve, 2));
-  }
-}
+import { SessionManager as FixtureSessionManager } from "../sessions/SessionManager";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createDefaultWorkspaceGovernance } from "@craft-agent/shared/governance";
+import { MissionSpecSchema, readMissionEvents } from "@craft-agent/shared/missions";
+import { saveWorkspaceConfig } from "@craft-agent/shared/workspaces";
+import type { ISessionManager } from "../handlers/session-manager-interface.ts";
+import { MissionController } from "./MissionController.ts";
+import { MissionRuntimeService } from "./MissionRuntimeService.ts";
+import { expectPreviewRefusalWithoutWrites, externalFixture, fixture, objectivePass, routeConnection } from "./testing/MissionDigitalTwinIntegration-fixture.ts";
 
 describe('Mission digital twin host integration', () => {
   let root: string;
+
   let sessionManager: ISessionManager;
 
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), 'mission-twin-integration-'));
-    sessionManager = {
+    sessionManager = Object.assign(new FixtureSessionManager(), ({
       waitForInit: async () => {},
       getSessions: () => [],
       cancelProcessing: async () => {},
-    } as unknown as ISessionManager;
+    } satisfies Partial<ISessionManager>));
   });
 
   afterEach(() => rmSync(root, { recursive: true, force: true }));
@@ -343,8 +215,6 @@ describe('Mission digital twin host integration', () => {
     expect(routeGates.every(gate => gate.detail.includes('no non-empty explicit or default connection'))).toBe(true);
   });
 
-
-
   it('keeps the selected provider while estimating shared-profile assignments', async () => {
     const createdAt = Date.parse('2026-08-20T10:00:00.000Z');
     const governance = createDefaultWorkspaceGovernance({
@@ -461,7 +331,7 @@ describe('Mission digital twin host integration', () => {
     const before = controller.recordVerdict(
       'twin-integration', 'review-objective-0', 'review-session', objectivePass('twin-integration'),
     );
-    expect(before.workItems.independent?.status).toBe('accepted');
+    expect(before.workItems["independent"]?.status).toBe('accepted');
     expect(before.workItems['final-review-0']?.status).toBe('pending');
 
     const proposed = before.spec.workItems.map((item) =>
@@ -498,10 +368,10 @@ describe('Mission digital twin host integration', () => {
     });
     expect(replanned.planVersion).toBe(2);
     expect(replanned.replans).toHaveLength(1);
-    expect(replanned.workItems.independent?.status).toBe('accepted');
-    expect(replanned.workItems.source?.status).toBe('pending');
-    expect(replanned.workItems.dependent?.status).toBe('pending');
-    expect(replanned.workItems.objective?.status).toBe('pending');
+    expect(replanned.workItems["independent"]?.status).toBe('accepted');
+    expect(replanned.workItems["source"]?.status).toBe('pending');
+    expect(replanned.workItems["dependent"]?.status).toBe('pending');
+    expect(replanned.workItems["objective"]?.status).toBe('pending');
     expect(replanned.workItems['review-objective-0']).toBeUndefined();
     expect(replanned.workItems['final-review-0']).toBeUndefined();
     expect(() => controller.replanMission('twin-integration', {
@@ -521,7 +391,7 @@ describe('Mission digital twin host integration', () => {
       dispatchId: 'connector-dispatch',
       binding: { executorKind: 'connector', executionId: 'connector-execution' },
     });
-    expect(snapshot.workItems.source?.status).toBe('reserved');
+    expect(snapshot.workItems["source"]?.status).toBe('reserved');
     expectPreviewRefusalWithoutWrites(root, controller, snapshot, snapshot.spec.workItems, /leases are active/);
     expect(() => controller.replanMission('twin-external', {
       expectedRevision: snapshot.revision,
@@ -529,7 +399,7 @@ describe('Mission digital twin host integration', () => {
       actorId: 'local-owner', reason: 'Unsafe while active',
     })).toThrow(/leases are active/);
     snapshot = controller.confirmWorkItemDispatch('twin-external', 'source', 'connector-dispatch');
-    expect(snapshot.workItems.source?.status).toBe('running');
+    expect(snapshot.workItems["source"]?.status).toBe('running');
     expectPreviewRefusalWithoutWrites(root, controller, snapshot, snapshot.spec.workItems, /leases are active/);
     expect(() => controller.replanMission('twin-external', {
       expectedRevision: snapshot.revision,
@@ -555,7 +425,7 @@ describe('Mission digital twin host integration', () => {
     controller.createMission(externalFixture('twin-ambiguous'));
     controller.startMission('twin-ambiguous');
     let snapshot = controller.dispatchWorkItem('twin-ambiguous', 'source', 'connector-dispatch');
-    snapshot = controller.failWorkItemAttempt('twin-ambiguous', 'source', snapshot.workItems.source!.dispatchId!, {
+    snapshot = controller.failWorkItemAttempt('twin-ambiguous', 'source', snapshot.workItems["source"]!.dispatchId!, {
       reason: 'Provider outcome unknown', retryable: false, ambiguousMutation: true,
     });
     expectPreviewRefusalWithoutWrites(
@@ -567,580 +437,4 @@ describe('Mission digital twin host integration', () => {
       actorId: 'local-owner', reason: 'Unsafe while unreconciled',
     })).toThrow(/not durably reconciled/);
   });
-
-  it('makes preview and apply require explicit compensation before changing a reconciled mutation', () => {
-    const controller = new MissionController({ workspaceRoot: root });
-    controller.createMission(externalFixture('twin-compensation'));
-    controller.startMission('twin-compensation');
-    controller.dispatchWorkItem('twin-compensation', 'source', 'connector-session');
-    const snapshot = controller.submitWorkItem('twin-compensation', 'source', 'connector-session', {
-      summary: 'Mutation reconciled',
-      outputRefs: ['connector://receipts/source'],
-      evidence: [{
-        requirementId: 'mutation-receipt',
-        uri: 'connector://receipts/source',
-        kind: 'receipt',
-        sha256: 'a'.repeat(64),
-      }],
-    });
-    const proposed = snapshot.spec.workItems.map((item) => item.id === 'source' ? {
-      ...item,
-      connectorInvocation: {
-        ...item.connectorInvocation!,
-        payload: { name: 'replacement.xlsx' },
-      },
-    } : item);
-    expectPreviewRefusalWithoutWrites(root, controller, snapshot, proposed, /requires explicit compensation/);
-    expect(() => controller.replanMission('twin-compensation', {
-      expectedRevision: snapshot.revision,
-      proposedWorkItems: proposed,
-      actorId: 'local-owner', reason: 'Unsafe invocation replacement',
-    })).toThrow(/requires explicit compensation/);
-  });
-
-  it('enforces preview admission through the host RPC without constructing an executor', async () => {
-    const controller = new MissionController({ workspaceRoot: root });
-    controller.createMission(externalFixture('twin-rpc-active'));
-    controller.startMission('twin-rpc-active');
-    const snapshot = controller.reserveWorkItem('twin-rpc-active', 'source', {
-      dispatchId: 'rpc-dispatch',
-      binding: { executorKind: 'connector', executionId: 'rpc-execution' },
-    });
-    const eventsBefore = readMissionEvents(root, 'twin-rpc-active');
-    let executorConstructions = 0;
-    const service = new MissionRuntimeService({
-      sessionManager,
-      resolveWorkspace: (id) => id === 'workspace-1' ? { id, rootPath: root } : null,
-      listWorkspaces: () => [],
-      executorFactory: () => {
-        executorConstructions += 1;
-        throw new Error('preview constructed an executor');
-      },
-    });
-
-    await expect(service.previewReplan(
-      'workspace-1',
-      'twin-rpc-active',
-      snapshot.revision,
-      snapshot.spec.workItems,
-    )).rejects.toThrow(/leases are active/);
-    expect(readMissionEvents(root, 'twin-rpc-active')).toEqual(eventsBefore);
-    expect(executorConstructions).toBe(0);
-  });
-
-  it('persists the admitted route and fails closed when it drifts before effective dispatch', async () => {
-    const createdAt = Date.parse('2026-08-20T10:00:00.000Z');
-    saveWorkspaceConfig(root, {
-      schemaVersion: 1,
-      id: 'workspace-1', name: 'Twin workspace', slug: 'twin-workspace', createdAt, updatedAt: createdAt,
-      defaults: { defaultLlmConnection: 'openai', thinkingLevel: 'medium' },
-      costControl: {},
-    });
-    const spec = fixture('route-drift');
-    spec.policy.maxConcurrentAgents = 1;
-    spec.policy.maxTechnicalAttempts = 1;
-    spec.workItems = spec.workItems.filter(item => item.id === 'objective' || item.id === 'source');
-    let catalogueModels = ['pi/gpt-5.6-terra'];
-    let preparedInput: MissionExecutionInput | undefined;
-    let executeCount = 0;
-    let releasePrepare!: () => void;
-    let markPrepareEntered!: () => void;
-    const prepareEntered = new Promise<void>(resolve => { markPrepareEntered = resolve; });
-    const prepareRelease = new Promise<void>(resolve => { releasePrepare = resolve; });
-    const inertExecutor: MissionWorkExecutor = {
-      prepare: async input => {
-        preparedInput = input;
-        markPrepareEntered();
-        await prepareRelease;
-        return { executorKind: 'inert', executionId: input.dispatchId };
-      },
-      execute: async () => {
-        executeCount += 1;
-        return { status: 'failed', reason: 'not dispatched', retryable: false };
-      },
-    };
-    const service = new MissionRuntimeService({
-      sessionManager,
-      resolveWorkspace: id => id === 'workspace-1' ? { id, rootPath: root } : null,
-      listWorkspaces: () => [],
-      executorFactory: () => inertExecutor,
-      preflightConnections: () => [routeConnection('openai', catalogueModels)],
-    });
-
-    await service.createAndStart('workspace-1', spec);
-    await prepareEntered;
-    expect(preparedInput?.profile).toMatchObject({
-      llmConnection: 'openai',
-      model: 'pi/gpt-5.6-terra',
-      thinkingLevel: expect.any(String),
-    });
-
-    catalogueModels = ['pi/gpt-5.6-sol'];
-    releasePrepare();
-    await eventually(() =>
-      new MissionController({ workspaceRoot: root }).getMission('route-drift').status === 'blocked');
-
-    const blocked = new MissionController({ workspaceRoot: root }).getMission('route-drift');
-    expect(blocked.workItems.source?.executionBinding?.missionRoute).toMatchObject({
-      routeDecisionSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
-      connectionSlug: 'openai',
-      model: 'pi/gpt-5.6-terra',
-    });
-    expect(blocked.workItems.source?.statusReason).toContain('drifted after prepare');
-    expect(executeCount).toBe(0);
-  });
-
-  it('pins a relative Mission cwd to the exact workspace-relative absolute path', async () => {
-    const createdAt = Date.parse('2026-08-20T10:00:00.000Z');
-    saveWorkspaceConfig(root, {
-      schemaVersion: 1,
-      id: 'workspace-1', name: 'Twin workspace', slug: 'twin-workspace', createdAt, updatedAt: createdAt,
-      defaults: { defaultLlmConnection: 'openai', thinkingLevel: 'medium' },
-      costControl: {},
-    });
-    mkdirSync(join(root, 'project'), { recursive: true });
-    const spec = fixture('relative-cwd');
-    spec.cwd = 'project';
-    spec.policy.maxConcurrentAgents = 1;
-    spec.workItems = spec.workItems.filter(item => item.id === 'objective' || item.id === 'source');
-    let prepared: MissionExecutionInput | undefined;
-    const never = new Promise<MissionExecutionResult>(() => {});
-    const service = new MissionRuntimeService({
-      sessionManager,
-      resolveWorkspace: id => id === 'workspace-1' ? { id, rootPath: root } : null,
-      listWorkspaces: () => [],
-      preflightConnections: () => [routeConnection('openai', ['pi/gpt-5.6-terra'])],
-      executorFactory: () => ({
-        prepare: async input => {
-          prepared = input;
-          return { executorKind: 'cwd-observer', executionId: input.dispatchId };
-        },
-        execute: async () => never,
-      }),
-    });
-
-    await service.createAndStart('workspace-1', spec);
-    await eventually(() => prepared !== undefined);
-    expect(prepared?.mission.cwd).toBe('project');
-    expect(prepared?.ordinaryRoutePin?.cwd).toBe(join(root, 'project'));
-  });
-
-  it('rejects relative traversal, absolute exterior paths, and symlink escapes as Mission cwd', async () => {
-    const outside = mkdtempSync(join(tmpdir(), 'mission-cwd-outside-'));
-    symlinkSync(outside, join(root, 'outside-link'));
-    const service = new MissionRuntimeService({
-      sessionManager,
-      resolveWorkspace: id => id === 'workspace-1' ? { id, rootPath: root } : null,
-      listWorkspaces: () => [],
-      executorFactory: () => ({
-        prepare: async input => ({ executorKind: 'unexpected', executionId: input.dispatchId }),
-        execute: async () => ({ status: 'failed', reason: 'unexpected', retryable: false }),
-      }),
-    });
-    try {
-      for (const [id, cwd] of [
-        ['relative-traversal', '../outside'],
-        ['absolute-exterior', outside],
-        ['symlink-exterior', 'outside-link'],
-      ] as const) {
-        const spec = fixture(id);
-        spec.cwd = cwd;
-        await expect(service.createAndStart('workspace-1', spec)).rejects.toThrow(
-          /working directory is not authorized: Path escapes the workspace/,
-        );
-        expect(existsSync(missionJournalPath(root, id))).toBe(false);
-      }
-    } finally {
-      rmSync(outside, { recursive: true, force: true });
-    }
-  });
-
-  it('revalidates a persisted ordinary route binding while recovering a reserved dispatch', async () => {
-    const createdAt = Date.parse('2026-08-20T10:00:00.000Z');
-    saveWorkspaceConfig(root, {
-      schemaVersion: 1,
-      id: 'workspace-1', name: 'Twin workspace', slug: 'twin-workspace', createdAt, updatedAt: createdAt,
-      defaults: { defaultLlmConnection: 'openai', thinkingLevel: 'medium' },
-      costControl: {},
-    });
-    const spec = fixture('route-recovery');
-    spec.policy.maxConcurrentAgents = 1;
-    spec.policy.maxTechnicalAttempts = 1;
-    spec.workItems = spec.workItems.filter(item => item.id === 'objective' || item.id === 'source');
-    const options = {
-      sessionManager,
-      resolveWorkspace: (id: string) => id === 'workspace-1' ? { id, rootPath: root } : null,
-      preflightConnections: () => [routeConnection('openai', ['pi/gpt-5.6-terra'])],
-    };
-    const never = new Promise<MissionExecutionResult>(() => {});
-    const initial = new MissionRuntimeService({
-      ...options,
-      listWorkspaces: () => [],
-      executorFactory: () => ({
-        prepare: async input => ({ executorKind: 'recovering', executionId: input.dispatchId }),
-        execute: async () => never,
-      }),
-    });
-    await initial.createAndStart('workspace-1', spec);
-    await eventually(() => Boolean(
-      new MissionController({ workspaceRoot: root })
-        .getMission(spec.id).workItems.source?.executionBinding?.missionRoute,
-    ));
-    const route = new MissionController({ workspaceRoot: root })
-      .getMission(spec.id).workItems.source!.executionBinding!.missionRoute!;
-    let prepareCount = 0;
-    let executedInput: MissionExecutionInput | undefined;
-    const service = new MissionRuntimeService({
-      ...options,
-      listWorkspaces: () => [{ id: 'workspace-1', rootPath: root }],
-      executorFactory: () => ({
-        prepare: async input => {
-          prepareCount += 1;
-          return { executorKind: 'unexpected', executionId: input.dispatchId };
-        },
-        execute: async input => {
-          executedInput = input;
-          return { status: 'failed', reason: 'Recovery observed', retryable: false };
-        },
-      }),
-    });
-
-    expect(await service.start()).toEqual(['workspace-1:route-recovery']);
-    await eventually(() =>
-      new MissionController({ workspaceRoot: root }).getMission(spec.id).status === 'blocked');
-    expect(prepareCount).toBe(0);
-    expect(executedInput?.profile).toMatchObject({
-      llmConnection: route.connectionSlug,
-      model: route.model,
-      thinkingLevel: route.thinkingLevel,
-    });
-    expect(executedInput?.ordinaryRoutePin).toEqual(route);
-  });
-
-  it('fails closed on recovery when a legacy reservation has no optional route binding', async () => {
-    const createdAt = Date.parse('2026-08-20T10:00:00.000Z');
-    saveWorkspaceConfig(root, {
-      schemaVersion: 1,
-      id: 'workspace-1', name: 'Twin workspace', slug: 'twin-workspace', createdAt, updatedAt: createdAt,
-      defaults: { defaultLlmConnection: 'openai', thinkingLevel: 'medium' },
-      costControl: {},
-    });
-    const spec = fixture('legacy-route-recovery');
-    spec.policy.maxConcurrentAgents = 1;
-    spec.policy.maxTechnicalAttempts = 1;
-    spec.workItems = spec.workItems.filter(item => item.id === 'objective' || item.id === 'source');
-    const controller = new MissionController({ workspaceRoot: root });
-    controller.createMission(spec);
-    controller.startMission(spec.id);
-    controller.reserveWorkItem(spec.id, 'source', {
-      dispatchId: 'legacy-route-dispatch',
-      binding: { executorKind: 'legacy', executionId: 'legacy-route-execution' },
-    });
-    let executeCount = 0;
-    const service = new MissionRuntimeService({
-      sessionManager,
-      resolveWorkspace: id => id === 'workspace-1' ? { id, rootPath: root } : null,
-      listWorkspaces: () => [{ id: 'workspace-1', rootPath: root }],
-      preflightConnections: () => [routeConnection('openai', ['pi/gpt-5.6-terra'])],
-      executorFactory: () => ({
-        prepare: async input => ({ executorKind: 'unexpected', executionId: input.dispatchId }),
-        execute: async () => {
-          executeCount += 1;
-          return { status: 'failed', reason: 'should not execute', retryable: false };
-        },
-      }),
-    });
-
-    expect(await service.start()).toEqual(['workspace-1:legacy-route-recovery']);
-    await eventually(() =>
-      new MissionController({ workspaceRoot: root }).getMission(spec.id).status === 'blocked');
-    const blocked = new MissionController({ workspaceRoot: root }).getMission(spec.id);
-    expect(blocked.workItems.source?.statusReason).toContain('missing from the durable dispatch binding');
-    expect(executeCount).toBe(0);
-  });
-
-  it('uses completed item cost and estimates only the remaining work for the next dispatch', async () => {
-    const createdAt = Date.parse('2026-08-20T10:00:00.000Z');
-    saveWorkspaceConfig(root, {
-      schemaVersion: 1,
-      id: 'workspace-1', name: 'Twin workspace', slug: 'twin-workspace', createdAt, updatedAt: createdAt,
-      defaults: { defaultLlmConnection: 'openai', thinkingLevel: 'medium' },
-      costControl: {},
-    });
-    const spec = fixture('per-dispatch-cost');
-    spec.policy.maxConcurrentAgents = 1;
-    spec.workItems = spec.workItems.filter(item =>
-      item.id === 'objective' || item.id === 'source' || item.id === 'dependent');
-    const prepared = new Map<string, MissionExecutionInput>();
-    const executor: MissionWorkExecutor = {
-      prepare: async input => {
-        prepared.set(input.item.id, input);
-        return { executorKind: 'cost-observer', executionId: input.dispatchId };
-      },
-      execute: async input => {
-        if (input.item.kind === 'objective-review') {
-          return { status: 'verdict', verdict: objectivePass(input.mission.id) };
-        }
-        if (input.item.kind === 'final-review') {
-          return { status: 'verdict', verdict: {
-            targetType: 'mission', targetId: input.mission.id, result: 'pass', summary: 'Mission passed',
-            criteria: [{
-              criterionId: 'mission-ok', result: 'pass', evidenceRefs: ['test://mission'], explanation: 'OK',
-            }],
-            affectedWorkItemIds: [], corrections: [],
-          } };
-        }
-        return {
-          status: 'submission',
-          submission: { summary: 'Done', outputRefs: [], evidence: [] },
-          ...(input.item.id === 'source' ? {
-            telemetry: {
-              durationMs: 1,
-              tokenUsage: {
-                inputTokens: 10, outputTokens: 5, totalTokens: 15, contextTokens: 10, costUsd: 0.07,
-              },
-            },
-          } : {}),
-        };
-      },
-    };
-    const service = new MissionRuntimeService({
-      sessionManager,
-      resolveWorkspace: id => id === 'workspace-1' ? { id, rootPath: root } : null,
-      listWorkspaces: () => [],
-      executorFactory: () => executor,
-      preflightConnections: () => [routeConnection('openai', ['pi/gpt-5.6-terra'])],
-      preflightCostEstimator: { estimateUsd: () => 0.1 },
-    });
-
-    await service.createAndStart('workspace-1', spec);
-    await eventually(() => prepared.has('dependent'));
-    expect(prepared.get('source')?.ordinaryRoutePin).toMatchObject({
-      measuredMissionUsd: 0,
-      projectedRemainingUsd: 0.2,
-    });
-    expect(prepared.get('dependent')?.ordinaryRoutePin?.measuredMissionUsd).toBeCloseTo(0.07, 10);
-    expect(prepared.get('dependent')?.ordinaryRoutePin?.projectedRemainingUsd).toBeCloseTo(0.1, 10);
-  });
-
-  it('serializes concurrent route preparation and estimates each work item only once', async () => {
-    const createdAt = Date.parse('2026-08-20T10:00:00.000Z');
-    saveWorkspaceConfig(root, {
-      schemaVersion: 1,
-      id: 'workspace-1', name: 'Twin workspace', slug: 'twin-workspace', createdAt, updatedAt: createdAt,
-      defaults: { defaultLlmConnection: 'openai', thinkingLevel: 'medium' },
-      costControl: {},
-    });
-    const taskCount = 12;
-    const base = fixture('concurrent-route-decisions');
-    const spec = MissionSpecSchema.parse({
-      ...base,
-      policy: { ...base.policy, maxConcurrentAgents: taskCount },
-      workItems: [
-        base.workItems.find(item => item.id === 'objective'),
-        ...Array.from({ length: taskCount }, (_, index) => ({
-          id: `parallel-${index}`, kind: 'task', title: 'Same task', prompt: 'Perform the same bounded check',
-          objectiveId: 'objective', acceptanceCriteria: [{ id: `parallel-ok-${index}`, description: 'Done' }],
-        })),
-      ],
-    });
-    let estimateCalls = 0;
-    const prepared: MissionExecutionInput[] = [];
-    const never = new Promise<MissionExecutionResult>(() => {});
-    const service = new MissionRuntimeService({
-      sessionManager,
-      resolveWorkspace: id => id === 'workspace-1' ? { id, rootPath: root } : null,
-      listWorkspaces: () => [],
-      executorFactory: () => ({
-        prepare: async input => {
-          prepared.push(input);
-          return { executorKind: 'concurrent-observer', executionId: input.dispatchId };
-        },
-        execute: async () => never,
-      }),
-      preflightConnections: () => [routeConnection('openai', ['pi/gpt-5.6-terra'])],
-      preflightCostEstimator: { estimateUsd: () => {
-        estimateCalls += 1;
-        return 0.01;
-      } },
-    });
-
-    await service.createAndStart('workspace-1', spec);
-    await eventually(() => prepared.length === taskCount);
-    expect(estimateCalls).toBe(taskCount);
-    expect(new Set(prepared.map(input => input.ordinaryRoutePin?.routeDecisionSha256)).size).toBe(1);
-    for (const input of prepared) {
-      expect(input.ordinaryRoutePin?.measuredMissionUsd).toBe(0);
-      expect(input.ordinaryRoutePin?.projectedRemainingUsd).toBeCloseTo(taskCount * 0.01, 10);
-    }
-  });
-
-  it('blocks route-config, endpoint, credential-generation, and source drift after prepare', async () => {
-    const runCase = async (
-      name: string,
-      configure: (caseRoot: string, spec: MissionSpec) => (() => void) | void,
-      expectedReason: string,
-    ): Promise<void> => {
-      const caseRoot = join(root, name);
-      mkdirSync(caseRoot, { recursive: true });
-      const createdAt = Date.parse('2026-08-20T10:00:00.000Z');
-      saveWorkspaceConfig(caseRoot, {
-        schemaVersion: 1,
-        id: 'workspace-1', name: 'Twin workspace', slug: 'twin-workspace', createdAt, updatedAt: createdAt,
-        defaults: { defaultLlmConnection: 'openai', thinkingLevel: 'medium' },
-        costControl: {},
-      });
-      const spec = fixture(`drift-${name}`);
-      spec.policy.maxConcurrentAgents = 1;
-      spec.policy.maxTechnicalAttempts = 1;
-      spec.workItems = spec.workItems.filter(item => item.id === 'objective' || item.id === 'source');
-      let credentialGeneration = 'credential-a';
-      let connection = {
-        ...routeConnection('openai', ['pi/gpt-5.6-terra']),
-        authType: 'api_key' as const,
-        baseUrl: 'https://one.example.test',
-      };
-      const mutateConfiguredState = configure(caseRoot, spec);
-      let executeCount = 0;
-      const service = new MissionRuntimeService({
-        sessionManager,
-        resolveWorkspace: id => id === 'workspace-1' ? { id, rootPath: caseRoot } : null,
-        listWorkspaces: () => [],
-        preflightConnections: () => [connection],
-        ordinaryRouteCredentialBindingResolver: () => ({
-          slot: 'llm_api_key', bindingId: credentialGeneration,
-        }),
-        executorFactory: () => ({
-          prepare: async input => {
-            if (name === 'endpoint') {
-              connection = { ...connection, baseUrl: 'https://two.example.test' };
-            } else if (name === 'credential') {
-              credentialGeneration = 'credential-b';
-            } else {
-              mutateConfiguredState?.();
-            }
-            return { executorKind: 'drift-observer', executionId: input.dispatchId };
-          },
-          execute: async () => {
-            executeCount += 1;
-            return { status: 'failed', reason: 'must not execute', retryable: false };
-          },
-        }),
-      });
-
-      await service.createAndStart('workspace-1', spec);
-      await eventually(() =>
-        new MissionController({ workspaceRoot: caseRoot }).getMission(spec.id).status === 'blocked');
-      const blocked = new MissionController({ workspaceRoot: caseRoot }).getMission(spec.id);
-      expect(blocked.workItems.source?.statusReason).toContain(expectedReason);
-      if (name === 'source') {
-        expect(blocked.workItems.source?.executionBinding?.missionRoute?.effectiveSourceBindings)
-          .toEqual([{
-            slug: 'local-docs',
-            identitySha256: expect.stringMatching(/^[a-f0-9]{64}$/),
-          }]);
-      }
-      expect(executeCount).toBe(0);
-    };
-
-    await runCase('endpoint', () => undefined, 'connection endpoint');
-    await runCase('credential', () => undefined, 'credential binding drifted');
-    await runCase('route-config', caseRoot => () => saveWorkspaceConfig(caseRoot, {
-      schemaVersion: 1,
-      id: 'workspace-1', name: 'Twin workspace', slug: 'twin-workspace',
-      createdAt: Date.parse('2026-08-20T10:00:00.000Z'),
-      updatedAt: Date.parse('2026-08-20T11:00:00.000Z'),
-      defaults: { defaultLlmConnection: 'openai', thinkingLevel: 'medium' },
-      costControl: { budgets: { softSessionUsd: 5 } },
-    }), 'route configuration drifted');
-    await runCase('source', (caseRoot, spec) => {
-      const sourceConfig = {
-        id: 'local-docs-id', name: 'Local docs', slug: 'local-docs', enabled: true,
-        provider: 'custom' as const, type: 'local' as const, local: { path: caseRoot },
-        routingSensitivity: 'internal' as const,
-      };
-      saveSourceConfig(caseRoot, sourceConfig);
-      spec.agentProfiles = spec.agentProfiles.map(profile => profile.id === 'worker'
-        ? { ...profile, sources: ['local-docs'] }
-        : profile);
-      return () => saveSourceConfig(caseRoot, {
-        ...sourceConfig,
-        routingSensitivity: 'confidential',
-      });
-    }, 'source configuration or credential binding');
-  });
-
-  it('refuses environment authentication without a host-attestable credential generation', async () => {
-    await expect(ordinaryMissionConnectionIdentity({
-      agentProfileId: 'worker',
-      connection: {
-        ...routeConnection('environment-auth', ['pi/gpt-5.6-terra']),
-        authType: 'environment',
-      },
-      connectionSlug: 'environment-auth',
-      model: 'pi/gpt-5.6-terra',
-      thinkingLevel: 'medium',
-      credentialBindingResolver: () => null,
-    })).rejects.toThrow('no host-attestable credential generation');
-  });
-
-  it('replays 100 replans with torn-tail faults and dispatches the final plan exactly once', async () => {
-    const controller = new MissionController({ workspaceRoot: root });
-    const base = fixture('twin-faults');
-    controller.createMission(MissionSpecSchema.parse({
-      ...base,
-      workItems: base.workItems.filter((item) => item.id === 'objective' || item.id === 'source'),
-    }));
-    for (let version = 1; version <= 100; version += 1) {
-      const before = controller.getMission('twin-faults');
-      const proposed = before.spec.workItems.map((item) =>
-        item.id === 'source' ? { ...item, prompt: `Read source revision ${version}` } : item);
-      controller.replanMission('twin-faults', {
-        expectedRevision: before.revision,
-        proposedWorkItems: proposed,
-        actorId: 'fault-test',
-        reason: `Fault-injected replan ${version}`,
-      });
-      appendFileSync(missionJournalPath(root, 'twin-faults'), '{"torn":', 'utf8');
-    }
-    const replayed = new MissionController({ workspaceRoot: root }).getMission('twin-faults');
-    expect(replayed.planVersion).toBe(101);
-    expect(replayed.replans).toHaveLength(100);
-    expect(replayed.spec.workItems.find((item) => item.id === 'source')?.prompt)
-      .toBe('Read source revision 100');
-
-    let prepareCount = 0;
-    let executeCount = 0;
-    let releaseExecution!: (result: MissionExecutionResult) => void;
-    const execution = new Promise<MissionExecutionResult>((resolve) => { releaseExecution = resolve; });
-    const executor: MissionWorkExecutor = {
-      async prepare(input: MissionExecutionInput): Promise<MissionExecutionBinding> {
-        prepareCount += 1;
-        return { executorKind: 'fault-test', executionId: `execution-${input.dispatchId}` };
-      },
-      async execute(): Promise<MissionExecutionResult> {
-        executeCount += 1;
-        return execution;
-      },
-    };
-    const runtime = new MissionRuntime({
-      workspaceRoot: root,
-      controller: new MissionController({ workspaceRoot: root }),
-      executor,
-      genDispatchId: (_missionId, workItemId, attempt) => `${workItemId}-${attempt}`,
-    });
-    runtime.startMission('twin-faults');
-    for (let fault = 0; fault < 100; fault += 1) runtime.recoverNonTerminalMissions();
-    await eventually(() => executeCount === 1);
-    expect(prepareCount).toBe(1);
-    expect(executeCount).toBe(1);
-    let events = readMissionEvents(root, 'twin-faults');
-    expect(events.filter((event) => event.kind === 'work-item-dispatch-reserved')).toHaveLength(1);
-    expect(events.filter((event) => event.kind === 'work-item-dispatched')).toHaveLength(1);
-
-    releaseExecution({ status: 'failed', reason: 'Injected terminal fault', retryable: false });
-    await eventually(() => new MissionController({ workspaceRoot: root }).getMission('twin-faults').status === 'blocked');
-    events = readMissionEvents(root, 'twin-faults');
-    expect(events.filter((event) => event.kind === 'work-item-dispatch-reserved')).toHaveLength(1);
-  }, 30_000); // Includes 100 durable journal rewrites; allow slower CI disks.
 });

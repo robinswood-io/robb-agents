@@ -27,7 +27,6 @@ function createCtx(workspacePath: string) {
         return { size: s.size, isDirectory: () => s.isDirectory() };
       },
     },
-    validators: undefined,
     loadSourceConfig: () => null,
   } as const;
 }

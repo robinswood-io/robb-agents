@@ -1,0 +1,18 @@
+{
+  "status": "passed",
+  "cases": [
+    "unavailable host error",
+    "retry reissues config request"
+  ],
+  "configRequests": 2,
+  "detail": [
+    "Internet est accessible, mais l’hôte ne répond pas. Vérifiez que Robb Agents et Remote fonctionnent sur votre ordinateur."
+  ],
+  "controls": [
+    "Réessayer",
+    "Se déconnecter"
+  ],
+  "errors": [],
+  "browser": "145.0.7632.6",
+  "target": "native WebUI App with QA-only 503 response"
+}

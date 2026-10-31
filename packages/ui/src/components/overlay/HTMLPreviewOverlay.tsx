@@ -43,19 +43,19 @@ export interface HTMLPreviewOverlayProps {
   /** Callback when the overlay should close */
   onClose: () => void
   /** Single HTML content (backward compat for link interceptor usage) */
-  html?: string
+  html?: string | undefined
   /** Multiple items for tabbed navigation */
-  items?: PreviewItem[]
+  items?: PreviewItem[] | undefined
   /** Pre-loaded content cache (src → html string) */
-  contentCache?: Record<string, string>
+  contentCache?: Record<string, string> | undefined
   /** Callback to load content for uncached items */
-  onLoadContent?: (src: string) => Promise<string>
+  onLoadContent?: ((src: string) => Promise<string>) | undefined
   /** Initial active item index (defaults to 0) */
-  initialIndex?: number
+  initialIndex?: number | undefined
   /** Optional title for the overlay header */
-  title?: string
+  title?: string | undefined
   /** Theme mode for dark/light styling */
-  theme?: 'light' | 'dark'
+  theme?: 'light' | 'dark' | undefined
 }
 
 export function HTMLPreviewOverlay({
@@ -123,7 +123,7 @@ export function HTMLPreviewOverlay({
       .then((content) => {
         setInternalCache((prev) => ({ ...prev, [activeItem.src]: content }))
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         setLoadError(err instanceof Error ? err.message : 'Failed to load content')
       })
       .finally(() => setLoadingItem(false))

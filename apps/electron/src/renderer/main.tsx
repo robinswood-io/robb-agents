@@ -22,7 +22,6 @@ setupI18n([LanguageDetector, initReactI18next])
 const resolvedLanguage = i18n.resolvedLanguage
 console.info('[i18n] renderer bootstrap push', {
   resolvedLanguage: resolvedLanguage ?? null,
-  localStorageI18nextLng: typeof window !== 'undefined' ? window.localStorage?.getItem('i18nextLng') : null,
 })
 if (resolvedLanguage) {
   void window.electronAPI?.changeLanguage?.(resolvedLanguage)
@@ -76,17 +75,17 @@ class RootErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { error: unknown; hasError: boolean }
 > {
-  state = { error: undefined as unknown, hasError: false }
+  override state = { error: undefined as unknown, hasError: false }
 
   static getDerivedStateFromError(error: unknown) {
     return { error, hasError: true }
   }
 
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
+  override componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('[RootErrorBoundary] Renderer crashed:', error, info.componentStack)
   }
 
-  render() {
+  override render() {
     if (this.state.hasError) {
       return <CrashFallback error={this.state.error} />
     }

@@ -1,0 +1,68 @@
+{
+  "status": "passed",
+  "before": {
+    "status": "baseline-recorded",
+    "cases": [
+      {
+        "name": "same workspace ID with a changed server address triggers a fresh health check",
+        "status": "failed",
+        "error": "TimeoutError: page.waitForFunction: Timeout 1500ms exceeded."
+      },
+      {
+        "name": "remote transfer uses the current server and closes on success",
+        "status": "passed"
+      },
+      {
+        "name": "an unsupported remote importer leaves an actionable visible error",
+        "status": "passed"
+      },
+      {
+        "name": "local transfer uses the native local import API",
+        "status": "passed"
+      }
+    ],
+    "failed": [
+      {
+        "name": "same workspace ID with a changed server address triggers a fresh health check",
+        "status": "failed",
+        "error": "TimeoutError: page.waitForFunction: Timeout 1500ms exceeded."
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [],
+    "browserVersion": "145.0.7632.6",
+    "headless": false,
+    "limits": [
+      "Données et appels QA en mémoire ; aucune connexion réelle ni écriture métier."
+    ]
+  },
+  "after": {
+    "status": "passed",
+    "cases": [
+      {
+        "name": "same workspace ID with a changed server address triggers a fresh health check",
+        "status": "passed"
+      },
+      {
+        "name": "remote transfer uses the current server and closes on success",
+        "status": "passed"
+      },
+      {
+        "name": "an unsupported remote importer leaves an actionable visible error",
+        "status": "passed"
+      },
+      {
+        "name": "local transfer uses the native local import API",
+        "status": "passed"
+      }
+    ],
+    "failed": [],
+    "errors": [],
+    "consoleErrors": [],
+    "browserVersion": "145.0.7632.6",
+    "headless": false,
+    "limits": [
+      "Données et appels QA en mémoire ; aucune connexion réelle ni écriture métier."
+    ]
+  }
+}

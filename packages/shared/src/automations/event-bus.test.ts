@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, jest, spyOn } from 'bun:test';
-import { WorkspaceEventBus, type EventHandler, type AnyEventHandler } from './event-bus.ts';
+import { WorkspaceEventBus,  } from './event-bus.ts';
 
 describe('WorkspaceEventBus', () => {
   let bus: WorkspaceEventBus;
@@ -36,9 +36,9 @@ describe('WorkspaceEventBus', () => {
       });
 
       expect(handler).toHaveBeenCalledTimes(1);
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({
+      expect<unknown>(handler).toHaveBeenCalledWith((expect.objectContaining({
         label: 'test-label',
-      }));
+      }) as unknown));
     });
 
     it('should emit to multiple handlers for the same event', async () => {
@@ -159,8 +159,8 @@ describe('WorkspaceEventBus', () => {
       });
 
       expect(anyHandler).toHaveBeenCalledTimes(2);
-      expect(anyHandler).toHaveBeenCalledWith('LabelAdd', expect.anything());
-      expect(anyHandler).toHaveBeenCalledWith('FlagChange', expect.anything());
+      expect<unknown>(anyHandler).toHaveBeenCalledWith('LabelAdd', (expect.anything() as unknown));
+      expect<unknown>(anyHandler).toHaveBeenCalledWith('FlagChange', (expect.anything() as unknown));
     });
 
     it('should unregister any-handlers', async () => {

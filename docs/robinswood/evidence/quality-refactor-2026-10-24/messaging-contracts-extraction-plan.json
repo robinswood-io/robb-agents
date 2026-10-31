@@ -1,0 +1,233 @@
+{
+  "source": "packages/messaging-gateway/src/types.ts",
+  "units": [
+    {
+      "names": [
+        "PlatformType"
+      ],
+      "group": "platform",
+      "bodySha256": "453c0ab962f1499c8608274cfbf44645850c83b94ed6e9d7315b87ee260356e2"
+    },
+    {
+      "names": [
+        "MessagingLogContext"
+      ],
+      "group": "platform",
+      "bodySha256": "cfbcefbb5ba94cee594ef1a2af5539b698ad51ad2e4b423343bcadba29716333"
+    },
+    {
+      "names": [
+        "MessagingLogMeta"
+      ],
+      "group": "platform",
+      "bodySha256": "8c10ab70360b9f92f4c96984e8fad0fc8ea8a26fa117876baa8a998834b937ed"
+    },
+    {
+      "names": [
+        "MessagingLogger"
+      ],
+      "group": "platform",
+      "bodySha256": "5f9afcb2ccb3580bb306bccc58eaad992653eca203ae13a22e7b81a292519510"
+    },
+    {
+      "names": [
+        "MessagingPlatformRuntimeState"
+      ],
+      "group": "platform",
+      "bodySha256": "a45d97a9b9d0c14260d69afbdacd17332c53d3e5c0ab8391fa7919a03d8c280a"
+    },
+    {
+      "names": [
+        "MessagingPlatformRuntimeInfo"
+      ],
+      "group": "platform",
+      "bodySha256": "581e6abeac5d8f7f69a2d8827c1d54e4ba4e48258247015ab4f53e9aeb2524c8"
+    },
+    {
+      "names": [
+        "AdapterCapabilities"
+      ],
+      "group": "platform",
+      "bodySha256": "4d2d6decd94a34434f0f54b83040a908049a20c88e638bba7ed4cdc86da7f469"
+    },
+    {
+      "names": [
+        "IncomingMessage"
+      ],
+      "group": "platform",
+      "bodySha256": "7e75ee096d36196836efb1977454172a237672348039d0688252e02b54613e1d"
+    },
+    {
+      "names": [
+        "IncomingAttachment"
+      ],
+      "group": "platform",
+      "bodySha256": "e388c041de399e91fa79999b6c99e1a7a7385f01c982e21fc7661de85a995a92"
+    },
+    {
+      "names": [
+        "SentMessage"
+      ],
+      "group": "platform",
+      "bodySha256": "90f34c8ac6d5ab1ceacca7d4ecb536ad86c8b51e86a19b17d3e0a96f654f17b5"
+    },
+    {
+      "names": [
+        "InlineButton"
+      ],
+      "group": "platform",
+      "bodySha256": "00b17d4918037578baedff9f13d1dd17678f1bb1794af1852b33011ef06db3bf"
+    },
+    {
+      "names": [
+        "ButtonPress"
+      ],
+      "group": "platform",
+      "bodySha256": "6ec3400eee9e5f54102aac16004d2945829346affd8a50941cf86d317bb2ce45"
+    },
+    {
+      "names": [
+        "SendOptions"
+      ],
+      "group": "platform",
+      "bodySha256": "f3304412378ed7e656d46ee89f21eb357be1aa3287cffa251d91c29bfd65a7c4"
+    },
+    {
+      "names": [
+        "PlatformConfig"
+      ],
+      "group": "platform",
+      "bodySha256": "da07e047e2121769abb0607116a2c200c42651262eca8be8094571611c6f1f9f"
+    },
+    {
+      "names": [
+        "PlatformAdapter"
+      ],
+      "group": "platform",
+      "bodySha256": "b38195f7b47b370ec8e02cc401989a2efb7ed6cd395aa5cad017fc5bb8a8b777"
+    },
+    {
+      "names": [
+        "ResponseMode"
+      ],
+      "group": "bindings",
+      "bodySha256": "cb06e276fec9f3376d8ce6f950438c8e1e0021fa0e81c8e1727376c4271121c0"
+    },
+    {
+      "names": [
+        "BindingAccessMode"
+      ],
+      "group": "bindings",
+      "bodySha256": "3de5036e1197e51c3525e4f72c592bd7c1a0d087b239cc58a2d13b25547fb22c"
+    },
+    {
+      "names": [
+        "BindingConfig"
+      ],
+      "group": "bindings",
+      "bodySha256": "1de7fd9b722f507ec4e55bff42c01e7800ebea8497f97895dfd88b094065c9b3"
+    },
+    {
+      "names": [
+        "DEFAULT_BINDING_CONFIG"
+      ],
+      "group": "bindings",
+      "bodySha256": "1c7af02de431fce03ca5577778fa4e381cca0496eb58966e25122b4079a81357"
+    },
+    {
+      "names": [
+        "getDefaultBindingConfig"
+      ],
+      "group": "bindings",
+      "bodySha256": "6af9f5d062b94ba0c3ea299916bb8ea8f28eafaee17a1f844fe78bfb30ae58db"
+    },
+    {
+      "names": [
+        "normalizeBindingConfig"
+      ],
+      "group": "bindings",
+      "bodySha256": "66e9e0f35a108a2fa4523945ce6a5cdd5c2c3451357cd139114b65637ebce679"
+    },
+    {
+      "names": [
+        "ChannelBinding"
+      ],
+      "group": "bindings",
+      "bodySha256": "d7c297954da020ca1122189bb8599f11b5e4dc91ac2d10bce09152c6b4ee4665"
+    },
+    {
+      "names": [
+        "TelegramSupergroupConfig"
+      ],
+      "group": "access-config",
+      "bodySha256": "eb350a9d067994956e13d94ac23a33c3eb8807fa72c13883a6d46db25fb45e49"
+    },
+    {
+      "names": [
+        "PlatformAccessMode"
+      ],
+      "group": "access-config",
+      "bodySha256": "4ebaae892f3f0547a5bda7dd744ef8d2dd96bd12fbed51d02e832afdba3e25ce"
+    },
+    {
+      "names": [
+        "PlatformOwner"
+      ],
+      "group": "access-config",
+      "bodySha256": "e6e93f2bbbe4925db0cefe9226de63e045926bce78a1b0c6ffc0f2209ceec6c7"
+    },
+    {
+      "names": [
+        "PendingRejectReason"
+      ],
+      "group": "access-config",
+      "bodySha256": "162cb23a3b0866bcf4f805f22a4fa33676ad7dd614e2a1b2b34368ad9ff89826"
+    },
+    {
+      "names": [
+        "PendingSender"
+      ],
+      "group": "access-config",
+      "bodySha256": "de6e1ff4f93f3de11aa9ebce501804aed4eeaba47b3f8c040ec10a5473baf145"
+    },
+    {
+      "names": [
+        "MessagingConfig"
+      ],
+      "group": "access-config",
+      "bodySha256": "8f91649f144b5fe1e0553705f6c14708a0c508e75046b6d4b14ebf07fb730cf9"
+    },
+    {
+      "names": [
+        "DEFAULT_MESSAGING_CONFIG"
+      ],
+      "group": "access-config",
+      "bodySha256": "12b06ece1064b3b9d0a8ce17dcaa4b730ea7576c2d807d9f30da5274b8af2870"
+    }
+  ],
+  "modules": [
+    {
+      "name": "platform",
+      "lines": 230
+    },
+    {
+      "name": "bindings",
+      "lines": 127
+    },
+    {
+      "name": "access-config",
+      "lines": 167
+    }
+  ],
+  "dependencies": {
+    "platform": [],
+    "bindings": [
+      "platform"
+    ],
+    "access-config": [
+      "platform"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

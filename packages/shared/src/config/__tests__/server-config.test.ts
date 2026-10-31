@@ -16,8 +16,8 @@ describe('normalizeServerConfigPublicUrls', () => {
       publicWebuiUrl: '  ',
       publicWsUrl: '',
     }))).toEqual(config({
-      publicWebuiUrl: undefined,
-      publicWsUrl: undefined,
+      
+      
     }))
   })
 

@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+import type { SkillValidateSchema } from '../tool-defs/schemas.ts';
 /**
  * Skill Validate Handler
  *
@@ -21,9 +23,7 @@ import {
   formatValidationResult,
 } from '../validation.ts';
 
-export interface SkillValidateArgs {
-  skillSlug: string;
-}
+export type SkillValidateArgs = z.infer<typeof SkillValidateSchema>;
 
 /**
  * Resolve the SKILL.md path by checking all three tiers (project > workspace > global).

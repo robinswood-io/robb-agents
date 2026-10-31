@@ -1,0 +1,174 @@
+{
+  "status": "passed",
+  "files": [
+    {
+      "file": "packages/ui/src/components/markdown/TiptapBubbleMenus.tsx",
+      "lines": 447,
+      "sha256": "0b2d44996c7a386c373b7cb2f2d62999a054e022175a1ed0e393d9c02285f8ba"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/TiptapMarkdownEditor.tsx",
+      "lines": 405,
+      "sha256": "6dc6597f7d8672afe716bea2dda4e69b07c347184010f54d4f81665a79e3af51"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/TiptapCodeBlockView.tsx",
+      "lines": 325,
+      "sha256": "3821dbac7c206c74935f94fc8a94f2116864b335bd94b1d55f1b5e5a8b6fe2fe"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/TiptapSlashMenu.ts",
+      "lines": 432,
+      "sha256": "286fc4ac59163dc37005c1515b926bc139a647253c3b03a7b58a94e3afa3af03"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/extensions/LatexBlock.tsx",
+      "lines": 80,
+      "sha256": "454cc3d51c3529bd696ba23ad4ac9124fdc36bc98b799d06676d922d9f580b81"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/extensions/MermaidBlock.tsx",
+      "lines": 78,
+      "sha256": "494667a52d425a46eb3ba3e06b2b875b1637715751fbe4a5f55ef4defe86570e"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/extensions/RichBlockInteractions.ts",
+      "lines": 224,
+      "sha256": "5941e589a416fdca9264526ec20d87e4f51bb34d064167506ac532780f96e489"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/rich-block-events.ts",
+      "lines": 10,
+      "sha256": "ea222ceeb6449581df6c615a5a14e908c52632eefaf1847aafe549a6ae199071"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/tiptap-bubble-helpers.tsx",
+      "lines": 106,
+      "sha256": "869a2edbc626da71b1efd1dbf3990f93dd17c168f4199e6e17398cb0c8528de9"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/tiptap-slash-icons.ts",
+      "lines": 121,
+      "sha256": "e01ab2eec38010a91328d8c5f9597d66b9f564ca50a1cc72af9f34aef02a44a7"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/__tests__/tiptap-prosemirror-identity.test.ts",
+      "lines": 19,
+      "sha256": "acfc89fc4d777625c10c863b1b6b2ccffe3c1fd854f155ac51cbf5b259159937"
+    }
+  ],
+  "removedExplicitAny": 22,
+  "typingJavaScriptUnchanged": true,
+  "nativeDeclarationsPreserved": 29,
+  "runtimeImportCycles": 0,
+  "newEventEmitterOrWorkflow": false,
+  "preparations": [
+    {
+      "file": "packages/ui/src/components/markdown/TiptapBubbleMenus.tsx",
+      "nativeSourceHash": "f3768aaafded34cf5293bb040d947751f5555396aac66a086170010072b1c863",
+      "preparedSourceHash": "f6a61dcff4542aac61534b95b19a51548fdd9cde99296e6b093bd4687cfa06e4"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/TiptapMarkdownEditor.tsx",
+      "nativeSourceHash": "83b7cad4b1fe2a99ea49301817d9a0e695f3e4a0fb97973d26d0e566809007e2",
+      "preparedSourceHash": "6dc6597f7d8672afe716bea2dda4e69b07c347184010f54d4f81665a79e3af51"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/TiptapCodeBlockView.tsx",
+      "nativeSourceHash": "47e2871c3252e61e6dbb17c270bec29f82a01643b5e51463dcf49f04d14cfa45",
+      "preparedSourceHash": "3821dbac7c206c74935f94fc8a94f2116864b335bd94b1d55f1b5e5a8b6fe2fe"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/TiptapSlashMenu.ts",
+      "nativeSourceHash": "a9cb323c9545caaec1bb88c2696f85a1f3a723d36cd680acdc01e46972242dd2",
+      "preparedSourceHash": "0cf903430e8ccadd91425bcce08c930bd5e274726bf286614ca0ba61a58bfe06"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/extensions/LatexBlock.tsx",
+      "nativeSourceHash": "f82ff83c27f1e577155423648bd6a28df73552b7ac70eb12ea137ef5855f481c",
+      "preparedSourceHash": "454cc3d51c3529bd696ba23ad4ac9124fdc36bc98b799d06676d922d9f580b81"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/extensions/MermaidBlock.tsx",
+      "nativeSourceHash": "33fe6c3ccc4f16155848e99589820a01f407e195c5e1005b55483073bfc6dedd",
+      "preparedSourceHash": "494667a52d425a46eb3ba3e06b2b875b1637715751fbe4a5f55ef4defe86570e"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/extensions/RichBlockInteractions.ts",
+      "nativeSourceHash": "e014aed9633d37c1ae22142c59097d1141a538a253eacfb1348defa43f1af9b6",
+      "preparedSourceHash": "5941e589a416fdca9264526ec20d87e4f51bb34d064167506ac532780f96e489"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/rich-block-events.ts",
+      "nativeSourceHash": "73f2761b63803d842c8d3e7627f9ccf6fe8afb9a35aeb0180fcc931d9a81f6c1",
+      "preparedSourceHash": "ea222ceeb6449581df6c615a5a14e908c52632eefaf1847aafe549a6ae199071"
+    }
+  ],
+  "extractions": [
+    {
+      "status": "passed",
+      "source": "packages/ui/src/components/markdown/TiptapBubbleMenus.tsx",
+      "nativeSourceHash": "f6a61dcff4542aac61534b95b19a51548fdd9cde99296e6b093bd4687cfa06e4",
+      "nativeDeclarations": 10,
+      "extractedDeclarations": 3,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "react-i18next",
+        "@tiptap/react/menus",
+        "@tiptap/pm/state",
+        "lucide-react",
+        "../../lib/utils",
+        "./rich-block-events"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 448,
+      "files": [
+        {
+          "file": "packages/ui/src/components/markdown/TiptapBubbleMenus.tsx",
+          "lines": 448,
+          "sha256": "0b2d44996c7a386c373b7cb2f2d62999a054e022175a1ed0e393d9c02285f8ba"
+        },
+        {
+          "file": "packages/ui/src/components/markdown/tiptap-bubble-helpers.tsx",
+          "lines": 107,
+          "sha256": "869a2edbc626da71b1efd1dbf3990f93dd17c168f4199e6e17398cb0c8528de9"
+        }
+      ]
+    },
+    {
+      "status": "passed",
+      "source": "packages/ui/src/components/markdown/TiptapSlashMenu.ts",
+      "nativeSourceHash": "0cf903430e8ccadd91425bcce08c930bd5e274726bf286614ca0ba61a58bfe06",
+      "nativeDeclarations": 19,
+      "extractedDeclarations": 3,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "@tiptap/core",
+        "@tiptap/suggestion",
+        "@tiptap/pm/state",
+        "../ui/InlineMenuSurface",
+        "./rich-block-events"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 433,
+      "files": [
+        {
+          "file": "packages/ui/src/components/markdown/TiptapSlashMenu.ts",
+          "lines": 433,
+          "sha256": "286fc4ac59163dc37005c1515b926bc139a647253c3b03a7b58a94e3afa3af03"
+        },
+        {
+          "file": "packages/ui/src/components/markdown/tiptap-slash-icons.ts",
+          "lines": 122,
+          "sha256": "e01ab2eec38010a91328d8c5f9597d66b9f564ca50a1cc72af9f34aef02a44a7"
+        }
+      ]
+    }
+  ],
+  "dependencyRepair": "tiptap-dependency-repair-proof.json"
+}

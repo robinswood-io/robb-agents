@@ -27,18 +27,18 @@ export function bareJid(jid: string | undefined | null): string | null {
  * captions on image/doc/video.
  */
 export function extractText(msg: Record<string, unknown>): string {
-  const m = msg.message as Record<string, unknown> | undefined
+  const m = msg["message"] as Record<string, unknown> | undefined
   if (!m) return ''
-  const conv = m.conversation as string | undefined
+  const conv = m["conversation"] as string | undefined
   if (conv) return conv
-  const ext = m.extendedTextMessage as Record<string, unknown> | undefined
-  if (typeof ext?.text === 'string') return ext.text as string
-  const img = m.imageMessage as Record<string, unknown> | undefined
-  if (typeof img?.caption === 'string') return img.caption as string
-  const doc = m.documentMessage as Record<string, unknown> | undefined
-  if (typeof doc?.caption === 'string') return doc.caption as string
-  const vid = m.videoMessage as Record<string, unknown> | undefined
-  if (typeof vid?.caption === 'string') return vid.caption as string
+  const ext = m["extendedTextMessage"] as Record<string, unknown> | undefined
+  if (typeof ext?.["text"] === 'string') return ext["text"] as string
+  const img = m["imageMessage"] as Record<string, unknown> | undefined
+  if (typeof img?.["caption"] === 'string') return img["caption"] as string
+  const doc = m["documentMessage"] as Record<string, unknown> | undefined
+  if (typeof doc?.["caption"] === 'string') return doc["caption"] as string
+  const vid = m["videoMessage"] as Record<string, unknown> | undefined
+  if (typeof vid?.["caption"] === 'string') return vid["caption"] as string
   return ''
 }
 
@@ -109,7 +109,7 @@ export function classifyInbound(
   msg: Record<string, unknown>,
   ctx: ClassifyContext,
 ): InboundDecision {
-  const key = msg.key as { remoteJid?: string; fromMe?: boolean; id?: string } | undefined
+  const key = msg["key"] as { remoteJid?: string; fromMe?: boolean; id?: string } | undefined
   if (!key || !key.remoteJid || !key.id) return { action: 'skip', reason: 'malformed' }
 
   const text = extractText(msg)

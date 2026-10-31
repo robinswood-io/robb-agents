@@ -1,0 +1,50 @@
+{
+  "status": "passed",
+  "registries": [
+    {
+      "source": "apps/electron/src/renderer/playground/registry/chat.tsx",
+      "nativeHash": "58280939f27a0152824ffd903ef1823881ed09d3861c71e41923edf7a00cb564",
+      "preparedHash": "c0b9076f574744883ef75b91f7d8fb82552a94ae3fc619a7fa099a4e02ae6540",
+      "entryObjects": 12,
+      "nativeObjectBodiesAndOrder": true,
+      "nativeContextualTypes": true,
+      "view": null
+    },
+    {
+      "source": "apps/electron/src/renderer/playground/registry/turn-card.tsx",
+      "nativeHash": "3591281a671d28d567acfc3fc1369e1725adeb68bd1207e890d9b5e5aabe8c26",
+      "preparedHash": "97c0fd188232c9cbeb40183fc46a702c03c49b0fa9df4ef33741a342d69684cd",
+      "entryObjects": 9,
+      "nativeObjectBodiesAndOrder": true,
+      "nativeContextualTypes": true,
+      "view": null
+    },
+    {
+      "source": "apps/electron/src/renderer/playground/registry/planner.tsx",
+      "nativeHash": "7de751b90db1c72f6e668070a59edddca606b37037461658df2da869846913fc",
+      "preparedHash": "01754b2874a7d710a7ad6e34307c8a6a5db25ff74c79148659d0eb44650b3a12",
+      "entryObjects": 0,
+      "nativeObjectBodiesAndOrder": true,
+      "nativeContextualTypes": true,
+      "view": {
+        "inputs": 29,
+        "pureFunction": true,
+        "noNewReactComponentBoundary": true,
+        "originalHooksAndEffectsRetained": true,
+        "unchangedJsxAndHandlers": true,
+        "allInputsNativeConstBindings": true
+      }
+    },
+    {
+      "source": "apps/electron/src/renderer/playground/registry/edit-popover.tsx",
+      "nativeHash": "920738031ff8ba4fd062edb91725b01136aef1fa74985e8a3eab3dc60a4a8a19",
+      "preparedHash": "920738031ff8ba4fd062edb91725b01136aef1fa74985e8a3eab3dc60a4a8a19",
+      "entryObjects": 0,
+      "nativeObjectBodiesAndOrder": true,
+      "nativeContextualTypes": true,
+      "view": null
+    }
+  ],
+  "originalRegistryMechanismPreserved": true,
+  "stateOrRoutingAdded": false
+}

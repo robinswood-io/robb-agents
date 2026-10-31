@@ -39,7 +39,7 @@ describe('sourceNeedsAuthentication', () => {
         const source = createMockSource({
           type: 'mcp',
           mcp: { url: 'https://example.com/mcp', authType: 'none' },
-          isAuthenticated: undefined,
+          
         });
         expect(sourceNeedsAuthentication(source)).toBe(false);
       });
@@ -77,7 +77,7 @@ describe('sourceNeedsAuthentication', () => {
         const source = createMockSource({
           type: 'mcp',
           mcp: { url: 'https://example.com/mcp', authType: 'oauth' },
-          isAuthenticated: undefined,
+          
         });
         expect(sourceNeedsAuthentication(source)).toBe(true);
       });
@@ -117,7 +117,7 @@ describe('sourceNeedsAuthentication', () => {
         const source = createMockSource({
           type: 'mcp',
           mcp: { transport: 'stdio', command: 'npx', args: ['@test/server'] },
-          isAuthenticated: undefined,
+          
         });
         expect(sourceNeedsAuthentication(source)).toBe(false);
       });
@@ -137,7 +137,7 @@ describe('sourceNeedsAuthentication', () => {
         const source = createMockSource({
           type: 'mcp',
           mcp: { url: 'https://example.com/mcp' },
-          isAuthenticated: undefined,
+          
         });
         expect(sourceNeedsAuthentication(source)).toBe(false);
       });
@@ -150,7 +150,7 @@ describe('sourceNeedsAuthentication', () => {
         const source = createMockSource({
           type: 'api',
           api: { baseUrl: 'https://api.example.com', authType: 'none' },
-          isAuthenticated: undefined,
+          
         });
         expect(sourceNeedsAuthentication(source)).toBe(false);
       });
@@ -249,8 +249,9 @@ describe('sourceNeedsAuthentication', () => {
       it('should return false when authType is undefined (no auth required)', () => {
         const source = createMockSource({
           type: 'api',
-          api: { baseUrl: 'https://api.example.com' } as LoadedSource['config']['api'],
-          isAuthenticated: undefined,
+          // Exercise a legacy config written before authType became mandatory.
+          api: { baseUrl: 'https://api.example.com' } as NonNullable<LoadedSource['config']['api']>,
+          
         });
         expect(sourceNeedsAuthentication(source)).toBe(false);
       });
@@ -262,7 +263,7 @@ describe('sourceNeedsAuthentication', () => {
       const source = createMockSource({
         type: 'local',
         local: { path: '/path/to/files' },
-        isAuthenticated: undefined,
+        
       });
       expect(sourceNeedsAuthentication(source)).toBe(false);
     });
@@ -318,7 +319,7 @@ describe('inactive source reason display', () => {
       const source = createMockSource({
         type: 'mcp',
         mcp: { url: 'https://example.com/mcp', authType: 'none' },
-        isAuthenticated: undefined,
+        
       });
       expect(sourceNeedsAuthentication(source)).toBe(false);
       // Therefore formatSourceState should show "inactive" not "needs auth"
@@ -338,7 +339,7 @@ describe('inactive source reason display', () => {
       const source = createMockSource({
         type: 'mcp',
         mcp: { transport: 'stdio', command: 'npx' },
-        isAuthenticated: undefined,
+        
       });
       expect(sourceNeedsAuthentication(source)).toBe(false);
       // Therefore formatSourceState should show "inactive" not "needs auth"

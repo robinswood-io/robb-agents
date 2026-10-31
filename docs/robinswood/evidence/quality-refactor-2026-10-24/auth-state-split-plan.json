@@ -1,0 +1,8 @@
+{
+  "source": "packages/shared/src/auth/__tests__/state.test.ts",
+  "extracted": "packages/shared/src/auth/__tests__/state-setup-needs.test.ts",
+  "beforeHash": "c60be800c782822153eb7e64f3fdc7718229e56e6fa5569a1a889385b1dc53f3",
+  "suiteHash": "5a28887a06d4d530fe1b715f1866f6cc042d31402e53973ed43cf3ad160fee92",
+  "remainingLines": 378,
+  "extractedLines": 147
+}

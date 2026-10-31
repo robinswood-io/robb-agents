@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 import { createHash, sign, verify, type KeyObject } from 'node:crypto';
 import type { OperationRiskLevel } from '../governance/capability-broker';
 
@@ -24,8 +25,8 @@ export interface ConnectorPackOperation {
   idempotent: boolean;
   compensation?: {
     strategy: 'inverse-operation' | 'restore-snapshot' | 'manual';
-    operationId?: string;
-  };
+    operationId?: string | undefined;
+  } | undefined;
   reconciliation: {
     required: boolean;
     receiptFields: string[];
@@ -89,10 +90,10 @@ export interface ConnectorPackValidation {
 }
 
 function stableValue(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(stableValue);
+  if (isUnknownArray(value)) return value.map(stableValue);
   if (value && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value)
+      Object.entries<unknown>((value as Record<string, unknown>))
         .sort(([left], [right]) => left.localeCompare(right))
         .map(([key, child]) => [key, stableValue(child)]),
     );
@@ -325,7 +326,7 @@ export async function runConnectorPackContract(
   }
   for (const operation of manifest.operations) {
     const response = await driver.invoke(operation.id, { contractProbe: true });
-    if (response.operationId !== operation.id) failures.push(`${operation.id} contract probe did not echo operationId`);
+    if (response["operationId"] !== operation.id) failures.push(`${operation.id} contract probe did not echo operationId`);
   }
   return { passed: failures.length === 0, failures, healthLatencyMs: health.latencyMs };
 }

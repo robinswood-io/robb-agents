@@ -1,3 +1,8 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import type { SessionEvent } from '@craft-agent/shared/protocol';
+
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -19,9 +24,9 @@ function harness(mode: 'safe' | 'ask' | 'allow-all' = 'allow-all') {
   const workspace = { id: 'fixture', slug: 'fixture', name: 'Fixture', rootPath, createdAt: 1 };
   writeFileSync(join(rootPath, 'config.json'), JSON.stringify({ ...workspace, schemaVersion: 1, updatedAt: 1,
     defaults: { permissionMode: mode, externalActionPolicy: 'allow-in-execute' } }));
-  const manager = new SessionManager(); managers.push(manager);
-  const host = manager as any, events: any[] = [];
-  host.sendEvent = (event: any) => events.push(event);
+  const manager = withSessionOperationsForTest(new SessionManager()); managers.push(manager);
+  const host = sessionManagerForTest(manager), events: SessionEvent[] = [];
+  host.sendEvent = (event: SessionEvent) => events.push(event);
   const managed = createManagedSession({ id: 'root', permissionMode: mode }, workspace, { messagesLoaded: true });
   managed.messages = [{ id: 'request', role: 'user', content: 'Recherche et livre un rapport vérifié.', timestamp: 1 }];
   managed.activeObjective = { schemaVersion: 1, objectiveId: 'objective', userMessageId: 'request',
@@ -30,7 +35,7 @@ function harness(mode: 'safe' | 'ask' | 'allow-all' = 'allow-all') {
     orchestrationMode: 'mission', risk: 'standard', terminalState: 'active',
     completionCriteria: ['requested-outcome-delivered', 'relevant-checks-passed', 'no-safe-work-remaining'] };
   managed.pendingTurnRecovery = { ...createPendingTurnRecovery('request'), attempts: 3, continuationCount: 3 } as never;
-  host.sessions.set(managed.id, managed);
+  sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
   return { manager, host, managed, workspace, events };
 }
 const question = [{ id: 'format', question: 'Quel format ?', options: [{ id: 'pdf', label: 'PDF' }] }];
@@ -45,15 +50,15 @@ describe('durable YOLO host boundaries', () => {
     h.managed.messages.push({ id: 'observed-report', role: 'tool', timestamp: 3, content: 'Read report',
       toolName: 'Read', toolUseId: 'read-report', toolStatus: 'completed', toolExecuted: true,
       toolInput: { path: '/tmp/report.md' }, toolResult: 'Fixture result content' });
-    const context = h.host.getSessionToolInfo(h.managed).objectiveEvidenceContext;
+    const context = h.host.getSessionToolInfo(h.managed)!.objectiveEvidenceContext;
     expect(context).toContain('"criterionId":"report-readable","messageId":"observed-report"');
     expect(context).toContain('"passed":true');
     expect(context).not.toContain('Fixture result content');
     const observer = createManagedSession({ id: 'observer', permissionMode: 'safe' }, h.workspace);
-    h.host.sessions.set(observer.id, observer);
-    expect(h.host.getSessionToolInfo(observer, h.managed.id).objectiveEvidenceContext).toBeUndefined();
+    sessionRuntimeStateForTest(h.host).sessions.set(observer.id, observer);
+    expect(h.host.getSessionToolInfo(observer, h.managed.id)!.objectiveEvidenceContext).toBeUndefined();
     h.managed.messagesLoaded = false;
-    expect(h.host.getSessionToolInfo(h.managed).objectiveEvidenceContext).toBeUndefined();
+    expect(h.host.getSessionToolInfo(h.managed)!.objectiveEvidenceContext).toBeUndefined();
   });
 
   it('never accepts self-session evidence metadata as proof of a user target', () => {
@@ -72,8 +77,8 @@ describe('durable YOLO host boundaries', () => {
     h.host.reportBackendAuthUnavailable(h.managed, 'No refresh token — please sign in again');
     expect(h.events.filter(event => event.type === 'info')).toHaveLength(1);
     const info = h.events.find(event => event.type === 'info');
-    expect(info.message).toContain('objective remains incomplete');
-    expect(info.message).not.toContain('please sign in');
+    expect(info!.message).toContain('objective remains incomplete');
+    expect(info!.message).not.toContain('please sign in');
     expect(h.managed.pendingAuthRequestId).toBeUndefined();
     expect(h.managed.userInputRequests).toBeUndefined();
     expect(h.managed.pendingTurnRecovery).toEqual(before);
@@ -112,7 +117,7 @@ describe('durable YOLO host boundaries', () => {
       delegation: { rootSessionId: 'root', rootObjectiveId: 'objective', parentObjectiveId: 'objective',
         role: 'reviewer', depth: 1, createdAt: 1 } as never }, h.workspace, { messagesLoaded: true });
     child.activeObjective = { ...h.managed.activeObjective!, objectiveId: 'review-objective', userMessageId: 'review-request' };
-    h.host.sessions.set(child.id, child);
+    sessionRuntimeStateForTest(h.host).sessions.set(child.id, child);
     await expect(h.manager.requestUserInput(child.id, question)).rejects.toThrow('YOLO_HUMAN_HANDOFF_DISABLED');
     for (const toolName of ['mcp__session__SubmitPlan', 'mcp__session__source_oauth_trigger', 'request_user_input']) {
       await expect(h.host.admitBackendToolExecution(child, {} as never, { toolName, toolInput: {} }))
@@ -139,7 +144,7 @@ describe('durable YOLO host boundaries', () => {
       expect(saved.userInputRequests ?? []).toHaveLength(0);
       const { messages, ...metadata } = saved;
       const restored = createManagedSession(metadata, h.workspace, { messagesLoaded: true });
-      restored.messages = messages.map(storedToMessage); h.host.sessions.set(restored.id, restored);
+      restored.messages = messages.map(storedToMessage); sessionRuntimeStateForTest(h.host).sessions.set(restored.id, restored);
       let calls = 0; h.host.getOrCreateAgent = async () => { calls++; throw new Error('Unexpected provider replay'); };
       await h.host.resumePendingTurnAfterRestart(restored.id);
       expect(calls).toBe(0);
@@ -149,7 +154,7 @@ describe('durable YOLO host boundaries', () => {
 
   it('removes conflicting objective instructions to ask for preferences or approval', () => {
     const h = harness(); h.managed.activeObjective!.requiresAcceptanceCriteria = true;
-    const prompt = h.host.buildObjectiveRuntimePrompt(h.managed, h.managed.activeObjective);
+    const prompt = h.host.buildObjectiveRuntimePrompt(h.managed, h.managed.activeObjective!);
     expect(prompt).toContain('YOLO is active');
     expect(prompt).not.toContain('Use request_user_input when missing context');
     expect(prompt).not.toContain('ask once for that missing decision');

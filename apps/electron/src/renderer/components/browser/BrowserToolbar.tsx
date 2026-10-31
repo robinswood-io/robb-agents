@@ -15,7 +15,7 @@ interface BrowserToolbarProps {
   onGoForward: () => void
   onReload: () => void
   onStop: () => void
-  compact?: boolean
+  compact?: boolean | undefined
 }
 
 export function BrowserToolbar({

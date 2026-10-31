@@ -1,0 +1,57 @@
+{
+  "status": "passed",
+  "cases": [
+    {
+      "name": "native content marker renders its active view and locks scroll",
+      "status": "passed"
+    },
+    {
+      "name": "native transition enters editor and Escape navigates back",
+      "status": "passed"
+    },
+    {
+      "name": "Escape closes the compact dialog and restores prior body style",
+      "status": "passed"
+    },
+    {
+      "name": "two islands share one scroll-lock owner until both close",
+      "status": "passed"
+    },
+    {
+      "name": "closed island can reopen, transition, and clean up again",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "calls": [
+    {
+      "method": "expand",
+      "args": []
+    },
+    {
+      "method": "back",
+      "args": [
+        "editor"
+      ]
+    },
+    {
+      "method": "back",
+      "args": [
+        "compact"
+      ]
+    },
+    {
+      "method": "close",
+      "args": [
+        "primary"
+      ]
+    },
+    {
+      "method": "expand",
+      "args": []
+    }
+  ],
+  "browser": "145.0.7632.6",
+  "scope": "native Island marker, layout, Escape and shared body scroll lock; disposable browser only"
+}

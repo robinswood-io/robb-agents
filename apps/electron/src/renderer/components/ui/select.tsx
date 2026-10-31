@@ -73,7 +73,7 @@ function SelectContent({
   position = "popper",
   container,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Content> & { container?: HTMLElement | null }) {
+}: React.ComponentProps<typeof SelectPrimitive.Content> & { container?: HTMLElement | null | undefined }) {
   return (
     <SelectPrimitive.Portal container={container}>
       <SelectPrimitive.Content

@@ -5,7 +5,7 @@
  * Collapsed: shows name + summary. Expanded: shows trigger, actions, and controls.
  */
 
-import * as React from 'react'
+
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronRight } from 'lucide-react'
@@ -17,10 +17,10 @@ import { getEventDisplayName, type AutomationListItem } from './types'
 
 export interface AutomationCardProps {
   automation: AutomationListItem
-  defaultExpanded?: boolean
-  onToggleEnabled?: (enabled: boolean) => void
-  onTest?: () => void
-  className?: string
+  defaultExpanded?: boolean | undefined
+  onToggleEnabled?: ((enabled: boolean) => void) | undefined
+  onTest?: (() => void) | undefined
+  className?: string | undefined
 }
 
 export function AutomationCard({
@@ -42,34 +42,40 @@ export function AutomationCard({
       )}
     >
       {/* Collapsed header */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-foreground/2 transition-colors"
-      >
-        {/* Expand chevron */}
-        {expanded ? (
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-        ) : (
-          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-        )}
+      <div className="flex w-full items-center hover:bg-foreground/2 transition-colors">
+        <button
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}
+          className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left"
+        >
+          {/* Expand chevron */}
+          {expanded ? (
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          )}
 
-        {/* Avatar */}
-        <AutomationAvatar event={automation.event} size="sm" />
+          {/* Avatar */}
+          <AutomationAvatar event={automation.event} size="sm" />
 
-        {/* Name + summary */}
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium truncate">{automation.name}</div>
-          <div className="text-xs text-foreground/50 truncate">{automation.summary}</div>
-        </div>
+          {/* Name + summary */}
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium truncate">{automation.name}</div>
+            <div className="text-xs text-foreground/50 truncate">{automation.summary}</div>
+          </div>
 
-        {/* Enable toggle */}
-        <div onClick={(e) => e.stopPropagation()}>
+        </button>
+
+        {/* Enable toggle stays separate from the expansion button. */}
+        <div className="pr-4">
           <Switch
+            aria-label={automation.name}
             checked={automation.enabled}
             onCheckedChange={(checked) => onToggleEnabled?.(checked)}
           />
         </div>
-      </button>
+      </div>
 
       {/* Expanded content */}
       {expanded && (

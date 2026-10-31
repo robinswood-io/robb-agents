@@ -5,7 +5,7 @@ let validateOpenAiResponsesBody: typeof import('../unified-network-interceptor.t
 
 describe('unified-network-interceptor responses-history repair (#613)', () => {
   beforeAll(async () => {
-    process.env.CRAFT_INTERCEPTOR_DISABLE_AUTO_INSTALL = '1';
+    process.env["CRAFT_INTERCEPTOR_DISABLE_AUTO_INSTALL"] = '1';
     const mod = await import('../unified-network-interceptor.ts');
     repairResponsesHistoryInPlace = mod.repairResponsesHistoryInPlace;
     validateOpenAiResponsesBody = mod.validateOpenAiResponsesBody;
@@ -18,8 +18,8 @@ describe('unified-network-interceptor responses-history repair (#613)', () => {
     const result = repairResponsesHistoryInPlace(input);
     expect(result.synthesizedCallIds).toBe(1);
     expect(result.droppedOrphans).toBe(0);
-    expect(typeof input[0]!.call_id).toBe('string');
-    expect((input[0]!.call_id as string).startsWith('repaired_')).toBe(true);
+    expect(typeof input[0]!["call_id"]).toBe('string');
+    expect((input[0]!["call_id"] as string).startsWith('repaired_')).toBe(true);
   });
 
   it('synthesizes a stable call_id given the same name + arguments', () => {
@@ -31,7 +31,7 @@ describe('unified-network-interceptor responses-history repair (#613)', () => {
     ];
     repairResponsesHistoryInPlace(a);
     repairResponsesHistoryInPlace(b);
-    expect(a[0]!.call_id).toBe(b[0]!.call_id);
+    expect(a[0]!["call_id"]).toBe(b[0]!["call_id"]);
   });
 
   it('drops function_call_output entries that reference unknown call_ids', () => {

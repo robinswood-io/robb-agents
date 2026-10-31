@@ -1,3 +1,7 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import * as configStorage from '@craft-agent/shared/config/storage';
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -11,7 +15,7 @@ import { createManagedSession, SessionManager } from './SessionManager.ts';
 import { transitionObjectiveContract } from './objective-contract.ts';
 import { registerObjectiveAcceptanceCriteria } from './objective-acceptance-criteria.ts';
 
-type Managed = ReturnType<typeof createManagedSession>;
+
 const fixtures: Array<{ root: string; id: string }> = [];
 afterEach(() => {
   for (const { root, id } of fixtures.splice(0)) {
@@ -25,7 +29,7 @@ function harness(stream: AgentEvent[] = [], beforeChat?: () => void) {
   const id = `learning-runtime-${fixtures.length}`;
   fixtures.push({ root, id });
   const project = createProject(root, { name: 'Isolated learning fixture' });
-  const manager = new SessionManager();
+  const manager = withSessionOperationsForTest(new SessionManager());
   const managed = createManagedSession({ id, projectId: project.id }, {
     id: 'learning-workspace', slug: 'learning-workspace', name: 'Learning fixture', rootPath: root, createdAt: 1,
   }, { messagesLoaded: true });
@@ -35,33 +39,24 @@ function harness(stream: AgentEvent[] = [], beforeChat?: () => void) {
     { id: 'answer', role: 'assistant', content: 'Le document est complet.', timestamp: 2 },
   ];
   managed.activeObjective = transitionObjectiveContract({ messageId: 'objective', text: managed.messages[0]!.content, nowMs: 1 });
-  const runtime = manager as unknown as {
-    sessions: Map<string, Managed>; enqueuePersist: () => void; persistSession: () => boolean; flushSession: () => Promise<void>;
-    sendEvent: () => void; emitExecutionTelemetry: () => void; startGenerationTelemetry: () => void; finishGenerationTelemetry: () => void;
-    beginAutomaticSessionStatusLifecycle: () => Promise<void>; finishAutomaticSessionStatusLifecycle: () => Promise<void>;
-    isSessionBeingViewed: () => boolean; markSessionRead: () => Promise<void>; processNextQueuedMessage: () => void;
-    disposeManagedAgentRuntime: () => Promise<void>; getOrCreateAgent: (m: Managed) => Promise<unknown>;
-    enqueueAutomaticTurnRecovery: () => Promise<boolean>;
-    processEvent: (m: Managed, event: AgentEvent) => Promise<void>;
-    onProcessingStopped: (id: string, reason: 'error') => Promise<void>;
-  };
-  runtime.sessions.set(id, managed);
+  const runtime = sessionManagerForTest(manager);
+  sessionRuntimeStateForTest(manager).sessions.set(id, managed);
   // Stub UI/session IO and the provider only. Real sendMessage, objective
   // transition, event processing, policy reads and project journal writes run.
-  runtime.enqueuePersist = () => {}; runtime.persistSession = () => true; runtime.flushSession = async () => {};
+  runtime.enqueuePersist = () => true; runtime.persistSession = () => true; runtime.flushSession = async () => {};
   runtime.sendEvent = () => {}; runtime.emitExecutionTelemetry = () => {};
   runtime.startGenerationTelemetry = () => {}; runtime.finishGenerationTelemetry = () => {};
   runtime.beginAutomaticSessionStatusLifecycle = async () => {}; runtime.finishAutomaticSessionStatusLifecycle = async () => {};
   runtime.isSessionBeingViewed = () => true; runtime.markSessionRead = async () => {};
   runtime.processNextQueuedMessage = () => {}; runtime.disposeManagedAgentRuntime = async () => { managed.agent = null; };
   runtime.enqueueAutomaticTurnRecovery = async () => false;
-  const agent = {
+  const agent = completeSessionAgentFixture(managed.workspace, {
     async *chat(): AsyncGenerator<AgentEvent> { beforeChat?.(); for (const event of stream) yield event; },
     getModel: () => 'fixture/local', getSessionId: () => null, setAllSources: () => {},
     isProcessing: () => false, redirect: () => true,
-  };
-  managed.agent = agent as never;
-  runtime.getOrCreateAgent = async session => { session.agent = agent as never; return agent; };
+  });
+  managed.agent = agent;
+  runtime.getOrCreateAgent = async session => { session.agent = agent; return agent; };
   return { manager, managed, runtime, root, project };
 }
 
@@ -99,36 +94,44 @@ describe('SessionManager runtime project learning', () => {
   });
 
   it('binds the selected playbook before chat and refuses closure with only a generic technical check', async () => {
-    const stream: AgentEvent[] = [];
-    const h = harness(stream, () => {
+    const previousLegacyMode = process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"];
+    process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1';
+    try {
+      const stream: AgentEvent[] = [];
+      const h = harness(stream, () => {
+        expect(h.managed.activeObjective?.procedure).toEqual({ id: 'software-change', version: 1 });
+        // The model deliberately omits procedure and business requirement IDs.
+        h.managed.activeObjective = registerObjectiveAcceptanceCriteria(h.managed.activeObjective!, [{
+          id: 'generic-tests-pass', description: 'The fixture test command succeeds', toolName: 'Bash',
+          input: { command: 'bun test fixture.test.ts' }, checks: [{ path: 'passed', equals: true }],
+        }], Date.now() - 1);
+        const objective = h.managed.activeObjective;
+        stream.push(
+          { type: 'tool_start', toolName: 'Bash', toolUseId: 'generic-check', input: { command: 'bun test fixture.test.ts' } },
+          { type: 'tool_result', toolName: 'Bash', toolUseId: 'generic-check', result: '{"passed":true}', isError: false, executed: true },
+          { type: 'text_complete', text: `Les tests passent. <!-- robb_objective_outcome ${JSON.stringify({
+            state: 'complete_verified', blocker: null, remainingWork: [],
+            criteria: [...objective.completionCriteria, 'generic-tests-pass'].map(id => ({ id, satisfied: true, evidence: ['generic-check'] })),
+          })} -->` },
+          { type: 'complete' },
+        );
+      });
+      h.managed.playbookSlug = 'verified-software-change';
+      await h.manager.sendMessage(h.managed.id, 'Poursuit');
       expect(h.managed.activeObjective?.procedure).toEqual({ id: 'software-change', version: 1 });
-      // The model deliberately omits procedure and business requirement IDs.
-      h.managed.activeObjective = registerObjectiveAcceptanceCriteria(h.managed.activeObjective!, [{
-        id: 'generic-tests-pass', description: 'The fixture test command succeeds', toolName: 'Bash',
-        input: { command: 'bun test fixture.test.ts' }, checks: [{ path: 'passed', equals: true }],
-      }], Date.now() - 1);
-      const objective = h.managed.activeObjective;
-      stream.push(
-        { type: 'tool_start', toolName: 'Bash', toolUseId: 'generic-check', input: { command: 'bun test fixture.test.ts' } },
-        { type: 'tool_result', toolName: 'Bash', toolUseId: 'generic-check', result: '{"passed":true}', isError: false, executed: true },
-        { type: 'text_complete', text: `Les tests passent. <!-- robb_objective_outcome ${JSON.stringify({
-          state: 'complete_verified', blocker: null, remainingWork: [],
-          criteria: [...objective.completionCriteria, 'generic-tests-pass'].map(id => ({ id, satisfied: true, evidence: ['generic-check'] })),
-        })} -->` },
-        { type: 'complete' },
-      );
-    });
-    h.managed.playbookSlug = 'verified-software-change';
-    await h.manager.sendMessage(h.managed.id, 'Poursuit');
-    expect(h.managed.activeObjective?.procedure).toEqual({ id: 'software-change', version: 1 });
-    expect(h.managed.activeObjective?.terminalState).toBe('exhausted');
-    expect(h.managed.messages.some(message => message.role === 'tool' && message.toolUseId === 'generic-check' && !message.isError)).toBe(true);
-    const rejection = h.managed.messages.find(message => message.role === 'error' && message.errorCode === 'objective_validation_failed');
-    expect(rejection?.errorDetails).toEqual([
-      'Business procedure lacks outcome coverage: requested-behavior',
-      'Business procedure lacks outcome coverage: regression-checks',
-      'Business procedure lacks outcome coverage: user-journey',
-    ]);
+      expect(h.managed.activeObjective?.terminalState).toBe('exhausted');
+      expect(h.managed.messages.some(message => message.role === 'tool' && message.toolUseId === 'generic-check' && !message.isError)).toBe(true);
+      const rejection = h.managed.messages.find(message => message.role === 'error' && message.errorCode === 'objective_validation_failed');
+      expect(rejection?.errorDetails).toEqual([
+        'Business procedure lacks outcome coverage: requested-behavior',
+        'Business procedure lacks outcome coverage: regression-checks',
+        'Business procedure lacks outcome coverage: user-journey',
+        'Full-request coverage requires the current independent review, not only a successful registered observation',
+      ]);
+    } finally {
+      if (previousLegacyMode === undefined) delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"];
+      else process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = previousLegacyMode;
+    }
   });
 
   it('persists an actual user correction as a version-bound inactive observation', async () => {
@@ -167,18 +170,23 @@ describe('SessionManager runtime project learning', () => {
   });
 
   it('captures the exhausted terminal error through real event processing, never as a learned rule', async () => {
-    const h = harness([
-      { type: 'tool_start', toolName: 'Bash', toolUseId: 'failed-render', input: { command: 'fixture-render' } },
-      { type: 'tool_result', toolName: 'Bash', toolUseId: 'failed-render', result: 'Fixture renderer unavailable', isError: true, executed: true },
-      { type: 'text_complete', text: 'Le document est prêt.' },
-      { type: 'complete' },
-    ]);
-    await h.manager.sendMessage(h.managed.id, 'Poursuit');
-    expect(h.managed.activeObjective?.terminalState).toBe('exhausted');
-    const entries = loadProjectMemoryJournal(h.root, h.project.slug).entries;
-    expect(entries.some(e => e.provenance.sourceId === 'failed-render')).toBe(true);
-    expect(entries.some(e => e.content.includes('host:objective_validation_failed'))).toBe(true);
-    expect(entries.every(e => e.status === 'proposed' && e.scope?.version === 'fixture-build')).toBe(true);
+    process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1';
+    try {
+      const h = harness([
+        { type: 'tool_start', toolName: 'Bash', toolUseId: 'failed-render', input: { command: 'fixture-render' } },
+        { type: 'tool_result', toolName: 'Bash', toolUseId: 'failed-render', result: 'Fixture renderer unavailable', isError: true, executed: true },
+        { type: 'text_complete', text: 'Le document est prêt.' },
+        { type: 'complete' },
+      ]);
+      await h.manager.sendMessage(h.managed.id, 'Poursuit');
+      expect(h.managed.activeObjective?.terminalState).toBe('exhausted');
+      const entries = loadProjectMemoryJournal(h.root, h.project.slug).entries;
+      expect(entries.some(e => e.provenance.sourceId === 'failed-render')).toBe(true);
+      expect(entries.some(e => e.content.includes('host:objective_validation_failed'))).toBe(true);
+      expect(entries.every(e => e.status === 'proposed' && e.scope?.version === 'fixture-build')).toBe(true);
+    } finally {
+      delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"];
+    }
   });
 
   it('captures a terminal transport failure even when no complete event was emitted', async () => {

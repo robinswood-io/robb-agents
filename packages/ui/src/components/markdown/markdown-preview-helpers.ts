@@ -1,3 +1,5 @@
+import { isJsonObject, isUnknownArray, omitUndefined } from '@craft-agent/shared/utils/json'
+
 /**
  * Pure helpers for MarkdownDocBlock.
  *
@@ -9,12 +11,13 @@
 export interface MarkdownPreviewItem {
   src: string
   label?: string
+  ratio?: number | undefined
 }
 
 export interface MarkdownPreviewSpec {
-  src?: string
-  title?: string
-  items?: MarkdownPreviewItem[]
+  src?: string | undefined
+  title?: string | undefined
+  items?: MarkdownPreviewItem[] | undefined
 }
 
 /**
@@ -32,28 +35,33 @@ export function parseMarkdownPreviewSpec(code: string): MarkdownPreviewSpec | nu
     return null
   }
 
-  if (!raw || typeof raw !== 'object') return null
-  const spec = raw as Record<string, unknown>
-
-  const itemsField = spec.items
-  if (Array.isArray(itemsField) && itemsField.length > 0) {
-    const items = itemsField.filter(
-      (item): item is MarkdownPreviewItem =>
-        !!item && typeof item === 'object' && typeof (item as { src?: unknown }).src === 'string' && (item as { src: string }).src.length > 0
-    )
+  if (!isJsonObject(raw)) return null
+  const src = raw['src']
+  const title = raw['title']
+  const itemsField = raw['items']
+  if (isUnknownArray(itemsField) && itemsField.length > 0) {
+    const items: MarkdownPreviewItem[] = []
+    for (const item of itemsField) {
+      if (!isJsonObject(item)) continue
+      const itemSrc = item['src']
+      if (typeof itemSrc !== 'string' || itemSrc.length === 0) continue
+      const label = item['label']
+      const ratio = item['ratio']
+      items.push(omitUndefined<MarkdownPreviewItem>({
+        src: itemSrc,
+        label: typeof label === 'string' ? label : undefined,
+        ratio: typeof ratio === 'number' && Number.isFinite(ratio) && ratio > 0 ? ratio : undefined,
+      }))
+    }
     if (items.length === 0) return null
     return {
-      src: typeof spec.src === 'string' ? spec.src : undefined,
-      title: typeof spec.title === 'string' ? spec.title : undefined,
+      src: typeof src === 'string' ? src : undefined,
+      title: typeof title === 'string' ? title : undefined,
       items,
     }
   }
-
-  if (typeof spec.src === 'string' && spec.src.length > 0) {
-    return {
-      src: spec.src,
-      title: typeof spec.title === 'string' ? spec.title : undefined,
-    }
+  if (typeof src === 'string' && src.length > 0) {
+    return { src, title: typeof title === 'string' ? title : undefined }
   }
 
   return null

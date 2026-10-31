@@ -9,11 +9,11 @@ describe('canonical session tool JSON Schema export', () => {
   it.each(canonical.map(tool => [tool.name, tool] as const))('%s advertises all fields and required inputs', (name, definition) => {
     const schema = exported.get(name)!.inputSchema;
     const fields = definition.inputSchema.shape;
-    expect(schema.type).toBe('object');
-    expect(Object.keys(schema.properties as object).sort()).toEqual(Object.keys(fields).sort());
+    expect(schema["type"]).toBe('object');
+    expect(Object.keys(schema["properties"] as object).sort()).toEqual(Object.keys(fields).sort());
     const required = Object.entries(fields).filter(([, field]) => !z.safeParse(field, undefined).success).map(([key]) => key).sort();
-    expect(((schema.required as string[] | undefined) ?? []).slice().sort()).toEqual(required);
-    expect(schema.$schema).toBeUndefined();
+    expect(((schema["required"] as string[] | undefined) ?? []).slice().sort()).toEqual(required);
+    expect(schema["$schema"]).toBeUndefined();
   });
 
   it('exposes spawn roles and exact permission enums without display aliases', () => {

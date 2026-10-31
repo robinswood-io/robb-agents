@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 import {
   constants,
   ftruncateSync,
@@ -48,7 +49,7 @@ function errnoCode(error: unknown): string | undefined {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === 'object' && value !== null && !isUnknownArray(value);
 }
 
 function checksumFor(
@@ -71,14 +72,21 @@ function checksumFor(
 }
 
 function parseIntegrity(value: unknown): Integrity {
-  if (!isRecord(value) || value.version !== INTEGRITY_VERSION ||
-      !Number.isInteger(value.batchSequence) || (value.batchSequence as number) <= 0 ||
-      !Number.isInteger(value.fromRevision) || (value.fromRevision as number) <= 0 ||
-      !Number.isInteger(value.toRevision) || (value.toRevision as number) < (value.fromRevision as number) ||
-      typeof value.previousChecksum !== 'string' || typeof value.checksum !== 'string') {
+  if (!isRecord(value) || value["version"] !== INTEGRITY_VERSION ||
+      !Number.isInteger(value["batchSequence"]) || (value["batchSequence"] as number) <= 0 ||
+      !Number.isInteger(value["fromRevision"]) || (value["fromRevision"] as number) <= 0 ||
+      !Number.isInteger(value["toRevision"]) || (value["toRevision"] as number) < (value["fromRevision"] as number) ||
+      typeof value["previousChecksum"] !== 'string' || typeof value["checksum"] !== 'string') {
     throw new Error('Mission journal integrity metadata is invalid');
   }
-  return value as unknown as Integrity;
+  return {
+    version: INTEGRITY_VERSION,
+    batchSequence: value["batchSequence"] as number,
+    fromRevision: value["fromRevision"] as number,
+    toRevision: value["toRevision"] as number,
+    previousChecksum: value["previousChecksum"],
+    checksum: value["checksum"],
+  };
 }
 
 interface ParsedJournal {
@@ -107,11 +115,11 @@ function parseJournal(text: string): ParsedJournal {
       throw new Error(`Mission journal integrity failure: malformed record at line ${index + 1}`);
     }
     if (!isRecord(raw)) throw new Error(`Mission journal integrity failure: record ${index + 1} is not an object`);
-    const integrity = parseIntegrity(raw._integrity);
-    if (!Array.isArray(raw.events) || raw.events.length === 0) {
+    const integrity = parseIntegrity(raw["_integrity"]);
+    if (!isUnknownArray(raw["events"]) || raw["events"].length === 0) {
       throw new Error(`Mission journal integrity failure: batch ${index + 1} has no events`);
     }
-    const batchEvents = raw.events.map((event) => MissionEventSchema.parse(event));
+    const batchEvents = raw["events"].map((event: unknown) => MissionEventSchema.parse(event));
     if (
       integrity.batchSequence !== lastBatchSequence + 1 ||
       integrity.fromRevision !== lastRevision + 1 ||
@@ -163,7 +171,7 @@ function removeStaleLock(workspaceRoot: string, lockPath: string): boolean {
     let ownerDead = false;
     try {
       const raw: unknown = JSON.parse(readFileSync(handle.descriptor, 'utf-8'));
-      ownerDead = isRecord(raw) && typeof raw.pid === 'number' && !processIsAlive(raw.pid);
+      ownerDead = isRecord(raw) && typeof raw["pid"] === 'number' && !processIsAlive(raw["pid"]);
     } catch { /* age is the fallback proof */ }
     handle.assertStillBound();
     if (!ownerDead && Date.now() - initial.mtimeMs <= STALE_LOCK_MAX_AGE_MS) return false;

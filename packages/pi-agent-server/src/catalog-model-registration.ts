@@ -1,227 +1,31 @@
-import type { Api, Model, OAuthProviderInterface } from '@earendil-works/pi-ai';
-import type { ModelRegistry as PiModelRegistry } from '@earendil-works/pi-coding-agent';
+import type { ModelRegistry } from '@earendil-works/pi-coding-agent';
 
-import { getPiModelsForAuthProvider } from '../../shared/src/config/models-pi.ts';
-
-type RuntimeModel = Model<Api>;
-
-const OPENAI_SUPPLEMENTAL_MODEL_IDS = [
-  'gpt-6.1-sol',
-  'gpt-6-astra',
-  'gpt-6-sol',
-  'gpt-6-luna',
-  'gpt-5.6-sol',
-  'gpt-5.6-terra',
-  'gpt-5.6-luna',
-] as const;
-
-const CATALOG_MODEL_TEMPLATES: Readonly<Record<string, {
-  templateId: string;
-  supplementalModelIds: readonly string[];
-}>> = {
-  openai: {
-    templateId: 'gpt-5.5',
-    supplementalModelIds: OPENAI_SUPPLEMENTAL_MODEL_IDS,
-  },
-  'openai-codex': {
-    templateId: 'gpt-5.5',
-    supplementalModelIds: OPENAI_SUPPLEMENTAL_MODEL_IDS,
-  },
-  anthropic: {
-    // This template explicitly enables adaptive thinking and disables sampling.
-    templateId: 'claude-opus-4-8',
-    supplementalModelIds: ['claude-opus-5', 'claude-fable-5-1'],
-  },
-  mistral: {
-    templateId: 'mistral-medium-2604',
-    supplementalModelIds: ['mistral-medium-3-5'],
+// Current metadata belongs to Pi. These saved IDs remain accepted by the
+// provider; keep old sessions resolvable without offering retired IDs again.
+// https://api-docs.deepseek.com/updates/ (2026-09-10 compatibility aliases)
+const savedModelAliases: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  mistral: { 'mistral-medium-3-5': 'mistral-medium-2604' },
+  deepseek: {
+    'deepseek-v4-flash': 'deepseek-flash',
+    'deepseek-v4-flash-vision-exp': 'deepseek-flash',
   },
 };
 
-/**
- * Current standard-processing prices in USD per 1M tokens.
- *
- * Pi 0.80.3 predates these models, so cloning an older transport would also
- * clone stale prices and reasoning compatibility. Keep the overrides explicit
- * until the upstream SDK catalogue contains the models itself.
- * Sources:
- * - https://developers.openai.com/api/docs/models/gpt-6-astra
- * - https://developers.openai.com/api/docs/models/gpt-6.1-sol
- * - https://developers.openai.com/api/docs/models/gpt-6-sol
- * - https://developers.openai.com/api/docs/models/gpt-6-luna
- * - https://developers.openai.com/api/docs/models/gpt-5.6-sol
- * - https://platform.claude.com/docs/en/models/opus-5/overview
- * - https://platform.claude.com/docs/en/models/fable-5-1/overview
- */
-const RUNTIME_OVERRIDES: Readonly<Record<
-  string,
-  Pick<RuntimeModel, 'cost' | 'maxTokens' | 'thinkingLevelMap'>
->> = {
-  'gpt-6.1-sol': {
-    cost: { input: 2, output: 10, cacheRead: 0.1, cacheWrite: 2.5 },
-    maxTokens: 128_000,
-    // GPT-6.1 rejects none/minimal, including persisted legacy selections.
-    // The SDK clamps disabled levels to low before serializing Responses.
-    thinkingLevelMap: {
-      off: null,
-      minimal: null,
-      low: 'low',
-      medium: 'medium',
-      high: 'high',
-      xhigh: 'xhigh',
-    },
-  },
-  'gpt-6-astra': {
-    cost: { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 },
-    maxTokens: 128_000,
-    // Astra rejects the legacy `none` and `minimal` efforts. Pi 0.80.3 has no
-    // distinct `max` enum yet, so Robb's current max setting safely clamps to
-    // xhigh until the pinned runtime is upgraded.
-    thinkingLevelMap: {
-      off: null,
-      minimal: null,
-      low: 'low',
-      medium: 'medium',
-      high: 'high',
-      xhigh: 'xhigh',
-    },
-  },
-  'gpt-6-sol': {
-    cost: { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 2.5 },
-    maxTokens: 128_000,
-    thinkingLevelMap: { off: 'none', minimal: null, xhigh: 'xhigh' },
-  },
-  'gpt-6-luna': {
-    cost: { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125 },
-    maxTokens: 128_000,
-    thinkingLevelMap: { off: 'none', minimal: null, xhigh: 'xhigh' },
-  },
-  'gpt-5.6-sol': {
-    // Promotional pricing is available at least through November 21, 2026.
-    cost: { input: 4, output: 20, cacheRead: 0.4, cacheWrite: 5 },
-    maxTokens: 128_000,
-  },
-  'gpt-5.6-terra': {
-    cost: { input: 2, output: 12, cacheRead: 0.2, cacheWrite: 2.5 },
-    maxTokens: 128_000,
-  },
-  'gpt-5.6-luna': {
-    cost: { input: 0.2, output: 1.2, cacheRead: 0.02, cacheWrite: 0.25 },
-    maxTokens: 128_000,
-  },
-  'claude-opus-5': {
-    cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
-    maxTokens: 128_000,
-  },
-  'claude-fable-5-1': {
-    cost: { input: 10, output: 50, cacheRead: 0.25, cacheWrite: 12.5 },
-    maxTokens: 128_000,
-    // Fable always thinks; omitting thinking keeps the API's adaptive default.
-    thinkingLevelMap: { off: null, xhigh: 'xhigh' },
-  },
-};
-
-/**
- * Convert a resolved SDK model back to registerProvider's model shape.
- * registerProvider replaces every model for a provider, so all existing
- * entries must be carried forward when adding a catalog supplement.
- */
-function toRegistrationModel(model: RuntimeModel) {
-  return {
-    id: model.id,
-    name: model.name,
-    api: model.api,
-    baseUrl: model.baseUrl,
-    reasoning: model.reasoning,
-    thinkingLevelMap: model.thinkingLevelMap,
-    input: [...model.input],
-    cost: { ...model.cost },
-    contextWindow: model.contextWindow,
-    maxTokens: model.maxTokens,
-    headers: model.headers ? { ...model.headers } : undefined,
-    compat: model.compat,
-  };
-}
-
-type RegistrationAuth =
-  | { apiKey: string }
-  | { oauth: Omit<OAuthProviderInterface, 'id'> };
-
-function getRegistrationAuth(
-  modelRegistry: PiModelRegistry,
-  provider: string,
-): RegistrationAuth | undefined {
-  const credential = modelRegistry.authStorage.get(provider);
-  if (credential?.type === 'api_key') return { apiKey: credential.key };
-  if (credential?.type !== 'oauth') return undefined;
-
-  const oauthProvider = modelRegistry.authStorage
-    .getOAuthProviders()
-    .find(candidate => candidate.id === provider);
-  if (!oauthProvider) return undefined;
-
-  // registerProvider requires either apiKey or oauth when defining models.
-  // Passing the current OAuth access token as apiKey would create a stale
-  // fallback if refresh fails. Re-register the provider's OAuth contract so
-  // AuthStorage remains the sole source of credentials and refresh behavior.
-  const { id: _providerId, ...oauth } = oauthProvider;
-  return { oauth };
-}
-
-/**
- * Register catalog models that are newer than the bundled Pi SDK catalogue.
- *
- * The shared catalogue exposes recent models for supported auth providers.
- * Pi SDK 0.80.3 does not know these IDs yet, so create
- * runtime entries using the latest compatible provider model as the transport
- * template. Unknown providers and unauthenticated registries are left intact.
- */
-export function registerSupplementalCatalogModels(
-  modelRegistry: PiModelRegistry,
-  provider: string,
-): string[] {
-  const rule = CATALOG_MODEL_TEMPLATES[provider];
-  if (!rule) return [];
-
-  const existingModels = modelRegistry.getAll().filter(model => model.provider === provider);
-  const template = existingModels.find(model => model.id === rule.templateId);
-  const registrationAuth = getRegistrationAuth(modelRegistry, provider);
-  if (!template || !registrationAuth) return [];
-
-  const existingIds = new Set(existingModels.map(model => model.id));
-  const missingDefinitions = getPiModelsForAuthProvider(provider).filter(definition => {
-    const bareId = definition.id.replace(/^pi\//, '');
-    return rule.supplementalModelIds.includes(bareId) && !existingIds.has(bareId);
+export function registerSupplementalCatalogModels(registry: ModelRegistry, provider: string): string[] {
+  const aliases = savedModelAliases[provider];
+  if (!aliases) return [];
+  const models = registry.getAll().filter(model => model.provider === provider);
+  const missing = Object.entries(aliases).flatMap(([id, source]) => {
+    const template = models.find(model => model.id === source);
+    return !registry.find(provider, id) && template && registry.hasConfiguredAuth(template)
+      ? [{ ...template, id, name: provider === 'mistral' ? 'Mistral Medium 3.5' : template.name }]
+      : [];
   });
-  if (missingDefinitions.length === 0) return [];
-
-  const supplementalModels = missingDefinitions.map(definition => {
-    const id = definition.id.replace(/^pi\//, '');
-    const overrides = RUNTIME_OVERRIDES[id];
-    return {
-      ...toRegistrationModel(template),
-      id,
-      name: definition.name,
-      reasoning: definition.supportsThinking ?? template.reasoning,
-      contextWindow: definition.contextWindow ?? template.contextWindow,
-      ...(overrides ? {
-        cost: { ...overrides.cost },
-        maxTokens: overrides.maxTokens,
-        ...(overrides.thinkingLevelMap
-          ? { thinkingLevelMap: { ...overrides.thinkingLevelMap } }
-          : {}),
-      } : {}),
-    };
+  if (!missing.length) return [];
+  const registration = (model: (typeof models)[number]) => ({ ...model, input: [...model.input] });
+  registry.registerProvider(provider, {
+    baseUrl: missing[0]!.baseUrl,
+    models: [...models, ...missing].map(registration),
   });
-
-  modelRegistry.registerProvider(provider, {
-    baseUrl: template.baseUrl,
-    ...registrationAuth,
-    models: [
-      ...existingModels.map(toRegistrationModel),
-      ...supplementalModels,
-    ],
-  });
-
-  return supplementalModels.map(model => model.id);
+  return missing.map(model => model.id);
 }

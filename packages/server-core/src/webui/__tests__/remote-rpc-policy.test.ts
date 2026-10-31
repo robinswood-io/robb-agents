@@ -1,3 +1,7 @@
+import { OAuthFlowStore } from '@craft-agent/shared/auth';
+import type { ISessionManager } from '@craft-agent/server-core/handlers';
+import { SessionManager as FixtureSessionManager } from '@craft-agent/server-core/sessions';
+import { createHeadlessPlatform } from '../../runtime/platform-headless.ts';
 import { describe, expect, it } from 'bun:test'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import type { RequestContext } from '../../transport/types'
@@ -88,12 +92,11 @@ describe('Remote RPC policy', () => {
       validateToken: async token => token === 'paired-test-token' ? { ...remote, capabilities: [] } : false,
       authorizeRequest: createWebuiRpcAuthorizer(registry),
     })
-    registerSessionsHandlers(server, {
-      platform: { logger: {} },
-      sessionManager: {
+    registerSessionsHandlers(server, ({platform: createHeadlessPlatform(),
+sessionManager: Object.assign(new FixtureSessionManager(), ({
         getSessions: () => [
-          { id: 'child-origin', workspaceId: 'workspace-1' },
-          { id: 'foreign-origin', workspaceId: 'workspace-2' },
+          { id: 'child-origin', workspaceId: 'workspace-1', workspaceName: 'Test', lastMessageAt: 0, messages: [], isProcessing: false },
+          { id: 'foreign-origin', workspaceId: 'workspace-2', workspaceName: 'Test', lastMessageAt: 0, messages: [], isProcessing: false },
         ],
         getSession: () => { throw new Error('Authorization must happen before hydration') },
         // Only the final business dispatch is substituted; the websocket,
@@ -102,8 +105,8 @@ describe('Remote RPC policy', () => {
           delivered.push(args)
           return { status: 'accepted', delivery: 'steered' }
         },
-      },
-    } as unknown as HandlerDeps)
+      } satisfies Partial<ISessionManager>)),
+oauthFlowStore: new OAuthFlowStore()} satisfies HandlerDeps))
     let client: WsRpcClient | undefined
     try {
       await server.listen()
@@ -113,7 +116,7 @@ describe('Remote RPC policy', () => {
       expect(result).toEqual({ status: 'accepted', delivery: 'steered' })
       expect(delivered).toHaveLength(1)
       expect(delivered[0]?.slice(0, 2)).toEqual(['child-origin', response])
-      expect(delivered[0]?.[2]).toEqual({ callerClientId: expect.any(String) })
+      expect<unknown>(delivered[0]?.[2]).toEqual({ callerClientId: (expect.any(String) as unknown) })
 
       // A client-supplied workspace field cannot authorize a different origin.
       await expect(client.invoke(RPC_CHANNELS.sessions.RESPOND_TO_USER_INPUT, 'foreign-origin', { ...response, workspaceId: 'workspace-1' })).rejects.toThrow('Workspace access denied')

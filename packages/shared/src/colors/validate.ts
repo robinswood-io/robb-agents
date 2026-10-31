@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 /**
  * Entity Color Validation
  *
@@ -6,7 +7,7 @@
  */
 
 import { z } from 'zod'
-import { SYSTEM_COLOR_NAMES } from './types.ts'
+import { SYSTEM_COLOR_NAMES, type EntityColor } from './types.ts'
 
 // ============================================================================
 // CSS Color Validation
@@ -72,14 +73,14 @@ export function isValidSystemColor(value: string): boolean {
  * Check if a value is a valid EntityColor.
  * Accepts system color strings or custom color objects.
  */
-export function isValidEntityColor(value: unknown): boolean {
+export function isValidEntityColor(value: unknown): value is EntityColor {
   if (typeof value === 'string') {
     return isValidSystemColor(value)
   }
-  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+  if (typeof value === 'object' && value !== null && !isUnknownArray(value)) {
     const obj = value as Record<string, unknown>
-    if (typeof obj.light !== 'string' || !isValidCSSColor(obj.light)) return false
-    if (obj.dark !== undefined && (typeof obj.dark !== 'string' || !isValidCSSColor(obj.dark))) return false
+    if (typeof obj["light"] !== 'string' || !isValidCSSColor(obj["light"])) return false
+    if (obj["dark"] !== undefined && (typeof obj["dark"] !== 'string' || !isValidCSSColor(obj["dark"]))) return false
     return true
   }
   return false
@@ -100,7 +101,7 @@ export function isValidEntityColor(value: unknown): boolean {
  * - System color string: "accent", "foreground/50", "info/80"
  * - Custom color object: { light: "#EF4444", dark?: "#F87171" }
  */
-export const EntityColorSchema = z.any().superRefine((val, ctx) => {
+export const EntityColorSchema = z.unknown().superRefine((val, ctx) => {
   // --- String path: validate as system color ---
   if (typeof val === 'string') {
     if (!isValidSystemColor(val)) {
@@ -117,10 +118,10 @@ export const EntityColorSchema = z.any().superRefine((val, ctx) => {
   }
 
   // --- Object path: validate as custom color ---
-  if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+  if (typeof val === 'object' && val !== null && !isUnknownArray(val)) {
     const obj = val as Record<string, unknown>
 
-    if (typeof obj.light !== 'string') {
+    if (typeof obj["light"] !== 'string') {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: `Custom color object requires a "light" field with a valid CSS color. `
@@ -130,20 +131,20 @@ export const EntityColorSchema = z.any().superRefine((val, ctx) => {
       return
     }
 
-    if (!isValidCSSColor(obj.light)) {
+    if (!isValidCSSColor(obj["light"])) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: `Invalid "light" color "${obj.light}". `
+        message: `Invalid "light" color "${obj["light"]}". `
           + `Supported CSS formats: #RGB, #RRGGBB, #RRGGBBAA, oklch(L C H), rgb(r, g, b), hsl(h, s%, l%). `
           + `Example: "#EF4444" or "oklch(0.7 0.15 20)".`,
       })
     }
 
-    if (obj.dark !== undefined) {
-      if (typeof obj.dark !== 'string' || !isValidCSSColor(obj.dark)) {
+    if (obj["dark"] !== undefined) {
+      if (typeof obj["dark"] !== 'string' || !isValidCSSColor(obj["dark"])) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `Invalid "dark" color "${obj.dark}". `
+          message: `Invalid "dark" color "${obj["dark"]}". `
             + `Must be a valid CSS color (same formats as "light"). `
             + `Omit "dark" entirely to auto-derive from light (+30% brightness).`,
         })
@@ -160,4 +161,4 @@ export const EntityColorSchema = z.any().superRefine((val, ctx) => {
       + `or a custom color object ({ "light": "#hex", "dark?": "#hex" }). `
       + `See statuses.md for full color format reference.`,
   })
-})
+}).transform((value) => isValidEntityColor(value) ? value : z.NEVER)

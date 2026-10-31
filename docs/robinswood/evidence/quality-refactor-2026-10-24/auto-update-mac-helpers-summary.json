@@ -1,0 +1,199 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Mise à jour macOS : préparation du remplacement signé et contrôles des installateurs",
+  "changes": [
+    "Cinq fonctions existantes de préparation extraites dans auto-update-mac.ts ; point d’entrée, promesses partagées et temporisations conservés.",
+    "Corps des 35 déclarations, état unique, ordre des effets et imports natifs contrôlés ; maximum 418 lignes.",
+    "Assertions de sécurité maintenues dans les tests : remplacement transactionnel, signature Developer ID, notarisation et validation Bash."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/main/__tests__/robinswood-branding.test.ts",
+      "lines": 228,
+      "sha256": "6888aa52fe8903a7da11da6948cde39b1e2304be7d1f00f346cf740b25364eb4"
+    },
+    {
+      "file": "apps/electron/src/main/auto-update-mac.ts",
+      "lines": 252,
+      "sha256": "de6782b3a5985fae59a81f89db12f047572749d8a98c4e721d6d05b43f8f32ef"
+    },
+    {
+      "file": "apps/electron/src/main/auto-update.ts",
+      "lines": 417,
+      "sha256": "e612b363fd811d47f129577fa7209919ffd7b80823149b131a5a2896ed7b9453"
+    },
+    {
+      "file": "scripts/tests/test_installers.py",
+      "lines": 399,
+      "sha256": "ddf2b79437102615862ee4ee473f9aeac35c064d3310e67261412da0ca7685cc"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 17.11,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auto-update-mac-helpers-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 27.28,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auto-update-mac-helpers-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/main/auto-update.ts",
+        "apps/electron/src/main/auto-update-mac.ts",
+        "apps/electron/src/main/__tests__/robinswood-branding.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.85,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auto-update-mac-helpers-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "scripts/tests",
+        "-p",
+        "test_installers.py"
+      ],
+      "exitCode": 0,
+      "seconds": 0.74,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auto-update-mac-helpers-installers.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/main/__tests__/robinswood-branding.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.14,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auto-update-mac-helpers-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 12.53,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auto-update-mac-helpers-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 137.88,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auto-update-mac-helpers-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "source": "apps/electron/src/main/auto-update.ts",
+    "nativeSourceHash": "9be571e6b89fffdd2ec7f858c01344aea36f34b4a8f9fc4772df4e6af9ed58b7",
+    "nativeDeclarations": 35,
+    "extractedDeclarations": 5,
+    "nativeBodiesStateAndEffectOrderPreserved": true,
+    "nativePublicExportsAndImportedBindingsPreserved": true,
+    "nativeExternalImportOrder": [
+      "node:child_process",
+      "node:os",
+      "node:path",
+      "node:fs",
+      "electron",
+      "electron-updater",
+      "@craft-agent/shared/config",
+      "@craft-agent/shared/version",
+      "../shared/types",
+      "./app-channel",
+      "./logger"
+    ],
+    "runtimeImportCycles": 0,
+    "newStateOrWorkflowAdded": false,
+    "maximumFileLines": 418,
+    "files": [
+      {
+        "file": "apps/electron/src/main/auto-update.ts",
+        "lines": 418,
+        "sha256": "e612b363fd811d47f129577fa7209919ffd7b80823149b131a5a2896ed7b9453"
+      },
+      {
+        "file": "apps/electron/src/main/auto-update-mac.ts",
+        "lines": 253,
+        "sha256": "de6782b3a5985fae59a81f89db12f047572749d8a98c4e721d6d05b43f8f32ef"
+      }
+    ]
+  },
+  "fullTestSummary": {
+    "pass": 10743,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "auto-update-mac-helpers-targeted": {
+      "pass": 16,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": null,
+  "sourceGate": {
+    "max-lines": 73,
+    "no-explicit-any": 269
+  },
+  "globalLint": {
+    "files": 3541,
+    "errors": 312,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 250,
+      "max-lines": 62,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "73 fichiers trop longs et 269 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-25T23:20:11.967780+00:00"
+}

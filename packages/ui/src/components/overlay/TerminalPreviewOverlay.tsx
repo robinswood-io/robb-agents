@@ -4,7 +4,7 @@
  * Uses PreviewOverlay for presentation and TerminalOutput for display.
  */
 
-import * as React from 'react'
+
 import { useTranslation } from 'react-i18next'
 import { Terminal, Search, FolderSearch } from 'lucide-react'
 import { PreviewOverlay, type BadgeVariant } from './PreviewOverlay'
@@ -21,17 +21,17 @@ export interface TerminalPreviewOverlayProps {
   /** The output from the command */
   output: string
   /** Exit code (0 = success) */
-  exitCode?: number
+  exitCode?: number | undefined
   /** Tool type for display styling */
-  toolType?: ToolType
+  toolType?: ToolType | undefined
   /** Optional description of what the command does */
-  description?: string
+  description?: string | undefined
   /** Theme mode */
-  theme?: 'light' | 'dark'
+  theme?: 'light' | 'dark' | undefined
   /** Error message if the command failed to execute */
-  error?: string
+  error?: string | undefined
   /** Render inline without dialog (for playground) */
-  embedded?: boolean
+  embedded?: boolean | undefined
 }
 
 function getToolConfig(toolType: ToolType): {

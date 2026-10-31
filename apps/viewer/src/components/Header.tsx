@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 /**
  * RobinswoodLogo - compact Robb Agents monogram
  */
-function RobinswoodLogo({ className }: { className?: string }) {
+function RobinswoodLogo({ className }: { className?: string | undefined }) {
   return (
     <svg
       className={className}
@@ -28,7 +28,7 @@ function RobinswoodLogo({ className }: { className?: string }) {
 
 interface HeaderProps {
   hasSession: boolean
-  sessionTitle?: string
+  sessionTitle?: string | undefined
   isDark: boolean
   onToggleTheme: () => void
   onClear: () => void

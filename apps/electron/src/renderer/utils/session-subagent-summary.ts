@@ -1,13 +1,13 @@
 import { getInternalParentSessionId, isUserFacingSession, type SessionVisibilityInput } from './session-visibility'
 
 export interface SidebarSessionInput extends SessionVisibilityInput {
-  isProcessing?: boolean
-  hasPendingUserInput?: boolean
-  hasPendingAuth?: boolean
+  isProcessing?: boolean | undefined
+  hasPendingUserInput?: boolean | undefined
+  hasPendingAuth?: boolean | undefined
   pendingTurnRecovery?: {
-    exhaustedAt?: number
-    validationExhausted?: boolean
-  }
+    exhaustedAt?: number | undefined
+    validationExhausted?: boolean | undefined
+  } | undefined
 }
 
 export interface SessionSubagentSummary {
@@ -41,12 +41,12 @@ function hasActiveSubagentWork(session: SidebarSessionInput): boolean {
  */
 export function summarizeSessionsForSidebar<T extends SidebarSessionInput>(
   sessions: T[],
-  relatedSessions: T[] = sessions,
+  relatedSessions: readonly SidebarSessionInput[] = sessions,
 ): SidebarSessionSummary<T> {
   const sessionById = new Map(relatedSessions.map(session => [session.id, session]))
   const ancestorsBySessionId = new Map<string, string[] | null>()
 
-  const resolveAncestors = (session: T): string[] | null => {
+  const resolveAncestors = (session: SidebarSessionInput): string[] | null => {
     const internalParentId = getInternalParentSessionId(session)
     if (!internalParentId) return []
 

@@ -36,19 +36,19 @@ export type PreviewBadgeVariant = keyof typeof PREVIEW_BADGE_VARIANTS
 
 export interface PreviewHeaderBadgeProps {
   /** Icon component to display */
-  icon?: LucideIcon
+  icon?: LucideIcon | undefined
   /** Badge label text */
   label: string
   /** Badge variant (default: 'default') */
-  variant?: PreviewBadgeVariant
+  variant?: PreviewBadgeVariant | undefined
   /** Click handler (makes it a clickable link-style button) */
-  onClick?: () => void
+  onClick?: (() => void) | undefined
   /** Title for tooltip */
-  title?: string
+  title?: string | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
   /** Allow badge to shrink (for long paths) - default: false */
-  shrinkable?: boolean
+  shrinkable?: boolean | undefined
 }
 
 /**
@@ -101,17 +101,17 @@ export function PreviewHeaderBadge({
 
 export interface PreviewHeaderProps {
   /** Badge elements to render in center */
-  children?: React.ReactNode
+  children?: React.ReactNode | undefined
   /** Close handler - when provided, shows X button on right */
-  onClose?: () => void
+  onClose?: (() => void) | undefined
   /** Actions to render on the right, just before the close button */
-  rightActions?: React.ReactNode
+  rightActions?: React.ReactNode | undefined
   /** Height of the header (default: 50px for windows, 44px for overlays) */
-  height?: number
+  height?: number | undefined
   /** Additional className for the header */
-  className?: string
+  className?: string | undefined
   /** Inline styles */
-  style?: React.CSSProperties
+  style?: React.CSSProperties | undefined
 }
 
 /**

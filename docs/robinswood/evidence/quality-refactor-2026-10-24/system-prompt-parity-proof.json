@@ -1,0 +1,251 @@
+{
+  "status": "passed",
+  "combinations": 48,
+  "nativeSourceHash": "4b46de9fb73099809d322b60a26a3a6ac74989f851b6cd1e61eb9409a5474086",
+  "currentSourceHash": "4ed74c54a820f112a79086bed599c2be3f42b797f8313fa5096a7705547d576b",
+  "completePromptBytesIdentical": true,
+  "results": [
+    {
+      "id": "default|Claude Code|false|false|false",
+      "sha256": "3292114f1d6d0e05c70058fe55011426d928bc4caf562138b9475029fb4db681",
+      "bytes": 37191
+    },
+    {
+      "id": "default|Claude Code|false|false|true",
+      "sha256": "e92c2ab410b0f50c59e6bf22c1e776b0b282143f73753233f2de9a9903f2723e",
+      "bytes": 41018
+    },
+    {
+      "id": "default|Claude Code|false|true|false",
+      "sha256": "d93d491224b84187aa6051dad91400162e117c2081cf98b039055782e0f2db79",
+      "bytes": 37337
+    },
+    {
+      "id": "default|Claude Code|false|true|true",
+      "sha256": "da8e535a81094403ddb44f0924e00e4ac9ff870681429c436b8925047f3affcc",
+      "bytes": 41164
+    },
+    {
+      "id": "default|Claude Code|true|false|false",
+      "sha256": "629c595cadeb2f204913f99376d6a8d5e0ee13478bfa0ad7a37a6ffe5ded9a4b",
+      "bytes": 37842
+    },
+    {
+      "id": "default|Claude Code|true|false|true",
+      "sha256": "686d91b555969b8d4a9038c326f431e4168a5fe959f988696a7d28c233f07837",
+      "bytes": 41669
+    },
+    {
+      "id": "default|Claude Code|true|true|false",
+      "sha256": "b417eec7ec410f8fedead446d05d7736b2ed2955c92460587592411f0845f666",
+      "bytes": 37988
+    },
+    {
+      "id": "default|Claude Code|true|true|true",
+      "sha256": "0b5ede4911125f6f944b40db2628a01ffdad000d20b6c7a4a97d9ec22a1e4fe1",
+      "bytes": 41815
+    },
+    {
+      "id": "default|Pi|false|false|false",
+      "sha256": "721ea936db78b944f4fee92861919dbb9e85d98a64dfe558ee965912f971e69d",
+      "bytes": 37173
+    },
+    {
+      "id": "default|Pi|false|false|true",
+      "sha256": "e19ae0e2adb77a1a701c169c039dd4f1fdc9b6d78831913610910a53d71b8844",
+      "bytes": 41000
+    },
+    {
+      "id": "default|Pi|false|true|false",
+      "sha256": "0cae61003f72522aab64a5b84da972e461a593e6135802395255bec6ec87b125",
+      "bytes": 37319
+    },
+    {
+      "id": "default|Pi|false|true|true",
+      "sha256": "a89d9e0703704be15aae36b282756d9b3beca281b6890743a79984ba454c17e1",
+      "bytes": 41146
+    },
+    {
+      "id": "default|Pi|true|false|false",
+      "sha256": "a6766d95803acbf062a3d355ba9e79d8d284931a5421db5fe1090cd6b3752597",
+      "bytes": 37824
+    },
+    {
+      "id": "default|Pi|true|false|true",
+      "sha256": "06b00bd631772b61bcddb02c79eb682453a4a731dcd09567f032cdf206a5e275",
+      "bytes": 41651
+    },
+    {
+      "id": "default|Pi|true|true|false",
+      "sha256": "bc37958a9cfa6982510ce267df4e18c002a1729ccc5c1ca2f1361600c8e307d1",
+      "bytes": 37970
+    },
+    {
+      "id": "default|Pi|true|true|true",
+      "sha256": "55051b09749ae939a491f7fd0ae80623384a0f266f874029cdfe9675d4b52e2c",
+      "bytes": 41797
+    },
+    {
+      "id": "default|OpenAI Codex|false|false|false",
+      "sha256": "a14cb35b4fbdfecda28314245769c85868a73a94cb00190661e7f40a63bbcc52",
+      "bytes": 37193
+    },
+    {
+      "id": "default|OpenAI Codex|false|false|true",
+      "sha256": "1986c51e893aa0cdff16dd90015c35f68187fb5b4024ec37c8138838eb54d54e",
+      "bytes": 41020
+    },
+    {
+      "id": "default|OpenAI Codex|false|true|false",
+      "sha256": "31207827e383d511e0a7aba9f60ad0f71037c2f643aea76f56d5ac36ce6d1969",
+      "bytes": 37339
+    },
+    {
+      "id": "default|OpenAI Codex|false|true|true",
+      "sha256": "fae833baed6a69b68e751b190208712e62c711a785cc130f196a26494cbf091c",
+      "bytes": 41166
+    },
+    {
+      "id": "default|OpenAI Codex|true|false|false",
+      "sha256": "9bae21a84eb22b3d31580d8e8b776910391bb5b66843bb0698e32d20f3194843",
+      "bytes": 37844
+    },
+    {
+      "id": "default|OpenAI Codex|true|false|true",
+      "sha256": "b3e5f1e782e93caa130d9115e829e435ee4abd27ffd35b53e21bd62faaed9526",
+      "bytes": 41671
+    },
+    {
+      "id": "default|OpenAI Codex|true|true|false",
+      "sha256": "f71c9460b4db90285a2a084244e147dbca66d4581abe2774c932605e874d47b7",
+      "bytes": 37990
+    },
+    {
+      "id": "default|OpenAI Codex|true|true|true",
+      "sha256": "47b04a5d3ff00f124b175bca53d05ead6ed5707ce56e464ff5f206c86aa61fef",
+      "bytes": 41817
+    },
+    {
+      "id": "mini|Claude Code|false|false|false",
+      "sha256": "d5b6433f3615c7692ce5217fc020a93c5fe2d85e15afbb5e38dc3fcee8637329",
+      "bytes": 731
+    },
+    {
+      "id": "mini|Claude Code|false|false|true",
+      "sha256": "d5b6433f3615c7692ce5217fc020a93c5fe2d85e15afbb5e38dc3fcee8637329",
+      "bytes": 731
+    },
+    {
+      "id": "mini|Claude Code|false|true|false",
+      "sha256": "d5b6433f3615c7692ce5217fc020a93c5fe2d85e15afbb5e38dc3fcee8637329",
+      "bytes": 731
+    },
+    {
+      "id": "mini|Claude Code|false|true|true",
+      "sha256": "d5b6433f3615c7692ce5217fc020a93c5fe2d85e15afbb5e38dc3fcee8637329",
+      "bytes": 731
+    },
+    {
+      "id": "mini|Claude Code|true|false|false",
+      "sha256": "2b9453a08931350bd5366fc43f9da93660431f3e286492c99c03ff8c66eda3d9",
+      "bytes": 961
+    },
+    {
+      "id": "mini|Claude Code|true|false|true",
+      "sha256": "2b9453a08931350bd5366fc43f9da93660431f3e286492c99c03ff8c66eda3d9",
+      "bytes": 961
+    },
+    {
+      "id": "mini|Claude Code|true|true|false",
+      "sha256": "2b9453a08931350bd5366fc43f9da93660431f3e286492c99c03ff8c66eda3d9",
+      "bytes": 961
+    },
+    {
+      "id": "mini|Claude Code|true|true|true",
+      "sha256": "2b9453a08931350bd5366fc43f9da93660431f3e286492c99c03ff8c66eda3d9",
+      "bytes": 961
+    },
+    {
+      "id": "mini|Pi|false|false|false",
+      "sha256": "d5b6433f3615c7692ce5217fc020a93c5fe2d85e15afbb5e38dc3fcee8637329",
+      "bytes": 731
+    },
+    {
+      "id": "mini|Pi|false|false|true",
+      "sha256": "d5b6433f3615c7692ce5217fc020a93c5fe2d85e15afbb5e38dc3fcee8637329",
+      "bytes": 731
+    },
+    {
+      "id": "mini|Pi|false|true|false",
+      "sha256": "d5b6433f3615c7692ce5217fc020a93c5fe2d85e15afbb5e38dc3fcee8637329",
+      "bytes": 731
+    },
+    {
+      "id": "mini|Pi|false|true|true",
+      "sha256": "d5b6433f3615c7692ce5217fc020a93c5fe2d85e15afbb5e38dc3fcee8637329",
+      "bytes": 731
+    },
+    {
+      "id": "mini|Pi|true|false|false",
+      "sha256": "2b9453a08931350bd5366fc43f9da93660431f3e286492c99c03ff8c66eda3d9",
+      "bytes": 961
+    },
+    {
+      "id": "mini|Pi|true|false|true",
+      "sha256": "2b9453a08931350bd5366fc43f9da93660431f3e286492c99c03ff8c66eda3d9",
+      "bytes": 961
+    },
+    {
+      "id": "mini|Pi|true|true|false",
+      "sha256": "2b9453a08931350bd5366fc43f9da93660431f3e286492c99c03ff8c66eda3d9",
+      "bytes": 961
+    },
+    {
+      "id": "mini|Pi|true|true|true",
+      "sha256": "2b9453a08931350bd5366fc43f9da93660431f3e286492c99c03ff8c66eda3d9",
+      "bytes": 961
+    },
+    {
+      "id": "mini|OpenAI Codex|false|false|false",
+      "sha256": "d5b6433f3615c7692ce5217fc020a93c5fe2d85e15afbb5e38dc3fcee8637329",
+      "bytes": 731
+    },
+    {
+      "id": "mini|OpenAI Codex|false|false|true",
+      "sha256": "d5b6433f3615c7692ce5217fc020a93c5fe2d85e15afbb5e38dc3fcee8637329",
+      "bytes": 731
+    },
+    {
+      "id": "mini|OpenAI Codex|false|true|false",
+      "sha256": "d5b6433f3615c7692ce5217fc020a93c5fe2d85e15afbb5e38dc3fcee8637329",
+      "bytes": 731
+    },
+    {
+      "id": "mini|OpenAI Codex|false|true|true",
+      "sha256": "d5b6433f3615c7692ce5217fc020a93c5fe2d85e15afbb5e38dc3fcee8637329",
+      "bytes": 731
+    },
+    {
+      "id": "mini|OpenAI Codex|true|false|false",
+      "sha256": "2b9453a08931350bd5366fc43f9da93660431f3e286492c99c03ff8c66eda3d9",
+      "bytes": 961
+    },
+    {
+      "id": "mini|OpenAI Codex|true|false|true",
+      "sha256": "2b9453a08931350bd5366fc43f9da93660431f3e286492c99c03ff8c66eda3d9",
+      "bytes": 961
+    },
+    {
+      "id": "mini|OpenAI Codex|true|true|false",
+      "sha256": "2b9453a08931350bd5366fc43f9da93660431f3e286492c99c03ff8c66eda3d9",
+      "bytes": 961
+    },
+    {
+      "id": "mini|OpenAI Codex|true|true|true",
+      "sha256": "2b9453a08931350bd5366fc43f9da93660431f3e286492c99c03ff8c66eda3d9",
+      "bytes": 961
+    }
+  ],
+  "configRoot": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/prompt-parity-profile",
+  "realUserProfileTouched": false
+}

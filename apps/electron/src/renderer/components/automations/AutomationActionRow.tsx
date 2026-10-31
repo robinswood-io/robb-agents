@@ -19,7 +19,7 @@ import { DEFAULT_WEBHOOK_METHOD } from './constants'
 export interface AutomationActionRowProps {
   action: AutomationAction
   index: number
-  className?: string
+  className?: string | undefined
 }
 
 /**

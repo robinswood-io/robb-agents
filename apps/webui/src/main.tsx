@@ -51,17 +51,17 @@ class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { failed: boolean }
 > {
-  state = { failed: false }
+  override state = { failed: false }
 
   static getDerivedStateFromError(): { failed: boolean } {
     return { failed: true }
   }
 
-  componentDidCatch(error: unknown): void {
+  override componentDidCatch(error: unknown): void {
     console.error('[webui] Renderer crashed', error instanceof Error ? error.name : 'UnknownError')
   }
 
-  render(): React.ReactNode {
+  override render(): React.ReactNode {
     return this.state.failed ? <CrashFallback /> : this.props.children
   }
 }

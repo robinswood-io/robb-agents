@@ -2,8 +2,8 @@ import type { SendMessageOptions } from '@craft-agent/shared/protocol';
 
 export interface InternalQueuedMessage {
   message: string;
-  options?: SendMessageOptions;
-  messageId?: string;
+  options?: SendMessageOptions | undefined;
+  messageId?: string | undefined;
 }
 
 export function selectInternalMessageCoalesceTarget<T extends InternalQueuedMessage>(

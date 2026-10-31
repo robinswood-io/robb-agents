@@ -6,8 +6,8 @@ interface HorizontalResizeHandleProps {
   /** Called during drag with the delta Y (positive = moving down) */
   onResize: (deltaY: number) => void
   /** Called when drag ends */
-  onResizeEnd?: () => void
-  className?: string
+  onResizeEnd?: (() => void) | undefined
+  className?: string | undefined
 }
 
 /**

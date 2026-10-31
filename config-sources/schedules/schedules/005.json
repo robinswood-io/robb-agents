@@ -1,0 +1,142 @@
+[
+  {
+    "schedule_id": "sched.traid-reliability-training",
+    "workflow_id": "rbw.traid-reliability-training",
+    "task_queue": "watchdog",
+    "cron": "0 9,14,18 * * 1-5",
+    "timezone": "Europe/Paris",
+    "enabled": true,
+    "payload": {
+      "legacy_id": "traid-reliability-training",
+      "name": "TRAID — sandbox reliability training (fail-closed)",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    }
+  },
+  {
+    "schedule_id": "sched.traid-paper-research-loop",
+    "workflow_id": "rbw.traid-paper-research-loop",
+    "task_queue": "watchdog",
+    "cron": "30 9,14,18 * * *",
+    "timezone": "Europe/Paris",
+    "enabled": true,
+    "payload": {
+      "legacy_id": "traid-paper-research-loop",
+      "name": "TRAID — causal regime mixture P41-P920 v109 (sandbox fail-closed)",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    }
+  },
+  {
+    "schedule_id": "sched.afnor-bookstore-retail-audit",
+    "workflow_id": "rbw.afnor-bookstore-retail-audit-day",
+    "task_queue": "campaigns",
+    "cron": "18 10,16 * * 1-5",
+    "timezone": "Europe/Paris",
+    "enabled": true,
+    "payload": {
+      "legacy_id": "afnor-bookstore-retail-audit",
+      "name": "AFNOR Bookstore Retail Audit - Day Cadence",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    }
+  },
+  {
+    "schedule_id": "sched.afnor-bookstore-candidate-verifier",
+    "workflow_id": "rbw.afnor-bookstore-candidate-verifier-day",
+    "task_queue": "campaigns",
+    "cron": "24 10,16 * * 1-5",
+    "timezone": "Europe/Paris",
+    "enabled": true,
+    "payload": {
+      "legacy_id": "afnor-bookstore-candidate-verifier",
+      "name": "AFNOR Bookstore Candidate Verifier - Day Cadence",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    }
+  },
+  {
+    "schedule_id": "sched.robinswood-pme-hdf-sellsy-crm-sync",
+    "workflow_id": "rbw.robinswood-pme-hdf-sellsy-crm-sync",
+    "task_queue": "campaigns",
+    "cron": "40 9,13,17 * * 1-5",
+    "timezone": "Europe/Paris",
+    "enabled": true,
+    "payload": {
+      "legacy_id": "robinswood-pme-hdf-sellsy-crm-sync",
+      "name": "Robinswood PME HDF — sync contacts/actions to Sellsy",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    }
+  },
+  {
+    "schedule_id": "sched.campaign-history-sellsy-company-sync",
+    "workflow_id": "rbw.campaign-history-sellsy-company-sync",
+    "task_queue": "campaigns",
+    "cron": "45 8 * * 1-5",
+    "timezone": "Europe/Paris",
+    "enabled": true,
+    "payload": {
+      "legacy_id": "campaign-history-sellsy-company-sync",
+      "name": "Campaign history — sync companies/contacts to Sellsy",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    }
+  },
+  {
+    "schedule_id": "sched.robinswood-media-authority-2026",
+    "workflow_id": "rbw.robinswood-media-authority-2026",
+    "task_queue": "campaigns",
+    "cron": "35 9 * * 1-5",
+    "timezone": "Europe/Paris",
+    "enabled": true,
+    "payload": {
+      "legacy_id": "robinswood-media-authority-2026",
+      "name": "Robinswood Media Authority 2026",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    }
+  },
+  {
+    "schedule_id": "sched.robinswood-media-authority-2026-replenisher",
+    "workflow_id": "rbw.robinswood-media-authority-2026-replenisher",
+    "task_queue": "campaigns",
+    "cron": "20 9 * * 1-5",
+    "timezone": "Europe/Paris",
+    "enabled": true,
+    "payload": {
+      "legacy_id": "robinswood-media-authority-2026-replenisher",
+      "name": "Robinswood Media Authority 2026 Replenisher",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    }
+  },
+  {
+    "schedule_id": "sched.robinswood-media-authority-2026-reply-scan",
+    "workflow_id": "rbw.robinswood-media-authority-2026-reply-scan",
+    "task_queue": "campaigns",
+    "cron": "20 12,16 * * 1-5",
+    "timezone": "Europe/Paris",
+    "enabled": true,
+    "payload": {
+      "legacy_id": "robinswood-media-authority-2026-reply-scan",
+      "name": "Robinswood Media Authority 2026 Reply/Bounce Scan",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    }
+  },
+  {
+    "schedule_id": "sched.robinswood-media-contact-enrichment-2026",
+    "workflow_id": "rbw.robinswood-media-contact-enrichment-2026",
+    "task_queue": "campaigns",
+    "cron": "15 9-18/2 * * 1-5",
+    "timezone": "Europe/Paris",
+    "enabled": true,
+    "payload": {
+      "legacy_id": "robinswood-media-contact-enrichment-2026",
+      "name": "Robinswood Media Contact Enrichment 2026",
+      "llm_connection": "openrouter",
+      "model": "nvidia/nemotron-3-super-120b-a12b:free"
+    }
+  }
+]

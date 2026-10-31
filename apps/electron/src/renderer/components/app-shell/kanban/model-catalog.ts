@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { getModelShortName } from '@config/models'
 import { getDefaultModelsForConnection, type LlmConnectionWithStatus } from '@config/llm-connections'
 import { getSelectableConnectionModels } from '../input/model-picker-helpers'
@@ -19,7 +20,7 @@ export function buildModelCatalog(connections: LlmConnectionWithStatus[]): {
   for (const conn of connections) {
     if (!conn.isAuthenticated) continue
     const rawModels = getSelectableConnectionModels(
-      { ...conn, models: conn.models?.length ? conn.models : undefined },
+      omitUndefined({ ...conn, models: conn.models?.length ? conn.models : undefined }),
       getDefaultModelsForConnection(conn.providerType, conn.piAuthProvider),
     )
     const models = rawModels.map(m => {

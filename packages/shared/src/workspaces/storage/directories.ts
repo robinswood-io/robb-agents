@@ -1,0 +1,271 @@
+/**
+ * Workspace Storage
+ *
+ * CRUD operations for workspaces.
+ * Workspaces can be stored anywhere on disk via rootPath.
+ * Default location: ~/.craft-agent/workspaces/
+ */
+import { existsSync, mkdirSync, readdirSync, rmSync } from "fs";
+import { join } from "path";
+import { randomUUID } from "crypto";
+import { getDefaultStatusConfig, saveStatusConfig, ensureDefaultIconFiles } from "../../statuses/storage.ts";
+import { getDefaultLabelConfig, saveLabelConfig } from "../../labels/storage.ts";
+import { loadConfigDefaults } from "../../config/storage.ts";
+import type { WorkspaceConfig, LoadedWorkspace, WorkspaceSummary } from "../types.ts";
+import { loadWorkspaceConfig, saveWorkspaceConfig } from './config.ts';
+import { DEFAULT_WORKSPACES_DIR, WORKSPACE_CONFIG_SCHEMA_VERSION, getWorkspaceSessionsPath, getWorkspaceSkillsPath, getWorkspaceSourcesPath } from './paths.ts';
+import { ensurePluginManifest } from './settings.ts';
+
+// ============================================================
+// Load Operations
+// ============================================================
+
+/**
+ * Count subdirectories in a path
+ */
+function countSubdirs(dirPath: string): number {
+  if (!existsSync(dirPath)) return 0;
+  try {
+    return readdirSync(dirPath, { withFileTypes: true }).filter((d) => d.isDirectory()).length;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * List subdirectory names in a path
+ */
+function listSubdirNames(dirPath: string): string[] {
+  if (!existsSync(dirPath)) return [];
+  try {
+    return readdirSync(dirPath, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Load workspace with summary info from a rootPath
+ * @param rootPath - Absolute path to workspace root folder
+ */
+export function loadWorkspace(rootPath: string): LoadedWorkspace | null {
+  const config = loadWorkspaceConfig(rootPath);
+  if (!config) return null;
+
+  // Ensure plugin manifest exists (migration for existing workspaces)
+  ensurePluginManifest(rootPath, config.name);
+
+  // Ensure skills directory exists (migration for existing workspaces)
+  const skillsPath = getWorkspaceSkillsPath(rootPath);
+  if (!existsSync(skillsPath)) {
+    mkdirSync(skillsPath, { recursive: true });
+  }
+
+  return {
+    config,
+    sourceSlugs: listSubdirNames(getWorkspaceSourcesPath(rootPath)),
+    sessionCount: countSubdirs(getWorkspaceSessionsPath(rootPath)),
+  };
+}
+
+/**
+ * Get workspace summary from a rootPath
+ * @param rootPath - Absolute path to workspace root folder
+ */
+export function getWorkspaceSummary(rootPath: string): WorkspaceSummary | null {
+  const config = loadWorkspaceConfig(rootPath);
+  if (!config) return null;
+
+  return {
+    slug: config.slug,
+    name: config.name,
+    sourceCount: countSubdirs(getWorkspaceSourcesPath(rootPath)),
+    sessionCount: countSubdirs(getWorkspaceSessionsPath(rootPath)),
+    createdAt: config.createdAt,
+    updatedAt: config.updatedAt,
+  };
+}
+
+// ============================================================
+// Create/Delete Operations
+// ============================================================
+
+/**
+ * Generate URL-safe slug from name
+ */
+export function generateSlug(name: string): string {
+  let slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .substring(0, 50);
+
+  if (!slug) {
+    slug = 'workspace';
+  }
+
+  return slug;
+}
+
+/**
+ * Generate a unique folder path for a workspace by appending a numeric suffix
+ * if the slug-based folder already exists.
+ * E.g., "my-workspace", "my-workspace-2", "my-workspace-3", ...
+ *
+ * @param name - Display name to derive the slug from
+ * @param baseDir - Parent directory where workspace folders live (e.g., ~/.craft-agent/workspaces/)
+ * @returns Full path to a unique, non-existing folder
+ */
+export function generateUniqueWorkspacePath(name: string, baseDir: string): string {
+  const slug = generateSlug(name);
+  let candidate = join(baseDir, slug);
+
+  if (!existsSync(candidate)) {
+    return candidate;
+  }
+
+  // Append numeric suffix until we find a non-existing path
+  let counter = 2;
+  while (existsSync(join(baseDir, `${slug}-${counter}`))) {
+    counter++;
+  }
+
+  return join(baseDir, `${slug}-${counter}`);
+}
+
+/**
+ * Create workspace folder structure at a given path
+ * @param rootPath - Absolute path where workspace folder will be created
+ * @param name - Display name for the workspace
+ * @param defaults - Optional default settings for new sessions
+ * @returns The created WorkspaceConfig
+ */
+export function createWorkspaceAtPath(
+  rootPath: string,
+  name: string,
+  defaults?: WorkspaceConfig['defaults']
+): WorkspaceConfig {
+  const now = Date.now();
+  const slug = generateSlug(name);
+
+  // Load global defaults from config-defaults.json
+  const globalDefaults = loadConfigDefaults();
+
+  // Merge global defaults with provided defaults
+  // AI settings (model, thinkingLevel, defaultLlmConnection) are left undefined
+  // so they fall back to app-level defaults
+  const workspaceDefaults: WorkspaceConfig['defaults'] = {
+    
+    
+    // defaultLlmConnection: undefined - falls back to app default
+    permissionMode: globalDefaults.workspaceDefaults.permissionMode,
+    externalActionPolicy: globalDefaults.workspaceDefaults.externalActionPolicy,
+    cyclablePermissionModes: globalDefaults.workspaceDefaults.cyclablePermissionModes,
+    enabledSourceSlugs: [],
+    
+    ...defaults, // User-provided defaults override global defaults
+  };
+
+  const config: WorkspaceConfig = {
+    schemaVersion: WORKSPACE_CONFIG_SCHEMA_VERSION,
+    id: `ws_${randomUUID().slice(0, 8)}`,
+    name,
+    slug,
+    ...(workspaceDefaults !== undefined ? { defaults: workspaceDefaults } : {}),
+    localMcpServers: globalDefaults.workspaceDefaults.localMcpServers,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  // Create workspace directory structure
+  mkdirSync(rootPath, { recursive: true });
+  mkdirSync(getWorkspaceSourcesPath(rootPath), { recursive: true });
+  mkdirSync(getWorkspaceSessionsPath(rootPath), { recursive: true });
+  mkdirSync(getWorkspaceSkillsPath(rootPath), { recursive: true });
+
+  // Save config
+  saveWorkspaceConfig(rootPath, config);
+
+  // Initialize status configuration with defaults
+  saveStatusConfig(rootPath, getDefaultStatusConfig());
+  ensureDefaultIconFiles(rootPath);
+
+  // Initialize label configuration with defaults (two nested groups + valued labels)
+  saveLabelConfig(rootPath, getDefaultLabelConfig());
+
+  // Initialize plugin manifest for SDK integration (enables skills, commands, agents)
+  ensurePluginManifest(rootPath, name);
+
+  return config;
+}
+
+/**
+ * Delete a workspace folder and all its contents
+ * @param rootPath - Absolute path to workspace root folder
+ */
+export function deleteWorkspaceFolder(rootPath: string): boolean {
+  if (!existsSync(rootPath)) return false;
+
+  try {
+    rmSync(rootPath, { recursive: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if a valid workspace exists at a path
+ * @param rootPath - Absolute path to check
+ */
+export function isValidWorkspace(rootPath: string): boolean {
+  return existsSync(join(rootPath, 'config.json'));
+}
+
+/**
+ * Rename a workspace (updates config.json in the workspace folder)
+ * @param rootPath - Absolute path to workspace root folder
+ * @param newName - New display name
+ */
+export function renameWorkspaceFolder(rootPath: string, newName: string): boolean {
+  const config = loadWorkspaceConfig(rootPath);
+  if (!config) return false;
+
+  config.name = newName.trim();
+  saveWorkspaceConfig(rootPath, config);
+  return true;
+}
+
+// ============================================================
+// Auto-Discovery (for default workspace location)
+// ============================================================
+
+/**
+ * Discover workspace folders in the default location that have valid config.json
+ * Returns paths to valid workspaces found in ~/.craft-agent/workspaces/
+ */
+export function discoverWorkspacesInDefaultLocation(): string[] {
+  const discovered: string[] = [];
+
+  if (!existsSync(DEFAULT_WORKSPACES_DIR)) {
+    return discovered;
+  }
+
+  try {
+    const entries = readdirSync(DEFAULT_WORKSPACES_DIR, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+
+      const rootPath = join(DEFAULT_WORKSPACES_DIR, entry.name);
+      if (isValidWorkspace(rootPath)) {
+        discovered.push(rootPath);
+      }
+    }
+  } catch {
+    // Ignore errors scanning directory
+  }
+
+  return discovered;
+}

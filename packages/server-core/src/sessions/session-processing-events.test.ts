@@ -1,15 +1,18 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { describe, expect, it } from 'bun:test'
-import { SessionManager } from './SessionManager'
+import { SessionManager, createManagedSession } from './SessionManager'
 
 describe('authoritative processing state publication', () => {
   it('publishes both transitions so a resumed agent exposes Stop before any new message', () => {
-    const events: Array<{ event: any; workspaceId: string }> = []
-    const managed = { id: 'session', isProcessing: false, workspace: { id: 'workspace' } }
-    const runtime = { sendEvent: (event: any, workspaceId: string) => events.push({ event, workspaceId }) }
-    const setProcessing = (SessionManager.prototype as any).setProcessing
-    setProcessing.call(runtime, managed, true)
-    setProcessing.call(runtime, managed, true)
-    setProcessing.call(runtime, managed, false)
+    const events: Array<{ event: Parameters<SessionManager['sendEvent']>[0]; workspaceId?: string }> = []
+    const managed = createManagedSession({ id: 'session' }, {
+      id: 'workspace', slug: 'workspace', name: 'Fixture', rootPath: '/tmp/processing-events', createdAt: 1,
+    })
+    const runtime = withSessionOperationsForTest(new SessionManager())
+    runtime['sendEvent'] = (event, workspaceId) => { events.push({ event, ...(workspaceId !== undefined ? { workspaceId: workspaceId } : {}) }) }
+    runtime['setProcessing'](managed, true)
+    runtime['setProcessing'](managed, true)
+    runtime['setProcessing'](managed, false)
     expect(events).toEqual([
       { event: { type: 'session_metadata_changed', sessionId: 'session', changes: { isProcessing: true } }, workspaceId: 'workspace' },
       { event: { type: 'session_metadata_changed', sessionId: 'session', changes: { isProcessing: false } }, workspaceId: 'workspace' },

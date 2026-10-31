@@ -1,0 +1,76 @@
+{
+  "status": "testé dans le candidat local ; découpage du point d’entrée en cours",
+  "scope": "Contrats du serveur Pi et outils hétérogènes du SDK actuel",
+  "explicitAnyRemoved": 21,
+  "internalContracts": 24,
+  "contractsFileLines": 195,
+  "sdkAdaptation": "defineTool public, fonction identité vérifiée dans le SDK installé ; schémas JSON et objets d’outils conservés",
+  "proof": "JavaScript comparé après normalisation des seuls appels identité du SDK et de l’alias du diagnostic ; 89 déclarations de l’extraction conservées",
+  "checks": {
+    "pi-contracts-all-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 20.95,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-contracts-all-types.log"
+    },
+    "pi-contracts-all-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 142.64,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-contracts-all-tests.log"
+    },
+    "pi-contracts-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 20.35,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-contracts-build.log"
+    },
+    "pi-contracts-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/pi-agent-server/src/index.ts",
+        "packages/pi-agent-server/src/index/contracts.ts",
+        "packages/pi-agent-server/src/tool-loop-feedback.ts",
+        "--format",
+        "json",
+        "--output-file",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-contracts-lint.json",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 1,
+      "seconds": 1.38,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-contracts-lint.log"
+    }
+  },
+  "knownLintIssue": [
+    {
+      "file": "packages/pi-agent-server/src/index.ts",
+      "rule": "max-lines",
+      "message": "File has too many lines (1775). Maximum allowed is 500."
+    }
+  ],
+  "remaining": {
+    "oversizedCodeFiles": 199,
+    "explicitAny": 565
+  },
+  "installedApplication": "Inchangée"
+}

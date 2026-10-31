@@ -32,9 +32,9 @@ describe('YOLO no-human execution policy', () => {
           permissionMode: 'ask', externalActionPolicy: 'allow-in-execute',
           workspaceRootPath: '/tmp/yolo-fixture', workspaceId: 'fixture', plansFolderPath: '/tmp/plans',
           activeSourceSlugs: [], allSourceSlugs: [], hasSourceActivation: false,
-          permissionManager: {} as never, prerequisiteManager: undefined,
+          permissionManager: {} as never, 
         });
-        expect(result).toMatchObject({ type: 'block', reason: expect.stringContaining('YOLO_HUMAN_HANDOFF_DISABLED') });
+        expect(result).toMatchObject({ type: 'block', reason: (expect.stringContaining('YOLO_HUMAN_HANDOFF_DISABLED') as unknown) });
       });
     }
   }
@@ -57,8 +57,8 @@ describe('YOLO no-human execution policy', () => {
       workspaceRootPath: '/tmp/yolo-fixture', workspaceId: 'fixture', activeSourceSlugs: [], allSourceSlugs: [],
       hasSourceActivation: false, permissionManager: { isCommandWhitelisted: () => false,
         isDangerousCommand: () => false, getBaseCommand: () => 'touch', extractDomainFromNetworkCommand: () => null,
-        isDomainWhitelisted: () => false } as never, prerequisiteManager: undefined });
-    expect(result).toMatchObject({ type: 'block', reason: expect.stringContaining('No tool was executed') });
+        isDomainWhitelisted: () => false } as never,  });
+    expect(result).toMatchObject({ type: 'block', reason: (expect.stringContaining('No tool was executed') as unknown) });
     expect(yoloHumanHandoffBlock('request_user_input', 'safe', 'confirm', false)).toContain('YOLO_HUMAN_HANDOFF_DISABLED');
   });
 
@@ -72,8 +72,8 @@ describe('YOLO no-human execution policy', () => {
       objectiveMutationAuthorized: true, objectiveSensitiveActionAuthorized: true,
       workspaceRootPath: '/tmp/yolo-fixture', workspaceId: 'fixture',
       activeSourceSlugs: ['google-contacts'], allSourceSlugs: ['google-contacts'],
-      hasSourceActivation: false, permissionManager: {} as never, prerequisiteManager: undefined });
-    expect(result).toMatchObject({ type: 'block', reason: expect.stringContaining('No permission request was opened') });
+      hasSourceActivation: false, permissionManager: {} as never,  });
+    expect(result).toMatchObject({ type: 'block', reason: (expect.stringContaining('No permission request was opened') as unknown) });
   });
 
   it('updates volatile policy immediately without consuming mode state twice or rebuilding the stable prefix', () => {

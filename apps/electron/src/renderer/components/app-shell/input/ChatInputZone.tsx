@@ -10,22 +10,22 @@ import { InputContainer } from './InputContainer'
 import { InputErrorBoundary } from './InputErrorBoundary'
 
 interface ChatInputZoneProps {
-  compactMode?: boolean
-  showOptionBadges?: boolean
-  permissionMode?: PermissionMode
-  onPermissionModeChange?: (mode: PermissionMode) => void
-  tasks?: BackgroundTask[]
+  compactMode?: boolean | undefined
+  showOptionBadges?: boolean | undefined
+  permissionMode?: PermissionMode | undefined
+  onPermissionModeChange?: ((mode: PermissionMode) => void) | undefined
+  tasks?: BackgroundTask[] | undefined
   sessionId: string
-  sessionFolderPath?: string
-  onKillTask?: (taskId: string) => void
-  onInsertMessage?: (text: string) => void
-  sessionLabels?: string[]
-  labels?: LabelConfig[]
-  onLabelsChange?: (labels: string[]) => void
-  sessionStatuses?: SessionStatus[]
-  currentSessionStatus?: string
-  onSessionStatusChange?: (stateId: string) => void
-  className?: string
+  sessionFolderPath?: string | undefined
+  onKillTask?: ((taskId: string) => void) | undefined
+  onInsertMessage?: ((text: string) => void) | undefined
+  sessionLabels?: string[] | undefined
+  labels?: LabelConfig[] | undefined
+  onLabelsChange?: ((labels: string[]) => void) | undefined
+  sessionStatuses?: SessionStatus[] | undefined
+  currentSessionStatus?: string | undefined
+  onSessionStatusChange?: ((stateId: string) => void) | undefined
+  className?: string | undefined
   inputProps: React.ComponentProps<typeof InputContainer>
 }
 

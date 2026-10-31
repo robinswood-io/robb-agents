@@ -4,7 +4,7 @@ import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'path'
-import { resolveReactPdfWorker } from '../../scripts/pdf-worker-resolution'
+import { resolveReactPdfWorker } from '../../scripts/pdf-worker-resolution.ts'
 
 const configDir = import.meta.dirname
 const webBaselineTargets = ['chrome111', 'edge111', 'firefox114', 'safari16.4']
@@ -114,8 +114,8 @@ export default defineConfig({
     // Auto-detects TLS: if the server has CRAFT_RPC_TLS_KEY/CERT set, we proxy
     // over https/wss with secure:false to accept the self-signed dev cert.
     proxy: (() => {
-      const port = process.env.CRAFT_RPC_PORT ?? '9100'
-      const useTls = Boolean(process.env.CRAFT_RPC_TLS_KEY || process.env.CRAFT_RPC_TLS_CERT)
+      const port = process.env["CRAFT_RPC_PORT"] ?? '9100'
+      const useTls = Boolean(process.env["CRAFT_RPC_TLS_KEY"] || process.env["CRAFT_RPC_TLS_CERT"])
       const httpProto = useTls ? 'https' : 'http'
       const wsProto = useTls ? 'wss' : 'ws'
       const httpTarget = `${httpProto}://127.0.0.1:${port}`

@@ -33,32 +33,32 @@ export interface EntityIconProps {
   /** Resolved icon from useEntityIcon hook */
   icon: ResolvedEntityIcon
   /** Size variant (default: 'md') */
-  size?: IconSize
+  size?: IconSize | undefined
   /** Icon component rendered when icon.kind === 'fallback' (Lucide icon or custom SVG) */
   fallbackIcon: IconComponent
   /** Escape hatch: fully custom fallback ReactNode (overrides fallbackIcon if provided) */
-  fallback?: React.ReactNode
+  fallback?: React.ReactNode | undefined
   /** Alt text for accessibility */
-  alt?: string
+  alt?: string | undefined
   /** Additional className on the outer container */
-  className?: string
+  className?: string | undefined
   /**
    * Override container size class.
    * Use 'h-full w-full' for fluid sizing within a parent container.
    * If provided, replaces the default ICON_SIZE_CLASSES for the given size.
    */
-  containerClassName?: string
+  containerClassName?: string | undefined
   /**
    * When true, renders emoji without container chrome (no bg, ring, or rounded).
    * Used for inline emoji icons in the sidebar where the container is unnecessary.
    */
-  chromeless?: boolean
+  chromeless?: boolean | undefined
   /**
    * When true, renders the icon content directly without any container div.
    * Used in filter menus where the parent provides all necessary styling.
    * Color inheritance still works via parent element's color style.
    */
-  bare?: boolean
+  bare?: boolean | undefined
 }
 
 // ============================================================================

@@ -1,0 +1,60 @@
+{
+  "status": "passed",
+  "nativeDeclarationBodiesPreserved": true,
+  "reviewedStableDependencyAdditions": {
+    "handleOpenFile": [
+      "t"
+    ],
+    "handleShare": [
+      "t"
+    ],
+    "handleCopyLink": [
+      "t"
+    ],
+    "handleUpdateShare": [
+      "t"
+    ],
+    "handleRevokeShare": [
+      "t"
+    ],
+    "shareButton": [
+      "t"
+    ],
+    "compactInfoButton": [
+      "t"
+    ]
+  },
+  "reviewedDependencyRemovals": {
+    "effectiveModel": [
+      "session?.id"
+    ]
+  },
+  "nativeMainJSXAndInlineCallbacksPreserved": true,
+  "nativeRootAndActionHooksReinlinedExactly": true,
+  "viewAddsNoStateOrEffects": true,
+  "nativeValuesPassedDirectly": true,
+  "nativeImportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/pages/ChatPage.tsx",
+      "lines": 392,
+      "sha256": "e7235c3ab43f326edd7194b7bfff7e8869013a9b200151f4f546b43e34afa703"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/chat-page-content.tsx",
+      "lines": 191,
+      "sha256": "fc0402756b410b0889295cc9ede58f6f31ccd7024e50f51ec1254a1975d7ba37"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/use-chat-session-state.ts",
+      "lines": 323,
+      "sha256": "cf6735d0cbb46ec26f0898ab20f1647ec33817fd4225e4bd01a88ac4d506e55f"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/use-chat-session-header.tsx",
+      "lines": 352,
+      "sha256": "dbbb8af284eea1549eefca86734e6de3a51d07bb2859aaefc267c63e53db8a81"
+    }
+  ]
+}

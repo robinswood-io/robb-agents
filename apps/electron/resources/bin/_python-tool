@@ -4,7 +4,7 @@ set -eu
 tool_script=${1:?missing bundled Python tool script name}
 shift
 
-bin_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+bin_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 scripts_dir=${CRAFT_SCRIPTS:-"$bin_dir/../scripts"}
 
 if [ -n "${CRAFT_UV:-}" ]; then
@@ -43,4 +43,4 @@ if [ ! -f "$scripts_dir/$tool_script" ]; then
   exit 127
 fi
 
-exec "$uv_bin" run --python 3.12 "$scripts_dir/$tool_script" "$@"
+exec "$uv_bin" run --python 3.15 "$scripts_dir/$tool_script" "$@"

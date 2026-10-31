@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 /**
  * Per-binding allow-list editor.
  *
@@ -176,7 +177,7 @@ function ModeRow({
 function buildTriggerLabel(
   access: BindingAccess,
   workspaceOwnersCount: number,
-  t: (key: string, opts?: Record<string, unknown>) => string,
+  t: TFunction,
 ): string {
   if (access.mode === 'inherit') {
     return workspaceOwnersCount === 0

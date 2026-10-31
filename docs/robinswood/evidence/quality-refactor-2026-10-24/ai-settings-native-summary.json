@@ -1,0 +1,133 @@
+{
+  "status": "tested; local integration pending remaining quality work",
+  "scope": "ai-settings-native",
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/pages/settings/AiSettingsPage.tsx",
+      "lines": 441,
+      "sha256": "00cd59cdd9e5fbf78cb8da3caf4256b3fa554fc14c11a6d7e9dbf36ea0c07e77"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/ai-connection-settings.tsx",
+      "lines": 332,
+      "sha256": "3661d3be7394c405d6b3d78507f4e6be4783f002c5d957951cb449653bcf41a9"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/ai-workspace-overrides.tsx",
+      "lines": 230,
+      "sha256": "a0f3a7e5f89e8eef7751dddc160d43c788839f43eb88c17739dfcb6262cc0812"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/ai-settings-content.tsx",
+      "lines": 363,
+      "sha256": "03e919349d8991e7bbad0cc300639dccc23cbe85c929ae0fc70ccf5c677c5733"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/use-ai-connection-actions.ts",
+      "lines": 209,
+      "sha256": "95964ffbc689dd932be37d02c870089016f19abb96d01e6778272fec54abeca7"
+    }
+  ],
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/pages/settings/AiSettingsPage.tsx",
+        "apps/electron/src/renderer/pages/settings/ai-connection-settings.tsx",
+        "apps/electron/src/renderer/pages/settings/ai-workspace-overrides.tsx",
+        "apps/electron/src/renderer/pages/settings/ai-settings-content.tsx",
+        "apps/electron/src/renderer/pages/settings/use-ai-connection-actions.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 3.45,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/ai-settings-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 9.66,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/ai-settings-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 33.66,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/ai-settings-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/renderer/hooks/__tests__/useOnboarding.test.ts",
+        "packages/shared/src/config/__tests__/storage-update-llm-connection.test.ts",
+        "apps/electron/src/main/__tests__/connection-setup-updateOnly.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 5.23,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/ai-settings-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 14.41,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/ai-settings-native-build.log"
+    }
+  },
+  "targetedTests": {
+    "pass": 31,
+    "fail": 0
+  },
+  "browser": {
+    "before": 7,
+    "after": 7,
+    "nativeCallbackPayloadsEqual": true,
+    "errors": 0
+  },
+  "sourceGate": {
+    "max-lines": 18
+  },
+  "globalLint": {
+    "files": 3651,
+    "errors": 18,
+    "warnings": 93,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 18,
+      "react-hooks/exhaustive-deps": 72,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "limits": [
+    "Other historical files and lint findings remain",
+    "No installation or final real-model mission claim",
+    "Global suite rerun prohibited by PreToolUse; last full suite f521166: 10759 passed"
+  ]
+}

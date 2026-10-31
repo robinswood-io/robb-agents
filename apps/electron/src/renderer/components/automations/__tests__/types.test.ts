@@ -1,3 +1,4 @@
+import { requiredTestValue } from '@craft-agent/shared/testing/fixture-values';
 import { describe, it, expect } from 'bun:test'
 import { parseAutomationsConfig } from '../types'
 
@@ -36,11 +37,11 @@ describe('parseAutomationsConfig', () => {
     }
     const items = parseAutomationsConfig(config)
     expect(items).toHaveLength(1)
-    expect(items[0].event).toBe('SchedulerTick')
-    expect(items[0].matcherIndex).toBe(0)
-    expect(items[0].cron).toBe('0 9 * * 1-5')
-    expect(items[0].actions).toHaveLength(1)
-    expect(items[0].actions[0].type).toBe('prompt')
+    expect(requiredTestValue(items[0]).event).toBe('SchedulerTick')
+    expect(requiredTestValue(items[0]).matcherIndex).toBe(0)
+    expect(requiredTestValue(items[0]).cron).toBe('0 9 * * 1-5')
+    expect(requiredTestValue(items[0]).actions).toHaveLength(1)
+    expect(requiredTestValue(requiredTestValue(items[0]).actions[0]).type).toBe('prompt')
   })
 
   it('parses multiple events with multiple matchers', () => {
@@ -58,12 +59,12 @@ describe('parseAutomationsConfig', () => {
     }
     const items = parseAutomationsConfig(config)
     expect(items).toHaveLength(3)
-    expect(items[0].event).toBe('SchedulerTick')
-    expect(items[0].matcherIndex).toBe(0)
-    expect(items[1].event).toBe('SchedulerTick')
-    expect(items[1].matcherIndex).toBe(1)
-    expect(items[2].event).toBe('LabelAdd')
-    expect(items[2].matcherIndex).toBe(0)
+    expect(requiredTestValue(items[0]).event).toBe('SchedulerTick')
+    expect(requiredTestValue(items[0]).matcherIndex).toBe(0)
+    expect(requiredTestValue(items[1]).event).toBe('SchedulerTick')
+    expect(requiredTestValue(items[1]).matcherIndex).toBe(1)
+    expect(requiredTestValue(items[2]).event).toBe('LabelAdd')
+    expect(requiredTestValue(items[2]).matcherIndex).toBe(0)
   })
 
   it('derives name from name field when present', () => {
@@ -77,7 +78,7 @@ describe('parseAutomationsConfig', () => {
       },
     }
     const items = parseAutomationsConfig(config)
-    expect(items[0].name).toBe('Morning Backup')
+    expect(requiredTestValue(items[0]).name).toBe('Morning Backup')
   })
 
   it('derives name from @mention in prompt', () => {
@@ -90,7 +91,7 @@ describe('parseAutomationsConfig', () => {
       },
     }
     const items = parseAutomationsConfig(config)
-    expect(items[0].name).toBe('daily-standup prompt')
+    expect(requiredTestValue(items[0]).name).toBe('daily-standup prompt')
   })
 
   it('derives name from prompt when no name field', () => {
@@ -103,7 +104,7 @@ describe('parseAutomationsConfig', () => {
       },
     }
     const items = parseAutomationsConfig(config)
-    expect(items[0].name).toBe('echo "hello world"')
+    expect(requiredTestValue(items[0]).name).toBe('echo "hello world"')
   })
 
   it('truncates long names to 40 chars with ellipsis', () => {
@@ -117,7 +118,7 @@ describe('parseAutomationsConfig', () => {
       },
     }
     const items = parseAutomationsConfig(config)
-    expect(items[0].name).toBe('a'.repeat(40) + '...')
+    expect(requiredTestValue(items[0]).name).toBe('a'.repeat(40) + '...')
   })
 
   it('sets enabled: true when field is missing (default)', () => {
@@ -130,7 +131,7 @@ describe('parseAutomationsConfig', () => {
       },
     }
     const items = parseAutomationsConfig(config)
-    expect(items[0].enabled).toBe(true)
+    expect(requiredTestValue(items[0]).enabled).toBe(true)
   })
 
   it('sets enabled: false when explicitly set', () => {
@@ -144,7 +145,7 @@ describe('parseAutomationsConfig', () => {
       },
     }
     const items = parseAutomationsConfig(config)
-    expect(items[0].enabled).toBe(false)
+    expect(requiredTestValue(items[0]).enabled).toBe(false)
   })
 
   it('skips matchers with empty actions array', () => {
@@ -159,7 +160,7 @@ describe('parseAutomationsConfig', () => {
     }
     const items = parseAutomationsConfig(config)
     expect(items).toHaveLength(1)
-    expect(items[0].name).toBe('valid')
+    expect(requiredTestValue(items[0]).name).toBe('valid')
   })
 
   it('generates correct matcherIndex per event', () => {
@@ -174,9 +175,9 @@ describe('parseAutomationsConfig', () => {
       },
     }
     const items = parseAutomationsConfig(config)
-    expect(items[0].matcherIndex).toBe(0)
-    expect(items[1].matcherIndex).toBe(1)
-    expect(items[2].matcherIndex).toBe(2)
+    expect(requiredTestValue(items[0]).matcherIndex).toBe(0)
+    expect(requiredTestValue(items[1]).matcherIndex).toBe(1)
+    expect(requiredTestValue(items[2]).matcherIndex).toBe(2)
   })
 
   it('generates unique IDs across events', () => {
@@ -206,8 +207,8 @@ describe('parseAutomationsConfig', () => {
       },
     }
     const items = parseAutomationsConfig(config)
-    expect(items[0].matcher).toBe('urgent')
-    expect(items[0].permissionMode).toBe('ask')
-    expect(items[0].labels).toEqual(['important'])
+    expect(requiredTestValue(items[0]).matcher).toBe('urgent')
+    expect(requiredTestValue(items[0]).permissionMode).toBe('ask')
+    expect(requiredTestValue(items[0]).labels).toEqual(['important'])
   })
 })

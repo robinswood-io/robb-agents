@@ -13,17 +13,17 @@ export interface SettingsRowProps {
   /** Row label (can be string or JSX for custom rendering) */
   label: React.ReactNode
   /** Optional description below label */
-  description?: string
+  description?: string | undefined
   /** Content on the right side */
-  children?: React.ReactNode
+  children?: React.ReactNode | undefined
   /** Click handler for the entire row */
-  onClick?: () => void
+  onClick?: (() => void) | undefined
   /** Optional action button (e.g., "Change" button) */
-  action?: React.ReactNode
+  action?: React.ReactNode | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
   /** Whether the row is inside a card (affects padding) */
-  inCard?: boolean
+  inCard?: boolean | undefined
 }
 
 /**
@@ -90,8 +90,8 @@ export function SettingsRowLabel({
   className,
 }: {
   label: string
-  description?: string
-  className?: string
+  description?: string | undefined
+  className?: string | undefined
 }) {
   return (
     <div className={cn(settingsUI.labelGroup, className)}>

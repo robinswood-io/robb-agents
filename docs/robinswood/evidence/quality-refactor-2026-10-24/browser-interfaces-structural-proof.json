@@ -1,0 +1,83 @@
+{
+  "status": "passed",
+  "nativeMockDeclarations": 25,
+  "nativeMockExportsAndSingleStatePreserved": true,
+  "mockInstallationCallsPreserved": true,
+  "api": {
+    "members": 53,
+    "updatedNativeContracts": [
+      "watchSessionFiles",
+      "unwatchSessionFiles",
+      "installUpdate",
+      "checkForUpdates",
+      "readPreferences",
+      "writePreferences"
+    ]
+  },
+  "typeOnlyRuntimeProof": [
+    "Node browser shims",
+    "custom CSS property",
+    "native React dynamic component type"
+  ],
+  "explicitAnyRemoved": 14,
+  "functionalUiCorrections": [
+    "Existing NavigationProvider and ModalProvider supplied by the existing playground shell",
+    "Automation switch separated from the expansion button",
+    "Existing application icon referenced by the playground",
+    "YAML preview preserves significant indentation"
+  ],
+  "noNewWorkflowOrRuntimeState": true,
+  "maximumFileLines": 482,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/playground/mock-utils.ts",
+      "lines": 204,
+      "sha256": "8a569d3b9b45d2488b80f60cbec996ffa9684a90d062005b8107b321e22ac196"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/mock-utils/messaging.ts",
+      "lines": 205,
+      "sha256": "555e19c2ae5f22f6d75226f262388ee4955f0797cdac178b37c39b5db6a78822"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/mock-utils/electron-api.ts",
+      "lines": 482,
+      "sha256": "c293ae40634e089ba84735b1db82d245d957f3cf96d5a437baf9a7b3a5eb142d"
+    },
+    {
+      "file": "apps/webui/src/shims/node-builtins.ts",
+      "lines": 140,
+      "sha256": "0ab292d1816c4fb88b0a2412a74575f63fd0e613e8b6e2f116da121daf9fe2e3"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/custom-shadows.tsx",
+      "lines": 299,
+      "sha256": "49b696051680fd5049b7cd6656cd8657a4f5cd27ad5eb3eb7441c02c125ad6a4"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/types.ts",
+      "lines": 47,
+      "sha256": "cf4d7c67592ab09f326132227c16ac9cbfa05ecca1cb0241f1aa695fccf365db"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/PlaygroundAppShellProvider.tsx",
+      "lines": 97,
+      "sha256": "81ee5467822682012a8d8d9912258b01c00c44b7af3a0a6f3cccac44530d7853"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/automations/AutomationCard.tsx",
+      "lines": 123,
+      "sha256": "76590a55bdd775103b19837dd08f167334ec6775e9ea6b677beafa878f9d3059"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground.html",
+      "lines": 18,
+      "sha256": "c4a6a20a2ca73b45ef1997e71c771448af6033ba059fca73dc5a5e1344476f21"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/task-editor/preview.tsx",
+      "lines": 306,
+      "sha256": "a354917c27f0bdb43cbfdadf159fb5cadcbd0ac07ad97fde841019cb0e852a29"
+    }
+  ]
+}

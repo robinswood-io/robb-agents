@@ -1,0 +1,186 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Décomposition et typage des tests natifs d’import/export de ressources",
+  "changes": [
+    "La suite de 1 808 lignes est répartie en cinq fichiers de scénarios et une fixture de 103 lignes. Les contextes lexicaux, hooks, préparations et corps des 70 déclarations de tests sont conservés.",
+    "Quatre any remplacés par les contrats natifs WebhookAction, AutomationMatcher et ResourceBundle. Le cas volontairement invalide conserve sa valeur au passage vers le validateur.",
+    "Les 72 tests exécutés et leurs 229 assertions restent identiques avant et après. Aucun état mutable de fixture ajouté ni dépendance runtime nouvelle."
+  ],
+  "files": [
+    {
+      "file": "packages/shared/src/resources/__tests__/resource-bundle-accepts-a-valid-bundle.test.ts",
+      "lines": 430,
+      "sha256": "3f78eed1dedfeb445230042b34bcb153d8a76fcbdaa35537a050b7747bdbc57f"
+    },
+    {
+      "file": "packages/shared/src/resources/__tests__/resource-bundle-imports-skills-with-auxiliary-files.test.ts",
+      "lines": 425,
+      "sha256": "256ae16e2229750761bbcee9bde366b720f92bdf0a24fde80444763dc904fec5"
+    },
+    {
+      "file": "packages/shared/src/resources/__tests__/resource-bundle-preserves-source-and-skill-content-through-round-trip.test.ts",
+      "lines": 86,
+      "sha256": "e14ac95066bf5318b8d0262254b79ab9f607a516ec98b8ae032ce359dbc55650"
+    },
+    {
+      "file": "packages/shared/src/resources/__tests__/resource-bundle-replaces-a-source-only-after-validatestagedsource-authorizes-it.test.ts",
+      "lines": 433,
+      "sha256": "1406ba7ce6bfe7fb9be5d07cf2db16859d42603db6235daef2477cb1d1aa360b"
+    },
+    {
+      "file": "packages/shared/src/resources/__tests__/resource-bundle.test.ts",
+      "lines": 424,
+      "sha256": "d4635f32453f0b4995674b92ce7b1c572d8f8f3436f0d2d9aa54119180b0ff94"
+    },
+    {
+      "file": "packages/shared/src/resources/__tests__/testing/resource-bundle-fixture.ts",
+      "lines": 102,
+      "sha256": "8dff4d5fea3c93afa345917bf2ac7977daaf9412f4d86cc8bc3fe40a51be2598"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/shared/src/resources/__tests__/resource-bundle.test.ts",
+        "packages/shared/src/resources/__tests__/resource-bundle-accepts-a-valid-bundle.test.ts",
+        "packages/shared/src/resources/__tests__/resource-bundle-imports-skills-with-auxiliary-files.test.ts",
+        "packages/shared/src/resources/__tests__/resource-bundle-replaces-a-source-only-after-validatestagedsource-authorizes-it.test.ts",
+        "packages/shared/src/resources/__tests__/resource-bundle-preserves-source-and-skill-content-through-round-trip.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.36,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/resource-bundle-scenario-modules-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 15.22,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/resource-bundle-scenario-modules-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 9.04,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/resource-bundle-scenario-modules-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/run-owned-files-eslint.py",
+        "resource-bundle-scenario-modules"
+      ],
+      "exitCode": 0,
+      "seconds": 1.53,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/resource-bundle-scenario-modules-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 138.04,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/resource-bundle-scenario-modules-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "fixtureRuntimeImports": [
+      "fs",
+      "path"
+    ],
+    "packing": "Contiguous native cases with each original nested lexical scope retained once per file",
+    "source": "packages/shared/src/resources/__tests__/resource-bundle.test.ts",
+    "typing": {
+      "status": "passed",
+      "file": "packages/shared/src/resources/__tests__/resource-bundle.test.ts",
+      "sourceHash": "18e8f4066c406d358f59584ee95d41350d994a5b79b4128947d14364a6015ff8",
+      "typedSourceHash": "dd8a25d4ea4655b1e296defccc65e26d9d0d8d37a6f69af1d69b5c06462603ee",
+      "runtimeJavaScriptIdentical": true,
+      "removedExplicitAny": 4,
+      "negativeFixture": "Intentionally invalid wire bundle asserted only at the validation boundary; value unchanged"
+    },
+    "testDeclarations": 70,
+    "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+    "nestedSuiteIdentityPreserved": true,
+    "nativeSetupAndBeforeEachRetainedPerFile": true,
+    "sharedDeclarations": [
+      "createTestWorkspace",
+      "createTestSource",
+      "createTestSkill",
+      "makeBundleFile",
+      "createTestAutomations",
+      "makeAutomationEntry",
+      "noopDeps"
+    ],
+    "sharedMutableStateAdded": false,
+    "runtimeImportCycles": 0,
+    "maximumFileLines": 434,
+    "currentSourceHashes": {
+      "packages/shared/src/resources/__tests__/resource-bundle.test.ts": "d4635f32453f0b4995674b92ce7b1c572d8f8f3436f0d2d9aa54119180b0ff94",
+      "packages/shared/src/resources/__tests__/resource-bundle-accepts-a-valid-bundle.test.ts": "3f78eed1dedfeb445230042b34bcb153d8a76fcbdaa35537a050b7747bdbc57f",
+      "packages/shared/src/resources/__tests__/resource-bundle-imports-skills-with-auxiliary-files.test.ts": "256ae16e2229750761bbcee9bde366b720f92bdf0a24fde80444763dc904fec5",
+      "packages/shared/src/resources/__tests__/resource-bundle-replaces-a-source-only-after-validatestagedsource-authorizes-it.test.ts": "1406ba7ce6bfe7fb9be5d07cf2db16859d42603db6235daef2477cb1d1aa360b",
+      "packages/shared/src/resources/__tests__/resource-bundle-preserves-source-and-skill-content-through-round-trip.test.ts": "e14ac95066bf5318b8d0262254b79ab9f607a516ec98b8ae032ce359dbc55650",
+      "packages/shared/src/resources/__tests__/testing/resource-bundle-fixture.ts": "8dff4d5fea3c93afa345917bf2ac7977daaf9412f4d86cc8bc3fe40a51be2598"
+    }
+  },
+  "fullTestSummary": {
+    "pass": 10747,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "resource-bundle-scenario-modules-targeted": {
+      "pass": 72,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": {
+    "targetedPass": 72,
+    "targetedExpectCalls": 229
+  },
+  "sourceGate": {
+    "max-lines": 43,
+    "no-explicit-any": 108
+  },
+  "globalLint": {
+    "files": 3604,
+    "errors": 135,
+    "warnings": 100,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 103,
+      "max-lines": 32,
+      "react-hooks/exhaustive-deps": 79,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "43 fichiers trop longs et 108 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T04:50:07.537418+00:00"
+}

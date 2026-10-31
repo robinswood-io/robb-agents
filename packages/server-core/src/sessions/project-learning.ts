@@ -1,3 +1,6 @@
+import { parseJsonObject } from '@craft-agent/shared/utils/json';
+import type { LoadMemoryJournalOptions } from '../../../shared/src/projects/memory-v2/memory-schema.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { WorkspaceGovernanceStore } from '@craft-agent/shared/governance';
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces';
 import { createHash } from 'node:crypto';
@@ -70,10 +73,10 @@ export async function handleProjectLearning(
   ioOptions?.assertTarget?.();
   if (!policy.enabled && request.action === 'list') return [];
   if (!policy.enabled && request.action !== 'revoke') throw new Error('Project memory is disabled by workspace policy');
-  const entries = loadProjectMemoryJournal(root, slug, {
+  const entries = loadProjectMemoryJournal(root, slug, omitUndefined<LoadMemoryJournalOptions>({
     strict: true,
     legacyWorkspaceRootPath: ioOptions?.legacyWorkspaceRootPath,
-  }).entries;
+  })).entries;
   if (request.action === 'list') return entries.filter(entry => entry.status === 'proposed'
     && (!entry.scope || entry.scope.projectSlug === slug)
     && (!entry.expiresAt || Date.parse(entry.expiresAt) > Date.now())
@@ -120,15 +123,14 @@ export async function handleProjectLearning(
   const review = messages.find(message => message.toolUseId === request.reviewToolUseId);
   if (!review || !hasObjectiveSubstantiveToolResult(review) || !/(?:^|__)(?:call_llm|reviewer)$/.test(review.toolName ?? '')) throw new Error('A successful independent review tool result is required');
   let receipt: Record<string, unknown>;
-  try { receipt = JSON.parse(review.toolResult!); } catch { throw new Error('Review must be an unambiguous JSON receipt'); }
-  if (!receipt || typeof receipt !== 'object' || Array.isArray(receipt)) throw new Error('Review must be an unambiguous JSON receipt');
-  const replayIds = receipt.replayEvidenceIds;
-  if (receipt.proposalId !== proposal.id || receipt.contentSha256 !== hash(proposal.content)
-    || receipt.sourceEvidenceSha256 !== proposal.tags.find(tag => tag.startsWith('evidence:'))?.slice(9)
-    || receipt.verdict !== 'PASS' || !Array.isArray(receipt.findings) || receipt.findings.length
-    || (proposal.scope?.version && (request.version !== proposal.scope.version || receipt.version !== proposal.scope.version))
+  try { receipt = parseJsonObject(review.toolResult ?? ''); } catch { throw new Error('Review must be an unambiguous JSON receipt'); }
+  const replayIds = receipt["replayEvidenceIds"];
+  if (receipt["proposalId"] !== proposal.id || receipt["contentSha256"] !== hash(proposal.content)
+    || receipt["sourceEvidenceSha256"] !== proposal.tags.find(tag => tag.startsWith('evidence:'))?.slice(9)
+    || receipt["verdict"] !== 'PASS' || !Array.isArray(receipt["findings"]) || receipt["findings"].length
+    || (proposal.scope?.version && (request.version !== proposal.scope.version || receipt["version"] !== proposal.scope.version))
     || !Array.isArray(replayIds) || !replayIds.length
-    || !replayIds.every(id => messages.some(message => message.toolUseId === id
+    || !replayIds.every((id: unknown) => messages.some(message => message.toolUseId === id
       && message !== review && message.timestamp < review.timestamp
       && message.timestamp >= Date.parse(proposal.createdAt)
       && hasObjectiveSubstantiveToolResult(message)
@@ -179,7 +181,7 @@ export async function captureProjectUserCorrection(
   const content = `User correction awaiting independent verification: ${JSON.stringify(message.content.slice(0, 1600))}. Refers to assistant message ${corrected.id}. This records the user's assertion only, not a verified fact or permission.`;
   return await handleProjectLearning(root, slug, sessionId, messages, {
     action: 'propose', kind: 'observation', content, tags: ['user-correction', 'observation'],
-    evidenceIds: [message.id], ttlDays: Math.min(30, policy.retentionDays), version: event.version,
+    evidenceIds: [message.id], ttlDays: Math.min(30, policy.retentionDays), ...(event.version !== undefined ? { version: event.version } : {}),
   }, ioOptions) as ProjectMemoryEntry;
 }
 
@@ -224,7 +226,7 @@ export async function captureProjectTerminalLearning(
     const state = replay ? 'failure-followed-by-success' : 'terminal-failure';
     const content = `Observed ${failureName} failure in objective ${event.objectiveId}; terminal outcome: ${event.state}.${replay ? ` A later ${failureName} call succeeded. Temporal sequence alone does not prove a repair or an equivalent target.` : ' No successful recovery was established by the selected evidence.'} Inspect the cited inputs/results and replay before proposing a reusable procedure.`;
     const proposal = await handleProjectLearning(root, slug, sessionId, messages, {
-      action: 'propose', kind: 'observation', content, tags: [state, 'observation'], version: event.version,
+      action: 'propose', kind: 'observation', content, tags: [state, 'observation'], ...(event.version !== undefined ? { version: event.version } : {}),
       evidenceIds: [failure.toolUseId ?? failure.id, ...(replay ? [replay.toolUseId ?? replay.id] : [])],
       ttlDays: Math.min(event.ttlDays ?? 30, policy.retentionDays),
     }, ioOptions) as ProjectMemoryEntry;

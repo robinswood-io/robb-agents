@@ -38,9 +38,9 @@ interface PanelSlotProps {
   /** Flex-grow weight for proportional sizing */
   proportion: number
   /** Optional sash element rendered before this panel */
-  sash?: React.ReactNode
+  sash?: React.ReactNode | undefined
   /** Compact (mobile) mode — shows back button in panel header */
-  isCompact?: boolean
+  isCompact?: boolean | undefined
 }
 
 export function PanelSlot({
@@ -73,7 +73,7 @@ export function PanelSlot({
         tooltip={t("common.close")}
       />
     )
-  }, [handleClose])
+  }, [handleClose, t])
 
   // Build back button for compact mode — closes the panel to reveal the session list.
   // Same PanelHeaderCenterButton style as X and share, just on the left side.
@@ -86,7 +86,7 @@ export function PanelSlot({
         tooltip={t("common.backToList")}
       />
     )
-  }, [isCompact, handleClose, navState?.navigator])
+  }, [isCompact, handleClose, navState?.navigator, t])
 
   // Override AppShellContext so ChatPage/PanelHeader gets our per-panel close button,
   // back button (compact mode), and isFocusedPanel for input field appearance

@@ -1,9 +1,9 @@
 // Check CRAFT_DEBUG env var at module load (for SDK subprocess)
 // Guard against browser/renderer contexts where process is undefined
-let debugEnabled = typeof process !== 'undefined' && process.env?.CRAFT_DEBUG === '1';
+let debugEnabled = typeof process !== 'undefined' && process.env?.["CRAFT_DEBUG"] === '1';
 
 function isCliJsonOnlyMode(): boolean {
-  return typeof process !== 'undefined' && process.env?.CRAFT_CLI_JSON_ONLY === '1';
+  return typeof process !== 'undefined' && process.env?.["CRAFT_CLI_JSON_ONLY"] === '1';
 }
 
 /**
@@ -17,36 +17,23 @@ function detectEnvironment(): Environment {
     return 'electron-renderer';
   }
   // Electron main process
-  if ((process as any).type === 'browser') {
+  if ((process as typeof process & { type?: string }).type === 'browser') {
     return 'electron-main';
   }
   // Electron renderer process (with nodeIntegration)
-  if ((process as any).type === 'renderer') {
+  if ((process as typeof process & { type?: string }).type === 'renderer') {
     return 'electron-renderer';
   }
   // Default: CLI/scripts
   return 'cli';
 }
 
-let electronLog: unknown | null = null;
-let electronLogChecked = false;
-
-function getElectronLog(): { info?: (message: string) => void } | null {
-  if (electronLogChecked) {
-    return (electronLog as { info?: (message: string) => void } | null) ?? null;
-  }
-  electronLogChecked = true;
-  try {
-    // Optional dependency - only available in Electron main process.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const loaded = require('electron-log/main');
-    electronLog = loaded?.default ?? loaded ?? null;
-  } catch {
-    electronLog = null;
-  }
-  return (electronLog as { info?: (message: string) => void } | null) ?? null;
+type DebugSink = { info: (message: string) => void };
+let debugSink: DebugSink | null = null;
+/** Register the host logger at startup; shared browser code never imports Electron. */
+export function setDebugSink(sink: DebugSink | null): void {
+  debugSink = sink;
 }
-
 /**
  * Enable debug logging. Call this when --debug flag is passed.
  */
@@ -71,7 +58,7 @@ function safeStringify(obj: unknown): string {
   } catch {
     // Handle circular references by using a replacer that tracks seen objects
     const seen = new WeakSet();
-    return JSON.stringify(obj, (_key, value) => {
+    return JSON.stringify(obj, (_key, value: unknown) => {
       if (typeof value === 'object' && value !== null) {
         if (seen.has(value)) {
           return '[Circular]';
@@ -105,10 +92,7 @@ function output(formatted: string): void {
   const env = detectEnvironment();
 
   // Mirror debug logs into electron-log when available so they appear in main.log.
-  if (env === 'electron-main') {
-    const log = getElectronLog();
-    log?.info?.(formatted.trim());
-  }
+  debugSink?.info(formatted.trim());
 
   if (env === 'electron-renderer') {
     // Use console.log in renderer for DevTools

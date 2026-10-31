@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rtk",
+    "bun",
+    "run",
+    "test"
+  ],
+  "exitCode": 0,
+  "seconds": 151.87,
+  "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/domain-extractions-all-tests.log"
+}

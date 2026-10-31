@@ -9,7 +9,7 @@
  */
 
 import type { WebSearchProvider, WebSearchResult } from '../types.ts';
-import { parseResponsesApiResults, type ResponsesApiResponse } from './responses-api-parser.ts';
+import { parseResponsesApiResults, responsesApiResponseSchema } from './responses-api-parser.ts';
 
 const DEFAULT_SEARCH_MODEL = 'gpt-4o-mini';
 
@@ -54,7 +54,7 @@ export class ResponsesApiSearchProvider implements WebSearchProvider {
       throw new Error(`${this.name} search failed (HTTP ${response.status}): ${errorText}`);
     }
 
-    const data = (await response.json()) as ResponsesApiResponse;
+    const data = responsesApiResponseSchema.parse(await response.json());
     return parseResponsesApiResults(data, query, count);
   }
 }

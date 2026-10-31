@@ -64,7 +64,7 @@ const DropdownMenuTrigger = React.forwardRef<
         asChild
         {...props}
       >
-        {React.cloneElement(children as React.ReactElement<{ className?: string }>, {
+        {React.cloneElement(children as React.ReactElement<{ className?: string | undefined }>, {
           className: mergedChildClassName,
         })}
       </DropdownMenuPrimitive.Trigger>
@@ -119,8 +119,8 @@ function DropdownMenuItem({
   variant = "default",
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Item> & {
-  inset?: boolean
-  variant?: "default" | "destructive"
+  inset?: boolean | undefined
+  variant?: "default" | "destructive" | undefined
 }) {
   return (
     <DropdownMenuPrimitive.Item
@@ -202,7 +202,7 @@ function DropdownMenuLabel({
   inset,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Label> & {
-  inset?: boolean
+  inset?: boolean | undefined
 }) {
   return (
     <DropdownMenuPrimitive.Label
@@ -258,7 +258,7 @@ function DropdownMenuSubTrigger({
   children,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubTrigger> & {
-  inset?: boolean
+  inset?: boolean | undefined
 }) {
   return (
     <DropdownMenuPrimitive.SubTrigger

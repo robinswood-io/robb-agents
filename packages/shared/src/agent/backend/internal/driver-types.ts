@@ -19,6 +19,7 @@ export interface BackendRuntimePaths {
   bridgeServer?: string;
   piServer?: string;
   vibeAcpServer?: string;
+  antigravityServer?: string;
 }
 
 export interface BackendRuntimePayload extends Record<string, unknown> {

@@ -3,18 +3,18 @@ export const AUTONOMOUS_SESSION_LIMITS = { maxDepth: 4, maxPerRoot: 4, maxRestar
 
 export interface AutonomousSessionNode {
   id: string
-  parentSessionId?: string
+  parentSessionId?: string | undefined
   workspace: { id: string }
-  createdAt?: number
-  isProcessing?: boolean
-  stopRequested?: boolean
-  activeObjective?: { terminalState: string; startedAt: number; userMessageId?: string }
+  createdAt?: number | undefined
+  isProcessing?: boolean | undefined
+  stopRequested?: boolean | undefined
+  activeObjective?: { terminalState: string; startedAt: number; userMessageId?: string  | undefined} | undefined
   pendingTurnRecovery?: unknown
-  pendingQueuedMessageIds?: string[]
-  pendingAgentDeliveryIds?: string[]
-  messageQueue?: readonly unknown[]
-  userInputRequests?: readonly { sessionId: string; status: string; objectiveUserMessageId?: string }[]
-  pendingAuthRequestId?: string
+  pendingQueuedMessageIds?: string[] | undefined
+  pendingAgentDeliveryIds?: string[] | undefined
+  messageQueue?: readonly unknown[] | undefined
+  userInputRequests?: readonly { sessionId: string; status: string; objectiveUserMessageId?: string  | undefined}[] | undefined
+  pendingAuthRequestId?: string | undefined
   pendingAuthRequest?: unknown
 }
 
@@ -74,7 +74,7 @@ export function inspectAutonomousLineage(
   }
   const depth = chain.length - 1 + (spawning ? 1 : 0)
   if (depth > AUTONOMOUS_SESSION_LIMITS.maxDepth) block('depth', session.id)
-  return { allowed: !reason, rootId: chain.at(-1)?.id ?? session.id, depth, ...(reason ? { reason, blockedBy } : {}) }
+  return { allowed: !reason, rootId: chain.at(-1)?.id ?? session.id, depth, ...(reason ? { reason, ...(blockedBy !== undefined ? { blockedBy: blockedBy } : {}) } : {}) }
 }
 
 export function isSessionDescendant(id: string, ancestorId: string, get: (id: string) => AutonomousSessionNode | undefined): boolean {

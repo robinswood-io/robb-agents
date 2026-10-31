@@ -1,7 +1,7 @@
 import { existsSync, lstatSync, realpathSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { homedir, tmpdir } from 'node:os';
-import { dirname, join, resolve, sep } from 'node:path';
+import { basename, dirname, join, resolve, sep } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 /** Host-owned policy. There is deliberately no permission-mode or environment opt-out. */
@@ -11,7 +11,7 @@ function canonicalPath(path: string): string {
   const absolute = resolve(path);
   try { return realpathSync.native(absolute); } catch {
     const parent = dirname(absolute);
-    return parent === absolute ? absolute : join(canonicalPath(parent), absolute.slice(parent.length + (parent === sep ? 0 : 1)));
+    return parent === absolute ? absolute : join(canonicalPath(parent), basename(absolute));
   }
 }
 
@@ -42,10 +42,11 @@ export function buildApplicationProtectionProfile(roots: readonly string[]): str
   if (roots.length === 0) throw new Error('Application protection requires at least one bundle root');
   const paths = new Set<string>();
   for (const root of roots) {
-    if (!root.startsWith('/') || /[\x00-\x1f\x7f]/.test(root) || resolve(root) === '/') {
+    const absolute = resolve(root);
+    if (!root.startsWith('/') || /[\x00-\x1f\x7f]/.test(root) || dirname(absolute) === absolute) {
       throw new Error('Invalid application protection root');
     }
-    for (const path of [resolve(root), canonicalPath(root)]) {
+    for (const path of [absolute, canonicalPath(root)]) {
       paths.add(path);
       // macOS firmlinks expose the same writable volume through a second spelling.
       const dataPath = `/System/Volumes/Data${path}`;
@@ -62,7 +63,7 @@ export function buildApplicationProtectionProfile(roots: readonly string[]): str
   const ancestors = new Set<string>();
   for (const path of paths) {
     rules.push(`(deny file-write* (subpath ${quote(path)}))`);
-    for (let parent = dirname(path); parent !== '/'; parent = dirname(parent)) ancestors.add(parent);
+    for (let parent = dirname(path); parent !== dirname(parent); parent = dirname(parent)) ancestors.add(parent);
   }
   for (const parent of ancestors) rules.push(`(deny file-write-unlink (literal ${quote(parent)}))`);
   return rules.join('\n');

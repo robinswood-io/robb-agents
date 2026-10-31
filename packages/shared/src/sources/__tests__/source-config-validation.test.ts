@@ -7,8 +7,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { validateSourceConfig } from '../../config/validators.ts';
-import type { ApiSourceConfig, FolderSourceConfig } from '../types.ts';
+import type { FolderSourceConfig } from '../types.ts';
 
 /**
  * Validate multi-header source config for common misconfigurations.

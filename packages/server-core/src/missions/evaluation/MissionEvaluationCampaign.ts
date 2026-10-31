@@ -143,7 +143,7 @@ class CorpusExecutor implements MissionWorkExecutor {
   readonly executed: ScriptedExecution[] = [];
   private readonly remaining = new Map<string, number>();
 
-  constructor(private readonly scenario: MissionEvaluationScenario) {
+  constructor(scenario: MissionEvaluationScenario) {
     for (const fault of scenario.faults) {
       this.remaining.set(faultKey(fault), 'times' in fault ? fault.times : Number.POSITIVE_INFINITY);
     }

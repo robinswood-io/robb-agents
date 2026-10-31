@@ -1,0 +1,138 @@
+{
+  "status": "testé localement ; intégration finale restante",
+  "scope": "Transport RPC, adaptateurs Electron/Web et réponses OAuth/natives",
+  "changes": [
+    "Arguments de callbacks inférés à l’inscription ; collections opaques invocables seulement à la frontière de dispatch existante",
+    "Résultats et arguments réseau inconnus jusqu’au contrôle de forme ; aucune nouvelle couche de routage",
+    "Métadonnées Error natives conservées ; classification limitée aux valeurs reconnues",
+    "Contrôles partagés des réponses OAuth et validation des confirmations/sélections de fichiers",
+    "Adaptateur Web : états de mise à jour complets et plateforme web explicite pour Git Bash indisponible",
+    "Bancs de tests adaptés sans supprimer de scénarios ni réduire les assertions existantes"
+  ],
+  "sourceGate": {
+    "max-lines": 162,
+    "no-explicit-any": 417
+  },
+  "explicitAnyRemoved": 72,
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 16.14,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-native-clean-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "apps/electron/src/__tests__/transport.test.ts",
+        "apps/electron/src/main/handlers/__tests__/session-watcher.test.ts",
+        "apps/electron/src/main/handlers/__tests__/sessions-watchers.test.ts",
+        "apps/electron/src/preload/oauth-api.isolated.ts",
+        "apps/electron/src/preload/oauth-api.ts",
+        "apps/electron/src/transport/build-api.ts",
+        "apps/electron/src/transport/channel-map.ts",
+        "apps/electron/src/transport/routed-client.ts",
+        "apps/webui/src/adapter/web-api.ts",
+        "packages/server-core/src/handlers/rpc/automations.ts",
+        "packages/server-core/src/handlers/rpc/files.ts",
+        "packages/server-core/src/handlers/rpc/llm-connections.models.test.ts",
+        "packages/server-core/src/handlers/rpc/missions.proof-passport-rpc.test.ts",
+        "packages/server-core/src/handlers/rpc/permission-response-options.test.ts",
+        "packages/server-core/src/handlers/rpc/remote-user-input.test.ts",
+        "packages/server-core/src/handlers/rpc/sessions-metadata-access.test.ts",
+        "packages/server-core/src/handlers/rpc/settings.manual-selection.test.ts",
+        "packages/server-core/src/handlers/rpc/system.open-url.test.ts",
+        "packages/server-core/src/handlers/rpc/transfer.test.ts",
+        "packages/server-core/src/handlers/rpc/transfer.ts",
+        "packages/server-core/src/handlers/rpc/user-input-response.test.ts",
+        "packages/server-core/src/sessions/retry-turn.test.ts",
+        "packages/server-core/src/transport/capabilities.ts",
+        "packages/server-core/src/transport/client.ts",
+        "packages/server-core/src/transport/server.ts",
+        "packages/server-core/src/transport/types.ts",
+        "packages/shared/src/protocol/dto/workspace-and-updates.ts",
+        "packages/shared/src/protocol/index.ts",
+        "packages/shared/src/protocol/oauth-responses.ts",
+        "packages/server-core/src/transport/__tests__/capability-responses.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.6,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-native-clean-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 12.3,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-native-clean-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/server-core/src/transport",
+        "./apps/electron/src/transport",
+        "./apps/electron/src/__tests__/transport.test.ts",
+        "--reporter=junit",
+        "--reporter-outfile=/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-native-after.xml"
+      ],
+      "exitCode": 0,
+      "seconds": 2.75,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-native-transport.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./apps/electron/src/preload/oauth-api.isolated.ts",
+        "--reporter=junit",
+        "--reporter-outfile=/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-native-oauth.xml"
+      ],
+      "exitCode": 0,
+      "seconds": 0.14,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-native-oauth.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 140.22,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-native-full-suite.log"
+    }
+  ],
+  "transportRegression": {
+    "baselineCases": 103,
+    "afterCases": 114,
+    "lostOrChangedCasesAndAssertionCounts": 0,
+    "addedCases": 11
+  },
+  "oauthSimulation": {
+    "cases": 24,
+    "newMalformedResponseAndRetryCases": 6,
+    "realCredentialsUsed": false
+  },
+  "limits": [
+    "Lint et seuils globaux encore en cours",
+    "Missions réelles et interface du candidat non encore vérifiées",
+    "Application installée inchangée"
+  ]
+}

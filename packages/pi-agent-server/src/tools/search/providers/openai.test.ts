@@ -1,6 +1,13 @@
+import { z } from 'zod';
 import { afterEach, describe, expect, it } from 'bun:test';
 import { ResponsesApiSearchProvider } from './openai.ts';
 
+const capturedSearchRequestSchema = z.looseObject({
+  model: z.string(), tools: z.array(z.looseObject({ type: z.string() })),
+});
+function captureSearchRequest(init: RequestInit | undefined) {
+  return init?.body ? capturedSearchRequestSchema.parse(JSON.parse(String(init.body))) : null;
+}
 const originalFetch = globalThis.fetch;
 
 afterEach(() => {
@@ -10,12 +17,12 @@ afterEach(() => {
 describe('ResponsesApiSearchProvider', () => {
   it('calls Responses API with web_search tool and parses URL citations', async () => {
     let calledUrl = '';
-    let calledBody: any = null;
+    let calledBody = null as { model: string; tools: Array<{ type: string }> } | null;
     let calledHeaders: Record<string, string> = {};
 
-    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = Object.assign(async (input: RequestInfo | URL, init?: RequestInit) => {
       calledUrl = typeof input === 'string' ? input : input.toString();
-      calledBody = init?.body ? JSON.parse(String(init.body)) : null;
+      calledBody = captureSearchRequest(init);
       const h = init?.headers as Record<string, string> | undefined;
       calledHeaders = h || {};
 
@@ -40,7 +47,7 @@ describe('ResponsesApiSearchProvider', () => {
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       );
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ResponsesApiSearchProvider({
       apiBase: 'https://api.openai.com/v1',
@@ -49,8 +56,8 @@ describe('ResponsesApiSearchProvider', () => {
     const results = await provider.search('craft agent', 5);
 
     expect(calledUrl).toBe('https://api.openai.com/v1/responses');
-    expect(calledBody.model).toBe('gpt-4o-mini');
-    expect(calledBody.tools).toEqual([{ type: 'web_search' }]);
+    expect(calledBody!.model).toBe('gpt-4o-mini');
+    expect(calledBody!.tools).toEqual([{ type: 'web_search' }]);
     expect(calledHeaders['Authorization']).toBe('Bearer sk-test');
 
     expect(results).toHaveLength(2);
@@ -60,11 +67,11 @@ describe('ResponsesApiSearchProvider', () => {
 
   it('uses custom apiBase and model for OpenRouter', async () => {
     let calledUrl = '';
-    let calledBody: any = null;
+    let calledBody = null as { model: string; tools: Array<{ type: string }> } | null;
 
-    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = Object.assign(async (input: RequestInfo | URL, init?: RequestInit) => {
       calledUrl = typeof input === 'string' ? input : input.toString();
-      calledBody = init?.body ? JSON.parse(String(init.body)) : null;
+      calledBody = captureSearchRequest(init);
 
       return new Response(
         JSON.stringify({
@@ -85,7 +92,7 @@ describe('ResponsesApiSearchProvider', () => {
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       );
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ResponsesApiSearchProvider({
       apiBase: 'https://openrouter.ai/api/v1',
@@ -98,12 +105,12 @@ describe('ResponsesApiSearchProvider', () => {
     const results = await provider.search('test', 5);
 
     expect(calledUrl).toBe('https://openrouter.ai/api/v1/responses');
-    expect(calledBody.model).toBe('openai/gpt-4o-mini');
+    expect(calledBody!.model).toBe('openai/gpt-4o-mini');
     expect(results).toHaveLength(1);
   });
 
   it('respects count limit when parsing citations', async () => {
-    globalThis.fetch = (async () => {
+    globalThis.fetch = Object.assign(async () => {
       return new Response(
         JSON.stringify({
           output: [
@@ -125,7 +132,7 @@ describe('ResponsesApiSearchProvider', () => {
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       );
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ResponsesApiSearchProvider({
       apiBase: 'https://api.openai.com/v1',
@@ -138,7 +145,7 @@ describe('ResponsesApiSearchProvider', () => {
   });
 
   it('falls back to summary result when no citations are present', async () => {
-    globalThis.fetch = (async () => {
+    globalThis.fetch = Object.assign(async () => {
       return new Response(
         JSON.stringify({
           output: [
@@ -150,7 +157,7 @@ describe('ResponsesApiSearchProvider', () => {
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       );
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ResponsesApiSearchProvider({
       apiBase: 'https://api.openai.com/v1',
@@ -167,14 +174,14 @@ describe('ResponsesApiSearchProvider', () => {
   it('includes extraHeaders in the request', async () => {
     let calledHeaders: Record<string, string> = {};
 
-    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = Object.assign(async (_input: RequestInfo | URL, init?: RequestInit) => {
       calledHeaders = (init?.headers as Record<string, string>) || {};
 
       return new Response(
         JSON.stringify({ output: [{ type: 'message', content: [{ type: 'output_text', text: 'ok' }] }] }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       );
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ResponsesApiSearchProvider({
       apiBase: 'https://custom.api.com/v1',

@@ -9,6 +9,19 @@ import { spawn, ChildProcess } from 'child_process';
 import { existsSync } from 'fs';
 import { resolveBackendHostTooling } from '@craft-agent/shared/agent/backend';
 import { createScopedLogger, CONSOLE_LOGGER, type PlatformServices, type Logger } from '../runtime/platform';
+import { z } from 'zod';
+
+const RipgrepMatchSchema = z.object({
+  type: z.literal('match'),
+  data: z.object({
+    path: z.object({ text: z.string().min(1) }),
+    line_number: z.number().int().positive(),
+    lines: z.object({ text: z.string().optional() }).optional(),
+    submatches: z.array(z.object({
+      match: z.object({ text: z.string().optional() }).nullish(),
+    })).optional(),
+  }),
+});
 
 /**
  * Thrown when the search service cannot run (e.g. ripgrep binary not found).
@@ -114,7 +127,7 @@ function extractSnippetFast(rawLine: string, matchText: string, maxLength = 150)
     // Handles both string content and the start of array content
     const contentMatch = rawLine.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
 
-    if (contentMatch) {
+    if (contentMatch?.[1] !== undefined) {
       // Simple string content - unescape and extract window around match
       const content = contentMatch[1]
         .replace(/\\n/g, ' ')
@@ -145,7 +158,7 @@ function extractSnippetFast(rawLine: string, matchText: string, maxLength = 150)
 
     // Content might be an array (Claude format) - extract first text block
     const textBlockMatch = rawLine.match(/"type"\s*:\s*"text"\s*,\s*"text"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-    if (textBlockMatch) {
+    if (textBlockMatch?.[1] !== undefined) {
       const text = textBlockMatch[1]
         .replace(/\\n/g, ' ')
         .replace(/\\"/g, '"')
@@ -285,10 +298,9 @@ export async function searchSessions(
         if (!line.trim()) continue;
 
         try {
-          const result = JSON.parse(line);
-
-          // We only care about 'match' type results
-          if (result.type !== 'match') continue;
+          const parsed = RipgrepMatchSchema.safeParse(JSON.parse(line));
+          if (!parsed.success) continue;
+          const result = parsed.data;
 
           const data = result.data;
           const filePath = data.path?.text;

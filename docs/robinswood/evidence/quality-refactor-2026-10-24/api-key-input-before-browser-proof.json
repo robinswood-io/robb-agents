@@ -1,0 +1,80 @@
+{
+  "status": "passed",
+  "cases": [
+    {
+      "name": "direct native provider submits the trimmed QA key",
+      "status": "passed"
+    },
+    {
+      "name": "custom endpoint requires models and preserves the selected protocol",
+      "status": "passed"
+    },
+    {
+      "name": "Pi tier selection survives a parent rerender without a request loop",
+      "status": "passed"
+    },
+    {
+      "name": "Bedrock IAM validation precedes submission and keeps all QA credential fields",
+      "status": "passed"
+    },
+    {
+      "name": "Bedrock environment authentication omits IAM credentials",
+      "status": "passed"
+    },
+    {
+      "name": "validation disables native inputs and server errors remain visible",
+      "status": "passed"
+    }
+  ],
+  "payloads": [
+    {
+      "apiKey": "qa-key-only"
+    },
+    {
+      "apiKey": "qa-key-only",
+      "baseUrl": "https://qa.invalid/v1",
+      "connectionDefaultModel": "qa-one",
+      "models": [
+        "qa-one",
+        "qa-two"
+      ],
+      "piAuthProvider": "anthropic",
+      "modelSelectionMode": "userDefined3Tier",
+      "customEndpoint": {
+        "api": "anthropic-messages"
+      }
+    },
+    {
+      "apiKey": "qa-key-only",
+      "connectionDefaultModel": "qa-cheap",
+      "models": [
+        "qa-cheap",
+        "qa-balanced",
+        "qa-cheap"
+      ],
+      "piAuthProvider": "mistral",
+      "modelSelectionMode": "userDefined3Tier"
+    },
+    {
+      "apiKey": "",
+      "piAuthProvider": "amazon-bedrock",
+      "bedrockAuthMethod": "iam_credentials",
+      "awsRegion": "eu-west-3",
+      "iamCredentials": {
+        "accessKeyId": "QA-ACCESS-ONLY",
+        "secretAccessKey": "QA-SECRET-ONLY",
+        "sessionToken": "QA-TOKEN-ONLY"
+      }
+    },
+    {
+      "apiKey": "",
+      "piAuthProvider": "amazon-bedrock",
+      "bedrockAuthMethod": "environment",
+      "awsRegion": "us-east-1"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "browser": "145.0.7632.6",
+  "target": "native ApiKeyInput; QA values in memory only"
+}

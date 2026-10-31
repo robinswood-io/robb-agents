@@ -1,5 +1,22 @@
 import { describe, it, expect } from 'bun:test'
 import { parseArgs, resolveApiKey, shouldSetupLlmConnection } from './index.ts'
+import { requireWorkspaceList } from './rpc-shapes.ts'
+
+describe('workspace RPC boundary', () => {
+  it('preserves valid rows, ordering and extra metadata', () => {
+    const first = { id: 'qa-first', name: 'QA', rootPath: '/qa', extra: { retained: true } }
+    const second = { id: 'qa-second' }
+    const rows = requireWorkspaceList([first, second])
+    expect(rows).toEqual([first, second])
+    expect(rows[0]).toBe(first)
+  })
+
+  it('rejects malformed rows instead of silently selecting another workspace', () => {
+    for (const payload of [null, {}, [{ id: '' }], [{ id: 'qa', rootPath: 42 }],
+      [{ id: 'qa' }, { id: 42 }], [{ id: 42 }, { id: 'qa' }],
+    ]) expect(() => requireWorkspaceList(payload)).toThrow()
+  })
+})
 
 // ---------------------------------------------------------------------------
 // Arg parsing tests
@@ -53,13 +70,13 @@ describe('parseArgs', () => {
   })
 
   it('falls back to env vars for url and token', () => {
-    const prevUrl = process.env.CRAFT_SERVER_URL
-    const prevToken = process.env.CRAFT_SERVER_TOKEN
-    const prevCa = process.env.CRAFT_TLS_CA
+    const prevUrl = process.env["CRAFT_SERVER_URL"]
+    const prevToken = process.env["CRAFT_SERVER_TOKEN"]
+    const prevCa = process.env["CRAFT_TLS_CA"]
 
-    process.env.CRAFT_SERVER_URL = 'ws://env-server:8080'
-    process.env.CRAFT_SERVER_TOKEN = 'env-token'
-    process.env.CRAFT_TLS_CA = '/env/ca.pem'
+    process.env["CRAFT_SERVER_URL"] = 'ws://env-server:8080'
+    process.env["CRAFT_SERVER_TOKEN"] = 'env-token'
+    process.env["CRAFT_TLS_CA"] = '/env/ca.pem'
 
     try {
       const args = parseArgs(['bun', 'index.ts', 'ping'])
@@ -67,25 +84,25 @@ describe('parseArgs', () => {
       expect(args.token).toBe('env-token')
       expect(args.tlsCa).toBe('/env/ca.pem')
     } finally {
-      if (prevUrl === undefined) delete process.env.CRAFT_SERVER_URL
-      else process.env.CRAFT_SERVER_URL = prevUrl
-      if (prevToken === undefined) delete process.env.CRAFT_SERVER_TOKEN
-      else process.env.CRAFT_SERVER_TOKEN = prevToken
-      if (prevCa === undefined) delete process.env.CRAFT_TLS_CA
-      else process.env.CRAFT_TLS_CA = prevCa
+      if (prevUrl === undefined) delete process.env["CRAFT_SERVER_URL"]
+      else process.env["CRAFT_SERVER_URL"] = prevUrl
+      if (prevToken === undefined) delete process.env["CRAFT_SERVER_TOKEN"]
+      else process.env["CRAFT_SERVER_TOKEN"] = prevToken
+      if (prevCa === undefined) delete process.env["CRAFT_TLS_CA"]
+      else process.env["CRAFT_TLS_CA"] = prevCa
     }
   })
 
   it('explicit flags override env vars', () => {
-    const prevUrl = process.env.CRAFT_SERVER_URL
-    process.env.CRAFT_SERVER_URL = 'ws://env-server:8080'
+    const prevUrl = process.env["CRAFT_SERVER_URL"]
+    process.env["CRAFT_SERVER_URL"] = 'ws://env-server:8080'
 
     try {
       const args = parseArgs(['bun', 'index.ts', '--url', 'ws://flag-server:9090', 'ping'])
       expect(args.url).toBe('ws://flag-server:9090')
     } finally {
-      if (prevUrl === undefined) delete process.env.CRAFT_SERVER_URL
-      else process.env.CRAFT_SERVER_URL = prevUrl
+      if (prevUrl === undefined) delete process.env["CRAFT_SERVER_URL"]
+      else process.env["CRAFT_SERVER_URL"] = prevUrl
     }
   })
 
@@ -238,14 +255,14 @@ describe('parseArgs', () => {
 
 describe('resolveApiKey', () => {
   it('uses DEEPSEEK_API_KEY for the deepseek provider', () => {
-    const prev = process.env.DEEPSEEK_API_KEY
-    process.env.DEEPSEEK_API_KEY = 'deepseek-test-key'
+    const prev = process.env["DEEPSEEK_API_KEY"]
+    process.env["DEEPSEEK_API_KEY"] = 'deepseek-test-key'
 
     try {
       expect(resolveApiKey('deepseek', '')).toBe('deepseek-test-key')
     } finally {
-      if (prev === undefined) delete process.env.DEEPSEEK_API_KEY
-      else process.env.DEEPSEEK_API_KEY = prev
+      if (prev === undefined) delete process.env["DEEPSEEK_API_KEY"]
+      else process.env["DEEPSEEK_API_KEY"] = prev
     }
   })
 })
@@ -280,12 +297,12 @@ describe('getValidateSteps', () => {
 
   it('first step is handshake', () => {
     const steps = getValidateSteps()
-    expect(steps[0].name).toBe('Connect + handshake')
+    expect(steps[0]?.name).toBe('Connect + handshake')
   })
 
   it('last step is disconnect', () => {
     const steps = getValidateSteps()
-    expect(steps[steps.length - 1].name).toBe('Disconnect')
+    expect(steps.at(-1)?.name).toBe('Disconnect')
   })
 
   it('has no duplicate step names', () => {

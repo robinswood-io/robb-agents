@@ -130,12 +130,12 @@ function readManifest(path: string): UpdateManifest {
   const parsed: unknown = load(readFileSync(path, 'utf8'))
   if (!isRecord(parsed)) throw new Error(`Updater manifest is not an object: ${path}`)
 
-  const rawFiles = parsed.files
+  const rawFiles = parsed["files"]
   if (!Array.isArray(rawFiles) || rawFiles.length === 0) {
     throw new Error(`Updater manifest must contain files: ${path}`)
   }
 
-  const files = rawFiles.map((rawFile, index): UpdateFileEntry => {
+  const files = rawFiles.map((rawFile: unknown, index): UpdateFileEntry => {
     const context = `${basename(path)} files[${index}]`
     if (!isRecord(rawFile)) throw new Error(`${context} must be an object`)
     return {
@@ -282,23 +282,23 @@ export function validateReleaseBundle(
     if (!fileNames.includes(contract.fileName)) throw new Error(`Missing ${contract.fileName}`)
     const provenance = parseProvenance(path)
     provenanceFiles.push(contract.fileName)
-    if (provenance.product !== 'Robb Agents') {
+    if (provenance["product"] !== 'Robb Agents') {
       throw new Error(`${contract.fileName} has invalid product`)
     }
-    if (provenance.version !== options.version) {
-      throw new Error(`${contract.fileName} has invalid version ${provenance.version}`)
+    if (provenance["version"] !== options.version) {
+      throw new Error(`${contract.fileName} has invalid version ${provenance["version"]}`)
     }
-    if (provenance.release_tag !== expectedTag) {
-      throw new Error(`${contract.fileName} has invalid release_tag ${provenance.release_tag}`)
+    if (provenance["release_tag"] !== expectedTag) {
+      throw new Error(`${contract.fileName} has invalid release_tag ${provenance["release_tag"]}`)
     }
-    if (provenance.platform !== contract.platform) {
-      throw new Error(`${contract.fileName} has invalid platform ${provenance.platform}`)
+    if (provenance["platform"] !== contract.platform) {
+      throw new Error(`${contract.fileName} has invalid platform ${provenance["platform"]}`)
     }
-    if (options.sourceCommit && provenance.source_commit !== options.sourceCommit) {
-      throw new Error(`${contract.fileName} has invalid source_commit ${provenance.source_commit}`)
+    if (options.sourceCommit && provenance["source_commit"] !== options.sourceCommit) {
+      throw new Error(`${contract.fileName} has invalid source_commit ${provenance["source_commit"]}`)
     }
     if (options.requireSigned) {
-      const signingState = provenance.signing
+      const signingState = provenance["signing"]
       const expectedSigning = contract.platform === 'windows-x64' && windowsSigningMode === 'unsigned'
         ? 'unsigned-public-release'
         : contract.signing
@@ -312,7 +312,7 @@ export function validateReleaseBundle(
     const sbomPath = join(options.releaseDir, 'SBOM.spdx.json')
     if (!fileNames.includes('SBOM.spdx.json')) throw new Error('Missing SBOM.spdx.json')
     const parsedSbom: unknown = JSON.parse(readFileSync(sbomPath, 'utf8'))
-    if (!isRecord(parsedSbom) || typeof parsedSbom.spdxVersion !== 'string') {
+    if (!isRecord(parsedSbom) || typeof parsedSbom["spdxVersion"] !== 'string') {
       throw new Error('SBOM.spdx.json is not a valid SPDX JSON document')
     }
   }
@@ -355,14 +355,19 @@ if (import.meta.main) {
     )
   }
 
-  const windowsSigningMode = readArgument('--windows-signing-mode') as WindowsSigningMode | undefined
+  const windowsSigningMode = readArgument('--windows-signing-mode')
+  if (windowsSigningMode !== undefined && windowsSigningMode !== 'unsigned' && windowsSigningMode !== 'pfx' && windowsSigningMode !== 'azure') {
+    throw new Error(`Unsupported Windows signing mode ${windowsSigningMode}`)
+  }
+  const sourceCommit = readArgument('--source-commit')
+  const tag = readArgument('--tag')
   const report = validateReleaseBundle({
     releaseDir,
     version,
-    sourceCommit: readArgument('--source-commit'),
-    tag: readArgument('--tag'),
+    ...(sourceCommit !== undefined ? { sourceCommit } : {}),
+    ...(tag !== undefined ? { tag } : {}),
     requireSigned: process.argv.includes('--require-signed'),
-    windowsSigningMode,
+    ...(windowsSigningMode !== undefined ? { windowsSigningMode } : {}),
     requireSbom: process.argv.includes('--require-sbom'),
   })
   console.log(

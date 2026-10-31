@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+import type { RenderTemplateSchema } from '../tool-defs/schemas.ts';
 import { isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from '../runtime/application-protection.ts';
 /**
  * Render Template Handler
@@ -14,11 +16,7 @@ import { renderMustache } from '../templates/mustache.ts';
 import { join } from 'node:path';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 
-export interface RenderTemplateArgs {
-  source: string;
-  template: string;
-  data: Record<string, unknown>;
-}
+export type RenderTemplateArgs = z.infer<typeof RenderTemplateSchema>;
 
 /**
  * Handle the render_template tool call.

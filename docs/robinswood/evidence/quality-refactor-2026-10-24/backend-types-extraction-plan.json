@@ -1,0 +1,163 @@
+{
+  "source": "packages/shared/src/agent/backend/types.ts",
+  "units": [
+    {
+      "names": [
+        "ToolAdmissionRecoveryError"
+      ],
+      "group": "contracts",
+      "bodySha256": "411b076a98bf782001d8956a74f9bb6c2071625e9edcb1bad34bee345a0b1a22"
+    },
+    {
+      "names": [
+        "ProviderDispatchRejectedError"
+      ],
+      "group": "contracts",
+      "bodySha256": "5429e9ee1ca315f0082f8f09e862150cc9e21704889e8f5b9de10414fdb7b587"
+    },
+    {
+      "names": [
+        "BackendRuntimeUpdate"
+      ],
+      "group": "contracts",
+      "bodySha256": "718006d12548c438e5f0797480a437eccd74f86e1d9dc267b13dd03ede404f48"
+    },
+    {
+      "names": [
+        "AgentProvider"
+      ],
+      "group": "contracts",
+      "bodySha256": "4419d362d13e3de32d1ea9c5c23ccb89d2820f1cf9917d13bce823414418385b"
+    },
+    {
+      "names": [
+        "TerminalReconciliationPolicy"
+      ],
+      "group": "contracts",
+      "bodySha256": "aa6c3f47c4440e5d329cd7ba3f66da58d9d9cb2b0f3d8033a08decf611db37b3"
+    },
+    {
+      "names": [
+        "PermissionRequestType"
+      ],
+      "group": "contracts",
+      "bodySha256": "cd1e43b16f88529ab178c51f5a56875ceca7c4bf1e25a005ec91f6e9cf6480a9"
+    },
+    {
+      "names": [
+        "PermissionCallback"
+      ],
+      "group": "contracts",
+      "bodySha256": "5ae53e9337d0fdd336b10946ea76f48c12791fbed6f76062f67913d7d578f3ba"
+    },
+    {
+      "names": [
+        "PlanCallback"
+      ],
+      "group": "contracts",
+      "bodySha256": "6a47c93905fc41f9c32cafee9ddaba81abf548c3fb69ea4ca3a08034ea6eae61"
+    },
+    {
+      "names": [
+        "AuthCallback"
+      ],
+      "group": "contracts",
+      "bodySha256": "f5355cc55532d8e7aeb23682cae1e572c5306a10bda433524e2dd921325a12ff"
+    },
+    {
+      "names": [
+        "SourceChangeCallback"
+      ],
+      "group": "contracts",
+      "bodySha256": "5a717881a96e9524491c71e7ad5603c3993480aa541109bb65d849f0e7bbeae9"
+    },
+    {
+      "names": [
+        "SourceActivationCallback"
+      ],
+      "group": "contracts",
+      "bodySha256": "95794f10a18100ce0dd265173caea808978988c7ae79c4eab3f6dad7923ebd1c"
+    },
+    {
+      "names": [
+        "PostInitResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "5e25fbbd801c88359ab94be8d0312a9aaa1a4a1f231d34e31157b77152beabfd"
+    },
+    {
+      "names": [
+        "SourceServerSnapshot"
+      ],
+      "group": "contracts",
+      "bodySha256": "955b1cca50b49ac64ed120d8a3c58782ca22e1d0ce40f0e54dc3d3eedbc4f371"
+    },
+    {
+      "names": [
+        "BackendHostRuntimeContext"
+      ],
+      "group": "contracts",
+      "bodySha256": "aa942e8d61b80c8c94c6142beb76368253b076a91446afafc779f01723762744"
+    },
+    {
+      "names": [
+        "ChatOptions"
+      ],
+      "group": "contracts",
+      "bodySha256": "68454dacc7eda733da3001224c8538944426a452f79e7f794098030d738a0a14"
+    },
+    {
+      "names": [
+        "SdkMcpServerConfig"
+      ],
+      "group": "contracts",
+      "bodySha256": "3869479f3eb487d8223571b5d561167a0c18c87a3ff02497568f533b007522b7"
+    },
+    {
+      "names": [
+        "CoreBackendConfig"
+      ],
+      "group": "config",
+      "bodySha256": "b994438a60dcfffc08641f595bb4bede0a07dc88d18462e720044d92b50d9ccd"
+    },
+    {
+      "names": [
+        "BackendConfig"
+      ],
+      "group": "config",
+      "bodySha256": "da9a0a8f3d76570853d650cf8deb7b84445de548241e06bddc0644491e5927ee"
+    },
+    {
+      "names": [
+        "AgentBackend"
+      ],
+      "group": "agent-backend",
+      "bodySha256": "ab3c20cddfad93765b222eca0067d8af22dffb76e3f7459549adb0a23c583d77"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 206
+    },
+    {
+      "name": "config",
+      "lines": 252
+    },
+    {
+      "name": "agent-backend",
+      "lines": 378
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "config": [
+      "contracts"
+    ],
+    "agent-backend": [
+      "contracts"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

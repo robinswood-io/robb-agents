@@ -21,7 +21,7 @@ export interface SystemMessageProps {
   /** Message type determining visual style */
   type: SystemMessageType
   /** Additional className for the outer container */
-  className?: string
+  className?: string | undefined
 }
 
 // Style configuration for each message type

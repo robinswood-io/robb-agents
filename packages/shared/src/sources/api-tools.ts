@@ -324,11 +324,11 @@ export function createApiTool(
         // Add body for non-GET requests
         if (method !== 'GET' && params && Object.keys(params).length > 0) {
           // Support raw text bodies via _rawBody param (e.g., for endpoints expecting plain text)
-          if (typeof params._rawBody === 'string') {
-            fetchOptions.body = params._rawBody;
+          if (typeof params["_rawBody"] === 'string') {
+            fetchOptions.body = params["_rawBody"];
             (fetchOptions.headers as Record<string, string>)['Content-Type'] =
-              typeof params._contentType === 'string' ? params._contentType : 'text/plain';
-            debug(`[api-tools] ${config.name}: raw body prepared (${(fetchOptions.headers as Record<string, string>)['Content-Type']}, ${params._rawBody.length} chars)`);
+              typeof params["_contentType"] === 'string' ? params["_contentType"] : 'text/plain';
+            debug(`[api-tools] ${config.name}: raw body prepared (${(fetchOptions.headers as Record<string, string>)['Content-Type']}, ${params["_rawBody"].length} chars)`);
           } else {
             fetchOptions.body = JSON.stringify(params);
           }
@@ -374,14 +374,14 @@ export function createApiTool(
           const guarded = await guardLargeResult(buffer, {
             sessionPath,
             toolName: `api_${config.name}`,
-            input: params,
-            intent: _intent,
-            summarize: summarize ? prompt => summarize(prompt, {
+            ...(params !== undefined ? { input: params } : {}),
+            ...(_intent !== undefined ? { intent: _intent } : {}),
+            ...(summarize ? { summarize: prompt => summarize(prompt, {
               requestIdentity: apiSummaryRequestIdentity(JSON.stringify([
                 config.baseUrl, config.auth, config.defaultHeaders, resolvedCredential, method, path, params,
               ])),
               allowReuse: method === 'GET',
-            }) : undefined,
+            }) } : {}),
           });
           if (guarded) {
             return { content: [{ type: 'text' as const, text: guarded }] };

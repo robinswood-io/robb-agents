@@ -354,7 +354,7 @@ describe('Sovereign Team Mesh', () => {
     );
     queue.enqueue(enqueueInput());
     const tokens = new Set<number>();
-    let last;
+    let last: ReturnType<typeof queue.claim> | undefined;
     for (let index = 0; index < 1_000; index += 1) {
       const host = index % 2 === 0 ? 'host-a' : 'host-b';
       const machineIdentityId = host === 'host-a' ? 'machine-a' : 'machine-b';
@@ -381,17 +381,11 @@ describe('Sovereign Team Mesh', () => {
       () => Date.parse('2026-08-20T10:00:00.000Z'),
     );
 
-    const compileTimeForgery: MissionQueueEnqueueInput = {
-      ...enqueueInput('compile-time-forgery'),
-      // @ts-expect-error The creator is resolver-derived and is not part of enqueue input.
-      createdByHumanIdentityId: 'human:attacker',
-    };
-    void compileTimeForgery;
-
-    expect(() => queue.enqueue({
-      ...enqueueInput('runtime-forgery'),
-      createdByHumanIdentityId: 'human:attacker',
-    } as unknown as MissionQueueEnqueueInput)).toThrow();
+    const creatorIsHostOnly: 'createdByHumanIdentityId' extends keyof MissionQueueEnqueueInput ? false : true = true;
+    expect(creatorIsHostOnly).toBe(true);
+    const runtimeForgery = enqueueInput('runtime-forgery');
+    Reflect.set(runtimeForgery, 'createdByHumanIdentityId', 'human:attacker');
+    expect(() => queue.enqueue(runtimeForgery)).toThrow();
     expect(resolverCalls).toBe(0);
 
     queue.enqueue(enqueueInput());

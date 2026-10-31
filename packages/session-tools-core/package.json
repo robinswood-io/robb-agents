@@ -1,6 +1,6 @@
 {
   "name": "@craft-agent/session-tools-core",
-  "version": "0.12.10",
+  "version": "0.12.11",
   "license": "MIT",
   "description": "Shared utilities for session-scoped tools (Claude and Codex)",
   "type": "module",
@@ -10,12 +10,12 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit"
+    "typecheck": "node ../../scripts/run-typescript.ts native --noEmit"
   },
   "dependencies": {
-    "beautiful-mermaid": "*",
-    "zod": "^4.4.3",
-    "zod-to-json-schema": "^3.25.0",
+    "beautiful-mermaid": "1.1.3",
+    "zod": "4.6.7",
+    "zod-to-json-schema": "^3.25.2",
     "gray-matter": "^4.0.3"
   },
   "devDependencies": {

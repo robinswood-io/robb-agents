@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * AppSettingsPage
  *
@@ -67,12 +68,12 @@ function toProxyFormState(settings?: NetworkProxySettings): ProxyFormState {
 }
 
 function toNetworkProxySettings(form: ProxyFormState): NetworkProxySettings {
-  return {
+  return omitUndefined<NetworkProxySettings>({
     enabled: form.enabled,
     httpProxy: form.httpProxy.trim() || undefined,
     httpsProxy: form.httpsProxy.trim() || undefined,
     noProxy: form.noProxy.trim() || undefined,
-  }
+  })
 }
 
 function validateProxyUrl(url: string): string | undefined {
@@ -160,7 +161,7 @@ export default function AppSettingsPage() {
 
   useEffect(() => {
     loadSettings()
-  }, [])
+  }, [loadSettings])
 
   const handleNotificationsEnabledChange = useCallback(async (enabled: boolean) => {
     setNotificationsEnabled(enabled)

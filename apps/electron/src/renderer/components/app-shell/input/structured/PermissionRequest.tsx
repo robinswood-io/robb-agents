@@ -9,7 +9,7 @@ interface PermissionRequestProps {
   request: PermissionRequestType
   onResponse: (response: PermissionResponse) => void
   /** When true, removes container styling (shadow, rounded) - used when wrapped by InputContainer */
-  unstyled?: boolean
+  unstyled?: boolean | undefined
 }
 
 /**

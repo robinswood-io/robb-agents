@@ -1,0 +1,441 @@
+[
+  {
+    "legacy_id": "robinswood-pme-hdf-sellsy-crm-sync",
+    "name": "Robinswood PME HDF — Sellsy CRM sync contacts/actions",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_pme_hdf_sellsy_crm_sync.py --apply --max-contacts 5000 --max-actions 500 --cache-pages 12 --continue-on-error",
+    "timeout_seconds": 1800,
+    "cutover_ready": true,
+    "triggerType": "Schedule",
+    "task_queue": "campaigns",
+    "riskClass": "bounded_crm_write_no_outbound",
+    "sideEffects": [
+      "read_hdf_campaign_contact_artifacts",
+      "read_hdf_mailer_and_reply_ledgers",
+      "find_or_create_sellsy_company",
+      "find_or_create_sellsy_contact",
+      "create_sellsy_crm_task_notes",
+      "write_sync_state_and_report",
+      "no_external_outbound_message"
+    ],
+    "category": "sales",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-sellsy-crm-sync-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Synchronizes every HDF campaign contact discovery and contact action into Sellsy company fiches as CRM storage. Idempotent markers prevent duplicates. No external outbound; sending remains controlled by pre-send/safety/mailer gates.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_pme_hdf_sellsy_crm_sync.py",
+        "--apply",
+        "--max-contacts",
+        "5000",
+        "--max-actions",
+        "500",
+        "--cache-pages",
+        "12",
+        "--continue-on-error"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 1800,
+      "env": {
+        "RBW_HDF_SELLSY_SYNC_APPLY": "1"
+      }
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-sellsy-crm-sync-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-sellsy-crm-sync-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-sellsy-crm-sync-last.md",
+    "businessContractVersion": "robinswood-pme-hdf-sellsy-crm-sync-v1"
+  },
+  {
+    "legacy_id": "campaign-history-sellsy-company-sync",
+    "name": "Campaign history — Sellsy company/contact sync",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/campaign_history_sellsy_company_sync.py --apply --max-records 5000 --cache-pages 20 --continue-on-error",
+    "timeout_seconds": 2400,
+    "cutover_ready": true,
+    "triggerType": "Schedule",
+    "task_queue": "campaigns",
+    "riskClass": "bounded_crm_write_no_outbound",
+    "sideEffects": [
+      "read_historical_campaign_artifacts",
+      "find_or_create_sellsy_company",
+      "find_or_create_sellsy_contact",
+      "create_sellsy_campaign_history_tasks",
+      "write_sync_state_and_report",
+      "no_external_outbound_message"
+    ],
+    "category": "sales",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/campaign-history-sellsy-company-sync-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Backfills and maintains historical campaign companies/contacts/actions in Sellsy. Idempotent CRM storage only; no outbound.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/campaign_history_sellsy_company_sync.py",
+        "--apply",
+        "--max-records",
+        "5000",
+        "--cache-pages",
+        "20",
+        "--continue-on-error"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 2400,
+      "env": {
+        "RBW_CAMPAIGN_HISTORY_SELLSY_SYNC_APPLY": "1"
+      }
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/campaign-history-sellsy-company-sync-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/campaign-history-sellsy-company-sync-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/campaign-history-sellsy-company-sync-last.md",
+    "businessContractVersion": "campaign-history-sellsy-company-sync-v1"
+  },
+  {
+    "legacy_id": "afnor-book-launch-controller",
+    "name": "AFNOR - controleur lancement livre Quand l IA ne suffit pas",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/afnor_book_launch_controller.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "triggerType": "Schedule",
+    "task_queue": "campaigns",
+    "riskClass": "gated_campaign_launch_controller",
+    "sideEffects": [
+      "write_campaign_ops_reports",
+      "update_campaign_launch_timing_gate",
+      "update_no_outbound_lock",
+      "no_ads_without_gate",
+      "no_client_naming_without_permission"
+    ],
+    "category": "campaign-governance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/afnor-book-launch-controller-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Dedicated lifecycle controller for AFNOR book launch. Runs prepare-only until official AFNOR date and launch gates pass; can release only controlled non-ads/non-client-named first wave after conditional approval and gates.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/afnor_book_launch_controller.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/afnor-book-launch-controller-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/afnor-book-launch-2026-launch-controller-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/afnor-book-launch-2026-launch-controller-last.md",
+    "businessContractVersion": "afnor-book-launch-controller-v1"
+  },
+  {
+    "legacy_id": "agent-task-context-enriched-campaign-executor",
+    "name": "Agent Task — Context-enriched campaign / Posts executor",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/agent_task_context_enriched_campaign_executor.py --max 10000",
+    "timeout_seconds": 1800,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "riskClass": "autonomous_content_publication_gated",
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-context-enriched-campaign-executor-last.json",
+    "note": "Manual/on-demand wrapper for the scheduled Agent Task context-enriched campaign and Posts executor. LinkedIn publication remains controlled by linkedin.env gates, connector policy, and --confirm-publish injected by the workflow.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/agent_task_context_enriched_campaign_executor.py",
+        "--max",
+        "10000"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 1800
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-context-enriched-campaign-executor-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/agent-task-context-enriched-campaign-executor-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/agent-task-context-enriched-campaign-executor-last.md",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "robinswood-linkedin-weekly-thought-leadership",
+    "name": "Robinswood LinkedIn — thought leadership hebdomadaire IA/contraintes",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_linkedin_weekly_thought_leadership.py --mode publish",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "triggerType": "Schedule",
+    "task_queue": "campaigns",
+    "riskClass": "bounded_public_linkedin_publication",
+    "sideEffects": [
+      "read_editorial_config",
+      "read_posts_publication_registry",
+      "linkedin_publish_text_post_if_gates_allow",
+      "write_reports",
+      "write_posts_publication_registry"
+    ],
+    "category": "thought-leadership",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-linkedin-weekly-thought-leadership-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Publie au maximum un post LinkedIn public par semaine autour des piliers IA/contraintes Robinswood. Aucun DM, aucune invitation, aucune recherche de personnes. Déduplication par state + posts-publication-registry + ledger LinkedIn. Publication conditionnée aux gates LinkedIn existants.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_linkedin_weekly_thought_leadership.py",
+        "--mode",
+        "publish"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-linkedin-weekly-thought-leadership-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-linkedin-weekly-thought-leadership-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-linkedin-weekly-thought-leadership-last.md",
+    "businessContractVersion": "robinswood-linkedin-weekly-thought-leadership-v1"
+  },
+  {
+    "legacy_id": "reseau-entreprendre-source-backfill",
+    "name": "Réseau Entreprendre Picardie — backfill source Sellsy gardé",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/reseau_entreprendre_source_backfill.py --read-sleep-seconds 0.8",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "triggerType": "ManualDirectOnly",
+    "task_queue": "sync",
+    "riskClass": "guarded_crm_task_description_update_dry_run_default",
+    "sideEffects": [
+      "reads_prospect_research_intake_reports",
+      "reads_sellsy_tasks",
+      "writes_reports",
+      "writes_idempotency_ledger",
+      "no_outbound_message",
+      "no_company_or_contact_creation",
+      "sellsy_task_description_update_only_with_manual_cli_apply_and_env_guard"
+    ],
+    "category": "sales-crm-maintenance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/reseau-entreprendre-source-backfill-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Manual OSS wrapper replacing the local ad-hoc backfill_reseau_source_throttled.py job. Manifest command is dry-run/read-only by default. Real Sellsy task description updates require both --apply and RBW_ALLOW_SELLSY_SOURCE_BACKFILL=1 from an explicit operator run; external outbound and company/contact creation are blocked.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/reseau_entreprendre_source_backfill.py",
+        "--read-sleep-seconds",
+        "0.8"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/reseau-entreprendre-source-backfill-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/reseau-entreprendre-source-backfill-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/reseau-entreprendre-source-backfill-last.md",
+    "businessContractVersion": "reseau-entreprendre-source-backfill-v1-oss-guarded"
+  },
+  {
+    "legacy_id": "reseau-entreprendre-source-backfill-tests",
+    "name": "Réseau Entreprendre Picardie — tests backfill source",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/reseau_entreprendre_source_backfill_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "triggerType": "ManualDirectOnly",
+    "task_queue": "sync",
+    "riskClass": "guardrail_tests",
+    "sideEffects": [
+      "writes_test_report"
+    ],
+    "category": "sales-crm-maintenance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/reseau-entreprendre-source-backfill-tests-last.json",
+    "note": "Unit/guardrail tests for source block construction, idempotent marker detection, and historical queue/report pairing.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/reseau_entreprendre_source_backfill_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/reseau-entreprendre-source-backfill-tests-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/reseau-entreprendre-source-backfill-tests.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "blog-seo-matomo-learning",
+    "name": "Apprentissage SEO Matomo du blog Robinswood",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/blog_seo_matomo_learning.py",
+    "timeout_seconds": 240,
+    "cutover_ready": true,
+    "note": "Autonomous Matomo SEO learning loop: collects blog analytics, writes editorial memory, and feeds daily blog generator.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/blog_seo_matomo_learning.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 240
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/blog-seo-matomo-learning-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/blog-seo-matomo-learning-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "sellsy-revenue-operator-decision-brief",
+    "name": "Sellsy — brief décision opérateur revenue/cash sans approbation",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/sellsy_revenue_operator_decision_brief.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "triggerType": "ManualOrScheduleStep",
+    "task_queue": "sync",
+    "riskClass": "human_decision_support_prepare_only_no_approval",
+    "sideEffects": [
+      "reads_approval_pack",
+      "writes_decision_brief",
+      "writes_draft_inbox_not_live",
+      "no_approved_rows",
+      "no_dispatch_plan",
+      "no_sellsy_mutation",
+      "no_external_message",
+      "no_rubypayeur_debt"
+    ],
+    "category": "revenue-ops",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-revenue-operator-decision-brief-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Generates a non-live operator decision brief and approval-inbox draft from the Sellsy revenue approval pack. It never writes the live approval inbox and never sets approvalStatus=approved.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/sellsy_revenue_operator_decision_brief.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-revenue-operator-decision-brief-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-revenue-operator-decision-brief.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-revenue-operator-decision-brief.md",
+    "businessContractVersion": "sellsy-revenue-operator-decision-brief-v1-prepare-only-no-approval"
+  },
+  {
+    "legacy_id": "sellsy-revenue-operator-decision-brief-tests",
+    "name": "Sellsy — tests brief décision opérateur",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/sellsy_revenue_operator_decision_brief_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "triggerType": "ManualOrScheduleStep",
+    "task_queue": "sync",
+    "riskClass": "guardrail_tests",
+    "sideEffects": [
+      "writes_test_report"
+    ],
+    "category": "revenue-ops",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-revenue-operator-decision-brief-tests-last.json",
+    "note": "Verifies no approved rows, no blocked effects and all mutation/external/Rubypayeur gates stay false.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/sellsy_revenue_operator_decision_brief_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-revenue-operator-decision-brief-tests-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-revenue-operator-decision-brief-tests.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "client-incident-autonomy-loop",
+    "name": "Client Incident Autonomy — email → diagnostic → réparation → réponse contrôlée",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/client_incident_autonomy_loop.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "triggerType": "Schedule",
+    "task_queue": "campaigns",
+    "riskClass": "bounded_client_incident_remediation_with_controlled_reply",
+    "sideEffects": [
+      "gmail_read_allowlisted_client_incidents",
+      "ssh_wpcli_bmb_shared_hosting_repair_known_ticket_placeholders",
+      "wordpress_ticket_code_generation_with_backup",
+      "generate_wordpress_password_reset_link",
+      "gmail_reply_after_successful_controls",
+      "write_reports_and_ledger"
+    ],
+    "category": "client-support-autonomy",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/client-incident-autonomy-loop-last.json",
+    "contractPath": "/srv/rbw-agents-oss/config/client-incident-autonomy-policy.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Autonomous allowlisted client incident loop. Known BMB/CE ticket generation failures are repaired via guarded WP-CLI runbook with backup; external client reply is sent only after public-site and post-repair controls pass. Unknown incidents are report-only. Cadence: daily at 09:00, 14:00 and 20:00 Europe/Paris.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/client_incident_autonomy_loop.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/client-incident-autonomy-loop-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/client-incident-autonomy-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/client-incident-autonomy-last.md",
+    "businessContractVersion": "client-incident-autonomy-v1"
+  },
+  {
+    "legacy_id": "client-incident-autonomy-tests",
+    "name": "Client Incident Autonomy — guardrail tests",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/client_incident_autonomy_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "triggerType": "ScheduleStep",
+    "task_queue": "campaigns",
+    "riskClass": "guardrail_tests",
+    "sideEffects": [
+      "writes_test_report"
+    ],
+    "category": "client-support-autonomy",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/client-incident-autonomy-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Unit/guardrail tests for allowlisted incident detection, no unknown-sender remediation, controlled reply content, and BMB PHP runbook backup/guard invariants. Cadence: daily after the 09:00, 14:00 and 20:00 incident controls.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/client_incident_autonomy_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/client-incident-autonomy-tests-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/client-incident-autonomy-tests-last.json",
+    "businessContractVersion": "client-incident-autonomy-tests-v1"
+  }
+]

@@ -83,7 +83,8 @@ describe('independent review of amendment-bound acceptance revisions', () => {
 
   it('rejects the former 2024 false completion, accepts 2025 only after a new contract and observation, and retains the root budget', () => {
     const original = initial(), observed2024 = observe(2024, 3), oldReceipt = receipt(original, observed2024.id);
-    expect(validateObjectiveOutcome(oldReceipt, { objective: original, messages: [root, observed2024] }).valid).toBe(true);
+    const existingReview = review(original, 4, 'review-original');
+    expect(validateObjectiveOutcome(oldReceipt, { objective: original, messages: [root, observed2024, existingReview] }).valid).toBe(true);
     const changed = amend(original);
     expect(changed.acceptanceNeedsReview).toBe(true);
     expect(changed.acceptanceRevision).toBe(amendment.id);
@@ -108,7 +109,7 @@ describe('independent review of amendment-bound acceptance revisions', () => {
       [root, observed2024, amendment, observedBeforeRegistration], currentReceipt)).toEqual([]);
     const currentObservation = observe(2025, 12, 'new-observation');
     expect(validateObjectiveOutcome(currentReceipt, { objective: revised,
-      messages: [root, observed2024, amendment, currentObservation] }).valid).toBe(true);
+      messages: [root, observed2024, amendment, currentObservation, review(revised, 13, 'review-current')] }).valid).toBe(true);
     expect(() => registerObjectiveAcceptanceCriteria(revised, [yearCheck(2026)], 13)).toThrow('cannot be weakened or replaced');
   });
 
@@ -170,6 +171,7 @@ describe('independent review of amendment-bound acceptance revisions', () => {
     const original = initial();
     const observation = observe(2024, 3);
     const originalReceipt = receipt(original, observation.id);
+    const existingReview = review(original, 4, 'review-presentation');
     for (const [index, text] of [
       'Réponds plus brièvement dans le message final.',
       'Utilise un ton plus simple.',
@@ -187,7 +189,7 @@ describe('independent review of amendment-bound acceptance revisions', () => {
       expect(continued.acceptanceCriteria).toEqual(original.acceptanceCriteria);
       expect(objectiveReviewBinding(continued)).toEqual(objectiveReviewBinding(original));
       expect(validateObjectiveOutcome(originalReceipt, {
-        objective: continued, messages: [root, observation, preference],
+        objective: continued, messages: [root, observation, existingReview, preference],
       }).valid).toBe(true);
     }
   });

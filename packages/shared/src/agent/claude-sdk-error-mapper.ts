@@ -1,7 +1,7 @@
 import type { SDKAssistantMessageError } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentError } from './errors.ts';
 import type { LastApiError } from '../interceptor-common.ts';
-import { getProviderMetadata, getProviderDisplayName } from '../config/provider-metadata.ts';
+import { getProviderMetadata } from '../config/provider-metadata.ts';
 
 export interface ClaudeSdkApiError {
   errorType: string;
@@ -234,7 +234,7 @@ export function mapClaudeSdkAssistantError(
     actions: retryAction,
     canRetry: true,
     retryDelayMs: 5000,
-    providerInfo,
+    ...(providerInfo !== undefined ? { providerInfo } : {}),
   };
 
   const networkError: AgentError = {
@@ -249,7 +249,7 @@ export function mapClaudeSdkAssistantError(
     actions: retryAction,
     canRetry: true,
     retryDelayMs: 2000,
-    providerInfo,
+    ...(providerInfo !== undefined ? { providerInfo } : {}),
   };
 
   switch (errorCode) {
@@ -265,7 +265,7 @@ export function mapClaudeSdkAssistantError(
         ],
         canRetry: true,
         retryDelayMs: 1000,
-        providerInfo,
+        ...(providerInfo !== undefined ? { providerInfo } : {}),
       };
 
     case 'billing_error':
@@ -276,7 +276,7 @@ export function mapClaudeSdkAssistantError(
         details: ['Check your account billing status'],
         actions: [{ key: 's', label: 'Update credentials', action: 'settings' }],
         canRetry: false,
-        providerInfo,
+        ...(providerInfo !== undefined ? { providerInfo } : {}),
       };
 
     case 'rate_limit':
@@ -288,7 +288,7 @@ export function mapClaudeSdkAssistantError(
         actions: retryAction,
         canRetry: true,
         retryDelayMs: 5000,
-        providerInfo,
+        ...(providerInfo !== undefined ? { providerInfo } : {}),
       };
 
     case 'invalid_request': {
@@ -309,7 +309,7 @@ export function mapClaudeSdkAssistantError(
           // Retrying the same payload won't help — user must change settings
           // or compact history first. Hiding the button is correct UX.
           canRetry: false,
-          providerInfo,
+          ...(providerInfo !== undefined ? { providerInfo } : {}),
         };
       }
 
@@ -329,7 +329,7 @@ export function mapClaudeSdkAssistantError(
           // Same as 1M case: retrying without changing the payload hits the
           // same wall, so suppress the button.
           canRetry: false,
-          providerInfo,
+          ...(providerInfo !== undefined ? { providerInfo } : {}),
         };
       }
 
@@ -360,7 +360,7 @@ export function mapClaudeSdkAssistantError(
         actions: retryAction,
         canRetry: true,
         retryDelayMs: 1000,
-        providerInfo,
+        ...(providerInfo !== undefined ? { providerInfo } : {}),
       };
     }
 
@@ -376,7 +376,7 @@ export function mapClaudeSdkAssistantError(
         actions: retryAction,
         canRetry: true,
         retryDelayMs: 1000,
-        providerInfo,
+        ...(providerInfo !== undefined ? { providerInfo } : {}),
       };
 
     case 'unknown': {
@@ -400,7 +400,7 @@ export function mapClaudeSdkAssistantError(
         actions: retryAction,
         canRetry: true,
         retryDelayMs: 2000,
-        providerInfo,
+        ...(providerInfo !== undefined ? { providerInfo } : {}),
       };
     }
 
@@ -417,7 +417,7 @@ export function mapClaudeSdkAssistantError(
         actions: retryAction,
         canRetry: true,
         retryDelayMs: 2000,
-        providerInfo,
+        ...(providerInfo !== undefined ? { providerInfo } : {}),
       };
   }
 }

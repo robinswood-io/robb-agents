@@ -16,10 +16,10 @@ function createCtx(
       _attachments?: Array<{ path: string; name?: string }>,
       messageType?: AgentMessageType,
     ) => {
-      calls.push({ sessionId, message, messageType });
+      calls.push({ sessionId, message, ...(messageType !== undefined ? { messageType } : {}) });
       return result;
     },
-  } as unknown as SessionToolContext;
+  } as SessionToolContext;
   return { ctx, calls };
 }
 

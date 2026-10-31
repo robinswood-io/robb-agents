@@ -31,7 +31,7 @@ export interface DiffViewerControlsProps {
   onBackgroundChange: (disabled: boolean) => void
 
   /** Additional className */
-  className?: string
+  className?: string | undefined
 }
 
 /**

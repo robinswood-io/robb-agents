@@ -1,0 +1,10 @@
+diff --git a/dist/commonjs/index.js b/dist/commonjs/index.js
+index eb1c915f43b2debf5faa7ac3a73c262a161c7a4f..3d4c73f5083f31fc7f6c40c0bac193a39c30e1ca 100644
+--- a/dist/commonjs/index.js
++++ b/dist/commonjs/index.js
+@@ -1548,3 +1548,5 @@ exports.minimatch.Minimatch = Minimatch;
+ exports.minimatch.escape = escape_js_1.escape;
+ exports.minimatch.unescape = unescape_js_1.unescape;
+ //# sourceMappingURL=index.js.map
++// Preserve callable CommonJS consumers while retaining the secure matcher and named API.
++module.exports = Object.assign(exports.minimatch, exports);

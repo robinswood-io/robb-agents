@@ -1,3 +1,5 @@
+import { isUnknownArray } from "../../../../../packages/shared/src/utils/json.ts";
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { ActivityItem, FileChange } from '@craft-agent/ui'
 
 function asString(value: unknown): string | undefined {
@@ -5,7 +7,7 @@ function asString(value: unknown): string | undefined {
 }
 
 function getFilePath(input: Record<string, unknown>): string {
-  return asString(input.file_path) || asString(input.path) || 'unknown'
+  return asString(input["file_path"]) || asString(input["path"]) || 'unknown'
 }
 
 function getEditChangeId(activityId: string, editIndex: number, editCount: number): string {
@@ -21,59 +23,59 @@ export function collectFileChangesFromActivities(activities: ActivityItem[]): Fi
 
     if (activity.toolName === 'Edit') {
       // Codex format: { changes: Array<{ path, kind, diff }> }
-      if (Array.isArray(input.changes)) {
-        for (const codexChange of input.changes as Array<{ path?: string; diff?: string }>) {
-          changes.push({
+      if (isUnknownArray(input["changes"])) {
+        for (const codexChange of input["changes"] as Array<{ path?: string; diff?: string }>) {
+          changes.push(omitUndefined<FileChange>({
             id: `${activity.id}-${codexChange.path || 'unknown'}`,
             filePath: codexChange.path || 'unknown',
             toolType: 'Edit',
             original: '',
             modified: '',
-            unifiedDiff: codexChange.diff,
+            ...(codexChange.diff !== undefined ? { unifiedDiff: codexChange.diff } : {}),
             error: activity.error || undefined,
-          })
+          }))
         }
         continue
       }
 
       // Pi SDK >= 0.63.2 edit format: { path, edits: [{ oldText, newText }] }
-      if (Array.isArray(input.edits) && input.edits.length > 0) {
+      if (isUnknownArray(input["edits"]) && input["edits"].length > 0) {
         const filePath = getFilePath(input)
-        for (const [index, edit] of input.edits.entries()) {
+        for (const [index, edit] of input["edits"].entries()) {
           const currentEdit = (edit ?? {}) as { oldText?: unknown; newText?: unknown }
-          changes.push({
-            id: getEditChangeId(activity.id, index, input.edits.length),
+          changes.push(omitUndefined<FileChange>({
+            id: getEditChangeId(activity.id, index, input["edits"].length),
             filePath,
             toolType: 'Edit',
             original: asString(currentEdit.oldText) || '',
             modified: asString(currentEdit.newText) || '',
             error: activity.error || undefined,
-          })
+          }))
         }
         continue
       }
 
       // Claude fields take precedence; legacy Pi fields are additive fallbacks.
-      changes.push({
+      changes.push(omitUndefined<FileChange>({
         id: activity.id,
         filePath: getFilePath(input),
         toolType: 'Edit',
-        original: asString(input.old_string) || asString(input.oldText) || '',
-        modified: asString(input.new_string) || asString(input.newText) || '',
+        original: asString(input["old_string"]) || asString(input["oldText"]) || '',
+        modified: asString(input["new_string"]) || asString(input["newText"]) || '',
         error: activity.error || undefined,
-      })
+      }))
       continue
     }
 
     if (activity.toolName === 'Write') {
-      changes.push({
+      changes.push(omitUndefined<FileChange>({
         id: activity.id,
         filePath: getFilePath(input),
         toolType: 'Write',
         original: '',
-        modified: asString(input.content) || '',
+        modified: asString(input["content"]) || '',
         error: activity.error || undefined,
-      })
+      }))
     }
   }
 

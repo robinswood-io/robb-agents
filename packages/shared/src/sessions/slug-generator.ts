@@ -120,7 +120,7 @@ export function parseSessionId(sessionId: string): {
     datePrefix,
     date,
     slug,
-    suffix: suffixStr ? parseInt(suffixStr, 10) : undefined,
+    ...(suffixStr ? { suffix: parseInt(suffixStr, 10) } : {}),
   };
 }
 

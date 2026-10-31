@@ -29,6 +29,26 @@ afterEach(() => {
 })
 
 describe('BindingStore', () => {
+  it.each([
+    { id: 42 },
+    { platform: 'unknown-platform' },
+    { config: { accessMode: 'unexpected-mode' } },
+    { config: { allowedSenderIds: [42] } },
+  ])('rejects malformed persisted bindings without rewriting the file: %j', patch => {
+    const seed = new BindingStore(dir).bind('ws1', 'session', 'telegram', 'channel')
+    const contents = JSON.stringify([{ ...seed, ...patch }])
+    const file = join(dir, 'bindings.json')
+    writeFileSync(file, contents)
+    const errors: string[] = []
+    const logger = {
+      info: () => {}, warn: () => {}, error: (message: string) => { errors.push(message) },
+      child: () => logger,
+    }
+    expect(new BindingStore(dir, undefined, logger).getAll()).toEqual([])
+    expect(errors).toHaveLength(1)
+    expect(readFileSync(file, 'utf8')).toBe(contents)
+  })
+
   it('binds and finds a channel', () => {
     const store = new BindingStore(dir)
     const b = store.bind('ws1', 'session-A', 'telegram', 'chat-1', 'Alice')

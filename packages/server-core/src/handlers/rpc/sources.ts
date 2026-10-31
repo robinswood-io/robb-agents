@@ -1,3 +1,5 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import type { FolderSourceConfig } from '@craft-agent/shared/sources';
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import { getWorkspaceByNameOrId } from '@craft-agent/shared/config'
 import { loadWorkspaceSources } from '@craft-agent/shared/sources'
@@ -46,10 +48,10 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
       provider: config.provider || 'custom',
       type: config.type || 'mcp',
       enabled: config.enabled ?? true,
-      mcp: config.mcp,
-      api: config.api,
-      local: config.local,
-      routingSensitivity: config.routingSensitivity,
+      ...(config.mcp !== undefined ? { mcp: config.mcp } : {}),
+      ...(config.api !== undefined ? { api: config.api } : {}),
+      ...(config.local !== undefined ? { local: config.local } : {}),
+      ...(config.routingSensitivity !== undefined ? { routingSensitivity: config.routingSensitivity } : {}),
     })
   })
 
@@ -62,7 +64,7 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
     const existing = loadSourceConfig(workspace.rootPath, sourceSlug)
     if (!existing) throw new Error(`Source not found: ${sourceSlug}`)
 
-    const next = {
+    const next = omitUndefined<FolderSourceConfig>({
       ...existing,
       ...updates,
       routingSensitivity: updates.routingSensitivity === null ? undefined : updates.routingSensitivity ?? existing.routingSensitivity,
@@ -73,7 +75,7 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
       mcp: updates.mcp ?? existing.mcp,
       api: updates.api ?? existing.api,
       local: updates.local ?? existing.local,
-    }
+    })
 
     saveSourceConfig(workspace.rootPath, next)
     const sources = loadWorkspaceSources(workspace.rootPath)
@@ -224,7 +226,7 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
           transport: 'stdio',
           command: resolved.command,
           args: resolved.args,
-          env: resolved.env,
+          ...(resolved.env !== undefined ? { env: resolved.env } : {}),
         })
       } else {
         if (!source.config.mcp.url) {
@@ -245,15 +247,14 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
         client = new CraftMcpClient({
           transport: 'http',
           url: source.config.mcp.url,
-          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
+          ...(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {}),
         })
       }
 
       const tools = await client.listTools()
       await client.close()
 
-      const { loadSourcePermissionsConfig, permissionsConfigCache } = await import('@craft-agent/shared/agent')
-      const permissionsConfig = loadSourcePermissionsConfig(workspace.rootPath, sourceSlug)
+      const { permissionsConfigCache } = await import('@craft-agent/shared/agent')
 
       const mergedConfig = permissionsConfigCache.getMergedConfig({
         workspaceRootPath: workspace.rootPath,

@@ -119,7 +119,7 @@ const PlatformContext = createContext<PlatformActions>({})
 
 export interface PlatformProviderProps {
   children: ReactNode
-  actions?: PlatformActions
+  actions?: PlatformActions | undefined
 }
 
 /**

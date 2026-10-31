@@ -1,0 +1,37 @@
+{
+  "status": "passed",
+  "source": "packages/ui/src/components/markdown/MarkdownDatatableBlock.tsx",
+  "nativeSourceHash": "8ef88b1a37f3d2f2b521fe6b21d4cd12d47e2e51a72b7d769235ffc08a6cae50",
+  "nativeDeclarations": 18,
+  "extractedDeclarations": 17,
+  "nativeBodiesStateAndEffectOrderPreserved": true,
+  "nativePublicExportsAndImportedBindingsPreserved": true,
+  "nativeExternalImportOrder": [
+    "react",
+    "nice-ticks",
+    "lucide-react",
+    "../../lib/utils",
+    "./CodeBlock",
+    "../overlay/DataTableOverlay",
+    "./useScrollFade",
+    "./TableExportDropdown",
+    "../../context/PlatformContext",
+    "../ui/StyledDropdown",
+    "react-i18next"
+  ],
+  "runtimeImportCycles": 0,
+  "newStateOrWorkflowAdded": false,
+  "maximumFileLines": 481,
+  "files": [
+    {
+      "file": "packages/ui/src/components/markdown/MarkdownDatatableBlock.tsx",
+      "lines": 481,
+      "sha256": "93d697e1e6760d5351af1db8a7136b5c3d11f41c2c188e4296ab48850adc7672"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/datatable-values.tsx",
+      "lines": 275,
+      "sha256": "52e64e970b93e5f108c06ae0d750feaeef162ea705daf46c8fb89515e8718e19"
+    }
+  ]
+}

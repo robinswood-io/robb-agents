@@ -3,15 +3,11 @@ import react from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
-import { resolveReactPdfWorker } from '../../scripts/pdf-worker-resolution'
+import { resolveReactPdfWorker } from '../../scripts/pdf-worker-resolution.ts'
 
 const configDir = import.meta.dirname
 
-// NOTE: Source map upload to Sentry is intentionally disabled.
-// To re-enable, uncomment the sentryVitePlugin below and add SENTRY_AUTH_TOKEN,
-// SENTRY_ORG, SENTRY_PROJECT to CI secrets. See CLAUDE.md "Sentry Error Tracking" section.
-// import { sentryVitePlugin } from '@sentry/vite-plugin'
-
+// Source maps are generated locally; upload to Sentry is disabled.
 export default defineConfig({
   plugins: [
     react(),
@@ -25,16 +21,6 @@ export default defineConfig({
       ],
     }),
     tailwindcss(),
-    // Sentry source map upload — intentionally disabled. See CLAUDE.md for re-enabling instructions.
-    // sentryVitePlugin({
-    //   org: process.env.SENTRY_ORG,
-    //   project: process.env.SENTRY_PROJECT,
-    //   authToken: process.env.SENTRY_AUTH_TOKEN,
-    //   disable: !process.env.SENTRY_AUTH_TOKEN,
-    //   sourcemaps: {
-    //     filesToDeleteAfterUpload: ['**/*.map'],
-    //   },
-    // }),
   ],
   root: resolve(configDir, 'src/renderer'),
   base: './',
@@ -68,6 +54,8 @@ export default defineConfig({
     dedupe: ['react', 'react-dom']
   },
   optimizeDeps: {
+    // Scan linked UI dependencies before navigation triggers a second prebundle.
+    entries: ['*.html', '../../../../packages/ui/src/index.ts'],
     include: ['react', 'react-dom', 'jotai', 'pdfjs-dist'],
     exclude: ['@craft-agent/ui', 'pdfjs-dist/build/pdf.worker.min.mjs?url'],
     rolldownOptions: {

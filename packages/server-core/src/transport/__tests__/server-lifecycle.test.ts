@@ -1,3 +1,6 @@
+import { isJsonObject, parseJsonObject } from '@craft-agent/shared/utils/json'
+import type { WsRpcServerOptions } from '../server/shared.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * WsRpcServer lifecycle & security tests.
  *
@@ -26,7 +29,7 @@ function createServer(opts?: {
     args: readonly unknown[],
   ) => boolean | Promise<boolean>
 }) {
-  return new WsRpcServer({
+  return new WsRpcServer(omitUndefined<WsRpcServerOptions>({
     host: '127.0.0.1',
     port: 0,
     requireAuth: opts?.requireAuth ?? true,
@@ -37,7 +40,7 @@ function createServer(opts?: {
     maxClients: opts?.maxClients,
     authorizeRequest: opts?.authorizeRequest,
     serverId: 'test',
-  })
+  }))
 }
 
 function handshake(
@@ -63,13 +66,18 @@ function handshake(
       }))
     })
     ws.on('message', (data) => {
-      const msg = JSON.parse(data.toString())
-      if (msg.type === 'handshake_ack') {
+      const msg = parseJsonObject(data.toString())
+      if (msg['type'] === 'handshake_ack') {
         clearTimeout(timeout)
-        resolve({ ws, clientId: msg.clientId })
-      } else if (msg.type === 'error') {
+        const clientId = msg['clientId']
+        if (typeof clientId !== 'string') {
+          reject(new Error('Invalid handshake client identity')); ws.close(); return
+        }
+        resolve({ ws, clientId })
+      } else if (msg['type'] === 'error') {
         clearTimeout(timeout)
-        reject(new Error(`Auth error: ${msg.error?.message}`))
+        const error = msg['error']
+        reject(new Error(`Auth error: ${isJsonObject(error) ? String(error['message']) : 'invalid server error'}`))
         ws.close()
       }
     })
@@ -91,14 +99,14 @@ function invoke(ws: WebSocket, channel: string, args: readonly unknown[] = []): 
       const parsed: unknown = JSON.parse(data.toString())
       if (typeof parsed !== 'object' || parsed === null) return
       const message = parsed as Record<string, unknown>
-      if (message.id !== id || message.type !== 'response') return
+      if (message["id"] !== id || message["type"] !== 'response') return
       ws.off('message', onMessage)
-      if (typeof message.error === 'object' && message.error !== null) {
-        const error = message.error as Record<string, unknown>
-        reject(new Error(typeof error.message === 'string' ? error.message : 'RPC failed'))
+      if (typeof message["error"] === 'object' && message["error"] !== null) {
+        const error = message["error"] as Record<string, unknown>
+        reject(new Error(typeof error["message"] === 'string' ? error["message"] : 'RPC failed'))
         return
       }
-      resolve(message.result)
+      resolve(message["result"])
     }
     ws.on('message', onMessage)
     ws.send(JSON.stringify({ id, type: 'request', channel, args }))

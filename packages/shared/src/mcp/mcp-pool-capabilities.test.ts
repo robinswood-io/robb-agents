@@ -50,10 +50,10 @@ describe('McpClientPool proxy capabilities', () => {
     expect(definition?.idempotent).toBeUndefined();
     expect(definition?.destructive).toBeUndefined();
 
-    expect(pool.getProxyToolCapabilities('mcp__mixed__inspect')).toEqual({
+    expect<unknown>(pool.getProxyToolCapabilities('mcp__mixed__inspect')).toEqual({idempotent: undefined, destructive: undefined, 
       readOnly: false,
-      idempotent: undefined,
-      destructive: undefined,
+      
+      
       openWorld: false,
       trusted: false,
     });

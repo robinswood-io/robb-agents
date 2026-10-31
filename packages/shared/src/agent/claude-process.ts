@@ -11,7 +11,7 @@ export function createProtectedClaudeSpawner(stderr?: Options['stderr']): NonNul
     });
     // The SDK only drains stderr for its default spawner. Preserve diagnostics
     // and prevent a full stderr pipe from hanging a custom protected process.
-    child.stderr.on('data', data => stderr?.(data.toString()));
+    child.stderr.on('data', (data: Buffer | string) => stderr?.(data.toString()));
     return child;
   };
 }

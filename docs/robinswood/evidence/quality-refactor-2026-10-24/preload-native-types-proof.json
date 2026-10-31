@@ -1,0 +1,9 @@
+{
+  "valid": true,
+  "explicitAnyRemoved": 17,
+  "guardedErrnoReads": 2,
+  "runtimeAstPreservedOutsideErrnoGuards": true,
+  "guardBehavior": "Unknown socket-binding failures are narrowed before reading code; native Error and plain error-record EADDRINUSE cases are exercised by the isolated flow tests.",
+  "beforeHash": "528f58447e5f96b9eb1db7392281a3b6d899fbb5111d6bbbeeec99fa1e6dff7f",
+  "typedHash": "f8bfc308149a6b05c041e5e8a10f0ff4383839427b36b0665f97001b13e01bf2"
+}

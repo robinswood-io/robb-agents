@@ -1,0 +1,170 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Client et serveur WebSocket",
+  "changes": [
+    "Client réparti entre connexion et messages ; serveur réparti entre connexion, cycle de vie et livraison.",
+    "Les champs, constructeurs et méthodes conservées restent natifs. Les 23 implémentations déplacées opèrent sur la même instance typée.",
+    "Les méthodes conservent leurs paramètres, valeurs par défaut, sorties et callbacks ; les déclarations communes et exports publics sont conservés.",
+    "Les nouvelles dépendances internes ne créent aucun cycle d’import d’exécution."
+  ],
+  "outputFiles": [
+    {
+      "file": "packages/server-core/src/transport/client/shared.ts",
+      "hash": "5a0b6b1a29a19db535875bbe0a24bb893c00bad2f9cda582a5587f9a1aacc6ce",
+      "lines": 69
+    },
+    {
+      "file": "packages/server-core/src/transport/client/connection.ts",
+      "hash": "a77421ff0ec7bc10b4fa57aa274ba48728afe0965a2b3f74fb4f4dd720dac07c",
+      "lines": 316
+    },
+    {
+      "file": "packages/server-core/src/transport/client/messages.ts",
+      "hash": "cdb4762a6ecc538b0e5984532fb9a6753191a9f26e8ae65c391facb489689418",
+      "lines": 228
+    },
+    {
+      "file": "packages/server-core/src/transport/client.ts",
+      "hash": "e20ca69f5d2a23a1040030523b9943156b1c428df7d9b2cc8d42bf0d35e8a1ec",
+      "lines": 389
+    },
+    {
+      "file": "packages/server-core/src/transport/server/shared.ts",
+      "hash": "70b3bf0b3017e0161db32d7071487ea8dafda7ea174428e3b462e9ac075e4683",
+      "lines": 126
+    },
+    {
+      "file": "packages/server-core/src/transport/server/connection.ts",
+      "hash": "370e4159e4b8f33e0f9b9e82fa54cfcedb2689f11313f76c365aab0d99be9193",
+      "lines": 391
+    },
+    {
+      "file": "packages/server-core/src/transport/server/lifecycle.ts",
+      "hash": "348fc9a338168a82f0a7562f69f7c255599bff4bfc2f5b0bc44f35e2153f048a",
+      "lines": 159
+    },
+    {
+      "file": "packages/server-core/src/transport/server/delivery.ts",
+      "hash": "f2aa5b2f4a33798e53dfbf45856e74fa7d9d5b8e181ff2ab27d1e4392a3ccfdb",
+      "lines": 173
+    },
+    {
+      "file": "packages/server-core/src/transport/server.ts",
+      "hash": "29cbb740a040260577ddf72368fbae4f87613ed3696941dc0024e5cbd0bcd019",
+      "lines": 392
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 18.14,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/transport-classes-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 17.11,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/transport-classes-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/server-core/src/transport",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 2.49,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/transport-classes-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/server-core/src/transport",
+        "./apps/electron/src/__tests__/transport.test.ts",
+        "./apps/electron/src/__tests__/transport-simple-invoke-returns-result.test.ts",
+        "./apps/electron/src/__tests__/transport-client-receives-server-pushed-events.test.ts",
+        "./apps/electron/src/__tests__/transport-manual-reconnect-preserves-reconnect-identity-and-replays-missed.test.ts",
+        "./apps/electron/src/__tests__/transport-server-with-requireauth-rejects-clients-without-token.test.ts",
+        "./apps/electron/src/__tests__/transport-becomes-connected-after-successful-handshake.test.ts",
+        "./apps/electron/src/__tests__/transport-invoke-queues-until-handshake-completes.test.ts",
+        "./apps/electron/src/__tests__/transport-server-invokes-client-capability-and-receives-result.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 2.91,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/transport-classes-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 12.74,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/transport-classes-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 142.82,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/transport-classes-test.log"
+    }
+  ],
+  "fullTestSummary": {
+    "pass": 10741,
+    "fail": 0,
+    "skip": 12
+  },
+  "proof": "transport-class-structural-proof.json",
+  "sourceGate": {
+    "max-lines": 116,
+    "no-explicit-any": 376
+  },
+  "globalLint": {
+    "files": 3247,
+    "errors": 462,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 357,
+      "max-lines": 105,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "limits": [
+    "116 fichiers trop longs et 376 any subsistent dans le code maintenu.",
+    "Missions réelles, contrôle UI et installation finale restent à effectuer."
+  ],
+  "installedApplication": "Aucune installation de ce lot effectuée.",
+  "updatedAt": "2026-10-25T17:31:38.448944+00:00"
+}

@@ -1,3 +1,5 @@
+import en from '../../../../../packages/shared/src/i18n/locales/en/index.ts'
+import fr from '../../../../../packages/shared/src/i18n/locales/fr/index.ts'
 import { describe, expect, it } from 'bun:test'
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, statSync } from 'node:fs'
@@ -23,7 +25,7 @@ describe('Robinswood visible branding', () => {
 
   it('selects the Electron app name from the isolated runtime channel', () => {
     const main = readRepoFile('apps/electron/src/main/index.ts')
-    expect(main).toContain('app.setName(process.env.CRAFT_APP_NAME || getDefaultAppName(APP_CHANNEL))')
+    expect(main).toContain('app.setName(process.env["CRAFT_APP_NAME"] || getDefaultAppName(APP_CHANNEL))')
     expect(main).not.toContain("app.setName(process.env.CRAFT_APP_NAME || 'Craft Agents')")
   })
 
@@ -55,6 +57,37 @@ describe('Robinswood visible branding', () => {
     expect(builder).not.toContain('productName: Craft Agents')
   })
 
+  it('keeps platform runtimes external and platform-independent wrappers packaged', () => {
+    const builder = readRepoFile('apps/electron/electron-builder.yml')
+    const files = builder.split('\nextraResources:')[0] ?? ''
+    for (const platform of ['darwin', 'linux', 'win32']) {
+      expect(files).toContain('!dist/resources/bin/' + platform + '-*/**')
+    }
+    for (const wrapper of ['markitdown', 'pdf-tool', 'xlsx-tool', 'doc-diff', 'img-tool', 'docx-tool', 'pptx-tool', 'ical-tool']) {
+      expect(files).toContain('- resources/bin/' + wrapper + '\n')
+      expect(files).toContain('- resources/bin/' + wrapper + '.cmd')
+    }
+
+    const externalResources = builder.split('\nextraResources:\n')[1] ?? ''
+    const genericResources = externalResources.split('\nmac:\n')[0] ?? ''
+    expect(genericResources).toContain('!bin/darwin-*/**')
+    expect(genericResources).toContain('!bin/linux-*/**')
+    expect(genericResources).toContain('!bin/win32-*/**')
+
+    const macResources = builder.split('\nmac:\n')[1]?.split('\ndmg:\n')[0] ?? ''
+    expect(macResources).toContain('from: resources/bin/${platform}-${arch}')
+    expect(macResources).toContain('to: app/resources/bin/${platform}-${arch}')
+    const windowsResources = builder.split('\nwin:\n')[1]?.split('\nnsis:\n')[0] ?? ''
+    expect(windowsResources).toContain('from: resources/bin/win32-x64')
+    expect(windowsResources).toContain('to: app/resources/bin/win32-x64')
+    const linuxResources = builder.split('\nlinux:\n')[1] ?? ''
+    expect(linuxResources).toContain('from: resources/bin/${platform}-${arch}')
+    expect(linuxResources).toContain('to: app/resources/bin/${platform}-${arch}')
+    const main = readRepoFile('apps/electron/src/main/index.ts')
+    expect(main).toContain("? join(process.resourcesPath, 'app')")
+    expect(main).toContain("join(resourcesBase, 'resources', 'bin', platformKey)")
+  })
+
   it('packages development with a disjoint name and bundle identifier', () => {
     const builder = readRepoFile('apps/electron/electron-builder.dev.yml')
     expect(builder).toContain('appId: io.robinswood.robbagents.dev')
@@ -68,7 +101,7 @@ describe('Robinswood visible branding', () => {
     expect(readRepoFile('apps/electron/scripts/build-dmg.sh')).toContain('Robb-Agents-${ARCH}.dmg')
     expect(readRepoFile('apps/electron/scripts/build-linux.sh')).toContain('Robb-Agents-${ARCH}.AppImage')
     expect(readRepoFile('apps/electron/scripts/build-win.ps1')).toContain('Building Robb Agents Windows Installer')
-    const afterPack = readRepoFile('apps/electron/scripts/afterPack.cjs')
+    const afterPack = readRepoFile('apps/electron/scripts/afterPack.ts')
     expect(afterPack).toContain('productFilename')
     expect(afterPack).toContain('robinswood-Assets.car')
     expect(afterPack).not.toContain("'Craft Agents.app'")
@@ -92,8 +125,8 @@ describe('Robinswood visible branding', () => {
   })
 
   it('loads the window icon from electron-builder extraResources in packaged builds', () => {
-    const windowManager = readRepoFile('apps/electron/src/main/window-manager.ts')
-    expect(windowManager).toContain("join(process.resourcesPath, 'app', 'resources', iconName)")
+    const windowCreation = readRepoFile('apps/electron/src/main/window-manager/creation.ts')
+    expect(windowCreation).toContain("join(process.resourcesPath, 'app', 'resources', iconName)")
   })
 
   it('does not ship a Robinswood Assets.car that is just the upstream Craft asset catalog', () => {
@@ -104,12 +137,12 @@ describe('Robinswood visible branding', () => {
   })
 
   it('uses Robinswood labels in visible locale values and provider labels', () => {
-    const en = readRepoFile('packages/shared/src/i18n/locales/en.json')
-    const fr = readRepoFile('packages/shared/src/i18n/locales/fr.json')
-    expect(en).toContain('Welcome to Robb Agents')
-    expect(fr).toContain('Bienvenue dans Robb Agents')
-    expect(en).toContain('Robb Agents Backend')
-    expect(fr).toContain('Robb Agents Backend')
+    const english = JSON.stringify(en)
+    const french = JSON.stringify(fr)
+    expect(english).toContain('Welcome to Robb Agents')
+    expect(french).toContain('Bienvenue dans Robb Agents')
+    expect(english).toContain('Robb Agents Backend')
+    expect(french).toContain('Robb Agents Backend')
     expect(readRepoFile('apps/electron/src/renderer/components/app-shell/input/model-picker-helpers.ts')).toContain('ROBINSWOOD_BACKEND_NAME')
     expect(readRepoFile('apps/electron/src/renderer/lib/provider-icons.ts')).toContain('ROBINSWOOD_BACKEND_NAME')
   })
@@ -127,11 +160,14 @@ describe('Robinswood visible branding', () => {
 
   it('keeps production data compatible and isolates every development launch', () => {
     const paths = readRepoFile('packages/shared/src/config/paths.ts')
-    expect(paths).toContain('process.env.CRAFT_CONFIG_DIR')
+    expect(paths).toContain('process.env["CRAFT_CONFIG_DIR"]')
     expect(paths).toContain("PRODUCTION_CONFIG_DIR_NAME = '.craft-agent'")
     expect(paths).toContain("DEVELOPMENT_CONFIG_DIR_NAME = '.craft-agent-dev'")
     expect(paths).toContain("channel === 'development'")
     expect(paths).not.toContain("join(homedir(), '.robb-agents')")
+    const server = readRepoFile('apps/electron/src/main/main-embedded-server.ts')
+    expect(server).toContain("join(CONFIG_DIR, 'workspaces', wsId, 'messaging')")
+    expect(server).not.toContain("join(homedir(), '.craft-agent'")
 
     const windowState = readRepoFile('apps/electron/src/main/window-state.ts')
     expect(windowState).toContain("@craft-agent/shared/config/paths")
@@ -142,30 +178,31 @@ describe('Robinswood visible branding', () => {
     expect(logger).toContain("join(CONFIG_DIR, 'logs', 'auto-update.log')")
     expect(logger).not.toContain("join(homedir(), '.craft-agent', 'logs'")
 
-    const electronDev = readRepoFile('scripts/electron-dev.ts')
+    const electronDev = ['scripts/electron-dev.ts', 'scripts/electron-dev-support.ts'].map(readRepoFile).join('\n')
     expect(electronDev).toContain('Robb Agents Dev.app')
     expect(electronDev).toContain('io.robinswood.robbagents.dev')
     expect(electronDev).toContain('.craft-agent-dev')
-    expect(electronDev).toContain('CRAFT_DEEPLINK_SCHEME: process.env.CRAFT_DEEPLINK_SCHEME || "robbagentsdev"')
+    expect(electronDev).toContain('CRAFT_DEEPLINK_SCHEME: process.env["CRAFT_DEEPLINK_SCHEME"] || "robbagentsdev"')
     expect(electronDev).toContain('Development profile isolation refused')
   })
 
   it('detects stable updates at launch but requires consent before download', () => {
     const updater = readRepoFile('apps/electron/src/main/auto-update.ts')
-    const main = readRepoFile('apps/electron/src/main/index.ts')
+    const macInstaller = readRepoFile('apps/electron/src/main/auto-update-mac.ts')
     const updateHook = readRepoFile('apps/electron/src/renderer/hooks/useUpdateChecker.ts')
     expect(updater).toContain('autoUpdater.autoDownload = false')
     expect(updater).toContain('autoUpdater.autoInstallOnAppQuit = false')
     expect(updater).toContain('autoUpdater.allowPrerelease = false')
     expect(updater).toContain('await autoUpdater.downloadUpdate()')
     expect(updater).toContain("void checkForUpdates('automatic')")
-    expect(main).toContain('startAutomaticUpdateChecks()')
+    expect(readRepoFile('apps/electron/src/main/main-ready.ts')).toContain('startAutomaticUpdateChecks()')
+    expect(readRepoFile('apps/electron/src/main/index.ts')).toContain('await startMainProcess(')
     expect(updateHook).toContain('await window.electronAPI.checkForUpdates()')
     expect(updateHook).toContain('onClick: onDownload')
-    expect(updater).toContain('/usr/sbin/spctl --assess --type execute')
-    expect(updater).toContain('source=Notarized Developer ID')
-    expect(updater).toContain('^Authority=Developer ID Application: .+$')
-    expect(updater).toContain('^TeamIdentifier=[A-Z0-9]{10}$')
+    expect(macInstaller).toContain('/usr/sbin/spctl --assess --type execute')
+    expect(macInstaller).toContain('source=Notarized Developer ID')
+    expect(macInstaller).toContain('^Authority=Developer ID Application: .+$')
+    expect(macInstaller).toContain('^TeamIdentifier=[A-Z0-9]{10}$')
 
     const menu = readRepoFile('apps/electron/src/main/menu.ts')
     const menuSchema = readRepoFile('apps/electron/src/shared/menu-schema.ts')
@@ -196,6 +233,7 @@ describe('Robinswood visible branding', () => {
     for (const path of [
       'apps/electron/package.json',
       'scripts/electron-dev.ts',
+      'scripts/electron-dev-support.ts',
       'scripts/build/win32.ts',
     ]) {
       expect(readRepoFile(path)).not.toContain('define:process.env.GOOGLE_OAUTH_CLIENT_SECRET')
@@ -204,7 +242,7 @@ describe('Robinswood visible branding', () => {
 
   it('uses Robb Agents in visible runtime guidance outside the desktop shell', () => {
     expect(readRepoFile('packages/messaging-gateway/src/access-control.ts')).toContain('Robb Agents app')
-    expect(readRepoFile('packages/messaging-gateway/src/commands.ts')).toContain('Robb Agents app')
+    expect(readRepoFile('packages/messaging-gateway/src/commands/binding.ts')).toContain('Robb Agents app')
     expect(readRepoFile('packages/messaging-whatsapp-worker/src/worker.ts')).toContain("Browsers.macOS('Robb Agents')")
     expect(readRepoFile('packages/server-core/src/sessions/RemoteBrowserPaneManager.ts')).toContain('Robb Agents desktop app')
     expect(readRepoFile('packages/shared/src/sources/builtin-sources.ts')).toContain('Upstream Craft Agents OSS Docs')

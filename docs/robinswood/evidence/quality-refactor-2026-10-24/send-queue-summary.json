@@ -1,0 +1,134 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Admission et écriture des messages reçus pendant un tour actif",
+  "changes": [
+    "Admission, capacité et écriture durable réparties en fonctions directes.",
+    "Valeurs déjà calculées transmises dans un argument en lecture seule avec leurs 25 types natifs.",
+    "Réponses durables conservées à leur place ; calcul de capacité synchrone ; attente de publication conservée sur les chemins qui attendaient déjà.",
+    "Identité des fonctions de retour et ordre des écritures, accusés de réception et contrôles d’arrêt conservés."
+  ],
+  "sourceGate": {
+    "max-lines": 126,
+    "no-explicit-any": 403
+  },
+  "parentLinesBefore": 4770,
+  "parentLinesAfter": 4279,
+  "newFiles": [
+    {
+      "file": "packages/server-core/src/sessions/SessionManager/operations/queued-message-input.ts",
+      "lines": 35
+    },
+    {
+      "file": "packages/server-core/src/sessions/SessionManager/operations/queued-delivery-capacity.ts",
+      "lines": 50
+    },
+    {
+      "file": "packages/server-core/src/sessions/SessionManager/operations/persist-queued-message.ts",
+      "lines": 157
+    },
+    {
+      "file": "packages/server-core/src/sessions/SessionManager/operations/enqueue-session-message.ts",
+      "lines": 396
+    }
+  ],
+  "equivalence": {
+    "nativeQueueBodyAndOrderPreserved": true,
+    "nativeSendOutsideQueuePreserved": true,
+    "readonlyNativeCaptures": 25,
+    "capacityRemainsSynchronous": true,
+    "durableResponsesRemainInAdmission": true,
+    "persistenceAlreadyAwaitedOnEveryNativePath": true,
+    "callbackIdentitiesPreserved": [
+      "finishFreshAgentDeliveryAppend",
+      "fenceDirectContinuation",
+      "rejectStoppedDirectContinuation"
+    ],
+    "nativeEmptyArrayIsSuccessfulAdmission": true,
+    "additionalRuntimeState": false,
+    "newFilesWithin500Lines": true
+  },
+  "moduleGraph": {
+    "files": 108,
+    "functions": 461,
+    "runtimeImportCycles": 0
+  },
+  "checks": [
+    {
+      "name": "send-queue-fixed-types",
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 17.23,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/send-queue-fixed-types.log"
+    },
+    {
+      "name": "send-queue-fixed-build",
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 16.28,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/send-queue-fixed-build.log"
+    },
+    {
+      "name": "send-queue-fixed-lint",
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/server-core/src/sessions/SessionManager/operations/queued-message-input.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/queued-delivery-capacity.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/persist-queued-message.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/enqueue-session-message.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.63,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/send-queue-fixed-lint.log"
+    },
+    {
+      "name": "send-queue-compat-types",
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 11.02,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/send-queue-compat-types.log"
+    },
+    {
+      "name": "send-queue-full-test",
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 139.39,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/send-queue-full-test.log"
+    }
+  ],
+  "parentLint": "Échec attendu pour max-lines uniquement ; aucune autre erreur ni avertissement sur le parent.",
+  "installedApplication": "Aucune installation de ce lot effectuée.",
+  "limits": [
+    "La routine principale dépasse encore 500 lignes.",
+    "Le dépôt conserve 126 fichiers trop longs et 403 any explicites ; le lint global et les missions réelles finales restent à valider."
+  ],
+  "updatedAt": "2026-10-25T13:58:00.291952+00:00"
+}

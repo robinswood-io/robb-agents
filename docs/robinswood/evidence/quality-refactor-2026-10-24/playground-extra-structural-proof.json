@@ -1,0 +1,53 @@
+{
+  "status": "passed",
+  "registries": [
+    {
+      "source": "apps/electron/src/renderer/playground/registry/chat.tsx",
+      "declarations": 36,
+      "nativePublicExports": true,
+      "unchangedBodiesAndClosures": true,
+      "nativeExternalImportOrder": true,
+      "nativeEagerCalls": 38,
+      "runtimeImportCycles": 0,
+      "moduleCount": 7
+    },
+    {
+      "source": "apps/electron/src/renderer/playground/registry/turn-card.tsx",
+      "declarations": 65,
+      "nativePublicExports": true,
+      "unchangedBodiesAndClosures": true,
+      "nativeExternalImportOrder": true,
+      "nativeEagerCalls": 6,
+      "runtimeImportCycles": 0,
+      "moduleCount": 10
+    },
+    {
+      "source": "apps/electron/src/renderer/playground/registry/planner.tsx",
+      "declarations": 29,
+      "nativePublicExports": true,
+      "unchangedBodiesAndClosures": true,
+      "nativeExternalImportOrder": true,
+      "nativeEagerCalls": 0,
+      "runtimeImportCycles": 0,
+      "moduleCount": 6
+    },
+    {
+      "source": "apps/electron/src/renderer/playground/registry/edit-popover.tsx",
+      "declarations": 15,
+      "nativePublicExports": true,
+      "unchangedBodiesAndClosures": true,
+      "nativeExternalImportOrder": true,
+      "nativeEagerCalls": 15,
+      "runtimeImportCycles": 0,
+      "moduleCount": 3
+    }
+  ],
+  "nativeDeclarations": 145,
+  "maximumFileLines": 425,
+  "runtimeImportCycles": 0,
+  "originalRegistryMechanismPreserved": true,
+  "addedStateOrIndirection": false,
+  "explicitAnyRemoved": 2,
+  "nativeContextContractsChecked": true,
+  "retiredMockPropertiesRemoved": 6
+}

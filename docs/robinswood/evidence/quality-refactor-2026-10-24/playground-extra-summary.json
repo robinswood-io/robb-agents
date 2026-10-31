@@ -1,0 +1,373 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Exemples de chat, cartes de tours, planificateur et édition du playground",
+  "changes": [
+    "21 objets d’exemples séparés avec leur type contextuel ComponentEntry et leur ordre public préservés.",
+    "Rendu du planificateur déplacé dans une fonction pure recevant 29 valeurs natives ; hooks, effets, état et JSX conservés.",
+    "Deux any supprimés au profit du contrat AppShellContextType ; six anciens champs de simulation retirés et callbacks de brouillons et d’archivage actualisés."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/playground/registry/chat.tsx",
+      "lines": 38,
+      "sha256": "2adbcb3b657546fd5e83f534f8dca226a05c5b95641a09dee33cc7bca46d5c5f"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/chat/activity-fixtures.tsx",
+      "lines": 315,
+      "sha256": "428f8d341e53ca4709bcbf7a2d0846da7f726e1d604444af8d139367e46daadc"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/chat/conversation-entries.tsx",
+      "lines": 303,
+      "sha256": "6d843e8b75dbf57d467699f1857f90afa87a64715ea5cc1cee5d55b4cbe93597"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/chat/input-entry.tsx",
+      "lines": 275,
+      "sha256": "8d12a54b50c5fa33ec817aa1f40614f00c0caf852e5a2d6fc9c30d573576fcd4"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/chat/input-fixtures.tsx",
+      "lines": 198,
+      "sha256": "e9cf40dfbad23c6ba94914f8ebf9dfee3c07b94b5359865b0acd1464e12cae61"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/chat/input-preview.tsx",
+      "lines": 257,
+      "sha256": "d20ca81afefcb7dd81308a9dc8b765da109b88b72ef5c02eb46bc59706941ecd"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/chat/task-previews.tsx",
+      "lines": 179,
+      "sha256": "7170b3edf6418703b034d2d925500d5aacfaa49f29698c038f53c1cf0d970da3"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/edit-popover.tsx",
+      "lines": 180,
+      "sha256": "49a4b01f637e53e532ef311fafda4d3815f81fc92d69a2d468654b76bfc9293d"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/edit-popover/fixtures.tsx",
+      "lines": 131,
+      "sha256": "b8f0a73095808138420bee56e78ba9545e8152854d83e4ab3e771bef6efd0f3e"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/edit-popover/previews.tsx",
+      "lines": 216,
+      "sha256": "7b71a48c40ee0f88f0f24012fc8838c71400bae401b52c1ed8780dc7739ecfaf"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/planner.tsx",
+      "lines": 41,
+      "sha256": "7b374f4631aa53e2250c3b708302ccd693d6ae1dc726c6b2dc1077ecf3aebb30"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/planner/board.tsx",
+      "lines": 374,
+      "sha256": "427d894e04fec3501fbe6116d6d8ea8bb6052a972d2289f1489da8cb3e63b3de"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/planner/fixtures.tsx",
+      "lines": 298,
+      "sha256": "8a3ccfcd9f030ea3626e92dc2efa14dbf0143f48a6d1b314e4e30bf3ef140157"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/planner/models.tsx",
+      "lines": 74,
+      "sha256": "0621c7f0b97c84828c132aa49720e331ef6bad16d8b97e8e0000a2cdf2e6bccb"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/planner/ordering.tsx",
+      "lines": 62,
+      "sha256": "44d400b85c68064b71b018db7d7e09debb6b3aafc03bc82a8266c6476738b6c1"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/planner/view.tsx",
+      "lines": 406,
+      "sha256": "9b04bba0a0c4d0d735a613e3145a7a6d1e08c6af1de7acd5b8850dc4e3430a58"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/turn-card.tsx",
+      "lines": 28,
+      "sha256": "02bb6e608cfc3af56345853d6d9c01b053b31ab54aa05816ae4cbdc0ec042065"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/turn-card/code-fixtures.tsx",
+      "lines": 327,
+      "sha256": "5d7447e1b43ee9d28a777ecc8a8554227d74d3526826ca9cc294bf29c6aa53d1"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/turn-card/document-entries.tsx",
+      "lines": 188,
+      "sha256": "4c527b5527a08d5d4297ede6b137c7c6cc1e8ce23182e64e42ace7ac3b329a2c"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/turn-card/document-fixtures.tsx",
+      "lines": 199,
+      "sha256": "676fb4adb93c1d432b2514c73dd6b33f55231358b125620add3bc8cb182dad44"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/turn-card/overlays.tsx",
+      "lines": 247,
+      "sha256": "4f2255d0da8ce93b52e2ece7f1344a1fb0b81a5de0b8003e603e1ea90e4da281"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/turn-card/streaming.tsx",
+      "lines": 221,
+      "sha256": "6ba086ad4e985f12a91ae92ef2bcb75ade109029cdeec542e1c09d5a5f2e0a32"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/turn-card/turn-entry.tsx",
+      "lines": 424,
+      "sha256": "9d4a8cd7df2a0bfe121ba90d23657ecf761d1c0bd54547f80a8a99afe8149aaf"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/turn-card/turn-fixtures.tsx",
+      "lines": 315,
+      "sha256": "21556424883b1c602b742c54ae4acdd69d971814c6d2828466e8b43458a7fba3"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/turn-card/utility-entries.tsx",
+      "lines": 316,
+      "sha256": "426300af5eb541fce7b6bd71db9fb057e54dfccf13d6a3eff8bc48ee87d251b6"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/turn-card/utility-fixtures.tsx",
+      "lines": 131,
+      "sha256": "9f5aa46433f3a2d2fbf24bcbbb8c1c7ba3a3f560542aa1925e2bf7d0718c209d"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 15.08,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/playground-extra-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 24.34,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/playground-extra-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/playground/registry/chat/input-fixtures.tsx",
+        "apps/electron/src/renderer/playground/registry/chat/activity-fixtures.tsx",
+        "apps/electron/src/renderer/playground/registry/chat/input-preview.tsx",
+        "apps/electron/src/renderer/playground/registry/chat/task-previews.tsx",
+        "apps/electron/src/renderer/playground/registry/chat/conversation-entries.tsx",
+        "apps/electron/src/renderer/playground/registry/chat/input-entry.tsx",
+        "apps/electron/src/renderer/playground/registry/chat.tsx",
+        "apps/electron/src/renderer/playground/registry/turn-card/streaming.tsx",
+        "apps/electron/src/renderer/playground/registry/turn-card/turn-fixtures.tsx",
+        "apps/electron/src/renderer/playground/registry/turn-card/turn-entry.tsx",
+        "apps/electron/src/renderer/playground/registry/turn-card.tsx",
+        "apps/electron/src/renderer/playground/registry/turn-card/document-fixtures.tsx",
+        "apps/electron/src/renderer/playground/registry/turn-card/overlays.tsx",
+        "apps/electron/src/renderer/playground/registry/turn-card/code-fixtures.tsx",
+        "apps/electron/src/renderer/playground/registry/turn-card/utility-fixtures.tsx",
+        "apps/electron/src/renderer/playground/registry/turn-card/document-entries.tsx",
+        "apps/electron/src/renderer/playground/registry/turn-card/utility-entries.tsx",
+        "apps/electron/src/renderer/playground/registry/planner/models.tsx",
+        "apps/electron/src/renderer/playground/registry/planner/fixtures.tsx",
+        "apps/electron/src/renderer/playground/registry/planner/ordering.tsx",
+        "apps/electron/src/renderer/playground/registry/planner/board.tsx",
+        "apps/electron/src/renderer/playground/registry/planner/view.tsx",
+        "apps/electron/src/renderer/playground/registry/planner.tsx",
+        "apps/electron/src/renderer/playground/registry/edit-popover/fixtures.tsx",
+        "apps/electron/src/renderer/playground/registry/edit-popover/previews.tsx",
+        "apps/electron/src/renderer/playground/registry/edit-popover.tsx",
+        "--format",
+        "json",
+        "--output-file",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/playground-extra-owned-lint-report.json",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.56,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/playground-extra-owned-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 12.68,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/playground-extra-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 136.43,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/playground-extra-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "registries": [
+      {
+        "source": "apps/electron/src/renderer/playground/registry/chat.tsx",
+        "declarations": 36,
+        "nativePublicExports": true,
+        "unchangedBodiesAndClosures": true,
+        "nativeExternalImportOrder": true,
+        "nativeEagerCalls": 38,
+        "runtimeImportCycles": 0,
+        "moduleCount": 7
+      },
+      {
+        "source": "apps/electron/src/renderer/playground/registry/turn-card.tsx",
+        "declarations": 65,
+        "nativePublicExports": true,
+        "unchangedBodiesAndClosures": true,
+        "nativeExternalImportOrder": true,
+        "nativeEagerCalls": 6,
+        "runtimeImportCycles": 0,
+        "moduleCount": 10
+      },
+      {
+        "source": "apps/electron/src/renderer/playground/registry/planner.tsx",
+        "declarations": 29,
+        "nativePublicExports": true,
+        "unchangedBodiesAndClosures": true,
+        "nativeExternalImportOrder": true,
+        "nativeEagerCalls": 0,
+        "runtimeImportCycles": 0,
+        "moduleCount": 6
+      },
+      {
+        "source": "apps/electron/src/renderer/playground/registry/edit-popover.tsx",
+        "declarations": 15,
+        "nativePublicExports": true,
+        "unchangedBodiesAndClosures": true,
+        "nativeExternalImportOrder": true,
+        "nativeEagerCalls": 15,
+        "runtimeImportCycles": 0,
+        "moduleCount": 3
+      }
+    ],
+    "nativeDeclarations": 145,
+    "maximumFileLines": 425,
+    "runtimeImportCycles": 0,
+    "originalRegistryMechanismPreserved": true,
+    "addedStateOrIndirection": false,
+    "explicitAnyRemoved": 2,
+    "nativeContextContractsChecked": true,
+    "retiredMockPropertiesRemoved": 6
+  },
+  "fullTestSummary": {
+    "pass": 10741,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {},
+  "beforeAfter": null,
+  "sourceGate": {
+    "max-lines": 79,
+    "no-explicit-any": 318
+  },
+  "globalLint": {
+    "files": 3490,
+    "errors": 367,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 299,
+      "max-lines": 68,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [
+    "Les deux contextes de démonstration ne respectaient pas le contrat Workspace : ajout du slug et de createdAt, retrait du champ path obsolète."
+  ],
+  "limits": [
+    "79 fichiers trop longs et 318 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-25T21:28:27.987614+00:00",
+  "additionalProofs": {
+    "playground-extra-preparation-proof.json": {
+      "status": "passed",
+      "registries": [
+        {
+          "source": "apps/electron/src/renderer/playground/registry/chat.tsx",
+          "nativeHash": "58280939f27a0152824ffd903ef1823881ed09d3861c71e41923edf7a00cb564",
+          "preparedHash": "c0b9076f574744883ef75b91f7d8fb82552a94ae3fc619a7fa099a4e02ae6540",
+          "entryObjects": 12,
+          "nativeObjectBodiesAndOrder": true,
+          "nativeContextualTypes": true,
+          "view": null
+        },
+        {
+          "source": "apps/electron/src/renderer/playground/registry/turn-card.tsx",
+          "nativeHash": "3591281a671d28d567acfc3fc1369e1725adeb68bd1207e890d9b5e5aabe8c26",
+          "preparedHash": "97c0fd188232c9cbeb40183fc46a702c03c49b0fa9df4ef33741a342d69684cd",
+          "entryObjects": 9,
+          "nativeObjectBodiesAndOrder": true,
+          "nativeContextualTypes": true,
+          "view": null
+        },
+        {
+          "source": "apps/electron/src/renderer/playground/registry/planner.tsx",
+          "nativeHash": "7de751b90db1c72f6e668070a59edddca606b37037461658df2da869846913fc",
+          "preparedHash": "01754b2874a7d710a7ad6e34307c8a6a5db25ff74c79148659d0eb44650b3a12",
+          "entryObjects": 0,
+          "nativeObjectBodiesAndOrder": true,
+          "nativeContextualTypes": true,
+          "view": {
+            "inputs": 29,
+            "pureFunction": true,
+            "noNewReactComponentBoundary": true,
+            "originalHooksAndEffectsRetained": true,
+            "unchangedJsxAndHandlers": true,
+            "allInputsNativeConstBindings": true
+          }
+        },
+        {
+          "source": "apps/electron/src/renderer/playground/registry/edit-popover.tsx",
+          "nativeHash": "920738031ff8ba4fd062edb91725b01136aef1fa74985e8a3eab3dc60a4a8a19",
+          "preparedHash": "920738031ff8ba4fd062edb91725b01136aef1fa74985e8a3eab3dc60a4a8a19",
+          "entryObjects": 0,
+          "nativeObjectBodiesAndOrder": true,
+          "nativeContextualTypes": true,
+          "view": null
+        }
+      ],
+      "originalRegistryMechanismPreserved": true,
+      "stateOrRoutingAdded": false
+    }
+  }
+}

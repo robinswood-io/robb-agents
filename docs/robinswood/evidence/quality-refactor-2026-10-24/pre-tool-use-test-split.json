@@ -1,0 +1,122 @@
+{
+  "valid": true,
+  "mockParameterChangePreservesJavaScript": true,
+  "files": [
+    {
+      "file": "pre-tool-use-fixture.ts",
+      "lines": 131
+    },
+    {
+      "file": "pre-tool-use-browser-channel.isolated.ts",
+      "lines": 244
+    },
+    {
+      "file": "pre-tool-use-admission.isolated.ts",
+      "lines": 279
+    },
+    {
+      "file": "pre-tool-use-input-transforms.isolated.ts",
+      "lines": 278
+    },
+    {
+      "file": "pre-tool-use-ask-gate.isolated.ts",
+      "lines": 114
+    },
+    {
+      "file": "pre-tool-use-pipeline-ordering.isolated.ts",
+      "lines": 181
+    },
+    {
+      "file": "pre-tool-use-resume-authority.isolated.ts",
+      "lines": 412
+    },
+    {
+      "file": "pre-tool-use-checks.isolated.ts",
+      "lines": 339
+    }
+  ],
+  "suites": [
+    {
+      "suite": "host browser channel constraint",
+      "file": "pre-tool-use-browser-channel.isolated.ts",
+      "bodyPreserved": true,
+      "expected": "f16d0002ab3d41a779137bb60f140b4c0353dd4fa101eb73b5a73ffa1c2b4101",
+      "received": "f16d0002ab3d41a779137bb60f140b4c0353dd4fa101eb73b5a73ffa1c2b4101"
+    },
+    {
+      "suite": "step 1: permission mode check",
+      "file": "pre-tool-use-admission.isolated.ts",
+      "bodyPreserved": true,
+      "expected": "27a773f5ec7b4f13afecab4f0c12b5c42cda38d84f2969221d08ba34e8d0c044",
+      "received": "27a773f5ec7b4f13afecab4f0c12b5c42cda38d84f2969221d08ba34e8d0c044"
+    },
+    {
+      "suite": "step 2: source blocking",
+      "file": "pre-tool-use-admission.isolated.ts",
+      "bodyPreserved": true,
+      "expected": "38a31c34c818f92d6a87458941446dc8a91c6cad6e6b5374472631f07ccbd7a5",
+      "received": "38a31c34c818f92d6a87458941446dc8a91c6cad6e6b5374472631f07ccbd7a5"
+    },
+    {
+      "suite": "step 3: prerequisite check",
+      "file": "pre-tool-use-admission.isolated.ts",
+      "bodyPreserved": true,
+      "expected": "2ce4576482dbb7e508d5ea5ed8c305f56c6a1a3ed3d6ea8f37b2325a6abf17ba",
+      "received": "2ce4576482dbb7e508d5ea5ed8c305f56c6a1a3ed3d6ea8f37b2325a6abf17ba"
+    },
+    {
+      "suite": "step 4: call_llm interception",
+      "file": "pre-tool-use-admission.isolated.ts",
+      "bodyPreserved": true,
+      "expected": "bac0ce16980e5a70de98de0ed96d300c6bdb4a0dd1e3df6fb793d8b84a119e1c",
+      "received": "bac0ce16980e5a70de98de0ed96d300c6bdb4a0dd1e3df6fb793d8b84a119e1c"
+    },
+    {
+      "suite": "step 5: input transforms",
+      "file": "pre-tool-use-input-transforms.isolated.ts",
+      "bodyPreserved": true,
+      "expected": "d90ff1ef95a5a08dfa839c90cf79fbf9159f5560991a718dbf80b0a88ee37d4e",
+      "received": "d90ff1ef95a5a08dfa839c90cf79fbf9159f5560991a718dbf80b0a88ee37d4e"
+    },
+    {
+      "suite": "step 6: ask-mode prompt decision",
+      "file": "pre-tool-use-ask-gate.isolated.ts",
+      "bodyPreserved": true,
+      "expected": "5a9b955a4126cacccb7e65b1be9d51fb8e54a58df0623325ce42e4cb8ca3842b",
+      "received": "5a9b955a4126cacccb7e65b1be9d51fb8e54a58df0623325ce42e4cb8ca3842b"
+    },
+    {
+      "suite": "pipeline ordering",
+      "file": "pre-tool-use-pipeline-ordering.isolated.ts",
+      "bodyPreserved": true,
+      "expected": "8508ff308dc5521398bc0f2edbad8cebe32a9f41e07a91cade031829dd6e5093",
+      "received": "8508ff308dc5521398bc0f2edbad8cebe32a9f41e07a91cade031829dd6e5093"
+    },
+    {
+      "suite": "bounded rbw-agents-oss catalog reads",
+      "file": "pre-tool-use-pipeline-ordering.isolated.ts",
+      "bodyPreserved": true,
+      "expected": "63be5e4f5e45fc8ac9b390c161d155fc40b3de20e1f5de45a1c9dbce51e6420e",
+      "received": "63be5e4f5e45fc8ac9b390c161d155fc40b3de20e1f5de45a1c9dbce51e6420e"
+    },
+    {
+      "suite": "debug callback",
+      "file": "pre-tool-use-pipeline-ordering.isolated.ts",
+      "bodyPreserved": true,
+      "expected": "648edccf92ccf48632438eedd12554cdad547934ef935e03ee81fee8c0065545",
+      "received": "648edccf92ccf48632438eedd12554cdad547934ef935e03ee81fee8c0065545"
+    },
+    {
+      "suite": "signed synthetic resume target authority regressions",
+      "file": "pre-tool-use-resume-authority.isolated.ts",
+      "bodyPreserved": true,
+      "expected": "e80a53ea63ac9fcf218d32eace0a1f3ce99b1b99ddd51343afa1fb136f30c158",
+      "received": "e80a53ea63ac9fcf218d32eace0a1f3ce99b1b99ddd51343afa1fb136f30c158"
+    },
+    {
+      "suite": "shouldPromptInAskMode",
+      "file": "pre-tool-use-checks.isolated.ts",
+      "bodyPreserved": true
+    }
+  ]
+}

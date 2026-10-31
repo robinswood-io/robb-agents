@@ -1,0 +1,169 @@
+{
+  "source": "packages/shared/src/credentials/backends/secure-storage.ts",
+  "units": [
+    {
+      "names": [
+        "CREDENTIALS_DIR"
+      ],
+      "group": "key-derivation",
+      "bodySha256": "4984a456c9395f94c1aaa65bdb3d525d8bc15c554e57b4880b396aadf935d603"
+    },
+    {
+      "names": [
+        "DEFAULT_CREDENTIALS_FILE"
+      ],
+      "group": "key-derivation",
+      "bodySha256": "4ad72316bb63e71cf4d6ef3309793ffa72c6bcf09feb192655515cb58336ba8b"
+    },
+    {
+      "names": [
+        "MAGIC_BYTES"
+      ],
+      "group": "key-derivation",
+      "bodySha256": "3ab1dc1f33f62229c0f48967800fa5add2bd8884891322dd314cb6f34b1b83a4"
+    },
+    {
+      "names": [
+        "HEADER_SIZE"
+      ],
+      "group": "key-derivation",
+      "bodySha256": "dc794efcb60a3f758ee1a0fb54cc94a636653a6a391665edd3e67c93da168a4d"
+    },
+    {
+      "names": [
+        "MAGIC_SIZE"
+      ],
+      "group": "key-derivation",
+      "bodySha256": "1597554adcf02f975cd1797d789041dcb04f8cd29b221d1ebf6be0822b60c7cd"
+    },
+    {
+      "names": [
+        "FLAGS_SIZE"
+      ],
+      "group": "key-derivation",
+      "bodySha256": "5fc8e768c63a4a28757670bbd81d638611963424dd4f97b37e5d48e8b6124481"
+    },
+    {
+      "names": [
+        "SALT_SIZE"
+      ],
+      "group": "key-derivation",
+      "bodySha256": "819c93c71f48078ab996f20476d1bcb10b5c6179af3799c9e6a6947193e1df91"
+    },
+    {
+      "names": [
+        "IV_SIZE"
+      ],
+      "group": "key-derivation",
+      "bodySha256": "58c717aad1fef02df2e217a68b8697073cac63f8fbc0ca7e8fdf6af4eacd3e90"
+    },
+    {
+      "names": [
+        "AUTH_TAG_SIZE"
+      ],
+      "group": "key-derivation",
+      "bodySha256": "ffe7aef64100f2c454841c4dd8f0ffd19a12d3f7e543801da8e1bb1356e2bf42"
+    },
+    {
+      "names": [
+        "KEY_SIZE"
+      ],
+      "group": "key-derivation",
+      "bodySha256": "4899619a5e74103f970274804b819959d6647bb3185b7cedbd3384e02b409de7"
+    },
+    {
+      "names": [
+        "PBKDF2_ITERATIONS"
+      ],
+      "group": "key-derivation",
+      "bodySha256": "87fe994d607911869c04fe8f52c7df139a80bfa21acf5f481aa89358c3465d5f"
+    },
+    {
+      "names": [
+        "getStableMachineId"
+      ],
+      "group": "key-derivation",
+      "bodySha256": "a88c53d8076832e2ed8bc0eeb050d343a0504adbf91b5c0cf6bd3a5f9a2591de"
+    },
+    {
+      "names": [
+        "CredentialStore"
+      ],
+      "group": "contracts",
+      "bodySha256": "477ad774b7367824128bed282701323c0009adc2f99873d96d0c4fc41cb93185"
+    },
+    {
+      "names": [
+        "CredentialStoreErrorCode"
+      ],
+      "group": "contracts",
+      "bodySha256": "e92b0ec8532a08212d7be6c8cff07563e1d2aa45b9d15fcd68db8b6cac96307b"
+    },
+    {
+      "names": [
+        "CredentialStoreError"
+      ],
+      "group": "contracts",
+      "bodySha256": "a7e749980703729113b73741d64a652de91344a0a4a42fe60f48f32005ba50e5"
+    },
+    {
+      "names": [
+        "SecureStorageOptions"
+      ],
+      "group": "contracts",
+      "bodySha256": "8e414ca1446c59859af4761416b5be14dc96fbaf28a43dbcc6b6dee5fc5d7950"
+    },
+    {
+      "names": [
+        "isRecord"
+      ],
+      "group": "contracts",
+      "bodySha256": "d83a5dcd3b722e06998b2a8ee99faf280ef7ffd784ad82be84ac7bc96a8d8d70"
+    },
+    {
+      "names": [
+        "isCredentialStore"
+      ],
+      "group": "contracts",
+      "bodySha256": "0376f923c6b9ba25dc4614d5107abe0dada6a4b2d566728c2799a5d59fb6d14e"
+    },
+    {
+      "names": [
+        "mutationQueues"
+      ],
+      "group": "backend",
+      "bodySha256": "462325e0c26cdaaa1e90c2c49e93b186ae253d7139b1937e29db7dfdf9b4efc8"
+    },
+    {
+      "names": [
+        "SecureStorageBackend"
+      ],
+      "group": "backend",
+      "bodySha256": "88114b3cee4a05dae6e73e138af765800e4f71414dd75a8d661135354528f4e6"
+    }
+  ],
+  "modules": [
+    {
+      "name": "key-derivation",
+      "lines": 75
+    },
+    {
+      "name": "contracts",
+      "lines": 52
+    },
+    {
+      "name": "backend",
+      "lines": 393
+    }
+  ],
+  "dependencies": {
+    "key-derivation": [],
+    "contracts": [],
+    "backend": [
+      "contracts",
+      "key-derivation"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

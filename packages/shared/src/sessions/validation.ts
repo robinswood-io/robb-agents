@@ -21,7 +21,7 @@ const SESSION_ID_PATTERN = /^[\w-]+$/;
  * @param sessionId - The session ID to validate
  * @throws Error if sessionId is invalid or contains path traversal
  */
-export function validateSessionId(sessionId: string): void {
+export function validateSessionId(sessionId: unknown): void {
   // Check for null/undefined/empty
   if (!sessionId || typeof sessionId !== 'string') {
     throw new Error('Security Error: Session ID is required');
@@ -47,7 +47,7 @@ export function validateSessionId(sessionId: string): void {
  * @param sessionId - The session ID to sanitize
  * @returns The sanitized session ID (basename only)
  */
-export function sanitizeSessionId(sessionId: string): string {
+export function sanitizeSessionId(sessionId: unknown): string {
   if (!sessionId || typeof sessionId !== 'string') {
     return '';
   }
@@ -60,7 +60,7 @@ export function sanitizeSessionId(sessionId: string): string {
  * @param sessionId - The session ID to check
  * @returns true if valid, false otherwise
  */
-export function isValidSessionId(sessionId: string): boolean {
+export function isValidSessionId(sessionId: unknown): boolean {
   try {
     validateSessionId(sessionId);
     return true;

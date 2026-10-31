@@ -1,0 +1,586 @@
+{
+  "source": "packages/shared/src/projects/memory-v2.ts",
+  "units": [
+    {
+      "names": [
+        "MEMORY_V2_FILENAME"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "d4399c9a18b81d46a4a67770fda642a0f1a5a2a2018b9e83413b410e7a67e14f"
+    },
+    {
+      "names": [
+        "MEMORY_V2_SCHEMA_VERSION"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "c2257271ce1f1285f9c84b02d2875d1f10187ece639df41a060f22b4a9510216"
+    },
+    {
+      "names": [
+        "MEMORY_V2_LOCK_SUFFIX"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "696293bbe4c3cb33f2ccb4a7d654bd8087d606fceb29451ac95103919bd7237b"
+    },
+    {
+      "names": [
+        "MEMORY_V2_STALE_LOCK_MS"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "fbecfc1364ecc711e8461eb5c5adaf181a2195631ff22d33acb2a75aa09d32e1"
+    },
+    {
+      "names": [
+        "MemoryKind"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "e1625b7ee8ab80c330a0056ae6c4d316f433809e393357e659f0732944a1f812"
+    },
+    {
+      "names": [
+        "MemoryStatus"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "ea195d7a1e40059f86ad3ac5c2d2d4e5c9f4ff9418bb546ef19a9b6107596e5d"
+    },
+    {
+      "names": [
+        "MemorySourceType"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "d90023b4e5006a26fc497f2c160744123cad61be975885a2b3468a64b1b49d73"
+    },
+    {
+      "names": [
+        "MemoryProvenance"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "4b28e79d885336f35e3fb265a5c587771032ab03c5c3c734f459342d4ef51453"
+    },
+    {
+      "names": [
+        "ProjectMemoryEntry"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "5736badccc357d90c500bb2fef21b0d6e95716d5ddff8b9fe534a28c6a148972"
+    },
+    {
+      "names": [
+        "CreateProjectMemoryEntryInput"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "a4ea508da239107e48e4288bd5002b96594511c13e471edaf61013957456d6bc"
+    },
+    {
+      "names": [
+        "MemoryJournalEvent"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "6459118e81cfc40de7f3d181215cc4925b9d1c1a2c2eafba5d6f5c432f3d22b7"
+    },
+    {
+      "names": [
+        "StoredMemoryJournalRecord"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "f2fc31e9bee370f02bae5d637a26d7a3cb0836ced103ffdc53622f0427286b3b"
+    },
+    {
+      "names": [
+        "MemoryJournalIssueCode"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "bb8b627feb213e8ddd878fa62e2b2036db6693816d03d9c70f1112a4d03ed7c7"
+    },
+    {
+      "names": [
+        "MemoryJournalIssue"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "6527c4d558a835f576d44868b6f3669385bbeaed9590c603877f0eab26cbea4d"
+    },
+    {
+      "names": [
+        "LoadMemoryJournalOptions"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "ea2d0423a9b50c709373bae06d76630dc2385e060229555bf4c2fc824cf41f61"
+    },
+    {
+      "names": [
+        "LoadedProjectMemoryJournal"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "1a539c3b448eabda0afb1da5986346d1579c025c9917fa8cd6a8171298baa7b1"
+    },
+    {
+      "names": [
+        "MemoryScoreBreakdown"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "b02f756fc222ef693cb6e4d4bb2581fa5b019b1457580c236dcf73696ce5369d"
+    },
+    {
+      "names": [
+        "RetrievedProjectMemory"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "c3dde4738d5dda5077c6fee9ae4bc208e3ca57497150f3f2c4469911c227b9dd"
+    },
+    {
+      "names": [
+        "MemoryRetrievalWeights"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "0ced13ea0ec797aa3df7ffc81d00e57d66a3935dd2258baa94f7f33edb0fa0e3"
+    },
+    {
+      "names": [
+        "RetrieveProjectMemoryOptions"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "9f2ac1b253d4e186213225b1e547e63f342e41214dff97a4b31a5fe07d97fa7c"
+    },
+    {
+      "names": [
+        "LoadProjectMemoryV2ContextOptions"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "0c7bc74cf1143265529e9c7a41feed043e4496669e62d63473feff0fee36ec51"
+    },
+    {
+      "names": [
+        "MEMORY_KINDS"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "7670e3fd766c238f4425248ce0c991866a8838a94305cfcbfa1905450f13bfa4"
+    },
+    {
+      "names": [
+        "MEMORY_STATUSES"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "a627564390ba99361d110f6fab1bdd5de93c8ae86ffe284a1a6aefe76386531f"
+    },
+    {
+      "names": [
+        "MEMORY_SOURCE_TYPES"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "7758d81fa8332c3b59da6d9597cfec8a51424f2e6c778463f6df6931a91a0433"
+    },
+    {
+      "names": [
+        "DEFAULT_RETRIEVAL_WEIGHTS"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "224f163e892c929cb0851222aa904b2df5573e7b9874b1f8ee368af5c0412f0f"
+    },
+    {
+      "names": [
+        "DAY_MS"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "bc6e8da850e21d7de4292ce39dedd51ba8f6d24cf57af81dfb1a01e2c083e0a5"
+    },
+    {
+      "names": [
+        "assertMemoryKind"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "d3de642d8040b368e5486634f2a7148642ed34ce16b91c8f615bff53d837ad8f"
+    },
+    {
+      "names": [
+        "assertMemoryStatus"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "155c4796bfa989f083d04c39609dda4ef0f419a4b8db68b66acae8d2211c081a"
+    },
+    {
+      "names": [
+        "assertMemorySourceType"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "11e1582185ce22604baea21f79499b5be12d699abb286841dcb3652eb3e9a333"
+    },
+    {
+      "names": [
+        "normalizeContent"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "87aeae346924c6f20faece84bdf509bf4b60ed1617f6f7994d45653eb8f30580"
+    },
+    {
+      "names": [
+        "normalizeIdentifier"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "6274aaa5e355d198852f7eb2b30c283d40c2d5441c490ddfdf8214a9de802fda"
+    },
+    {
+      "names": [
+        "normalizeConfidence"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "6a24307e75467db273d6182d2bbc6534d1063e6502486be2179886b40c88b233"
+    },
+    {
+      "names": [
+        "normalizeIsoTimestamp"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "0c113d38a4e92762c7fec6a18ded3a51dbaabdaa79d006495d7f43c0f2a84baa"
+    },
+    {
+      "names": [
+        "normalizeStringList"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "ef9d6b521e45f37493402df7683760146ea1a68576a5aaeb5dc1d1712c40d1c5"
+    },
+    {
+      "names": [
+        "parseStringList"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "d51bb52fc9230ddde49059389cf3a0925e24458fe4c8bfe2872582ca22f1df77"
+    },
+    {
+      "names": [
+        "isRecord"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "d83a5dcd3b722e06998b2a8ee99faf280ef7ffd784ad82be84ac7bc96a8d8d70"
+    },
+    {
+      "names": [
+        "clamp01"
+      ],
+      "group": "memory-schema",
+      "bodySha256": "afe021581479d752c4bc1b1dd716b753dad920d2806d72407b8f3d8875d08389"
+    },
+    {
+      "names": [
+        "getProjectMemoryJournalPath"
+      ],
+      "group": "journal-lock",
+      "bodySha256": "21f46ba0a21f4c2e9964e7e7c2ae36135065e6f48c7612430563ec3754801c95"
+    },
+    {
+      "names": [
+        "appendMemoryJournalSnapshot"
+      ],
+      "group": "journal-lock",
+      "bodySha256": "554ded805f61f6506cb02f435f1a37172a32a13b169de386d42068b80ab3cfaf"
+    },
+    {
+      "names": [
+        "errnoCode"
+      ],
+      "group": "journal-lock",
+      "bodySha256": "0efe7dbcf575853da2731db70830c6163f32f6f51fda1ffc5734533925b9d48c"
+    },
+    {
+      "names": [
+        "processIsAlive"
+      ],
+      "group": "journal-lock",
+      "bodySha256": "81b79f3c0b88030287c11db89f0a7436252e32e66f3e765e2db089f84ed84ac3"
+    },
+    {
+      "names": [
+        "removeStaleMemoryJournalLock"
+      ],
+      "group": "journal-lock",
+      "bodySha256": "a9b6edbf3212d08db556ddbc5e6ccd1ba34d160d22f48d743d94dd868e26668e"
+    },
+    {
+      "names": [
+        "withMemoryJournalLock"
+      ],
+      "group": "journal-lock",
+      "bodySha256": "3caa3516f3608db5834869ce9e865b8009803ed41f2282a9ffaeba169cc91dad"
+    },
+    {
+      "names": [
+        "appendProjectMemoryEntry"
+      ],
+      "group": "journal-writes",
+      "bodySha256": "adac7121606f4a525bee48e31a05bf52fb1a02bcc7863bec88e1870364100cd1"
+    },
+    {
+      "names": [
+        "setProjectMemoryStatus"
+      ],
+      "group": "journal-writes",
+      "bodySha256": "a2c36c8754dc6b340a6c1dc0511a017b7a5d1a13b66ba08f70101c0092709eb3"
+    },
+    {
+      "names": [
+        "forgetProjectMemoryEntry"
+      ],
+      "group": "journal-writes",
+      "bodySha256": "8cf34d10b2f1f7d871fd9ecb4f0ac35022a7859264d6d1df2b359a537d33e5f6"
+    },
+    {
+      "names": [
+        "loadProjectMemoryJournal"
+      ],
+      "group": "journal-read",
+      "bodySha256": "e8242d85440f9c92a9b1274db4c111ce1850dd9ad6a9e73d17a711db5f90aa07"
+    },
+    {
+      "names": [
+        "retrieveProjectMemories"
+      ],
+      "group": "retrieval",
+      "bodySha256": "12f54e30a0ce9e1083b8f7f0d6ac6ac6989d5d0d7dc3a54dc922ab3cba89fea2"
+    },
+    {
+      "names": [
+        "loadProjectMemoryV2Context"
+      ],
+      "group": "retrieval",
+      "bodySha256": "5c2cb3a54dbc72d3a8ae63a21c8a63ea5d508204b2201a1f438a726fa0a95d20"
+    },
+    {
+      "names": [
+        "repairIncompleteJournalTail"
+      ],
+      "group": "journal-parse",
+      "bodySha256": "9c5f2f73edb820b80e7d3016e5629e750ba69e001359bf6003a2be04972bf0fe"
+    },
+    {
+      "names": [
+        "parseStoredRecord"
+      ],
+      "group": "journal-parse",
+      "bodySha256": "2730ce12969ebc64aebbae93d042cabf513ca1cbc63f6373321985eae6a3aa2e"
+    },
+    {
+      "names": [
+        "parseProjectMemoryEntry"
+      ],
+      "group": "journal-parse",
+      "bodySha256": "e836bd807aa124adf6c548f6af8704a67d8ae5002e6b32a636a406ca595fa06e"
+    },
+    {
+      "names": [
+        "deriveRelationshipStatuses"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "6c5d0712da4d5a961f63fa4f0cb05fe125d8ea33e882f5d8840401dca8ba7365"
+    },
+    {
+      "names": [
+        "isMemoryRelationEffective"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "674c48cb6f7b12aa87c9e67a18d4cb8e1c1a226059b9d25508f48d5742255025"
+    },
+    {
+      "names": [
+        "isMemoryEntryRetrievable"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "e5f0ff3dd9f91d98b6e4847afabbe14c56e47506ad87e4a5f325c77df323858f"
+    },
+    {
+      "names": [
+        "lexicalScore"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "40f7c5adc216fafa21762bafe238c4ca2073a0892b3f0aa4059778cea0bb9b7f"
+    },
+    {
+      "names": [
+        "tokenize"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "a96ec4295e2a2fdcf04c676efbd3981912bcb0de82c317ae23ce59e2fa08248d"
+    },
+    {
+      "names": [
+        "SEARCH_STOP_WORDS"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "226b7344a536040fa445444e0bbad8e0c55c301bf735ee1e9785831735261913"
+    },
+    {
+      "names": [
+        "SEARCH_CONCEPT_GROUPS"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "c12f522a26e3a320b0d9b8f8406a0e649a5fd1583202a2a581cfe5a472357d32"
+    },
+    {
+      "names": [
+        "SEARCH_CONCEPTS"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "e2a92c91b000e6c8b3590827d2e781be3db266223229f77586d68caa37fd70ce"
+    },
+    {
+      "names": [
+        "MemorySearchFeatures"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "31522c815b66c76dcd67a1bc4d66fd3d67ad2b8551651c0d54a1d5f5d76fa81e"
+    },
+    {
+      "names": [
+        "searchFeatureCache"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "e9786903546c8e01b28fc988f4a470fdc581400998171d9de66286ba4d82f6a8"
+    },
+    {
+      "names": [
+        "SEARCH_FEATURE_CACHE_LIMIT"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "2c9159e062416c79e1f524308034af14cad76c9ef9c651c975c6237fd53ef8c0"
+    },
+    {
+      "names": [
+        "memorySearchFeatures"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "161b3874670e89365194103682a1b21bad34f81b4130ae503673682fbde3baf3"
+    },
+    {
+      "names": [
+        "conceptSimilarity"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "b9d3e2ea8b90b5ffa2428b6b02d860f49c8be95e588a10ccf6feec40d008dcee"
+    },
+    {
+      "names": [
+        "normalizeMemoryScope"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "f2c7eaf4b3e61c9e156eafb0068044787a2e29aa4238c0b1cf6a583607c15241"
+    },
+    {
+      "names": [
+        "memoryWorkspaceIdentity"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "f3ee0f7bb3bbd4b35648e1ebb7816d781fdd8ea48940703ee06830f8d07e18b1"
+    },
+    {
+      "names": [
+        "memoryWorkspaceKey"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "9d8abbd108c04e5bed7192ff9b64b11a0b83213f078fe949ac7963c05ac3a923"
+    },
+    {
+      "names": [
+        "quoteMemoryMetadata"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "11e239a46fd31deb662d4defc7b77372ff2cdca87892b5adbf205cb8cc99b02d"
+    },
+    {
+      "names": [
+        "normalizeWeights"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "f573ce51c8d817e14a2b798c32881311c5449a19a2ac393fd638c63ceab6bb7b"
+    },
+    {
+      "names": [
+        "checksumPayload"
+      ],
+      "group": "retrieval-ranking",
+      "bodySha256": "09183bdc34490f86c4c499525b7c138d60e67f421afb1bfe6dac91e6850ca838"
+    },
+    {
+      "names": [
+        "fitTextToTokenBudget"
+      ],
+      "group": "context-budget",
+      "bodySha256": "998f2e32ca4d7bd2e7d225fbe6ca17b617675f2349f7c4c5d0c183e6898936f5"
+    },
+    {
+      "names": [
+        "truncateTextToTokenBudget"
+      ],
+      "group": "context-budget",
+      "bodySha256": "a70b130751eb69f53d46f1f4971dd84e11e07f6cfa33a6d2092928edceffd0e5"
+    }
+  ],
+  "modules": [
+    {
+      "name": "memory-schema",
+      "lines": 283
+    },
+    {
+      "name": "journal-lock",
+      "lines": 149
+    },
+    {
+      "name": "journal-writes",
+      "lines": 126
+    },
+    {
+      "name": "journal-read",
+      "lines": 105
+    },
+    {
+      "name": "retrieval",
+      "lines": 101
+    },
+    {
+      "name": "journal-parse",
+      "lines": 168
+    },
+    {
+      "name": "retrieval-ranking",
+      "lines": 216
+    },
+    {
+      "name": "context-budget",
+      "lines": 37
+    }
+  ],
+  "dependencies": {
+    "memory-schema": [],
+    "journal-lock": [
+      "memory-schema",
+      "retrieval-ranking",
+      "journal-parse"
+    ],
+    "journal-writes": [
+      "memory-schema",
+      "retrieval-ranking",
+      "journal-lock",
+      "journal-read"
+    ],
+    "journal-read": [
+      "memory-schema",
+      "journal-lock",
+      "retrieval-ranking",
+      "journal-parse"
+    ],
+    "retrieval": [
+      "memory-schema",
+      "retrieval-ranking",
+      "journal-read",
+      "context-budget"
+    ],
+    "journal-parse": [
+      "memory-schema",
+      "retrieval-ranking"
+    ],
+    "retrieval-ranking": [
+      "memory-schema"
+    ],
+    "context-budget": []
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

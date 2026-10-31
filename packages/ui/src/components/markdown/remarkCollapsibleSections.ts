@@ -1,19 +1,4 @@
-/**
- * Remark plugin that wraps heading + content groups into section nodes.
- *
- * For each heading (H1-H6), it collects all content until the next
- * same-or-higher level heading and wraps them in a section node.
- *
- * Example:
- *   ## Intro       -> section[depth=2]
- *     paragraph       contains: heading, paragraph, paragraph, section[depth=3]
- *     paragraph
- *     ### Details  -> section[depth=3] (nested inside Intro section)
- *       paragraph     contains: heading, paragraph
- *   ## Next       -> section[depth=2]
- */
 
-import { visit } from 'unist-util-visit'
 import type { Plugin } from 'unified'
 import type { Root, Content, Heading, Parent } from 'mdast'
 
@@ -29,6 +14,12 @@ interface SectionNode extends Parent {
     }
   }
   children: Content[]
+}
+
+// Register the custom node with mdast so nesting remains type checked.
+declare module 'mdast' {
+  interface RootContentMap { section: SectionNode }
+  interface BlockContentMap { section: SectionNode }
 }
 
 // Module-level counter reset for each parse
@@ -66,8 +57,8 @@ function wrapHeadingsAtDepth(tree: Root, depth: number): void {
 
       // Recursively process existing sections (for nested content)
       // Note: 'section' is our custom node type, not in mdast types
-      if ((node as { type: string }).type === 'section') {
-        processNode(node as Parent)
+      if (node.type === 'section') {
+        processNode(node)
         i++
         continue
       }
@@ -90,7 +81,7 @@ function wrapHeadingsAtDepth(tree: Root, depth: number): void {
           // Stop at a section that contains a same-or-higher level heading
           // (already processed deeper sections)
           // Note: 'section' is our custom node type, not in mdast types
-          if ((sibling as { type: string }).type === 'section' && (sibling as unknown as SectionNode).depth <= depth) {
+          if (sibling.type === 'section' && sibling.depth <= depth) {
             break
           }
 
@@ -116,7 +107,7 @@ function wrapHeadingsAtDepth(tree: Root, depth: number): void {
         }
 
         // Replace the heading and its content with the section
-        parent.children.splice(i, sectionChildren.length, section as unknown as Content)
+        parent.children.splice(i, sectionChildren.length, section)
       }
 
       i++

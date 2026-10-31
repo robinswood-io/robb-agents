@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 /**
  * Session utility functions
  */
@@ -47,27 +48,27 @@ function boundedIdentifier(value: unknown): string | undefined {
 export function sanitizeContextCompactionAttemptState(
   value: unknown,
 ): ContextCompactionAttemptState | undefined {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  if (!value || typeof value !== 'object' || isUnknownArray(value)) return undefined;
 
   const source = value as Record<string, unknown>;
-  const attemptedAt = nonNegativeSafeInteger(source.attemptedAt);
-  const contextTokensBefore = nonNegativeSafeInteger(source.contextTokensBefore);
-  const contextTokensAfter = nonNegativeSafeInteger(source.contextTokensAfter);
-  const providerContextBaselineTokens = nonNegativeSafeInteger(source.providerContextBaselineTokens);
+  const attemptedAt = nonNegativeSafeInteger(source["attemptedAt"]);
+  const contextTokensBefore = nonNegativeSafeInteger(source["contextTokensBefore"]);
+  const contextTokensAfter = nonNegativeSafeInteger(source["contextTokensAfter"]);
+  const providerContextBaselineTokens = nonNegativeSafeInteger(source["providerContextBaselineTokens"]);
   const providerBaselineAdmissionDispatchedAt = nonNegativeSafeInteger(
-    source.providerBaselineAdmissionDispatchedAt,
+    source["providerBaselineAdmissionDispatchedAt"],
   );
-  const objectiveRootId = boundedIdentifier(source.objectiveRootId);
-  const outcome = typeof source.outcome === 'string'
-    && CONTEXT_COMPACTION_OUTCOMES.has(source.outcome as ContextCompactionOutcome)
-    ? source.outcome as ContextCompactionOutcome
+  const objectiveRootId = boundedIdentifier(source["objectiveRootId"]);
+  const outcome = typeof source["outcome"] === 'string'
+    && CONTEXT_COMPACTION_OUTCOMES.has(source["outcome"] as ContextCompactionOutcome)
+    ? source["outcome"] as ContextCompactionOutcome
     : undefined;
   if (attemptedAt === undefined || contextTokensBefore === undefined || !outcome) return undefined;
 
-  const hardLimitTokens = nonNegativeSafeInteger(source.hardLimitTokens);
-  const classifiedIssueCode = typeof source.issueCode === 'string'
-    && CONTEXT_COMPACTION_ISSUE_CODES.has(source.issueCode as ContextCompactionIssueCode)
-    ? source.issueCode as ContextCompactionIssueCode
+  const hardLimitTokens = nonNegativeSafeInteger(source["hardLimitTokens"]);
+  const classifiedIssueCode = typeof source["issueCode"] === 'string'
+    && CONTEXT_COMPACTION_ISSUE_CODES.has(source["issueCode"] as ContextCompactionIssueCode)
+    ? source["issueCode"] as ContextCompactionIssueCode
     : undefined;
   const issueCode = outcome === 'skipped-not-needed'
     ? (classifiedIssueCode === 'not-needed' ? classifiedIssueCode : undefined)
@@ -83,17 +84,17 @@ export function sanitizeContextCompactionAttemptState(
     ...(outcome === 'succeeded' && providerContextBaselineTokens !== undefined
       && providerContextBaselineTokens > 0
       ? { providerContextBaselineTokens }
-      : outcome === 'succeeded' && source.awaitingProviderContextBaseline === true
+      : outcome === 'succeeded' && source["awaitingProviderContextBaseline"] === true
         ? { awaitingProviderContextBaseline: true as const }
         : {}),
-    ...(outcome === 'succeeded' && source.awaitingProviderContextBaseline === true
+    ...(outcome === 'succeeded' && source["awaitingProviderContextBaseline"] === true
       && providerContextBaselineTokens === undefined
       && providerBaselineAdmissionDispatchedAt !== undefined
       ? { providerBaselineAdmissionDispatchedAt }
       : {}),
     ...(hardLimitTokens !== undefined && hardLimitTokens > 0 ? { hardLimitTokens } : {}),
-    ...(source.hardLimitFollowUpAttempted === true ? { hardLimitFollowUpAttempted: true as const } : {}),
-    ...(source.hardLimitRecoveryAttempted === true ? { hardLimitRecoveryAttempted: true as const } : {}),
+    ...(source["hardLimitFollowUpAttempted"] === true ? { hardLimitFollowUpAttempted: true as const } : {}),
+    ...(source["hardLimitRecoveryAttempted"] === true ? { hardLimitRecoveryAttempted: true as const } : {}),
     ...(issueCode ? { issueCode } : {}),
   };
 }

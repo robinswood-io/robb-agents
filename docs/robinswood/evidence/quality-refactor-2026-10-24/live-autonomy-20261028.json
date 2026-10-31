@@ -1,0 +1,182 @@
+{
+  "generatedAt": "2026-10-28T06:09:11.525Z",
+  "scope": "Seven real-provider missions on the current headless local source runtime and freshly built subprocesses; new QA sessions and synthetic local files only. Packaged Electron UI and installability are not verified here.",
+  "source": {
+    "head": "b8322a8c0db48e58c1058aa0ba0b627078cc4907",
+    "files": 5288,
+    "treeSha256": "08d16ed4417e0c662477c5c21ea6cd23b94d3bb4ff4b2de6a29062dfd4d07496",
+    "bundles": {
+      "packages/session-mcp-server/dist/index.js": "47b933593eb576d420d4e658f9d01d8c2de6e2e7e61e7ea1fa026df29308d9d6",
+      "packages/pi-agent-server/dist/index.js": "fc62790055cc925f107d72fdcf896014ff3d2a050765be478eb95526c5a85414",
+      "packages/pi-agent-server/dist/vibe-acp-server.js": "a011ef7566d6df60776deff26a11920d34359ea9fb98ee71252674163d5d1ca1",
+      "packages/pi-agent-server/dist/antigravity-server.js": "ee98c8467db28c161668fa0c7d2badc6e3ad94549d481b80d11ea4c3cea2ea65"
+    }
+  },
+  "sourceUnchangedDuringRun": true,
+  "connection": {
+    "provider": "pi",
+    "model": "pi/gpt-6.1-sol"
+  },
+  "diagnosticCounts": {
+    "warnings": 6
+  },
+  "results": [
+    {
+      "name": "two-targets",
+      "passed": true,
+      "durationMs": 12551,
+      "toolCalls": 2,
+      "toolErrors": 0,
+      "sourceErrors": 0,
+      "checks": [
+        "Both named targets read and represented",
+        "True and false states preserved",
+        "Deliverable linked"
+      ]
+    },
+    {
+      "name": "three-deliverables",
+      "passed": true,
+      "durationMs": 15788,
+      "toolCalls": 2,
+      "toolErrors": 0,
+      "sourceErrors": 0,
+      "checks": [
+        "Correct count and total",
+        "Three real deliverables inspected independently",
+        "All final files linked"
+      ]
+    },
+    {
+      "name": "missing-input-recovery",
+      "passed": true,
+      "durationMs": 20178,
+      "toolCalls": 4,
+      "toolErrors": 1,
+      "sourceErrors": 0,
+      "checks": [
+        "Missing initial input did not block completion",
+        "Fallback source identified",
+        "Both outputs checked independently"
+      ]
+    },
+    {
+      "name": "midstream-amendment",
+      "passed": true,
+      "durationMs": 17999,
+      "toolCalls": 2,
+      "toolErrors": 1,
+      "sourceErrors": 0,
+      "checks": [
+        "A real human correction arrived during tool execution",
+        "Latest requested content retained",
+        "Additional requirement delivered and linked"
+      ]
+    },
+    {
+      "name": "source-activation-amendment",
+      "passed": true,
+      "durationMs": 46105,
+      "toolCalls": 7,
+      "toolErrors": 1,
+      "sourceErrors": 0,
+      "checks": [
+        "A correction arrived during source testing",
+        "Corrected arithmetic came from the read-only local connector",
+        "Both corrected requirements delivered and linked"
+      ]
+    },
+    {
+      "name": "compaction-continuation",
+      "passed": true,
+      "durationMs": 34991,
+      "toolCalls": 4,
+      "toolErrors": 0,
+      "sourceErrors": 0,
+      "checks": [
+        "Real SDK compaction completed",
+        "Previously accepted objective and presentation requirement retained",
+        "Acquired file unchanged",
+        "New outputs and hashes verified"
+      ]
+    },
+    {
+      "name": "continuation",
+      "passed": true,
+      "durationMs": 21762,
+      "toolCalls": 3,
+      "toolErrors": 0,
+      "sourceErrors": 0,
+      "checks": [
+        "Original result preserved without rewrite",
+        "Amendment delivered",
+        "Independent byte hashes match",
+        "Final deliverables linked"
+      ]
+    }
+  ],
+  "limits": [
+    "Real provider calls and real file operations; headless session runtime, not an Electron UI journey.",
+    "Seven synthetic local missions do not establish a general success rate; the QA connector is local and read-only.",
+    "Six runtime warnings were counted by the privacy-preserving QA logger; their messages were not retained and no classification is claimed.",
+    "This source tree is uncommitted; the recorded tree and bundle SHA256 values identify exactly what was tested."
+  ],
+  "toolScopeAudit": {
+    "checkedAt": "2026-10-28T07:03:11.874269+00:00",
+    "toolRecords": 24,
+    "workingDirectoriesVerified": 7,
+    "filePathArgumentsChecked": 13,
+    "filePathsConfinedToQa": true,
+    "soleAdditionalRead": "The newly created synthetic QA connector guide",
+    "businessConnectorCalls": 0,
+    "bashCommandsReviewed": 11,
+    "bashReview": "All eleven command bodies inspected: relative QA file operations or Path.cwd(), local reads, arithmetic, SHA256 and the bounded sleep; no business-data or network operation observed",
+    "commands": [
+      {
+        "mission": "two-targets",
+        "sha256": "00d27c64dc07b75545329f52d688e548190f330e14476059cfdfe4447b982061"
+      },
+      {
+        "mission": "two-targets",
+        "sha256": "8767bfe2bd07ac0d802e9f349ea94ed2bc9751a222cdd178e194c78e973809bb"
+      },
+      {
+        "mission": "three-deliverables",
+        "sha256": "d0b134e48087976ed64192f48b873601d2669c39ee3c46cbbc557f69122fb850"
+      },
+      {
+        "mission": "three-deliverables",
+        "sha256": "fd58882b892a1f0f0c1f840574d287bc4f842075e0709f1da7d625139d489890"
+      },
+      {
+        "mission": "missing-input-recovery",
+        "sha256": "91a2a16709a64ccb27050a73beb6aee75c541995ad0a98011f4b326dce599681"
+      },
+      {
+        "mission": "midstream-amendment",
+        "sha256": "4d3ef1a66503bed90345d953846584f6e2a1edf057830796238a847c143597ff"
+      },
+      {
+        "mission": "midstream-amendment",
+        "sha256": "b3b038e67fe96ff9dbdea843015d708707800b539f1f767184f6410cf543646f"
+      },
+      {
+        "mission": "source-activation-amendment",
+        "sha256": "f54b0838ad8b756d168f3da24aaf4053d8ec27f8a60965c7b2027c29c6ca91ed"
+      },
+      {
+        "mission": "compaction-continuation",
+        "sha256": "30360117fda9e3c0d179ca5016f69891be3c757cc38335e4a36e17c643214968"
+      },
+      {
+        "mission": "compaction-continuation",
+        "sha256": "865aaa653e1ea043e34d82dde45e585d6b7e608f28f4252a353af701ffec7978"
+      },
+      {
+        "mission": "continuation",
+        "sha256": "030a3c9f43fd43e92e066f979b9cf662a23389dc58f967328f83ee6d1b8ecdd7"
+      }
+    ],
+    "limit": "Observed actions of these seven synthetic missions only; not a general filesystem sandbox or a packaged-app verification"
+  }
+}

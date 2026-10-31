@@ -15,7 +15,7 @@
 
 import { getProviders, getModels } from '@earendil-works/pi-ai/compat';
 import type { KnownProvider, Model, Api } from '@earendil-works/pi-ai';
-import { MODEL_REGISTRY, type ModelDefinition } from './models.ts';
+import type { ModelDefinition } from './models.ts';
 import { isModelAllowedForAuthProvider } from './llm-connections.ts';
 
 // ============================================
@@ -31,6 +31,7 @@ const GOOGLE_GEMINI_CODE_ASSIST_MODELS: ModelDefinition[] = [
     provider: 'pi',
     contextWindow: 1048576,
     supportsThinking: true,
+    supportsImages: true,
   },
   {
     id: 'pi/gemini-2.5-pro',
@@ -40,6 +41,27 @@ const GOOGLE_GEMINI_CODE_ASSIST_MODELS: ModelDefinition[] = [
     provider: 'pi',
     contextWindow: 1048576,
     supportsThinking: true,
+    supportsImages: true,
+  },
+  {
+    id: 'pi/gemini-3.5-flash',
+    name: 'Gemini 3.5 Flash',
+    shortName: '3.5 Flash',
+    description: 'Google Gemini 3.5 Flash model via a licensed organization Gemini Code Assist account',
+    provider: 'pi',
+    contextWindow: 1048576,
+    supportsThinking: true,
+    supportsImages: true,
+  },
+  {
+    id: 'pi/gemini-3.1-pro-preview',
+    name: 'Gemini 3.1 Pro Preview',
+    shortName: '3.1 Pro',
+    description: 'Google Gemini 3.1 Pro frontier model via a licensed organization Gemini Code Assist account',
+    provider: 'pi',
+    contextWindow: 1048576,
+    supportsThinking: true,
+    supportsImages: true,
   },
   {
     id: 'pi/gemini-3-flash-preview',
@@ -49,80 +71,13 @@ const GOOGLE_GEMINI_CODE_ASSIST_MODELS: ModelDefinition[] = [
     provider: 'pi',
     contextWindow: 1048576,
     supportsThinking: true,
-  },
-];
-
-const OPENAI_SUPPLEMENTAL_MODELS: ModelDefinition[] = [
-  {
-    id: 'pi/gpt-6.1-sol',
-    name: 'GPT-6.1 Sol',
-    shortName: '6.1 Sol',
-    description: 'OpenAI GPT-6.1 model for coding and agentic work via Robb Agents Backend',
-    provider: 'pi',
-    // Official maximum: 1.05M. Keep the standard-price operational cap until
-    // Pi can represent the higher input/cache/output tariffs above 272K.
-    contextWindow: 272_000,
-    supportsThinking: true,
     supportsImages: true,
   },
   {
-    id: 'pi/gpt-6-astra',
-    name: 'GPT-6 Astra',
-    shortName: 'Astra',
-    description: 'OpenAI GPT-6 flagship reasoning and coding model via Robb Agents Backend',
-    provider: 'pi',
-    // Astra supports up to 1.05M tokens, but standard pricing changes above
-    // 272K and Pi 0.80.3 cannot represent tiered costs. Use the same safe
-    // operational cap as the current upstream Pi catalogue.
-    contextWindow: 272_000,
-    supportsThinking: true,
-    supportsImages: true,
-  },
-  {
-    id: 'pi/gpt-6-sol',
-    name: 'GPT-6 Sol',
-    shortName: '6 Sol',
-    description: 'OpenAI GPT-6 model for coding and agentic work via Robb Agents Backend',
-    provider: 'pi',
-    contextWindow: 272_000,
-    supportsThinking: true,
-    supportsImages: true,
-  },
-  {
-    id: 'pi/gpt-6-luna',
-    name: 'GPT-6 Luna',
-    shortName: '6 Luna',
-    description: 'OpenAI GPT-6 efficient model for focused tasks via Robb Agents Backend',
-    provider: 'pi',
-    contextWindow: 272_000,
-    supportsThinking: true,
-    supportsImages: true,
-  },
-  {
-    id: 'pi/gpt-5.6-sol',
-    name: 'GPT-5.6 Sol',
-    shortName: 'Sol',
-    description: 'OpenAI GPT-5.6 flagship model via Robb Agents Backend',
-    provider: 'pi',
-    contextWindow: 1048576,
-    supportsThinking: true,
-    supportsImages: true,
-  },
-  {
-    id: 'pi/gpt-5.6-terra',
-    name: 'GPT-5.6 Terra',
-    shortName: 'Terra',
-    description: 'OpenAI GPT-5.6 balanced model via Robb Agents Backend',
-    provider: 'pi',
-    contextWindow: 1048576,
-    supportsThinking: true,
-    supportsImages: true,
-  },
-  {
-    id: 'pi/gpt-5.6-luna',
-    name: 'GPT-5.6 Luna',
-    shortName: 'Luna',
-    description: 'OpenAI GPT-5.6 cost-efficient model via Robb Agents Backend',
+    id: 'pi/gemini-3.1-flash-lite',
+    name: 'Gemini 3.1 Flash Lite',
+    shortName: '3.1 Flash Lite',
+    description: 'Google Gemini 3.1 Flash Lite utility model via a licensed organization Gemini Code Assist account',
     provider: 'pi',
     contextWindow: 1048576,
     supportsThinking: true,
@@ -142,28 +97,6 @@ const MISTRAL_VIBE_SUBSCRIPTION_MODELS: ModelDefinition[] = [
     // reasoning selector through this bridge. Thinking events still stream.
     supportsThinking: false,
     supportsImages: false,
-  },
-];
-
-// Pi 0.80.3 lacks the current Anthropic snapshots. Preserve the metadata in
-// the shared registry; runtime definitions live in catalog-model-registration.
-const ANTHROPIC_SUPPLEMENTAL_MODELS: ModelDefinition[] = MODEL_REGISTRY
-  .filter(model => model.id === 'claude-opus-5' || model.id === 'claude-fable-5-1')
-  .map(model => ({ ...model, id: `pi/${model.id}`, provider: 'pi' }));
-
-const MISTRAL_SUPPLEMENTAL_MODELS: ModelDefinition[] = [
-  {
-    // Official canonical ID; Pi 0.80.3 only has the 2604 snapshot and a dotted
-    // alias. Keep existing selections and offer the documented ID for new ones.
-    // https://docs.mistral.ai/models/mistral-medium-3-5-26-04
-    id: 'pi/mistral-medium-3-5',
-    name: 'Mistral Medium 3.5',
-    shortName: 'Medium 3.5',
-    description: 'Mistral model for agentic and coding tasks via Robb Agents Backend',
-    provider: 'pi',
-    contextWindow: 262_144,
-    supportsThinking: true,
-    supportsImages: true,
   },
 ];
 
@@ -228,13 +161,6 @@ const GOOGLE_ANTIGRAVITY_MODELS: ModelDefinition[] = [
 ];
 
 const PI_MODEL_SUPPLEMENTS: Record<string, ModelDefinition[]> = {
-  // Pi SDK 0.80.3 predates OpenAI's GPT-5.6, GPT-6 and GPT-6.1 launches. Keep
-  // Robb current by injecting the official IDs until the upstream catalogue
-  // catches up.
-  openai: OPENAI_SUPPLEMENTAL_MODELS,
-  'openai-codex': OPENAI_SUPPLEMENTAL_MODELS,
-  anthropic: ANTHROPIC_SUPPLEMENTAL_MODELS,
-  mistral: MISTRAL_SUPPLEMENTAL_MODELS,
   // Antigravity is an external account-backed agent, not a Pi API provider.
   // These IDs are reported by `agy models` and passed back to the official CLI.
   'google-antigravity': GOOGLE_ANTIGRAVITY_MODELS,
@@ -245,8 +171,12 @@ const PI_MODEL_SUPPLEMENTS: Record<string, ModelDefinition[]> = {
 
 function withSupplementalPiModels(piAuthProvider: string, models: ModelDefinition[]): ModelDefinition[] {
   const eligibleModels = models.filter(m => isModelAllowedForAuthProvider(m.id, piAuthProvider));
-  const supplements = (PI_MODEL_SUPPLEMENTS[piAuthProvider] ?? [])
-    .filter(m => isModelAllowedForAuthProvider(m.id, piAuthProvider));
+  const canonical = piAuthProvider === 'mistral'
+    ? models.find(model => model.id === 'pi/mistral-medium-2604') : undefined;
+  const additional = canonical
+    ? [{ ...canonical, id: 'pi/mistral-medium-3-5', name: 'Mistral Medium 3.5', shortName: 'Medium 3.5' }]
+    : PI_MODEL_SUPPLEMENTS[piAuthProvider] ?? [];
+  const supplements = additional.filter(m => isModelAllowedForAuthProvider(m.id, piAuthProvider));
   if (supplements.length === 0) return eligibleModels;
   const seenBareIds = new Set(eligibleModels.map(m => m.id.replace(/^pi\//, '')));
   return [

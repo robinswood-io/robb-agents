@@ -1,24 +1,31 @@
+import { sessionManagerForTest } from './testing/private-runtime-access.ts';
+import { ScriptedSessionAgent } from './testing/scripted-session-agent.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from 'bun:test'
-import { SessionManager } from './SessionManager'
+import { SessionManager, createManagedSession } from './SessionManager'
 import { cleanupModeState, getPermissionModeDiagnostics, initializeModeState } from '@craft-agent/shared/agent'
+
+const workspace = { id: 'isolated-workspace', slug: 'isolated', name: 'Fixture', rootPath: '/tmp/permission-alias', createdAt: 1 };
 
 describe('SessionManager permission mode boundary', () => {
   it('rejects an unknown mode before changing managed state, notifying the backend, or persisting', () => {
     const id = 'permission-api-invalid'
     const calls: unknown[] = []
-    const managed = { id, permissionMode: 'safe', workspace: { id: 'isolated-workspace' }, agent: {
-      setPermissionMode: (mode: string) => calls.push(['backend', mode]),
-    } }
-    const host = Object.create(SessionManager.prototype)
-    host.sessions = new Map([[id, managed]])
-    host.shuttingDown = false
-    host.retiringSessions = new WeakSet()
+    const managed = createManagedSession({ id, permissionMode: 'safe' }, workspace, { agent: Object.assign(new ScriptedSessionAgent(workspace), {
+      setPermissionMode: (mode: string) => { calls.push(['backend', mode]); },
+    }) })
+    const nativeHost = Object.create(SessionManager.prototype) as SessionManager
+    Object.defineProperty(nativeHost, 'runtimeState', { value: nativeHost, configurable: true });
+    const host = sessionManagerForTest(nativeHost);
+    sessionRuntimeStateForTest(host).sessions = new Map([[id, managed]])
+    sessionRuntimeStateForTest(host).shuttingDown = false
+    sessionRuntimeStateForTest(host).retiringSessions = new WeakSet()
     host.sendEvent = (...args: unknown[]) => calls.push(['event', ...args])
-    host.persistSession = () => calls.push(['persist'])
+    host.persistSession = () => { calls.push(['persist']); return true }
     initializeModeState(id, 'safe')
     try {
       const before = getPermissionModeDiagnostics(id)
-      expect(() => host.setSessionPermissionMode(id, 'unrecognized')).toThrow('Invalid permissionMode')
+      expect(() => { Reflect.apply(host.setSessionPermissionMode, host, [id, 'unrecognized']) }).toThrow('Invalid permissionMode')
       expect(managed.permissionMode).toBe('safe')
       expect(getPermissionModeDiagnostics(id)).toEqual(before)
       expect(calls).toEqual([])
@@ -32,18 +39,20 @@ describe('SessionManager permission mode boundary', () => {
     const backendModes: string[] = []
     const persistedModes: string[] = []
     const events: Array<{ permissionMode: string }> = []
-    const managed = { id, permissionMode: 'ask', workspace: { id: 'isolated-workspace' }, agent: {
-      setPermissionMode: (mode: string) => backendModes.push(mode),
-    } }
-    const host = Object.create(SessionManager.prototype)
-    host.sessions = new Map([[id, managed]])
-    host.shuttingDown = false
-    host.retiringSessions = new WeakSet()
-    host.sendEvent = (event: { permissionMode: string }) => events.push(event)
-    host.persistSession = () => persistedModes.push(managed.permissionMode)
+    const managed = createManagedSession({ id, permissionMode: 'ask' }, workspace, { agent: Object.assign(new ScriptedSessionAgent(workspace), {
+      setPermissionMode: (mode: string) => { backendModes.push(mode); },
+    }) })
+    const nativeHost = Object.create(SessionManager.prototype) as SessionManager
+    Object.defineProperty(nativeHost, 'runtimeState', { value: nativeHost, configurable: true });
+    const host = sessionManagerForTest(nativeHost);
+    sessionRuntimeStateForTest(host).sessions = new Map([[id, managed]])
+    sessionRuntimeStateForTest(host).shuttingDown = false
+    sessionRuntimeStateForTest(host).retiringSessions = new WeakSet()
+    host.sendEvent = event => { if (event.type === 'permission_mode_changed') events.push(event) }
+    host.persistSession = () => { persistedModes.push(managed.permissionMode ?? 'ask'); return true }
     initializeModeState(id, 'ask')
     try {
-      host.setSessionPermissionMode(id, input)
+      Reflect.apply(host.setSessionPermissionMode, host, [id, input])
       expect(managed.permissionMode).toBe(expected)
       expect(getPermissionModeDiagnostics(id).permissionMode).toBe(expected)
       expect(backendModes).toEqual([expected])

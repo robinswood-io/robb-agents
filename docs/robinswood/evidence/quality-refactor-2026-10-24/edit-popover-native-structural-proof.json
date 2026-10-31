@@ -1,0 +1,52 @@
+{
+  "memoizedOpenCallback": {
+    "name": "setOpen",
+    "dependencies": [
+      "isControlled",
+      "controlledOnOpenChange"
+    ],
+    "handlerBodyUnchanged": true
+  },
+  "status": "passed",
+  "source": "apps/electron/src/renderer/components/ui/EditPopover.tsx",
+  "nativeSourceHash": "b00b5d117e200f77e8f924f919067dcd14a3dab63b09aa45243789b8667546f8",
+  "nativeDeclarations": 12,
+  "extractedDeclarations": 9,
+  "nativeBodiesStateAndEffectOrderPreserved": true,
+  "nativePublicExportsAndImportedBindingsPreserved": true,
+  "nativeExternalImportOrder": [
+    "react",
+    "react",
+    "react-i18next",
+    "i18next",
+    "lucide-react",
+    "motion/react",
+    "./popover",
+    "./button",
+    "@/lib/utils",
+    "@craft-agent/ui",
+    "@/context/AppShellContext",
+    "@/context/EscapeInterruptContext",
+    "../app-shell/ChatDisplay"
+  ],
+  "runtimeImportCycles": 0,
+  "newStateOrWorkflowAdded": false,
+  "maximumFileLines": 499,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/ui/EditPopover.tsx",
+      "lines": 499,
+      "sha256": "d86277862b0b888accebf4abba0c7f3c364840953ef5a718a90e59f3cde3a646"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/ui/edit-popover-types.ts",
+      "lines": 188,
+      "sha256": "6dd760a5f0ca6e2a79686dee7e50996d30a2be8863bf804ee97b0b59c952704a"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/ui/edit-configs.ts",
+      "lines": 479,
+      "sha256": "e62a48df11d923ba2b478fe0453c138743ec2ad39f6e7ee424224d49ae402852"
+    }
+  ]
+}

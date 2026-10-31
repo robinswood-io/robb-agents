@@ -1,0 +1,226 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Nettoyage natif du second aperçu de différences et correction du script de missions réelles",
+  "changes": [
+    "Cinq any supprimés avec les contrats natifs existants.",
+    "La fermeture retire le listener de son élément exact ; rendu, clic unique, changement de fichier et démontage sont vérifiés en navigateur.",
+    "Le script QA lit le stockage réel des sessions et attend une reprise automatique en cours."
+  ],
+  "files": [
+    {
+      "file": "packages/ui/src/components/code-viewer/UnifiedDiffViewer.tsx",
+      "lines": 242,
+      "sha256": "ad4379f2dd82bc32090c8d38e81a93dde9c7ab9c6225bc01fe2beefba8553024"
+    },
+    {
+      "file": "packages/ui/src/components/overlay/MultiDiffPreviewOverlay.tsx",
+      "lines": 395,
+      "sha256": "d38e4e92736868d11070e308a4b6593859fb66fbad7c6a80229b444ad8e65fca"
+    },
+    {
+      "file": "scripts/robb-completion-live-check.ts",
+      "lines": 266,
+      "sha256": "2b407714e25bf70d337f83c42f9e0531eaaddbc0b1c8214986e14cd5ee798267"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 14.68,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/diff-preview-cleanup-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/ui/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 11.37,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/diff-preview-cleanup-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "scripts/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 1.78,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/diff-preview-cleanup-scripts-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/run-owned-files-eslint.py",
+        "diff-preview-cleanup"
+      ],
+      "exitCode": 0,
+      "seconds": 0.73,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/diff-preview-cleanup-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 17.93,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/diff-preview-cleanup-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 138.29,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/diff-preview-cleanup-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "removedExplicitAny": 5,
+    "runtimePreservedOutsideReviewedCorrections": true,
+    "controlledChanges": [
+      "Exact native header listener cleanup",
+      "Native language types without assertions",
+      "QA reads actual SessionManager runtimeState.sessions for pending retries"
+    ],
+    "newRuntimeWorkflow": false,
+    "files": [
+      {
+        "file": "packages/ui/src/components/code-viewer/UnifiedDiffViewer.tsx",
+        "lines": 242,
+        "sha256": "ad4379f2dd82bc32090c8d38e81a93dde9c7ab9c6225bc01fe2beefba8553024"
+      },
+      {
+        "file": "packages/ui/src/components/overlay/MultiDiffPreviewOverlay.tsx",
+        "lines": 395,
+        "sha256": "d38e4e92736868d11070e308a4b6593859fb66fbad7c6a80229b444ad8e65fca"
+      },
+      {
+        "file": "scripts/robb-completion-live-check.ts",
+        "lines": 266,
+        "sha256": "2b407714e25bf70d337f83c42f9e0531eaaddbc0b1c8214986e14cd5ee798267"
+      }
+    ]
+  },
+  "fullTestSummary": {
+    "pass": 10748,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {},
+  "beforeAfter": {
+    "browserCases": 4,
+    "observedBrowserFailuresBefore": 1,
+    "browserFailuresAfter": 0
+  },
+  "sourceGate": {
+    "max-lines": 42,
+    "no-explicit-any": 91
+  },
+  "globalLint": {
+    "files": 3620,
+    "errors": 117,
+    "warnings": 100,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 86,
+      "max-lines": 31,
+      "react-hooks/exhaustive-deps": 79,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "42 fichiers trop longs et 91 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T06:05:26.253262+00:00",
+  "additionalProofs": {
+    "diff-preview-cleanup-regression-proof.json": {
+      "status": "passed",
+      "beforeBrowser": {
+        "status": "baseline-recorded",
+        "cases": [
+          {
+            "name": "native diff renders its file header and changed source",
+            "status": "passed"
+          },
+          {
+            "name": "a native header click invokes the callback once",
+            "status": "passed"
+          },
+          {
+            "name": "the file header callback uses the current path",
+            "status": "passed"
+          },
+          {
+            "name": "unmount removes the listener from its actual shadow header",
+            "status": "failed",
+            "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n    'qa-before.ts',\n    'qa-after.ts',\n+   'qa-after.ts'\n  ]\n"
+          }
+        ],
+        "failed": [
+          {
+            "name": "unmount removes the listener from its actual shadow header",
+            "status": "failed",
+            "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n    'qa-before.ts',\n    'qa-after.ts',\n+   'qa-after.ts'\n  ]\n"
+          }
+        ],
+        "errors": [],
+        "consoleErrors": [],
+        "browserVersion": "145.0.7632.6",
+        "headless": false
+      },
+      "afterBrowser": {
+        "status": "passed",
+        "cases": [
+          {
+            "name": "native diff renders its file header and changed source",
+            "status": "passed"
+          },
+          {
+            "name": "a native header click invokes the callback once",
+            "status": "passed"
+          },
+          {
+            "name": "the file header callback uses the current path",
+            "status": "passed"
+          },
+          {
+            "name": "unmount removes the listener from its actual shadow header",
+            "status": "passed"
+          }
+        ],
+        "failed": [],
+        "errors": [],
+        "consoleErrors": [],
+        "browserVersion": "145.0.7632.6",
+        "headless": false
+      }
+    }
+  }
+}

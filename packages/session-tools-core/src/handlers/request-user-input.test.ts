@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { describe, expect, it } from 'bun:test';
 import type { SessionToolContext } from '../context.ts';
 import { getToolDefsAsJsonSchema, SESSION_TOOL_REGISTRY } from '../tool-defs.ts';
@@ -30,7 +31,7 @@ describe('request_user_input', () => {
     await Promise.resolve();
     expect(resolved).toBe(false);
     confirm({ requestId: 'confirmed', status: 'pending' });
-    expect(JSON.parse((await pending).content[0]!.text).requestId).toBe('confirmed');
+    expect(z.object({ requestId: z.string() }).parse(JSON.parse((await pending).content[0]!.text)).requestId).toBe('confirmed');
   });
 
   it('fails closed without a host callback, including standalone MCP contexts', async () => {
@@ -92,10 +93,10 @@ describe('request_user_input', () => {
     const proxy = getToolDefsAsJsonSchema({ prefix: 'mcp__session__' }).find(tool => tool.name === 'mcp__session__request_user_input');
     expect(proxy?.inputSchema).toEqual(standalone?.inputSchema);
     expect(standalone?.inputSchema).toMatchObject({ type: 'object', required: ['questions'], properties: { questions: { type: 'array', minItems: 1, maxItems: 3 } } });
-    const properties = standalone?.inputSchema.properties as Record<string, { items: { required: string[]; properties: Record<string, unknown> } }>;
-    expect(properties.questions!.items.required).toEqual(['id', 'question']);
-    expect(properties.questions!.items.properties.options).toMatchObject({ type: 'array', maxItems: 8 });
-    expect(properties.questions!.items.properties.multiSelect).toMatchObject({ type: 'boolean', default: false });
+    const properties = standalone?.inputSchema["properties"] as Record<string, { items: { required: string[]; properties: Record<string, unknown> } }>;
+    expect(properties["questions"]!.items.required).toEqual(['id', 'question']);
+    expect(properties["questions"]!.items.properties["options"]).toMatchObject({ type: 'array', maxItems: 8 });
+    expect(properties["questions"]!.items.properties["multiSelect"]).toMatchObject({ type: 'boolean', default: false });
     expect(standalone?.description).toContain('pending from a named third party is not a missing user preference');
     expect(proxy?.description).toContain('finish independent safe work and report the exact external dependency');
     expect(standalone?.description).toContain('replacing the blocked provider or integration');

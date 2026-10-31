@@ -15,7 +15,7 @@ import { DEFAULT_WEBHOOK_METHOD } from './constants'
 
 export interface AutomationActionPreviewProps {
   actions: AutomationAction[]
-  className?: string
+  className?: string | undefined
 }
 
 export function AutomationActionPreview({ actions, className }: AutomationActionPreviewProps) {

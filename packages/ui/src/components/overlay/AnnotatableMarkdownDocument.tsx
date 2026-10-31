@@ -1,63 +1,57 @@
-import * as React from 'react'
-import { Markdown } from '../markdown'
-import type { AnnotationV1 } from '@craft-agent/core'
-import { type IslandTransitionConfig } from '../ui'
-import { AnnotationIslandMenu } from '../annotations/AnnotationIslandMenu'
-import {
-  ANNOTATION_PREFIX_SUFFIX_WINDOW,
-  SELECTION_POINTER_MAX_AGE_MS,
-  clamp,
-  hasExistingTextRangeAnnotation,
-  createSelectionPreviewAnnotation,
-  createTextSelectionAnnotation,
-  getCanonicalText,
-  resolveNodeOffset,
-  type AnnotationOverlayRect,
-} from '../annotations/annotation-core'
-import {
-  getAnnotationNoteText,
-  formatAnnotationFollowUpTooltipText,
-} from '../annotations/follow-up-state'
-import {
-  type PointerSnapshot,
-  buildAnnotationChipEntryTransition,
-  buildSelectionEntryTransition,
-} from '../annotations/island-motion'
-import {
-  shouldIgnoreSelectionMouseUpTarget,
-} from '../annotations/interaction-policy'
-import { computeAnnotationOverlayGeometry, type AnnotationOverlayChip } from '../annotations/annotation-overlay-geometry'
-import { AnnotationOverlayLayer } from '../annotations/AnnotationOverlayLayer'
-import {
-  getAnnotationInteractionAnchor,
-  getAnnotationInteractionSourceKey,
-  hasAnnotationInteraction,
-} from '../annotations/interaction-selectors'
-import {
-  type AnnotationIslandMode,
-} from '../annotations/interaction-state-machine'
-import { useAnnotationInteractionController, type ExternalOpenAnnotationRequest } from '../annotations/use-annotation-interaction-controller'
-import { useAnnotationIslandPresentation } from '../annotations/use-annotation-island-presentation'
-import { useAnnotationIslandEvents } from '../annotations/use-annotation-island-events'
-import { useAnnotationCancelRestore } from '../annotations/use-annotation-cancel-restore'
-import { canAnnotateMessage, shouldRenderAnnotationIslandInPortal } from '../annotations/annotation-host-config'
-import { clearDomSelection } from '../annotations/selection-restore'
-import { applyBlockAnnotationMarker, clearBlockAnnotationMarkers } from '../annotations/block-markers'
+import * as React from 'react';
+import { Markdown } from '../markdown';
+import { AnnotationIslandMenu } from '../annotations/AnnotationIslandMenu';
+import { hasExistingTextRangeAnnotation, createSelectionPreviewAnnotation, createTextSelectionAnnotation, type AnnotationOverlayRect } from '../annotations/annotation-core';
+import { getAnnotationNoteText, formatAnnotationFollowUpTooltipText } from '../annotations/follow-up-state';
+import { type PointerSnapshot, buildAnnotationChipEntryTransition } from '../annotations/island-motion';
+import "../annotations/interaction-policy";
+import { computeAnnotationOverlayGeometry, type AnnotationOverlayChip } from '../annotations/annotation-overlay-geometry';
+import { AnnotationOverlayLayer } from '../annotations/AnnotationOverlayLayer';
+import { getAnnotationInteractionAnchor, getAnnotationInteractionSourceKey, hasAnnotationInteraction } from '../annotations/interaction-selectors';
+import { useAnnotationInteractionController, type ExternalOpenAnnotationRequest } from '../annotations/use-annotation-interaction-controller';
+import { useAnnotationIslandPresentation } from '../annotations/use-annotation-island-presentation';
+import { useAnnotationIslandEvents } from '../annotations/use-annotation-island-events';
+import { useAnnotationCancelRestore } from '../annotations/use-annotation-cancel-restore';
+import { canAnnotateMessage, shouldRenderAnnotationIslandInPortal } from '../annotations/annotation-host-config';
+import { clearDomSelection } from '../annotations/selection-restore';
+import { applyBlockAnnotationMarker, clearBlockAnnotationMarkers } from '../annotations/block-markers';
+
+import { useMarkdownSelection } from "./use-markdown-selection";
+
+
+import type { AnnotationV1 } from '@craft-agent/core';
+import { type IslandTransitionConfig } from '../ui';
+
+
+
+
+
+
+
+
+import { type AnnotationIslandMode } from '../annotations/interaction-state-machine';
+
+
+
+
+
+
+
 
 export interface AnnotatableMarkdownDocumentProps {
   content: string
   messageId: string
-  sessionId?: string
-  annotations?: AnnotationV1[]
-  onAddAnnotation?: (messageId: string, annotation: AnnotationV1) => void
-  onRemoveAnnotation?: (messageId: string, annotationId: string) => void
-  onUpdateAnnotation?: (messageId: string, annotationId: string, patch: Partial<AnnotationV1>) => void
-  onOpenUrl?: (url: string) => void
-  onOpenFile?: (path: string) => void
-  sendMessageKey?: 'enter' | 'cmd-enter'
-  islandZIndex?: React.CSSProperties['zIndex']
-  openAnnotationRequest?: ExternalOpenAnnotationRequest | null
-  isStreaming?: boolean
+  sessionId?: string | undefined
+  annotations?: AnnotationV1[] | undefined
+  onAddAnnotation?: ((messageId: string, annotation: AnnotationV1) => void) | undefined
+  onRemoveAnnotation?: ((messageId: string, annotationId: string) => void) | undefined
+  onUpdateAnnotation?: ((messageId: string, annotationId: string, patch: Partial<AnnotationV1>) => void) | undefined
+  onOpenUrl?: ((url: string) => void) | undefined
+  onOpenFile?: ((path: string) => void) | undefined
+  sendMessageKey?: 'enter' | 'cmd-enter' | undefined
+  islandZIndex?: React.CSSProperties['zIndex'] | undefined
+  openAnnotationRequest?: ExternalOpenAnnotationRequest | null | undefined
+  isStreaming?: boolean | undefined
 }
 
 export function AnnotatableMarkdownDocument({
@@ -176,7 +170,7 @@ export function AnnotatableMarkdownDocument({
       const geometry = computeAnnotationOverlayGeometry({
         root,
         renderedAnnotations,
-        persistedAnnotations: annotations,
+        ...(annotations !== undefined ? { persistedAnnotations: annotations } : {}),
       })
       return { rects: geometry.rects, chips: geometry.chips }
     }
@@ -259,7 +253,7 @@ export function AnnotatableMarkdownDocument({
       ]
 
       const nextMeta = { ...(activeAnnotation.meta ?? {}) }
-      delete nextMeta.followUp
+      delete nextMeta["followUp"]
 
       onUpdateAnnotation(messageId, activeAnnotationDetail.annotationId, {
         body: nextBody,
@@ -273,7 +267,7 @@ export function AnnotatableMarkdownDocument({
                 updatedAt: Date.now(),
               },
             }
-          : (Object.keys(nextMeta).length > 0 ? nextMeta : undefined),
+          : nextMeta,
       })
 
       markSubmitSuccess()
@@ -327,7 +321,7 @@ export function AnnotatableMarkdownDocument({
 
     const consumed = consumeExternalOpenRequest(openAnnotationRequest, {
       messageId,
-      annotations,
+      ...(annotations !== undefined ? { annotations: annotations } : {}),
       getNoteText: getAnnotationNoteText,
       fallbackAnchor,
     })
@@ -343,261 +337,25 @@ export function AnnotatableMarkdownDocument({
     consumeExternalOpenRequest,
     triggerSelectionMenuEntryReplay,
   ])
-
-  const showSelectionMenuFromCurrentSelection = React.useCallback(() => {
-    const root = contentLayerRef.current
-    if (!root || !canAnnotate) return
-
-    requestAnimationFrame(() => {
-      const selection = window.getSelection()
-      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-        closeSelectionMenu()
-        return
-      }
-
-      const range = selection.getRangeAt(0)
-      if (!root.contains(range.commonAncestorContainer)) {
-        closeSelectionMenu()
-        return
-      }
-
-      const start = resolveNodeOffset(root, range.startContainer, range.startOffset)
-      const end = resolveNodeOffset(root, range.endContainer, range.endOffset)
-      if (start == null || end == null || end <= start) {
-        closeSelectionMenu()
-        return
-      }
-
-      if (hasExistingTextRangeAnnotation(annotations, start, end)) {
-        closeSelectionMenu()
-        return
-      }
-
-      const selectedText = range.toString()
-      if (!selectedText || !/\S/.test(selectedText)) {
-        closeSelectionMenu()
-        return
-      }
-
-      const fullText = getCanonicalText(root)
-      const prefix = fullText.slice(Math.max(0, start - ANNOTATION_PREFIX_SUFFIX_WINDOW), start)
-      const suffix = fullText.slice(end, end + ANNOTATION_PREFIX_SUFFIX_WINDOW)
-
-      const rects = Array.from(range.getClientRects()).filter(rect => rect.width > 0 && rect.height > 0)
-      const pointer = lastPointerRef.current
-      const hasRecentPointer = Boolean(pointer && (Date.now() - pointer.ts) <= SELECTION_POINTER_MAX_AGE_MS)
-      const pointerX = hasRecentPointer && pointer ? pointer.x : null
-      const pointerY = hasRecentPointer && pointer ? pointer.y : null
-
-      const fallbackRect = range.getBoundingClientRect()
-      let anchorRect: DOMRect
-      if (rects.length > 0) {
-        if (pointerY != null) {
-          const rowCandidates = rects.filter(rect => pointerY >= rect.top && pointerY <= rect.bottom)
-
-          if (rowCandidates.length > 0) {
-            if (pointerX != null) {
-              const xContaining = rowCandidates.filter(rect => pointerX >= rect.left && pointerX <= rect.right)
-              if (xContaining.length > 0) {
-                anchorRect = xContaining.reduce((best, rect) => (rect.width > best.width ? rect : best))
-              } else {
-                anchorRect = rowCandidates.reduce((best, rect) => {
-                  const bestDistance = Math.min(Math.abs(pointerX - best.left), Math.abs(pointerX - best.right))
-                  const rectDistance = Math.min(Math.abs(pointerX - rect.left), Math.abs(pointerX - rect.right))
-                  return rectDistance < bestDistance ? rect : best
-                })
-              }
-            } else {
-              anchorRect = rowCandidates.reduce((best, rect) => (rect.width > best.width ? rect : best))
-            }
-          } else {
-            anchorRect = rects.reduce((best, rect) => {
-              const bestDistance = Math.abs((best.top + best.bottom) / 2 - pointerY)
-              const rectDistance = Math.abs((rect.top + rect.bottom) / 2 - pointerY)
-              return rectDistance < bestDistance ? rect : best
-            })
-          }
-        } else {
-          anchorRect = rects.reduce((best, rect) => (rect.top < best.top ? rect : best))
-        }
-      } else {
-        anchorRect = fallbackRect
-      }
-
-      const anchorRowRects = rects.length > 0
-        ? rects.filter(rect => Math.abs(rect.top - anchorRect.top) <= 2)
-        : []
-      const clampRects = anchorRowRects.length > 0 ? anchorRowRects : (rects.length > 0 ? rects : [anchorRect])
-      const selectionMinX = Math.min(...clampRects.map(rect => rect.left))
-      const selectionMaxX = Math.max(...clampRects.map(rect => rect.right))
-
-      const anchorX = pointerX != null
-        ? clamp(pointerX, selectionMinX, selectionMaxX)
-        : (anchorRect.left + (anchorRect.width / 2))
-      const anchorY = anchorRect.top - 8
-
-      const transition = buildSelectionEntryTransition(dragStartPointerRef.current, pointer)
-
-      setSelectionMenuTransitionConfig(transition)
-      triggerSelectionMenuEntryReplay()
-      openFromSelection({
-        start,
-        end,
-        selectedText,
-        prefix,
-        suffix,
-        anchorX,
-        anchorY,
-      })
-      selectionMenuOpenedAtRef.current = Date.now()
-      dragStartPointerRef.current = null
-    })
-  }, [annotations, canAnnotate, closeSelectionMenu, triggerSelectionMenuEntryReplay])
-
-  const handleSelectionPointerDown = React.useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    selectionStartedInContentRef.current = true
-    const snapshot: PointerSnapshot = {
-      x: event.clientX,
-      y: event.clientY,
-      ts: Date.now(),
-    }
-    dragStartPointerRef.current = snapshot
-    lastPointerRef.current = snapshot
-  }, [])
-
-  const handleTextSelection = React.useCallback((event: React.MouseEvent<HTMLDivElement>) => {
-    if (!canAnnotate) return
-
-    if (shouldIgnoreSelectionMouseUpTarget(event.target)) {
-      selectionStartedInContentRef.current = false
-      return
-    }
-
-    lastPointerRef.current = { x: event.clientX, y: event.clientY, ts: Date.now() }
-
-    if (event.shiftKey) {
-      const targetElement = event.target instanceof Element ? event.target : null
-      const blockElement = targetElement?.closest<HTMLElement>('[data-ca-block-path]')
-      if (blockElement && onAddAnnotation) {
-        const blockPath = blockElement.getAttribute('data-ca-block-path') || ''
-        const blockType = blockElement.getAttribute('data-ca-block-type') || 'paragraph'
-        const blockId = blockElement.getAttribute('data-ca-block-id') || undefined
-
-        if (blockPath) {
-          const alreadyExists = (annotations ?? []).some(annotation => {
-            const blockSelector = annotation.target.selectors.find(s => s.type === 'block') as Extract<
-              AnnotationV1['target']['selectors'][number],
-              { type: 'block' }
-            > | undefined
-            if (!blockSelector) return false
-            if (blockId && blockSelector.blockId) return blockSelector.blockId === blockId
-            return blockSelector.path === blockPath
-          })
-
-          if (!alreadyExists) {
-            const annotation: AnnotationV1 = {
-              id: `ann-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-              schemaVersion: 1,
-              createdAt: Date.now(),
-              intent: 'highlight',
-              body: [{ type: 'highlight' }],
-              target: {
-                source: {
-                  sessionId: sessionId ?? '',
-                  messageId,
-                },
-                selectors: [
-                  {
-                    type: 'block',
-                    blockType: blockType as Extract<AnnotationV1['target']['selectors'][number], { type: 'block' }>['blockType'],
-                    path: blockPath,
-                    ...(blockId ? { blockId } : {}),
-                  },
-                ],
-              },
-              style: { color: 'yellow' },
-            }
-            onAddAnnotation(messageId, annotation)
-          }
-        }
-      }
-      selectionStartedInContentRef.current = false
-      return
-    }
-
-    selectionStartedInContentRef.current = false
-    showSelectionMenuFromCurrentSelection()
-  }, [annotations, canAnnotate, messageId, onAddAnnotation, sessionId, showSelectionMenuFromCurrentSelection])
-
-  React.useEffect(() => {
-    if (!canAnnotate) return
-
-    const handleDocumentMouseUp = (event: MouseEvent) => {
-      if (!selectionStartedInContentRef.current) return
-      selectionStartedInContentRef.current = false
-
-      lastPointerRef.current = {
-        x: event.clientX,
-        y: event.clientY,
-        ts: Date.now(),
-      }
-
-      const root = contentLayerRef.current
-      if (!root) return
-
-      const target = event.target as Node | null
-      if (target && root.contains(target)) {
-        return
-      }
-
-      showSelectionMenuFromCurrentSelection()
-    }
-
-    document.addEventListener('mouseup', handleDocumentMouseUp)
-    return () => {
-      document.removeEventListener('mouseup', handleDocumentMouseUp)
-    }
-  }, [canAnnotate, showSelectionMenuFromCurrentSelection])
-
-  React.useEffect(() => {
-    if (!hasAnnotationInteraction(interactionState) || !isSelectionMenuVisible) return
-
-    const handleSelectionChange = () => {
-      if (Date.now() - selectionMenuOpenedAtRef.current < 180) {
-        return
-      }
-
-      const root = contentLayerRef.current
-      if (!root) {
-        closeSelectionMenu()
-        return
-      }
-
-      const selection = window.getSelection()
-      if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-        return
-      }
-
-      const range = selection.getRangeAt(0)
-      const common = range.commonAncestorContainer
-      const commonElement = common.nodeType === Node.ELEMENT_NODE
-        ? common as Element
-        : common.parentElement
-
-      if (commonElement && isTargetInsideAnnotationIsland(commonElement)) {
-        return
-      }
-
-      if (!root.contains(common)) {
-        closeSelectionMenu()
-      }
-    }
-
-    document.addEventListener('selectionchange', handleSelectionChange)
-    return () => {
-      document.removeEventListener('selectionchange', handleSelectionChange)
-    }
-  }, [interactionState, isSelectionMenuVisible, closeSelectionMenu, isTargetInsideAnnotationIsland, selectionMenuOpenedAtRef])
+  const { handleSelectionPointerDown, handleTextSelection } = useMarkdownSelection({
+    contentLayerRef,
+    canAnnotate,
+    closeSelectionMenu,
+    annotations,
+    lastPointerRef,
+    dragStartPointerRef,
+    setSelectionMenuTransitionConfig,
+    triggerSelectionMenuEntryReplay,
+    openFromSelection,
+    selectionMenuOpenedAtRef,
+    selectionStartedInContentRef,
+    onAddAnnotation,
+    sessionId,
+    messageId,
+    interactionState,
+    isSelectionMenuVisible,
+    isTargetInsideAnnotationIsland,
+  })
 
   const handleSelectionMenuRequestBack = React.useCallback((): boolean => {
     if (selectionMenuView !== 'compact') {

@@ -1,0 +1,79 @@
+{
+  "status": "testé dans le candidat local, non intégré",
+  "mainFileLines": 647,
+  "newModuleLines": 188,
+  "scope": "Observations et faits d’autorité contextuelle Gmail, décisions de réponse et dépendances constatées",
+  "preserved": "23 instructions de tête et blocs comparés ; cinq valeurs d’autorité en entrée, sept faits existants en sortie, mêmes observations et rejets natifs",
+  "typeCorrection": "Import de type de classification explicite ajouté ; instructions exécutées inchangées après la suite réussie",
+  "checks": {
+    "pretool-gmail-authority-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-browser-channel.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-admission.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-input-transforms.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-ask-gate.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-pipeline-ordering.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-resume-authority.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-checks.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.02,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-gmail-authority-tests.log"
+    },
+    "pretool-gmail-authority-lint-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/shared/src/agent/core/pre-tool-use/gmail-authority.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 0.5,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-gmail-authority-lint-2.log"
+    },
+    "pretool-gmail-authority-all-types-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 15.41,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-gmail-authority-all-types-2.log"
+    },
+    "pretool-gmail-authority-full-suite": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 140.42,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-gmail-authority-full-suite.log"
+    },
+    "pretool-gmail-authority-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 13.81,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-gmail-authority-build.log"
+    }
+  },
+  "remaining": {
+    "oversizedCodeFiles": 209,
+    "explicitAny": 708
+  },
+  "installedApplication": "Inchangée"
+}

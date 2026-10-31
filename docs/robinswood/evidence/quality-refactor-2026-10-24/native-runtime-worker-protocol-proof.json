@@ -1,0 +1,24 @@
+{
+  "status": "passed",
+  "sameInput": true,
+  "sameExitAndSerializedReceipt": true,
+  "before": {
+    "exitCode": 0,
+    "stdout": "{\"type\":\"send_result\",\"id\":\"qa-not-connected\",\"ok\":false,\"error\":\"Not connected\"}\n",
+    "stderr": "",
+    "workerSha256": "c462791eda7b031d4455688edf21904f0ce64d64e20d674faa723a9d172b7482",
+    "input": "{\"type\":\"send_text\",\"id\":\"qa-not-connected\",\"channelId\":\"qa@invalid\",\"text\":\"QA only\"}\n{\"type\":\"shutdown\"}\n"
+  },
+  "after": {
+    "exitCode": 0,
+    "stdout": "{\"type\":\"send_result\",\"id\":\"qa-not-connected\",\"ok\":false,\"error\":\"Not connected\"}\n",
+    "stderr": "",
+    "workerSha256": "f425473910c97c9235d11f0c960c8b3c534fe320c79a3a300d735dc0e6aec008"
+  },
+  "noAuthenticatedSessionStarted": true,
+  "noRemoteMessageSent": true,
+  "commands": [
+    "send_text against a disconnected worker",
+    "shutdown"
+  ]
+}

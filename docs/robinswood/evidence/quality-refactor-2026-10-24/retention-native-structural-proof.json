@@ -1,0 +1,36 @@
+{
+  "status": "passed",
+  "nativeDeclarations": 50,
+  "nativeTestCases": 24,
+  "testBodiesAndAssertionsPreserved": true,
+  "failureInjectionChanges": "Explicit module lookup owners; same side effects and conditions",
+  "sourcePathAnchorPreservedInEntryPoint": true,
+  "newWorkflowOrProxy": false,
+  "files": [
+    {
+      "file": "scripts/robb_retention_files.py",
+      "lines": 202,
+      "sha256": "26053fb06ddcc3dc77f3c439a4ee460e524ecb45b4c542d7147a4f9ec28301a3"
+    },
+    {
+      "file": "scripts/robb_retention_atomic.py",
+      "lines": 336,
+      "sha256": "14d1dbe267ddc5bb1bd39a140a5c001ee342f193353b2a783846de2d142aacbc"
+    },
+    {
+      "file": "scripts/robb_retention_journal.py",
+      "lines": 269,
+      "sha256": "206931e3cf5b4182a8dd9616cfb5197459e5eff262a85fbfb6d1acd7b69bed81"
+    },
+    {
+      "file": "scripts/robb_retention_recovery.py",
+      "lines": 453,
+      "sha256": "13b48f843adeb551fbc9a34144d90142919e1e5ab751aae8d862bcf496da67de"
+    },
+    {
+      "file": "scripts/install-staging-retention.py",
+      "lines": 236,
+      "sha256": "bff9f4ee675ea85be5621296214d579614bf717685e34eac71c05acd63a3d384"
+    }
+  ]
+}

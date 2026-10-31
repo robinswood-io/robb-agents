@@ -26,11 +26,11 @@ export interface ProjectsListPanelProps {
   projects: LoadedProject[]
   workspaceId: string
   onProjectClick: (slug: string) => void
-  onAddProject?: () => void
+  onAddProject?: (() => void) | undefined
   /** Jump to All Sessions filtered by this project's id. */
-  onJumpToSessions?: (projectId: string) => void
-  selectedProjectSlug?: string | null
-  className?: string
+  onJumpToSessions?: ((projectId: string) => void) | undefined
+  selectedProjectSlug?: string | null | undefined
+  className?: string | undefined
 }
 
 export function ProjectsListPanel({
@@ -109,7 +109,7 @@ interface ProjectRowProps {
   isFirst: boolean
   onClick: () => void
   onDelete: () => void
-  onJumpToSessions?: () => void
+  onJumpToSessions?: (() => void) | undefined
 }
 
 function ProjectRow({ project, isSelected, isFirst, onClick, onDelete, onJumpToSessions }: ProjectRowProps) {
@@ -142,7 +142,7 @@ function ProjectRow({ project, isSelected, isFirst, onClick, onDelete, onJumpToS
   )
 }
 
-function ProjectRowMenu({ onDelete, onJumpToSessions }: { onDelete: () => void; onJumpToSessions?: () => void }) {
+function ProjectRowMenu({ onDelete, onJumpToSessions }: { onDelete: () => void; onJumpToSessions?: (() => void) | undefined }) {
   const { t } = useTranslation()
   const { MenuItem, Separator } = useMenuComponents()
   return (

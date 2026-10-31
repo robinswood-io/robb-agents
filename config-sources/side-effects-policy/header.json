@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "side-effects-policy-v1",
+  "updatedAt": "2026-07-12T20:49:57.333080Z",
+  "updatedBy": "oss-runtime-v2-queue-canary-cleanup",
+  "description": "Explicit side-effects and risk policy for every command-manifest row. New manifest rows must be classified before promotion/cadence change.",
+  "counts": {
+    "manifestRows": 193,
+    "classifiedCapabilities": 193,
+    "highRisk": 15,
+    "requiresHumanApprovalForApply": 15
+  },
+  "capabilities": []
+}

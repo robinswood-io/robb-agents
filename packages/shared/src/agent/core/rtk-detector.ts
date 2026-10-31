@@ -146,7 +146,7 @@ function findBundledRtk(): string[] {
   // The main JS assets root may be app.asar while native tools live next to it
   // under Resources/app. Standalone servers set CRAFT_BUNDLED_ASSETS_ROOT.
   const binDirs = [
-    ...[process.env.CRAFT_RESOURCES_BASE, process.env.CRAFT_BUNDLED_ASSETS_ROOT]
+    ...[process.env["CRAFT_RESOURCES_BASE"], process.env["CRAFT_BUNDLED_ASSETS_ROOT"]]
       .filter((root): root is string => !!root && isPhysicalExecutablePath(root))
       .map(root => join(root, 'resources', 'bin')),
     getBundledAssetsDir('bin'),

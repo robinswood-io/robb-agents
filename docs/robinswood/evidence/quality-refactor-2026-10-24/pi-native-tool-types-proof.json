@@ -1,0 +1,15 @@
+{
+  "files": [
+    {
+      "file": "packages/pi-agent-server/src/index.ts",
+      "equivalentEmittedSyntaxHash": "5a2f5840600c364afdcb633dd30bf883c8d9f217b0193ea06fc3ad4ff4534764"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tool-loop-feedback.ts",
+      "equivalentEmittedSyntaxHash": "3ada1bc2c46957fb3af3403b7351f3cbdb1827bd469415a8edd83df8ce4eead7"
+    }
+  ],
+  "sdkIdentityFunctionVerified": true,
+  "nativeIdentityCalls": 7,
+  "normalization": "Only the SDK identity calls/import and a type-only diagnostic alias are removed; every other emitted syntax node, identifier, literal and child order must match."
+}

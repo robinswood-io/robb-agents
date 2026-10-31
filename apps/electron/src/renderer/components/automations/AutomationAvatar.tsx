@@ -57,10 +57,10 @@ const categoryConfig: Record<EventCategory, { icon: React.ElementType; bg: strin
 
 export interface AutomationAvatarProps {
   event: AutomationTrigger
-  size?: AvatarSize
+  size?: AvatarSize | undefined
   /** Fill parent container (h-full w-full). Overrides size. */
-  fluid?: boolean
-  className?: string
+  fluid?: boolean | undefined
+  className?: string | undefined
 }
 
 export function AutomationAvatar({ event, size = 'md', fluid, className }: AutomationAvatarProps) {

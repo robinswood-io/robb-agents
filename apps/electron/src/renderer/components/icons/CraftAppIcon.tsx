@@ -1,8 +1,8 @@
 import craftLogo from "@/assets/craft_logo_c.svg"
 
 interface CraftAppIconProps {
-  className?: string
-  size?: number
+  className?: string | undefined
+  size?: number | undefined
 }
 
 /**

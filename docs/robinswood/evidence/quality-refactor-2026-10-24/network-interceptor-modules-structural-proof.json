@@ -1,0 +1,69 @@
+{
+  "status": "passed",
+  "source": "packages/shared/src/unified-network-interceptor.ts",
+  "nativeSourceHash": "beee8d67972836298cb96da2b48a89dca84dbddf48599ccb6b9f85da05959697",
+  "nativeDeclarations": 54,
+  "nativeBodiesModelsAndSingleStatePreserved": true,
+  "nativePublicExports": true,
+  "originalFetchCaptureAndSingleInstallationPreserved": true,
+  "nativeExternalImportOrder": [
+    "./interceptor-common.ts",
+    "./feature-flags.ts",
+    "./interceptor-request-utils.ts"
+  ],
+  "mutableRequestStateColocatedWithReaderAndWriter": true,
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 477,
+  "files": [
+    {
+      "file": "packages/shared/src/unified-network-interceptor/configuration.ts",
+      "lines": 68,
+      "sha256": "59f43eb8db1aca05c6b99336e930db9502ac89a6d6251e789e60d80cdb1bd127"
+    },
+    {
+      "file": "packages/shared/src/unified-network-interceptor.ts",
+      "lines": 206,
+      "sha256": "407ee233d1b444bf036290c0e8775acfb73017854fd5ff110694b6b0920f6831"
+    },
+    {
+      "file": "packages/shared/src/unified-network-interceptor/tool-metadata.ts",
+      "lines": 164,
+      "sha256": "b2b70cbbd79e64e1781039dbb4ef95ca13befd7a969e1f49b66e9bf0a611a659"
+    },
+    {
+      "file": "packages/shared/src/unified-network-interceptor/cache-control.ts",
+      "lines": 262,
+      "sha256": "e79fdfa055520249b26b2b7c6514a8400a120fd089a568327d2d349e3090e81d"
+    },
+    {
+      "file": "packages/shared/src/unified-network-interceptor/anthropic.ts",
+      "lines": 367,
+      "sha256": "e1f98036253d1d0576af87b6ce8d146981e8b0021caf7b06ce0b973fee35d373"
+    },
+    {
+      "file": "packages/shared/src/unified-network-interceptor/openai-chat.ts",
+      "lines": 477,
+      "sha256": "bdf924570a40da174801cff6c984e2e7dce4464b73ff4db519d6fcefbe015c1d"
+    },
+    {
+      "file": "packages/shared/src/unified-network-interceptor/openai-responses.ts",
+      "lines": 249,
+      "sha256": "7d052e5b7cdfb822c2df873910a1ec4378d1a76e0c26bf32bf8314573907f00b"
+    },
+    {
+      "file": "packages/shared/src/unified-network-interceptor/history-validation.ts",
+      "lines": 308,
+      "sha256": "282cb035c5f3c61df6887cf8cf9523635490d165c1aa0b0be65fff676a7ae964"
+    },
+    {
+      "file": "packages/shared/src/unified-network-interceptor/adapter-registry.ts",
+      "lines": 50,
+      "sha256": "ce57c32654575f83b95f461588e6ce761f39669bdf1eda4f78a3f67274ed6b8f"
+    },
+    {
+      "file": "packages/shared/src/unified-network-interceptor/observability.ts",
+      "lines": 353,
+      "sha256": "2ee70acfeb52aa815f8d622b1b57df864838a5ddb86e3b54a0e954c5694a80f2"
+    }
+  ]
+}

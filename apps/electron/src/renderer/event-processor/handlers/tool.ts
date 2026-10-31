@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Tool Event Handlers
  *
@@ -33,12 +34,12 @@ export function handleToolStart(
   if (existingIndex !== -1) {
     // Update with complete input (second event has full input)
     const updatedSession = updateMessageAt(session, existingIndex, {
-      toolInput: event.toolInput,
-      toolIntent: event.toolIntent,
-      toolDisplayName: event.toolDisplayName,
-      toolDisplayMeta: event.toolDisplayMeta,
-      turnId: event.turnId,
-      parentToolUseId: event.parentToolUseId,
+      ...(event.toolInput !== undefined ? { toolInput: event.toolInput } : {}),
+      ...(event.toolIntent !== undefined ? { toolIntent: event.toolIntent } : {}),
+      ...(event.toolDisplayName !== undefined ? { toolDisplayName: event.toolDisplayName } : {}),
+      ...(event.toolDisplayMeta !== undefined ? { toolDisplayMeta: event.toolDisplayMeta } : {}),
+      ...(event.turnId !== undefined ? { turnId: event.turnId } : {}),
+      ...(event.parentToolUseId !== undefined ? { parentToolUseId: event.parentToolUseId } : {}),
     })
     return { session: updatedSession, streaming }
   }
@@ -51,13 +52,13 @@ export function handleToolStart(
     timestamp: event.timestamp ?? Date.now(),
     toolUseId: event.toolUseId,
     toolName: event.toolName,
-    toolInput: event.toolInput,
+    ...(event.toolInput !== undefined ? { toolInput: event.toolInput } : {}),
     toolStatus: 'executing',
-    turnId: event.turnId,
-    parentToolUseId: event.parentToolUseId,
-    toolIntent: event.toolIntent,
-    toolDisplayName: event.toolDisplayName,
-    toolDisplayMeta: event.toolDisplayMeta,
+    ...(event.turnId !== undefined ? { turnId: event.turnId } : {}),
+    ...(event.parentToolUseId !== undefined ? { parentToolUseId: event.parentToolUseId } : {}),
+    ...(event.toolIntent !== undefined ? { toolIntent: event.toolIntent } : {}),
+    ...(event.toolDisplayName !== undefined ? { toolDisplayName: event.toolDisplayName } : {}),
+    ...(event.toolDisplayMeta !== undefined ? { toolDisplayMeta: event.toolDisplayMeta } : {}),
   }
 
   return {
@@ -150,13 +151,13 @@ export function handleToolResult(
 
   const effectiveIsError = isPersistedOutput ? false : inferredError
 
-  const toolMessage: Message = {
+  const toolMessage: Message = omitUndefined<Message>({
     id: generateMessageId(),
     role: 'tool',
     content: '',
     timestamp: event.timestamp ?? Date.now(),
     toolUseId: event.toolUseId,
-    toolName: event.toolName,
+    ...(event.toolName !== undefined ? { toolName: event.toolName } : {}),
     toolResult: event.result,
     toolStatus: effectiveIsError ? 'error' : 'completed',
     isError: effectiveIsError,
@@ -165,7 +166,7 @@ export function handleToolResult(
     errorCode: isPersistedOutput ? 'response_too_large' : undefined,
     turnId: event.turnId,
     parentToolUseId: event.parentToolUseId,
-  }
+  })
 
   return {
     session: appendMessage(session, toolMessage),

@@ -1,0 +1,436 @@
+[
+  {
+    "legacy_id": "inqom-accounting-action-dispatcher-tests",
+    "accepted": true,
+    "riskClass": "low_test_guardrail",
+    "sideEffects": [
+      "filesystem-write:test-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315360Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-accounting-agent-copilot-audit",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "external-api:inqom-or-finance",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315428Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-accounting-autonomy-pipeline",
+    "accepted": true,
+    "riskClass": "medium_finance_prepare_only",
+    "sideEffects": [
+      "external-api:inqom-or-finance",
+      "external-api:sellsy-or-crm",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315124Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-accounting-decision-closure",
+    "accepted": true,
+    "riskClass": "medium_finance_prepare_only",
+    "sideEffects": [
+      "external-api:inqom-or-finance",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315381Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-accounting-decision-closure-tests",
+    "accepted": true,
+    "riskClass": "low_test_guardrail",
+    "sideEffects": [
+      "filesystem-write:test-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315409Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-bank-reconciliation-autonomy",
+    "accepted": true,
+    "riskClass": "medium_finance_prepare_only",
+    "sideEffects": [
+      "external-api:inqom-or-finance",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315145Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-bank-reconciliation-guard-tests",
+    "accepted": true,
+    "riskClass": "low_test_guardrail",
+    "sideEffects": [
+      "filesystem-write:test-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315162Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-confidence-lettering-executor",
+    "accepted": true,
+    "riskClass": "high_human_approval_required",
+    "sideEffects": [
+      "external-api:inqom-or-finance",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "human_approved_apply_only",
+    "requiresHumanApprovalForApply": true,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315470Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-group-accounting-order-board",
+    "accepted": true,
+    "riskClass": "medium_finance_prepare_only",
+    "sideEffects": [
+      "external-api:inqom-or-finance",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315321Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-group-accounting-order-guard-tests",
+    "accepted": true,
+    "riskClass": "low_test_guardrail",
+    "sideEffects": [
+      "filesystem-write:test-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315340Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-intercompany-reconciliation-board",
+    "accepted": true,
+    "riskClass": "medium_finance_prepare_only",
+    "sideEffects": [
+      "external-api:inqom-or-finance",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315183Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-intercompany-reconciliation-guard-tests",
+    "accepted": true,
+    "riskClass": "low_test_guardrail",
+    "sideEffects": [
+      "filesystem-write:test-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315202Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-lettering-confidence-guard-tests",
+    "accepted": true,
+    "riskClass": "low_test_guardrail",
+    "sideEffects": [
+      "filesystem-write:test-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315302Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-lettering-evidence-research-queue",
+    "accepted": true,
+    "riskClass": "medium_finance_prepare_only",
+    "sideEffects": [
+      "external-api:inqom-or-finance",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315262Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-lettering-execution-guard-filter",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "external-api:inqom-or-finance",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315283Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-line-transfer-engine",
+    "accepted": true,
+    "riskClass": "high_human_approval_required",
+    "sideEffects": [
+      "external-api:inqom-or-finance",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "human_approved_apply_only",
+    "requiresHumanApprovalForApply": true,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315102Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-manual-reconciliation-packs",
+    "accepted": true,
+    "riskClass": "medium_finance_prepare_only",
+    "sideEffects": [
+      "external-api:inqom-or-finance",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315222Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "inqom-manual-reconciliation-packs-tests",
+    "accepted": true,
+    "riskClass": "low_test_guardrail",
+    "sideEffects": [
+      "filesystem-write:test-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315241Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "langfuse-business-cost-export",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317084Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "langfuse-kpi-dashboard-7d",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314353Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "langfuse-kpi-threshold-alerts",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314378Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "langfuse-runs-export-hourly",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314333Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "linkedin-editorial-regression-tests",
+    "accepted": true,
+    "riskClass": "low_test_guardrail",
+    "sideEffects": [
+      "filesystem-write:test-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317314Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "mail-autonomy-guard",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317906Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "mail-autonomy-regression-tests",
+    "accepted": true,
+    "riskClass": "low_test_guardrail",
+    "sideEffects": [
+      "filesystem-write:test-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317782Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "marketing-autonomy-kpi-monitor-48h",
+    "accepted": true,
+    "riskClass": "low_observability_or_prepare_only",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314439Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "memory-capture-post-session",
+    "accepted": true,
+    "riskClass": "low_observability_or_prepare_only",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314698Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "memory-freshness-check",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314543Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  }
+]

@@ -230,7 +230,7 @@ function toElectronMenuItem(item: MenuItem): Electron.MenuItemConstructorOptions
 
   if (item.type === 'role') {
     // Use Electron's built-in role - it handles accelerators automatically
-    return { role: item.role as Electron.MenuItemConstructorOptions['role'] }
+    return { role: item.role }
   }
 
   if (item.type === 'action') {

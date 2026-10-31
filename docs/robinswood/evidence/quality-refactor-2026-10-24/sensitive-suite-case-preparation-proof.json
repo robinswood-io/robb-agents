@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "source": "packages/shared/src/agent/core/__tests__/sensitive-external-action.test.ts",
+  "nativeSourceHash": "83564a14f04a41a0e0b00414a7a35456e5a4e92548fc97db72340641ba3afccd",
+  "preparedHash": "9fc33ab9a478fdde444a4ef65d4db55e0af23789050ee784bf0d39de07cf309a",
+  "originalAssertionsAndOrderPreserved": true,
+  "unchangedOtherTestsAndLifecycle": true,
+  "splitIndependentScenarioCount": 3,
+  "addedTestBoundaries": 2,
+  "sharedObjectiveHasNoEffects": true,
+  "fileOwnedSessionCleanupRetained": true,
+  "rationale": "Les trois sections n’échangent aucune valeur locale en dehors de l’objectif constant ; les sessions sont créées avec des identifiants aléatoires propres à chaque appel et nettoyées après chaque scénario."
+}

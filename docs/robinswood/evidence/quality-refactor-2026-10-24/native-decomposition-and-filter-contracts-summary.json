@@ -1,0 +1,343 @@
+{
+  "status": "testé localement, travail global en cours",
+  "changes": [
+    "Zéro any dans le contrôle maintenu TS/JS et Python",
+    "Décodage sûr des filtres de sessions, contrat natif des éléments de barre latérale",
+    "Formulaire API : quatre modules, champs et callbacks natifs conservés ; dépendances de chargement corrigées",
+    "Outil PDF : 33 fonctions natives réparties dans six fichiers",
+    "Construction du serveur : deux fichiers ; aide CLI inchangée",
+    "Signatures macOS : validation native séparée du parcours de packaging"
+  ],
+  "sourceGate": {
+    "max-lines": 30,
+    "no-explicit-any": 0
+  },
+  "globalLint": {
+    "errorCount": 23,
+    "warningCount": 99,
+    "fatalErrorCount": 0
+  },
+  "fullTests": {
+    "pass": 10759,
+    "fail": 0,
+    "skip": 12
+  },
+  "browserCases": 6,
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/renderer/components/app-shell/__tests__/view-filters.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.14,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-view-filters-tests.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 15.93,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-view-filters-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/components/app-shell/view-filters.ts",
+        "apps/electron/src/renderer/components/app-shell/__tests__/view-filters.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.25,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-view-filters-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 19.28,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/api-key-input-view-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 3.35,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/api-key-input-view-native-final.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/components/apisetup/ApiKeyInput.tsx",
+        "apps/electron/src/renderer/components/apisetup/api-key-input-config.ts",
+        "apps/electron/src/renderer/components/apisetup/api-key-input-view.tsx",
+        "apps/electron/src/renderer/components/apisetup/api-key-bedrock-fields.tsx",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.18,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/api-key-input-view-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 28.83,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-decomposition-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "-m",
+        "unittest",
+        "apps.electron.resources.scripts.tests.test_pdf_tool_smoke",
+        "-v"
+      ],
+      "exitCode": 0,
+      "seconds": 14.41,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-pdf-before.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "-m",
+        "unittest",
+        "apps.electron.resources.scripts.tests.test_pdf_tool_smoke",
+        "-v"
+      ],
+      "exitCode": 0,
+      "seconds": 1.71,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-pdf-after.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "scripts/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 0.45,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/build-server-resources-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "scripts/build-server.ts",
+        "scripts/server-build-resources.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.03,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/build-server-resources-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "scripts/build-server.ts",
+        "--help"
+      ],
+      "exitCode": 0,
+      "seconds": 0.1,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/build-server-help-before.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "scripts/build-server.ts",
+        "--help"
+      ],
+      "exitCode": 0,
+      "seconds": 0.08,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/build-server-help-after.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "-m",
+        "unittest",
+        "scripts.tests.test_robb_packaged_smoke",
+        "-v"
+      ],
+      "exitCode": 0,
+      "seconds": 0.15,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/packaged-signatures-before.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "-m",
+        "unittest",
+        "scripts.tests.test_robb_packaged_smoke",
+        "-v"
+      ],
+      "exitCode": 0,
+      "seconds": 0.1,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/packaged-signatures-after.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 140.42,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-decomposition-full.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 15.58,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-decomposition-build.log"
+    }
+  ],
+  "files": [
+    {
+      "file": "apps/electron/resources/scripts/pdf_common.py",
+      "lines": 422,
+      "sha256": "b29f2d90c3e0f79a6aa81b95ba90c5482c5fa38e78392def2c569c23c451d7ec"
+    },
+    {
+      "file": "apps/electron/resources/scripts/pdf_organize.py",
+      "lines": 302,
+      "sha256": "5e7e8df4ce469ea376095f22230f3141492c753f12a3ca69ec58b68864b90cd5"
+    },
+    {
+      "file": "apps/electron/resources/scripts/pdf_edit.py",
+      "lines": 295,
+      "sha256": "eebd8d8b37027a8ea3d628c74c1e7136aa1ee5e133c4fee393ce4068eb60a178"
+    },
+    {
+      "file": "apps/electron/resources/scripts/pdf_security.py",
+      "lines": 230,
+      "sha256": "4241419e551aec8b8f874105cdef8b94009d86c54518b086b50ae0359026bb71"
+    },
+    {
+      "file": "apps/electron/resources/scripts/pdf_convert.py",
+      "lines": 164,
+      "sha256": "71c856f5cc4c3791277e8b7a4927a6a5e0c72061be087b97149906b79dd732bc"
+    },
+    {
+      "file": "apps/electron/resources/scripts/pdf_tool.py",
+      "lines": 49,
+      "sha256": "b657605b45f0f0b5217f03c982340580e3a743713cb5be0f045de8c9e15eabab"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/apisetup/ApiKeyInput.tsx",
+      "lines": 384,
+      "sha256": "fa397d4605c26e121e7a0a510148d15dc0bccc8ccbd265090844dc1c36ec563f"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/apisetup/api-key-input-config.ts",
+      "lines": 220,
+      "sha256": "def2009b07f2ef03f4a6bbcacb509fd9adc086c4378263354d9ca4ddcf89fbe3"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/apisetup/api-key-input-view.tsx",
+      "lines": 356,
+      "sha256": "3f7a6e37fde0e9b1d437832f8bb3a348ca9d53abc71473f0451e48f51928f319"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/apisetup/api-key-bedrock-fields.tsx",
+      "lines": 154,
+      "sha256": "af2bf955bd1cc6a8c736a729cc2dca04a29303fdde90c4030ac6cc7c71aec0fe"
+    },
+    {
+      "file": "scripts/robinswood-packaged-smoke.py",
+      "lines": 479,
+      "sha256": "2aee3580dbcedecf2b08f5f705f55de13afeacdec1161ee035fc224d3122efcd"
+    },
+    {
+      "file": "scripts/robb_package_signatures.py",
+      "lines": 70,
+      "sha256": "10cbef5df289027cbbd7b34e90c7b9c9ac5d71b7f64c1de8b05dbcad59a8c2f0"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/AppShell.tsx",
+      "lines": 3889,
+      "sha256": "5590411969bccfa92dde547e7b62ff4ea9c57bafae35d374febc97ba66e391ac"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/view-filters.ts",
+      "lines": 54,
+      "sha256": "d70d1e1f4017d6b13c5a14380b198fde9ade1d04d44ce145768f2694853cf7be"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/__tests__/view-filters.test.ts",
+      "lines": 39,
+      "sha256": "50bbb56b7b1efebdd94f3b3e2f0e7b348bbd4697c063030362c716034ffa4ed8"
+    },
+    {
+      "file": "scripts/build-server.ts",
+      "lines": 482,
+      "sha256": "606ff6d2ead5d15aeac4b204ba1dc1c2b438648047a218cfd0a38ac8a4255cf4"
+    },
+    {
+      "file": "scripts/server-build-resources.ts",
+      "lines": 435,
+      "sha256": "a85b5e058cb7112a42315e5db4b240512f299f376becfbcec58c122563009cd9"
+    }
+  ],
+  "limits": [
+    "30 fichiers à découper et 99 avertissements lint à corriger",
+    "Application installée inchangée ; missions complètes avec le candidat final encore à réaliser"
+  ],
+  "finalWhitespaceCheck": "Two extra EOF newlines removed; Python AST identical."
+}

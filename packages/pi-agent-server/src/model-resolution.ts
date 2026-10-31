@@ -8,18 +8,26 @@ export { isDeniedMiniModelId } from '../../shared/src/config/llm-connections.ts'
 // Re-export the PiModel type used by callers
 type PiModel = ReturnType<PiModelRegistry['find']>;
 
+type PiModelIdentity = Pick<NonNullable<PiModel>, 'id' | 'name'>
+  & Partial<Pick<NonNullable<PiModel>, 'provider'>>;
+
+interface PiModelLookup<Model extends PiModelIdentity> {
+  find(provider: string, modelId: string): Model | undefined;
+  getAll(): Model[];
+}
+
 /**
  * Codex sessions must pass an explicit eligible model to the SDK, including
  * when the host has no selection: otherwise the SDK can restore a retired
  * model from its own settings/history without passing through our resolver.
  * Other providers retain their existing implicit-default behavior.
  */
-export function resolveInitialPiModel(
-  modelRegistry: PiModelRegistry,
+export function resolveInitialPiModel<Model extends PiModelIdentity>(
+  modelRegistry: PiModelLookup<Model>,
   modelId: string | undefined,
   piAuthProvider?: string,
   preferCustomEndpoint?: boolean,
-): PiModel {
+): Model | undefined {
   if (modelId) return requireExplicitPiModel(modelRegistry, modelId, piAuthProvider, preferCustomEndpoint);
   if (piAuthProvider !== 'openai-codex') return undefined;
 
@@ -28,7 +36,7 @@ export function resolveInitialPiModel(
     ...modelRegistry.getAll().filter(model => model.provider === piAuthProvider).map(model => model.id),
   ];
   for (const candidate of new Set(candidates)) {
-    const model = resolvePiModel(modelRegistry, candidate, piAuthProvider);
+    const model: Model | undefined = resolvePiModel(modelRegistry, candidate, piAuthProvider);
     // An implicit choice must not switch to a custom endpoint or another provider.
     if (model?.provider === piAuthProvider) return model;
   }
@@ -36,13 +44,13 @@ export function resolveInitialPiModel(
 }
 
 /** Preserve model eligibility across dynamic custom-endpoint registration. */
-export function resolvePiModelWithCustomFallback(
-  modelRegistry: PiModelRegistry,
+export function resolvePiModelWithCustomFallback<Model extends PiModelIdentity>(
+  modelRegistry: PiModelLookup<Model>,
   modelId: string,
   piAuthProvider?: string,
   preferCustomEndpoint?: boolean,
   registerCustomModel?: (bareId: string) => void,
-): PiModel {
+): Model | undefined {
   if (!isModelAllowedForAuthProvider(modelId, piAuthProvider)) return undefined;
   const model = resolvePiModel(modelRegistry, modelId, piAuthProvider, preferCustomEndpoint);
   if (model || !registerCustomModel) return model;
@@ -59,16 +67,16 @@ export function resolvePiModelWithCustomFallback(
  * 2. Exact model ID/name within that provider
  * 3. Legacy provider-less connections: one unambiguous model match only
  */
-export function resolvePiModel(
-  modelRegistry: PiModelRegistry,
+export function resolvePiModel<Model extends PiModelIdentity>(
+  modelRegistry: PiModelLookup<Model>,
   modelId: string,
   piAuthProvider?: string,
   preferCustomEndpoint?: boolean,
-): PiModel {
+): Model | undefined {
   // Reject stale selections before any fallback, including custom endpoints.
   // Also check each resolved ID: registry lookups may accept a display-name alias.
   if (!isModelAllowedForAuthProvider(modelId, piAuthProvider)) return undefined;
-  const isAllowedModel = (model: NonNullable<PiModel>): boolean =>
+  const isAllowedModel = (model: PiModelIdentity): boolean =>
     isModelAllowedForAuthProvider(model.id, piAuthProvider)
     && isModelAllowedForAuthProvider(model.id, model.provider);
 
@@ -103,12 +111,12 @@ export function resolvePiModel(
  * so makes Pi silently select its own default model, which can route a request
  * to a provider/model the user did not choose.
  */
-export function requireExplicitPiModel(
-  modelRegistry: PiModelRegistry,
+export function requireExplicitPiModel<Model extends PiModelIdentity>(
+  modelRegistry: PiModelLookup<Model>,
   modelId: string,
   piAuthProvider?: string,
   preferCustomEndpoint?: boolean,
-): NonNullable<PiModel> {
+): Model {
   const model = resolvePiModel(modelRegistry, modelId, piAuthProvider, preferCustomEndpoint);
   if (!model) {
     throw new Error(

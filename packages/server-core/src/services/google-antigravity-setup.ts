@@ -1,3 +1,4 @@
+import type { EventEmitter } from 'node:events'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -22,11 +23,13 @@ const SAFE_ENVIRONMENT_KEYS = new Set([
   'CURL_CA_BUNDLE', 'REQUESTS_CA_BUNDLE',
 ])
 
+type SetupProcess = EventEmitter & Pick<ChildProcess, 'stdout' | 'stderr' | 'kill' | 'unref'>
+
 type SpawnLike = (
   command: string,
   args: readonly string[],
   options: Parameters<typeof spawn>[2],
-) => ChildProcess
+) => SetupProcess
 
 export type AntigravityProbeResult =
   | { status: 'ready'; models: string[] }
@@ -39,7 +42,7 @@ export interface GoogleAntigravitySetupOptions {
   platform?: NodeJS.Platform
   command?: string
   pathExists?: (path: string) => boolean
-  spawnImpl?: SpawnLike
+  spawnImpl?: SpawnLike | undefined
   launchInteractive?: (command: string, platform: NodeJS.Platform) => Promise<void>
   now?: () => number
   delay?: (milliseconds: number) => Promise<void>
@@ -63,10 +66,10 @@ export function resolveGoogleAntigravityCommand(
   platform: NodeJS.Platform = process.platform,
   pathExists: (path: string) => boolean = existsSync,
 ): string {
-  const override = environment.ROBB_ANTIGRAVITY_COMMAND?.trim()
+  const override = environment["ROBB_ANTIGRAVITY_COMMAND"]?.trim()
   if (override) return override
 
-  const userHome = environment.HOME || environment.USERPROFILE || homedir()
+  const userHome = environment["HOME"] || environment["USERPROFILE"] || homedir()
   const executable = platform === 'win32' ? 'agy.exe' : 'agy'
   const candidates = platform === 'win32'
     ? [
@@ -114,7 +117,7 @@ export async function probeGoogleAntigravity(
     child.stdout?.on('data', append)
     child.stderr?.on('data', append)
     child.once('error', () => finish({ status: 'unavailable' }))
-    child.once('exit', (code) => {
+    child.once('exit', (code: unknown) => {
       if (code === 0) {
         const models = parseModelIds(output)
         finish(models.length > 0 ? { status: 'ready', models } : { status: 'error' })
@@ -138,7 +141,7 @@ async function launchInteractiveAntigravity(
   platform: NodeJS.Platform,
   spawnImpl: SpawnLike = spawn,
 ): Promise<void> {
-  let child: ChildProcess
+  let child: SetupProcess
   if (platform === 'darwin') {
     child = spawnImpl('/usr/bin/osascript', [
       '-e', 'on run argv',

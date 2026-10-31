@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+import type { SubmitPlanSchema } from '../tool-defs/schemas.ts';
 /**
  * SubmitPlan Handler
  *
@@ -9,9 +11,7 @@ import type { SessionToolContext } from '../context.ts';
 import type { ToolResult } from '../types.ts';
 import { successResponse, errorResponse } from '../response.ts';
 
-export interface SubmitPlanArgs {
-  planPath: string;
-}
+export type SubmitPlanArgs = z.infer<typeof SubmitPlanSchema>;
 
 /**
  * Handle the SubmitPlan tool call.

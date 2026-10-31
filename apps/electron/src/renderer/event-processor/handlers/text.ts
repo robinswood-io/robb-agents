@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Text Event Handlers
  *
@@ -5,7 +6,7 @@
  * Pure functions that return new state - no side effects.
  */
 
-import type { SessionState, StreamingState, TextDeltaEvent, TextCompleteEvent } from '../types'
+import type { SessionState, StreamingState, TextDeltaEvent, TextCompleteEvent, TextDiscardEvent } from '../types'
 import type { Message } from '../../../shared/types'
 import {
   findStreamingMessage,
@@ -29,22 +30,22 @@ export function handleTextDelta(
 
   // Accumulate in streaming state
   const newStreaming: StreamingState = streaming
-    ? {
+    ? omitUndefined<StreamingState>({
         ...streaming,
         content: streaming.content + event.delta,
         turnId: event.turnId ?? streaming.turnId
-      }
+      })
     : {
         content: event.delta,
-        turnId: event.turnId
+        ...(event.turnId !== undefined ? { turnId: event.turnId } : {})
       }
 
   // Find existing streaming message by turnId
   const streamingIndex = findStreamingMessage(session.messages, event.turnId)
 
-  if (streamingIndex !== -1) {
+  const currentMsg = streamingIndex !== -1 ? session.messages[streamingIndex] : undefined
+  if (currentMsg) {
     // Message exists - update its content
-    const currentMsg = session.messages[streamingIndex]
     const updatedSession = updateMessageAt(session, streamingIndex, {
       content: currentMsg.content + event.delta,
     })
@@ -60,7 +61,7 @@ export function handleTextDelta(
     timestamp: Date.now(),
     isStreaming: true,
     isPending: true,
-    turnId: event.turnId,
+    ...(event.turnId !== undefined ? { turnId: event.turnId } : {}),
   }
 
   return {
@@ -109,12 +110,12 @@ export function handleTextComplete(
 
     // Don't overwrite a completed intermediate message with another intermediate —
     // each thinking block (e.g. Codex reasoning between tool calls) should be distinct
-    const isSameAuthoritativeMessage = !!event.messageId && existingMsg.id === event.messageId
+    const isSameAuthoritativeMessage = !!event.messageId && existingMsg?.id === event.messageId
     if (
-      !existingMsg.isStreaming
+      !existingMsg || (!existingMsg.isStreaming
       && existingMsg.isIntermediate
       && event.isIntermediate
-      && !isSameAuthoritativeMessage
+      && !isSameAuthoritativeMessage)
     ) {
       msgIndex = -1
     }
@@ -150,19 +151,19 @@ export function handleTextComplete(
   // Message not found - CREATE IT
   // This handles the race condition where text_complete arrives
   // before text_delta's setSessions has been processed
-  const newMessage: Message = {
+  const newMessage: Message = omitUndefined<Message>({
     id: event.messageId ?? generateMessageId(),
     role: 'assistant',
     content: event.text || streaming?.content || '',
     timestamp: event.timestamp ?? Date.now(),
     isStreaming: false,
     isPending: false,
-    isIntermediate: event.isIntermediate,
-    turnId: event.turnId,
-    parentToolUseId: event.parentToolUseId,
-    routingMeta: event.routingMeta,
+    ...(event.isIntermediate !== undefined ? { isIntermediate: event.isIntermediate } : {}),
+    ...(event.turnId !== undefined ? { turnId: event.turnId } : {}),
+    ...(event.parentToolUseId !== undefined ? { parentToolUseId: event.parentToolUseId } : {}),
+    ...(event.routingMeta !== undefined ? { routingMeta: event.routingMeta } : {}),
     ...outcomeMetadata,
-  }
+  })
 
   // Only update lastMessageAt for final (non-intermediate) messages
   const shouldUpdateTimestamp = !event.isIntermediate
@@ -170,5 +171,19 @@ export function handleTextComplete(
   return {
     session: appendMessage(session, newMessage, shouldUpdateTimestamp),
     streaming: null,
+  }
+}
+
+
+/** Remove only the identified unfinished attempt; completed work remains intact. */
+export function handleTextDiscard(state: SessionState, event: TextDiscardEvent): SessionState {
+  const messages = state.session.messages.filter(message => !(
+    message.role === 'assistant' && message.isStreaming && message.turnId === event.turnId
+  ))
+  const clearsStream = state.streaming?.turnId === event.turnId
+  if (messages.length === state.session.messages.length && !clearsStream) return state
+  return {
+    session: messages.length === state.session.messages.length ? state.session : { ...state.session, messages },
+    streaming: clearsStream ? null : state.streaming,
   }
 }

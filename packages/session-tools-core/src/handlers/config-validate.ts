@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+import type { ConfigValidateSchema } from '../tool-defs/schemas.ts';
 /**
  * Config Validate Handler
  *
@@ -10,7 +12,7 @@ import { homedir } from 'node:os';
 
 const AUTOMATIONS_CONFIG_FILE = 'automations.json';
 import type { SessionToolContext } from '../context.ts';
-import type { ToolResult } from '../types.ts';
+import type { ToolResult, ValidationResult } from '../types.ts';
 import { successResponse, errorResponse } from '../response.ts';
 import {
   formatValidationResult,
@@ -19,10 +21,7 @@ import {
 } from '../validation.ts';
 import { getSourceConfigPath } from '../source-helpers.ts';
 
-export interface ConfigValidateArgs {
-  target: 'config' | 'sources' | 'statuses' | 'preferences' | 'permissions' | 'automations' | 'tool-icons' | 'all';
-  sourceSlug?: string;
-}
+export type ConfigValidateArgs = z.infer<typeof ConfigValidateSchema>;
 
 /**
  * Handle the config_validate tool call.
@@ -40,7 +39,7 @@ export async function handleConfigValidate(
   // If full validators available (Claude), use them
   if (ctx.validators) {
     try {
-      let result;
+      let result: ValidationResult;
 
       switch (target) {
         case 'config':

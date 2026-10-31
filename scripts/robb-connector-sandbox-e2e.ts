@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import {
   fetchConnectorSandboxTransport,
   runConnectorSandboxProbe,
@@ -24,17 +25,17 @@ function providerFromEnvironment(value: string | undefined): ConnectorSandboxPro
 }
 
 async function main(): Promise<void> {
-  const provider = providerFromEnvironment(process.env.ROBB_CONNECTOR_SANDBOX_PROVIDER)
-  const accessToken = process.env.ROBB_CONNECTOR_SANDBOX_ACCESS_TOKEN
+  const provider = providerFromEnvironment(process.env["ROBB_CONNECTOR_SANDBOX_PROVIDER"])
+  const accessToken = process.env["ROBB_CONNECTOR_SANDBOX_ACCESS_TOKEN"]
   if (!accessToken) {
     throw new Error('ROBB_CONNECTOR_SANDBOX_ACCESS_TOKEN is required and is never printed')
   }
-  const result = await runConnectorSandboxProbe({
+  const result = await runConnectorSandboxProbe(omitUndefined({
     provider,
     accessToken,
-    endpoint: process.env.ROBB_CONNECTOR_SANDBOX_ENDPOINT,
+    endpoint: process.env["ROBB_CONNECTOR_SANDBOX_ENDPOINT"],
     transport: fetchConnectorSandboxTransport,
-  })
+  }))
   console.log(
     JSON.stringify({
       provider: result.provider,

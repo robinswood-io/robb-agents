@@ -1,254 +1,227 @@
-/* global window, exports, define */
-
-!function() {
-    'use strict'
-
-    var MAX_WIDTH = 1024
-    var MAX_PRECISION = 1024
-    var MAX_NUMERIC_PRECISION = 100
-    var MAX_CACHE_ENTRIES = 1024
-
-    var re = {
-        not_string: /[^s]/,
-        not_bool: /[^t]/,
-        not_type: /[^T]/,
-        not_primitive: /[^v]/,
-        number: /[diefg]/,
-        numeric_arg: /[bcdiefguxX]/,
-        json: /[j]/,
-        not_json: /[^j]/,
-        text: /^[^\x25]+/,
-        modulo: /^\x25{2}/,
-        placeholder: /^\x25(?:([1-9]\d*)\$|\(([^)]+)\))?(\+)?(0|'[^$])?(-)?(\d+)?(?:\.(\d+))?([b-gijostTuvxX])/,
-        key: /^([a-z_][a-z_\d]*)/i,
-        key_access: /^\.([a-z_][a-z_\d]*)/i,
-        index_access: /^\[(\d+)\]/,
-        sign: /^[+-]/
+// Generated from sprintf.ts by scripts/build-sprintf-vendor.ts; do not edit.
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+var sprintf_exports = {};
+__export(sprintf_exports, {
+  sprintf: () => sprintf,
+  vsprintf: () => vsprintf
+});
+module.exports = __toCommonJS(sprintf_exports);
+const MAX_WIDTH = 1024;
+const MAX_PRECISION = 1024;
+const MAX_NUMERIC_PRECISION = 100;
+const MAX_CACHE_ENTRIES = 1024;
+const re = {
+  number: /[diefg]/,
+  numeric: /[bcdiefguxX]/,
+  text: /^[^\x25]+/,
+  modulo: /^\x25{2}/,
+  placeholder: /^\x25(?:([1-9]\d*)\$|\(([^)]+)\))?(\+)?(0|'[^$])?(-)?(\d+)?(?:\.(\d+))?([b-gijostTuvxX])/,
+  key: /^([a-z_][a-z_\d]*)/i,
+  keyAccess: /^\.([a-z_][a-z_\d]*)/i,
+  indexAccess: /^\[(\d+)\]/
+};
+const cache = /* @__PURE__ */ new Map();
+function property(value, key) {
+  if (value === null || value === void 0) {
+    throw new TypeError(`Cannot read properties of ${value} (reading '${key}')`);
+  }
+  const boxed = Object(value);
+  const result = Reflect.get(boxed, key);
+  return result;
+}
+function invoke(value, receiver, args) {
+  if (typeof value !== "function") throw new TypeError("[sprintf] value is not a function");
+  const result = Reflect.apply(value, receiver, args);
+  return result;
+}
+function keysFor(field) {
+  let match = re.key.exec(field);
+  if (!match?.[1]) throw new SyntaxError("[sprintf] failed to parse named argument key");
+  const keys = [match[1]];
+  let remaining = field.slice(match[0].length);
+  while (remaining) {
+    match = re.keyAccess.exec(remaining) ?? re.indexAccess.exec(remaining);
+    if (!match?.[1]) throw new SyntaxError("[sprintf] failed to parse named argument key");
+    keys.push(match[1]);
+    remaining = remaining.slice(match[0].length);
+  }
+  return keys;
+}
+function parse(format) {
+  const found = cache.get(format);
+  if (found) return found;
+  let remaining = format;
+  const parts = [];
+  let argumentNames = 0;
+  while (remaining) {
+    const literal = re.text.exec(remaining);
+    const modulo = re.modulo.exec(remaining);
+    if (literal) {
+      parts.push(literal[0]);
+      remaining = remaining.slice(literal[0].length);
+      continue;
     }
-
-    function sprintf(key) {
-        // `arguments` is not an array, but should be fine for this call
-        return sprintf_format(sprintf_parse(key), arguments)
+    if (modulo) {
+      parts.push("%");
+      remaining = remaining.slice(modulo[0].length);
+      continue;
     }
-
-    function vsprintf(fmt, argv) {
-        return sprintf.apply(null, [fmt].concat(argv || []))
+    const match = re.placeholder.exec(remaining);
+    if (!match?.[8]) throw new SyntaxError("[sprintf] unexpected placeholder");
+    const keys = match[2] ? keysFor(match[2]) : void 0;
+    argumentNames |= keys ? 1 : 2;
+    if (argumentNames === 3) {
+      throw new Error("[sprintf] mixing positional and named placeholders is not (yet) supported");
     }
-
-    function sprintf_format(parse_tree, argv) {
-        var cursor = 1, tree_length = parse_tree.length, arg, output = '', i, k, ph, pad, pad_character, pad_length, is_positive, sign
-        for (i = 0; i < tree_length; i++) {
-            if (typeof parse_tree[i] === 'string') {
-                output += parse_tree[i]
-            }
-            else if (typeof parse_tree[i] === 'object') {
-                ph = parse_tree[i] // convenience purposes only
-                if (ph.keys) { // keyword argument
-                    arg = argv[cursor]
-                    for (k = 0; k < ph.keys.length; k++) {
-                        if (arg == undefined) {
-                            throw new Error(sprintf('[sprintf] Cannot access property "%s" of undefined value "%s"', ph.keys[k], ph.keys[k-1]))
-                        }
-                        arg = arg[ph.keys[k]]
-                    }
-                }
-                else if (ph.param_no) { // positional argument (explicit)
-                    arg = argv[ph.param_no]
-                }
-                else { // positional argument (implicit)
-                    arg = argv[cursor++]
-                }
-
-                if (re.not_type.test(ph.type) && re.not_primitive.test(ph.type) && arg instanceof Function) {
-                    arg = arg()
-                }
-
-                if (re.numeric_arg.test(ph.type) && (typeof arg !== 'number' && isNaN(arg))) {
-                    throw new TypeError(sprintf('[sprintf] expecting number but found %T', arg))
-                }
-
-                if (re.number.test(ph.type)) {
-                    is_positive = arg >= 0
-                }
-
-                switch (ph.type) {
-                    case 'b':
-                        arg = parseInt(arg, 10).toString(2)
-                        break
-                    case 'c':
-                        arg = String.fromCharCode(parseInt(arg, 10))
-                        break
-                    case 'd':
-                    case 'i':
-                        arg = parseInt(arg, 10)
-                        break
-                    case 'j':
-                        arg = JSON.stringify(arg, null, ph.width ? parseInt(ph.width, 10) : 0)
-                        break
-                    case 'e':
-                        arg = ph.precision !== undefined ? parseFloat(arg).toExponential(ph.precision) : parseFloat(arg).toExponential()
-                        break
-                    case 'f':
-                        arg = ph.precision !== undefined ? parseFloat(arg).toFixed(ph.precision) : parseFloat(arg)
-                        break
-                    case 'g':
-                        arg = ph.precision !== undefined ? String(Number(arg.toPrecision(ph.precision))) : parseFloat(arg)
-                        break
-                    case 'o':
-                        arg = (parseInt(arg, 10) >>> 0).toString(8)
-                        break
-                    case 's':
-                        arg = String(arg)
-                        arg = (ph.precision !== undefined ? arg.substring(0, ph.precision) : arg)
-                        break
-                    case 't':
-                        arg = String(!!arg)
-                        arg = (ph.precision !== undefined ? arg.substring(0, ph.precision) : arg)
-                        break
-                    case 'T':
-                        arg = Object.prototype.toString.call(arg).slice(8, -1).toLowerCase()
-                        arg = (ph.precision !== undefined ? arg.substring(0, ph.precision) : arg)
-                        break
-                    case 'u':
-                        arg = parseInt(arg, 10) >>> 0
-                        break
-                    case 'v':
-                        arg = arg.valueOf()
-                        arg = (ph.precision !== undefined ? arg.substring(0, ph.precision) : arg)
-                        break
-                    case 'x':
-                        arg = (parseInt(arg, 10) >>> 0).toString(16)
-                        break
-                    case 'X':
-                        arg = (parseInt(arg, 10) >>> 0).toString(16).toUpperCase()
-                        break
-                }
-                if (re.json.test(ph.type)) {
-                    output += arg
-                }
-                else {
-                    if (re.number.test(ph.type) && (!is_positive || ph.sign)) {
-                        sign = is_positive ? '+' : '-'
-                        arg = arg.toString().replace(re.sign, '')
-                    }
-                    else {
-                        sign = ''
-                    }
-                    pad_character = ph.pad_char ? ph.pad_char === '0' ? '0' : ph.pad_char.charAt(1) : ' '
-                    pad_length = (ph.width || 0) - (sign + arg).length
-                    pad = ph.width ? (pad_length > 0 ? pad_character.repeat(pad_length) : '') : ''
-                    output += ph.align ? sign + arg + pad : (pad_character === '0' ? sign + pad + arg : pad + sign + arg)
-                }
-            }
+    const width = match[6] !== void 0 ? Number.parseInt(match[6], 10) : void 0;
+    const precision = match[7] !== void 0 ? Number.parseInt(match[7], 10) : void 0;
+    if (width !== void 0 && (Number.isNaN(width) || width > MAX_WIDTH)) {
+      throw new RangeError(`[sprintf] width specifier exceeds maximum allowed limit (${MAX_WIDTH})`);
+    }
+    if (precision !== void 0 && (Number.isNaN(precision) || precision > MAX_PRECISION)) {
+      throw new RangeError(`[sprintf] precision specifier exceeds maximum allowed limit (${MAX_PRECISION})`);
+    }
+    if (re.number.test(match[8]) && precision !== void 0 && precision > MAX_NUMERIC_PRECISION) {
+      throw new RangeError(`[sprintf] numeric precision specifier exceeds maximum allowed limit (${MAX_NUMERIC_PRECISION})`);
+    }
+    parts.push({
+      param: match[1],
+      keys,
+      sign: match[3],
+      pad: match[4],
+      align: match[5],
+      width,
+      precision,
+      type: match[8]
+    });
+    remaining = remaining.slice(match[0].length);
+  }
+  if (cache.size >= MAX_CACHE_ENTRIES) cache.clear();
+  cache.set(format, parts);
+  return parts;
+}
+function formatParts(parts, argv) {
+  let cursor = 1;
+  let output = "";
+  for (const part of parts) {
+    if (typeof part === "string") {
+      output += part;
+      continue;
+    }
+    let arg;
+    if (part.keys) {
+      arg = argv[cursor];
+      for (const [index, key] of part.keys.entries()) {
+        if (arg === null || arg === void 0) {
+          throw new Error(sprintf('[sprintf] Cannot access property "%s" of undefined value "%s"', key, part.keys[index - 1]));
         }
-        return output
+        arg = property(arg, key);
+      }
+    } else if (part.param) {
+      arg = argv[Number(part.param)];
+    } else {
+      arg = argv[cursor++];
     }
-
-    var sprintf_cache = Object.create(null)
-    var sprintf_cache_size = 0
-
-    function sprintf_parse(fmt) {
-        if (sprintf_cache[fmt]) {
-            return sprintf_cache[fmt]
-        }
-
-        var _fmt = fmt, match, parse_tree = [], arg_names = 0
-        while (_fmt) {
-            if ((match = re.text.exec(_fmt)) !== null) {
-                parse_tree.push(match[0])
-            }
-            else if ((match = re.modulo.exec(_fmt)) !== null) {
-                parse_tree.push('%')
-            }
-            else if ((match = re.placeholder.exec(_fmt)) !== null) {
-                if (match[2]) {
-                    arg_names |= 1
-                    var field_list = [], replacement_field = match[2], field_match = []
-                    if ((field_match = re.key.exec(replacement_field)) !== null) {
-                        field_list.push(field_match[1])
-                        while ((replacement_field = replacement_field.substring(field_match[0].length)) !== '') {
-                            if ((field_match = re.key_access.exec(replacement_field)) !== null) {
-                                field_list.push(field_match[1])
-                            }
-                            else if ((field_match = re.index_access.exec(replacement_field)) !== null) {
-                                field_list.push(field_match[1])
-                            }
-                            else {
-                                throw new SyntaxError('[sprintf] failed to parse named argument key')
-                            }
-                        }
-                    }
-                    else {
-                        throw new SyntaxError('[sprintf] failed to parse named argument key')
-                    }
-                    match[2] = field_list
-                }
-                else {
-                    arg_names |= 2
-                }
-                if (arg_names === 3) {
-                    throw new Error('[sprintf] mixing positional and named placeholders is not (yet) supported')
-                }
-
-                var width = match[6] !== undefined ? parseInt(match[6], 10) : undefined
-                var precision = match[7] !== undefined ? parseInt(match[7], 10) : undefined
-                if (width !== undefined && (isNaN(width) || width > MAX_WIDTH)) {
-                    throw new RangeError('[sprintf] width specifier exceeds maximum allowed limit (' + MAX_WIDTH + ')')
-                }
-                if (precision !== undefined && (isNaN(precision) || precision > MAX_PRECISION)) {
-                    throw new RangeError('[sprintf] precision specifier exceeds maximum allowed limit (' + MAX_PRECISION + ')')
-                }
-                if (re.number.test(match[8]) && precision !== undefined && precision > MAX_NUMERIC_PRECISION) {
-                    throw new RangeError('[sprintf] numeric precision specifier exceeds maximum allowed limit (' + MAX_NUMERIC_PRECISION + ')')
-                }
-
-                parse_tree.push(
-                    {
-                        placeholder: match[0],
-                        param_no:    match[1],
-                        keys:        match[2],
-                        sign:        match[3],
-                        pad_char:    match[4],
-                        align:       match[5],
-                        width:       width,
-                        precision:   precision,
-                        type:        match[8]
-                    }
-                )
-            }
-            else {
-                throw new SyntaxError('[sprintf] unexpected placeholder')
-            }
-            _fmt = _fmt.substring(match[0].length)
-        }
-        if (sprintf_cache_size >= MAX_CACHE_ENTRIES) {
-            sprintf_cache = Object.create(null)
-            sprintf_cache_size = 0
-        }
-        sprintf_cache_size++
-        return sprintf_cache[fmt] = parse_tree
+    if (part.type !== "T" && part.type !== "v" && typeof arg === "function") {
+      arg = invoke(arg, void 0, []);
     }
-
-    /**
-     * export to either browser or node.js
-     */
-    /* eslint-disable quote-props */
-    if (typeof exports !== 'undefined') {
-        exports['sprintf'] = sprintf
-        exports['vsprintf'] = vsprintf
+    if (re.numeric.test(part.type) && typeof arg !== "number" && invoke(globalThis.isNaN, void 0, [arg]) === true) {
+      throw new TypeError(sprintf("[sprintf] expecting number but found %T", arg));
     }
-    if (typeof window !== 'undefined') {
-        window['sprintf'] = sprintf
-        window['vsprintf'] = vsprintf
-
-        if (typeof define === 'function' && define['amd']) {
-            define(function() {
-                return {
-                    'sprintf': sprintf,
-                    'vsprintf': vsprintf
-                }
-            })
-        }
+    const numeric = re.number.test(part.type);
+    const positive = numeric && Number(arg) >= 0;
+    const precision = part.precision;
+    switch (part.type) {
+      case "b":
+        arg = Number.parseInt(`${arg}`, 10).toString(2);
+        break;
+      case "c":
+        arg = String.fromCharCode(Number.parseInt(`${arg}`, 10));
+        break;
+      case "d":
+      case "i":
+        arg = Number.parseInt(`${arg}`, 10);
+        break;
+      case "j":
+        arg = JSON.stringify(arg, null, part.width ?? 0);
+        break;
+      case "e":
+        arg = Number.parseFloat(`${arg}`).toExponential(precision);
+        break;
+      case "f":
+        arg = precision !== void 0 ? Number.parseFloat(`${arg}`).toFixed(precision) : Number.parseFloat(`${arg}`);
+        break;
+      case "g":
+        arg = precision !== void 0 ? String(Number(invoke(property(arg, "toPrecision"), arg, [precision]))) : Number.parseFloat(`${arg}`);
+        break;
+      case "o":
+        arg = (Number.parseInt(`${arg}`, 10) >>> 0).toString(8);
+        break;
+      case "s": {
+        const text = String(arg);
+        arg = precision !== void 0 ? text.substring(0, precision) : text;
+        break;
+      }
+      case "t": {
+        const text = String(Boolean(arg));
+        arg = precision !== void 0 ? text.substring(0, precision) : text;
+        break;
+      }
+      case "T": {
+        const text = Object.prototype.toString.call(arg).slice(8, -1).toLowerCase();
+        arg = precision !== void 0 ? text.substring(0, precision) : text;
+        break;
+      }
+      case "u":
+        arg = Number.parseInt(`${arg}`, 10) >>> 0;
+        break;
+      case "v":
+        arg = invoke(property(arg, "valueOf"), arg, []);
+        arg = precision !== void 0 ? invoke(property(arg, "substring"), arg, [0, precision]) : arg;
+        break;
+      case "x":
+        arg = (Number.parseInt(`${arg}`, 10) >>> 0).toString(16);
+        break;
+      case "X":
+        arg = (Number.parseInt(`${arg}`, 10) >>> 0).toString(16).toUpperCase();
+        break;
     }
-    /* eslint-enable quote-props */
-}(); // eslint-disable-line
+    if (part.type === "j") {
+      output += `${arg}`;
+      continue;
+    }
+    let sign = "";
+    if (numeric && (!positive || part.sign)) {
+      sign = positive ? "+" : "-";
+      arg = String(arg).replace(/^[+-]/, "");
+    }
+    const padCharacter = part.pad ? part.pad === "0" ? "0" : part.pad.charAt(1) : " ";
+    const padLength = (part.width ?? 0) - `${sign}${arg}`.length;
+    const pad = part.width && padLength > 0 ? padCharacter.repeat(padLength) : "";
+    output += part.align ? `${sign}${arg}${pad}` : padCharacter === "0" ? `${sign}${pad}${arg}` : `${pad}${sign}${arg}`;
+  }
+  return output;
+}
+function sprintf(format, ...args) {
+  return formatParts(parse(format), [format, ...args]);
+}
+function vsprintf(format, args) {
+  return sprintf(format, ...args ?? []);
+}
+if (typeof window !== "undefined") Object.assign(window, { sprintf, vsprintf });

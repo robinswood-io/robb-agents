@@ -37,13 +37,12 @@ async function mapWithConcurrency<T, R>(
   concurrency: number,
   mapper: (value: T) => Promise<R>,
 ): Promise<PromiseSettledResult<R>[]> {
-  const results: PromiseSettledResult<R>[] = new Array(values.length)
-  let cursor = 0
+  const results: PromiseSettledResult<R>[] = new Array<PromiseSettledResult<R>>(values.length)
+  const entries = values.entries()
   const worker = async () => {
-    while (cursor < values.length) {
-      const index = cursor++
+    for (const [index, value] of entries) {
       try {
-        results[index] = { status: 'fulfilled', value: await mapper(values[index]) }
+        results[index] = { status: 'fulfilled', value: await mapper(value) }
       } catch (reason) {
         results[index] = { status: 'rejected', reason }
       }

@@ -1,0 +1,115 @@
+{
+  "status": "testé localement, travail global en cours",
+  "changes": [
+    "Douze déclarations natives réparties dans trois modules, exports publics conservés",
+    "Callback contrôlé/non contrôlé stabilisé par useCallback ; corps du gestionnaire inchangé et dépendances explicites"
+  ],
+  "sourceGate": {
+    "max-lines": 27,
+    "no-explicit-any": 0
+  },
+  "globalLint": {
+    "files": 3643,
+    "errors": 20,
+    "warnings": 98,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 20,
+      "react-hooks/exhaustive-deps": 77,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "fullTests": {
+    "pass": 10759,
+    "fail": 0,
+    "skip": 12
+  },
+  "nativeBrowserScenarios": 4,
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 20.22,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/edit-popover-native-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/components/ui/EditPopover.tsx",
+        "apps/electron/src/renderer/components/ui/edit-popover-types.ts",
+        "apps/electron/src/renderer/components/ui/edit-configs.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.86,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/edit-popover-native-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 28.97,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/edit-popover-native-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 140.31,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/edit-popover-native-full.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 18.73,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/edit-popover-native-build.log"
+    }
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/ui/EditPopover.tsx",
+      "lines": 498,
+      "sha256": "d86277862b0b888accebf4abba0c7f3c364840953ef5a718a90e59f3cde3a646"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/ui/edit-popover-types.ts",
+      "lines": 187,
+      "sha256": "6dd760a5f0ca6e2a79686dee7e50996d30a2be8863bf804ee97b0b59c952704a"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/ui/edit-configs.ts",
+      "lines": 478,
+      "sha256": "e62a48df11d923ba2b478fe0453c138743ec2ad39f6e7ee424224d49ae402852"
+    }
+  ],
+  "limits": [
+    "27 fichiers à découper et 98 avertissements lint restent à traiter",
+    "Application installée inchangée ; missions réelles finales et installation encore à réaliser"
+  ]
+}

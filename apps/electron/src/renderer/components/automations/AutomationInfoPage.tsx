@@ -7,7 +7,7 @@
 
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { PauseCircle, AlertCircle, Hash } from 'lucide-react'
+import { PauseCircle ,Hash } from 'lucide-react'
 import {
   Info_Page,
   Info_Section,
@@ -33,14 +33,14 @@ import { describeCron, computeNextRuns } from './utils'
 
 export interface AutomationInfoPageProps {
   automation: AutomationListItem
-  executions?: ExecutionEntry[]
-  testResult?: TestResult
-  onToggleEnabled?: () => void
-  onTest?: () => void
-  onDuplicate?: () => void
-  onDelete?: () => void
-  onReplay?: (automationId: string, event: string) => void
-  className?: string
+  executions?: ExecutionEntry[] | undefined
+  testResult?: TestResult | undefined
+  onToggleEnabled?: (() => void) | undefined
+  onTest?: (() => void) | undefined
+  onDuplicate?: (() => void) | undefined
+  onDelete?: (() => void) | undefined
+  onReplay?: ((automationId: string, event: string) => void) | undefined
+  className?: string | undefined
 }
 
 export function AutomationInfoPage({
@@ -155,7 +155,7 @@ export function AutomationInfoPage({
                   <Info_Table.Row label={t('automations.labelNextRuns')}>
                     <div className="flex flex-col gap-0.5">
                       {(() => {
-                        const spansYears = nextRuns.length > 1 && nextRuns[0].getFullYear() !== nextRuns[nextRuns.length - 1].getFullYear()
+                        const spansYears = nextRuns.length > 1 && nextRuns[0]?.getFullYear() !== nextRuns.at(-1)?.getFullYear()
                         return nextRuns.map((date, i) => (
                           <span key={i} className="text-sm text-foreground/70">
                             {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(spansYears && { year: 'numeric' }) })}{' '}

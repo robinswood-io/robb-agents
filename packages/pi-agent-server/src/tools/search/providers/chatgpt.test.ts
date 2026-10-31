@@ -1,15 +1,26 @@
+import { z } from 'zod';
 import { afterEach, describe, expect, it } from 'bun:test';
 import { ChatGPTBackendSearchProvider, extractChatGptAccountId } from './chatgpt.ts';
 
+const capturedSearchRequestSchema = z.looseObject({
+  model: z.string(), store: z.boolean(), stream: z.boolean(), instructions: z.string(),
+  tools: z.array(z.looseObject({ type: z.string() })), tool_choice: z.string(),
+  parallel_tool_calls: z.boolean(), text: z.looseObject({ verbosity: z.string() }),
+  input: z.array(z.looseObject({ role: z.string(), content: z.array(z.looseObject({ type: z.string(), text: z.string() })) })),
+});
+type CapturedSearchRequest = z.infer<typeof capturedSearchRequestSchema>;
+function captureSearchRequest(init: RequestInit | undefined): CapturedSearchRequest | null {
+  return init?.body ? capturedSearchRequestSchema.parse(JSON.parse(String(init.body))) : null;
+}
 const originalFetch = globalThis.fetch;
-const originalKillSwitch = process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND;
+const originalKillSwitch = process.env["ROBB_DISABLE_CHATGPT_CODEX_BACKEND"];
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
   if (originalKillSwitch === undefined) {
-    delete process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND;
+    delete process.env["ROBB_DISABLE_CHATGPT_CODEX_BACKEND"];
   } else {
-    process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND = originalKillSwitch;
+    process.env["ROBB_DISABLE_CHATGPT_CODEX_BACKEND"] = originalKillSwitch;
   }
 });
 
@@ -58,13 +69,28 @@ describe('extractChatGptAccountId', () => {
 });
 
 describe('ChatGPTBackendSearchProvider', () => {
+  it('keeps completed streamed items when the final response omits its output', async () => {
+    const item = { type: 'message', content: [{ type: 'output_text', text: 'OpenAI agents guide', annotations: [
+      { type: 'url_citation', url: 'https://openai.com/index/new-tools-for-building-agents/', title: 'OpenAI agents' },
+    ] }] };
+    globalThis.fetch = Object.assign(async () => new Response([
+      `data: ${JSON.stringify({ type: 'response.output_item.done', output_index: 0, item })}`,
+      '',
+      'data: {"type":"response.completed","response":{"status":"completed","output":[]}}',
+      '',
+    ].join('\n'), { status: 200 }), { preconnect: () => {} });
+    const results = await new ChatGPTBackendSearchProvider('test-token', 'test-account', { model: 'selected-model' })
+      .search('OpenAI agents guide', 2);
+    expect(results[0]?.url).toBe('https://openai.com/index/new-tools-for-building-agents/');
+  });
+
   it('fails closed before fetch when the contract kill switch is active', async () => {
     let fetched = false;
-    globalThis.fetch = (async () => {
+    globalThis.fetch = Object.assign(async () => {
       fetched = true;
       return new Response('{}');
-    }) as typeof fetch;
-    process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND = '1';
+    }, { preconnect: () => {} });
+    process.env["ROBB_DISABLE_CHATGPT_CODEX_BACKEND"] = '1';
 
     const provider = new ChatGPTBackendSearchProvider('must-not-leak', 'acc_123');
     await expect(provider.search('test query', 5)).rejects.toThrow(
@@ -76,12 +102,12 @@ describe('ChatGPTBackendSearchProvider', () => {
   it('calls ChatGPT backend endpoint with correct auth headers', async () => {
     let calledUrl = '';
     let calledHeaders: Record<string, string> = {};
-    let calledBody: any = null;
+    let calledBody = null as CapturedSearchRequest | null;
 
-    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    globalThis.fetch = Object.assign(async (input: RequestInfo | URL, init?: RequestInit) => {
       calledUrl = typeof input === 'string' ? input : input.toString();
       calledHeaders = (init?.headers as Record<string, string>) || {};
-      calledBody = init?.body ? JSON.parse(String(init.body)) : null;
+      calledBody = captureSearchRequest(init);
 
       return new Response(
         JSON.stringify({
@@ -102,34 +128,34 @@ describe('ChatGPTBackendSearchProvider', () => {
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       );
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ChatGPTBackendSearchProvider('my-access-token', 'acc_12345');
     const results = await provider.search('test query', 5);
 
     expect(provider.name).toBe('ChatGPT');
     expect(calledUrl).toBe('https://chatgpt.com/backend-api/codex/responses');
-    expect(calledHeaders.Authorization).toBe('Bearer my-access-token');
+    expect(calledHeaders["Authorization"]).toBe('Bearer my-access-token');
     expect(calledHeaders['chatgpt-account-id']).toBe('acc_12345');
-    expect(calledBody.model).toBe('gpt-5.4-mini');
-    expect(calledBody.store).toBe(false);
-    expect(calledBody.stream).toBe(true);
-    expect(calledBody.instructions).toContain('web search assistant');
-    expect(calledBody.tools).toEqual([{ type: 'web_search' }]);
-    expect(calledBody.tool_choice).toBe('auto');
-    expect(calledBody.parallel_tool_calls).toBe(true);
-    expect(calledBody.text).toEqual({ verbosity: 'medium' });
-    expect(Array.isArray(calledBody.input)).toBe(true);
-    expect(calledBody.input[0]?.role).toBe('user');
-    expect(calledBody.input[0]?.content?.[0]?.type).toBe('input_text');
-    expect(calledBody.input[0]?.content?.[0]?.text).toContain('Search the web for: test query');
+    expect(calledBody!.model).toBe('gpt-5.3-codex');
+    expect(calledBody!.store).toBe(false);
+    expect(calledBody!.stream).toBe(true);
+    expect(calledBody!.instructions).toContain('web search assistant');
+    expect(calledBody!.tools).toEqual([{ type: 'web_search' }]);
+    expect(calledBody!.tool_choice).toBe('auto');
+    expect(calledBody!.parallel_tool_calls).toBe(true);
+    expect(calledBody!.text).toEqual({ verbosity: 'medium' });
+    expect(Array.isArray(calledBody!.input)).toBe(true);
+    expect(calledBody!.input[0]?.role).toBe('user');
+    expect(calledBody!.input[0]?.content?.[0]?.type).toBe('input_text');
+    expect(calledBody!.input[0]?.content?.[0]?.text).toContain('Search the web for: test query');
     expect(calledHeaders['OpenAI-Beta']).toBe('responses=experimental');
     expect(results).toHaveLength(1);
     expect(results[0]?.url).toBe('https://example.com');
   });
 
   it('parses SSE payload even when content-type is not event-stream', async () => {
-    globalThis.fetch = (async () => {
+    globalThis.fetch = Object.assign(async () => {
       const sse = [
         'event: response.created',
         'data: {"type":"response.created","response":{"id":"resp_1"}}',
@@ -143,7 +169,7 @@ describe('ChatGPTBackendSearchProvider', () => {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ChatGPTBackendSearchProvider('token', 'acc_123');
     const results = await provider.search('openai status', 3);
@@ -161,11 +187,11 @@ describe('ChatGPTBackendSearchProvider', () => {
       tool_choice: unknown;
       parallel_tool_calls: unknown;
       text: unknown;
-      input: unknown;
+      input: CapturedSearchRequest['input'] | undefined;
     }> = [];
 
-    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
-      const body = init?.body ? JSON.parse(String(init.body)) : null;
+    globalThis.fetch = Object.assign(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const body = captureSearchRequest(init);
       attempts.push({
         tools: body?.tools,
         model: body?.model,
@@ -179,7 +205,7 @@ describe('ChatGPTBackendSearchProvider', () => {
       });
 
       return new Response('Unsupported tool type: web_search_preview', { status: 400 });
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ChatGPTBackendSearchProvider('token', 'acc_123');
     let message = '';
@@ -198,8 +224,8 @@ describe('ChatGPTBackendSearchProvider', () => {
     expect(attempts[0]?.parallel_tool_calls).toBe(true);
     expect(attempts[0]?.text).toEqual({ verbosity: 'medium' });
     expect(Array.isArray(attempts[0]?.input)).toBe(true);
-    expect((attempts[0]?.input as any[])[0]?.role).toBe('user');
-    expect((attempts[0]?.input as any[])[0]?.content?.[0]?.type).toBe('input_text');
+    expect((attempts[0]?.input as CapturedSearchRequest['input'])[0]?.role).toBe('user');
+    expect((attempts[0]?.input as CapturedSearchRequest['input'])[0]?.content?.[0]?.type).toBe('input_text');
     expect(message).toContain('HTTP 400');
     expect(message).toContain('tool=web_search');
     expect(JSON.stringify(attempts)).not.toContain('web_search_preview');
@@ -208,14 +234,14 @@ describe('ChatGPTBackendSearchProvider', () => {
   it('surfaces parse failures without retrying with unsupported preview search', async () => {
     const attempts: Array<{ tools: unknown }> = [];
 
-    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
-      const body = init?.body ? JSON.parse(String(init.body)) : null;
+    globalThis.fetch = Object.assign(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const body = captureSearchRequest(init);
       attempts.push({ tools: body?.tools });
       return new Response('Bad Request', {
         status: 200,
         headers: { 'Content-Type': 'text/plain' },
       });
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ChatGPTBackendSearchProvider('token', 'acc_123');
     let message = '';
@@ -234,8 +260,8 @@ describe('ChatGPTBackendSearchProvider', () => {
   it('does not retry invalid SSE payloads with unsupported preview search', async () => {
     const attempts: Array<{ tools: unknown }> = [];
 
-    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
-      const body = init?.body ? JSON.parse(String(init.body)) : null;
+    globalThis.fetch = Object.assign(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const body = captureSearchRequest(init);
       attempts.push({ tools: body?.tools });
 
       const invalidSse = [
@@ -251,7 +277,7 @@ describe('ChatGPTBackendSearchProvider', () => {
         status: 200,
         headers: { 'Content-Type': 'text/event-stream' },
       });
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ChatGPTBackendSearchProvider('token', 'acc_123');
     let message = '';
@@ -269,14 +295,14 @@ describe('ChatGPTBackendSearchProvider', () => {
   });
 
   it('reports parse failure with request fingerprint', async () => {
-    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
-      const body = init?.body ? JSON.parse(String(init.body)) : null;
+    globalThis.fetch = Object.assign(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const body = captureSearchRequest(init);
       const toolType = body?.tools?.[0]?.type;
       return new Response(`Bad Request from ${toolType}`, {
         status: 200,
         headers: { 'Content-Type': 'text/plain' },
       });
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ChatGPTBackendSearchProvider('token', 'acc_123');
 
@@ -296,10 +322,10 @@ describe('ChatGPTBackendSearchProvider', () => {
   it('throws immediately on non-400 errors (no retry) with request fingerprint', async () => {
     let callCount = 0;
 
-    globalThis.fetch = (async () => {
+    globalThis.fetch = Object.assign(async () => {
       callCount++;
       return new Response('Unauthorized', { status: 401 });
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const provider = new ChatGPTBackendSearchProvider('bad-token', 'acc_123');
 

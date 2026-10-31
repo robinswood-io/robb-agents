@@ -15,10 +15,10 @@ export interface EntityListEmptyScreenProps {
   title: string
   description: string
   /** Auto-renders a "Learn more" button linking to this doc key */
-  docKey?: DocFeature
+  docKey?: DocFeature | undefined
   /** Extra action buttons rendered after "Learn more" */
-  children?: React.ReactNode
-  className?: string
+  children?: React.ReactNode | undefined
+  className?: string | undefined
 }
 
 export function EntityListEmptyScreen({

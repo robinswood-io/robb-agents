@@ -14,8 +14,9 @@ export function readPluginName(workspaceRootPath: string): string | null {
   try {
     const manifestPath = join(workspaceRootPath, '.claude-plugin', 'plugin.json');
     if (!existsSync(manifestPath)) return null;
-    const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
-    return manifest.name || null;
+    const manifest: unknown = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+    if (!manifest || typeof manifest !== 'object' || !('name' in manifest)) return null;
+    return typeof manifest.name === 'string' && manifest.name ? manifest.name : null;
   } catch {
     return null;
   }

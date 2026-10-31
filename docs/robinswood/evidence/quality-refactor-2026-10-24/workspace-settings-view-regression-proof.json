@@ -1,0 +1,93 @@
+{
+  "status": "passed",
+  "browser": {
+    "before": {
+      "status": "passed",
+      "cases": [
+        {
+          "name": "native workspace settings load their name sources directory and policy",
+          "status": "passed"
+        },
+        {
+          "name": "rename keeps the native dialog and saves the trimmed workspace name",
+          "status": "passed"
+        },
+        {
+          "name": "permission mode and Execute autonomy save through the original callbacks",
+          "status": "passed"
+        },
+        {
+          "name": "mode cycling persists valid selections and refuses fewer than two modes",
+          "status": "passed"
+        },
+        {
+          "name": "default sources update and live source removal heals the saved selection",
+          "status": "passed"
+        },
+        {
+          "name": "invalid cost JSON stays visible without saving and a valid policy saves",
+          "status": "passed"
+        },
+        {
+          "name": "the native folder picker selects a directory and Clear persists the empty value",
+          "status": "passed"
+        },
+        {
+          "name": "the local MCP toggle saves through the native workspace setting",
+          "status": "passed"
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [],
+      "browserVersion": "145.0.7632.6",
+      "headless": false,
+      "limits": [
+        "Workspace settings and sources are QA objects in memory; no real files, credentials or accounting data are changed."
+      ]
+    },
+    "after": {
+      "status": "passed",
+      "cases": [
+        {
+          "name": "native workspace settings load their name sources directory and policy",
+          "status": "passed"
+        },
+        {
+          "name": "rename keeps the native dialog and saves the trimmed workspace name",
+          "status": "passed"
+        },
+        {
+          "name": "permission mode and Execute autonomy save through the original callbacks",
+          "status": "passed"
+        },
+        {
+          "name": "mode cycling persists valid selections and refuses fewer than two modes",
+          "status": "passed"
+        },
+        {
+          "name": "default sources update and live source removal heals the saved selection",
+          "status": "passed"
+        },
+        {
+          "name": "invalid cost JSON stays visible without saving and a valid policy saves",
+          "status": "passed"
+        },
+        {
+          "name": "the native folder picker selects a directory and Clear persists the empty value",
+          "status": "passed"
+        },
+        {
+          "name": "the local MCP toggle saves through the native workspace setting",
+          "status": "passed"
+        }
+      ],
+      "errors": [],
+      "consoleErrors": [],
+      "browserVersion": "145.0.7632.6",
+      "headless": false,
+      "limits": [
+        "Workspace settings and sources are QA objects in memory; no real files, credentials or accounting data are changed."
+      ]
+    }
+  }
+}

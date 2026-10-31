@@ -1,0 +1,483 @@
+{
+  "source": "packages/shared/src/config/llm-connections.ts",
+  "units": [
+    {
+      "names": [
+        "PiModelResolver"
+      ],
+      "group": "connection-types",
+      "bodySha256": "6403d16e9208de4c8b2ed6d83b982bc21205b9458ccd476404d43ff2ddb23791"
+    },
+    {
+      "names": [
+        "_piModelResolver"
+      ],
+      "group": "connection-types",
+      "bodySha256": "e7afa23c5aea8c473efa122856b6eec4bbc99d508776884587e9f9bdd34fdb1e"
+    },
+    {
+      "names": [
+        "registerPiModelResolver"
+      ],
+      "group": "connection-types",
+      "bodySha256": "bd91cb232558c5f37fe916cc51d39945e060eae44a00dffb4c56ec81aafb7f36"
+    },
+    {
+      "names": [
+        "LlmProviderType"
+      ],
+      "group": "connection-types",
+      "bodySha256": "b4124505832c3421f87fd20e6c84ec3fa41a043ba9ccf280eb0d14f6df249b49"
+    },
+    {
+      "names": [
+        "LlmConnectionType"
+      ],
+      "group": "connection-types",
+      "bodySha256": "18582f037913342195cc5db8fae5e28888b55abe9b6d43838ebc354fbc52fb59"
+    },
+    {
+      "names": [
+        "LlmAuthType"
+      ],
+      "group": "connection-types",
+      "bodySha256": "a642eac204a87e459b344d32257ba5a10a5737fc494c2fbfd59418980f5096cf"
+    },
+    {
+      "names": [
+        "ModelSelectionMode"
+      ],
+      "group": "connection-types",
+      "bodySha256": "ac181d69b7a6e61599b2a8a4e838af25c6a9c2d9a7f1582664295fb7389705d2"
+    },
+    {
+      "names": [
+        "CustomEndpointApi"
+      ],
+      "group": "connection-types",
+      "bodySha256": "16d202e9b1accaffb276c8cf44610a3c4aabb5e10f106aec6c6502fd8d4e84bf"
+    },
+    {
+      "names": [
+        "CustomEndpointConfig"
+      ],
+      "group": "connection-types",
+      "bodySha256": "2a12a696d17461931a12c6208c6fe9b8bca2cfab79adcfa471167cf361fe1d11"
+    },
+    {
+      "names": [
+        "MidStreamBehavior"
+      ],
+      "group": "connection-types",
+      "bodySha256": "f66266dcea5a46bb1e3a46bca1cc21678e5858ec918ec789b0f2593b7c8e81f9"
+    },
+    {
+      "names": [
+        "LlmConnection"
+      ],
+      "group": "connection-types",
+      "bodySha256": "2f8ec8e6e19e32cbbc70cdc585d0ba141ac8310446f098e262a0146cd9434620"
+    },
+    {
+      "names": [
+        "LlmConnectionWithStatus"
+      ],
+      "group": "connection-types",
+      "bodySha256": "71928fae56ffd8d7ee85fcbbed4150cb9e6000bff2d615a1433234b955412b1d"
+    },
+    {
+      "names": [
+        "isModelAllowedForAuthProvider"
+      ],
+      "group": "model-selection",
+      "bodySha256": "4f776084e5ab72c44bb3b4fc8521f108d68ac532e92ede430f78e93168453da1"
+    },
+    {
+      "names": [
+        "isDeniedMiniModelId"
+      ],
+      "group": "model-selection",
+      "bodySha256": "1266e5b2d7e9526eb67104e9f0b549d064afdf020b201970083db66ea35298ea"
+    },
+    {
+      "names": [
+        "getMiniModel"
+      ],
+      "group": "model-selection",
+      "bodySha256": "ede816cd8958c0486aa0792af95f504eb7a92a087826adc8f1021d941a741e5a"
+    },
+    {
+      "names": [
+        "findSmallModel"
+      ],
+      "group": "model-selection",
+      "bodySha256": "860fa6ed52924b0ee85b576787a1e6816d5fc84afac16f07b313058f67799b69"
+    },
+    {
+      "names": [
+        "generateSlug"
+      ],
+      "group": "credential-identity",
+      "bodySha256": "48694793861148856cd8765488ab99f30a865edd1aeed3fea6b537b629fdd78e"
+    },
+    {
+      "names": [
+        "isValidSlug"
+      ],
+      "group": "credential-identity",
+      "bodySha256": "267e4d711b28e9ef0235b6cc1b4c2d151dd1cab310e32a333c6096dd8fe48fcd"
+    },
+    {
+      "names": [
+        "getLlmCredentialKey"
+      ],
+      "group": "credential-identity",
+      "bodySha256": "9c961c4ad2a77bbbb32238b7c527590ee593b9440d3c19679d07290b56f08673"
+    },
+    {
+      "names": [
+        "LlmCredentialStorageType"
+      ],
+      "group": "credential-identity",
+      "bodySha256": "016661b71740a7dd345feec9c76676d6e64a9c2e24dcfc46235dc79288de58f3"
+    },
+    {
+      "names": [
+        "authTypeToCredentialStorageType"
+      ],
+      "group": "credential-identity",
+      "bodySha256": "24aed434367b2afcc497157e29565f31cea7421aa198c6eaf7e1fe37bcfc70b4"
+    },
+    {
+      "names": [
+        "authTypeToCredentialType"
+      ],
+      "group": "credential-identity",
+      "bodySha256": "c0448899f27a4df3d241f96637fa0ff766bfb17d2d7c7aabf16f00486ec10041"
+    },
+    {
+      "names": [
+        "authTypeRequiresEndpoint"
+      ],
+      "group": "credential-identity",
+      "bodySha256": "3010d7c038b8e403172f224056588423872eb18bb622380ec3b3c77bfa43fce3"
+    },
+    {
+      "names": [
+        "isCompatProvider"
+      ],
+      "group": "provider-policy",
+      "bodySha256": "36c58aeede2828afc346415318a8f362ab3a8963fff6a4ac9273150eaf31a0fd"
+    },
+    {
+      "names": [
+        "isAnthropicProvider"
+      ],
+      "group": "provider-policy",
+      "bodySha256": "35b0254a84951ea205af52b616ed3e50ba8810e4637901ea2a7b21085411eceb"
+    },
+    {
+      "names": [
+        "isLocalConnection"
+      ],
+      "group": "provider-policy",
+      "bodySha256": "27cc39858cb89d6a382632511358f22ccd2e9db04af3c55b6595d29fd726088e"
+    },
+    {
+      "names": [
+        "isPiProvider"
+      ],
+      "group": "provider-policy",
+      "bodySha256": "205fa05113eaa350f7dcb3bacf19d3816f740f82240c73956c029f0dcd2d1453"
+    },
+    {
+      "names": [
+        "defaultMidStreamBehavior"
+      ],
+      "group": "provider-policy",
+      "bodySha256": "3252362343c82ccb6bcc92477ba6e0092cfe45712b3f1c629779cf17ebe6880d"
+    },
+    {
+      "names": [
+        "resolveMidStreamBehavior"
+      ],
+      "group": "provider-policy",
+      "bodySha256": "7073249f2afd399311ef4f70536448865cdf0bb5d23f904a7779a47f3879b1d8"
+    },
+    {
+      "names": [
+        "setModelSupportsImages"
+      ],
+      "group": "model-capabilities",
+      "bodySha256": "ea69b6041072f92098027f1ab190dda0705a5c41d3acd2193050b6ad5f5ad044"
+    },
+    {
+      "names": [
+        "modelSupportsImages"
+      ],
+      "group": "model-capabilities",
+      "bodySha256": "21ba405d55ee426be274c74183053d1d70ea827d4335511af7a2600c26bb993c"
+    },
+    {
+      "names": [
+        "getModelsForProviderType"
+      ],
+      "group": "model-capabilities",
+      "bodySha256": "6444612ee1599a62c55f448515f187e516aea4f3d9ec4fb29707aa4e5046f3b6"
+    },
+    {
+      "names": [
+        "PI_PREFERRED_DEFAULTS"
+      ],
+      "group": "default-models",
+      "bodySha256": "986ce923aaa20ebb755983642cd77d9e6e50a81271751e381f16b96e66bcb676"
+    },
+    {
+      "names": [
+        "getDefaultModelsForConnection"
+      ],
+      "group": "default-models",
+      "bodySha256": "adf9d75d7e15c6d89b5e83aa0e7632c32beac4daf5b35669db5259e933c5d149"
+    },
+    {
+      "names": [
+        "getDefaultModelForConnection"
+      ],
+      "group": "default-models",
+      "bodySha256": "ca4fa63b5ea4874b9524696f3d6abed6dbc016d1c2768219b22192e8286187c5"
+    },
+    {
+      "names": [
+        "resolveEffectiveConnectionSlug"
+      ],
+      "group": "default-models",
+      "bodySha256": "4fbeb0e147e31d2c9349e63b1c665ba276c26b111f982921ea0258e38e85c3be"
+    },
+    {
+      "names": [
+        "isSessionConnectionUnavailable"
+      ],
+      "group": "default-models",
+      "bodySha256": "de516413e59461532e7ab39bde2b550a0f1edfb1f91d423698ecc3ad2e2c3588"
+    },
+    {
+      "names": [
+        "authTypeIsOAuth"
+      ],
+      "group": "auth-policy",
+      "bodySha256": "04b64d83de78f9512ce6e02fa204b20aff32e723756d290524e9a59c6389b85d"
+    },
+    {
+      "names": [
+        "isValidProviderAuthCombination"
+      ],
+      "group": "auth-policy",
+      "bodySha256": "1c351ff58cde3e9cdbeec0260df18c97599ea2b1f55e0d11739373d41d2d391a"
+    },
+    {
+      "names": [
+        "BEDROCK_MODEL_MAP"
+      ],
+      "group": "auth-policy",
+      "bodySha256": "52e0ff06aa06b06492237f4be84d4bba48267f87a34a294295076804481ce58d"
+    },
+    {
+      "names": [
+        "BEDROCK_REVERSE_MAP"
+      ],
+      "group": "auth-policy",
+      "bodySha256": "485cc62079c6839078448186c7eb8220b986c32ba3650c5236d8865905760c6d"
+    },
+    {
+      "names": [
+        "deriveBedrockRegionPrefix"
+      ],
+      "group": "bedrock-models",
+      "bodySha256": "cbb562ccc92d6c265dbc08c479e3df4985e8c0a7029cdd537e570773a3fda8e3"
+    },
+    {
+      "names": [
+        "toBedrockNativeId"
+      ],
+      "group": "bedrock-models",
+      "bodySha256": "19ed2414d6b38f38f96aba9302f0a6e0353243b7f2781c209bd4e35bad12f0cd"
+    },
+    {
+      "names": [
+        "fromBedrockNativeId"
+      ],
+      "group": "bedrock-models",
+      "bodySha256": "75beecbd878de8ea39ae88d00efae5adf737926841c3719801725b225928d21c"
+    },
+    {
+      "names": [
+        "normalizeBedrockModelId"
+      ],
+      "group": "bedrock-models",
+      "bodySha256": "ded53267d27e6f92ccd7ac325f10cbb9eb8f9d153f6bdee537457f1246e99866"
+    },
+    {
+      "names": [
+        "migrateConnectionType"
+      ],
+      "group": "legacy-types",
+      "bodySha256": "ae3d44b8838db08af7c027a3e9b137d05e1cb8d60b4e6d39bf59f9f4c0e8716c"
+    },
+    {
+      "names": [
+        "migrateAuthType"
+      ],
+      "group": "legacy-types",
+      "bodySha256": "3bd30ba902de86eb2ac6f3d036f59a9fb78d86834e538bda0668845592c92982"
+    },
+    {
+      "names": [
+        "CLAUDE_BEDROCK_ROUTING_ENV_KEYS"
+      ],
+      "group": "auth-environment",
+      "bodySha256": "31e04f9ad362c5ed812625c6191aff1863222606c85bc46ed1ae1e2567cf2dac"
+    },
+    {
+      "names": [
+        "CLAUDE_BEDROCK_ROUTING_ENV_KEY_SET"
+      ],
+      "group": "auth-environment",
+      "bodySha256": "0822cd1f829e09834a1f47ed89409dfea215e6f3bc6dde4fa871f05fcba80f21"
+    },
+    {
+      "names": [
+        "MANAGED_ANTHROPIC_AUTH_ENV_KEYS"
+      ],
+      "group": "auth-environment",
+      "bodySha256": "020f5f50fb9e395b9fdcaa0072768f2bef782b3bd320b58202407cad525df491"
+    },
+    {
+      "names": [
+        "getRuntimeEnvValue"
+      ],
+      "group": "auth-environment",
+      "bodySha256": "91d387df6a390e2a8dbb8fe878b3bba701fb71c3e724a333fb99252812d8e24f"
+    },
+    {
+      "names": [
+        "MANAGED_ANTHROPIC_AUTH_ENV_BASELINE"
+      ],
+      "group": "auth-environment",
+      "bodySha256": "8c2f3d9a151e0cce7e64152a9937ee4c125f2187f20be8341a935cb34d744d96"
+    },
+    {
+      "names": [
+        "clearClaudeBedrockRoutingEnvVars"
+      ],
+      "group": "auth-environment",
+      "bodySha256": "f34e499d7608fe322876cb0dbf25d44edd5f60624fb78e942c68d1093e2a34c6"
+    },
+    {
+      "names": [
+        "resetManagedAnthropicAuthEnvVars"
+      ],
+      "group": "auth-environment",
+      "bodySha256": "417d883a2a49123876ad0c7ab16b2f4f372184c1d53a5862b85876ca415b3251"
+    },
+    {
+      "names": [
+        "ResolvedAuthEnvVars"
+      ],
+      "group": "auth-environment",
+      "bodySha256": "dcc25e5cd9e611937d6f0fd269cdb8ab3cd4b3898d9127d437c679962ec2743a"
+    },
+    {
+      "names": [
+        "resolveAuthEnvVars"
+      ],
+      "group": "auth-environment",
+      "bodySha256": "247af6ec1733752522826534eec2b539682f441dc796aedb202ae8cf9e013fc0"
+    },
+    {
+      "names": [
+        "migrateLlmConnection"
+      ],
+      "group": "auth-environment",
+      "bodySha256": "88fa0e62fc7675fb20b63a7d395f9926a4bf942da3a637a80be5471ba12a06af"
+    }
+  ],
+  "modules": [
+    {
+      "name": "connection-types",
+      "lines": 227
+    },
+    {
+      "name": "model-selection",
+      "lines": 137
+    },
+    {
+      "name": "credential-identity",
+      "lines": 93
+    },
+    {
+      "name": "provider-policy",
+      "lines": 76
+    },
+    {
+      "name": "model-capabilities",
+      "lines": 105
+    },
+    {
+      "name": "default-models",
+      "lines": 170
+    },
+    {
+      "name": "auth-policy",
+      "lines": 115
+    },
+    {
+      "name": "bedrock-models",
+      "lines": 45
+    },
+    {
+      "name": "legacy-types",
+      "lines": 47
+    },
+    {
+      "name": "auth-environment",
+      "lines": 216
+    }
+  ],
+  "dependencies": {
+    "connection-types": [],
+    "model-selection": [
+      "connection-types",
+      "provider-policy"
+    ],
+    "credential-identity": [
+      "connection-types"
+    ],
+    "provider-policy": [
+      "connection-types"
+    ],
+    "model-capabilities": [
+      "connection-types",
+      "provider-policy"
+    ],
+    "default-models": [
+      "connection-types",
+      "model-selection"
+    ],
+    "auth-policy": [
+      "connection-types"
+    ],
+    "bedrock-models": [
+      "auth-policy"
+    ],
+    "legacy-types": [
+      "connection-types"
+    ],
+    "auth-environment": [
+      "connection-types",
+      "provider-policy",
+      "legacy-types"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

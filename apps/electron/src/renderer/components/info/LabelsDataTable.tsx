@@ -6,11 +6,11 @@
  * Columns: Color, Name (indented + chevron), Value Type.
  */
 
-import * as React from 'react'
+
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import type { ColumnDef, Row } from '@tanstack/react-table'
+import type { ColumnDef, Row } from '@/components/ui/data-table'
 import { ChevronRight, Maximize2 } from 'lucide-react'
 import { Info_DataTable, SortableHeader } from './Info_DataTable'
 import { Info_Badge } from './Info_Badge'
@@ -24,14 +24,14 @@ interface LabelsDataTableProps {
   /** Label tree (root-level nodes with nested children) */
   data: LabelConfig[]
   /** Show search input */
-  searchable?: boolean
+  searchable?: boolean | undefined
   /** Max height with scroll */
-  maxHeight?: number
+  maxHeight?: number | undefined
   /** Enable fullscreen button */
-  fullscreen?: boolean
+  fullscreen?: boolean | undefined
   /** Title for fullscreen overlay */
-  fullscreenTitle?: string
-  className?: string
+  fullscreenTitle?: string | undefined
+  className?: string | undefined
 }
 
 /**

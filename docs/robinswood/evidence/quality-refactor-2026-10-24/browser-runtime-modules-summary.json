@@ -1,0 +1,283 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Exécution des commandes navigateur : découpage par responsabilité",
+  "changes": [
+    "Fichier de 2 108 lignes réparti en 11 modules ; maximum 373 lignes.",
+    "Les 33 branches sont déléguées à des fonctions statiques, avec corps, conditions, références capturées et ordre des arguments conservés.",
+    "Admission, annulation, watchdog, budget de temps et garde Gmail conservés au point d’entrée ; état de session unique auprès de ses accès.",
+    "120 tests ciblés et 442 assertions identiques avant et après ; types, lint du lot, construction et suite complète réussis."
+  ],
+  "files": [
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime.ts",
+      "lines": 372,
+      "sha256": "261c8dfe397bfb36f4bc9cbfe2574f6aba6e2569f74e4b5a6f81d0f6d168867d"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/capture-clipboard.ts",
+      "lines": 207,
+      "sha256": "8bf82710b8dba32e6d52028851a3298acf9ef83a95378cc406c2442b8acdaa89"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/command-syntax.ts",
+      "lines": 235,
+      "sha256": "1dbe381aee80eabaacd807a4cefe8baa3b7aaf19048655fac6e7a161ece9a758"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/contracts.ts",
+      "lines": 21,
+      "sha256": "6ba6060a1d44c6c1d3bd652d344da600c419df306e71c91a0e8a3ff2e28e5bcd"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/execution-timeout.ts",
+      "lines": 93,
+      "sha256": "5cca4d2f505eca231eff4a57782105a765386572efad8fa63732e39c370d01be"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/inspection.ts",
+      "lines": 302,
+      "sha256": "26af25b5ea90293e28f33731a1281744c94a7d06b380a5d115de806274ed985f"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/interaction-execute-key-browser-command.ts",
+      "lines": 67,
+      "sha256": "10d7880f9bb14bc47970cd05c03344fc65721b8b43558530bc3ec4870a1c7257"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/interaction.ts",
+      "lines": 372,
+      "sha256": "4b2c89d2188cc485b45523a7cacfd7c7a631009157ecbd75e8755db65d756118"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/mutation-guard.ts",
+      "lines": 73,
+      "sha256": "b2b2f980e2466e277a80a449d6b6c320b025c65470c9109bd4d02af8189e382f"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/page-summary.ts",
+      "lines": 247,
+      "sha256": "7d8c60d308b0bc72c581b452c067361da13eaa2815f322dde4c7afc11048b141"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/window-lifecycle.ts",
+      "lines": 276,
+      "sha256": "d1eeee9ce0b4cd935ed3fa0947661609a4db50872e51552b274eb210f3c5d680"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 14.75,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-runtime-modules-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 9.11,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-runtime-modules-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/shared/src/agent/browser-tool-runtime.ts",
+        "packages/shared/src/agent/browser-tool-runtime",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.22,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-runtime-modules-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/shared/src/agent/__tests__/browser-tool-names.test.ts",
+        "packages/shared/src/agent/__tests__/browser-tool-watchdog.test.ts",
+        "packages/shared/src/agent/__tests__/browser-tools-does-not-split-batch-on-semicolons-inside-quoted-text.test.ts",
+        "packages/shared/src/agent/__tests__/browser-tools-evaluate-preserves-semicolons-without-quoting.test.ts",
+        "packages/shared/src/agent/__tests__/browser-tools-parses-quoted-wait-text-values-with-spaces.test.ts",
+        "packages/shared/src/agent/__tests__/browser-tools-permissions.test.ts",
+        "packages/shared/src/agent/__tests__/browser-tools-remote.test.ts",
+        "packages/shared/src/agent/__tests__/browser-tools-returns-help-text-for-help-without-release-hint.test.ts",
+        "packages/shared/src/agent/__tests__/browser-tools-returns-iserror-when-getbrowserpanefns-returns-undefined.test.ts",
+        "packages/shared/src/agent/__tests__/browser-tools.test.ts",
+        "packages/shared/src/agent/__tests__/pi-browser-tool-toggle.test.ts",
+        "packages/shared/src/agent/__tests__/pi-browser-tool-watchdog.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.17,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-runtime-modules-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 12.75,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-runtime-modules-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 138.9,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-runtime-modules-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "source": "packages/shared/src/agent/browser-tool-runtime.ts",
+    "nativeSourceHash": "763e710961b318d80330a38b868ca0d17fb7a3998b03edfebfd46653bea6fea6",
+    "nativeDeclarations": 83,
+    "nativeBodiesModelsAndSingleStatePreserved": true,
+    "nativePublicExports": true,
+    "nativeCommandEntryAndSafetyFencesPreserved": true,
+    "nativeExternalImportOrder": [
+      "./browser-tool-execution-watchdog.ts",
+      "./browser-tool-execution-watchdog.ts"
+    ],
+    "singleSessionGuardStateColocatedWithAccessors": true,
+    "runtimeImportCycles": 0,
+    "maximumFileLines": 373,
+    "files": [
+      {
+        "file": "packages/shared/src/agent/browser-tool-runtime/contracts.ts",
+        "lines": 22,
+        "sha256": "6ba6060a1d44c6c1d3bd652d344da600c419df306e71c91a0e8a3ff2e28e5bcd"
+      },
+      {
+        "file": "packages/shared/src/agent/browser-tool-runtime/mutation-guard.ts",
+        "lines": 74,
+        "sha256": "b2b2f980e2466e277a80a449d6b6c320b025c65470c9109bd4d02af8189e382f"
+      },
+      {
+        "file": "packages/shared/src/agent/browser-tool-runtime/page-summary.ts",
+        "lines": 248,
+        "sha256": "7d8c60d308b0bc72c581b452c067361da13eaa2815f322dde4c7afc11048b141"
+      },
+      {
+        "file": "packages/shared/src/agent/browser-tool-runtime.ts",
+        "lines": 373,
+        "sha256": "261c8dfe397bfb36f4bc9cbfe2574f6aba6e2569f74e4b5a6f81d0f6d168867d"
+      },
+      {
+        "file": "packages/shared/src/agent/browser-tool-runtime/command-syntax.ts",
+        "lines": 236,
+        "sha256": "1dbe381aee80eabaacd807a4cefe8baa3b7aaf19048655fac6e7a161ece9a758"
+      },
+      {
+        "file": "packages/shared/src/agent/browser-tool-runtime/execution-timeout.ts",
+        "lines": 94,
+        "sha256": "5cca4d2f505eca231eff4a57782105a765386572efad8fa63732e39c370d01be"
+      },
+      {
+        "file": "packages/shared/src/agent/browser-tool-runtime/interaction.ts",
+        "lines": 373,
+        "sha256": "4b2c89d2188cc485b45523a7cacfd7c7a631009157ecbd75e8755db65d756118"
+      },
+      {
+        "file": "packages/shared/src/agent/browser-tool-runtime/window-lifecycle.ts",
+        "lines": 277,
+        "sha256": "d1eeee9ce0b4cd935ed3fa0947661609a4db50872e51552b274eb210f3c5d680"
+      },
+      {
+        "file": "packages/shared/src/agent/browser-tool-runtime/inspection.ts",
+        "lines": 303,
+        "sha256": "26af25b5ea90293e28f33731a1281744c94a7d06b380a5d115de806274ed985f"
+      },
+      {
+        "file": "packages/shared/src/agent/browser-tool-runtime/capture-clipboard.ts",
+        "lines": 208,
+        "sha256": "8bf82710b8dba32e6d52028851a3298acf9ef83a95378cc406c2442b8acdaa89"
+      },
+      {
+        "file": "packages/shared/src/agent/browser-tool-runtime/interaction-execute-key-browser-command.ts",
+        "lines": 68,
+        "sha256": "10d7880f9bb14bc47970cd05c03344fc65721b8b43558530bc3ec4870a1c7257"
+      }
+    ]
+  },
+  "fullTestSummary": {
+    "pass": 10743,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "browser-runtime-modules-targeted": {
+      "pass": 120,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": {
+    "targetedPass": 120,
+    "targetedExpectCalls": 442
+  },
+  "sourceGate": {
+    "max-lines": 72,
+    "no-explicit-any": 269
+  },
+  "globalLint": {
+    "files": 3551,
+    "errors": 311,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 250,
+      "max-lines": 61,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "72 fichiers trop longs et 269 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-25T23:27:13.600411+00:00",
+  "additionalProofs": {
+    "browser-runtime-command-preparation-proof.json": {
+      "status": "passed",
+      "source": "packages/shared/src/agent/browser-tool-runtime.ts",
+      "nativeSourceHash": "caba25f981f02c7bbd9d2cad6d1f64e75b82e33677ed1447a298d20bcf7931e9",
+      "preparedSourceHash": "763e710961b318d80330a38b868ca0d17fb7a3998b03edfebfd46653bea6fea6",
+      "commands": 33,
+      "nativeCommandBodiesAndConditionsPreserved": true,
+      "nativeCaptureReferencesAndArgumentOrderPreserved": true,
+      "inputContractPreserved": true,
+      "allOtherNativeDeclarationsAndSafetyFencesPreserved": true,
+      "additionalMutableState": 0,
+      "additionalWorkflow": 0
+    }
+  }
+}

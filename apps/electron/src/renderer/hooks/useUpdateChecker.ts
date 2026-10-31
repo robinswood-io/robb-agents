@@ -96,7 +96,7 @@ export function useUpdateChecker(): UseUpdateCheckerResult {
         description: error instanceof Error ? error.message : 'Unknown error',
       })
     }
-  }, [])
+  }, [t])
 
   const downloadUpdate = useCallback(async () => {
     try {
@@ -153,7 +153,7 @@ export function useUpdateChecker(): UseUpdateCheckerResult {
       cleanupAvailable()
       cleanupProgress()
     }
-  }, [showUpdateToast, showAvailableToast, installUpdate, downloadUpdate])
+  }, [showUpdateToast, showAvailableToast, installUpdate, downloadUpdate, t])
 
   // Check for updates manually
   const checkForUpdates = useCallback(async () => {
@@ -184,7 +184,7 @@ export function useUpdateChecker(): UseUpdateCheckerResult {
         description: error instanceof Error ? error.message : 'Unknown error',
       })
     }
-  }, [showUpdateToast, showAvailableToast, installUpdate, downloadUpdate])
+  }, [showUpdateToast, showAvailableToast, installUpdate, downloadUpdate, t])
 
   return {
     updateInfo,

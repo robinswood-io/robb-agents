@@ -1,25 +1,31 @@
 from __future__ import annotations
 
-import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from typing import ClassVar, override
 
-from ._tool_test_harness import build_env, run_tool
+from ._tool_test_harness import build_env, parse_json_object, run_tool
 
 
 class PptxToolSmokeTests(unittest.TestCase):
+    env: ClassVar[dict[str, str]]
+    tmpdir_obj: ClassVar[tempfile.TemporaryDirectory[str]]
+    tmpdir: ClassVar[Path]
     @classmethod
+    @override
     def setUpClass(cls) -> None:
         cls.env = build_env()
         cls.tmpdir_obj = tempfile.TemporaryDirectory(prefix="pptx-tool-smoke-")
         cls.tmpdir = Path(cls.tmpdir_obj.name)
 
     @classmethod
+    @override
     def tearDownClass(cls) -> None:
         cls.tmpdir_obj.cleanup()
 
-    def run_tool(self, *args: str):
+    def run_tool(self, *args: str) -> subprocess.CompletedProcess[str]:
         return run_tool("pptx-tool", *args, env=self.env)
 
     def test_create_info_extract(self) -> None:
@@ -38,8 +44,11 @@ class PptxToolSmokeTests(unittest.TestCase):
 
         info = self.run_tool("info", str(deck))
         self.assertEqual(info.returncode, 0, msg=info.stderr)
-        meta = json.loads(info.stdout)
-        self.assertGreaterEqual(meta["slide_count"], 2)
+        meta = parse_json_object(info.stdout)
+        slide_count = meta.get("slide_count")
+        if not isinstance(slide_count, int):
+            self.fail("Expected integer slide_count")
+        self.assertGreaterEqual(slide_count, 2)
 
         extracted = self.run_tool("extract", str(deck))
         self.assertEqual(extracted.returncode, 0, msg=extracted.stderr)
@@ -57,4 +66,4 @@ class PptxToolSmokeTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    _ = unittest.main()

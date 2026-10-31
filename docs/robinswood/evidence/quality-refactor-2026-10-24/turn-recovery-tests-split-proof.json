@@ -1,0 +1,16 @@
+{
+  "valid": true,
+  "source": "packages/server-core/src/sessions/turn-recovery.test.ts",
+  "testDeclarationsPreserved": 42,
+  "sharedDeclarationsPreserved": 5,
+  "setupPreservedInEverySuite": true,
+  "importsPreserved": true,
+  "maximumLines": 427,
+  "currentSourceHashes": {
+    "packages/server-core/src/sessions/turn-recovery.test.ts": "8b50abb7ece442b729c09260ad2ba07d60c98ba911acaa62f24dfb1f5b78c7a6",
+    "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts": "001c4494c437fec8be2b26b7e7a3af294a5e29d586f0a7b075fc14a73aa35f67",
+    "packages/server-core/src/sessions/turn-recovery-keeps-the-existing-missing-registration-recovery-unchanged-outsid.test.ts": "ca7bda561abdf6c8177272af841f684dd5b01df83641340ce6104f059bea76a7",
+    "packages/server-core/src/sessions/testing/turn-recovery-fixture.ts": "65d1a47eaeaf3027af8d9532be01452d28f43e71a89053037e2822877860e9b6"
+  },
+  "issues": []
+}

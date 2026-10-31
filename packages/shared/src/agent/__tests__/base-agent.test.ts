@@ -232,7 +232,7 @@ describe('BaseAgent', () => {
 
     it('does not infer provider handoff from a local info event before setup fails', async () => {
       class LocalInfoThenFailureAgent extends TestAgent {
-        protected override async *chatImpl(): AsyncGenerator<import('@craft-agent/core/types').AgentEvent> {
+        protected override async *chatImpl(): AsyncGenerator<import('@craft-agent/core/types').AgentEvent, void, unknown> {
           yield { type: 'info', message: 'Preparing local context' };
           throw new Error('ETIMEDOUT');
         }

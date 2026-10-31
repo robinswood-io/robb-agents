@@ -11,7 +11,7 @@ bun install --frozen-lockfile
 bun run electron:dev
 ```
 
-Prerequisites: Bun 1.3.9+, Node.js 20+, and platform tooling appropriate to the component you are changing.
+Prerequisites: Bun 1.4.4+, Node.js 24+ (validated with Node.js 26.12.1), and platform tooling appropriate to the component you are changing.
 
 ## Development, local staging, and release promotion
 
@@ -31,13 +31,14 @@ To update the local production application as a staging candidate, start from
 a clean, identifiable commit and run:
 
 ```bash
-bash apps/electron/scripts/build-dmg.sh arm64 --local-production
+CSC_NAME="<Developer ID Application from your keychain>" bash apps/electron/scripts/build-dmg.sh arm64 --local-production
 ```
 
 Back up the installed bundle before replacement, then verify the embedded
 commit, the `~/.craft-agent/robb-electron` runtime path, historical sessions,
-configured connections, and relevant MCP processes. This ad-hoc package must
-remain local. Merging a pull request into `main` does not publish a GitHub
+configured connections, and relevant MCP processes. A stable Developer ID
+signature preserves macOS permissions across local updates. This unnotarized
+package must remain local. Merging a pull request into `main` does not publish a GitHub
 Release; create a release tag only after the staging result has been explicitly
 accepted.
 
@@ -53,7 +54,7 @@ accepted.
    bun run typecheck:release-contract
    bun run test:release-contract
    bun run test:installer-contract
-   python3 scripts/robinswood-validate.py
+   python3 scripts/robinswood_validate.py
    ```
 
 4. Explain the user outcome, tests run, and any platform-specific limitation in the pull request.

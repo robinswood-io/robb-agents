@@ -37,7 +37,7 @@ export interface SettingsRadioGroupProps<T extends string = string> {
   /** Radio cards */
   children: React.ReactNode
   /** Additional className */
-  className?: string
+  className?: string | undefined
 }
 
 /**
@@ -92,23 +92,23 @@ export interface SettingsRadioCardProps {
   /** Option label */
   label: string
   /** Optional description below label */
-  description?: string
+  description?: string | undefined
   /** Optional icon on the right */
-  icon?: React.ReactNode
+  icon?: React.ReactNode | undefined
   /** Optional badge (e.g., "Active", "Beta") */
-  badge?: React.ReactNode
+  badge?: React.ReactNode | undefined
   /** Disabled state */
-  disabled?: boolean
+  disabled?: boolean | undefined
   /** Content to show when this option is selected */
-  expandedContent?: React.ReactNode
+  expandedContent?: React.ReactNode | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
   /** Standalone mode: whether this option is selected (use instead of RadioGroup) */
-  selected?: boolean
+  selected?: boolean | undefined
   /** Standalone mode: click handler (use instead of RadioGroup) */
-  onClick?: () => void
+  onClick?: (() => void) | undefined
   /** When true, disables card styling (use when inside a SettingsCard) */
-  inCard?: boolean
+  inCard?: boolean | undefined
 }
 
 /**
@@ -228,11 +228,11 @@ export interface SettingsRadioOptionProps {
   /** Option label */
   label: string
   /** Optional description (inline, after separator) */
-  description?: string
+  description?: string | undefined
   /** Disabled state */
-  disabled?: boolean
+  disabled?: boolean | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
 }
 
 /**

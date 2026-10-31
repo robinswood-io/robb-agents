@@ -1,0 +1,478 @@
+{
+  "source": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+  "sourceHash": "50eefcec83cf47e7866bea275636b74f5f03654dadd39159b2d748d8b1a2274b",
+  "files": [
+    {
+      "file": "packages/server-core/src/sessions/testing/delegated-review-outcome-fixture.ts",
+      "lines": 224
+    },
+    {
+      "file": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "lines": 398
+    },
+    {
+      "file": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "lines": 428
+    },
+    {
+      "file": "packages/server-core/src/sessions/delegated-review-outcome-does-not-erase-an-old-successful-check-on-a-failed-invocation-but.test.ts",
+      "lines": 288
+    }
+  ],
+  "groups": [
+    {
+      "file": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "suite": 0,
+      "indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "suite": 0,
+      "indices": [
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/delegated-review-outcome-does-not-erase-an-old-successful-check-on-a-failed-invocation-but.test.ts",
+      "suite": 0,
+      "indices": [
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    }
+  ],
+  "statements": [
+    {
+      "suite": 0,
+      "index": 0,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "43a498dc63c65571bd9fbdc0c40adba8f40725bd2eaab61bae4933ed5a4188fa"
+    },
+    {
+      "suite": 0,
+      "index": 1,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "a2397e95fa5c09e9f519a7400d93906c64121d45d02fd0ca3919877c5a236002"
+    },
+    {
+      "suite": 0,
+      "index": 2,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "284634ce809d2c2134fc55da8e07395d49142d47dc66fadef6ea4090aae8e39e"
+    },
+    {
+      "suite": 0,
+      "index": 3,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "4e747857d53af37edebe68ecd6937519b78d5ee6f75ce593d8a0ce33b0a73fbd"
+    },
+    {
+      "suite": 0,
+      "index": 4,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "ce1c4bf404a15d6a0e89280dacb8a4014676ddbd4f6f0493d8a9e2d0edbe26c0"
+    },
+    {
+      "suite": 0,
+      "index": 5,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "446180ba2cab5ff42aa672a4c0e2941e87103c7d578cfdf6e0f94a55d5c209b8"
+    },
+    {
+      "suite": 0,
+      "index": 6,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "0a80d31460ec350b3c4e33413d4fd46bd3277121b9466fd6090c7556e3e08cd5"
+    },
+    {
+      "suite": 0,
+      "index": 7,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "4b05c412539ccd6278378b380894afc9cfb759051d832e64110a5a7f12c38f40"
+    },
+    {
+      "suite": 0,
+      "index": 8,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "5ac6b5df94c37136cffb0aa740cebc1de399eb3fec93c10fcc23bfeca1008c46"
+    },
+    {
+      "suite": 0,
+      "index": 9,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "8feca87a1b44189e102fcceb83004d93ae0ed68552f5f0f2e8ff3ff8cea5f219"
+    },
+    {
+      "suite": 0,
+      "index": 10,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "90065de2466cb64fc1574892c0e01f4336a7afe45b14f26bac61b7d7d8f5fc0c"
+    },
+    {
+      "suite": 0,
+      "index": 11,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "46b927a41f8fbd7a43d55db949a7272f19e7d1360d98d88ad1c99c1f4c2c5a6d"
+    },
+    {
+      "suite": 0,
+      "index": 12,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "64fe3547f007a9d6346af17a1a62590c5c0dcba7f53c6d5414a87a51e7fc7fbb"
+    },
+    {
+      "suite": 0,
+      "index": 13,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "4c917c649cdf210523d44685ad72504ced9329f72db212708f0778e7956acecf"
+    },
+    {
+      "suite": 0,
+      "index": 14,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "8c134ab1b87cbfa58397e3eeb585d43f7661f56cf098bbef188500f05d85a305"
+    },
+    {
+      "suite": 0,
+      "index": 15,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "18e93d55e4c7d37106c364417628be527ee6964eefb1c20cf71ca96bcc24cbee"
+    },
+    {
+      "suite": 0,
+      "index": 16,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+      "hash": "5a4ba1fe656dcd8732b2e4f327210026c28d47db0ba06e56858e50e35a267c87"
+    },
+    {
+      "suite": 0,
+      "index": 17,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "41c87e67c4a83c74fec6ac0e10c1d8ed108e6b5ea93d83f40f83de6803459268"
+    },
+    {
+      "suite": 0,
+      "index": 18,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "d2354ae36f7e48d29ee10412e6f793731476be27fe8223c5e04fa91bf2bfa280"
+    },
+    {
+      "suite": 0,
+      "index": 19,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "2706559bd8fcb48cc790f0739b10298726e13fa277152d5990770a7dc02ff19b"
+    },
+    {
+      "suite": 0,
+      "index": 20,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "1f73f3f4b8b8d27bc6ede4cc8a198e60d8f20d086bd29a2e9cc5ae99fabdc37c"
+    },
+    {
+      "suite": 0,
+      "index": 21,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "c29597902af4566dba6d5cd360903d279c00f454f75ee5d99a8aeb0a661dd1aa"
+    },
+    {
+      "suite": 0,
+      "index": 22,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "79fb20b76431603527f977b53ca6bda400816a7421675575bf1b1ad3f74ed1c8"
+    },
+    {
+      "suite": 0,
+      "index": 23,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "587a44c84ff963713b5337dda94bd24652a7b29280a956e857c83da86a30f761"
+    },
+    {
+      "suite": 0,
+      "index": 24,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "eee731d5c6a66c22694160e961432849c193cd09397a7ab357c4691822af3b6f"
+    },
+    {
+      "suite": 0,
+      "index": 25,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "e8fd8f8819d9feece989590962890771f0b4809d073613a718dd963d0991e61f"
+    },
+    {
+      "suite": 0,
+      "index": 26,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "b4cc7fca471fbe03fa432fdf7a2c41e4ca04f80120c51efbd237e05bd5c4236e"
+    },
+    {
+      "suite": 0,
+      "index": 27,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "dc9ce476223ae079d6ffb35216d86369cabf75515803c3ebd66a2b129a522a5b"
+    },
+    {
+      "suite": 0,
+      "index": 28,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "93f126e6e5510e39afee4926d21ded0638d534a47fe6dc1f2e5b19b0170948ea"
+    },
+    {
+      "suite": 0,
+      "index": 29,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "348720cb9cff8d63c69ca76de48f2ba996239bebf1c803c3a794e84bb575a44a"
+    },
+    {
+      "suite": 0,
+      "index": 30,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "b7622eb7d783f811cfee6a4e4d303d7b548af6e209cbad3c9f480002edae1bc8"
+    },
+    {
+      "suite": 0,
+      "index": 31,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "5e48017823a09db4e8965cae594f6fff808c669755605f84d9528aa023315cef"
+    },
+    {
+      "suite": 0,
+      "index": 32,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "9a332aab09079213054bf328c72aa11ab7c7dd0553525b54c386ba70ab96df23"
+    },
+    {
+      "suite": 0,
+      "index": 33,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "769bcfec7103ed38ca525f97c0750a8cd51a0878689c7e1a630714e2fa812b19"
+    },
+    {
+      "suite": 0,
+      "index": 34,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "f047e5b5e512529fdf0ae07c87cf8447ce68abc0b9b9e0a6c0262e26c4b82a89"
+    },
+    {
+      "suite": 0,
+      "index": 35,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "d6437ecf113473da49ef163a122ad0cefb56bd8b6a01ba0ce9cb7672347fc6e2"
+    },
+    {
+      "suite": 0,
+      "index": 36,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "a8814c98c2a5624d2dfc651f475209f82401ce56f75b3edd1e8ee90d6247d41f"
+    },
+    {
+      "suite": 0,
+      "index": 37,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "a529c9d4589a10efa53d5589f5fedf44c32d7b48489f628af2caaa09d15be9ef"
+    },
+    {
+      "suite": 0,
+      "index": 38,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "ab26a71902bd3f020fd9f515657834bffc4ba400bef55f2375d382e0029b5211"
+    },
+    {
+      "suite": 0,
+      "index": 39,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "862677d79a0b7a0ab49e9b492d36dae3440494fca8906424f7f752480b0db3b6"
+    },
+    {
+      "suite": 0,
+      "index": 40,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "6eb8ec98e4931c276eba50ff5f45c01d1d20c6abea135c3c8a97d022c6a6748f"
+    },
+    {
+      "suite": 0,
+      "index": 41,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts",
+      "hash": "95aad71079b366c71dc6dee53b0ef5cbd7130ae8b4dfd51cca9fbf4cceacb4ee"
+    },
+    {
+      "suite": 0,
+      "index": 42,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-does-not-erase-an-old-successful-check-on-a-failed-invocation-but.test.ts",
+      "hash": "4dfb4eaa64d0c292509930db0cfbfcf5c3510305245e12e52d84d9e6a3ed9ae5"
+    },
+    {
+      "suite": 0,
+      "index": 43,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-does-not-erase-an-old-successful-check-on-a-failed-invocation-but.test.ts",
+      "hash": "dafdecc2aeb86fe541a32ee0abd31e0f4619be5a469a271b86446aab360461f0"
+    },
+    {
+      "suite": 0,
+      "index": 44,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-does-not-erase-an-old-successful-check-on-a-failed-invocation-but.test.ts",
+      "hash": "138e4ee26084d196ca635f845f8c529c693689ebcd2f29a04f823c39425ce97e"
+    },
+    {
+      "suite": 0,
+      "index": 45,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-does-not-erase-an-old-successful-check-on-a-failed-invocation-but.test.ts",
+      "hash": "a132e67ad6a09be31dc9f7fa8019242536359ec07b2ed353d59534d5f9d0c13f"
+    },
+    {
+      "suite": 0,
+      "index": 46,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-does-not-erase-an-old-successful-check-on-a-failed-invocation-but.test.ts",
+      "hash": "c57087bdf572c96afcb719aa1209dee7331e2631a02744d63048f019316dba9a"
+    },
+    {
+      "suite": 0,
+      "index": 47,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-does-not-erase-an-old-successful-check-on-a-failed-invocation-but.test.ts",
+      "hash": "1206364a24f4f11906d6190e1bbe1931109d430164313d2b0d4daeac400340e9"
+    },
+    {
+      "suite": 0,
+      "index": 48,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-does-not-erase-an-old-successful-check-on-a-failed-invocation-but.test.ts",
+      "hash": "d239ab83e234e6dd210286fbe57abc91cefb4ddc285ee88a879b2066f807bb95"
+    },
+    {
+      "suite": 0,
+      "index": 49,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-does-not-erase-an-old-successful-check-on-a-failed-invocation-but.test.ts",
+      "hash": "058de17cf0cfaf5087e3b56d14dbd2c1c3293f0c666f42d44fdb3241f75e928f"
+    },
+    {
+      "suite": 0,
+      "index": 50,
+      "destination": "packages/server-core/src/sessions/delegated-review-outcome-does-not-erase-an-old-successful-check-on-a-failed-invocation-but.test.ts",
+      "hash": "32227de388d21916698c86b50cadeae5d02221b13950c67e6eed3a8c25d20794"
+    }
+  ],
+  "setups": [
+    {
+      "suite": 0,
+      "label": "'completion of a delegated read-only review'",
+      "hashes": []
+    }
+  ],
+  "sharedDeclarations": [
+    {
+      "name": "hash",
+      "hash": "3906193275de1c7b5f7d658c7d937439f6f003a765a078ba487a06bfbcbefd6f"
+    },
+    {
+      "name": "revision",
+      "hash": "9ba153c3a8f3ca6cdfeb301d9f51d0c4cc1905f46c7305177011d023ef6f1f8e"
+    },
+    {
+      "name": "drift",
+      "hash": "ef5a11fb5196e71193f999688905759e9f938889185d993eff4286b12964888f"
+    },
+    {
+      "name": "safeGit",
+      "hash": "ab4c4fca281b79179e86e54dd91aa1cc31d6a5292932ea497a6273ad94bbd2ae"
+    },
+    {
+      "name": "legacyGitWithoutSignatureGuards",
+      "hash": "5509d4cceb66e1c3829bf191a01a0001fd6483c6282692f938aef8b0f605ca75"
+    },
+    {
+      "name": "reviewGit",
+      "hash": "f57887393f9160a78ecbcac524a4022272f882a4730b6a5953258ce181b62283"
+    },
+    {
+      "name": "ids",
+      "hash": "5ee95d8699cd4eb05c265cc7f3b035f2ba7360b60b2d92bd406bf9e46d7ae0a0"
+    },
+    {
+      "name": "binding",
+      "hash": "ed1a6d2b1034e1fab3713ba44da18ab2e98d6f219553f6796a2e4ccf9114bacf"
+    },
+    {
+      "name": "template",
+      "hash": "8bca4b1a241a1d87cef2db26ed85c028c261dd172a11a9161f514e523331da93"
+    },
+    {
+      "name": "scope",
+      "hash": "20f56d5c7315e80547416127e5833fec831b3dcdd20d3cb7792112ff497fae67"
+    },
+    {
+      "name": "fixture",
+      "hash": "f490ae88f41e9417edba1b1a6f4cf1f710bdda7fff6cb85f419dabc4a66b47ae"
+    },
+    {
+      "name": "remoteFixture",
+      "hash": "085c57954bcd466d3e64ad70c8211075bec15a81c879379aed0610f3a5e6fb2e"
+    },
+    {
+      "name": "multiTargetHostFixture",
+      "hash": "446a82f9af92c0da0c709782b2ab39b316044f1d160c2c78636c11811222fb67"
+    },
+    {
+      "name": "connectorHostFailFixture",
+      "hash": "2b0b67afa396b4254ec92de775f412ce2f5cd1be9be20e1203e82210aea57698"
+    },
+    {
+      "name": "setMultiTargetHostBrief",
+      "hash": "2249d41453218f2373fabc399494b7b5bc8e9f2aefe785d19ca721a8c05f59e1"
+    }
+  ],
+  "statementCount": 51,
+  "sharedFixture": "packages/server-core/src/sessions/testing/delegated-review-outcome-fixture.ts"
+}

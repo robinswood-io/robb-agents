@@ -1,0 +1,95 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Préparation du modèle, réduction du contexte et traitement des erreurs",
+  "changes": [
+    "Extraction de la préparation native en trois fonctions directes, sans nouveau moteur ni état persistant.",
+    "Les quatre variables mutables restent locales à la préparation ; seuls le modèle et le drapeau de reprise sont retournés.",
+    "Ajout du contrôle de propriété du tour après la réduction asynchrone du contexte."
+  ],
+  "parentLinesBefore": 2968,
+  "parentLinesAfter": 2251,
+  "newFileLines": {
+    "prepare-agent-runtime.ts": 465,
+    "runtime-context-compaction.ts": 165,
+    "runtime-preparation-error.ts": 221,
+    "runtime-preparation-input.ts": 42
+  },
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 20.4,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/runtime-preparation-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 20.31,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/runtime-preparation-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 20.47,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/runtime-preparation-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/server-core/src/sessions/SessionManager/operations/perform-send-message.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/runtime-context-compaction.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/runtime-preparation-error.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/prepare-agent-runtime.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/runtime-preparation-input.ts",
+        "--max-warnings",
+        "0",
+        "--rule",
+        "max-lines: off"
+      ],
+      "exitCode": 0,
+      "seconds": 1.03,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/runtime-preparation-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 139.43,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/runtime-preparation-test.log"
+    }
+  ],
+  "equivalenceProof": "runtime-preparation-structural-proof.json",
+  "sourceGate": {
+    "max-lines": 126,
+    "no-explicit-any": 403
+  },
+  "targetedLintLimit": "Le seuil max-lines est désactivé uniquement dans cette commande ciblée pour le parent encore trop long. Le contrôle global reste en échec et aucune exemption n’a été ajoutée au dépôt.",
+  "installedApplication": "Aucune installation de ce lot effectuée.",
+  "updatedAt": "2026-10-25T15:52:55.725126+00:00"
+}

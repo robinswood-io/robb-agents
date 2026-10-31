@@ -30,14 +30,14 @@ export function buildBranchSessionOptions(
     branchFromMessageId: messageId,
     branchFromSessionId: session.id,
     name: `Branch of ${session.name || 'Untitled'}`,
-    llmConnection: session.llmConnection,
+    ...(session.llmConnection !== undefined ? { llmConnection: session.llmConnection } : {}),
     connectionRoutePinned: session.connectionRoutePinned === true
       || (session.modelRoutePinned === true && session.llmConnection !== undefined),
-    model: session.model,
+    ...(session.model !== undefined ? { model: session.model } : {}),
     modelRoutePinned: session.modelRoutePinned === true,
-    thinkingLevel: session.thinkingLevel,
+    ...(session.thinkingLevel !== undefined ? { thinkingLevel: session.thinkingLevel } : {}),
     thinkingLevelPinned: session.thinkingLevelPinned === true,
-    permissionMode: session.permissionMode,
-    workingDirectory: session.workingDirectory,
+    ...(session.permissionMode !== undefined ? { permissionMode: session.permissionMode } : {}),
+    ...(session.workingDirectory !== undefined ? { workingDirectory: session.workingDirectory } : {}),
   }
 }

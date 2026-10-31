@@ -6,7 +6,7 @@
  * allowing the full table to be visible in an expanded view.
  */
 
-import * as React from 'react'
+
 import type { ReactNode } from 'react'
 import { Table2 } from 'lucide-react'
 import { PreviewOverlay, type BadgeVariant } from './PreviewOverlay'
@@ -19,13 +19,13 @@ export interface DataTableOverlayProps {
   /** Title for the overlay header (e.g., "Permissions", "Tools") */
   title: string
   /** Optional subtitle (e.g., row count) */
-  subtitle?: string
+  subtitle?: string | undefined
   /** Theme mode for dark/light styling (defaults to 'light') */
-  theme?: 'light' | 'dark'
+  theme?: 'light' | 'dark' | undefined
   /** Badge variant for the header (default: gray) */
-  badgeVariant?: BadgeVariant
+  badgeVariant?: BadgeVariant | undefined
   /** Actions to show in header right side (e.g., copy dropdown) */
-  headerActions?: ReactNode
+  headerActions?: ReactNode | undefined
   /** The data table content to render */
   children: ReactNode
 }

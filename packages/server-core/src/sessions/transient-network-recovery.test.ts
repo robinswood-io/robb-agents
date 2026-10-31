@@ -1,3 +1,6 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -41,8 +44,8 @@ describe('transient network recovery', () => {
         pendingTurnRecovery: createPendingTurnRecovery(userMessage.id, 1),
       },
     )
-    const manager = new SessionManager()
-    ;(manager as unknown as { sessions: Map<string, unknown> }).sessions.set(managed.id, managed)
+    const manager = withSessionOperationsForTest(new SessionManager())
+    ;sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     if (retryExisting) {
       managed.messages.push(
         { id: 'old-final', role: 'assistant', content: 'Done.', timestamp: 2 },
@@ -62,26 +65,24 @@ describe('transient network recovery', () => {
       },
     }
     const processEvent = (
-      manager as unknown as {
-        processEvent: (session: typeof managed, agentEvent: AgentEvent, generation: number) => Promise<void>
-      }
+      sessionManagerForTest(manager)
     ).processEvent.bind(manager)
 
     await processEvent(managed, event, 1)
 
     expect(managed.pendingTurnRecovery?.attempts).toBe(1)
     expect(managed.messageQueue).toHaveLength(1)
-    expect(managed.messageQueue[0]?.options?.automaticRecovery).toMatchObject({
+    expect<unknown>(managed.messageQueue[0]?.options?.automaticRecovery).toMatchObject({
       originalUserMessageId: userMessage.id,
       cause: 'runtime_error',
-      dispatchId: expect.any(String),
+      dispatchId: (expect.any(String) as unknown),
       dispatchAttempt: retryExisting ? 2 : 1,
       dispatchOrigin: 'automatic',
-      dispatchAllocatedAt: expect.any(Number),
+      dispatchAllocatedAt: (expect.any(Number) as unknown),
     })
-    expect(managed.pendingRuntimeProviderFallback).toMatchObject({
+    expect<unknown>(managed.pendingRuntimeProviderFallback).toMatchObject({
       generation: 1,
-      error: expect.any(Error),
+      error: (expect.any(Error) as unknown),
     })
     expect(managed.messages.slice(retryExisting ? 3 : 0).some(message => message.role === 'error')).toBe(false)
 
@@ -126,8 +127,8 @@ describe('transient network recovery', () => {
         pendingTurnRecovery: createPendingTurnRecovery(userMessage.id, 1),
       },
     )
-    const manager = new SessionManager()
-    ;(manager as unknown as { sessions: Map<string, unknown> }).sessions.set(managed.id, managed)
+    const manager = withSessionOperationsForTest(new SessionManager())
+    ;sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     if (retryExisting) {
       managed.messages.push(
         { id: 'old-final', role: 'assistant', content: 'Done.', timestamp: 2 },
@@ -136,9 +137,7 @@ describe('transient network recovery', () => {
       managed.pendingTurnRecovery = { ...managed.pendingTurnRecovery!, lastCause: 'user_retry', userRetryFromMessageCount: 3 }
     }
     const processEvent = (
-      manager as unknown as {
-        processEvent: (session: typeof managed, agentEvent: AgentEvent, generation: number) => Promise<void>
-      }
+      sessionManagerForTest(manager)
     ).processEvent.bind(manager)
 
     await processEvent(managed, {
@@ -148,9 +147,9 @@ describe('transient network recovery', () => {
 
     expect(managed.pendingTurnRecovery?.attempts).toBe(1)
     expect(managed.messageQueue).toHaveLength(1)
-    expect(managed.pendingRuntimeProviderFallback).toMatchObject({
+    expect<unknown>(managed.pendingRuntimeProviderFallback).toMatchObject({
       generation: 3,
-      error: expect.any(Error),
+      error: (expect.any(Error) as unknown),
     })
     expect(managed.messages.slice(retryExisting ? 3 : 0).some(message => message.role === 'error')).toBe(false)
   })
@@ -184,8 +183,8 @@ describe('transient network recovery', () => {
           pendingTurnRecovery: createPendingTurnRecovery(userMessage.id, 1),
         },
       )
-      const manager = new SessionManager()
-      ;(manager as unknown as { sessions: Map<string, unknown> }).sessions.set(managed.id, managed)
+      const manager = withSessionOperationsForTest(new SessionManager())
+      ;sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 
       const event: AgentEvent = {
         type: 'typed_error',
@@ -198,18 +197,16 @@ describe('transient network recovery', () => {
         },
       }
       const processEvent = (
-        manager as unknown as {
-          processEvent: (session: typeof managed, agentEvent: AgentEvent, generation: number) => Promise<void>
-        }
+        sessionManagerForTest(manager)
       ).processEvent.bind(manager)
 
       await processEvent(managed, event, 1)
 
       expect(managed.pendingTurnRecovery?.attempts).toBe(1)
       expect(managed.messageQueue).toHaveLength(1)
-      expect(managed.pendingRuntimeProviderFallback).toMatchObject({
+      expect<unknown>(managed.pendingRuntimeProviderFallback).toMatchObject({
         generation: 1,
-        error: expect.any(Error),
+        error: (expect.any(Error) as unknown),
       })
       expect(managed.messages.some(message => message.role === 'error')).toBe(false)
     },

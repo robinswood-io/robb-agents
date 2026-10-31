@@ -1,25 +1,38 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from typing import ClassVar, override
 
-from ._tool_test_harness import build_env, run_tool
+from ._tool_test_harness import (
+    build_env,
+    parse_json_object,
+    require_json_array,
+    require_json_object,
+    run_tool,
+)
 
 
 class IcalToolSmokeTests(unittest.TestCase):
+    env: ClassVar[dict[str, str]]
+    tmpdir_obj: ClassVar[tempfile.TemporaryDirectory[str]]
+    tmpdir: ClassVar[Path]
     @classmethod
+    @override
     def setUpClass(cls) -> None:
         cls.env = build_env()
         cls.tmpdir_obj = tempfile.TemporaryDirectory(prefix="ical-tool-smoke-")
         cls.tmpdir = Path(cls.tmpdir_obj.name)
 
     @classmethod
+    @override
     def tearDownClass(cls) -> None:
         cls.tmpdir_obj.cleanup()
 
-    def run_tool(self, *args: str):
+    def run_tool(self, *args: str) -> subprocess.CompletedProcess[str]:
         return run_tool("ical-tool", *args, env=self.env)
 
     def test_create_read_filter(self) -> None:
@@ -39,9 +52,13 @@ class IcalToolSmokeTests(unittest.TestCase):
 
         read = self.run_tool("read", str(calendar), "--format", "json")
         self.assertEqual(read.returncode, 0, msg=read.stderr)
-        parsed = json.loads(read.stdout)
+        parsed = parse_json_object(read.stdout)
         self.assertEqual(parsed["event_count"], 1)
-        self.assertEqual(parsed["events"][0]["summary"], "Planning")
+        events = require_json_array(parsed.get("events"))
+        if not events:
+            self.fail("Expected at least one parsed event")
+        event = require_json_object(events[0])
+        self.assertEqual(event.get("summary"), "Planning")
 
         filtered = self.run_tool(
             "filter",
@@ -54,12 +71,12 @@ class IcalToolSmokeTests(unittest.TestCase):
             "json",
         )
         self.assertEqual(filtered.returncode, 0, msg=filtered.stderr)
-        filtered_json = json.loads(filtered.stdout)
+        filtered_json = parse_json_object(filtered.stdout)
         self.assertEqual(filtered_json["event_count"], 1)
 
     def test_read_malformed_fails(self) -> None:
         bad = self.tmpdir / "bad.ics"
-        bad.write_text("not-a-valid-ics", encoding="utf-8")
+        _ = bad.write_text("not-a-valid-ics", encoding="utf-8")
 
         result = self.run_tool("read", str(bad))
         self.assertNotEqual(result.returncode, 0)
@@ -67,4 +84,4 @@ class IcalToolSmokeTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    _ = unittest.main()

@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../packages/shared/src/utils/json.ts';
 import { describe, expect, it } from 'bun:test';
 import { runProviderCanaries } from '../robb-provider-canaries.ts';
 
@@ -42,11 +43,11 @@ describe('provider contract canaries', () => {
         ROBB_CANARY_CHATGPT_MODEL: 'gpt-canary-model',
       },
       fetchImpl: async (_input, init) => {
-        const body = JSON.parse(String(init?.body)) as Record<string, any>;
+        const body = JSON.parse(String(init?.body)) as { model?: string; input?: unknown; tools?: Array<{ type?: string; strict?: boolean | null; parameters?: { additionalProperties?: boolean } }> };
         expect(body.model).toBe('gpt-canary-model');
-        expect(body.input).toEqual([{
+        expect<unknown>(body.input).toEqual([{
           role: 'user',
-          content: [{ type: 'input_text', text: expect.any(String) }],
+          content: [{ type: 'input_text', text: (expect.any(String) as unknown) }],
         }]);
         if (body.tools?.[0]?.type === 'web_search') {
           return new Response(JSON.stringify({
@@ -121,8 +122,8 @@ describe('provider contract canaries', () => {
           }));
         }
         if (url.includes(':streamGenerateContent')) {
-          const body = JSON.parse(String(init?.body));
-          expect(body.project).toBe('canary-project');
+          const body = parseJsonObject(String(init?.body));
+          expect(body['project']).toBe('canary-project');
           return new Response('data: {"response":{"candidates":[{"content":{"parts":[{"functionCall":{"name":"provider_contract_healthcheck","args":{}}}]}}]}}\n\n');
         }
         throw new Error(`unexpected canary URL: ${url}`);
@@ -178,17 +179,17 @@ describe('provider contract canaries', () => {
   });
 
   it('keeps every runtime on the exact Pi SDK contract', async () => {
-    const root = await Bun.file('package.json').json() as any;
-    const shared = await Bun.file('packages/shared/package.json').json() as any;
-    const piServer = await Bun.file('packages/pi-agent-server/package.json').json() as any;
+    const root = await Bun.file('package.json').json() as { dependencies: Record<string, string> };
+    const shared = await Bun.file('packages/shared/package.json').json() as { dependencies: Record<string, string> };
+    const piServer = await Bun.file('packages/pi-agent-server/package.json').json() as { dependencies: Record<string, string> };
 
-    expect(root.dependencies['@earendil-works/pi-ai']).toBe('0.80.3');
-    expect(root.dependencies['@earendil-works/pi-coding-agent']).toBe('0.80.3');
-    expect(shared.dependencies['@earendil-works/pi-ai']).toBe('0.80.3');
-    expect(shared.dependencies['@earendil-works/pi-coding-agent']).toBe('0.80.3');
-    expect(piServer.dependencies['@earendil-works/pi-agent-core']).toBe('0.80.3');
-    expect(piServer.dependencies['@earendil-works/pi-ai']).toBe('0.80.3');
-    expect(piServer.dependencies['@earendil-works/pi-coding-agent']).toBe('0.80.3');
+    expect(root.dependencies['@earendil-works/pi-ai']).toBe('1.4.0');
+    expect(root.dependencies['@earendil-works/pi-coding-agent']).toBe('1.4.0');
+    expect(shared.dependencies['@earendil-works/pi-ai']).toBe('1.4.0');
+    expect(shared.dependencies['@earendil-works/pi-coding-agent']).toBe('1.4.0');
+    expect(piServer.dependencies['@earendil-works/pi-agent-core']).toBe('1.4.0');
+    expect(piServer.dependencies['@earendil-works/pi-ai']).toBe('1.4.0');
+    expect(piServer.dependencies['@earendil-works/pi-coding-agent']).toBe('1.4.0');
     expect(piServer.dependencies['@craft-agent/core']).toBe('workspace:*');
   });
 });

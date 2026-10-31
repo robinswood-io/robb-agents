@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "originalSourceHash": "8b5f8374c6462393e6e35c8d8b03819d565f0330557ed816d68bc0f778d14d60",
+  "nativeActiveRunSnapshotHash": "e0f16182127e168ced4e97ef9007ed5f0d39512a28bf675d21ff797a6a7a7e67",
+  "independentProofsLinkedBySourceHash": true,
+  "originalEntryAndSharedModulesUnchanged": true,
+  "currentOwnedFilesMatchVerifiedOutputs": true,
+  "ownedFiles": 17,
+  "combinedRuntimeImportCycles": 0,
+  "maximumFileLines": 379
+}

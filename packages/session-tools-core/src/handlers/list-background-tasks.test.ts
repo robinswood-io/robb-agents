@@ -6,7 +6,7 @@ function createCtx(tasks: BackgroundTaskInfo[] | undefined): SessionToolContext 
   return {
     sessionId: 'sess-1',
     listBackgroundTasks: tasks === undefined ? undefined : () => tasks,
-  } as unknown as SessionToolContext;
+  } as SessionToolContext;
 }
 
 describe('handleListBackgroundTasks', () => {

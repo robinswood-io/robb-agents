@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
 import {
   SessionLifecycleManager,
+  type SessionState,
   AbortReason,
   createSessionLifecycleManager,
 } from '../session-lifecycle.ts';
@@ -147,7 +148,7 @@ describe('SessionLifecycleManager', () => {
 
   describe('State Change Callbacks', () => {
     it('should call onStateChange when message completes', () => {
-      const stateChanges: any[] = [];
+      const stateChanges: SessionState[] = [];
       const managerWithCallback = new SessionLifecycleManager({
         sessionId: 'test',
         onStateChange: (state) => stateChanges.push(state),
@@ -155,11 +156,11 @@ describe('SessionLifecycleManager', () => {
 
       managerWithCallback.recordMessageComplete();
       expect(stateChanges.length).toBe(1);
-      expect(stateChanges[0].messageCount).toBe(1);
+      expect(stateChanges[0]!.messageCount).toBe(1);
     });
 
     it('should call onStateChange when content received (first time only)', () => {
-      const stateChanges: any[] = [];
+      const stateChanges: SessionState[] = [];
       const managerWithCallback = new SessionLifecycleManager({
         sessionId: 'test',
         onStateChange: (state) => stateChanges.push(state),

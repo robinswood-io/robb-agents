@@ -11,13 +11,13 @@
 
 import { useTranslation } from 'react-i18next'
 import {
-  Trash2,
-  FileCode,
-  Copy,
-  Play,
-  Power,
-  PowerOff,
-  Send,
+Trash2,
+FileCode,
+Copy,
+Play,
+Power,
+PowerOff,
+Send,
 } from 'lucide-react'
 import { useMenuComponents } from '@/components/ui/menu-context'
 
@@ -25,18 +25,16 @@ export interface AutomationMenuProps {
   automationId: string
   automationName: string
   enabled: boolean
-  onToggleEnabled?: () => void
-  onTest?: () => void
-  onDuplicate?: () => void
-  onEditJson?: () => void
-  onDelete?: () => void
+  onToggleEnabled?: (() => void) | undefined
+  onTest?: (() => void) | undefined
+  onDuplicate?: (() => void) | undefined
+  onEditJson?: (() => void) | undefined
+  onDelete?: (() => void) | undefined
   /** Send to another workspace (omit to hide the option) */
-  onSendToWorkspace?: () => void
+  onSendToWorkspace?: (() => void) | undefined
 }
 
 export function AutomationMenu({
-  automationId,
-  automationName,
   enabled,
   onToggleEnabled,
   onTest,

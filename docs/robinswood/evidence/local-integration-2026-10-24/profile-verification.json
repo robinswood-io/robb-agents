@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "originalSessionsPreserved": 2321,
+  "currentSessionCount": 2330,
+  "connectionsPreserved": 6,
+  "defaultConnectionPreserved": true,
+  "workspaceIdsPreserved": true,
+  "allSourceConfigHashesUnchanged": 35,
+  "realAccountingDataModified": false,
+  "scope": "Only synthetic QA sessions/files and a retired read-only fixture used in this validation."
+}

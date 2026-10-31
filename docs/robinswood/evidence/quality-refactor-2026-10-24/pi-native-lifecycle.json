@@ -1,0 +1,219 @@
+{
+  "status": "testé dans le candidat local isolé ; application installée inchangée",
+  "changes": [
+    "Débloquer les autorisations d’outils avant d’attendre session.abort ; éviter le deadlock arrêt/nouvelle demande.",
+    "Clôturer après prompt + waitForIdle et toutes les continuations/demandes concurrentes ; ignorer agent_end brut et les agent_settled intermédiaires.",
+    "Retirer temporisations de clôture et commande de récupération inter-processus ; un seul fallback contextuel après récupération native achevée.",
+    "Corréler chaque message avec l’entrée réelle du journal SDK après turn_end ; ne pas supposer un ID dans le message fournisseur.",
+    "Séparer les conversions de messages et charges utiles d’outils par fonctions directes ; aucun nouveau coordinateur.",
+    "Aligner le build du sous-package Electron sur la commande canonique complète existante ; retirer la référence au validateur absent.",
+    "Retirer 20 any du test OAuth et utiliser son événement terminal natif."
+  ],
+  "regressions": {
+    "abort": "SDK AgentSession réel + outil suspendu sur autorisation ; arrêt termine, zéro effet, nouvelle demande complète.",
+    "settlement": "Processus JSONL réel + SDK réel ; deux barrières agent_before_settle et prompt différé après agent_settled ; exactement une clôture après tous les travaux ; demande suivante complète.",
+    "history": "Références comparées aux IDs indépendamment lus dans le journal SDK ; tests de reçus outils, événement périmé et fournisseur sans responseId.",
+    "overflow": "Ordre idle/compact/continue/idle ; pièces jointes et reçus conservés par identité ; aucune continuation si compaction échoue."
+  },
+  "offlineModels": true,
+  "realAccountingDataWritten": false,
+  "moduleLines": {
+    "event-adapter.ts": 436,
+    "message-events.ts": 251,
+    "tool-event-payloads.ts": 150
+  },
+  "checks": {
+    "tool-approval-abort-red-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "--timeout",
+        "3000",
+        "packages/pi-agent-server/src/tool-approval-abort.test.ts"
+      ],
+      "exitCode": 1,
+      "seconds": 0.93,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/tool-approval-abort-red-2.log"
+    },
+    "tool-approval-abort-green": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "--timeout",
+        "3000",
+        "packages/pi-agent-server/src/tool-approval-abort.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.74,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/tool-approval-abort-green.log"
+    },
+    "native-settlement-red-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/pi-agent-server/src/native-settlement.test.ts"
+      ],
+      "exitCode": 1,
+      "seconds": 1.05,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-settlement-red-2.log"
+    },
+    "native-settlement-green-3": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/pi-agent-server/src/native-settlement.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.77,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-settlement-green-3.log"
+    },
+    "native-worker-suite-4": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/pi-agent-server/src"
+      ],
+      "exitCode": 0,
+      "seconds": 4.64,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-worker-suite-4.log"
+    },
+    "native-lifecycle-all-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 20.45,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-lifecycle-all-types.log"
+    },
+    "pi-message-split-tests-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/shared/src/agent/__tests__/pi-event-adapter"
+      ],
+      "exitCode": 0,
+      "seconds": 0.74,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-message-split-tests-2.log"
+    },
+    "pi-message-split-types-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "tsc",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 1.81,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-message-split-types-2.log"
+    },
+    "native-oauth-terminal-test": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/shared/src/agent/__tests__/pi-agent-oauth-refresh.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.87,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-oauth-terminal-test.log"
+    },
+    "native-oauth-terminal-types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 1.74,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-oauth-terminal-types.log"
+    },
+    "native-oauth-terminal-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/shared/src/agent/__tests__/pi-agent-oauth-refresh.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 0.5,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-oauth-terminal-lint.log"
+    },
+    "native-lifecycle-new-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/shared/src/agent/backend/pi/event-adapter.ts",
+        "packages/shared/src/agent/backend/pi/message-events.ts",
+        "packages/shared/src/agent/backend/pi/tool-event-payloads.ts",
+        "packages/pi-agent-server/src/native-settlement.test.ts",
+        "packages/pi-agent-server/src/__tests__/fixtures/native-settlement.preload.ts",
+        "packages/pi-agent-server/src/turn-history.ts",
+        "packages/pi-agent-server/src/turn-history.test.ts",
+        "packages/pi-agent-server/src/tool-approval-abort.ts",
+        "packages/pi-agent-server/src/tool-approval-abort.test.ts",
+        "packages/pi-agent-server/src/overflow-recovery.ts",
+        "packages/pi-agent-server/src/overflow-recovery.test.ts",
+        "packages/pi-agent-server/src/incomplete-tool-tail-recovery.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 2.58,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-lifecycle-new-lint.log"
+    },
+    "native-lifecycle-all-tests-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 150.25,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-lifecycle-all-tests-2.log"
+    },
+    "native-lifecycle-electron-build-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "--cwd",
+        "apps/electron",
+        "build"
+      ],
+      "exitCode": 0,
+      "seconds": 20.4,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-lifecycle-electron-build-2.log"
+    }
+  },
+  "remaining": {
+    "filesOver500": 227,
+    "explicitAny": 1073
+  },
+  "limits": [
+    "Lint global toujours non conforme sur le code historique",
+    "Nouveaux SDK pas encore validés par missions au modèle réel ni parcours UI complet",
+    "Candidat non intégré au checkout principal et non installé"
+  ]
+}

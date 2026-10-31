@@ -4,9 +4,9 @@ import { AlertCircle, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface InputErrorBoundaryProps {
-  sessionId?: string
+  sessionId?: string | undefined
   resetKey: string
-  onClearDraft?: () => void
+  onClearDraft?: (() => void) | undefined
   children: React.ReactNode
 }
 
@@ -24,17 +24,17 @@ export class InputErrorBoundary extends React.Component<
   InputErrorBoundaryProps,
   InputErrorBoundaryState
 > {
-  state: InputErrorBoundaryState = { hasError: false }
+  override state: InputErrorBoundaryState = { hasError: false }
 
   static getDerivedStateFromError(): InputErrorBoundaryState {
     return { hasError: true }
   }
 
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
+  override componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('[InputErrorBoundary] Composer crashed:', error, info.componentStack)
   }
 
-  componentDidUpdate(prevProps: InputErrorBoundaryProps) {
+  override componentDidUpdate(prevProps: InputErrorBoundaryProps) {
     if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
       this.setState({ hasError: false })
     }
@@ -49,7 +49,7 @@ export class InputErrorBoundary extends React.Component<
     this.setState({ hasError: false })
   }
 
-  render() {
+  override render() {
     if (!this.state.hasError) return this.props.children
 
     return (

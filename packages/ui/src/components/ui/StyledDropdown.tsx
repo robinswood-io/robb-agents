@@ -53,7 +53,7 @@ const DropdownMenuSub = DropdownMenuPrimitive.Sub
 
 interface DropdownMenuTriggerProps extends React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Trigger> {
   /** Auto-mirror hover:* classes to data-[state=open]:* while menu is open. Default: true */
-  autoMirrorHoverToOpen?: boolean
+  autoMirrorHoverToOpen?: boolean | undefined
 }
 
 const DropdownMenuTrigger = React.forwardRef<
@@ -63,7 +63,7 @@ const DropdownMenuTrigger = React.forwardRef<
   const triggerClassName = autoMirrorHoverToOpen ? mirrorHoverToOpenStateClasses(className) : className
 
   if (asChild && autoMirrorHoverToOpen && React.isValidElement(children)) {
-    const childClassName = (children.props as { className?: string }).className
+    const childClassName = (children.props as { className?: string | undefined }).className
     const mergedChildClassName = mirrorHoverToOpenStateClasses(cn(childClassName, className))
 
     return (
@@ -72,7 +72,7 @@ const DropdownMenuTrigger = React.forwardRef<
         asChild
         {...props}
       >
-        {React.cloneElement(children as React.ReactElement<{ className?: string }>, {
+        {React.cloneElement(children as React.ReactElement<{ className?: string | undefined }>, {
           className: mergedChildClassName,
         })}
       </DropdownMenuPrimitive.Trigger>
@@ -98,9 +98,9 @@ export { DropdownMenu, DropdownMenuTrigger, DropdownMenuSub }
 
 interface StyledDropdownMenuContentProps
   extends React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content> {
-  minWidth?: string
+  minWidth?: string | undefined
   /** Force light mode instead of dark */
-  light?: boolean
+  light?: boolean | undefined
 }
 
 export const StyledDropdownMenuContent = React.forwardRef<
@@ -136,7 +136,7 @@ StyledDropdownMenuContent.displayName = 'StyledDropdownMenuContent'
 
 interface StyledDropdownMenuItemProps
   extends React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> {
-  variant?: 'default' | 'destructive'
+  variant?: 'default' | 'destructive' | undefined
 }
 
 export const StyledDropdownMenuItem = React.forwardRef<
@@ -202,7 +202,7 @@ StyledDropdownMenuSubTrigger.displayName = 'StyledDropdownMenuSubTrigger'
 
 interface StyledDropdownMenuSubContentProps
   extends React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent> {
-  minWidth?: string
+  minWidth?: string | undefined
 }
 
 export const StyledDropdownMenuSubContent = React.forwardRef<

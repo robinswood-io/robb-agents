@@ -12,7 +12,6 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import type { Session } from '@craft-agent/shared/protocol'
-import type { ISessionManager } from '@craft-agent/server-core/handlers'
 import { BindingStore } from '../binding-store'
 import { Commands, type AccessControlDeps, type PairingCodeConsumer } from '../commands'
 import type {
@@ -40,14 +39,12 @@ function makeSession(id: string): Session {
     workspaceId: 'ws1',
     workspaceName: 'Workspace',
     messages: [],
-    createdAt: Date.now() - 1000,
-    updatedAt: Date.now(),
+    isProcessing: false,
     lastMessageAt: Date.now(),
-    isArchived: false,
-  } as unknown as Session
+  }
 }
 
-function makeSessionManager(sessions: Session[] = []): ISessionManager {
+function makeSessionManager(sessions: Session[] = []) {
   return {
     getSessions: () => sessions,
     getSession: async (sessionId: string) => sessions.find((s) => s.id === sessionId) ?? null,
@@ -56,7 +53,7 @@ function makeSessionManager(sessions: Session[] = []): ISessionManager {
     sendMessage: async () => {},
     cancelProcessing: async () => {},
     respondToPermission: () => true,
-  } as unknown as ISessionManager
+  }
 }
 
 function makeAdapter(): PlatformAdapter & { sent: string[] } {

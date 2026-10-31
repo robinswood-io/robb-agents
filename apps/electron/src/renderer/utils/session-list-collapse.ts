@@ -1,4 +1,11 @@
 import type { SessionFilter } from '../../shared/types'
+import { isUnknownArray } from '@craft-agent/shared/utils/json';
+
+/** Corrupt cached identifiers must not enter the collapse state. */
+export function parseCollapsedGroups(value: unknown): Set<string> {
+  return isUnknownArray(value) && value.every(group => typeof group === 'string')
+    ? new Set(value) : new Set();
+}
 
 export interface CollapsedGroupScopeOptions {
   workspaceId?: string

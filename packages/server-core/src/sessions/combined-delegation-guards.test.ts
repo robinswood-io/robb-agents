@@ -1,3 +1,9 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import type { Session } from '../../../shared/src/protocol/dto/sessions.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest , requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -16,18 +22,18 @@ function fixture() {
   parent.isProcessing = true
   parent.processingGeneration = 1
   parent.activeObjective = transitionObjectiveContract({ messageId: 'objective', text: 'Inspect the target files.', nowMs: 1 })
-  const host = new SessionManager() as any
-  host.sessions.set(parent.id, parent)
+  const host = sessionManagerForTest(withSessionOperationsForTest(new SessionManager()))
+  sessionRuntimeStateForTest(host).sessions.set(parent.id, parent)
   const created: Managed[] = [], sent: string[] = []
-  host.persistSession = () => {}
+  host.persistSession = () => false
   host.flushSession = async () => {}
   host.sendEvent = () => {}
-  host.createSession = async (_id: string, options: any, internal: any) => {
-    const child = createManagedSession({ ...options, id: `child-${created.length}`, delegation: internal.delegation }, workspace)
-    host.sessions.set(child.id, child); created.push(child); return child
+  host.createSession = async (_id: string, options, internal) => {
+    const child = createManagedSession(omitUndefined({ ...options, id: `child-${created.length}`, delegation: internal!.delegation }), workspace)
+    sessionRuntimeStateForTest(host).sessions.set(child.id, child); created.push(child); return omitUndefined<Session>({ ...child, workspaceId: workspace.id, workspaceName: workspace.name })
   }
   host.sendMessage = async (id: string, _prompt: string, ...args: unknown[]) => {
-    sent.push(id); host.sessions.get(id).isProcessing = true
+    sent.push(id); requiredTestValue(sessionRuntimeStateForTest(host).sessions.get(id)).isProcessing = true
     ;(args[5] as ((messageId: string) => void) | undefined)?.(`${id}-durable-dispatch`)
   }
   return { parent, host, workspace, created, sent, spawn: (extra: Record<string, unknown> = {}) => host.spawnDelegatedSession(parent, { prompt: 'Inspect the exact target.', ...extra }) }
@@ -52,8 +58,8 @@ describe('combined delegation retains lifecycle guards', () => {
     await expect(h.spawn()).rejects.toThrow()
     expect(h.sent.filter(id => id.startsWith('child-'))).toHaveLength(0)
     expect(h.created[0]!.delegation?.finishedAt).toBeNumber()
-    expect(h.host.automaticAdmissionReservations.size).toBe(0)
-    expect(h.host.pendingSpawnRoots.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.host).automaticAdmissionReservations.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.host).pendingSpawnRoots.size).toBe(0)
   })
 
   it('deduplicates the same role but never reuses a worker as a reviewer', async () => {
@@ -67,14 +73,18 @@ describe('combined delegation retains lifecycle guards', () => {
     expect(h.created[1]!.permissionMode).toBe('safe')
   })
 
-  it.each(['global', 'legacy-family'] as const)('preserves the %s capacity boundary', async scope => {
+  it.each(['global', 'legacy-family'] as const)('preserves the %s capacity boundary while allowing a single parent-slot reviewer', async scope => {
     const h = fixture()
     for (let i = 0; i < (scope === 'global' ? 7 : 3); i++) {
       const child = createManagedSession({ id: `existing-${i}`, ...(scope === 'legacy-family' ? { parentSessionId: h.parent.id } : {}) }, h.workspace)
-      child.isProcessing = true; h.host.sessions.set(child.id, child)
+      child.isProcessing = true; sessionRuntimeStateForTest(h.host).sessions.set(child.id, child)
     }
     await expect(h.spawn()).rejects.toThrow(scope === 'global' ? 'global_capacity' : 'root_capacity')
     expect(h.created).toHaveLength(0); expect(h.sent).toHaveLength(0)
+    const reviewer = await h.spawn({ role: 'reviewer', prompt: 'Inspect the exact target /srv/review.' })
+    expect(reviewer.sessionId).toBe('child-0')
+    await expect(h.spawn({ role: 'reviewer', prompt: 'Inspect a second target /srv/review-2.' }))
+      .rejects.toThrow(scope === 'global' ? 'global_capacity' : 'root_capacity')
   })
 
   it('refuses a missing attachment without creating an incomplete child', async () => {

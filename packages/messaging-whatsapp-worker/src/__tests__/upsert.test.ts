@@ -23,7 +23,7 @@ function captureEmit(): CapturedEmit {
 const noopLog = (..._args: unknown[]): void => {}
 
 interface SessionOpts {
-  baileys?: BaileysModule
+  baileys?: Pick<BaileysModule, 'downloadMediaMessage'>
   selfChatMode?: boolean
   responsePrefix?: string
   sentIds?: Set<string>
@@ -38,14 +38,14 @@ function makeSession(opts: SessionOpts = {}): UpsertSession {
       opts.baileys ??
       ({
         downloadMediaMessage: async () => Buffer.alloc(0),
-      } as unknown as BaileysModule),
+      } satisfies Pick<BaileysModule, 'downloadMediaMessage'>),
   }
 }
 
-function makeBaileys(buffer: Buffer): BaileysModule {
+function makeBaileys(buffer: Buffer): Pick<BaileysModule, 'downloadMediaMessage'> {
   return {
     downloadMediaMessage: async () => buffer,
-  } as unknown as BaileysModule
+  } satisfies Pick<BaileysModule, 'downloadMediaMessage'>
 }
 
 function cleanup(events: IncomingEvent[]): void {
@@ -126,7 +126,7 @@ describe('processUpsertMessage', () => {
         downloadedAttempted = true
         return buf
       },
-    } as unknown as BaileysModule
+    } satisfies Pick<BaileysModule, 'downloadMediaMessage'>
 
     const session = makeSession({ selfChatMode: true, baileys })
     const { events, emit } = captureEmit()

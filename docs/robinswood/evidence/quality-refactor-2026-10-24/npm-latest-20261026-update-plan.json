@@ -1,0 +1,93 @@
+[
+  {
+    "file": "apps/electron/package.json",
+    "group": "dependencies",
+    "package": "i18next-browser-languagedetector",
+    "before": "^8.2.2",
+    "after": "^8.2.3"
+  },
+  {
+    "file": "apps/electron/package.json",
+    "group": "dependencies",
+    "package": "react-i18next",
+    "before": "^17.1.8",
+    "after": "^17.1.9"
+  },
+  {
+    "file": "apps/viewer/package.json",
+    "group": "dependencies",
+    "package": "react-i18next",
+    "before": "^17.1.8",
+    "after": "^17.1.9"
+  },
+  {
+    "file": "apps/webui/package.json",
+    "group": "dependencies",
+    "package": "i18next",
+    "before": "^26.5.10",
+    "after": "^26.5.11"
+  },
+  {
+    "file": "apps/webui/package.json",
+    "group": "dependencies",
+    "package": "i18next-browser-languagedetector",
+    "before": "^8.2.2",
+    "after": "^8.2.3"
+  },
+  {
+    "file": "apps/webui/package.json",
+    "group": "dependencies",
+    "package": "react-i18next",
+    "before": "^17.1.8",
+    "after": "^17.1.9"
+  },
+  {
+    "file": "package.json",
+    "group": "dependencies",
+    "package": "react-resizable-panels",
+    "before": "^4.14.8",
+    "after": "^4.15.0"
+  },
+  {
+    "file": "package.json",
+    "group": "devDependencies",
+    "package": "@rollup/rollup-win32-arm64-msvc",
+    "before": "^4.65.0",
+    "after": "^4.65.1"
+  },
+  {
+    "file": "package.json",
+    "group": "overrides",
+    "package": "follow-redirects",
+    "before": "1.16.1",
+    "after": "1.16.2"
+  },
+  {
+    "file": "package.json",
+    "group": "overrides",
+    "package": "hono",
+    "before": "4.13.13",
+    "after": "4.13.14"
+  },
+  {
+    "file": "package.json",
+    "group": "overrides",
+    "package": "ip-address",
+    "before": "10.7.4",
+    "after": "10.7.5"
+  },
+  {
+    "file": "package.json",
+    "group": "overrides",
+    "package": "music-metadata",
+    "before": "12.3.0",
+    "after": "12.3.2"
+  },
+  {
+    "file": "packages/shared/package.json",
+    "group": "dependencies",
+    "package": "i18next",
+    "before": "^26.5.10",
+    "after": "^26.5.11"
+  }
+]

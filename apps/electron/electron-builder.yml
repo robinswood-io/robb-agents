@@ -2,14 +2,14 @@ appId: io.robinswood.robbagents
 productName: Robb Agents
 copyright: Copyright © 2026 Robinswood
 
-electronVersion: "43.4.0"
+electronVersion: "45.2.1"
 
 # Hook to compile macOS 26+ Liquid Glass icon after packaging
-afterPack: scripts/afterPack.cjs
+afterPack: scripts/afterPack.ts
 # Every production package fails closed on dirty source before packing. macOS
 # additionally verifies Developer ID signing plus notarization after signing.
-beforePack: scripts/releaseIntegrity.cjs
-afterSign: scripts/afterSign.cjs
+beforePack: scripts/releaseIntegrity.ts
+afterSign: scripts/afterSign.ts
 
 directories:
   output: release
@@ -37,11 +37,15 @@ files:
   - "!dist/Robb Agents.app/**"
   - "!dist/**/*.app"
   - "!dist/**/*.app/**"
+  # Platform-native binaries are copied to extraResources by the target block.
+  # Exclude their staged copies from app.asar to avoid duplicate payloads.
+  - "!dist/resources/bin/darwin-*/**"
+  - "!dist/resources/bin/linux-*/**"
+  - "!dist/resources/bin/win32-*/**"
   - "!dist/renderer/src/**"
   - "!**/*.map"
   - package.json
   # Include bundled MCP servers (bridge + session) for Codex sessions
-  - resources/bridge-mcp-server/**/*
   - resources/session-mcp-server/**/*
   # Include Pi agent server subprocess for Pi SDK sessions
   - resources/pi-agent-server/**/*
@@ -138,7 +142,7 @@ mac:
   # electron-builder.dev.yml and build-dmg.sh's non-release path override this.
   forceCodeSigning: true
   # macOS 26+ Liquid Glass: Tell macOS to look for icon in Assets.car
-  # The value must match --app-icon used in actool (see afterPack.cjs)
+  # The value must match --app-icon used in actool (see afterPack.ts)
   extendInfo:
     CFBundleIconName: AppIcon
     NSCameraUsageDescription: "Robb Agents uses the camera only when an agent-controlled secure website you selected requires it."
@@ -208,6 +212,8 @@ dmg:
     height: 380
 
 win:
+  # Match the eight supported UI languages; avoid shipping unused Chromium locales.
+  electronLanguages: [en-US, es, zh-CN, ja, hu, de, pl, fr]
   icon: resources/robinswood-icon.ico
   target:
     - target: nsis

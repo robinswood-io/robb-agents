@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * CredentialsStep - Onboarding step wrapper for API key or OAuth flow
  *
@@ -5,17 +6,17 @@
  * with StepFormLayout for the onboarding wizard context.
  */
 
-import { useEffect, useState } from "react"
+import { useEffect,useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Check, ExternalLink } from "lucide-react"
+import { Check,ExternalLink } from "lucide-react"
 import type { ApiSetupMethod } from "./APISetupStep"
-import { StepFormLayout, BackButton, ContinueButton } from "./primitives"
+import { StepFormLayout,BackButton,ContinueButton } from "./primitives"
 import {
-  ApiKeyInput,
-  type ApiKeyStatus,
-  type ApiKeySubmitData,
-  OAuthConnect,
-  type OAuthStatus,
+ApiKeyInput,
+type ApiKeyStatus,
+type ApiKeySubmitData,
+OAuthConnect,
+type OAuthStatus,
 } from "../apisetup"
 import type { CustomEndpointApi } from '@config/llm-connections'
 
@@ -24,16 +25,16 @@ export type CredentialStatus = ApiKeyStatus | OAuthStatus
 interface CredentialsStepProps {
   apiSetupMethod: ApiSetupMethod
   status: CredentialStatus
-  errorMessage?: string
+  errorMessage?: string | undefined
   onSubmit: (data: ApiKeySubmitData) => void
-  onStartOAuth?: (methodOverride?: ApiSetupMethod, connectionSlugOverride?: string, googleCloudProject?: string) => void
+  onStartOAuth?: ((methodOverride?: ApiSetupMethod, connectionSlugOverride?: string, googleCloudProject?: string) => void) | undefined
   onBack: () => void
   // Two-step OAuth flow
-  isWaitingForCode?: boolean
-  onSubmitAuthCode?: (code: string) => void
-  onCancelOAuth?: () => void
+  isWaitingForCode?: boolean | undefined
+  onSubmitAuthCode?: ((code: string) => void) | undefined
+  onCancelOAuth?: (() => void) | undefined
   // Device flow (Copilot)
-  copilotDeviceCode?: { userCode: string; verificationUri: string }
+  copilotDeviceCode?: { userCode: string; verificationUri: string } | undefined
   // Edit mode (pre-fill existing connection values)
   editInitialValues?: {
     apiKey?: string
@@ -43,9 +44,9 @@ interface CredentialsStepProps {
     models?: string[]
     customApi?: CustomEndpointApi
     googleCloudProject?: string
-  }
+  } | undefined
   /** Pi preset selected from the first-level onboarding screen. */
-  initialPiPreset?: string
+  initialPiPreset?: string | undefined
 }
 
 export function CredentialsStep({
@@ -69,9 +70,8 @@ export function CredentialsStep({
   const isGeminiOAuth = apiSetupMethod === 'pi_gemini_oauth'
   const isGoogleAntigravitySubscription = apiSetupMethod === 'pi_google_antigravity_subscription'
   const isMistralVibeSubscription = apiSetupMethod === 'pi_mistral_vibe_subscription'
-  const isAnthropicApiKey = apiSetupMethod === 'anthropic_api_key'
   const isPiApiKey = apiSetupMethod === 'pi_api_key'
-  const isApiKey = isAnthropicApiKey || isPiApiKey
+
   const [googleCloudProject, setGoogleCloudProject] = useState(editInitialValues?.googleCloudProject ?? '')
   const validGoogleCloudProject = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(googleCloudProject.trim())
 
@@ -416,10 +416,10 @@ export function CredentialsStep({
 
   // An existing connection's saved preset always takes precedence over an
   // onboarding suggestion. New Mistral connections arrive preselected here.
-  const effectiveInitialValues = {
+  const effectiveInitialValues = omitUndefined({
     ...editInitialValues,
     activePreset: editInitialValues?.activePreset ?? initialPiPreset,
-  }
+  })
   const apiKeyInputKey = [
     apiSetupMethod,
     effectiveInitialValues.activePreset ?? '',

@@ -1,0 +1,528 @@
+{
+  "source": "packages/shared/src/specialized-profiles/schema.ts",
+  "units": [
+    {
+      "names": [
+        "SPECIALIZED_PROFILE_REGISTRY_SCHEMA_VERSION"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "82da7c598765f1a7086429edf7f2bfce9bb40ce83181c48ea7a48cff826cd750"
+    },
+    {
+      "names": [
+        "SPECIALIZED_PROFILE_VERSION_SCHEMA_VERSION"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "b683d453b7bfb7df1c3ef712c58cb8539f3937a73b0097419364c8197ed6d641"
+    },
+    {
+      "names": [
+        "SPECIALIZED_PROFILE_REGISTRY_HEAD_SCHEMA_VERSION"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "e470fff10a519501c1f4a417337a4d55730dec11b90d222bb2efe9bc3e4785ce"
+    },
+    {
+      "names": [
+        "SPECIALIZED_PROFILE_REGISTRY_ANCHOR_SCHEMA_VERSION"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "e1e920ac5aada23c03a5ec6747712a8f5b3046d5817bfa0445e97a91eef9d7b8"
+    },
+    {
+      "names": [
+        "SPECIALIZED_PROFILE_STATES"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "3827116592f9d2063540a2e55ee6f450d362fcfebd6912b0c6cd6ed1cba7a0cb"
+    },
+    {
+      "names": [
+        "SPECIALIZED_PROFILE_EVALUATION_STAGES"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "e9731f55ab352c499b3852fd0e9a73dda079544c74e53e09043023211b211880"
+    },
+    {
+      "names": [
+        "SPECIALIZED_PROFILE_MIN_EVALUATION_CASES"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "a45190d7e7c31d07f8c67b288d74dfbb01daf7f5800eab878a27133301772a6f"
+    },
+    {
+      "names": [
+        "SPECIALIZED_PROFILE_ALLOWED_TRANSITIONS"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "e86cd0146b0e031426403d9a29a1c691d93d297f7e1faad63752207a1164e896"
+    },
+    {
+      "names": [
+        "SPECIALIZED_PROFILE_REQUIRED_EVALUATION_STAGE"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "44b2954e119cfebce91731641d6940d91ecb410578230f43fec4ae941f70acaa"
+    },
+    {
+      "names": [
+        "SPECIALIZED_PROFILE_PROMOTION_RANK"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "d6335045de8d977ba316367013e36f245e6c98a08330e63193e8dd14c8d09123"
+    },
+    {
+      "names": [
+        "specializedProfileTransitionIsPromotion"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "07adb14f79cb36e9ff79794ea58f256d47f8c3eadbae6b7c719116f44ee9c2b7"
+    },
+    {
+      "names": [
+        "SPECIALIZED_PROFILE_EVALUATION_ENTRY_STATE"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "0517ff135fda85076cc745d9bd67b1fd75b22070bc7e785880aa03c331eee90d"
+    },
+    {
+      "names": [
+        "PROFILE_ID_RE"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "06302ef47632157e0ebcb30e3af51de36b51e8d8d5b653e988a4b733dd38146b"
+    },
+    {
+      "names": [
+        "CONDITION_FIELD_RE"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "56b87aee68effe460037b0aead93f85c1123b9ee649e9bb745b09eb9dac6a4e1"
+    },
+    {
+      "names": [
+        "SHA256_RE"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "e164ad0c505490d178d741aed0541bf6b925135e66969ad87039bb43cb18be33"
+    },
+    {
+      "names": [
+        "profileId"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "70a674892ce7b4f70e8ca77131bf258bceb91781d3f0ab90d4a86dd2210e77b8"
+    },
+    {
+      "names": [
+        "identifier"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "c4eedadb2443e7579a7b9299b0a18c57b86c2b48f25d101280d6bc680ad17198"
+    },
+    {
+      "names": [
+        "timestamp"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "a6b9c78d27f63e5f8fbc0d61cb0ee25cee08daeedc7de7654c500fc318b4ff06"
+    },
+    {
+      "names": [
+        "SpecializedProfileStateSchema"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "0f816c03d9004d7afdd961dac2e596aabef32cbb58174a99e4b06a3862e6f400"
+    },
+    {
+      "names": [
+        "SpecializedProfileState"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "0b5d31e5954bd2572787f57d80f75d235f9c48f08c95d3aa8fc685771c629e95"
+    },
+    {
+      "names": [
+        "SpecializedProfileConditionSchema"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "f5903040ca44ab38d2a48aaa55241b29a7dc1eb622b2209ac9b287106f62f56b"
+    },
+    {
+      "names": [
+        "SpecializedProfileCondition"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "4e6322167b1bbc193f4ff0dde42eb1f064dcfccbe8114b35fb9bbe8ea6383f6f"
+    },
+    {
+      "names": [
+        "SpecializedProfileRequestedCapabilitySchema"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "6634105f9f8a5e799c698b22166af40348cd01be109e69c3747ccb65ffeda592"
+    },
+    {
+      "names": [
+        "SpecializedProfileRequestedCapability"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "d89f8383edabf7fbb1e6231c24c9c50c6ee50a90583ed8d69a3753b519e63557"
+    },
+    {
+      "names": [
+        "SpecializedAgentProfileDefinitionSchema"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "90a0c8bbf5f55f0b303d60d479cf7da1c19568dc766fc79b9ccdfd8458acfb1f"
+    },
+    {
+      "names": [
+        "SpecializedAgentProfileDefinition"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "5f8b775c361618fb907b3241012bf3a55bdd87cd5672a405c238a8500435c741"
+    },
+    {
+      "names": [
+        "SpecializedProfileSourceRefSchema"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "e20360f8453195df333b60151b2af4f36e61ae3f5acb5f1d496f57bdc1f38c2a"
+    },
+    {
+      "names": [
+        "SpecializedProfileSourceRef"
+      ],
+      "group": "profile-definition",
+      "bodySha256": "d5dfbd63f0a5bea9db9e5e4ebd60e09b3fd8bbe175efdd7ec2c36cb2564aadd5"
+    },
+    {
+      "names": [
+        "SpecializedProfileProvenanceSchema"
+      ],
+      "group": "profile-provenance",
+      "bodySha256": "e2f864a52a4c3fe7e144567e0a60805ada936cbcb451ed769c9c7ec257a9b50e"
+    },
+    {
+      "names": [
+        "SpecializedProfileProvenance"
+      ],
+      "group": "profile-provenance",
+      "bodySha256": "acfaf3acc4606ada681fa2de30609676b21b0a09545c4e2757b91d4456a63b32"
+    },
+    {
+      "names": [
+        "SpecializedProfileVersionSchema"
+      ],
+      "group": "profile-provenance",
+      "bodySha256": "90f81000292f11ef90c667aad468f05dc4ccc33fc2b7ede575b5c2b9996fec32"
+    },
+    {
+      "names": [
+        "SpecializedProfileVersion"
+      ],
+      "group": "profile-provenance",
+      "bodySha256": "7d3c4c5957687795132373e448e225d5e797c9dd4b9dba21c998a410bac6a588"
+    },
+    {
+      "names": [
+        "SpecializedProfileEvaluationSchema"
+      ],
+      "group": "evaluation",
+      "bodySha256": "ba42b133e374141a490970a791443fc5944efd63a612ea909e9126cc8cfc0fe7"
+    },
+    {
+      "names": [
+        "SpecializedProfileEvaluation"
+      ],
+      "group": "evaluation",
+      "bodySha256": "81b847f8e918941a6b7fa1347426e17e765c5680d0081e8836889837ee6c8822"
+    },
+    {
+      "names": [
+        "SpecializedProfileEvaluationCampaignSchema"
+      ],
+      "group": "evaluation",
+      "bodySha256": "f66576fb9f4867e6d062d33a9005e5b70b474ae5446bc434e4d01fae4e4ded5d"
+    },
+    {
+      "names": [
+        "SpecializedProfileEvaluationCampaign"
+      ],
+      "group": "evaluation",
+      "bodySha256": "eac53aa9ad850ba103d26a3fcc76fce338d8ad9812054e75fe05dd8f7bbd11ff"
+    },
+    {
+      "names": [
+        "specializedProfileEvaluationPassesPromotionGate"
+      ],
+      "group": "evaluation",
+      "bodySha256": "a5957485dc600585dd157100f08cfab9d7ca92e393c03fd16af0b461f386bdfc"
+    },
+    {
+      "names": [
+        "SpecializedProfileHumanApprovalReceiptSchema"
+      ],
+      "group": "approval",
+      "bodySha256": "820932f258d4d4f916bdb7719c2707a8053dbdfe935a49eb943d3053ec92a468"
+    },
+    {
+      "names": [
+        "SpecializedProfileHumanApprovalReceipt"
+      ],
+      "group": "approval",
+      "bodySha256": "75011b280508062b4f0653af29ee162400a799a06e3f6c741751cc210fd24119"
+    },
+    {
+      "names": [
+        "SpecializedProfileTransitionSchema"
+      ],
+      "group": "approval",
+      "bodySha256": "76f44901895257c02d6bcbae5cc6365066ab2fb4c4e34a429babd4182b068f0f"
+    },
+    {
+      "names": [
+        "SpecializedProfileTransition"
+      ],
+      "group": "approval",
+      "bodySha256": "cb766416e434787708d7cd9474ad0266b1a01759ea4c6d9bcac9a2e471828605"
+    },
+    {
+      "names": [
+        "SpecializedProfileRecordSchema"
+      ],
+      "group": "profile-record",
+      "bodySha256": "bcfa96faa4a5a2d99879fb6c6b9b104c09e3630182ce20e3369d82628f28dc2e"
+    },
+    {
+      "names": [
+        "SpecializedProfileRecord"
+      ],
+      "group": "profile-record",
+      "bodySha256": "1bdbcffa88c925bf9542badf0020f7ae5a6469934342888551ea78cd7cc15154"
+    },
+    {
+      "names": [
+        "SpecializedProfileRegistryAuthorityAttestationSchema"
+      ],
+      "group": "registry",
+      "bodySha256": "b38b7145208a20c7b3b334633d1ba709bbaa29f3c10dd39713bbe5842df9cc74"
+    },
+    {
+      "names": [
+        "SpecializedProfileRegistryAuthorityAttestation"
+      ],
+      "group": "registry",
+      "bodySha256": "77ce94f10726ba437afb8a33cd1fb29164ddf589c847fba26a6fb4675b744ed1"
+    },
+    {
+      "names": [
+        "SpecializedProfileRegistryHeadSchema"
+      ],
+      "group": "registry",
+      "bodySha256": "3561590f5415bc4fcba902e1211379475915b0651f8c17813614d600fa142452"
+    },
+    {
+      "names": [
+        "SpecializedProfileRegistryHead"
+      ],
+      "group": "registry",
+      "bodySha256": "88735460bb8876afc16998b82e15353d0e8b4bf9d825808085d1fc58b6ab2230"
+    },
+    {
+      "names": [
+        "SpecializedProfileRegistryPayloadSchema"
+      ],
+      "group": "registry",
+      "bodySha256": "4837f777e4659678e85435f59f138d9bcecde24e26a602d86b269187b32571ae"
+    },
+    {
+      "names": [
+        "SpecializedProfileRegistryAnchorRefSchema"
+      ],
+      "group": "registry",
+      "bodySha256": "efa0852cf65d9426b053fa6cd49d3b853b18ff784c3f2084e8d91f65c990f191"
+    },
+    {
+      "names": [
+        "SpecializedProfileRegistryAnchorRef"
+      ],
+      "group": "registry",
+      "bodySha256": "d21ff7014b04232593b9551fe6619d55f1beb98543f1e8c9c5aaa257f7bf6260"
+    },
+    {
+      "names": [
+        "SpecializedProfileRegistryAnchorPayloadSchema"
+      ],
+      "group": "registry",
+      "bodySha256": "7a3adcfe8fae360244f77ad9473fe4acffccc14d3126d10729241b19ecf03919"
+    },
+    {
+      "names": [
+        "SpecializedProfileRegistryAnchorSchema"
+      ],
+      "group": "registry",
+      "bodySha256": "f60db1e25f479c19967250f115cd9f4a9493abed3bb9d27874c9bf12693c1316"
+    },
+    {
+      "names": [
+        "SpecializedProfileRegistryAnchor"
+      ],
+      "group": "registry",
+      "bodySha256": "ba84ea107c0c36431ad20e5e6899111e4e4bcb38bd37795e92cb37eccf011927"
+    },
+    {
+      "names": [
+        "SpecializedProfileRegistryDocumentSchema"
+      ],
+      "group": "registry-specialized-profile-registry-document-schema",
+      "bodySha256": "20224caa1b7cc3a25a55a04316a3eee7f5681df6467dbd5fc45b80659d75c739"
+    },
+    {
+      "names": [
+        "SpecializedProfileRegistryDocument"
+      ],
+      "group": "registry-specialized-profile-registry-document-schema",
+      "bodySha256": "249ec1b3d154eb8618572498106cbf0c91b40c9f8ca0a7795f87fe336de2dde9"
+    },
+    {
+      "names": [
+        "CreateSpecializedProfileCandidateInput"
+      ],
+      "group": "mutation-contracts",
+      "bodySha256": "37505db10135334d3cf0616664e2dca4a1505695b1eb1962ccab18b6e3bf24b9"
+    },
+    {
+      "names": [
+        "ReviseSpecializedProfileInput"
+      ],
+      "group": "mutation-contracts",
+      "bodySha256": "a5d455b1d5f8c1e720128b8c7d0e2db6b69de2879c67185490d6a87b7bbc0073"
+    },
+    {
+      "names": [
+        "TransitionSpecializedProfileInput"
+      ],
+      "group": "mutation-contracts",
+      "bodySha256": "f69bd75aec8f334672091ceeef23dded1fa220404f436aee78ee34dbc22cc616"
+    },
+    {
+      "names": [
+        "RollbackSpecializedProfileInput"
+      ],
+      "group": "mutation-contracts",
+      "bodySha256": "0f92aa4eeba558abf10f257b84f1677abe81786f607e489bff61fc4e2407708a"
+    },
+    {
+      "names": [
+        "canonicalSpecializedProfileDefinitionHash"
+      ],
+      "group": "mutation-contracts",
+      "bodySha256": "c3149bd49b125a366bef5413ba4ef92c181c8551af6e1ecfdea75978cd9c37e9"
+    },
+    {
+      "names": [
+        "canonicalSpecializedProfileVersionHash"
+      ],
+      "group": "mutation-contracts",
+      "bodySha256": "2271541ad694075c08dd12b95f94413fa02a6e70a211edec65e908a17032668f"
+    },
+    {
+      "names": [
+        "canonicalSpecializedProfileRegistryPayloadHash"
+      ],
+      "group": "mutation-contracts",
+      "bodySha256": "626a9ff3ec842c9f9cf69518679812190430b39a572ab3168ea6e38c9bd4a512"
+    },
+    {
+      "names": [
+        "canonicalSpecializedProfileRegistryAnchorPayloadHash"
+      ],
+      "group": "mutation-contracts",
+      "bodySha256": "0bd4d2db672e43f785debb798f6c9793f908babebb03e546f47961cb7a5466e8"
+    },
+    {
+      "names": [
+        "canonicalJson"
+      ],
+      "group": "mutation-contracts",
+      "bodySha256": "989c84232a10410543935b325098f83a2b8f2b84aa46fea4099da08e7c4f7ab1"
+    },
+    {
+      "names": [
+        "sha256"
+      ],
+      "group": "mutation-contracts",
+      "bodySha256": "1de8df46c24b8702e0a3077a889030fdc08208f5c5ff5ea1875f3e92b4441e5f"
+    }
+  ],
+  "modules": [
+    {
+      "name": "profile-definition",
+      "lines": 196
+    },
+    {
+      "name": "profile-provenance",
+      "lines": 101
+    },
+    {
+      "name": "evaluation",
+      "lines": 211
+    },
+    {
+      "name": "approval",
+      "lines": 69
+    },
+    {
+      "name": "profile-record",
+      "lines": 291
+    },
+    {
+      "name": "registry",
+      "lines": 64
+    },
+    {
+      "name": "registry-specialized-profile-registry-document-schema",
+      "lines": 24
+    },
+    {
+      "name": "mutation-contracts",
+      "lines": 83
+    }
+  ],
+  "dependencies": {
+    "profile-definition": [],
+    "profile-provenance": [
+      "profile-definition"
+    ],
+    "evaluation": [
+      "profile-definition"
+    ],
+    "approval": [
+      "profile-definition"
+    ],
+    "profile-record": [
+      "profile-definition",
+      "profile-provenance",
+      "evaluation",
+      "approval"
+    ],
+    "registry": [
+      "profile-definition",
+      "profile-record"
+    ],
+    "registry-specialized-profile-registry-document-schema": [
+      "registry",
+      "mutation-contracts"
+    ],
+    "mutation-contracts": [
+      "profile-definition",
+      "profile-provenance",
+      "approval",
+      "registry"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

@@ -24,8 +24,8 @@ export type { SlackService } from '../sources/types.ts';
 
 // Slack OAuth configuration - must be set via environment variables
 // These are baked into the build at compile time
-const SLACK_CLIENT_ID = process.env.SLACK_OAUTH_CLIENT_ID || '';
-const SLACK_CLIENT_SECRET = process.env.SLACK_OAUTH_CLIENT_SECRET || '';
+const SLACK_CLIENT_ID = process.env["SLACK_OAUTH_CLIENT_ID"] || '';
+const SLACK_CLIENT_SECRET = process.env["SLACK_OAUTH_CLIENT_SECRET"] || '';
 
 // Slack OAuth endpoints
 const SLACK_AUTH_URL = 'https://slack.com/oauth/v2/authorize';
@@ -160,8 +160,8 @@ async function exchangeCodeForTokens(
 
   return {
     accessToken: data.authed_user.access_token,
-    refreshToken: data.authed_user.refresh_token,
-    expiresIn: data.authed_user.expires_in,
+    ...(data.authed_user.refresh_token !== undefined ? { refreshToken: data.authed_user.refresh_token } : {}),
+    ...(data.authed_user.expires_in !== undefined ? { expiresIn: data.authed_user.expires_in } : {}),
     teamId: data.team?.id || '',
     teamName: data.team?.name || '',
     userId: data.authed_user.id,
@@ -207,7 +207,7 @@ export async function refreshSlackToken(
 
   return {
     accessToken: data.access_token!,
-    expiresAt: data.expires_in ? Date.now() + data.expires_in * 1000 : undefined,
+    ...(data.expires_in ? { expiresAt: Date.now() + data.expires_in * 1000 } : {}),
   };
 }
 
@@ -297,8 +297,8 @@ export async function exchangeSlackOAuth(params: OAuthExchangeParams): Promise<O
     return {
       success: true,
       accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresAt: tokens.expiresIn ? Date.now() + tokens.expiresIn * 1000 : undefined,
+      ...(tokens.refreshToken !== undefined ? { refreshToken: tokens.refreshToken } : {}),
+      ...(tokens.expiresIn ? { expiresAt: Date.now() + tokens.expiresIn * 1000 } : {}),
       email: tokens.teamName,  // Use teamName as the identifier
     };
   } catch (error) {
@@ -349,7 +349,7 @@ export async function startSlackOAuth(options: SlackOAuthOptions = {}): Promise<
     // Start local HTTP callback server with deeplink for returning to chat session
     const appType = options.appType || 'electron';
     const deeplinkUrl = buildOAuthDeeplinkUrl(options.sessionContext);
-    const callbackServer = await createCallbackServer({ appType, deeplinkUrl });
+    const callbackServer = await createCallbackServer({ appType, ...(deeplinkUrl !== undefined ? { deeplinkUrl } : {}) });
 
     // Extract port from local callback URL
     const localUrl = new URL(callbackServer.url);
@@ -375,7 +375,7 @@ export async function startSlackOAuth(options: SlackOAuthOptions = {}): Promise<
     const callback = await callbackServer.promise;
 
     // Verify state
-    if (callback.query.state !== state) {
+    if (callback.query["state"] !== state) {
       return {
         success: false,
         error: 'OAuth state mismatch - possible CSRF attack',
@@ -383,15 +383,15 @@ export async function startSlackOAuth(options: SlackOAuthOptions = {}): Promise<
     }
 
     // Check for error
-    if (callback.query.error) {
+    if (callback.query["error"]) {
       return {
         success: false,
-        error: callback.query.error_description || callback.query.error,
+        error: callback.query["error_description"] || callback.query["error"],
       };
     }
 
     // Get authorization code
-    const code = callback.query.code;
+    const code = callback.query["code"];
     if (!code) {
       return {
         success: false,
@@ -405,8 +405,8 @@ export async function startSlackOAuth(options: SlackOAuthOptions = {}): Promise<
     return {
       success: true,
       accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresAt: tokens.expiresIn ? Date.now() + tokens.expiresIn * 1000 : undefined,
+      ...(tokens.refreshToken !== undefined ? { refreshToken: tokens.refreshToken } : {}),
+      ...(tokens.expiresIn ? { expiresAt: Date.now() + tokens.expiresIn * 1000 } : {}),
       teamId: tokens.teamId,
       teamName: tokens.teamName,
       userId: tokens.userId,

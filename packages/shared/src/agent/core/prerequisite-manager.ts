@@ -74,7 +74,7 @@ function fullCatPaths(command: unknown): string[] {
 
 /** Global browser tools docs path required before browser tool usage. */
 function getBrowserToolsDocPath(): string {
-  const configDir = process.env.CRAFT_CONFIG_DIR || join(homedir(), '.craft-agent');
+  const configDir = process.env["CRAFT_CONFIG_DIR"] || join(homedir(), '.craft-agent');
   return resolve(join(configDir, 'docs', 'browser-tools.md'));
 }
 
@@ -154,7 +154,7 @@ export class PrerequisiteManager {
 
   constructor(config: PrerequisiteManagerConfig) {
     this.workspaceRootPath = config.workspaceRootPath;
-    this.onDebug = config.onDebug;
+    if (config.onDebug === undefined) { delete this.onDebug } else { this.onDebug = config.onDebug }
 
     if (config.browserGuideLoadedInContext) {
       const browserToolsDocPath = getBrowserToolsDocPath();
@@ -261,8 +261,8 @@ export class PrerequisiteManager {
    * Also clears matching pending skill paths.
    */
   trackReadTool(toolInput: Record<string, unknown>): void {
-    if (toolInput.offset !== undefined || toolInput.limit !== undefined) return;
-    const filePath = (toolInput.file_path as string) || (toolInput.path as string);
+    if (toolInput["offset"] !== undefined || toolInput["limit"] !== undefined) return;
+    const filePath = (toolInput["file_path"] as string) || (toolInput["path"] as string);
     if (!filePath) return;
 
     const expanded = expandPath(filePath);
@@ -282,7 +282,7 @@ export class PrerequisiteManager {
    * Called from the pre-tool-use pipeline to allow targeted Bash reads through.
    */
   trackBashSkillRead(input: Record<string, unknown>): boolean {
-    const paths = fullCatPaths(input.command);
+    const paths = fullCatPaths(input["command"]);
     return paths.length > 0 && paths.every(path => this.pendingSkillPaths.has(expandPath(path)));
   }
 
@@ -304,7 +304,7 @@ export class PrerequisiteManager {
       || (typeof result === 'object' && (result as { isError?: unknown }).isError === true)) return;
     if (toolName === 'Read') this.trackReadTool(input);
     if (toolName === 'Bash') {
-      for (const path of fullCatPaths(input.command)) this.trackReadTool({ file_path: path });
+      for (const path of fullCatPaths(input["command"])) this.trackReadTool({ file_path: path });
     }
   }
 

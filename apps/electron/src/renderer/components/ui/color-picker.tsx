@@ -19,21 +19,21 @@ interface ColorPickerProps {
   value: string
   onChange: (hex: string) => void
   /** Optional preset swatches shown above the picker for quick selection. */
-  presets?: readonly string[]
+  presets?: readonly string[] | undefined
   /** Fallback hex used when `value` is empty (just for the popover's initial state). */
-  fallbackColor?: string
+  fallbackColor?: string | undefined
   /** Visual style of the trigger swatch. */
-  triggerClassName?: string
+  triggerClassName?: string | undefined
   /** Accessible label for the trigger button. */
-  ariaLabel?: string
+  ariaLabel?: string | undefined
   /** Where the popover opens relative to the trigger. */
-  align?: 'start' | 'center' | 'end'
+  align?: 'start' | 'center' | 'end' | undefined
   /** Render-prop trigger to fully replace the default swatch button. */
-  trigger?: React.ReactNode
+  trigger?: React.ReactNode | undefined
   /** If set, shows a "Reset" link inside the popover that invokes this callback. */
-  onClear?: () => void
+  onClear?: (() => void) | undefined
   /** Label for the clear/reset action (default "Reset to default"). */
-  clearLabel?: string
+  clearLabel?: string | undefined
 }
 
 export function ColorPicker({

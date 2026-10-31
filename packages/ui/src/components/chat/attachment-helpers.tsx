@@ -153,7 +153,7 @@ export function getFileTypeLabel(type: AttachmentType, mimeType: string, fileNam
 export interface FileTypeIconProps {
   type: AttachmentType
   mimeType: string
-  className?: string
+  className?: string | undefined
 }
 
 /**

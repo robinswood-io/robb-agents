@@ -1,0 +1,244 @@
+{
+  "status": "passed",
+  "previouslyUncoveredTestsNowIncluded": 44,
+  "initiallyExcludedTests": 130,
+  "remainingExcludedTestFiles": 0,
+  "configs": [
+    {
+      "config": "packages/core/tsconfig.json",
+      "include": [
+        "src/**/*"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 2,
+      "configuredTestFiles": 2,
+      "excludedTests": [],
+      "previouslyExcludedTests": 2
+    },
+    {
+      "config": "packages/shared/tsconfig.json",
+      "include": [
+        "src/**/*"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist",
+        "src/automations/**/*.test.ts"
+      ],
+      "testFiles": 378,
+      "configuredTestFiles": 378,
+      "excludedTests": [],
+      "previouslyExcludedTests": 30
+    },
+    {
+      "config": "packages/server-core/tsconfig.json",
+      "include": [
+        "src/**/*",
+        "../shared/src/agent/bash-parser.d.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 279,
+      "configuredTestFiles": 279,
+      "excludedTests": [],
+      "previouslyExcludedTests": 0
+    },
+    {
+      "config": "packages/server/tsconfig.json",
+      "include": [
+        "src/**/*",
+        "../shared/src/agent/bash-parser.d.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 1,
+      "configuredTestFiles": 1,
+      "excludedTests": [],
+      "previouslyExcludedTests": 0
+    },
+    {
+      "config": "packages/session-tools-core/tsconfig.json",
+      "include": [
+        "src/**/*.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 27,
+      "configuredTestFiles": 27,
+      "excludedTests": [],
+      "previouslyExcludedTests": 0
+    },
+    {
+      "config": "packages/session-mcp-server/tsconfig.json",
+      "include": [
+        "src/**/*.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 1,
+      "configuredTestFiles": 1,
+      "excludedTests": [],
+      "previouslyExcludedTests": 0
+    },
+    {
+      "config": "packages/messaging-gateway/tsconfig.json",
+      "include": [
+        "src"
+      ],
+      "testFiles": 30,
+      "configuredTestFiles": 30,
+      "excludedTests": [],
+      "previouslyExcludedTests": 0
+    },
+    {
+      "config": "packages/messaging-whatsapp-worker/tsconfig.json",
+      "include": [
+        "src/**/*.ts"
+      ],
+      "testFiles": 3,
+      "configuredTestFiles": 3,
+      "excludedTests": [],
+      "previouslyExcludedTests": 0
+    },
+    {
+      "config": "packages/pi-agent-server/tsconfig.typecheck.json",
+      "include": [
+        "src/**/*"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist",
+        "**/*.test.ts"
+      ],
+      "testFiles": 44,
+      "configuredTestFiles": 44,
+      "excludedTests": [],
+      "previouslyExcludedTests": 44
+    },
+    {
+      "config": "packages/ui/tsconfig.json",
+      "include": [
+        "src/**/*"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist",
+        "src/**/__tests__"
+      ],
+      "testFiles": 45,
+      "configuredTestFiles": 45,
+      "excludedTests": [],
+      "previouslyExcludedTests": 45
+    },
+    {
+      "config": "apps/cli/tsconfig.json",
+      "include": [
+        "src/**/*",
+        "../../packages/shared/src/**/*.d.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 4,
+      "configuredTestFiles": 4,
+      "excludedTests": [],
+      "previouslyExcludedTests": 0
+    },
+    {
+      "config": "apps/electron/tsconfig.json",
+      "include": [
+        "src/**/*",
+        "../../packages/shared/src/**/*.d.ts",
+        "../../scripts/robb-completion-live-check.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 155,
+      "configuredTestFiles": 155,
+      "excludedTests": [],
+      "previouslyExcludedTests": 1
+    },
+    {
+      "config": "apps/viewer/tsconfig.json",
+      "include": [
+        "src"
+      ],
+      "testFiles": 0,
+      "configuredTestFiles": 0,
+      "excludedTests": [],
+      "previouslyExcludedTests": 0
+    },
+    {
+      "config": "apps/viewer/tsconfig.node.json",
+      "include": [
+        "vite.config.ts",
+        "../../scripts/pdf-worker-resolution.ts"
+      ],
+      "testFiles": 0,
+      "configuredTestFiles": 0,
+      "excludedTests": [],
+      "previouslyExcludedTests": 0
+    },
+    {
+      "config": "apps/webui/tsconfig.json",
+      "include": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "../electron/src/renderer/**/*.ts",
+        "../electron/src/renderer/**/*.tsx",
+        "../electron/src/shared/**/*.ts",
+        "../electron/src/transport/**/*.ts",
+        "../../packages/shared/src/**/*.d.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 12,
+      "configuredTestFiles": 12,
+      "excludedTests": [],
+      "previouslyExcludedTests": 0
+    },
+    {
+      "config": "scripts/tsconfig.json",
+      "include": [
+        "apply-minimatch-compat.ts",
+        "generate-github-update-manifests.ts",
+        "robb-provider-canaries.ts",
+        "validate-electron-package-security.ts",
+        "validate-release-bundle.ts",
+        "verify-proof-passport.ts",
+        "verify-github-release-assets.ts",
+        "tests/apply-minimatch-compat.test.ts",
+        "tests/generate-github-update-manifests.test.ts",
+        "tests/provider-canaries.test.ts",
+        "tests/validate-workspace-versions.test.ts",
+        "tests/validate-release-bundle.test.ts",
+        "tests/verify-proof-passport.test.ts",
+        "tests/verify-github-release-assets.test.ts",
+        "validate-workspace-versions.ts",
+        "robb-human-benchmark.ts",
+        "robb-autonomy-acceptance.ts",
+        "test-autonomy-audit.ts"
+      ],
+      "testFiles": 15,
+      "configuredTestFiles": 15,
+      "excludedTests": [],
+      "previouslyExcludedTests": 8
+    }
+  ]
+}

@@ -70,11 +70,11 @@ export function createMessagingBootstrap(opts: MessagingBootstrapOptions): Messa
     sessionManager: opts.sessionManager,
     credentialManager: opts.credentialManager,
     getMessagingDir: opts.getMessagingDir,
-    getLegacyMessagingDir: opts.getLegacyMessagingDir,
-    logger: opts.logger,
+    ...(opts.getLegacyMessagingDir !== undefined ? { getLegacyMessagingDir: opts.getLegacyMessagingDir } : {}),
+    ...(opts.logger !== undefined ? { logger: opts.logger } : {}),
     whatsapp: {
       workerEntry: opts.whatsapp.workerEntry,
-      nodeBin: opts.whatsapp.nodeBin,
+      ...(opts.whatsapp.nodeBin !== undefined ? { nodeBin: opts.whatsapp.nodeBin } : {}),
       pairingMode: opts.whatsapp.pairingMode ?? 'qr',
     },
     publishEvent: (channel, target, ...args) => {

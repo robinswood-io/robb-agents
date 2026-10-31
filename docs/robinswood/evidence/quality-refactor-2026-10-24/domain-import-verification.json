@@ -1,0 +1,114 @@
+[
+  {
+    "source": "packages/shared/src/automations/validation.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/agent/backend/factory.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/agent/bash-validator.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/ui/src/components/chat/turn-utils.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/config/storage.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/config/validators.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/utils/files.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/utils/large-response.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/config/llm-connections.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/mcp/validation.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/missions/schema.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/server-core/src/sessions/objective-acceptance-criteria.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/server-core/src/sessions/objective-contract.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/server-core/src/sessions/objective-outcome.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/agent/powershell-validator.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/projects/memory-v2.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/interop/protocol-conformance.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/protocol/dto.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/agent/core/registered-observation.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/resources/resource-bundle.ts",
+    "missing": []
+  },
+  {
+    "source": "apps/electron/src/shared/route-parser.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/sessions/storage.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/sessions/types.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/sources/storage.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/session-tools-core/src/handlers/source-test.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/sources/types.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/specialized-profiles/schema.ts",
+    "missing": []
+  },
+  {
+    "source": "packages/shared/src/tasks/storage.ts",
+    "missing": []
+  }
+]

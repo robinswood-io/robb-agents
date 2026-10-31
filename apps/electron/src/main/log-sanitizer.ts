@@ -1,3 +1,4 @@
+import { isUnknownArray } from "../../../../packages/shared/src/utils/json.ts";
 import { redactSecretLikeMaterial } from '@craft-agent/shared/utils'
 
 export const REDACTED_LOG_VALUE = '[REDACTED]'
@@ -91,7 +92,7 @@ function appendEnumerableProperties(
 ): void {
   const keys = readObjectKeys(source)
   if (!keys) {
-    target.serializationError = '[Object keys unavailable]'
+    target["serializationError"] = '[Object keys unavailable]'
     return
   }
 
@@ -115,7 +116,7 @@ function appendEnumerableProperties(
   }
 
   if (keys.length > MAX_LOG_COLLECTION_ITEMS) {
-    target.__truncatedKeys = keys.length - MAX_LOG_COLLECTION_ITEMS
+    target["__truncatedKeys"] = keys.length - MAX_LOG_COLLECTION_ITEMS
   }
 }
 
@@ -154,16 +155,16 @@ function sanitizeLogValueInternal(
       name: sanitizeString(value.name),
       message: sanitizeString(value.message),
     }
-    if (value.stack) result.stack = sanitizeString(value.stack)
+    if (value.stack) result["stack"] = sanitizeString(value.stack)
     if ('code' in value) {
-      result.code = sanitizeLogValueInternal(
+      result["code"] = sanitizeLogValueInternal(
         (value as Error & { code?: unknown }).code,
         depth + 1,
         state,
       )
     }
     if (value.cause !== undefined) {
-      result.cause = sanitizeLogValueInternal(value.cause, depth + 1, state)
+      result["cause"] = sanitizeLogValueInternal(value.cause, depth + 1, state)
     }
     appendEnumerableProperties(
       value,
@@ -175,10 +176,10 @@ function sanitizeLogValueInternal(
     return result
   }
 
-  if (Array.isArray(value)) {
+  if (isUnknownArray(value)) {
     const result = value
       .slice(0, MAX_LOG_COLLECTION_ITEMS)
-      .map(item => sanitizeLogValueInternal(item, depth + 1, state))
+      .map((item: unknown) => sanitizeLogValueInternal(item, depth + 1, state))
     if (value.length > MAX_LOG_COLLECTION_ITEMS) {
       result.push(`[${value.length - MAX_LOG_COLLECTION_ITEMS} more items]`)
     }
@@ -188,7 +189,7 @@ function sanitizeLogValueInternal(
   if (value instanceof Map) {
     const entries: unknown[] = []
     let index = 0
-    for (const [key, nested] of value) {
+    for (const [key, nested] of value as ReadonlyMap<unknown, unknown>) {
       if (index >= MAX_LOG_COLLECTION_ITEMS) break
       if (typeof key === 'string' && isSensitiveLogKey(key)) {
         entries.push([sanitizeString(key), REDACTED_LOG_VALUE])
@@ -212,7 +213,7 @@ function sanitizeLogValueInternal(
   if (value instanceof Set) {
     const values = Array.from(value)
       .slice(0, MAX_LOG_COLLECTION_ITEMS)
-      .map(item => sanitizeLogValueInternal(item, depth + 1, state))
+      .map((item: unknown) => sanitizeLogValueInternal(item, depth + 1, state))
     return {
       type: 'Set',
       values,

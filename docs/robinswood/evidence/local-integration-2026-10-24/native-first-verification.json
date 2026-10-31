@@ -1,0 +1,31 @@
+{
+  "passed": true,
+  "sessionId": "261024-spry-woods",
+  "groupCount": 2,
+  "inputUnchanged": true,
+  "manifestMatchesBytes": true,
+  "files": {
+    "fournisseurs-qa.csv": {
+      "sizeBytes": 169,
+      "mtimeNs": 1792868782469048771,
+      "sha256": "5b1585ed97bc50639a14bd52b6584ee20ad60a47882aac1c26491280505cdc38"
+    },
+    "duplicates.json": {
+      "sizeBytes": 222,
+      "mtimeNs": 1792868971943297578,
+      "sha256": "ac01ce1fad1b9ed3133df55f1c0305c8dbfa5b5c5d52f57f9f15372ed984646e"
+    },
+    "rapport.md": {
+      "sizeBytes": 745,
+      "mtimeNs": 1792868971943500033,
+      "sha256": "3deed7bba249ab8d576d0cbce068aa61475c1337cf37d5d2727b41018e79579b"
+    },
+    "manifest.json": {
+      "sizeBytes": 321,
+      "mtimeNs": 1792868971943721237,
+      "sha256": "cd433c9bacc809c49b770a49b0612cb69ac4c764aa0ab16ebe666e7014e1f94d"
+    }
+  },
+  "completedAt": 1792868975227,
+  "pendingTurnRecovery": false
+}

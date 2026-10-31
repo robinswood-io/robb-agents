@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "source": "interne:/srv/rbw-agents-oss/scripts",
+  "recoveryDate": "2026-10-30",
+  "files": [
+    {
+      "path": "scripts/action_queue_contract.py",
+      "originalSha256": "3926e6bed11dce1ddad7b0a4c6d9f5d8b37482f96954ca3c5567130a850b35f8",
+      "changes": "Strict JSON typing; explicit non-security identifier hash; unhashable JSON blocking reason accepted as text. No personal data or credentials in source.",
+      "qualification": "pending"
+    }
+  ]
+}

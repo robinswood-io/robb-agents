@@ -127,7 +127,7 @@ export function assessContextCompactionResult(
   if (tokensAfter === undefined) issues.push('invalid-tokens-after')
 
   if (issues.length > 0 || tokensBefore === undefined || tokensAfter === undefined) {
-    return { outcome: 'unverified', issues, tokensBefore, tokensAfter }
+    return { outcome: 'unverified', issues, ...(tokensBefore !== undefined ? { tokensBefore: tokensBefore } : {}), ...(tokensAfter !== undefined ? { tokensAfter: tokensAfter } : {}) }
   }
 
   const reclaimedTokens = Math.max(0, tokensBefore - tokensAfter)
@@ -156,10 +156,10 @@ export function assessContextCompactionResult(
 export type ContextCompactionDecisionInput = {
   contextTokens: number
   compactAtTokens: number
-  hardLimitTokens?: number
-  objectiveRootId?: string
+  hardLimitTokens?: number | undefined
+  objectiveRootId?: string | undefined
   now: number
-  previous?: ContextCompactionAttemptState
+  previous?: ContextCompactionAttemptState | undefined
 }
 
 export type ContextProviderAdmissionDecision =

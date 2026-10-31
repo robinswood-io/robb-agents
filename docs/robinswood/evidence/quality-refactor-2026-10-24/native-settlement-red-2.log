@@ -1,0 +1,22 @@
+
+packages/pi-agent-server/src/native-settlement.test.ts:
+81 |       sessionId: 'settlement-fixture', sessionPath, plansFolderPath: join(sessionPath, 'plans'),
+82 |       agentDir: join(directory, 'agent'), thinkingLevel: 'off' });
+83 |     await waitFor(() => frames.some(frame => frame.type === 'ready'));
+84 |     await send({ type: 'prompt', id: 'first', message: 'Complete every step', systemPrompt: 'Offline QA' });
+85 |     await waitFor(() => frames.some(frame => frame.type === 'fixture_boundary' && frame.stage === 1));
+86 |     expect(completions()).toBe(0);
+                               ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/packages/pi-agent-server/src/native-settlement.test.ts:86:27)
+(fail) closes after the real SDK settles all deferred work, retains exact anchors, then serves a fresh request [666.08ms]
+
+ 0 pass
+ 1 fail
+ 1 expect() calls
+Ran 1 test across 1 file. [1017.00ms]
+bun test v1.4.4 (38afee6c8)

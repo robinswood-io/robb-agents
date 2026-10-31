@@ -15,7 +15,7 @@ describe('handleWaitSessions', () => {
         })),
         timeoutMs,
       }),
-    } as unknown as SessionToolContext;
+    } satisfies Pick<SessionToolContext, 'sessionId' | 'waitForSessions'>;
 
     const result = await handleWaitSessions(ctx, { sessionIds: ['child'], timeoutMs: 250 });
     expect(result.isError).toBeFalsy();
@@ -29,7 +29,7 @@ describe('handleWaitSessions', () => {
     let received: unknown[] = [];
     const ctx = { sessionId: 'parent', waitForSessions: async (...args: unknown[]) => {
       received = args; return { outcome: 'timeout' as const, sessions: [] };
-    } } as unknown as SessionToolContext;
+    } } satisfies Pick<SessionToolContext, 'sessionId' | 'waitForSessions'>;
     const afterCursors = { child: 'a'.repeat(64) };
     await handleWaitSessions(ctx, { sessionIds: ['child'], afterCursors });
     expect(received).toEqual([['child'], undefined, afterCursors, undefined, undefined]);
@@ -41,7 +41,7 @@ describe('handleWaitSessions', () => {
     const ctx = {
       sessionId: 'parent',
       waitForSessions: async () => ({ outcome: 'timeout' as const, sessions: [] }),
-    } as unknown as SessionToolContext;
+    } satisfies Pick<SessionToolContext, 'sessionId' | 'waitForSessions'>;
 
     const result = await handleWaitSessions(ctx, { sessionIds: ['parent'] });
     expect(result.isError).toBe(true);
@@ -63,7 +63,7 @@ describe('handleWaitSessions', () => {
           ],
         };
       },
-    } as unknown as SessionToolContext;
+    } as SessionToolContext;
 
     const result = await handleWaitSessions(ctx, {
       sessionIds: ['a', 'b'],
@@ -89,7 +89,7 @@ describe('handleWaitSessions', () => {
     const ctx = { sessionId: 'parent', waitForSessions: async (...args: unknown[]) => {
       received = args;
       return { outcome: 'timeout' as const, sessions: [] };
-    } } as unknown as SessionToolContext;
+    } } satisfies Pick<SessionToolContext, 'sessionId' | 'waitForSessions'>;
     await handleWaitSessions(ctx, {
       sessionIds: ['child'],
       timeoutMs: 0,

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * ServerSettingsPage
  *
@@ -63,7 +64,7 @@ function configToForm(config: ServerConfig): ServerFormState {
 }
 
 function formToConfig(form: ServerFormState): ServerConfig {
-  return {
+  return omitUndefined<ServerConfig>({
     enabled: form.enabled,
     port: parseInt(form.port, 10) || 9100,
     tlsCertPath: form.tlsCertPath.trim() || undefined,
@@ -73,7 +74,7 @@ function formToConfig(form: ServerFormState): ServerConfig {
     remoteAuthMode: form.remoteAuthMode,
     publicWebuiUrl: form.publicWebuiUrl.trim() || undefined,
     publicWsUrl: form.publicWsUrl.trim() || undefined,
-  }
+  })
 }
 
 function arePublicProxyFieldsValid(form: ServerFormState): boolean {

@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 import { describe, it, expect, beforeEach } from 'bun:test';
 import {
   registerSessionScopedToolCallbacks,
@@ -138,11 +139,11 @@ describe('attachSessionSelfManagementBindings', () => {
         return { requestId: 'first', status: 'pending' };
       },
     });
-    expect(JSON.parse((await handler(ctx, args)).content[0]!.text).requestId).toBe('first');
+    expect(parseJsonObject((await handler(ctx, args)).content[0]!.text)["requestId"]).toBe('first');
     mergeSessionScopedToolCallbacks(sessionId, {
       requestUserInputFn: async () => ({ requestId: 'replacement', status: 'pending' }),
     });
-    expect(JSON.parse((await handler(ctx, args)).content[0]!.text).requestId).toBe('replacement');
+    expect(parseJsonObject((await handler(ctx, args)).content[0]!.text)["requestId"]).toBe('replacement');
     unregisterSessionScopedToolCallbacks(sessionId);
     expect((await handler(ctx, args)).isError).toBe(true);
     expect(calls).toEqual(['scope']);

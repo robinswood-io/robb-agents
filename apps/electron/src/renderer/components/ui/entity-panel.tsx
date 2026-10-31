@@ -27,12 +27,12 @@ export interface EntityPanelProps<T> {
   mapItem: (item: T) => EntityPanelItem
   selection: ReturnType<typeof createEntitySelection>
   onItemClick: (item: T) => void
-  selectedId?: string | null
-  emptyState?: React.ReactNode
-  className?: string
+  selectedId?: string | null | undefined
+  emptyState?: React.ReactNode | undefined
+  className?: string | undefined
   /** Extra data/aria attributes merged onto the inner list container.
    *  Use to set `data-list-role` so compact-mode CSS can target the right list. */
-  containerProps?: Record<string, string>
+  containerProps?: Record<string, string> | undefined
 }
 
 export function EntityPanel<T>({

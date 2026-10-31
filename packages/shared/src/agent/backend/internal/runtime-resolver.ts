@@ -9,7 +9,7 @@ import { setPathToClaudeCodeExecutable } from '../../options.ts';
  * interceptor, and bun in the monorepo / on the system PATH.
  * Intended for local `electron:dist:mac` builds that skip `build-dmg.sh`.
  */
-const IS_DEV_RUNTIME = !!process.env.CRAFT_DEV_RUNTIME;
+const IS_DEV_RUNTIME = !!process.env["CRAFT_DEV_RUNTIME"];
 
 export interface ResolvedBackendRuntimePaths {
   /**
@@ -27,7 +27,6 @@ export interface ResolvedBackendRuntimePaths {
    */
   interceptorBundlePath?: string;
   sessionServerPath?: string;
-  bridgeServerPath?: string;
   piServerPath?: string;
   /** ACP-to-Robb bridge for Mistral Vibe subscription sessions. */
   vibeAcpServerPath?: string;
@@ -222,21 +221,28 @@ function resolveServerPath(hostRuntime: BackendHostRuntimeContext, serverName: s
 function resolveRipgrepPath(hostRuntime: BackendHostRuntimeContext): string | undefined {
   const binaryName = process.platform === 'win32' ? 'rg.exe' : 'rg';
   const ripgrepRelative = join('node_modules', '@vscode', 'ripgrep', 'bin', binaryName);
+  const platformRipgrepRelative = join('node_modules', '@vscode', `ripgrep-${process.platform}-${process.arch}`, 'bin', binaryName);
 
   if (hostRuntime.isPackaged) {
     const externalRoot = externalPackagedAppRoot(hostRuntime);
     const packaged = firstExistingPath([
       ...(externalRoot ? [join(externalRoot, ripgrepRelative)] : []),
+      ...(externalRoot ? [join(externalRoot, platformRipgrepRelative)] : []),
       join(hostRuntime.appRootPath, ripgrepRelative),
+      join(hostRuntime.appRootPath, platformRipgrepRelative),
     ]);
     if (packaged) return packaged;
   }
 
   const fromHostRoot = resolveUpwards(hostRuntime.appRootPath, ripgrepRelative, 10);
   if (fromHostRoot) return fromHostRoot;
+  const platformFromHostRoot = resolveUpwards(hostRuntime.appRootPath, platformRipgrepRelative, 10);
+  if (platformFromHostRoot) return platformFromHostRoot;
 
   const cwdFallback = join(process.cwd(), ripgrepRelative);
   if (existsSync(cwdFallback)) return cwdFallback;
+  const platformCwdFallback = join(process.cwd(), platformRipgrepRelative);
+  if (existsSync(platformCwdFallback)) return platformCwdFallback;
 
   // Non-packaged (headless server, dev mode): fall back to system rg via PATH.
   // Packaged apps must use vendored binary only — never resolve from PATH
@@ -256,13 +262,11 @@ export function resolveBackendRuntimePaths(hostRuntime: BackendHostRuntimeContex
   const bundledRuntimePath = hostRuntime.nodeRuntimePath || resolveBundledRuntimePath(hostRuntime);
   const externalRoot = externalPackagedAppRoot(hostRuntime);
 
-  return {
-    claudeCliPath: resolveClaudeBinaryPath(hostRuntime),
-    interceptorBundlePath: resolveInterceptorBundlePath(hostRuntime),
-    sessionServerPath: resolveServerPath(hostRuntime, 'session-mcp-server'),
-    bridgeServerPath: resolveServerPath(hostRuntime, 'bridge-mcp-server'),
-    piServerPath: resolveServerPath(hostRuntime, 'pi-agent-server'),
-    vibeAcpServerPath: hostRuntime.isPackaged
+  const claudeCliPath = resolveClaudeBinaryPath(hostRuntime);
+  const interceptorBundlePath = resolveInterceptorBundlePath(hostRuntime);
+  const sessionServerPath = resolveServerPath(hostRuntime, 'session-mcp-server');
+  const piServerPath = resolveServerPath(hostRuntime, 'pi-agent-server');
+  const vibeAcpServerPath = hostRuntime.isPackaged
       ? firstExistingPath([
           ...(externalRoot
             ? [
@@ -273,8 +277,8 @@ export function resolveBackendRuntimePaths(hostRuntime: BackendHostRuntimeContex
           join(hostRuntime.appRootPath, 'resources', 'pi-agent-server', 'vibe-acp-server.js'),
           join(hostRuntime.appRootPath, 'dist', 'resources', 'pi-agent-server', 'vibe-acp-server.js'),
         ])
-      : resolveUpwards(hostRuntime.appRootPath, join('packages', 'pi-agent-server', 'dist', 'vibe-acp-server.js')),
-    antigravityServerPath: hostRuntime.isPackaged
+      : resolveUpwards(hostRuntime.appRootPath, join('packages', 'pi-agent-server', 'dist', 'vibe-acp-server.js'));
+  const antigravityServerPath = hostRuntime.isPackaged
       ? firstExistingPath([
           ...(externalRoot
             ? [
@@ -285,15 +289,23 @@ export function resolveBackendRuntimePaths(hostRuntime: BackendHostRuntimeContex
           join(hostRuntime.appRootPath, 'resources', 'pi-agent-server', 'antigravity-server.js'),
           join(hostRuntime.appRootPath, 'dist', 'resources', 'pi-agent-server', 'antigravity-server.js'),
         ])
-      : resolveUpwards(hostRuntime.appRootPath, join('packages', 'pi-agent-server', 'dist', 'antigravity-server.js')),
+      : resolveUpwards(hostRuntime.appRootPath, join('packages', 'pi-agent-server', 'dist', 'antigravity-server.js'));
+  return {
+    ...(claudeCliPath !== undefined ? { claudeCliPath } : {}),
+    ...(interceptorBundlePath !== undefined ? { interceptorBundlePath } : {}),
+    ...(sessionServerPath !== undefined ? { sessionServerPath } : {}),
+    ...(piServerPath !== undefined ? { piServerPath } : {}),
+    ...(vibeAcpServerPath !== undefined ? { vibeAcpServerPath } : {}),
+    ...(antigravityServerPath !== undefined ? { antigravityServerPath } : {}),
     nodeRuntimePath: hostRuntime.nodeRuntimePath || bundledRuntimePath || process.execPath,
-    bundledRuntimePath,
+    ...(bundledRuntimePath !== undefined ? { bundledRuntimePath } : {}),
   };
 }
 
 export function resolveBackendHostTooling(hostRuntime: BackendHostRuntimeContext): ResolvedBackendHostTooling {
+  const ripgrepPath = resolveRipgrepPath(hostRuntime);
   return {
-    ripgrepPath: resolveRipgrepPath(hostRuntime),
+    ...(ripgrepPath !== undefined ? { ripgrepPath } : {}),
   };
 }
 
@@ -310,7 +322,7 @@ export function resolveBackendHostTooling(hostRuntime: BackendHostRuntimeContext
  * try its own auto-discovery via optional-dep node_modules resolution).
  */
 export function applyAnthropicRuntimeBootstrap(
-  hostRuntime: BackendHostRuntimeContext,
+  _hostRuntime: BackendHostRuntimeContext,
   paths: ResolvedBackendRuntimePaths,
   options?: { strict?: boolean },
 ): void {

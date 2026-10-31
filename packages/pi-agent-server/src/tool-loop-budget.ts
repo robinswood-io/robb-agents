@@ -13,7 +13,7 @@ function isMutation(toolName: string, input: Record<string, unknown>): boolean {
   const normalized = toolName.replace(/^(?:mcp__session__|session__)/, '').replace(/([a-z])([A-Z])/g, '$1_$2');
   if (MUTATING_TOOL_PATTERN.test(`_${normalized}_`)) return true;
   if (!/^(?:bash|shell|exec_command)$/i.test(normalized)) return false;
-  const command = [input.command, input.cmd, input.script]
+  const command = [input["command"], input["cmd"], input["script"]]
     .find((value): value is string => typeof value === 'string');
   return !!command && MUTATING_SHELL_PATTERN.test(command);
 }
@@ -34,8 +34,8 @@ function signature(toolName: string, input: Record<string, unknown>): string {
 
 /** Per-prompt deterministic guard against unbatched or unchanged tool loops. */
 export class ToolLoopBudget {
-  private lastToolName?: string;
-  private lastSignature?: string;
+  private lastToolName?: string | undefined;
+  private lastSignature?: string | undefined;
   private totalToolCalls = 0;
   private consecutiveToolCalls = 0;
   private identicalCalls = 0;

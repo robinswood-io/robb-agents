@@ -1,0 +1,16 @@
+{
+  "valid": true,
+  "source": "packages/shared/src/specialized-profiles/registry-store.test.ts",
+  "testDeclarationsPreserved": 15,
+  "sharedDeclarationsPreserved": 13,
+  "setupPreservedInEverySuite": true,
+  "documentedPersistenceDrainFix": false,
+  "ownedLocalDeclarationsPreservedPerFile": true,
+  "importsPreserved": true,
+  "maximumLines": 426,
+  "currentSourceHashes": {
+    "packages/shared/src/specialized-profiles/registry-store.test.ts": "5c888e674f0c092868719938c55646f4422ea268fcf260c827b0569f6a3c670e",
+    "packages/shared/src/specialized-profiles/testing/registry-store-fixture.ts": "eca461d79e2ba392961b7effe8824e48125358701982cc22da95347571ea1f89"
+  },
+  "issues": []
+}

@@ -1,0 +1,427 @@
+[
+  {
+    "legacy_id": "client-incident-autonomy-guard",
+    "name": "Client Incident Autonomy — guard de fraîcheur, cadence et secrets",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/client_incident_autonomy_guard.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "triggerType": "ScheduleStep",
+    "task_queue": "campaigns",
+    "riskClass": "critical_autonomy_guard",
+    "sideEffects": [
+      "reads_reports",
+      "validates_schedule_cadence",
+      "validates_secret_file_presence_and_permissions",
+      "writes_guard_report",
+      "no_external_message",
+      "no_client_mutation"
+    ],
+    "category": "client-support-autonomy",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/client-incident-autonomy-guard-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Critical guard for the client incident autonomy loop. Fails if latest run/tests are stale or failed, if cadence drifts from 09:00/14:00/20:00 Europe/Paris, or if BMB secret/policy is missing.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/client_incident_autonomy_guard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/client-incident-autonomy-guard-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/client-incident-autonomy-guard-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/client-incident-autonomy-guard-last.md",
+    "businessContractVersion": "client-incident-autonomy-guard-v1"
+  },
+  {
+    "legacy_id": "agent-task-inbox-router",
+    "name": "Agent Task — inbox router général dev/OSS/CLI",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/agent_task_inbox.py route-once --max 5",
+    "timeout_seconds": 2700,
+    "cutover_ready": true,
+    "triggerType": "AgentTaskOrDirectQueue",
+    "task_queue": "watchdog",
+    "riskClass": "dev_agent_router_guarded",
+    "sideEffects": [
+      "reads_agent_task_inbox",
+      "writes_agent_task_status",
+      "may_execute_dev_cli_agent_when_task_sets_cliExecutionMode_exec_cli_and_policy_allows"
+    ],
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-inbox-router-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Routes Agent Task inbox entries to OSS wrapper/OpenRouter/Codex/Claude/Night Agent lanes. Dev CLI execution remains allowlisted by policy and task metadata.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/agent_task_inbox.py",
+        "route-once",
+        "--max",
+        "5"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 2700
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-inbox-router-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/agent-task-inbox-router-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/agent-task-inbox-router-last.md",
+    "businessContractVersion": "agent-task-inbox-policy-v1"
+  },
+  {
+    "legacy_id": "bmb-wordpress-structural-audit",
+    "name": "BMB WordPress — audit structurel read-only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/bmb_wordpress_structural_audit.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "triggerType": "ScheduleStep",
+    "task_queue": "campaigns",
+    "riskClass": "read_only_client_wordpress_structural_monitoring",
+    "sideEffects": [
+      "ssh_read_only_bmb_wordpress",
+      "wpcli_read_only_audit",
+      "writes_ops_report",
+      "no_database_mutation",
+      "no_plugin_update",
+      "no_external_message"
+    ],
+    "category": "client-support-autonomy",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/bmb-wordpress-structural-audit-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Read-only structural audit for BMB CE WordPress/WooCommerce/Event Tickets. Tracks HPOS, plugin update debt, license uncertainty, ticket free-code reserves, and recent WooCommerce critical logs. No client mutation.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/bmb_wordpress_structural_audit.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/bmb-wordpress-structural-audit-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/bmb-wordpress-structural-audit-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/bmb-wordpress-structural-audit-last.md",
+    "businessContractVersion": "bmb-wordpress-structural-audit-v1"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-performance-optimizer",
+    "name": "Robinswood PME HDF — performance optimizer prepare-only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_pme_hdf_performance_optimizer.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "riskClass": "prepare_only",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-performance-optimizer-last.json",
+    "note": "Prepare-only performance analysis and optimization memory for HDF campaign; no outbound, no send queue.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_pme_hdf_performance_optimizer.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-performance-optimizer-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-performance-optimizer-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-performance-optimizer-last.md",
+    "businessContractVersion": "robinswood-pme-hdf-performance-optimizer-v1"
+  },
+  {
+    "legacy_id": "oss-p0-structural-fix",
+    "name": "OSS — P0 structural fix applier",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_p0_structural_patch.py",
+    "timeout_seconds": 420,
+    "cutover_ready": true,
+    "triggerType": "ManualDirectOnly",
+    "task_queue": "watchdog",
+    "riskClass": "structural_config_guard",
+    "sideEffects": [
+      "config-write",
+      "schedule-manifest-write",
+      "report-write"
+    ],
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-p0-structural-fix-last.json",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_p0_structural_patch.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 420
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-p0-structural-fix-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-p0-structural-fix-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-p0-structural-fix-last.md",
+    "businessContractVersion": "oss-structural-p0-v1"
+  },
+  {
+    "legacy_id": "oss-structural-guard",
+    "name": "OSS — structural guard registry/cadence validator",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_structural_guard.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "triggerType": "SchedulerTick",
+    "task_queue": "watchdog",
+    "riskClass": "observability_prepare_only",
+    "sideEffects": [
+      "config-read",
+      "report-write"
+    ],
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-structural-guard-last.json",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_structural_guard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-structural-guard-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-structural-guard-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-structural-guard-last.md",
+    "businessContractVersion": "oss-structural-guard-v1"
+  },
+  {
+    "legacy_id": "oss-p1-structural-cleanup",
+    "name": "OSS — P1 structural cleanup archive/migrate active tree",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_p1_structural_cleanup.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "triggerType": "ManualDirectOnly",
+    "task_queue": "watchdog",
+    "riskClass": "structural_archive_guard",
+    "sideEffects": [
+      "config-write",
+      "file-move-archive",
+      "report-write"
+    ],
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-p1-structural-cleanup-last.json",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_p1_structural_cleanup.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-p1-structural-cleanup-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-p1-structural-cleanup-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-p1-structural-cleanup-last.md",
+    "businessContractVersion": "oss-structural-p1-v1"
+  },
+  {
+    "legacy_id": "oss-ops-report-indexer",
+    "name": "OSS Ops Report Indexer",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_ops_report_indexer.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "observability",
+    "sideEffects": [
+      "reads_ops_state",
+      "writes_reports",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_ops_report_indexer.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-ops-report-indexer-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-ops-report-indexer-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-operational-knowledge-synthesizer",
+    "name": "OSS Operational Knowledge Synthesizer",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_operational_knowledge_synthesizer.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "observability",
+    "sideEffects": [
+      "reads_ops_state",
+      "writes_reports",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_operational_knowledge_synthesizer.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-operational-knowledge-synthesizer-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-operational-knowledge-synthesizer-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "langfuse-business-cost-export",
+    "name": "Export coût LLM business Langfuse",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/langfuse_business_cost_export.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "observability",
+    "sideEffects": [
+      "reads_ops_state",
+      "writes_reports",
+      "no_outbound_message"
+    ],
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/langfuse_business_cost_export.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/langfuse-business-cost-export-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/langfuse-business-cost-export-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "temporal-history-audit",
+    "name": "Temporal History Audit",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/temporal_history_audit.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "observability_guardrail",
+    "sideEffects": [
+      "reads_temporal_or_ops_state",
+      "writes_guardrail_report",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/temporal_history_audit.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/temporal-history-audit-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/temporal-history-audit-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "ovh-domain-sentinel",
+    "name": "Surveillance OVH Domain Sentinel",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/ovh_domain_sentinel.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "observability_prepare_only",
+    "sideEffects": [
+      "reads_domain_state",
+      "writes_reports_or_registry",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/ovh_domain_sentinel.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/ovh-domain-sentinel-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/ovh-domain-sentinel-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "ovh-domain-registry-refresh",
+    "name": "Rafraîchissement registre domaines OVH",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/ovh_domain_registry_refresh.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "observability_prepare_only",
+    "sideEffects": [
+      "reads_domain_state",
+      "writes_reports_or_registry",
+      "no_outbound_message"
+    ],
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "note": "P2 manifest alignment: materializes an existing scheduled /srv script; no cron, schedule, or script content changed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/ovh_domain_registry_refresh.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/ovh-domain-registry-refresh-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/ovh-domain-registry-refresh-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  }
+]

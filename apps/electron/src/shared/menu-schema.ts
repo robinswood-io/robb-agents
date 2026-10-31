@@ -35,7 +35,7 @@ export interface MenuItemAction {
 
 export interface MenuItemRole {
   type: 'role'
-  role: string                  // Electron role: 'undo', 'copy', etc.
+  role: NonNullable<import('electron').MenuItemConstructorOptions['role']>
   labelKey: string              // i18n key — resolve with t() at render time
   shortcutDisplayMac?: string
   shortcutDisplayOther?: string

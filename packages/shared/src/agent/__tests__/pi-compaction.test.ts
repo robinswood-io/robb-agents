@@ -5,25 +5,25 @@ import type { BackendConfig } from '../backend/types'
 function createConfig(): BackendConfig {
   return {
     provider: 'pi',
-    workspace: {
+    workspace: { slug: 'test-workspace', createdAt: 1,
       id: 'ws-test',
       name: 'Test Workspace',
       rootPath: '/tmp/craft-agent-compaction-test',
-    } as any,
+    },
     session: {
       id: 'session-test',
       workspaceRootPath: '/tmp/craft-agent-compaction-test',
       createdAt: Date.now(),
       lastUsedAt: Date.now(),
-    } as any,
+    },
     isHeadless: true,
   }
 }
 
 function installFakeSubprocess(agent: PiAgent): Array<Record<string, unknown>> {
   const sent: Array<Record<string, unknown>> = []
-  ;(agent as any).ensureSubprocess = async () => {}
-  ;(agent as any).send = (message: Record<string, unknown>) => sent.push(message)
+  ;agent.ensureSubprocess = async () => {}
+  ;agent['send'] = (message: Record<string, unknown>) => { sent.push(message); return true; }
   return sent
 }
 
@@ -40,13 +40,13 @@ describe('PiAgent compaction RPC', () => {
     let writeAheads = 0
     agent.onProviderHandoff = () => { handoffs += 1 }
     agent.onBeforeProviderDispatch = async () => { writeAheads += 1 }
-    ;(agent as any).send = (message: Record<string, unknown>) => {
+    ;agent['send'] = (message: Record<string, unknown>) => {
       sent.push(message)
-      if (message.type !== 'compact') return
+      if (message["type"] !== 'compact') return true
       queueMicrotask(() => {
-        ;(agent as any).handleLine(JSON.stringify({
+        ;agent.handleLine(JSON.stringify({
           type: 'compact_result',
-          id: message.id,
+          id: message["id"],
           success: true,
           result: {
             summary: 'Compacted locally.',
@@ -55,12 +55,13 @@ describe('PiAgent compaction RPC', () => {
           },
         }))
       })
-    }
+    return true;
+}
 
     const events = []
     for await (const event of agent.chat('/compact')) events.push(event)
 
-    expect(sent.map(message => message.type)).toEqual(['compact'])
+    expect(sent.map(message => message["type"])).toEqual(['compact'])
     expect(events).toEqual([
       { type: 'info', message: 'Compacted context to fit within limits (from ~42,000 tokens)' },
       { type: 'complete' },
@@ -76,9 +77,9 @@ describe('PiAgent compaction RPC', () => {
 
     const pending = agent.compactContext('Keep verified evidence.')
     await flushMicrotasks()
-    const id = sent[0]!.id as string
+    const id = sent[0]!["id"] as string
 
-    ;(agent as any).handleLine(JSON.stringify({
+    ;agent.handleLine(JSON.stringify({
       type: 'compact_result',
       id,
       success: true,
@@ -105,15 +106,15 @@ describe('PiAgent compaction RPC', () => {
     const agent = new PiAgent(createConfig())
     const sent = installFakeSubprocess(agent)
     const originalSetTimeout = globalThis.setTimeout
-    ;(globalThis as any).setTimeout = ((callback: () => void) => originalSetTimeout(callback, 1)) as typeof setTimeout
+    ;globalThis.setTimeout = ((callback: () => void) => originalSetTimeout(callback, 1)) as typeof setTimeout
 
     try {
       await expect(agent.compactContext()).rejects.toThrow(/timed out/i)
-      expect(sent.map(message => message.type)).toEqual(['compact', 'abort_compaction'])
-      expect(sent[1]!.id).toBe(sent[0]!.id)
-      expect((agent as any).pendingCompactions.size).toBe(0)
+      expect(sent.map(message => message["type"])).toEqual(['compact', 'abort_compaction'])
+      expect(sent[1]!["id"]).toBe(sent[0]!["id"])
+      expect(agent.pendingCompactions.size).toBe(0)
     } finally {
-      ;(globalThis as any).setTimeout = originalSetTimeout
+      ;globalThis.setTimeout = originalSetTimeout
       agent.destroy()
     }
   })

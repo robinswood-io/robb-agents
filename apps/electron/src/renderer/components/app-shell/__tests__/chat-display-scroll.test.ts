@@ -2,12 +2,22 @@ import { describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-// ChatDisplay has no RTL/jsdom harness. Keep a focused source guard for the
-// reset wiring; browser-level validation remains necessary for scroll metrics.
-const source = readFileSync(join(__dirname, '../ChatDisplay.tsx'), 'utf8')
+// The scroll behavior spans the display, viewport, and scroll hooks. Keep a
+// source guard for their wiring alongside the browser-level scroll check.
+const displaySource = readFileSync(join(__dirname, '../ChatDisplay.tsx'), 'utf8')
+const source = [
+  'chat-display-contracts.tsx',
+  'ChatTranscriptViewport.tsx',
+  'chat-display-view.tsx',
+  'use-chat-scroll-events.ts',
+  'use-chat-scroll-state.ts',
+].map(file => readFileSync(join(__dirname, '..', file), 'utf8')).join('\n')
+const chatPageSource = readFileSync(join(__dirname, '../../../pages/ChatPage.tsx'), 'utf8')
+const sessionViewerSource = readFileSync(join(__dirname, '../../../../../../../packages/ui/src/components/chat/SessionViewer.tsx'), 'utf8')
 
 describe('ChatDisplay transcript positioning', () => {
   it('repositions compact transcripts when the active session changes', () => {
+    expect(displaySource).toContain('<ChatDisplayView')
     expect(source).toContain('resetKey: string')
     expect(source).toContain('}, [onScroll, resetKey, skip, viewportRef])')
     expect(source).toContain('resetKey={session.id}')
@@ -28,6 +38,11 @@ describe('ChatDisplay transcript positioning', () => {
     expect(source).toContain('presentation="codex"')
     expect(source).toContain('displayMode="informative"')
     expect(source).toMatch(/<JourneyProgress[\s\S]*presentation="codex"/)
+    expect(source).not.toContain('<JourneyOutcome')
+    expect(sessionViewerSource).not.toContain('<JourneyOutcome')
+    expect(chatPageSource).not.toContain('showMissionCompletedPrompt')
+    expect(chatPageSource).not.toContain('showObjectiveReopenedPrompt')
+    expect(chatPageSource).not.toContain('chat.missionCompletedTitle')
     expect(source).toContain('const [showScrollToLatest, setShowScrollToLatest]')
     expect(source).toContain('const handleReturnToLatestMessage')
     expect(source).toContain('{!compactMode && showScrollToLatest &&')

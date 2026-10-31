@@ -1,0 +1,41 @@
+{
+  "status": "passed",
+  "nativeFunctionsUnchanged": 33,
+  "commandsRegisteredInNativeOrder": [
+    "extract",
+    "duplicate",
+    "watermark",
+    "header_footer",
+    "encrypt",
+    "sanitize",
+    "to_image",
+    "to_pptx"
+  ],
+  "files": [
+    {
+      "file": "apps/electron/resources/scripts/pdf_common.py",
+      "lines": 422
+    },
+    {
+      "file": "apps/electron/resources/scripts/pdf_organize.py",
+      "lines": 302
+    },
+    {
+      "file": "apps/electron/resources/scripts/pdf_edit.py",
+      "lines": 295
+    },
+    {
+      "file": "apps/electron/resources/scripts/pdf_security.py",
+      "lines": 230
+    },
+    {
+      "file": "apps/electron/resources/scripts/pdf_convert.py",
+      "lines": 164
+    },
+    {
+      "file": "apps/electron/resources/scripts/pdf_tool.py",
+      "lines": 49
+    }
+  ],
+  "finalWhitespaceCheck": "Removed one extra EOF newline only; Python AST identical."
+}

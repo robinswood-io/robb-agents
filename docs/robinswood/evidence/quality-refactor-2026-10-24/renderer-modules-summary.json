@@ -1,0 +1,81 @@
+{
+  "status": "testé dans le candidat local ; chantier global en cours",
+  "scope": "Types des événements, atomes de sessions, recherche, icônes et automatismes de l’interface",
+  "declarationsPreserved": 112,
+  "maximumLines": 422,
+  "simplification": "41 interfaces identiques réutilisent les variantes du protocole partagé ; sept projections distinctes conservées. JavaScript généré identique.",
+  "structure": "Fonctions et atomes déplacés directement avec conservation des corps, imports et exports ; aucun cycle entre les modules.",
+  "checks": {
+    "renderer-modules-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 19.15,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/renderer-modules-types.log"
+    },
+    "renderer-modules-lint": {
+      "command": [
+        "rtk",
+        "bunx",
+        "eslint",
+        "--max-warnings",
+        "0",
+        "apps/electron/src/renderer/event-processor/types.ts",
+        "apps/electron/src/renderer/atoms/sessions.ts",
+        "apps/electron/src/renderer/atoms/sessions",
+        "apps/electron/src/renderer/hooks/useSessionSearch.ts",
+        "apps/electron/src/renderer/hooks/useSessionSearch",
+        "apps/electron/src/renderer/lib/icon-cache.ts",
+        "apps/electron/src/renderer/lib/icon-cache",
+        "apps/electron/src/renderer/components/automations/types.ts",
+        "apps/electron/src/renderer/components/automations/types"
+      ],
+      "exitCode": 0,
+      "seconds": 1.16,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/renderer-modules-lint.log"
+    },
+    "renderer-modules-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 17.45,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/renderer-modules-build.log"
+    },
+    "renderer-modules-all-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 142.0,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/renderer-modules-all-tests.log"
+    },
+    "renderer-contract-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./apps/electron/src/renderer/event-processor"
+      ],
+      "exitCode": 0,
+      "seconds": 0.3,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/renderer-contract-tests.log"
+    }
+  },
+  "remaining": {
+    "max-lines": 192,
+    "no-explicit-any": 564
+  },
+  "pending": "Vérification UI et missions réelles complètes dans le candidat final ; autres violations historiques du seuil et du typage.",
+  "installedApplication": "inchangée"
+}

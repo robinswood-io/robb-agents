@@ -1,4 +1,7 @@
+import { z } from 'zod';
+const outboundMessageSchema = z.record(z.string(), z.unknown());
 import { afterEach, describe, expect, it } from 'bun:test';
+import type { AssistantMessage, TextContent } from '@earendil-works/pi-ai';
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -54,9 +57,9 @@ describe('Google Antigravity NDJSON bridge', () => {
       cwd: join(import.meta.dir, '..'),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
-    const output: Array<Record<string, any>> = [];
+    const output: Array<Record<string, unknown>> = [];
     const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });
-    lines.on('line', line => output.push(JSON.parse(line)));
+    lines.on('line', line => output.push(outboundMessageSchema.parse(JSON.parse(line))));
     const exit = new Promise<void>(resolve => child.once('exit', () => resolve()));
     const waitFor = async (predicate: () => boolean) => {
       const deadline = Date.now() + 5_000;
@@ -69,7 +72,7 @@ describe('Google Antigravity NDJSON bridge', () => {
 
     try {
       send({ type: 'prompt', id: 'pre-write-turn', message: 'never sent' });
-      await waitFor(() => output.some(message => message.type === 'error'));
+      await waitFor(() => output.some(message => message["type"] === 'error'));
 
       expect(output).toContainEqual({
         type: 'error',
@@ -77,7 +80,7 @@ describe('Google Antigravity NDJSON bridge', () => {
         id: 'pre-write-turn',
         message: 'Google Antigravity rejected this turn before sending it to the provider. Confirm that `agy` is signed in, then try again.',
       });
-      expect(output.some(message => message.type === 'provider_handoff')).toBe(false);
+      expect(output.some(message => message["type"] === 'provider_handoff')).toBe(false);
     } finally {
       send({ type: 'shutdown' });
       const timer = setTimeout(() => child.kill('SIGKILL'), 1_000);
@@ -105,14 +108,14 @@ input.on('line', (line) => {
       cwd: join(import.meta.dir, '..'),
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
-        HOME: process.env.HOME,
-        PATH: process.env.PATH,
+        HOME: process.env["HOME"],
+        PATH: process.env["PATH"],
         ROBB_ANTIGRAVITY_COMMAND: executable,
       },
     });
-    const output: Array<Record<string, any>> = [];
+    const output: Array<Record<string, unknown>> = [];
     const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });
-    lines.on('line', line => output.push(JSON.parse(line)));
+    lines.on('line', line => output.push(outboundMessageSchema.parse(JSON.parse(line))));
     const exit = new Promise<void>(resolve => child.once('exit', () => resolve()));
     const waitFor = async (predicate: () => boolean) => {
       const deadline = Date.now() + 5_000;
@@ -125,15 +128,15 @@ input.on('line', (line) => {
 
     try {
       send({ type: 'init', cwd: directory, model: 'pi/google-antigravity' });
-      await waitFor(() => output.some(message => message.type === 'ready'));
+      await waitFor(() => output.some(message => message["type"] === 'ready'));
       send({ type: 'prompt', id: 'written-turn', message: 'written before exit' });
       await waitFor(() => output.some(message => (
-        message.type === 'event' && message.event?.type === 'agent_end'
+        message["type"] === 'event' && (message["event"] as Record<string, unknown> | undefined)?.["type"] === 'agent_end'
       )));
 
       expect(output).toContainEqual({ type: 'provider_handoff', id: 'written-turn' });
-      expect(output.some(message => message.type === 'error' && message.code === 'prompt_error')).toBe(false);
-      expect(output.some(message => message.type === 'error' && message.id === 'written-turn')).toBe(false);
+      expect(output.some(message => message["type"] === 'error' && message["code"] === 'prompt_error')).toBe(false);
+      expect(output.some(message => message["type"] === 'error' && message["id"] === 'written-turn')).toBe(false);
     } finally {
       if (child.exitCode === null) send({ type: 'shutdown' });
       const timer = setTimeout(() => child.kill('SIGKILL'), 1_000);
@@ -149,14 +152,14 @@ input.on('line', (line) => {
       cwd: join(import.meta.dir, '..'),
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
-        HOME: process.env.HOME,
-        PATH: process.env.PATH,
+        HOME: process.env["HOME"],
+        PATH: process.env["PATH"],
         ROBB_ANTIGRAVITY_COMMAND: fakeAgy.executable,
       },
     });
     const output: Array<Record<string, unknown>> = [];
     const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });
-    lines.on('line', line => output.push(JSON.parse(line)));
+    lines.on('line', line => output.push(outboundMessageSchema.parse(JSON.parse(line))));
 
     const waitFor = async (predicate: () => boolean) => {
       const deadline = Date.now() + 10_000;
@@ -172,7 +175,7 @@ input.on('line', (line) => {
       model: 'pi/gemini-3.7-flash-low',
       thinkingLevel: 'low',
     })}\n`);
-    await waitFor(() => output.some(message => message.type === 'ready'));
+    await waitFor(() => output.some(message => message["type"] === 'ready'));
     await waitFor(() => Bun.file(fakeAgy.argvLog).size > 0);
 
     const launchArguments = await Bun.file(fakeAgy.argvLog).json() as string[];
@@ -186,8 +189,8 @@ input.on('line', (line) => {
       systemPrompt: 'Follow Robb instructions.',
     })}\n`);
     await waitFor(() => output.some(message => (
-      message.type === 'event'
-      && (message.event as Record<string, unknown>)?.type === 'agent_end'
+      message["type"] === 'event'
+      && (message["event"] as Record<string, unknown>)?.["type"] === 'agent_end'
     )));
 
     expect(output).toContainEqual({ type: 'provider_handoff', id: 'turn-1' });
@@ -200,12 +203,12 @@ input.on('line', (line) => {
       },
     });
     const messageEnd = output.find(message => (
-      message.type === 'event'
-      && (message.event as Record<string, unknown>)?.type === 'message_end'
+      message["type"] === 'event'
+      && (message["event"] as Record<string, unknown>)?.["type"] === 'message_end'
     ));
     expect(messageEnd).toBeDefined();
-    expect((messageEnd!.event as any).message.content[0].text).toBe('bridge-ok\n');
-    expect((messageEnd!.event as any).message.usage).toEqual({
+    expect(((messageEnd!["event"] as { message: AssistantMessage }).message.content[0]! as TextContent).text).toBe('bridge-ok\n');
+    expect((messageEnd!["event"] as { message: AssistantMessage }).message.usage).toEqual({
       input: 100,
       output: 10,
       cacheRead: 0,
@@ -230,14 +233,14 @@ input.on('line', (line) => {
       cwd: join(import.meta.dir, '..'),
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
-        HOME: process.env.HOME,
-        PATH: process.env.PATH,
+        HOME: process.env["HOME"],
+        PATH: process.env["PATH"],
         ROBB_ANTIGRAVITY_COMMAND: fakeAgy.executable,
       },
     });
     const output: Array<Record<string, unknown>> = [];
     const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });
-    lines.on('line', line => output.push(JSON.parse(line)));
+    lines.on('line', line => output.push(outboundMessageSchema.parse(JSON.parse(line))));
 
     const waitFor = async (predicate: () => boolean) => {
       const deadline = Date.now() + 10_000;
@@ -254,7 +257,7 @@ input.on('line', (line) => {
         model: 'pi/claude-sonnet-4-6',
         thinkingLevel: 'high',
       })}\n`);
-      await waitFor(() => output.some(message => message.type === 'ready'));
+      await waitFor(() => output.some(message => message["type"] === 'ready'));
       await waitFor(() => Bun.file(fakeAgy.argvLog).size > 0);
 
       const launchArguments = await Bun.file(fakeAgy.argvLog).json() as string[];
@@ -295,14 +298,14 @@ input.on('line', (line) => {
       cwd: join(import.meta.dir, '..'),
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
-        HOME: process.env.HOME,
-        PATH: process.env.PATH,
+        HOME: process.env["HOME"],
+        PATH: process.env["PATH"],
         ROBB_ANTIGRAVITY_COMMAND: executable,
       },
     });
     const output: Array<Record<string, unknown>> = [];
     const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });
-    lines.on('line', line => output.push(JSON.parse(line)));
+    lines.on('line', line => output.push(outboundMessageSchema.parse(JSON.parse(line))));
 
     const waitFor = async (predicate: () => boolean) => {
       const deadline = Date.now() + 10_000;
@@ -318,16 +321,16 @@ input.on('line', (line) => {
         cwd: directory,
         model: 'pi/gpt-oss-120b-medium',
       })}\n`);
-      await waitFor(() => output.some(message => message.type === 'ready'));
+      await waitFor(() => output.some(message => message["type"] === 'ready'));
 
       child.stdin!.write(`${JSON.stringify({
         type: 'prompt',
         id: 'turn-cap',
         message: 'hello',
       })}\n`);
-      await waitFor(() => output.some(message => message.type === 'error' && (message as any).code === 'GOOGLE_ANTIGRAVITY_CAPACITY_LIMIT'));
+      await waitFor(() => output.some(message => message["type"] === 'error' && message["code"] === 'GOOGLE_ANTIGRAVITY_CAPACITY_LIMIT'));
 
-      const errorEvent = output.find(m => m.type === 'error');
+      const errorEvent = output.find(m => m["type"] === 'error');
       expect(errorEvent).toEqual({
         type: 'error',
         code: 'GOOGLE_ANTIGRAVITY_CAPACITY_LIMIT',

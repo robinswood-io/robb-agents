@@ -1,7 +1,8 @@
-import { createHash } from 'node:crypto';
+import { isUnknownArray } from '@craft-agent/shared/utils/json';
 import type { Message, ObjectiveAcceptanceCriterion } from '@craft-agent/core/types';
 import type { ActiveSessionObjective } from '@craft-agent/shared/sessions';
 import { parseIndependentReviewReceipt } from '@craft-agent/shared/agent';
+import { objectiveReviewBinding } from './objective-contract.ts';
 
 export interface LegacyAcceptanceScalarDiagnostic {
   kind: 'legacy-scalar-coercion';
@@ -20,11 +21,10 @@ export interface ObjectiveAcceptanceCriteriaProjection {
 const REGISTRATION = /^(?:mcp__session__|session__)?set_completion_criteria$/;
 // Match every review tool recognized by objective-outcome, including aliases.
 const REVIEW = /(?:call_llm|spawn_session|wait_sessions|reviewer|review)/i;
-const hash = (value: unknown): string => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
+const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !isUnknownArray(value);
 const keysExactly = (value: Record<string, unknown>, keys: string[]): boolean =>
   Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
-const canonical = (value: unknown): string => JSON.stringify(value, (_key, item) => record(item)
+const canonical = (value: unknown): string => JSON.stringify(value, (_key: string, item: unknown): unknown => record(item)
   ? Object.fromEntries(Object.keys(item).sort().map(key => [key, item[key]])) : item);
 
 /** Our host serializes these ACKs with JSON.stringify. This also refuses duplicate
@@ -32,12 +32,13 @@ const canonical = (value: unknown): string => JSON.stringify(value, (_key, item)
 function parseHostAck(text: string): Record<string, unknown> | undefined {
   if (!text || text.length > 256_000) return undefined;
   try {
-    let value = JSON.parse(text);
+    let value: unknown = JSON.parse(text);
     if (JSON.stringify(value) !== text.trim()) return undefined;
-    if (record(value) && Array.isArray(value.content)) {
-      if (value.isError || value.content.length !== 1 || value.content[0]?.type !== 'text'
-        || typeof value.content[0]?.text !== 'string') return undefined;
-      const inner = value.content[0].text;
+    if (record(value) && isUnknownArray(value["content"])) {
+      const block = value["content"][0];
+      if (value["isError"] || value["content"].length !== 1 || !record(block) || block["type"] !== 'text'
+        || typeof block["text"] !== 'string') return undefined;
+      const inner = block["text"];
       value = JSON.parse(inner);
       if (JSON.stringify(value) !== inner.trim()) return undefined;
     }
@@ -46,10 +47,10 @@ function parseHostAck(text: string): Record<string, unknown> | undefined {
 }
 
 function strictRawShape(value: unknown): value is ObjectiveAcceptanceCriterion[] {
-  return Array.isArray(value) && value.length > 0 && value.length <= 16 && value.every(item =>
+  return isUnknownArray(value) && value.length > 0 && value.length <= 16 && value.every(item =>
     record(item) && keysExactly(item, ['id', 'description', 'toolName', 'input', 'checks'])
-    && record(item.input) && Array.isArray(item.checks)
-    && item.checks.every(check => record(check) && keysExactly(check, ['path', 'equals'])));
+    && record(item["input"]) && isUnknownArray(item["checks"])
+    && item["checks"].every(check => record(check) && keysExactly(check, ['path', 'equals'])));
 }
 
 /** Simulation of the old anyOf[string,number,boolean,null] with coerceTypes:true.
@@ -85,15 +86,17 @@ export function recoverLegacyAcceptanceScalars(
   const rootIndex = messages.findIndex(message => message.role === 'user' && message.id === objective.userMessageId);
   if (rootIndex < 0) return undefined;
   const scoped = messages.slice(rootIndex + 1);
-  const persistedCriteriaSha256 = hash(saved);
+  const persistedCriteriaSha256 = objectiveReviewBinding(objective).acceptanceSha256;
   // Changing expected scalar types changes the meaning/hash of a bound review.
   // Never reuse such a review across the projection, even in a standard-risk task.
   for (const message of scoped) {
     if (!REVIEW.test(message.toolName ?? '') || message.role !== 'tool' || !message.toolResult) continue;
+    const candidateSessionIds: unknown = message.toolInput?.['sessionIds'];
+    const sessionIds = isUnknownArray(candidateSessionIds)
+      && candidateSessionIds.every((id): id is string => typeof id === 'string') ? candidateSessionIds : undefined;
     const receipt = parseIndependentReviewReceipt(message.toolResult, {
       toolName: message.toolName!, objectiveId: objective.objectiveId, acceptanceSha256: persistedCriteriaSha256,
-      sessionIds: Array.isArray(message.toolInput?.sessionIds) && message.toolInput.sessionIds.every(id => typeof id === 'string')
-        ? message.toolInput.sessionIds as string[] : undefined,
+      ...(sessionIds !== undefined ? { sessionIds } : {}),
     });
     if (receipt && (receipt.acceptanceSha256 === persistedCriteriaSha256
       || receipt.criteria.some(item => saved.some(criterion => criterion.id === item.id)))) return undefined;
@@ -114,21 +117,21 @@ export function recoverLegacyAcceptanceScalars(
       || (message as Message & { continuationRequired?: boolean }).continuationRequired) return undefined;
     const ack = parseHostAck(message.toolResult ?? '');
     const input = message.toolInput;
-    if (!ack || ack.objectiveId !== objective.objectiveId || !Array.isArray(ack.criteria)
-      || canonical(ack.criteria) !== canonical(saved) || !record(input)
+    if (!ack || ack["objectiveId"] !== objective.objectiveId || !isUnknownArray(ack["criteria"])
+      || canonical(ack["criteria"]) !== canonical(saved) || !record(input)
       || Object.keys(input).some(key => !['criteria', '_intent', '_displayName'].includes(key))
-      || !strictRawShape(input.criteria) || !validateOriginal(input.criteria)) return undefined;
-    const replay = legacyStringFirst(input.criteria);
-    if (!replay.changes || canonical(replay.criteria) !== canonical(ack.criteria)) return undefined;
+      || !strictRawShape(input["criteria"]) || !validateOriginal(input["criteria"])) return undefined;
+    const replay = legacyStringFirst(input["criteria"]);
+    if (!replay.changes || canonical(replay.criteria) !== canonical(ack["criteria"])) return undefined;
     witness = message;
-    original = structuredClone(input.criteria);
+    original = structuredClone(input["criteria"]);
     changes = replay.changes;
   }
   if (!witness || !original) return undefined;
   return { criteria: original, diagnostic: {
     kind: 'legacy-scalar-coercion', objectiveId: objective.objectiveId,
     registrationMessageId: witness.id, registrationToolUseId: witness.toolUseId!, scalarChangeCount: changes,
-    persistedCriteriaSha256, projectedCriteriaSha256: hash(original),
+    persistedCriteriaSha256, projectedCriteriaSha256: objectiveReviewBinding({ ...objective, acceptanceCriteria: original }).acceptanceSha256,
   } };
 }
 

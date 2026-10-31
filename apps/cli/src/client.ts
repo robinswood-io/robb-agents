@@ -25,10 +25,10 @@ interface PendingRequest {
 }
 
 export interface CliClientOptions {
-  token?: string
-  workspaceId?: string
-  requestTimeout?: number
-  connectTimeout?: number
+  token?: string | undefined
+  workspaceId?: string | undefined
+  requestTimeout?: number | undefined
+  connectTimeout?: number | undefined
 }
 
 // ---------------------------------------------------------------------------
@@ -74,8 +74,8 @@ export class CliRpcClient {
           id: crypto.randomUUID(),
           type: 'handshake',
           protocolVersion: PROTOCOL_VERSION,
-          workspaceId: this.workspaceId,
-          token: this.token,
+          ...(this.workspaceId !== undefined ? { workspaceId: this.workspaceId } : {}),
+          ...(this.token !== undefined ? { token: this.token } : {}),
         }
         this.ws!.send(serializeEnvelope(handshake))
       }
@@ -100,8 +100,9 @@ export class CliRpcClient {
           resolve(this._clientId!)
         } else if (envelope.type === 'error') {
           clearTimeout(timer)
-          const err = new Error(envelope.error?.message ?? 'Connection rejected')
-          ;(err as any).code = envelope.error?.code
+          const err = Object.assign(new Error(envelope.error?.message ?? 'Connection rejected'), {
+            code: envelope.error?.code,
+          })
           reject(err)
         }
       }
@@ -208,9 +209,9 @@ export class CliRpcClient {
           this.pending.delete(envelope.id)
           clearTimeout(req.timeout)
           if (envelope.error) {
-            const err = new Error(envelope.error.message)
-            ;(err as any).code = envelope.error.code
-            ;(err as any).data = envelope.error.data
+            const err = Object.assign(new Error(envelope.error.message), {
+              code: envelope.error.code, data: envelope.error.data,
+            })
             req.reject(err)
           } else {
             req.resolve(envelope.result)

@@ -37,7 +37,7 @@ describe('IncompleteToolTailRecovery', () => {
     const recovery = new IncompleteToolTailRecovery();
     recovery.beginPrompt();
 
-    expect(recovery.shouldSuppressAgentEnd(finalTail)).toBe(false);
+    expect(recovery.observeSettledTail(finalTail)).toBe(false);
     expect(await recovery.recover(async () => {})).toBe('none');
 
     recovery.endPrompt();
@@ -46,12 +46,12 @@ describe('IncompleteToolTailRecovery', () => {
   it('continues once when Pi ends immediately after a tool result', async () => {
     const recovery = new IncompleteToolTailRecovery();
     recovery.beginPrompt();
-    expect(recovery.shouldSuppressAgentEnd(toolTail)).toBe(true);
+    expect(recovery.observeSettledTail(toolTail)).toBe(true);
 
     let continuations = 0;
     const result = await recovery.recover(async () => {
       continuations += 1;
-      expect(recovery.shouldSuppressAgentEnd(finalTail)).toBe(false);
+      expect(recovery.observeSettledTail(finalTail)).toBe(false);
     });
 
     expect(result).toBe('recovered');
@@ -62,12 +62,12 @@ describe('IncompleteToolTailRecovery', () => {
   it('continues when Pi unexpectedly aborts after partial assistant commentary', async () => {
     const recovery = new IncompleteToolTailRecovery();
     recovery.beginPrompt();
-    expect(recovery.shouldSuppressAgentEnd(partialAssistantTail)).toBe(true);
+    expect(recovery.observeSettledTail(partialAssistantTail)).toBe(true);
 
     let continuations = 0;
     const result = await recovery.recover(async () => {
       continuations += 1;
-      expect(recovery.shouldSuppressAgentEnd([
+      expect(recovery.observeSettledTail([
         { role: 'assistant', stopReason: 'stop' },
       ])).toBe(false);
     });
@@ -81,13 +81,13 @@ describe('IncompleteToolTailRecovery', () => {
     const recovery = new IncompleteToolTailRecovery();
     recovery.beginPrompt();
 
-    expect(recovery.shouldSuppressAgentEnd([
+    expect(recovery.observeSettledTail([
       { role: 'assistant', stopReason: 'stop' },
     ])).toBe(false);
-    expect(recovery.shouldSuppressAgentEnd([
+    expect(recovery.observeSettledTail([
       { role: 'assistant', stopReason: 'error' },
     ])).toBe(false);
-    expect(recovery.shouldSuppressAgentEnd([
+    expect(recovery.observeSettledTail([
       { role: 'assistant', stopReason: 'length' },
     ])).toBe(false);
     expect(await recovery.recover(async () => {})).toBe('none');
@@ -100,7 +100,7 @@ describe('IncompleteToolTailRecovery', () => {
     recovery.beginPrompt();
     recovery.requestAbort();
 
-    expect(recovery.shouldSuppressAgentEnd(partialAssistantTail)).toBe(false);
+    expect(recovery.observeSettledTail(partialAssistantTail)).toBe(false);
     expect(await recovery.recover(async () => {})).toBe('none');
 
     recovery.endPrompt();
@@ -109,12 +109,12 @@ describe('IncompleteToolTailRecovery', () => {
   it('retries repeated tool-tail endings but remains bounded', async () => {
     const recovery = new IncompleteToolTailRecovery(2);
     recovery.beginPrompt();
-    expect(recovery.shouldSuppressAgentEnd(toolTail)).toBe(true);
+    expect(recovery.observeSettledTail(toolTail)).toBe(true);
 
     let continuations = 0;
     const result = await recovery.recover(async () => {
       continuations += 1;
-      expect(recovery.shouldSuppressAgentEnd(toolTail)).toBe(true);
+      expect(recovery.observeSettledTail(toolTail)).toBe(true);
     });
 
     expect(result).toBe('exhausted');
@@ -125,7 +125,7 @@ describe('IncompleteToolTailRecovery', () => {
   it('does not recover an explicitly aborted prompt', async () => {
     const recovery = new IncompleteToolTailRecovery();
     recovery.beginPrompt();
-    expect(recovery.shouldSuppressAgentEnd(toolTail)).toBe(true);
+    expect(recovery.observeSettledTail(toolTail)).toBe(true);
     recovery.requestAbort();
 
     let continued = false;

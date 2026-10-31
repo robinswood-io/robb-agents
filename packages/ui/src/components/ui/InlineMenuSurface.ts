@@ -110,7 +110,7 @@ export class InlineMenuSurface<T> {
     const target = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-index]')
     if (!target) return
 
-    const index = Number(target.dataset.index ?? '-1')
+    const index = Number(target.dataset["index"] ?? '-1')
     if (Number.isNaN(index) || index < 0 || index >= this.items.length) return
 
     this.setSelectedIndex(index)

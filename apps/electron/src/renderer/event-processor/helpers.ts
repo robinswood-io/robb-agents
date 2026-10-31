@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Message Operation Helpers
  *
@@ -47,7 +48,8 @@ export function findStreamingMessage(
   }
   // Fallback: find last streaming assistant message
   for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i].role === 'assistant' && messages[i].isStreaming) {
+    const message = messages[i]
+    if (message?.role === 'assistant' && message.isStreaming) {
       return i
     }
   }
@@ -69,7 +71,8 @@ export function findAssistantMessage(
   }
   // Fallback: find last streaming assistant message
   for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i].role === 'assistant' && messages[i].isStreaming) {
+    const message = messages[i]
+    if (message?.role === 'assistant' && message.isStreaming) {
       return i
     }
   }
@@ -91,17 +94,23 @@ export function findToolMessage(
  * Always creates new references (immutable update)
  * @param updateTimestamp - If true, also update lastMessageAt
  */
+type MessageUpdate = {
+  [K in keyof Message]?: Message[K] | ({} extends Pick<Message, K> ? undefined : never)
+}
+
 export function updateMessageAt(
   session: Session,
   index: number,
-  updates: Partial<Message>,
+  updates: MessageUpdate,
   updateTimestamp = false
 ): Session {
   if (index < 0 || index >= session.messages.length) {
     return session
   }
   const messages = [...session.messages]
-  messages[index] = { ...messages[index], ...updates }
+  const previous = messages[index]
+  if (!previous) return session
+  messages[index] = omitUndefined<Message>({ ...previous, ...updates })
   return {
     ...session,
     messages,

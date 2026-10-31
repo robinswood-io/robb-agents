@@ -190,7 +190,7 @@ export class LongRunningProcessSupervisor {
   private reportError?: string;
 
   start(options: SupervisorStartOptions = {}): void {
-    this.healthReportPath = options.healthReportPath ?? this.healthReportPath;
+    if (options.healthReportPath !== undefined) this.healthReportPath = options.healthReportPath;
     this.terminationGraceMs = options.terminationGraceMs ?? this.terminationGraceMs;
     if (!this.sweepTimer) {
       this.sweepTimer = setInterval(() => void this.sweep(), options.sweepIntervalMs ?? DEFAULT_SWEEP_INTERVAL_MS);
@@ -303,7 +303,7 @@ export class LongRunningProcessSupervisor {
     try {
       const output = await execFileText('ps', ['-o', '%cpu=,rss=', '-p', String(pid)]);
       const [cpu, rssKb] = output.trim().split(/\s+/).map(Number);
-      if (Number.isFinite(cpu)) record.cpuPercent = cpu;
+      if (Number.isFinite(cpu)) if (cpu === undefined) { delete record.cpuPercent } else { record.cpuPercent = cpu }
       if (rssKb !== undefined && Number.isFinite(rssKb)) record.rssBytes = rssKb * 1024;
     } catch {
       if (!isAlive(pid)) {
@@ -385,17 +385,17 @@ export class LongRunningProcessSupervisor {
       id: record.registration.id,
       kind: record.registration.kind,
       ownerId: record.registration.ownerId,
-      pid: record.child.pid,
+      ...(record.child.pid !== undefined ? { pid: record.child.pid } : {}),
       status: record.status,
       startedAt: new Date(record.startedAtMs).toISOString(),
       lastActivityAt: new Date(record.lastActivityAtMs).toISOString(),
       idleForMs: Math.max(0, now - record.lastActivityAtMs),
       maxIdleMs: record.registration.maxIdleMs ?? DEFAULT_IDLE_TIMEOUT_MS,
-      cpuPercent: record.cpuPercent,
-      rssBytes: record.rssBytes,
-      exitCode: record.exitCode,
-      exitSignal: record.exitSignal,
-      terminationReason: record.terminationReason,
+      ...(record.cpuPercent !== undefined ? { cpuPercent: record.cpuPercent } : {}),
+      ...(record.rssBytes !== undefined ? { rssBytes: record.rssBytes } : {}),
+      ...(record.exitCode !== undefined ? { exitCode: record.exitCode } : {}),
+      ...(record.exitSignal !== undefined ? { exitSignal: record.exitSignal } : {}),
+      ...(record.terminationReason !== undefined ? { terminationReason: record.terminationReason } : {}),
       metadata: { ...(record.registration.metadata ?? {}) },
     }));
     const running = processes.filter((item) => item.status === 'running').length;
@@ -430,7 +430,7 @@ export class LongRunningProcessSupervisor {
   writeHealthReport(): void {
     if (!this.healthReportPath) return;
     try {
-      this.reportError = undefined;
+      delete this.reportError
       mkdirSync(dirname(this.healthReportPath), { recursive: true });
       atomicWriteFileSync(this.healthReportPath, `${JSON.stringify(this.snapshot(), null, 2)}\n`);
     } catch (error) {
@@ -443,8 +443,8 @@ export class LongRunningProcessSupervisor {
   shutdown(reason = 'server shutdown'): void {
     if (this.sweepTimer) clearInterval(this.sweepTimer);
     if (this.reportTimer) clearInterval(this.reportTimer);
-    this.sweepTimer = undefined;
-    this.reportTimer = undefined;
+    delete this.sweepTimer
+    delete this.reportTimer
     for (const record of this.records.values()) this.terminateRecord(record, reason);
     this.writeHealthReport();
   }

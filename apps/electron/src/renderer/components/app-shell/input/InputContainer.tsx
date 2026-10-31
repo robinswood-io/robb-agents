@@ -12,13 +12,13 @@ import { readUsableViewportHeight, subscribeToViewportHeight } from './viewport-
 
 interface InputContainerProps extends Omit<FreeFormInputProps, 'inputRef'> {
   /** Structured input state - when present, shows structured UI instead of freeform */
-  structuredInput?: StructuredInputState
+  structuredInput?: StructuredInputState | undefined
   /** Callback when user responds to structured input */
-  onStructuredResponse?: (response: StructuredResponse) => void | Promise<void>
+  onStructuredResponse?: ((response: StructuredResponse) => void | Promise<void>) | undefined
   /** External ref for the input (for focus control) */
-  textareaRef?: React.RefObject<RichTextInputHandle>
+  textareaRef?: React.RefObject<RichTextInputHandle | null> | undefined
   /** Per-frame callback during height animation (for scroll sync) */
-  onAnimatedHeightChange?: (delta: number) => void
+  onAnimatedHeightChange?: ((delta: number) => void) | undefined
 }
 
 // Animation timing - synced across height and opacity
@@ -26,7 +26,7 @@ const TRANSITION_DURATION = 0.25
 const TRANSITION_EASE = [0.4, 0, 0.2, 1] as const
 
 // Fallback heights (used on first render before measurement)
-const FALLBACK_HEIGHTS: Record<InputMode | string, number> = {
+const FALLBACK_HEIGHTS = {
   freeform: 114,
   'freeform-compact': 70,  // Smaller for compact mode
   permission: 200,
@@ -59,7 +59,7 @@ export function InputContainer({
   // Separate height states: freeform uses callback, structured uses measuring div
   // Use smaller fallback height for compact mode
   const [freeformHeight, setFreeformHeight] = React.useState<number>(
-    compactMode ? FALLBACK_HEIGHTS['freeform-compact'] : FALLBACK_HEIGHTS.freeform
+    compactMode ? FALLBACK_HEIGHTS['freeform-compact'] : FALLBACK_HEIGHTS["freeform"]
   )
   const [structuredHeight, setStructuredHeight] = React.useState<number | null>(null)
   const [viewportHeight, setViewportHeight] = React.useState<number>(() =>
@@ -93,6 +93,8 @@ export function InputContainer({
       }, TRANSITION_DURATION * 1000 + 100)
       return () => clearTimeout(timer)
     }
+  
+    return undefined;
   }, [contentKey, isTransitioning])
 
   // Compact-mode collapse-during-thinking is escapable: the user can hover or
@@ -180,7 +182,7 @@ export function InputContainer({
   // to viewport-aware bounds; their internals scroll so action buttons stay reachable.
   const rawTargetHeight = mode === 'freeform'
     ? freeformHeight
-    : (structuredHeight ?? FALLBACK_HEIGHTS[structuredInput?.type ?? 'freeform'] ?? FALLBACK_HEIGHTS.freeform)
+    : (structuredHeight ?? FALLBACK_HEIGHTS[structuredInput?.type ?? 'freeform'] ?? FALLBACK_HEIGHTS["freeform"])
   const structuredMaxHeight = getStructuredInputMaxHeight(viewportHeight)
   const targetHeight = mode === 'freeform'
     ? rawTargetHeight

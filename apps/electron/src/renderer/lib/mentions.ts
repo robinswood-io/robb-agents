@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Utilities for parsing [bracket] mentions from chat messages
  *
@@ -201,7 +202,7 @@ export function extractBadges(
       rawText = `[skill:${pluginName}:${match.id}]`
     }
 
-    return {
+    return omitUndefined({
       type: match.type as 'source' | 'skill' | 'file' | 'folder',
       label,
       rawText,
@@ -209,6 +210,6 @@ export function extractBadges(
       filePath,
       start: match.startIndex,
       end: match.startIndex + match.fullMatch.length,
-    }
+    })
   })
 }

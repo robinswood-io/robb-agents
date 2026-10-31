@@ -1,13 +1,10 @@
-import type { AgentMessageType, SessionToolContext } from '../context.ts';
+import type { z } from 'zod';
+import type { SendAgentMessageSchema } from '../tool-defs/schemas.ts';
+import type { SessionToolContext } from '../context.ts';
 import type { ToolResult } from '../types.ts';
 import { successResponse, errorResponse } from '../response.ts';
 
-export interface SendAgentMessageArgs {
-  sessionId: string;
-  message: string;
-  messageType?: AgentMessageType;
-  attachments?: Array<{ path: string; name?: string }>;
-}
+export type SendAgentMessageArgs = z.infer<typeof SendAgentMessageSchema>;
 
 export async function handleSendAgentMessage(
   ctx: SessionToolContext,
@@ -48,7 +45,7 @@ export async function handleSendAgentMessage(
     const result = await ctx.sendAgentMessage(
       args.sessionId,
       wrappedMessage,
-      args.attachments,
+      args.attachments?.map(({ path, name }) => ({ path, ...(name !== undefined ? { name } : {}) })),
       messageType,
     );
 

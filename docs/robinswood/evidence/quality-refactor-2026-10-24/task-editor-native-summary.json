@@ -1,0 +1,144 @@
+{
+  "status": "tested; local integration pending remaining quality work",
+  "scope": "task-editor-native",
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/TaskEditor.tsx",
+      "lines": 439,
+      "sha256": "4771ec693d9a1a233915659bb012c80dc84d5fe983083c5067105d68bb66b2a4"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/task-editor-primitives.tsx",
+      "lines": 125,
+      "sha256": "41ac0879d17d25ac426cce75f17e6bb0ccf1da9622ce65205f632c5dba036646"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/task-editor-resources.tsx",
+      "lines": 174,
+      "sha256": "6bd83cd6f8e5a58c6345a7e2cdf467d86e4d8af889998df15825ca89228ac432"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/task-editor-subtask.tsx",
+      "lines": 119,
+      "sha256": "eaaab288a990caabc2cffa211f21e00a92707c2a5dad5cde36a36f77f05be5ef"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/task-editor-results.tsx",
+      "lines": 403,
+      "sha256": "93150c7268968830c6d5c593a5c187d8423703ceb333e34e4b157ce2e8da9500"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/task-editor-content.tsx",
+      "lines": 459,
+      "sha256": "3aaf07325495a15821820a1c5fd872872672915f7dd50a5c0d2bef7b387de8d0"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/use-task-editor-generation.ts",
+      "lines": 314,
+      "sha256": "d1d862bd03e808c0e62fb24cab8dbf53835f64298210e415edbb1e55e238f492"
+    }
+  ],
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/components/app-shell/kanban/TaskEditor.tsx",
+        "apps/electron/src/renderer/components/app-shell/kanban/task-editor-primitives.tsx",
+        "apps/electron/src/renderer/components/app-shell/kanban/task-editor-resources.tsx",
+        "apps/electron/src/renderer/components/app-shell/kanban/task-editor-subtask.tsx",
+        "apps/electron/src/renderer/components/app-shell/kanban/task-editor-results.tsx",
+        "apps/electron/src/renderer/components/app-shell/kanban/task-editor-content.tsx",
+        "apps/electron/src/renderer/components/app-shell/kanban/use-task-editor-generation.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.03,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/task-editor-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 4.82,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/task-editor-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 24.42,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/task-editor-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/renderer/components/app-shell/kanban/__tests__/task-spec-form.test.ts",
+        "apps/electron/src/renderer/components/app-shell/kanban/__tests__/subtask-merge.test.ts",
+        "apps/electron/src/renderer/components/app-shell/kanban/__tests__/model-catalog.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.12,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/task-editor-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 13.29,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/task-editor-native-build.log"
+    }
+  },
+  "targetedTests": {
+    "pass": 36,
+    "fail": 0
+  },
+  "browser": {
+    "before": 7,
+    "after": 7,
+    "nativeCallbackPayloadsEqual": true,
+    "errors": 0
+  },
+  "sourceGate": {
+    "max-lines": 10
+  },
+  "globalLint": {
+    "files": 3683,
+    "errors": 10,
+    "warnings": 61,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 10,
+      "react-hooks/exhaustive-deps": 61
+    }
+  },
+  "limits": [
+    "Other historical files and lint findings remain",
+    "No installation or final real-model mission claim",
+    "Global suite rerun prohibited by PreToolUse; last full suite f521166: 10759 passed"
+  ]
+}

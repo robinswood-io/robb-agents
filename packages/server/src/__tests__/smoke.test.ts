@@ -1,3 +1,4 @@
+import { isJsonObject, parseJsonObject } from '@craft-agent/shared/utils/json';
 /**
  * Headless server smoke test.
  *
@@ -14,7 +15,7 @@ import type { Subprocess } from 'bun'
 import WebSocket from 'ws'
 
 const SERVER_ENTRY = join(import.meta.dir, '..', 'index.ts')
-const BUN_EXECUTABLE = process.env.BUN_BIN || process.execPath
+const BUN_EXECUTABLE = process.env["BUN_BIN"] || process.execPath
 const STARTUP_TIMEOUT = 30_000
 const TEST_TIMEOUT = 45_000
 
@@ -110,11 +111,11 @@ function connectWs(url: string, token: string): Promise<WebSocket> {
       }))
     })
     ws.on('message', (data) => {
-      const msg = JSON.parse(data.toString())
-      if (msg.type === 'handshake_ack') {
+      const msg = parseJsonObject(data.toString())
+      if (msg['type'] === 'handshake_ack') {
         resolve(ws)
-      } else if (msg.type === 'error') {
-        reject(new Error(`Handshake error: ${msg.error?.message}`))
+      } else if (msg['type'] === 'error') {
+        reject(new Error(`Handshake error: ${isJsonObject(msg['error']) ? String(msg['error']['message']) : 'Unknown error'}`))
         ws.close()
       }
     })

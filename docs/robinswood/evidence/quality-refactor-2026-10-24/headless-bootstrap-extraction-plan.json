@@ -1,0 +1,162 @@
+{
+  "source": "packages/server-core/src/bootstrap/headless-start.ts",
+  "units": [
+    {
+      "names": [
+        "ModelRefreshServiceLike"
+      ],
+      "group": "contracts",
+      "bodySha256": "7bdc3e219e15ecf82e6d98c041fcc80574b9c3b90687fd45d09ad7c761f80f07"
+    },
+    {
+      "names": [
+        "ServerBootstrapOptions"
+      ],
+      "group": "contracts",
+      "bodySha256": "ab6669822b5e797b382cc645b6e03993d4a0937676561773508c1454498f8cec"
+    },
+    {
+      "names": [
+        "ServerHandlerContext"
+      ],
+      "group": "contracts",
+      "bodySha256": "7504d7afbac0275a804ef579498a82b3d99999a2c88fa72bac9a72f22a04f964"
+    },
+    {
+      "names": [
+        "ServerInstance"
+      ],
+      "group": "contracts",
+      "bodySha256": "407e118a4aabd877ea708ef4ea770ad37d1e881011b5d0e1aea1ef03bc342d46"
+    },
+    {
+      "names": [
+        "MIN_TOKEN_LENGTH"
+      ],
+      "group": "server-identity",
+      "bodySha256": "75f8dbc5abe314613428e92496216fb4e97632c54b72f3306cf721e7b8919443"
+    },
+    {
+      "names": [
+        "validateTokenEntropy"
+      ],
+      "group": "server-identity",
+      "bodySha256": "e25a3dbdec17397aae148f740d1b508e23602f6b132746f566e2da54485ced8b"
+    },
+    {
+      "names": [
+        "generateServerToken"
+      ],
+      "group": "server-identity",
+      "bodySha256": "8ecc299a0c8e8a538205bf546faafe0b87736f7e02df0884a08576fe008d557a"
+    },
+    {
+      "names": [
+        "getLockFile"
+      ],
+      "group": "server-identity",
+      "bodySha256": "c62d28e9eced49e307ce8816d726971efe8c6fcf45d62a27d0e4b62a5b178378"
+    },
+    {
+      "names": [
+        "LockPayload"
+      ],
+      "group": "server-identity",
+      "bodySha256": "943d0cb14c40631b863cb3349e6b9d66f0c17f9bbcb3be404bf679e2e207bd3b"
+    },
+    {
+      "names": [
+        "isProcessAlive"
+      ],
+      "group": "server-identity",
+      "bodySha256": "0696680dc64474075e4b1eb1b033fac9060a47380fee942a8cf58c7fe87d326a"
+    },
+    {
+      "names": [
+        "parseLockContent"
+      ],
+      "group": "server-identity",
+      "bodySha256": "2402933f69d20cd8ebdfaf231ac5467d54a7fbcc477a30831259ea410ed01c48"
+    },
+    {
+      "names": [
+        "isLockFromPreviousBoot"
+      ],
+      "group": "server-identity",
+      "bodySha256": "f9ab824996d50698b6f507b6590a4642a71e550835abec45d2e704104e7adecd"
+    },
+    {
+      "names": [
+        "acquireServerLock"
+      ],
+      "group": "server-identity",
+      "bodySha256": "85d3450f4a15db4a1482f32cdee6273d6af21933eba1271ef22fa58bff128fdf"
+    },
+    {
+      "names": [
+        "releaseServerLock"
+      ],
+      "group": "server-identity",
+      "bodySha256": "c8a3fb785e42fae60685cadc322bcab03c884e412b1af727f6fa139479e88339"
+    },
+    {
+      "names": [
+        "bootstrapConfigArtifacts"
+      ],
+      "group": "server",
+      "bodySha256": "c55d69f6f7fffd06947e1a0add2d26ba66daaa54d0d3e81334a869350d36e57c"
+    },
+    {
+      "names": [
+        "ensureGlobalConfigExists"
+      ],
+      "group": "server",
+      "bodySha256": "f6cb28865bbf3d9761969e9aa4050d90fcbbfdeaefb0653fff13f953ea733549"
+    },
+    {
+      "names": [
+        "bootstrapServer"
+      ],
+      "group": "server",
+      "bodySha256": "1b087048949d87d9751e75e6a23ee9b0ebeaeea6733a3a6ac24ae5fc67d63f97"
+    },
+    {
+      "names": [
+        "HealthHttpServerOptions"
+      ],
+      "group": "server",
+      "bodySha256": "22befc90e1b48095a92dd80c4197646d576c45098a99933a4c7ea8b04f04a018"
+    },
+    {
+      "names": [
+        "startHealthHttpServer"
+      ],
+      "group": "server",
+      "bodySha256": "38046851593e3e3beaf489dca4e9eff168cb5dd916423d77a6d3f2b0dbf9cb95"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 74
+    },
+    {
+      "name": "server-identity",
+      "lines": 171
+    },
+    {
+      "name": "server",
+      "lines": 278
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "server-identity": [],
+    "server": [
+      "contracts",
+      "server-identity"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

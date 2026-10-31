@@ -11,22 +11,22 @@
 
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { useCallback, useMemo } from 'react'
-import { useAtomValue, useSetAtom } from 'jotai'
-import { Archive, Flag, FlagOff, Trash2, Tag, Send } from 'lucide-react'
+import { useCallback,useMemo } from 'react'
+import { useAtomValue,useSetAtom } from 'jotai'
+import { Archive,Flag,FlagOff,Trash2,Tag,Send } from 'lucide-react'
 import { toast } from 'sonner'
 import { useMenuComponents } from '@/components/ui/menu-context'
 import { useSelectedIds } from '@/hooks/useSession'
 import { useSessionSelection } from '@/hooks/useSession'
-import { sessionMetaMapAtom, sendToWorkspaceAtom, type SessionMeta } from '@/atoms/sessions'
+import { sessionMetaMapAtom,sendToWorkspaceAtom,type SessionMeta } from '@/atoms/sessions'
 import { useAppShellContext } from '@/context/AppShellContext'
-import { getStateColor, getStateIcon, type SessionStatusId } from '@/config/session-status-config'
+import { getStateColor,getStateIcon,type SessionStatusId } from '@/config/session-status-config'
 import { extractLabelId } from '@craft-agent/shared/labels'
-import { LabelMenuItems, StatusMenuItems } from './SessionMenuParts'
+import { LabelMenuItems,StatusMenuItems } from './SessionMenuParts'
 
 export interface BatchSessionMenuProps {
   /** Callback to open Send to Workspace dialog for the selected sessions */
-  onSendToWorkspace?: () => void
+  onSendToWorkspace?: (() => void) | undefined
 }
 
 export function BatchSessionMenu({ onSendToWorkspace }: BatchSessionMenuProps = {}) {
@@ -41,7 +41,6 @@ export function BatchSessionMenu({ onSendToWorkspace }: BatchSessionMenuProps = 
   const {
     onSessionStatusChange,
     onArchiveSession,
-    onUnarchiveSession,
     onFlagSession,
     onUnflagSession,
     onSessionLabelsChange,
@@ -65,8 +64,9 @@ export function BatchSessionMenu({ onSendToWorkspace }: BatchSessionMenuProps = 
 
   // Compute shared status (if all selected have the same status)
   const activeStatusId = useMemo((): SessionStatusId | null => {
-    if (selectedMetas.length === 0) return null
-    const first = (selectedMetas[0].sessionStatus || 'todo') as SessionStatusId
+    const firstMeta = selectedMetas[0]
+    if (!firstMeta) return null
+    const first = (firstMeta.sessionStatus || 'todo') as SessionStatusId
     const allSame = selectedMetas.every(meta => (meta.sessionStatus || 'todo') === first)
     return allSame ? first : null
   }, [selectedMetas])
@@ -148,10 +148,12 @@ export function BatchSessionMenu({ onSendToWorkspace }: BatchSessionMenuProps = 
     const count = selectedIds.size
     const ids = [...selectedIds]
     // Delete one-by-one (first shows confirmation, rest skip if first is confirmed)
-    const firstDeleted = await onDeleteSession(ids[0])
+    const firstId = ids[0]
+    if (!firstId) return
+    const firstDeleted = await onDeleteSession(firstId)
     if (!firstDeleted) return // User cancelled
-    for (let i = 1; i < ids.length; i++) {
-      await onDeleteSession(ids[i], true) // skip confirmation for remaining
+    for (const id of ids.slice(1)) {
+      await onDeleteSession(id, true) // skip confirmation for remaining
     }
     clearMultiSelect()
     toast(`${count} ${count === 1 ? 'session' : 'sessions'} deleted`)

@@ -1,0 +1,71 @@
+{
+  "status": "testé dans le candidat local ; chantier global en cours",
+  "scope": "Fixtures des fournisseurs Pi et Anthropic et scénarios négatifs de leur fabrique",
+  "explicitAnyRemoved": 19,
+  "casesPreserved": 54,
+  "assertionsPreserved": 79,
+  "failures": 0,
+  "skipped": 0,
+  "fixtureChanges": "Configurations de backend, hôte, connexion et modèles complètes et vérifiées avec leurs types natifs. Le modèle de test utilise une fenêtre zéro pour exercer le traitement existant sans surcharge de contexte. La fonction fetch simulée expose preconnect.",
+  "negativeCases": "Trois fournisseurs inconnus restent transmis au runtime ; @ts-expect-error documente chaque valeur volontairement invalide et exige que TypeScript continue à la rejeter.",
+  "assertionProof": "Toutes les expressions expect, arguments et attentes compris, sont identiques après effacement des types.",
+  "checks": {
+    "backend-driver-fixtures-types-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 16.01,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/backend-driver-fixtures-types-2.log"
+    },
+    "backend-driver-fixtures-tests-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/agent/backend/__tests__/factory.test.ts",
+        "./packages/shared/src/agent/backend/internal/drivers/pi.test.ts",
+        "./packages/shared/src/agent/backend/internal/drivers/anthropic.test.ts",
+        "--reporter=junit",
+        "--reporter-outfile=/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/backend-driver-fixtures-after-2.xml"
+      ],
+      "exitCode": 0,
+      "seconds": 0.51,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/backend-driver-fixtures-tests-2.log"
+    },
+    "backend-driver-fixtures-lint-2": {
+      "command": [
+        "rtk",
+        "bunx",
+        "eslint",
+        "--max-warnings",
+        "0",
+        "packages/shared/src/agent/backend/__tests__/factory.test.ts",
+        "packages/shared/src/agent/backend/internal/drivers/pi.test.ts",
+        "packages/shared/src/agent/backend/internal/drivers/anthropic.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.61,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/backend-driver-fixtures-lint-2.log"
+    },
+    "backend-driver-fixtures-all-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 141.55,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/backend-driver-fixtures-all-tests.log"
+    }
+  },
+  "remaining": {
+    "max-lines": 165,
+    "no-explicit-any": 506
+  },
+  "installedApplication": "inchangée ; vérification UI et missions réelles finales sous nouvelles dépendances restantes"
+}

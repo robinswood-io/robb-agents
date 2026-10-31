@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 /**
  * Unit tests for the API renew endpoint token refresh feature.
  *
@@ -152,9 +153,9 @@ describe('refreshApiRenew via refresh()', () => {
 
     await credManager.refresh(source);
 
-    const body = JSON.parse(fetchCalls[0]!.init.body as string);
-    expect(body.token).toBe('current-access-token');
-    expect(body.grant_type).toBe('refresh');
+    const body = parseJsonObject(fetchCalls[0]!.init.body as string);
+    expect(body["token"]).toBe('current-access-token');
+    expect(body["grant_type"]).toBe('refresh');
   });
 
   test('handles absolute renew URL', async () => {

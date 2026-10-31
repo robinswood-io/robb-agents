@@ -1,0 +1,437 @@
+[
+  {
+    "legacy_id": "agent-task-google-tasks-intake-overnight",
+    "name": "Agent Task Google Tasks Intake — Overnight Cadence",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/agent_task_google_tasks_intake.py --max 20",
+    "timeout_seconds": 240,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "cadenceClass": "agent_task_official_cadence",
+    "cadencePolicy": "agent-task-cadence-policy-v1",
+    "riskClass": "agent_task_intake_guarded",
+    "sideEffects": [
+      "reads_google_tasks",
+      "writes_agent_task_inbox",
+      "may_update_google_task_notes_or_status_per_policy",
+      "no_external_outbound_message"
+    ],
+    "note": "Official Agent Task overnight intake alias; Tue-Sat 03:00 cadence only.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/agent_task_google_tasks_intake.py",
+        "--max",
+        "20"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 240
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-google-tasks-intake-overnight-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-google-tasks-intake-overnight-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "agent-task-inbox-router-overnight",
+    "name": "Agent Task Inbox Router — Overnight",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/agent_task_inbox.py route-once --max 5",
+    "timeout_seconds": 2700,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "cadenceClass": "agent_task_official_cadence",
+    "cadencePolicy": "agent-task-cadence-policy-v1",
+    "riskClass": "dev_agent_router_guarded",
+    "sideEffects": [
+      "reads_agent_task_inbox",
+      "writes_agent_task_status",
+      "routes_to_allowed_agent_lanes_per_policy"
+    ],
+    "note": "Official Agent Task overnight router alias matching daytime router behavior.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/agent_task_inbox.py",
+        "route-once",
+        "--max",
+        "5"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 2700
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-inbox-router-overnight-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-inbox-router-overnight-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "agent-task-temporal-openrouter-executor",
+    "name": "Agent Task Temporal OpenRouter Executor",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/agent_task_temporal_openrouter_executor.py --max 5",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "cadenceClass": "agent_task_official_cadence",
+    "cadencePolicy": "agent-task-cadence-policy-v1",
+    "riskClass": "agent_task_executor_guarded",
+    "sideEffects": [
+      "reads_agent_task_status",
+      "calls_openrouter_for_routed_tasks",
+      "writes_agent_task_results",
+      "no_direct_external_outbound_message"
+    ],
+    "note": "Official Agent Task executor cadence alias; executes only routed eligible tasks.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/agent_task_temporal_openrouter_executor.py",
+        "--max",
+        "5"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-temporal-openrouter-executor-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-temporal-openrouter-executor-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "agent-task-temporal-openrouter-executor-overnight",
+    "name": "Agent Task Temporal OpenRouter Executor — Overnight",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/agent_task_temporal_openrouter_executor.py --max 5",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "cadenceClass": "agent_task_official_cadence",
+    "cadencePolicy": "agent-task-cadence-policy-v1",
+    "riskClass": "agent_task_executor_guarded",
+    "sideEffects": [
+      "reads_agent_task_status",
+      "calls_openrouter_for_routed_tasks",
+      "writes_agent_task_results",
+      "no_direct_external_outbound_message"
+    ],
+    "note": "Official Agent Task overnight executor alias; executes only routed eligible tasks.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/agent_task_temporal_openrouter_executor.py",
+        "--max",
+        "5"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-temporal-openrouter-executor-overnight-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-temporal-openrouter-executor-overnight-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "agent-task-context-enriched-campaign-executor-overnight",
+    "name": "Agent Task Context-Enriched Campaign Executor — Overnight",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/agent_task_context_enriched_campaign_executor.py --max 10000",
+    "timeout_seconds": 1800,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "cadenceClass": "agent_task_official_cadence",
+    "cadencePolicy": "agent-task-cadence-policy-v1",
+    "riskClass": "autonomous_content_publication_gated",
+    "sideEffects": [
+      "reads_agent_task_status",
+      "writes_campaign_execution_artifacts",
+      "publication_gated_by_connector_policy"
+    ],
+    "note": "Official Agent Task overnight context-enriched campaign executor alias; publication remains gated by existing policy.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/agent_task_context_enriched_campaign_executor.py",
+        "--max",
+        "10000"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 1800
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-context-enriched-campaign-executor-overnight-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-context-enriched-campaign-executor-overnight-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "agent-task-campaign-activation-loop",
+    "name": "Agent Task Campaign Activation Loop",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/agent_task_campaign_activation_loop.py --max 5",
+    "timeout_seconds": 360,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "cadenceClass": "agent_task_official_cadence",
+    "cadencePolicy": "agent-task-cadence-policy-v1",
+    "riskClass": "campaign_activation_prepare_only_by_default",
+    "sideEffects": [
+      "reads_campaign_artifacts",
+      "writes_activation_reports",
+      "no_external_send_without_allow_external_send_flag"
+    ],
+    "note": "Official Agent Task campaign activation cadence; manifest command intentionally omits --allow-external-send.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/agent_task_campaign_activation_loop.py",
+        "--max",
+        "5"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 360
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-campaign-activation-loop-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-campaign-activation-loop-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "agent-task-campaign-activation-loop-overnight",
+    "name": "Agent Task Campaign Activation Loop — Overnight",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/agent_task_campaign_activation_loop.py --max 5",
+    "timeout_seconds": 360,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "cadenceClass": "agent_task_official_cadence",
+    "cadencePolicy": "agent-task-cadence-policy-v1",
+    "riskClass": "campaign_activation_prepare_only_by_default",
+    "sideEffects": [
+      "reads_campaign_artifacts",
+      "writes_activation_reports",
+      "no_external_send_without_allow_external_send_flag"
+    ],
+    "note": "Official Agent Task overnight campaign activation cadence; manifest command intentionally omits --allow-external-send.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/agent_task_campaign_activation_loop.py",
+        "--max",
+        "5"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 360
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-campaign-activation-loop-overnight-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/agent-task-campaign-activation-loop-overnight-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-company-brief-generator",
+    "name": "Robinswood PME HDF — company brief generator",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_pme_hdf_company_brief_generator.py",
+    "timeout_seconds": 240,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "riskClass": "prepare_only",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-company-brief-generator-last.json",
+    "note": "Generate 1-page Robinswood-branded prepare-only company briefs for HDF A-tier prospects. Attachments disabled by default.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_pme_hdf_company_brief_generator.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 240
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-company-brief-generator-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-company-briefs-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-company-briefs-last.md",
+    "businessContractVersion": "robinswood-pme-hdf-company-briefs-v1-prepare-only-no-auto-attach"
+  },
+  {
+    "legacy_id": "oss-lock-watchdog",
+    "name": "OSS Lock Watchdog",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_lock_watchdog.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "riskClass": "observability_report_only",
+    "sideEffects": [
+      "reads_lock_files",
+      "writes_report",
+      "no_lock_removal_without_remove_flag",
+      "no_external_outbound_message"
+    ],
+    "note": "P3a safe activation: command intentionally omits --remove, so stale locks are reported but not deleted.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_lock_watchdog.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-lock-watchdog-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-lock-watchdog-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-capability-performance-knowledge-auditor",
+    "name": "OSS Capability Performance Knowledge Auditor",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_capability_performance_knowledge_auditor.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "riskClass": "observability_audit_report_only",
+    "sideEffects": [
+      "reads_manifest_mapping_schedules_reports",
+      "writes_audit_report",
+      "no_external_outbound_message"
+    ],
+    "note": "P3a safe activation: audit/report wrapper only.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_capability_performance_knowledge_auditor.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-capability-performance-knowledge-auditor-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-capability-performance-knowledge-auditor-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-self-healing-candidate-queue",
+    "name": "OSS Self-Healing Candidate Queue",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_self_healing_candidate_queue.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "riskClass": "self_healing_candidate_report_only",
+    "sideEffects": [
+      "reads_guard_reports",
+      "writes_candidate_queue_report",
+      "no_autofix",
+      "no_external_outbound_message"
+    ],
+    "note": "P3a safe activation: script declares reportOnly=True and forbidden mutation checks.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_self_healing_candidate_queue.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-self-healing-candidate-queue-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-self-healing-candidate-queue-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-gtm-coherence-report",
+    "name": "OSS GTM Coherence Report",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_gtm_coherence_report.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "observability_gtm_coherence_report",
+    "sideEffects": [
+      "reads_policy_and_reports",
+      "writes_coherence_report",
+      "no_external_outbound_message"
+    ],
+    "note": "P3a safe activation: coherence report checks outbound gates; it does not send.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_gtm_coherence_report.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-gtm-coherence-report-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-gtm-coherence-report-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "campaign-impact-autonomy-guard",
+    "name": "Campaign Impact Autonomy Guard",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/campaign_impact_autonomy_guard.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "campaign_impact_guard_dry_run",
+    "sideEffects": [
+      "reads_campaign_impact_reports",
+      "writes_guard_report_and_action_queue",
+      "dry_run_without_apply_safe",
+      "no_external_send"
+    ],
+    "note": "P3a safe activation: command intentionally omits --apply-safe.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/campaign_impact_autonomy_guard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/campaign-impact-autonomy-guard-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/campaign-impact-autonomy-guard-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  }
+]

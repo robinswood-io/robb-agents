@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../utils/json.ts';
 /**
  * Generic OAuth 2.0 for API Sources
  *
@@ -18,17 +19,15 @@ import { generatePKCE, generateState } from './pkce.ts';
  * We send Accept: application/json but tolerate form-encoded as a fallback.
  */
 function parseTokenResponse(body: string, contentType: string | null): Record<string, string> {
-  if (contentType?.includes('application/json')) {
-    return JSON.parse(body);
-  }
-  // Try JSON first (many providers return JSON regardless of Content-Type)
+  const parseObject = () => Object.fromEntries(Object.entries(parseJsonObject(body))
+    .flatMap(([key, value]) => typeof value === 'string' || typeof value === 'number'
+      ? [[key, String(value)]] : []));
+  if (contentType?.includes('application/json')) return parseObject();
   try {
-    const parsed = JSON.parse(body);
-    if (typeof parsed === 'object' && parsed !== null) return parsed;
+    return parseObject();
   } catch {
-    // Not JSON — try form-urlencoded
+    return Object.fromEntries(new URLSearchParams(body));
   }
-  return Object.fromEntries(new URLSearchParams(body));
 }
 
 // ============================================================
@@ -78,7 +77,7 @@ export function prepareGenericOAuth(options: PrepareGenericOAuthOptions): Prepar
     codeVerifier: pkce.codeVerifier,
     tokenEndpoint: oauthConfig.tokenUrl,
     clientId: oauthConfig.clientId,
-    clientSecret: oauthConfig.clientSecret,
+    ...(oauthConfig.clientSecret !== undefined ? { clientSecret: oauthConfig.clientSecret } : {}),
     redirectUri,
     provider: 'generic',
   };
@@ -122,19 +121,19 @@ export async function exchangeGenericOAuth(params: OAuthExchangeParams): Promise
     const responseBody = await response.text();
     const data = parseTokenResponse(responseBody, response.headers.get('content-type'));
 
-    if (data.error) {
-      return { success: false, error: `OAuth error: ${data.error} — ${data.error_description ?? ''}` };
+    if (data["error"]) {
+      return { success: false, error: `OAuth error: ${data["error"]} — ${data["error_description"] ?? ''}` };
     }
 
-    const expiresIn = data.expires_in ? parseInt(data.expires_in, 10) : undefined;
+    const expiresIn = data["expires_in"] ? parseInt(data["expires_in"], 10) : undefined;
 
     return {
       success: true,
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      expiresAt: expiresIn ? Date.now() + expiresIn * 1000 : undefined,
+      ...(data["access_token"] !== undefined ? { accessToken: data["access_token"] } : {}),
+      ...(data["refresh_token"] !== undefined ? { refreshToken: data["refresh_token"] } : {}),
+      ...(expiresIn ? { expiresAt: Date.now() + expiresIn * 1000 } : {}),
       oauthClientId: params.clientId,
-      oauthClientSecret: params.clientSecret,
+      ...(params.clientSecret !== undefined ? { oauthClientSecret: params.clientSecret } : {}),
     };
   } catch (error) {
     return {
@@ -185,19 +184,19 @@ export async function refreshGenericOAuthToken(
   const responseBody = await response.text();
   const data = parseTokenResponse(responseBody, response.headers.get('content-type'));
 
-  if (data.error) {
-    throw new Error(`OAuth refresh error: ${data.error} — ${data.error_description ?? ''}`);
+  if (data["error"]) {
+    throw new Error(`OAuth refresh error: ${data["error"]} — ${data["error_description"] ?? ''}`);
   }
 
-  if (!data.access_token) {
+  if (!data["access_token"]) {
     throw new Error('Token refresh response missing access_token');
   }
 
-  const expiresIn = data.expires_in ? parseInt(data.expires_in, 10) : undefined;
+  const expiresIn = data["expires_in"] ? parseInt(data["expires_in"], 10) : undefined;
 
   return {
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-    expiresAt: expiresIn ? Date.now() + expiresIn * 1000 : undefined,
+    accessToken: data["access_token"],
+    ...(data["refresh_token"] !== undefined ? { refreshToken: data["refresh_token"] } : {}),
+    ...(expiresIn ? { expiresAt: Date.now() + expiresIn * 1000 } : {}),
   };
 }

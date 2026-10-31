@@ -1,10 +1,17 @@
 from __future__ import annotations
 
-from enum import Enum
 import re
-from typing import Any, Literal
+from enum import Enum
+from typing import ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    JsonValue,
+    field_validator,
+    model_validator,
+)
 
 
 class ExecutionBackend(str, Enum):
@@ -19,7 +26,7 @@ PROTECTED_MANIFEST_ENV = frozenset({
 
 
 class ExecutionSpec(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     backend: ExecutionBackend
     timeout_seconds: int = Field(default=600, ge=1, le=7200)
@@ -33,7 +40,7 @@ class ExecutionSpec(BaseModel):
         if not value:
             raise ValueError("argv must not be empty")
         for item in value:
-            if not isinstance(item, str) or not item or "\x00" in item:
+            if not item or "\x00" in item:
                 raise ValueError("argv contains an empty or invalid item")
             if len(item) > 8192:
                 raise ValueError("argv item exceeds 8192 characters")
@@ -48,13 +55,13 @@ class ExecutionSpec(BaseModel):
                 raise ValueError(f"invalid environment key: {key!r}")
             if key in PROTECTED_MANIFEST_ENV or key.startswith("RBW_RUNTIME_V2_"):
                 raise ValueError(f"protected environment key: {key}")
-            if not isinstance(item, str) or "\x00" in item or len(item) > 16384:
+            if "\x00" in item or len(item) > 16384:
                 raise ValueError(f"invalid environment value for {key}")
             clean[key] = item
         return clean
 
     @model_validator(mode="after")
-    def validate_backend_contract(self) -> "ExecutionSpec":
+    def validate_backend_contract(self) -> ExecutionSpec:
         if self.backend != ExecutionBackend.ARGV or not self.argv:
             raise ValueError("runtime v2 requires a non-empty argv backend")
         if not self.argv[0].startswith("/"):
@@ -63,7 +70,7 @@ class ExecutionSpec(BaseModel):
 
 
 class ReportContract(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     version: str = "observed-v0"
     expects_report: bool = False
@@ -72,7 +79,7 @@ class ReportContract(BaseModel):
 
 
 class ScheduleInstance(BaseModel):
-    model_config = ConfigDict(extra="allow")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="allow")
 
     schedule_id: str | None = None
     workflow_id: str | None = None
@@ -83,7 +90,7 @@ class ScheduleInstance(BaseModel):
 
 
 class PolicySpec(BaseModel):
-    model_config = ConfigDict(extra="allow")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="allow")
 
     classified: bool = False
     policy_class: str = "unclassified"
@@ -96,7 +103,7 @@ class PolicySpec(BaseModel):
 
 
 class SourceStatus(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     in_manifest: bool
     in_mapping: bool
@@ -106,7 +113,7 @@ class SourceStatus(BaseModel):
 
 
 class AgentSpec(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     schema_version: Literal["agent-spec-v2"] = "agent-spec-v2"
     id: str = Field(min_length=1, pattern=r"^[a-z0-9][a-z0-9._-]*$")
@@ -124,20 +131,20 @@ class AgentSpec(BaseModel):
     task_queues: list[str] = Field(default_factory=list)
     workflow_ids: list[str] = Field(default_factory=list)
     source_status: SourceStatus
-    provenance: dict[str, Any] = Field(default_factory=dict)
+    provenance: dict[str, JsonValue] = Field(default_factory=dict)
 
 
 class Invocation(BaseModel):
-    model_config = ConfigDict(extra="allow")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="allow")
 
     legacy_id: str = Field(min_length=1)
-    event: dict[str, Any] = Field(default_factory=dict)
-    approval: dict[str, Any] = Field(default_factory=dict)
+    event: dict[str, JsonValue] = Field(default_factory=dict)
+    approval: dict[str, JsonValue] = Field(default_factory=dict)
     requested_effect: str | None = None
 
 
 class PolicyDecision(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid")
 
     allowed: bool
     decision: Literal["allow", "block"]
@@ -156,7 +163,7 @@ class PolicyDecision(BaseModel):
 
 
 class ExecutionResult(BaseModel):
-    model_config = ConfigDict(extra="allow")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="allow")
 
     ok: bool
     exitCode: int
@@ -171,12 +178,12 @@ class ExecutionResult(BaseModel):
     stderrBytes: int = 0
     stdoutTruncated: bool = False
     stderrTruncated: bool = False
-    jsonStatus: dict[str, Any] = Field(default_factory=dict)
+    jsonStatus: dict[str, JsonValue] = Field(default_factory=dict)
     executionBackend: Literal["argv"] = "argv"
 
 
 class ReportEnvelope(BaseModel):
-    model_config = ConfigDict(extra="allow")
+    model_config: ClassVar[ConfigDict] = ConfigDict(extra="allow")
 
     generatedAt: str
     contractVersion: str = "oss-agent-report-envelope-v2"
@@ -184,8 +191,8 @@ class ReportEnvelope(BaseModel):
     ok: bool
     status: str
     summary: str
-    counts: dict[str, Any] = Field(default_factory=dict)
+    counts: dict[str, JsonValue] = Field(default_factory=dict)
     blockingReasons: list[str] = Field(default_factory=list)
     warningReasons: list[str] = Field(default_factory=list)
-    artifacts: dict[str, Any] = Field(default_factory=dict)
-    checks: dict[str, Any] = Field(default_factory=dict)
+    artifacts: dict[str, JsonValue] = Field(default_factory=dict)
+    checks: dict[str, JsonValue] = Field(default_factory=dict)

@@ -1,3 +1,4 @@
+import { isUnknownArray } from "../../../../../packages/shared/src/utils/json.ts";
 import * as React from 'react'
 import { AlertTriangle, CheckCircle2, GitCompareArrows, Loader2, ShieldQuestion } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -39,7 +40,9 @@ function requestIdentityMatches(
     && left.revision === right.revision
 }
 
-function missionCanReplan(mission: MissionSnapshotDto): boolean {
+function missionCanReplan(mission: Pick<MissionSnapshotDto, 'status'> & {
+  workItems: Record<string, Pick<MissionSnapshotDto['workItems'][string], 'status'>>
+}): boolean {
   if (TERMINAL_MISSION_STATUSES.has(mission.status)) return false
   return !Object.values(mission.workItems).some((item) =>
     item.status === 'reserved' || item.status === 'running')
@@ -86,7 +89,7 @@ function parseProposedWorkItems(value: string): MissionWorkItem[] {
   } catch (error) {
     throw new Error(error instanceof Error ? error.message : 'Invalid JSON')
   }
-  if (!Array.isArray(parsed) || parsed.length < 2) {
+  if (!isUnknownArray(parsed) || parsed.length < 2) {
     throw new Error('A Mission plan requires at least two work items')
   }
   const knownKinds = new Set([
@@ -100,25 +103,25 @@ function parseProposedWorkItems(value: string): MissionWorkItem[] {
   ])
   const ids = new Set<string>()
   for (const [index, item] of parsed.entries()) {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    if (!item || typeof item !== 'object' || isUnknownArray(item)) {
       throw new Error(`Work item ${index + 1} must be an object`)
     }
     const candidate = item as Record<string, unknown>
-    if (typeof candidate.id !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(candidate.id)) {
+    if (typeof candidate["id"] !== 'string' || !/^[a-z0-9][a-z0-9-]*$/.test(candidate["id"])) {
       throw new Error(`Work item ${index + 1} has an invalid id`)
     }
-    if (ids.has(candidate.id)) throw new Error(`Duplicate work item id "${candidate.id}"`)
-    ids.add(candidate.id)
-    if (typeof candidate.title !== 'string' || candidate.title.trim().length === 0) {
-      throw new Error(`Work item "${candidate.id}" requires a title`)
+    if (ids.has(candidate["id"])) throw new Error(`Duplicate work item id "${candidate["id"]}"`)
+    ids.add(candidate["id"])
+    if (typeof candidate["title"] !== 'string' || candidate["title"].trim().length === 0) {
+      throw new Error(`Work item "${candidate["id"]}" requires a title`)
     }
-    if (typeof candidate.kind !== 'string' || !knownKinds.has(candidate.kind)) {
-      throw new Error(`Work item "${candidate.id}" has an invalid kind`)
+    if (typeof candidate["kind"] !== 'string' || !knownKinds.has(candidate["kind"])) {
+      throw new Error(`Work item "${candidate["id"]}" has an invalid kind`)
     }
-    if (candidate.effect === 'external-mutation' && (
-      !candidate.connectorInvocation
-      || typeof candidate.connectorInvocation !== 'object'
-      || Array.isArray(candidate.connectorInvocation)
+    if (candidate["effect"] === 'external-mutation' && (
+      !candidate["connectorInvocation"]
+      || typeof candidate["connectorInvocation"] !== 'object'
+      || isUnknownArray(candidate["connectorInvocation"])
     )) {
       throw new Error('External mutation work requires a structured brokered connector invocation')
     }
@@ -324,7 +327,7 @@ export function MissionDigitalTwinPanel({
           aria-live="polite"
         >
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <span className={preflight.readyToStart ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}>
+            <span className={preflight.readyToStart ? 'text-success' : 'text-info'}>
               <strong>{preflight.readyToStart ? t('missionControl.preflightReady') : t('missionControl.preflightNotReady')}</strong>
             </span>
             <span>{t('missionControl.preflightMutations', { count: preflight.projectedExternalMutations })}</span>
@@ -339,12 +342,12 @@ export function MissionDigitalTwinPanel({
                 key={gate.id}
                 className={cn(
                   'flex items-start gap-2 rounded px-2 py-1.5',
-                  gate.status === 'fail' && 'bg-red-500/[0.04] text-red-700 dark:text-red-300',
-                  gate.status === 'unknown' && 'bg-amber-500/[0.04] text-amber-700 dark:text-amber-300',
+                  gate.status === 'fail' && 'bg-destructive/[0.04] text-destructive',
+                  gate.status === 'unknown' && 'bg-info/[0.04] text-info',
                 )}
               >
                 {gate.status === 'pass'
-                  ? <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
+                  ? <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-success" />
                   : <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />}
                 <span><strong>{gate.category}</strong> · {gate.detail}</span>
               </li>

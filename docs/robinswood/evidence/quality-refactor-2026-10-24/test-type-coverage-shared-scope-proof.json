@@ -1,0 +1,272 @@
+{
+  "status": "passed",
+  "previouslyUncoveredTestsNowIncluded": 30,
+  "remainingExcludedTestFiles": 44,
+  "configs": [
+    {
+      "config": "packages/core/tsconfig.json",
+      "include": [
+        "src/**/*"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 2,
+      "configuredTestFiles": 2,
+      "excludedTests": []
+    },
+    {
+      "config": "packages/shared/tsconfig.json",
+      "include": [
+        "src/**/*"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist",
+        "src/automations/**/*.test.ts"
+      ],
+      "testFiles": 378,
+      "configuredTestFiles": 378,
+      "excludedTests": []
+    },
+    {
+      "config": "packages/server-core/tsconfig.json",
+      "include": [
+        "src/**/*",
+        "../shared/src/agent/bash-parser.d.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 279,
+      "configuredTestFiles": 279,
+      "excludedTests": []
+    },
+    {
+      "config": "packages/server/tsconfig.json",
+      "include": [
+        "src/**/*",
+        "../shared/src/agent/bash-parser.d.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 1,
+      "configuredTestFiles": 1,
+      "excludedTests": []
+    },
+    {
+      "config": "packages/session-tools-core/tsconfig.json",
+      "include": [
+        "src/**/*.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 27,
+      "configuredTestFiles": 27,
+      "excludedTests": []
+    },
+    {
+      "config": "packages/session-mcp-server/tsconfig.json",
+      "include": [
+        "src/**/*.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 1,
+      "configuredTestFiles": 1,
+      "excludedTests": []
+    },
+    {
+      "config": "packages/messaging-gateway/tsconfig.json",
+      "include": [
+        "src"
+      ],
+      "testFiles": 30,
+      "configuredTestFiles": 30,
+      "excludedTests": []
+    },
+    {
+      "config": "packages/messaging-whatsapp-worker/tsconfig.json",
+      "include": [
+        "src/**/*.ts"
+      ],
+      "testFiles": 3,
+      "configuredTestFiles": 3,
+      "excludedTests": []
+    },
+    {
+      "config": "packages/pi-agent-server/tsconfig.typecheck.json",
+      "include": [
+        "src/**/*"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist",
+        "**/*.test.ts"
+      ],
+      "testFiles": 44,
+      "configuredTestFiles": 0,
+      "excludedTests": [
+        "packages/pi-agent-server/src/antigravity-server.test.ts",
+        "packages/pi-agent-server/src/antigravity-subprocess.test.ts",
+        "packages/pi-agent-server/src/authenticated-model-runtime.test.ts",
+        "packages/pi-agent-server/src/catalog-model-registration.test.ts",
+        "packages/pi-agent-server/src/compact-selected-model.test.ts",
+        "packages/pi-agent-server/src/craft-metadata-schema.test.ts",
+        "packages/pi-agent-server/src/custom-endpoint-models.test.ts",
+        "packages/pi-agent-server/src/google-code-assist-auth.test.ts",
+        "packages/pi-agent-server/src/google-code-assist-provider.test.ts",
+        "packages/pi-agent-server/src/google-code-assist-wire.test.ts",
+        "packages/pi-agent-server/src/incomplete-tool-tail-recovery.test.ts",
+        "packages/pi-agent-server/src/intra-turn-context-guard.test.ts",
+        "packages/pi-agent-server/src/mistral-provider-contract.test.ts",
+        "packages/pi-agent-server/src/model-resolution.test.ts",
+        "packages/pi-agent-server/src/native-settlement.test.ts",
+        "packages/pi-agent-server/src/overflow-recovery.test.ts",
+        "packages/pi-agent-server/src/provider-contract-guard.test.ts",
+        "packages/pi-agent-server/src/provider-handoff.test.ts",
+        "packages/pi-agent-server/src/proxy-tool-precheck-contract.test.ts",
+        "packages/pi-agent-server/src/proxy-tool-response-watchdog.test.ts",
+        "packages/pi-agent-server/src/proxy-tool-result.test.ts",
+        "packages/pi-agent-server/src/query-model.test.ts",
+        "packages/pi-agent-server/src/read-tool-timeout.test.ts",
+        "packages/pi-agent-server/src/selected-thinking-level.test.ts",
+        "packages/pi-agent-server/src/session-path-normalization.test.ts",
+        "packages/pi-agent-server/src/session-tool-registration.test.ts",
+        "packages/pi-agent-server/src/source-tool-activation.test.ts",
+        "packages/pi-agent-server/src/system-prompt-override.test.ts",
+        "packages/pi-agent-server/src/token-update.test.ts",
+        "packages/pi-agent-server/src/tool-approval-abort.test.ts",
+        "packages/pi-agent-server/src/tool-execution-checkpoint.test.ts",
+        "packages/pi-agent-server/src/tool-loop-budget.test.ts",
+        "packages/pi-agent-server/src/tool-loop-feedback-integration.test.ts",
+        "packages/pi-agent-server/src/tool-loop-feedback.test.ts",
+        "packages/pi-agent-server/src/turn-history.test.ts",
+        "packages/pi-agent-server/src/vibe-acp-server.test.ts",
+        "packages/pi-agent-server/src/vibe-subprocess.test.ts",
+        "packages/pi-agent-server/src/tools/web-fetch-pdf.test.ts",
+        "packages/pi-agent-server/src/tools/web-fetch.test.ts",
+        "packages/pi-agent-server/src/tools/__tests__/web-fetch.test.ts",
+        "packages/pi-agent-server/src/tools/search/create-search-tool.test.ts",
+        "packages/pi-agent-server/src/tools/search/resolve-provider.test.ts",
+        "packages/pi-agent-server/src/tools/search/providers/chatgpt.test.ts",
+        "packages/pi-agent-server/src/tools/search/providers/openai.test.ts"
+      ]
+    },
+    {
+      "config": "packages/ui/tsconfig.json",
+      "include": [
+        "src/**/*"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist",
+        "src/**/__tests__"
+      ],
+      "testFiles": 45,
+      "configuredTestFiles": 45,
+      "excludedTests": []
+    },
+    {
+      "config": "apps/cli/tsconfig.json",
+      "include": [
+        "src/**/*",
+        "../../packages/shared/src/**/*.d.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 4,
+      "configuredTestFiles": 4,
+      "excludedTests": []
+    },
+    {
+      "config": "apps/electron/tsconfig.json",
+      "include": [
+        "src/**/*",
+        "../../packages/shared/src/**/*.d.ts",
+        "../../scripts/robb-completion-live-check.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 155,
+      "configuredTestFiles": 155,
+      "excludedTests": []
+    },
+    {
+      "config": "apps/viewer/tsconfig.json",
+      "include": [
+        "src"
+      ],
+      "testFiles": 0,
+      "configuredTestFiles": 0,
+      "excludedTests": []
+    },
+    {
+      "config": "apps/viewer/tsconfig.node.json",
+      "include": [
+        "vite.config.ts",
+        "../../scripts/pdf-worker-resolution.ts"
+      ],
+      "testFiles": 0,
+      "configuredTestFiles": 0,
+      "excludedTests": []
+    },
+    {
+      "config": "apps/webui/tsconfig.json",
+      "include": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "../electron/src/renderer/**/*.ts",
+        "../electron/src/renderer/**/*.tsx",
+        "../electron/src/shared/**/*.ts",
+        "../electron/src/transport/**/*.ts",
+        "../../packages/shared/src/**/*.d.ts"
+      ],
+      "exclude": [
+        "node_modules",
+        "dist"
+      ],
+      "testFiles": 12,
+      "configuredTestFiles": 12,
+      "excludedTests": []
+    },
+    {
+      "config": "scripts/tsconfig.json",
+      "include": [
+        "apply-minimatch-compat.ts",
+        "generate-github-update-manifests.ts",
+        "robb-provider-canaries.ts",
+        "validate-electron-package-security.ts",
+        "validate-release-bundle.ts",
+        "verify-proof-passport.ts",
+        "verify-github-release-assets.ts",
+        "tests/apply-minimatch-compat.test.ts",
+        "tests/generate-github-update-manifests.test.ts",
+        "tests/provider-canaries.test.ts",
+        "tests/validate-workspace-versions.test.ts",
+        "tests/validate-release-bundle.test.ts",
+        "tests/verify-proof-passport.test.ts",
+        "tests/verify-github-release-assets.test.ts",
+        "validate-workspace-versions.ts",
+        "robb-human-benchmark.ts",
+        "robb-autonomy-acceptance.ts",
+        "test-autonomy-audit.ts"
+      ],
+      "testFiles": 16,
+      "configuredTestFiles": 16,
+      "excludedTests": []
+    }
+  ]
+}

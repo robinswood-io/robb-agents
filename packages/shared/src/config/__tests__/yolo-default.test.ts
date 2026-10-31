@@ -1,3 +1,4 @@
+import { isJsonObject, parseJsonObject } from '../../utils/json.ts';
 import { describe, expect, it } from 'bun:test';
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -14,7 +15,10 @@ function readDefaults(configDir: string) {
     env: { ...process.env, CRAFT_CONFIG_DIR: configDir }, stdout: 'pipe', stderr: 'pipe',
   });
   if (run.exitCode !== 0) throw new Error(run.stderr.toString());
-  return JSON.parse(run.stdout.toString());
+  const value = parseJsonObject(run.stdout.toString());
+  const workspaceDefaults = value['workspaceDefaults'];
+  if (!isJsonObject(workspaceDefaults)) throw new Error('Missing workspace defaults');
+  return { ...value, workspaceDefaults };
 }
 
 describe('YOLO configuration defaults', () => {
@@ -23,9 +27,8 @@ describe('YOLO configuration defaults', () => {
     expect(readDefaults(configDir).workspaceDefaults).toMatchObject({
       permissionMode: 'allow-all', externalActionPolicy: 'allow-in-execute',
     });
-    expect(JSON.parse(readFileSync(join(configDir, 'config-defaults.json'), 'utf8'))
-      .workspaceDefaults.externalActionPolicy).toBe('allow-in-execute');
-    expect(readDefaults(configDir).workspaceDefaults.externalActionPolicy).toBe('allow-in-execute');
+    expect(parseJsonObject(readFileSync(join(configDir, 'config-defaults.json'), 'utf8'))).toMatchObject({ workspaceDefaults: { externalActionPolicy: 'allow-in-execute' } });
+    expect(readDefaults(configDir).workspaceDefaults["externalActionPolicy"]).toBe('allow-in-execute');
   });
 
   for (const policy of ['confirm', undefined]) {
@@ -40,7 +43,7 @@ describe('YOLO configuration defaults', () => {
       expect(readDefaults(configDir).workspaceDefaults).toMatchObject({
         permissionMode: 'ask', externalActionPolicy: 'confirm',
       });
-      expect(readDefaults(configDir).workspaceDefaults.externalActionPolicy).toBe('confirm');
+      expect(readDefaults(configDir).workspaceDefaults["externalActionPolicy"]).toBe('confirm');
     });
   }
 });

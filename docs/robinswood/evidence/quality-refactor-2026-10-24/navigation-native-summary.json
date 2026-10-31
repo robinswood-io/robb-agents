@@ -1,0 +1,155 @@
+{
+  "status": "tested; local integration pending remaining quality work",
+  "scope": "navigation-native",
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/contexts/NavigationContext.tsx",
+      "lines": 490,
+      "sha256": "01adf40c416423296431274d27bcfc6f2d9c1077909fcabf5930fb80dcad9e5e"
+    },
+    {
+      "file": "apps/electron/src/renderer/contexts/navigation-context-state.ts",
+      "lines": 71,
+      "sha256": "975dcf53ed8fbdad319a3199002a2f474e5559bb9c31dc9247aa99336824eab8"
+    },
+    {
+      "file": "apps/electron/src/renderer/contexts/navigation-provider-content.tsx",
+      "lines": 60,
+      "sha256": "0b1e9c2808f2dbdcb6411d8d03f3fc0cbc81a67874f8e2804dffe4e3e18188bb"
+    },
+    {
+      "file": "apps/electron/src/renderer/contexts/use-navigation-history.ts",
+      "lines": 179,
+      "sha256": "d97e58da191ab368467936f761652926cc872e4a15acded0c9fcff4c94b787b3"
+    },
+    {
+      "file": "apps/electron/src/renderer/contexts/use-navigation-session-selection.ts",
+      "lines": 142,
+      "sha256": "e081d9735362446631d18b4d89c17495d2fd773f9fb5ec7f330bdab8b9f5364c"
+    },
+    {
+      "file": "apps/electron/src/renderer/contexts/use-navigation-auto-selection.ts",
+      "lines": 102,
+      "sha256": "bb2c53693a116d530ae22a6ea3d599c5c5f26fdd19fba17554e4b5a84ad6f1a0"
+    },
+    {
+      "file": "apps/electron/src/renderer/contexts/use-navigation-actions.ts",
+      "lines": 305,
+      "sha256": "b90026ffcfa0f6bc0eeea3b4ce3f5945ab636bb946bc54456d3ceed65de8e858"
+    },
+    {
+      "file": "apps/electron/src/renderer/contexts/use-navigation-synchronization.ts",
+      "lines": 293,
+      "sha256": "1ee630cd991bbb1a0f9060e9a53f866ec70271f973555805bdb39cb970b94edb"
+    }
+  ],
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/contexts/NavigationContext.tsx",
+        "apps/electron/src/renderer/contexts/navigation-context-state.ts",
+        "apps/electron/src/renderer/contexts/navigation-provider-content.tsx",
+        "apps/electron/src/renderer/contexts/use-navigation-history.ts",
+        "apps/electron/src/renderer/contexts/use-navigation-session-selection.ts",
+        "apps/electron/src/renderer/contexts/use-navigation-auto-selection.ts",
+        "apps/electron/src/renderer/contexts/use-navigation-actions.ts",
+        "apps/electron/src/renderer/contexts/use-navigation-synchronization.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.48,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/navigation-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 4.22,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/navigation-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 28.17,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/navigation-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/renderer/contexts/navigation-empty-session-cleanup.test.ts",
+        "apps/electron/src/renderer/contexts/__tests__/navigation-history-key.test.ts",
+        "apps/electron/src/renderer/contexts/__tests__/navigation-reconcile.test.ts",
+        "apps/electron/src/renderer/atoms/__tests__/panel-stack-lanes.test.ts",
+        "apps/electron/src/renderer/utils/__tests__/session-visibility.test.ts",
+        "apps/electron/src/shared/__tests__/route-parser-label-filter.test.ts",
+        "apps/electron/src/shared/__tests__/route-parser-missions.test.ts",
+        "apps/electron/src/shared/__tests__/route-parser-automations.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.18,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/navigation-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 13.87,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/navigation-native-build.log"
+    }
+  },
+  "targetedTests": {
+    "pass": 55,
+    "fail": 0
+  },
+  "browser": {
+    "before": 9,
+    "after": 9,
+    "nativeCallbackPayloadsEqual": true,
+    "errors": 0
+  },
+  "sourceGate": {
+    "max-lines": 7
+  },
+  "globalLint": {
+    "files": 3695,
+    "errors": 7,
+    "warnings": 59,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 7,
+      "react-hooks/exhaustive-deps": 59
+    }
+  },
+  "limits": [
+    "Other historical files and lint findings remain",
+    "No installation or final real-model mission claim",
+    "Global suite rerun prohibited by PreToolUse; last full suite f521166: 10759 passed"
+  ]
+}

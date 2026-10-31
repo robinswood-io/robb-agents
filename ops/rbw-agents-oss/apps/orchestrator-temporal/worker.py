@@ -4,13 +4,12 @@ import asyncio
 import json
 import os
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
+from activities import run_legacy_automation
 from temporalio.client import Client
 from temporalio.worker import Worker
-
 from workflows import RbwAutomationWorkflow
-from activities import run_legacy_automation
 
 
 def _queue_default_activity_slots(queue: str) -> int:
@@ -32,13 +31,13 @@ def _env_int(name: str, default: int, minimum: int = 1) -> int:
         if value < minimum:
             return minimum
         return value
-    except Exception:
+    except ValueError:
         return default
 
 
 async def _on_fatal_error(exc: BaseException) -> None:
     payload = {
-        "ts": datetime.now(timezone.utc).isoformat(),
+        "ts": datetime.now(UTC).isoformat(),
         "component": "temporal-worker",
         "level": "error",
         "event": "fatal_worker_error",
@@ -113,7 +112,7 @@ async def main() -> None:
     print(f"Temporal worker threadpool configured: queues={queues}, max_workers={threadpool_workers}", flush=True)
 
     client = await Client.connect(temporal_host)
-    await asyncio.gather(*(_run_queue_worker(client, temporal_host, queue) for queue in queues))
+    _ = await asyncio.gather(*(_run_queue_worker(client, temporal_host, queue) for queue in queues))
 
 
 if __name__ == "__main__":

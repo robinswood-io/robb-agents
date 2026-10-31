@@ -1,0 +1,227 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Backend Pi, échanges du sous-processus et contrats des callbacks",
+  "changes": [
+    "67 implémentations déplacées dans des fonctions par responsabilité ; champs, constructeur, méthodes super et trois accès directs à l’état conservés.",
+    "La classe Pi tient en 494 lignes ; 17 formes de messages et attentes reprennent exactement les types natifs.",
+    "Le verrou de rafraîchissement et les limites statiques restent sur la classe d’origine, passée par référence à cinq opérations.",
+    "La délégation du générateur conserve ses événements ; les défauts sont évalués une seule fois, puis transmis dans un ordre explicite aux fonctions internes.",
+    "Trois any retirés, dont le callback d’authentification relié au contrat natif des outils de session. Le JavaScript de la fabrique de contexte est inchangé.",
+    "Les anciens tests qui cherchaient du texte dans le monolithe vérifient désormais les messages réels et le filtrage effectif des outils navigateur."
+  ],
+  "files": [
+    {
+      "file": "packages/shared/src/agent/pi-agent/protocol.ts",
+      "lines": 108,
+      "sha256": "b6bb84fe0f457c03a48c3a2d2ea2aad7cae773694a107b673b67b1cd386e162e"
+    },
+    {
+      "file": "packages/shared/src/agent/pi-agent/shared.ts",
+      "lines": 278,
+      "sha256": "8927adb6f12b1204f90fcd48858a45e6a9fc9b621eb459c8f671de732627c8c8"
+    },
+    {
+      "file": "packages/shared/src/agent/pi-agent/context.ts",
+      "lines": 154,
+      "sha256": "50e9fc89c680e341032ccabac4cd3f645e39789dac0453e5e0770991a5ac705c"
+    },
+    {
+      "file": "packages/shared/src/agent/pi-agent/subprocess-start.ts",
+      "lines": 378,
+      "sha256": "cc3983177e01bb3ab16f05f17e77a50755ffbbba4e7596009efd45c079598b9a"
+    },
+    {
+      "file": "packages/shared/src/agent/pi-agent/auth.ts",
+      "lines": 276,
+      "sha256": "ac9d6bc660dc17300d00c38bde3d2001b33eecf6bf094bb25b006715516946ca"
+    },
+    {
+      "file": "packages/shared/src/agent/pi-agent/io.ts",
+      "lines": 103,
+      "sha256": "071d5eb43899d394735d088f0578061d8d3f519b56b983bca3de3ebe2424d410"
+    },
+    {
+      "file": "packages/shared/src/agent/pi-agent/events.ts",
+      "lines": 342,
+      "sha256": "f43f8fa434abb06de2485c7e51cdd4b7636c4657498066a05ef5fa3ba009b273"
+    },
+    {
+      "file": "packages/shared/src/agent/pi-agent/subprocess-stop.ts",
+      "lines": 315,
+      "sha256": "aa2b42ec3e5e9e482b36ed2d306403d939c564f4482f023ceed4f5748a863723"
+    },
+    {
+      "file": "packages/shared/src/agent/pi-agent/pretool.ts",
+      "lines": 330,
+      "sha256": "38404502e7bb9fcdf8e5533c4e14122690575df1910497380f270918e1430237"
+    },
+    {
+      "file": "packages/shared/src/agent/pi-agent/permission-prompts.ts",
+      "lines": 268,
+      "sha256": "45075b5a39812a601aa3887ff0c42c574a4b152e7e438236094f5dbbc4d7e8d9"
+    },
+    {
+      "file": "packages/shared/src/agent/pi-agent/session-tools.ts",
+      "lines": 340,
+      "sha256": "0ba860c73191378f81f0eea679857a202e01046e34213aee4ad793c02b1e2d6d"
+    },
+    {
+      "file": "packages/shared/src/agent/pi-agent/runtime.ts",
+      "lines": 265,
+      "sha256": "1dd54135335c9604dbbb58a780265617796399de08aefec086c69b4ee5ff6e2c"
+    },
+    {
+      "file": "packages/shared/src/agent/pi-agent/chat.ts",
+      "lines": 308,
+      "sha256": "127787859121ef2e85950e9091423c277404ca1063bf1d7451f7dee3239fcca6"
+    },
+    {
+      "file": "packages/shared/src/agent/pi-agent/lifecycle.ts",
+      "lines": 125,
+      "sha256": "e4df2f2a64b90049a790049af77e96b7a7f20edf1d703f3920fe2b93c9d6da31"
+    },
+    {
+      "file": "packages/shared/src/agent/pi-agent/mini-completion.ts",
+      "lines": 64,
+      "sha256": "628363811e5776d531a773dfdbf562e10d564ec6cfdf869dc352e290d2de4db3"
+    },
+    {
+      "file": "packages/shared/src/agent/pi-agent.ts",
+      "lines": 494,
+      "sha256": "cbdf5bbd68fb9eefde7cf73f511461e34910c8dded9bc2b2a53ba02b10af1ca8"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 17.3,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-class-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 11.83,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-class-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/shared/src/agent/pi-agent.ts",
+        "packages/shared/src/agent/pi-agent",
+        "packages/shared/src/agent/claude-context.ts",
+        "packages/shared/src/agent/__tests__/browser-tools-remote.test.ts",
+        "packages/shared/src/agent/__tests__/pi-browser-tool-toggle.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 2.77,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-class-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/agent"
+      ],
+      "exitCode": 0,
+      "seconds": 8.92,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-class-agent-tests.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/pi-agent-server/src"
+      ],
+      "exitCode": 0,
+      "seconds": 6.83,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-class-server-tests.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 13.91,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-class-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 142.36,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-class-test.log"
+    }
+  ],
+  "proof": "pi-class-structural-proof.json",
+  "fullTestSummary": {
+    "pass": 10741,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "agentTests": {
+      "pass": 2465,
+      "skip": 1,
+      "expectCalls": 8542
+    },
+    "piServerTests": {
+      "pass": 242,
+      "skip": 0,
+      "expectCalls": 1283
+    },
+    "nativeSdk": "Test local du SDK avec modèle de test : règlement des travaux différés, conservation des ancres, puis nouvelle demande."
+  },
+  "sourceGate": {
+    "max-lines": 115,
+    "no-explicit-any": 373
+  },
+  "globalLint": {
+    "files": 3262,
+    "errors": 458,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 354,
+      "max-lines": 104,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "limits": [
+    "115 fichiers trop longs et 373 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; les missions avec la connexion habituelle et le contrôle UI final restent à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-25T18:24:23.017008+00:00"
+}

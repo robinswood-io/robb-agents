@@ -1,8 +1,12 @@
+import { sessionManagerForTest } from './testing/private-runtime-access.ts';
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { AgentEvent, Message, StoredMessage } from '@craft-agent/core/types'
+import type { Message } from '@craft-agent/core/types'
 import { getSessionFilePath } from '@craft-agent/shared/sessions/storage'
 import { SessionManager, createManagedSession } from './SessionManager'
 
@@ -12,22 +16,16 @@ describe('tool start durability before results arrive', () => {
   let root: string
   let manager: SessionManager
   let managed: Managed
-  let runtime: {
-    sessions: Map<string, Managed>
-    processEvent: (session: Managed, event: AgentEvent) => Promise<void>
-    persistSession: (session: Managed) => void
-    sendEvent: (event: unknown) => void
-    emitExecutionTelemetry: () => void
-  }
+  let runtime: ReturnType<typeof sessionManagerForTest>
 
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), 'tool-start-durability-'))
-    manager = new SessionManager()
+    manager = withSessionOperationsForTest(new SessionManager())
     managed = createManagedSession({ id: 'tool-start-session', name: 'Durability fixture' }, {
       id: 'test-workspace', slug: 'test', name: 'Test workspace', rootPath: root, createdAt: 1,
     }, { messagesLoaded: true })
-    runtime = manager as unknown as typeof runtime
-    runtime.sessions.set(managed.id, managed)
+    runtime = sessionManagerForTest(manager)
+    sessionRuntimeStateForTest(runtime).sessions.set(managed.id, managed)
     runtime.sendEvent = () => {}
     runtime.emitExecutionTelemetry = () => {}
   })
@@ -37,9 +35,9 @@ describe('tool start durability before results arrive', () => {
     rmSync(root, { recursive: true, force: true })
   })
 
-  function readTools(): StoredMessage[] {
+  function readTools(): Array<ReturnType<typeof parseRecoveryJournalObservation>> {
     return readFileSync(getSessionFilePath(root, managed.id), 'utf8').trim().split('\n')
-      .slice(1).map(line => JSON.parse(line) as StoredMessage).filter(message => message.type === 'tool')
+      .slice(1).map(line => parseRecoveryJournalObservation(line)).filter(message => message.type === 'tool')
   }
 
   it('retains the final unfinished tool when the normal quit flush runs without any later event', async () => {

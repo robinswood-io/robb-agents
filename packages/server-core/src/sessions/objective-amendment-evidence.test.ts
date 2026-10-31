@@ -1,12 +1,21 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import {describe,it,expect} from 'bun:test';
 import {transitionObjectiveContract,buildObjectiveContractPrompt,objectiveRequiresExecutionEvidence} from './objective-contract.ts';
 import {requiresStructuredObjectiveOutcome} from './objective-completion-policy.ts';
 import {classifyObjectiveTerminalState} from './turn-completion.ts';
 import {SessionManager,createManagedSession} from './SessionManager.ts';
+import type {Workspace} from '@craft-agent/core/types';
 import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {appendRunLog} from '@craft-agent/shared/tasks';
+
+
+
+
 
 const original=()=>({...transitionObjectiveContract({messageId:'root',text:'Explique simplement ce terme.',
  lifetimeCostUsd:12,lifetimeTokens:200,nowMs:1}),model:'pi/selected-model',thinkingLevel:'high' as const});
@@ -14,9 +23,9 @@ const original=()=>({...transitionObjectiveContract({messageId:'root',text:'Expl
 describe('accepted amendments promote completion evidence without replacing the root',()=>{
  it('builds an authenticated Task child contract from its semantic assignment only',async()=>{
   const directory=mkdtempSync(join(tmpdir(),'task-objective-contract-'));
-  const manager=new SessionManager();const host=manager as any;
+  const manager=withSessionOperationsForTest(new SessionManager());const host=sessionManagerForTest(manager);
   try{
-   const workspace={id:'fixture',name:'Fixture',rootPath:directory,createdAt:1} as any;
+   const workspace: Workspace={id:'fixture',slug:'fixture',name:'Fixture',rootPath:directory,createdAt:1};
    const parent=createManagedSession({id:'orchestrator',name:'Orchestrator'},workspace,
     {messagesLoaded:true,isProcessing:true});
    parent.activeObjective=transitionObjectiveContract({messageId:'parent-root',text:'Coordinate the task.',nowMs:1});
@@ -27,11 +36,11 @@ describe('accepted amendments promote completion evidence without replacing the 
    appendRunLog(directory,'read-task','run-1',{
     t:'2026-09-11T00:00:00.000Z',kind:'node-spawned',nodeId:'list',sessionId:'task-child',
    });
-   host.sessions.set(parent.id,parent);host.sessions.set(managed.id,managed);host.sendEvent=()=>{};
-   for(const name of ['startGenerationTelemetry','finishGenerationTelemetry','finishAllGenerationTelemetry','emitExecutionTelemetry'])host[name]=()=>{};
-   const agent={getModel:()=> 'fixture',getSessionId:()=>null,setAllSources:()=>{},isProcessing:()=>false,forceAbort:()=>{},dispose:()=>{},
-    async *chat(){yield {type:'text_complete',text:'Listed.',turnId:'task-final'};yield {type:'complete'};}};
-   host.getOrCreateAgent=async()=>{managed.agent=agent as any;return agent;};
+   sessionRuntimeStateForTest(manager).sessions.set(parent.id,parent);sessionRuntimeStateForTest(manager).sessions.set(managed.id,managed);host.sendEvent=()=>{};
+   host.startGenerationTelemetry=()=>{};host.finishGenerationTelemetry=()=>{};host.finishAllGenerationTelemetry=()=>{};host.emitExecutionTelemetry=()=>{};
+   const agent=completeSessionAgentFixture(managed.workspace, {getModel:()=> 'fixture',getSessionId:()=>null,setAllSources:()=>{},isProcessing:()=>false,forceAbort:()=>{},dispose:()=>{},
+    async *chat(){yield {type:'text_complete',text:'Listed.',turnId:'task-final'};yield {type:'complete'};}});
+   host.getOrCreateAgent=async()=>{managed.agent=agent;return agent;};
    const assignment='List files.';
    const prompt='[Execution policy]\nWrite paths: (none)\nNever persist secret values.\n<specialist_execution>\nDo not claim completion without executing the relevant verification.\n</specialist_execution>\nPrevious failure mentioned external mutation and security verification.\n\nList files.';
    await manager.sendMessage(managed.id,prompt,undefined,undefined,{internalOrigin:{
@@ -45,24 +54,26 @@ describe('accepted amendments promote completion evidence without replacing the 
   }finally{await manager.cleanup();rmSync(directory,{recursive:true,force:true});}
  });
  it('the real host refuses an unregistered artifact completion after accepting a new instruction',async()=>{
+  process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]='1';
   const directory=mkdtempSync(join(tmpdir(),'objective-amendment-'));
-  const manager=new SessionManager();const host=manager as any;
+  const manager=withSessionOperationsForTest(new SessionManager());const host=sessionManagerForTest(manager);
   try{
+   const workspace: Workspace={id:'fixture',slug:'fixture',name:'Fixture',rootPath:directory,createdAt:1};
    const managed=createManagedSession({id:'amended-direct',name:'Amended direct'},
-    {id:'fixture',name:'Fixture',rootPath:directory,createdAt:1} as any,{messagesLoaded:true});
+    workspace,{messagesLoaded:true});
    managed.activeObjective=original();managed.messages=[{id:'root',role:'user',content:managed.activeObjective.originalText!,timestamp:1}];
-   host.sessions.set(managed.id,managed);host.sendEvent=()=>{};
-   for(const name of ['startGenerationTelemetry','finishGenerationTelemetry','finishAllGenerationTelemetry','emitExecutionTelemetry'])host[name]=()=>{};
+   sessionRuntimeStateForTest(manager).sessions.set(managed.id,managed);host.sendEvent=()=>{};
+   host.startGenerationTelemetry=()=>{};host.finishGenerationTelemetry=()=>{};host.finishAllGenerationTelemetry=()=>{};host.emitExecutionTelemetry=()=>{};
    const recovery:string[]=[];host.enqueueAutomaticTurnRecovery=async(_session:unknown,cause:string)=>{recovery.push(cause);return false;};
-   const agent={getModel:()=> 'fixture',getSessionId:()=>null,setAllSources:()=>{},isProcessing:()=>false,forceAbort:()=>{},dispose:()=>{},
-    async *chat(){yield {type:'text_complete',text:'Les documents sont produits et vérifiés.',turnId:'unproven-final'};yield {type:'complete'};}};
-   host.getOrCreateAgent=async()=>{managed.agent=agent as any;return agent;};
+   const agent=completeSessionAgentFixture(managed.workspace, {getModel:()=> 'fixture',getSessionId:()=>null,setAllSources:()=>{},isProcessing:()=>false,forceAbort:()=>{},dispose:()=>{},
+    async *chat(){yield {type:'text_complete',text:'Les documents sont produits et vérifiés.',turnId:'unproven-final'};yield {type:'complete'};}});
+   host.getOrCreateAgent=async()=>{managed.agent=agent;return agent;};
    await manager.sendMessage(managed.id,'Continue : crée les documents puis vérifie leur rendu.');
    await manager.flushSession(managed.id);
    expect(managed.activeObjective).toMatchObject({objectiveId:'root',requiresExecutionEvidence:true,requiresAcceptanceCriteria:true});
    expect(managed.activeObjective?.terminalState).not.toBe('complete_verified');
    expect(recovery).toContain('objective_incomplete');
-  }finally{await manager.cleanup();rmSync(directory,{recursive:true,force:true});}
+  }finally{delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"];await manager.cleanup();rmSync(directory,{recursive:true,force:true});}
  });
  it('rejects a bare success claim after a direct discussion becomes artifact work',()=>{
   const first=original();

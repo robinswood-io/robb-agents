@@ -21,7 +21,7 @@ import {
 } from './MissionSpecializedProfileResolver.ts';
 import { loadSpecializedSkillPackageSnapshot } from './capability-identity.ts';
 
-function mission(root: string, project: string, profile: AgentProfile): MissionSpec {
+function mission(_root: string, project: string, profile: AgentProfile): MissionSpec {
   return MissionSpecSchema.parse({
     schemaVersion: 2,
     id: 'resolver-test',

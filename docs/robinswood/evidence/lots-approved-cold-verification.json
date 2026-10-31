@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "sessionId": "261024-lively-coyote",
+  "candidateCommit": "76e185d9dbd95a652319825eae8fc7dea1ad3a2e",
+  "checks": [
+    "Application actually closed during active tool, with durable recovery and no final output",
+    "New process resumed same original request automatically",
+    "One recovery and exactly two human requests; no continuation prompt added",
+    "Four acquired files retain their bytes and nanosecond modification times",
+    "Marker bytes and nanosecond modification time unchanged: its write was not replayed",
+    "Final control contains correct group count and four actual file hashes/sizes",
+    "Objective completed; pendingTurnRecovery cleared; no real accounting connector called"
+  ],
+  "humanRequests": 2,
+  "automaticRecoveries": 1,
+  "originalRuntimePid": 63188,
+  "restartedRuntimePid": 64355,
+  "controlSha256": "cbb1d3a493549a00405c36da6314efdb965c5d7b72f7a12a9e46f95cd890ce38",
+  "observedAtMs": 1792865683388,
+  "finalControlPreviewOpened": true
+}

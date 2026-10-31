@@ -6,7 +6,7 @@ describe('Vibe ACP subprocess environment boundary', () => {
     const child = spawnVibeSubprocess(process.execPath, process.cwd(), {
       args: ['-e', 'process.stdout.write(JSON.stringify(process.env))'],
       baseEnv: {
-        PATH: process.env.PATH || '/usr/bin',
+        PATH: process.env["PATH"] || '/usr/bin',
         HOME: '/safe/home',
         LANG: 'fr_FR.UTF-8',
         LC_ALL: 'fr_FR.UTF-8',
@@ -22,7 +22,7 @@ describe('Vibe ACP subprocess environment boundary', () => {
     });
 
     let stdout = '';
-    child.stdout?.on('data', (chunk) => { stdout += chunk.toString(); });
+    child.stdout?.setEncoding('utf8').on('data', (chunk: string) => { stdout += chunk; });
     const exitCode = await new Promise<number | null>((resolve, reject) => {
       child.once('error', reject);
       child.once('exit', resolve);
@@ -30,18 +30,18 @@ describe('Vibe ACP subprocess environment boundary', () => {
 
     expect(exitCode).toBe(0);
     const childEnv = JSON.parse(stdout) as Record<string, string>;
-    expect(childEnv.PATH).toBeDefined();
-    expect(childEnv.HOME).toBe('/safe/home');
-    expect(childEnv.LANG).toBe('fr_FR.UTF-8');
-    expect(childEnv.LC_ALL).toBe('fr_FR.UTF-8');
-    expect(childEnv.HTTPS_PROXY).toBe('http://proxy.test:8080');
+    expect(childEnv["PATH"]).toBeDefined();
+    expect(childEnv["HOME"]).toBe('/safe/home');
+    expect(childEnv["LANG"]).toBe('fr_FR.UTF-8');
+    expect(childEnv["LC_ALL"]).toBe('fr_FR.UTF-8');
+    expect(childEnv["HTTPS_PROXY"]).toBe('http://proxy.test:8080');
 
-    expect(childEnv.ROBB_SENTINEL_SECRET).toBeUndefined();
-    expect(childEnv.LC_SENTINEL_SECRET).toBeUndefined();
-    expect(childEnv.SSH_AUTH_SOCK).toBeUndefined();
-    expect(childEnv.CI_JOB_TOKEN).toBeUndefined();
-    expect(childEnv.AWS_SECRET_ACCESS_KEY).toBeUndefined();
-    expect(childEnv.AZURE_CLIENT_SECRET).toBeUndefined();
-    expect(childEnv.MISTRAL_API_KEY).toBeUndefined();
+    expect(childEnv["ROBB_SENTINEL_SECRET"]).toBeUndefined();
+    expect(childEnv["LC_SENTINEL_SECRET"]).toBeUndefined();
+    expect(childEnv["SSH_AUTH_SOCK"]).toBeUndefined();
+    expect(childEnv["CI_JOB_TOKEN"]).toBeUndefined();
+    expect(childEnv["AWS_SECRET_ACCESS_KEY"]).toBeUndefined();
+    expect(childEnv["AZURE_CLIENT_SECRET"]).toBeUndefined();
+    expect(childEnv["MISTRAL_API_KEY"]).toBeUndefined();
   });
 });

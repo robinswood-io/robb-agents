@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "sourceHash": "8b5f8374c6462393e6e35c8d8b03819d565f0330557ed816d68bc0f778d14d60",
+  "nativeClasses": [
+    "TaskRunner",
+    "ActiveRun"
+  ],
+  "nativeClassFieldsConstructorsAndMethodBodies": true,
+  "nativeModels": 57,
+  "nativePublicExports": true,
+  "nativeEntryRuntimeImportOrder": true,
+  "noAdditionalState": true,
+  "runtimeImportCycles": 0,
+  "activeRunNativeSnapshotHash": "e0f16182127e168ced4e97ef9007ed5f0d39512a28bf675d21ff797a6a7a7e67",
+  "limit": "Cette preuve porte sur la séparation initiale ; la borne finale est contrôlée par task-runner-module-chain-proof.json."
+}

@@ -1,3 +1,4 @@
+import { isJsonObject, parseJsonObject } from '../utils/json.ts';
 import { describe, expect, test } from 'bun:test'
 
 import {
@@ -30,9 +31,9 @@ describe('external protocol conformance', () => {
       toolArguments: { query: 'status' },
       transport: async (request) => {
         requests.push(request)
-        const payload = request.body ? JSON.parse(request.body) : {}
-        const id = Reflect.get(payload, 'id')
-        const method = Reflect.get(payload, 'method')
+        const payload = request.body ? parseJsonObject(request.body) : {}
+        const id = payload['id']
+        const method = payload['method']
         if (method === 'initialize') {
           return response({
             jsonrpc: '2.0',
@@ -125,9 +126,9 @@ describe('external protocol conformance', () => {
       toolArguments: { query: 'status' },
       transport: async (request) => {
         requests.push(request)
-        const payload = request.body ? JSON.parse(request.body) : {}
-        const id = Reflect.get(payload, 'id')
-        const method = Reflect.get(payload, 'method')
+        const payload = request.body ? parseJsonObject(request.body) : {}
+        const id = payload['id']
+        const method = payload['method']
         if (method === 'server/discover') {
           return response({
             jsonrpc: '2.0',
@@ -207,12 +208,14 @@ describe('external protocol conformance', () => {
     expect(requests.find((request) => request.headers['Mcp-Method'] === 'tasks/get')?.headers['Mcp-Name'])
       .toBe('task-modern-1')
     for (const request of requests) {
-      const params = request.body ? JSON.parse(request.body).params : {}
-      expect(params._meta['io.modelcontextprotocol/protocolVersion']).toBe('2026-07-28')
-      expect(Object.hasOwn(
-        params._meta['io.modelcontextprotocol/clientCapabilities'].extensions,
-        'io.modelcontextprotocol/tasks',
-      )).toBe(true)
+      const payload = request.body ? parseJsonObject(request.body) : {};
+      const params = payload['params'];
+      if (!isJsonObject(params) || !isJsonObject(params['_meta'])) throw new Error('Missing RPC metadata');
+      const meta = params['_meta'];
+      expect(meta['io.modelcontextprotocol/protocolVersion']).toBe('2026-07-28');
+      const capabilities = meta['io.modelcontextprotocol/clientCapabilities'];
+      if (!isJsonObject(capabilities) || !isJsonObject(capabilities['extensions'])) throw new Error('Missing RPC capabilities');
+      expect(Object.hasOwn(capabilities['extensions'], 'io.modelcontextprotocol/tasks')).toBe(true);
     }
   })
 
@@ -221,9 +224,9 @@ describe('external protocol conformance', () => {
     const report = await runMcpTasksConformance({
       endpoint: 'https://legacy-mcp.test/mcp',
       transport: async (request) => {
-        const payload = request.body ? JSON.parse(request.body) : {}
-        const id = Reflect.get(payload, 'id')
-        const method = String(Reflect.get(payload, 'method'))
+        const payload = request.body ? parseJsonObject(request.body) : {}
+        const id = payload['id']
+        const method = String(payload['method'])
         methods.push(method)
         if (method === 'server/discover') {
           return response({
@@ -284,9 +287,9 @@ describe('external protocol conformance', () => {
       endpoint: 'https://corrective-modern-mcp.test/mcp',
       era: 'auto',
       transport: async (request) => {
-        const payload = request.body ? JSON.parse(request.body) : {}
-        const id = Reflect.get(payload, 'id')
-        const method = String(Reflect.get(payload, 'method'))
+        const payload = request.body ? parseJsonObject(request.body) : {}
+        const id = payload['id']
+        const method = String(payload['method'])
         if (method === 'server/discover') {
           discoverCount++
           if (discoverCount === 1) {
@@ -332,9 +335,9 @@ describe('external protocol conformance', () => {
         approval: { action: 'accept', content: { approved: true } },
       },
       transport: async (request) => {
-        const payload = request.body ? JSON.parse(request.body) : {}
-        const id = Reflect.get(payload, 'id')
-        const method = String(Reflect.get(payload, 'method'))
+        const payload = request.body ? parseJsonObject(request.body) : {}
+        const id = payload['id']
+        const method = String(payload['method'])
         methods.push(method)
         if (method === 'server/discover') {
           return response({ jsonrpc: '2.0', id, result: {
@@ -367,9 +370,9 @@ describe('external protocol conformance', () => {
           } })
         }
         if (method === 'tasks/update') {
-          expect(payload.params.inputResponses).toEqual({
+          expect(payload).toMatchObject({ params: { inputResponses: {
             approval: { action: 'accept', content: { approved: true } },
-          })
+          } } })
           return response({ jsonrpc: '2.0', id, result: { resultType: 'complete' } })
         }
         throw new Error(`Unexpected method: ${method}`)

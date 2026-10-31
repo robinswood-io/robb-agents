@@ -1,0 +1,15 @@
+{
+  "scope": "Local Robb Agents staging on this Mac; no accounting data writes",
+  "lintScope": "All Git-visible maintained Robb files, including tests. Nested Git worktrees, generated release-dev packages, and the separately Git-excluded commercial module are outside this checkout's maintained source set.",
+  "defect": "An expired Claude Max OAuth credential produced authentication_failed, followed by a result marked success with is_error=true. A later plain error retriggered Robb's generic token refresh after the SDK had already failed to refresh, leaving the mission interrupted.",
+  "change": "Treat is_error results as failures, show the SDK's expired-OAuth message with a reconnect action, and suppress further automatic refresh and continuation for that terminal failure.",
+  "checks": {
+    "lint": "passed: 3986 maintained files, 0 over 500 lines, 0 explicit any, 0 ESLint warnings or errors",
+    "typecheckAll": "passed",
+    "targetedTests": "45 passed, 0 failed across 4 files",
+    "livePiMissions": "7 of 7 passed on the usual chatgpt-plus-2 connection; 26 tool calls, 0 source errors; two targets, three deliverables, missing-input recovery, midstream amendment, source activation, compaction continuation, and continuation",
+    "postFixPiRegression": "missing-input recovery passed; 4 tool calls, 1 expected missing-file tool error, 0 source errors",
+    "expiredClaudeMax": "one terminal source error, 0 tool calls, stopped with reason error, no automatic replay"
+  },
+  "limit": "The Claude Max credential is expired and requires account re-authentication; a Claude mission cannot complete until that external credential is renewed."
+}

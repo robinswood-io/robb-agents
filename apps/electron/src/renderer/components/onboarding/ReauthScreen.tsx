@@ -3,12 +3,11 @@ import { useTranslation } from "react-i18next"
 import { AlertCircle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@craft-agent/ui"
-import { RobbAgentsSymbol } from "@/components/icons/RobbAgentsSymbol"
 import { StepFormLayout } from "./primitives"
 
 interface ReauthScreenProps {
   onLogin: () => Promise<void>
-  onReset?: () => void
+  onReset?: (() => void) | undefined
 }
 
 /**

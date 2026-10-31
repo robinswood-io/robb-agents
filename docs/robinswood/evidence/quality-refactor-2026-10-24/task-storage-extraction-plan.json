@@ -1,0 +1,406 @@
+{
+  "source": "packages/shared/src/tasks/storage.ts",
+  "units": [
+    {
+      "names": [
+        "TASKS_DIR"
+      ],
+      "group": "run-types",
+      "bodySha256": "e012b20063da8ffa5d41b49998d86d99a35ffa7d8a9e16a7a6bbbea0cfb7716a"
+    },
+    {
+      "names": [
+        "TASK_FILE"
+      ],
+      "group": "run-types",
+      "bodySha256": "ba64a6cc58f75695afcd3bd018780076167f90638119ae68208c0aa640ff633d"
+    },
+    {
+      "names": [
+        "RUNS_DIR"
+      ],
+      "group": "run-types",
+      "bodySha256": "1323c787ab032aa111517ab3c61ad3eadf292c82a6453c5f89c58c448426d3fa"
+    },
+    {
+      "names": [
+        "RUN_LOG"
+      ],
+      "group": "run-types",
+      "bodySha256": "1972378fadea8ca759293b5af9f0c7af18c803034add34e9cc2e868b8c43386f"
+    },
+    {
+      "names": [
+        "NODES_DIR"
+      ],
+      "group": "run-types",
+      "bodySha256": "b951ebc9820654b9d8be0451b68768e398cfef6af668f62aaf0cd90631233235"
+    },
+    {
+      "names": [
+        "NodeRunState"
+      ],
+      "group": "run-types",
+      "bodySha256": "053d3e85af5e2ab08edb45dd708919d206ffeb0b5399ee6a89400d19ed599439"
+    },
+    {
+      "names": [
+        "RunLogEntry"
+      ],
+      "group": "run-types",
+      "bodySha256": "2ee94cfe7253c5038032b9e04d8e1419afeda9e6e6867de3deb4397062a24f3d"
+    },
+    {
+      "names": [
+        "tasksRoot"
+      ],
+      "group": "task-files",
+      "bodySha256": "201f06839abf5804573b7ead2e9f9de74e87b06c48110b65aadec9618cd0cf7f"
+    },
+    {
+      "names": [
+        "taskDir"
+      ],
+      "group": "task-files",
+      "bodySha256": "172ef92e25759b7a117756898bbbe506d043448c3fdd01b4d89b2301df42c561"
+    },
+    {
+      "names": [
+        "taskYamlPath"
+      ],
+      "group": "task-files",
+      "bodySha256": "388633b39978784a875d3859030d8834f1d5b087a39e2db300a74735c3581f5e"
+    },
+    {
+      "names": [
+        "runDir"
+      ],
+      "group": "task-files",
+      "bodySha256": "d219dbcd432e023db066f4cc58031af6ec8e8c59652f60e30023a2d256f988e1"
+    },
+    {
+      "names": [
+        "ensureDir"
+      ],
+      "group": "task-files",
+      "bodySha256": "1bece0829e176905b8f312de8dbc61c24fac6e68cf5f0365145b70f7aa7b25e8"
+    },
+    {
+      "names": [
+        "parseTaskYaml"
+      ],
+      "group": "task-files",
+      "bodySha256": "2c153adb7bd86ed63712574d29aa3c40c8cf0d87cd0b4b38a19623befa81fafb"
+    },
+    {
+      "names": [
+        "serializeTaskYaml"
+      ],
+      "group": "task-files",
+      "bodySha256": "5af73f107a624fd3e83aed8ef3878ff8817b43dadf531d33d8a5f9415fe28547"
+    },
+    {
+      "names": [
+        "loadTaskSpec"
+      ],
+      "group": "task-files",
+      "bodySha256": "a38c920996cf86398a33c010425ab4aa6af0291c5cd8ced6151756a5e29cf99a"
+    },
+    {
+      "names": [
+        "saveTaskSpec"
+      ],
+      "group": "task-files",
+      "bodySha256": "0be3f9e738d1f4a9351e351623aa034905f8a7d153afe49d041c0bacc4d47200"
+    },
+    {
+      "names": [
+        "listTaskSlugs"
+      ],
+      "group": "task-files",
+      "bodySha256": "2ac176184513dd0eab62ad117d012beeea995bc5c0c5cb9b6d37a62b0e3fee43"
+    },
+    {
+      "names": [
+        "listTaskRunSlugs"
+      ],
+      "group": "task-files",
+      "bodySha256": "647d70a48808851d12f448e0e2a15b503eb1882799d1c12e12336e244c921dcc"
+    },
+    {
+      "names": [
+        "RUN_LOG_INTEGRITY_VERSION"
+      ],
+      "group": "run-integrity",
+      "bodySha256": "3685188312d78863734db99e81d0e384f0bee1f22321397cead577a3bde613b6"
+    },
+    {
+      "names": [
+        "RUN_LOG_LOCK"
+      ],
+      "group": "run-integrity",
+      "bodySha256": "76ce8ac623248ec3dee7dd32f90d72aa182f0b20d3acf575871f896c405c970b"
+    },
+    {
+      "names": [
+        "EMPTY_CHECKSUM"
+      ],
+      "group": "run-integrity",
+      "bodySha256": "f8c7349db784cc5265129002bcd4a6ab793502f641886da00c00d3cf0823558e"
+    },
+    {
+      "names": [
+        "STALE_LOCK_MAX_AGE_MS"
+      ],
+      "group": "run-integrity",
+      "bodySha256": "2febe0f46e898556398ecd5f6c2ae6adc5c37d012a0a6a0d3c45a4a6ed95a415"
+    },
+    {
+      "names": [
+        "RunLogIntegrity"
+      ],
+      "group": "run-integrity",
+      "bodySha256": "0b7669303161bff9b34b4761d0f4d54a7cb3fff77cc06393daa15bd71bf5159c"
+    },
+    {
+      "names": [
+        "StoredRunLogRecord"
+      ],
+      "group": "run-integrity",
+      "bodySha256": "9832fb87cfb176935f894244c4b77e514bc8bb0c8610a474f6c1d04f8f9023da"
+    },
+    {
+      "names": [
+        "errnoCode"
+      ],
+      "group": "run-integrity",
+      "bodySha256": "0efe7dbcf575853da2731db70830c6163f32f6f51fda1ffc5734533925b9d48c"
+    },
+    {
+      "names": [
+        "isRecord"
+      ],
+      "group": "run-integrity",
+      "bodySha256": "d83a5dcd3b722e06998b2a8ee99faf280ef7ffd784ad82be84ac7bc96a8d8d70"
+    },
+    {
+      "names": [
+        "checksumFor"
+      ],
+      "group": "run-integrity",
+      "bodySha256": "b92b587a3d37f88dfd6d12254ebf4bda7690c70a46d7a9572c7a498c75090411"
+    },
+    {
+      "names": [
+        "parseIntegrity"
+      ],
+      "group": "run-integrity",
+      "bodySha256": "977bf9caf453f098f4c4241572f1977f24ded31a2724f6ecca0eb6426f7eaee8"
+    },
+    {
+      "names": [
+        "ParsedRunLog"
+      ],
+      "group": "run-integrity",
+      "bodySha256": "a29a45ea8e0360a7a0bf799f0b1003ce8503eb33c7f4a85b979f4f26f39e1b91"
+    },
+    {
+      "names": [
+        "RunLogHead"
+      ],
+      "group": "run-integrity",
+      "bodySha256": "124844e31d26a99d38ba0bc6d8eee8e4a61f8784f08039a7e914f00b7c0835c4"
+    },
+    {
+      "names": [
+        "runLogHeadCache"
+      ],
+      "group": "run-integrity",
+      "bodySha256": "fbdeeaf448b8dafb0346df749a92bc1d4894c3051f1088053bd81992161a7974"
+    },
+    {
+      "names": [
+        "parseRunLogText"
+      ],
+      "group": "run-integrity",
+      "bodySha256": "beffed42b1d2f59cb8c31f5e10312b020280a525cda75b26436c2d04d4c86b51"
+    },
+    {
+      "names": [
+        "finalRecordIsMalformed"
+      ],
+      "group": "run-integrity",
+      "bodySha256": "e58130549a679f220680e31dc8a3cd0cd492295ac8a08747565ca9967646131b"
+    },
+    {
+      "names": [
+        "processIsAlive"
+      ],
+      "group": "run-lock",
+      "bodySha256": "7bac9efe6f80cf60124e7991dbe9f7b8b301beec853c9b7b25192c2f21d850b8"
+    },
+    {
+      "names": [
+        "removeStaleRunLogLock"
+      ],
+      "group": "run-lock",
+      "bodySha256": "fe1bf275976fdfe2c9cf7a292916cca26835ae141669893bd1d6cb90bc0eb08d"
+    },
+    {
+      "names": [
+        "withRunLogLock"
+      ],
+      "group": "run-lock",
+      "bodySha256": "46f27703f49ad8d45f63727e9cdd97bd0006f695e1c680059cc355e9d09605fb"
+    },
+    {
+      "names": [
+        "appendRunLog"
+      ],
+      "group": "run-journal",
+      "bodySha256": "cfacb1c8671008996c78d94c594812624999855447277e2b6c03ac913fbbccf2"
+    },
+    {
+      "names": [
+        "readRunLog"
+      ],
+      "group": "run-journal",
+      "bodySha256": "f184c6bf94990f6573aa1d229df53561f9c562db51b906520ad1ad8c871014df"
+    },
+    {
+      "names": [
+        "listRunIds"
+      ],
+      "group": "run-journal",
+      "bodySha256": "931360b734d77e38448d0ba2e8917edda392ccc046519e3206221ddfcbacca2a"
+    },
+    {
+      "names": [
+        "RUN_SPEC"
+      ],
+      "group": "run-context",
+      "bodySha256": "64c1cfdcd32babac209b902e9473b5be51f14dcf4e8b137bb4d6d2d6b69afe4a"
+    },
+    {
+      "names": [
+        "RUN_CONTEXT"
+      ],
+      "group": "run-context",
+      "bodySha256": "fe6a1b3dc880018a79e8a6c360876dde6eafabbefd42ef9122378dad2b7d7f66"
+    },
+    {
+      "names": [
+        "RunContextSnapshot"
+      ],
+      "group": "run-context",
+      "bodySha256": "16c487fd672f571eeb9d6238c993987c0f75bd277e6eea6b463e5dedbdaf7842"
+    },
+    {
+      "names": [
+        "isJsonValue"
+      ],
+      "group": "run-context",
+      "bodySha256": "0ce3e039d148ca43466ad8dc6b7ec5794e8e62fd9761278ba0cafb03e32ef3d1"
+    },
+    {
+      "names": [
+        "parseRunContext"
+      ],
+      "group": "run-context",
+      "bodySha256": "4185a99b021ec76a0c667174f7f36ae831da4ad59d13628bd81945effceaded0"
+    },
+    {
+      "names": [
+        "writeRunSpecSnapshot"
+      ],
+      "group": "run-context",
+      "bodySha256": "c56147a587f8056f86a33883e24a8c825f011cd44d2bf2eccdf00059a1915243"
+    },
+    {
+      "names": [
+        "readRunSpecSnapshot"
+      ],
+      "group": "run-context",
+      "bodySha256": "92799eef5b01299e830e01b42ac6f00d6783e13cdbbd67ab3c5885f2bf7264f3"
+    },
+    {
+      "names": [
+        "writeRunContextSnapshot"
+      ],
+      "group": "run-context",
+      "bodySha256": "067547b94ad57b1e17d122f850d05aeb8657801ac0c5f969b2758031f1060887"
+    },
+    {
+      "names": [
+        "readRunContextSnapshot"
+      ],
+      "group": "run-context",
+      "bodySha256": "f21e4b689fd795f2aa449a8a458b38e8650f3dc6c741a42c90fb86bdeec4a3fa"
+    },
+    {
+      "names": [
+        "writeNodeOutput"
+      ],
+      "group": "run-context",
+      "bodySha256": "5892370efa4666cb44a0eefd06a6d1dd14c7e08642784e1bb62dbc9d3139f345"
+    },
+    {
+      "names": [
+        "readNodeOutput"
+      ],
+      "group": "run-context",
+      "bodySha256": "d8cadb9f493a5ff617d43259bc10a1bc8aaaa7d0c69aeb2c8eea5e940b5ef861"
+    }
+  ],
+  "modules": [
+    {
+      "name": "run-types",
+      "lines": 139
+    },
+    {
+      "name": "task-files",
+      "lines": 111
+    },
+    {
+      "name": "run-integrity",
+      "lines": 155
+    },
+    {
+      "name": "run-lock",
+      "lines": 94
+    },
+    {
+      "name": "run-journal",
+      "lines": 123
+    },
+    {
+      "name": "run-context",
+      "lines": 189
+    }
+  ],
+  "dependencies": {
+    "run-types": [],
+    "task-files": [
+      "run-types"
+    ],
+    "run-integrity": [
+      "run-types"
+    ],
+    "run-lock": [
+      "run-integrity"
+    ],
+    "run-journal": [
+      "run-types",
+      "task-files",
+      "run-integrity",
+      "run-lock"
+    ],
+    "run-context": [
+      "run-integrity",
+      "task-files",
+      "run-types"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

@@ -24,11 +24,11 @@ export type ToggleModelVision = (
 export function useModelVisionToggle(): ToggleModelVision {
   const { t } = useTranslation()
   const appShellCtx = useOptionalAppShellContext()
-  const llmConnections = appShellCtx?.llmConnections ?? []
   const refreshLlmConnections = appShellCtx?.refreshLlmConnections
 
   return React.useCallback(async (connectionSlug, modelId, enabled) => {
     if (!window.electronAPI) return
+    const llmConnections = appShellCtx?.llmConnections ?? []
     const conn = llmConnections.find(c => c.slug === connectionSlug)
     if (!conn) return
     try {
@@ -45,5 +45,5 @@ export function useModelVisionToggle(): ToggleModelVision {
       console.error('Failed to toggle model vision:', error)
       toast.error(t('chat.modelPicker.toggleVisionFailed'))
     }
-  }, [llmConnections, refreshLlmConnections, t])
+  }, [appShellCtx?.llmConnections, refreshLlmConnections, t])
 }

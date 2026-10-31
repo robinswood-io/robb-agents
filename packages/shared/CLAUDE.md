@@ -51,13 +51,13 @@ node scripts/run-typescript.mjs native --noEmit -p packages/shared/tsconfig.json
 
 ## i18n (Internationalization)
 
-Translations live in `src/i18n/locales/{lang}.json`. All user-facing strings must use `t()` (React) or `i18n.t()` (non-React).
+Translations live in `src/i18n/locales/{lang}/{domain}.json`. All user-facing strings must use `t()` (React) or `i18n.t()` (non-React).
 
 ### Locale registry (single source of truth)
 
 All locale metadata lives in **`src/i18n/registry.ts`**. To add a new locale:
 
-1. Create `src/i18n/locales/{code}.json` with all keys (copy from `en.json`)
+1. Create `src/i18n/locales/{code}/` with the domain JSON files and static `index.ts` (copy the `en/` folder)
 2. Import the messages and `date-fns` locale in `registry.ts`
 3. Add one entry to `LOCALE_REGISTRY`
 
@@ -108,7 +108,7 @@ Keys use **flat dot-notation** with a category prefix:
 4. **Include `...` in the translation value** if the UI needs an ellipsis — don't append it in JSX.
 5. **Use `<Trans>` component** for translations containing HTML tags (e.g. `<strong>`).
 6. **Use `i18n.resolvedLanguage`** (not `i18n.language`) when comparing against supported language codes.
-7. **Keys must exist in every locale file** in `src/i18n/locales/` (not just `en.json` — `lint:i18n:parity` enforces this across the full set). Keep alphabetically sorted.
+7. **Every language bundle must contain the English keys** in the corresponding domain resources under `src/i18n/locales/`. `lint:i18n:parity` checks the complete bundles; keep each domain file alphabetically sorted.
 8. **Watch translation length for constrained UI elements.** Translations can be 20-100%+ longer than English. For buttons, badges, tab labels, and dropdown items, keep translations concise — use shorter synonyms if needed. High-risk areas:
    - Permission mode badges (3-5 characters max)
    - Settings tab labels (≤10 characters ideal)
@@ -122,23 +122,23 @@ Three checks gate i18n correctness, all wired into pre-commit (`lint:i18n:staged
 | Script | Catches |
 |--------|---------|
 | `lint:i18n:sorted` | locale keys not alphabetical |
-| `lint:i18n:parity` | non-EN locale missing keys present in `en.json`, or vice versa |
-| `lint:i18n:coverage` | `t('...')` callsite referencing a key that doesn't exist in `en.json` |
+| `lint:i18n:parity` | non-EN locale missing keys present in the English `en/` domains, or vice versa |
+| `lint:i18n:coverage` | empty values; reports English fallbacks for translation follow-up |
 
-`parity` alone is insufficient — it can't detect symmetric losses across all locales (a merge that drops the same 50 keys from every locale file passes parity but breaks the UI). `coverage` closes that gap by verifying every literal `t(...)` / `i18n.t(...)` / `<Trans i18nKey>` reference resolves against `en.json`. Dynamic keys (`t(\`status.${id}\`)`) are skipped — those surface via i18next's runtime missing-key warnings.
+`parity` checks key presence. `coverage` checks non-empty values and reports English fallbacks; it does not validate translation call sites. Locale tests also reject duplicate keys and unsorted domain resources.
 
 When resolving locale merge conflicts, run `bun run validate:ci` and trust the result — no manual key auditing needed if all three pass.
 
 ### Adding a new translated string
 
-1. Add the key + English value to `en.json` (alphabetical order)
-2. Add the key + translated value to **every other** `src/i18n/locales/*.json` file (run `bun run lint:i18n:parity` to confirm none were missed)
+1. Add the key + English value to the English `en/` domains (alphabetical order)
+2. Add the key + translated value to **every other** `src/i18n/locales/*/*.json` file (run `bun run lint:i18n:parity` to confirm none were missed)
 3. Use `t("your.key")` in the component (add `useTranslation()` hook if not present)
 4. For non-React code, use `i18n.t("your.key")` — but only inside functions, never at module level
 
 ### Adding a new locale
 
-1. Create `src/i18n/locales/{code}.json` with all keys from `en.json`
+1. Create `src/i18n/locales/{code}/` by copying the English `en/` domain files and static index
 2. Add the entry to `LOCALE_REGISTRY` in `src/i18n/registry.ts` (messages + date-fns locale + native name)
 3. Run tests — the registry tests will catch any missing wiring
 

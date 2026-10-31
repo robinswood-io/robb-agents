@@ -1,0 +1,382 @@
+{
+  "source": "packages/shared/src/resources/resource-bundle.ts",
+  "units": [
+    {
+      "names": [
+        "sanitizeSourceConfig"
+      ],
+      "group": "source-sanitization",
+      "bodySha256": "64100610df8f9cb08fb3caaab9ab86d9a0e724e69d47a0fb8e24dc590008addd"
+    },
+    {
+      "names": [
+        "SENSITIVE_RESOURCE_FILE_NAMES"
+      ],
+      "group": "source-sanitization",
+      "bodySha256": "49cf65ce66037568f232c2a92435fb3fbf34898c4325cdbf96fa0b1d9510b2de"
+    },
+    {
+      "names": [
+        "SENSITIVE_RESOURCE_FILE_EXTENSIONS"
+      ],
+      "group": "source-sanitization",
+      "bodySha256": "06dce12c7a4b4ceef97d6db6e46dc5d49b91ec36c14f72f74ef28306e41d9796"
+    },
+    {
+      "names": [
+        "PROTECTED_SOURCE_OVERLAY_MARKER"
+      ],
+      "group": "source-sanitization",
+      "bodySha256": "16768d0a14a8c5a7696a49475c6c032ede30e92ca106b92b786e00157fb93ef7"
+    },
+    {
+      "names": [
+        "SOURCE_TRANSACTION_LOCK_PREFIX"
+      ],
+      "group": "source-sanitization",
+      "bodySha256": "1b537211fb8832db5291bcbe830d63b33b382689ee5553376e5bc470e95ec99a"
+    },
+    {
+      "names": [
+        "PROTECTED_SOURCE_TRANSACTION_SLUG"
+      ],
+      "group": "source-sanitization",
+      "bodySha256": "de67f0b0a673688e9f423d786eb0d5f2b8a02fae837e3a39d50755d8ebe47238"
+    },
+    {
+      "names": [
+        "RESOURCE_SLUG_PATTERN"
+      ],
+      "group": "source-sanitization",
+      "bodySha256": "49d2681cce9e04f479290d12d35aeebc60866c3a6c860417290787370bbe935c"
+    },
+    {
+      "names": [
+        "isCanonicalResourceSlug"
+      ],
+      "group": "source-transaction",
+      "bodySha256": "67c36368afe03d0d0d7158a5f72a416168d0cab1466580753788931bb03894d0"
+    },
+    {
+      "names": [
+        "sourceTransactionLockPath"
+      ],
+      "group": "source-transaction",
+      "bodySha256": "6c055cae343e31d1ddc6df3b4a248bf6dba2e109fdbb946fd193c9094ad2252d"
+    },
+    {
+      "names": [
+        "fsyncDirectorySync"
+      ],
+      "group": "source-transaction",
+      "bodySha256": "e5fa5182f1a801f3689d035f87081e73b10d0861e736a774a9cdf1da014b59cf"
+    },
+    {
+      "names": [
+        "processStartIdentity"
+      ],
+      "group": "source-transaction",
+      "bodySha256": "774f914a8decb711c447ca82953da70d52b17e47a4fafe7ae1bdd2bc02c5197d"
+    },
+    {
+      "names": [
+        "acquireSourceTransactionLock"
+      ],
+      "group": "source-transaction",
+      "bodySha256": "d38fa9a4ac208020cf0d53f227d4b1754fb8d1e20a62a1b469bc1c4f9e536169"
+    },
+    {
+      "names": [
+        "withSourceTransactionLock"
+      ],
+      "group": "source-transaction",
+      "bodySha256": "ba5610b9f0970cffae574a2bcd471aafabea9255c3c8dfd4b4831f73ebfb3df9"
+    },
+    {
+      "names": [
+        "hasFilesystemEntry"
+      ],
+      "group": "resource-paths",
+      "bodySha256": "f4851a4322abada3f9a424760fb9070a628dae2e6ee19849c1e9240a015309a0"
+    },
+    {
+      "names": [
+        "errnoCode"
+      ],
+      "group": "resource-paths",
+      "bodySha256": "5ef08a0363a9311870ba93a8690115162eb0b153134b578479448440f319209d"
+    },
+    {
+      "names": [
+        "existingConfinedCollectionDirectory"
+      ],
+      "group": "resource-paths",
+      "bodySha256": "f736033ec9b8b10250bfe17007951c55a014e39f142eabfcbb9e036dd82210bf"
+    },
+    {
+      "names": [
+        "ensureConfinedCollectionDirectory"
+      ],
+      "group": "resource-paths",
+      "bodySha256": "fe8bfde7c454924b69b95496e3837fee688979dbae8c6187e50fd253516ebd8e"
+    },
+    {
+      "names": [
+        "existingConfinedResourceDirectory"
+      ],
+      "group": "resource-paths",
+      "bodySha256": "04ad3451ee679f20aeef89357f7daf04ce95e5d9ead02e720608f516d83a4392"
+    },
+    {
+      "names": [
+        "loadConfinedSourceConfig"
+      ],
+      "group": "resource-paths",
+      "bodySha256": "7ba0d759a0b1dc339b26a0fefa2f10c4353b413e963ee39746c6dfb4dcb306a7"
+    },
+    {
+      "names": [
+        "assertPortableSourceImportAllowed"
+      ],
+      "group": "resource-paths",
+      "bodySha256": "4e5560009ae525dff30fdf60f17068a7a3be8d406f37bc0ff1d324aba7c3e0c5"
+    },
+    {
+      "names": [
+        "isSensitiveResourceBundleFile"
+      ],
+      "group": "resource-paths",
+      "bodySha256": "cfb91e17d7c4eebe25561e2e13e23303ef00066aa1c888716405b7122a859c30"
+    },
+    {
+      "names": [
+        "collectPortableResourceFiles"
+      ],
+      "group": "resource-paths",
+      "bodySha256": "ce279b4b96953116b7e52e3b009e1a5faed0c7c7676b286c99928220a18c1df5"
+    },
+    {
+      "names": [
+        "exportResources"
+      ],
+      "group": "resource-export",
+      "bodySha256": "eb9db06e63990f39b64f263ae114cfda0549a4f114604307564ec09e8b8065c9"
+    },
+    {
+      "names": [
+        "exportSources"
+      ],
+      "group": "resource-export",
+      "bodySha256": "afbccd7e6e3dc8344e0a9b347f6e9b4e99926ea83955cb8c26cedfeb5aeff04c"
+    },
+    {
+      "names": [
+        "exportSkills"
+      ],
+      "group": "resource-export",
+      "bodySha256": "cae56f0cfce0c433ae1e14c112405a500c450b95f0da98f896fc1aac8c640b9d"
+    },
+    {
+      "names": [
+        "SECRET_HEADER_PATTERNS"
+      ],
+      "group": "automation-export",
+      "bodySha256": "e476a87cfdca247a0f08a0900d7c8fa36fe94405650089d0082e875f0074f144"
+    },
+    {
+      "names": [
+        "isSecretHeader"
+      ],
+      "group": "automation-export",
+      "bodySha256": "0262f979d98e8decf899c77c158170a06ebc6d98eeb406540c6af21b7b2ea3a2"
+    },
+    {
+      "names": [
+        "isTemplatedValue"
+      ],
+      "group": "automation-export",
+      "bodySha256": "a95c7faea22920345c7ffe9198606e679143590ce9cdd8619dff8495bd7b754d"
+    },
+    {
+      "names": [
+        "sanitizeAutomationMatcher"
+      ],
+      "group": "automation-export",
+      "bodySha256": "debdeef2303c4816c5c0ebef877477b9435b99736d90c15e4c40e48bafc90090"
+    },
+    {
+      "names": [
+        "exportAutomations"
+      ],
+      "group": "automation-export",
+      "bodySha256": "8d3557c876b126e39798690e19c69392cd30876256b819efc9880ebcac3aed6c"
+    },
+    {
+      "names": [
+        "validateResourceBundle"
+      ],
+      "group": "bundle-validation",
+      "bodySha256": "84a2211436311c576c554564d3b01c3fb2d58f914d45cc299b530575ee2bd5cc"
+    },
+    {
+      "names": [
+        "validateFileEntries"
+      ],
+      "group": "bundle-validation",
+      "bodySha256": "76a730ed3281fc9691b61dd7b10ce34bb2ae9c9ae4f01c43ceff676300dc0f40"
+    },
+    {
+      "names": [
+        "importResources"
+      ],
+      "group": "resource-import",
+      "bodySha256": "e471f58cc940fa0ba1bf4d4df544a9525f8caa7fece1ce612e317a2dcdcafd41"
+    },
+    {
+      "names": [
+        "emptyBucketResult"
+      ],
+      "group": "resource-import-empty-bucket-result",
+      "bodySha256": "f9f63720db5c932738de88deff5d3a65df75f6ded3f4efd6e473b1227edd1d0d"
+    },
+    {
+      "names": [
+        "stagedSourceTreeFingerprint"
+      ],
+      "group": "resource-import-empty-bucket-result",
+      "bodySha256": "1e1527a1e201f388502d04b223a310b0489ccae494c359307864bd1f23f668cd"
+    },
+    {
+      "names": [
+        "importSources"
+      ],
+      "group": "source-import",
+      "bodySha256": "f1c694fc38d79d1276477796ff6ff802b519a743b20c1566bb6b02bcb037591e"
+    },
+    {
+      "names": [
+        "importSkills"
+      ],
+      "group": "skill-import",
+      "bodySha256": "df5d0e611d15bb6720df274febec3a5470168083ffd49b019e97301774831368"
+    },
+    {
+      "names": [
+        "automationLabel"
+      ],
+      "group": "automation-import",
+      "bodySha256": "6b0c61f5fa0135a521f00066065381720bcca95712b2bb7be05507124be2ea72"
+    },
+    {
+      "names": [
+        "findMatcherById"
+      ],
+      "group": "automation-import",
+      "bodySha256": "56242d0d66798971db708aadb2add0d018a9f8fe6d0ed30b1d10683905253e0e"
+    },
+    {
+      "names": [
+        "filterJsonlByMatcherIds"
+      ],
+      "group": "automation-import",
+      "bodySha256": "4e6e810d6e10da116b39ec5f909ff278fa2297d5d93994394344cdb0e4a5db01"
+    },
+    {
+      "names": [
+        "importAutomations"
+      ],
+      "group": "automation-import",
+      "bodySha256": "a1cce737dc2cb47415f50bb18549b3985362976194984bbcd124bf84ca148f53"
+    }
+  ],
+  "modules": [
+    {
+      "name": "source-sanitization",
+      "lines": 89
+    },
+    {
+      "name": "source-transaction",
+      "lines": 198
+    },
+    {
+      "name": "resource-paths",
+      "lines": 148
+    },
+    {
+      "name": "resource-export",
+      "lines": 234
+    },
+    {
+      "name": "automation-export",
+      "lines": 164
+    },
+    {
+      "name": "bundle-validation",
+      "lines": 229
+    },
+    {
+      "name": "resource-import",
+      "lines": 63
+    },
+    {
+      "name": "resource-import-empty-bucket-result",
+      "lines": 68
+    },
+    {
+      "name": "source-import",
+      "lines": 167
+    },
+    {
+      "name": "skill-import",
+      "lines": 90
+    },
+    {
+      "name": "automation-import",
+      "lines": 213
+    }
+  ],
+  "dependencies": {
+    "source-sanitization": [],
+    "source-transaction": [
+      "source-sanitization",
+      "resource-paths"
+    ],
+    "resource-paths": [
+      "source-sanitization"
+    ],
+    "resource-export": [
+      "automation-export",
+      "resource-paths",
+      "source-transaction",
+      "source-sanitization"
+    ],
+    "automation-export": [],
+    "bundle-validation": [
+      "source-transaction",
+      "resource-paths"
+    ],
+    "resource-import": [
+      "bundle-validation",
+      "source-import",
+      "resource-import-empty-bucket-result",
+      "skill-import",
+      "automation-import"
+    ],
+    "resource-import-empty-bucket-result": [],
+    "source-import": [
+      "resource-import-empty-bucket-result",
+      "resource-paths",
+      "source-sanitization",
+      "source-transaction"
+    ],
+    "skill-import": [
+      "resource-import-empty-bucket-result",
+      "resource-paths"
+    ],
+    "automation-import": [
+      "resource-import-empty-bucket-result"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

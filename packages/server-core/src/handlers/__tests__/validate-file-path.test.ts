@@ -81,7 +81,7 @@ describe('validateFilePath', () => {
   it('filters out falsy values in additionalAllowedDirs', async () => {
     const path = join(home, 'test.txt')
     // Should not throw even with undefined/empty values in the array
-    const result = await validateFilePath(path, ['', undefined as unknown as string])
+    const result = await validateFilePath(path, ['', undefined])
     expect(result).toContain('test.txt')
   })
 })

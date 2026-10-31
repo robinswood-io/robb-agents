@@ -1,3 +1,4 @@
+import { isUnknownArray } from "../../shared/src/utils/json.ts";
 type StructuredStream<Message> = {
   readable: ReadableStream<Message>;
   writable: WritableStream<Message>;
@@ -25,13 +26,13 @@ function providerPromptRequests(message: unknown): Array<{
   key: string;
   request: Record<string, unknown>;
 }> {
-  const messages = Array.isArray(message) ? message : [message];
+  const messages = isUnknownArray(message) ? message : [message];
   const requests: Array<{ key: string; request: Record<string, unknown> }> = [];
   for (const candidate of messages) {
-    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) continue;
+    if (!candidate || typeof candidate !== 'object' || isUnknownArray(candidate)) continue;
     const record = candidate as Record<string, unknown>;
-    if (record.method !== 'session/prompt') continue;
-    const id = record.id;
+    if (record["method"] !== 'session/prompt') continue;
+    const id = record["id"];
     if (typeof id !== 'string' && typeof id !== 'number') continue;
     requests.push({ key: `${typeof id}:${String(id)}`, request: record });
   }
@@ -97,7 +98,7 @@ export function createCorrelatedProviderPromptStream<Message>(
         writer.releaseLock();
       }
     },
-    async abort(reason) {
+    async abort(reason: unknown) {
       const writer = source.writable.getWriter();
       try {
         await writer.abort(reason);
@@ -112,7 +113,7 @@ export function createCorrelatedProviderPromptStream<Message>(
     reserve(turnId, matches) {
       const reservation: PromptWriteReservation = {
         turnId,
-        matches,
+        ...(matches !== undefined ? { matches: matches } : {}),
         bound: false,
         cancelled: false,
       };
@@ -168,17 +169,16 @@ export async function writeProviderPromptWithHandoff(
 
 /**
  * Adapt Pi AgentSession's preflight callback to the host handoff protocol.
- * Pi reports `false` for every local validation/setup failure and `true` only
- * after those checks, immediately before its provider loop (or after a native
- * follow-up has been accepted into Pi's own queue). Duplicate callbacks are
+ * A started request or a natively queued follow-up crosses this boundary.
+ * Locally handled input never reaches the provider. Duplicate callbacks are
  * harmless and never acknowledge more than once.
  */
 export function createProviderHandoffPreflight(
   acknowledge: () => void,
-): (ready: boolean) => void {
+): NonNullable<import('@earendil-works/pi-coding-agent').PromptOptions['preflightResult']> {
   let acknowledged = false;
-  return ready => {
-    if (!ready || acknowledged) return;
+  return disposition => {
+    if ((disposition !== 'started' && disposition !== 'queued') || acknowledged) return;
     acknowledged = true;
     acknowledge();
   };

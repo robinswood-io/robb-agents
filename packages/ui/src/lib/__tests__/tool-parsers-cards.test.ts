@@ -1,3 +1,4 @@
+import { parseReadResult, parseBashResult, parseGrepResult, parseGlobResult } from '../tool-parsers/results.ts'
 import { describe, it, expect } from 'bun:test'
 import type { ActivityItem } from '../../components/chat/TurnCard'
 import { extractOverlayCards, parseWebSearchResult } from '../tool-parsers'
@@ -108,5 +109,37 @@ describe('parseWebSearchResult', () => {
   it('preserves a large unterminated links payload', () => {
     const input = `Links: [${'x'.repeat(100_000)}`
     expect(parseWebSearchResult(input)).toBe(input)
+  })
+})
+
+
+describe('structured tool output boundaries', () => {
+  it('keeps Read content and numeric line metadata while retaining malformed envelopes verbatim', () => {
+    expect(parseReadResult('{"file":{"content":"hello","numLines":1,"startLine":2,"totalLines":3}}'))
+      .toEqual({ content: 'hello', numLines: 1, startLine: 2, totalLines: 3 })
+    for (const raw of ['null', '{"file":null}', '{"file":{"content":{}}}']) {
+      expect(parseReadResult(raw)).toEqual({ content: raw })
+    }
+  })
+  it('preserves empty Bash output and an observed interruption without coercing malformed fields', () => {
+    expect(parseBashResult('{"stdout":"","stderr":"","exitCode":0}'))
+      .toEqual({ output: '', exitCode: 0 })
+    expect(parseBashResult('{"stdout":"partial","interrupted":true}'))
+      .toEqual({ output: 'partial', exitCode: 130 })
+    expect(parseBashResult('{"stdout":{},"exitCode":"0"}'))
+      .toEqual({ output: '{"stdout":{},"exitCode":"0"}' })
+  })
+  it('renders valid search filenames and leaves malformed values visible', () => {
+    expect(parseGrepResult('{"filenames":["a.ts","b.ts"]}', 'pattern', '.', 'files').output)
+      .toBe('a.ts\nb.ts')
+    for (const raw of ['null', '{"filenames":{}}', '{"filenames":["a.ts",7]}']) {
+      expect(parseGrepResult(raw, 'pattern', '.', 'files').output).toBe(raw)
+    }
+  })
+  it('accepts both Glob formats and preserves corrupt rows for diagnosis', () => {
+    for (const raw of ['["a.ts","b.ts"]', '{"filenames":["a.ts","b.ts"],"numFiles":2}']) {
+      expect(parseGlobResult(raw, '*.ts', '.').output).toBe('a.ts\nb.ts')
+    }
+    expect(parseGlobResult('["a.ts",{}]', '*.ts', '.').output).toBe('["a.ts",{}]')
   })
 })

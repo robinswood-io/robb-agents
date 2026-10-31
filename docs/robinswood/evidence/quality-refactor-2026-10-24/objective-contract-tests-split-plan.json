@@ -1,0 +1,1098 @@
+{
+  "source": "packages/server-core/src/sessions/objective-contract.test.ts",
+  "sourceHash": "a25198c30a28e44b23513def09ed1463bf19b15ec8e08125c8705f42e70e1144",
+  "files": [
+    {
+      "file": "packages/server-core/src/sessions/testing/objective-contract-fixture.ts",
+      "lines": 8
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract.test.ts",
+      "lines": 437
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "lines": 438
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-preserves-a-later-independent-imperative-after-an-analytical-deci.test.ts",
+      "lines": 424
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-guards-an-authoritative-medical-treatment-mutation-with-medical-e.test.ts",
+      "lines": 421
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-lets-a-new-substantive-amendment-replace-an-older-clarified-secur.test.ts",
+      "lines": 401
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-does-not-turn-read-only-negated-reported-or-chat-response-wording.test.ts",
+      "lines": 428
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "lines": 436
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-starts-a-new-objective-for-a-fresh-request-after-completion.test.ts",
+      "lines": 410
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "lines": 440
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-advances-evidence-when-the-bounded-result-changes-for-the-same-no.test.ts",
+      "lines": 189
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-keeps-the-exact-body-as-payload-while-excluding-it-from-risk-and.test.ts",
+      "lines": 83
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-uses-a-signed-preflight-for-an-authorized-thread-reply-without-as.test.ts",
+      "lines": 19
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-recovers-an-authenticated-repair-command-while-preserving-explici.test.ts",
+      "lines": 107
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-never-counts-a-plan-update-as-target-mutation-evidence-or-objecti.test.ts",
+      "lines": 15
+    }
+  ],
+  "groups": [
+    {
+      "file": "packages/server-core/src/sessions/objective-contract.test.ts",
+      "suite": 0,
+      "indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "suite": 0,
+      "indices": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-preserves-a-later-independent-imperative-after-an-analytical-deci.test.ts",
+      "suite": 0,
+      "indices": [
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-guards-an-authoritative-medical-treatment-mutation-with-medical-e.test.ts",
+      "suite": 0,
+      "indices": [
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-lets-a-new-substantive-amendment-replace-an-older-clarified-secur.test.ts",
+      "suite": 0,
+      "indices": [
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-does-not-turn-read-only-negated-reported-or-chat-response-wording.test.ts",
+      "suite": 0,
+      "indices": [
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "suite": 0,
+      "indices": [
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-starts-a-new-objective-for-a-fresh-request-after-completion.test.ts",
+      "suite": 0,
+      "indices": [
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "suite": 0,
+      "indices": [
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-advances-evidence-when-the-bounded-result-changes-for-the-same-no.test.ts",
+      "suite": 0,
+      "indices": [
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        115
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-keeps-the-exact-body-as-payload-while-excluding-it-from-risk-and.test.ts",
+      "suite": 1,
+      "indices": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "setupIndices": [
+        0,
+        1
+      ],
+      "setupHashes": [
+        "2f5333987bace8c107350162364066b35fe1e0e44c665850fcbda6154f0b9eca",
+        "d133c7d10f0bd61d9b6ffebf7747b5e536936012c896d704dd2b3ff0badd3d4f"
+      ]
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-uses-a-signed-preflight-for-an-authorized-thread-reply-without-as.test.ts",
+      "suite": 2,
+      "indices": [
+        0
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-recovers-an-authenticated-repair-command-while-preserving-explici.test.ts",
+      "suite": 3,
+      "indices": [
+        0,
+        1
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-contract-never-counts-a-plan-update-as-target-mutation-evidence-or-objecti.test.ts",
+      "suite": 4,
+      "indices": [
+        0
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    }
+  ],
+  "statements": [
+    {
+      "suite": 0,
+      "index": 0,
+      "destination": "packages/server-core/src/sessions/objective-contract.test.ts",
+      "hash": "76324b59ae3f01e56a5376a132b4802b7ed14a0782aed85b5ab1c82c16ed4f94"
+    },
+    {
+      "suite": 0,
+      "index": 1,
+      "destination": "packages/server-core/src/sessions/objective-contract.test.ts",
+      "hash": "d8a0fbaa07d71e54293e19e113ea8bfef6502cef316167b5de28090f472c73ba"
+    },
+    {
+      "suite": 0,
+      "index": 2,
+      "destination": "packages/server-core/src/sessions/objective-contract.test.ts",
+      "hash": "891f64f16f0a42bcfe9a1e631841166f8f1b7f52d6f9a0b1f0adf4cd2161e5de"
+    },
+    {
+      "suite": 0,
+      "index": 3,
+      "destination": "packages/server-core/src/sessions/objective-contract.test.ts",
+      "hash": "ffb1e1797a2d093a899dc0bb1a8d7fab67272ff576a14ffd6e183ddea51d5a71"
+    },
+    {
+      "suite": 0,
+      "index": 4,
+      "destination": "packages/server-core/src/sessions/objective-contract.test.ts",
+      "hash": "61273a2a2fae601acb22eb564915caa29ad90b13fd4726c3de052c572b8bc47c"
+    },
+    {
+      "suite": 0,
+      "index": 5,
+      "destination": "packages/server-core/src/sessions/objective-contract.test.ts",
+      "hash": "7ee975c15b62d961ace97524277cf45193c40482d665ccf74f3ef8c56d79cb47"
+    },
+    {
+      "suite": 0,
+      "index": 6,
+      "destination": "packages/server-core/src/sessions/objective-contract.test.ts",
+      "hash": "46cdfac613d86e5be5b2ac5c7afb523e99fd68083544cf4c3513caffcf39d139"
+    },
+    {
+      "suite": 0,
+      "index": 7,
+      "destination": "packages/server-core/src/sessions/objective-contract.test.ts",
+      "hash": "cff3da5b9e1d7a93f6bb82db99f9c8bf1415c1f08504fd7081154b8522d1646f"
+    },
+    {
+      "suite": 0,
+      "index": 8,
+      "destination": "packages/server-core/src/sessions/objective-contract.test.ts",
+      "hash": "18bea5b10506ce0d8978e8ae146279b93d8be30eda8e5836e4e35bb0a1eadbfc"
+    },
+    {
+      "suite": 0,
+      "index": 9,
+      "destination": "packages/server-core/src/sessions/objective-contract.test.ts",
+      "hash": "d0dbb630dc0d5c1713436e1767d87b1b3f14b9731b379b495908db0256227ec6"
+    },
+    {
+      "suite": 0,
+      "index": 10,
+      "destination": "packages/server-core/src/sessions/objective-contract.test.ts",
+      "hash": "911f8a579f2296a37ec05ba9364d39d2cfd4f828ca5008f3670585538e0a3c2a"
+    },
+    {
+      "suite": 0,
+      "index": 11,
+      "destination": "packages/server-core/src/sessions/objective-contract.test.ts",
+      "hash": "64ed5219f94c0e198c1e7368af33c158351042bbfecec33d473309084ced70b6"
+    },
+    {
+      "suite": 0,
+      "index": 12,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "1e58077e76490f6424bb2e1f4496d69b5b1d5c7f8f6c49f83d19f4446e7e8a3c"
+    },
+    {
+      "suite": 0,
+      "index": 13,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "2b5317df6face08913e2006637078c5ff026f7559b8b766b662b86aaf3807b05"
+    },
+    {
+      "suite": 0,
+      "index": 14,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "2be6cf2ada9460470cec9d7242fc056ce7c673f14e96d4cbf82d494b9151d521"
+    },
+    {
+      "suite": 0,
+      "index": 15,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "3c84954b9723f726a54e26c4c7a9d5324d5f56731f032be49b8f571337880524"
+    },
+    {
+      "suite": 0,
+      "index": 16,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "4849cd529fae05bcf8aae95229f3ae36cf67ee7d05a7fe7def119ea91ed77a02"
+    },
+    {
+      "suite": 0,
+      "index": 17,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "e4ac57c772625ade03a036f9472c64fdddf6300dacb4db6ed299a75f87e85aec"
+    },
+    {
+      "suite": 0,
+      "index": 18,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "978ea38cdfcdac9e1824269ebeaf574fa885333362189eeeb57c3f2c4fbe959f"
+    },
+    {
+      "suite": 0,
+      "index": 19,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "86f18a5eaeab95433437142a702028db77afc8f7d7db087418d1c4818164a0c0"
+    },
+    {
+      "suite": 0,
+      "index": 20,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "45a9507e6d7cde5211aadd04e607c4f7aa518f74adfb4ee836a4b3477f5ab600"
+    },
+    {
+      "suite": 0,
+      "index": 21,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "c23d8725fc68d196fb0619c9aa6bf6f172db893d226381fb8b573bd6d3462b05"
+    },
+    {
+      "suite": 0,
+      "index": 22,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "fa8bf5d0245f185bab15464dcbab1ee821b134b49af041d4b8f1dbdfce8b1f59"
+    },
+    {
+      "suite": 0,
+      "index": 23,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "269d69c099ec590f3033d422552e99e0309455b642ef1f588f6dc66beac35eca"
+    },
+    {
+      "suite": 0,
+      "index": 24,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "f3282e563bb0ff31facd3f8ea8c0af137e80767fc7adc4d44c6e082fa9a24d0e"
+    },
+    {
+      "suite": 0,
+      "index": 25,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "32c2741aeb2dad2789974c79d93f4231060d568e3d1fa715907f190fadd253a4"
+    },
+    {
+      "suite": 0,
+      "index": 26,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "41daa1ac64e0a3f2ad3aba7f2ac4de8f54bc76b435a4dc7ab5175b04d01eaa70"
+    },
+    {
+      "suite": 0,
+      "index": 27,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-deploy-then-close-as-mutation-work-even-when-later-mutation.test.ts",
+      "hash": "22741eb17fa6cf23a8930beda420eed0f130ffa562c017596e9c5bcd3f8c8cb6"
+    },
+    {
+      "suite": 0,
+      "index": 28,
+      "destination": "packages/server-core/src/sessions/objective-contract-preserves-a-later-independent-imperative-after-an-analytical-deci.test.ts",
+      "hash": "6a7c491a0c1aac8f1acb84075da82c398b3317803408ed27d1e533627fc1ef30"
+    },
+    {
+      "suite": 0,
+      "index": 29,
+      "destination": "packages/server-core/src/sessions/objective-contract-preserves-a-later-independent-imperative-after-an-analytical-deci.test.ts",
+      "hash": "1f12637a2c1f0e659ac260835358770c2690ce66bc338f956dc15e7bad89f4a7"
+    },
+    {
+      "suite": 0,
+      "index": 30,
+      "destination": "packages/server-core/src/sessions/objective-contract-preserves-a-later-independent-imperative-after-an-analytical-deci.test.ts",
+      "hash": "2ed3b5476067e6c630f9adf8f474ac6b2c707ccb18fd199833e336da5c864d7f"
+    },
+    {
+      "suite": 0,
+      "index": 31,
+      "destination": "packages/server-core/src/sessions/objective-contract-preserves-a-later-independent-imperative-after-an-analytical-deci.test.ts",
+      "hash": "db7af1b8d2d1b809fcd97debe85658cd5ff296e84ca8e62539a4798cd1de5f44"
+    },
+    {
+      "suite": 0,
+      "index": 32,
+      "destination": "packages/server-core/src/sessions/objective-contract-preserves-a-later-independent-imperative-after-an-analytical-deci.test.ts",
+      "hash": "3e10244df043e565c578792f208d34fa96e493ee2298b3427d22e55ebf2342c2"
+    },
+    {
+      "suite": 0,
+      "index": 33,
+      "destination": "packages/server-core/src/sessions/objective-contract-preserves-a-later-independent-imperative-after-an-analytical-deci.test.ts",
+      "hash": "6c2f8a4c3d541652f7b8851a287a6f9172c2731abf7ddc2f8d652070c8c83ddf"
+    },
+    {
+      "suite": 0,
+      "index": 34,
+      "destination": "packages/server-core/src/sessions/objective-contract-preserves-a-later-independent-imperative-after-an-analytical-deci.test.ts",
+      "hash": "67b1b6f58fdcc37766a66d1e4f8c5165fd90a923610d94df902d6d7b03eaba3d"
+    },
+    {
+      "suite": 0,
+      "index": 35,
+      "destination": "packages/server-core/src/sessions/objective-contract-preserves-a-later-independent-imperative-after-an-analytical-deci.test.ts",
+      "hash": "e220316a0c6b89dfcad8475d93b9d8e6d6116e7ca9607aba7e44b4afd4e05870"
+    },
+    {
+      "suite": 0,
+      "index": 36,
+      "destination": "packages/server-core/src/sessions/objective-contract-preserves-a-later-independent-imperative-after-an-analytical-deci.test.ts",
+      "hash": "caae813b5996d65ba74f4ee52f8a6d9a6826511af3a8ae3304a64b34b3f58d7b"
+    },
+    {
+      "suite": 0,
+      "index": 37,
+      "destination": "packages/server-core/src/sessions/objective-contract-preserves-a-later-independent-imperative-after-an-analytical-deci.test.ts",
+      "hash": "db95e4b8d2882a591e0b92d557a7615a3fc077a35596f8376c350de32921d32c"
+    },
+    {
+      "suite": 0,
+      "index": 38,
+      "destination": "packages/server-core/src/sessions/objective-contract-preserves-a-later-independent-imperative-after-an-analytical-deci.test.ts",
+      "hash": "a799b0df7f29d8eba4e4a660536107d711ee844b242eb0794aa6868d18b20af5"
+    },
+    {
+      "suite": 0,
+      "index": 39,
+      "destination": "packages/server-core/src/sessions/objective-contract-preserves-a-later-independent-imperative-after-an-analytical-deci.test.ts",
+      "hash": "cca4e1951ce580b06828533949792e3bd1efb7cde13c4ca54969b9c448613d1f"
+    },
+    {
+      "suite": 0,
+      "index": 40,
+      "destination": "packages/server-core/src/sessions/objective-contract-guards-an-authoritative-medical-treatment-mutation-with-medical-e.test.ts",
+      "hash": "22a0ad1878232dda92d53d8ac5f615486d8c034ded59c16245d316f29c49718f"
+    },
+    {
+      "suite": 0,
+      "index": 41,
+      "destination": "packages/server-core/src/sessions/objective-contract-guards-an-authoritative-medical-treatment-mutation-with-medical-e.test.ts",
+      "hash": "a42316c0f1f35d3a978ffc9fa30c603fc30a264abe66627069c727e5bc02911b"
+    },
+    {
+      "suite": 0,
+      "index": 42,
+      "destination": "packages/server-core/src/sessions/objective-contract-guards-an-authoritative-medical-treatment-mutation-with-medical-e.test.ts",
+      "hash": "6549692ed06ad934061916c5a74e09119ff222ea6f85bbde0359f2182d83e450"
+    },
+    {
+      "suite": 0,
+      "index": 43,
+      "destination": "packages/server-core/src/sessions/objective-contract-guards-an-authoritative-medical-treatment-mutation-with-medical-e.test.ts",
+      "hash": "df7e5783e0bd41b78166847ad59b196e048bacdf238988af6c0d777a2150a018"
+    },
+    {
+      "suite": 0,
+      "index": 44,
+      "destination": "packages/server-core/src/sessions/objective-contract-guards-an-authoritative-medical-treatment-mutation-with-medical-e.test.ts",
+      "hash": "97d038c4cf42d6cc5268dc4043f926345029b0afb43fc58d500d0a489aced169"
+    },
+    {
+      "suite": 0,
+      "index": 45,
+      "destination": "packages/server-core/src/sessions/objective-contract-guards-an-authoritative-medical-treatment-mutation-with-medical-e.test.ts",
+      "hash": "b635cfcfd362e72539841e13e861f49758697009b729e7196a42cf9c919b5622"
+    },
+    {
+      "suite": 0,
+      "index": 46,
+      "destination": "packages/server-core/src/sessions/objective-contract-guards-an-authoritative-medical-treatment-mutation-with-medical-e.test.ts",
+      "hash": "d8b9cdfb651b0610d6906a43dc1dedd163d65254ced94a83914b07b0be25d17c"
+    },
+    {
+      "suite": 0,
+      "index": 47,
+      "destination": "packages/server-core/src/sessions/objective-contract-guards-an-authoritative-medical-treatment-mutation-with-medical-e.test.ts",
+      "hash": "176b909ec3c6753a0c2c71a933e3035ed04e05d5a2fc62b2667da6b66cfd256d"
+    },
+    {
+      "suite": 0,
+      "index": 48,
+      "destination": "packages/server-core/src/sessions/objective-contract-guards-an-authoritative-medical-treatment-mutation-with-medical-e.test.ts",
+      "hash": "dee7394393ebb28eb7d02bb0f9c6af4acda8306dce01cd06fbd04cc44841ac6d"
+    },
+    {
+      "suite": 0,
+      "index": 49,
+      "destination": "packages/server-core/src/sessions/objective-contract-guards-an-authoritative-medical-treatment-mutation-with-medical-e.test.ts",
+      "hash": "0054b25306e73c91157a54b784f27c197485483d68bde05649da7d7447e680f4"
+    },
+    {
+      "suite": 0,
+      "index": 50,
+      "destination": "packages/server-core/src/sessions/objective-contract-guards-an-authoritative-medical-treatment-mutation-with-medical-e.test.ts",
+      "hash": "a2151b2e40b73bb267369a9adb9402f05b21a76171ecc082911031df8a4a4bca"
+    },
+    {
+      "suite": 0,
+      "index": 51,
+      "destination": "packages/server-core/src/sessions/objective-contract-guards-an-authoritative-medical-treatment-mutation-with-medical-e.test.ts",
+      "hash": "4b902129718c6100c3f492a1b8a8b1962c8be4c5e271ae7f8c706d3edfd4409f"
+    },
+    {
+      "suite": 0,
+      "index": 52,
+      "destination": "packages/server-core/src/sessions/objective-contract-lets-a-new-substantive-amendment-replace-an-older-clarified-secur.test.ts",
+      "hash": "7661bb176ed70bb0456da2cfaac416bb79e69aa84e4a976e84a719d1e3154ab3"
+    },
+    {
+      "suite": 0,
+      "index": 53,
+      "destination": "packages/server-core/src/sessions/objective-contract-lets-a-new-substantive-amendment-replace-an-older-clarified-secur.test.ts",
+      "hash": "a9a5a0cfa0471a2ae03efdc0af2a22b287b9498046294e7ba47db4b4f4e0e754"
+    },
+    {
+      "suite": 0,
+      "index": 54,
+      "destination": "packages/server-core/src/sessions/objective-contract-lets-a-new-substantive-amendment-replace-an-older-clarified-secur.test.ts",
+      "hash": "16570726486385b63af257ef6e328275fa7204e6a796ae0fcb4592bffa37c847"
+    },
+    {
+      "suite": 0,
+      "index": 55,
+      "destination": "packages/server-core/src/sessions/objective-contract-lets-a-new-substantive-amendment-replace-an-older-clarified-secur.test.ts",
+      "hash": "c037a3287ba27c7612a6064a8143db4eaf2a959b3390121a5c7457f71f3ef43d"
+    },
+    {
+      "suite": 0,
+      "index": 56,
+      "destination": "packages/server-core/src/sessions/objective-contract-lets-a-new-substantive-amendment-replace-an-older-clarified-secur.test.ts",
+      "hash": "32d01ab2c29be1daedec6bf05fbb4f45745c4aa58d9f1b19134566589639fa32"
+    },
+    {
+      "suite": 0,
+      "index": 57,
+      "destination": "packages/server-core/src/sessions/objective-contract-lets-a-new-substantive-amendment-replace-an-older-clarified-secur.test.ts",
+      "hash": "a53e9ac7bd38daf89b67a12e45bfbd55340da76ed7f35ad17571501d6b5f068c"
+    },
+    {
+      "suite": 0,
+      "index": 58,
+      "destination": "packages/server-core/src/sessions/objective-contract-lets-a-new-substantive-amendment-replace-an-older-clarified-secur.test.ts",
+      "hash": "186dee5781f96d52c0c74084ac9a158b8f274e1d023faca8554926423114c05e"
+    },
+    {
+      "suite": 0,
+      "index": 59,
+      "destination": "packages/server-core/src/sessions/objective-contract-lets-a-new-substantive-amendment-replace-an-older-clarified-secur.test.ts",
+      "hash": "29080f9b1d57772b58a7cb784f0bf926026e6af4577af812269cb77f1b67eb74"
+    },
+    {
+      "suite": 0,
+      "index": 60,
+      "destination": "packages/server-core/src/sessions/objective-contract-lets-a-new-substantive-amendment-replace-an-older-clarified-secur.test.ts",
+      "hash": "0f72d92bfb0fa29dfb4046ac3bda719f6029bb3a8dc5fdd7c813630a6a622784"
+    },
+    {
+      "suite": 0,
+      "index": 61,
+      "destination": "packages/server-core/src/sessions/objective-contract-lets-a-new-substantive-amendment-replace-an-older-clarified-secur.test.ts",
+      "hash": "9a997a544ccfee97b55201d32e8891ac8aca41958af6f8d7676c47e623921e89"
+    },
+    {
+      "suite": 0,
+      "index": 62,
+      "destination": "packages/server-core/src/sessions/objective-contract-lets-a-new-substantive-amendment-replace-an-older-clarified-secur.test.ts",
+      "hash": "0c65f21418b7b2cb9e9d06324c16094c47fcef781e71b4ecfabd732774ae9722"
+    },
+    {
+      "suite": 0,
+      "index": 63,
+      "destination": "packages/server-core/src/sessions/objective-contract-does-not-turn-read-only-negated-reported-or-chat-response-wording.test.ts",
+      "hash": "44a10efd4a5d711b552bf8c68d99f097c634d746b48c81c72a556ca3905c0617"
+    },
+    {
+      "suite": 0,
+      "index": 64,
+      "destination": "packages/server-core/src/sessions/objective-contract-does-not-turn-read-only-negated-reported-or-chat-response-wording.test.ts",
+      "hash": "e2f74c7b26abb36f97390fef53cbb6c84c4302b4eb14047a08fefda002687d80"
+    },
+    {
+      "suite": 0,
+      "index": 65,
+      "destination": "packages/server-core/src/sessions/objective-contract-does-not-turn-read-only-negated-reported-or-chat-response-wording.test.ts",
+      "hash": "b7d442029745ed9c266ab1d8f682671692ae8f894ca208d8f74767394518dcb3"
+    },
+    {
+      "suite": 0,
+      "index": 66,
+      "destination": "packages/server-core/src/sessions/objective-contract-does-not-turn-read-only-negated-reported-or-chat-response-wording.test.ts",
+      "hash": "bcb857222393f678408542a5d25c466976bf1afa81d32623123f3ec160d6540a"
+    },
+    {
+      "suite": 0,
+      "index": 67,
+      "destination": "packages/server-core/src/sessions/objective-contract-does-not-turn-read-only-negated-reported-or-chat-response-wording.test.ts",
+      "hash": "f10bfcafe1213631361684be027f2960095127b089f8c6c2fa3f9694fca27493"
+    },
+    {
+      "suite": 0,
+      "index": 68,
+      "destination": "packages/server-core/src/sessions/objective-contract-does-not-turn-read-only-negated-reported-or-chat-response-wording.test.ts",
+      "hash": "771327cceb5ebb8a146ed776104064fb18f0bdfc950291756302a720b012fb48"
+    },
+    {
+      "suite": 0,
+      "index": 69,
+      "destination": "packages/server-core/src/sessions/objective-contract-does-not-turn-read-only-negated-reported-or-chat-response-wording.test.ts",
+      "hash": "e18f77e6fd383117b80412b370310367aa3108b8c53dd1e4939c47c5c84537be"
+    },
+    {
+      "suite": 0,
+      "index": 70,
+      "destination": "packages/server-core/src/sessions/objective-contract-does-not-turn-read-only-negated-reported-or-chat-response-wording.test.ts",
+      "hash": "73468d90946c016a6b1b86e6f97159b07fa6b3ba794eccd440bed858a6442daa"
+    },
+    {
+      "suite": 0,
+      "index": 71,
+      "destination": "packages/server-core/src/sessions/objective-contract-does-not-turn-read-only-negated-reported-or-chat-response-wording.test.ts",
+      "hash": "01ee046d7b3a1bde517663bcdaf6c9fe01322e06b0d761eff3a4392cd2c38352"
+    },
+    {
+      "suite": 0,
+      "index": 72,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "hash": "3b99f9188f27c8066680304f98b354835f4fec6e2623edaf9e090f98bf56a2c8"
+    },
+    {
+      "suite": 0,
+      "index": 73,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "hash": "c2c58ceac303e717d573d68272145dc427fbec95afa4a070f5ffe78911268241"
+    },
+    {
+      "suite": 0,
+      "index": 74,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "hash": "81a0b5d65417819c9b8fc788e9bcce72df40ecc9b908794719589c5ed731be24"
+    },
+    {
+      "suite": 0,
+      "index": 75,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "hash": "ac8003376cca6ecb88019f038e6a5cb11062b51bb7f4fca5f64a4b961caafc1a"
+    },
+    {
+      "suite": 0,
+      "index": 76,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "hash": "3cff195f47c7ec9c2160ace561776fda9eb222e4a8d16dabaa8b426b6caa169c"
+    },
+    {
+      "suite": 0,
+      "index": 77,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "hash": "278672e16b1b1e97b58db4d4d5a230100b0e5dffd22fc29cbec9492645ab1eda"
+    },
+    {
+      "suite": 0,
+      "index": 78,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "hash": "24b98834140852462a8ea44fe674f88862c46b7105b5545588d7afaa0a064f0d"
+    },
+    {
+      "suite": 0,
+      "index": 79,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "hash": "0ef98bc8e203e252d83be4ff9aa914c394e8ce7fb2312aaffeeaa1e803f8c744"
+    },
+    {
+      "suite": 0,
+      "index": 80,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "hash": "5b3b32c2c3560edd1ad37cd6e1364b1a99b783af77e3170bd5aad3d7b2527f1e"
+    },
+    {
+      "suite": 0,
+      "index": 81,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "hash": "277250384126dc4214ac171f639c11b857e5d47e825986a50ad09d9e5406160e"
+    },
+    {
+      "suite": 0,
+      "index": 82,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "hash": "04d82461abcfb51868cce8ae2cfab221d14fbc6f14c3209b7af33c911c3b44c3"
+    },
+    {
+      "suite": 0,
+      "index": 83,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "hash": "5331102072551b982a2426005db33e7979c6dc8a0f955eef4afa40331d576c41"
+    },
+    {
+      "suite": 0,
+      "index": 84,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "hash": "7737e4e3f92b8311969df4eec9faee121691db1a7bc8d196cb7139f7ee48a2c2"
+    },
+    {
+      "suite": 0,
+      "index": 85,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-bare-acknowledgments-inert-but-lets-contentful-continuation.test.ts",
+      "hash": "3fbbc5016691e70d274af9f0289d66faf8c062724b9f40577396322960de1e7a"
+    },
+    {
+      "suite": 0,
+      "index": 86,
+      "destination": "packages/server-core/src/sessions/objective-contract-starts-a-new-objective-for-a-fresh-request-after-completion.test.ts",
+      "hash": "345be8ed0991c0e208de3d1b2d7dae072e66caf43382a0180691e91eb6502a64"
+    },
+    {
+      "suite": 0,
+      "index": 87,
+      "destination": "packages/server-core/src/sessions/objective-contract-starts-a-new-objective-for-a-fresh-request-after-completion.test.ts",
+      "hash": "f9b853e3e5e5b594691751480ecc3690ed5bea633ed58035218a1988104de7fd"
+    },
+    {
+      "suite": 0,
+      "index": 88,
+      "destination": "packages/server-core/src/sessions/objective-contract-starts-a-new-objective-for-a-fresh-request-after-completion.test.ts",
+      "hash": "a2cacaf330543d36aa5e35168532909446decc5a0e0c96cb3ad2b26fb6351e54"
+    },
+    {
+      "suite": 0,
+      "index": 89,
+      "destination": "packages/server-core/src/sessions/objective-contract-starts-a-new-objective-for-a-fresh-request-after-completion.test.ts",
+      "hash": "6ef019fcfb8989e14fc1248c0ec6b20e2846747a85433e08aa6075bf8b955cd6"
+    },
+    {
+      "suite": 0,
+      "index": 90,
+      "destination": "packages/server-core/src/sessions/objective-contract-starts-a-new-objective-for-a-fresh-request-after-completion.test.ts",
+      "hash": "a43d20c1e00342e373edcaa3eae7e28888a3a2606206a805bdd5639c4cf66984"
+    },
+    {
+      "suite": 0,
+      "index": 91,
+      "destination": "packages/server-core/src/sessions/objective-contract-starts-a-new-objective-for-a-fresh-request-after-completion.test.ts",
+      "hash": "65791688ebccefc53879f60023d6a38a03e31bc908ff144650e401e7f87b1510"
+    },
+    {
+      "suite": 0,
+      "index": 92,
+      "destination": "packages/server-core/src/sessions/objective-contract-starts-a-new-objective-for-a-fresh-request-after-completion.test.ts",
+      "hash": "f7cfbe99da7c0d017b7cf70e586c845d089153b60857d7b3faa48e0a662ced5d"
+    },
+    {
+      "suite": 0,
+      "index": 93,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "0e821dd28806a6995215e23924e66c80bf9a902f4933456f79c3e40949ab6e87"
+    },
+    {
+      "suite": 0,
+      "index": 94,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "cd5dae41c3b3a551f0f9273c0469c3890d03e3fd4cbf3adc1862c1df6bfcce6c"
+    },
+    {
+      "suite": 0,
+      "index": 95,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "57e477f9453b07cfc8388dc785bec27040e9f14b345aa42932a7f396627aa693"
+    },
+    {
+      "suite": 0,
+      "index": 96,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "d96471901b2ff639c537ae5bc16e0318763e4d665a7b9c760e61392e1a16d0a0"
+    },
+    {
+      "suite": 0,
+      "index": 97,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "3a47705a3ff92b036674a006795af79e5bcff9bc139c18c256a8929206aaeac6"
+    },
+    {
+      "suite": 0,
+      "index": 98,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "986a0a1cad243c7ce692f8f912dd333b5db986890aec45f3f633d7a245567578"
+    },
+    {
+      "suite": 0,
+      "index": 99,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "e6a44d24d1e840aa05d112f4d22ca7265c587a20d539e55af83f40529ff33771"
+    },
+    {
+      "suite": 0,
+      "index": 100,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "ff3acd6bb45a32b3bdd1f46bd543876f7934aba8db27e1ccd35e28a927a4b3a4"
+    },
+    {
+      "suite": 0,
+      "index": 101,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "b04bbb7bde5cbf6822657583df26583b34c71b93008f082101d0d14854733e53"
+    },
+    {
+      "suite": 0,
+      "index": 102,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "364df285940826f726fd8f410e5a5177d14394ccef4ce84e1b917392531ad7b9"
+    },
+    {
+      "suite": 0,
+      "index": 103,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "93ceacfacac34a3dec19e44b5fc66755b66e2c4291fbda88991c551e1f91c15d"
+    },
+    {
+      "suite": 0,
+      "index": 104,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "fbc90bb7ec17fb7d6411346b96842a736862d87b72cf22a7a7427b59e38d64b0"
+    },
+    {
+      "suite": 0,
+      "index": 105,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "dc3d09d1979b86c506fb1e6f876596fff35f545b4e0d018a10a76ddc38c2c960"
+    },
+    {
+      "suite": 0,
+      "index": 106,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "8044bba0e921740726f1d972b222d6f27db9a7ed53b7d55a4523e7ac954ff5cd"
+    },
+    {
+      "suite": 0,
+      "index": 107,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "274ba0605552accbd7963d03794616e66de6dcfb62faf1af0a2fc93f729b0da8"
+    },
+    {
+      "suite": 0,
+      "index": 108,
+      "destination": "packages/server-core/src/sessions/objective-contract-reopens-a-verified-objective-when-the-user-demands-precision-or-c.test.ts",
+      "hash": "71070bb8032ce933b509cd0101f0547de8a368fcf9ca28383e8efb8a4c7d2a2d"
+    },
+    {
+      "suite": 0,
+      "index": 109,
+      "destination": "packages/server-core/src/sessions/objective-contract-advances-evidence-when-the-bounded-result-changes-for-the-same-no.test.ts",
+      "hash": "14c8febdc4a2c81f0b1b1df98536e7432d1dff696e7a9d0d858b4d87923ca454"
+    },
+    {
+      "suite": 0,
+      "index": 110,
+      "destination": "packages/server-core/src/sessions/objective-contract-advances-evidence-when-the-bounded-result-changes-for-the-same-no.test.ts",
+      "hash": "cac088e31d4a5c62b5c04a1e40b38691a8dc364b994234377b58bc8cfb7c15a3"
+    },
+    {
+      "suite": 0,
+      "index": 111,
+      "destination": "packages/server-core/src/sessions/objective-contract-advances-evidence-when-the-bounded-result-changes-for-the-same-no.test.ts",
+      "hash": "7214247499e29a36053e9017fce9e0bd1d653a2e3f8e6c76a9d9aef64b4732da"
+    },
+    {
+      "suite": 0,
+      "index": 112,
+      "destination": "packages/server-core/src/sessions/objective-contract-advances-evidence-when-the-bounded-result-changes-for-the-same-no.test.ts",
+      "hash": "17262f5ae9bafdc53c55d36d14b9a279f65ccc87cd56c1d86a20da997fc3f34a"
+    },
+    {
+      "suite": 0,
+      "index": 113,
+      "destination": "packages/server-core/src/sessions/objective-contract-advances-evidence-when-the-bounded-result-changes-for-the-same-no.test.ts",
+      "hash": "37e3caacf98d9f7e90486cff082ea53b44fe74c8a9ed93258cc5dec00feb6471"
+    },
+    {
+      "suite": 0,
+      "index": 114,
+      "destination": "packages/server-core/src/sessions/objective-contract-advances-evidence-when-the-bounded-result-changes-for-the-same-no.test.ts",
+      "hash": "785ba419b481e13a162c2e24dee5325438c655dfe1d0b12170ca78e209a85510"
+    },
+    {
+      "suite": 0,
+      "index": 115,
+      "destination": "packages/server-core/src/sessions/objective-contract-advances-evidence-when-the-bounded-result-changes-for-the-same-no.test.ts",
+      "hash": "238bd0011a13b440c807c58784f9009d870de933e95bfc4c339de4683b9e2e4a"
+    },
+    {
+      "suite": 1,
+      "index": 0,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-the-exact-body-as-payload-while-excluding-it-from-risk-and.test.ts",
+      "hash": "324c3b2cde6467ed78dc1ff5b9cccd8ba929de96eae1c814585976c65dc56930"
+    },
+    {
+      "suite": 1,
+      "index": 1,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-the-exact-body-as-payload-while-excluding-it-from-risk-and.test.ts",
+      "hash": "098f6878eddb8cdc72a6518a74245a77f50480af3c983406284077ceccb6254b"
+    },
+    {
+      "suite": 1,
+      "index": 2,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-the-exact-body-as-payload-while-excluding-it-from-risk-and.test.ts",
+      "hash": "1a15e7eb7b4a9f6c8f2eee9dd2b3516139056b3d3299d7e76ccc86cd11537f84"
+    },
+    {
+      "suite": 1,
+      "index": 3,
+      "destination": "packages/server-core/src/sessions/objective-contract-keeps-the-exact-body-as-payload-while-excluding-it-from-risk-and.test.ts",
+      "hash": "e64a4ed080a6052910b1c1da1608ac11af0308b39f34874942227f040705275d"
+    },
+    {
+      "suite": 2,
+      "index": 0,
+      "destination": "packages/server-core/src/sessions/objective-contract-uses-a-signed-preflight-for-an-authorized-thread-reply-without-as.test.ts",
+      "hash": "f6ca3f22c2e7bb48d5b9f38c72eac24a2d306623cfcd0350faa7c32e8cb86c45"
+    },
+    {
+      "suite": 3,
+      "index": 0,
+      "destination": "packages/server-core/src/sessions/objective-contract-recovers-an-authenticated-repair-command-while-preserving-explici.test.ts",
+      "hash": "720253f2a213634a2d5ed09e066d5f0098dc51b895cfbb3291989ad37e6b6d3e"
+    },
+    {
+      "suite": 3,
+      "index": 1,
+      "destination": "packages/server-core/src/sessions/objective-contract-recovers-an-authenticated-repair-command-while-preserving-explici.test.ts",
+      "hash": "a73d348cede33884c9497e6fc15c0523d2f8ac9554befdea97d4cc708a0461f8"
+    },
+    {
+      "suite": 4,
+      "index": 0,
+      "destination": "packages/server-core/src/sessions/objective-contract-never-counts-a-plan-update-as-target-mutation-evidence-or-objecti.test.ts",
+      "hash": "85fecc959cdf62627f04cc325bde21b63e1ad6cf68bd942af21c7e2069dffc81"
+    }
+  ],
+  "setups": [
+    {
+      "suite": 0,
+      "label": "'durable objective contract'",
+      "hashes": []
+    },
+    {
+      "suite": 1,
+      "label": "'structured email body policy isolation'",
+      "hashes": [
+        "2f5333987bace8c107350162364066b35fe1e0e44c665850fcbda6154f0b9eca",
+        "d133c7d10f0bd61d9b6ffebf7747b5e536936012c896d704dd2b3ff0badd3d4f"
+      ]
+    },
+    {
+      "suite": 2,
+      "label": "'contextual Gmail execution guidance'",
+      "hashes": []
+    },
+    {
+      "suite": 3,
+      "label": "'legacy direct repair authority'",
+      "hashes": []
+    },
+    {
+      "suite": 4,
+      "label": null,
+      "hashes": []
+    }
+  ],
+  "sharedDeclarations": [
+    {
+      "name": "MARKED_TERMINAL_RECONCILIATION",
+      "hash": "0998874553810c817d94c4c021276381f1f16c56a572112badc6fcfda4862309"
+    },
+    {
+      "name": "GENERIC_TERMINAL_RECONCILIATION",
+      "hash": "b81bef0b454d0ccc29a94a2b8db2be91a3fa869ef868d20d2bdfd32723bd322e"
+    }
+  ],
+  "statementCount": 124,
+  "sharedFixture": "packages/server-core/src/sessions/testing/objective-contract-fixture.ts"
+}

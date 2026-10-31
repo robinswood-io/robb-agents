@@ -20,40 +20,40 @@ import type {
 interface KanbanColumnProps {
   column: KanbanColumnMeta
   /** Resolved color identity for this column (header pill + body tint). */
-  color?: KanbanColumnColor
+  color?: KanbanColumnColor | undefined
   tasks: KanbanTask[]
   projectsById: Map<string, KanbanProject>
   statusesById: Map<string, SessionStatus>
   /** Ordered workspace statuses for the per-tile status picker. */
-  statuses?: SessionStatus[]
+  statuses?: SessionStatus[] | undefined
   /** Change a task's status from its tile. Enables the status-badge picker when set. */
-  onChangeStatus?: (taskId: string, statusId: string) => void
+  onChangeStatus?: ((taskId: string, statusId: string) => void) | undefined
   treatment: ProjectColorTreatment
   expandedTaskIds: Set<string>
-  onTaskClick?: (taskId: string) => void
+  onTaskClick?: ((taskId: string) => void) | undefined
   /** Open the editor against a tile (edit mode). Enables the tile's "Edit task" action. */
-  onEditTask?: (taskId: string) => void
-  onToggleSubtasks?: (taskId: string) => void
-  onSubtaskClick?: (taskId: string, subtaskId: string) => void
-  onAddSubtask?: (taskId: string, title: string, model: string) => void
+  onEditTask?: ((taskId: string) => void) | undefined
+  onToggleSubtasks?: ((taskId: string) => void) | undefined
+  onSubtaskClick?: ((taskId: string, subtaskId: string) => void) | undefined
+  onAddSubtask?: ((taskId: string, title: string, model: string) => void) | undefined
   /** Run all pending subtasks of a task. Shows each tile's Play button when set. */
-  onRunSubtasks?: (taskId: string) => void
+  onRunSubtasks?: ((taskId: string) => void) | undefined
   /** Provider→model catalog for each tile's "Add subtask" composer. */
-  subtaskModelGroups?: KanbanModelProviderGroup[]
+  subtaskModelGroups?: KanbanModelProviderGroup[] | undefined
   /** Model id pre-selected in the composer. */
-  defaultSubtaskModel?: string
+  defaultSubtaskModel?: string | undefined
   /** When present, renders the inline "New Task" composer at the top of the column. */
-  onCreateTask?: (title: string) => void
+  onCreateTask?: ((title: string) => void) | undefined
   /** Status auto-applied to a task dropped into this column (empty/undefined = leave untouched). */
-  dropStatusId?: string
+  dropStatusId?: string | undefined
   /** Set this column's drop-status. Enables the header status picker when provided ('' clears). */
-  onSelectDropStatus?: (statusId: string) => void
+  onSelectDropStatus?: ((statusId: string) => void) | undefined
   /** Rename this (custom) column. Enables the column editor when provided. */
-  onRename?: (name: string) => void
+  onRename?: ((name: string) => void) | undefined
   /** Set this (custom) column's accent color. */
-  onSetColor?: (color: string) => void
+  onSetColor?: ((color: string) => void) | undefined
   /** Remove this (custom) column. Absent for the last remaining column (the board keeps one). */
-  onRemove?: () => void
+  onRemove?: (() => void) | undefined
 }
 
 export function KanbanColumn({
@@ -170,14 +170,14 @@ function ColumnHeader({
 }: {
   label: string
   count: number
-  color?: KanbanColumnColor
-  statuses?: SessionStatus[]
-  dropStatus?: SessionStatus
-  onSelectDropStatus?: (statusId: string) => void
-  editable?: boolean
-  onRename?: (name: string) => void
-  onSetColor?: (color: string) => void
-  onRemove?: () => void
+  color?: KanbanColumnColor | undefined
+  statuses?: SessionStatus[] | undefined
+  dropStatus?: SessionStatus | undefined
+  onSelectDropStatus?: ((statusId: string) => void) | undefined
+  editable?: boolean | undefined
+  onRename?: ((name: string) => void) | undefined
+  onSetColor?: ((color: string) => void) | undefined
+  onRemove?: (() => void) | undefined
 }) {
   const { t } = useTranslation()
   const [open, setOpen] = React.useState(false)

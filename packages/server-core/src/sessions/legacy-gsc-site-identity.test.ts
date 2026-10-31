@@ -1,3 +1,11 @@
+import { z } from 'zod';
+import { setOptional } from '@craft-agent/shared/utils/json';
+interface GscSiteListFixture {
+  rowCount: number;
+  sites: Array<{ siteUrl: string; permissionLevel: unknown } | null>;
+}
+
+import { sessionManagerForTest } from './testing/private-runtime-access.ts';
 import { describe, expect, it } from 'bun:test';
 import type { Message, ObjectiveAcceptanceCriterion, ObjectiveOutcomeDeclaration } from '@craft-agent/core/types';
 import { validateObjectiveOutcome } from './objective-outcome.ts';
@@ -6,6 +14,7 @@ import { objectiveReviewBinding, transitionObjectiveContract } from './objective
 import { collectObjectiveAcceptanceObservations, projectObjectiveAcceptanceCriteria,
   registerObjectiveAcceptanceCriteria, validateObjectiveAcceptanceCriteria } from './objective-acceptance-criteria.ts';
 
+const siteListObservation = z.object({ rowCount: z.number(), sites: z.array(z.object({ siteUrl: z.string(), permissionLevel: z.unknown() }).passthrough().nullable()) }).passthrough();
 const toolName = 'mcp__marketing__gsc_list_sites';
 const siteUrl = 'https://requested.example/';
 const root: Message = { id: 'root', role: 'user', content: 'Verify ownership of the requested property.', timestamp: 10 };
@@ -63,16 +72,16 @@ describe('historically attested GSC property identity', () => {
   });
 
   it.each([
-    ['absent', (r: any) => { r.sites[1].siteUrl = 'https://different.example/'; }],
-    ['duplicate', (r: any) => { r.sites[2] = { ...r.sites[1] }; }],
-    ['wrong permission', (r: any) => { r.sites[1].permissionLevel = 'siteUnverifiedUser'; }],
-    ['wrong type', (r: any) => { r.sites[1].permissionLevel = true; }],
-    ['permission on another site', (r: any) => { r.sites[1].permissionLevel = 'siteFullUser'; r.sites[3].permissionLevel = 'siteOwner'; }],
-    ['changed URL', (r: any) => { r.sites[1].siteUrl = 'https://requested.example'; }],
-    ['count mismatch', (r: any) => { r.rowCount++; }],
-    ['invalid row', (r: any) => { r.sites[0] = null; }],
+    ['absent', (r: GscSiteListFixture) => { r.sites[1]!.siteUrl = 'https://different.example/'; }],
+    ['duplicate', (r: GscSiteListFixture) => { r.sites[2] = { ...r.sites[1]! }; }],
+    ['wrong permission', (r: GscSiteListFixture) => { r.sites[1]!.permissionLevel = 'siteUnverifiedUser'; }],
+    ['wrong type', (r: GscSiteListFixture) => { r.sites[1]!.permissionLevel = true; }],
+    ['permission on another site', (r: GscSiteListFixture) => { r.sites[1]!.permissionLevel = 'siteFullUser'; r.sites[3]!.permissionLevel = 'siteOwner'; }],
+    ['changed URL', (r: GscSiteListFixture) => { r.sites[1]!.siteUrl = 'https://requested.example'; }],
+    ['count mismatch', (r: GscSiteListFixture) => { r.rowCount++; }],
+    ['invalid row', (r: GscSiteListFixture) => { r.sites[0] = null; }],
   ])('rejects current result: %s', (_name, mutate) => {
-    const f = fixture(); const result = JSON.parse(f.current.toolResult!); mutate(result);
+    const f = fixture(); const result: GscSiteListFixture = siteListObservation.parse(JSON.parse(f.current.toolResult!)); mutate(result);
     f.current.toolResult = JSON.stringify(result);
     expect(validateObjectiveAcceptanceCriteria(f.objective, f.messages, f.declaration)).toHaveLength(1);
     expect(collectObjectiveAcceptanceObservations(f.objective, f.messages).find(x => x.criterionId === criterion.id)?.passed).not.toBe(true);
@@ -82,19 +91,19 @@ describe('historically attested GSC property identity', () => {
     for (const mutate of [
       (f: ReturnType<typeof fixture>) => { f.original.toolResult = output(2); },
       (f: ReturnType<typeof fixture>) => { f.messages.splice(1, 1); },
-      (f: ReturnType<typeof fixture>) => { f.original.toolUseId = undefined; },
+      (f: ReturnType<typeof fixture>) => { delete f.original.toolUseId; },
       (f: ReturnType<typeof fixture>) => { f.original.toolExecuted = false; },
-      (f: ReturnType<typeof fixture>) => { f.original.toolInput!.force_refresh = 'true'; },
+      (f: ReturnType<typeof fixture>) => { f.original.toolInput!["force_refresh"] = 'true'; },
       (f: ReturnType<typeof fixture>) => { f.original.timestamp = 19; },
       (f: ReturnType<typeof fixture>) => { f.messages.splice(2, 0, { ...f.original, id: 'ambiguous', toolUseId: 'ambiguous-call' }); },
-      (f: ReturnType<typeof fixture>) => { f.registration.toolUseId = undefined; },
+      (f: ReturnType<typeof fixture>) => { delete f.registration.toolUseId; },
       (f: ReturnType<typeof fixture>) => { f.registration.toolResult = 'PASS'; },
-      (f: ReturnType<typeof fixture>) => { f.registration.toolExecuted = undefined; },
+      (f: ReturnType<typeof fixture>) => { delete f.registration.toolExecuted; },
       (f: ReturnType<typeof fixture>) => { f.messages.splice(3, 1); },
-      (f: ReturnType<typeof fixture>) => { f.additive.toolResult = f.registration.toolResult; },
+      (f: ReturnType<typeof fixture>) => { setOptional(f.additive, 'toolResult', f.registration.toolResult); },
       (f: ReturnType<typeof fixture>) => { f.messages.splice(3, 0, { ...f.registration, id: 'duplicate' }); },
       (f: ReturnType<typeof fixture>) => { f.objective.acceptanceCriteria![0]!.description = 'Different contract'; },
-      (f: ReturnType<typeof fixture>) => { (f.registration.toolInput!.criteria as ObjectiveAcceptanceCriterion[])[0]!.input.force_refresh = 'true'; },
+      (f: ReturnType<typeof fixture>) => { (f.registration.toolInput!["criteria"] as ObjectiveAcceptanceCriterion[])[0]!.input["force_refresh"] = 'true'; },
     ]) {
       const f = fixture(); mutate(f);
       expect(validateObjectiveAcceptanceCriteria(f.objective, f.messages, f.declaration)).toHaveLength(1);
@@ -128,8 +137,10 @@ describe('historically attested GSC property identity', () => {
 
   it('a newer duplicate identity invalidates an earlier cited valid snapshot', () => {
     const f = fixture();
-    const result = JSON.parse(output(5));
-    result.sites[2] = { ...result.sites[5] };
+    const result = siteListObservation.parse(JSON.parse(output(5)));
+    const duplicate = result.sites[5];
+    if (!duplicate) throw new Error('Fixture site is missing');
+    result.sites[2] = { ...duplicate };
     f.messages.push({ ...f.current, id: 'newest', toolUseId: 'newest-call', timestamp: 35, toolResult: JSON.stringify(result) });
     expect(validateObjectiveAcceptanceCriteria(f.objective, f.messages, f.declaration)).toHaveLength(1);
     expect(collectObjectiveAcceptanceObservations(f.objective, f.messages).find(x => x.criterionId === criterion.id))
@@ -152,7 +163,7 @@ describe('historically attested GSC property identity', () => {
       (c: ObjectiveAcceptanceCriterion) => { c.checks.push({ path: '$.rowCount', equals: 6 }); },
     ]) {
       const f = fixture();
-      const raw = f.registration.toolInput!.criteria as ObjectiveAcceptanceCriterion[]; transform(raw[0]!);
+      const raw = f.registration.toolInput!["criteria"] as ObjectiveAcceptanceCriterion[]; transform(raw[0]!);
       const saved = stringifyScalars(raw);
       f.objective.acceptanceCriteria = [...saved, additional];
       f.registration.toolResult = JSON.stringify({ objectiveId: f.objective.objectiveId, criteria: saved });
@@ -171,7 +182,7 @@ describe('historically attested GSC property identity', () => {
       (f: ReturnType<typeof fixture>) => { f.registration.toolResult = f.registration.toolResult!.replace('"objectiveId":"root"', '"objectiveId":"wrong"'); },
       (f: ReturnType<typeof fixture>) => { f.registration.toolResult = f.registration.toolResult!.replace('"objectiveId":"root"', '"objectiveId":"wrong","objectiveId":"root"'); },
       (f: ReturnType<typeof fixture>) => { f.messages.splice(3, 0, { ...f.registration, id: 'opaque', toolUseId: 'opaque-call', toolResult: 'done' }); },
-      (f: ReturnType<typeof fixture>) => { f.objective.acceptanceRegisteredAt = undefined; },
+      (f: ReturnType<typeof fixture>) => { delete f.objective.acceptanceRegisteredAt; },
       (f: ReturnType<typeof fixture>) => { f.original.toolResult = f.original.toolResult!.replace('https://other-0.example/', siteUrl); },
     ]) {
       const f = fixture(); mutate(f);
@@ -180,7 +191,7 @@ describe('historically attested GSC property identity', () => {
   });
 
   it('exposes only the attested mapping in repair/runtime prompts while preserving the original review binding', async () => {
-    const { SessionManager } = await import('./SessionManager.ts');
+    const { SessionManager, createManagedSession } = await import('./SessionManager.ts');
     const f = fixture();
     const before = JSON.stringify(f);
     const context = buildObjectiveValidationEvidenceContext(f.messages, f.objective)!;
@@ -189,10 +200,12 @@ describe('historically attested GSC property identity', () => {
     expect(context).toContain('"force_refresh":true');
     expect(context).toContain('does not establish PASS');
     expect(context).not.toContain(f.original.toolResult!);
-    const prototype = SessionManager.prototype as unknown as {
-      buildObjectiveRuntimePrompt(managed: { messages: Message[] }, objective: typeof f.objective): string;
-    };
-    const prompt = prototype.buildObjectiveRuntimePrompt({ messages: f.messages }, f.objective);
+    const manager = sessionManagerForTest(new SessionManager());
+    const runtimePrompt = (messages: Message[]) => manager.buildObjectiveRuntimePrompt(
+      createManagedSession({ id: 'projection' }, {
+        id: 'projection-workspace', slug: 'projection-workspace', name: 'Projection', rootPath: '/tmp/projection-test', createdAt: 1,
+      }, { messagesLoaded: true, messages }), f.objective);
+    const prompt = runtimePrompt(f.messages);
     expect(prompt).toContain('legacy-gsc-site-identity');
     expect(prompt).toContain('"force_refresh":"true"');
     expect(prompt).toContain('"force_refresh":true');

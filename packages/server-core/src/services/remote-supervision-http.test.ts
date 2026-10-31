@@ -57,7 +57,7 @@ describe('remote supervision HTTP gateway', () => {
         executed.push({
           workspaceId: input.workspaceId,
           action: input.action,
-          targetId: input.targetId,
+          ...(input.targetId !== undefined ? { targetId: input.targetId } : {}),
         })
       },
     })

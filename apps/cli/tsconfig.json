@@ -1,10 +1,14 @@
 {
   "compilerOptions": {
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",
-    "allowJs": true,
+    "allowJs": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "moduleResolution": "bundler",
@@ -12,19 +16,43 @@
     "verbatimModuleSyntax": true,
     "noEmit": true,
     "strict": true,
-    "skipLibCheck": true,
-    "types": ["node", "bun"],
+    "skipLibCheck": false,
+    "types": [
+      "node",
+      "bun"
+    ],
     "noFallthroughCasesInSwitch": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "rootDir": "../..",
     "paths": {
-      "@craft-agent/shared": ["../../packages/shared/src/index.ts"],
-      "@craft-agent/shared/*": ["../../packages/shared/src/*"],
-      "@craft-agent/server-core": ["../../packages/server-core/src/index.ts"],
-      "@craft-agent/server-core/*": ["../../packages/server-core/src/*"]
-    }
+      "@craft-agent/shared": [
+        "../../packages/shared/src/index.ts"
+      ],
+      "@craft-agent/shared/*": [
+        "../../packages/shared/src/*"
+      ],
+      "@craft-agent/server-core": [
+        "../../packages/server-core/src/index.ts"
+      ],
+      "@craft-agent/server-core/*": [
+        "../../packages/server-core/src/*"
+      ]
+    },
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false
   },
-  "include": ["src/**/*", "../../packages/shared/src/**/*.d.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*",
+    "../../packages/shared/src/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

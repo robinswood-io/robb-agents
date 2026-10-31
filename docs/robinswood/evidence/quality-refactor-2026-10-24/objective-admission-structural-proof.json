@@ -1,0 +1,10 @@
+{
+  "status": "passed",
+  "nativeObjectiveSequence": true,
+  "nativeRollbackCallbackExceptDeadWrite": true,
+  "removedUnobservedCallbackAssignment": "cleanRecoveryProviderStateAtomized = true;",
+  "callbackEscapesAfterFinalFlagRead": true,
+  "propagatedNativeEarlyReturns": 8,
+  "extraOwnershipFenceAfterAsyncObjectiveAdmission": true,
+  "unchangedRootSequence": true
+}

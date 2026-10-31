@@ -1,3 +1,4 @@
+import type { ElectronAPI } from "../../../../shared/types.ts";
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { restoreSessionFileWatch } from '../session-files-watch'
 
@@ -14,8 +15,7 @@ describe('restoreSessionFileWatch', () => {
     if (originalWindow) {
       globalThis.window = originalWindow
     } else {
-      // @ts-expect-error test cleanup for window shim
-      delete globalThis.window
+      Reflect.deleteProperty(globalThis, 'window')
     }
   })
 
@@ -28,7 +28,7 @@ describe('restoreSessionFileWatch', () => {
           calls.push(`watch:${sessionId}`)
         },
       },
-    } as unknown as typeof window
+    } as typeof window
 
     await restoreSessionFileWatch('session-1', async () => {
       calls.push('reload')
@@ -40,14 +40,12 @@ describe('restoreSessionFileWatch', () => {
   it('still reloads files when re-subscribing the watch fails', async () => {
     const calls: string[] = []
 
-    globalThis.window = {
-      electronAPI: {
+    Object.defineProperty(globalThis, 'window', { configurable: true, writable: true, value: { electronAPI: ({
         watchSessionFiles: async () => {
           calls.push('watch')
           throw new Error('watch failed')
         },
-      },
-    } as unknown as typeof window
+      } satisfies Partial<ElectronAPI>) } })
 
     await restoreSessionFileWatch('session-2', async () => {
       calls.push('reload')

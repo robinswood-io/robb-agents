@@ -6,24 +6,24 @@ export interface MetadataBadgeProps extends React.ButtonHTMLAttributes<HTMLButto
   /** Primary label text */
   label: string
   /** Optional secondary value text */
-  value?: string
+  value?: string | undefined
   /** When set, the value text renders as a clickable link and calls this on click.
    *  The handler stops propagation so the chip's surrounding popover/trigger doesn't toggle. */
-  onValueClick?: (e: React.MouseEvent) => void
+  onValueClick?: ((e: React.MouseEvent) => void) | undefined
   /** Optional leading icon */
-  icon?: React.ReactNode
+  icon?: React.ReactNode | undefined
   /** Optional trailing hint icon when no value is set */
-  valueHintIcon?: React.ReactNode
+  valueHintIcon?: React.ReactNode | undefined
   /** Color tint source for chip background/text */
-  badgeColor?: string
+  badgeColor?: string | undefined
   /** Enable hover/click styling */
-  interactive?: boolean
+  interactive?: boolean | undefined
   /** Active/open state styling */
-  isActive?: boolean
+  isActive?: boolean | undefined
   /** Show dropdown chevron on the right */
-  showChevron?: boolean
+  showChevron?: boolean | undefined
   /** Shadow style for the chip */
-  shadow?: 'none' | 'minimal'
+  shadow?: 'none' | 'minimal' | undefined
 }
 
 export const MetadataBadge = React.forwardRef<HTMLButtonElement, MetadataBadgeProps>(

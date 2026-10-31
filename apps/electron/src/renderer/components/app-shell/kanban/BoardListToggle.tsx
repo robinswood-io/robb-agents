@@ -7,7 +7,7 @@ export type BoardListValue = 'list' | 'board'
 interface BoardListToggleProps {
   value: BoardListValue
   onChange: (value: BoardListValue) => void
-  className?: string
+  className?: string | undefined
 }
 
 /**

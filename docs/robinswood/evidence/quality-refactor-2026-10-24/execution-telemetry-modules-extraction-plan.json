@@ -1,0 +1,533 @@
+{
+  "source": "packages/shared/src/telemetry/execution-telemetry.ts",
+  "units": [
+    {
+      "names": [
+        "OtlpScalar"
+      ],
+      "group": "contracts",
+      "bodySha256": "63f7aa59e7c8b464f94507e1e852e7d828501628c2085a9c5a3ef78491a13f06"
+    },
+    {
+      "names": [
+        "OtlpSignal"
+      ],
+      "group": "contracts",
+      "bodySha256": "ca8790f21a6d6374efb652e9ab74e0d2316d2fdf1014faf7d53beb899bd1977d"
+    },
+    {
+      "names": [
+        "TelemetryOutcome"
+      ],
+      "group": "contracts",
+      "bodySha256": "49bc70554cb0a72d31ba7064b1a32505cc35fd26f905d88eeecf7b3dec3a5a95"
+    },
+    {
+      "names": [
+        "OtlpAttribute"
+      ],
+      "group": "contracts",
+      "bodySha256": "fb9207df6bd5b3fafe548dc56c9a90314bbf59131db827283094b6c6b56e5d5f"
+    },
+    {
+      "names": [
+        "AdvancedTelemetryCorrelation"
+      ],
+      "group": "contracts",
+      "bodySha256": "f719c40bebb439fb9d88782894cb87e59eda4ce9081a7d6cac5d80e53f38fc65"
+    },
+    {
+      "names": [
+        "TelemetryCorrelation"
+      ],
+      "group": "contracts",
+      "bodySha256": "c77432f67d3f8443f067e409284201036cf655c9268b4bde9956b4b5ca38bec4"
+    },
+    {
+      "names": [
+        "CoreExecutionTelemetryEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "38594dd3b33baa39972288078d21e2179809d973824eeb23020e9ad9cbc6168a"
+    },
+    {
+      "names": [
+        "ExtendedTelemetryBase"
+      ],
+      "group": "contracts",
+      "bodySha256": "1dcb063c47211cf8b2513064fc2cc05652f92ba857617e9a51c013b517afc83b"
+    },
+    {
+      "names": [
+        "RunTelemetryEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "8eca5c9379967344df5f4bf21c49b3c5e5836eb084d3cd719901f7734a8c8a92"
+    },
+    {
+      "names": [
+        "GenerationTelemetryEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "99fd3299f432e80acf65b7c2a09e8cd878127e37489ab938f9f525cf681f06fd"
+    },
+    {
+      "names": [
+        "RetryTelemetryEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "6c35ec4f75ec0497db64b5209b627bd0424a6d5f25ceb900b32421006a95ed19"
+    },
+    {
+      "names": [
+        "CompactionTelemetryEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "bbf76eb9febace64c44fb62e59748286e5919f1be2b3c49ae85af2ea35b303d2"
+    },
+    {
+      "names": [
+        "MemoryTelemetryEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "345aeb6b5e1f7cb19b608d2ba30f7de3208c928b7868861114219f7e7c89e8f6"
+    },
+    {
+      "names": [
+        "EvalTelemetryEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "4ac9ad47aa8926dca271489fe03077bbd3779367448a83767681ef3dff837473"
+    },
+    {
+      "names": [
+        "ExtendedExecutionTelemetryEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "41c51d3434aeccb4b0c98bce80ce743c58f2646b94c4f5a1a927387fb9286db3"
+    },
+    {
+      "names": [
+        "RobbExecutionTelemetryEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "ee3e525a5a0b6419e73f42c517f703d2b5f2a55fcaef3578d29c9978d62d7323"
+    },
+    {
+      "names": [
+        "OtlpBatchConfig"
+      ],
+      "group": "contracts",
+      "bodySha256": "80804c5d6bcfa8c32b236a04d68964a06b59bca67afbdb12f8dea2040e173c4d"
+    },
+    {
+      "names": [
+        "OtlpTelemetryConfig"
+      ],
+      "group": "contracts",
+      "bodySha256": "9a0f16a8115fa8b898221d3ced7e015ae1f5830d57932ec33ea86d627b63ce68"
+    },
+    {
+      "names": [
+        "ExecutionTelemetrySink"
+      ],
+      "group": "contracts",
+      "bodySha256": "6a881c9b6f3b80b6f114ba41017d3719d1d80654e15a2a7d0b292e1b5cf9e6ab"
+    },
+    {
+      "names": [
+        "LOCAL_SAFE_FIELDS"
+      ],
+      "group": "contracts",
+      "bodySha256": "87d156bdfbb84996f49779809ae9987f0fb64d0d891c120a8cd2e6c1685f0263"
+    },
+    {
+      "names": [
+        "toPrivacySafeTelemetryRecord"
+      ],
+      "group": "contracts",
+      "bodySha256": "324f82f3b4700e5dc889f0c664da9948ddca0ed8768d80a71e02699f528c9d38"
+    },
+    {
+      "names": [
+        "TelemetryFetch"
+      ],
+      "group": "contracts",
+      "bodySha256": "3543c8df7f30c25e9e7f6a76cdf6ecc4e474683e99e9e504982661e535bcd435"
+    },
+    {
+      "names": [
+        "OtlpPayloads"
+      ],
+      "group": "contracts",
+      "bodySha256": "304b12cbc6dd105abeeca28abb02b49e984b81ddd1f6490356b8691719e32234"
+    },
+    {
+      "names": [
+        "TelemetrySinkStats"
+      ],
+      "group": "contracts",
+      "bodySha256": "feca2c4ff35d3e1fef431079bac3cc392b1b5c15f665df20ee4d8eb52625ef01"
+    },
+    {
+      "names": [
+        "ResolvedBatchConfig"
+      ],
+      "group": "contracts",
+      "bodySha256": "dac6e8f8c4befcd7a942d855a9c30c8a0fdd65c15d8dafb35bddaad1b85a6702"
+    },
+    {
+      "names": [
+        "localJsonlOperations"
+      ],
+      "group": "local-sink",
+      "bodySha256": "ccd33a94266dafb0457d7e0ad8f018f32717bffe77ae10d16589f5737128b650"
+    },
+    {
+      "names": [
+        "errnoCode"
+      ],
+      "group": "local-sink",
+      "bodySha256": "6f534645eb3ad1da5f7cf498960365979efcb74e336557c369b2e7eae298ad7a"
+    },
+    {
+      "names": [
+        "serializeLocalJsonlOperation"
+      ],
+      "group": "local-sink",
+      "bodySha256": "00155d9bc5d278e2b4b8b3d2daea9d21daea88f8efa9268529b4ae1c293d989e"
+    },
+    {
+      "names": [
+        "openLocalJsonlFile"
+      ],
+      "group": "local-sink",
+      "bodySha256": "4ff1a57452ae665aca48231afc69cda8e395cb860a9b9ed6a93aa0389c23a505"
+    },
+    {
+      "names": [
+        "findLastNewline"
+      ],
+      "group": "local-sink",
+      "bodySha256": "55826321033ae315b3f2f2c6c270ef67c1a090ec22b228f6bd236e63c605b3ef"
+    },
+    {
+      "names": [
+        "repairLocalJsonlTail"
+      ],
+      "group": "local-sink",
+      "bodySha256": "e6684334d533a60e98fb151c43a00ff4c5c564f082c5b1293013d7ef59aa8e75"
+    },
+    {
+      "names": [
+        "inspectLocalJsonlFile"
+      ],
+      "group": "local-sink",
+      "bodySha256": "7d3efd042c189cec55d6504c9491536eccfa7d3e2219c0e36dbf6618c8738fa7"
+    },
+    {
+      "names": [
+        "appendCompleteLocalJsonlRecord"
+      ],
+      "group": "local-sink",
+      "bodySha256": "fd395f4892bf4e5d1b7c6c9f7418a3fbba176064672fe969a1635c219e5ecbe1"
+    },
+    {
+      "names": [
+        "readBoundLocalJsonlFile"
+      ],
+      "group": "local-sink",
+      "bodySha256": "b55918bff714fca04e0fbd6cef477b229a38ba6bdbc741e9dee8becca30720bd"
+    },
+    {
+      "names": [
+        "replaceBoundLocalJsonlFile"
+      ],
+      "group": "local-sink",
+      "bodySha256": "cdf134f22f9e50a94ed8a23b5314592a35976c117caeb16dd18fa5ac66b2f1ac"
+    },
+    {
+      "names": [
+        "rotateBoundLocalJsonlFile"
+      ],
+      "group": "local-sink",
+      "bodySha256": "4186d01391607dc19223056624df11dafcab11a691ff0c176e8699f1138be11c"
+    },
+    {
+      "names": [
+        "LocalJsonlTelemetrySink"
+      ],
+      "group": "local-sink",
+      "bodySha256": "3976a7ee1dd9a4d156b4e096fee3e3401198e5c15ee09559443142880fe81642"
+    },
+    {
+      "names": [
+        "parseOtlpHeaders"
+      ],
+      "group": "otlp-config",
+      "bodySha256": "815bf3ac466341e5b69d00c014c461ffd0d5291827f31dc510af5f4ab4de3904"
+    },
+    {
+      "names": [
+        "isHttpEndpoint"
+      ],
+      "group": "otlp-config",
+      "bodySha256": "c0cba221298e898d955c6531d6ee87ae5c62df2257ba11976af955a6faaeb527"
+    },
+    {
+      "names": [
+        "positiveInteger"
+      ],
+      "group": "otlp-config",
+      "bodySha256": "9f0f01ebdc0b859da84993ec6a3c4a76d9aa1cf18a08c11e65f2469a2e13af74"
+    },
+    {
+      "names": [
+        "resolveOtlpTelemetryConfig"
+      ],
+      "group": "otlp-config",
+      "bodySha256": "2edbaae4d2bcc0550b49a273c0d0cb8d53993b623bae23d3bebd2c8e62e12068"
+    },
+    {
+      "names": [
+        "resolveBatchConfig"
+      ],
+      "group": "otlp-config",
+      "bodySha256": "4452ceb702d3b4de6d828c0f8d35b7e8edda2eeee6b1fe3b3a717f468051ad2c"
+    },
+    {
+      "names": [
+        "toUnixNano"
+      ],
+      "group": "attributes",
+      "bodySha256": "35ed6f83e0d5eb9ca7b4df6947b59c6457d3d1e6616fa614ca43984447bf0ac5"
+    },
+    {
+      "names": [
+        "attribute"
+      ],
+      "group": "attributes",
+      "bodySha256": "93e1525c80f392c20c4cd17a11353efc93ea6bfc75e84e7745c8ec29fb973d7b"
+    },
+    {
+      "names": [
+        "compactAttributes"
+      ],
+      "group": "attributes",
+      "bodySha256": "7a845a2cb4d65f17973a6116e40c7895dc4ff558f92f7359ae9012729ffb20e3"
+    },
+    {
+      "names": [
+        "eventAttributes"
+      ],
+      "group": "attributes",
+      "bodySha256": "c5eb023cffb96ba05b1155ed99d1a3c6965db23e86a9d603ce1705c8c2412c94"
+    },
+    {
+      "names": [
+        "resourceAttributes"
+      ],
+      "group": "attributes",
+      "bodySha256": "492665a42194622d9f6ea07df1806af560375e9b01095878de2faccc06c4a0be"
+    },
+    {
+      "names": [
+        "metricPoint"
+      ],
+      "group": "metrics",
+      "bodySha256": "3382d044a1f9746973865271583b5b208955710dd7932d08268fcd21a9405a13"
+    },
+    {
+      "names": [
+        "tokenMetric"
+      ],
+      "group": "metrics",
+      "bodySha256": "7ba38377da2bfc4d13a6f138b8036073c9ee870a2361de0b1dd9d088f0d77a67"
+    },
+    {
+      "names": [
+        "metricPoints"
+      ],
+      "group": "metrics",
+      "bodySha256": "d33ca7c3ccb40148719d34b764b27fa62b519be6550915cc43fae0055c9be668"
+    },
+    {
+      "names": [
+        "stableHex"
+      ],
+      "group": "traces",
+      "bodySha256": "f7599a72831c6b1516778700b5f660999f88658416efead4222d7e9aa79558e5"
+    },
+    {
+      "names": [
+        "normalizedHex"
+      ],
+      "group": "traces",
+      "bodySha256": "2e82933965b345b958edc539181004c24d8b2396760ab1660bc4435b5a577f3c"
+    },
+    {
+      "names": [
+        "eventScopeId"
+      ],
+      "group": "traces",
+      "bodySha256": "f3b7917aa966f318752e84c8a8a79eaf0773abf7da233c42d7d1b42886585d45"
+    },
+    {
+      "names": [
+        "inferredParentScopeId"
+      ],
+      "group": "traces",
+      "bodySha256": "8ed1fe7a825ecafd32770f12350ed1cbe6b586607bcdbe0273d095183e03a4aa"
+    },
+    {
+      "names": [
+        "tracePayload"
+      ],
+      "group": "traces",
+      "bodySha256": "b96b83c54497ae989c0103b5bbe6b75db2d61106831df77b4f6d4c8eb8b25e5f"
+    },
+    {
+      "names": [
+        "isFailedEvent"
+      ],
+      "group": "traces",
+      "bodySha256": "30aecd39544f2963837ce61ea3af0690cbdd7957e432a0f04b06ced3bd503724"
+    },
+    {
+      "names": [
+        "buildOtlpPayloads"
+      ],
+      "group": "payloads",
+      "bodySha256": "19ee8cbc85ecdbe7352ec5973de4275eb5706cd8fc99e3092ca6da8fcf8f4803"
+    },
+    {
+      "names": [
+        "objectValue"
+      ],
+      "group": "payloads",
+      "bodySha256": "a256190c92116b7570f3c4dfb824850ac19447bae35d2c74cacce2f82ec137a2"
+    },
+    {
+      "names": [
+        "objectArray"
+      ],
+      "group": "payloads",
+      "bodySha256": "6d4157765b77ba933f1b7a88256a55e577e68d06ce1d22b9b72a947c47856577"
+    },
+    {
+      "names": [
+        "mergeOtlpPayloads"
+      ],
+      "group": "payloads",
+      "bodySha256": "097ca8e13142cd73623b42e7aac459d8a54c1c9a6aa246a43194b025a355a409"
+    },
+    {
+      "names": [
+        "isOtlpPayloads"
+      ],
+      "group": "payloads",
+      "bodySha256": "3a94d82849b23a410e176a61612ccc8f486848f1464052bc8da0aa788b92d70c"
+    },
+    {
+      "names": [
+        "signalUrl"
+      ],
+      "group": "http-sink",
+      "bodySha256": "5a5afa8382b0837cf49566614d5d2f45df0c2585a475586329372c9a64791f1e"
+    },
+    {
+      "names": [
+        "wait"
+      ],
+      "group": "http-sink",
+      "bodySha256": "e3751c800b4c1cead5cc2b354760f5941b8b0e28776f25c8402ef576578e6fbe"
+    },
+    {
+      "names": [
+        "TelemetryBackpressureError"
+      ],
+      "group": "http-sink",
+      "bodySha256": "106692b05a37da8524a10809b9c0fefbb755389179e4339ff8e83e8dbed20f40"
+    },
+    {
+      "names": [
+        "OtlpHttpTelemetrySink"
+      ],
+      "group": "http-sink",
+      "bodySha256": "8e8724e4ccb082e80b272018179da9105442fc9ef8ede4fd6fc592498c95dd31"
+    },
+    {
+      "names": [
+        "DisabledTelemetrySink"
+      ],
+      "group": "http-sink",
+      "bodySha256": "642c6c3ec6bf8c085b705b97f72eb442865f6d346466ec952252920de318c9b5"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 219
+    },
+    {
+      "name": "local-sink",
+      "lines": 279
+    },
+    {
+      "name": "otlp-config",
+      "lines": 127
+    },
+    {
+      "name": "attributes",
+      "lines": 143
+    },
+    {
+      "name": "metrics",
+      "lines": 184
+    },
+    {
+      "name": "traces",
+      "lines": 128
+    },
+    {
+      "name": "payloads",
+      "lines": 125
+    },
+    {
+      "name": "http-sink",
+      "lines": 250
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "local-sink": [
+      "contracts"
+    ],
+    "otlp-config": [
+      "contracts"
+    ],
+    "attributes": [
+      "contracts"
+    ],
+    "metrics": [
+      "contracts",
+      "attributes"
+    ],
+    "traces": [
+      "contracts"
+    ],
+    "payloads": [
+      "contracts",
+      "attributes",
+      "traces",
+      "metrics"
+    ],
+    "http-sink": [
+      "contracts",
+      "otlp-config",
+      "payloads"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

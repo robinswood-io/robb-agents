@@ -1,3 +1,4 @@
+import { SessionManager as FixtureSessionManager } from "../../../server-core/src/sessions/SessionManager";
 /**
  * MessagingGateway — `perm:` button-press behavior. Regression for issue
  * [#726](https://github.com/craft-ai-agents/craft-agents-oss/issues/726):
@@ -70,9 +71,9 @@ function makeFakeAdapter(): FakeAdapter {
   const calls: AdapterCall[] = []
   let nextId = 100
 
-  const adapter = {
-    platform: 'telegram' as const,
-    capabilities: {
+  const adapter = ({fireButton: (press: ButtonPress) => buttonHandler!(press), fireMessage: (msg: IncomingMessage) => messageHandler!(msg),calls,
+platform: 'telegram' as const,
+capabilities: {
       messageEditing: true,
       inlineButtons: true,
       maxButtons: 10,
@@ -80,37 +81,33 @@ function makeFakeAdapter(): FakeAdapter {
       markdown: 'v2' as const,
       webhookSupport: false,
     },
-    initialize: async () => {},
-    destroy: async () => {},
-    isConnected: () => true,
-    onMessage(h: (msg: IncomingMessage) => Promise<void>) {
+initialize: async () => {},
+destroy: async () => {},
+isConnected: () => true,
+onMessage(h: (msg: IncomingMessage) => Promise<void>) {
       messageHandler = h
     },
-    onButtonPress(h: (press: ButtonPress) => Promise<void>) {
+onButtonPress(h: (press: ButtonPress) => Promise<void>) {
       buttonHandler = h
     },
-    sendText: mock(async (channelId: string, text: string) => {
+sendText: mock(async (channelId: string, text: string) => {
       const messageId = String(nextId++)
       calls.push({ kind: 'sendText', channelId, text, messageId })
       return { platform: 'telegram' as const, channelId, messageId }
     }),
-    editMessage: async () => {},
-    sendButtons: mock(async (channelId: string, text: string) => {
+editMessage: async () => {},
+sendButtons: mock(async (channelId: string, text: string) => {
       const messageId = String(nextId++)
       calls.push({ kind: 'sendButtons', channelId, text, messageId })
       return { platform: 'telegram' as const, channelId, messageId }
     }),
-    sendTyping: async () => {},
-    sendFile: async () => ({ platform: 'telegram' as const, channelId: '', messageId: '0' }),
-    clearButtons: mock(async (channelId: string, messageId: string) => {
+sendTyping: async () => {},
+sendFile: async () => ({ platform: 'telegram' as const, channelId: '', messageId: '0' }),
+clearButtons: mock(async (channelId: string, messageId: string) => {
       calls.push({ kind: 'clearButtons', channelId, messageId })
-    }),
-  } as unknown as FakeAdapter
+    })} satisfies FakeAdapter)
   ;(adapter as { calls: AdapterCall[] }).calls = calls
-  ;(adapter as { fireButton: (press: ButtonPress) => Promise<void> }).fireButton = (press) =>
-    buttonHandler!(press)
-  ;(adapter as { fireMessage: (msg: IncomingMessage) => Promise<void> }).fireMessage = (msg) =>
-    messageHandler!(msg)
+  ;
   return adapter
 }
 
@@ -121,7 +118,7 @@ interface StubSessionManagerOpts {
 
 function makeStubSessionManager(opts: StubSessionManagerOpts = {}): ISessionManager {
   const respondReturn = opts.respondToPermissionReturn ?? true
-  return {
+  return Object.assign(new FixtureSessionManager(), ({
     getSession: async (id: string) => ({ id, name: id } as never),
     sendMessage: async () => {},
     cancelProcessing: async () => {},
@@ -130,7 +127,7 @@ function makeStubSessionManager(opts: StubSessionManagerOpts = {}): ISessionMana
     setPendingPlanExecution: mock(async () => {}),
     clearPendingPlanExecution: mock(async () => {}),
     setAutomationBinder: () => {},
-  } as unknown as ISessionManager
+  } satisfies Partial<ISessionManager>))
 }
 
 interface Harness {
@@ -225,7 +222,7 @@ describe('MessagingGateway — perm: button (#726)', () => {
 
     await h.adapter.fireButton(pressFor('perm:deny:req-1'))
 
-    const respondMock = h.sessionManager.respondToPermission as unknown as ReturnType<typeof mock>
+    const respondMock = h.sessionManager.respondToPermission as ReturnType<typeof mock>
     expect(respondMock.mock.calls[0]?.[2]).toBe(false)
     const acks = h.adapter.calls.filter((c) => c.kind === 'sendText')
     expect(acks[0]?.text).toContain('Denied')
@@ -309,7 +306,7 @@ describe('MessagingGateway — perm: button (#726)', () => {
     // A tap on req-2 is honored.
     await h.adapter.fireButton(pressFor('perm:allow:req-2'))
     expect(h.sessionManager.respondToPermission).toHaveBeenCalledTimes(1)
-    const respondMock = h.sessionManager.respondToPermission as unknown as ReturnType<typeof mock>
+    const respondMock = h.sessionManager.respondToPermission as ReturnType<typeof mock>
     expect(respondMock.mock.calls[0]?.[1]).toBe('req-2')
   })
 

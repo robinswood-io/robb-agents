@@ -5,11 +5,11 @@
  * Features: searchable patterns, sortable columns, max-height scroll, fullscreen view.
  */
 
-import * as React from 'react'
+
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import type { ColumnDef } from '@tanstack/react-table'
+import type { ColumnDef } from '@/components/ui/data-table'
 import { Maximize2 } from 'lucide-react'
 import { Info_DataTable, SortableHeader } from './Info_DataTable'
 import { Info_Badge } from './Info_Badge'
@@ -33,16 +33,16 @@ export interface PermissionRow {
 interface PermissionsDataTableProps {
   data: PermissionRow[]
   /** Hide the type column (for MCP sources that only show pattern/comment) */
-  hideTypeColumn?: boolean
+  hideTypeColumn?: boolean | undefined
   /** Show search input */
-  searchable?: boolean
+  searchable?: boolean | undefined
   /** Max height with scroll */
-  maxHeight?: number
+  maxHeight?: number | undefined
   /** Enable fullscreen button (shows Maximize2 icon on hover) */
-  fullscreen?: boolean
+  fullscreen?: boolean | undefined
   /** Title for the fullscreen overlay header */
-  fullscreenTitle?: string
-  className?: string
+  fullscreenTitle?: string | undefined
+  className?: string | undefined
 }
 
 /**

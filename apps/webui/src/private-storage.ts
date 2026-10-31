@@ -51,8 +51,8 @@ export function subscribeWebSessionInvalidation(callback: () => void): () => voi
     if (event.key === WEB_SESSION_INVALIDATION_KEY && event.newValue) callback()
   }
   const channel = getWebSessionChannel()
-  const onMessage = (event: MessageEvent) => {
-    if (event.data && typeof event.data === 'object' && event.data.type === 'invalidate') callback()
+  const onMessage = (event: MessageEvent<unknown>) => {
+    if (event.data && typeof event.data === 'object' && 'type' in event.data && event.data.type === 'invalidate') callback()
   }
   window.addEventListener('storage', onStorage)
   channel?.addEventListener('message', onMessage)

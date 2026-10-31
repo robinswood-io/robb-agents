@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "classes": [
+    {
+      "source": "packages/server-core/src/tasks/task-runner/active-run.ts",
+      "nativeMethodBodies": 83,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "nativeModuleBindings": 0,
+      "relocatedNativeDynamicImports": 0,
+      "protocolAliasesExpandedToNativeShapes": 4,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    }
+  ],
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 364
+}

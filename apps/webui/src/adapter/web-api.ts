@@ -1,3 +1,6 @@
+import type { WsRpcClientOptions } from '../../../../packages/server-core/src/transport/client/shared.ts';
+import {isJsonObject, omitUndefined } from '@craft-agent/shared/utils/json';
+import { assertOAuthStart, assertOAuthResult } from '@craft-agent/shared/protocol'
 /**
  * Web API adapter — browser-compatible ElectronAPI implementation.
  *
@@ -78,12 +81,12 @@ export function createWebApi(options: WebApiOptions): {
   let activeWorkspaceId = workspaceId
   const sessionWorkspaceIds = new Map<string, string>()
 
-  const client = new WsRpcClient(serverUrl, {
+  const client = new WsRpcClient(serverUrl, omitUndefined<WsRpcClientOptions>({
     workspaceId,
     autoReconnect: true,
     mode: 'remote',
     // No token — auth is via session cookie sent on WebSocket upgrade
-  })
+  }))
 
   // Build the API proxy from the same channel map the Electron app uses
   const baseApi = buildClientApi(
@@ -190,8 +193,10 @@ export function createWebApi(options: WebApiOptions): {
     // System info
     getVersions: () => ({ node: 'n/a', chrome: navigator.userAgent, electron: 'web' }),
     getRuntimeEnvironment: () => 'web',
-    getSystemWarnings: () => Promise.resolve({ vcredistMissing: false }),
-    isDebugMode: () => Promise.resolve(import.meta.env.DEV),
+    isDebugMode: () => {
+      const environment: unknown = import.meta.env
+      return Promise.resolve(isJsonObject(environment) && environment['DEV'] === true)
+    },
 
     // Theme
     getSystemTheme: () => Promise.resolve(getSystemTheme()),
@@ -241,9 +246,9 @@ export function createWebApi(options: WebApiOptions): {
     },
 
     // Auto-update — not applicable to web (but expose server version for About page)
-    checkForUpdates: () => Promise.resolve({ available: false, currentVersion: client.getServerVersion() ?? '' } as any),
-    getUpdateInfo: () => Promise.resolve({ available: false, currentVersion: client.getServerVersion() ?? '' } as any),
-    downloadUpdate: () => Promise.resolve({ available: false, currentVersion: client.getServerVersion() ?? '' } as any),
+    checkForUpdates: () => Promise.resolve({ available: false, currentVersion: client.getServerVersion() ?? '', latestVersion: null, downloadState: 'idle', downloadProgress: 0 }),
+    getUpdateInfo: () => Promise.resolve({ available: false, currentVersion: client.getServerVersion() ?? '', latestVersion: null, downloadState: 'idle', downloadProgress: 0 }),
+    downloadUpdate: () => Promise.resolve({ available: false, currentVersion: client.getServerVersion() ?? '', latestVersion: null, downloadState: 'idle', downloadProgress: 0 }),
     installUpdate: () => Promise.resolve(),
     dismissUpdate: () => Promise.resolve(),
     getDismissedUpdateVersion: () => Promise.resolve(null),
@@ -295,7 +300,7 @@ export function createWebApi(options: WebApiOptions): {
     onNotificationNavigate: () => () => {},
 
     // Git bash (Windows-only) — not applicable
-    checkGitBash: () => Promise.resolve({ available: true } as any),
+    checkGitBash: () => Promise.resolve({ found: false, path: null, platform: 'web' }),
     browseForGitBash: () => Promise.resolve(null),
     setGitBashPath: () => Promise.resolve({ success: true }),
 
@@ -311,9 +316,9 @@ export function createWebApi(options: WebApiOptions): {
     setKeepAwakeWhileRunning: () => Promise.resolve(),
 
     // Transport state
-    getTransportConnectionState: () => Promise.resolve(client.getConnectionState() as TransportConnectionState),
+    getTransportConnectionState: () => Promise.resolve(client.getConnectionState()),
     onTransportConnectionStateChanged: (cb: (state: TransportConnectionState) => void) => {
-      return client.onConnectionStateChanged(cb as any)
+      return client.onConnectionStateChanged(cb)
     },
     reconnectTransport: () => { client.reconnectNow(); return Promise.resolve() },
     isChannelAvailable: (ch: string) => client.isChannelAvailable(ch),
@@ -354,6 +359,7 @@ export function createWebApi(options: WebApiOptions): {
           sessionId: args.sessionId,
           authRequestId: args.authRequestId,
         })
+        assertOAuthStart(result)
 
         if (popup && !popup.closed) {
           // Happy path — pre-opened popup is still open, redirect it.
@@ -391,6 +397,7 @@ export function createWebApi(options: WebApiOptions): {
       const popup = window.open('about:blank', '_blank')
       try {
         const result = await client.invoke('onboarding:startClaudeOAuth')
+        assertOAuthResult(result)
         if (result.success && result.authUrl) {
           if (popup && !popup.closed) {
             popup.location.href = result.authUrl

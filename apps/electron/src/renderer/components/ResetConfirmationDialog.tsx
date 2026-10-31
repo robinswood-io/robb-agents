@@ -38,6 +38,7 @@ export function ResetConfirmationDialog({
 
   // Generate a random math problem when dialog opens
   const problem = useMemo(() => {
+    if (!open) return { a: 0, b: 0, sum: 0 }
     const a = Math.floor(Math.random() * 50) + 10
     const b = Math.floor(Math.random() * 50) + 10
     return { a, b, sum: a + b }

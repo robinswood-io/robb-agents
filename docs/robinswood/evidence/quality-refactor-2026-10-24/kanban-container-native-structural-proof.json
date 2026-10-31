@@ -1,0 +1,41 @@
+{
+  "status": "passed",
+  "nativeDeclarationBodiesPreserved": true,
+  "reviewedStableDependencyAdditions": {
+    "handleEditTask": [
+      "setEditorTarget"
+    ],
+    "handleToggleSubtasks": [
+      "setExpandedTaskIds"
+    ],
+    "handleAddSubtask": [
+      "setExpandedTaskIds"
+    ],
+    "handleRunSubtasks": [
+      "deriveRunState"
+    ]
+  },
+  "nativeMainJSXAndInlineCallbacksPreserved": true,
+  "nativeRootAndActionHooksReinlinedExactly": true,
+  "viewAddsNoStateOrEffects": true,
+  "nativeValuesPassedDirectly": true,
+  "nativeImportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/KanbanBoardContainer.tsx",
+      "lines": 426,
+      "sha256": "db790b1c947e5a20a856fa0efe3654b2ce9e765ff1da478cb2fb9a5dc8fd2d28"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/kanban-board-content.tsx",
+      "lines": 150,
+      "sha256": "63e16fbf5e3af9d8d96f63e2b0b241e9782c51bd059e731274fa3692aceb441a"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/use-kanban-board-actions.ts",
+      "lines": 215,
+      "sha256": "3ad552de026a670a5b2a5cedd245adb663bd4f26dfaae8df6cafd19b2c908772"
+    }
+  ]
+}

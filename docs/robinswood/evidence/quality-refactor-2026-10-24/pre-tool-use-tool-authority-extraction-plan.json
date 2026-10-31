@@ -1,0 +1,52 @@
+{
+  "source": "packages/shared/src/agent/core/pre-tool-use.ts",
+  "units": [
+    {
+      "names": [
+        "runPreToolUseChecks"
+      ],
+      "group": "pipeline",
+      "bodySha256": "ea2e42ad23a9b128ab5afe36eea4a7a3583ee658595b8a4ec98b476b39336718"
+    },
+    {
+      "names": [
+        "ToolAuthorityFacts"
+      ],
+      "group": "tool-authority",
+      "bodySha256": "88cb052d911adad8a46e8ea187cc4d4b18da678da1b16f33a6579ff884f6023c"
+    },
+    {
+      "names": [
+        "classifyToolAuthority"
+      ],
+      "group": "tool-authority",
+      "bodySha256": "159021c8fe4d3073c927dbca76958f9176d6d0bf1e97bb624e3c1d015c810d58"
+    }
+  ],
+  "modules": [
+    {
+      "name": "pipeline",
+      "lines": 735,
+      "file": "packages/shared/src/agent/core/pre-tool-use.ts",
+      "retained": true
+    },
+    {
+      "name": "tool-authority",
+      "lines": 180,
+      "file": "packages/shared/src/agent/core/pre-tool-use/tool-authority.ts",
+      "retained": false
+    }
+  ],
+  "dependencies": {
+    "pipeline": [
+      "tool-authority"
+    ],
+    "tool-authority": []
+  },
+  "unitCycles": [],
+  "moduleCycles": [],
+  "retainedTransformProofs": [
+    "pretool-gmail-authority-body-proof.json",
+    "pretool-admission-body-proof.json"
+  ]
+}

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdtempSync, mkdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -39,6 +39,7 @@ describe('ensurePrivateLogFilePath', () => {
     writeFileSync(join(logDirectory, 'main.log'), 'main', { mode: 0o644 })
     writeFileSync(join(logDirectory, 'robb-remote-tunnel-launch.log'), 'tunnel', { mode: 0o644 })
     writeFileSync(outsideFile, 'outside', { mode: 0o644 })
+    chmodSync(outsideFile, 0o644)
     symlinkSync(outsideFile, join(logDirectory, 'linked.log'))
 
     expect(ensurePrivateLogDirectory(logDirectory)).toEqual({

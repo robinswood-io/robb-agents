@@ -5,13 +5,12 @@
  * until required files (like guide.md) have been read.
  */
 import { describe, it, expect, beforeEach, mock } from 'bun:test';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { CONFIG_DIR } from '../../../config/paths.ts';
 import { resolve, join } from 'node:path';
 import { PrerequisiteManager } from '../prerequisite-manager.ts';
 
 // Mock existsSync to control guide.md existence
-const originalExistsSync = existsSync;
 const originalReadFileSync = readFileSync;
 let mockExistsPaths: Set<string> = new Set();
 
@@ -294,7 +293,6 @@ describe('PrerequisiteManager', () => {
       mockExistsPaths.add(guideFile);
 
       // Track with tilde path that expands to the same absolute path
-      const homeDir = process.env.HOME || process.env.USERPROFILE || '/home/user';
       const tildeRelative = `~/some-file.md`;
       manager.trackReadTool({ file_path: tildeRelative });
 

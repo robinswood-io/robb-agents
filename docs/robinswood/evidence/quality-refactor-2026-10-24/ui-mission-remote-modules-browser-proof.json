@@ -1,0 +1,49 @@
+{
+  "status": "passed",
+  "url": "http://127.0.0.1:6185/",
+  "browserVersion": "145.0.7632.6",
+  "headless": false,
+  "cases": [
+    {
+      "name": "portfolio, selected mission, and final-review proof requirement",
+      "status": "passed"
+    },
+    {
+      "name": "search and status filters compose",
+      "status": "passed"
+    },
+    {
+      "name": "pause and resume update native portfolio and detail",
+      "status": "passed"
+    },
+    {
+      "name": "refresh reloads the QA portfolio",
+      "status": "passed"
+    },
+    {
+      "name": "desktop reconnect observes native connection subscription",
+      "status": "passed"
+    },
+    {
+      "name": "capability dialog traps Tab and restores focus on Escape",
+      "status": "passed"
+    },
+    {
+      "name": "mobile status menu closes with Escape and restores focus",
+      "status": "passed"
+    },
+    {
+      "name": "offline workspace action closes the mobile menu",
+      "status": "passed"
+    },
+    {
+      "name": "mobile retry reconnects and closes the dialog",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "limits": [
+    "API et connexion QA en mémoire ; aucune donnée métier, comptable ou configuration de connecteur modifiée."
+  ]
+}

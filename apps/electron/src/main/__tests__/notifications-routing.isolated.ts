@@ -44,6 +44,7 @@ describe('notification click routing', () => {
   it('routes notification navigation to resolved client target when resolver is provided', async () => {
     const notifications = await import('../notifications')
 
+    type NotificationWindow = NonNullable<ReturnType<Parameters<typeof notifications.initNotificationService>[0]['getWindowByWorkspace']>>
     const mockWindow = {
       isDestroyed: () => false,
       isMinimized: () => false,
@@ -52,18 +53,16 @@ describe('notification click routing', () => {
       webContents: {
         id: 101,
         isDestroyed: () => false,
-      },
-    }
+      } satisfies Pick<NotificationWindow['webContents'], 'id' | 'isDestroyed'> as NotificationWindow['webContents'],
+    } satisfies Pick<NotificationWindow, 'isDestroyed' | 'isMinimized' | 'restore' | 'focus' | 'webContents'> as NotificationWindow
 
-    notifications.initNotificationService({
-      getWindowByWorkspace: () => mockWindow,
-      createWindow: () => mockWindow,
-    } as any)
+    notifications.initNotificationService(({getWindowByWorkspace: () => mockWindow,
+createWindow: () => mockWindow} satisfies Parameters<typeof notifications.initNotificationService>[0]))
 
     const pushed: Array<{ channel: string; target: unknown; args: unknown[] }> = []
     notifications.setNotificationEventSink(((channel: string, target: unknown, ...args: unknown[]) => {
       pushed.push({ channel, target, args })
-    }) as any, (wcId) => wcId === 101 ? 'client-101' : undefined)
+    }), (wcId) => wcId === 101 ? 'client-101' : undefined)
 
     notifications.showNotification('Title', 'Body', 'ws-1', 'sess-1')
     expect(clickHandler).toBeTruthy()
@@ -78,6 +77,7 @@ describe('notification click routing', () => {
   it('falls back to workspace-targeted navigation when resolver is not provided', async () => {
     const notifications = await import('../notifications')
 
+    type NotificationWindow = NonNullable<ReturnType<Parameters<typeof notifications.initNotificationService>[0]['getWindowByWorkspace']>>
     const mockWindow = {
       isDestroyed: () => false,
       isMinimized: () => false,
@@ -86,18 +86,16 @@ describe('notification click routing', () => {
       webContents: {
         id: 202,
         isDestroyed: () => false,
-      },
-    }
+      } satisfies Pick<NotificationWindow['webContents'], 'id' | 'isDestroyed'> as NotificationWindow['webContents'],
+    } satisfies Pick<NotificationWindow, 'isDestroyed' | 'isMinimized' | 'restore' | 'focus' | 'webContents'> as NotificationWindow
 
-    notifications.initNotificationService({
-      getWindowByWorkspace: () => mockWindow,
-      createWindow: () => mockWindow,
-    } as any)
+    notifications.initNotificationService(({getWindowByWorkspace: () => mockWindow,
+createWindow: () => mockWindow} satisfies Parameters<typeof notifications.initNotificationService>[0]))
 
     const pushed: Array<{ channel: string; target: unknown; args: unknown[] }> = []
     notifications.setNotificationEventSink(((channel: string, target: unknown, ...args: unknown[]) => {
       pushed.push({ channel, target, args })
-    }) as any)
+    }))
 
     notifications.showNotification('Title', 'Body', 'ws-2', 'sess-2')
     expect(clickHandler).toBeTruthy()

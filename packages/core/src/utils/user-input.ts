@@ -51,27 +51,27 @@ export function normalizeUserInputQuestions(value: unknown): UserInputQuestion[]
   if (!Array.isArray(value) || value.length < 1 || value.length > USER_INPUT_LIMITS.maxQuestions) {
     throw new Error(`Provide between 1 and ${USER_INPUT_LIMITS.maxQuestions} questions`);
   }
-  const questions = value.map((entry): UserInputQuestion => {
+  const questions = value.map((entry: unknown): UserInputQuestion => {
     const question = record(entry, 'Question');
-    if (question.options !== undefined && (!Array.isArray(question.options) || question.options.length > USER_INPUT_LIMITS.maxOptions)) {
+    if (question["options"] !== undefined && (!Array.isArray(question["options"]) || question["options"].length > USER_INPUT_LIMITS.maxOptions)) {
       throw new Error(`Provide at most ${USER_INPUT_LIMITS.maxOptions} options per question`);
     }
-    const options = (question.options as unknown[] | undefined)?.map(entry => {
+    const options = (question["options"] as unknown[] | undefined)?.map(entry => {
       const option = record(entry, 'Option');
-      const description = option.description === undefined ? undefined
-        : text(option.description, USER_INPUT_LIMITS.maxOptionDescriptionLength, 'Option description', true);
+      const description = option["description"] === undefined ? undefined
+        : text(option["description"], USER_INPUT_LIMITS.maxOptionDescriptionLength, 'Option description', true);
       return {
-        id: identifier(option.id, 'Option id'),
-        label: text(option.label, USER_INPUT_LIMITS.maxOptionLabelLength, 'Option label'),
+        id: identifier(option["id"], 'Option id'),
+        label: text(option["label"], USER_INPUT_LIMITS.maxOptionLabelLength, 'Option label'),
         ...(description ? { description } : {}),
-        ...(optionalBoolean(option.recommended, 'recommended') ? { recommended: true } : {}),
+        ...(optionalBoolean(option["recommended"], 'recommended') ? { recommended: true } : {}),
       };
     });
     if (options) assertUnique(options.map(option => option.id), 'Option ids');
-    const multiple = optionalBoolean(question.multiSelect, 'multiSelect');
+    const multiple = optionalBoolean(question["multiSelect"], 'multiSelect');
     return {
-      id: identifier(question.id, 'Question id'),
-      question: text(question.question, USER_INPUT_LIMITS.maxQuestionLength, 'Question'),
+      id: identifier(question["id"], 'Question id'),
+      question: text(question["question"], USER_INPUT_LIMITS.maxQuestionLength, 'Question'),
       ...(options?.length ? { options } : {}),
       ...(multiple && options?.length ? { multiSelect: true } : {}),
     };
@@ -86,30 +86,30 @@ export function normalizeUserInputResponse(
   value: unknown,
 ): UserInputResponse {
   const response = record(value, 'Response');
-  const requestId = identifier(response.requestId, 'Request id');
+  const requestId = identifier(response["requestId"], 'Request id');
   if (requestId !== request.id) throw new Error('Response does not match this request');
-  if (optionalBoolean(response.cancelled, 'cancelled')) {
-    if (response.answers !== undefined && (!Array.isArray(response.answers) || response.answers.length > 0)) {
+  if (optionalBoolean(response["cancelled"], 'cancelled')) {
+    if (response["answers"] !== undefined && (!Array.isArray(response["answers"]) || response["answers"].length > 0)) {
       throw new Error('A cancelled response must not include answers');
     }
     return { requestId, cancelled: true };
   }
   const questions = normalizeUserInputQuestions(request.questions);
-  if (!Array.isArray(response.answers) || response.answers.length !== questions.length) {
+  if (!Array.isArray(response["answers"]) || response["answers"].length !== questions.length) {
     throw new Error('Answer each question exactly once');
   }
-  const answers = response.answers.map((entry): UserInputAnswer => {
+  const answers = response["answers"].map((entry: unknown): UserInputAnswer => {
     const answer = record(entry, 'Answer');
-    const questionId = identifier(answer.questionId, 'Question id');
+    const questionId = identifier(answer["questionId"], 'Question id');
     const question = questions.find(question => question.id === questionId);
     if (!question) throw new Error('Unknown question');
-    const rawIds = answer.optionIds ?? [];
+    const rawIds = answer["optionIds"] ?? [];
     if (!Array.isArray(rawIds) || rawIds.length > USER_INPUT_LIMITS.maxOptions) throw new Error('Invalid option selection');
-    const optionIds = rawIds.map(id => identifier(id, 'Selected option id'));
+    const optionIds = rawIds.map((id: unknown) => identifier(id, 'Selected option id'));
     assertUnique(optionIds, 'Selected options');
     if (!question.multiSelect && optionIds.length > 1) throw new Error('Select only one option for this question');
     if (optionIds.some(id => !question.options?.some(option => option.id === id))) throw new Error('Unknown option');
-    const freeText = answer.text === undefined ? '' : text(answer.text, USER_INPUT_LIMITS.maxAnswerLength, 'Answer', true);
+    const freeText = answer["text"] === undefined ? '' : text(answer["text"], USER_INPUT_LIMITS.maxAnswerLength, 'Answer', true);
     if (!optionIds.length && !freeText) throw new Error('Choose an option or enter an answer');
     return {
       questionId,

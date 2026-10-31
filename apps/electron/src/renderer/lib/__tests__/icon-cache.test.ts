@@ -15,7 +15,7 @@ import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test'
 // ============================================================================
 
 // Mock window.electronAPI
-const mockReadWorkspaceImage = mock((workspaceId: string, path: string) => Promise.resolve(null as string | null))
+const mockReadWorkspaceImage = mock((_workspaceId: string, _path: string) => Promise.resolve(null as string | null))
 
 // We need to mock the window object before importing the module
 const originalWindow = globalThis.window
@@ -26,7 +26,7 @@ beforeEach(() => {
   mockReadWorkspaceImage.mockImplementation((_workspaceId: string, _path: string) => Promise.resolve(null))
 
   // Setup mock window.electronAPI
-  ;(globalThis as unknown as { window: unknown }).window = {
+  ;((globalThis) as { window: unknown }).window = {
     electronAPI: {
       readWorkspaceImage: mockReadWorkspaceImage,
     },
@@ -38,7 +38,7 @@ beforeEach(() => {
 
 afterEach(() => {
   // Restore original window
-  ;(globalThis as unknown as { window: unknown }).window = originalWindow
+  ;((globalThis) as { window: unknown }).window = originalWindow
 })
 
 // ============================================================================
@@ -268,8 +268,8 @@ describe('string method null safety', () => {
     const content: string | null = null
 
     expect(() => {
-      // This is what was crashing - intentionally unsafe cast for testing
-      ;(content as unknown as string).includes('currentColor')
+      // Invoke the native string method with the invalid receiver explicitly.
+      String.prototype.includes.call(content, 'currentColor')
     }).toThrow(TypeError)
   })
 
@@ -277,8 +277,8 @@ describe('string method null safety', () => {
     const content: string | null = null
 
     expect(() => {
-      // Intentionally unsafe cast for testing
-      ;(content as unknown as string).startsWith('data:')
+      // Invoke the native string method with the invalid receiver explicitly.
+      String.prototype.startsWith.call(content, 'data:')
     }).toThrow(TypeError)
   })
 

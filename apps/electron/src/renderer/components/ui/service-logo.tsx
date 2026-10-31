@@ -9,10 +9,10 @@ import * as React from 'react'
 import { CrossfadeAvatar } from '@/components/ui/avatar'
 
 interface ServiceLogoProps {
-  logo?: string | null  // Google Favicon URL
+  logo?: string | null | undefined  // Google Favicon URL
   name: string
   fallbackIcon: React.ReactNode
-  className?: string
+  className?: string | undefined
 }
 
 export function ServiceLogo({

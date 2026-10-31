@@ -37,7 +37,7 @@ interface ProviderSelectStepProps {
   /** Called when the user selects a provider */
   onSelect: (choice: ProviderChoice) => void
   /** Called when the user chooses to skip setup */
-  onSkip?: () => void
+  onSkip?: (() => void) | undefined
 }
 
 /**

@@ -3,7 +3,6 @@ import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import type { CreateSessionOptions, Session } from '@craft-agent/shared/protocol';
-import type { ISessionManager } from '../handlers/session-manager-interface.ts';
 import type { SessionCompletionEvent } from '../sessions/SessionManager.ts';
 import { MissionPlanner } from './MissionPlanner.ts';
 
@@ -39,7 +38,7 @@ class PlannerHost {
   readonly sessions: Session[] = [];
   readonly listeners = new Set<(event: SessionCompletionEvent) => void>();
   output = validPlan();
-  lastOptions?: CreateSessionOptions;
+  lastOptions?: CreateSessionOptions | undefined;
   lastPrompt?: string;
 
   constructor(root: string) {
@@ -107,7 +106,7 @@ describe('MissionPlanner', () => {
     root = mkdtempSync(join(tmpdir(), 'mission-planner-'));
     host = new PlannerHost(root);
     planner = new MissionPlanner({
-      host: host as unknown as ISessionManager,
+    host,
       workspaceId: 'workspace-1',
       workspaceRoot: root,
       timeoutMs: 1_000,
@@ -170,7 +169,7 @@ describe('MissionPlanner', () => {
   it('uses Execute and instructs allow-all profiles only after the two-key opt-in', async () => {
     const autonomousHost = new PlannerHost(root);
     const autonomousPlanner = new MissionPlanner({
-      host: autonomousHost as unknown as ISessionManager,
+    host: autonomousHost,
       workspaceId: 'workspace-1',
       workspaceRoot: root,
       timeoutMs: 1_000,

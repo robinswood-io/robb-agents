@@ -71,7 +71,7 @@ describe('resolveServerPath fallback', () => {
       binaryName,
     );
     const interceptorPath = join(externalRoot, 'dist', 'interceptor.cjs');
-    const serverNames = ['pi-agent-server', 'session-mcp-server', 'bridge-mcp-server'];
+    const serverNames = ['pi-agent-server', 'session-mcp-server'];
     for (const serverName of serverNames) {
       const serverDir = join(externalRoot, 'resources', serverName);
       mkdirSync(serverDir, { recursive: true });
@@ -94,7 +94,6 @@ describe('resolveServerPath fallback', () => {
 
     expect(paths.piServerPath).toBe(join(externalRoot, 'resources', 'pi-agent-server', 'index.js'));
     expect(paths.sessionServerPath).toBe(join(externalRoot, 'resources', 'session-mcp-server', 'index.js'));
-    expect(paths.bridgeServerPath).toBe(join(externalRoot, 'resources', 'bridge-mcp-server', 'index.js'));
     expect(paths.vibeAcpServerPath).toBe(vibePath);
     expect(paths.antigravityServerPath).toBe(antigravityPath);
     expect(paths.interceptorBundlePath).toBe(interceptorPath);
@@ -152,6 +151,23 @@ describe('resolveRipgrepPath', () => {
     };
 
     const result = resolveBackendHostTooling({ hostRuntime });
+    expect(result.ripgrepPath).toBe(rgPath);
+  });
+
+  it('finds the platform ripgrep binary used by current @vscode/ripgrep packages', () => {
+    const appRoot = join(tmpBase, 'platform-package');
+    const binaryName = process.platform === 'win32' ? 'rg.exe' : 'rg';
+    const rgDir = join(appRoot, 'node_modules', '@vscode', `ripgrep-${process.platform}-${process.arch}`, 'bin');
+    mkdirSync(rgDir, { recursive: true });
+    const rgPath = join(rgDir, binaryName);
+    writeFileSync(rgPath, '#!/bin/sh\n');
+    chmodSync(rgPath, 0o755);
+
+    const result = resolveBackendHostTooling({ hostRuntime: {
+      appRootPath: appRoot,
+      resourcesPath: appRoot,
+      isPackaged: false,
+    } });
     expect(result.ripgrepPath).toBe(rgPath);
   });
 

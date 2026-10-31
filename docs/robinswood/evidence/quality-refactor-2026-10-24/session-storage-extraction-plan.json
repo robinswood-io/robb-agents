@@ -1,0 +1,582 @@
+{
+  "source": "packages/shared/src/sessions/storage.ts",
+  "units": [
+    {
+      "names": [
+        "ensurePhysicalDirectory"
+      ],
+      "group": "session-paths",
+      "bodySha256": "0779ec08051ecb629868c16e08f998958336cd67c07217c890556afe2582602d"
+    },
+    {
+      "names": [
+        "ensureSessionsDir"
+      ],
+      "group": "session-paths",
+      "bodySha256": "8579c3f33fa9ee1a3f23356b724e5b0e3b7180bcc13942164d815fb869e9aab5"
+    },
+    {
+      "names": [
+        "getSessionPath"
+      ],
+      "group": "session-paths",
+      "bodySha256": "7146f232f9eae766e26a86e9f8697ac0eda56eba7103db3c22d2c3e2c207ea2c"
+    },
+    {
+      "names": [
+        "getSessionFilePath"
+      ],
+      "group": "session-paths",
+      "bodySha256": "ed8c5943d7d5c712dd7abf9a4f8a3c21cb5c953c9f0a6968881a0ab6e91e9262"
+    },
+    {
+      "names": [
+        "recoverInterruptedSessionWrite"
+      ],
+      "group": "session-paths",
+      "bodySha256": "fe85e78b171310ffc445f8b7c61c99a55d09de47177ebeb77868e695daef665b"
+    },
+    {
+      "names": [
+        "ensureSessionDir"
+      ],
+      "group": "session-paths",
+      "bodySha256": "7d441024a739b857f31577ed7ffd87c3b6c56812c23278cfa60c327d1ef6e09f"
+    },
+    {
+      "names": [
+        "getSessionAttachmentsPath"
+      ],
+      "group": "session-paths",
+      "bodySha256": "ed2a89fd4875aed5ea01abbb6400a5af7ab138b178a9158f471b77b270a67a88"
+    },
+    {
+      "names": [
+        "getSessionPlansPath"
+      ],
+      "group": "session-paths",
+      "bodySha256": "6dcf088701870646bdd35ccd74dbe3ffac8734f155ffafc20d682c2397161122"
+    },
+    {
+      "names": [
+        "getSessionDataPath"
+      ],
+      "group": "session-paths",
+      "bodySha256": "79d331218be569512ad1511e86be63d2c9db7d22ea956f197dee6f2c11424fe6"
+    },
+    {
+      "names": [
+        "getSessionDownloadsPath"
+      ],
+      "group": "session-paths",
+      "bodySha256": "4cadd6e93ee5ac275ca09ba87d798f157cfb6b651cf8822d9235ee89d43de5b3"
+    },
+    {
+      "names": [
+        "getExistingSessionIds"
+      ],
+      "group": "session-paths",
+      "bodySha256": "fe2d656ffec2b70d8cabfec1853f9f9928551bd10178a85e368ef42580eba580"
+    },
+    {
+      "names": [
+        "generateSessionId"
+      ],
+      "group": "session-paths",
+      "bodySha256": "cd36c57f3318ffd344a5dfbfa35e0c908d8efe738cbf72e8fd248f995a30f85a"
+    },
+    {
+      "names": [
+        "createSession"
+      ],
+      "group": "creation",
+      "bodySha256": "7eff7a5dfdb24e441f358a3a0ca238d4c3885dc80d32c74307be64d88e60d154"
+    },
+    {
+      "names": [
+        "getOrCreateSessionById"
+      ],
+      "group": "creation",
+      "bodySha256": "829d35c5c489898cd2fda444633f393744fe28e98767e6bd368dcc23d3d7a479"
+    },
+    {
+      "names": [
+        "saveSession"
+      ],
+      "group": "creation",
+      "bodySha256": "0e86e2c0d608fc705b324fd1e0be3fa9a8a01c3098c944d4434cd1b269aac677"
+    },
+    {
+      "names": [
+        "loadSession"
+      ],
+      "group": "session-index",
+      "bodySha256": "5c071ebd4a4fbc3d47defeacd93dd2bb6231e23f7b4b557ac03f83d0d01357af"
+    },
+    {
+      "names": [
+        "listSessions"
+      ],
+      "group": "session-index",
+      "bodySha256": "8c18dd8759d7b4cd3ce3afa5d958c36ab09f6597f9d504672de6ba42f96ff194"
+    },
+    {
+      "names": [
+        "headerToMetadata"
+      ],
+      "group": "session-index",
+      "bodySha256": "445cad4e9e72946a9e7ebbc0499a64568b655400361f33c7cad547483f358b76"
+    },
+    {
+      "names": [
+        "deleteSession"
+      ],
+      "group": "session-index",
+      "bodySha256": "bd3a56db5fa125f37cf8642971232adcee56d94c052821481b880316bb86be77"
+    },
+    {
+      "names": [
+        "LEGACY_SESSION_DELETION_QUARANTINE"
+      ],
+      "group": "deletion-quarantine",
+      "bodySha256": "4a1e13f38b878a0e8b0e598475b46eb8d690a75b4cb429af9926f2b88d510d4e"
+    },
+    {
+      "names": [
+        "LEGACY_SESSION_DELETION_STAGING_PREFIX"
+      ],
+      "group": "deletion-quarantine",
+      "bodySha256": "264410a920b8a2d8cc62ea8e278fb82887955ab28f4e5694d7d8edb80ecdfd70"
+    },
+    {
+      "names": [
+        "SESSION_DELETION_ENTRY_PREFIX"
+      ],
+      "group": "deletion-quarantine",
+      "bodySha256": "d609aebd065e8c4000ac507eacd95f422f92492fa894568fd9590cca53566590"
+    },
+    {
+      "names": [
+        "SESSION_DELETION_PENDING_PREFIX"
+      ],
+      "group": "deletion-quarantine",
+      "bodySha256": "ac591c58086cf84539e1361ae0cf55dd59c9228ad6de8329d499318ac36ee541"
+    },
+    {
+      "names": [
+        "UUID_V4_PATTERN_SOURCE"
+      ],
+      "group": "deletion-quarantine",
+      "bodySha256": "1c620d4b666b5c8cfdf4f762f0985ff4f1de3d807cc63cdfc56e15f1043e1fd8"
+    },
+    {
+      "names": [
+        "LEGACY_SESSION_DELETION_ENTRY_PATTERN"
+      ],
+      "group": "deletion-quarantine",
+      "bodySha256": "f1f877bd41b5b70d6cf76e86ce1500bf271b373ab10685b88dcf4595ef38d37e"
+    },
+    {
+      "names": [
+        "SESSION_DELETION_ENTRY_PATTERN"
+      ],
+      "group": "deletion-quarantine",
+      "bodySha256": "dd94dbd1644bbe2fc1ae12c7c8da0802c66afc2a86a9b184b1500a18d9a9da0c"
+    },
+    {
+      "names": [
+        "LEGACY_SESSION_DELETION_STAGING_PATTERN"
+      ],
+      "group": "deletion-quarantine",
+      "bodySha256": "ed6cc160d9ca4eeaf4000b10dd054e6d08fe826fedfbbcab7b9ae26c1dfdd695"
+    },
+    {
+      "names": [
+        "recoveredDeletionQuarantines"
+      ],
+      "group": "deletion-quarantine",
+      "bodySha256": "0943fe870cb22af43b3c31b9e1a0cb00bbf1dc1580b5a0cc62b69eeab142612e"
+    },
+    {
+      "names": [
+        "syncDirectory"
+      ],
+      "group": "deletion-quarantine",
+      "bodySha256": "b1c069bf00ac9a84c3b1920f852554b9d9f7148ce456a556c511903f96ce4d5e"
+    },
+    {
+      "names": [
+        "syncDirectoryForMaintenance"
+      ],
+      "group": "deletion-quarantine",
+      "bodySha256": "d1a9013279cf38b50396016617e3e9caac3a00f26125ebcd718c4372e0f4a516"
+    },
+    {
+      "names": [
+        "purgeLegacySessionDeletionQuarantine"
+      ],
+      "group": "deletion-quarantine",
+      "bodySha256": "6745f41c5dbef2581f75d620d86b620ebcda1b3e4af6de4463afe28856b6def8"
+    },
+    {
+      "names": [
+        "purgeSessionDeletionQuarantine"
+      ],
+      "group": "deletion-quarantine",
+      "bodySha256": "8cb5233c5fc903b7f515a7e081e14347bbac459f092046c4f74bc786eb8a88a0"
+    },
+    {
+      "names": [
+        "AtomicSessionDeletionResult"
+      ],
+      "group": "atomic-deletion",
+      "bodySha256": "4fe9e8df126d88e1ca008508d9dc6451fcb8f336dd99f17cb0b81d66f8014c67"
+    },
+    {
+      "names": [
+        "AtomicSessionDeletionTestHooks"
+      ],
+      "group": "atomic-deletion",
+      "bodySha256": "9ec27ba30d3a950a3cc033c1a59939121705712ee0c550fe8e9afeee09b021c2"
+    },
+    {
+      "names": [
+        "deleteSessionAtomically"
+      ],
+      "group": "atomic-deletion",
+      "bodySha256": "2e92355a645a230965621781256e2aa4ee2bbbb7f1e7975ea76b1d2729e628b9"
+    },
+    {
+      "names": [
+        "clearSessionMessages"
+      ],
+      "group": "metadata",
+      "bodySha256": "707fc2fad0cf0a1bf9d4fe2792a573c4a6a3543a3b9964204827ecb020ce5f86"
+    },
+    {
+      "names": [
+        "getOrCreateLatestSession"
+      ],
+      "group": "metadata",
+      "bodySha256": "baff7aec9319be133496be5a08b95a5ee2350153604eda55d34c11243d45a204"
+    },
+    {
+      "names": [
+        "updateSessionSdkId"
+      ],
+      "group": "metadata",
+      "bodySha256": "5001753b554ac0965b99c9936b8f1ef39520dc5b9b8f57287dedf68101367b04"
+    },
+    {
+      "names": [
+        "canUpdateSdkCwd"
+      ],
+      "group": "metadata",
+      "bodySha256": "e18e3586fc3f855f115c7faed781fefa764ac1066a2e8eb35f2e97680b3f1fef"
+    },
+    {
+      "names": [
+        "updateSessionMetadata"
+      ],
+      "group": "metadata",
+      "bodySha256": "32fdd4b0ddaf2ea25497172ea4fb4bdd2ad3b0dcf3180f949dc9524ac59d0c87"
+    },
+    {
+      "names": [
+        "flagSession"
+      ],
+      "group": "metadata",
+      "bodySha256": "ebfd00fc12d054536fb5168b56f0e1018824c33de5218a9a1f36694865997089"
+    },
+    {
+      "names": [
+        "unflagSession"
+      ],
+      "group": "metadata",
+      "bodySha256": "0289523af7a0a1c39d8628011196ed4241dbdc53bfb494d1cb4cf02030de18e1"
+    },
+    {
+      "names": [
+        "setSessionStatus"
+      ],
+      "group": "metadata",
+      "bodySha256": "4366b2a72e5c2b1a0a30f2b92c2ad6598a371c21054b883a62557c2f61f21d21"
+    },
+    {
+      "names": [
+        "setSessionLabels"
+      ],
+      "group": "metadata",
+      "bodySha256": "b26c7b57ded9e48dfb37b8bd435c75fdc5e3d8fe088112fee2b108c5343ea9b7"
+    },
+    {
+      "names": [
+        "setSessionProjectId"
+      ],
+      "group": "metadata",
+      "bodySha256": "076cd978336bbf87781c717475490787de79827dde2dbc2c6c36d023991ada4a"
+    },
+    {
+      "names": [
+        "unbindProjectFromSessions"
+      ],
+      "group": "metadata",
+      "bodySha256": "fcd4251f10218be2866a73140fb17f96e405892aa19b944225ca46916a0adb1c"
+    },
+    {
+      "names": [
+        "archiveSession"
+      ],
+      "group": "metadata",
+      "bodySha256": "078d7094bc212a43b87069335ff395c51b6f9d13a6844eb3828abe84c0012031"
+    },
+    {
+      "names": [
+        "unarchiveSession"
+      ],
+      "group": "metadata",
+      "bodySha256": "d617145037bb587ec69aecc68335d29bc060fe0d49d639d2608a41e1f1d54aae"
+    },
+    {
+      "names": [
+        "setPendingPlanExecution"
+      ],
+      "group": "pending-plan",
+      "bodySha256": "37abb256ddd51c2f20da1d426335cb6d3cbdc6991aa09c85ebde8e53bd118703"
+    },
+    {
+      "names": [
+        "markCompactionComplete"
+      ],
+      "group": "pending-plan",
+      "bodySha256": "a2c8b3361a212074f8fcf7e87561773d624fba2a7f9f9ba72391bf82d7ac071d"
+    },
+    {
+      "names": [
+        "markPendingPlanExecutionDispatched"
+      ],
+      "group": "pending-plan",
+      "bodySha256": "de2d0e18b4d3e9a587808cbf74ea7c58786cf8e1dd7b079726f6a04835ce8220"
+    },
+    {
+      "names": [
+        "clearPendingPlanExecution"
+      ],
+      "group": "pending-plan",
+      "bodySha256": "d128928e9ac0af60f6d0bc3b253ed3c7644bdbf8ab36fc7e94922a3980355b84"
+    },
+    {
+      "names": [
+        "getPendingPlanExecution"
+      ],
+      "group": "pending-plan",
+      "bodySha256": "1c1394f962d2e03ee542b9f52fedf108f9fbba749a13af12073d5d9cf74ea8ee"
+    },
+    {
+      "names": [
+        "listFlaggedSessions"
+      ],
+      "group": "session-queries",
+      "bodySha256": "c5bffce80a9bee5849582e70d9559d96601d31a9231cf44a98c0099824cf08d8"
+    },
+    {
+      "names": [
+        "listCompletedSessions"
+      ],
+      "group": "session-queries",
+      "bodySha256": "56784c7e29fb821f46b51b81f5e004c182f946dd8e18ea0f5491cb7e831b698c"
+    },
+    {
+      "names": [
+        "listInboxSessions"
+      ],
+      "group": "session-queries",
+      "bodySha256": "22cb3ab29d7eaceca3030106f20e54a72154fe9b6050abe64edb66c7de45d970"
+    },
+    {
+      "names": [
+        "listArchivedSessions"
+      ],
+      "group": "session-queries",
+      "bodySha256": "abd137e29b4e3276b95dd65bdb12096a1300272c5a85ea2fbe9c5c58ca093cc1"
+    },
+    {
+      "names": [
+        "listActiveSessions"
+      ],
+      "group": "session-queries",
+      "bodySha256": "1470c2de7ace8b8cd59eb816d7f52d2298f7c27cae2a0ce2309bd6e93918c708"
+    },
+    {
+      "names": [
+        "deleteOldArchivedSessions"
+      ],
+      "group": "session-queries",
+      "bodySha256": "9f105c5c5249ca85888e6640af7ccade7f2ce82ea5800b81bc67fcde7d277a31"
+    },
+    {
+      "names": [
+        "slugify"
+      ],
+      "group": "plan-format",
+      "bodySha256": "fb0b258f57c430cf31eddac7727037090f80ee3d094324043dddf7a6b875fadb"
+    },
+    {
+      "names": [
+        "generatePlanFileName"
+      ],
+      "group": "plan-format",
+      "bodySha256": "eb6b1a9140ea13bab0296e1fe06e8693e5b470618a70f50886654ae60650088d"
+    },
+    {
+      "names": [
+        "ensurePlansDir"
+      ],
+      "group": "plan-format",
+      "bodySha256": "c57d3eb77c7c2c7261d54284ddace214c78155c07a761ffe00cc159c18b7d5d2"
+    },
+    {
+      "names": [
+        "formatPlanAsMarkdown"
+      ],
+      "group": "plan-format",
+      "bodySha256": "cae04f5af00a523d5c90891165dcf006133e9fe888c41c7f53e7b024976e2b53"
+    },
+    {
+      "names": [
+        "parsePlanFromMarkdown"
+      ],
+      "group": "plan-format",
+      "bodySha256": "ce97e7cb4dc7ee84621dadfeef1050ae4f34eb78a25d5ab9dfbcc6d19bacbc46"
+    },
+    {
+      "names": [
+        "savePlanToFile"
+      ],
+      "group": "plan-files",
+      "bodySha256": "1ad67eb1209ad4beddc96f27697af7c310ab0488e74a206c0f09df6c5f56b0e0"
+    },
+    {
+      "names": [
+        "loadPlanFromFile"
+      ],
+      "group": "plan-files",
+      "bodySha256": "b7075e5fd3c3686d06bfc6a0e852fc88ef1b785b0f9a04b478419c7749f8cd0c"
+    },
+    {
+      "names": [
+        "loadPlanFromPath"
+      ],
+      "group": "plan-files",
+      "bodySha256": "33b881a7d8b38ea7a5b436e58de0452fea2f91e068b3602ba2ee9a62a4e9c7e8"
+    },
+    {
+      "names": [
+        "listPlanFiles"
+      ],
+      "group": "plan-files",
+      "bodySha256": "487214cc572d191b10476577639fb8d2eb88a2eca675994a90f84600ba4ba366"
+    },
+    {
+      "names": [
+        "deletePlanFile"
+      ],
+      "group": "plan-files",
+      "bodySha256": "f185707a4a24cf1b17b33d22ef552f959dbd4f5a44dedf89fc2592ae2f74c6da"
+    },
+    {
+      "names": [
+        "getMostRecentPlanFile"
+      ],
+      "group": "plan-files",
+      "bodySha256": "5aacea77fdb7e53652da1731c5a97f13bb748402a419c9580a64f2422726df20"
+    },
+    {
+      "names": [
+        "ensureAttachmentsDir"
+      ],
+      "group": "plan-files",
+      "bodySha256": "41270290d485bc35be584eac6525df74fa1c2e5c8a0ddfe083e427f1cbcf2f38"
+    }
+  ],
+  "modules": [
+    {
+      "name": "session-paths",
+      "lines": 203
+    },
+    {
+      "name": "creation",
+      "lines": 200
+    },
+    {
+      "name": "session-index",
+      "lines": 152
+    },
+    {
+      "name": "deletion-quarantine",
+      "lines": 188
+    },
+    {
+      "name": "atomic-deletion",
+      "lines": 193
+    },
+    {
+      "name": "metadata",
+      "lines": 241
+    },
+    {
+      "name": "pending-plan",
+      "lines": 115
+    },
+    {
+      "name": "session-queries",
+      "lines": 75
+    },
+    {
+      "name": "plan-format",
+      "lines": 181
+    },
+    {
+      "name": "plan-files",
+      "lines": 151
+    }
+  ],
+  "dependencies": {
+    "session-paths": [],
+    "creation": [
+      "session-paths",
+      "session-index"
+    ],
+    "session-index": [
+      "session-paths",
+      "deletion-quarantine",
+      "plan-files"
+    ],
+    "deletion-quarantine": [],
+    "atomic-deletion": [
+      "session-paths",
+      "deletion-quarantine"
+    ],
+    "metadata": [
+      "session-index",
+      "creation",
+      "session-queries"
+    ],
+    "pending-plan": [
+      "session-index",
+      "creation"
+    ],
+    "session-queries": [
+      "session-index"
+    ],
+    "plan-format": [
+      "session-paths"
+    ],
+    "plan-files": [
+      "plan-format",
+      "session-paths"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

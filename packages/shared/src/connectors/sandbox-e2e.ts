@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 export type ConnectorSandboxProvider =
   | 'microsoft365'
   | 'googleWorkspace'
@@ -67,7 +68,7 @@ function slackResponseIsAuthenticated(body: unknown): boolean {
   return Boolean(
     body
     && typeof body === 'object'
-    && !Array.isArray(body)
+    && !isUnknownArray(body)
     && Reflect.get(body, 'ok') === true,
   )
 }
@@ -106,7 +107,7 @@ export async function runConnectorSandboxProbe(input: {
       `${input.provider} sandbox returned HTTP ${response.status}`,
     )
   }
-  if (!response.body || typeof response.body !== 'object' || Array.isArray(response.body)) {
+  if (!response.body || typeof response.body !== 'object' || isUnknownArray(response.body)) {
     throw new ConnectorSandboxError(
       'INVALID_RESPONSE',
       `${input.provider} sandbox did not return a JSON object`,

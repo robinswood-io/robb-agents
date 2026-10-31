@@ -17,10 +17,10 @@ export interface SkillsListPanelProps {
   skills: LoadedSkill[]
   onDeleteSkill: (skillSlug: string) => void
   onSkillClick: (skill: LoadedSkill) => void
-  selectedSkillSlug?: string | null
-  workspaceId?: string
-  workspaceRootPath?: string
-  className?: string
+  selectedSkillSlug?: string | null | undefined
+  workspaceId?: string | undefined
+  workspaceRootPath?: string | undefined
+  className?: string | undefined
 }
 
 export function SkillsListPanel({

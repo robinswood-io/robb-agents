@@ -9,10 +9,10 @@ export type BannerState =
 
 interface SetupAuthBannerProps {
   state: BannerState
-  reason?: string
+  reason?: string | undefined
   onAction: () => void
   /** Variant: 'banner' for chat list, 'inputAreaCover' matches chat input styling */
-  variant?: 'banner' | 'inputAreaCover'
+  variant?: 'banner' | 'inputAreaCover' | undefined
 }
 
 /**

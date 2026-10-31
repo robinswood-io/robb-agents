@@ -1,13 +1,11 @@
-#!/usr/bin/env python3
 """Audit a packaged Robb Agents directory for recursive releases and size drift."""
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
 import os
-from pathlib import Path
 import sys
-
+from dataclasses import dataclass
+from pathlib import Path
 
 MIB = 1024 * 1024
 DEFAULT_MAX_UNPACKED_BYTES = 900 * MIB
@@ -164,7 +162,7 @@ def artifact_size_finding(path: Path, *, max_bytes: int = DEFAULT_MAX_ARTIFACT_B
 def print_report(report: PackageAuditReport, *, inventory_limit: int = 12) -> None:
     print(
         f"Package audit: {report.root} — {report.file_count} files, "
-        f"{format_bytes(report.total_bytes)} unpacked"
+        + f"{format_bytes(report.total_bytes)} unpacked"
     )
     for label, size in report.inventory[:inventory_limit]:
         print(f"  {format_bytes(size):>10}  {label}")
@@ -172,17 +170,23 @@ def print_report(report: PackageAuditReport, *, inventory_limit: int = 12) -> No
         print(f"::error::{finding.path}: {finding.reason}", file=sys.stderr)
 
 
+class PackageAuditArguments(argparse.Namespace):
+    root: Path = Path()
+    max_mib: int = DEFAULT_MAX_UNPACKED_BYTES // MIB
+    inventory_limit: int = 12
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", type=Path, required=True, help="Packaged application directory to audit")
-    parser.add_argument(
+    _ = parser.add_argument("--root", type=Path, required=True, help="Packaged application directory to audit")
+    _ = parser.add_argument(
         "--max-mib",
         type=int,
         default=DEFAULT_MAX_UNPACKED_BYTES // MIB,
         help="Maximum unpacked package size in MiB; use 0 to disable the size budget",
     )
-    parser.add_argument("--inventory-limit", type=int, default=12)
-    args = parser.parse_args()
+    _ = parser.add_argument("--inventory-limit", type=int, default=12)
+    args = parser.parse_args(namespace=PackageAuditArguments())
 
     max_bytes = None if args.max_mib == 0 else args.max_mib * MIB
     try:

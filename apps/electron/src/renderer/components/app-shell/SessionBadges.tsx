@@ -7,7 +7,7 @@ import type { LabelConfig } from "@craft-agent/shared/labels"
 
 interface SessionBadgesProps {
   item: SessionMeta
-  maxVisible?: number
+  maxVisible?: number | undefined
 }
 
 export function SessionBadges({ item, maxVisible = 2 }: SessionBadgesProps) {

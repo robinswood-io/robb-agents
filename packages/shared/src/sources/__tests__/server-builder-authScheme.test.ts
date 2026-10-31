@@ -25,7 +25,7 @@ describe('SourceServerBuilder.buildApiConfig', () => {
         api: {
           baseUrl: 'https://api.example.com/',
           authType: authType as 'bearer' | 'header' | 'query' | 'basic' | 'none',
-          authScheme,
+          ...(authScheme !== undefined ? { authScheme } : {}),
         },
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -65,7 +65,9 @@ describe('SourceServerBuilder.buildApiConfig', () => {
 
   it('handles null by defaulting to Bearer (via nullish coalescing)', () => {
     // Test runtime behavior with null (TypeScript wouldn't allow this)
-    const source = createMockSource('bearer', null as unknown as undefined);
+    const source = createMockSource('bearer');
+    if (!source.config.api) throw new Error('Missing API fixture');
+    Reflect.set(source.config.api, 'authScheme', null);
     const config = builder.buildApiConfig(source);
 
     expect(config.auth).toEqual({ type: 'bearer', authScheme: 'Bearer' });

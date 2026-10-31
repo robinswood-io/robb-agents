@@ -31,13 +31,15 @@ export const MermaidBlock = Node.create({
 
   markdownTokenName: 'code',
 
-  parseMarkdown: (token: any, helpers: any) => {
-    if ((token.lang ?? '').toLowerCase() !== 'mermaid') return []
+  parseMarkdown: (token, helpers) => {
+    const language: unknown = token["lang"]
+    if ((typeof language === 'string' ? language : '').toLowerCase() !== 'mermaid') return []
     return helpers.createNode('mermaidBlock', { code: token.text ?? '' })
   },
 
-  renderMarkdown: (node: any) => {
-    const code = (node.attrs?.code ?? '').replace(/\n$/, '')
+  renderMarkdown: (node) => {
+    const rawCode: unknown = node.attrs?.["code"]
+    const code = (typeof rawCode === 'string' ? rawCode : '').replace(/\n$/, '')
     return `\`\`\`mermaid\n${code}\n\`\`\``
   },
 
@@ -51,7 +53,7 @@ export const MermaidBlock = Node.create({
 
       const handleEditClick = () => {
         selectNode()
-        queueMicrotask(() => (editor as any).emit(RICH_BLOCK_EDIT_EVENT))
+        queueMicrotask(() => editor.emit(RICH_BLOCK_EDIT_EVENT))
       }
 
       return (
@@ -69,7 +71,7 @@ export const MermaidBlock = Node.create({
           }}
         >
           <RichBlockShell onEdit={handleEditClick} editTitle="Edit Mermaid">
-            <MarkdownMermaidBlock code={(node.attrs.code as string) ?? ''} showExpandButton={false} tapToOpen={false} minHeight={140} />
+            <MarkdownMermaidBlock code={(node.attrs["code"] as string) ?? ''} showExpandButton={false} tapToOpen={false} minHeight={140} />
           </RichBlockShell>
         </NodeViewWrapper>
       )

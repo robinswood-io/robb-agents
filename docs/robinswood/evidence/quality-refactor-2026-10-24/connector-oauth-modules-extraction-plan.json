@@ -1,0 +1,212 @@
+{
+  "source": "packages/shared/src/connectors/oauth-client.ts",
+  "units": [
+    {
+      "names": [
+        "ConnectorOAuthProvider"
+      ],
+      "group": "contracts",
+      "bodySha256": "65dcafb2cb9b5454eb73250af5a50b3529688bfef69dad91a77b398b79a009e8"
+    },
+    {
+      "names": [
+        "ConnectorOAuthScopeMapping"
+      ],
+      "group": "contracts",
+      "bodySha256": "c74f4bffc64bd0cc9724598a4f67d23958f4e0c1d4c857d9639bc0e5bf36280d"
+    },
+    {
+      "names": [
+        "ConnectorOAuthProfile"
+      ],
+      "group": "contracts",
+      "bodySha256": "44545aa85ed1a41d31eb119a43dedad79a244ac1f2ac119bc0c040add652fc33"
+    },
+    {
+      "names": [
+        "ConnectorOAuthFlow"
+      ],
+      "group": "contracts",
+      "bodySha256": "b76f20877255c5a5db15bb2b9b03cf41db1c242b6d7108986892f1449349e345"
+    },
+    {
+      "names": [
+        "ConnectorOAuthTokenSet"
+      ],
+      "group": "contracts",
+      "bodySha256": "4539e74887a64a13dcf44a1c2d4fd572454efd1f884848dd945f4027d6517cd6"
+    },
+    {
+      "names": [
+        "ConnectorOAuthHttpRequest"
+      ],
+      "group": "contracts",
+      "bodySha256": "c9cfa24ec008060055b5e67859f54b93e9e885d34966a9490a9cec746c27fb92"
+    },
+    {
+      "names": [
+        "ConnectorOAuthHttpResponse"
+      ],
+      "group": "contracts",
+      "bodySha256": "2bb380f769c6e4be416005524a9f3b291e486176f56c197f4b7100482c543ead"
+    },
+    {
+      "names": [
+        "ConnectorOAuthTransport"
+      ],
+      "group": "contracts",
+      "bodySha256": "158e8bb65ca93fd6a5d15b2cbf66294db2e22894ee4f381d41f13adb9c58e582"
+    },
+    {
+      "names": [
+        "ConnectorOAuthError"
+      ],
+      "group": "contracts",
+      "bodySha256": "c4911e2a4838b068c5ce6a5498d54e4cd02b8d32681b66d7250b26327f1226a3"
+    },
+    {
+      "names": [
+        "ConnectorOAuthProfileOptions"
+      ],
+      "group": "contracts",
+      "bodySha256": "7d6ffff9c25c1812b7fc42c7d51f997d2ae9d482ca04689d6a6fb7ecb4fe1b23"
+    },
+    {
+      "names": [
+        "builtInProfiles"
+      ],
+      "group": "profiles",
+      "bodySha256": "0cc4c3e530d03f0482fd042b9743220ce0d8095a2a76b66974ab9d73ea56e553"
+    },
+    {
+      "names": [
+        "profileEndpoint"
+      ],
+      "group": "profiles",
+      "bodySha256": "bf3a9469f8f0617033ff20c6e3640415e00499c0e9808d661834a94dde309664"
+    },
+    {
+      "names": [
+        "createConnectorOAuthProfile"
+      ],
+      "group": "profiles",
+      "bodySha256": "2f39d445cdeb0fd315c61d010da94d451b8dc708bfdda7fa96589d706c4baba9"
+    },
+    {
+      "names": [
+        "base64Url"
+      ],
+      "group": "oauth-flow",
+      "bodySha256": "4b1f3fbeb470544e41c9f24cc914c975e77d16d6751b4354a0c791ecb5699013"
+    },
+    {
+      "names": [
+        "requestedMappings"
+      ],
+      "group": "oauth-flow",
+      "bodySha256": "b3edfc1abbf6620b749e271080475291ebc601758afab12cb3777ee5df42f4bf"
+    },
+    {
+      "names": [
+        "prepareConnectorOAuthFlow"
+      ],
+      "group": "oauth-flow",
+      "bodySha256": "2901c4e3d76912b62860307b79f78cd0399566b9e74d67dd954fbbf3dc70999b"
+    },
+    {
+      "names": [
+        "readString"
+      ],
+      "group": "oauth-flow",
+      "bodySha256": "df3c8474b7b37837940af63d8cb6696bc2e3d6a415c2acb9ae42a4f50b539466"
+    },
+    {
+      "names": [
+        "readPositiveNumber"
+      ],
+      "group": "oauth-flow",
+      "bodySha256": "04c56d2bf48cec0fc522b10cb0d8e8c09e0d9963920d18da2ccd36b8d8f28e86"
+    },
+    {
+      "names": [
+        "parseGrantedScopes"
+      ],
+      "group": "oauth-flow",
+      "bodySha256": "e1493d21c4db14dade50b5d171910afb37e0aa91f9828df995b4cd5a7960347f"
+    },
+    {
+      "names": [
+        "basicAuthorization"
+      ],
+      "group": "oauth-flow",
+      "bodySha256": "89eebdabeb0216cf4352d28abf14e16b1dd6b90ea32a295d3860542c66280be9"
+    },
+    {
+      "names": [
+        "tokenRequest"
+      ],
+      "group": "oauth-flow",
+      "bodySha256": "57eb48678bd445f58294db28ceab09d344aa95dd44beffc0a794fbfee0b6a302"
+    },
+    {
+      "names": [
+        "parseTokenResponse"
+      ],
+      "group": "oauth-flow",
+      "bodySha256": "9bdf896db295589d2a2e8d899737f4a719d5af9bb4573285c9150fc3d7abbb8c"
+    },
+    {
+      "names": [
+        "exchangeConnectorOAuthCode"
+      ],
+      "group": "oauth-flow",
+      "bodySha256": "800e2ce8ca53b21adad8f3612613a19fa3f68702ddc6ff6558f11166605ada6a"
+    },
+    {
+      "names": [
+        "refreshConnectorOAuthToken"
+      ],
+      "group": "oauth-flow",
+      "bodySha256": "fc3093a9b814c1689d276bc3e6e97a7f74322a6ac9984aa2dadaab462bd48735"
+    },
+    {
+      "names": [
+        "createConnectorSecretLeaseFromOAuth"
+      ],
+      "group": "oauth-flow",
+      "bodySha256": "331bef093a161d343a8b0a48f9d2c9a0adcccd0e9521f904c12976d0b8b1c013"
+    },
+    {
+      "names": [
+        "fetchConnectorOAuthTransport"
+      ],
+      "group": "oauth-flow",
+      "bodySha256": "ef75313850cc274cd0f22acebcb240ae556315f493863903a5f780e480e72378"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 86
+    },
+    {
+      "name": "profiles",
+      "lines": 125
+    },
+    {
+      "name": "oauth-flow",
+      "lines": 303
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "profiles": [
+      "contracts"
+    ],
+    "oauth-flow": [
+      "contracts"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

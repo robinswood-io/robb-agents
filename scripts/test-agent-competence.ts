@@ -38,7 +38,15 @@ const groups = [
   ] },
   // These modules install process-level mocks and must run in separate Bun VMs.
   { id: 'prerequisites', scenarios: ['D08-permissions-prerequisites'], files: ['./packages/shared/src/agent/core/__tests__/prerequisite-manager.isolated.ts'] },
-  { id: 'pre-tool-use', scenarios: ['D08-permissions-prerequisites'], files: ['./packages/shared/src/agent/core/__tests__/pre-tool-use-checks.isolated.ts'] },
+  { id: 'pre-tool-use', scenarios: ['D08-permissions-prerequisites'], files: [
+    './packages/shared/src/agent/core/__tests__/pre-tool-use-browser-channel.isolated.ts',
+    './packages/shared/src/agent/core/__tests__/pre-tool-use-admission.isolated.ts',
+    './packages/shared/src/agent/core/__tests__/pre-tool-use-input-transforms.isolated.ts',
+    './packages/shared/src/agent/core/__tests__/pre-tool-use-ask-gate.isolated.ts',
+    './packages/shared/src/agent/core/__tests__/pre-tool-use-pipeline-ordering.isolated.ts',
+    './packages/shared/src/agent/core/__tests__/pre-tool-use-resume-authority.isolated.ts',
+    './packages/shared/src/agent/core/__tests__/pre-tool-use-checks.isolated.ts',
+  ] },
   { id: 'business-amendments-delegation', scenarios: ['D08-campaign-coverage', 'D08-document-completeness', 'D08-objective-revision', 'D08-bounded-review', 'D08-user-outcome'], files: [
     'packages/server-core/src/sessions/competence-regressions.test.ts',
     'packages/server-core/src/sessions/objective-amendment-revision.test.ts',

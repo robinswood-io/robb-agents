@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 /**
  * Unit tests for basic auth credential storage and retrieval
  *
@@ -44,9 +45,9 @@ function getApiCredential(storedValue: string, isBasicAuth: boolean): ApiCredent
 
   if (isBasicAuth) {
     try {
-      const parsed = JSON.parse(storedValue);
-      if (parsed.username && parsed.password) {
-        return parsed as BasicAuthCredential;
+      const parsed = parseJsonObject(storedValue);
+      if (typeof parsed["username"] === "string" && parsed["username"] && typeof parsed["password"] === "string" && parsed["password"]) {
+        return { username: parsed["username"], password: parsed["password"] };
       }
     } catch {
       // Not JSON, treat as regular credential
@@ -75,9 +76,9 @@ describe('Basic Auth Credential Storage', () => {
     expect(stored.value).toBeDefined();
 
     // Should be valid JSON
-    const parsed = JSON.parse(stored.value);
-    expect(parsed.username).toBe('user@example.com/token');
-    expect(parsed.password).toBe('api-key-123');
+    const parsed = parseJsonObject(stored.value);
+    expect(parsed["username"]).toBe('user@example.com/token');
+    expect(parsed["password"]).toBe('api-key-123');
   });
 
   test('does NOT store credentials as pre-encoded base64', () => {

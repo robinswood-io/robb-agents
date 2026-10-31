@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'bun:test'
 import {
   buildCustomEndpointModelDef,
+  inferLocalModelReasoning,
+  normalizeCustomEndpointBaseUrl,
   normalizeCustomEndpointModelEntry,
   stripPiPrefix,
 } from './custom-endpoint-models.ts'
@@ -70,5 +72,35 @@ describe('buildCustomEndpointModelDef', () => {
     const model = buildCustomEndpointModelDef('deepseek-r1-local', undefined, { supportsThinking: true, maxTokens: 32_768 })
     expect(model.reasoning).toBe(true)
     expect(model.maxTokens).toBe(32_768)
+  })
+
+  it('auto-infers reasoning capability for known local reasoning families while keeping coder models fast by default', () => {
+    expect(inferLocalModelReasoning('qwen3:32b')).toBe(true)
+    expect(inferLocalModelReasoning('deepseek-r1:70b')).toBe(true)
+    expect(inferLocalModelReasoning('gpt-oss:120b')).toBe(true)
+    expect(inferLocalModelReasoning('glm-5:latest')).toBe(true)
+    expect(inferLocalModelReasoning('qwen3-coder:30b')).toBe(false)
+    expect(buildCustomEndpointModelDef('qwen3:32b').reasoning).toBe(true)
+    expect(buildCustomEndpointModelDef('qwen3:32b', undefined, { supportsThinking: false }).reasoning).toBe(false)
+  })
+
+  it('sets safe OpenAI-compatible local runtime flags so Ollama, LM Studio, vLLM, and llama.cpp do not fail on proprietary fields', () => {
+    const model = buildCustomEndpointModelDef('qwen3-coder')
+    expect(model.compat).toEqual({
+      supportsStore: false,
+      supportsDeveloperRole: false,
+      supportsReasoningEffort: false,
+      maxTokensField: 'max_tokens',
+      supportsStrictMode: false,
+      supportsLongCacheRetention: false,
+    })
+  })
+
+  it('normalizes bare loopback base URLs to /v1 for openai-completions while preserving custom paths and anthropic-messages', () => {
+    expect(normalizeCustomEndpointBaseUrl('http://localhost:11434', 'openai-completions')).toBe('http://localhost:11434/v1')
+    expect(normalizeCustomEndpointBaseUrl('http://127.0.0.1:1234/', 'openai-completions')).toBe('http://127.0.0.1:1234/v1')
+    expect(normalizeCustomEndpointBaseUrl('http://localhost:11434/v1', 'openai-completions')).toBe('http://localhost:11434/v1')
+    expect(normalizeCustomEndpointBaseUrl('https://openrouter.ai/api/v1', 'openai-completions')).toBe('https://openrouter.ai/api/v1')
+    expect(normalizeCustomEndpointBaseUrl('http://localhost:11434', 'anthropic-messages')).toBe('http://localhost:11434')
   })
 })

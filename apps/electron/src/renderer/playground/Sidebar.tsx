@@ -1,3 +1,4 @@
+import * as storage from '@/lib/local-storage'
 import * as React from 'react'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -9,13 +10,12 @@ interface SidebarProps {
   onSelect: (id: string) => void
 }
 
-const STORAGE_KEY = 'playground-expanded-categories'
 
 export function Sidebar({ categories, selectedId, onSelect }: SidebarProps) {
   const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(() => {
     // Try to restore from localStorage, otherwise collapse all by default
     try {
-      const stored = localStorage.getItem(STORAGE_KEY)
+      const stored = storage.getRaw(storage.KEYS.playgroundExpandedCategories)
       if (stored) {
         const parsed = JSON.parse(stored) as string[]
         return new Set(parsed)
@@ -29,7 +29,7 @@ export function Sidebar({ categories, selectedId, onSelect }: SidebarProps) {
   // Persist expanded categories to localStorage
   React.useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([...expandedCategories]))
+      storage.setRaw(storage.KEYS.playgroundExpandedCategories, JSON.stringify([...expandedCategories]))
     } catch {
       // Ignore storage errors
     }

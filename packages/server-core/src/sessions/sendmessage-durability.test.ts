@@ -1,3 +1,7 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
@@ -22,7 +26,7 @@ describe('sendMessage durability', () => {
 
   beforeEach(() => {
     tmpRoot = mkdtempSync(join(tmpdir(), 'sm-durability-'))
-    sm = new SessionManager()
+    sm = withSessionOperationsForTest(new SessionManager())
   })
 
   afterEach(async () => {
@@ -45,7 +49,7 @@ describe('sendMessage durability', () => {
       workspace as never,
       { messagesLoaded: true },
     )
-    ;(sm as unknown as { sessions: Map<string, unknown> }).sessions.set(id, managed)
+    ;sessionRuntimeStateForTest(sm).sessions.set(id, managed)
     return managed
   }
 
@@ -54,7 +58,7 @@ describe('sendMessage durability', () => {
     if (!existsSync(path)) return []
     const lines = readFileSync(path, 'utf-8').trim().split('\n')
     // First line is the header, remaining lines are messages.
-    return lines.slice(1).map(l => JSON.parse(l)).map(m => m.id as string)
+    return lines.slice(1).map(l => parseRecoveryJournalObservation(l)).map(m => m.id as string)
   }
 
   it('user message is on disk before onAck fires (normal branch)', async () => {
@@ -159,7 +163,7 @@ describe('sendMessage durability', () => {
       },
     }, managed.workspace, { messagesLoaded: true })
     reviewer.isProcessing = true
-    ;(sm as unknown as { sessions: Map<string, typeof managed> }).sessions.set(reviewer.id, reviewer)
+    ;sessionRuntimeStateForTest(sm).sessions.set(reviewer.id, reviewer)
     managed.messageQueue.push({
       message: '<automatic_turn_recovery>continue</automatic_turn_recovery>',
       options: {
@@ -257,7 +261,7 @@ describe('sendMessage durability', () => {
       },
     }, managed.workspace, { messagesLoaded: true })
     reviewer.isProcessing = true
-    ;(sm as unknown as { sessions: Map<string, typeof managed> }).sessions.set(reviewer.id, reviewer)
+    ;sessionRuntimeStateForTest(sm).sessions.set(reviewer.id, reviewer)
     const siblingReviewer = createManagedSession({
       id: 'single-slot-sibling-reviewer', parentSessionId: managed.id,
       delegation: {
@@ -266,7 +270,7 @@ describe('sendMessage durability', () => {
       },
     }, managed.workspace, { messagesLoaded: true })
     siblingReviewer.isProcessing = true
-    ;(sm as unknown as { sessions: Map<string, typeof managed> }).sessions.set(siblingReviewer.id, siblingReviewer)
+    ;sessionRuntimeStateForTest(sm).sessions.set(siblingReviewer.id, siblingReviewer)
     managed.messageQueue.push({
       message: '<automatic_turn_recovery>continue</automatic_turn_recovery>',
       options: {
@@ -320,7 +324,7 @@ describe('sendMessage durability', () => {
   it('does not clear a pending plan when an offline anchor is rejected', async () => {
     const sessionId = 'offline-anchor-plan'
     const managed = buildSession(sessionId)
-    ;(sm as unknown as { persistSession: (session: unknown) => void }).persistSession(managed)
+    ;(sessionManagerForTest(sm)).persistSession(managed)
     await sm.flushSession(sessionId)
     await sm.setPendingPlanExecution(sessionId, '/tmp/plan.md', 'draft')
     expect(sm.getPendingPlanExecution(sessionId)).not.toBeNull()

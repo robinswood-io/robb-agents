@@ -28,7 +28,7 @@ function makeBaileys(downloader: () => Promise<Buffer> | Buffer): {
       calls.push({ message, type, options })
       return downloader()
     },
-  } as unknown as BaileysModule
+  } as BaileysModule
   return { baileys, calls }
 }
 

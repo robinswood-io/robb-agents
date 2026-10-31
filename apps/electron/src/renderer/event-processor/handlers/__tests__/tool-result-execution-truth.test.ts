@@ -7,6 +7,8 @@ function stateWithTool(toolName = 'Edit'): SessionState {
   return {
     session: {
       id: 'session-1',
+      workspaceId: 'workspace',
+      workspaceName: 'Workspace',
       lastMessageAt: Date.now(),
       isProcessing: true,
       messages: [{
@@ -18,12 +20,29 @@ function stateWithTool(toolName = 'Edit'): SessionState {
         toolUseId: 'call-1',
         toolStatus: 'executing',
       }],
-    } as never,
+    },
     streaming: null,
   }
 }
 
 describe('tool_result execution truth', () => {
+  it('clears the old checkpoint after the same tool has actually executed', () => {
+    const state = stateWithTool();
+    const checkpoint = { schemaVersion: 1 as const, kind: 'tool-call-budget' as const, reason: 'Not started' };
+    const deferred = handleToolResult(state, {
+      type: 'tool_result', sessionId: 'session-1', toolUseId: 'call-1', toolName: 'Edit',
+      result: checkpoint.reason, executed: false, checkpoint,
+    });
+    expect(deferred.session.messages[0]?.toolCheckpoint).toEqual(checkpoint);
+    const completed = handleToolResult(deferred, {
+      type: 'tool_result', sessionId: 'session-1', toolUseId: 'call-1', toolName: 'Edit',
+      result: 'Applied successfully', executed: true,
+    });
+    expect(completed.session.messages[0]?.toolExecuted).toBe(true);
+    expect(completed.session.messages[0]?.toolCheckpoint).toBeUndefined();
+    expect(deferred.session.messages[0]?.toolCheckpoint).toEqual(checkpoint);
+  });
+
   for (const typed of [false, true]) {
     it(`preserves unknown execution through ${typed ? 'typed' : 'plain'} transport failure and complete`, () => {
       const state = stateWithTool('Bash')

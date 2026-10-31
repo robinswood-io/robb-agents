@@ -74,14 +74,15 @@ describe('build provenance dirty-state resolution', () => {
     expect(buildScript).toContain('cmd: ["bun", "run", "scripts/build-wa-worker.ts"]')
 
     const workerBuildScript = readFileSync(join(import.meta.dir, '..', 'build-wa-worker.ts'), 'utf8')
-    expect(workerBuildScript).toContain('process.env.ROBB_BUILD_COMMIT')
-    expect(workerBuildScript).toContain('process.env.ROBB_BUILD_DIRTY')
+    expect(workerBuildScript).toContain('process.env["ROBB_BUILD_COMMIT"]')
+    expect(workerBuildScript).toContain('process.env["ROBB_BUILD_DIRTY"]')
     expect(workerBuildScript).toContain('assertCleanProductionBuild')
     expect(workerBuildScript).toContain('--define:__WA_WORKER_PROVENANCE__')
   })
 
   it('covers development, direct package, and legacy Windows main builds', () => {
-    const devScript = readFileSync(join(import.meta.dir, '..', 'electron-dev.ts'), 'utf8')
+    const devScript = ['electron-dev.ts', 'electron-dev-support.ts']
+      .map(file => readFileSync(join(import.meta.dir, '..', file), 'utf8')).join('\n')
     const electronPackage = readFileSync(join(import.meta.dir, '..', '..', 'apps/electron/package.json'), 'utf8')
     const windowsScript = readFileSync(join(import.meta.dir, '..', 'build/win32.ts'), 'utf8')
     expect(devScript).toContain('process.env.ROBB_BUILD_COMMIT')

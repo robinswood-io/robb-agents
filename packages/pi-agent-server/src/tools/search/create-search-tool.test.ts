@@ -1,3 +1,4 @@
+import type { TextContent } from '@earendil-works/pi-ai';
 import { describe, expect, it } from 'bun:test';
 import { createSearchTool } from './create-search-tool.ts';
 import type { WebSearchProvider } from './types.ts';
@@ -34,7 +35,7 @@ describe('createSearchTool', () => {
     expect(capturedCount).toBe(10);
     expect(result.details?.isError).toBeUndefined();
     expect(result.content[0]?.type).toBe('text');
-    expect((result.content[0] as any).text).toContain('(via MockProvider)');
+    expect((result.content[0] as TextContent).text).toContain('(via MockProvider)');
   });
 
   it('automatically falls back when primary provider fails', async () => {
@@ -56,9 +57,9 @@ describe('createSearchTool', () => {
     const result = await tool.execute('tool-2', { query: 'craft', count: 5 });
 
     expect(result.details?.isError).toBeUndefined();
-    expect((result.content[0] as any).text).toContain('automatically fell back to DuckDuckGo');
-    expect((result.content[0] as any).text).toContain('401 missing scope');
-    expect((result.content[0] as any).text).toContain('https://fallback.example');
+    expect((result.content[0] as TextContent).text).toContain('automatically fell back to DuckDuckGo');
+    expect((result.content[0] as TextContent).text).toContain('401 missing scope');
+    expect((result.content[0] as TextContent).text).toContain('https://fallback.example');
   });
 
   it('marks failures as errors when primary and fallback both fail', async () => {
@@ -80,8 +81,8 @@ describe('createSearchTool', () => {
     const result = await tool.execute('tool-3', { query: 'craft', count: -1 });
 
     expect(result.details?.isError).toBe(true);
-    expect((result.content[0] as any).text).toContain('primary (OpenAI) failed');
-    expect((result.content[0] as any).text).toContain('fallback (DuckDuckGo) failed');
+    expect((result.content[0] as TextContent).text).toContain('primary (OpenAI) failed');
+    expect((result.content[0] as TextContent).text).toContain('fallback (DuckDuckGo) failed');
   });
 
   it('does not recurse fallback when provider is already fallback provider', async () => {
@@ -96,7 +97,7 @@ describe('createSearchTool', () => {
     const result = await tool.execute('tool-4', { query: 'craft' });
 
     expect(result.details?.isError).toBe(true);
-    expect((result.content[0] as any).text).toContain('Search failed');
-    expect((result.content[0] as any).text).toContain('ddg boom');
+    expect((result.content[0] as TextContent).text).toContain('Search failed');
+    expect((result.content[0] as TextContent).text).toContain('ddg boom');
   });
 });

@@ -6,25 +6,25 @@ import { SUPPORTED_LANGUAGE_CODES, LANGUAGES } from "../languages";
 import { getDateLocale } from "../date-locale";
 
 // ---------------------------------------------------------------------------
-// Registry completeness — every locale file on disk must be in the registry
+// Registry completeness — every locale folder on disk must be in the registry
 // ---------------------------------------------------------------------------
 
 const LOCALES_DIR = join(import.meta.dir, "../locales");
-const localeFilesOnDisk = readdirSync(LOCALES_DIR)
-  .filter((f) => f.endsWith(".json"))
-  .map((f) => f.replace(".json", ""));
+const localeFilesOnDisk = readdirSync(LOCALES_DIR, { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
 
 describe("locale registry completeness", () => {
   const registryCodes = Object.keys(LOCALE_REGISTRY);
 
-  it("every locale file on disk is registered in LOCALE_REGISTRY", () => {
+  it("every locale folder on disk is registered in LOCALE_REGISTRY", () => {
     const unregistered = localeFilesOnDisk.filter(
       (code) => !registryCodes.includes(code),
     );
     expect(unregistered).toEqual([]);
   });
 
-  it("every registry entry has a locale file on disk", () => {
+  it("every registry entry has a locale folder on disk", () => {
     const missingFiles = registryCodes.filter(
       (code) => !localeFilesOnDisk.includes(code),
     );

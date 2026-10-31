@@ -26,7 +26,7 @@ describe('getDefaultModelsForConnection', () => {
     // Verify they are ModelDefinition objects, not strings
     const first = models[0]!
     expect(typeof first).toBe('object')
-    expect(typeof (first as any).id).toBe('string')
+    expect(typeof (first as Exclude<typeof first, string>).id).toBe('string')
   })
 
   it('pi with piAuthProvider returns filtered models without deprecated Opus 4.6', () => {
@@ -249,9 +249,10 @@ describe('Bedrock preferred defaults ordering', () => {
   it('sorts preferred models first for amazon-bedrock', () => {
     const models = getDefaultModelsForConnection('pi', 'amazon-bedrock')
     if (models.length === 0) return // Pi resolver not registered in test env
-    const firstId = typeof models[0] === 'string' ? models[0] : (models[0] as any).id
-    // First model should be a preferred model (claude-opus or claude-sonnet), not a deprecated one
-    expect(firstId).toMatch(/claude-(opus|sonnet)-4/)
+    const first = models[0]!
+    const firstId = typeof first === 'string' ? first : first.id
+    // The current preferred Opus generation wins over older regional entries
+    expect(firstId).toContain('claude-opus-5')
   })
 })
 

@@ -24,7 +24,7 @@ describe('connector vendor sandbox E2E probe', () => {
 
     expect(results.every((result) => result.authenticated)).toBe(true)
     expect(requests.every((request) => request.method === 'GET')).toBe(true)
-    expect(requests.every((request) => request.headers.Authorization === 'Bearer sandbox-token')).toBe(true)
+    expect(requests.every((request) => request.headers["Authorization"] === 'Bearer sandbox-token')).toBe(true)
     expect(requests.map((request) => new URL(request.url).protocol)).toEqual([
       'https:',
       'https:',

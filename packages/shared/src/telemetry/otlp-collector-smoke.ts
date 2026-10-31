@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 import type { ToolTelemetryEvent } from '@craft-agent/core/types';
 import { OtlpHttpTelemetrySink } from './execution-telemetry.ts';
 
@@ -11,8 +12,8 @@ export interface OtlpCollectorSmokeResult {
 }
 
 function recordValue(value: unknown): Record<string, unknown> | null {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? Object.fromEntries(Object.entries(value))
+  return typeof value === 'object' && value !== null && !isUnknownArray(value)
+    ? Object.fromEntries(Object.entries<unknown>((value as Record<string, unknown>)))
     : null;
 }
 
@@ -27,9 +28,9 @@ function payloadHasSignal(
   signal: OtlpSignal,
   payload: Record<string, unknown>,
 ): boolean {
-  if (signal === 'logs') return Array.isArray(payload.resourceLogs);
-  if (signal === 'metrics') return Array.isArray(payload.resourceMetrics);
-  return Array.isArray(payload.resourceSpans);
+  if (signal === 'logs') return isUnknownArray(payload["resourceLogs"]);
+  if (signal === 'metrics') return isUnknownArray(payload["resourceMetrics"]);
+  return isUnknownArray(payload["resourceSpans"]);
 }
 
 export async function runOtlpCollectorSmoke(): Promise<OtlpCollectorSmokeResult> {

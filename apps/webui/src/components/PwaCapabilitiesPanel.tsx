@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import { BellDot, Check, Cpu, Fingerprint, FolderOpen, MemoryStick, Minus, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { CapabilitySupport, PwaCapabilities } from '../pwa-capabilities'

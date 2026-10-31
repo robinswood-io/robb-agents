@@ -119,8 +119,8 @@ export class TestAgent extends BaseAgent {
     message: string,
     attachments?: unknown[],
     options?: ChatOptions
-  ): AsyncGenerator<AgentEvent> {
-    this.chatCalls.push({ message, attachments, options });
+  ): AsyncGenerator<AgentEvent, void, unknown> {
+    this.chatCalls.push({ message, ...(attachments !== undefined ? { attachments } : {}), ...(options !== undefined ? { options } : {}) });
     this._isProcessing = true;
     try {
       this.performProviderHandoff(() => undefined);
@@ -131,7 +131,7 @@ export class TestAgent extends BaseAgent {
   }
 
   async abort(reason?: string): Promise<void> {
-    this.abortCalls.push({ reason });
+    this.abortCalls.push({ ...(reason !== undefined ? { reason } : {}) });
     this._isProcessing = false;
   }
 
@@ -145,7 +145,7 @@ export class TestAgent extends BaseAgent {
   }
 
   respondToPermission(requestId: string, allowed: boolean, alwaysAllow?: boolean): void {
-    this.respondToPermissionCalls.push({ requestId, allowed, alwaysAllow });
+    this.respondToPermissionCalls.push({ requestId, allowed, ...(alwaysAllow !== undefined ? { alwaysAllow } : {}) });
   }
 
   async runMiniCompletion(_prompt: string): Promise<string | null> {
@@ -175,7 +175,7 @@ export class TestAgent extends BaseAgent {
 /**
  * Collect all events from an AsyncGenerator.
  */
-export async function collectEvents(generator: AsyncGenerator<AgentEvent>): Promise<AgentEvent[]> {
+export async function collectEvents(generator: AsyncGenerator<AgentEvent, void, unknown>): Promise<AgentEvent[]> {
   const events: AgentEvent[] = [];
   for await (const event of generator) {
     events.push(event);

@@ -14,110 +14,27 @@
  * Domain-specific logic (what icon, what badges, what menu items) is injected via slots.
  */
 
-import * as React from 'react'
-import { useState } from 'react'
-import { MoreHorizontal } from 'lucide-react'
-import { Separator } from '@/components/ui/separator'
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  StyledDropdownMenuContent,
-} from '@/components/ui/styled-dropdown'
-import {
-  ContextMenu,
-  ContextMenuTrigger,
-  StyledContextMenuContent,
-} from '@/components/ui/styled-context-menu'
-import { DropdownMenuProvider, ContextMenuProvider } from '@/components/ui/menu-context'
-import {
-  LONG_PRESS_MS,
-  MOVE_TOLERANCE_PX,
-  shouldFireLongPress,
-} from '@/components/ui/long-press-state'
-import { cn } from '@/lib/utils'
+import * as React from 'react';
+import { useState } from 'react';
+import { MoreHorizontal } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { DropdownMenu, DropdownMenuTrigger, StyledDropdownMenuContent } from '@/components/ui/styled-dropdown';
+import { ContextMenu, ContextMenuTrigger, StyledContextMenuContent } from '@/components/ui/styled-context-menu';
+import { DropdownMenuProvider, ContextMenuProvider } from '@/components/ui/menu-context';
+import { LONG_PRESS_MS, MOVE_TOLERANCE_PX, shouldFireLongPress } from '@/components/ui/long-press-state';
+import { cn } from '@/lib/utils';
 
-/** Window the long-press / right-click handler keeps `suppressNextActivation`
- *  asserted for after the drawer opens. Activation events (`onMouseDown` /
- *  `onClick`) within this window are dropped so the row doesn't get selected
- *  underneath the drawer when the user releases the press. A normal tap is
- *  <300ms, so the window doesn't eat real taps. */
-const SUPPRESS_ACTIVATION_MS = 300
+import { SUPPRESS_ACTIVATION_MS, type EntityRowProps } from "./entity-row-types";
+export { type EntityRowProps } from "./entity-row-types";
 
-export interface EntityRowProps {
-  /** Left icon area — rendered in-flow as a flex child before the content column.
-   *  Consumers can pass multiple icons (e.g. via a fragment) for a horizontal icon group. */
-  icon?: React.ReactNode
-  /** Title content (ReactNode for search highlighting support) */
-  title: React.ReactNode
-  /** Additional className on the title wrapper (e.g. shimmer animation) */
-  titleClassName?: string
-  /** Content rendered inline after the title (e.g. timestamp). On hover, swapped with the more button.
-   *  When set, the title row becomes single-line (truncated) and the absolute more button is hidden. */
-  titleTrailing?: React.ReactNode
-  /** Content rendered inline immediately after the title, on the same row.
-   *  Lives between the title and the trailing slot. Use for tiny, high-priority
-   *  inline chips (e.g. platform bindings) that should read as part of the title
-   *  area, not as badges below. `shrink-0` so long titles truncate first. */
-  titleSuffix?: React.ReactNode
-  /** Optional subtitle line beneath the title */
-  subtitle?: React.ReactNode
-  /** Badge/subtitle row beneath the title */
-  badges?: React.ReactNode
-  /** Right-aligned content in the badge row (timestamp, child toggle) */
-  trailing?: React.ReactNode
-  /** Content rendered below the main button (e.g. expanded child list) */
-  children?: React.ReactNode
-  /** Absolutely-positioned overlay (e.g. match count badge) */
-  overlay?: React.ReactNode
 
-  // --- Interaction ---
-  /** Selection state */
-  isSelected?: boolean
-  /** Multi-select highlight (left accent bar + tinted bg) */
-  isInMultiSelect?: boolean
-  /** Suppress the left-edge selection bar (background tint still shows). Used
-   *  when an outer wrapper draws its own accent stripe (e.g. project color) at
-   *  the same leading edge and the two would collide. */
-  suppressSelectionBar?: boolean
-  /** Click handler — use onMouseDown for modifier key detection (Session), or onClick for simple cases */
-  onMouseDown?: (e: React.MouseEvent) => void
-  /** Simple click handler (used when modifier key detection isn't needed) */
-  onClick?: () => void
-  /** Show separator above this row */
-  showSeparator?: boolean
 
-  // --- Menu ---
-  /** Menu content — rendered in BOTH dropdown and context menu via providers.
-   *  Should be a component that uses useMenuComponents() for its items. */
-  menuContent?: React.ReactNode
-  /** Context menu content when different from dropdown (e.g. batch menu in multi-select) */
-  contextMenuContent?: React.ReactNode
-  /** Whether to hide the more button (e.g. when overlay is showing) */
-  hideMoreButton?: boolean
-  /** Whether to render the menu surface in compact (drawer) mode. Pass-through
-   *  from the consumer so EntityRow stays generic and usable from playground /
-   *  non-AppShell surfaces. Only meaningful in combination with `compactMenu`. */
-  isCompactMode?: boolean
-  /** Render-prop for the compact (drawer) menu surface. EntityRow owns the
-   *  open state (driven by both the `…` button and long-press / right-click)
-   *  and hands it to the consumer so a single drawer instance is controlled
-   *  by both triggers. When omitted OR `isCompactMode` is false: the
-   *  existing dropdown/context-menu behaviour kicks in. */
-  compactMenu?: (props: {
-    open: boolean
-    onOpenChange: (open: boolean) => void
-  }) => React.ReactNode
 
-  // --- Passthrough ---
-  /** Additional props spread onto the <button> (aria attrs, keyboard handlers, tabIndex, ref) */
-  buttonProps?: Record<string, unknown>
-  /** Data attributes on the outer wrapper div */
-  dataAttributes?: Record<string, string | undefined>
-  /** Outer wrapper className */
-  className?: string
-  /** Separator padding class (default: 'pl-12 pr-4') */
-  separatorClassName?: string
-}
+
+
+
+
+
 
 export function EntityRow({
   icon,
@@ -285,7 +202,7 @@ export function EntityRow({
           (isSelected || isInMultiSelect)
             ? "bg-foreground/[0.055]"
             : "hover:bg-foreground/[0.035]",
-          (buttonProps as Record<string, unknown>)?.className as string | undefined,
+          (buttonProps as Record<string, unknown>)?.["className"] as string | undefined,
         )}
         onMouseDown={wrappedOnMouseDown}
         onClick={!onMouseDown ? wrappedOnClick : undefined}

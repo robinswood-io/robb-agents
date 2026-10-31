@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "source": "packages/ui/src/components/markdown/TiptapBubbleMenus.tsx",
+  "nativeSourceHash": "f6a61dcff4542aac61534b95b19a51548fdd9cde99296e6b093bd4687cfa06e4",
+  "nativeDeclarations": 10,
+  "extractedDeclarations": 3,
+  "nativeBodiesStateAndEffectOrderPreserved": true,
+  "nativePublicExportsAndImportedBindingsPreserved": true,
+  "nativeExternalImportOrder": [
+    "react",
+    "react-i18next",
+    "@tiptap/react/menus",
+    "@tiptap/pm/state",
+    "lucide-react",
+    "../../lib/utils",
+    "./rich-block-events"
+  ],
+  "runtimeImportCycles": 0,
+  "newStateOrWorkflowAdded": false,
+  "maximumFileLines": 448,
+  "files": [
+    {
+      "file": "packages/ui/src/components/markdown/TiptapBubbleMenus.tsx",
+      "lines": 448,
+      "sha256": "0b2d44996c7a386c373b7cb2f2d62999a054e022175a1ed0e393d9c02285f8ba"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/tiptap-bubble-helpers.tsx",
+      "lines": 107,
+      "sha256": "869a2edbc626da71b1efd1dbf3990f93dd17c168f4199e6e17398cb0c8528de9"
+    }
+  ]
+}

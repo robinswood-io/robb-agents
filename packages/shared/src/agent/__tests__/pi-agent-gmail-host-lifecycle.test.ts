@@ -1,3 +1,4 @@
+import { McpClientPool } from '../../mcp/mcp-pool.ts';
 import { describe, expect, it } from 'bun:test';
 import { PiAgent } from '../pi-agent.ts';
 import type { BackendConfig } from '../backend/types.ts';
@@ -6,17 +7,17 @@ import type { ContextualGmailHostExecutionTicket } from '../core/pre-tool-use.ts
 function createConfig(sessionId: string): BackendConfig {
   return {
     provider: 'pi',
-    workspace: {
+    workspace: { slug: 'test-workspace', createdAt: 1,
       id: 'gmail-host-lifecycle-workspace',
       name: 'Gmail host lifecycle workspace',
       rootPath: '/tmp/gmail-host-lifecycle-workspace',
-    } as never,
+    },
     session: {
       id: sessionId,
       workspaceRootPath: '/tmp/gmail-host-lifecycle-workspace',
       createdAt: Date.now(),
       lastUsedAt: Date.now(),
-    } as never,
+    },
     isHeadless: true,
   };
 }
@@ -32,19 +33,19 @@ function ticket(sessionId: string): ContextualGmailHostExecutionTicket {
 }
 
 function admitExecution(
-  internals: any,
+  internals: PiAgent,
   runtime: { runtimeId: string; sessionId: string },
   toolName: string,
   toolUseId: string,
   args: Record<string, unknown>,
 ): void {
-  expect(internals.admitToolExecution({
+  expect(internals['admitToolExecution']({
     toolUseId,
     toolName,
     toolInput: args,
     sessionId: runtime.sessionId,
     runtimeId: runtime.runtimeId,
-    authorizationEpoch: internals.promptPreparationRevision,
+    authorizationEpoch: internals['promptPreparationRevision'],
   })).toBe(true);
 }
 
@@ -52,11 +53,11 @@ describe('Pi Gmail host execution lifecycle', () => {
   it('preserves ordinary headless Ask behavior while keeping sensitive prompts fail-closed', async () => {
     const sessionId = `pi-headless-ask-${Date.now()}`;
     const agent = new PiAgent(createConfig(sessionId));
-    const internals = agent as any;
+    const internals = agent;
     const runtime = { runtimeId: 'pi-runtime-ask', sessionId };
     const sent: Array<Record<string, unknown>> = [];
-    internals.subprocessRuntimeContext = runtime;
-    internals.send = (message: Record<string, unknown>) => sent.push(message);
+    internals['subprocessRuntimeContext'] = runtime;
+    internals['send'] = (message: Record<string, unknown>) => { sent.push(message); return true; };
     internals.resolveContextualGmailPromptDecision = () => ({ applies: false, allowed: false });
 
     await internals.handlePreToolUsePrompt(
@@ -64,7 +65,7 @@ describe('Pi Gmail host execution lifecycle', () => {
       'Read',
       { file_path: '/tmp/original' },
       sessionId,
-      { type: 'prompt', description: 'ordinary prompt', modifiedInput: { file_path: '/tmp/normalized' } },
+      { type: 'prompt', promptType: 'file_write', description: 'ordinary prompt', modifiedInput: { file_path: '/tmp/normalized' } },
       'ordinary-tool',
       runtime,
     );
@@ -73,7 +74,7 @@ describe('Pi Gmail host execution lifecycle', () => {
       'Bash',
       { command: 'deploy' },
       sessionId,
-      { type: 'prompt', description: 'sensitive prompt', requiresExplicitConfirmation: true },
+      { type: 'prompt', promptType: 'bash', description: 'sensitive prompt', requiresExplicitConfirmation: true },
       'sensitive-tool',
       runtime,
     );
@@ -92,26 +93,25 @@ describe('Pi Gmail host execution lifecycle', () => {
         reason: 'Explicit confirmation is required for this sensitive external action, but no permission handler is available.',
       },
     ]);
-    internals.subprocessRuntimeContext = null;
+    internals['subprocessRuntimeContext'] = null;
     agent.destroy();
   });
 
   it('never calls the MCP pool when the final host guard refuses execution', async () => {
     const agent = new PiAgent(createConfig(`pi-gmail-denied-${Date.now()}`));
     let poolCalls = 0;
-    const internals = agent as any;
-    internals.config.mcpPool = {
-      isProxyTool: () => true,
-      callTool: async () => {
+    const internals = agent;
+    internals['config'].mcpPool = new McpClientPool();
+internals['config'].mcpPool.isProxyTool = () => true;
+internals['config'].mcpPool.callTool = async () => {
         poolCalls += 1;
         return { content: 'unexpected', isError: false };
-      },
-    };
+      };
     const result = await internals.routeToolCall(
       'mcp__google-contacts__gmail_reply_bound',
       { messageId: '1a0a917ea946a540' },
       'gmail-tool-1',
-      { runtimeId: 'pi-runtime-1', sessionId: internals.config.session.id },
+      { runtimeId: 'pi-runtime-1', sessionId: internals['config'].session!.id },
     );
 
     expect(result.isError).toBe(true);
@@ -123,20 +123,19 @@ describe('Pi Gmail host execution lifecycle', () => {
   it('keeps the host ticket live until a deferred MCP call settles', async () => {
     const sessionId = `pi-gmail-deferred-${Date.now()}`;
     const agent = new PiAgent(createConfig(sessionId));
-    const internals = agent as any;
+    const internals = agent;
     const executionTicket = ticket(sessionId);
     let releasePool!: () => void;
     const poolGate = new Promise<void>(resolve => { releasePool = resolve; });
     let poolCalls = 0;
     const settled: ContextualGmailHostExecutionTicket[] = [];
-    internals.config.mcpPool = {
-      isProxyTool: () => true,
-      callTool: async () => {
+    internals['config'].mcpPool = new McpClientPool();
+internals['config'].mcpPool.isProxyTool = () => true;
+internals['config'].mcpPool.callTool = async () => {
         poolCalls += 1;
         await poolGate;
         return { content: '{"ok":true}', isError: false };
-      },
-    };
+      };
     internals.beginContextualGmailHostExecution = () => ({
       applies: true,
       allowed: true,
@@ -169,15 +168,14 @@ describe('Pi Gmail host execution lifecycle', () => {
   it('settles the exact host ticket even when the MCP pool throws', async () => {
     const sessionId = `pi-gmail-throw-${Date.now()}`;
     const agent = new PiAgent(createConfig(sessionId));
-    const internals = agent as any;
+    const internals = agent;
     const executionTicket = ticket(sessionId);
     let settleCalls = 0;
-    internals.config.mcpPool = {
-      isProxyTool: () => true,
-      callTool: async () => {
+    internals['config'].mcpPool = new McpClientPool();
+internals['config'].mcpPool.isProxyTool = () => true;
+internals['config'].mcpPool.callTool = async () => {
         throw new Error('transport lost after dispatch');
-      },
-    };
+      };
     internals.beginContextualGmailHostExecution = () => ({
       applies: true,
       allowed: true,
@@ -204,26 +202,23 @@ describe('Pi Gmail host execution lifecycle', () => {
   ])('settles the host reservation when %s before dispatch', async (_label, prerequisiteAllowed, proxyAvailable) => {
     const sessionId = `pi-gmail-local-block-${Date.now()}-${String(prerequisiteAllowed)}`;
     const agent = new PiAgent(createConfig(sessionId));
-    const internals = agent as any;
+    const internals = agent;
     const runtime = { runtimeId: 'pi-runtime-1', sessionId };
     const executionTicket = ticket(sessionId);
     const sent: Array<Record<string, unknown>> = [];
     let poolCalls = 0;
     const settled: ContextualGmailHostExecutionTicket[] = [];
-    internals.subprocessRuntimeContext = runtime;
-    internals.send = (message: Record<string, unknown>) => sent.push(message);
-    internals.prerequisiteManager = {
-      checkPrerequisites: () => prerequisiteAllowed
+    internals['subprocessRuntimeContext'] = runtime;
+    internals['send'] = (message: Record<string, unknown>) => { sent.push(message); return true; };
+    internals['prerequisiteManager'].checkPrerequisites = () => prerequisiteAllowed
         ? { allowed: true }
-        : { allowed: false, blockReason: 'Read the source guide first.' },
-    };
-    internals.config.mcpPool = {
-      isProxyTool: () => proxyAvailable,
-      callTool: async () => {
+        : { allowed: false, blockReason: 'Read the source guide first.' };
+    internals['config'].mcpPool = new McpClientPool();
+internals['config'].mcpPool.isProxyTool = () => proxyAvailable;
+internals['config'].mcpPool.callTool = async () => {
         poolCalls += 1;
         return { content: 'unexpected', isError: false };
-      },
-    };
+      };
     internals.beginContextualGmailHostExecution = () => ({
       applies: true,
       allowed: true,
@@ -252,30 +247,29 @@ describe('Pi Gmail host execution lifecycle', () => {
     expect(poolCalls).toBe(0);
     expect(settled).toEqual([executionTicket]);
     expect(sent).toHaveLength(1);
-    expect((sent[0] as any).result.isError).toBe(true);
-    internals.subprocessRuntimeContext = null;
+    expect(sent[0]).toMatchObject({ result: { isError: true } });
+    internals['subprocessRuntimeContext'] = null;
     agent.destroy();
   });
 
   it('does not deliver a delayed old-runtime tool response to its replacement', async () => {
     const sessionId = `pi-gmail-stale-response-${Date.now()}`;
     const agent = new PiAgent(createConfig(sessionId));
-    const internals = agent as any;
+    const internals = agent;
     const oldRuntime = { runtimeId: 'pi-runtime-old', sessionId };
     const newRuntime = { runtimeId: 'pi-runtime-new', sessionId };
     let releasePool!: () => void;
     const poolGate = new Promise<void>(resolve => { releasePool = resolve; });
     const sent: Array<Record<string, unknown>> = [];
-    internals.subprocessRuntimeContext = oldRuntime;
-    internals.send = (message: Record<string, unknown>) => sent.push(message);
-    internals.prerequisiteManager = { checkPrerequisites: () => ({ allowed: true }) };
-    internals.config.mcpPool = {
-      isProxyTool: () => true,
-      callTool: async () => {
+    internals['subprocessRuntimeContext'] = oldRuntime;
+    internals['send'] = (message: Record<string, unknown>) => { sent.push(message); return true; };
+    internals['prerequisiteManager'].checkPrerequisites = () => ({ allowed: true });
+    internals['config'].mcpPool = new McpClientPool();
+internals['config'].mcpPool.isProxyTool = () => true;
+internals['config'].mcpPool.callTool = async () => {
         await poolGate;
         return { content: 'old result', isError: false };
-      },
-    };
+      };
     internals.beginContextualGmailHostExecution = () => ({ applies: false, allowed: true });
 
     admitExecution(
@@ -293,12 +287,12 @@ describe('Pi Gmail host execution lifecycle', () => {
       args: {},
     }, oldRuntime);
     await Promise.resolve();
-    internals.subprocessRuntimeContext = newRuntime;
+    internals['subprocessRuntimeContext'] = newRuntime;
     releasePool();
     await pending;
 
     expect(sent).toEqual([]);
-    internals.subprocessRuntimeContext = null;
+    internals['subprocessRuntimeContext'] = null;
     agent.destroy();
   });
 });

@@ -1,0 +1,1190 @@
+{
+  "source": "packages/server-core/src/tasks/TaskRunner.test.ts",
+  "sourceHash": "2c6d454851cd581752e30fe15421066f558c0f6b3432d09c7bda883c0169f66b",
+  "files": [
+    {
+      "file": "packages/server-core/src/tasks/testing/TaskRunner-fixture.ts",
+      "lines": 272
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner.test.ts",
+      "lines": 436
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-injects-a-stable-idempotency-key-and-isolation-envelope-into-the.test.ts",
+      "lines": 418
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts",
+      "lines": 404
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-discovers-a-create-before-log-worker-before-a-drained-paused-run.test.ts",
+      "lines": 405
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-recovers-resolved-run-params-and-verification-behavior-exactly-af.test.ts",
+      "lines": 431
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-re-arms-node-timeouts-longer-than-the-platform-timer-ceiling-inst.test.ts",
+      "lines": 412
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts",
+      "lines": 404
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-gates-the-run-on-an-independent-durable-reviewer-and-includes-acc.test.ts",
+      "lines": 357
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-completes-through-the-real-sessionmanager-host-review-contract-an.test.ts",
+      "lines": 390
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-restores-reviewer-usage-high-water-marks-and-does-not-charge-a-re.test.ts",
+      "lines": 406
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "lines": 434
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-contains-rejected-best-effort-ui-metadata-without-changing-the-ve.test.ts",
+      "lines": 164
+    }
+  ],
+  "groups": [
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner.test.ts",
+      "suite": 0,
+      "indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "setupIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "setupHashes": [
+        "8887f01d8a0c3c43b8ae6060203db127a02766929aa9d0755d13af4c99b001ab",
+        "515810014f874dda2381110bc99f45d6e7aaad89146e49c932068b8e5b927953",
+        "141171766466c3ac8a990587e5c329b814ce4bc38b5ddb6aa0e5c4f953e15b6d",
+        "4c3336bb78dd091b097525cb087f099a9e7073030e6ed7df0ec62845ada79a3a",
+        "a572f69d2bce169aefc4c984389b3ba445a215f6c09b7b9a800cd7b65a28b0ce"
+      ]
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-injects-a-stable-idempotency-key-and-isolation-envelope-into-the.test.ts",
+      "suite": 0,
+      "indices": [
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "setupIndices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "setupHashes": [
+        "8887f01d8a0c3c43b8ae6060203db127a02766929aa9d0755d13af4c99b001ab",
+        "515810014f874dda2381110bc99f45d6e7aaad89146e49c932068b8e5b927953",
+        "141171766466c3ac8a990587e5c329b814ce4bc38b5ddb6aa0e5c4f953e15b6d",
+        "4c3336bb78dd091b097525cb087f099a9e7073030e6ed7df0ec62845ada79a3a",
+        "a572f69d2bce169aefc4c984389b3ba445a215f6c09b7b9a800cd7b65a28b0ce",
+        "b5edf6faa994eb8a1a6c882a37989943050a05c85f8c24a2bf9a7bc0365e9723"
+      ]
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts",
+      "suite": 0,
+      "indices": [
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33
+      ],
+      "setupIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "setupHashes": [
+        "8887f01d8a0c3c43b8ae6060203db127a02766929aa9d0755d13af4c99b001ab",
+        "515810014f874dda2381110bc99f45d6e7aaad89146e49c932068b8e5b927953",
+        "141171766466c3ac8a990587e5c329b814ce4bc38b5ddb6aa0e5c4f953e15b6d",
+        "4c3336bb78dd091b097525cb087f099a9e7073030e6ed7df0ec62845ada79a3a",
+        "a572f69d2bce169aefc4c984389b3ba445a215f6c09b7b9a800cd7b65a28b0ce"
+      ]
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-discovers-a-create-before-log-worker-before-a-drained-paused-run.test.ts",
+      "suite": 0,
+      "indices": [
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "setupIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "setupHashes": [
+        "8887f01d8a0c3c43b8ae6060203db127a02766929aa9d0755d13af4c99b001ab",
+        "515810014f874dda2381110bc99f45d6e7aaad89146e49c932068b8e5b927953",
+        "141171766466c3ac8a990587e5c329b814ce4bc38b5ddb6aa0e5c4f953e15b6d",
+        "4c3336bb78dd091b097525cb087f099a9e7073030e6ed7df0ec62845ada79a3a",
+        "a572f69d2bce169aefc4c984389b3ba445a215f6c09b7b9a800cd7b65a28b0ce"
+      ]
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-recovers-resolved-run-params-and-verification-behavior-exactly-af.test.ts",
+      "suite": 0,
+      "indices": [
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54
+      ],
+      "setupIndices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "setupHashes": [
+        "8887f01d8a0c3c43b8ae6060203db127a02766929aa9d0755d13af4c99b001ab",
+        "515810014f874dda2381110bc99f45d6e7aaad89146e49c932068b8e5b927953",
+        "141171766466c3ac8a990587e5c329b814ce4bc38b5ddb6aa0e5c4f953e15b6d",
+        "4c3336bb78dd091b097525cb087f099a9e7073030e6ed7df0ec62845ada79a3a",
+        "a572f69d2bce169aefc4c984389b3ba445a215f6c09b7b9a800cd7b65a28b0ce",
+        "b5edf6faa994eb8a1a6c882a37989943050a05c85f8c24a2bf9a7bc0365e9723"
+      ]
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-re-arms-node-timeouts-longer-than-the-platform-timer-ceiling-inst.test.ts",
+      "suite": 0,
+      "indices": [
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65
+      ],
+      "setupIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "setupHashes": [
+        "8887f01d8a0c3c43b8ae6060203db127a02766929aa9d0755d13af4c99b001ab",
+        "515810014f874dda2381110bc99f45d6e7aaad89146e49c932068b8e5b927953",
+        "141171766466c3ac8a990587e5c329b814ce4bc38b5ddb6aa0e5c4f953e15b6d",
+        "4c3336bb78dd091b097525cb087f099a9e7073030e6ed7df0ec62845ada79a3a",
+        "a572f69d2bce169aefc4c984389b3ba445a215f6c09b7b9a800cd7b65a28b0ce"
+      ]
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts",
+      "suite": 0,
+      "indices": [
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78
+      ],
+      "setupIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "setupHashes": [
+        "8887f01d8a0c3c43b8ae6060203db127a02766929aa9d0755d13af4c99b001ab",
+        "515810014f874dda2381110bc99f45d6e7aaad89146e49c932068b8e5b927953",
+        "141171766466c3ac8a990587e5c329b814ce4bc38b5ddb6aa0e5c4f953e15b6d",
+        "4c3336bb78dd091b097525cb087f099a9e7073030e6ed7df0ec62845ada79a3a",
+        "a572f69d2bce169aefc4c984389b3ba445a215f6c09b7b9a800cd7b65a28b0ce"
+      ]
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-gates-the-run-on-an-independent-durable-reviewer-and-includes-acc.test.ts",
+      "suite": 0,
+      "indices": [
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85
+      ],
+      "setupIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "setupHashes": [
+        "8887f01d8a0c3c43b8ae6060203db127a02766929aa9d0755d13af4c99b001ab",
+        "515810014f874dda2381110bc99f45d6e7aaad89146e49c932068b8e5b927953",
+        "141171766466c3ac8a990587e5c329b814ce4bc38b5ddb6aa0e5c4f953e15b6d",
+        "4c3336bb78dd091b097525cb087f099a9e7073030e6ed7df0ec62845ada79a3a",
+        "a572f69d2bce169aefc4c984389b3ba445a215f6c09b7b9a800cd7b65a28b0ce"
+      ]
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-completes-through-the-real-sessionmanager-host-review-contract-an.test.ts",
+      "suite": 0,
+      "indices": [
+        86,
+        87,
+        88,
+        89,
+        90
+      ],
+      "setupIndices": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "setupHashes": [
+        "8887f01d8a0c3c43b8ae6060203db127a02766929aa9d0755d13af4c99b001ab",
+        "515810014f874dda2381110bc99f45d6e7aaad89146e49c932068b8e5b927953",
+        "141171766466c3ac8a990587e5c329b814ce4bc38b5ddb6aa0e5c4f953e15b6d",
+        "4c3336bb78dd091b097525cb087f099a9e7073030e6ed7df0ec62845ada79a3a"
+      ],
+      "prunedUnusedFixtureBindings": [
+        "host"
+      ]
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-restores-reviewer-usage-high-water-marks-and-does-not-charge-a-re.test.ts",
+      "suite": 0,
+      "indices": [
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100
+      ],
+      "setupIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "setupHashes": [
+        "8887f01d8a0c3c43b8ae6060203db127a02766929aa9d0755d13af4c99b001ab",
+        "515810014f874dda2381110bc99f45d6e7aaad89146e49c932068b8e5b927953",
+        "141171766466c3ac8a990587e5c329b814ce4bc38b5ddb6aa0e5c4f953e15b6d",
+        "4c3336bb78dd091b097525cb087f099a9e7073030e6ed7df0ec62845ada79a3a",
+        "a572f69d2bce169aefc4c984389b3ba445a215f6c09b7b9a800cd7b65a28b0ce"
+      ]
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "suite": 0,
+      "indices": [
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114
+      ],
+      "setupIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "setupHashes": [
+        "8887f01d8a0c3c43b8ae6060203db127a02766929aa9d0755d13af4c99b001ab",
+        "515810014f874dda2381110bc99f45d6e7aaad89146e49c932068b8e5b927953",
+        "141171766466c3ac8a990587e5c329b814ce4bc38b5ddb6aa0e5c4f953e15b6d",
+        "4c3336bb78dd091b097525cb087f099a9e7073030e6ed7df0ec62845ada79a3a",
+        "a572f69d2bce169aefc4c984389b3ba445a215f6c09b7b9a800cd7b65a28b0ce"
+      ]
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner-contains-rejected-best-effort-ui-metadata-without-changing-the-ve.test.ts",
+      "suite": 0,
+      "indices": [
+        115,
+        116,
+        117,
+        118
+      ],
+      "setupIndices": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "setupHashes": [
+        "8887f01d8a0c3c43b8ae6060203db127a02766929aa9d0755d13af4c99b001ab",
+        "515810014f874dda2381110bc99f45d6e7aaad89146e49c932068b8e5b927953",
+        "141171766466c3ac8a990587e5c329b814ce4bc38b5ddb6aa0e5c4f953e15b6d",
+        "4c3336bb78dd091b097525cb087f099a9e7073030e6ed7df0ec62845ada79a3a",
+        "a572f69d2bce169aefc4c984389b3ba445a215f6c09b7b9a800cd7b65a28b0ce"
+      ]
+    }
+  ],
+  "statements": [
+    {
+      "suite": 0,
+      "index": 0,
+      "destination": "packages/server-core/src/tasks/TaskRunner.test.ts",
+      "hash": "d9c3b387f81eadbc0387f24ddc33e530ea87b25b37fb9030d841f171807ae813"
+    },
+    {
+      "suite": 0,
+      "index": 1,
+      "destination": "packages/server-core/src/tasks/TaskRunner.test.ts",
+      "hash": "14ed4938a3effbb1e30df73f42ff748c9325e0518afc4ca2043cbd4e8921f9c1"
+    },
+    {
+      "suite": 0,
+      "index": 2,
+      "destination": "packages/server-core/src/tasks/TaskRunner.test.ts",
+      "hash": "95016e3e966d7decd1bfc1afc38cc4f3626a02c849785f91cfca158f6b0dd867"
+    },
+    {
+      "suite": 0,
+      "index": 3,
+      "destination": "packages/server-core/src/tasks/TaskRunner.test.ts",
+      "hash": "68a4d2bf8f78f430e7ba7de3bda67d6ce0222c8561609f6e60297b9f2a33ad71"
+    },
+    {
+      "suite": 0,
+      "index": 4,
+      "destination": "packages/server-core/src/tasks/TaskRunner.test.ts",
+      "hash": "c423e7d0af400e508fda85e96dc3016e81f418b1b26d4774ab5773763f6e3a0c"
+    },
+    {
+      "suite": 0,
+      "index": 5,
+      "destination": "packages/server-core/src/tasks/TaskRunner.test.ts",
+      "hash": "9ca37342f47f26cfae56cdeac9bb02f75be10c2621bcb9a6a6826970f23a4be2"
+    },
+    {
+      "suite": 0,
+      "index": 6,
+      "destination": "packages/server-core/src/tasks/TaskRunner.test.ts",
+      "hash": "cf5d26941531b98ab6f0d1ad5e799a24bea82bc324d7dea31dd2294689c657cb"
+    },
+    {
+      "suite": 0,
+      "index": 7,
+      "destination": "packages/server-core/src/tasks/TaskRunner.test.ts",
+      "hash": "f1d33b8af7def17c5b29b98d297f892e0de4209c3d7cfe347f1c7b36a5cd7ffd"
+    },
+    {
+      "suite": 0,
+      "index": 8,
+      "destination": "packages/server-core/src/tasks/TaskRunner.test.ts",
+      "hash": "15c692f432c15361e7956c93dcfc321c33af1bbd62b6ef2851bea9a267c3a079"
+    },
+    {
+      "suite": 0,
+      "index": 9,
+      "destination": "packages/server-core/src/tasks/TaskRunner.test.ts",
+      "hash": "3f52ba299c5141e2d6bc7ceb1e93f0e23bce03563d7554b45ffb320791ec8cee"
+    },
+    {
+      "suite": 0,
+      "index": 10,
+      "destination": "packages/server-core/src/tasks/TaskRunner-injects-a-stable-idempotency-key-and-isolation-envelope-into-the.test.ts",
+      "hash": "383d52eed692af739dd4ccdbeed6de0e9d03530aabd130727e53cd26d1ec47c2"
+    },
+    {
+      "suite": 0,
+      "index": 11,
+      "destination": "packages/server-core/src/tasks/TaskRunner-injects-a-stable-idempotency-key-and-isolation-envelope-into-the.test.ts",
+      "hash": "1b693c6639957d7accf5fe0640ed4f1e6c384ee17ca3df2cd7a958243d3d658a"
+    },
+    {
+      "suite": 0,
+      "index": 12,
+      "destination": "packages/server-core/src/tasks/TaskRunner-injects-a-stable-idempotency-key-and-isolation-envelope-into-the.test.ts",
+      "hash": "1009b4acd7fa48b037545dcac9ad4d17f820c8c425a3f9772e3bd452d2c2f16d"
+    },
+    {
+      "suite": 0,
+      "index": 13,
+      "destination": "packages/server-core/src/tasks/TaskRunner-injects-a-stable-idempotency-key-and-isolation-envelope-into-the.test.ts",
+      "hash": "7f22e5eac719c2776d2f8d4b4875dd61e35a2ed292972f3c34e3cf0662ce7394"
+    },
+    {
+      "suite": 0,
+      "index": 14,
+      "destination": "packages/server-core/src/tasks/TaskRunner-injects-a-stable-idempotency-key-and-isolation-envelope-into-the.test.ts",
+      "hash": "43819467d62d83b095f847e7930df161ef363a65c395039abd2100c9b673e725"
+    },
+    {
+      "suite": 0,
+      "index": 15,
+      "destination": "packages/server-core/src/tasks/TaskRunner-injects-a-stable-idempotency-key-and-isolation-envelope-into-the.test.ts",
+      "hash": "6d9f1695b3af43548d23b51e8b3a710cdbf1b92d02299e11da12a79db92f0a26"
+    },
+    {
+      "suite": 0,
+      "index": 16,
+      "destination": "packages/server-core/src/tasks/TaskRunner-injects-a-stable-idempotency-key-and-isolation-envelope-into-the.test.ts",
+      "hash": "256cd995c4a7565916ef662a4f873b2d20fddcc4c4314f1f69cfb7314d68f540"
+    },
+    {
+      "suite": 0,
+      "index": 17,
+      "destination": "packages/server-core/src/tasks/TaskRunner-injects-a-stable-idempotency-key-and-isolation-envelope-into-the.test.ts",
+      "hash": "03e1ddc05b168ce4f5b45082a1af4d4cff624fbae1c5acaa2cb229e299b93bc7"
+    },
+    {
+      "suite": 0,
+      "index": 18,
+      "destination": "packages/server-core/src/tasks/TaskRunner-injects-a-stable-idempotency-key-and-isolation-envelope-into-the.test.ts",
+      "hash": "b524590d3e113a293923586c762905c33ccc05bcc9e4eff1122a0978bd0af95e"
+    },
+    {
+      "suite": 0,
+      "index": 19,
+      "destination": "packages/server-core/src/tasks/TaskRunner-injects-a-stable-idempotency-key-and-isolation-envelope-into-the.test.ts",
+      "hash": "30ce2b171ed41b143cd02715c83de5d71dc83779fc44c29da3546bea0ac1f25e"
+    },
+    {
+      "suite": 0,
+      "index": 20,
+      "destination": "packages/server-core/src/tasks/TaskRunner-injects-a-stable-idempotency-key-and-isolation-envelope-into-the.test.ts",
+      "hash": "17ef0e050a28f1f0187b32806daa7e1acccf712155c70ba33fe8cd88cc490383"
+    },
+    {
+      "suite": 0,
+      "index": 21,
+      "destination": "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts",
+      "hash": "4c364a8bade3967d85b8b49aacbee043c3395eb732ba52f27b6f5f3d82b93e48"
+    },
+    {
+      "suite": 0,
+      "index": 22,
+      "destination": "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts",
+      "hash": "e60a2e6d0c71b5e7444e8878edc4b27d317a87a4df2dcfaa39e1923529aefd3a"
+    },
+    {
+      "suite": 0,
+      "index": 23,
+      "destination": "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts",
+      "hash": "3294d35fe667683c54cb90ea2e11795ba25aa6c0bf6f23bc5135371a29ca72f2"
+    },
+    {
+      "suite": 0,
+      "index": 24,
+      "destination": "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts",
+      "hash": "ad552d6dd96b8ccd86697da94cb97477602b31971366dec7d3531020eb9c45a0"
+    },
+    {
+      "suite": 0,
+      "index": 25,
+      "destination": "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts",
+      "hash": "5220d30b5c52de2faec0a033a1d585e9609ddbb5a407f12134d1fd5dd116e7d6"
+    },
+    {
+      "suite": 0,
+      "index": 26,
+      "destination": "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts",
+      "hash": "53c8cc7ff2fcf5197d4b7ade70f92664a9768f2d02758adbd80e47d3045f3b2d"
+    },
+    {
+      "suite": 0,
+      "index": 27,
+      "destination": "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts",
+      "hash": "86d483aad200e5eafc4486837dddf0cd7eca8d0c262cff333381aab5876689d8"
+    },
+    {
+      "suite": 0,
+      "index": 28,
+      "destination": "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts",
+      "hash": "521e1959cc63d0ffcf3eb7d6955f90f4990b9096b2a7c7737e05707e8ed3ee84"
+    },
+    {
+      "suite": 0,
+      "index": 29,
+      "destination": "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts",
+      "hash": "b008ec9c84b4565eb8f518168f2e4c586141c2a9439a52ec0ff4f4d52240e5c9"
+    },
+    {
+      "suite": 0,
+      "index": 30,
+      "destination": "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts",
+      "hash": "4c4aefd7e0786ee0987b872fddcb748772171ee7b155f6f1abf6e4ad694bf183"
+    },
+    {
+      "suite": 0,
+      "index": 31,
+      "destination": "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts",
+      "hash": "8281931f5ab8d248044401fa806228608e1e69bda1f4fa668429d13389fd100d"
+    },
+    {
+      "suite": 0,
+      "index": 32,
+      "destination": "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts",
+      "hash": "60cefde7ca224e626a2ba7b1f3458780a3271cebc49b5bb6c5727818f19b4e06"
+    },
+    {
+      "suite": 0,
+      "index": 33,
+      "destination": "packages/server-core/src/tasks/TaskRunner-fails-a-mission-when-its-high-impact-approval-is-rejected.test.ts",
+      "hash": "e4768d4dcec8b2b9d424ec8d4eb2281d62727ae71dcf0ab5edd98a1cbfd5d95d"
+    },
+    {
+      "suite": 0,
+      "index": 34,
+      "destination": "packages/server-core/src/tasks/TaskRunner-discovers-a-create-before-log-worker-before-a-drained-paused-run.test.ts",
+      "hash": "0115b18d7c63388e3f077ab49f4909c9613ace16a1dddb3fa82bb60b2618aeeb"
+    },
+    {
+      "suite": 0,
+      "index": 35,
+      "destination": "packages/server-core/src/tasks/TaskRunner-discovers-a-create-before-log-worker-before-a-drained-paused-run.test.ts",
+      "hash": "707ff72e19ed96687d322fac31a8eb50306c022f6e12dcf8a0705536cb42b204"
+    },
+    {
+      "suite": 0,
+      "index": 36,
+      "destination": "packages/server-core/src/tasks/TaskRunner-discovers-a-create-before-log-worker-before-a-drained-paused-run.test.ts",
+      "hash": "5d096ee9b49f5a1a4d417052aa3786996b884942e054f9cefa23307f67d41f2e"
+    },
+    {
+      "suite": 0,
+      "index": 37,
+      "destination": "packages/server-core/src/tasks/TaskRunner-discovers-a-create-before-log-worker-before-a-drained-paused-run.test.ts",
+      "hash": "18485feb99772b818626f8a5b2b458b25370b36b1e371e7d041f0752b339a3cf"
+    },
+    {
+      "suite": 0,
+      "index": 38,
+      "destination": "packages/server-core/src/tasks/TaskRunner-discovers-a-create-before-log-worker-before-a-drained-paused-run.test.ts",
+      "hash": "3e35fb7fb6785f1104f5b20809d48b384703c7e83e57e0fd8639ce07c07ecd8b"
+    },
+    {
+      "suite": 0,
+      "index": 39,
+      "destination": "packages/server-core/src/tasks/TaskRunner-discovers-a-create-before-log-worker-before-a-drained-paused-run.test.ts",
+      "hash": "c32c8536adfaf08f0b3d1e92a7c2b3735d75a002928f6d44767585bd96bcec32"
+    },
+    {
+      "suite": 0,
+      "index": 40,
+      "destination": "packages/server-core/src/tasks/TaskRunner-discovers-a-create-before-log-worker-before-a-drained-paused-run.test.ts",
+      "hash": "6283e65d1121039268893fc21a4a43541b38ab0fc977ad3b110e18908876051a"
+    },
+    {
+      "suite": 0,
+      "index": 41,
+      "destination": "packages/server-core/src/tasks/TaskRunner-discovers-a-create-before-log-worker-before-a-drained-paused-run.test.ts",
+      "hash": "ec7728edadf4586317c68b0cc34aab5abf034a4c406c1f78d53121dcd10f12fa"
+    },
+    {
+      "suite": 0,
+      "index": 42,
+      "destination": "packages/server-core/src/tasks/TaskRunner-discovers-a-create-before-log-worker-before-a-drained-paused-run.test.ts",
+      "hash": "5e623e6e0290cbef8f9fcd5a3afb326cdcdb1e61d9f345d64f77e9ec8efbf123"
+    },
+    {
+      "suite": 0,
+      "index": 43,
+      "destination": "packages/server-core/src/tasks/TaskRunner-discovers-a-create-before-log-worker-before-a-drained-paused-run.test.ts",
+      "hash": "2c3623b7def5e72d305ffdefba9c01daca9c9346a541d6c8fc698d10f66c9741"
+    },
+    {
+      "suite": 0,
+      "index": 44,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-resolved-run-params-and-verification-behavior-exactly-af.test.ts",
+      "hash": "dd8456a93e90cab0bede22ac01cd8863a9030f7b33d68f8149d419d32a781242"
+    },
+    {
+      "suite": 0,
+      "index": 45,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-resolved-run-params-and-verification-behavior-exactly-af.test.ts",
+      "hash": "aff85b18546dec72b9093e652bbc37bc2e1ce13bca7f257691a7b0706f83d2c3"
+    },
+    {
+      "suite": 0,
+      "index": 46,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-resolved-run-params-and-verification-behavior-exactly-af.test.ts",
+      "hash": "cf48d842042af1f3bbe7b0cf69dff7d2aa8fd1fa11beb96510aea04ab7479288"
+    },
+    {
+      "suite": 0,
+      "index": 47,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-resolved-run-params-and-verification-behavior-exactly-af.test.ts",
+      "hash": "ee469578845182aeb1a13be1ee89c99c865933a9e761792daf7064eafb33b58a"
+    },
+    {
+      "suite": 0,
+      "index": 48,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-resolved-run-params-and-verification-behavior-exactly-af.test.ts",
+      "hash": "67f8207961dafcac148da9a6c5a6c02cbef4f2964bf917dccf17b4536765571e"
+    },
+    {
+      "suite": 0,
+      "index": 49,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-resolved-run-params-and-verification-behavior-exactly-af.test.ts",
+      "hash": "c1eb4e18f50341e0f131b3c05adc05ea4560d791145bed1f04f2f30bf3c30168"
+    },
+    {
+      "suite": 0,
+      "index": 50,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-resolved-run-params-and-verification-behavior-exactly-af.test.ts",
+      "hash": "53f7f6df058beaa57cf1c7bd489d0be29c7907ea4d161edc476796246519dbc2"
+    },
+    {
+      "suite": 0,
+      "index": 51,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-resolved-run-params-and-verification-behavior-exactly-af.test.ts",
+      "hash": "f19ad079904b94240acb44593b4c8f274048f26aac57d1012a13819a82858cd9"
+    },
+    {
+      "suite": 0,
+      "index": 52,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-resolved-run-params-and-verification-behavior-exactly-af.test.ts",
+      "hash": "831c2dab5cd3c06a15a5b53113a84f09ad5ca484c2970b07b0464eb1e8095b44"
+    },
+    {
+      "suite": 0,
+      "index": 53,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-resolved-run-params-and-verification-behavior-exactly-af.test.ts",
+      "hash": "1d71bcf4f542ac4c6d8d4cf3965fd93b478363bc25c1e6d05fccf8f30ec29bdc"
+    },
+    {
+      "suite": 0,
+      "index": 54,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-resolved-run-params-and-verification-behavior-exactly-af.test.ts",
+      "hash": "79e26446ed6758ca3da4cba9db05341988cb4c75103804a348687acac7a38a49"
+    },
+    {
+      "suite": 0,
+      "index": 55,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-arms-node-timeouts-longer-than-the-platform-timer-ceiling-inst.test.ts",
+      "hash": "76d3a6d16a68b025ccb94406dc174365e56cf565805d91451af600393eeb866a"
+    },
+    {
+      "suite": 0,
+      "index": 56,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-arms-node-timeouts-longer-than-the-platform-timer-ceiling-inst.test.ts",
+      "hash": "9fb2e708123d727a9a8dc0c7d9b0a781d07b42f13ca1e9485a2dc7795d6bc07b"
+    },
+    {
+      "suite": 0,
+      "index": 57,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-arms-node-timeouts-longer-than-the-platform-timer-ceiling-inst.test.ts",
+      "hash": "d16c597aa83bce6d666ec121f2638dbf42d966b509cb2bfbfbce532c8bb8ef37"
+    },
+    {
+      "suite": 0,
+      "index": 58,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-arms-node-timeouts-longer-than-the-platform-timer-ceiling-inst.test.ts",
+      "hash": "9a9f756bfa044376d17e0d55ab972eedbd1633ed9c6555c610e703d7305e57d0"
+    },
+    {
+      "suite": 0,
+      "index": 59,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-arms-node-timeouts-longer-than-the-platform-timer-ceiling-inst.test.ts",
+      "hash": "e70e79578c5fe56ac9ebd42a5ac88c8edc105111fede8c729bb2613265a35b73"
+    },
+    {
+      "suite": 0,
+      "index": 60,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-arms-node-timeouts-longer-than-the-platform-timer-ceiling-inst.test.ts",
+      "hash": "d937045da80cadd0a35a1d3b035f945f26d002ba439a66dcbfa2d755d54cea16"
+    },
+    {
+      "suite": 0,
+      "index": 61,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-arms-node-timeouts-longer-than-the-platform-timer-ceiling-inst.test.ts",
+      "hash": "7dc6505e8d28b50b2063e698692d2112da13881d2c00a96786669b305b3867f2"
+    },
+    {
+      "suite": 0,
+      "index": 62,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-arms-node-timeouts-longer-than-the-platform-timer-ceiling-inst.test.ts",
+      "hash": "18bac9538125a61d4ea10a22288b6ebaf25e67f64d3e165d0b571d6269ed3e8b"
+    },
+    {
+      "suite": 0,
+      "index": 63,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-arms-node-timeouts-longer-than-the-platform-timer-ceiling-inst.test.ts",
+      "hash": "2292b626258fa3b8a2b16e22ea694b6b6d4961b7fdba54c825f3c5fa2fc50826"
+    },
+    {
+      "suite": 0,
+      "index": 64,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-arms-node-timeouts-longer-than-the-platform-timer-ceiling-inst.test.ts",
+      "hash": "e9ea9b91923369701f09f9848411fac19823cf2dde4acf8b315efff0653121c1"
+    },
+    {
+      "suite": 0,
+      "index": 65,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-arms-node-timeouts-longer-than-the-platform-timer-ceiling-inst.test.ts",
+      "hash": "cbced97fa7cbc97b404d37f717429819e6fe29384d4af42593570c5cecf9f2cb"
+    },
+    {
+      "suite": 0,
+      "index": 66,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts",
+      "hash": "163a68596e007dd06f7c7297bca32a2fcd74ca5e820948d1e13824c28691d286"
+    },
+    {
+      "suite": 0,
+      "index": 67,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts",
+      "hash": "8c72a6bc1590fb923d39507a532e1f3e22d8b7a4a80ea36f92a2f9bcfa1d59dd"
+    },
+    {
+      "suite": 0,
+      "index": 68,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts",
+      "hash": "3cd8c52e4e394dd4653adc323e91301baebfcf30b1f775a1d5755836422d4e8c"
+    },
+    {
+      "suite": 0,
+      "index": 69,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts",
+      "hash": "4f0fb25050a6bf1bd47aaa026d2b016dcb52da29df9aac62933d2f4419f1c870"
+    },
+    {
+      "suite": 0,
+      "index": 70,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts",
+      "hash": "7689c7bd4eaf85f29f7d9f7ef1e02ba9e58a5a3bb38783ef7c51836338717dd2"
+    },
+    {
+      "suite": 0,
+      "index": 71,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts",
+      "hash": "28e53dbb5d9158ee11a3c128d7782e680a2ff5e21abb358d06ebf01793cca624"
+    },
+    {
+      "suite": 0,
+      "index": 72,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts",
+      "hash": "380cf2b70c2f58eb9ab390fbababe0ab161ba2017785ba49e30cabae9d803d99"
+    },
+    {
+      "suite": 0,
+      "index": 73,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts",
+      "hash": "95dbe508bac3e2803352321a95921bf226bd991d589f0c39e1bc7b2b6d613bed"
+    },
+    {
+      "suite": 0,
+      "index": 74,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts",
+      "hash": "d4d722c953520a1b458f1adb326b269aef87d43342e61211b941fb31498d2602"
+    },
+    {
+      "suite": 0,
+      "index": 75,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts",
+      "hash": "3c431ca1fb9c6f5f3f13bc2d4ce07c449089292a5aabe09cb5abe20d201ed2c0"
+    },
+    {
+      "suite": 0,
+      "index": 76,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts",
+      "hash": "b9531d21a8c5b5ad72a442c2ce747ee856fd8efd09f25f4f415beb7188d530ea"
+    },
+    {
+      "suite": 0,
+      "index": 77,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts",
+      "hash": "da7029e98de7241325d785c8d891260144674676923a7eb2e0a98a5298824d1e"
+    },
+    {
+      "suite": 0,
+      "index": 78,
+      "destination": "packages/server-core/src/tasks/TaskRunner-recovers-non-terminal-paused-runs-after-restart-without-schedulin.test.ts",
+      "hash": "5719ad418eb0757c26e5ff830947a9f4e9af49428f1eaa1b45b62169ae84d76c"
+    },
+    {
+      "suite": 0,
+      "index": 79,
+      "destination": "packages/server-core/src/tasks/TaskRunner-gates-the-run-on-an-independent-durable-reviewer-and-includes-acc.test.ts",
+      "hash": "caf23e5d4a6f4adff87fea22ba49e025ab24c10aaf73b88f228c1b4103e99571"
+    },
+    {
+      "suite": 0,
+      "index": 80,
+      "destination": "packages/server-core/src/tasks/TaskRunner-gates-the-run-on-an-independent-durable-reviewer-and-includes-acc.test.ts",
+      "hash": "afef4339a61b306ef293e65d0f016f90c5afd6de17a798ff733fc78d6231ae76"
+    },
+    {
+      "suite": 0,
+      "index": 81,
+      "destination": "packages/server-core/src/tasks/TaskRunner-gates-the-run-on-an-independent-durable-reviewer-and-includes-acc.test.ts",
+      "hash": "2b4c17fb493ba4ea1874a7b05c29d566c9010a9e9c6c09f5a4aef69d46d5834a"
+    },
+    {
+      "suite": 0,
+      "index": 82,
+      "destination": "packages/server-core/src/tasks/TaskRunner-gates-the-run-on-an-independent-durable-reviewer-and-includes-acc.test.ts",
+      "hash": "781bdb4b5b3f769623133b355c317d6e3d08ff3244cfe260920d9cbfd6f9b79e"
+    },
+    {
+      "suite": 0,
+      "index": 83,
+      "destination": "packages/server-core/src/tasks/TaskRunner-gates-the-run-on-an-independent-durable-reviewer-and-includes-acc.test.ts",
+      "hash": "aafe5b3555f0fb12b61ddd75de81989dae7e7b5c9eacba3530713818098e7414"
+    },
+    {
+      "suite": 0,
+      "index": 84,
+      "destination": "packages/server-core/src/tasks/TaskRunner-gates-the-run-on-an-independent-durable-reviewer-and-includes-acc.test.ts",
+      "hash": "8e8827e8c3fc8baae17cf44c3878189bc613b8fb06f21b27e9c663dd4f6d61d1"
+    },
+    {
+      "suite": 0,
+      "index": 85,
+      "destination": "packages/server-core/src/tasks/TaskRunner-gates-the-run-on-an-independent-durable-reviewer-and-includes-acc.test.ts",
+      "hash": "eb819a62311ab85cc5ccae6bd52694e2fcd9cb08b826fea5cad81fb1dbd7ebb0"
+    },
+    {
+      "suite": 0,
+      "index": 86,
+      "destination": "packages/server-core/src/tasks/TaskRunner-completes-through-the-real-sessionmanager-host-review-contract-an.test.ts",
+      "hash": "12ac63a8e5e7d3327c80b5389b75bce0e23f227e4f20d4cb81eab4528d34c404"
+    },
+    {
+      "suite": 0,
+      "index": 87,
+      "destination": "packages/server-core/src/tasks/TaskRunner-completes-through-the-real-sessionmanager-host-review-contract-an.test.ts",
+      "hash": "8bb7eb27381b58aef362b1f4749f7cf397a9716e02c91de755b7c672b4a78ce1"
+    },
+    {
+      "suite": 0,
+      "index": 88,
+      "destination": "packages/server-core/src/tasks/TaskRunner-completes-through-the-real-sessionmanager-host-review-contract-an.test.ts",
+      "hash": "cdf73ed6b17105290bc3bbbad26ade49d64aed803fd47fd046c45b6cfc70689f"
+    },
+    {
+      "suite": 0,
+      "index": 89,
+      "destination": "packages/server-core/src/tasks/TaskRunner-completes-through-the-real-sessionmanager-host-review-contract-an.test.ts",
+      "hash": "0ca69ec118e909691ce9a0c276f9f0baa25a96ff944ace7b5e9c78d33e4b3e70"
+    },
+    {
+      "suite": 0,
+      "index": 90,
+      "destination": "packages/server-core/src/tasks/TaskRunner-completes-through-the-real-sessionmanager-host-review-contract-an.test.ts",
+      "hash": "69467aee494a952de3f2aed72b4009f541da7bc095d6f5dd154432471684e088"
+    },
+    {
+      "suite": 0,
+      "index": 91,
+      "destination": "packages/server-core/src/tasks/TaskRunner-restores-reviewer-usage-high-water-marks-and-does-not-charge-a-re.test.ts",
+      "hash": "72ad1c2f67ea505e5fa6e13f61dabcc925d60a2a337c73e4ab848ee0bfdc838c"
+    },
+    {
+      "suite": 0,
+      "index": 92,
+      "destination": "packages/server-core/src/tasks/TaskRunner-restores-reviewer-usage-high-water-marks-and-does-not-charge-a-re.test.ts",
+      "hash": "cfe6269256c6b804ef2b4841d8c7cec27f8f3df7e48f71bc523e826bf0d39bb4"
+    },
+    {
+      "suite": 0,
+      "index": 93,
+      "destination": "packages/server-core/src/tasks/TaskRunner-restores-reviewer-usage-high-water-marks-and-does-not-charge-a-re.test.ts",
+      "hash": "beb01e72b5e2c8c671498b89bca9155dab66ebca007c1579a7ca91031c001c6b"
+    },
+    {
+      "suite": 0,
+      "index": 94,
+      "destination": "packages/server-core/src/tasks/TaskRunner-restores-reviewer-usage-high-water-marks-and-does-not-charge-a-re.test.ts",
+      "hash": "e21933b60d9a89262dfa8112773938fc5fdbd4ba0844c083049ec9ecb54e36ba"
+    },
+    {
+      "suite": 0,
+      "index": 95,
+      "destination": "packages/server-core/src/tasks/TaskRunner-restores-reviewer-usage-high-water-marks-and-does-not-charge-a-re.test.ts",
+      "hash": "ca703a5158f093c2f3e2fcd20a9aeaa196c95517eaf8436b1e4eff0792f4a527"
+    },
+    {
+      "suite": 0,
+      "index": 96,
+      "destination": "packages/server-core/src/tasks/TaskRunner-restores-reviewer-usage-high-water-marks-and-does-not-charge-a-re.test.ts",
+      "hash": "fd6529556ff8d778b56620bf99873d2c11609708f6cd398c246d560f7fce5498"
+    },
+    {
+      "suite": 0,
+      "index": 97,
+      "destination": "packages/server-core/src/tasks/TaskRunner-restores-reviewer-usage-high-water-marks-and-does-not-charge-a-re.test.ts",
+      "hash": "6441c248c89fb10d5c581ae0190ef330cecd4f69e708b0bdd2e928aba38adda3"
+    },
+    {
+      "suite": 0,
+      "index": 98,
+      "destination": "packages/server-core/src/tasks/TaskRunner-restores-reviewer-usage-high-water-marks-and-does-not-charge-a-re.test.ts",
+      "hash": "a05c2d904472352527694627d8fd0e173541aa9b6df22d1cb9082e34949269cb"
+    },
+    {
+      "suite": 0,
+      "index": 99,
+      "destination": "packages/server-core/src/tasks/TaskRunner-restores-reviewer-usage-high-water-marks-and-does-not-charge-a-re.test.ts",
+      "hash": "d7a9f704b8e31d35c52f461bb33c858e909744a112069728638507205a4b2c54"
+    },
+    {
+      "suite": 0,
+      "index": 100,
+      "destination": "packages/server-core/src/tasks/TaskRunner-restores-reviewer-usage-high-water-marks-and-does-not-charge-a-re.test.ts",
+      "hash": "50294faa09e7bc88141309f9c4d6554f8d2311770c06814e713980dde1c37c03"
+    },
+    {
+      "suite": 0,
+      "index": 101,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "hash": "764fc43819a7819d7031b53414e6117dce62a95a3b8c0480c05224384ef2c9ac"
+    },
+    {
+      "suite": 0,
+      "index": 102,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "hash": "d7e3b03b91702091130871ab5a03f65cdfd6041eda6d86bb8738b364c2b7b199"
+    },
+    {
+      "suite": 0,
+      "index": 103,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "hash": "e29496f600bf1c5396760858407bdba33d008260219c38c0941c7ab06c54b9e2"
+    },
+    {
+      "suite": 0,
+      "index": 104,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "hash": "7cad19c4cb01421513937f467a0ea197ae717169b758d55d854333facd8f41d2"
+    },
+    {
+      "suite": 0,
+      "index": 105,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "hash": "c730f0c3e24cf7f2af173abb622c0ab03737dce56316ecc4849f44bb586b4e4d"
+    },
+    {
+      "suite": 0,
+      "index": 106,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "hash": "659ac64ff8310b3b59710060fd77b8707654d5e459a99422c330bc53d8477869"
+    },
+    {
+      "suite": 0,
+      "index": 107,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "hash": "0148381391b99d7fcf2779129f50523d72161dabd17138a8b494e08c1add94fd"
+    },
+    {
+      "suite": 0,
+      "index": 108,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "hash": "21c1ade8611285ed61bea043e147b59f12ecf8f0a95e513cf77f4ea0721d0361"
+    },
+    {
+      "suite": 0,
+      "index": 109,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "hash": "e939c0b5cfdcee7e2f6a750688be2fedba1cae10ea7455c6f4d115f3e2be73aa"
+    },
+    {
+      "suite": 0,
+      "index": 110,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "hash": "f5201f4f387595ae165a7e68b7008bf04d37b91c3354c27c6bfd7be98e4493ac"
+    },
+    {
+      "suite": 0,
+      "index": 111,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "hash": "d318875ce01a249b6771e492b079cad92f15176bbd92439ae1f49893019d826b"
+    },
+    {
+      "suite": 0,
+      "index": 112,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "hash": "385932403ae0ec5e54f42bc70405d9b29887ac8e111f7586293e8d63f36f4fa2"
+    },
+    {
+      "suite": 0,
+      "index": 113,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "hash": "32e16cea541fbb21c269d1408ff8c0046c7b2abc66fd891ea3184e5c018911d0"
+    },
+    {
+      "suite": 0,
+      "index": 114,
+      "destination": "packages/server-core/src/tasks/TaskRunner-re-asks-on-an-unparsable-verdict-and-fails-only-after-the-re-ask.test.ts",
+      "hash": "a9dad47106328422d0d0464605aa649149becf97a6fcbcd21f8c15c9e6a81d59"
+    },
+    {
+      "suite": 0,
+      "index": 115,
+      "destination": "packages/server-core/src/tasks/TaskRunner-contains-rejected-best-effort-ui-metadata-without-changing-the-ve.test.ts",
+      "hash": "c57bbdbefea35825a605ffb752acbbf618885bf86fa93bd3c51f70601b3e50cd"
+    },
+    {
+      "suite": 0,
+      "index": 116,
+      "destination": "packages/server-core/src/tasks/TaskRunner-contains-rejected-best-effort-ui-metadata-without-changing-the-ve.test.ts",
+      "hash": "82b6a62a9a7c86bde4a38d4f36ea9b6742cdf2e2ee1ed588d80d71078b4cc624"
+    },
+    {
+      "suite": 0,
+      "index": 117,
+      "destination": "packages/server-core/src/tasks/TaskRunner-contains-rejected-best-effort-ui-metadata-without-changing-the-ve.test.ts",
+      "hash": "89b483edda78c23c267537cc9fa50a8750515b4b251654ead029b52c8c7ab4d1"
+    },
+    {
+      "suite": 0,
+      "index": 118,
+      "destination": "packages/server-core/src/tasks/TaskRunner-contains-rejected-best-effort-ui-metadata-without-changing-the-ve.test.ts",
+      "hash": "62e09dd6ccb3bf4d4930c566ab763fd9100936844d35583acb6c2815cf7aee76"
+    }
+  ],
+  "setups": [
+    {
+      "suite": 0,
+      "label": "'TaskRunner (Conductor)'",
+      "hashes": [
+        "8887f01d8a0c3c43b8ae6060203db127a02766929aa9d0755d13af4c99b001ab",
+        "515810014f874dda2381110bc99f45d6e7aaad89146e49c932068b8e5b927953",
+        "141171766466c3ac8a990587e5c329b814ce4bc38b5ddb6aa0e5c4f953e15b6d",
+        "4c3336bb78dd091b097525cb087f099a9e7073030e6ed7df0ec62845ada79a3a",
+        "a572f69d2bce169aefc4c984389b3ba445a215f6c09b7b9a800cd7b65a28b0ce",
+        "b5edf6faa994eb8a1a6c882a37989943050a05c85f8c24a2bf9a7bc0365e9723"
+      ]
+    }
+  ],
+  "sharedDeclarations": [
+    {
+      "name": "tick",
+      "hash": "0181701459fa7a67461c0ae6db863d05a4a885be19d5839cf73056a2d79b9cea"
+    },
+    {
+      "name": "inactiveKillSwitch",
+      "hash": "2afa2de6e25d477d788be7d629b559cbfc51bff3f9c7df8c3279170401e07f5c"
+    },
+    {
+      "name": "waitUntil",
+      "hash": "108ba7adb1abc462ca26acdc1acc5ccce60517a3ee3985d30f1568e61409c45d"
+    },
+    {
+      "name": "tu",
+      "hash": "a010f1751489a47383cb6ff77613cfacea46c31608e5545c28b76c22084af9ad"
+    },
+    {
+      "name": "specOf",
+      "hash": "56c68ccde6b29dafcdafe18631a21cd4d793aea16dc8540aa08bf322ba3d0f61"
+    },
+    {
+      "name": "MockHost",
+      "hash": "aba14c5ae45e8dec7a97fe2a535d874d06fffa83f5202e2415fd95e62b163669"
+    },
+    {
+      "name": "UniqueSessionHost",
+      "hash": "a750c728a3e0643d3c3c84d7c6dcdc3cfdea1f767244d22251e39bd5928cb65f"
+    },
+    {
+      "name": "PrefixedSessionHost",
+      "hash": "33ef3c3a08c773c75c2c283e49212ae09d567ac99fc5874bb5ad7b6c21a1b4ae"
+    }
+  ],
+  "statementCount": 119,
+  "sharedFixture": "packages/server-core/src/tasks/testing/TaskRunner-fixture.ts"
+}
