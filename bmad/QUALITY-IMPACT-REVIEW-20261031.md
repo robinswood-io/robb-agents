@@ -291,3 +291,26 @@ prior rule and language applicability remains valid after this bounded delta.
 Renew the 138 source scopes and 60 review hashes without changing controls,
 statuses or exceptions. Installation, Documents access, missions and publication
 are not established by this review.
+
+## Supported macOS release runners
+Candidate `7e1a945` passed canonical RUN and VERIFY in CI `41212994043`: all seven
+checks returned zero and the final receipt binds controller 13 and that exact SHA.
+The quality job took 40 min 02 s. Both subsequent macOS jobs were cancelled before
+starting by GitHub's scheduled macOS 14 runner-image brownout, not by a Robb test.
+The job annotations identify https://github.com/actions/runner-images/issues/13518;
+the official image catalogue lists macos-26 for ARM64 and macos-26-intel for x64.
+The sole functional delta replaces the obsolete common macos-14 runner with an
+explicit two-entry architecture/runner matrix. Existing matrix.arch build flags,
+artifact names, provenance, timeout, prerequisites, signing, notarization and
+publication checks remain unchanged. No larger paid runner label is introduced.
+No application, dependency, connector, accounting data or permission is changed.
+The workflow remains 496 physical lines. Existing release-policy tests pass:
+8 tests, 76 assertions,zero failures. Project YAML validation has zero diagnostics;
+PyYAML confirms both mappings and git diff --check returns zero. No test simply
+mirroring the label values is added. actionlint/yamllint are unavailable on DEV;
+the actual project validator is used, without claiming those tools passed.
+A fresh workspace dependency audit remains at 285 dependencies and zero issues.
+Evidence: robb-ci-gate-fixes-20261031/macos-runner-migration. The prior gate
+qualifies `7e1a945` only; renew the review scopes and run the canonical gate on the
+new commit. Real signed builds on both new images remain required. This review
+asserts neither successful packaging nor local missions nor publication.
