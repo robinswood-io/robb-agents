@@ -70,3 +70,13 @@ vérifiés avant et après run/verify. Aucune réinitialisation du dépôt ni co
 clone n’est effectuée. Le helper doit déjà porter les droits autorisés ; le job
 local les vérifie sans les modifier. Les binaires du PATH projet sont préparés
 avant activation. L’inscription éphémère du runner demeure distincte du gate direct.
+
+## Routage de release sur les runners internes
+Tous les jobs du workflow release exigent self-hosted et le label dédié robb-release.
+Linux X64 utilise DEV ; macOS ARM64, macOS X64 et Windows X64 exigent chacun un
+hôte natif qualifié. Les labels sont des exigences, pas une preuve de disponibilité.
+Aucun repli implicite sur les runners hébergés GitHub n'est autorisé.
+Les contributions externes ne doivent pas être routées vers DEV partagé : leur CI
+reste distincte et son isolation doit être établie avant une migration de runners.
+Le contrôleur privé épinglé est celui de la diffusion 15, commit
+f9ab876de31a6beb0dca75b8f850531ccebbba99. Les contrôles applicatifs restent inchangés.

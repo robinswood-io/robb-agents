@@ -46,6 +46,22 @@ class ReleaseQualityTests(unittest.TestCase):
         self.assertNotIn("secrets.", quality)
         self.assertNotIn("pull_request", workflow.split("\njobs:", 1)[0])
 
+    def test_release_jobs_require_internal_runners(self) -> None:
+        workflow = (Path(__file__).resolve().parents[2] / ".github/workflows/release.yml").read_text()
+        declarations = re.findall(r"^\s*(?:runs-on|runner): (.+)$", workflow, re.MULTILINE)
+        self.assertEqual(len(declarations), 8)
+        self.assertNotIn("sudo apt-get", workflow)
+        for declaration in declarations:
+            if declaration == "${{ matrix.runner }}":
+                continue
+            with self.subTest(runner=declaration):
+                self.assertTrue(declaration.startswith("[") and declaration.endswith("]"))
+                labels = {label.strip() for label in declaration[1:-1].split(",")}
+                self.assertIn("self-hosted", labels)
+                self.assertIn("robb-release", labels)
+                self.assertEqual(len(labels & {"Linux", "Windows", "macOS"}), 1)
+                self.assertEqual(len(labels & {"X64", "ARM64"}), 1)
+
     def test_only_immutable_commits_are_accepted(self) -> None:
         self.assertEqual(CI.require_commit("a" * 40), "a" * 40)
         for value in ("main", "v0.12.11", "a" * 39, "../private"):

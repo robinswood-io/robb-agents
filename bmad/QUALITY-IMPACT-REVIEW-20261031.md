@@ -398,3 +398,34 @@ applicability decisions change. Prior targeted execution evidence remains
 relevant; renew the source scope after this impact review. Inspect generated
 provenance and all source-size checks before the next full RUN/VERIFY.
 This correction is not a successful RUN/VERIFY or packaged mission qualification.
+
+## Internal release runners and policy diffusion 15
+The user requires desktop builds on company-controlled runners. Release preflight,
+Linux build and publication now require the existing dedicated Linux/X64 label;
+macOS ARM64/X64 and Windows X64 require dedicated self-hosted native runners.
+These labels express required capabilities, not an assertion that native machines
+are registered. No hosted fallback is allowed. GitHub remains the orchestrator
+and the destination robinswood-io/robb-agents is unchanged. Public pull-request
+CI is not redirected onto shared DEV without isolation; its migration is pending.
+The trusted release triggers, dependency graph, concurrency, timeouts, signatures,
+installer tests, checksums, attestations and private module boundary are preserved.
+A regression test checks every direct and matrix release runner declaration.
+Controller diffusion 15 replaces 13. Canonical changes affecting this project are
+rules 04/18/28 (browser completion) and 48 (governance), plus the project-policy
+export. They require observing the final native journey on the correct host,
+reuse of authorized sessions, bounded technical recovery and explicit remaining
+human authentication. No browser outcome is inferred from code tests or screenshots.
+The existing native mission plan covers missing input, deduplication, continuation,
+a new request, report preview and restart persistence. Those candidate runs remain
+pending; no installed application, protected data or connection is changed here.
+Rule 50 remains 1.5.0 and the executable controller is unchanged between revisions.
+Review impact: runner routing (rule 30), trusted release boundary (security/git),
+new browser/governance obligations and the environment reference. Reuse unaffected
+source reviews after renewing the exact source scope; preserve every control,
+applicability decision and dependency exception. A fresh RUN and VERIFY are required.
+
+The former hosted Linux bootstrap installed system packages with sudo apt-get.
+On shared DEV this is replaced by a read-only check of preinstalled desktop
+packages, including the actual Ubuntu libgtk-3-0t64 package. All six prerequisites
+are installed on DEV. Missing packages stop that job; no permissions or system
+packages are changed. The Linux AppImage smoke remains mandatory and unchanged.

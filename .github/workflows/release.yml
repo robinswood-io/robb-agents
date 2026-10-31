@@ -25,7 +25,7 @@ jobs:
   preflight:
     timeout-minutes: 10
     name: Release policy preflight
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, robb-release]
     outputs:
       publish: ${{ steps.policy.outputs.publish }}
       tag: ${{ steps.policy.outputs.tag }}
@@ -75,10 +75,10 @@ jobs:
         working-directory: /home/ubuntu/robb-local-reconcile-20261029
     env:
       NODE_OPTIONS: "--max-old-space-size=4096"
-      ROBB_RULEBOOK_COMMIT: "aa499d6689353a00689d2eb943e3db6c8e118fda"
+      ROBB_RULEBOOK_COMMIT: "f9ab876de31a6beb0dca75b8f850531ccebbba99"
       ROBB_EXPECTED_SOURCE_COMMIT: "${{ needs.preflight.outputs.source_commit }}"
       ROBB_QUALITY_CHECKOUT: /home/ubuntu/robb-local-reconcile-20261029
-      ROBB_RULEBOOK_CHECKOUT: /home/ubuntu/robb-release-controllers/aa499d6689353a00689d2eb943e3db6c8e118fda
+      ROBB_RULEBOOK_CHECKOUT: /home/ubuntu/robb-release-controllers/f9ab876de31a6beb0dca75b8f850531ccebbba99
     steps:
       # The runner verifies the prepared checkout; it never resets or replaces it.
       - name: Verify immutable prepared source
@@ -106,9 +106,9 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            runner: macos-26
+            runner: [self-hosted, macOS, ARM64, robb-release]
           - arch: x64
-            runner: macos-26-intel
+            runner: [self-hosted, macOS, X64, robb-release]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -182,7 +182,7 @@ jobs:
     timeout-minutes: 60
     name: Windows x64
     needs: [preflight, quality]
-    runs-on: windows-latest
+    runs-on: [self-hosted, Windows, X64, robb-release]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -272,7 +272,7 @@ jobs:
     timeout-minutes: 45
     name: Linux x64
     needs: [preflight, quality]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, robb-release]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -285,10 +285,11 @@ jobs:
         with: {bun-version: "1.4.4"}
       - name: Exercise Linux installer update contract
         run: python3 -m unittest scripts.tests.test_installers scripts.tests.test_ripgrep_packaging
-      - name: Install Linux desktop smoke dependencies
+      - name: Verify preinstalled Linux desktop smoke dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes xvfb libgtk-3-0 libnss3 libasound2t64 libxss1 libgbm1
+          for package in xvfb libgtk-3-0t64 libnss3 libasound2t64 libxss1 libgbm1; do
+            test "$(dpkg-query -W -f='${db:Status-Status}' "$package")" = installed
+          done
       - name: Build and validate Linux AppImage
         env:
           # Public Linux artifacts are checksum/provenance verified. They do
@@ -327,7 +328,7 @@ jobs:
     name: Publish GitHub Release
     if: needs.preflight.outputs.publish == 'true'
     needs: [preflight, macos, windows, linux]
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, robb-release]
     # This environment is intentionally the single publication boundary. Configure
     # required reviewers once the repository is public or on a GitHub plan that
     # supports protected private environments.
