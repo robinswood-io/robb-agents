@@ -74,3 +74,11 @@ No dependency, fetching policy, runtime path or packaging boundary changes.
 Both shell scripts pass bash syntax and ShellCheck; actual resolution returns
 0.3.316 and npm pack retrieves its Darwin x64 package with the native executable.
 The new source still requires canonical run/verify and real signed builds.
+
+## Lucide stable update
+Run41177750879 passes six checks, including all tests and strict TypeScript,
+but rejects two Lucide1.65.0 declarations after stable1.66.0 was published
+at2026-10-31T06:12:30Z. Update root and viewer manifests to1.66.0 and regenerate
+bun.lock with bun install. No icon usage, styling, component API or architecture
+changes. The full typecheck and fresh286-dependency audit pass before relaunch.
+Keep canonical run/verify, signed builds and real UI acceptance mandatory.

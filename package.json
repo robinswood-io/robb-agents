@@ -225,7 +225,7 @@
     "js-yaml": "^5.5.0",
     "katex": "0.19.1",
     "linkify-it": "^6.1.0",
-    "lucide-react": "1.65.0",
+    "lucide-react": "1.66.0",
     "marked": "^18.1.2",
     "open": "^11.0.4",
     "prosemirror-highlight": "^0.16.0",
