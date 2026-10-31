@@ -314,3 +314,37 @@ Evidence: robb-ci-gate-fixes-20261031/macos-runner-migration. The prior gate
 qualifies `7e1a945` only; renew the review scopes and run the canonical gate on the
 new commit. Real signed builds on both new images remain required. This review
 asserts neither successful packaging nor local missions nor publication.
+
+## Packaged document interpreter alignment
+Candidate `f9b8632` passed canonical RUN and VERIFY (all seven checks zero),
+then both signed/notarized macOS builds in run `41217138482`. Parent verification
+of the actual ARM package exposed an unqualified runtime path: bundled
+`markitdown --help` exited zero but reported Python 3.12.13 incompatible with
+its script requirement >=3.15. A successful exit alone did not establish the
+requested Python migration. That candidate was prepared but never installed.
+The two authored Unix/Windows launchers still selected `uv run --python 3.12`.
+This bounded correction changes only that selector to 3.15, preserving quoting,
+arguments, executable discovery and document conversion implementations. No new
+runtime layer, dependency, connector, permission or accounting-data access is added.
+The existing wrapper suite now also compares both launchers to the script's
+minimum and executes the actual platform uv/wrapper with a temporary PEP 723
+version probe. It validates version components and rejects an incompatibility
+warning; it reuses the existing test harness without host-specific paths or skips.
+The probe failed with the old selector (actual Python 3.12.3) and passed after
+restoring 3.15. Final targeted results: three tests OK, strict basedpyright zero
+errors/warnings, Ruff zero diagnostics, diff-check zero. Ten existing complete
+document conversion tests also pass on DEV under Python 3.15.2 with warnings
+as errors (14.195 s), covering successful and invalid synthetic documents.
+The existing Windows installer CI job, already provisioned with Python 3.15.2,
+now invokes that same real-interpreter test after building the Windows resources.
+This is a call to the existing test, not a new validation framework. Its actual
+Windows execution is still pending; Linux results do not certify the .cmd runtime.
+The workflow is 269 lines and the project's YAML validator reports no diagnostics.
+PyYAML is unavailable in this Python runtime and is not claimed as a passed check.
+Evidence: robb-ci-gate-fixes-20261031/python-wrapper-runtime, including the old
+selector failure, final strict/lint/test receipts and full conversion log.
+Impact is limited to the Python execution boundary, shell launchers, regression
+coverage and Windows CI invocation. Existing rule/language applicability and all
+controls remain; renew source scopes and review hashes without new exceptions.
+A fresh canonical RUN/VERIFY, signed packaging and real local missions remain
+required for the new commit. The installed 6f application and user data are unchanged.

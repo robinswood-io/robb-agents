@@ -13,4 +13,4 @@ if not defined CRAFT_TOOL_SCRIPT (
   echo Missing bundled Python tool script name. 1>&2
   exit /b 127
 )
-"%UV_BIN%" run --python 3.12 "%SCRIPTS_DIR%\%CRAFT_TOOL_SCRIPT%" %*
+"%UV_BIN%" run --python 3.15 "%SCRIPTS_DIR%\%CRAFT_TOOL_SCRIPT%" %*

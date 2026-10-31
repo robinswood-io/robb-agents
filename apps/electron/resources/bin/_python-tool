@@ -43,4 +43,4 @@ if [ ! -f "$scripts_dir/$tool_script" ]; then
   exit 127
 fi
 
-exec "$uv_bin" run --python 3.12 "$scripts_dir/$tool_script" "$@"
+exec "$uv_bin" run --python 3.15 "$scripts_dir/$tool_script" "$@"

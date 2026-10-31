@@ -207,6 +207,12 @@ jobs:
         run: |
           powershell -ExecutionPolicy Bypass -File apps/electron/scripts/build-win.ps1
 
+      - name: Verify the Windows document interpreter
+        shell: pwsh
+        run: >-
+          python -m unittest
+          apps.electron.resources.scripts.tests.test_python_wrapper.PythonWrapperTests.test_real_uv_launcher_runs_a_compatible_interpreter_without_warning
+
       - name: Exercise isolated install and uninstall
         shell: pwsh
         run: |
