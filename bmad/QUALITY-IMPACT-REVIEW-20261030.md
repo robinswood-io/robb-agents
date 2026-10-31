@@ -467,3 +467,13 @@ release-policy tests pass. This affects packaging/runtime consistency (rules 27/
 not entitlements, sandbox permissions, public/private boundaries or app behavior.
 The prior reviews of unaffected rules and language commands remain applicable.
 A fresh exact canonical run/verify and signed artifacts remain required.
+
+CI 41164835140 completed the same six non-test checks successfully. Unit fixtures
+for the CI boundary inherited real runner checkout paths, causing six test errors
+or failures before their intended assertions. The fixture now clears its mocked
+environment; a regression fails before this correction and passes afterward,
+including restoration of inherited variables. Production CI checks are unchanged.
+The complete test command passes under the real runner checkout variables and an
+isolated profile in 493.5 seconds; scripts/tests includes 210 tests, three native
+platform skips. Rule 27/50 evidence is refreshed; unaffected reviews remain valid.
+A fresh canonical run/verify on the committed candidate remains mandatory.

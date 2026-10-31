@@ -143,7 +143,7 @@ class ReleaseQualityTests(unittest.TestCase):
 
             output = io.StringIO()
             with (
-                patch.dict(os.environ, environment),
+                patch.dict(os.environ, environment, clear=True),
                 patch.object(CI, "bootstrap_rtk"),
                 patch.object(CI, "bootstrap_static_tools"),
                 patch.object(CI, "prepare_electron_sandbox"),
@@ -182,6 +182,18 @@ class ReleaseQualityTests(unittest.TestCase):
         self.assertNotIn("PRIVATE_RULE_CONTENT", output)
         self.assertEqual(sum("verify" in call for call in calls), 1)
         self.assertEqual(calls[-1], ("git", "rev-parse", "HEAD"))
+
+    def test_pipeline_fixture_isolates_inherited_runner_checkouts(self) -> None:
+        inherited = {
+            "ROBB_QUALITY_CHECKOUT": "/outside-fixture/robb-checkout",
+            "ROBB_RULEBOOK_CHECKOUT": "/outside-fixture/rulebook-checkout",
+        }
+        with patch.dict(os.environ, inherited):
+            code, _, calls = self.pipeline()
+            self.assertEqual(code, 0)
+            self.assertEqual(sum("verify" in call for call in calls), 1)
+            for name, value in inherited.items():
+                self.assertEqual(os.environ[name], value)
 
     def test_failed_canonical_check_preserves_exit_code_and_never_verifies(self) -> None:
         code, output, calls = self.pipeline(check_code=7)
