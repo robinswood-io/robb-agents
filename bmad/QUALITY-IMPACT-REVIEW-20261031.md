@@ -383,3 +383,18 @@ Electron but does not qualify the packaged or installed Robb application.
 Fresh workspace dependency audit: 285 entries, zero issues, six off-platform
 binary records. Full command receipts and smoke inputs/results are kept under
 `/home/ubuntu/robb-ci-gate-fixes-20261031/resizable-panels/final-validation/`.
+
+## Generated lockfile provenance reconciliation
+Run 41229481050 for 09b39d0454cb61ebbac381cec8654218dc250be2 stopped
+before executing quality commands: generated_provenance_missing_or_changed:bun.lock.
+The previous dependency update omitted both exact lockfile digest references.
+On the canonical DEV checkout, Bun 1.4.4 install --ignore-scripts exited zero
+and reproduced the committed lockfile byte-for-byte; its generation receipt is
+kept in robb-ci-gate-fixes-20261031/lock-provenance/generation-proof.json.
+Update only the current digest in the generated provenance record and policy.
+Preserve historical origin, generator command, every exclusion path and reason.
+No application source, dependency resolution, tests, control commands or
+applicability decisions change. Prior targeted execution evidence remains
+relevant; renew the source scope after this impact review. Inspect generated
+provenance and all source-size checks before the next full RUN/VERIFY.
+This correction is not a successful RUN/VERIFY or packaged mission qualification.
