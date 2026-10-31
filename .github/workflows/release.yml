@@ -116,7 +116,7 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: {bun-version: "1.4.4"}
       - name: Exercise macOS installer update contract
-        run: python3 scripts/tests/test_installers.py
+        run: python3 -m unittest scripts.tests.test_installers
       - name: Build and validate macOS artifact
         env:
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
@@ -190,7 +190,7 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with: {python-version: "3.15.2"}
       - name: Exercise Windows installer update contract
-        run: python3 scripts/tests/test_installers.py
+        run: python3 -m unittest scripts.tests.test_installers
       - name: Build and validate Windows installer
         env:
           WINDOWS_SIGNING_MODE: ${{ vars.WINDOWS_SIGNING_MODE || 'unsigned' }}
@@ -280,7 +280,7 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: {bun-version: "1.4.4"}
       - name: Exercise Linux installer update contract
-        run: python3 scripts/tests/test_installers.py
+        run: python3 -m unittest scripts.tests.test_installers
       - name: Install Linux desktop smoke dependencies
         run: |
           sudo apt-get update

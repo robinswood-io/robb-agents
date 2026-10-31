@@ -365,3 +365,18 @@ The seven-job CI and complete run/verify PASS on parent 2868fef remain historica
 evidence for unchanged code, not a PASS for this new controller/candidate pair.
 The authorized ephemeral DEV release runner must execute canonical run/verify on
 the exact new candidate before signed staging artifacts or local integration.
+
+## Release installer test entrypoints (31 October 2026)
+Release CI still invoked test_installers.py directly in the macOS, Linux and
+Windows jobs. A clean native Python 3.15.2 import-only diagnostic fails with
+ModuleNotFoundError for scripts.json_sources, before collecting tests. Use the
+standard module entrypoint already qualified in robinswood-validate.yml:
+python3 -m unittest scripts.tests.test_installers. All ten installer contracts
+remain enabled, with their existing platform skips; no sys.path manipulation,
+PYTHONPATH workaround or assertion change is introduced. Native macOS execution
+passes ten tests with one Windows-only skip and warnings treated as errors.
+The obsolete stage run 41149843964 was cancelled before artifact construction;
+its ephemeral runner completed cleanup and deregistered. This cancelled attempt
+is not a quality PASS. The corrected exact candidate requires canonical CI
+run/verify and signed staging before local integration. The application, its
+dependencies, permissions and public/private boundaries are unchanged.
