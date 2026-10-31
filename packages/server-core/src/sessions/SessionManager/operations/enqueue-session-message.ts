@@ -9,6 +9,7 @@ import type { Message } from '@craft-agent/core/types';
 import { createPendingTurnRecovery } from '../../turn-recovery';
 import { appendCoalescedInternalMessage, selectInternalMessageCoalesceTarget } from '../../internal-message-coalescing';
 import { isHostSyntheticObjectiveText, transitionObjectiveContract } from '../../objective-contract';
+import { requiresStructuredObjectiveOutcome } from "../../objective-completion-policy.ts";
 import { delegatedObjectiveRoleForSession } from '../review-lifecycle.ts';
 import { sessionLog } from '../runtime-platform.ts';
 import { hasTerminalObjectiveState as sessionOpHasTerminalObjectiveState, dropDeferredSourceActivations as sessionOpDropDeferredSourceActivations } from './repair-legacy-synthetic-objective-authority.ts';
@@ -107,7 +108,8 @@ export async function enqueueSessionMessage(input: QueuedMessageInput): Promise<
     const agent = managed.agent;
     let steered = false;
     let finishToolAdmissionRebind: ((committed: boolean) => void) | undefined;
-    const steeringMessage = steeredObjective && isLegacyHostObjectiveContractEnabled(managed)
+    const steeringMessage = steeredObjective
+        && (isLegacyHostObjectiveContractEnabled(managed) || requiresStructuredObjectiveOutcome(steeredObjective))
         ? `${message}\n\n${sessionOpBuildObjectiveRuntimePrompt(sessionOperationContext, managed, steeredObjective)}`
         : message;
     // Redirect transports only text. Keep attachments and model-input options

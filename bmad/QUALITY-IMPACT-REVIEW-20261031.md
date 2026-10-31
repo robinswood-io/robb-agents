@@ -228,3 +228,38 @@ Provider-message interception verifies one contract envelope, required registrat
 DEV proof: initial-objective-prompt-c738/targeted-final.log (61 pass, 0 fail, 5 files); Node26.13 strict typecheck and zero-warning ESLint logs plus controller13-admission.json are adjacent; diff check passes.
 Limit: these synthetic tests qualify prompt/terminal behavior only; they do not validate real Documents access, a provider account or a connector.
 No quality control or exception is relaxed; run/verify on the exact final commit and release qualification remain required.
+
+## Structured mission regression qualification after failed gate
+Canonical run 41205223819 on eb759799 failed three server-core scenarios;
+the other six checks passed. Keep that failure and do not reuse its qualification.
+The affected fixtures demanded execution and observation but still assumed a
+receipt-free final answer. The two-file fixture omitted registered criteria and
+a scoped review, so its bounded recovery never emitted a completed mission.
+Production now reuses the existing runtime contract builder for the initial
+structured turn and a structured steer. This preserves criterion projections,
+delegated review and human-input/YOLO guidance without a new prompt builder.
+Legacy clean recovery still omits the contract; provider-driven clean recovery
+keeps its prior scope path. Stored user text and authority fields stay unchanged.
+The integration fixture registers criteria through the existing helper, writes
+and reads both real temporary files, and supplies observation-bound review and
+outcome fixtures. Its first incomplete answer still triggers automatic dispatch.
+Assertions retain the first file's modification time, both file contents,
+exactly two turns, one completion and the persisted terminal state. Review and
+provider events are simulated: this is not a real-model mission qualification.
+Parameterized tests cover ask/allow-all and legacy/provider-driven steer; absent
+receipts are rejected while authorization and sensitive authority remain unset.
+DEV evidence: structured-mission-regressions under robb-ci-gate-fixes-20261031.
+Ten targeted tests pass; strict server-core typing, changed-file ESLint with
+zero warnings and diff-check pass. The complete official test command under
+Xvfb and an isolated profile returns zero: 11140 Bun passes, 32 platform/explicit
+skips and 720 Python test executions. The preserved first full attempt failed
+because its launch lacked DISPLAY; no test timeout or check was relaxed.
+Full log SHA256: e90071468c3e1474ca4e864c944683acdd6cf525835f1f1daa3319cd0818ab00.
+Review impact: existing execution/completion and authority boundaries under
+rules 27, 44, 48 and 50. Prior applicability and language coverage remain valid
+after inspection of this three-file delta. No dependency, connector, credential,
+profile, permission, accounting data or private module is changed. All three
+TypeScript files remain below 500 physical lines. Source scopes and this review's
+hash must be renewed without altering commands, statuses or exceptions.
+This review does not assert RUN/VERIFY, installation, restored Documents access,
+real-model success or publication. Those checks remain required on the new commit.
