@@ -61,5 +61,16 @@ bounded diff review. Language commands and strict coverage remain unchanged;
 source scope and evidence hashes must bind the new files and current rule versions.
 No connector writes, accounting data, profiles, permissions or private modules change.
 DEV tests remain serialized with the 4 GiB Node heap. The Mac remains orchestration
-and signed staging. PR approval, exact canonical run/verify, signed artifact,
-official local preflight and three real QA missions remain required before release.
+and signed staging. Protected-branch review remains required before merging main. Exact canonical
+run/verify, signed artifacts, official local preflight and three real QA missions
+remain required before release under the published release controls.
+
+## Cross-architecture SDK version resolution
+Signed staging run 41174259742 passes canonical run/verify, but macOS x64
+requests the nonexistent native SDK version undefined. The fallback still reads
+root dependencies after SDK moved to devDependencies. Both macOS and Linux
+fallbacks now read version from the already installed SDK package manifest.
+No dependency, fetching policy, runtime path or packaging boundary changes.
+Both shell scripts pass bash syntax and ShellCheck; actual resolution returns
+0.3.316 and npm pack retrieves its Darwin x64 package with the native executable.
+The new source still requires canonical run/verify and real signed builds.

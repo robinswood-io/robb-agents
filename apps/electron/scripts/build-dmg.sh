@@ -163,7 +163,7 @@ cp -R "$SDK_SOURCE" "$ELECTRON_DIR/node_modules/@anthropic-ai/"
 SDK_BIN_PKG="claude-agent-sdk-darwin-${ARCH}"
 SDK_BIN_SOURCE="$ROOT_DIR/node_modules/@anthropic-ai/${SDK_BIN_PKG}"
 if [[ ! -d "$SDK_BIN_SOURCE" ]]; then
-  SDK_VERSION="$(node -p "require('$ROOT_DIR/package.json').dependencies['@anthropic-ai/claude-agent-sdk']" | tr -d '"')"
+  SDK_VERSION="$(node -p 'require(process.argv[1]).version' "$SDK_SOURCE/package.json")"
   mkdir -p "$TEMP_DIR/sdk"
   (
     cd "$TEMP_DIR/sdk"

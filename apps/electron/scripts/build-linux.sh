@@ -142,7 +142,7 @@ SDK_BIN_PKG="claude-agent-sdk-linux-${ARCH}"
 SDK_BIN_SOURCE="$ROOT_DIR/node_modules/@anthropic-ai/${SDK_BIN_PKG}"
 if [ ! -d "$SDK_BIN_SOURCE" ]; then
     echo "Cross-arch build: ${SDK_BIN_PKG} not in node_modules — fetching from npm..."
-    SDK_VERSION=$(node -p "require('$ROOT_DIR/package.json').dependencies['@anthropic-ai/claude-agent-sdk']" | tr -d '"')
+    SDK_VERSION=$(node -p 'require(process.argv[1]).version' "$SDK_SOURCE/package.json")
     PKG_TMP=$(mktemp -d)
     (
         cd "$PKG_TMP"
