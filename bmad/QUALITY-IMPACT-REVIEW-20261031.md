@@ -82,3 +82,23 @@ at2026-10-31T06:12:30Z. Update root and viewer manifests to1.66.0 and regenerate
 bun.lock with bun install. No icon usage, styling, component API or architecture
 changes. The full typecheck and fresh286-dependency audit pass before relaunch.
 Keep canonical run/verify, signed builds and real UI acceptance mandatory.
+
+## Pinned controller isolation
+Run41180045934 passes all seven canonical checks on3fedd538, but verify rejects
+a concurrent central-controller update from977c4d0 to92a699aa. Robb source and
+fingerprint are unchanged. Keep the published session policy11/977c4d0 and
+the existing exact CI pin; never reset the central checkout or weaken verify.
+The DEV release runner now uses a separate private clone at the pinned commit,
+with its controller dependencies installed from the unchanged package-lock.
+Check controller HEAD and clean status before run, before verify and after verify.
+Regression tests must reject mid-run drift and must never emit a PASS receipt
+for a changed or dirty controller. The project checkout remains in place and
+its existing concurrent-change checks remain enabled. No rules or private logs
+enter public artifacts. Retain the user ceiling of500 lines for every maintained
+test, despite the newer central contract permitting reviewed larger suites.
+Impact is limited to CI isolation and its regression tests, under rules27/48/50
+and the project environment contract. Dependencies, UI, accounting data, secrets,
+permissions and application architecture are unchanged. Reuse earlier analyses
+of unchanged rules after this diff review; bind the renewed scope and evidence
+to the exact final source. Canonical run/verify, signed builds, official preflight
+and the three native missions remain mandatory before publication.

@@ -63,8 +63,10 @@ canonique complet et les règles privées restent exclus des artefacts publics.
 ## Job qualité du runner local
 
 Le job de release qualité vise le label self-hosted robb-release sur DEV. Il utilise
-le checkout préparé ci-dessus et le contrôleur canonique existant, avec commits
-vérifiés. Aucune réinitialisation du dépôt ni copie automatique de revue dans un
+le checkout préparé ci-dessus et une copie privée propre du contrôleur canonique
+épinglé, sous /home/ubuntu/robb-release-controllers/<commit>. Cette copie est
+indépendante du checkout central mutable ; son commit et sa propreté sont
+vérifiés avant et après run/verify. Aucune réinitialisation du dépôt ni copie automatique de revue dans un
 clone n’est effectuée. Le helper doit déjà porter les droits autorisés ; le job
 local les vérifie sans les modifier. Les binaires du PATH projet sont préparés
 avant activation. L’inscription éphémère du runner demeure distincte du gate direct.

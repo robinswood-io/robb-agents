@@ -7,6 +7,7 @@ import io
 import json
 import os
 import platform
+import re
 import stat
 import subprocess
 import tempfile
@@ -25,10 +26,21 @@ class ReleaseQualityTests(unittest.TestCase):
         quality = workflow.split("\n  quality:", 1)[1].split("\n  macos:", 1)[0]
         self.assertIn("permissions: {contents: read}", quality)
         self.assertIn("run: xvfb-run -a rtk python3 scripts/robinswood_quality_ci.py", quality)
-        self.assertRegex(quality, 'ROBB_RULEBOOK_COMMIT: "[0-9a-f]{40}"')
+        controller_commit_match = re.search(
+            r'^\s*ROBB_RULEBOOK_COMMIT:\s*"([0-9a-f]{40})"$', quality, re.MULTILINE,
+        )
+        controller_checkout_match = re.search(
+            r'^\s*ROBB_RULEBOOK_CHECKOUT:\s*(\S+)$', quality, re.MULTILINE,
+        )
+        if controller_commit_match is None or controller_checkout_match is None:
+            self.fail("workflow must pin a private controller commit and checkout")
+        controller_commit = controller_commit_match.group(1)
+        controller_checkout = Path(controller_checkout_match.group(1))
         self.assertIn("runs-on: [self-hosted, Linux, X64, robb-release]", quality)
         self.assertIn("ROBB_QUALITY_CHECKOUT: /home/ubuntu/robb-local-reconcile-20261029", quality)
-        self.assertIn("ROBB_RULEBOOK_CHECKOUT: /opt/ia-webdev/rulebook-ai", quality)
+        self.assertEqual(controller_checkout.name, controller_commit)
+        self.assertTrue(str(controller_checkout).startswith("/home/ubuntu/robb-release-controllers/"))
+        self.assertNotIn("/opt/ia-webdev/rulebook-ai", quality)
         self.assertNotIn("actions/checkout", quality)
         self.assertNotIn("sudo", quality)
         self.assertNotIn("secrets.", quality)
@@ -86,8 +98,13 @@ class ReleaseQualityTests(unittest.TestCase):
         self, *, check_code: int = 0, validation_code: int = 0, source: str = "a" * 40,
         gate_timeout: bool = False, check_name: str = "lint", self_hosted: bool = False,
         explicit_roots: bool = False, dirty: bool = False,
+        controller_head_after_run: str | None = None,
+        controller_dirty_after_run: bool = False,
+        controller_head_after_verify: str | None = None,
+        output_stream: io.StringIO | None = None,
     ) -> tuple[int, str, list[tuple[str, ...]]]:
         calls: list[tuple[str, ...]] = []
+        controller_stage = {"run": False, "verify": False}
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory).resolve()
             root = base / "checkout"
@@ -113,10 +130,22 @@ class ReleaseQualityTests(unittest.TestCase):
                 if gate_timeout and len(argv) > 2 and argv[2] == "run":
                     raise subprocess.TimeoutExpired(argv, timeout)
                 if argv == ["git", "rev-parse", "HEAD"]:
-                    head = "b" * 40 if cwd == controller else source
+                    if cwd == controller:
+                        if controller_stage["verify"] and controller_head_after_verify is not None:
+                            head = controller_head_after_verify
+                        elif controller_stage["run"] and controller_head_after_run is not None:
+                            head = controller_head_after_run
+                        else:
+                            head = "b" * 40
+                    else:
+                        head = source
                     return subprocess.CompletedProcess(argv, 0, head + "\n", "")
                 if argv == ["git", "status", "--porcelain"]:
-                    return subprocess.CompletedProcess(argv, 0, " M source.ts\n" if dirty else "", "")
+                    if cwd == controller:
+                        dirty_status = " M private-rule.json\n" if controller_stage["run"] and controller_dirty_after_run else ""
+                    else:
+                        dirty_status = " M source.ts\n" if dirty else ""
+                    return subprocess.CompletedProcess(argv, 0, dirty_status, "")
                 if argv == ["git", "rev-parse", "--git-path", "info/exclude"]:
                     return subprocess.CompletedProcess(argv, 0, ".git/info/exclude\n", "")
                 if argv == ["bun", "run", "validate:versions"]:
@@ -135,13 +164,17 @@ class ReleaseQualityTests(unittest.TestCase):
                         "rules": {"private-rule": "PRIVATE_RULE_CONTENT"},
                     }
                     _ = (root / "bmad/quality-evidence.json").write_text(json.dumps(report))
+                    controller_stage["run"] = True
                     # RTK console output may be compressed; it is not a machine contract.
                     return subprocess.CompletedProcess(argv, check_code, "compressed console", "")
                 if argv[0] == "python3" and argv[-2:] == ["verify", str(root)]:
+                    if controller_head_after_run is not None or controller_dirty_after_run:
+                        self.fail("controller change after run must block verify")
+                    controller_stage["verify"] = True
                     return subprocess.CompletedProcess(argv, 0, "verified", "")
                 raise AssertionError("Unexpected release command: " + repr(argv))
 
-            output = io.StringIO()
+            output = output_stream if output_stream is not None else io.StringIO()
             with (
                 patch.dict(os.environ, environment, clear=True),
                 patch.object(CI, "bootstrap_rtk"),
@@ -168,6 +201,20 @@ class ReleaseQualityTests(unittest.TestCase):
         self.assertIn("dependencies diagnostic", output)
         self.assertNotIn("PRIVATE_RULE_CONTENT", output)
         self.assertFalse(any(len(call) > 2 and call[2] == "verify" for call in calls))
+
+    def test_controller_head_change_after_run_blocks_verify(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Private controller commit differs from pinned revision"):
+            _ = self.pipeline(controller_head_after_run="c" * 40)
+
+    def test_dirty_controller_after_run_blocks_verify(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Private controller checkout has concurrent or uncommitted changes"):
+            _ = self.pipeline(controller_dirty_after_run=True)
+
+    def test_controller_head_change_after_verify_blocks_pass_receipt(self) -> None:
+        output = io.StringIO()
+        with self.assertRaisesRegex(ValueError, "Private controller commit differs from pinned revision"):
+            _ = self.pipeline(controller_head_after_verify="c" * 40, output_stream=output)
+        self.assertNotIn('"controller_commit"', output.getvalue())
 
     def test_gate_timeout_preserves_failure_and_never_verifies(self) -> None:
         code, output, calls = self.pipeline(gate_timeout=True)

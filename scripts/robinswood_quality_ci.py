@@ -121,6 +121,13 @@ def git_value(args: list[str], root: Path) -> str:
     return result.stdout.strip()
 
 
+def assert_controller_revision(controller: Path, expected: str) -> None:
+    if git_value(["rev-parse", "HEAD"], controller) != expected:
+        raise ValueError("Private controller commit differs from pinned revision")
+    if git_value(["status", "--porcelain"], controller):
+        raise ValueError("Private controller checkout has concurrent or uncommitted changes")
+
+
 def prepare_electron_sandbox(root: Path) -> None:
     if os.environ.get("RUNNER_ENVIRONMENT") == "self-hosted":
         checkout = root.resolve(strict=True)
@@ -185,8 +192,7 @@ def main() -> int:
     bootstrap_static_tools(temporary)
     if git_value(["rev-parse", "HEAD"], root) != expected:
         raise ValueError("Release source commit differs from preflight")
-    if git_value(["rev-parse", "HEAD"], controller) != controller_commit:
-        raise ValueError("Private controller commit differs from pinned revision")
+    assert_controller_revision(controller, controller_commit)
     if os.environ.get("RUNNER_ENVIRONMENT") == "self-hosted" and git_value(
         ["status", "--porcelain"], root
     ):
@@ -217,6 +223,7 @@ def main() -> int:
         _ = (public / "timeout.json").write_text('{"state":"TIMEOUT","exit_code":124,"seconds":2100}\n')
         print("Canonical quality exceeded 35 minutes; no verification or publication.")
         return 124
+    assert_controller_revision(controller, controller_commit)
     # Private rule contents and the full report stay out of public build logs/artifacts.
     report_text = (root / "bmad/quality-evidence.json").read_text()
     _ = (temporary / "robb-canonical-quality.json").write_text(report_text)
@@ -249,6 +256,7 @@ def main() -> int:
     if verified.returncode:
         print("Canonical quality verify failed; publication remains blocked.")
         return verified.returncode
+    assert_controller_revision(controller, controller_commit)
     if git_value(["rev-parse", "HEAD"], root) != expected:
         raise ValueError("Release commit changed during checks")
     receipt: dict[str, str] = {"state": "PASS", "source_commit": expected,
