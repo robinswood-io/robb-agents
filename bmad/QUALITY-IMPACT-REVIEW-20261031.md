@@ -356,3 +356,30 @@ coverage and Windows CI invocation. Existing rule/language applicability and all
 controls remain; renew source scopes and review hashes without new exceptions.
 A fresh canonical RUN/VERIFY, signed packaging and real local missions remain
 required for the new commit. The installed 6f application and user data are unchanged.
+
+## React resizable panels 4.16.0 dependency update
+
+The b4 candidate dependency gate identified the sole issue as
+`not_latest_stable:package.json:react-resizable-panels`: root manifest and lock
+resolved 4.15.3 while npm published stable 4.16.0 at 2026-10-31T16:46:17Z.
+Update only the root range and lock entry to 4.16.0. The package adds a
+Workspace feature that this app does not adopt; it also fixes pointer-distance
+handling under CSS zoom/scale, separator hover around iframes, and preview
+styling. React and ReactDOM peer ranges are unchanged and the package adds no
+runtime dependencies. The app continues using its existing Group, Panel, and
+Separator components. See the [official 4.16.0 release](https://github.com/bvaughn/react-resizable-panels/releases/tag/4.16.0)
+and private registry record at
+`/home/ubuntu/robb-ci-gate-fixes-20261031/resizable-panels/npm-latest.json`.
+
+On the canonical b4 checkout, Bun 1.4.4 `install --frozen-lockfile
+--ignore-scripts` resolved exactly 4.16.0. `typecheck:electron` passed; the
+renderer production build passed (5,882 modules transformed). The build retains
+the existing Vite advisory for chunks larger than 500 kB. A temporary real
+Electron/Xvfb smoke using the installed library and Playwright measured panel
+widths 354→444 px on a pointer drag, 555→625 px at CSS zoom 1.25×, and
+625→669 px by keyboard ArrowRight; unmount/remount left one Group and one
+Separator, with no renderer errors. This verifies the library interaction in
+Electron but does not qualify the packaged or installed Robb application.
+Fresh workspace dependency audit: 285 entries, zero issues, six off-platform
+binary records. Full command receipts and smoke inputs/results are kept under
+`/home/ubuntu/robb-ci-gate-fixes-20261031/resizable-panels/final-validation/`.
