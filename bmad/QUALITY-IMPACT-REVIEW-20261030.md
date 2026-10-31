@@ -380,3 +380,69 @@ its ephemeral runner completed cleanup and deregistered. This cancelled attempt
 is not a quality PASS. The corrected exact candidate requires canonical CI
 run/verify and signed staging before local integration. The application, its
 dependencies, permissions and public/private boundaries are unchanged.
+
+
+## CI refusal corrections and secure dependency migration (31 October 2026)
+
+Stage run 41151280496 refused tests, dependencies and typed lint. The permission
+fixture now explicitly sets its outside file to 0644 before testing refusal;
+this isolates the assertion from the runner's private umask without weakening
+production permission handling. Both umask 022 and 077 targeted runs pass.
+OpenAI 7.46.0, Claude Agent SDK 0.3.316 and Electron 45.2.1 replace the preceding
+compatible releases. Provider contract tests pass; seven sandboxed Electron
+canvas tests pass with Bun 1.4.4, including real bitmap capture. The Electron
+sandbox helper has the same verified bytes as the previously authorized helper;
+its existing authorization does not grant permissions to other executables.
+
+GHSA-3g3m-2fjr-6pw4 requires replacing affected glob 9-14.0.1 installations.
+The Bun override selects that range only and installs glob 14.0.3, preserving
+callback-based glob 7 for legacy installer consumers. GHSA-g3hv-75wg-m249 requires
+minimatch 11.0.1 or later; the override installs current stable 11.0.3 throughout
+the dependency tree. The existing Bun patch mechanism preserves the callable
+CommonJS entrypoint in minimatch and adapts glob 7's six matcher uses to the
+modern non-regex matcher. ESM exports and the secured matching algorithm are
+unchanged. No separate runtime service, abstraction layer or weakened control
+is added. The override audit retains each version selector while resolving the
+actual package name for registry checks and installed versions.
+
+Four regression tests verify CommonJS/ESM, callback/sync legacy glob, async/sync
+modern glob, dot/ignore behavior, bounded adversarial preprocessing, and synthetic
+archive roundtrips through ASAR 3 and 4. TypeScript release-script checks, ESLint
+with zero warnings, Python Ruff and seven dependency-audit boundary tests pass.
+Bun audit reports no dependency vulnerability. The GHSA test asserts structural
+bounds and matching, not a general performance benchmark. The removed makeRe
+API is not reintroduced; the reviewed installed parent sources do not call it.
+
+The package-name normalization also preserves the original manifest path in every
+inventory row. A regression covers root and workspace dependencies, so the two
+previously authorized compatibility exceptions remain bound to their exact
+manifests. The final direct audit checks 286 entries without issues. The four glob
+compatibility tests, script typecheck and zero-warning ESLint pass on the 11.0.3
+lock; its CommonJS adapter changes exports only, preserving upstream matcher code.
+Upstream release: https://github.com/isaacs/minimatch/releases/tag/v11.0.3.
+
+The installed Pi package also contains a prebuilt CLI/RPC bundle with an older
+embedded matcher. Robb imports the SDK root instead, builds pi-agent-server
+from its own entrypoint, and stages only that output; Electron excludes the
+installed node_modules tree. This is a static packaging review, not permission
+to use the upstream CLI bundle or a completed build attestation. The exact signed
+artifact still requires inspection and full mission qualification.
+
+Rules 00 and 50 retain strict typing, no any, physical source limits, all tests
+and all audits. Rules 43/48 retain the 4 GiB Node limit, serialized DEV work,
+synthetic-only accounting fixtures and the public/private connector boundary.
+The controller candidate splits sequential typed-lint batches at the nearest
+configured project root, retaining every file, its order and all checks. Its
+separate qualification and publication must precede the final Robb run/verify.
+Earlier green commits and targeted checks above do not attest the new candidate;
+canonical run/verify, native release jobs and local real missions remain required.
+
+The release workflow now pins Rulebook controller
+977c4d0263be04197c7f5dba9f1219224508ac99. Its lint scheduler separates contiguous
+batches by their nearest TypeScript configuration without changing the global
+snapshot, file coverage, worker validation or the 4 GiB heap. The controller's own
+supervisor test publishes its readiness marker atomically; assertions are retained.
+The root Rulebook SDK lock is also updated to the supported compatible release.
+Canonical rules 48/50 are unchanged. This pin preparation does not attest a Robb
+CI run or a publication: controller publication and the exact Robb gate remain
+mandatory before building and staging the release.

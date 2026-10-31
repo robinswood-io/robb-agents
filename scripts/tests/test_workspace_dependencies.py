@@ -51,6 +51,33 @@ class DependencyBoundaryTests(unittest.TestCase):
         path = self.root / name
         path.parent.mkdir(parents=True, exist_ok=True)
         _ = path.write_text(json.dumps(value))
+    def test_versioned_override_keeps_selector_and_resolves_installed_package(self) -> None:
+        self.write("package.json", {"overrides": {
+            "glob@>=9.0.0 <14.0.2": "14.0.3", "@scope/pkg@^2": "3.0.0",
+        }})
+        self.write("node_modules/glob/package.json", {"version": "14.0.3"})
+        self.write("node_modules/@scope/pkg/package.json", {"version": "3.0.0"})
+        rows = audit.dependencies(["package.json"])
+        self.assertEqual([(row["package"], row["registry_name"], row["installed"]) for row in rows], [
+            ("glob@>=9.0.0 <14.0.2", "glob", "14.0.3"), ("@scope/pkg@^2", "@scope/pkg", "3.0.0"),
+        ])
+        for invalid in ("", "glob@", "../glob", "@scope", "glob@1@2"):
+            with self.subTest(selector=invalid), self.assertRaises(ValueError):
+                _ = audit.override_package_name(invalid)
+
+    def test_dependency_rows_preserve_manifest_paths(self) -> None:
+        self.write("package.json", {"devDependencies": {"typescript": "~6.0.3"},
+                                    "overrides": {"glob@>=9.0.0 <14.0.2": "14.0.3"}})
+        self.write("packages/worker/package.json", {"dependencies": {
+            "@whiskeysockets/baileys": "7.0.0-rc14",
+        }})
+        rows = audit.dependencies(["package.json", "packages/worker/package.json"])
+        self.assertEqual([(row["manifest"], row["package"]) for row in rows], [
+            ("package.json", "typescript"),
+            ("package.json", "glob@>=9.0.0 <14.0.2"),
+            ("packages/worker/package.json", "@whiskeysockets/baileys"),
+        ])
+
     def authorization(self) -> dict[str, object]:
         return {"release": "0.12.11", "approved_by": "Thibault",
                 "authorization_reference": "Synthetic test fixture; grants no real authorization",

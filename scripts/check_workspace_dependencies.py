@@ -106,6 +106,14 @@ def inventory() -> list[str]:
     ).split("\0")) - {""})
 
 
+def override_package_name(selector: str) -> str:
+    """Resolve a Bun version-qualified override without querying a selector as a name."""
+    match = re.fullmatch(r"(@[^/\s]+/[^@/\s]+|[^@/\s]+)(?:@([^@]+))?", selector)
+    if match is None:
+        raise ValueError("Invalid dependency override selector: " + selector)
+    return match.group(1)
+
+
 def installed_version(manifest: Path, package: str) -> str | None:
     parent = manifest.parent
     while parent.is_relative_to(ROOT):
@@ -132,11 +140,12 @@ def dependencies(names: list[str]) -> list[Dependency]:
                     raise TypeError("Invalid dependency spec: " + package)
                 if spec.startswith("workspace:"):
                     continue
+                package_name = override_package_name(package) if group == "overrides" else package
                 alias = re.fullmatch(r"npm:(@[^/]+/[^@]+|[^@]+)(?:@(.+))?", spec)
                 result.append({
                     "manifest": name, "group": group, "package": package, "spec": spec,
-                    "registry_name": alias.group(1) if alias else package,
-                    "installed": installed_version(path, package),
+                    "registry_name": alias.group(1) if alias else package_name,
+                    "installed": installed_version(path, package_name),
                 })
     return result
 
