@@ -458,3 +458,12 @@ The first CI admission for 2c5592b rejected the stale generated-file digest of
 bun.lock before executing checks. Its existing provenance now records the exact
 Bun 1.4.4 output and generating manifest; no generated-file exception is broadened.
 The complete lightweight gate admission is checked before the next canonical run.
+
+CI 41162553148 completed all seven canonical checks: only the tests command
+failed, because electron-builder.yml still selected Electron 45.2.0 while the
+installed and declared runtime is 45.2.1. The production packaging pin now matches
+that qualified runtime. The existing equality assertion is unchanged; its eight
+release-policy tests pass. This affects packaging/runtime consistency (rules 27/50),
+not entitlements, sandbox permissions, public/private boundaries or app behavior.
+The prior reviews of unaffected rules and language commands remain applicable.
+A fresh exact canonical run/verify and signed artifacts remain required.
