@@ -477,3 +477,18 @@ The complete test command passes under the real runner checkout variables and an
 isolated profile in 493.5 seconds; scripts/tests includes 210 tests, three native
 platform skips. Rule 27/50 evidence is refreshed; unaffected reviews remain valid.
 A fresh canonical run/verify on the committed candidate remains mandatory.
+## Measured complete-suite deadline (31 October 2026)
+CI 41167535039 passes all six non-test checks on 662d65e, but its full test
+command reaches the controller's default 600-second deadline. A complete,
+unchanged rerun under the runner checkout variables passes in 733.214 seconds;
+the preceding complete pass took 493.5 seconds. The main server-core group grows
+from 201.90 to 378.24 seconds; its 1,000-checkpoint recovery test passes in
+229.99 seconds versus 113.53 previously. The 1,000-failover test also passes.
+Set only command_timeouts.tests to 900 seconds using the controller's existing
+bounded field: this leaves 166.786 seconds above the observed full-suite duration.
+Keep every test, assertion, process-isolation boundary and 4 GiB Node heap.
+No production timeout, workflow deadline, permission or functional control changes.
+Evidence: private CI 41167535039 diagnostics and profile-full-tests.json/log under
+robb-ci-gate-fixes-20261031/ci-41167535039 on DEV. Rules 27/50 and this execution
+budget are re-reviewed; all unaffected rule and language reviews remain applicable.
+The new exact commit still requires canonical run/verify and native/local QA.
