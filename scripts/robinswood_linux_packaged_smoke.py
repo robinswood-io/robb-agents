@@ -146,13 +146,17 @@ def launch_smoke(root: pathlib.Path, timeout_seconds: int) -> None:
                 + f"within {timeout_seconds} seconds{output}"
             )
         finally:
-            if process.poll() is None:
-                os.killpg(process.pid, 15)
-                try:
-                    _ = process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    os.killpg(process.pid, 9)
-                    _ = process.wait(timeout=5)
+            try:
+                if process.poll() is None:
+                    os.killpg(process.pid, 15)
+                    try:
+                        _ = process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        os.killpg(process.pid, 9)
+                        _ = process.wait(timeout=5)
+            finally:
+                if process.stdout is not None:
+                    process.stdout.close()
 
 
 class LinuxArguments(argparse.Namespace):

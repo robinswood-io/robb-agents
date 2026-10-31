@@ -467,3 +467,15 @@ Linux bundle, which remains unqualified because its size audit failed. Rebuild
 and real smoke must prove the new archive before delivery. This packaging-only
 change affects release/storage rules; preserve other reviewed decisions, commands,
 exceptions and budgets. Renew the scope and require fresh RUN/VERIFY on this commit.
+
+## Close the Linux launch smoke output stream
+Raw build-log review found an ignored ResourceWarning although the producer exited
+zero: the launch smoke waited for its child but left subprocess.stdout open.
+Close that stream in a nested finally after termination and wait, including when
+cleanup raises. Keep child-group cleanup, renderer checks and failure propagation.
+The real AppImage launch with Python 3.15.2 and PYTHONWARNINGS=error now exits zero
+without ResourceWarning; strict basedpyright and Ruff also pass with no diagnostics.
+This changes only test resource lifetime, with no application, dependency, budget,
+permission, workflow or control-command change. Vite chunk-size notices remain
+visible; no warning threshold is raised. Preserve prior rule decisions and renew
+the source binding. Rebuild and full RUN/VERIFY must qualify the exact new commit.
