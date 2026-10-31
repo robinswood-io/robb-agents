@@ -13,12 +13,13 @@
     },
     {
       "file": "bun.lock",
-      "sha256": "c08bd8fa03ec24bbccecc9d762f5999159ba6da67ef018ec02ab9553d7b37db5",
-      "historical_origin_reference": "package.json#packageManager=bun@1.4.4; sha256=6e8cba07d5626ee99a60008462ebcb27f799f5c8f355efcb4c079ac9c4b212f6",
+      "sha256": "195af9edbb008897cdc5cc1a7811a09447a947d97192c9540258e758d16dc0c6",
+      "historical_origin_reference": "package.json#packageManager=bun@1.4.4; sha256=6c6e4c0f71986cb664a0e9243f74565548030972c3e06be7d1f4dda4164c47e0",
       "generator_command": [
         "bun",
-        "install",
-        "--ignore-scripts"
+        "add",
+        "--dev",
+        "openai@^7.47.0"
       ]
     },
     {

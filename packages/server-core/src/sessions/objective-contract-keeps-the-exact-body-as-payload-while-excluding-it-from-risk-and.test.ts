@@ -1,3 +1,4 @@
+import { objectiveAmendmentAuthorityText } from './objective-contract/amendment-authority.ts';
 import { describe, expect, it } from "bun:test";
 import type { Message } from "@craft-agent/core/types";
 import { buildObjectiveContractPrompt, objectiveEvidenceContractSegments, objectiveRequiresExecutionEvidence, transitionObjectiveContract } from "./objective-contract.ts";
@@ -30,6 +31,14 @@ ${body}
 BODY_END
 Vérifie ensuite le message dans SENT.`;
 
+  it.each([
+    ['CRLF envelope', exactRequest.replaceAll('\n', '\r\n')],
+    ['empty body', exactRequest.replace(body, '')],
+  ])('keeps the existing authenticated-envelope rejection for %s', (_label, text) => {
+    // The execution gate requires LF body boundaries and a nonempty body.
+    // Policy must not hide payloads which that gate cannot authenticate.
+    expect(objectiveAmendmentAuthorityText(text)).toBe(text);
+  });
   it('keeps the exact body as payload while excluding it from risk and evidence classification', () => {
     const root: Message = { id: 'gmail-structured', role: 'user', timestamp: 1, content: exactRequest };
     const objective = transitionObjectiveContract({ messageId: root.id, text: root.content, nowMs: root.timestamp });

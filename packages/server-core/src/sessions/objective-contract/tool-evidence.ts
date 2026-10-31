@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import type { Message } from "@craft-agent/core/types";
 import { classifyToolNameMutationSemantics, isProvablyReadOnlyShellCommand, normalizeToolLeafName } from "@craft-agent/shared/agent";
 import { GENERIC_EXECUTE_TOOL_PATTERN, MAX_CANONICAL_INPUT_CHARS, MAX_RESULT_DIGEST_CHARS, MAX_TRANSFORM_DIGEST_CHARS, MUTATION_SQL_PATTERN, MUTATION_TRANSFORM_KEY_PATTERN, NON_EXECUTED_CHECKPOINT_PATTERN, NON_SUBSTANTIVE_TOOL_RESULT_PATTERN, OBJECTIVE_NON_EXECUTING_PREFLIGHT_TOOLS, OBSERVATION_TARGET_KEY_PATTERN, PASSIVE_NO_PROGRESS_ACTION_PATTERN, PASSIVE_NO_PROGRESS_TOOL_PATTERN, PLAN_TRACKING_TOOL_PATTERN, POSITIVE_HTTP_POST_TARGET_TOKENS, POSITIVE_MUTATION_HTTP_METHOD_PATTERN, SESSION_COORDINATION_TOOL_PATTERN } from './intent-vocabulary.ts';
-import { MUTATION_BASH_PATTERN } from './mutation-vocabulary.ts';
+import { hasShellMutationCommand } from './mutation-vocabulary.ts';
 
 function stableValue(value: unknown, depth = 0): unknown {
   if (depth >= 5) return '[depth-limit]';
@@ -147,5 +147,5 @@ export function isObjectiveMutationTool(message: Message): boolean {
   // The AST-backed read-only classifier also recognizes non-editing forms of
   // commands such as `sed -n`; the mutation regex alone flags their name.
   if (command && isProvablyReadOnlyShellCommand(command)) return false;
-  return MUTATION_BASH_PATTERN.test(command) || hasShellOutputRedirection(command);
+  return hasShellMutationCommand(command) || hasShellOutputRedirection(command);
 }

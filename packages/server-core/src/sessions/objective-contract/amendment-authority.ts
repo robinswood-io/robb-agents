@@ -6,7 +6,13 @@ export function objectiveAmendmentAuthorityText(text: string): string {
   // Amendments from an active SDK turn may include the host contract appended
   // after the user's text. Its defensive examples mention security, legal and
   // medical policy but are not part of the accepted human objective.
-  const hostContractIndex = text.search(/\n\s*<host_objective_contract\b/iu);
+  let hostContractIndex = -1;
+  for (const match of text.matchAll(/<host_objective_contract\b/giu)) {
+    for (let index = match.index - 1; index >= 0 && /\s/u.test(text.charAt(index)); index--) {
+      if (text[index] === '\n') hostContractIndex = index;
+    }
+    if (hostContractIndex >= 0) break;
+  }
   const withoutHostContract = hostContractIndex >= 0 ? text.slice(0, hostContractIndex) : text;
   // A closed email body is quoted payload data. Questions, credential names or
   // action verbs inside it must not change objective risk, mutation authority or
@@ -14,15 +20,18 @@ export function objectiveAmendmentAuthorityText(text: string): string {
   // accepted by the execution gate may receive that treatment; bare or malformed
   // BODY markers remain visible to policy classification (fail closed).
   if (!parseStructuredGmailSendResumeSegment(withoutHostContract)) return withoutHostContract;
-  const beginCount = withoutHostContract.match(/(?:^|\r?\n)BODY_BEGIN(?=\r?\n|$)/gu)?.length ?? 0;
-  const endCount = withoutHostContract.match(/(?:^|\r?\n)BODY_END(?=\r?\n|$)/gu)?.length ?? 0;
-  if (beginCount !== 1 || endCount !== 1) return withoutHostContract;
-  const block = /(^|\r?\n)BODY_BEGIN\r?\n[\s\S]*?\r?\nBODY_END(?=\r?\n|$)/u;
-  if (!block.test(withoutHostContract)) return withoutHostContract;
-  return withoutHostContract.replace(
-    block,
-    '$1BODY_BEGIN\n[exact payload body omitted from objective policy classification]\nBODY_END',
-  );
+  const beginnings = [...withoutHostContract.matchAll(/(?:^|\r?\n)BODY_BEGIN(?=\r?\n|$)/gu)];
+  const endings = [...withoutHostContract.matchAll(/(?:^|\r?\n)BODY_END(?=\r?\n|$)/gu)];
+  const begin = beginnings[0];
+  const end = endings[0];
+  if (beginnings.length !== 1 || endings.length !== 1 || !begin || !end) return withoutHostContract;
+  const markerStart = begin.index + begin[0].length - 'BODY_BEGIN'.length;
+  const afterMarker = begin.index + begin[0].length;
+  const bodyStart = afterMarker + (withoutHostContract[afterMarker] === '\r' ? 2 : 1);
+  if (bodyStart > end.index) return withoutHostContract;
+  return withoutHostContract.slice(0, markerStart)
+    + 'BODY_BEGIN\n[exact payload body omitted from objective policy classification]\nBODY_END'
+    + withoutHostContract.slice(end.index + end[0].length);
 }
 
 /**

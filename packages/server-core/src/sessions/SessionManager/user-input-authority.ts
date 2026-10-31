@@ -250,7 +250,10 @@ export function authenticatedUserInputAnswerAuthoritySegments(
     if (answer.text?.trim()) selectedText.push(answer.text.trim())
     if (selectedText.length === 0) continue
     if (answerAffirmativelyConfirmsDisplayedScope(question, answer)) {
-      const displayedScope = question.question.trim().replace(/[?？]+\s*$/u, '').trimEnd()
+      const scope = question.question.trim()
+      let scopeEnd = scope.length
+      while (scopeEnd > 0 && (scope[scopeEnd - 1] === '?' || scope[scopeEnd - 1] === '？')) scopeEnd--
+      const displayedScope = scope.slice(0, scopeEnd).trimEnd()
       segments.push([
         AUTHENTICATED_USER_AUTHORIZATION_MARKER,
         `Authenticated question id: ${question.id}`,

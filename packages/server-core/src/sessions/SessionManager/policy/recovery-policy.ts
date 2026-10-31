@@ -226,7 +226,7 @@ export function cleanRetrySetupFailureSignal(error: unknown): Parameters<typeof 
         ? Number(rawStatus.trim())
         : undefined
     if (httpStatus === undefined) {
-      const match = messages.join(' ').match(/\bstatus(?:\s+code)?\s*[:=]?\s*([45]\d\d)\b/i)
+      const match = messages.join(' ').match(/\bstatus(?:\s+code)?\s*(?:[:=]\s*)?([45]\d\d)\b/i)
       if (match?.[1]) httpStatus = Number(match[1])
     }
     const rawCode = records.map(record => record["code"]).find(code => (

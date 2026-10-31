@@ -38,6 +38,7 @@ function isIndividualCodeAssistUnavailable(reasons: string[]): boolean {
 }
 
 export async function ensureCodeAssistUser(accessToken: string, signal?: AbortSignal): Promise<CodeAssistUserData> {
+  // Short-lived cache identity for a bearer token, never a password verifier.
   const cacheKey = createHash('sha256').update(accessToken).digest('hex');
   const cached = userDataCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) return cached;

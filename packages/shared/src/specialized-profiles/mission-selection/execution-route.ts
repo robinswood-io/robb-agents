@@ -13,6 +13,7 @@ export function specializedProfileExecutionRouteIdentity(
       `Specialized Mission profile "${profile.id}" has no fully pinned execution route`,
     );
   }
+  // Detect route drift; this digest neither verifies passwords nor anonymizes account IDs.
   return createHash('sha256').update(routeStableJson({
     llmConnection: profile.llmConnection,
     model: profile.model,

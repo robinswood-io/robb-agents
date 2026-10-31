@@ -199,6 +199,16 @@ describe('extractSdkReportedBinaryPath', () => {
     expect(extractSdkReportedBinaryPath(msg)).toBe('/opt/0.9.1/claude');
   });
 
+  it('preserves leading delimiter whitespace and spaces within the reported path', () => {
+    const msg = 'Claude Code native binary not found at \t /Applications/Craft Agents.app/claude  ';
+    expect(extractSdkReportedBinaryPath(msg)).toBe('/Applications/Craft Agents.app/claude  ');
+  });
+
+  it('accepts whitespace before a path on the next line and strips its final period', () => {
+    const msg = 'Claude Code executable not found at \n  /opt/Claude Agent/claude.  \n';
+    expect(extractSdkReportedBinaryPath(msg)).toBe('/opt/Claude Agent/claude');
+  });
+
   it('returns undefined when the message does not match', () => {
     expect(extractSdkReportedBinaryPath('some unrelated error')).toBeUndefined();
     expect(extractSdkReportedBinaryPath('')).toBeUndefined();

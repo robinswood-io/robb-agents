@@ -57,6 +57,37 @@ describe('Robinswood visible branding', () => {
     expect(builder).not.toContain('productName: Craft Agents')
   })
 
+  it('keeps platform runtimes external and platform-independent wrappers packaged', () => {
+    const builder = readRepoFile('apps/electron/electron-builder.yml')
+    const files = builder.split('\nextraResources:')[0] ?? ''
+    for (const platform of ['darwin', 'linux', 'win32']) {
+      expect(files).toContain('!dist/resources/bin/' + platform + '-*/**')
+    }
+    for (const wrapper of ['markitdown', 'pdf-tool', 'xlsx-tool', 'doc-diff', 'img-tool', 'docx-tool', 'pptx-tool', 'ical-tool']) {
+      expect(files).toContain('- resources/bin/' + wrapper + '\n')
+      expect(files).toContain('- resources/bin/' + wrapper + '.cmd')
+    }
+
+    const externalResources = builder.split('\nextraResources:\n')[1] ?? ''
+    const genericResources = externalResources.split('\nmac:\n')[0] ?? ''
+    expect(genericResources).toContain('!bin/darwin-*/**')
+    expect(genericResources).toContain('!bin/linux-*/**')
+    expect(genericResources).toContain('!bin/win32-*/**')
+
+    const macResources = builder.split('\nmac:\n')[1]?.split('\ndmg:\n')[0] ?? ''
+    expect(macResources).toContain('from: resources/bin/${platform}-${arch}')
+    expect(macResources).toContain('to: app/resources/bin/${platform}-${arch}')
+    const windowsResources = builder.split('\nwin:\n')[1]?.split('\nnsis:\n')[0] ?? ''
+    expect(windowsResources).toContain('from: resources/bin/win32-x64')
+    expect(windowsResources).toContain('to: app/resources/bin/win32-x64')
+    const linuxResources = builder.split('\nlinux:\n')[1] ?? ''
+    expect(linuxResources).toContain('from: resources/bin/${platform}-${arch}')
+    expect(linuxResources).toContain('to: app/resources/bin/${platform}-${arch}')
+    const main = readRepoFile('apps/electron/src/main/index.ts')
+    expect(main).toContain("? join(process.resourcesPath, 'app')")
+    expect(main).toContain("join(resourcesBase, 'resources', 'bin', platformKey)")
+  })
+
   it('packages development with a disjoint name and bundle identifier', () => {
     const builder = readRepoFile('apps/electron/electron-builder.dev.yml')
     expect(builder).toContain('appId: io.robinswood.robbagents.dev')

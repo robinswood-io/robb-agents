@@ -9,13 +9,26 @@ function identityAnagram(value: string): string | undefined {
 
 /** Terms that are structurally identity-like, rather than ordinary subject
  * vocabulary: an email/domain label or an all-caps/camel-case brand. */
-function gmailExplicitIdentityTerms(value: string): Set<string> {
+export function gmailExplicitIdentityTerms(value: string): Set<string> {
   const result = new Set<string>();
   const addTerms = (candidate: string) => {
     for (const term of gmailIdentityTerms(candidate)) result.add(term);
   };
-  for (const match of value.matchAll(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|(?:[A-Z0-9-]+\.)+[A-Z]{2,}/gi)) {
-    addTerms(match[0]);
+  // Tokenize once. Only complete email/domain tokens establish identity;
+  // malformed addresses must not lend authority through a partial match.
+  for (const match of value.matchAll(/[A-Z0-9._%+@-]+/gi)) {
+    let end = match[0].length;
+    if (end > 0 && match[0][end - 1] === '.') end--;
+    const token = match[0].slice(0, end);
+    const at = token.indexOf('@');
+    if (at !== token.lastIndexOf('@')) continue;
+    if (at >= 0 && !/^[A-Z0-9._%+-]+$/i.test(token.slice(0, at))) continue;
+    const labels = token.slice(at + 1).split('.');
+    const tld = labels.pop();
+    if (labels.length === 0 || !tld || !/^[A-Z]{2,}$/i.test(tld)) continue;
+    if (!labels.every(label => /^[A-Z0-9-]+$/i.test(label)
+      && !label.startsWith('-') && !label.endsWith('-'))) continue;
+    addTerms(token);
   }
   for (const match of value.matchAll(/\b(?:[A-ZÀ-ÖØ-Þ]{4,}|[A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ0-9]+[A-ZÀ-ÖØ-Þ][A-Za-zÀ-ÖØ-öø-ÿ0-9]*)\b/g)) {
     addTerms(match[0]);
