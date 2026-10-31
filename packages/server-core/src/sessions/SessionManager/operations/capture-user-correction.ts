@@ -3,6 +3,7 @@ import type { ProjectLearningRequest } from '../../project-learning.ts';
 import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { SessionOperationContext } from '../operation-context.ts';
 import { persistenceRootFor, isLegacyHostObjectiveContractEnabled } from '../policy.ts';
+import { requiresStructuredObjectiveOutcome } from '../../objective-completion-policy.ts';
 import { getBuiltinPlaybook, loadWorkspacePlaybook } from '@craft-agent/shared/playbooks';
 import type { FileAttachment, SendMessageOptions } from '@craft-agent/shared/protocol';
 import type { Message, StoredAttachment } from '@craft-agent/core/types';
@@ -148,7 +149,7 @@ async function sessionOpCaptureUserCorrection(sessionOperationContext: SessionOp
 
 function sessionOpHasExplicitStructuredObjectiveTracking(_sessionOperationContext: SessionOperationContext, managed: ManagedSession): boolean {
     return isLegacyHostObjectiveContractEnabled(managed)
-        || !!managed.activeObjective?.acceptanceCriteria?.length;
+        || (!!managed.activeObjective && requiresStructuredObjectiveOutcome(managed.activeObjective));
 }
 
 async function sessionOpSendMessage(sessionOperationContext: SessionOperationContext, sessionId: string, message: string, attachments?: FileAttachment[], storedAttachments?: StoredAttachment[], options?: SendMessageOptions, existingMessageId?: string, _isAuthRetry?: boolean, onAck?: (messageId: string) => void, rpcContext?: {

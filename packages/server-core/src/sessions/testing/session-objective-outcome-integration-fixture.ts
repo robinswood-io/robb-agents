@@ -28,6 +28,7 @@ export interface Harness {
   manager: SessionManager
   managed: Managed
   sentEvents: Array<Record<string, unknown>>
+  providerMessages: string[]
   telemetryNames: string[]
   resumedSessionIds: string[]
   completions: CompletionEvent[]
@@ -56,6 +57,7 @@ export function makeHarness(id: string): Harness {
   } as never, { messagesLoaded: true })
   const manager = withSessionOperationsForTest(new SessionManager())
   const sentEvents: Array<Record<string, unknown>> = []
+  const providerMessages: string[] = []
   const telemetryNames: string[] = []
   const resumedSessionIds: string[] = []
   const completions: CompletionEvent[] = []
@@ -77,14 +79,15 @@ export function makeHarness(id: string): Harness {
     managed.agent = null
   }
   manager.onSessionComplete(event => completions.push(event as CompletionEvent))
-  return { manager, managed, sentEvents, telemetryNames, resumedSessionIds, completions }
+  return { manager, managed, sentEvents, providerMessages, telemetryNames, resumedSessionIds, completions }
 }
 
 
 export function installAgent(harness: Harness, events: AgentEvent[], beforeChat?: () => void, reviewed = false): string[] {
   const redirected: string[] = []
   const agent = completeSessionAgentFixture(harness.managed.workspace, {
-    async *chat(): AsyncGenerator<AgentEvent, void, unknown> {
+    async *chat(message: string): AsyncGenerator<AgentEvent, void, unknown> {
+      harness.providerMessages.push(message)
       beforeChat?.()
       for (const event of events) {
         if (reviewed && event.type === 'text_complete' && harness.managed.activeObjective?.acceptanceCriteria?.length) {

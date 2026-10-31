@@ -67,6 +67,7 @@ const RECOVERABLE_TECHNICAL_CHECKPOINT_PATTERNS = [
 
 const HUMAN_HANDOFF_PATTERN = /\b(?:connecte(?:-toi|z-vous)?|authentifie(?:-toi|z-vous)?|clique(?:z)?|valide(?:z)?|saisis(?:sez)?|renseigne(?:r|z)?|r[ée]ponds|dites?-moi|dis-moi|quand\s+(?:tu|vous)|merci\s+de|peux-tu|pouvez-vous|il\s+me\s+manque\s+(?:seulement\s+|ton|ta|votre|un\s+choix|une\s+d[ée]cision|une\s+autorisation|un\s+identifiant|un\s+secret)|j['’]ai\s+besoin\s+(?:de\s+ton|de\s+ta|de\s+votre|d['’]un\s+choix|d['’]une\s+d[ée]cision|d['’]une\s+autorisation|d['’]un\s+identifiant|d['’]un\s+secret)|(?:action|intervention|validation|confirmation|d[ée]cision|autorisation)\s+humaine|j['’]attends\s+(?:ta|votre)\s+(?:r[ée]ponse|validation|confirmation|d[ée]cision|autorisation)|please\s+(?:sign\s+in|log\s+in|click|confirm|enter|reply)|tell\s+me|once\s+you|waiting\s+for\s+you)\b/i;
 const PROVEN_HUMAN_BLOCKER_PATTERN = /\b(?:oauth|mfa|2fa|authentification\s+[àa]\s+deux\s+facteurs|(?:code\s+(?:de\s+)?(?:validation|s[ée]curit[ée])|mot\s+de\s+passe|password|api[-_ ]?key|cl[ée]\s+api|secret|credentials?|identifiant)\s+(?:manquant|requis|n[ée]cessaire|absent|invalide|expir[ée]|missing|required|needed|invalid|expired)|(?:manque|besoin|exige|requiert|requires?|needs?)\s+(?:d['’])?(?:un\s+|une\s+|le\s+|la\s+|des?\s+)?(?:code\s+(?:de\s+)?(?:validation|s[ée]curit[ée])|mot\s+de\s+passe|password|api[-_ ]?key|cl[ée]\s+api|secret|credentials?|identifiant)|connecte(?:-toi|z-vous)?|authentifie(?:-toi|z-vous)?|sign\s+in|log\s+in|d[ée]cision\s+m[ée]tier|business\s+decision|choix\s+m[ée]tier|autorisation\s+(?:externe|humaine|irr[ée]versible)|external\s+authorization)\b/i;
+const DECLARED_OBJECTIVE_BLOCKER_PATTERN = /^\s*(?:[*_#`~>+-]\s*)*(?:(?:mission|objectif|t[âa]che)\s+(?:(?:est|is)\s+)?bloqu[ée]e?|(?:mission|task)\s+(?:is\s+)?blocked)(?=$|[\s\p{P}\p{S}])/iu;
 const POLICY_BLOCKER_PATTERN = /\b(?:(?:politique|policy|r[èe]gle|permission|mode\s+lecture\s+seule|read[- ]only|sandbox)\b.{0,120}\b(?:interdit|bloqu[ée]|refus[ée]|n['’]autorise\s+pas|forbids?|blocked|denied)|(?:interdit|bloqu[ée]|refus[ée]|forbidden|blocked|denied)\b.{0,120}\b(?:politique|policy|permission|sandbox)|(?:l['’]application|l['’]h[ôo]te|le\s+connecteur|le\s+relais)\s+(?:actuel\s+)?(?:bloque|refuse|interdit|impose\s+la\s+lecture\s+seule)|(?:r[ée]ponse|message|mail|courriel|envoi)\s+pr[ée]par[ée]e?,?\s+mais\s+non\s+envoy[ée]e?|(?:le\s+nettoyage|l['’]op[ée]ration|l['’]envoi|la\s+suppression|la\s+modification)\s+reste\s+bloqu[ée]e?)\b/i;
 
 const CONDITIONAL_POLITE_OFFER_PATTERN = /\b(?:si\s+(?:vous|tu)\s+(?:le\s+)?(?:souhait(?:ez|es?)|voulez|veux|avez\s+besoin|as\s+besoin)|au\s+besoin|n['’]h[ée]site(?:z)?\s+pas|le\s+cas\s+[ée]ch[ée]ant|sur\s+demande|je\s+reste\s+(?:[àa]\s+disposition|disponible)|if\s+you\s+(?:want|need|wish)|let\s+me\s+know\s+if|feel\s+free\s+to)\b/i;
@@ -122,15 +123,16 @@ export function classifyObjectiveTerminalState(
     if (options.structuredOutcomeValid !== true) return 'continue';
     if (options.declaredState === 'continue') return 'continue';
     if (options.declaredState === 'complete_verified'
-      && (options.evidenceGap || options.executionEvidenceMissing || options.remainingPlanSteps?.length)) return 'continue';
+      && (options.evidenceGap || options.executionEvidenceMissing || options.remainingPlanSteps?.length
+        || DECLARED_OBJECTIVE_BLOCKER_PATTERN.test(normalized) || looksLikePrematureFinalAssistant(normalized))) return 'continue';
     return options.declaredState;
   }
   if (looksLikePrematureFinalAssistant(normalized)) return 'continue';
-  if (options.structuredOutcomeRequired) return 'continue';
   if (PROVEN_HUMAN_BLOCKER_PATTERN.test(normalized) && HUMAN_HANDOFF_PATTERN.test(normalized)) {
     return 'blocked_human';
   }
-  if (POLICY_BLOCKER_PATTERN.test(normalized)) return 'blocked_policy';
+  if (POLICY_BLOCKER_PATTERN.test(normalized) || DECLARED_OBJECTIVE_BLOCKER_PATTERN.test(normalized)) return 'blocked_policy';
+  if (options.structuredOutcomeRequired) return 'continue';
   if (options.evidenceGap || options.executionEvidenceMissing || options.remainingPlanSteps?.length) return 'continue';
   return 'complete_verified';
 }

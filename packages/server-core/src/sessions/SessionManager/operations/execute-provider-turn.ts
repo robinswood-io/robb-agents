@@ -17,7 +17,8 @@ import { filterAttachmentsForModelInput } from '../../runtime-config';
 import { incompletePlanSteps } from '../../turn-completion';
 import { getProjectLearningPolicy } from '../../project-learning';
 import { createAutomaticRecoveryToolDeadline, resolveAutomaticRecoveryInactivityTimeoutMs, withAutomaticRecoveryInactivityTimeout } from '../../turn-recovery';
-import { buildObjectiveScopePrompt, findObjectiveText } from '../../objective-contract';
+import { buildObjectiveContractPrompt, buildObjectiveScopePrompt, findObjectiveText } from '../../objective-contract';
+import { requiresStructuredObjectiveOutcome } from '../../objective-completion-policy.ts';
 import { sessionLog } from '../runtime-platform.ts';
 import { RECOVERY_BUDGET_UNAVAILABLE_MESSAGE } from '../runtime-policy.ts';
 import { SOURCE_ACTIVATION_PROTOCOL_SUFFIX, sourceActivationObjectiveBinding } from '../source-activation.ts';
@@ -98,9 +99,14 @@ try {
         }
         assertActivePreparation();
         if (managed.activeObjective?.terminalState === 'active') {
+            const initialStructuredContract = !providerTurnInput.cleanRecoveryHandoffPrompt
+                && managed.activeObjective.userMessageId === userMessage.id
+                && requiresStructuredObjectiveOutcome(managed.activeObjective);
             const objectivePrompt = isLegacyHostObjectiveContractEnabled(managed)
                 ? !providerTurnInput.cleanRecoveryHandoffPrompt ? sessionOpBuildObjectiveRuntimePrompt(sessionOperationContext, managed, managed.activeObjective) : ''
-                : buildObjectiveScopePrompt(managed.activeObjective, managed.messages, userMessage.id, incompletePlanSteps(managed.messages, managed.activeObjective.userMessageId));
+                : initialStructuredContract
+                    ? buildObjectiveContractPrompt(managed.activeObjective, managed.messages)
+                    : buildObjectiveScopePrompt(managed.activeObjective, managed.messages, userMessage.id, incompletePlanSteps(managed.messages, managed.activeObjective.userMessageId));
             if (objectivePrompt)
                 effectiveMessage += `\n\n${objectivePrompt}`;
         }

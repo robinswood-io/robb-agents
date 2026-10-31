@@ -216,3 +216,15 @@ and language coverage remain valid after this focused review. Renew the exact
 source scopes and review hash; no quality control or exception is relaxed.
 The failed gate is preserved independently. A new canonical run and verify,
 signed builds, preflight, local missions and official release remain required.
+## Initial objective contract and terminal-state correction
+This delta qualifies candidate6f350db under controller13 aa499d6689353a00689d2eb943e3db6c8e118fda, quality50 v1.5.0 and governance48 v2.5.0.
+Synthetic QA showed a blocked read with no deliverable recorded as complete_verified: explicit acceptance/execution obligations were absent from direct-mode provider instructions. blocked_policy is an existing state for declared external blockers; this evidence does not establish a TCC cause.
+The initial provider path injected only continuation scope; the existing objective-contract builder ran only in legacy/recovery paths. The completion classifier also missed a clear blocker declaration.
+The fix injects the existing contract once on the first provider send when structured obligations apply, preserves the original user message, and classifies an opening blocker as blocked_policy. A contradictory complete_verified receipt remains active when prose still declares a blocker or promises technical recovery.
+It leaves follow-up/recovery scope behavior and simple conversations unchanged; it adds no supervisor, prompt layer, dependency or connector.
+Source scope: execute-provider-turn.ts, capture-user-correction.ts and turn-completion.ts; prompt/runtime tests, objective integration fixture and acceptance transport tests (8 TypeScript files).
+No manifests, lockfiles, dependency versions, credentials, connector settings or external services were changed. Private QA evidence was read for diagnosis and remains outside this checkout and report.
+Provider-message interception verifies one contract envelope, required registration/outcome guidance, unchanged stored user text, no repeat on follow-up and no injection into simple chat.
+DEV proof: initial-objective-prompt-c738/targeted-final.log (61 pass, 0 fail, 5 files); Node26.13 strict typecheck and zero-warning ESLint logs plus controller13-admission.json are adjacent; diff check passes.
+Limit: these synthetic tests qualify prompt/terminal behavior only; they do not validate real Documents access, a provider account or a connector.
+No quality control or exception is relaxed; run/verify on the exact final commit and release qualification remain required.

@@ -372,6 +372,56 @@ describe('SessionManager objective outcome integration', () => {
     expect(harness.sentEvents.some(event => event["type"] === 'typed_error')).toBe(false)
   })
 
+  it('keeps a blocked mission incomplete when a required receipt and registered checks are absent', async () => {
+    const harness = makeHarness('blocked-mission-without-receipt')
+    delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]
+    const finalText = '**Mission bloquée à la lecture du fichier.** Aucun livrable n’a été créé.'
+    installAgent(harness, [
+      { type: 'tool_start', toolName: 'Read', toolUseId: 'blocked-read', input: { file_path: 'synthetic.csv' } },
+      { type: 'tool_result', toolName: 'Read', toolUseId: 'blocked-read', result: 'Read timed out', isError: true, executed: true },
+      { type: 'text_complete', text: finalText },
+      { type: 'complete' },
+    ], () => {
+      const objective = harness.managed.activeObjective!
+      objective.requiresAcceptanceCriteria = true
+      objective.requiresExecutionEvidence = true
+      delete objective.acceptanceCriteria
+    })
+
+    await harness.manager.sendMessage(harness.managed.id, 'Read the synthetic file and produce the requested deliverables.')
+
+    expect(harness.managed.activeObjective?.terminalState).toBe('blocked_policy')
+    expect(harness.managed.activeObjective?.completionCriteria).toEqual([
+      'requested-outcome-delivered', 'relevant-checks-passed', 'no-safe-work-remaining',
+    ])
+    expect(harness.managed.pendingTurnRecovery).toBeUndefined()
+    expect(harness.managed.messageQueue).toEqual([])
+    expect(harness.managed.messages.some(message => message.role === 'tool'
+      && message.toolName === 'Read' && message.isError === true)).toBe(true)
+    expect([...harness.managed.messages].reverse().find(message => message.role === 'assistant')?.content)
+      .toBe(finalText)
+  })
+
+  it('does not verify success when required checks were never registered', async () => {
+    const harness = makeHarness('mission-without-registered-checks')
+    delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"]
+    installAgent(harness, [
+      { type: 'text_complete', text: 'Le correctif est prêt et les tests sont validés.' },
+      { type: 'complete' },
+    ], () => {
+      const objective = harness.managed.activeObjective!
+      objective.requiresAcceptanceCriteria = true
+      objective.requiresExecutionEvidence = true
+      delete objective.acceptanceCriteria
+    })
+
+    await harness.manager.sendMessage(harness.managed.id, 'Implémente le changement puis vérifie-le.')
+
+    expect(harness.managed.activeObjective?.terminalState).not.toBe('complete_verified')
+    expect(harness.managed.pendingTurnRecovery).toMatchObject({ attempts: 1, lastCause: 'objective_incomplete' })
+    expect(harness.managed.messageQueue).toHaveLength(1)
+  })
+
   it('does not recover after a completed read-only preflight reaches its explicit authority boundary', async () => {
     const harness = makeHarness('read-only-authority-boundary')
     const rootText = 'Déploie Zero sur le serveur de staging puis vérifie le service.'

@@ -51,6 +51,7 @@ async function registerThroughPi(criteria: ObjectiveAcceptanceCriterion[], prefi
 describe('typed acceptance criteria across Pi registration and evidence validation', () => {
   it.each(['', 'mcp__session__'])('preserves original scalar types through %s schema, SDK, host, ACK, and stored JSON', async (prefix) => {
     const { args, validated, result, objective } = await registerThroughPi([criterion], prefix);
+    expect(objective.orchestrationMode).toBe('direct');
     expect(args.criteria).toEqual([criterion]);
     expect(validated['criteria']).toEqual([criterion]);
     expect(result.isError).toBeFalsy();
