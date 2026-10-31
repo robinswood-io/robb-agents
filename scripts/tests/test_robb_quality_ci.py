@@ -62,6 +62,16 @@ class ReleaseQualityTests(unittest.TestCase):
                 self.assertEqual(len(labels & {"Linux", "Windows", "macOS"}), 1)
                 self.assertEqual(len(labels & {"X64", "ARM64"}), 1)
 
+    def test_pull_request_installer_uses_an_isolated_internal_runner(self) -> None:
+        workflow = (Path(__file__).resolve().parents[2] / ".github/workflows/robinswood-validate.yml").read_text()
+        installer = workflow.split("\n  windows-installer:", 1)[1].split("\n  optional-upstream-validation:", 1)[0]
+        self.assertIn("runs-on: [self-hosted, Windows, X64, robb-ci-isolated]", installer)
+        self.assertIn("permissions: {contents: read}", installer)
+        self.assertIn("persist-credentials: false", installer)
+        self.assertNotIn("robb-release", installer)
+        self.assertNotIn("secrets.", installer)
+        self.assertIn("robinswood-windows-installer-e2e.ps1", installer)
+
     def test_only_immutable_commits_are_accepted(self) -> None:
         self.assertEqual(CI.require_commit("a" * 40), "a" * 40)
         for value in ("main", "v0.12.11", "a" * 39, "../private"):

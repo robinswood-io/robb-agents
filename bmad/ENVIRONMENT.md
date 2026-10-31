@@ -80,3 +80,13 @@ Les contributions externes ne doivent pas être routées vers DEV partagé : leu
 reste distincte et son isolation doit être établie avant une migration de runners.
 Le contrôleur privé épinglé est celui de la diffusion 15, commit
 f9ab876de31a6beb0dca75b8f850531ccebbba99. Les contrôles applicatifs restent inchangés.
+
+Le packaging Windows de la CI des pull requests exige le label distinct
+robb-ci-isolated (self-hosted, Windows, X64), jamais le runner de release.
+Ce label doit être réservé à une machine jetable par job, sans secrets de release,
+accès au réseau privé, données utilisateur ni checkout partagé. L'isolation et
+la destruction doivent être vérifiées avant enregistrement. Le jeton du job est
+limité à contents:read et checkout ne conserve pas ses identifiants Git.
+L'existence de ce runner Windows isolé reste à établir ; aucun hôte n'est inscrit
+par la modification du workflow. Les autres jobs de tests sans packaging restent
+inchangés ; leur routage n'est pas présenté comme migré.

@@ -429,3 +429,16 @@ On shared DEV this is replaced by a read-only check of preinstalled desktop
 packages, including the actual Ubuntu libgtk-3-0t64 package. All six prerequisites
 are installed on DEV. Missing packages stop that job; no permissions or system
 packages are changed. The Linux AppImage smoke remains mandatory and unchanged.
+
+## Remaining Windows CI packaging boundary
+The full workflow inventory also found an unsigned NSIS build in the pull-request
+Windows installer job. It now requires a separate self-hosted Windows/X64
+robb-ci-isolated runner, with contents:read and checkout credential persistence
+disabled. Native installer/interpreter tests, triggers and timeouts are retained.
+A release runner must never carry that isolation label. Before registration, the
+CI host requires per-job disposal and no release secrets, private-network access,
+user data or shared checkout. No such host has yet been established; a label is
+not an isolation proof. Non-packaging CI remains unchanged. The regression test
+checks the separate runner class, restricted permissions and preserved installer
+journey. The partial d077 qualification was deliberately stopped by this agent
+before editing so the combined candidate receives one complete RUN/VERIFY.
