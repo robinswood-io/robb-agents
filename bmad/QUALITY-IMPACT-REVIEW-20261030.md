@@ -453,3 +453,8 @@ The glob patch omits two blank context lines and their adjacent trailing context
 with corrected hunk lengths. A fresh Bun cache applies it successfully and yields
 JavaScript byte-identical to the tested installation; four compatibility tests
 pass again. This format correction does not alter dependency versions or code.
+
+The first CI admission for 2c5592b rejected the stale generated-file digest of
+bun.lock before executing checks. Its existing provenance now records the exact
+Bun 1.4.4 output and generating manifest; no generated-file exception is broadened.
+The complete lightweight gate admission is checked before the next canonical run.
