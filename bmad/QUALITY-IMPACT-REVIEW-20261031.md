@@ -263,3 +263,31 @@ TypeScript files remain below 500 physical lines. Source scopes and this review'
 hash must be renewed without altering commands, statuses or exceptions.
 This review does not assert RUN/VERIFY, installation, restored Documents access,
 real-model success or publication. Those checks remain required on the new commit.
+
+## DND patch and unused dependency removal
+Canonical CI 41209604849 on 1cd9a38 passed typecheck, lint, tests, environment,
+shell policy and TypeScript policy. Its dependency check alone rejected newly
+published @dnd-kit/dom and @dnd-kit/helpers 0.5.3; VERIFY and builds did not run.
+This delta updates DOM to compatible patch 0.5.3 and removes unused helpers.
+A tracked-source search across apps, packages, scripts and examples found no
+helpers imports. Bun 1.4.4 install --ignore-scripts regenerated bun.lock,
+updating only DOM's abstract/collision/geometry/state family and removing helpers.
+The generated provenance now binds the actual manifest and lockfile hashes.
+No application code, connector, private module, data, permission or runtime changes.
+DEV evidence: robb-ci-gate-fixes-20261031/dnd-kit-patch. Final install, registry
+check (285 dependencies, zero issues), strict Electron typing and renderer build
+all exit zero. Vite reports existing large chunks; this is a build-size advisory,
+not a clean-warning build claim. No size threshold or check is relaxed.
+A private 108-line smoke bundles the installed real DOM/Sortable APIs, runs real
+Electron under Xvfb with its sandbox enabled and an isolated temporary profile,
+and drives two mouse drags through Playwright. Each drag completes exactly once,
+uncanceled with the expected source ID; item removal, manager destruction and
+remount clean up once, with no stale listeners or page/console errors.
+This fixture qualifies the dependency lifecycle, not the complete Robb planner
+or model-driven missions. The prior full test proof remains valid only for 1cd9a38;
+a new complete canonical RUN/VERIFY and application qualification are required.
+Review impact: dependency/generated-file rules and existing frontend lifecycle;
+prior rule and language applicability remains valid after this bounded delta.
+Renew the 138 source scopes and 60 review hashes without changing controls,
+statuses or exceptions. Installation, Documents access, missions and publication
+are not established by this review.

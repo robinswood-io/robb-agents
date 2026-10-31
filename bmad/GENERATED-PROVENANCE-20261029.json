@@ -13,8 +13,8 @@
     },
     {
       "file": "bun.lock",
-      "sha256": "1ee87171ca3d6bba0184e97c052b797ab07d07a0d628d22cf7c75092cb9bbfd8",
-      "historical_origin_reference": "package.json#packageManager=bun@1.4.4; sha256=3db8fd28a1a3c13050ac6dfacc9d2ea873f4a87e9913e32b8751aa92c7c24f1e",
+      "sha256": "d81894ae18dcb8c88528f4aeeea4581eb174146595ce6ec85812161d5d9d3403",
+      "historical_origin_reference": "package.json#packageManager=bun@1.4.4; sha256=043ed8d30284188cfa94502e5af8e186a0ce5ab89713fa6048f9ebcc8f364ed6",
       "generator_command": [
         "bun",
         "install",
