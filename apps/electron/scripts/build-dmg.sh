@@ -178,10 +178,29 @@ mkdir -p "$ALIAS_DEST"
 cp -R "$SDK_BIN_SOURCE/." "$ALIAS_DEST/"
 chmod +x "$ALIAS_DEST/claude"
 
+# 5. Copy target-architecture ripgrep, fetching its optional package when needed.
 RG_SOURCE="$ROOT_DIR/node_modules/@vscode/ripgrep"
-RG_BINARY="$ROOT_DIR/node_modules/@vscode/ripgrep-darwin-$ARCH/bin/rg"
+RG_PLATFORM="darwin"
+RG_PACKAGE="@vscode/ripgrep-$RG_PLATFORM-$ARCH"
+RG_BINARY="$ROOT_DIR/node_modules/$RG_PACKAGE/bin/rg"
 require_path "$RG_SOURCE" "ripgrep package"
+if [[ ! -x "$RG_BINARY" ]]; then
+  echo "Cross-arch build: $RG_PACKAGE not in node_modules - fetching from npm..."
+  RG_VERSION="$(node -p 'require(process.argv[1]).version' "$RG_SOURCE/package.json")"
+  RG_TMP="$TEMP_DIR/ripgrep-$RG_PLATFORM-$ARCH"
+  mkdir -p "$RG_TMP"
+  (
+    cd "$RG_TMP"
+    npm pack "$RG_PACKAGE@$RG_VERSION" >/dev/null
+    tar -xzf vscode-ripgrep-$RG_PLATFORM-"$ARCH"-*.tgz
+  )
+  RG_BINARY="$RG_TMP/package/bin/rg"
+fi
 require_path "$RG_BINARY" "ripgrep binary"
+if [[ ! -x "$RG_BINARY" ]]; then
+  echo "ERROR: ripgrep binary is not executable: $RG_BINARY" >&2
+  exit 1
+fi
 mkdir -p "$ELECTRON_DIR/node_modules/@vscode"
 cp -R "$RG_SOURCE" "$ELECTRON_DIR/node_modules/@vscode/"
 mkdir -p "$ELECTRON_DIR/node_modules/@vscode/ripgrep/bin"

@@ -158,7 +158,7 @@ jobs:
           bun test packages/session-tools-core/src/runtime/application-protection.test.ts packages/shared/src/agent/__tests__/claude-process.test.ts packages/shared/src/agent/core/__tests__/tool-effect-permissions.test.ts packages/shared/src/agent/core/__tests__/tool-effect-permissions-admits-the-bounded-pns-reads-from-the-current-structured-instruct.test.ts packages/shared/tests/mode-manager-bash-plan-paths.test.ts packages/shared/tests/mode-manager-powershell.test.ts
 
       - name: Validate installer contracts
-        run: python3 -m unittest scripts.tests.test_installers
+        run: python3 -m unittest scripts.tests.test_installers scripts.tests.test_ripgrep_packaging
 
       - name: Parse Unix installer
         if: runner.os != 'Windows'

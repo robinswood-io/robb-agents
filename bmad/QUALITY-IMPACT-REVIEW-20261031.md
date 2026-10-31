@@ -155,3 +155,44 @@ The fresh registry audit finds prosemirror-view1.42.9 published on2026-10-31 at
 override from1.42.8 and the resolved Bun lock/tree. Preserve the existing editor
 API and all compatibility checks; the canonical typecheck, tests and native UI
 missions cover the installed candidate. No further version exception is added.
+
+## Cross-architecture ripgrep packaging
+Baseline c738daea1dd01cf540f3485a05ab86e8e889871d passes canonical run and verify
+(job 124502019604, controller diffusion 13). Its ARM macOS package is signed and
+notarized successfully; the Intel job fails because the ARM runner lacks the
+optional darwin-x64 ripgrep binary. Preserve the host build dependencies and use
+the existing npm-pack approach only when the executable for the target is absent.
+The target package version comes from the installed, locked wrapper (1.18.0);
+there is no latest-version fallback, new runtime layer, or permission change.
+The same supported cross-build case applies to Linux arm64 on an x64 host.
+A dedicated 108-line test executes the actual staging blocks for Darwin x64 and
+Linux arm64 with controlled external commands. Existing installer CI steps now
+include this module. The new POSIX-only case is not applicable on Windows, whose
+existing native installer tests remain intact. No existing check is disabled.
+DEV evidence: /home/ubuntu/robb-ci-gate-fixes-20261031/ripgrep-cross-arch/.
+qualified-checks.json and its raw logs: 11 installer tests (one existing Windows
+PowerShell case skipped on Linux), strict Python zero errors/warnings/notes, Ruff
+and formatting clean, four static-format files clean, 24 CI contract tests pass.
+validation-evidence.json records the earlier shell checks and the real npm pack
+under Node26.13.0/npm11.20.0: exact Darwin x64 package, mode755, Mach-O x86_64.
+Those earlier results are consolidated observations, not claimed raw transcripts.
+Packaging scope review: two packaging scripts, one dedicated test and two CI workflows;
+no application runtime, dependency lock, credentials, accounting data or private
+operation module changes. Prior rule-by-rule applicability and language-command
+coverage remain valid; renew their exact source scope and this review's hash.
+The new commit still requires canonical run/verify, signed builds, local preflight,
+restorable backup, real synthetic missions and the authorized public release.
+
+## WebSocket patch published during qualification
+The npm registry published ws8.22.1 at2026-10-31T09:58:47.842Z, after the previous
+candidate's dependency audit. Update the three direct workspace references from
+8.22.0 to8.22.1. Bun1.4.4 install --ignore-scripts regenerates only those three
+lock specs and the exact ws resolution. No other dependency entry changes.
+The existing WebSocket lifecycle and Electron transport suites pass17tests with
+30assertions, using localhost only. The fresh registry audit covers286dependencies
+with zero issues; all three installed workspace resolutions are8.22.1.
+Evidence and raw logs: ripgrep-cross-arch/ws-update/validation-summary.json and
+its sibling files under the DEV evidence directory named above.
+The lock provenance hash is updated from the real generated output. This patch
+does not change provider credentials, accounting data or the private operations
+module. Global run/verify and signed-build qualification remain mandatory.
