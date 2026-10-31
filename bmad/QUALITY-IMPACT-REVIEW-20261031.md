@@ -335,14 +335,22 @@ restoring 3.15. Final targeted results: three tests OK, strict basedpyright zero
 errors/warnings, Ruff zero diagnostics, diff-check zero. Ten existing complete
 document conversion tests also pass on DEV under Python 3.15.2 with warnings
 as errors (14.195 s), covering successful and invalid synthetic documents.
-The existing Windows installer CI job, already provisioned with Python 3.15.2,
-now invokes that same real-interpreter test after building the Windows resources.
-This is a call to the existing test, not a new validation framework. Its actual
-Windows execution is still pending; Linux results do not certify the .cmd runtime.
+The Windows installer CI job 124604854490 on run 41224212319 used Python 3.15.2
+and built the unsigned NSIS installer successfully. Its real
+`Verify the Windows document interpreter` step then failed (one test, exit 1):
+`_python-tool.cmd` requires `CRAFT_TOOL_SCRIPT`, but the test supplied the POSIX
+positional script argument, so the wrapper returned 127 with “Missing bundled
+Python tool script name.” The isolated correction changes only invocation:
+Windows gets `CRAFT_TOOL_SCRIPT`; Unix keeps the positional argument. It removes
+no assertions and retains the real interpreter/version and incompatibility
+warning checks. The corrected test passes on DEV Linux (3 tests), strict
+basedpyright (0 errors/warnings), and Ruff. The original Windows run remains
+failed, and install/uninstall was skipped; a Windows rerun on the corrected SHA
+is still required. No second quality gate has been started.
 The workflow is 269 lines and the project's YAML validator reports no diagnostics.
 PyYAML is unavailable in this Python runtime and is not claimed as a passed check.
-Evidence: robb-ci-gate-fixes-20261031/python-wrapper-runtime, including the old
-selector failure, final strict/lint/test receipts and full conversion log.
+Evidence: robb-ci-gate-fixes-20261031/python-wrapper-runtime and
+robb-candidate-5e05ad6-20261031/canonical-ci-41224301694/windows-installer-validation-failure.log.
 Impact is limited to the Python execution boundary, shell launchers, regression
 coverage and Windows CI invocation. Existing rule/language applicability and all
 controls remain; renew source scopes and review hashes without new exceptions.

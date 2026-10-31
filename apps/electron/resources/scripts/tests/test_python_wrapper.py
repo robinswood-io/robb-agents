@@ -61,8 +61,14 @@ class PythonWrapperTests(unittest.TestCase):
                 'UV_OFFLINE': '1',
                 'UV_CACHE_DIR': str(root / 'uv-cache'),
             })
+            _ = env.pop('CRAFT_TOOL_SCRIPT', None)
+            if os.name == 'nt':
+                env['CRAFT_TOOL_SCRIPT'] = probe.name
+                command = [str(wrapper)]
+            else:
+                command = [str(wrapper), probe.name]
             result = subprocess.run(
-                [str(wrapper), probe.name], env=env, capture_output=True, text=True, check=False,
+                command, env=env, capture_output=True, text=True, check=False,
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertNotIn('incompatible', result.stderr.lower(), result.stderr)
