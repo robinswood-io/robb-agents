@@ -443,6 +443,13 @@ batches by their nearest TypeScript configuration without changing the global
 snapshot, file coverage, worker validation or the 4 GiB heap. The controller's own
 supervisor test publishes its readiness marker atomically; assertions are retained.
 The root Rulebook SDK lock is also updated to the supported compatible release.
-Canonical rules 48/50 are unchanged. This pin preparation does not attest a Robb
-CI run or a publication: controller publication and the exact Robb gate remain
-mandatory before building and staging the release.
+Canonical rules 48/50 and their index are byte-identical to diffusion 10. The
+controller passed run/verify for all three projects on its committed checkout,
+then the official central publication checks; diffusion 11 is published.
+These controller proofs do not attest a Robb CI run. Its exact canonical gate,
+signed build and real local missions remain mandatory.
+
+The glob patch omits two blank context lines and their adjacent trailing context,
+with corrected hunk lengths. A fresh Bun cache applies it successfully and yields
+JavaScript byte-identical to the tested installation; four compatibility tests
+pass again. This format correction does not alter dependency versions or code.
