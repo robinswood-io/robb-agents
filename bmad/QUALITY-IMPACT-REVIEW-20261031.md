@@ -442,3 +442,14 @@ not an isolation proof. Non-packaging CI remains unchanged. The regression test
 checks the separate runner class, restricted permissions and preserved installer
 journey. The partial d077 qualification was deliberately stopped by this agent
 before editing so the combined candidate receives one complete RUN/VERIFY.
+
+## Strict typing of runner declaration regression tests
+The canonical gate on 9bba101 rejected six Python reportAny diagnostics in the
+new release runner test. Python re.findall has a broad return annotation; use
+re.finditer and Match.group(1) to retain a string type without casts or suppression.
+The same eight declarations and label assertions remain covered. This changes
+only the regression test, with no application, dependency, workflow, permission,
+control-command or applicability change. Preserve the preceding impact review
+and renew its source binding. Targeted tests and the strict Python checker must
+pass before a fresh complete RUN and VERIFY; earlier successes are not a receipt
+for this candidate. The failed gate and raw diagnostics remain archived privately.

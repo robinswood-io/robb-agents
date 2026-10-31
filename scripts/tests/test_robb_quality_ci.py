@@ -48,7 +48,12 @@ class ReleaseQualityTests(unittest.TestCase):
 
     def test_release_jobs_require_internal_runners(self) -> None:
         workflow = (Path(__file__).resolve().parents[2] / ".github/workflows/release.yml").read_text()
-        declarations = re.findall(r"^\s*(?:runs-on|runner): (.+)$", workflow, re.MULTILINE)
+        declarations = [
+            match.group(1)
+            for match in re.finditer(
+                r"^\s*(?:runs-on|runner): (.+)$", workflow, re.MULTILINE
+            )
+        ]
         self.assertEqual(len(declarations), 8)
         self.assertNotIn("sudo apt-get", workflow)
         for declaration in declarations:
