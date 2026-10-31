@@ -453,3 +453,17 @@ control-command or applicability change. Preserve the preceding impact review
 and renew its source binding. Targeted tests and the strict Python checker must
 pass before a fresh complete RUN and VERIFY; earlier successes are not a receipt
 for this candidate. The failed gate and raw diagnostics remain archived privately.
+
+## Exclude DMG installer illustrations from application payloads
+The Linux candidate 4eb4435 passed source RUN/VERIFY and built successfully, but
+its mandatory archive audit rejected 901.3 MiB unpacked against the unchanged
+900 MiB budget. Two DMG-only illustrations account for more than 12 MiB in the
+external runtime payload. Exclude exactly those two files from ASAR files and
+from the existing dist/resources extraResources filter. Keep original resources,
+DMG background configuration, licenses, native tools and all runtime code intact.
+Search found only the DMG builder and resource catalogue referencing these names.
+Original hashes are preserved; 13 document/wrapper tests passed on the initial
+Linux bundle, which remains unqualified because its size audit failed. Rebuild
+and real smoke must prove the new archive before delivery. This packaging-only
+change affects release/storage rules; preserve other reviewed decisions, commands,
+exceptions and budgets. Renew the scope and require fresh RUN/VERIFY on this commit.

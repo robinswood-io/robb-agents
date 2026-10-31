@@ -42,6 +42,8 @@ files:
   - "!dist/resources/bin/darwin-*/**"
   - "!dist/resources/bin/linux-*/**"
   - "!dist/resources/bin/win32-*/**"
+  - "!dist/resources/dmg-background.tiff"
+  - "!dist/resources/dmg-background@2x.png"
   - "!dist/renderer/src/**"
   - "!**/*.map"
   - package.json
@@ -96,6 +98,8 @@ extraResources:
       - "!bin/darwin-*/**"
       - "!bin/linux-*/**"
       - "!bin/win32-*/**"
+      - "!dmg-background.tiff"
+      - "!dmg-background@2x.png"
   - from: dist/interceptor.cjs
     to: app/dist/interceptor.cjs
   - from: ../webui/dist
