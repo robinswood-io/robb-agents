@@ -196,3 +196,23 @@ its sibling files under the DEV evidence directory named above.
 The lock provenance hash is updated from the real generated output. This patch
 does not change provider credentials, accounting data or the private operations
 module. Global run/verify and signed-build qualification remain mandatory.
+
+## Audio metadata compatible patch after exact gate failure
+Candidate b3c1451 completed all seven canonical checks on 2026-10-31.
+Typecheck, lint, tests, environment, shell and TypeScript policy returned zero.
+Only dependency auditing failed: music-metadata12.3.3 was published at10:47:57UTC,
+just before that run. The root override moves from12.3.2 to12.3.3.
+Upstream release: https://github.com/Borewit/music-metadata/releases/tag/v12.3.3
+Bun1.4.4 regenerates the lock using Node26.13.0: music-metadata requires
+strtok3 10.6.3, while file-type and @tokenizer/inflate retain their locked10.6.2
+through explicit nested resolutions. No other workspace manifest changes.
+A real parseBuffer smoke test reads a synthetic PCM WAV: duration1second,
+2channels,8000Hz; it passes. Fresh audit:286dependencies,zero issues.
+Evidence: /home/ubuntu/robb-ci-gate-fixes-20261031/music-metadata-update/.
+Impact is the existing transitive audio parser used by WhatsApp and its lock
+provenance. No application orchestration, credentials, connector settings,
+accounting data or private operations module changes. Prior rule applicability
+and language coverage remain valid after this focused review. Renew the exact
+source scopes and review hash; no quality control or exception is relaxed.
+The failed gate is preserved independently. A new canonical run and verify,
+signed builds, preflight, local missions and official release remain required.

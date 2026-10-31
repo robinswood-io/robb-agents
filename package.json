@@ -259,7 +259,7 @@
     "ip-address": "10.7.5",
     "katex": "0.19.1",
     "markdown-it": "15.0.3",
-    "music-metadata": "12.3.2",
+    "music-metadata": "12.3.3",
     "postcss": "8.5.32",
     "postcss-selector-parser": "7.1.7",
     "proxy-addr": "2.0.8",
