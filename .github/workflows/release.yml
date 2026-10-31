@@ -75,7 +75,7 @@ jobs:
         working-directory: /home/ubuntu/robb-local-reconcile-20261029
     env:
       NODE_OPTIONS: "--max-old-space-size=4096"
-      ROBB_RULEBOOK_COMMIT: "386f4e73dc1d9c3c11c93103f6871adf83519073"
+      ROBB_RULEBOOK_COMMIT: "4106cdc99eb240483160b27924347ef2f7f0fd1d"
       ROBB_EXPECTED_SOURCE_COMMIT: "${{ needs.preflight.outputs.source_commit }}"
       ROBB_QUALITY_CHECKOUT: /home/ubuntu/robb-local-reconcile-20261029
       ROBB_RULEBOOK_CHECKOUT: /opt/ia-webdev/rulebook-ai

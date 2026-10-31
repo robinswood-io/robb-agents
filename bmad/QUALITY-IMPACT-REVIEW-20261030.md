@@ -348,3 +348,20 @@ quality command is changed. Existing functional evidence on 487f3fb remains
 attributed to that commit: all seven CI jobs succeeded. The new exact candidate
 still requires its CI and quality gate run/verify under diffusion 9 before
 integration. This static impact review does not assert that the gate has passed.
+
+## Diffusion 10 controller admission (31 October 2026)
+The user-provided diffusion 10 pins controller
+4106cdc99eb240483160b27924347ef2f7f0fd1d. Contracts 48/50 and the rule index
+remain byte-identical. The reviewed controller adds optional rule-review fragments.
+Robb keeps its existing inline policy and does not enable fragments. For this
+policy, loading and the review contract retain their existing behavior. The
+controller still validates coverage, fingerprints, engine hashes and review scope;
+optional fragments cannot promote pending reviews and validate paths and digests.
+The changed engine invalidates the previous attestation: review scope is renewed
+after this impact review, without changing rule versions, review statuses,
+languages, vendor exceptions or any functional/type/lint control. No application
+code, dependency, permission, timeout or test assertion changes in this delta.
+The seven-job CI and complete run/verify PASS on parent 2868fef remain historical
+evidence for unchanged code, not a PASS for this new controller/candidate pair.
+The authorized ephemeral DEV release runner must execute canonical run/verify on
+the exact new candidate before signed staging artifacts or local integration.
