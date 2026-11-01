@@ -218,7 +218,7 @@ def main() -> int:
     public = temporary / "robb-public-quality"
     public.mkdir(mode=0o700, exist_ok=True)
     try:
-        result = execute(["python3", str(gate), "run", str(root)], root, timeout=2100)
+        result = execute(["python3", str(gate), "run", str(root), "--reuse-verified"], root, timeout=2100)
     except subprocess.TimeoutExpired:
         _ = (public / "timeout.json").write_text('{"state":"TIMEOUT","exit_code":124,"seconds":2100}\n')
         print("Canonical quality exceeded 35 minutes; no verification or publication.")

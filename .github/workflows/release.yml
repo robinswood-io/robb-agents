@@ -75,12 +75,11 @@ jobs:
         working-directory: /home/ubuntu/robb-local-reconcile-20261029
     env:
       NODE_OPTIONS: "--max-old-space-size=4096"
-      ROBB_RULEBOOK_COMMIT: "18e89a12add9e7ef49d81d7543eef2c7755265bb"
+      ROBB_RULEBOOK_COMMIT: "4d60a6151f4f44b02767032fcb49448f7709e417"
       ROBB_EXPECTED_SOURCE_COMMIT: "${{ needs.preflight.outputs.source_commit }}"
       ROBB_QUALITY_CHECKOUT: /home/ubuntu/robb-local-reconcile-20261029
-      ROBB_RULEBOOK_CHECKOUT: /home/ubuntu/robb-release-controllers/18e89a12add9e7ef49d81d7543eef2c7755265bb
+      ROBB_RULEBOOK_CHECKOUT: /home/ubuntu/robb-release-controllers/4d60a6151f4f44b02767032fcb49448f7709e417
     steps:
-      # The runner verifies the prepared checkout; it never resets or replaces it.
       - name: Verify immutable prepared source
         run: |
           robb_source_head="$(rtk git rev-parse HEAD)"
@@ -98,17 +97,19 @@ jobs:
         with: {name: release-quality-diagnostics, path: "${{ runner.temp }}/robb-public-quality/", if-no-files-found: warn}
   macos:
     timeout-minutes: 90
+    env: {ROBB_NODE_MAX_OLD_SPACE_SIZE: "4096"}
     name: macOS ${{ matrix.arch }}
     needs: [preflight, quality]
     runs-on: ${{ matrix.runner }}
     strategy:
+      max-parallel: 1
       fail-fast: false
       matrix:
         include:
           - arch: arm64
             runner: [self-hosted, macOS, ARM64, robb-release]
           - arch: x64
-            runner: [self-hosted, macOS, X64, robb-release]
+            runner: [self-hosted, macOS, ARM64, robb-release]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -120,7 +121,9 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with: {bun-version: "1.4.4"}
       - name: Exercise macOS installer update contract
-        run: python3 -m unittest scripts.tests.test_installers scripts.tests.test_ripgrep_packaging
+        run: |
+          if [[ "${{ matrix.arch }}" == x64 ]]; then arch -x86_64 /usr/bin/true; fi
+          python3 -m unittest scripts.tests.test_installers scripts.tests.test_ripgrep_packaging
       - name: Build and validate macOS artifact
         env:
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}

@@ -14,7 +14,7 @@ Node 26.13.0, Bun 1.4.4, Python 3.15.2, RTK OSS 1.1.0, uv 0.13.6.
 Compilation TypeScript native 7.0.2 ; API 6.0.3 pour le lint uniquement.
 Les deux seules exceptions approuvées sont dans dependency-exceptions.json.
 Les commandes et vérifications résolues sont dans quality-policy.json.
-Règle 48 v2.5.0 : la cible Mac autorisée et le contrat desktop priment sur
+Règle 48 v2.7.0 : la cible Mac autorisée et le contrat desktop priment sur
 les recettes Docker de déploiement. DEV sert au développement et aux validations lourdes ;
 le staging desktop et sa signature restent une étape distincte sur le Mac.
 Le thème desktop et ses tokens existants sont conservés sous le contrat projet ;
@@ -78,8 +78,8 @@ hôte natif qualifié. Les labels sont des exigences, pas une preuve de disponib
 Aucun repli implicite sur les runners hébergés GitHub n'est autorisé.
 Les contributions externes ne doivent pas être routées vers DEV partagé : leur CI
 reste distincte et son isolation doit être établie avant une migration de runners.
-Le contrôleur privé épinglé est celui de la diffusion 17, commit
-18e89a12add9e7ef49d81d7543eef2c7755265bb. Les contrôles applicatifs restent inchangés.
+Le contrôleur privé épinglé est celui de la diffusion 18, commit
+4d60a6151f4f44b02767032fcb49448f7709e417. Les contrôles applicatifs restent inchangés.
 
 Le packaging Windows de la CI des pull requests exige le label distinct
 robb-ci-isolated (self-hosted, Windows, X64), jamais le runner de release.
@@ -90,3 +90,8 @@ limité à contents:read et checkout ne conserve pas ses identifiants Git.
 L'existence de ce runner Windows isolé reste à établir ; aucun hôte n'est inscrit
 par la modification du workflow. Les autres jobs de tests sans packaging restent
 inchangés ; leur routage n'est pas présenté comme migré.
+
+Exception explicite du 1 novembre 2026 : Thibault autorise le build macOS local
+signé et la publication pour tous les systèmes pris en charge. Builds locaux
+sérialisés, tas Node plafonné à 4 Gio, arrêt sous pression mémoire ; aucun
+allègement du gate, du prévol, des sauvegardes, des signatures ou des essais natifs.

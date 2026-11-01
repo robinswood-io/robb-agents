@@ -187,7 +187,7 @@ class ReleaseQualityTests(unittest.TestCase):
                         self.assertIn("/.quality-rulebook/", exclude.read_text())
                     self.assertEqual(os.environ["CRAFT_CONFIG_DIR"], str(temporary / "robb-quality-test-profile"))
                     return subprocess.CompletedProcess(argv, validation_code, "Public source validation\n", "")
-                if argv[0] == "python3" and argv[-2:] == ["run", str(root)]:
+                if argv[0] == "python3" and argv[-3:] == ["run", str(root), "--reuse-verified"]:
                     report = {
                         "state": "FAIL" if check_code else "PASS",
                         "checks": [{"name": check_name, "exit_code": check_code,
@@ -218,7 +218,7 @@ class ReleaseQualityTests(unittest.TestCase):
             self.assertTrue((temporary / "robb-release-validation.log").is_file())
             if explicit_roots:
                 gate_run = next(call for call in calls if len(call) > 2 and call[2] == "run")
-                self.assertEqual(gate_run[-1], str(root))
+                self.assertEqual(gate_run[-2:], (str(root), "--reuse-verified"))
                 self.assertNotEqual(root, github_workspace)
                 self.assertFalse((root / ".git/info/exclude").exists())
             if check_name == "dependencies":
