@@ -479,3 +479,17 @@ This changes only test resource lifetime, with no application, dependency, budge
 permission, workflow or control-command change. Vite chunk-size notices remain
 visible; no warning threshold is raised. Preserve prior rule decisions and renew
 the source binding. Rebuild and full RUN/VERIFY must qualify the exact new commit.
+
+## Compatible i18next update after registry freshness refusal
+The 35f7a3d RUN passed six controls but refused two i18next 26.5.12 declarations.
+Official release https://github.com/i18next/i18next/releases/tag/v26.6.0 and npm
+confirm the compatible minor 26.6.0, published on 2026-10-31 at 23:19:35 UTC.
+Update only the webui/shared declarations and their Bun lock resolution; preserve
+application options. The new strictInterpolationChecks option remains opt-in.
+Bun 1.4.4 regenerated the lock with --lockfile-only --ignore-scripts, then installed
+it frozen; registry integrity matches. The 137 locale tests, i18n lint, shared and
+webui typechecks and vulnerability audit pass. Renew exact generated provenance.
+This affects dependency/type compatibility rules, not runtime architecture, rights,
+privacy or control budgets. Preserve all other reviews and both approved version
+exceptions. The exact dependency control, rebuild and complete RUN/VERIFY remain
+mandatory before integration; earlier candidate receipts are not transferred.
