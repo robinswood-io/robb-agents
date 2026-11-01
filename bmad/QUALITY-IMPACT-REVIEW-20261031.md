@@ -399,7 +399,7 @@ relevant; renew the source scope after this impact review. Inspect generated
 provenance and all source-size checks before the next full RUN/VERIFY.
 This correction is not a successful RUN/VERIFY or packaged mission qualification.
 
-## Internal release runners and policy diffusion 16
+## Internal release runners and policy diffusion 17
 The user requires desktop builds on company-controlled runners. Release preflight,
 Linux build and publication now require the existing dedicated Linux/X64 label;
 macOS ARM64/X64 and Windows X64 require dedicated self-hosted native runners.
@@ -410,12 +410,12 @@ CI is not redirected onto shared DEV without isolation; its migration is pending
 The trusted release triggers, dependency graph, concurrency, timeouts, signatures,
 installer tests, checksums, attestations and private module boundary are preserved.
 A regression test checks every direct and matrix release runner declaration.
-Controller diffusion 16 replaces 15; its rules and contracts are byte-identical.
-The earlier browser/governance review remains applicable: observe native outcomes,
-reuse authorized sessions and report remaining human authentication explicitly.
-The controller's first-manifest preflight now requires a regular file, a matching
-systemd-bun-watch destination, a command and unique services. Existing destination
-manifests retain their validation. Robb introduces no manifest or preflight bypass.
+Controller diffusion 17 replaces 16; canonical rules and contracts are byte-identical.
+Its npm audit qualifies transitives only at the registry maximum within the parent's
+original range, backed by installed graph, lockfile and integrity evidence; security
+npm audit is now mandatory. Direct migrations and all application checks remain.
+Native browser/governance and first-manifest preflight reviews remain applicable;
+no application code, dependency exception, capability or security bypass is added.
 The native mission plan (missing input, deduplication, continuation, new request,
 preview, restart) remains pending; no installed app, data or connection changes.
 Rule 50 remains 1.5.0, governance 2.6.0. The private controller commit is upstream;
