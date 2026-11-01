@@ -12,6 +12,7 @@ import json
 import os
 import pathlib
 import shutil
+import signal
 import socket
 import subprocess
 import sys
@@ -87,6 +88,28 @@ def has_robb_renderer(targets: list[object]) -> bool:
     return False
 
 
+def terminate_process_group(process: subprocess.Popen[str]) -> str:
+    try:
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            if process.poll() is None:
+                raise
+        try:
+            output, _ = process.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                if process.poll() is None:
+                    raise
+            output, _ = process.communicate(timeout=5)
+        return output or ""
+    finally:
+        if process.stdout is not None and not process.stdout.closed:
+            process.stdout.close()
+
+
 def launch_smoke(root: pathlib.Path, timeout_seconds: int) -> None:
     xvfb_run = shutil.which("xvfb-run")
     if xvfb_run is None:
@@ -129,7 +152,7 @@ def launch_smoke(root: pathlib.Path, timeout_seconds: int) -> None:
         try:
             while time.monotonic() < deadline:
                 if process.poll() is not None:
-                    output = process.stdout.read() if process.stdout else ""
+                    output = terminate_process_group(process)
                     fail(
                         "Extracted AppImage exited before exposing a renderer "
                         + f"(code {process.returncode}): {output[-4000:]}"
@@ -146,17 +169,7 @@ def launch_smoke(root: pathlib.Path, timeout_seconds: int) -> None:
                 + f"within {timeout_seconds} seconds{output}"
             )
         finally:
-            try:
-                if process.poll() is None:
-                    os.killpg(process.pid, 15)
-                    try:
-                        _ = process.wait(timeout=5)
-                    except subprocess.TimeoutExpired:
-                        os.killpg(process.pid, 9)
-                        _ = process.wait(timeout=5)
-            finally:
-                if process.stdout is not None:
-                    process.stdout.close()
+            _ = terminate_process_group(process)
 
 
 class LinuxArguments(argparse.Namespace):
