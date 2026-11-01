@@ -108,7 +108,7 @@ describe('browser capture churn grants no extra checkpoint passage', () => {
   it.each(['string', 'array'] as const)('neutralizes changing screenshot filenames and their Read receipts (%s), without changing evidence', mode => {
     const initial = [user, ...capture(1)];const after = [...initial, ...capture(2), ...capture(3)]
     if (mode === 'array') for (const message of after) {
-      if (message.toolName === 'mcp__session__browser_tool') message.toolInput!.command = ['screenshot-region', '0', '0', '400', '400']
+      if (message.toolName === 'mcp__session__browser_tool') message.toolInput!["command"] = ['screenshot-region', '0', '0', '400', '400']
     }
     const snapshot = structuredClone(after)
     expect(turnProgressFingerprint(initial, 'user')).not.toBe(turnProgressFingerprint(after, 'user'))

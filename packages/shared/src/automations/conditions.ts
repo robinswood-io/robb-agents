@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 /**
  * Automation Condition Evaluator
  *
@@ -190,7 +191,7 @@ function evaluateStateCondition(condition: StateCondition, context: ConditionCon
   // Handle contains (array membership)
   if (condition.contains !== undefined) {
     const arr = payload[field];
-    if (!Array.isArray(arr)) return false;
+    if (!isUnknownArray(arr)) return false;
     return arr.includes(condition.contains);
   }
 

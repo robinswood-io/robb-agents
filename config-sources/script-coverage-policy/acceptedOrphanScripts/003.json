@@ -1,0 +1,436 @@
+[
+  {
+    "path": "scripts/inqom_accountant_consolidated_pack.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286829Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_accounting_compliance_auditor.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286845Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_accounting_decision_board.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286861Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_accounting_guardrail_regression_tests.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286881Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "test_wrapper_or_regression_tool",
+    "riskClass": "low_manual_test",
+    "allowedInvocation": [
+      "manual_direct",
+      "ci_or_guard_harness"
+    ],
+    "rationale": "Regression/test helper; intentionally outside recurring manifest commands unless explicitly promoted."
+  },
+  {
+    "path": "scripts/inqom_accounting_rules_control_center.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286898Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_autonomy_score.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286915Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_autonomy_score_queue_reconciler.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286931Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_document_evidence_autonomy_classifier.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286947Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_expert_actions_10d_analysis.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286964Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_feedback_promotion_loop.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286980Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_fiscal_optimization_board_tests.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.286993Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "test_wrapper_or_regression_tool",
+    "riskClass": "low_manual_test",
+    "allowedInvocation": [
+      "manual_direct",
+      "ci_or_guard_harness"
+    ],
+    "rationale": "Regression/test helper; intentionally outside recurring manifest commands unless explicitly promoted."
+  },
+  {
+    "path": "scripts/inqom_fiscal_optimization_decision_board.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287007Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_experiment_or_research_tool",
+    "riskClass": "medium_experimental_manual",
+    "allowedInvocation": [
+      "manual_direct_after_review"
+    ],
+    "rationale": "Experiment/canary/research tooling; excluded from schedules until a safe profile and owner gate are defined."
+  },
+  {
+    "path": "scripts/inqom_fiscal_optimization_inputs.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287021Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_experiment_or_research_tool",
+    "riskClass": "medium_experimental_manual",
+    "allowedInvocation": [
+      "manual_direct_after_review"
+    ],
+    "rationale": "Experiment/canary/research tooling; excluded from schedules until a safe profile and owner gate are defined."
+  },
+  {
+    "path": "scripts/inqom_gocardless_deterministic_coverage.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287037Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_laure_expert_analysis.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287053Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_learned_accounting_rules_materializer.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287069Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_lettering_autonomy_batcher.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287085Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_live_apply_engine.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287100Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "high_risk_manual_or_retired_tool",
+    "riskClass": "high_review_required",
+    "allowedInvocation": [
+      "manual_direct_after_explicit_review"
+    ],
+    "rationale": "Potentially mutating/outbound/manual operation script; not manifest-scheduled and requires explicit review before any automation."
+  },
+  {
+    "path": "scripts/inqom_quality_autonomy_router.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287116Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_quality_autonomy_router_tests.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287131Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "test_wrapper_or_regression_tool",
+    "riskClass": "low_manual_test",
+    "allowedInvocation": [
+      "manual_direct",
+      "ci_or_guard_harness"
+    ],
+    "rationale": "Regression/test helper; intentionally outside recurring manifest commands unless explicitly promoted."
+  },
+  {
+    "path": "scripts/inqom_quality_autonomy_workbench.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287161Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_recent_expert_rule_materializer.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287179Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  },
+  {
+    "path": "scripts/inqom_review_only_controls.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.287196Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_finance_analysis_or_helper",
+    "riskClass": "medium_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_finance_pipeline"
+    ],
+    "rationale": "Finance/Inqom analysis/helper script; no direct recurring schedule unless promoted through finance guardrails."
+  }
+]

@@ -27,7 +27,38 @@ describe('classifyObjectiveTerminalState', () => {
     expect(classifyObjectiveTerminalState(
       'La politique de sécurité interdit cette mutation et la permission est refusée.',
     )).toBe('blocked_policy');
+    expect(classifyObjectiveTerminalState(
+      '**Réponse préparée, mais non envoyée** : l’application bloque l’envoi dans le fil de Cindy, malgré les vérifications Gmail réussies.',
+    )).toBe('blocked_policy');
+    expect(classifyObjectiveTerminalState(
+      '**Le nettoyage reste bloqué ; aucun compte ni aucune facture n’a été modifié.** Le connecteur actuel impose la lecture seule.',
+    )).toBe('blocked_policy');
     expect(classifyObjectiveTerminalState('Reste à exécuter : les tests.')).toBe('continue');
+  });
+
+  it.each([
+    '**Mission bloquée à la lecture du fichier.** Aucun livrable n’a été créé.',
+    'Objectif bloqué : l’accès au fichier a expiré.',
+    'Tâche bloquée, aucun résultat produit.',
+    'Mission blocked: file access failed.',
+    'Task is blocked because the source could not be read.',
+  ])('recognizes a leading blocked-objective declaration: %s', text => {
+    expect(classifyObjectiveTerminalState(text)).toBe('blocked_policy');
+  });
+
+  it.each([
+    'Le rapport cite mission bloquée en exemple.',
+    'La mission auparavant bloquée est maintenant achevée.',
+    'Mission auparavant bloquée, maintenant résolue.',
+  ])('does not treat a citation or resolved blocker as current: %s', text => {
+    expect(classifyObjectiveTerminalState(text)).toBe('complete_verified');
+  });
+
+  it('records an explicit blocked mission before requiring a success receipt', () => {
+    expect(classifyObjectiveTerminalState(
+      '**Mission bloquée à la lecture du fichier.** Aucun livrable n’a été créé.',
+      { structuredOutcomeRequired: true, executionEvidenceMissing: true },
+    )).toBe('blocked_policy');
   });
 
   it('keeps a high-stakes or execution objective active while evidence is missing', () => {
@@ -50,6 +81,17 @@ describe('classifyObjectiveTerminalState', () => {
     })).toBe('continue');
   });
 
+  it('keeps contradictory complete receipts active when prose declares a blocker or recovery', () => {
+    for (const content of [
+      'Mission bloquée à la lecture du fichier.',
+      'Mission bloquée à la lecture du fichier ; je vais réessayer avec une autre méthode.',
+    ]) {
+      expect(classifyObjectiveTerminalState(content, {
+        structuredOutcomeValid: true,
+        declaredState: 'complete_verified',
+      })).toBe('continue');
+    }
+  });
   it('honors a host-validated structured state over prose heuristics', () => {
     expect(classifyObjectiveTerminalState('Livraison vérifiée.', {
       structuredOutcomeRequired: true,

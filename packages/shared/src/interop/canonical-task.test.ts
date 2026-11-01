@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { omitUndefined } from '../utils/json.ts'
 import type {
   TaskResultsDto,
   TaskRunSnapshotDto,
@@ -101,14 +102,14 @@ describe('canonical task interoperability contract', () => {
   })
 
   it('omits empty node outputs from the shared artifact list', () => {
-    expect(taskResultsToCanonicalArtifacts('run-2', {
+    expect(taskResultsToCanonicalArtifacts('run-2', omitUndefined<TaskResultsDto>({
       ...results,
       reportMarkdown: undefined,
       nodes: [
         { id: 'empty', title: 'Empty', state: 'done', output: '  ' },
         { id: 'kept', title: 'Kept', state: 'done', output: 'Result' },
       ],
-    })).toHaveLength(1)
+    }))).toHaveLength(1)
   })
 
   it('rejects non-monotonic revisions', () => {

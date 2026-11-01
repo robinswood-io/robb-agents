@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { atom, type Atom } from 'jotai'
 import { selectAtom } from 'jotai/utils'
 import { describeJourneyActivity, safeActivityText, type JourneyActivity } from '@craft-agent/ui/chat/journey-activity'
@@ -27,12 +28,12 @@ function activityAtomFor(sessionId: string): Atom<ActiveAgentActivity> {
   const sessionAtom = sessionAtomFamily(sessionId)
   let activityAtom = activityAtoms.get(sessionAtom)
   if (!activityAtom) {
-    activityAtom = selectAtom(sessionAtom, session => ({
+    activityAtom = selectAtom(sessionAtom, session => (omitUndefined<ActiveAgentActivity>({
       sessionId, sessionName: safeActivityText(session?.name, 100),
       // Loaded/live messages only. Never hydrate delegated histories just to
       // populate progress, and never project tool inputs or returned data.
       activity: describeJourneyActivity(session?.messages ?? [], []),
-    }), sameAgent)
+    })), sameAgent)
     activityAtoms.set(sessionAtom, activityAtom)
   }
   return activityAtom
@@ -49,7 +50,7 @@ export function conversationAgentActivityAtom(sessionId: string): Atom<Conversat
       const active = ids.map(id => get(activityAtomFor(id)))
       active.sort((left, right) => (right.activity.observedAt ?? 0) - (left.activity.observedAt ?? 0)
         || left.sessionId.localeCompare(right.sessionId))
-      return { activeCount: ids.length, latest: active[0] }
+      return omitUndefined<ConversationAgentActivity>({ activeCount: ids.length, latest: active[0] })
     })
     result = selectAtom(candidates, value => value, (left, right) =>
       left.activeCount === right.activeCount && sameAgent(left.latest, right.latest))

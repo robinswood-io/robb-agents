@@ -1,0 +1,58 @@
+{
+  "source": "packages/shared/src/agent/core/pre-tool-use.ts",
+  "units": [
+    {
+      "names": [
+        "runPreToolUseChecks"
+      ],
+      "group": "pipeline",
+      "bodySha256": "485d066b1875cbc9f70a84590af74488e5e8e4fb565195c42f2ef0681b6e84d0"
+    },
+    {
+      "names": [
+        "GmailAuthorityInput"
+      ],
+      "group": "gmail-authority",
+      "bodySha256": "54b925ec1dfc288fe669931e15cbf1abef76650fecceb3c3f8a7093aa7f23992"
+    },
+    {
+      "names": [
+        "GmailAuthorityFacts"
+      ],
+      "group": "gmail-authority",
+      "bodySha256": "45e97ab502c6b5dd6c2fe02a2af0fe49b19c909d2708eed9af2dddb87c2d9823"
+    },
+    {
+      "names": [
+        "evaluateGmailAuthority"
+      ],
+      "group": "gmail-authority",
+      "bodySha256": "9a50d014aa89eea56fd1afbc37f7c4fce290930a777d97d69d90e1498ef5bd1d"
+    }
+  ],
+  "modules": [
+    {
+      "name": "pipeline",
+      "lines": 628,
+      "file": "packages/shared/src/agent/core/pre-tool-use.ts",
+      "retained": true
+    },
+    {
+      "name": "gmail-authority",
+      "lines": 188,
+      "file": "packages/shared/src/agent/core/pre-tool-use/gmail-authority.ts",
+      "retained": false
+    }
+  ],
+  "dependencies": {
+    "pipeline": [
+      "gmail-authority"
+    ],
+    "gmail-authority": []
+  },
+  "unitCycles": [],
+  "moduleCycles": [],
+  "retainedTransformProofs": [
+    "pretool-admission-body-proof.json"
+  ]
+}

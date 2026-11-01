@@ -27,10 +27,10 @@ function toPositiveNumber(value: unknown): number | null {
 }
 
 function TiptapImageNodeView({ node, editor, getPos, updateAttributes }: TiptapImageNodeViewProps) {
-  const src = typeof node.attrs.src === 'string' ? node.attrs.src : ''
-  const alt = typeof node.attrs.alt === 'string' ? node.attrs.alt : ''
-  const width = toPositiveNumber(node.attrs.width)
-  const height = toPositiveNumber(node.attrs.height)
+  const src = typeof node.attrs["src"] === 'string' ? node.attrs["src"] : ''
+  const alt = typeof node.attrs["alt"] === 'string' ? node.attrs["alt"] : ''
+  const width = toPositiveNumber(node.attrs["width"])
+  const height = toPositiveNumber(node.attrs["height"])
   const hasIntrinsicSize = width != null && height != null
 
   const imageRef = React.useRef<HTMLImageElement | null>(null)

@@ -1,0 +1,47 @@
+{
+  "status": "tested; remaining quality work pending",
+  "scope": "Local retention installer only; all tests use temporary files and simulated LaunchAgent calls",
+  "changes": [
+    "Native file identity and IO helpers",
+    "Native atomic filesystem mutations",
+    "Native journal schema and publication",
+    "Native recovery and cleanup",
+    "Existing install entry point and public imports preserved"
+  ],
+  "checks": {
+    "before": {
+      "command": [
+        "rtk",
+        "python3",
+        "-m",
+        "unittest",
+        "scripts.tests.test_install_staging_retention"
+      ],
+      "exitCode": 0,
+      "seconds": 19.45,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/retention-native-before.log"
+    },
+    "after": {
+      "command": [
+        "rtk",
+        "python3",
+        "-m",
+        "unittest",
+        "scripts.tests.test_install_staging_retention",
+        "scripts.tests.test_staging_retention"
+      ],
+      "exitCode": 0,
+      "seconds": 21.12,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/retention-native-after.log"
+    }
+  },
+  "sourceGate": {
+    "max-lines": 24
+  },
+  "proof": "retention-native-structural-proof.json",
+  "limits": [
+    "No real LaunchAgent modified",
+    "Global ESLint unchanged: Python-only lot",
+    "Other long files, warnings, real-model missions and installation pending"
+  ]
+}

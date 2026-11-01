@@ -1,0 +1,320 @@
+{
+  "source": "packages/shared/src/utils/files.ts",
+  "units": [
+    {
+      "names": [
+        "stripBom"
+      ],
+      "group": "json-file",
+      "bodySha256": "8772a3a7a802ef1b688e05c88f84b88ebb7d5387e9ce797059a56ecadb732e28"
+    },
+    {
+      "names": [
+        "safeJsonParse"
+      ],
+      "group": "json-file",
+      "bodySha256": "fa758e7bc350842819ae1a9c9ef87ea9269decc05749b4b485e76b6afbba6916"
+    },
+    {
+      "names": [
+        "readJsonFileSync"
+      ],
+      "group": "json-file",
+      "bodySha256": "2fb4d3af81ac2fdc0d29000f3ccb5eae4fd671d03f3c96e354cb051bc8f0b432"
+    },
+    {
+      "names": [
+        "atomicWriteFileSync"
+      ],
+      "group": "json-file",
+      "bodySha256": "073342d3af86a5de3bf553da97168f5b36d504d5cdf17c46c18f89809f3888d8"
+    },
+    {
+      "names": [
+        "FileAttachment"
+      ],
+      "group": "attachment-types",
+      "bodySha256": "f8151af8be4a6ca258e11bf6105bb3741d37d56484c28e5ab44a8a1578942c64"
+    },
+    {
+      "names": [
+        "IMAGE_EXTENSIONS"
+      ],
+      "group": "attachment-types",
+      "bodySha256": "eb17855d5527888dc5c0148546853a29f9810f76fc9ad4af199bfab089457848"
+    },
+    {
+      "names": [
+        "TEXT_EXTENSIONS"
+      ],
+      "group": "attachment-types",
+      "bodySha256": "9995f54a0c89193267132af98fb0f353b35c49ca5591eb8eac2ca78c9159eb88"
+    },
+    {
+      "names": [
+        "OFFICE_EXTENSIONS"
+      ],
+      "group": "attachment-types",
+      "bodySha256": "574a0a86354187e8f7d4143980dd69484ed6f665dace50a69787b8530e49e61b"
+    },
+    {
+      "names": [
+        "AUDIO_EXTENSIONS"
+      ],
+      "group": "attachment-types",
+      "bodySha256": "7af4ab919f64be8c4fea5165f7bf5c24b6bf6b88bbd81445a937103a047758ef"
+    },
+    {
+      "names": [
+        "MAX_FILE_SIZE"
+      ],
+      "group": "attachment-types",
+      "bodySha256": "a1202c78c58245f851da5ee9bb29269e1e2d78ca2a709e33598a8a45421d528f"
+    },
+    {
+      "names": [
+        "MAX_TEXT_SIZE"
+      ],
+      "group": "attachment-types",
+      "bodySha256": "c5f7166cab4542a903be004ec4db4519c89b906b806549bc2f3d8ecd4ba66676"
+    },
+    {
+      "names": [
+        "MAX_IMAGE_SIZE"
+      ],
+      "group": "attachment-types",
+      "bodySha256": "bc82abb46449974efc2f0a84a2736301942caf5bede0ca7660c9ed793b69ce79"
+    },
+    {
+      "names": [
+        "MAX_IMAGE_DIMENSION"
+      ],
+      "group": "attachment-types",
+      "bodySha256": "00a390eacf6491474fe35c4c9cca46134fa0eb0effc22de38483c79fa26d0e55"
+    },
+    {
+      "names": [
+        "OPTIMAL_IMAGE_EDGE"
+      ],
+      "group": "attachment-types",
+      "bodySha256": "72dfc160dbce211b15e70f563ecd4266560659a3e031513123baeb7e785f4c65"
+    },
+    {
+      "names": [
+        "ImageValidationResult"
+      ],
+      "group": "attachment-types",
+      "bodySha256": "4733b2202fc7b9c71a3070daf00cf2d19bff63e69525763e33b9cc2488116e8e"
+    },
+    {
+      "names": [
+        "validateImageForClaudeAPI"
+      ],
+      "group": "attachment-types",
+      "bodySha256": "fe9e4c16c88d1bb5d4e95afba694f97bb039d0c746a3a13656d901ab63f6d2a5"
+    },
+    {
+      "names": [
+        "IMAGE_LIMITS"
+      ],
+      "group": "attachment-types",
+      "bodySha256": "65eeb009def3eed75e05ef59621f40dc6e36689e011e0da2d09f1b04f4b5bbd1"
+    },
+    {
+      "names": [
+        "extractFilePaths"
+      ],
+      "group": "file-paths",
+      "bodySha256": "e84208b71a69177d6624e2544d7a1f2f72fc1557593ddfcb5d76a10b15303fb8"
+    },
+    {
+      "names": [
+        "looksLikeFilePath"
+      ],
+      "group": "file-paths",
+      "bodySha256": "281f6a4f91135318c83c3fdb3afe4553d9001f5eb944bc43e8ce7eef3503c667"
+    },
+    {
+      "names": [
+        "resolvePath"
+      ],
+      "group": "file-paths",
+      "bodySha256": "4d4071717ae343b2b8f843b803db75774f4b00f89aa383c8aec099cebab1d3c7"
+    },
+    {
+      "names": [
+        "getFileType"
+      ],
+      "group": "file-paths",
+      "bodySha256": "c253a43109ca712f8581523948751e3cb977499c8e62e3f5fc154063d379a058"
+    },
+    {
+      "names": [
+        "getMimeType"
+      ],
+      "group": "file-paths",
+      "bodySha256": "a4d23e8d3920dec07e4226136688fef84277714393ae0a8c77a8fd86900a80c3"
+    },
+    {
+      "names": [
+        "readFileAttachment"
+      ],
+      "group": "attachments",
+      "bodySha256": "28da6310daefd04b5b5c120e0ceeef08006870db457ecc9c6419c5e2f6d2ea75"
+    },
+    {
+      "names": [
+        "processInputWithFiles"
+      ],
+      "group": "attachments",
+      "bodySha256": "5ac38d44c2c0765e9ed14ab75c5660986e83073da37c5be60bde1d1ef8ce177d"
+    },
+    {
+      "names": [
+        "readImageFile"
+      ],
+      "group": "attachments",
+      "bodySha256": "6cf68db39a71c555c3fb1d50b2de0eb7b9d19bc09cde0e2a22c909b61eab51c2"
+    },
+    {
+      "names": [
+        "readClipboard"
+      ],
+      "group": "clipboard",
+      "bodySha256": "fdb0304723c62b07ef14cdf9e5ae89778a07b249a60a40af489ef090061f58c0"
+    },
+    {
+      "names": [
+        "readClipboardMacOS"
+      ],
+      "group": "clipboard-macos",
+      "bodySha256": "166b4eb3bf59904a772ad286c4ad939a30700f5449b8c7a5da8116f5cc7e6e9c"
+    },
+    {
+      "names": [
+        "readClipboardImageDataMacOS"
+      ],
+      "group": "clipboard-macos",
+      "bodySha256": "49bab702a0117c31c3c5d26b7365fd65136ed8280d0deb2c0d58f82bb57b0e6e"
+    },
+    {
+      "names": [
+        "readClipboardWindows"
+      ],
+      "group": "clipboard-windows",
+      "bodySha256": "8e6a518e3fb94251fb19c7e6a614a782546ffb117678b8789b15f9805277afae"
+    },
+    {
+      "names": [
+        "readClipboardImageDataWindows"
+      ],
+      "group": "clipboard-windows",
+      "bodySha256": "5a1012894c77e419fefee48b99c8c25d7acfdf5272d20a6253d46ae03b20185d"
+    },
+    {
+      "names": [
+        "readClipboardLinux"
+      ],
+      "group": "clipboard-linux",
+      "bodySha256": "4e8a079e25ff5d9f4747849cea086331ea7b369e667a9b353c1d4664880f8cd5"
+    },
+    {
+      "names": [
+        "readClipboardImageDataLinux"
+      ],
+      "group": "clipboard-linux",
+      "bodySha256": "847aa34ac236d089584892601d4975ffc4859b57135676f5ff43e7a6c8c1439a"
+    },
+    {
+      "names": [
+        "formatSinglePathToRelative"
+      ],
+      "group": "display-paths",
+      "bodySha256": "d2f050d61d7948c9e2f47178609c0aaa3ccdd16256cc34f9df2acee2d5f56fa5"
+    },
+    {
+      "names": [
+        "formatPathsToRelative"
+      ],
+      "group": "display-paths",
+      "bodySha256": "e7e2153c80d3fcd193c79852b211b68b4ef1f0d475205a00e56316f39812d573"
+    },
+    {
+      "names": [
+        "formatToolInputPaths"
+      ],
+      "group": "display-paths",
+      "bodySha256": "0f0d6815ec0f163bbecaae12ae92b47100ddde91f2b5ed639c4faf353aebe6d4"
+    }
+  ],
+  "modules": [
+    {
+      "name": "json-file",
+      "lines": 58
+    },
+    {
+      "name": "attachment-types",
+      "lines": 167
+    },
+    {
+      "name": "file-paths",
+      "lines": 149
+    },
+    {
+      "name": "attachments",
+      "lines": 160
+    },
+    {
+      "name": "clipboard",
+      "lines": 21
+    },
+    {
+      "name": "clipboard-macos",
+      "lines": 138
+    },
+    {
+      "name": "clipboard-windows",
+      "lines": 97
+    },
+    {
+      "name": "clipboard-linux",
+      "lines": 118
+    },
+    {
+      "name": "display-paths",
+      "lines": 73
+    }
+  ],
+  "dependencies": {
+    "json-file": [],
+    "attachment-types": [],
+    "file-paths": [
+      "attachment-types"
+    ],
+    "attachments": [
+      "attachment-types",
+      "file-paths"
+    ],
+    "clipboard": [
+      "attachment-types",
+      "clipboard-macos",
+      "clipboard-windows",
+      "clipboard-linux"
+    ],
+    "clipboard-macos": [
+      "attachment-types",
+      "attachments"
+    ],
+    "clipboard-windows": [
+      "attachment-types",
+      "attachments"
+    ],
+    "clipboard-linux": [
+      "attachment-types",
+      "attachments"
+    ],
+    "display-paths": []
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

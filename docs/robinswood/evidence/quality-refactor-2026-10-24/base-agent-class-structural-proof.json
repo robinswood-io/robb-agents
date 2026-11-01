@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "classes": [
+    {
+      "source": "packages/shared/src/agent/base-agent.ts",
+      "nativeMethodBodies": 73,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 1,
+      "nativeModuleBindings": 0,
+      "relocatedNativeDynamicImports": 0,
+      "protocolAliasesExpandedToNativeShapes": 6,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    }
+  ],
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 485
+}

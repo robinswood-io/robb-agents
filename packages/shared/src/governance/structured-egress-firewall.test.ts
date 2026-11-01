@@ -39,11 +39,11 @@ describe('StructuredEgressFirewall', () => {
     expect(first.payload).toEqual({
       invoice: { id: 'INV-42', amount: 1200 },
       customer: {
-        email: expect.stringMatching(/^psn_/),
-        phone: expect.stringMatching(/^psn_/),
+        email: (expect.stringMatching(/^psn_/) as unknown),
+        phone: (expect.stringMatching(/^psn_/) as unknown),
       },
     });
-    expect(first.payload.customer).toEqual(second.payload.customer);
+    expect(first.payload["customer"]).toEqual(second.payload["customer"]);
     expect(first.vaultEntries).toHaveLength(2);
     const receipt = boundary.issueReceipt({
       prepared: first,
@@ -100,7 +100,7 @@ describe('StructuredEgressFirewall', () => {
 
   it('rejects cyclic, non-JSON, and non-finite structured values', () => {
     const cyclic: Record<string, unknown> = {};
-    cyclic.self = cyclic;
+    cyclic["self"] = cyclic;
     for (const payload of [
       cyclic,
       { invoice: new Date('2026-08-20T00:00:00.000Z') },

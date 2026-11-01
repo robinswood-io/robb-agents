@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 /**
  * View Custom Functions
  *
@@ -39,8 +40,8 @@ function hoursSince(timestamp: number): number {
  * @example contains(name, 'feat')
  */
 function contains(collection: unknown, value: unknown): boolean {
-  if (Array.isArray(collection)) {
-    return collection.some(item =>
+  if (isUnknownArray(collection)) {
+    return collection.some((item: unknown) =>
       item === value ||
       (typeof item === 'string' && typeof value === 'string' && extractLabelId(item) === value)
     );
@@ -58,7 +59,7 @@ function contains(collection: unknown, value: unknown): boolean {
  * @example length(name) > 20
  */
 function length(value: unknown): number {
-  if (Array.isArray(value) || typeof value === 'string') {
+  if (isUnknownArray(value) || typeof value === 'string') {
     return value.length;
   }
   return 0;
@@ -90,7 +91,7 @@ function lower(str: unknown): string {
  * All custom functions to register with Filtrex.
  * Keys are the function names available in expressions.
  */
-export const VIEW_FUNCTIONS: Record<string, Function> = {
+export const VIEW_FUNCTIONS = {
   daysSince,
   hoursSince,
   contains,

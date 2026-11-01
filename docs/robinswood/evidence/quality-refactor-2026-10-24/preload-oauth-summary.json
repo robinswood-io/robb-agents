@@ -1,0 +1,89 @@
+{
+  "status": "testé dans le candidat local ; chantier global en cours",
+  "scope": "Préchargement Electron et cinq parcours OAuth",
+  "explicitAnyRemoved": 17,
+  "maximumLines": 311,
+  "structure": "Configuration des cinq méthodes dans oauth-api.ts avec deux références lexicales de callback, initialisées dans leur ordre d’origine ; un seul appel de configuration par préchargement. Aucun moteur ou registre ajouté.",
+  "proof": "Déclarations OAuth et ordre des autres instructions conservés. JavaScript équivalent après effacement des types, hors deux lectures de code d’erreur désormais bornées aux objets.",
+  "isolatedScenarios": {
+    "cases": 18,
+    "assertions": 83,
+    "boundaries": "Electron et serveur local de callback simulés dans un processus Bun isolé ; aucun compte réel connecté ou modifié.",
+    "coverage": [
+      "succès des cinq méthodes",
+      "refus du fournisseur",
+      "callback sans code",
+      "port occupé avec Error ou objet simple",
+      "nouvelle demande après échec",
+      "expiration puis nouvelle demande réussie",
+      "corrélation de source et de demande",
+      "URL Mistral interdite et annulation"
+    ]
+  },
+  "checks": {
+    "preload-oauth-all-types-3": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 16.27,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/preload-oauth-all-types-3.log"
+    },
+    "preload-oauth-all-lint-3": {
+      "command": [
+        "rtk",
+        "bunx",
+        "eslint",
+        "--max-warnings",
+        "0",
+        "apps/electron/src/preload/bootstrap.ts",
+        "apps/electron/src/preload/oauth-api.ts",
+        "apps/electron/src/preload/oauth-api.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.01,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/preload-oauth-all-lint-3.log"
+    },
+    "preload-oauth-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 17.99,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/preload-oauth-build.log"
+    },
+    "preload-oauth-flow-tests-4": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./apps/electron/src/preload/oauth-api.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.05,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/preload-oauth-flow-tests-4.log"
+    },
+    "preload-oauth-final-all-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 143.69,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/preload-oauth-final-all-tests.log"
+    }
+  },
+  "remaining": {
+    "max-lines": 162,
+    "no-explicit-any": 489
+  },
+  "installedApplication": "inchangée ; validation globale, interface et missions réelles finales sous nouvelles dépendances restantes"
+}

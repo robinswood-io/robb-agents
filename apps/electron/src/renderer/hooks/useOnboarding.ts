@@ -1,3 +1,9 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import { useState,useCallback,useEffect } from 'react';
+import { type UseOnboardingOptions,type UseOnboardingReturn,apiSetupMethodToConnectionSetup } from "./onboarding-connection-setup";
+export { BASE_SLUG_FOR_METHOD, resolveProviderSetupSelection, resolveSlugForMethod, apiSetupMethodToConnectionSetup } from "./onboarding-connection-setup";
+
+import { useConnectionOnboarding } from "./use-connection-onboarding";
 /**
  * useOnboarding Hook
  *
@@ -9,228 +15,28 @@
  * 4. Credentials (API Key or Claude OAuth)
  * 5. Complete
  */
-import { useState, useCallback, useEffect } from 'react'
-import type {
-  OnboardingState,
-  OnboardingStep,
-  ApiSetupMethod,
-} from '@/components/onboarding'
-import type { ProviderChoice } from '@/components/onboarding/ProviderSelectStep'
-import type { LocalModelSubmitData } from '@/components/onboarding/LocalModelStep'
-import type { ApiKeySubmitData } from '@/components/apisetup'
-import type { CustomEndpointConfig } from '@config/llm-connections'
-import type { SetupNeeds, LlmConnectionSetup, ClaudeOAuthIdentityDto } from '../../shared/types'
-
-interface UseOnboardingOptions {
-  /** Called when onboarding is complete */
-  onComplete: () => void
-  /** Initial setup needs from auth state check */
-  initialSetupNeeds?: SetupNeeds
-  /** Start the wizard at a specific step (default: 'welcome') */
-  initialStep?: OnboardingStep
-  /** Pre-select an API setup method (useful when editing an existing connection) */
-  initialApiSetupMethod?: ApiSetupMethod
-  /** Called when user goes back from the initial step (dismisses the wizard) */
-  onDismiss?: () => void
-  /** Called immediately after config is saved to disk (before wizard closes).
-   *  Use this to propagate billing/model changes to the UI without waiting for onComplete. */
-  onConfigSaved?: () => void
-  /** Slug of existing connection being edited (null = creating new) */
-  editingSlug?: string | null
-  /** Set of slugs already in use (for generating unique slugs when creating new) */
-  existingSlugs?: Set<string>
-}
-
-interface UseOnboardingReturn {
-  // State
-  state: OnboardingState
-
-  // Wizard actions
-  handleContinue: () => void
-  handleBack: () => void
-
-  // Provider select (new flow)
-  handleSelectProvider: (choice: ProviderChoice) => void
-
-  // API Setup (legacy — kept for direct edit)
-  handleSelectApiSetupMethod: (method: ApiSetupMethod) => void
-
-  // Credentials
-  handleSubmitCredential: (data: ApiKeySubmitData) => void
-
-  // Local model
-  handleSubmitLocalModel: (data: LocalModelSubmitData) => void
-  handleStartOAuth: (methodOverride?: ApiSetupMethod, connectionSlugOverride?: string, googleCloudProject?: string) => void
-
-  // Claude OAuth (two-step flow)
-  isWaitingForCode: boolean
-  handleSubmitAuthCode: (code: string) => void
-  handleCancelOAuth: () => void
-
-  // Copilot device code (displayed during device flow)
-  copilotDeviceCode?: { userCode: string; verificationUri: string }
-
-  // Git Bash (Windows)
-  handleBrowseGitBash: () => Promise<string | null>
-  handleUseGitBashPath: (path: string) => void
-  handleRecheckGitBash: () => void
-  handleClearError: () => void
-
-  // Skip setup ("Setup later")
-  handleSkipSetup: () => void
-
-  // Completion
-  handleFinish: () => void
-  handleCancel: () => void
-
-  // Direct edit (skip method selection, jump to credentials)
-  jumpToCredentials: (method: ApiSetupMethod) => void
-
-  // Reset
-  reset: () => void
-}
-
-// Base slug for each setup method (used as template key in ipc.ts)
-export const BASE_SLUG_FOR_METHOD: Record<ApiSetupMethod, string> = {
-  anthropic_api_key: 'anthropic-api',
-  claude_oauth: 'claude-max',
-  pi_chatgpt_oauth: 'chatgpt-plus',
-  pi_copilot_oauth: 'github-copilot',
-  pi_gemini_oauth: 'google-gemini',
-  pi_google_antigravity_subscription: 'google-antigravity',
-  pi_mistral_vibe_subscription: 'mistral-vibe',
-  pi_api_key: 'pi-api-key',
-}
-
-interface ProviderSetupSelection {
-  method: ApiSetupMethod
-  preferredPiPreset?: string
-  startOAuth: boolean
-}
-
 /**
- * Resolve the safe default setup for a provider card. Google account access
- * uses the official Antigravity CLI; the legacy Code Assist OAuth method
- * remains available from direct setup for separately licensed organizations.
+ * useOnboarding Hook
+ *
+ * Manages the state machine for the onboarding wizard.
+ * Flow:
+ * 1. Welcome
+ * 2. Git Bash (Windows only, if not found)
+ * 3. API Setup (API Key / Claude OAuth)
+ * 4. Credentials (API Key or Claude OAuth)
+ * 5. Complete
  */
-export function resolveProviderSetupSelection(
-  choice: Exclude<ProviderChoice, 'local'>,
-): ProviderSetupSelection {
-  const selections: Record<Exclude<ProviderChoice, 'local'>, ProviderSetupSelection> = {
-    claude: { method: 'claude_oauth', startOAuth: true },
-    chatgpt: { method: 'pi_chatgpt_oauth', startOAuth: true },
-    copilot: { method: 'pi_copilot_oauth', startOAuth: true },
-    google: { method: 'pi_google_antigravity_subscription', startOAuth: true },
-    mistral: { method: 'pi_mistral_vibe_subscription', startOAuth: false },
-    api_key: { method: 'pi_api_key', startOAuth: false },
-  }
-  return selections[choice]
-}
 
-/**
- * Generate a unique slug for a new connection.
- * If the base slug is taken, appends -2, -3, etc.
- * When editingSlug is provided, reuses that slug (editing existing connection).
- */
-export function resolveSlugForMethod(
-  method: ApiSetupMethod,
-  editingSlug: string | null,
-  existingSlugs: Set<string>,
-): string {
-  // Editing an existing connection — reuse its slug
-  if (editingSlug) return editingSlug
 
-  const base = BASE_SLUG_FOR_METHOD[method]
-  if (!existingSlugs.has(base)) return base
 
-  let i = 2
-  while (existingSlugs.has(`${base}-${i}`)) i++
-  return `${base}-${i}`
-}
 
-// Map ApiSetupMethod to LlmConnectionSetup for the new unified connection system
-function isLoopbackEndpoint(baseUrl?: string): boolean {
-  if (!baseUrl?.trim()) return false
-  try {
-    const hostname = new URL(baseUrl.trim()).hostname
-    const normalizedHostname = hostname.startsWith('[') && hostname.endsWith(']')
-      ? hostname.slice(1, -1)
-      : hostname
-    return normalizedHostname === 'localhost' || normalizedHostname === '127.0.0.1' || normalizedHostname === '::1'
-  } catch {
-    return false
-  }
-}
 
-export function apiSetupMethodToConnectionSetup(
-  method: ApiSetupMethod,
-  options: {
-    credential?: string
-    baseUrl?: string
-    connectionDefaultModel?: string
-    models?: string[]
-    piAuthProvider?: string
-    googleCloudProject?: string
-    modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined3Tier'
-    customEndpoint?: CustomEndpointConfig
-    iamCredentials?: { accessKeyId: string; secretAccessKey: string; sessionToken?: string }
-    awsRegion?: string
-    bedrockAuthMethod?: 'iam_credentials' | 'environment'
-    oauthIdentity?: ClaudeOAuthIdentityDto
-  },
-  editingSlug: string | null,
-  existingSlugs: Set<string>,
-): LlmConnectionSetup {
-  const slug = resolveSlugForMethod(method, editingSlug, existingSlugs)
+import type { OnboardingState,ApiSetupMethod } from '@/components/onboarding';
 
-  switch (method) {
-    case 'anthropic_api_key':
-      return {
-        slug,
-        credential: options.credential,
-        baseUrl: options.baseUrl,
-        defaultModel: options.connectionDefaultModel,
-        models: options.models,
-        customEndpoint: options.customEndpoint,
-      }
-    case 'claude_oauth':
-      return {
-        slug,
-        credential: options.credential,
-        oauthIdentity: options.oauthIdentity,
-      }
-    case 'pi_chatgpt_oauth':
-    case 'pi_copilot_oauth':
-      return {
-        slug,
-        credential: options.credential,
-      }
-    case 'pi_gemini_oauth':
-      return {
-        slug,
-        credential: options.credential,
-        googleCloudProject: options.googleCloudProject,
-      }
-    case 'pi_google_antigravity_subscription':
-      return { slug }
-    case 'pi_mistral_vibe_subscription':
-      return { slug }
-    case 'pi_api_key':
-      return {
-        slug,
-        credential: options.credential,
-        baseUrl: options.baseUrl,
-        defaultModel: options.connectionDefaultModel,
-        models: options.models,
-        piAuthProvider: options.piAuthProvider,
-        modelSelectionMode: options.modelSelectionMode,
-        customEndpoint: options.customEndpoint,
-        iamCredentials: options.iamCredentials,
-        awsRegion: options.awsRegion,
-        bedrockAuthMethod: options.bedrockAuthMethod,
-      }
-  }
-}
+import type { LocalModelSubmitData } from '@/components/onboarding/LocalModelStep';
+
+import type { CustomEndpointConfig } from '@config/llm-connections';
+import type { ClaudeOAuthIdentityDto } from '../../shared/types';
 
 export function useOnboarding({
   onComplete,
@@ -243,17 +49,17 @@ export function useOnboarding({
   existingSlugs = new Set(),
 }: UseOnboardingOptions): UseOnboardingReturn {
   // Main wizard state
-  const [state, setState] = useState<OnboardingState>({
+  const [state, setState] = useState<OnboardingState>(omitUndefined({
     step: initialStep,
-    loginStatus: 'idle',
-    credentialStatus: 'idle',
-    completionStatus: 'saving',
+    loginStatus: 'idle' as const,
+    credentialStatus: 'idle' as const,
+    completionStatus: 'saving' as const,
     apiSetupMethod: initialApiSetupMethod ?? null,
     isExistingUser: initialSetupNeeds?.needsBillingConfig ?? false,
     gitBashStatus: undefined,
-    isRecheckingGitBash: false,
-    isCheckingGitBash: true, // Start as true until check completes
-  })
+    isRecheckingGitBash: false as const,
+    isCheckingGitBash: true as const, // Start as true until check completes
+  }))
 
   // Check Git Bash on Windows at mount. If missing, redirect to git-bash step
   // regardless of the initial step (provider-select skips the welcome gate).
@@ -310,18 +116,18 @@ export function useOnboarding({
     try {
       // Build connection setup from UI state
       const setup = apiSetupMethodToConnectionSetup(method, {
-        credential,
-        baseUrl: options?.baseUrl,
-        connectionDefaultModel: options?.connectionDefaultModel,
-        models: options?.models,
-        piAuthProvider: options?.piAuthProvider,
-        googleCloudProject: options?.googleCloudProject,
-        modelSelectionMode: options?.modelSelectionMode,
-        customEndpoint: options?.customEndpoint,
-        iamCredentials: options?.iamCredentials,
-        awsRegion: options?.awsRegion,
-        bedrockAuthMethod: options?.bedrockAuthMethod,
-        oauthIdentity: options?.oauthIdentity,
+        ...(credential !== undefined ? { credential: credential } : {}),
+        ...(options?.baseUrl !== undefined ? { baseUrl: options?.baseUrl } : {}),
+        ...(options?.connectionDefaultModel !== undefined ? { connectionDefaultModel: options?.connectionDefaultModel } : {}),
+        ...(options?.models !== undefined ? { models: options?.models } : {}),
+        ...(options?.piAuthProvider !== undefined ? { piAuthProvider: options?.piAuthProvider } : {}),
+        ...(options?.googleCloudProject !== undefined ? { googleCloudProject: options?.googleCloudProject } : {}),
+        ...(options?.modelSelectionMode !== undefined ? { modelSelectionMode: options?.modelSelectionMode } : {}),
+        ...(options?.customEndpoint !== undefined ? { customEndpoint: options?.customEndpoint } : {}),
+        ...(options?.iamCredentials !== undefined ? { iamCredentials: options?.iamCredentials } : {}),
+        ...(options?.awsRegion !== undefined ? { awsRegion: options?.awsRegion } : {}),
+        ...(options?.bedrockAuthMethod !== undefined ? { bedrockAuthMethod: options?.bedrockAuthMethod } : {}),
+        ...(options?.oauthIdentity !== undefined ? { oauthIdentity: options?.oauthIdentity } : {}),
       }, connectionSlugOverride ?? editingSlug, existingSlugs)
       // Use new unified API
       const result = await window.electronAPI.setupLlmConnection(
@@ -384,7 +190,7 @@ export function useOnboarding({
         onComplete()
         break
     }
-  }, [state.step, state.gitBashStatus, state.apiSetupMethod, onComplete])
+  }, [state.step, state.gitBashStatus, onComplete])
 
   // Go back to previous step. If at the initial step, call onDismiss instead.
   const handleBack = useCallback(() => {
@@ -407,369 +213,25 @@ export function useOnboarding({
         }
         break
       case 'credentials':
-        setState(s => ({ ...s, step: 'provider-select', credentialStatus: 'idle', errorMessage: undefined }))
+        setState(s => (omitUndefined<OnboardingState>({ ...s, step: 'provider-select', credentialStatus: 'idle', errorMessage: undefined })))
         break
       case 'local-model':
-        setState(s => ({ ...s, step: 'provider-select', credentialStatus: 'idle', errorMessage: undefined }))
+        setState(s => (omitUndefined<OnboardingState>({ ...s, step: 'provider-select', credentialStatus: 'idle', errorMessage: undefined })))
         break
     }
   }, [state.step, state.gitBashStatus, initialStep, onDismiss])
 
   // Select API setup method (legacy — kept for direct edit flows)
   const handleSelectApiSetupMethod = useCallback((method: ApiSetupMethod) => {
-    setState(s => ({ ...s, apiSetupMethod: method, preferredPiPreset: undefined }))
+    setState(s => (omitUndefined<OnboardingState>({ ...s, apiSetupMethod: method, preferredPiPreset: undefined })))
   }, [])
-
-  // Submit credential (API key + optional endpoint config)
-  // Tests the connection first before saving to catch issues early
-  const handleSubmitCredential = useCallback(async (data: ApiKeySubmitData) => {
-    setState(s => ({ ...s, credentialStatus: 'validating', errorMessage: undefined }))
-
-    const isPiApiKeyFlow = state.apiSetupMethod === 'pi_api_key'
-
-    try {
-      // Bedrock (Pi+amazon-bedrock) — skip API key validation and connection test
-      if (data.bedrockAuthMethod) {
-        const saved = await handleSaveConfig(undefined, {
-          baseUrl: data.baseUrl,
-          connectionDefaultModel: data.connectionDefaultModel,
-          models: data.models,
-          piAuthProvider: data.piAuthProvider,
-          modelSelectionMode: data.modelSelectionMode,
-          iamCredentials: data.iamCredentials,
-          awsRegion: data.awsRegion,
-          bedrockAuthMethod: data.bedrockAuthMethod,
-        })
-        if (saved) {
-          setState(s => ({ ...s, credentialStatus: 'success', step: 'complete' }))
-        } else {
-          setState(s => ({ ...s, credentialStatus: 'error' }))
-        }
-        return
-      }
-
-      // When editing an existing connection, API key is optional (empty = keep existing credential)
-      if (!data.apiKey.trim() && editingSlug) {
-        const saved = await handleSaveConfig(undefined, {
-          baseUrl: data.baseUrl,
-          connectionDefaultModel: data.connectionDefaultModel,
-          models: data.models,
-          piAuthProvider: data.piAuthProvider,
-          modelSelectionMode: data.modelSelectionMode,
-          customEndpoint: data.customEndpoint,
-        })
-        if (saved) {
-          setState(s => ({ ...s, credentialStatus: 'success', step: 'complete' }))
-        } else {
-          setState(s => ({ ...s, credentialStatus: 'error' }))
-        }
-        return
-      }
-
-      // API key validation differs by endpoint locality:
-      // - Local/loopback custom endpoints may be keyless (e.g. Ollama)
-      // - Non-local endpoints require an API key
-      const isLoopbackCustomEndpoint = isLoopbackEndpoint(data.baseUrl)
-      if (isPiApiKeyFlow) {
-        if (!data.apiKey.trim() && !isLoopbackCustomEndpoint) {
-          setState(s => ({
-            ...s,
-            credentialStatus: 'error',
-            errorMessage: 'Please enter a valid API key',
-          }))
-          return
-        }
-      } else {
-        if (!data.apiKey.trim() && !isLoopbackCustomEndpoint) {
-          setState(s => ({
-            ...s,
-            credentialStatus: 'error',
-            errorMessage: 'Please enter a valid API key',
-          }))
-          return
-        }
-      }
-
-      // Validate connection by spawning a lightweight subprocess test.
-      // Custom endpoint protocol routes through PiAgent at runtime, so test with Pi too.
-      const setupTestProvider = data.customEndpoint ? 'pi' : (isPiApiKeyFlow ? 'pi' : 'anthropic')
-      const effectivePiAuthProvider = data.piAuthProvider
-      const testResult = await window.electronAPI.testLlmConnectionSetup({
-        provider: setupTestProvider,
-        apiKey: data.apiKey,
-        baseUrl: data.baseUrl,
-        model: data.models?.[0],
-        piAuthProvider: effectivePiAuthProvider,
-        customEndpoint: data.customEndpoint,
-      })
-
-      if (!testResult.success) {
-        setState(s => ({
-          ...s,
-          credentialStatus: 'error',
-          errorMessage: testResult.error || 'Connection test failed',
-        }))
-        return
-      }
-
-      const saved = await handleSaveConfig(data.apiKey, {
-        baseUrl: data.baseUrl,
-        connectionDefaultModel: data.connectionDefaultModel,
-        models: data.models,
-        piAuthProvider: effectivePiAuthProvider,
-        modelSelectionMode: data.modelSelectionMode,
-        customEndpoint: data.customEndpoint,
-      })
-
-      if (saved) {
-        setState(s => ({
-          ...s,
-          credentialStatus: 'success',
-          step: 'complete',
-        }))
-      } else {
-        // Save failed — error is already set by handleSaveConfig, stay on credentials step
-        setState(s => ({ ...s, credentialStatus: 'error' }))
-      }
-    } catch (error) {
-      setState(s => ({
-        ...s,
-        credentialStatus: 'error',
-        errorMessage: error instanceof Error ? error.message : 'Validation failed',
-      }))
-    }
-  }, [handleSaveConfig, state.apiSetupMethod])
-
-  // Save config, validate the connection, and update state accordingly.
-  // Shared by all OAuth flows after tokens are captured.
-  // `method` is passed explicitly to break the stale-closure chain — the OAuth
-  // await crosses renders, so handleSaveConfig's closure may have an outdated
-  // state.apiSetupMethod.
-  const saveAndValidateConnection = useCallback(async (
-    connectionSlug: string,
-    method: ApiSetupMethod,
-    credential?: string,
-    updateOnly?: boolean,
-    oauthIdentity?: ClaudeOAuthIdentityDto,
-    googleCloudProject?: string,
-  ): Promise<boolean> => {
-    const setupOptions = oauthIdentity || googleCloudProject
-      ? { ...(oauthIdentity ? { oauthIdentity } : {}), ...(googleCloudProject ? { googleCloudProject } : {}) }
-      : undefined
-    const saved = await handleSaveConfig(credential, setupOptions, method, connectionSlug, updateOnly)
-    if (!saved) {
-      setState(s => ({ ...s, credentialStatus: 'error' }))
-      return false
-    }
-    const testResult = await window.electronAPI.testLlmConnection(connectionSlug)
-    if (testResult.success) {
-      setState(s => ({ ...s, credentialStatus: 'success', step: 'complete' }))
-      return true
-    } else {
-      setState(s => ({ ...s, credentialStatus: 'error', errorMessage: testResult.error || 'Connection test failed' }))
-      return false
-    }
-  }, [handleSaveConfig])
-
-  // Two-step OAuth flow state
-  const [isWaitingForCode, setIsWaitingForCode] = useState(false)
-
-  // Copilot device code (displayed during device flow)
-  const [copilotDeviceCode, setCopilotDeviceCode] = useState<{ userCode: string; verificationUri: string } | undefined>()
-
-  // Start OAuth flow (Claude or ChatGPT depending on selected method)
-  const handleStartOAuth = useCallback(async (
-    methodOverride?: ApiSetupMethod,
-    connectionSlugOverride?: string,
-    googleCloudProject?: string,
-  ) => {
-    const effectiveMethod = methodOverride ?? state.apiSetupMethod
-
-    if (methodOverride && methodOverride !== state.apiSetupMethod) {
-      setState(s => ({
-        ...s,
-        apiSetupMethod: methodOverride,
-        step: 'credentials',
-        credentialStatus: 'validating',
-        errorMessage: undefined,
-      }))
-    } else {
-      setState(s => ({ ...s, credentialStatus: 'validating', errorMessage: undefined }))
-    }
-
-    if (!effectiveMethod) {
-      setState(s => ({
-        ...s,
-        credentialStatus: 'error',
-        errorMessage: 'Select an authentication method first.',
-      }))
-      return
-    }
-
-    try {
-      // ChatGPT OAuth (single-step flow - opens browser, captures tokens automatically)
-      if (effectiveMethod === 'pi_chatgpt_oauth') {
-        const effectiveEditingSlug = connectionSlugOverride ?? editingSlug
-        const isReauth = !!effectiveEditingSlug
-        const connectionSlug = apiSetupMethodToConnectionSetup(effectiveMethod, {}, effectiveEditingSlug, existingSlugs).slug
-        const result = await window.electronAPI.startChatGptOAuth(connectionSlug)
-
-        if (result.success) {
-          await saveAndValidateConnection(connectionSlug, effectiveMethod, undefined, isReauth)
-        } else {
-          setState(s => ({
-            ...s,
-            credentialStatus: 'error',
-            errorMessage: result.error || 'ChatGPT authentication failed',
-          }))
-        }
-        return
-      }
-
-      // Mistral Vibe subscription (delegated browser flow owned by Vibe)
-      if (effectiveMethod === 'pi_mistral_vibe_subscription') {
-        const effectiveEditingSlug = connectionSlugOverride ?? editingSlug
-        const isReauth = !!effectiveEditingSlug
-        const connectionSlug = apiSetupMethodToConnectionSetup(effectiveMethod, {}, effectiveEditingSlug, existingSlugs).slug
-        const result = await window.electronAPI.startMistralVibeSetup()
-        if (result.success) {
-          await saveAndValidateConnection(connectionSlug, effectiveMethod, undefined, isReauth)
-        } else {
-          setState(s => ({ ...s, credentialStatus: 'error', errorMessage: result.error || 'Mistral Vibe setup failed' }))
-        }
-        return
-      }
-
-      // Google Antigravity subscription (official CLI owns the browser login
-      // and keeps its credential in the operating-system keyring).
-      if (effectiveMethod === 'pi_google_antigravity_subscription') {
-        const effectiveEditingSlug = connectionSlugOverride ?? editingSlug
-        const isReauth = !!effectiveEditingSlug
-        const connectionSlug = apiSetupMethodToConnectionSetup(effectiveMethod, {}, effectiveEditingSlug, existingSlugs).slug
-        const result = await window.electronAPI.startGoogleAntigravitySetup()
-        if (result.success) {
-          await saveAndValidateConnection(connectionSlug, effectiveMethod, undefined, isReauth)
-        } else {
-          setState(s => ({ ...s, credentialStatus: 'error', errorMessage: result.error || 'Google Antigravity setup failed' }))
-        }
-        return
-      }
-
-      if (effectiveMethod === 'pi_gemini_oauth') {
-        const trimmedProject = googleCloudProject?.trim() ?? ''
-        if (!/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(trimmedProject)) {
-          setState(s => ({
-            ...s,
-            credentialStatus: 'error',
-            errorMessage: 'Enter a valid Google Cloud project ID before signing in.',
-          }))
-          return
-        }
-        const effectiveEditingSlug = connectionSlugOverride ?? editingSlug
-        const isReauth = !!effectiveEditingSlug
-        const connectionSlug = apiSetupMethodToConnectionSetup(effectiveMethod, {}, effectiveEditingSlug, existingSlugs).slug
-        const result = await window.electronAPI.startGeminiOAuth(connectionSlug)
-
-        if (result.success) {
-          await saveAndValidateConnection(connectionSlug, effectiveMethod, undefined, isReauth, undefined, trimmedProject)
-        } else {
-          setState(s => ({
-            ...s,
-            credentialStatus: 'error',
-            errorMessage: result.error || 'Google authentication failed',
-          }))
-        }
-        return
-      }
-
-      // Copilot OAuth (device flow — polls for token after user enters code on GitHub)
-      if (effectiveMethod === 'pi_copilot_oauth') {
-        const effectiveEditingSlug = connectionSlugOverride ?? editingSlug
-        const isReauth = !!effectiveEditingSlug
-        const connectionSlug = apiSetupMethodToConnectionSetup(effectiveMethod, {}, effectiveEditingSlug, existingSlugs).slug
-
-        // Subscribe to device code event before starting the flow
-        const cleanup = window.electronAPI.onCopilotDeviceCode((data) => {
-          setCopilotDeviceCode(data)
-        })
-
-        try {
-          const result = await window.electronAPI.startCopilotOAuth(connectionSlug)
-
-          if (result.success) {
-            await saveAndValidateConnection(connectionSlug, effectiveMethod, undefined, isReauth)
-          } else {
-            setState(s => ({
-              ...s,
-              credentialStatus: 'error',
-              errorMessage: result.error || 'GitHub authentication failed',
-            }))
-          }
-        } finally {
-          cleanup()
-          setCopilotDeviceCode(undefined)
-        }
-        return
-      }
-
-      // Claude OAuth (two-step flow - opens browser, user copies code)
-      // Remaining method must be claude_oauth
-      if (effectiveMethod !== 'claude_oauth') {
-        setState(s => ({
-          ...s,
-          credentialStatus: 'error',
-          errorMessage: 'This connection uses API keys, not OAuth.',
-        }))
-        return
-      }
-
-      const result = await window.electronAPI.startClaudeOAuth()
-
-      if (result.success) {
-        // Browser opened successfully, now waiting for user to copy the code
-        setIsWaitingForCode(true)
-        setState(s => ({ ...s, credentialStatus: 'idle' }))
-      } else {
-        setState(s => ({
-          ...s,
-          credentialStatus: 'error',
-          errorMessage: result.error || 'Failed to start OAuth',
-        }))
-      }
-    } catch (error) {
-      setState(s => ({
-        ...s,
-        credentialStatus: 'error',
-        errorMessage: error instanceof Error ? error.message : 'OAuth failed',
-      }))
-    }
-  }, [state.apiSetupMethod, saveAndValidateConnection, editingSlug, existingSlugs])
-
-  // Map ProviderChoice → ApiSetupMethod and navigate to the right step
-  const handleSelectProvider = useCallback((choice: ProviderChoice) => {
-    if (choice === 'local') {
-      // Local uses anthropic_api_key with custom endpoint (Ollama doesn't need an API key)
-      setState(s => ({ ...s, step: 'local-model', apiSetupMethod: 'anthropic_api_key', credentialStatus: 'idle', errorMessage: undefined }))
-      return
-    }
-
-    const selection = resolveProviderSetupSelection(choice)
-    const method = selection.method
-    setState(s => ({
-      ...s,
-      apiSetupMethod: method,
-      preferredPiPreset: selection.preferredPiPreset,
-      step: 'credentials',
-      credentialStatus: 'idle',
-      errorMessage: undefined,
-    }))
-
-    // OAuth methods start immediately
-    if (selection.startOAuth) {
-      // Defer to next tick so state is updated before handleStartOAuth reads it
-      setTimeout(() => handleStartOAuth(method), 0)
-    }
-  }, [handleStartOAuth])
+  const { handleSubmitCredential, saveAndValidateConnection, isWaitingForCode, setIsWaitingForCode, copilotDeviceCode, handleStartOAuth, handleSelectProvider } = useConnectionOnboarding({
+    setState,
+    state,
+    handleSaveConfig,
+    editingSlug,
+    existingSlugs,
+  })
 
   // Submit authorization code (second step of OAuth flow)
   const handleSubmitAuthCode = useCallback(async (code: string) => {
@@ -782,7 +244,7 @@ export function useOnboarding({
       return
     }
 
-    setState(s => ({ ...s, credentialStatus: 'validating', errorMessage: undefined }))
+    setState(s => (omitUndefined<OnboardingState>({ ...s, credentialStatus: 'validating', errorMessage: undefined })))
 
     try {
       const connectionSlug = apiSetupMethodToConnectionSetup('claude_oauth', {}, editingSlug, existingSlugs).slug
@@ -805,11 +267,11 @@ export function useOnboarding({
         errorMessage: error instanceof Error ? error.message : 'Failed to exchange code',
       }))
     }
-  }, [saveAndValidateConnection, editingSlug, existingSlugs])
+  }, [saveAndValidateConnection, editingSlug, existingSlugs, setIsWaitingForCode])
 
   // Submit local model configuration (Ollama or any OpenAI-compatible local server)
   const handleSubmitLocalModel = useCallback(async (data: LocalModelSubmitData) => {
-    setState(s => ({ ...s, credentialStatus: 'validating', errorMessage: undefined }))
+    setState(s => (omitUndefined<OnboardingState>({ ...s, credentialStatus: 'validating', errorMessage: undefined })))
 
     try {
       // apiSetupMethod was set to 'anthropic_api_key' when entering local-model step
@@ -837,10 +299,10 @@ export function useOnboarding({
   // Cancel OAuth flow
   const handleCancelOAuth = useCallback(async () => {
     setIsWaitingForCode(false)
-    setState(s => ({ ...s, credentialStatus: 'idle', errorMessage: undefined }))
+    setState(s => (omitUndefined<OnboardingState>({ ...s, credentialStatus: 'idle', errorMessage: undefined })))
     // Clear OAuth state on backend
     await window.electronAPI.clearClaudeOAuthState()
-  }, [])
+  }, [setIsWaitingForCode])
 
   // Git Bash handlers (Windows only)
   const handleBrowseGitBash = useCallback(async () => {
@@ -882,7 +344,7 @@ export function useOnboarding({
   }, [])
 
   const handleClearError = useCallback(() => {
-    setState(s => ({ ...s, errorMessage: undefined }))
+    setState(s => (omitUndefined<OnboardingState>({ ...s, errorMessage: undefined })))
   }, [])
 
   // Skip setup — user chose "Setup later"
@@ -907,32 +369,32 @@ export function useOnboarding({
 
   // Jump directly to credentials step with a pre-set method (for editing existing connections)
   const jumpToCredentials = useCallback((method: ApiSetupMethod) => {
-    setState(s => ({
+    setState(s => (omitUndefined<OnboardingState>({
       ...s,
       step: 'credentials' as const,
       apiSetupMethod: method,
       credentialStatus: 'idle' as const,
       errorMessage: undefined,
-    }))
+    })))
   }, [])
 
   // Reset onboarding to initial state (used after logout or modal close)
   const reset = useCallback(() => {
-    setState({
+    setState(omitUndefined({
       step: initialStep,
-      loginStatus: 'idle',
-      credentialStatus: 'idle',
-      completionStatus: 'saving',
+      loginStatus: 'idle' as const,
+      credentialStatus: 'idle' as const,
+      completionStatus: 'saving' as const,
       apiSetupMethod: initialApiSetupMethod ?? null,
-      isExistingUser: false,
+      isExistingUser: false as const,
       errorMessage: undefined,
-    })
+    }))
     setIsWaitingForCode(false)
     // Clean up any pending OAuth state
     window.electronAPI.clearClaudeOAuthState().catch(() => {
       // Ignore errors - state may not exist
     })
-  }, [initialStep, initialApiSetupMethod])
+  }, [initialStep, initialApiSetupMethod, setIsWaitingForCode])
 
   return {
     state,
@@ -948,7 +410,7 @@ export function useOnboarding({
     handleSubmitAuthCode,
     handleCancelOAuth,
     // Copilot device code
-    copilotDeviceCode,
+    ...(copilotDeviceCode !== undefined ? { copilotDeviceCode: copilotDeviceCode } : {}),
     // Git Bash (Windows)
     handleBrowseGitBash,
     handleUseGitBashPath,

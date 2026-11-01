@@ -1,0 +1,339 @@
+[
+  {
+    "legacy_id": "robinswood-media-authority-2026-replenisher-tests",
+    "name": "Robinswood Media Authority 2026 — replenisher guardrail tests",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_media_authority_2026_replenisher_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "triggerType": "ScheduleStep",
+    "task_queue": "campaigns",
+    "riskClass": "guardrail_tests_no_outbound",
+    "sideEffects": [
+      "run_replenisher_dry_run",
+      "write_test_report",
+      "no_external_outbound_message"
+    ],
+    "category": "campaign-governance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-authority-2026-replenisher-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Tests strict replenisher filters, including bounce artifact suppression, before scheduled seed replenishment.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_media_authority_2026_replenisher_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-authority-2026-replenisher-tests-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-authority-2026-replenisher-tests-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-authority-2026-replenisher-tests-last.md",
+    "businessContractVersion": "media-authority-replenisher-tests-v2-bounce-suppression"
+  },
+  {
+    "legacy_id": "robinswood-media-authority-2026-reply-scan",
+    "name": "Robinswood Media Authority 2026 — reply/bounce scan only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_media_authority_2026.py --reply-scan-only",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "triggerType": "Schedule",
+    "task_queue": "campaigns",
+    "riskClass": "read_gmail_reply_scan_no_outbound",
+    "sideEffects": [
+      "read_gmail_threads_for_sent_media_authority_messages",
+      "write_reply_action_queue",
+      "write_bounces_artifact",
+      "may_mark_media_seed_bounced",
+      "may_append_global_contact_suppression_for_bounces",
+      "no_external_outbound_message"
+    ],
+    "category": "campaign-governance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-authority-2026-reply-scan-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Independent midday/afternoon scan for media replies and bounces. No send path is reachable in --reply-scan-only mode.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_media_authority_2026.py",
+        "--reply-scan-only"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-authority-2026-reply-scan-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-authority-2026-reply-scan-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-authority-2026-reply-scan-last.md",
+    "businessContractVersion": "media-authority-2026-v3-reply-scan-only-no-outbound-separate-report"
+  },
+  {
+    "legacy_id": "robinswood-media-contact-base-2026",
+    "name": "Robinswood Media Contact Base 2026 — journalistes FR/BE/CH/LU prepare-only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_media_contact_base_2026.py",
+    "timeout_seconds": 60,
+    "cutover_ready": true,
+    "triggerType": "ManualDirectOnly",
+    "task_queue": "campaigns",
+    "riskClass": "prepare_only_contact_database_no_outbound",
+    "sideEffects": [
+      "read_existing_oss_contact_sources",
+      "read_public_wikipedia_categories",
+      "write_contact_base_json_csv_md",
+      "no_external_outbound_message",
+      "no_crm_mutation"
+    ],
+    "category": "campaign-governance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-contact-base-2026-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Builds an auditable 500+ journalist/editorial contact base for France, Belgium, Switzerland and Luxembourg. Does not send, does not schedule outreach, and keeps legacy PR/bounced/suppressed/missing-email rows non-eligible.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_media_contact_base_2026.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 60
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-contact-base-2026-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-contact-base-2026-report.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-contact-base-2026.md",
+    "businessContractVersion": "contact-base-v1-500plus-fr-be-ch-lu-prepare-only"
+  },
+  {
+    "legacy_id": "robinswood-media-contact-base-2026-tests",
+    "name": "Robinswood Media Contact Base 2026 — guardrail tests",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_media_contact_base_2026_tests.py",
+    "timeout_seconds": 60,
+    "cutover_ready": true,
+    "triggerType": "ManualDirectOnly",
+    "task_queue": "campaigns",
+    "riskClass": "guardrail_tests_no_outbound",
+    "sideEffects": [
+      "rebuild_contact_base_prepare_only",
+      "write_test_report",
+      "no_external_outbound_message"
+    ],
+    "category": "campaign-governance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-contact-base-2026-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Validates 500+ target-region records, FR/BE/CH/LU presence, prepare-only contract and non-eligibility of legacy/missing-email rows.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_media_contact_base_2026_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 60
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-contact-base-2026-tests-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-contact-base-2026-tests-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-contact-base-2026-tests-last.md",
+    "businessContractVersion": "contact-base-tests-v1-500plus-no-outbound"
+  },
+  {
+    "legacy_id": "robinswood-media-contact-enrichment-2026",
+    "name": "Robinswood Media Contact Enrichment 2026 — public/Hunter prepare-only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_media_contact_enrichment_2026.py --batch-size 25 --max-hunter-calls 8",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "triggerType": "Schedule",
+    "task_queue": "campaigns",
+    "riskClass": "prepare_only_contact_enrichment_no_outbound",
+    "sideEffects": [
+      "read_media_contact_base",
+      "read_public_wikipedia_pages",
+      "bounded_hunter_lookup_or_verify",
+      "write_enriched_contact_base",
+      "write_review_queue",
+      "no_external_outbound_message",
+      "no_crm_mutation"
+    ],
+    "category": "campaign-governance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-contact-enrichment-2026-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Advances the 500+ media contact base enrichment in small batches. No send queue, no outbound, enrichment never makes a row directly sendable; enriched rows go to review queue.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_media_contact_enrichment_2026.py",
+        "--batch-size",
+        "25",
+        "--max-hunter-calls",
+        "8"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-contact-enrichment-2026-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-contact-enrichment-2026-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-contact-enrichment-2026-last.md",
+    "businessContractVersion": "media-contact-enrichment-v1-bounded-prepare-only"
+  },
+  {
+    "legacy_id": "robinswood-media-contact-enrichment-2026-tests",
+    "name": "Robinswood Media Contact Enrichment 2026 — guardrail tests",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_media_contact_enrichment_2026_tests.py",
+    "timeout_seconds": 60,
+    "cutover_ready": true,
+    "triggerType": "ManualDirectOnly",
+    "task_queue": "campaigns",
+    "riskClass": "guardrail_tests_no_outbound",
+    "sideEffects": [
+      "run_zero_hunter_prepare_only_enrichment_test",
+      "write_test_report",
+      "no_external_outbound_message"
+    ],
+    "category": "campaign-governance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-contact-enrichment-2026-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Validates prepare-only mode, no outbound review queue, 500+ base preservation and non-eligibility of enriched/legacy rows.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_media_contact_enrichment_2026_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 60
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-contact-enrichment-2026-tests-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-contact-enrichment-2026-tests-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-media-contact-enrichment-2026-tests-last.md",
+    "businessContractVersion": "media-contact-enrichment-tests-v1-no-outbound"
+  },
+  {
+    "mode": "script",
+    "cutover_ready": true,
+    "section": "wave1",
+    "task_queue": "campaigns",
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-linkedin-connection-enrichment-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "legacy_id": "sellsy-linkedin-connection-enrichment",
+    "name": "Sellsy >30 — LinkedIn connection enrichment fail-closed",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/sellsy_linkedin_connection_requests.py --mode enrich --max-hunter 25",
+    "timeout_seconds": 900,
+    "riskClass": "linkedin_connection_prepare_only_fail_closed",
+    "sideEffects": [
+      "read_sellsy_companies_contacts",
+      "hunter_limited_enrichment",
+      "write_oss_action_queue",
+      "no_linkedin_invites",
+      "no_company_follow"
+    ],
+    "note": "Builds Sellsy >30 employee target list, enriches contacts for LinkedIn profile evidence, and materializes an individual connection action queue. No invitations are sent; current LinkedIn contract blocks people search and connection invites.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/sellsy_linkedin_connection_requests.py",
+        "--mode",
+        "enrich",
+        "--max-hunter",
+        "25"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-linkedin-connection-enrichment-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-linkedin-connection-requests-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-linkedin-connection-requests-last.md",
+    "businessContractVersion": "sellsy-linkedin-connection-requests-v1"
+  },
+  {
+    "mode": "script",
+    "cutover_ready": true,
+    "section": "wave1",
+    "task_queue": "campaigns",
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-linkedin-connection-dispatch-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "legacy_id": "sellsy-linkedin-connection-dispatch",
+    "name": "Sellsy >30 — LinkedIn individual connection dispatch fail-closed",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/sellsy_linkedin_connection_requests.py --mode dispatch --apply --max-dispatch 20",
+    "timeout_seconds": 300,
+    "riskClass": "linkedin_connection_dispatch_fail_closed",
+    "sideEffects": [
+      "read_oss_action_queue",
+      "write_ledger",
+      "no_linkedin_invites_unless_contract_allows"
+    ],
+    "note": "Attempts individual connection dispatch but fails closed under the current LinkedIn source contract: no_people_search, no_connection_invites, no public API endpoint for invitations.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/sellsy_linkedin_connection_requests.py",
+        "--mode",
+        "dispatch",
+        "--apply",
+        "--max-dispatch",
+        "20"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-linkedin-connection-dispatch-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-linkedin-connection-requests-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-linkedin-connection-requests-last.md",
+    "businessContractVersion": "sellsy-linkedin-connection-requests-v1"
+  },
+  {
+    "mode": "script",
+    "cutover_ready": true,
+    "section": "wave1",
+    "task_queue": "campaigns",
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-linkedin-connection-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "legacy_id": "sellsy-linkedin-connection-tests",
+    "name": "Sellsy >30 — LinkedIn connection wrapper self-tests",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/sellsy_linkedin_connection_requests.py --mode selftest",
+    "timeout_seconds": 120,
+    "riskClass": "guardrail_tests",
+    "sideEffects": [
+      "read_linkedin_contract",
+      "write_report"
+    ],
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/sellsy_linkedin_connection_requests.py",
+        "--mode",
+        "selftest"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-linkedin-connection-tests-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-linkedin-connection-requests-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-linkedin-connection-requests-last.md",
+    "businessContractVersion": "sellsy-linkedin-connection-requests-v1"
+  }
+]

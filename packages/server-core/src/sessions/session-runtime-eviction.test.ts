@@ -1,18 +1,21 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it, jest } from 'bun:test'
 import { SessionManager, createManagedSession } from './SessionManager.ts'
 
 describe('session runtime eviction', () => {
-  const previousTimeout = process.env.CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS
+  const previousTimeout = process.env["CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS"]
 
   beforeEach(() => {
-    process.env.CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS = '60000'
+    process.env["CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS"] = '60000'
   })
 
   afterEach(() => {
     if (previousTimeout === undefined) {
-      delete process.env.CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS
+      delete process.env["CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS"]
     } else {
-      process.env.CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS = previousTimeout
+      process.env["CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS"] = previousTimeout
     }
   })
 
@@ -57,17 +60,15 @@ describe('session runtime eviction', () => {
       })
     }
 
-    ;(manager as unknown as { sessions: Map<string, unknown> }).sessions.set(id, managed)
+    ;sessionRuntimeStateForTest(manager).sessions.set(id, managed)
     return { managed, disposeForRestart, stop, disconnectAll }
   }
 
   it('releases the agent, pool server and MCP clients for an idle session', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const runtime = addRuntime(manager, 'idle', { lastActiveAt: 1 })
 
-    const evicted = await (manager as unknown as {
-      evictIdleSessionRuntimes: (now: number) => Promise<number>
-    }).evictIdleSessionRuntimes(60_002)
+    const evicted = await (sessionManagerForTest(manager)).evictIdleSessionRuntimes(60_002)
 
     expect(evicted).toBe(1)
     expect(runtime.disposeForRestart).toHaveBeenCalledTimes(1)
@@ -79,15 +80,13 @@ describe('session runtime eviction', () => {
   })
 
   it('releases default idle runtimes after five minutes while preserving conversation state', async () => {
-    delete process.env.CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS
-    const manager = new SessionManager()
+    delete process.env["CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS"]
+    const manager = withSessionOperationsForTest(new SessionManager())
     const runtime = addRuntime(manager, 'default-idle', { lastActiveAt: 1 })
     const messages = [{ id: 'message-1', role: 'user' as const, content: 'Keep this conversation', timestamp: 1 }]
     runtime.managed.messages = messages
     runtime.managed.sdkSessionId = 'persisted-provider-session'
-    const sweep = (now: number) => (manager as unknown as {
-      evictIdleSessionRuntimes: (now: number) => Promise<number>
-    }).evictIdleSessionRuntimes(now)
+    const sweep = (now: number) => (sessionManagerForTest(manager)).evictIdleSessionRuntimes(now)
 
     expect(await sweep(5 * 60_000)).toBe(0)
     expect(await sweep(5 * 60_000 + 1)).toBe(1)
@@ -98,38 +97,31 @@ describe('session runtime eviction', () => {
   })
 
   it('honors explicitly disabled runtime eviction', async () => {
-    process.env.CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS = '0'
-    const manager = new SessionManager()
+    process.env["CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS"] = '0'
+    const manager = withSessionOperationsForTest(new SessionManager())
     const runtime = addRuntime(manager, 'keep-runtime')
-    expect(await (manager as unknown as {
-      evictIdleSessionRuntimes: (now: number) => Promise<number>
-    }).evictIdleSessionRuntimes(60 * 60_000)).toBe(0)
+    expect(await (sessionManagerForTest(manager)).evictIdleSessionRuntimes(60 * 60_000)).toBe(0)
     expect(runtime.disposeForRestart).not.toHaveBeenCalled()
   })
 
   it('keeps runtimes with queued messages or an ongoing configuration refresh', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const queued = addRuntime(manager, 'queued')
     queued.managed.messageQueue.push({ message: 'next turn' } as never)
     const refreshing = addRuntime(manager, 'refreshing')
-    ;(manager as unknown as { agentRefreshLocks: Map<string, Promise<void>> })
-      .agentRefreshLocks.set('refreshing', Promise.resolve())
+    ;sessionRuntimeStateForTest(manager).agentRefreshLocks.set('refreshing', Promise.resolve())
 
-    expect(await (manager as unknown as {
-      evictIdleSessionRuntimes: (now: number) => Promise<number>
-    }).evictIdleSessionRuntimes(60_002)).toBe(0)
+    expect(await (sessionManagerForTest(manager)).evictIdleSessionRuntimes(60_002)).toBe(0)
     expect(queued.disposeForRestart).not.toHaveBeenCalled()
     expect(refreshing.disposeForRestart).not.toHaveBeenCalled()
   })
 
   it('preserves runtimes that are processing or own a running background task', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const processing = addRuntime(manager, 'processing', { processing: true, lastActiveAt: 1 })
     const background = addRuntime(manager, 'background', { runningTask: true, lastActiveAt: 1 })
 
-    const evicted = await (manager as unknown as {
-      evictIdleSessionRuntimes: (now: number) => Promise<number>
-    }).evictIdleSessionRuntimes(60_002)
+    const evicted = await (sessionManagerForTest(manager)).evictIdleSessionRuntimes(60_002)
 
     expect(evicted).toBe(0)
     expect(processing.disposeForRestart).not.toHaveBeenCalled()
@@ -137,16 +129,14 @@ describe('session runtime eviction', () => {
   })
 
   it('detaches a stale runtime before awaiting its slow subprocess shutdown', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     let releaseDisposal!: () => void
     const disposalGate = new Promise<void>(resolve => { releaseDisposal = resolve })
     const runtime = addRuntime(manager, 'replace-during-disposal', {
       disposeForRestart: () => disposalGate,
     })
 
-    const disposal = (manager as unknown as {
-      disposeManagedAgentRuntime: (managed: unknown, reason: string) => Promise<void>
-    }).disposeManagedAgentRuntime(runtime.managed, 'test replacement race')
+    const disposal = (sessionManagerForTest(manager)).disposeManagedAgentRuntime(runtime.managed, 'test replacement race')
 
     await Promise.resolve()
     expect(runtime.managed.agent).toBeNull()
@@ -158,12 +148,12 @@ describe('session runtime eviction', () => {
     releaseDisposal()
     await disposal
 
-    expect((runtime.managed as unknown as { agent: unknown }).agent).toBe(replacementAgent)
+    expect((runtime.managed as { agent: unknown }).agent).toBe(replacementAgent)
     expect(replacementAgent.dispose).not.toHaveBeenCalled()
   })
 
   it('rechecks later eviction batches when a session becomes active mid-sweep', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     let releaseFirstBatch!: () => void
     const firstBatchGate = new Promise<void>(resolve => { releaseFirstBatch = resolve })
     const firstBatch = Array.from({ length: 4 }, (_unused, index) => addRuntime(
@@ -173,9 +163,7 @@ describe('session runtime eviction', () => {
     ))
     const newlyActive = addRuntime(manager, 'newly-active', { lastActiveAt: 1 })
 
-    const sweep = (manager as unknown as {
-      evictIdleSessionRuntimes: (now: number) => Promise<number>
-    }).evictIdleSessionRuntimes(60_002)
+    const sweep = (sessionManagerForTest(manager)).evictIdleSessionRuntimes(60_002)
 
     await Promise.resolve()
     await Promise.resolve()
@@ -189,7 +177,7 @@ describe('session runtime eviction', () => {
   })
 
   it('disposes every session runtime during shutdown', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const first = addRuntime(manager, 'first')
     const second = addRuntime(manager, 'second')
 

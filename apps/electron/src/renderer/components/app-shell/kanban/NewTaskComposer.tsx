@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 interface NewTaskComposerProps {
   /** Create a task tile from the typed title. Fire-and-forget — the tile appears via the atom update. */
   onCreate: (title: string) => void
-  className?: string
+  className?: string | undefined
 }
 
 /**

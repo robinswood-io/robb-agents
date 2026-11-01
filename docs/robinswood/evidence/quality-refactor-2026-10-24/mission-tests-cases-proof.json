@@ -1,0 +1,13 @@
+{
+  "valid": true,
+  "casesPreserved": 898,
+  "assertionsPreserved": 5102,
+  "failures": 0,
+  "skipped": 0,
+  "method": "Counter of complete suite name, case name and assertion count, including every parameterized variant",
+  "junitSha256": {
+    "mission-contract-before.xml": "fabff4280f2b1a29d5b352505afd0632164523a8d32d674a9cc7976b662edde1",
+    "outcome-contract-before.xml": "ce8ef36a0941c6c2dc08899facaf40a207141ec18acc8cacc84a22052bdc353a",
+    "mission-tests-modules-after-cleanup.xml": "b85aecd9b9b3cef6324c081cb302c02a00d58a1b231060e3f96e26024dff6cc3"
+  }
+}

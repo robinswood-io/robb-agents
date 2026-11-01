@@ -13,8 +13,8 @@ import type { Session } from '../../../../shared/types'
 import { MOBILE_WORKSPACE_ID, MOBILE_WORKSPACE_SLUG, buildMockSession } from './mock-mobile-data'
 
 interface HydrateProps {
-  sessions?: SessionMeta[]
-  session?: Session
+  sessions?: SessionMeta[] | undefined
+  session?: Session | undefined
 }
 
 /**
@@ -41,7 +41,7 @@ function HydrateAtoms({ sessions, session, children }: HydrateProps & { children
 }
 
 interface MobileAppShellOverrideProps {
-  llmConnections?: LlmConnectionWithStatus[]
+  llmConnections?: LlmConnectionWithStatus[] | undefined
   children: React.ReactNode
 }
 
@@ -71,11 +71,11 @@ function MobileAppShellOverride({ llmConnections, children }: MobileAppShellOver
 
 export interface MobilePlaygroundProvidersProps {
   /** Sessions to populate `sessionMetaMapAtom` with. */
-  sessions?: SessionMeta[]
+  sessions?: SessionMeta[] | undefined
   /** Optional full session to hydrate into `sessionAtomFamily` for ChatDisplay. */
-  session?: Session
+  session?: Session | undefined
   /** Mock LLM connections (overrides the empty default from PlaygroundAppShellProvider). */
-  llmConnections?: LlmConnectionWithStatus[]
+  llmConnections?: LlmConnectionWithStatus[] | undefined
   children: React.ReactNode
 }
 

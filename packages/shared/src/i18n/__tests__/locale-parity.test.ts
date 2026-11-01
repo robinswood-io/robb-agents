@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { describe, it, expect } from "bun:test";
 import { readdirSync, readFileSync } from "fs";
 import { join } from "path";
@@ -6,16 +7,26 @@ import { join } from "path";
 // Dynamic locale discovery — automatically picks up new languages
 // ---------------------------------------------------------------------------
 const LOCALES_DIR = join(import.meta.dir, "../locales");
-const localeFiles = readdirSync(LOCALES_DIR).filter((f) => f.endsWith(".json"));
-
+const localeDirs = readdirSync(LOCALES_DIR, { withFileTypes: true }).filter(entry => entry.isDirectory());
 const locales: Record<string, Record<string, string>> = {};
-for (const file of localeFiles) {
-  const lang = file.replace(".json", "");
-  locales[lang] = JSON.parse(readFileSync(join(LOCALES_DIR, file), "utf-8"));
+const domains: Record<string, Record<string, string>> = {};
+for (const directory of localeDirs) {
+  const messages: Record<string, string> = {};
+  const files = readdirSync(join(LOCALES_DIR, directory.name)).filter(file => file.endsWith('.json'));
+  if (!files.length) throw new Error(`Locale ${directory.name} has no domain resources`);
+  for (const file of files) {
+    const translations = z.record(z.string(), z.string()).parse(JSON.parse(readFileSync(join(LOCALES_DIR, directory.name, file), 'utf-8')));
+    domains[`${directory.name}/${file}`] = translations;
+    for (const [key, value] of Object.entries(translations)) {
+      if (Object.hasOwn(messages, key)) throw new Error(`Duplicate locale key: ${directory.name}/${key}`);
+      messages[key] = value;
+    }
+  }
+  locales[directory.name] = messages;
 }
 
 const en = locales["en"];
-if (!en) throw new Error("en.json is required as the source-of-truth locale");
+if (!en) throw new Error("The English locale is required as the source-of-truth locale");
 
 const otherLangs = Object.entries(locales).filter(([lang]) => lang !== "en");
 const enKeys = Object.keys(en);
@@ -114,8 +125,8 @@ describe("i18n locale parity", () => {
     });
   }
 
-  // Key sorting — verify alphabetical order in each locale
-  for (const [lang, translations] of Object.entries(locales)) {
+  // Key sorting — verify alphabetical order in each maintained domain file
+  for (const [lang, translations] of Object.entries(domains)) {
     it(`${lang} keys are sorted alphabetically`, () => {
       const keys = Object.keys(translations);
       const sorted = [...keys].sort();

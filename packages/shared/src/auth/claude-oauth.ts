@@ -1,3 +1,4 @@
+import { parseOAuthError } from './oauth-error.ts';
 /**
  * Native Claude OAuth with PKCE
  *
@@ -62,15 +63,16 @@ export function parseClaudeOAuthIdentity(data: {
 }): ClaudeOAuthIdentity {
   const identity: ClaudeOAuthIdentity = {}
   if (data.account) {
+    const emailAddress = data.account.email_address ?? data.account.email;
     identity.account = {
-      uuid: data.account.uuid,
-      emailAddress: data.account.email_address ?? data.account.email,
+      ...(data.account.uuid !== undefined ? { uuid: data.account.uuid } : {}),
+      ...(emailAddress !== undefined ? { emailAddress } : {}),
     }
   }
   if (data.organization) {
     identity.organization = {
-      uuid: data.organization.uuid,
-      name: data.organization.name,
+      ...(data.organization.uuid !== undefined ? { uuid: data.organization.uuid } : {}),
+      ...(data.organization.name !== undefined ? { name: data.organization.name } : {}),
     }
   }
   return identity
@@ -230,8 +232,8 @@ export async function exchangeClaudeCode(
       const errorText = await response.text()
       let errorMessage: string
       try {
-        const errorJson = JSON.parse(errorText)
-        errorMessage = errorJson.error_description || errorJson.error || errorText
+        const errorJson = parseOAuthError(errorText)
+        errorMessage = errorJson["error_description"] || errorJson["error"] || errorText
       } catch {
         errorMessage = errorText
       }
@@ -270,8 +272,8 @@ export async function exchangeClaudeCode(
 
     return {
       accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      expiresAt: data.expires_in ? Date.now() + data.expires_in * 1000 : undefined,
+      ...(data.refresh_token !== undefined ? { refreshToken: data.refresh_token } : {}),
+      ...(data.expires_in ? { expiresAt: Date.now() + data.expires_in * 1000 } : {}),
       scopes: data.scope ? data.scope.split(' ') : ['user:inference', 'user:profile'],
       ...parseClaudeOAuthIdentity(data),
     }

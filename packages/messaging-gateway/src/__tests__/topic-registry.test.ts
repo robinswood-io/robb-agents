@@ -1,3 +1,4 @@
+import { isUnknownArray, parseJsonObject } from '@craft-agent/shared/utils/json';
 /**
  * TopicRegistry tests
  *
@@ -143,9 +144,11 @@ describe('TopicRegistry — persistence', () => {
 
     const file = join(dir, 'topic-registry.json')
     expect(existsSync(file)).toBe(true)
-    const parsed = JSON.parse(readFileSync(file, 'utf8'))
-    expect(parsed.entries.length).toBe(1)
-    expect(parsed.entries[0].threadId).toBe(55)
+    const parsed = parseJsonObject(readFileSync(file, 'utf8'))
+    const entries = parsed['entries']
+    if (!isUnknownArray(entries)) throw new Error('Expected the persisted topic entries')
+    expect(entries).toHaveLength(1)
+    expect(entries[0]).toMatchObject({ threadId: 55 })
 
     // Fresh instance — the cached entry must come back without calling createTopic.
     const reg2 = new TopicRegistry(dir)

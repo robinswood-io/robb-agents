@@ -8,10 +8,10 @@ interface SubtaskProgressProps {
    * Conductor run whose child sessions spawn lazily — the extra slots render as pending filler so the
    * count and bar stay stable instead of growing as children appear.
    */
-  total?: number
+  total?: number | undefined
   /** Accent color for done/running segments (the tile's column color). */
-  accent?: string
-  className?: string
+  accent?: string | undefined
+  className?: string | undefined
 }
 
 const PENDING_TRACK = 'color-mix(in srgb, currentColor 12%, transparent)'

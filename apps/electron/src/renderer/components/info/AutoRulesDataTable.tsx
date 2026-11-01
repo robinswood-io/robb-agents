@@ -9,11 +9,11 @@
  * all autoRules into a single list.
  */
 
-import * as React from 'react'
+
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import type { ColumnDef } from '@tanstack/react-table'
+import type { ColumnDef } from '@/components/ui/data-table'
 import { Maximize2 } from 'lucide-react'
 import { Info_DataTable, SortableHeader } from './Info_DataTable'
 import { Info_Badge } from './Info_Badge'
@@ -39,14 +39,14 @@ interface AutoRulesDataTableProps {
   /** Label tree (root-level nodes with nested children) */
   data: LabelConfig[]
   /** Show search input */
-  searchable?: boolean
+  searchable?: boolean | undefined
   /** Max height with scroll */
-  maxHeight?: number
+  maxHeight?: number | undefined
   /** Enable fullscreen button */
-  fullscreen?: boolean
+  fullscreen?: boolean | undefined
   /** Title for fullscreen overlay */
-  fullscreenTitle?: string
-  className?: string
+  fullscreenTitle?: string | undefined
+  className?: string | undefined
 }
 
 /**

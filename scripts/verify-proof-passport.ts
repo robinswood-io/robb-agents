@@ -117,7 +117,12 @@ export function parseProofPassportCliArguments(argv: string[]): CliOptions | { h
     }
   }
 
-  return { input, mode, trustedPublicKeyPath, trustedSpki, workspaceRoot };
+  return {
+    input, mode,
+    ...(trustedPublicKeyPath !== undefined ? { trustedPublicKeyPath } : {}),
+    ...(trustedSpki !== undefined ? { trustedSpki } : {}),
+    ...(workspaceRoot !== undefined ? { workspaceRoot } : {}),
+  };
 }
 
 function canonicalEd25519Spki(publicKey: KeyObject): string {

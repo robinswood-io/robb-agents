@@ -60,6 +60,6 @@ export function multiBlockResponse(texts: string[], isError?: boolean): ToolResu
   return {
     content: texts.map(text => ({ type: 'text' as const, text })),
     structuredContent: {},
-    isError,
+    ...(isError !== undefined ? { isError } : {}),
   };
 }

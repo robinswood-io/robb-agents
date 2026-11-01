@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { EventEmitter } from 'node:events'
 import { PassThrough } from 'node:stream'
-import type { ChildProcess } from 'node:child_process'
 import {
   buildMistralVibeEnvironment,
   resolveMistralVibeAcpCommand,
@@ -29,7 +28,7 @@ class FakeVibeProcess extends EventEmitter {
 
   constructor(private readonly delegatedAuth = true) {
     super()
-    this.stdin.on('data', (chunk) => {
+    this.stdin.on('data', (chunk: Buffer) => {
       this.buffer += chunk.toString()
       while (this.buffer.includes('\n')) {
         const newline = this.buffer.indexOf('\n')
@@ -112,7 +111,7 @@ describe('Mistral Vibe delegated browser authentication', () => {
     const child = new FakeVibeProcess()
     const flow = await startMistralVibeBrowserAuth({
       command: '/test/vibe-acp',
-      spawnImpl: (() => child as unknown as ChildProcess),
+      spawnImpl: (() => child),
       now: () => Date.parse('2026-08-23T20:00:00.000Z'),
     })
 
@@ -138,7 +137,7 @@ describe('Mistral Vibe delegated browser authentication', () => {
     const child = new FakeVibeProcess(false)
     await expect(startMistralVibeBrowserAuth({
       command: '/test/vibe-acp',
-      spawnImpl: (() => child as unknown as ChildProcess),
+      spawnImpl: (() => child),
     })).rejects.toThrow('must be updated')
     expect(child.killed).toBe(true)
   })

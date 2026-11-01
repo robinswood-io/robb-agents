@@ -1,0 +1,100 @@
+{
+  "status": "passed",
+  "cases": [
+    {
+      "name": "empty credential remains disabled",
+      "status": "passed"
+    },
+    {
+      "name": "credential submit clears fields immediately and submits once before completion",
+      "status": "passed"
+    },
+    {
+      "name": "basic authentication requires both fields and preserves its payload",
+      "status": "passed"
+    },
+    {
+      "name": "multi-header authentication requires and submits every configured header",
+      "status": "passed"
+    },
+    {
+      "name": "cancel clears the form and sends the native cancellation response",
+      "status": "passed"
+    },
+    {
+      "name": "OAuth delegates only to the mocked native API with exact identifiers",
+      "status": "passed"
+    },
+    {
+      "name": "terminal failure removes interactive credential fields",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "calls": [
+    {
+      "method": "credential",
+      "args": [
+        "qa-only-session",
+        "qa-request-bearer",
+        {
+          "type": "credential",
+          "value": "qa-token-not-real",
+          "cancelled": false
+        }
+      ]
+    },
+    {
+      "method": "credential",
+      "args": [
+        "qa-only-session",
+        "qa-request-basic",
+        {
+          "type": "credential",
+          "username": "qa-user",
+          "password": "qa-password-not-real",
+          "cancelled": false
+        }
+      ]
+    },
+    {
+      "method": "credential",
+      "args": [
+        "qa-only-session",
+        "qa-request-multi-header",
+        {
+          "type": "credential",
+          "headers": {
+            "X-QA-Key": "qa-key-not-real",
+            "X-QA-Org": "qa-org"
+          },
+          "cancelled": false
+        }
+      ]
+    },
+    {
+      "method": "credential",
+      "args": [
+        "qa-only-session",
+        "qa-request-bearer",
+        {
+          "type": "credential",
+          "cancelled": true
+        }
+      ]
+    },
+    {
+      "method": "oauth",
+      "args": [
+        {
+          "sourceSlug": "qa-only-source",
+          "sessionId": "qa-only-session",
+          "authRequestId": "qa-request-oauth"
+        }
+      ]
+    }
+  ],
+  "browser": "145.0.7632.6",
+  "scope": "native card with synthetic values and mocked credential/OAuth callbacks; no real account"
+}

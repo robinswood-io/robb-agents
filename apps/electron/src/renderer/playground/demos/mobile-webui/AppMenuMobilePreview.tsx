@@ -1,4 +1,4 @@
-import * as React from 'react'
+
 import { AppMenu } from '@/components/AppMenu'
 import { MobileWebUIFrame, type MobileDevice } from './MobileWebUIFrame'
 import { MobilePlaygroundProviders } from './MobilePlaygroundProviders'
@@ -7,9 +7,9 @@ const log = (label: string) => () => console.log(`[Mobile AppMenu] ${label}`)
 
 interface AppMenuMobilePreviewProps {
   /** Device frame size. */
-  device?: MobileDevice
+  device?: MobileDevice | undefined
   /** Show the iPhone-style bezel + status-bar strip. */
-  showBezel?: boolean
+  showBezel?: boolean | undefined
 }
 
 /**

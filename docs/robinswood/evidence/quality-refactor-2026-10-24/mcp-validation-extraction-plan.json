@@ -1,0 +1,115 @@
+{
+  "source": "packages/shared/src/mcp/validation.ts",
+  "units": [
+    {
+      "names": [
+        "InvalidProperty"
+      ],
+      "group": "tool-validation",
+      "bodySha256": "01102ca9186126d1527f012a2b66c5c675848e9ee66aa63fddf0fdcb2b7fa937"
+    },
+    {
+      "names": [
+        "McpValidationResult"
+      ],
+      "group": "tool-validation",
+      "bodySha256": "61d0e37631fa3af0f76ba4994889ceebbda467dd4ada9affd9a56ebc47812c5f"
+    },
+    {
+      "names": [
+        "ANTHROPIC_PROPERTY_NAME_PATTERN"
+      ],
+      "group": "tool-validation",
+      "bodySha256": "686a41ddce7a601965f018b4c33b8db3b2d6586458fc4b74ab435053365db2a5"
+    },
+    {
+      "names": [
+        "findInvalidProperties"
+      ],
+      "group": "tool-validation",
+      "bodySha256": "ed586a3702215172ef7ce72243a0af91330ee8c67769505d58d1ba760343a7bd"
+    },
+    {
+      "names": [
+        "McpValidationConfig"
+      ],
+      "group": "tool-validation",
+      "bodySha256": "883c440c67503d06786204b5686ed42d0a818ce6aabe99e28de26e347e7d3b68"
+    },
+    {
+      "names": [
+        "classifyConnectionError"
+      ],
+      "group": "connection-validation",
+      "bodySha256": "8ab36b8f695911eed527e7d44b2515c56e127f7e5b7d4af57e8621326fdc6dee"
+    },
+    {
+      "names": [
+        "validateMcpConnection"
+      ],
+      "group": "connection-validation",
+      "bodySha256": "00bbe10336ebe1e8549bd574986b4f3df7e93d6951576c24430230abf91d0fb3"
+    },
+    {
+      "names": [
+        "StdioValidationConfig"
+      ],
+      "group": "connection-validation",
+      "bodySha256": "fd4387d68c1dff8dfb6be76615b89355bec98931087622008231b0520461a15d"
+    },
+    {
+      "names": [
+        "getValidationErrorMessage"
+      ],
+      "group": "connection-validation",
+      "bodySha256": "2245f78178c97c3c0b07bc0fe42802cb578c3fb1206ceda9cfdd028d68a5a946"
+    },
+    {
+      "names": [
+        "ConnectWatchdog"
+      ],
+      "group": "stdio-validation",
+      "bodySha256": "37748c2c66ebfab0f41660052e7320d47a62a985b764090802dd3131f763f79e"
+    },
+    {
+      "names": [
+        "createConnectWatchdog"
+      ],
+      "group": "stdio-validation",
+      "bodySha256": "39cca8b30441cfe66d06e50b9065acacf2fb8db7d25cbee3d0fbeacd36b2067b"
+    },
+    {
+      "names": [
+        "validateStdioMcpConnection"
+      ],
+      "group": "stdio-validation",
+      "bodySha256": "8528bdfe40b2f6661728296da984920e5fa97e323ee6ed92fc8456dc41006ddd"
+    }
+  ],
+  "modules": [
+    {
+      "name": "tool-validation",
+      "lines": 111
+    },
+    {
+      "name": "connection-validation",
+      "lines": 151
+    },
+    {
+      "name": "stdio-validation",
+      "lines": 338
+    }
+  ],
+  "dependencies": {
+    "tool-validation": [],
+    "connection-validation": [
+      "tool-validation"
+    ],
+    "stdio-validation": [
+      "connection-validation",
+      "tool-validation"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

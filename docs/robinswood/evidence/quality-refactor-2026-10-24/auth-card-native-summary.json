@@ -1,0 +1,120 @@
+{
+  "status": "tested; local integration pending remaining quality work",
+  "scope": "auth-card-native",
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/chat/AuthRequestCard.tsx",
+      "lines": 326,
+      "sha256": "f5aa10b80d739eb604e9607166cd6be41dc37a36bf258b87b044cb7addae48c5"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/chat/auth-request-primitives.tsx",
+      "lines": 127,
+      "sha256": "34c76b50e75a3d35088544f0ea69b140750857aef69b8c5ea8ddbc5cf7dd1a1b"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/chat/auth-request-content.tsx",
+      "lines": 395,
+      "sha256": "432ae40c97b2e0cb0432949bfc1944075de88f9ce8f3ef720015e3f74f43d969"
+    }
+  ],
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/components/chat/AuthRequestCard.tsx",
+        "apps/electron/src/renderer/components/chat/auth-request-primitives.tsx",
+        "apps/electron/src/renderer/components/chat/auth-request-content.tsx",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.18,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auth-card-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 8.06,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auth-card-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 31.95,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auth-card-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/renderer/utils/__tests__/auth-validation.test.ts",
+        "apps/electron/src/renderer/atoms/__tests__/session-auth-requests.test.tsx",
+        "apps/electron/src/main/__tests__/session-event-message-parity-auth-request-message-carries-all-auth-fields.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.28,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auth-card-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 13.26,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auth-card-native-build.log"
+    }
+  },
+  "targetedTests": {
+    "pass": 56,
+    "fail": 0
+  },
+  "browser": {
+    "before": 7,
+    "after": 7,
+    "nativeCallbackPayloadsEqual": true,
+    "errors": 0
+  },
+  "sourceGate": {
+    "max-lines": 16
+  },
+  "globalLint": {
+    "files": 3665,
+    "errors": 16,
+    "warnings": 71,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 16,
+      "react-hooks/exhaustive-deps": 71
+    }
+  },
+  "limits": [
+    "Other historical files and lint findings remain",
+    "No installation or final real-model mission claim",
+    "Global suite rerun prohibited by PreToolUse; last full suite f521166: 10759 passed"
+  ]
+}

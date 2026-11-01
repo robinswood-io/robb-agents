@@ -49,7 +49,6 @@ function run(command: string, cwd: string): void {
   execSync(command, {
     cwd,
     stdio: 'inherit',
-    shell: true,
   });
 }
 
@@ -61,8 +60,7 @@ function runQuiet(command: string, cwd: string): void {
     execSync(command, {
       cwd,
       stdio: 'pipe',
-      shell: true,
-    });
+      });
   } catch {
     // Ignore errors
   }
@@ -138,16 +136,16 @@ function buildMainProcess(config: BuildConfig): void {
     // Replace grammY's bundled polyfills (node-fetch@2 + abort-controller@3)
     // with native Node globals. Keeps parity with electron-dev.ts,
     // electron-build-main.ts, and apps/electron/package.json build:main.
-    '--alias:node-fetch=./apps/electron/src/main/shims/node-fetch.cjs',
-    '--alias:abort-controller=./apps/electron/src/main/shims/abort-controller.cjs',
+    '--alias:node-fetch=./apps/electron/src/main/shims/node-fetch.ts',
+    '--alias:abort-controller=./apps/electron/src/main/shims/abort-controller.ts',
   ];
 
   // Add OAuth defines if env vars are set
   const oauthDefines = [
-    ['GOOGLE_OAUTH_CLIENT_ID', process.env.GOOGLE_OAUTH_CLIENT_ID],
-    ['SLACK_OAUTH_CLIENT_ID', process.env.SLACK_OAUTH_CLIENT_ID],
-    ['SLACK_OAUTH_CLIENT_SECRET', process.env.SLACK_OAUTH_CLIENT_SECRET],
-    ['MICROSOFT_OAUTH_CLIENT_ID', process.env.MICROSOFT_OAUTH_CLIENT_ID],
+    ['GOOGLE_OAUTH_CLIENT_ID', process.env["GOOGLE_OAUTH_CLIENT_ID"]],
+    ['SLACK_OAUTH_CLIENT_ID', process.env["SLACK_OAUTH_CLIENT_ID"]],
+    ['SLACK_OAUTH_CLIENT_SECRET', process.env["SLACK_OAUTH_CLIENT_SECRET"]],
+    ['MICROSOFT_OAUTH_CLIENT_ID', process.env["MICROSOFT_OAUTH_CLIENT_ID"]],
   ];
 
   for (const [key, value] of oauthDefines) {
@@ -165,13 +163,13 @@ function buildMainProcess(config: BuildConfig): void {
     // Source archives may not include git metadata.
   }
   const buildCommit = resolveBuildCommit(
-    process.env.ROBB_BUILD_COMMIT,
+    process.env["ROBB_BUILD_COMMIT"],
     gitCommit,
-    process.env.GITHUB_SHA,
+    process.env["GITHUB_SHA"],
   ) || '';
-  const buildDirty = resolveBuildDirty(process.env.ROBB_BUILD_DIRTY, gitPorcelain);
-  const buildChannel = process.env.CRAFT_DEV_RUNTIME === '1'
-    || process.env.ROBB_BUILD_CHANNEL === 'development'
+  const buildDirty = resolveBuildDirty(process.env["ROBB_BUILD_DIRTY"], gitPorcelain);
+  const buildChannel = process.env["CRAFT_DEV_RUNTIME"] === '1'
+    || process.env["ROBB_BUILD_CHANNEL"] === 'development'
     ? 'development'
     : 'production';
   mainArgs.push(`--define:process.env.ROBB_BUILD_COMMIT="'${buildCommit}'"`);

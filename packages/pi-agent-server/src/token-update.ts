@@ -12,16 +12,16 @@ export interface PiAuthUpdate {
  * Update the durable in-process init snapshot even when the SDK registry has
  * not been created yet. The optional callback updates an already-live registry.
  */
-export function applyTokenUpdate(
+export async function applyTokenUpdate(
   update: PiAuthUpdate,
   initConfig: { piAuth?: PiAuthUpdate } | null,
-  storeCredential?: (provider: string, credential: PiCredential) => void,
-): boolean {
+  storeCredential?: (provider: string, credential: PiCredential) => void | Promise<void>,
+): Promise<boolean> {
   if (initConfig) {
     initConfig.piAuth = update;
   }
 
   if (!storeCredential) return false;
-  storeCredential(update.provider, update.credential);
+  await storeCredential(update.provider, update.credential);
   return true;
 }

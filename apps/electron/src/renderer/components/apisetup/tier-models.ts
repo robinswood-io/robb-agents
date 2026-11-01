@@ -9,13 +9,14 @@ export interface PiModelInfo {
 
 /** Pick smart defaults for 3 tiers from a cost-sorted model list (expensive-first). */
 export function pickTierDefaults(models: PiModelInfo[]): { best: string; default_: string; cheap: string } {
-  if (models.length === 0) return { best: '', default_: '', cheap: '' }
-  if (models.length === 1) return { best: models[0].id, default_: models[0].id, cheap: models[0].id }
-  const best = models[0].id
-  const cheap = models[models.length - 1].id
+  const first = models[0]
+  if (!first) return { best: '', default_: '', cheap: '' }
+  const best = first.id
+  if (models.length === 1) return { best, default_: best, cheap: best }
+  const cheap = models.at(-1)?.id ?? best
   // ~40% from the top gives a mid-expensive model (list is top-10 + bottom-10)
   const defaultIdx = Math.min(Math.floor(models.length * 0.4), models.length - 2)
-  const default_ = models[defaultIdx].id
+  const default_ = models[defaultIdx]?.id ?? best
   return { best, default_, cheap }
 }
 

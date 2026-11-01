@@ -362,21 +362,26 @@ export class RemoteBrowserPaneManager implements IBrowserPaneManager {
   // ---------------------------------------------------------------------------
 
   private fromScreenshotWire(wire: ScreenshotResultWire): BrowserScreenshotResult {
-    const bytes = wire.imageBytes
+    const bytes: unknown = wire.imageBytes
     // Structured clone on the WS layer may deliver this as a Uint8Array or as
     // a serialized object with `data` field — accept both.
     let buffer: Buffer
     if (bytes instanceof Uint8Array) {
       buffer = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
-    } else if (bytes && typeof bytes === 'object' && 'data' in (bytes as object)) {
-      buffer = Buffer.from((bytes as { data: number[] }).data)
+    } else if (bytes instanceof ArrayBuffer || bytes instanceof SharedArrayBuffer) {
+      buffer = Buffer.from(bytes)
+    } else if (bytes && typeof bytes === 'object' && 'data' in bytes
+      && Array.isArray(bytes.data)
+      && bytes.data.every((byte: unknown): byte is number =>
+        typeof byte === 'number' && Number.isInteger(byte) && byte >= 0 && byte <= 255)) {
+      buffer = Buffer.from(bytes.data)
     } else {
-      buffer = Buffer.from(bytes as unknown as ArrayBufferLike)
+      throw new TypeError('Invalid screenshot image bytes')
     }
     return {
       imageBuffer: buffer,
       imageFormat: wire.imageFormat,
-      metadata: wire.metadata,
+      ...(wire.metadata !== undefined ? { metadata: wire.metadata } : {}),
     }
   }
 }

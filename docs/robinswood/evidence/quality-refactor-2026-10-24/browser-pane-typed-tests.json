@@ -1,0 +1,559 @@
+{
+  "status": "testé dans le candidat local isolé ; non installé",
+  "changes": [
+    "122 any supprimés ; accès privés vérifiés par les types natifs du gestionnaire",
+    "Mocks Electron typés dans deux fixtures ; aucun framework de test ni couche de production ajoutés",
+    "110 scénarios répartis par fonction dans neuf fichiers de 363 lignes au plus",
+    "Réponses canvas conformes au contrat CanvasBitmapReceipt, même dans les tests de rejet ; disposition popup alignée sur Electron 45",
+    "Entrées volontairement malformées placées à des frontières de test explicites pour atteindre les gardes runtime de production",
+    "Espion clearTimeout restauré par spyOn ; aucun cast globalThis"
+  ],
+  "checks": {
+    "browser-pane-typed-tests-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/main/__tests__/browser-pane-manager.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 13.74,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-pane-typed-tests-2.log"
+    },
+    "browser-pane-split-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/main/__tests__/browser-pane-manager"
+      ],
+      "exitCode": 0,
+      "seconds": 13.82,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-pane-split-tests.log"
+    },
+    "browser-pane-all-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 19.57,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-pane-all-types.log"
+    },
+    "browser-pane-all-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 148.65,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-pane-all-tests.log"
+    },
+    "browser-pane-split-final-types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 5.18,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-pane-split-final-types.log"
+    },
+    "browser-pane-split-final-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "apps/electron/src/main/__tests__/browser-pane-manager.agent-control.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.capture.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.input-workspace.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.interaction-security.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.navigation-local.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.navigation-remote.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.permissions.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.toolbar.test.ts",
+        "apps/electron/src/main/__tests__/fixtures/browser-pane-fixture.ts",
+        "apps/electron/src/main/__tests__/fixtures/electron-browser-mocks.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 2.22,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-pane-split-final-lint.log"
+    }
+  },
+  "decomposition": {
+    "cases": [
+      {
+        "title": "creates and lists instances",
+        "group": "lifecycle",
+        "sha256": "5f5275d0589c703dae4a6a9e1935e0fbe142651e0b352730beca31dfad45784e"
+      },
+      {
+        "title": "captures an explicit canvas crop without capturePage, overlay changes, focus or clipboard",
+        "group": "capture",
+        "sha256": "81415f6a4255cec754dee8de66048e30e05dc433b96f1844decbc4f1c750d0ec"
+      },
+      {
+        "title": "rejects a canvas image after its owner changes during the read",
+        "group": "capture",
+        "sha256": "8ce9881b04504dbbd40955df9330420c89dada46b2380d55b7cdd20612fbc3c4"
+      },
+      {
+        "title": "does not widen the remote browser owner gate for canvas capture",
+        "group": "capture",
+        "sha256": "5931d98fdb8ba0b46db72c928986e6609b272808cdbaaa3123dead661defa7ff"
+      },
+      {
+        "title": "rejects ambiguous or unbounded transport options without attempting a canvas read",
+        "group": "capture",
+        "sha256": "706e6d3a8c10b5130f6ec075606690d4077aaf99d5c7f495d37bba6a1cf4d50c"
+      },
+      {
+        "title": "does not turn an empty/transparent bitmap or oversized encoding into a successful screenshot",
+        "group": "capture",
+        "sha256": "b4e8e1d3d0b65a7037355c6af8e5d7c6e695ff75985e81fc4f72550f67957cb7"
+      },
+      {
+        "title": "composes page, overlay, and toolbar as ordered WebContentsView children",
+        "group": "permissions",
+        "sha256": "428394b4742ada0af8537ae7eee0f9ffbeaeca598581cdd8838212664dfe112a"
+      },
+      {
+        "title": "sets native view transparency in both themes instead of relying on page CSS",
+        "group": "permissions",
+        "sha256": "3ef64656b4e5854e33e610722eb43cdafe8df3dd53135315f211c4c0cbcbef83"
+      },
+      {
+        "title": "keeps the page beneath transparent full-window toolbar and menu overlay views",
+        "group": "permissions",
+        "sha256": "4b143da1f029e4fe617edbc70d181a819827f8c3ff678e550687b597123f51a8"
+      },
+      {
+        "title": "grants scoped browser permissions only with live autonomous session context",
+        "group": "permissions",
+        "sha256": "2300396cecd049aa4dac273c5f891cd1832296616e8355c753a4e1ab2efc5a07"
+      },
+      {
+        "title": "keeps browser permissions denied when the live session is not autonomous",
+        "group": "permissions",
+        "sha256": "c72b92198d48009627ca043fd5df737a72766071b408bac96cf54a989ca070b4"
+      },
+      {
+        "title": "is idempotent when explicit ID already exists",
+        "group": "lifecycle",
+        "sha256": "684ce988e2895e6ad4eb1326c2d8b1de03f7b89cd652302ecb68803a26aa370e"
+      },
+      {
+        "title": "does not replace an immediate navigation when the empty state load is aborted",
+        "group": "lifecycle",
+        "sha256": "f0ef00b6a756258b4599ca15068b70c581fccbda5147b51004b5ecb99f18f40f"
+      },
+      {
+        "title": "allows http(s) popups with shared browser partition",
+        "group": "lifecycle",
+        "sha256": "8a0f513b200faed34f52f30041b8e291e81cb235689943013606a8147ea6f19b"
+      },
+      {
+        "title": "prompts the user when WebAuthn returns multiple discoverable accounts",
+        "group": "lifecycle",
+        "sha256": "8513d9d4410db48371692d5466fe1319928539c75aa9ebdfe53d4612eb26b1af"
+      },
+      {
+        "title": "cancels WebAuthn account selection when the native dialog is dismissed",
+        "group": "lifecycle",
+        "sha256": "dd16d9a956554094ec0b1ac33c48573d55265c30f410534eb327630281c433da"
+      },
+      {
+        "title": "denies app deep-link popups and forwards to deep-link handler",
+        "group": "lifecycle",
+        "sha256": "589fe4f401e51f3be011a02ad9d76fc2752a6ea60d9cb6e7014ef347a8215979"
+      },
+      {
+        "title": "destroys child popups when parent instance is destroyed",
+        "group": "lifecycle",
+        "sha256": "dfb1437e770f7de8bb7c6bc3d3b41103b15a5eec6c5c3974b2f28b48efba416c"
+      },
+      {
+        "title": "unregisters a popup after Electron destroys its webContents wrapper",
+        "group": "lifecycle",
+        "sha256": "474fb9902046450096314cc467a8b48494dcb0a935ba51c558e9bbce1cc6af43"
+      },
+      {
+        "title": "destroys instances",
+        "group": "lifecycle",
+        "sha256": "e5e55ab76c0c7f3f849b3d4cee9f41a074794f4086bd641188073ad210f5b762"
+      },
+      {
+        "title": "destroys all instances even when Electron has already removed a native webContents wrapper",
+        "group": "lifecycle",
+        "sha256": "380f3125cf1c11f9d2cbabb92a46e1dd0d0399410a82ce754bbae84103d791a0"
+      },
+      {
+        "title": "destroys instance via toolbar destroy IPC handler",
+        "group": "lifecycle",
+        "sha256": "3babb74dedacc1ffcc9ce95e3fc720f7835e0bd30721a26977169cd2cc926a3c"
+      },
+      {
+        "title": "emits removed callback exactly once when destroy triggers closed",
+        "group": "lifecycle",
+        "sha256": "1da7322d2db719e3e60f34ade3b37be8735edf6b21d26ca36fd767b94e7f8bc9"
+      },
+      {
+        "title": "ignores late state events after instance was removed",
+        "group": "lifecycle",
+        "sha256": "e642f47472bf322c770180fe6c6608cdc15b71b939a8c5076ceff62b91c1ef51"
+      },
+      {
+        "title": "binds and unbinds sessions",
+        "group": "lifecycle",
+        "sha256": "41039a8a0359ed1673f7ddecff15cd71db4400420bfe9fb2d95cf44dc0bdc560"
+      },
+      {
+        "title": "createForSession returns canonical bound instance",
+        "group": "lifecycle",
+        "sha256": "3e4745d802a214578df7aa9de1d93b6b62fdca9f2215016bec22c9937619c2ff"
+      },
+      {
+        "title": "getOrCreateForSession reuses existing instance",
+        "group": "lifecycle",
+        "sha256": "4e6f07c6de9aeda9fa9ac3e979b1cbc16bbc5f22caac12332b3bc55c71598705"
+      },
+      {
+        "title": "createForSession reuses an unbound manual window before creating new",
+        "group": "lifecycle",
+        "sha256": "0085c9258723c1fda782148f0eef19db2671a499d6cd261005d2eba203c3ba54"
+      },
+      {
+        "title": "explicit remote keyboard text",
+        "group": "input-workspace",
+        "sha256": "910a0f1bd6fca14151c03af5189669f393082102a2d3fc18aaebf442af347630"
+      },
+      {
+        "title": "workspaceId stamping",
+        "group": "input-workspace",
+        "sha256": "dbddd34b3463089047b80a654135ababd696ec510b1054da82e681ba74e1c0e3"
+      },
+      {
+        "title": "navigate normalizes hostnames to https",
+        "group": "navigation-local",
+        "sha256": "56bb7bbff08e550f14d29826a5e70e35a7fc4639c4ed023709542f8e6ee27643"
+      },
+      {
+        "title": "navigate treats plain text as search query",
+        "group": "navigation-local",
+        "sha256": "d4662f76e0967f10268b54e3445d8219967ab88406f853ca754ac2f31f7cce72"
+      },
+      {
+        "title": "clears navigation timeout timer on success",
+        "group": "navigation-local",
+        "sha256": "d6c2f3eda797c1102890a99ea03be1e3be1faf97e9a55278e614f59df7323aae"
+      },
+      {
+        "title": "re-checks the live URL at the local mutation point after a concurrent navigation",
+        "group": "navigation-local",
+        "sha256": "5ab2b6067496d057998e124bcbccdb4f85ec256eb1b2c2cf0440a1d0f4e9a990"
+      },
+      {
+        "title": "keeps a history navigation serialized until its Gmail URL commits before a local mutation",
+        "group": "navigation-local",
+        "sha256": "7eda468381d0460d7fe381bbb7aba71c17fc7f36cea86633035247192e9f5a8b"
+      },
+      {
+        "title": "ignores a sub-frame in-page event while a guarded click awaits its main-frame Gmail navigation",
+        "group": "navigation-local",
+        "sha256": "cfdc10c2eff6ce03c7654d9f44693f74624b38e28a03dbafe557293ed0b7210b"
+      },
+      {
+        "title": "fails closed at the local mutation point when Electron exposes no parseable live URL",
+        "group": "navigation-local",
+        "sha256": "7a9e90ed2da6f30eadeb23c794d2d33e0c322f191bc8aff86f421a3751880d30"
+      },
+      {
+        "title": "re-applies a remote mutation URL policy after a concurrent capability navigation",
+        "group": "navigation-remote",
+        "sha256": "c49a923ac5c86fb9205140c465e944514b20969a148c23b5ea691f33ddc9d36c"
+      },
+      {
+        "title": "keeps a remote history capability serialized until Gmail commits before its mutation",
+        "group": "navigation-remote",
+        "sha256": "bae2a3f5235f0f53a63ee64f30a2b0dad58af9d3372e68f7d5c11f80faf8e66d"
+      },
+      {
+        "title": "keeps a remote guarded click queued through sub-frame events until main-frame Gmail commits",
+        "group": "navigation-remote",
+        "sha256": "12c2e1ee5052bdb313869ad66f57d9ed0e40fc4a8d3f324fc6be591460eca8e7"
+      },
+      {
+        "title": "fails closed for a remote mutation policy when the desktop live URL is malformed",
+        "group": "navigation-remote",
+        "sha256": "fcdf7caa8e8e216f190c5ed1a86939d4ed42c8c9d4988e51c1e30267494bcaf8"
+      },
+      {
+        "title": "rejects malformed or observational v2 capability requests before dispatch",
+        "group": "navigation-remote",
+        "sha256": "f888da2afd1e481bdf87e925abdd27b5bbbd17f5f0a9409d6852393bc0e00352"
+      },
+      {
+        "title": "focus brings the instance window to front",
+        "group": "lifecycle",
+        "sha256": "0a8a444cb0cdef1c837dd6900186c7aea08c75b170cc39f224616ef5cecc6cc6"
+      },
+      {
+        "title": "dedupes repeated focus calls before ready-to-show",
+        "group": "lifecycle",
+        "sha256": "37cd8d2ddea760e1ee5b380ea7aa8a6b55870349c98b590e0d854887022b7299"
+      },
+      {
+        "title": "cancels deferred pre-ready focus when hide happens first",
+        "group": "lifecycle",
+        "sha256": "88f7f7d9903fd59fabf47be9d5b258c91223f7b4c502253d610788c92e69de12"
+      },
+      {
+        "title": "user close hides window and keeps instance alive",
+        "group": "lifecycle",
+        "sha256": "715e4de6e452fa1b1b207aa8c901beb604b87963e070b75380026ba022e416de"
+      },
+      {
+        "title": "does not intercept close when destroy is explicit",
+        "group": "lifecycle",
+        "sha256": "05ec9df2a7e68d0bfc27cd99a733f24a7ac1250e164da425c6284218f84d6f42"
+      },
+      {
+        "title": "still destroys instance when cleanup throws",
+        "group": "lifecycle",
+        "sha256": "ced44e49fb5da29c575e72d1615194639f177c9d316cb0d9f2a9a43ceefb2dfa"
+      },
+      {
+        "title": "emits removed callback when window closes",
+        "group": "lifecycle",
+        "sha256": "5a0bb6e62a50394a73d7d585a614c6bc36d62420f711b5f8294831fb72472ef5"
+      },
+      {
+        "title": "retries toolbar load and recovers",
+        "group": "toolbar",
+        "sha256": "9bc4f663173ff95156e277252909bc97b181924b2ea411c53f99b9b532686726"
+      },
+      {
+        "title": "stops toolbar retries when the instance is destroyed during its initial load",
+        "group": "toolbar",
+        "sha256": "12f11ef2174907712be3bf7f07313150129368c204c9c0216914d9954a28bdbb"
+      },
+      {
+        "title": "loads toolbar fallback page after retry exhaustion",
+        "group": "toolbar",
+        "sha256": "98e8d62f888b242073ecaae1e424a64fd4c615cc51314b028718eb83cb3acd22"
+      },
+      {
+        "title": "captures and filters console entries",
+        "group": "toolbar",
+        "sha256": "a7123a24a1924a681bf747962c7bf07e0bc98d6847525f9e916f5a19e641c9c8"
+      },
+      {
+        "title": "redacts OAuth callback artifacts before retaining browser console entries",
+        "group": "toolbar",
+        "sha256": "e817372659081c978415c4ef56b04995a272c40c8ead68446c3c2386911db696"
+      },
+      {
+        "title": "applies observer theme signal and skips regular console logging for it",
+        "group": "toolbar",
+        "sha256": "f1e232508a1d02568e11ddb6b7d2df82e5ba87efe3bfa9e03d9b52a74b6d252d"
+      },
+      {
+        "title": "dedupes repeated observer theme signals",
+        "group": "toolbar",
+        "sha256": "35fa5c6b797a0c6b3f5e67671cda93fe26d1fb307e7c44a996b16217774a0fe9"
+      },
+      {
+        "title": "ignores observer theme signals from stale token",
+        "group": "toolbar",
+        "sha256": "53f47c9de836a2aca2af393bcf3e585c17253d2f9bb86604fef40b8f197daa91"
+      },
+      {
+        "title": "clears theme on explicit null sentinel signal",
+        "group": "toolbar",
+        "sha256": "89b4b987d064fee894d771019f00072a49b045567c1a58772547f3f9ee3fc265"
+      },
+      {
+        "title": "replays toolbar state with theme color when window is shown",
+        "group": "toolbar",
+        "sha256": "b61b14c72ed5a0eec91a481fcd8d5801c0cf72e1f531b67a1fa9ab07979f0c57"
+      },
+      {
+        "title": "replays full toolbar state when toolbar renderer finishes loading",
+        "group": "toolbar",
+        "sha256": "0445afd24599da17e4941679a8e441c601423cc06760cb0b97b8c602ede81e2f"
+      },
+      {
+        "title": "does not mark toolbar ready for about:blank did-finish-load",
+        "group": "toolbar",
+        "sha256": "3f2d2457c62edd7cd371d54c0e0cdcdc544bb1ced018dfc24e2447415717b15c"
+      },
+      {
+        "title": "marks toolbar ready for fallback data page did-finish-load",
+        "group": "toolbar",
+        "sha256": "1e2f0868e30902abb3d90353d041130efb877cb61b9403a4effa39f9349c74af"
+      },
+      {
+        "title": "keeps focus deferred until a valid toolbar document loads",
+        "group": "toolbar",
+        "sha256": "8e86d6d4dffe0bc4bc1f199ae688f89f343d84ccc0421743e8318890991263f6"
+      },
+      {
+        "title": "runs early theme extraction shortly after navigation",
+        "group": "toolbar",
+        "sha256": "0fc838c1fec80f55a7406925bd988bd64ecd1586120fb7874c1477969d1606cd"
+      },
+      {
+        "title": "clears pending in-page theme timer on full navigation",
+        "group": "toolbar",
+        "sha256": "0486d3404b46c10256f24c9bd1f14a9381fb8621c77f6c7a6e0b79b7a5ad4d88"
+      },
+      {
+        "title": "throws when screenshot capture returns empty NativeImage",
+        "group": "capture",
+        "sha256": "e7e88795916e6a13ab40f079d3226348782324177c06c7269cce4dc1808f8ba6"
+      },
+      {
+        "title": "throws when screenshot capture returns empty PNG buffer",
+        "group": "capture",
+        "sha256": "ffa4087af403f395ee13ee930f7f796ed1bd7928a647a941a041275de329d4a0"
+      },
+      {
+        "title": "recovers screenshot via non-disruptive inactive reveal and restores hidden state",
+        "group": "capture",
+        "sha256": "d2ae3e685286e03bebbbc6e152b6a4838e30ec7f1aa039b9320f63bbd4b74b69"
+      },
+      {
+        "title": "throws when region screenshot capture returns empty NativeImage",
+        "group": "capture",
+        "sha256": "2ddfa521f0e7fd323f83566c7c80446ebd4195334bca26bbfc57dfd9396e6521"
+      },
+      {
+        "title": "throws when region screenshot capture returns empty PNG buffer",
+        "group": "capture",
+        "sha256": "2694925a8812376c3cd463a182ea40053f78fb6eaf30f74a078a2d15c7b1b8de"
+      },
+      {
+        "title": "captures screenshot region from ref target",
+        "group": "capture",
+        "sha256": "54dc59b8c4049815e0b55b0f69c1a3c44af1a3c9cad6571fa1f048912c486261"
+      },
+      {
+        "title": "captures screenshot region from selector target",
+        "group": "capture",
+        "sha256": "7d299cc52062fd3bd2c4c9214c5e48701a34408f71db3dcb5eac5cb9518dcf9f"
+      },
+      {
+        "title": "throws for ambiguous screenshot region target modes",
+        "group": "capture",
+        "sha256": "5bc3cc259c676e1d6dcc2e280157d2ce1743916edf2f44eb034a72369d7184df"
+      },
+      {
+        "title": "throws when selector target cannot be resolved",
+        "group": "capture",
+        "sha256": "2135296541ebad6ee7cc2adf53f41fdd335ad13e45daeef72ee8308e0cad4136"
+      },
+      {
+        "title": "throws when resolved region is outside viewport",
+        "group": "capture",
+        "sha256": "021f54ea07bd0b99f86a07dbeebb3f5ef7b022faf88cff65f614011892874c74"
+      },
+      {
+        "title": "resizes browser window viewport and returns effective applied size",
+        "group": "lifecycle",
+        "sha256": "ec6899c99684d46e3835520dc59781ca969f922584add0ffe54f57c47a40a34a"
+      },
+      {
+        "title": "returns effective viewport size when min window constraints apply",
+        "group": "lifecycle",
+        "sha256": "fee54a104b41da4a068f5a427de7de3a28e64a71a70d6e408baf0f12d66b6e6a"
+      },
+      {
+        "title": "agent control overlay",
+        "group": "agent-control",
+        "sha256": "a90fd89edb8ff291b60f00771fd451bb120f26e97df504a5f199c7c36d8561e2"
+      },
+      {
+        "title": "failed interaction tracking",
+        "group": "interaction-security",
+        "sha256": "8d01f81f5cc870100f43a1c2df9c8ea1b8a7d9016050d90c8ee73f3f20cd2aff"
+      },
+      {
+        "title": "security challenge detection",
+        "group": "interaction-security",
+        "sha256": "548a29fd0f395fbae9490961af295611ce2b29f018296b916e46979c593c78f4"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "browser-pane-manager.test.ts",
+        "lines": 363
+      },
+      {
+        "name": "browser-pane-manager.capture.test.ts",
+        "lines": 206
+      },
+      {
+        "name": "browser-pane-manager.permissions.test.ts",
+        "lines": 117
+      },
+      {
+        "name": "browser-pane-manager.input-workspace.test.ts",
+        "lines": 182
+      },
+      {
+        "name": "browser-pane-manager.navigation-local.test.ts",
+        "lines": 209
+      },
+      {
+        "name": "browser-pane-manager.navigation-remote.test.ts",
+        "lines": 268
+      },
+      {
+        "name": "browser-pane-manager.toolbar.test.ts",
+        "lines": 266
+      },
+      {
+        "name": "browser-pane-manager.agent-control.test.ts",
+        "lines": 188
+      },
+      {
+        "name": "browser-pane-manager.interaction-security.test.ts",
+        "lines": 131
+      },
+      {
+        "name": "electron-browser-mocks.ts",
+        "lines": 295
+      },
+      {
+        "name": "browser-pane-fixture.ts",
+        "lines": 101
+      }
+    ]
+  },
+  "runtimeBodyProof": {
+    "scenariosBefore": 110,
+    "scenariosAfter": 110,
+    "identicalRuntimeScenarioBodies": true,
+    "normalization": "Shared mutable fixture variables become fields on one shared fixture object. TypeScript annotations and comments are erased with the official TypeScript transpiler before comparing runtime bodies."
+  },
+  "remaining": {
+    "max-lines": 218,
+    "no-explicit-any": 889
+  },
+  "limits": [
+    "Lint global et décomposition complète encore en cours",
+    "Aucun parcours UI réel ni installation de ce candidat à ce stade"
+  ]
+}

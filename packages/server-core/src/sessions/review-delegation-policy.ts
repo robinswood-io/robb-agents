@@ -10,13 +10,13 @@ export type ReviewDelegationDecision = { allowed: true } | {
 
 /** Pure host admission check. Never uses assistant verdicts as authority. */
 export function evaluateReviewDelegation(input: {
-  parentSessionId?: string;
+  parentSessionId?: string | undefined;
   objective: ActiveSessionObjective;
   prompt: string;
-  proposedRole?: 'worker' | 'reviewer';
-  sourceSlugs?: readonly string[];
+  proposedRole?: 'worker' | 'reviewer' | undefined;
+  sourceSlugs?: readonly string[] | undefined;
   /** Host-verified conflicting completed reviews, never a model supplied override. */
-  arbitration?: { verifiedConflictingReviewIds: readonly string[] };
+  arbitration?: { verifiedConflictingReviewIds: readonly string[] } | undefined;
 }): ReviewDelegationDecision {
   if (!input.parentSessionId || !input.objective.originalText) return { allowed: true };
   const current = getDelegatedReviewRequest(

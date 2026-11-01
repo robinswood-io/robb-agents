@@ -15,7 +15,7 @@
  * one click after the gateway records a rejected attempt.
  */
 
-import * as React from 'react'
+
 import { Trans, useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -31,7 +31,7 @@ interface Props {
   enforced: boolean
   onRemove: (userId: string) => void
   /** Identifies the current user so we can render a "(You)" tag. */
-  currentUserId?: string
+  currentUserId?: string | undefined
 }
 
 /** 22px-wide invisible spacer keeping rows aligned with the parent header's

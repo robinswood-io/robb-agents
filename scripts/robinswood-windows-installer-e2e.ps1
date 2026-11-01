@@ -41,7 +41,7 @@ function Get-AvailableLoopbackPort {
     }
 }
 
-function Get-InstalledAppProcesses([string]$InstalledRoot) {
+function Get-InstalledAppProcess([string]$InstalledRoot) {
     $prefix = [System.IO.Path]::GetFullPath($InstalledRoot).TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
     return @(
         Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
@@ -52,9 +52,9 @@ function Get-InstalledAppProcesses([string]$InstalledRoot) {
     )
 }
 
-function Write-StartupDiagnostics([string]$InstalledRoot, [string]$ProfileRoot) {
+function Write-StartupDiagnostic([string]$InstalledRoot, [string]$ProfileRoot) {
     Write-Output 'Installed process snapshot:'
-    $processes = @(Get-InstalledAppProcesses $InstalledRoot)
+    $processes = @(Get-InstalledAppProcess $InstalledRoot)
     if ($processes.Count -eq 0) {
         Write-Output '  <no running process under the isolated install root>'
     } else {
@@ -146,7 +146,7 @@ try {
         # non-interactive desktop. Electron can also detach the browser process
         # from the launcher PID. A renderer executing from this isolated install
         # is the equivalent runtime signal without depending on process topology.
-        $rendererProcess = @(Get-InstalledAppProcesses $InstallDir) |
+        $rendererProcess = @(Get-InstalledAppProcess $InstallDir) |
             Where-Object { $_.CommandLine -match '--type=renderer' } |
             Select-Object -First 1
     } while (-not $hasCdpRenderer -and $null -eq $rendererProcess -and (Get-Date) -lt $deadline)
@@ -155,7 +155,7 @@ try {
     } elseif ($null -ne $rendererProcess) {
         Write-Output 'OK: installed Robb Agents spawned a Chromium renderer on the non-interactive Windows runner'
     } else {
-        Write-StartupDiagnostics $InstallDir $SmokeConfig
+        Write-StartupDiagnostic $InstallDir $SmokeConfig
         throw 'Installed app did not expose a CDP page or installation-scoped Chromium renderer within 60 seconds'
     }
     & taskkill.exe /PID $AppProcess.Id /T /F 2>$null | Out-Null

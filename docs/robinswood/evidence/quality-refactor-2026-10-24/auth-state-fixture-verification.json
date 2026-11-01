@@ -1,0 +1,14 @@
+{
+  "valid": true,
+  "caseBodiesPreserved": 22,
+  "nativeManagerFixtures": 4,
+  "nativeFetchFixtures": 2,
+  "typedCaptureRecords": 1,
+  "normalizations": "Reverse only the four Object.assign native manager completions, the two native fetch preconnect properties, and the single typed captured-write record; compare complete emitted JavaScript case bodies.",
+  "nativeManagerConstructorAbsent": true,
+  "currentSourceHashes": {
+    "packages/shared/src/auth/__tests__/state.test.ts": "cfb7bd8ddcac961ceba1f3bdc67a88c125765f4f6a8342ec6c17986dca456781",
+    "packages/shared/src/auth/__tests__/state-setup-needs.test.ts": "00f39cfef93a7d96599377cb715037c3de53966f6d794246fa3db6fa02070631"
+  },
+  "issues": []
+}

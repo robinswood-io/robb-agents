@@ -5,10 +5,10 @@ interface AddWorkspace_RadioOptionProps {
   name: string
   checked: boolean
   onChange: () => void
-  disabled?: boolean
+  disabled?: boolean | undefined
   title: string
   subtitle: string | ReactNode
-  action?: ReactNode
+  action?: ReactNode | undefined
 }
 
 /**

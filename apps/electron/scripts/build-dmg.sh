@@ -13,7 +13,7 @@ ROOT_DIR="$(dirname "$(dirname "$ELECTRON_DIR")")"
 ARCH="arm64"
 RELEASE_BUILD=false
 LOCAL_PRODUCTION_BUILD=false
-BUN_VERSION="bun-v1.3.14"
+BUN_VERSION="bun-v1.4.4"
 
 usage() {
   cat <<'EOF'
@@ -27,8 +27,9 @@ Options:
              signing and Apple notarization, then verify the final application
              with codesign, spctl and stapler.
   --local-production
-             Build an ad-hoc signed local package which uses the production
-             identity and ~/.craft-agent profile. Requires a clean Git source.
+             Build a Developer ID signed local package using CSC_NAME from the
+             keychain, the production identity and ~/.craft-agent profile.
+             Requires clean Git source; keeps macOS permissions stable across updates.
              Never distribute this unnotarized artifact.
 
 Release credentials (provided by the operator/CI; never committed):
@@ -75,7 +76,7 @@ if [[ "$RELEASE_BUILD" == true ]]; then
   # Refuse dirty source before dependency installation or any generated-file
   # cleanup. The Electron main build and electron-builder hook repeat this
   # check so source cannot become dirty between preflight and packaging.
-  RELEASE_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.cjs" --check-source "$ROOT_DIR")"
+  RELEASE_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.ts" --check-source "$ROOT_DIR")"
   export ROBB_BUILD_CHANNEL=production
   export ROBB_BUILD_COMMIT="$RELEASE_COMMIT"
   export ROBB_BUILD_DIRTY=false
@@ -93,17 +94,21 @@ if [[ "$RELEASE_BUILD" == true ]]; then
 elif [[ "$LOCAL_PRODUCTION_BUILD" == true ]]; then
   command -v git >/dev/null || { echo "ERROR: --local-production requires Git to verify source integrity." >&2; exit 1; }
   command -v node >/dev/null || { echo "ERROR: --local-production requires Node.js to verify source integrity." >&2; exit 1; }
-  LOCAL_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.cjs" --check-source "$ROOT_DIR")"
+  LOCAL_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.ts" --check-source "$ROOT_DIR")"
   export ROBB_BUILD_CHANNEL=production
   export ROBB_BUILD_COMMIT="$LOCAL_COMMIT"
   export ROBB_BUILD_DIRTY=false
   unset CRAFT_DEV_RUNTIME
 
-  echo "WARNING: building an ad-hoc local production-profile package." >&2
+  if [[ -z "${CSC_NAME:-}" ]]; then
+    echo "ERROR: --local-production requires CSC_NAME (a Developer ID Application identity) to preserve macOS permissions." >&2
+    exit 1
+  fi
+  echo "WARNING: building a Developer ID signed local production-profile package." >&2
   echo "WARNING: it reads and writes ~/.craft-agent and must never be distributed." >&2
 
   export CSC_IDENTITY_AUTO_DISCOVERY=false
-  unset CSC_LINK CSC_KEY_PASSWORD CSC_NAME
+  unset CSC_LINK CSC_KEY_PASSWORD
 else
   # The default contract is a development-channel local smoke artifact.
   export ROBB_BUILD_CHANNEL=development
@@ -158,7 +163,7 @@ cp -R "$SDK_SOURCE" "$ELECTRON_DIR/node_modules/@anthropic-ai/"
 SDK_BIN_PKG="claude-agent-sdk-darwin-${ARCH}"
 SDK_BIN_SOURCE="$ROOT_DIR/node_modules/@anthropic-ai/${SDK_BIN_PKG}"
 if [[ ! -d "$SDK_BIN_SOURCE" ]]; then
-  SDK_VERSION="$(node -p "require('$ROOT_DIR/package.json').dependencies['@anthropic-ai/claude-agent-sdk']" | tr -d '"')"
+  SDK_VERSION="$(node -p 'require(process.argv[1]).version' "$SDK_SOURCE/package.json")"
   mkdir -p "$TEMP_DIR/sdk"
   (
     cd "$TEMP_DIR/sdk"
@@ -173,10 +178,33 @@ mkdir -p "$ALIAS_DEST"
 cp -R "$SDK_BIN_SOURCE/." "$ALIAS_DEST/"
 chmod +x "$ALIAS_DEST/claude"
 
+# 5. Copy target-architecture ripgrep, fetching its optional package when needed.
 RG_SOURCE="$ROOT_DIR/node_modules/@vscode/ripgrep"
-require_path "$RG_SOURCE/bin/rg" "ripgrep binary"
+RG_PLATFORM="darwin"
+RG_PACKAGE="@vscode/ripgrep-$RG_PLATFORM-$ARCH"
+RG_BINARY="$ROOT_DIR/node_modules/$RG_PACKAGE/bin/rg"
+require_path "$RG_SOURCE" "ripgrep package"
+if [[ ! -x "$RG_BINARY" ]]; then
+  echo "Cross-arch build: $RG_PACKAGE not in node_modules - fetching from npm..."
+  RG_VERSION="$(node -p 'require(process.argv[1]).version' "$RG_SOURCE/package.json")"
+  RG_TMP="$TEMP_DIR/ripgrep-$RG_PLATFORM-$ARCH"
+  mkdir -p "$RG_TMP"
+  (
+    cd "$RG_TMP"
+    npm pack "$RG_PACKAGE@$RG_VERSION" >/dev/null
+    tar -xzf vscode-ripgrep-$RG_PLATFORM-"$ARCH"-*.tgz
+  )
+  RG_BINARY="$RG_TMP/package/bin/rg"
+fi
+require_path "$RG_BINARY" "ripgrep binary"
+if [[ ! -x "$RG_BINARY" ]]; then
+  echo "ERROR: ripgrep binary is not executable: $RG_BINARY" >&2
+  exit 1
+fi
 mkdir -p "$ELECTRON_DIR/node_modules/@vscode"
 cp -R "$RG_SOURCE" "$ELECTRON_DIR/node_modules/@vscode/"
+mkdir -p "$ELECTRON_DIR/node_modules/@vscode/ripgrep/bin"
+cp "$RG_BINARY" "$ELECTRON_DIR/node_modules/@vscode/ripgrep/bin/rg"
 
 # Vite can exceed Node's default old-space limit on macOS runners while
 # rendering production chunks for the full desktop UI bundle.
@@ -185,14 +213,26 @@ export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=${ROBB_
 # The shared Electron build stages Pi/Vibe subprocesses and all bundled assets.
 bun run electron:build
 
+# Each package starts from an empty commercial slot. Stage only the explicitly
+# supplied production artifact so a prior build cannot leak into an OSS build.
+rm -rf "$ELECTRON_DIR/dist/resources/operations"
+if [[ -n "${ROBB_OPERATIONS_BUNDLE_PATH:-}" ]]; then
+  bun run scripts/stage-commercial-operations.ts --bundle "$ROBB_OPERATIONS_BUNDLE_PATH"
+fi
+
 cd "$ELECTRON_DIR"
 # Publishing is handled only by the verified GitHub Release job, never by
 # electron-builder's CI auto-detection.
 BUILDER_ARGS=(--config electron-builder.yml --mac --"$ARCH" --publish never)
-if [[ "$RELEASE_BUILD" == true ]]; then
+if [[ "$RELEASE_BUILD" == true || "$LOCAL_PRODUCTION_BUILD" == true ]]; then
   # Repeat the production config's fail-closed setting at the invocation
   # boundary so a future config regression cannot silently disable it.
   BUILDER_ARGS+=(--config.mac.forceCodeSigning=true)
+  if [[ "$LOCAL_PRODUCTION_BUILD" == true ]]; then
+    BUILDER_ARGS+=(--config.mac.identity="$CSC_NAME" --config.mac.notarize=false)
+  else
+    BUILDER_ARGS+=(--config.mac.notarize=true)
+  fi
 else
   # Preserve explicitly non-release local smoke builds without a certificate.
   # Apple Silicon refuses to launch a mutated Electron bundle without a valid
@@ -220,14 +260,14 @@ CHECKSUM_PATH="$ELECTRON_DIR/release/SHA256SUMS-macos-${ARCH}.txt"
 cd "$ROOT_DIR"
 if [[ "$RELEASE_BUILD" == true ]]; then
   if [[ "${ROBB_PACKAGE_LAUNCH_SMOKE:-0}" == "1" ]]; then
-    python3 scripts/robinswood-packaged-smoke.py --arch "$ARCH" --require-release-signing --launch --launch-seconds 12
+    python3 scripts/robinswood_packaged_smoke.py --arch "$ARCH" --require-release-signing --launch --launch-seconds 12
   else
-    python3 scripts/robinswood-packaged-smoke.py --arch "$ARCH" --require-release-signing
+    python3 scripts/robinswood_packaged_smoke.py --arch "$ARCH" --require-release-signing
   fi
 elif [[ "${ROBB_PACKAGE_LAUNCH_SMOKE:-0}" == "1" ]]; then
-  python3 scripts/robinswood-packaged-smoke.py --arch "$ARCH" --launch --launch-seconds 12
+  python3 scripts/robinswood_packaged_smoke.py --arch "$ARCH" --launch --launch-seconds 12
 else
-  python3 scripts/robinswood-packaged-smoke.py --arch "$ARCH"
+  python3 scripts/robinswood_packaged_smoke.py --arch "$ARCH"
 fi
 
 echo "=== Build complete ==="

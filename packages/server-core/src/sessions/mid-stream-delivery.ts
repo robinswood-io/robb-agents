@@ -1,3 +1,4 @@
+import { isUnknownArray } from "../../../shared/src/utils/json.ts";
 import type { FileAttachment, SendMessageOptions } from '@craft-agent/shared/protocol'
 import type { StoredAttachment } from '@craft-agent/core/types'
 
@@ -8,9 +9,9 @@ export function canSteerTextPayload(
   options?: SendMessageOptions,
 ): boolean {
   if (attachments?.length || storedAttachments?.length) return false
-  return !Object.entries(options ?? {}).some(([key, value]) => {
+  return !Object.entries(options ?? {}).some(([key, value]: [string, unknown]) => {
     if (value === undefined || key === 'optimisticMessageId') return false
-    if ((key === 'skillSlugs' || key === 'badges') && Array.isArray(value) && value.length === 0) return false
+    if ((key === 'skillSlugs' || key === 'badges') && isUnknownArray(value) && value.length === 0) return false
     if (key === 'hidden' && value === false) return false
     return true
   })

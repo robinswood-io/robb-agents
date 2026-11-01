@@ -1,0 +1,447 @@
+[
+  {
+    "legacy_id": "sellsy-business-kpi-export",
+    "name": "Export KPI business Sellsy",
+    "mode": "script",
+    "command": "/usr/bin/node /srv/rbw-agents-oss/scripts/sellsy_business_kpi_export.mjs",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "sellsy_readonly_kpi_export",
+    "sideEffects": [
+      "reads_sellsy_api",
+      "writes_kpi_report",
+      "no_sellsy_mutation",
+      "no_external_outbound_message"
+    ],
+    "note": "P3a safe activation: Sellsy OAuth/API reads only; writes local KPI artifacts.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/usr/bin/node",
+        "/srv/rbw-agents-oss/scripts/sellsy_business_kpi_export.mjs"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-business-kpi-export-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-business-kpi-export-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "campaign-impact-events",
+    "name": "Campaign Impact Events Normalizer",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/campaign_impact_events.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "campaign_impact_normalizer_report_only",
+    "sideEffects": [
+      "reads_campaign_and_sellsy_export_reports",
+      "writes_impact_events_and_summary",
+      "no_external_outbound_message"
+    ],
+    "note": "P3a safe activation: normalizes local/exported events only.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/campaign_impact_events.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/campaign-impact-events-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/campaign-impact-events-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "qualified-opportunity-quote-guard",
+    "name": "Qualified Opportunity Quote Guard",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/qualified_opportunity_quote_guard.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "quote_guard_report_only",
+    "sideEffects": [
+      "reads_opportunity_artifacts",
+      "writes_quote_outcome_report",
+      "no_external_outbound_message"
+    ],
+    "note": "P3a safe activation: guard/report wrapper only.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/qualified_opportunity_quote_guard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/qualified-opportunity-quote-guard-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/qualified-opportunity-quote-guard-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "contact-quality-audit",
+    "name": "Contact Quality Audit",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/contact_quality_audit.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "riskClass": "contact_quality_bounded_state_only",
+    "sideEffects": [
+      "reads_send_candidate_queues",
+      "writes_quality_audit_report",
+      "bounded_state_only_remediation",
+      "never_sends_deletes_or_external_mutates"
+    ],
+    "note": "P3a safe activation: script explicitly states it never sends, deletes, or externally mutates.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/contact_quality_audit.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/contact-quality-audit-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/contact-quality-audit-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "contact-quality-audit-overnight",
+    "name": "Contact Quality Audit — Overnight",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/contact_quality_audit.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "riskClass": "contact_quality_bounded_state_only",
+    "sideEffects": [
+      "reads_send_candidate_queues",
+      "writes_quality_audit_report",
+      "bounded_state_only_remediation",
+      "never_sends_deletes_or_external_mutates"
+    ],
+    "note": "P3a safe activation: overnight alias to contact-quality-audit; same non-outbound command.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/contact_quality_audit.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/contact-quality-audit-overnight-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/contact-quality-audit-overnight-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "mail-autonomy-regression-tests",
+    "name": "Tests anti-régression autonomie mail",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/mail_autonomy_regression_tests.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "guardrail_tests",
+    "sideEffects": [
+      "runs_selftests",
+      "writes_test_report",
+      "uses_test_monkeypatches_for_alerts",
+      "no_external_outbound_message"
+    ],
+    "note": "P3a safe activation: regression tests monkeypatch notification paths and run Sellsy sync only in selftest mode.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/mail_autonomy_regression_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/mail-autonomy-regression-tests-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/mail-autonomy-regression-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "contact-source-catalog-expander",
+    "name": "Expansion autonome du catalogue sources contact",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/contact_source_catalog_expander.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "internal_catalog_expansion_no_outbound",
+    "sideEffects": [
+      "writes_oss_source_catalog",
+      "archives_prior_catalog_snapshot_outside_active_tree",
+      "no_external_outbound_message"
+    ],
+    "note": "P3b repaired: catalog snapshots are archived under /srv/rbw-agents-oss/archive, not active .bak files.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/contact_source_catalog_expander.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/contact-source-catalog-expander-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/contact-source-catalog-expander-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "campaign-agent-source-rebuild",
+    "name": "Campaign Agent Source Rebuild — evidence-first prepare-only packs",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/campaign_agent_source_rebuild.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "prepare_only_source_rebuild_no_outbound",
+    "sideEffects": [
+      "runs_archived_prepare_only_source_rebuild_impl",
+      "writes_campaign_source_artifacts",
+      "externalSendAllowed_false"
+    ],
+    "note": "P3b repaired: dispatcher resolves the original implementation from archive instead of requiring active .bak files.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/campaign_agent_source_rebuild.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/campaign-agent-source-rebuild-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/campaign-agent-source-rebuild-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "gtm-autonomous-execution-materializer",
+    "name": "GTM Autonomous Execution Materializer",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/gtm_autonomous_execution_materializer.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "prepare_only_materializer",
+    "sideEffects": [
+      "writes_sales_draft_markdown",
+      "writes_github_backlog_proposals",
+      "githubMutation_proposal_only",
+      "no_external_send"
+    ],
+    "note": "P4a safe activation: materializes drafts/proposals only; no send or external mutation.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/gtm_autonomous_execution_materializer.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/gtm-autonomous-execution-materializer-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/gtm-autonomous-execution-materializer-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "business-autonomy-queue-governor",
+    "name": "Business Autonomy Queue Governor",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/business_autonomy_queue_governor.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "internal_queue_governance",
+    "sideEffects": [
+      "reads_business_action_queue",
+      "rewrites_internal_action_queue_ownership",
+      "writes_governance_report",
+      "no_external_send",
+      "no_external_api_mutation"
+    ],
+    "note": "P4a safe activation: internal queue governance only; the Sellsy string is ownership metadata, not an API mutation path.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/business_autonomy_queue_governor.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/business-autonomy-queue-governor-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/business-autonomy-queue-governor-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inbound-email-sellsy-task-sync",
+    "name": "Synchronisation réponses email entrantes vers tâches Sellsy",
+    "mode": "script",
+    "command": "/usr/bin/node /srv/rbw-agents-oss/scripts/inbound_email_sellsy_task_sync.mjs",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "bounded_inbound_crm_task_sync",
+    "sideEffects": [
+      "reads_gmail_triage_response_log",
+      "creates_sellsy_contact_when_missing",
+      "creates_sellsy_followup_task_idempotently",
+      "writes_sync_state",
+      "no_external_outbound_message"
+    ],
+    "note": "P4c activation: bounded inbound reply sync to Sellsy tasks; idempotent by gmailMessageId state and rate-limit aware.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/usr/bin/node",
+        "/srv/rbw-agents-oss/scripts/inbound_email_sellsy_task_sync.mjs"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inbound-email-sellsy-task-sync-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inbound-email-sellsy-task-sync-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "mail-autonomy-guard",
+    "name": "Garde-fou autonomie mail entrant",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/mail_autonomy_guard.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "mail_autonomy_guard_internal_alert",
+    "sideEffects": [
+      "reads_inbound_mail_sync_reports",
+      "writes_guard_report",
+      "may_send_deduped_internal_listmonk_alert_on_critical_regression",
+      "no_customer_outbound_message"
+    ],
+    "note": "P4c activation: guard may alert internally on critical regressions; this is observability, not client/outbound sales mail.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/mail_autonomy_guard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/mail-autonomy-guard-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/mail-autonomy-guard-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-agent-method-evidence-builder",
+    "name": "OSS Agent Method Evidence Builder",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_agent_method_evidence_builder.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "triggerType": "SchedulerTick",
+    "riskClass": "observability_evidence_report",
+    "sideEffects": [
+      "reads_capability_registry",
+      "writes_method_evidence_report",
+      "no_external_outbound_message"
+    ],
+    "note": "P4c activation: evidence/report builder only.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_agent_method_evidence_builder.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-agent-method-evidence-builder-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-agent-method-evidence-builder-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "business-target-reconsideration",
+    "name": "Reconsidération autonome du ciblage dirigeants PME/ETI",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/business_target_reconsideration.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "task_queue": "campaigns",
+    "triggerType": "SchedulerTick",
+    "riskClass": "target_reconsideration_dry_run",
+    "sideEffects": [
+      "reads_business_target_artifacts",
+      "writes_reconsideration_report",
+      "dry_run_without_apply_safe_or_update_action_queue",
+      "no_external_send"
+    ],
+    "note": "P4c activation: command intentionally omits --apply-safe and --update-action-queue.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/business_target_reconsideration.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/business-target-reconsideration-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/business-target-reconsideration-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  }
+]

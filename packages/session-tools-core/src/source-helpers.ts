@@ -165,8 +165,9 @@ export function resolveSessionWorkingDirectory(
       const buffer = Buffer.alloc(8192);
       const bytesRead = readSync(fd, buffer, 0, 8192, 0);
       const firstLine = buffer.toString('utf-8', 0, bytesRead).split('\n')[0] ?? '';
-      const header = JSON.parse(firstLine);
-      return header.workingDirectory || undefined;
+      const header: unknown = JSON.parse(firstLine);
+      if (!header || typeof header !== 'object' || !('workingDirectory' in header)) return undefined;
+      return typeof header.workingDirectory === 'string' && header.workingDirectory ? header.workingDirectory : undefined;
     } finally {
       closeSync(fd);
     }

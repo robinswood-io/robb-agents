@@ -1,0 +1,402 @@
+[
+  {
+    "pattern": "^tr\\b",
+    "comment": "Translate or delete characters"
+  },
+  {
+    "pattern": "^column\\b",
+    "comment": "Columnate lists"
+  },
+  {
+    "pattern": "^jq\\b",
+    "comment": "JSON processor"
+  },
+  {
+    "pattern": "^yq\\b(?![^\\r\\n]*\\s(?:-[^-\\s]*[is]\\S*|--(?:in-?place|split-exp(?:-file)?)(?:=\\S*)?)(?:\\s|$))",
+    "comment": "YAML processor without in-place editing"
+  },
+  {
+    "pattern": "^xq\\b(?![^\\r\\n]*\\s(?:-[^-\\s]*[is]\\S*|--(?:in-?place|split-exp(?:-file)?)(?:=\\S*)?)(?:\\s|$))",
+    "comment": "XML processor without in-place editing"
+  },
+  {
+    "pattern": "^xmllint\\b(?![^\\r\\n]*\\s(?:-o\\S*|--(?:output|shell)(?:=\\S*)?)(?:\\s|$))",
+    "comment": "XML linter and formatter without output files or interactive shell"
+  },
+  {
+    "pattern": "^json_pp\\b",
+    "comment": "JSON pretty printer"
+  },
+  {
+    "pattern": "^python\\s+-m\\s+json\\.tool(?:\\s+(?:--(?:sort-keys|no-ensure-ascii|json-lines|compact|tab|no-indent)|--indent(?:=(?:[0-9]+|\\\\t)|\\s+(?:[0-9]+|\\\\t))))*(?:\\s+(?:-|[^-\\s][^\\s]*))?\\s*$",
+    "comment": "Python JSON formatter with stdin or at most one input file and no output file"
+  },
+  {
+    "pattern": "^ping\\b",
+    "comment": "Send ICMP echo requests"
+  },
+  {
+    "pattern": "^traceroute\\b",
+    "comment": "Trace packet route to host"
+  },
+  {
+    "pattern": "^tracepath\\b",
+    "comment": "Trace path to host"
+  },
+  {
+    "pattern": "^mtr\\b",
+    "comment": "Network diagnostic tool"
+  },
+  {
+    "pattern": "^dig\\b",
+    "comment": "DNS lookup utility"
+  },
+  {
+    "pattern": "^nslookup\\b",
+    "comment": "Query DNS servers"
+  },
+  {
+    "pattern": "^host\\b",
+    "comment": "DNS lookup utility"
+  },
+  {
+    "pattern": "^netstat\\b",
+    "comment": "Network statistics"
+  },
+  {
+    "pattern": "^ss\\b",
+    "comment": "Socket statistics"
+  },
+  {
+    "pattern": "^ip\\s+(?:(?:-brief|-br|-json|-j|-details|-d|-statistics|-s|-pretty|-p|-human-readable|-h|-iec)\\s+)*(?:addr(?:ess)?|link|route|neigh(?:bour)?|neighbor|rule)\\s+(?:show|list)\\b",
+    "comment": "Show IP address, link, route, neighbour or rule information"
+  },
+  {
+    "pattern": "^ifconfig(?:\\s+(?:-a|-l|-s|-m|-v|[A-Za-z0-9_.:-]+))?\\s*$",
+    "comment": "Show all interfaces or one named interface without configuration arguments"
+  },
+  {
+    "pattern": "^node\\s+(?:--version|-v)\\s*$",
+    "comment": "Node.js version"
+  },
+  {
+    "pattern": "^npm\\s+(?:--version|-v)\\s*$",
+    "comment": "npm version"
+  },
+  {
+    "pattern": "^yarn\\s+(?:--version|-v)\\s*$",
+    "comment": "Yarn version"
+  },
+  {
+    "pattern": "^pnpm\\s+(?:--version|-v)\\s*$",
+    "comment": "pnpm version"
+  },
+  {
+    "pattern": "^bun\\s+(?:--version|-v)\\s*$",
+    "comment": "Bun version"
+  },
+  {
+    "pattern": "^python\\s+(?:--version|-V)\\s*$",
+    "comment": "Python version"
+  },
+  {
+    "pattern": "^python3\\s+(?:--version|-V)\\s*$",
+    "comment": "Python 3 version"
+  },
+  {
+    "pattern": "^ruby\\s+(?:--version|-v)\\s*$",
+    "comment": "Ruby version"
+  },
+  {
+    "pattern": "^go\\s+version\\s*$",
+    "comment": "Go version"
+  },
+  {
+    "pattern": "^rustc\\s+(?:--version|-V)\\s*$",
+    "comment": "Rust compiler version"
+  },
+  {
+    "pattern": "^cargo\\s+(?:--version|-V)\\s*$",
+    "comment": "Cargo version"
+  },
+  {
+    "pattern": "^java\\s+(?:-version|--version)\\s*$",
+    "comment": "Java version"
+  },
+  {
+    "pattern": "^dotnet\\s+--version\\s*$",
+    "comment": ".NET version"
+  },
+  {
+    "pattern": "^php\\s+(?:--version|-v)\\s*$",
+    "comment": "PHP version"
+  },
+  {
+    "pattern": "^perl\\s+(?:--version|-v)\\s*$",
+    "comment": "Perl version"
+  },
+  {
+    "pattern": "^Get-ChildItem\\b",
+    "comment": "PowerShell: List directory contents (dir/ls equivalent)"
+  },
+  {
+    "pattern": "^Get-Content\\b",
+    "comment": "PowerShell: Read file contents (cat equivalent)"
+  },
+  {
+    "pattern": "^Get-Item\\b",
+    "comment": "PowerShell: Get file/directory item properties"
+  },
+  {
+    "pattern": "^Get-ItemProperty\\b",
+    "comment": "PowerShell: Get item properties"
+  },
+  {
+    "pattern": "^Get-Location\\b",
+    "comment": "PowerShell: Print current directory (pwd equivalent)"
+  },
+  {
+    "pattern": "^Get-Process\\b",
+    "comment": "PowerShell: List running processes"
+  },
+  {
+    "pattern": "^Get-Service\\b",
+    "comment": "PowerShell: List services"
+  },
+  {
+    "pattern": "^Get-Command\\b",
+    "comment": "PowerShell: List available commands"
+  },
+  {
+    "pattern": "^Get-Help\\b",
+    "comment": "PowerShell: Display command help"
+  },
+  {
+    "pattern": "^Get-Module\\b",
+    "comment": "PowerShell: List loaded modules"
+  },
+  {
+    "pattern": "^Get-Variable\\b",
+    "comment": "PowerShell: List variables"
+  },
+  {
+    "pattern": "^Get-Alias\\b",
+    "comment": "PowerShell: List command aliases"
+  },
+  {
+    "pattern": "^Get-Host\\b",
+    "comment": "PowerShell: Get host information"
+  },
+  {
+    "pattern": "^Get-Date\\b",
+    "comment": "PowerShell: Get current date/time"
+  },
+  {
+    "pattern": "^Get-Culture\\b",
+    "comment": "PowerShell: Get culture settings"
+  },
+  {
+    "pattern": "^Get-ComputerInfo\\b",
+    "comment": "PowerShell: Get system information"
+  },
+  {
+    "pattern": "^Get-PSDrive\\b",
+    "comment": "PowerShell: List drives"
+  },
+  {
+    "pattern": "^Get-History\\b",
+    "comment": "PowerShell: Get command history"
+  },
+  {
+    "pattern": "^Get-EventLog\\b",
+    "comment": "PowerShell: Read event logs"
+  },
+  {
+    "pattern": "^Get-WinEvent\\b",
+    "comment": "PowerShell: Read Windows events"
+  },
+  {
+    "pattern": "^Get-Acl\\b",
+    "comment": "PowerShell: Get access control list"
+  },
+  {
+    "pattern": "^Get-NetAdapter\\b",
+    "comment": "PowerShell: List network adapters"
+  },
+  {
+    "pattern": "^Get-NetIPAddress\\b",
+    "comment": "PowerShell: Get IP addresses"
+  },
+  {
+    "pattern": "^Get-NetRoute\\b",
+    "comment": "PowerShell: Get routing table"
+  },
+  {
+    "pattern": "^Get-DnsClientServerAddress\\b",
+    "comment": "PowerShell: Get DNS server addresses"
+  },
+  {
+    "pattern": "^Get-Disk\\b",
+    "comment": "PowerShell: List disks"
+  },
+  {
+    "pattern": "^Get-Volume\\b",
+    "comment": "PowerShell: List volumes"
+  },
+  {
+    "pattern": "^Get-Partition\\b",
+    "comment": "PowerShell: List disk partitions"
+  },
+  {
+    "pattern": "^Get-Package\\b",
+    "comment": "PowerShell: List installed packages"
+  },
+  {
+    "pattern": "^Get-InstalledModule\\b",
+    "comment": "PowerShell: List installed PowerShell modules"
+  },
+  {
+    "pattern": "^Test-Path\\b",
+    "comment": "PowerShell: Test if path exists"
+  },
+  {
+    "pattern": "^Test-Connection\\b",
+    "comment": "PowerShell: Ping equivalent"
+  },
+  {
+    "pattern": "^Test-NetConnection\\b",
+    "comment": "PowerShell: Test network connectivity"
+  },
+  {
+    "pattern": "^Resolve-Path\\b",
+    "comment": "PowerShell: Resolve path to full path"
+  },
+  {
+    "pattern": "^Split-Path\\b",
+    "comment": "PowerShell: Split path into components"
+  },
+  {
+    "pattern": "^Join-Path\\b",
+    "comment": "PowerShell: Join path components"
+  },
+  {
+    "pattern": "^Measure-Object\\b",
+    "comment": "PowerShell: Measure/count objects"
+  },
+  {
+    "pattern": "^Measure-Command\\b",
+    "comment": "PowerShell: Measure execution time"
+  },
+  {
+    "pattern": "^Compare-Object\\b",
+    "comment": "PowerShell: Compare two objects"
+  },
+  {
+    "pattern": "^Select-Object\\b",
+    "comment": "PowerShell: Select object properties"
+  },
+  {
+    "pattern": "^Sort-Object\\b",
+    "comment": "PowerShell: Sort objects"
+  },
+  {
+    "pattern": "^Group-Object\\b",
+    "comment": "PowerShell: Group objects by property"
+  },
+  {
+    "pattern": "^Where-Object\\b",
+    "comment": "PowerShell: Filter objects"
+  },
+  {
+    "pattern": "^ForEach-Object\\b",
+    "comment": "PowerShell: Iterate over objects"
+  },
+  {
+    "pattern": "^Format-List\\b",
+    "comment": "PowerShell: Format output as list"
+  },
+  {
+    "pattern": "^Format-Table\\b",
+    "comment": "PowerShell: Format output as table"
+  },
+  {
+    "pattern": "^Format-Wide\\b",
+    "comment": "PowerShell: Format output as wide table"
+  },
+  {
+    "pattern": "^ConvertTo-Json\\b",
+    "comment": "PowerShell: Convert to JSON"
+  },
+  {
+    "pattern": "^ConvertFrom-Json\\b",
+    "comment": "PowerShell: Parse JSON"
+  },
+  {
+    "pattern": "^ConvertTo-Csv\\b",
+    "comment": "PowerShell: Convert to CSV"
+  },
+  {
+    "pattern": "^ConvertFrom-Csv\\b",
+    "comment": "PowerShell: Parse CSV"
+  },
+  {
+    "pattern": "^ConvertTo-Xml\\b",
+    "comment": "PowerShell: Convert to XML"
+  },
+  {
+    "pattern": "^Select-String\\b",
+    "comment": "PowerShell: Search strings in files (grep equivalent)"
+  },
+  {
+    "pattern": "^Find-Module\\b",
+    "comment": "PowerShell: Search for modules in gallery"
+  },
+  {
+    "pattern": "^Find-Package\\b",
+    "comment": "PowerShell: Search for packages"
+  },
+  {
+    "pattern": "^\\$PSVersionTable\\b",
+    "comment": "PowerShell: Version information variable"
+  },
+  {
+    "pattern": "^\\$env:",
+    "comment": "PowerShell: Environment variable access"
+  },
+  {
+    "pattern": "^\\$PWD\\b",
+    "comment": "PowerShell: Current directory variable"
+  },
+  {
+    "pattern": "^\\$HOME\\b",
+    "comment": "PowerShell: Home directory variable"
+  },
+  {
+    "pattern": "^\\$Host\\b",
+    "comment": "PowerShell: Host information variable"
+  },
+  {
+    "pattern": "^dir\\b",
+    "comment": "PowerShell/CMD: List directory (Get-ChildItem alias)"
+  },
+  {
+    "pattern": "^gci\\b",
+    "comment": "PowerShell: Get-ChildItem alias"
+  },
+  {
+    "pattern": "^gc\\b",
+    "comment": "PowerShell: Get-Content alias"
+  },
+  {
+    "pattern": "^gps\\b",
+    "comment": "PowerShell: Get-Process alias"
+  },
+  {
+    "pattern": "^gsv\\b",
+    "comment": "PowerShell: Get-Service alias"
+  },
+  {
+    "pattern": "^gcm\\b",
+    "comment": "PowerShell: Get-Command alias"
+  }
+]

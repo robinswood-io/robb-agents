@@ -1,0 +1,274 @@
+{
+  "source": "apps/electron/src/renderer/event-processor/handlers/session.ts",
+  "units": [
+    {
+      "names": [
+        "handleComplete"
+      ],
+      "group": "lifecycle",
+      "bodySha256": "76291b4879599130894edf1407487da646285d6c44eeef3a4893863c713d093c"
+    },
+    {
+      "names": [
+        "handleError"
+      ],
+      "group": "lifecycle",
+      "bodySha256": "80e4a6da65e6faec345bf450621d4c07904429b7fe27b8f773e6d46bb87237c6"
+    },
+    {
+      "names": [
+        "handleTypedError"
+      ],
+      "group": "lifecycle",
+      "bodySha256": "8535c9e110046007557320c4fb2db89ecfa219e8f2709d0cbb4ea1440bff8b35"
+    },
+    {
+      "names": [
+        "handleStatus"
+      ],
+      "group": "lifecycle",
+      "bodySha256": "433c5c457d162e1b49f7b94872e4d2cc2c80a01ada91026002de7d13fc3e716c"
+    },
+    {
+      "names": [
+        "handleInfo"
+      ],
+      "group": "lifecycle",
+      "bodySha256": "8252fbdaaee198f952295746e2a4cb4d6d6094cb037b5ab3b25ce03a422f2ea3"
+    },
+    {
+      "names": [
+        "handleInterrupted"
+      ],
+      "group": "lifecycle",
+      "bodySha256": "6657deaac887cba9eefd629c03416cbbb422837a569163eee1d6b2caf09850e2"
+    },
+    {
+      "names": [
+        "handleTitleGenerated"
+      ],
+      "group": "activity",
+      "bodySha256": "52234f9b6ea3debc327f748f3497e96b39595c5326ed078908a8c15da40db2d3"
+    },
+    {
+      "names": [
+        "handleTitleRegenerating"
+      ],
+      "group": "activity",
+      "bodySha256": "c8daadb1a63ccda1f389f3139937295bc0a210f8dbf056e17e890fae3254427f"
+    },
+    {
+      "names": [
+        "handleAsyncOperation"
+      ],
+      "group": "activity",
+      "bodySha256": "f13f0093ce7bc744590c56bcbe112f1b2b1423745c6ea9ec124534d4638df8fe"
+    },
+    {
+      "names": [
+        "handleWorkingDirectoryChanged"
+      ],
+      "group": "activity",
+      "bodySha256": "38916d817366686e61994dcb201ee8b1561dc02748cde0d2a6ac5e0d6869cf53"
+    },
+    {
+      "names": [
+        "handlePermissionModeChanged"
+      ],
+      "group": "activity",
+      "bodySha256": "800538456d51414c4e57ff83db4769c35434e58f6e762784b9c8b870a100eebf"
+    },
+    {
+      "names": [
+        "handleSessionModelChanged"
+      ],
+      "group": "activity",
+      "bodySha256": "bc51a0b18b293af47d6e3926c8f88d76cc10a7e2417b0617633c19cdd823005f"
+    },
+    {
+      "names": [
+        "handleConnectionChanged"
+      ],
+      "group": "activity",
+      "bodySha256": "bf55dc6f9a6f837f8b11f0d2f9dba529a89ed1b846ef1f7c0889629b9865b952"
+    },
+    {
+      "names": [
+        "handleUserMessage"
+      ],
+      "group": "messages",
+      "bodySha256": "d594c57a0205929e6c2ac9d55f47eed441527079c597129d1b2fdc0a2edc952f"
+    },
+    {
+      "names": [
+        "handleMessageAnnotationsUpdated"
+      ],
+      "group": "messages",
+      "bodySha256": "1b286c84922e02a555a26f30e5f33c4f2d9837e149452e4005842ce815d4f817"
+    },
+    {
+      "names": [
+        "handleSourcesChanged"
+      ],
+      "group": "metadata",
+      "bodySha256": "07aaa5e4007a1a9eca2bbf774d1576db25a0b312ff47ef713a8189884943566d"
+    },
+    {
+      "names": [
+        "handleLabelsChanged"
+      ],
+      "group": "metadata",
+      "bodySha256": "fcb2d48001041d9e5be1d5969c003804386790ba60942bba48057df2ccc03f72"
+    },
+    {
+      "names": [
+        "handleProjectIdChanged"
+      ],
+      "group": "metadata",
+      "bodySha256": "e7fe3525ba1cd8766d64a37f1f45d6640bada6c2e48df260cc24829a959fe254"
+    },
+    {
+      "names": [
+        "handleSessionStatusChanged"
+      ],
+      "group": "metadata",
+      "bodySha256": "8ab3bb7583592fddf1fa4004b4926d347da28ff362d3f35e7ba825116ea2f090"
+    },
+    {
+      "names": [
+        "handleSessionMetadataChanged"
+      ],
+      "group": "metadata",
+      "bodySha256": "941db387f2f904d520e533105dfc7e7f141003c5f639e69830c5be2ec78cca33"
+    },
+    {
+      "names": [
+        "handleSessionFlagged"
+      ],
+      "group": "metadata",
+      "bodySha256": "22a8ab0117923950b0bce239b2f339465d66b0ff506fbe7cd2792a21f7cf9122"
+    },
+    {
+      "names": [
+        "handleSessionUnflagged"
+      ],
+      "group": "metadata",
+      "bodySha256": "6aafffe067d21ffb7c9b1bfccd5d2b6e7926f9dc86ef95703bbcc6204f28334e"
+    },
+    {
+      "names": [
+        "handleSessionArchived"
+      ],
+      "group": "metadata",
+      "bodySha256": "9b99d928e98e3296326b95df97f37f74c249aded1c900c1f5a483ec41a9e71d7"
+    },
+    {
+      "names": [
+        "handleSessionUnarchived"
+      ],
+      "group": "metadata",
+      "bodySha256": "dcdf5228bf934a9cc2a672a82568859539f0a1efdf5323ea87cf6e64cdae7dcb"
+    },
+    {
+      "names": [
+        "handleNameChanged"
+      ],
+      "group": "metadata",
+      "bodySha256": "788bf1d5adf4fedb031e5e1791e33f3b4d6160fc89eb3114694743c06ae29856"
+    },
+    {
+      "names": [
+        "handleUsageUpdate"
+      ],
+      "group": "metadata",
+      "bodySha256": "0bca0cdbc823a5b42f309df5e5cb715d1b742602b0718e3d7b595d36ce16b851"
+    },
+    {
+      "names": [
+        "handleObjectiveChanged"
+      ],
+      "group": "metadata",
+      "bodySha256": "ebe7705dc322f449ddd619370f96fb3c90cf5478cc2ed96a9147b6a3d05b37d8"
+    },
+    {
+      "names": [
+        "handlePermissionRequest"
+      ],
+      "group": "requests",
+      "bodySha256": "7febbe6a96b7672fc759381daa066de4233fd637b34a175db9cd5321ca6b7a36"
+    },
+    {
+      "names": [
+        "handleCredentialRequest"
+      ],
+      "group": "requests",
+      "bodySha256": "35bc80bc34f47f287dbab22e0f96e8de738961d3bc7912389b32ccad6b43926b"
+    },
+    {
+      "names": [
+        "handlePlanSubmitted"
+      ],
+      "group": "requests",
+      "bodySha256": "1766db9a78a9a8ae5edaeea80a1fb0c60ba82857e551a7c2beb2bf0f5c761c49"
+    },
+    {
+      "names": [
+        "handleSessionShared"
+      ],
+      "group": "requests",
+      "bodySha256": "34226e1af350289390dc0bc1974d73692e6d3c875f3fbbcd3face8e169c9d008"
+    },
+    {
+      "names": [
+        "handleSessionUnshared"
+      ],
+      "group": "requests",
+      "bodySha256": "80345eea1e431d0edabf83cfb2653fcdf24b6a74de2c1ac49698c81d40663396"
+    },
+    {
+      "names": [
+        "handleAuthRequest"
+      ],
+      "group": "requests",
+      "bodySha256": "1d8af8a85919cb78691cb91c9ed3bd067230bd43bd0a846a7e0f32db22e2c667"
+    },
+    {
+      "names": [
+        "handleAuthCompleted"
+      ],
+      "group": "requests",
+      "bodySha256": "c4aa1aa58dc9f021018dd9e2c4480ecc8bb3f803e25d1aade247eb59b3d6d0ba"
+    }
+  ],
+  "modules": [
+    {
+      "name": "lifecycle",
+      "lines": 323
+    },
+    {
+      "name": "activity",
+      "lines": 163
+    },
+    {
+      "name": "messages",
+      "lines": 125
+    },
+    {
+      "name": "metadata",
+      "lines": 248
+    },
+    {
+      "name": "requests",
+      "lines": 171
+    }
+  ],
+  "dependencies": {
+    "lifecycle": [],
+    "activity": [],
+    "messages": [],
+    "metadata": [],
+    "requests": []
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

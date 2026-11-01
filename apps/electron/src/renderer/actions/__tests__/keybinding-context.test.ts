@@ -6,7 +6,7 @@ const originalDocument = globalThis.document
 
 afterEach(() => {
   setDismissibleLayerBridge(null)
-  ;(globalThis as unknown as { document: Document | undefined }).document = originalDocument
+  ;((globalThis) as { document: Document | undefined }).document = originalDocument
 })
 
 describe('getKeybindingContext', () => {
@@ -19,20 +19,18 @@ describe('getKeybindingContext', () => {
       handleEscape: () => true,
     })
 
-    ;(globalThis as unknown as { document: { querySelector: (_selector: string) => null } }).document = {
+    ;((globalThis) as { document: { querySelector: (_selector: string) => null } }).document = {
       querySelector: () => null,
     }
 
-    const event = {
-      target: { tagName: 'DIV', isContentEditable: false },
-    } as unknown as KeyboardEvent
+    const event = ({ target: Object.assign(new EventTarget(), { tagName: 'DIV', isContentEditable: false }) } satisfies Pick<KeyboardEvent, 'target'>)
 
     const context = getKeybindingContext(event)
     expect(context.menuOpen).toBe(true)
   })
 
   it('sets menuOpen=true when island dialog overlay is open', () => {
-    ;(globalThis as unknown as { document: { querySelector: (selector: string) => object | null } }).document = {
+    ;((globalThis) as { document: { querySelector: (selector: string) => object | null } }).document = {
       querySelector: (selector: string) => {
         if (selector.includes('[data-ca-island-dialog="true"][data-state="open"]')) {
           return {}
@@ -42,22 +40,18 @@ describe('getKeybindingContext', () => {
       },
     }
 
-    const event = {
-      target: { tagName: 'DIV', isContentEditable: false },
-    } as unknown as KeyboardEvent
+    const event = ({ target: Object.assign(new EventTarget(), { tagName: 'DIV', isContentEditable: false }) } satisfies Pick<KeyboardEvent, 'target'>)
 
     const context = getKeybindingContext(event)
     expect(context.menuOpen).toBe(true)
   })
 
   it('sets menuOpen=false when no overlay is open', () => {
-    ;(globalThis as unknown as { document: { querySelector: (_selector: string) => null } }).document = {
+    ;((globalThis) as { document: { querySelector: (_selector: string) => null } }).document = {
       querySelector: () => null,
     }
 
-    const event = {
-      target: { tagName: 'DIV', isContentEditable: false },
-    } as unknown as KeyboardEvent
+    const event = ({ target: Object.assign(new EventTarget(), { tagName: 'DIV', isContentEditable: false }) } satisfies Pick<KeyboardEvent, 'target'>)
 
     const context = getKeybindingContext(event)
     expect(context.menuOpen).toBe(false)

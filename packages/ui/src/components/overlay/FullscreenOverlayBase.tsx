@@ -59,30 +59,30 @@ export interface FullscreenOverlayBaseProps {
   /** Content to render inside the overlay */
   children: ReactNode
   /** Additional CSS classes for the container */
-  className?: string
+  className?: string | undefined
   /** Accessible title for the overlay (visually hidden) */
-  accessibleTitle?: string
+  accessibleTitle?: string | undefined
 
   // --- Structured header props (optional) ---
   // When any of these are provided, a FullscreenOverlayBaseHeader is rendered above children.
 
   /** Type badge — tool/format indicator (e.g. "Read", "Image", "Bash") */
-  typeBadge?: OverlayTypeBadge
+  typeBadge?: OverlayTypeBadge | undefined
   /** File path — shows dual-trigger menu badge with "Open" + "Reveal in {file manager}" */
-  filePath?: string
+  filePath?: string | undefined
   /** Title — displayed as a badge when no filePath */
-  title?: string
+  title?: string | undefined
   /** Click handler for the title badge */
-  onTitleClick?: () => void
+  onTitleClick?: (() => void) | undefined
   /** Subtitle — extra info badge (e.g. "Lines 1-50 of 200") */
-  subtitle?: string
+  subtitle?: string | undefined
   /** Right-side header actions (e.g. diff controls) */
-  headerActions?: ReactNode
+  headerActions?: ReactNode | undefined
   /** When provided, renders a built-in copy button in the header right actions area */
-  copyContent?: string
+  copyContent?: string | undefined
 
   /** Optional error banner — rendered between header and children */
-  error?: OverlayErrorBannerProps
+  error?: OverlayErrorBannerProps | undefined
 }
 
 export function handleFullscreenEscapeWithStack(): boolean {

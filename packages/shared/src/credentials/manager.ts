@@ -4,867 +4,360 @@
  * Main interface for credential storage. Uses encrypted file storage
  * for cross-platform compatibility without OS keychain prompts.
  */
-
-import type { CredentialBackend } from './backends/types.ts';
-import type { CredentialId, CredentialType, StoredCredential, CredentialHealthStatus, CredentialHealthIssue } from './types.ts';
-import type { LlmAuthType, LlmProviderType } from '../config/llm-connections.ts';
-import { SecureStorageBackend } from './backends/secure-storage.ts';
-import { debug } from '../utils/debug.ts';
-import { randomUUID } from 'node:crypto';
-
-export interface LlmCredentialBinding {
-  /** Exact encrypted-vault slot used by the selected auth mechanism. */
-  slot: 'llm_api_key' | 'llm_oauth' | 'llm_iam' | 'llm_service_account' | 'none';
-  /** Host-minted generation. It never contains or hashes credential material. */
-  bindingId: string;
-}
+import type { CredentialBackend } from "./backends/types.ts";
+import type { CredentialId, CredentialType, StoredCredential, CredentialHealthStatus } from "./types.ts";
+import type { LlmAuthType, LlmProviderType } from "../config/llm-connections.ts";
+import type { LlmCredentialBinding } from './manager/shared.ts';
+import * as managerStorage from './manager/storage.ts';
+import * as managerOauth from './manager/oauth.ts';
+import * as managerLlm from './manager/llm.ts';
+import * as managerLlmOauth from './manager/llm-oauth.ts';
+import * as managerServiceAccounts from './manager/service-accounts.ts';
+import * as managerHealth from './manager/health.ts';
+export type { LlmCredentialBinding } from './manager/shared.ts';
 
 export class CredentialManager {
-  private backends: CredentialBackend[] = [];
-  private writeBackend: CredentialBackend | null = null;
-  private initialized = false;
-  private initPromise: Promise<void> | null = null;
-  private mutationTails = new Map<string, Promise<void>>();
-
-  private async serializeMutation<T>(key: string, mutation: () => Promise<T>): Promise<T> {
-    const previous = this.mutationTails.get(key) ?? Promise.resolve();
-    let release!: () => void;
-    const gate = new Promise<void>((resolve) => { release = resolve; });
-    const tail = previous.catch(() => undefined).then(() => gate);
-    this.mutationTails.set(key, tail);
-    await previous.catch(() => undefined);
-    try {
-      return await mutation();
-    } finally {
-      release();
-      if (this.mutationTails.get(key) === tail) this.mutationTails.delete(key);
+    /** @internal Shared with the extracted backend helpers. */ public backends: CredentialBackend[] = [];
+    /** @internal */ public writeBackend: CredentialBackend | null = null;
+    /** @internal */ public initialized = false;
+    /** @internal */ public initPromise: Promise<void> | null = null;
+    /** @internal */ public mutationTails = new Map<string, Promise<void>>();
+    /** @internal */ public async serializeMutation<T>(key: string, mutation: () => Promise<T>): Promise<T> {
+        return managerStorage.serializeMutation<T>(this, key, mutation);
     }
-  }
-
-  private llmMutationKey(type: CredentialType, connectionSlug: string): string {
-    return `${type}\u0000${connectionSlug}`;
-  }
-
-  /**
-   * Explicitly initialize the credential manager.
-   * This is optional - methods auto-initialize via ensureInitialized().
-   * Use this for eager initialization at app startup if desired.
-   */
-  async initialize(): Promise<void> {
-    await this.ensureInitialized();
-  }
-
-  /**
-   * Internal: ensure initialization has completed.
-   * Called automatically by all public methods.
-   */
-  private async ensureInitialized(): Promise<void> {
-    if (this.initialized) {
-      return;
+    /** @internal */ public llmMutationKey(type: CredentialType, connectionSlug: string): string {
+        return managerStorage.llmMutationKey(this, type, connectionSlug);
     }
-    // Prevent race condition with concurrent initialization
-    if (this.initPromise) {
-      return this.initPromise;
+    /**
+     * Explicitly initialize the credential manager.
+     * This is optional - methods auto-initialize via ensureInitialized().
+     * Use this for eager initialization at app startup if desired.
+     */
+    async initialize(): Promise<void> {
+        return managerStorage.initialize(this);
     }
-
-    // Clear promise on failure so initialization can be retried
-    this.initPromise = this._doInitialize().catch((err) => {
-      this.initPromise = null;
-      throw err;
-    });
-    await this.initPromise;
-  }
-
-  private ensureInitializedSync(): void {
-    if (this.initialized) {
-      return;
+    /** @internal Shared with the extracted backend helpers. */ public async ensureInitialized(): Promise<void> {
+        return managerStorage.ensureInitialized(this);
     }
-
-    // SecureStorageBackend is always available and is currently the only
-    // credential backend. This sync path exists for sync callers such as
-    // saveSourceConfig(), where fire-and-forget cleanup can race immediate reloads.
-    const backend = new SecureStorageBackend();
-    this.backends = [backend];
-    this.writeBackend = backend;
-    this.initialized = true;
-    this.initPromise = null;
-    debug(`[CredentialManager] Backend available: ${backend.name} (priority ${backend.priority})`);
-    debug(`[CredentialManager] Using backend: ${backend.name}`);
-  }
-
-  private async _doInitialize(): Promise<void> {
-    const potentialBackends: CredentialBackend[] = [
-      new SecureStorageBackend(),
-    ];
-    const availableBackends: CredentialBackend[] = [];
-
-    // Check which backends are available
-    for (const backend of potentialBackends) {
-      if (await backend.isAvailable()) {
-        availableBackends.push(backend);
-        debug(`[CredentialManager] Backend available: ${backend.name} (priority ${backend.priority})`);
-      }
+    /** @internal Shared with the extracted backend helpers. */ public ensureInitializedSync(): void {
+        return managerStorage.ensureInitializedSync(this);
     }
-
-    // A synchronous caller may have initialized the singleton while the async
-    // availability checks above were in flight. In that case, keep the sync state
-    // instead of appending duplicate backends.
-    if (this.initialized) return;
-
-    // Sort by priority (highest first)
-    availableBackends.sort((a, b) => b.priority - a.priority);
-    this.backends = availableBackends;
-
-    // Use the first available backend for writing
-    this.writeBackend = this.backends[0] || null;
-
-    if (this.writeBackend) {
-      debug(`[CredentialManager] Using backend: ${this.writeBackend.name}`);
-    } else {
-      debug(`[CredentialManager] WARNING: No backend available.`);
+    /** @internal Shared with the extracted backend helpers. */ public async _doInitialize(): Promise<void> {
+        return managerStorage._doInitialize(this);
     }
-
-    this.initialized = true;
-  }
-
-  /** Get the name of the active write backend */
-  getActiveBackendName(): string | null {
-    return this.writeBackend?.name || null;
-  }
-
-  /**
-   * Get a credential by ID, trying all backends.
-   * Automatically initializes if needed.
-   */
-  async get(id: CredentialId): Promise<StoredCredential | null> {
-    await this.ensureInitialized();
-    let firstError: unknown;
-
-    for (const backend of this.backends) {
-      try {
-        const cred = await backend.get(id);
-        if (cred) {
-          debug(`[CredentialManager] Found ${id.type} in ${backend.name}`);
-          return cred;
-        }
-      } catch (err) {
-        firstError ??= err;
-        debug(`[CredentialManager] Error reading from ${backend.name}:`, err);
-      }
+    /** Get the name of the active write backend */
+    getActiveBackendName(): string | null {
+        return managerStorage.getActiveBackendName(this);
     }
-
-    if (firstError) throw firstError;
-    return null;
-  }
-
-  /**
-   * Set a credential using the write backend.
-   * Automatically initializes if needed.
-   */
-  async set(id: CredentialId, credential: StoredCredential): Promise<void> {
-    await this.ensureInitialized();
-
-    if (!this.writeBackend) {
-      throw new Error('No writable credential backend available');
+    /**
+     * Get a credential by ID, trying all backends.
+     * Automatically initializes if needed.
+     */
+    async get(id: CredentialId): Promise<StoredCredential | null> {
+        return managerStorage.get(this, id);
     }
-
-    await this.writeBackend.set(id, credential);
-    debug(`[CredentialManager] Saved ${id.type} to ${this.writeBackend.name}`);
-  }
-
-  /** Atomically load or create a secret when the active backend supports it. */
-  async getOrCreate(id: CredentialId, create: () => StoredCredential): Promise<StoredCredential> {
-    await this.ensureInitialized();
-    if (!this.writeBackend) {
-      throw new Error('No writable credential backend available');
+    /**
+     * Set a credential using the write backend.
+     * Automatically initializes if needed.
+     */
+    async set(id: CredentialId, credential: StoredCredential): Promise<void> {
+        return managerStorage.set(this, id, credential);
     }
-    if (this.writeBackend.getOrCreate) {
-      return this.writeBackend.getOrCreate(id, create);
+    /** Atomically load or create a secret when the active backend supports it. */
+    async getOrCreate(id: CredentialId, create: () => StoredCredential): Promise<StoredCredential> {
+        return managerStorage.getOrCreate(this, id, create);
     }
-
-    const existing = await this.get(id);
-    if (existing) return existing;
-    const credential = create();
-    await this.writeBackend.set(id, credential);
-    return credential;
-  }
-
-  /**
-   * Delete a credential from all backends.
-   * Automatically initializes if needed.
-   */
-  async delete(id: CredentialId): Promise<boolean> {
-    await this.ensureInitialized();
-
-    let deleted = false;
-    let firstError: unknown;
-    for (const backend of this.backends) {
-      try {
-        if (await backend.delete(id)) {
-          deleted = true;
-          debug(`[CredentialManager] Deleted ${id.type} from ${backend.name}`);
-        }
-      } catch (err) {
-        firstError ??= err;
-        debug(`[CredentialManager] Error deleting from ${backend.name}:`, err);
-      }
+    /**
+     * Delete a credential from all backends.
+     * Automatically initializes if needed.
+     */
+    async delete(id: CredentialId): Promise<boolean> {
+        return managerStorage.deleteOperation(this, id);
     }
-
-    if (!deleted && firstError) throw firstError;
-    return deleted;
-  }
-
-  deleteSync(id: CredentialId): boolean {
-    this.ensureInitializedSync();
-
-    let deleted = false;
-    let firstError: unknown;
-    for (const backend of this.backends) {
-      if (!backend.deleteSync) {
-        debug(`[CredentialManager] Backend ${backend.name} does not support synchronous delete`);
-        continue;
-      }
-
-      try {
-        if (backend.deleteSync(id)) {
-          deleted = true;
-          debug(`[CredentialManager] Deleted ${id.type} from ${backend.name}`);
-        }
-      } catch (err) {
-        firstError ??= err;
-        debug(`[CredentialManager] Error deleting from ${backend.name}:`, err);
-      }
+    deleteSync(id: CredentialId): boolean {
+        return managerStorage.deleteSync(this, id);
     }
-
-    if (!deleted && firstError) throw firstError;
-    return deleted;
-  }
-
-  /**
-   * List credentials matching a filter.
-   * Automatically initializes if needed.
-   */
-  async list(filter?: Partial<CredentialId>): Promise<CredentialId[]> {
-    await this.ensureInitialized();
-
-    const seen = new Set<string>();
-    const results: CredentialId[] = [];
-    let firstError: unknown;
-
-    for (const backend of this.backends) {
-      try {
-        const ids = await backend.list(filter);
-        for (const id of ids) {
-          const key = JSON.stringify(id);
-          if (!seen.has(key)) {
-            seen.add(key);
-            results.push(id);
-          }
-        }
-      } catch (err) {
-        firstError ??= err;
-        debug(`[CredentialManager] Error listing from ${backend.name}:`, err);
-      }
+    /**
+     * List credentials matching a filter.
+     * Automatically initializes if needed.
+     */
+    async list(filter?: Partial<CredentialId>): Promise<CredentialId[]> {
+        return managerStorage.list(this, filter);
     }
-
-    if (firstError) throw firstError;
-    return results;
-  }
-
-  // ============================================================
-  // Convenience Methods
-  // ============================================================
-
-  /** Get Anthropic API key */
-  async getApiKey(): Promise<string | null> {
-    const cred = await this.get({ type: 'anthropic_api_key' });
-    return cred?.value || null;
-  }
-
-  /** Set Anthropic API key */
-  async setApiKey(key: string): Promise<void> {
-    await this.set({ type: 'anthropic_api_key' }, { value: key });
-  }
-
-  /** Get Claude OAuth token */
-  async getClaudeOAuth(): Promise<string | null> {
-    const cred = await this.get({ type: 'claude_oauth' });
-    return cred?.value || null;
-  }
-
-  /** Set Claude OAuth token */
-  async setClaudeOAuth(token: string): Promise<void> {
-    await this.set({ type: 'claude_oauth' }, { value: token });
-  }
-
-  /** Get Claude OAuth credentials (with refresh token, expiry, and source) */
-  async getClaudeOAuthCredentials(): Promise<{
-    accessToken: string;
-    refreshToken?: string;
-    expiresAt?: number;
-    /** Where the token came from: 'native' (our OAuth), 'cli' (Claude CLI import), or undefined (unknown) */
-    source?: 'native' | 'cli';
-  } | null> {
-    const cred = await this.get({ type: 'claude_oauth' });
-    if (!cred) return null;
-
-    return {
-      accessToken: cred.value,
-      refreshToken: cred.refreshToken,
-      expiresAt: cred.expiresAt,
-      source: cred.source as 'native' | 'cli' | undefined,
-    };
-  }
-
-  /** Set Claude OAuth credentials (with refresh token, expiry, and source) */
-  async setClaudeOAuthCredentials(credentials: {
-    accessToken: string;
-    refreshToken?: string;
-    expiresAt?: number;
-    /** Where the token came from: 'native' (our OAuth), 'cli' (Claude CLI import) */
-    source?: 'native' | 'cli';
-  }): Promise<void> {
-    await this.set({ type: 'claude_oauth' }, {
-      value: credentials.accessToken,
-      refreshToken: credentials.refreshToken,
-      expiresAt: credentials.expiresAt,
-      source: credentials.source,
-    });
-  }
-
-  /** Get workspace MCP OAuth credentials */
-  async getWorkspaceOAuth(workspaceId: string): Promise<{
-    accessToken: string;
-    tokenType?: string;
-    clientId?: string;
-  } | null> {
-    const cred = await this.get({ type: 'workspace_oauth', workspaceId });
-    if (!cred) return null;
-    return {
-      accessToken: cred.value,
-      tokenType: cred.tokenType,
-      clientId: cred.clientId,
-    };
-  }
-
-  /** Set workspace MCP OAuth credentials */
-  async setWorkspaceOAuth(workspaceId: string, credentials: {
-    accessToken: string;
-    tokenType?: string;
-    clientId?: string;
-  }): Promise<void> {
-    await this.set(
-      { type: 'workspace_oauth', workspaceId },
-      {
-        value: credentials.accessToken,
-        tokenType: credentials.tokenType,
-        clientId: credentials.clientId,
-      }
-    );
-  }
-
-  /** Delete all credentials for a workspace (source credentials) */
-  async deleteWorkspaceCredentials(workspaceId: string): Promise<void> {
-    const allCreds = await this.list({ workspaceId });
-    for (const cred of allCreds) {
-      await this.delete(cred);
+    // ============================================================
+    // Convenience Methods
+    // ============================================================
+    /** Get Anthropic API key */
+    async getApiKey(): Promise<string | null> {
+        return managerOauth.getApiKey(this);
     }
-  }
-
-  // Note: OpenAI API key methods removed - Codex uses native ChatGPT OAuth flow
-
-  // ============================================================
-  // LLM Connection Credentials
-  // ============================================================
-
-  /**
-   * Get API key for an LLM connection.
-   * @param connectionSlug - The connection slug
-   * @returns API key or null if not found
-   */
-  async getLlmApiKey(connectionSlug: string, expectedBindingId?: string): Promise<string | null> {
-    const cred = await this.get({ type: 'llm_api_key', connectionSlug });
-    if (expectedBindingId && cred?.bindingId !== expectedBindingId) {
-      throw new Error(`LLM credential generation drifted for "${connectionSlug}"`);
+    /** Set Anthropic API key */
+    async setApiKey(key: string): Promise<void> {
+        return managerOauth.setApiKey(this, key);
     }
-    return cred?.value || null;
-  }
-
-  /**
-   * Set API key for an LLM connection.
-   * @param connectionSlug - The connection slug
-   * @param apiKey - The API key to store
-   */
-  async setLlmApiKey(connectionSlug: string, apiKey: string): Promise<void> {
-    await this.serializeMutation(this.llmMutationKey('llm_api_key', connectionSlug), async () => {
-      await this.set({ type: 'llm_api_key', connectionSlug }, {
-        value: apiKey,
-        bindingId: randomUUID(),
-      });
-    });
-  }
-
-  /**
-   * Delete API key for an LLM connection.
-   * @param connectionSlug - The connection slug
-   * @returns true if deleted, false if not found
-   */
-  async deleteLlmApiKey(connectionSlug: string): Promise<boolean> {
-    return this.serializeMutation(this.llmMutationKey('llm_api_key', connectionSlug), () =>
-      this.delete({ type: 'llm_api_key', connectionSlug }));
-  }
-
-  /**
-   * Get OAuth token for an LLM connection.
-   * @param connectionSlug - The connection slug
-   * @returns OAuth credentials or null if not found
-   */
-  async getLlmOAuth(connectionSlug: string, expectedBindingId?: string): Promise<{
-    accessToken: string;
-    refreshToken?: string;
-    expiresAt?: number;
-    /** OIDC id_token (used by OpenAI/Codex) */
-    idToken?: string;
-    /** Opaque host generation; never derived from token material. */
-    bindingId?: string;
-  } | null> {
-    const cred = await this.get({ type: 'llm_oauth', connectionSlug });
-    if (expectedBindingId && cred?.bindingId !== expectedBindingId) {
-      throw new Error(`LLM credential generation drifted for "${connectionSlug}"`);
+    /** Get Claude OAuth token */
+    async getClaudeOAuth(): Promise<string | null> {
+        return managerOauth.getClaudeOAuth(this);
     }
-    if (!cred) return null;
-    return {
-      accessToken: cred.value,
-      refreshToken: cred.refreshToken,
-      expiresAt: cred.expiresAt,
-      idToken: cred.idToken,
-      bindingId: cred.bindingId,
-    };
-  }
-
-  /**
-   * Set OAuth token for an LLM connection.
-   * @param connectionSlug - The connection slug
-   * @param credentials - OAuth credentials to store
-   */
-  async setLlmOAuth(connectionSlug: string, credentials: {
-    accessToken: string;
-    refreshToken?: string;
-    expiresAt?: number;
-    /** OIDC id_token (used by OpenAI/Codex) */
-    idToken?: string;
-  }): Promise<void> {
-    await this.serializeMutation(this.llmMutationKey('llm_oauth', connectionSlug), async () => {
-      await this.set({ type: 'llm_oauth', connectionSlug }, {
-        value: credentials.accessToken,
-        refreshToken: credentials.refreshToken,
-        expiresAt: credentials.expiresAt,
-        idToken: credentials.idToken,
-        bindingId: randomUUID(),
-      });
-    });
-  }
-
-  /**
-   * Persist an automatic refresh of the credential already bound to this slot.
-   * Re-authentication must use setLlmOAuth() instead, which deliberately rotates
-   * the binding generation. A legacy unbound credential is assigned its first
-   * generation only for an unsealed refresh; a specialized caller always supplies
-   * expectedBindingId and therefore continues to fail closed on legacy state.
-   */
-  async refreshLlmOAuth(connectionSlug: string, credentials: {
-    accessToken: string;
-    refreshToken?: string;
-    expiresAt?: number;
-    /** OIDC id_token (used by OpenAI/Codex) */
-    idToken?: string;
-  }, expectedBindingId?: string): Promise<void> {
-    await this.serializeMutation(this.llmMutationKey('llm_oauth', connectionSlug), async () => {
-      const current = await this.get({ type: 'llm_oauth', connectionSlug });
-      if (!current) {
-        throw new Error(`Cannot refresh missing LLM OAuth credential "${connectionSlug}"`);
-      }
-      if (expectedBindingId && current.bindingId !== expectedBindingId) {
-        throw new Error(`LLM credential generation drifted for "${connectionSlug}"`);
-      }
-      const bindingId = current.bindingId ?? randomUUID();
-      await this.set({ type: 'llm_oauth', connectionSlug }, {
-        value: credentials.accessToken,
-        refreshToken: credentials.refreshToken,
-        expiresAt: credentials.expiresAt,
-        idToken: credentials.idToken,
-        bindingId,
-      });
-    });
-  }
-
-  /**
-   * Delete all credentials for an LLM connection.
-   * @param connectionSlug - The connection slug
-   */
-  async deleteLlmCredentials(connectionSlug: string): Promise<void> {
-    for (const type of [
-      'llm_api_key', 'llm_oauth', 'llm_iam', 'llm_service_account',
-    ] as const) {
-      await this.serializeMutation(this.llmMutationKey(type, connectionSlug), () =>
-        this.delete({ type, connectionSlug }));
+    /** Set Claude OAuth token */
+    async setClaudeOAuth(token: string): Promise<void> {
+        return managerOauth.setClaudeOAuth(this, token);
     }
-  }
-
-  // ============================================================
-  // IAM Credentials (AWS Bedrock)
-  // ============================================================
-
-  /**
-   * Get IAM credentials for an LLM connection.
-   * @param connectionSlug - The connection slug
-   * @returns IAM credentials or null if not found
-   */
-  async getLlmIamCredentials(connectionSlug: string, expectedBindingId?: string): Promise<{
-    accessKeyId: string;
-    secretAccessKey: string;
-    region?: string;
-    sessionToken?: string;
-  } | null> {
-    const cred = await this.get({ type: 'llm_iam', connectionSlug });
-    if (expectedBindingId && cred?.bindingId !== expectedBindingId) {
-      throw new Error(`LLM credential generation drifted for "${connectionSlug}"`);
+    /** Get Claude OAuth credentials (with refresh token, expiry, and source) */
+    async getClaudeOAuthCredentials(): Promise<{
+        accessToken: string;
+        refreshToken?: string;
+        expiresAt?: number;
+        /** Where the token came from: 'native' (our OAuth), 'cli' (Claude CLI import), or undefined (unknown) */
+        source?: 'native' | 'cli';
+    } | null> {
+        return managerOauth.getClaudeOAuthCredentials(this);
     }
-    if (!cred || !cred.awsAccessKeyId) return null;
-    return {
-      accessKeyId: cred.awsAccessKeyId,
-      secretAccessKey: cred.value, // Secret key stored in value field
-      region: cred.awsRegion,
-      sessionToken: cred.awsSessionToken,
-    };
-  }
-
-  /**
-   * Set IAM credentials for an LLM connection.
-   * @param connectionSlug - The connection slug
-   * @param credentials - IAM credentials to store
-   */
-  async setLlmIamCredentials(connectionSlug: string, credentials: {
-    accessKeyId: string;
-    secretAccessKey: string;
-    region?: string;
-    sessionToken?: string;
-  }): Promise<void> {
-    await this.serializeMutation(this.llmMutationKey('llm_iam', connectionSlug), async () => {
-      await this.set({ type: 'llm_iam', connectionSlug }, {
-        value: credentials.secretAccessKey, // Primary secret in value field
-        awsAccessKeyId: credentials.accessKeyId,
-        awsRegion: credentials.region,
-        awsSessionToken: credentials.sessionToken,
-        bindingId: randomUUID(),
-      });
-    });
-  }
-
-  // ============================================================
-  // Service Account Credentials (GCP Vertex)
-  // ============================================================
-
-  /**
-   * Get service account credentials for an LLM connection.
-   * @param connectionSlug - The connection slug
-   * @returns Service account JSON and metadata or null if not found
-   */
-  async getLlmServiceAccount(connectionSlug: string, expectedBindingId?: string): Promise<{
-    serviceAccountJson: string;
-    projectId?: string;
-    region?: string;
-    email?: string;
-  } | null> {
-    const cred = await this.get({ type: 'llm_service_account', connectionSlug });
-    if (expectedBindingId && cred?.bindingId !== expectedBindingId) {
-      throw new Error(`LLM credential generation drifted for "${connectionSlug}"`);
+    /** Set Claude OAuth credentials (with refresh token, expiry, and source) */
+    async setClaudeOAuthCredentials(credentials: {
+        accessToken: string;
+        refreshToken?: string;
+        expiresAt?: number;
+        /** Where the token came from: 'native' (our OAuth), 'cli' (Claude CLI import) */
+        source?: 'native' | 'cli';
+    }): Promise<void> {
+        return managerOauth.setClaudeOAuthCredentials(this, credentials);
     }
-    if (!cred) return null;
-    return {
-      serviceAccountJson: cred.value, // Full JSON stored in value field
-      projectId: cred.gcpProjectId,
-      region: cred.gcpRegion,
-      email: cred.serviceAccountEmail,
-    };
-  }
-
-  /**
-   * Set service account credentials for an LLM connection.
-   * @param connectionSlug - The connection slug
-   * @param credentials - Service account credentials to store
-   */
-  async setLlmServiceAccount(connectionSlug: string, credentials: {
-    serviceAccountJson: string;
-    projectId?: string;
-    region?: string;
-    email?: string;
-  }): Promise<void> {
-    await this.serializeMutation(this.llmMutationKey('llm_service_account', connectionSlug), async () => {
-      await this.set({ type: 'llm_service_account', connectionSlug }, {
-        value: credentials.serviceAccountJson, // Full JSON in value field
-        gcpProjectId: credentials.projectId,
-        gcpRegion: credentials.region,
-        serviceAccountEmail: credentials.email,
-        bindingId: randomUUID(),
-      });
-    });
-  }
-
-  /**
-   * Resolve the non-secret generation selected by the exact connection auth
-   * mechanism. Environment credentials are intentionally not attestable: their
-   * principal can change outside the encrypted host store without a generation.
-   */
-  async getLlmCredentialBinding(
-    connectionSlug: string,
-    authType: LlmAuthType,
-  ): Promise<LlmCredentialBinding | null> {
-    if (authType === 'none' || authType === 'environment') return null;
-    const slot: LlmCredentialBinding['slot'] = authType === 'oauth'
-      ? 'llm_oauth'
-      : authType === 'iam_credentials'
-        ? 'llm_iam'
-        : authType === 'service_account_file'
-          ? 'llm_service_account'
-          : 'llm_api_key';
-    const credential = await this.get({ type: slot, connectionSlug });
-    return credential?.bindingId
-      ? { slot, bindingId: credential.bindingId }
-      : null;
-  }
-
-  // ============================================================
-  // Unified Credential Checking
-  // ============================================================
-
-  /**
-   * Check if an LLM connection has valid credentials.
-   * Uses the new LlmAuthType system - routes by auth mechanism.
-   *
-   * @param connectionSlug - The connection slug
-   * @param authType - The auth type to check
-   * @param providerType - Optional provider type for OAuth routing
-   * @returns true if credentials exist and are valid
-   */
-  async hasLlmCredentials(
-    connectionSlug: string,
-    authType: LlmAuthType,
-    providerType?: LlmProviderType
-  ): Promise<boolean> {
-    switch (authType) {
-      // No credentials needed
-      case 'none':
-      case 'environment':
-        return true;
-
-      // API key variants - all use the same storage
-      case 'api_key':
-      case 'api_key_with_endpoint':
-      case 'bearer_token':
-        return this.hasLlmApiKeyCredential(connectionSlug);
-
-      // OAuth - browser flow
-      case 'oauth':
-        return this.hasLlmOAuthCredential(connectionSlug, providerType);
-
-      // AWS IAM credentials
-      case 'iam_credentials':
-        return this.hasLlmIamCredential(connectionSlug);
-
-      // GCP service account
-      case 'service_account_file':
-        return this.hasLlmServiceAccountCredential(connectionSlug);
-
-      default:
-        // Exhaustive check - TypeScript will error if we miss a case
-        const _exhaustive: never = authType;
-        return false;
+    /** Get workspace MCP OAuth credentials */
+    async getWorkspaceOAuth(workspaceId: string): Promise<{
+        accessToken: string;
+        tokenType?: string;
+        clientId?: string;
+    } | null> {
+        return managerOauth.getWorkspaceOAuth(this, workspaceId);
     }
-  }
-
-  /**
-   * Check if connection has valid API key credential.
-   * @internal
-   */
-  private async hasLlmApiKeyCredential(connectionSlug: string): Promise<boolean> {
-    const apiKey = await this.getLlmApiKey(connectionSlug);
-    return !!apiKey;
-  }
-
-  /**
-   * Check if connection has valid OAuth credential.
-   * @internal
-   */
-  private async hasLlmOAuthCredential(
-    connectionSlug: string,
-    providerType?: LlmProviderType
-  ): Promise<boolean> {
-    const oauth = await this.getLlmOAuth(connectionSlug);
-    if (!oauth) {
-      if (providerType === 'anthropic') {
-        const legacy = await this.getClaudeOAuthCredentials().catch(() => null);
-        if (legacy?.accessToken) {
-          if (legacy.expiresAt && this.isExpired({ value: legacy.accessToken, expiresAt: legacy.expiresAt })) {
-            return !!legacy.refreshToken;
-          }
-          return true;
-        }
-      }
-      return false;
+    /** Set workspace MCP OAuth credentials */
+    async setWorkspaceOAuth(workspaceId: string, credentials: {
+        accessToken: string;
+        tokenType?: string;
+        clientId?: string;
+    }): Promise<void> {
+        return managerOauth.setWorkspaceOAuth(this, workspaceId, credentials);
     }
-
-    // Check if expired
-    if (oauth.expiresAt && this.isExpired({ value: oauth.accessToken, expiresAt: oauth.expiresAt })) {
-      return !!oauth.refreshToken; // Can refresh
+    /** Delete all credentials for a workspace (source credentials) */
+    async deleteWorkspaceCredentials(workspaceId: string): Promise<void> {
+        return managerOauth.deleteWorkspaceCredentials(this, workspaceId);
     }
-    return true;
-  }
-
-  /**
-   * Check if connection has valid IAM credential.
-   * @internal
-   */
-  private async hasLlmIamCredential(connectionSlug: string): Promise<boolean> {
-    const cred = await this.getLlmIamCredentials(connectionSlug);
-    return !!cred?.accessKeyId && !!cred?.secretAccessKey;
-  }
-
-  /**
-   * Check if connection has valid service account credential.
-   * @internal
-   */
-  private async hasLlmServiceAccountCredential(connectionSlug: string): Promise<boolean> {
-    const cred = await this.getLlmServiceAccount(connectionSlug);
-    return !!cred?.serviceAccountJson;
-  }
-
-  /**
-   * Check if a credential is expired (with 5-minute buffer).
-   *
-   * If expiresAt is not set:
-   * - OAuth tokens (have refreshToken): treated as expired to force refresh attempt
-   * - API keys (no refreshToken): treated as never expiring
-   *
-   * This prevents OAuth tokens from being treated as valid forever when
-   * the provider doesn't return expires_in in the token response.
-   */
-  isExpired(credential: StoredCredential): boolean {
-    if (credential.expiresAt) {
-      // Consider expired if within 5 minutes of expiry
-      return Date.now() > credential.expiresAt - 5 * 60 * 1000;
+    // Note: OpenAI API key methods removed - Codex uses native ChatGPT OAuth flow
+    // ============================================================
+    // LLM Connection Credentials
+    // ============================================================
+    /**
+     * Get API key for an LLM connection.
+     * @param connectionSlug - The connection slug
+     * @returns API key or null if not found
+     */
+    async getLlmApiKey(connectionSlug: string, expectedBindingId?: string): Promise<string | null> {
+        return managerLlm.getLlmApiKey(this, connectionSlug, expectedBindingId);
     }
-
-    // No expiresAt set - behavior depends on credential type
-    if (credential.refreshToken) {
-      // OAuth token without expiry - treat as expired to force refresh
-      // This is safer than assuming it's valid forever
-      debug('[CredentialManager] OAuth token missing expiresAt - treating as expired');
-      return true;
+    /**
+     * Set API key for an LLM connection.
+     * @param connectionSlug - The connection slug
+     * @param apiKey - The API key to store
+     */
+    async setLlmApiKey(connectionSlug: string, apiKey: string): Promise<void> {
+        return managerLlm.setLlmApiKey(this, connectionSlug, apiKey);
     }
-
-    // API key without expiry - these typically don't expire
-    return false;
-  }
-
-  // ============================================================
-  // Health Check
-  // ============================================================
-
-  /**
-   * Check the health of the credential store.
-   *
-   * This validates:
-   * 1. The credential file can be read and decrypted (if it exists)
-   * 2. The default LLM connection has valid credentials
-   *
-   * Use this on app startup to detect issues before users hit cryptic errors.
-   *
-   * @returns Health status with any issues found
-   */
-  async checkHealth(): Promise<CredentialHealthStatus> {
-    const issues: CredentialHealthIssue[] = [];
-
-    try {
-      await this.ensureInitialized();
-
-      // 1. Try to list credentials - this triggers decryption
-      // If file is corrupted or can't be decrypted, this will throw
-      await this.list({});
-
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      const lowerMsg = errorMsg.toLowerCase();
-
-      // Detect decryption failures (usually means machine migration)
-      if (lowerMsg.includes('decrypt') || lowerMsg.includes('cipher') || lowerMsg.includes('authentication tag')) {
-        issues.push({
-          type: 'decryption_failed',
-          message: 'Credentials from another machine detected. Please re-authenticate.',
-          error: errorMsg,
-        });
-      } else if (lowerMsg.includes('json') || lowerMsg.includes('parse') || lowerMsg.includes('unexpected')) {
-        issues.push({
-          type: 'file_corrupted',
-          message: 'Credential file is corrupted. Please re-authenticate.',
-          error: errorMsg,
-        });
-      } else {
-        // Unknown error - treat as corruption
-        issues.push({
-          type: 'file_corrupted',
-          message: 'Failed to read credentials. Please re-authenticate.',
-          error: errorMsg,
-        });
-      }
-
-      return { healthy: false, issues };
+    /**
+     * Delete API key for an LLM connection.
+     * @param connectionSlug - The connection slug
+     * @returns true if deleted, false if not found
+     */
+    async deleteLlmApiKey(connectionSlug: string): Promise<boolean> {
+        return managerLlm.deleteLlmApiKey(this, connectionSlug);
     }
-
-    // 2. Check if default connection has credentials
-    // Import lazily to avoid circular dependency
-    try {
-      const { getDefaultLlmConnection, getLlmConnection } = await import('../config/storage.ts');
-      const defaultSlug = getDefaultLlmConnection();
-
-      if (defaultSlug) {
-        const connection = getLlmConnection(defaultSlug);
-        if (connection && connection.authType !== 'none' && connection.authType !== 'environment') {
-          const hasCredentials = await this.hasLlmCredentials(
-            defaultSlug,
-            connection.authType,
-            connection.providerType
-          );
-          if (!hasCredentials) {
-            issues.push({
-              type: 'no_default_credentials',
-              message: `No credentials found for default connection "${connection.name}".`,
-            });
-          }
-        }
-      }
-    } catch (configError) {
-      // Config not yet initialized - skip this check
-      debug('[CredentialManager] Skipping default connection check - config not available');
+    /**
+     * Get OAuth token for an LLM connection.
+     * @param connectionSlug - The connection slug
+     * @returns OAuth credentials or null if not found
+     */
+    async getLlmOAuth(connectionSlug: string, expectedBindingId?: string): Promise<{
+        accessToken: string;
+        refreshToken?: string;
+        expiresAt?: number;
+        /** OIDC id_token (used by OpenAI/Codex) */
+        idToken?: string;
+        /** Opaque host generation; never derived from token material. */
+        bindingId?: string;
+    } | null> {
+        return managerLlmOauth.getLlmOAuth(this, connectionSlug, expectedBindingId);
     }
-
-    return {
-      healthy: issues.length === 0,
-      issues,
-    };
-  }
+    /**
+     * Set OAuth token for an LLM connection.
+     * @param connectionSlug - The connection slug
+     * @param credentials - OAuth credentials to store
+     */
+    async setLlmOAuth(connectionSlug: string, credentials: {
+        accessToken: string;
+        refreshToken?: string;
+        expiresAt?: number;
+        /** OIDC id_token (used by OpenAI/Codex) */
+        idToken?: string;
+    }): Promise<void> {
+        return managerLlmOauth.setLlmOAuth(this, connectionSlug, credentials);
+    }
+    /**
+     * Persist an automatic refresh of the credential already bound to this slot.
+     * Re-authentication must use setLlmOAuth() instead, which deliberately rotates
+     * the binding generation. A legacy unbound credential is assigned its first
+     * generation only for an unsealed refresh; a specialized caller always supplies
+     * expectedBindingId and therefore continues to fail closed on legacy state.
+     */
+    async refreshLlmOAuth(connectionSlug: string, credentials: {
+        accessToken: string;
+        refreshToken?: string;
+        expiresAt?: number;
+        /** OIDC id_token (used by OpenAI/Codex) */
+        idToken?: string;
+    }, expectedBindingId?: string): Promise<void> {
+        return managerLlmOauth.refreshLlmOAuth(this, connectionSlug, credentials, expectedBindingId);
+    }
+    /**
+     * Delete all credentials for an LLM connection.
+     * @param connectionSlug - The connection slug
+     */
+    async deleteLlmCredentials(connectionSlug: string): Promise<void> {
+        return managerLlm.deleteLlmCredentials(this, connectionSlug);
+    }
+    // ============================================================
+    // IAM Credentials (AWS Bedrock)
+    // ============================================================
+    /**
+     * Get IAM credentials for an LLM connection.
+     * @param connectionSlug - The connection slug
+     * @returns IAM credentials or null if not found
+     */
+    async getLlmIamCredentials(connectionSlug: string, expectedBindingId?: string): Promise<{
+        accessKeyId: string;
+        secretAccessKey: string;
+        region?: string;
+        sessionToken?: string;
+    } | null> {
+        return managerServiceAccounts.getLlmIamCredentials(this, connectionSlug, expectedBindingId);
+    }
+    /**
+     * Set IAM credentials for an LLM connection.
+     * @param connectionSlug - The connection slug
+     * @param credentials - IAM credentials to store
+     */
+    async setLlmIamCredentials(connectionSlug: string, credentials: {
+        accessKeyId: string;
+        secretAccessKey: string;
+        region?: string | undefined;
+        sessionToken?: string | undefined;
+    }): Promise<void> {
+        return managerServiceAccounts.setLlmIamCredentials(this, connectionSlug, credentials);
+    }
+    // ============================================================
+    // Service Account Credentials (GCP Vertex)
+    // ============================================================
+    /**
+     * Get service account credentials for an LLM connection.
+     * @param connectionSlug - The connection slug
+     * @returns Service account JSON and metadata or null if not found
+     */
+    async getLlmServiceAccount(connectionSlug: string, expectedBindingId?: string): Promise<{
+        serviceAccountJson: string;
+        projectId?: string;
+        region?: string;
+        email?: string;
+    } | null> {
+        return managerServiceAccounts.getLlmServiceAccount(this, connectionSlug, expectedBindingId);
+    }
+    /**
+     * Set service account credentials for an LLM connection.
+     * @param connectionSlug - The connection slug
+     * @param credentials - Service account credentials to store
+     */
+    async setLlmServiceAccount(connectionSlug: string, credentials: {
+        serviceAccountJson: string;
+        projectId?: string;
+        region?: string;
+        email?: string;
+    }): Promise<void> {
+        return managerServiceAccounts.setLlmServiceAccount(this, connectionSlug, credentials);
+    }
+    /**
+     * Resolve the non-secret generation selected by the exact connection auth
+     * mechanism. Environment credentials are intentionally not attestable: their
+     * principal can change outside the encrypted host store without a generation.
+     */
+    async getLlmCredentialBinding(connectionSlug: string, authType: LlmAuthType): Promise<LlmCredentialBinding | null> {
+        return managerLlm.getLlmCredentialBinding(this, connectionSlug, authType);
+    }
+    // ============================================================
+    // Unified Credential Checking
+    // ============================================================
+    /**
+     * Check if an LLM connection has valid credentials.
+     * Uses the new LlmAuthType system - routes by auth mechanism.
+     *
+     * @param connectionSlug - The connection slug
+     * @param authType - The auth type to check
+     * @param providerType - Optional provider type for OAuth routing
+     * @returns true if credentials exist and are valid
+     */
+    async hasLlmCredentials(connectionSlug: string, authType: LlmAuthType, providerType?: LlmProviderType): Promise<boolean> {
+        return managerLlm.hasLlmCredentials(this, connectionSlug, authType, providerType);
+    }
+    /** @internal */ public async hasLlmApiKeyCredential(connectionSlug: string): Promise<boolean> {
+        return managerLlm.hasLlmApiKeyCredential(this, connectionSlug);
+    }
+    /** @internal */ public async hasLlmOAuthCredential(connectionSlug: string, providerType?: LlmProviderType): Promise<boolean> {
+        return managerLlm.hasLlmOAuthCredential(this, connectionSlug, providerType);
+    }
+    /** @internal */ public async hasLlmIamCredential(connectionSlug: string): Promise<boolean> {
+        return managerLlm.hasLlmIamCredential(this, connectionSlug);
+    }
+    /** @internal */ public async hasLlmServiceAccountCredential(connectionSlug: string): Promise<boolean> {
+        return managerLlm.hasLlmServiceAccountCredential(this, connectionSlug);
+    }
+    /**
+     * Check if a credential is expired (with 5-minute buffer).
+     *
+     * If expiresAt is not set:
+     * - OAuth tokens (have refreshToken): treated as expired to force refresh attempt
+     * - API keys (no refreshToken): treated as never expiring
+     *
+     * This prevents OAuth tokens from being treated as valid forever when
+     * the provider doesn't return expires_in in the token response.
+     */
+    isExpired(credential: StoredCredential): boolean {
+        return managerHealth.isExpired(this, credential);
+    }
+    // ============================================================
+    // Health Check
+    // ============================================================
+    /**
+     * Check the health of the credential store.
+     *
+     * This validates:
+     * 1. The credential file can be read and decrypted (if it exists)
+     * 2. The default LLM connection has valid credentials
+     *
+     * Use this on app startup to detect issues before users hit cryptic errors.
+     *
+     * @returns Health status with any issues found
+     */
+    async checkHealth(): Promise<CredentialHealthStatus> {
+        return managerHealth.checkHealth(this);
+    }
 }
-
 // Singleton instance
 let manager: CredentialManager | null = null;
 
 export function getCredentialManager(): CredentialManager {
-  if (!manager) {
-    manager = new CredentialManager();
-  }
-  return manager;
+    if (!manager) {
+        manager = new CredentialManager();
+    }
+    return manager;
 }
 
 export function setCredentialManagerForTesting(instance: CredentialManager | null): void {
-  manager = instance;
+    manager = instance;
 }

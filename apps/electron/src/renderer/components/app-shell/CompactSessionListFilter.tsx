@@ -376,15 +376,15 @@ function FilterRow({
   onModeTap,
 }: {
   icon: React.ReactNode
-  iconColor?: string
+  iconColor?: string | undefined
   /** Status icons render via EntityIcon and accept a `bare` prop to skip their own container. */
-  bareIcon?: boolean
+  bareIcon?: boolean | undefined
   label: React.ReactNode
-  mode?: FilterMode
-  pinned?: boolean
-  radioSelected?: boolean
-  onTap?: () => void
-  onModeTap?: () => void
+  mode?: FilterMode | undefined
+  pinned?: boolean | undefined
+  radioSelected?: boolean | undefined
+  onTap?: (() => void) | undefined
+  onModeTap?: (() => void) | undefined
 }) {
   const renderedIcon = bareIcon
     ? (

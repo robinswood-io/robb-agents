@@ -1,27 +1,37 @@
 from __future__ import annotations
 
-import importlib.util
-from pathlib import Path
+import sys
 import tempfile
 import unittest
+from pathlib import Path
+from typing import override
 
-SCRIPT = Path(__file__).resolve().parents[1] / "robinswood-public-source-boundary.py"
-SPEC = importlib.util.spec_from_file_location("public_source_boundary", SCRIPT)
-assert SPEC and SPEC.loader
-GUARD = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(GUARD)
+SCRIPT = Path(__file__).resolve().parents[1] / "robinswood_public_source_boundary.py"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+try:
+    import robinswood_public_source_boundary as GUARD
+finally:
+    _ = sys.path.pop(0)
 
 
 class PublicSourceBoundaryTests(unittest.TestCase):
+    temp: tempfile.TemporaryDirectory[str] | None = None
+
+    @property
+    def root(self) -> Path:
+        if self.temp is None:
+            raise RuntimeError("Fixture is not set up")
+        return Path(self.temp.name)
+
+    @override
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory(prefix="robb-public-boundary-")
-        self.root = Path(self.temp.name)
         self.addCleanup(self.temp.cleanup)
 
     def file(self, relative: str, text: str) -> str:
         path = self.root / relative
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text)
+        _ = path.write_text(text)
         return relative
 
     def test_rejects_retired_implementation_even_when_empty(self) -> None:
@@ -64,4 +74,4 @@ class PublicSourceBoundaryTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    _ = unittest.main()

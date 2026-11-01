@@ -47,7 +47,7 @@ describe('host objective events in the conversation', () => {
     }).state
     expect(visibleResponses(state)).toEqual([deliverable])
     expect(projectConversation(state.session.messages, state.session).outcome).toBeUndefined()
-    const hydrated = { ...state, session: JSON.parse(JSON.stringify(state.session)) }
+    const hydrated = { ...state, session: JSON.parse(JSON.stringify(state.session)) as typeof state.session }
     expect(visibleResponses(hydrated)).toEqual([deliverable])
     state = processEvent(state, { type: 'text_complete', sessionId: 'session-1', messageId: 'a5',
       turnId: 'verified', timestamp: 5, text: 'Les 300 lignes sont vérifiées.', objectiveOutcome: receipt,

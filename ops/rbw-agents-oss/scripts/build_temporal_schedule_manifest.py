@@ -3,24 +3,34 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TypedDict
 
 from lib.config_mutation import ConfigMutation
+from pydantic import JsonValue, TypeAdapter
+
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
+JSON_ROWS = TypeAdapter(list[dict[str, JsonValue]])
+STRINGS = TypeAdapter(list[str])
+
+class AdminPolicy(TypedDict):
+    raw: dict[str, JsonValue]
+    adminTaskQueue: str
+    watchdogQueueWrappers: set[str]
+
 
 ROOT = Path('/srv/rbw-agents-oss')
 mapping_path = ROOT / 'config/automation-mapping.json'
 out_path = ROOT / 'config/temporal/schedules.json'
 admin_policy_path = ROOT / 'config/admin-wrapper-queue-policy.json'
-out_path.parent.mkdir(parents=True, exist_ok=True)
 
 
-def _rows(data: Any) -> list[dict]:
+def _rows(data: JsonValue) -> list[dict[str, JsonValue]]:
     if isinstance(data, list):
         return [r for r in data if isinstance(r, dict)]
     if isinstance(data, dict):
-        out: list[dict] = []
+        out: list[dict[str, JsonValue]] = []
         for value in data.values():
             if isinstance(value, list):
                 out.extend([r for r in value if isinstance(r, dict)])
@@ -28,43 +38,33 @@ def _rows(data: Any) -> list[dict]:
     return []
 
 
-def _read_json(path: Path, default: Any) -> Any:
+def _read_json(path: Path, default: JsonValue) -> JsonValue:
     try:
-        return json.loads(path.read_text(encoding='utf-8'))
-    except Exception:
+        return TypeAdapter(JsonValue).validate_json(path.read_bytes())
+    except (OSError, ValueError):
         return default
 
 
-def _write_json(path: Path, data: Any) -> None:
-    with ConfigMutation('build-temporal-schedule-manifest') as mutation:
-        mutation.write_json(path, data)
-
-
-def _backup(path: Path, label: str) -> None:
-    # ConfigMutation writes an archive snapshot before every atomic replacement.
-    return None
-
-
-def _load_existing_schedules() -> list[dict]:
+def _load_existing_schedules() -> list[dict[str, JsonValue]]:
     if not out_path.exists():
         return []
     data = _read_json(out_path, {})
     return _rows(data.get('schedules', data) if isinstance(data, dict) else data)
 
 
-def _load_admin_policy() -> dict:
+def _load_admin_policy() -> AdminPolicy:
     data = _read_json(admin_policy_path, {})
     if not isinstance(data, dict):
         data = {}
-    defaults = data.get('defaults') if isinstance(data.get('defaults'), dict) else {}
+    defaults = JSON_OBJECT.validate_python(data.get('defaults') or {})
     return {
         'raw': data,
         'adminTaskQueue': str(defaults.get('adminTaskQueue') or 'watchdog'),
-        'watchdogQueueWrappers': set(str(x) for x in data.get('watchdogQueueWrappers', []) if x),
+        'watchdogQueueWrappers': {value for value in STRINGS.validate_python(data.get('watchdogQueueWrappers', [])) if value},
     }
 
 
-def _task_queue_for_fold(legacy_id: str, schedule: dict, policy: dict) -> str:
+def _task_queue_for_fold(legacy_id: str, schedule: dict[str, JsonValue], policy: AdminPolicy) -> str:
     if legacy_id in policy['watchdogQueueWrappers']:
         return policy['adminTaskQueue']
     # OVH sentinel/diagnostic/remediation jobs are operational observability and
@@ -74,17 +74,15 @@ def _task_queue_for_fold(legacy_id: str, schedule: dict, policy: dict) -> str:
     return str(schedule.get('task_queue') or 'default')
 
 
-def _fold_existing_missing_mapping(mapping_rows: list[dict], existing_schedules: list[dict], policy: dict) -> tuple[list[dict], list[dict], bool]:
-    existing_ids = {str(r.get('legacy_id')) for r in mapping_rows if isinstance(r, dict) and r.get('legacy_id')}
-    folded: list[dict] = []
+def _fold_existing_missing_mapping(mapping_rows: list[dict[str, JsonValue]], existing_schedules: list[dict[str, JsonValue]], policy: AdminPolicy) -> tuple[list[dict[str, JsonValue]], list[dict[str, JsonValue]], bool]:
+    existing_ids = {str(r.get('legacy_id')) for r in mapping_rows if r.get('legacy_id')}
+    folded: list[dict[str, JsonValue]] = []
     policy_changed = False
-    raw_policy = policy['raw'] if isinstance(policy.get('raw'), dict) else {}
-    watchdog_list = list(raw_policy.get('watchdogQueueWrappers') or [])
+    raw_policy = policy['raw']
+    watchdog_list = STRINGS.validate_python(raw_policy.get('watchdogQueueWrappers') or [])
 
     for schedule in existing_schedules:
-        if not isinstance(schedule, dict):
-            continue
-        payload = schedule.get('payload') if isinstance(schedule.get('payload'), dict) else {}
+        payload = JSON_OBJECT.validate_python(schedule.get('payload') or {})
         legacy_id = payload.get('legacy_id') or schedule.get('legacy_id')
         if not legacy_id:
             continue
@@ -96,7 +94,7 @@ def _fold_existing_missing_mapping(mapping_rows: list[dict], existing_schedules:
             watchdog_list.append(legacy_id)
             policy['watchdogQueueWrappers'].add(legacy_id)
             policy_changed = True
-        row = {
+        row: dict[str, JsonValue] = {
             'legacy_id': legacy_id,
             'name': payload.get('name') or schedule.get('name') or legacy_id,
             'triggerType': 'SchedulerTick',
@@ -113,71 +111,73 @@ def _fold_existing_missing_mapping(mapping_rows: list[dict], existing_schedules:
         folded.append({'legacy_id': legacy_id, 'task_queue': task_queue, 'cron': schedule.get('cron')})
 
     if policy_changed:
-        raw_policy['watchdogQueueWrappers'] = watchdog_list
-        raw_policy['generatedAt'] = datetime.now(timezone.utc).isoformat()
-        notes = raw_policy.setdefault('notes', [])
+        raw_policy['watchdogQueueWrappers'] = list(watchdog_list)
+        raw_policy['generatedAt'] = datetime.now(UTC).isoformat()
+        notes = STRINGS.validate_python(raw_policy.get('notes') or [])
         note = 'V6 builder auto-folded OVH scheduled-missing mapping entries into watchdog queue policy.'
         if note not in notes:
             notes.append(note)
-        _backup(admin_policy_path, 'builder-autofold-policy')
-        _write_json(admin_policy_path, raw_policy)
+        raw_policy['notes'] = list(notes)
 
     return mapping_rows, folded, policy_changed
 
 
-mapping_data = _read_json(mapping_path, [])
-if not isinstance(mapping_data, list):
-    raise SystemExit('automation-mapping.json must be a list')
-existing = _load_existing_schedules()
-policy = _load_admin_policy()
+def main() -> None:
+    with ConfigMutation('build-temporal-schedule-manifest') as mutation:
+        mapping_data = JSON_ROWS.validate_json(mapping_path.read_bytes())
+        existing = _load_existing_schedules()
+        policy = _load_admin_policy()
 
-# V6 invariant: schedules.json must be generated from mapping. If an autonomous
-# component has written a new schedule directly to schedules.json, fold it into
-# mapping first instead of preserving an unowned schedule entry.
-if os.getenv('RBW_DISABLE_SCHEDULE_AUTOFOLD', '').lower() in {'1', 'true', 'yes'}:
-    folded: list[dict] = []
-    policy_changed = False
-else:
-    mapping_data, folded, policy_changed = _fold_existing_missing_mapping(mapping_data, existing, policy)
-    if folded:
-        _backup(mapping_path, 'builder-autofold-mapping')
-        _write_json(mapping_path, mapping_data)
+        # V6 invariant: schedules.json must be generated from mapping. If an autonomous
+        # component has written a new schedule directly to schedules.json, fold it into
+        # mapping first instead of preserving an unowned schedule entry.
+        if os.getenv('RBW_DISABLE_SCHEDULE_AUTOFOLD', '').lower() in {'1', 'true', 'yes'}:
+            folded: list[dict[str, JsonValue]] = []
+            policy_changed = False
+        else:
+            mapping_data, folded, policy_changed = _fold_existing_missing_mapping(mapping_data, existing, policy)
+            if folded:
+                mutation.write_json(mapping_path, list(mapping_data))
+            if policy_changed:
+                mutation.write_json(admin_policy_path, policy['raw'])
 
-manifest: list[dict] = []
-seen_schedule_ids: set[str] = set()
-for r in mapping_data:
-    if r.get('triggerType') != 'SchedulerTick':
-        continue
-    legacy_id = r.get('legacy_id')
-    if not legacy_id:
-        continue
-    sid = f'sched.{legacy_id}'
-    if sid in seen_schedule_ids:
-        continue
-    seen_schedule_ids.add(sid)
-    manifest.append({
-        'schedule_id': sid,
-        'workflow_id': r.get('workflow_id') or f'rbw.{legacy_id}',
-        'task_queue': r.get('task_queue', 'default'),
-        'cron': r.get('cron'),
-        'timezone': r.get('timezone', 'Europe/Paris'),
-        'enabled': r.get('enabled', True),
-        'payload': {
-            'legacy_id': legacy_id,
-            'name': r.get('name'),
-            'llm_connection': r.get('llm_connection'),
-            'model': r.get('model'),
-        },
-    })
+        manifest: list[dict[str, JsonValue]] = []
+        seen_schedule_ids: set[str] = set()
+        for r in mapping_data:
+            if r.get('triggerType') != 'SchedulerTick':
+                continue
+            legacy_id = r.get('legacy_id')
+            if not legacy_id:
+                continue
+            sid = f'sched.{legacy_id}'
+            if sid in seen_schedule_ids:
+                continue
+            seen_schedule_ids.add(sid)
+            manifest.append({
+                'schedule_id': sid,
+                'workflow_id': r.get('workflow_id') or f'rbw.{legacy_id}',
+                'task_queue': r.get('task_queue', 'default'),
+                'cron': r.get('cron'),
+                'timezone': r.get('timezone', 'Europe/Paris'),
+                'enabled': r.get('enabled', True),
+                'payload': {
+                    'legacy_id': legacy_id,
+                    'name': r.get('name'),
+                    'llm_connection': r.get('llm_connection'),
+                    'model': r.get('model'),
+                },
+            })
 
-_backup(out_path, 'build-strict')
-_write_json(out_path, {'schedules': manifest})
-print(json.dumps({
-    'generatedFromMapping': len(manifest),
-    'preservedExisting': 0,
-    'foldedExistingIntoMapping': len(folded),
-    'folded': folded,
-    'policyChanged': policy_changed,
-    'total': len(manifest),
-    'outPath': str(out_path),
-}, ensure_ascii=False))
+        mutation.write_json(out_path, {'schedules': list(manifest)})
+        print(json.dumps({
+            'generatedFromMapping': len(manifest),
+            'preservedExisting': 0,
+            'foldedExistingIntoMapping': len(folded),
+            'folded': folded,
+            'policyChanged': policy_changed,
+            'total': len(manifest),
+            'outPath': str(out_path),
+        }, ensure_ascii=False))
+
+if __name__ == '__main__':
+    main()

@@ -1,3 +1,4 @@
+import { isUnknownArray } from "../../../shared/src/utils/json.ts";
 /**
  * Node HTTP ↔ Web Standard adapter.
  *
@@ -46,7 +47,7 @@ export function nodeHttpAdapter(
   options: NodeHttpAdapterOptions = {},
 ): (req: IncomingMessage, res: ServerResponse) => void {
   return (nodeReq, nodeRes) => {
-    handleRequest(handler, nodeReq, nodeRes).catch((error) => {
+    handleRequest(handler, nodeReq, nodeRes).catch((error: unknown) => {
       reportHandlerError(error, nodeReq, options.onError)
       if (!nodeRes.headersSent) {
         nodeRes.writeHead(500, {
@@ -151,15 +152,20 @@ async function handleRequest(
   const headers = new Headers()
   const raw = nodeReq.rawHeaders
   for (let i = 0; i < raw.length; i += 2) {
-    headers.append(raw[i], raw[i + 1])
+    const name = raw[i]
+    const value = raw[i + 1]
+    if (name === undefined || value === undefined) throw new Error('Incomplete HTTP header pair')
+    headers.append(name, value)
   }
 
   let body: Buffer | null = null
   if (nodeReq.method !== 'GET' && nodeReq.method !== 'HEAD') {
     const chunks: Buffer[] = []
     let totalBytes = 0
-    for await (const chunk of nodeReq) {
-      const buffer = typeof chunk === 'string' ? Buffer.from(chunk) : chunk
+    for await (const chunk of nodeReq as AsyncIterable<unknown>) {
+      const value: unknown = chunk
+      if (typeof value !== 'string' && !(value instanceof Uint8Array)) throw new TypeError('Unsupported HTTP request body chunk')
+      const buffer = typeof value === 'string' ? Buffer.from(value) : Buffer.isBuffer(value) ? value : Buffer.from(value)
       totalBytes += buffer.byteLength
       if (totalBytes > MAX_REQUEST_BODY_BYTES) {
         nodeRes.writeHead(413, {
@@ -177,7 +183,7 @@ async function handleRequest(
   }
 
   const request = new Request(url, {
-    method: nodeReq.method,
+    ...(nodeReq.method !== undefined ? { method: nodeReq.method } : {}),
     headers,
     body: body ? new Uint8Array(body) : null,
   })
@@ -193,7 +199,7 @@ async function handleRequest(
   response.headers.forEach((value, key) => {
     const existing = resHeaders[key]
     if (existing) {
-      resHeaders[key] = Array.isArray(existing)
+      resHeaders[key] = isUnknownArray(existing)
         ? [...existing, value]
         : [existing, value]
     } else {

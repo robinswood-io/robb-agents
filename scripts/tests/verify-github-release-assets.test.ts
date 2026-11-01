@@ -50,7 +50,7 @@ describe('GitHub release asset verification', () => {
     const fixture = prepareFixture()
     expect(verifyGitHubReleaseAssets(fixture)).toEqual({
       assets: 2,
-      bytes: fixture.assets.reduce((total, asset) => total + Number(asset.size), 0),
+      bytes: fixture.assets.reduce((total, asset) => total + Number(asset["size"]), 0),
     })
   })
 
@@ -62,14 +62,14 @@ describe('GitHub release asset verification', () => {
 
   it('rejects a server-side digest mismatch', () => {
     const fixture = prepareFixture()
-    fixture.assets[0]!.digest = `sha256:${'0'.repeat(64)}`
+    fixture.assets[0]!["digest"] = `sha256:${'0'.repeat(64)}`
     writeFileSync(fixture.assetsJsonPath, JSON.stringify({ assets: fixture.assets }))
     expect(() => verifyGitHubReleaseAssets(fixture)).toThrow('has digest')
   })
 
   it('rejects a non-uploaded asset even when its digest matches', () => {
     const fixture = prepareFixture()
-    fixture.assets[0]!.state = 'new'
+    fixture.assets[0]!["state"] = 'new'
     writeFileSync(fixture.assetsJsonPath, JSON.stringify({ assets: fixture.assets }))
     expect(() => verifyGitHubReleaseAssets(fixture)).toThrow('is not uploaded')
   })

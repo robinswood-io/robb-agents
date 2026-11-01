@@ -1,0 +1,308 @@
+{
+  "source": "packages/ui/src/components/chat/turn-utils.ts",
+  "units": [
+    {
+      "names": [
+        "stripErrorTags"
+      ],
+      "group": "turn-types",
+      "bodySha256": "a37bef77a854bf4b532bc95e0eb39b20fae13227185ab5c1411fd09cf3bd0542"
+    },
+    {
+      "names": [
+        "AssistantTurn"
+      ],
+      "group": "turn-types",
+      "bodySha256": "7aa603bd165fb7cabf8ced1da65d40ed39ce882955c3282d7fb65584fa03edfa"
+    },
+    {
+      "names": [
+        "UserTurn"
+      ],
+      "group": "turn-types",
+      "bodySha256": "db5d2593fcda52a76eb5c4963ca866fa2b525f568b11f6290a81c7a5d6fd6868"
+    },
+    {
+      "names": [
+        "SystemTurn"
+      ],
+      "group": "turn-types",
+      "bodySha256": "ac0e5ee52067a00c0607970d671c21720e2261d13363fad155169fbe37b193bb"
+    },
+    {
+      "names": [
+        "AuthRequestTurn"
+      ],
+      "group": "turn-types",
+      "bodySha256": "97da070447e4b3d0bde4f2c7ebb4279db51bd51a09a28c1af1d520a7e0c5cf8d"
+    },
+    {
+      "names": [
+        "Turn"
+      ],
+      "group": "turn-types",
+      "bodySha256": "fde2faed92b8e84c95a6f05edd3e78ffe593a55e45e7c46c7462def20af6f3ce"
+    },
+    {
+      "names": [
+        "getAssistantTurnUiKey"
+      ],
+      "group": "turn-types",
+      "bodySha256": "2fdb19ceb16a7ddf8bcdf1297d438a496cf4a2ffda4729f6b1d7cef4918a83e8"
+    },
+    {
+      "names": [
+        "TurnPhase"
+      ],
+      "group": "turn-types",
+      "bodySha256": "c7b6569139937926a96506da2230dfa4235160272ee835d45c64632034d8d880"
+    },
+    {
+      "names": [
+        "deriveTurnPhase"
+      ],
+      "group": "turn-phase",
+      "bodySha256": "67c8c8cc9942d96e14f85d0b89184d645a48305409f8e2e2d78c40733ad76698"
+    },
+    {
+      "names": [
+        "shouldShowThinkingIndicator"
+      ],
+      "group": "turn-phase",
+      "bodySha256": "20ca15dacf1d93c8d9e1e9a438bf01a0a32f4d758830189b836c60be06eddbb6"
+    },
+    {
+      "names": [
+        "getToolStatus"
+      ],
+      "group": "activity-conversion",
+      "bodySha256": "059b06490da94bb6c6a95ea6b25bae9cc7303bdf1a9bd253206643b0ecd3607f"
+    },
+    {
+      "names": [
+        "messageToActivity"
+      ],
+      "group": "activity-conversion",
+      "bodySha256": "f3cc1b0634075ab98f8ce509e847b4ee4171c4b0cccc66ca2384973d0d88514b"
+    },
+    {
+      "names": [
+        "calculateActivityDepths"
+      ],
+      "group": "activity-conversion",
+      "bodySha256": "4556592f55c9850ec5414d3fa5d83c07b2ed7c13ed417be2bd50e3b950d14318"
+    },
+    {
+      "names": [
+        "extractTodosFromActivities"
+      ],
+      "group": "activity-conversion",
+      "bodySha256": "d0c6863d9728b5a939cfb2b1978efd9aaa6ebce4f3363b961794ec5eb26051a6"
+    },
+    {
+      "names": [
+        "GroupTurnsOptions"
+      ],
+      "group": "turn-grouping",
+      "bodySha256": "d9174dba3cb54f7c051622f162b181e3c0602698c3b48dbc0a309e16ca63e302"
+    },
+    {
+      "names": [
+        "groupMessagesByTurn"
+      ],
+      "group": "turn-grouping",
+      "bodySha256": "aa6117e002292ff3b43bceeb70d9f9fa33cfff18b1807c50fc38255c848fdf12"
+    },
+    {
+      "names": [
+        "getTurnIntent"
+      ],
+      "group": "turn-summary",
+      "bodySha256": "2ba0b4ff21617810266dcc00f2cb24417bab1cfb803d44f2a0b4915cbbbef068"
+    },
+    {
+      "names": [
+        "hasPendingActivities"
+      ],
+      "group": "turn-summary",
+      "bodySha256": "3a53960da5efe19359710e24c5330ec2147061482154f01afba4a078a7f81bb6"
+    },
+    {
+      "names": [
+        "hasErrorActivities"
+      ],
+      "group": "turn-summary",
+      "bodySha256": "e4449f0f3bc483e094bd42460c1b8ab6a7085af0b64673399a778105eb39ba51"
+    },
+    {
+      "names": [
+        "getActivitySummary"
+      ],
+      "group": "turn-summary",
+      "bodySha256": "7e04dd5671b60d1a54844b0dbafb553c58548791e6bffe859a1576691169969d"
+    },
+    {
+      "names": [
+        "formatTurnAsMarkdown"
+      ],
+      "group": "markdown-export",
+      "bodySha256": "30bd8470e65cc78ede4096b50201571ed9c76ad65f93a052143d23953b04b0a9"
+    },
+    {
+      "names": [
+        "formatActivityAsMarkdown"
+      ],
+      "group": "markdown-export",
+      "bodySha256": "42901e506c614d123244fcbfe900963791f81b5043fab6dc38e843a0e5f82190"
+    },
+    {
+      "names": [
+        "getLastAssistantTurn"
+      ],
+      "group": "turn-queries",
+      "bodySha256": "9698712de1f92be086a63577a01786a505eeb252771f4750256a908112949695"
+    },
+    {
+      "names": [
+        "getLastUserMessageTime"
+      ],
+      "group": "turn-queries",
+      "bodySha256": "e5a0deeb1822fb610e90fd886463318fa32951e55b68a67dcaa6d76d12fdb5c8"
+    },
+    {
+      "names": [
+        "isLastTurnStreaming"
+      ],
+      "group": "turn-queries",
+      "bodySha256": "c85fea43252f33d3db7e5a2be223e304cd53edb4342f6e4527ae93e8a27d1e29"
+    },
+    {
+      "names": [
+        "computeLastChildSet"
+      ],
+      "group": "turn-queries",
+      "bodySha256": "01db03e48ce69e249dd53519f0e641776f536cb9ac5195b92e0e8649869a0e54"
+    },
+    {
+      "names": [
+        "formatDuration"
+      ],
+      "group": "display-format",
+      "bodySha256": "082f2c86cbfca3107c4544b2f83bc2b59362e82e9a1f8fcfa05cd48da59e07a2"
+    },
+    {
+      "names": [
+        "formatTokens"
+      ],
+      "group": "display-format",
+      "bodySha256": "af4b5159f61b163c3eb0caf33c4a5a36eae0b1e0b747461efb9c585c7095fb90"
+    },
+    {
+      "names": [
+        "TaskOutputData"
+      ],
+      "group": "activity-groups",
+      "bodySha256": "fb92b57b3903dd8d4f7a0f3ef666a404c5f3df0b2b16715be61a5e097a1dd1ab"
+    },
+    {
+      "names": [
+        "ActivityGroup"
+      ],
+      "group": "activity-groups",
+      "bodySha256": "ef3b380ee98e5d0b5c4bf6da0c4d88f2545f188cee7539c2baf213553d4c5855"
+    },
+    {
+      "names": [
+        "isActivityGroup"
+      ],
+      "group": "activity-groups",
+      "bodySha256": "cee02bf5e6c3ac796f2484d6e5eca54fe54d70da74647d9926d5ede50f005870"
+    },
+    {
+      "names": [
+        "extractTaskOutputData"
+      ],
+      "group": "activity-groups",
+      "bodySha256": "a50f7891cddc1ea9daf763e5b848c75bf3115d97c9eca3f07ebafb9655b9704b"
+    },
+    {
+      "names": [
+        "groupActivitiesByParent"
+      ],
+      "group": "activity-groups",
+      "bodySha256": "3a5f910cd40eca73610741d02f46ccc1689ad13fd870fe79701a844953b6c829"
+    },
+    {
+      "names": [
+        "countTotalActivities"
+      ],
+      "group": "activity-groups",
+      "bodySha256": "91c8b7e21966f30d48bd949571d935701fb123cc6335a105608adf59e819ca85"
+    }
+  ],
+  "modules": [
+    {
+      "name": "turn-types",
+      "lines": 116
+    },
+    {
+      "name": "turn-phase",
+      "lines": 70
+    },
+    {
+      "name": "activity-conversion",
+      "lines": 151
+    },
+    {
+      "name": "turn-grouping",
+      "lines": 358
+    },
+    {
+      "name": "turn-summary",
+      "lines": 49
+    },
+    {
+      "name": "markdown-export",
+      "lines": 202
+    },
+    {
+      "name": "turn-queries",
+      "lines": 62
+    },
+    {
+      "name": "display-format",
+      "lines": 50
+    },
+    {
+      "name": "activity-groups",
+      "lines": 202
+    }
+  ],
+  "dependencies": {
+    "turn-types": [],
+    "turn-phase": [
+      "turn-types"
+    ],
+    "activity-conversion": [
+      "turn-types"
+    ],
+    "turn-grouping": [
+      "turn-types",
+      "activity-conversion"
+    ],
+    "turn-summary": [
+      "turn-types"
+    ],
+    "markdown-export": [
+      "turn-types",
+      "turn-summary"
+    ],
+    "turn-queries": [
+      "turn-types"
+    ],
+    "display-format": [],
+    "activity-groups": []
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

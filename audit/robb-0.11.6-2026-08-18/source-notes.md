@@ -117,6 +117,7 @@ Le graphique « Chats affectés par type de problème » compte des chats, pas d
 
 - Source structurée : `report-source.json`
 - Sortie : `report.html`
-- Générateur : `deliver-with-overflow-fix.mjs`
+- Générateur historique : `deliver-with-overflow-fix.mjs`, conservé dans l’historique Git.
+- Maintenance du 30 octobre 2026 : retrait de ce helper devenu inexécutable, lié à un chemin absolu de plugin Mac retiré. Le rapport et sa source structurée sont conservés ; les vérifications historiques ci-dessous ne sont pas de nouvelles vérifications.
 - Le correctif local du générateur ajoute uniquement `overflow-x:hidden` pour contourner un débordement du bandeau `100vw` lorsqu'une barre de défilement verticale est présente.
 - Vérification finale : validation, packaging et rendu passés ; vues 1440 px et 390 px ; interaction clavier du dialogue de source passée.

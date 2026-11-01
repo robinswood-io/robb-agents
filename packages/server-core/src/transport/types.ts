@@ -63,12 +63,17 @@ export function assertRequestWorkspaceAccess(
   throw new Error(`Workspace access denied for "${requestedWorkspaceId}"`)
 }
 
-export type HandlerFn = (ctx: RequestContext, ...args: any[]) => Promise<any> | any
+// Registrations infer their concrete argument tuple. Collections retain an
+// opaque callable, invoked only at the dynamic wire-dispatch boundary.
+export type HandlerFn<Arguments extends unknown[] = never> = (ctx: RequestContext, ...args: Arguments) => unknown
+export type RpcListener<Arguments extends unknown[] = never> = (...args: Arguments) => void
+export type CapabilityHandler<Arguments extends unknown[] = never> = (...args: Arguments) => unknown
+export type AnyEventListener<Arguments extends unknown[] = never> = (channel: string, ...args: Arguments) => void
 
 export interface RpcServer {
-  handle(channel: string, handler: HandlerFn): void
-  push(channel: string, target: PushTarget, ...args: any[]): void
-  invokeClient(clientId: string, channel: string, ...args: any[]): Promise<any>
+  handle<Arguments extends unknown[]>(channel: string, handler: HandlerFn<Arguments>): void
+  push(channel: string, target: PushTarget, ...args: unknown[]): void
+  invokeClient(clientId: string, channel: string, ...args: unknown[]): Promise<unknown>
   updateClientWorkspace?(clientId: string, workspaceId: string): void
   disconnectClientsByActor?(actorId: string): number
 
@@ -80,9 +85,9 @@ export interface RpcServer {
 }
 
 export interface RpcClient {
-  invoke(channel: string, ...args: any[]): Promise<any>
-  on(channel: string, callback: (...args: any[]) => void): () => void
-  handleCapability(channel: string, handler: (...args: any[]) => Promise<any> | any): void
+  invoke(channel: string, ...args: unknown[]): Promise<unknown>
+  on<Arguments extends unknown[]>(channel: string, callback: RpcListener<Arguments>): () => void
+  handleCapability<Arguments extends unknown[]>(channel: string, handler: CapabilityHandler<Arguments>): void
 }
 
-export type EventSink = (channel: string, target: PushTarget, ...args: any[]) => void
+export type EventSink = (channel: string, target: PushTarget, ...args: unknown[]) => void

@@ -134,7 +134,10 @@ describe('executeWebhookRequest destination policy', () => {
     'http://169.254.169.254/latest/meta-data',
     'http://[::1]/admin',
   ])('blocks private address %s before fetch', async (url) => {
-    const fetchStub = mock(async () => new Response(null, { status: 204 }));
+    const fetchStub = Object.assign(
+      mock(async (..._args: Parameters<typeof fetch>) => new Response(null, { status: 204 })),
+      { preconnect: () => {} },
+    );
     const result = await executeWebhookRequest(
       { type: 'webhook', url },
       { fetch: fetchStub },
@@ -146,7 +149,10 @@ describe('executeWebhookRequest destination policy', () => {
   });
 
   it('blocks hostnames that resolve to private addresses', async () => {
-    const fetchStub = mock(async () => new Response(null, { status: 204 }));
+    const fetchStub = Object.assign(
+      mock(async (..._args: Parameters<typeof fetch>) => new Response(null, { status: 204 })),
+      { preconnect: () => {} },
+    );
     const result = await executeWebhookRequest(
       { type: 'webhook', url: 'https://hooks.example.com' },
       {
@@ -161,7 +167,10 @@ describe('executeWebhookRequest destination policy', () => {
   });
 
   it('rejects embedded URL credentials', async () => {
-    const fetchStub = mock(async () => new Response(null, { status: 204 }));
+    const fetchStub = Object.assign(
+      mock(async (..._args: Parameters<typeof fetch>) => new Response(null, { status: 204 })),
+      { preconnect: () => {} },
+    );
     const result = await executeWebhookRequest(
       { type: 'webhook', url: 'https://user:password@hooks.example.com' },
       {
@@ -176,7 +185,10 @@ describe('executeWebhookRequest destination policy', () => {
   });
 
   it('allows public destinations and refuses redirects', async () => {
-    const fetchStub = mock(async () => new Response(null, { status: 204 }));
+    const fetchStub = Object.assign(
+      mock(async (..._args: Parameters<typeof fetch>) => new Response(null, { status: 204 })),
+      { preconnect: () => {} },
+    );
     const result = await executeWebhookRequest(
       { type: 'webhook', url: 'https://hooks.example.com/events' },
       {

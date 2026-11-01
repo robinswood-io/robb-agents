@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "workspaces": [],
+  "activeWorkspaceId": null,
+  "activeSessionId": null,
+  "llmConnections": [
+    {
+      "slug": "mission-unit-default",
+      "name": "Unit only",
+      "providerType": "pi",
+      "authType": "none",
+      "baseUrl": "https://unit.invalid",
+      "models": [
+        "pi/gpt-5.6-sol"
+      ],
+      "defaultModel": "pi/gpt-5.6-sol",
+      "createdAt": 1,
+      "piAuthProvider": "openai"
+    },
+    {
+      "slug": "mission-selected-connection",
+      "name": "Unit selected",
+      "providerType": "pi",
+      "authType": "none",
+      "baseUrl": "https://unit.invalid",
+      "models": [
+        "mission-selected-model"
+      ],
+      "defaultModel": "mission-selected-model",
+      "createdAt": 1,
+      "piAuthProvider": "openai"
+    }
+  ],
+  "defaultLlmConnection": "mission-unit-default"
+}

@@ -1,0 +1,150 @@
+{
+  "source": "packages/server-core/src/services/connector-execution-runtime.ts",
+  "units": [
+    {
+      "names": [
+        "CAPABILITY_KEY_PURPOSE"
+      ],
+      "group": "contracts",
+      "bodySha256": "6f832b7dcaeeec481f932577ddd444c820fa420ba75232dd626061a120f2bdf2"
+    },
+    {
+      "names": [
+        "SECRET_LEASE_KEY_PURPOSE"
+      ],
+      "group": "contracts",
+      "bodySha256": "738a346a66ceb2ad0c946fcbc9ccf74f7be5adc0906a16d3a120a8fb136783f8"
+    },
+    {
+      "names": [
+        "EXECUTION_PROOF_KEY_PURPOSE"
+      ],
+      "group": "contracts",
+      "bodySha256": "c46ad09bbfe4357356fda7061f7c04902fbf664703e492a738c75fdc532483ad"
+    },
+    {
+      "names": [
+        "STRUCTURED_EGRESS_KEY_PURPOSE"
+      ],
+      "group": "contracts",
+      "bodySha256": "c7c90cc61457ea59cd14c2d3df783ccb3ac3d8649c25883616b6285ad27ba0ea"
+    },
+    {
+      "names": [
+        "PriorityConnectorRuntimeConfiguration"
+      ],
+      "group": "contracts",
+      "bodySha256": "938ef5002e1c12cacd947013ae27f22b27a67d5e3cf2a664d99d20a2dfedff62"
+    },
+    {
+      "names": [
+        "ConnectorSecretValueRequest"
+      ],
+      "group": "contracts",
+      "bodySha256": "e6025f10a5e5c4b0179ff7346c6815f7875f7e5985fab9ef0a4caa06222ed334"
+    },
+    {
+      "names": [
+        "ConnectorProofRecord"
+      ],
+      "group": "contracts",
+      "bodySha256": "e8a4239e4def7f0cc4a753cc2cd165713680f09521eb06318a48f507e397c572"
+    },
+    {
+      "names": [
+        "ConnectorPrivacyReceiptRecord"
+      ],
+      "group": "contracts",
+      "bodySha256": "b08660639ff36ee5373306f27601ea6a09554415a3948c9c0e3b892aee2f3e87"
+    },
+    {
+      "names": [
+        "PrepareConnectorInvocationInput"
+      ],
+      "group": "contracts",
+      "bodySha256": "fe8076a9890d0f7400bea67587a9e18b77be72089a851fa3ea80d87237b398ae"
+    },
+    {
+      "names": [
+        "PreparedConnectorInvocation"
+      ],
+      "group": "contracts",
+      "bodySha256": "1a613475a3e897d3266826870a63536149d5231fc0c3de3fd39280f98ca78c16"
+    },
+    {
+      "names": [
+        "ConnectorExecutionResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "30d9248582c626459367a9831d0ea3101eed3ccfdb8ad73d319e4de990e97627"
+    },
+    {
+      "names": [
+        "ConnectorAuthorizationResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "4473580b0536d153e3c1e94683838fd654cbc4781145a5f71af5e79aab89103c"
+    },
+    {
+      "names": [
+        "InternalPreparedInvocation"
+      ],
+      "group": "contracts",
+      "bodySha256": "a9df25828ee51fe47baa85836869fe5e04445ff2bb1f3132a4402afe062e3aeb"
+    },
+    {
+      "names": [
+        "ConnectorExecutionRuntimeOptions"
+      ],
+      "group": "contracts",
+      "bodySha256": "035cd96cd071ded80c78afa656bdbd6360825e3e539f2a747a4d21748bdb2fe3"
+    },
+    {
+      "names": [
+        "CreateWorkspaceConnectorExecutionRuntimeInput"
+      ],
+      "group": "contracts",
+      "bodySha256": "d13bb072e29ead5b0560a95f0394b1c84812952113374789c6accdc484fc6c66"
+    },
+    {
+      "names": [
+        "ConnectorExecutionRuntime"
+      ],
+      "group": "execution",
+      "bodySha256": "f9193784edd0cf8dfbf25eace2d6985e858b4bc997515fab7bbc7fb26174cc3e"
+    },
+    {
+      "names": [
+        "createWorkspaceConnectorExecutionRuntime"
+      ],
+      "group": "workspace-factory",
+      "bodySha256": "94ac4496b046b443a7b284e7ec080bbf27475d3928bdb8ed4b35974d52bb1bbf"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 135
+    },
+    {
+      "name": "execution",
+      "lines": 398
+    },
+    {
+      "name": "workspace-factory",
+      "lines": 65
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "execution": [
+      "contracts"
+    ],
+    "workspace-factory": [
+      "contracts",
+      "execution"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

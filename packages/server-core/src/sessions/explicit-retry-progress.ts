@@ -10,8 +10,8 @@ export function explicitRetryProgressFingerprint(messages: Message[], objectiveU
     if (message.role !== 'tool') return true
     const output = message.toolResult ?? ''
     if (/^\s*(?:\[ERROR\]|Error:)/.test(output)) return false
-    const command = message.toolInput?.command
-    const verb = Array.isArray(command) && command.every(arg => typeof arg === 'string')
+    const command = message.toolInput?.["command"]
+    const verb = Array.isArray(command) && command.every((arg: unknown) => typeof arg === 'string')
       ? command[0] : typeof command === 'string' ? command.trim().split(/\s+/, 1)[0] : undefined
     const capture = /^(?:mcp__session__|session__)?browser_tool$/.test(message.toolName ?? '')
       && typeof verb === 'string' && /^screenshot(?:-region)?$/i.test(verb)
@@ -24,7 +24,7 @@ export function explicitRetryProgressFingerprint(messages: Message[], objectiveU
       return false
     }
     if (/^(?:Read|read_file)$/.test(message.toolName ?? '')) {
-      const path = message.toolInput?.file_path ?? message.toolInput?.path
+      const path = message.toolInput?.["file_path"] ?? message.toolInput?.["path"]
       if (typeof path === 'string' && captures.has(path)) return false
     }
     return true

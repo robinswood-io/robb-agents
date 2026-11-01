@@ -51,7 +51,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Configuration
-BUN_VERSION="bun-v1.3.14"  # Pinned version for reproducible builds
+BUN_VERSION="bun-v1.4.4"  # Pinned version for reproducible builds
 
 if [[ "$RELEASE_BUILD" == true && "$ARCH" != "x64" ]]; then
     echo "ERROR: Linux arm64 is a local development artifact only; public --release supports x64." >&2
@@ -66,7 +66,7 @@ if [[ "$RELEASE_BUILD" == true ]]; then
     command -v git >/dev/null || { echo "ERROR: --release requires Git to verify source integrity." >&2; exit 1; }
     # Refuse dirty source before dependency installation or generated cleanup.
     # The electron-builder beforePack hook repeats this check.
-    RELEASE_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.cjs" --check-source "$ROOT_DIR")"
+    RELEASE_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.ts" --check-source "$ROOT_DIR")"
     export ROBB_BUILD_CHANNEL=production
     export ROBB_BUILD_COMMIT="$RELEASE_COMMIT"
     export ROBB_BUILD_DIRTY=false
@@ -109,7 +109,7 @@ fi
 
 # Create temp directory to avoid race conditions
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
 # Download binary and checksums
 curl -fSL "https://github.com/oven-sh/bun/releases/download/${BUN_VERSION}/${BUN_DOWNLOAD}.zip" -o "$TEMP_DIR/${BUN_DOWNLOAD}.zip"
@@ -142,13 +142,13 @@ SDK_BIN_PKG="claude-agent-sdk-linux-${ARCH}"
 SDK_BIN_SOURCE="$ROOT_DIR/node_modules/@anthropic-ai/${SDK_BIN_PKG}"
 if [ ! -d "$SDK_BIN_SOURCE" ]; then
     echo "Cross-arch build: ${SDK_BIN_PKG} not in node_modules — fetching from npm..."
-    SDK_VERSION=$(node -p "require('$ROOT_DIR/package.json').dependencies['@anthropic-ai/claude-agent-sdk']" | tr -d '"')
+    SDK_VERSION=$(node -p 'require(process.argv[1]).version' "$SDK_SOURCE/package.json")
     PKG_TMP=$(mktemp -d)
     (
         cd "$PKG_TMP"
         npm pack "@anthropic-ai/${SDK_BIN_PKG}@${SDK_VERSION}" >/dev/null
-        TARBALL=$(ls anthropic-ai-*.tgz | head -1)
-        tar -xzf "$TARBALL"
+        TARBALLS=(anthropic-ai-*.tgz)
+        tar -xzf "${TARBALLS[0]}"
     )
     mkdir -p "$SDK_BIN_SOURCE"
     cp -r "$PKG_TMP/package/." "$SDK_BIN_SOURCE/"
@@ -172,14 +172,35 @@ if [ "$BIN_SIZE" -lt 50000000 ]; then
 fi
 echo "  Native binary: $((BIN_SIZE / 1024 / 1024)) MB"
 
-# 5. Copy ripgrep (sourced from @vscode/ripgrep since 0.2.113).
+# 5. Copy target-architecture ripgrep, fetching its optional package when needed.
 RG_SOURCE="$ROOT_DIR/node_modules/@vscode/ripgrep"
-require_path "$RG_SOURCE" "@vscode/ripgrep" "Run 'bun install' and 'bun pm trust @vscode/ripgrep' first."
-require_path "$RG_SOURCE/bin/rg" "ripgrep binary" "@vscode/ripgrep postinstall did not run."
+RG_PLATFORM="linux"
+RG_PACKAGE="@vscode/ripgrep-$RG_PLATFORM-$ARCH"
+RG_BINARY="$ROOT_DIR/node_modules/$RG_PACKAGE/bin/rg"
+require_path "$RG_SOURCE" "@vscode/ripgrep" "Run 'bun install' first."
+if [[ ! -x "$RG_BINARY" ]]; then
+    echo "Cross-arch build: $RG_PACKAGE not in node_modules - fetching from npm..."
+    RG_VERSION="$(node -p 'require(process.argv[1]).version' "$RG_SOURCE/package.json")"
+    RG_TMP="$TEMP_DIR/ripgrep-$RG_PLATFORM-$ARCH"
+    mkdir -p "$RG_TMP"
+    (
+        cd "$RG_TMP"
+        npm pack "$RG_PACKAGE@$RG_VERSION" >/dev/null
+        tar -xzf vscode-ripgrep-$RG_PLATFORM-"$ARCH"-*.tgz
+    )
+    RG_BINARY="$RG_TMP/package/bin/rg"
+fi
+require_path "$RG_BINARY" "ripgrep binary" "Run 'bun install' or check npm access."
+if [[ ! -x "$RG_BINARY" ]]; then
+    echo "ERROR: ripgrep binary is not executable: $RG_BINARY" >&2
+    exit 1
+fi
 echo "Copying @vscode/ripgrep..."
 mkdir -p "$ELECTRON_DIR/node_modules/@vscode"
 rm -rf "$ELECTRON_DIR/node_modules/@vscode/ripgrep"
 cp -r "$RG_SOURCE" "$ELECTRON_DIR/node_modules/@vscode/"
+mkdir -p "$ELECTRON_DIR/node_modules/@vscode/ripgrep/bin"
+cp "$RG_BINARY" "$ELECTRON_DIR/node_modules/@vscode/ripgrep/bin/rg"
 
 # 6. Copy network interceptor sources (for Pi subprocess; Claude no longer
 #    uses --preload — Phase 2 will move that to SDK hooks or a local proxy).
@@ -207,7 +228,7 @@ cd "$ELECTRON_DIR"
 # Note: electron-builder may build both archs due to config, but we only use the requested one
 # Publishing is handled only by an explicit release workflow, never by
 # electron-builder's CI auto-detection.
-bun x --bun electron-builder --config electron-builder.yml --linux --${ARCH} --publish never
+bun x --bun electron-builder --config electron-builder.yml --linux "--${ARCH}" --publish never
 
 bun "$ROOT_DIR/scripts/validate-electron-package-security.ts" \
     --binary "$ELECTRON_DIR/release/linux-unpacked/robb-agents" \
@@ -256,4 +277,4 @@ SMOKE_ARGS=(--appimage "$APPIMAGE_PATH")
 if [[ "${ROBB_PACKAGE_LAUNCH_SMOKE:-0}" == "1" ]]; then
     SMOKE_ARGS+=(--launch --launch-timeout 45)
 fi
-python3 "$ROOT_DIR/scripts/robinswood-linux-packaged-smoke.py" "${SMOKE_ARGS[@]}"
+python3 "$ROOT_DIR/scripts/robinswood_linux_packaged_smoke.py" "${SMOKE_ARGS[@]}"

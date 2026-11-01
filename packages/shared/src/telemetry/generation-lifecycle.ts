@@ -24,13 +24,13 @@ export interface GenerationTerminalInput {
   eventId: string
   timestamp: number
   name: GenerationTerminalName
-  inputTokens?: number
-  outputTokens?: number
-  cachedInputTokens?: number
-  cacheWriteTokens?: number
-  reasoningTokens?: number
-  cacheHit?: boolean
-  errorCode?: string
+  inputTokens?: number | undefined
+  outputTokens?: number | undefined
+  cachedInputTokens?: number | undefined
+  cacheWriteTokens?: number | undefined
+  reasoningTokens?: number | undefined
+  cacheHit?: boolean | undefined
+  errorCode?: string | undefined
 }
 
 interface ActiveGeneration {
@@ -68,9 +68,9 @@ export class GenerationTelemetryLifecycle {
     this.active.set(generationId, {
       startedAt: input.timestamp,
       correlation: input.correlation,
-      providerType: input.providerType,
-      model: input.model,
-      inputTokens: input.inputTokens,
+      ...(input.providerType !== undefined ? { providerType: input.providerType } : {}),
+      ...(input.model !== undefined ? { model: input.model } : {}),
+      ...(input.inputTokens !== undefined ? { inputTokens: input.inputTokens } : {}),
     })
 
     return {
@@ -79,9 +79,9 @@ export class GenerationTelemetryLifecycle {
       timestamp: input.timestamp,
       name: 'generation.started',
       correlation: input.correlation,
-      providerType: input.providerType,
-      model: input.model,
-      inputTokens: input.inputTokens,
+      ...(input.providerType !== undefined ? { providerType: input.providerType } : {}),
+      ...(input.model !== undefined ? { model: input.model } : {}),
+      ...(input.inputTokens !== undefined ? { inputTokens: input.inputTokens } : {}),
     }
   }
 
@@ -93,23 +93,24 @@ export class GenerationTelemetryLifecycle {
     if (!active) return undefined
 
     this.active.delete(generationId)
+    const optionalInputTokens = input.inputTokens ?? active.inputTokens;
     return {
       schemaVersion: 1,
       eventId: input.eventId,
       timestamp: input.timestamp,
       name: input.name,
       correlation: active.correlation,
-      providerType: active.providerType,
-      model: active.model,
+      ...(active.providerType !== undefined ? { providerType: active.providerType } : {}),
+      ...(active.model !== undefined ? { model: active.model } : {}),
       outcome: terminalOutcome(input.name),
       durationMs: Math.max(0, input.timestamp - active.startedAt),
-      inputTokens: input.inputTokens ?? active.inputTokens,
-      outputTokens: input.outputTokens,
-      cachedInputTokens: input.cachedInputTokens,
-      cacheWriteTokens: input.cacheWriteTokens,
-      reasoningTokens: input.reasoningTokens,
-      cacheHit: input.cacheHit,
-      errorCode: input.errorCode,
+      ...(optionalInputTokens !== undefined ? { inputTokens: optionalInputTokens } : {}),
+      ...(input.outputTokens !== undefined ? { outputTokens: input.outputTokens } : {}),
+      ...(input.cachedInputTokens !== undefined ? { cachedInputTokens: input.cachedInputTokens } : {}),
+      ...(input.cacheWriteTokens !== undefined ? { cacheWriteTokens: input.cacheWriteTokens } : {}),
+      ...(input.reasoningTokens !== undefined ? { reasoningTokens: input.reasoningTokens } : {}),
+      ...(input.cacheHit !== undefined ? { cacheHit: input.cacheHit } : {}),
+      ...(input.errorCode !== undefined ? { errorCode: input.errorCode } : {}),
     }
   }
 

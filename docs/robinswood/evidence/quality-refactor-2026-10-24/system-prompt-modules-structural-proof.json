@@ -1,0 +1,30 @@
+{
+  "status": "passed",
+  "source": "packages/shared/src/prompts/system.ts",
+  "nativeSourceHash": "4b46de9fb73099809d322b60a26a3a6ac74989f851b6cd1e61eb9409a5474086",
+  "nativeDeclarations": 26,
+  "expandedGuidanceSections": 2,
+  "nativeLiteralValuesAndInterpolationOrderPreserved": true,
+  "workspaceAndEnvironmentPreparationPreserved": true,
+  "nativePublicExportsAndImportsPreserved": true,
+  "newStateOrWorkflowAdded": false,
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 473,
+  "files": [
+    {
+      "file": "packages/shared/src/prompts/system.ts",
+      "lines": 473,
+      "sha256": "4ed74c54a820f112a79086bed599c2be3f42b797f8313fa5096a7705547d576b"
+    },
+    {
+      "file": "packages/shared/src/prompts/assistant-prompt.ts",
+      "lines": 345,
+      "sha256": "10451b6aefdd60c4a2f48a4b9227b985a06ee69027d0ce1bcdb9aaa97cfaf2d1"
+    },
+    {
+      "file": "packages/shared/src/prompts/assistant-guidance.ts",
+      "lines": 444,
+      "sha256": "99c4c18c414c7f91ae0c3acca668e588f746be23453e76b1a3a0f7274ba4e70b"
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+{
+  "status": "tested; local integration pending remaining quality work",
+  "scope": "kanban-container-native",
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/KanbanBoardContainer.tsx",
+      "lines": 426,
+      "sha256": "db790b1c947e5a20a856fa0efe3654b2ce9e765ff1da478cb2fb9a5dc8fd2d28"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/kanban-board-content.tsx",
+      "lines": 150,
+      "sha256": "63e16fbf5e3af9d8d96f63e2b0b241e9782c51bd059e731274fa3692aceb441a"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/kanban/use-kanban-board-actions.ts",
+      "lines": 215,
+      "sha256": "3ad552de026a670a5b2a5cedd245adb663bd4f26dfaae8df6cafd19b2c908772"
+    }
+  ],
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/components/app-shell/kanban/KanbanBoardContainer.tsx",
+        "apps/electron/src/renderer/components/app-shell/kanban/kanban-board-content.tsx",
+        "apps/electron/src/renderer/components/app-shell/kanban/use-kanban-board-actions.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 3.91,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/kanban-container-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 10.7,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/kanban-container-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 40.97,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/kanban-container-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/renderer/components/app-shell/kanban/__tests__/subtask-merge.test.ts",
+        "apps/electron/src/renderer/components/app-shell/kanban/__tests__/model-catalog.test.ts",
+        "apps/electron/src/renderer/components/app-shell/kanban/__tests__/task-spec-form.test.ts",
+        "apps/electron/src/renderer/components/app-shell/kanban/TaskTile.test.tsx"
+      ],
+      "exitCode": 0,
+      "seconds": 0.95,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/kanban-container-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 14.45,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/kanban-container-native-build.log"
+    }
+  },
+  "targetedTests": {
+    "pass": 38,
+    "fail": 0
+  },
+  "browser": {
+    "before": 6,
+    "after": 6,
+    "nativeCallbackPayloadsEqual": true,
+    "errors": 0
+  },
+  "sourceGate": {
+    "max-lines": 17
+  },
+  "globalLint": {
+    "files": 3653,
+    "errors": 17,
+    "warnings": 92,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 17,
+      "react-hooks/exhaustive-deps": 71,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "limits": [
+    "Other historical files and lint findings remain",
+    "No installation or final real-model mission claim",
+    "Global suite rerun prohibited by PreToolUse; last full suite f521166: 10759 passed"
+  ]
+}

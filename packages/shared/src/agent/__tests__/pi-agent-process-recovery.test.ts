@@ -1,7 +1,6 @@
 import { describe, expect, it, jest } from 'bun:test'
-import { EventEmitter } from 'node:events'
 import { PassThrough } from 'node:stream'
-import type { ChildProcess } from 'node:child_process'
+import { ChildProcess } from 'node:child_process'
 import {
   PiAgent,
   PI_SUBPROCESS_FORCE_KILL_DELAY_MS,
@@ -28,12 +27,14 @@ function createConfig(): BackendConfig {
 }
 
 function fakeChild(pid: number): ChildProcess {
-  const child = new EventEmitter() as ChildProcess
+  const child = new ChildProcess()
+  Object.defineProperties(child, {
+    stdout: { value: new PassThrough(), configurable: true },
+    stderr: { value: new PassThrough(), configurable: true },
+    stdin: { value: new PassThrough(), configurable: true },
+  })
   Object.assign(child, {
     pid,
-    stdout: new PassThrough(),
-    stderr: new PassThrough(),
-    stdin: new PassThrough(),
     killed: false,
     exitCode: null,
     signalCode: null,
@@ -57,21 +58,15 @@ describe('PiAgent process recovery', () => {
     const events: unknown[] = []
     let completed = false
     const readyFailure = new Promise<void>((_resolve, reject) => {
-      const internals = agent as unknown as {
-        subprocess: ChildProcess | null
-        subprocessReady: Promise<void> | null
-        subprocessReadyReject: ((error: Error) => void) | null
-        _isProcessing: boolean
-        eventQueue: { enqueue: (event: unknown) => void; complete: () => void }
-      }
-      internals.subprocess = child
-      internals.subprocessReadyReject = reject
-      internals._isProcessing = true
-      internals.eventQueue.enqueue = event => events.push(event)
-      internals.eventQueue.complete = () => { completed = true }
+      const internals = agent
+      internals["subprocess"] = child
+      internals["subprocessReadyReject"] = reject
+      internals["_isProcessing"] = true
+      internals["eventQueue"].enqueue = event => events.push(event)
+      internals["eventQueue"].complete = () => { completed = true }
     })
 
-    ;(agent as unknown as {
+    ;((agent) as {
       handleSubprocessExit: (code: number | null, signal: string | null, child: ChildProcess) => void
     }).handleSubprocessExit(null, 'SIGSEGV', child)
 
@@ -84,7 +79,7 @@ describe('PiAgent process recovery', () => {
       signal: 'SIGSEGV',
     }])
     expect(completed).toBe(true)
-    expect((agent as unknown as { subprocess: ChildProcess | null }).subprocess).toBeNull()
+    expect((agent)["subprocess"]).toBeNull()
     agent.destroy()
   })
 
@@ -93,19 +88,14 @@ describe('PiAgent process recovery', () => {
     const staleChild = fakeChild(101)
     const currentChild = fakeChild(202)
     const events: unknown[] = []
-    const internals = agent as unknown as {
-      subprocess: ChildProcess | null
-      _isProcessing: boolean
-      eventQueue: { enqueue: (event: unknown) => void }
-      handleSubprocessExit: (code: number | null, signal: string | null, child: ChildProcess) => void
-    }
-    internals.subprocess = currentChild
-    internals._isProcessing = true
-    internals.eventQueue.enqueue = event => events.push(event)
+    const internals = agent
+    internals["subprocess"] = currentChild
+    internals["_isProcessing"] = true
+    internals["eventQueue"].enqueue = event => events.push(event)
 
-    internals.handleSubprocessExit(1, null, staleChild)
+    internals["handleSubprocessExit"](1, null, staleChild)
 
-    expect(internals.subprocess).toBe(currentChild)
+    expect(internals["subprocess"]).toBe(currentChild)
     expect(events).toEqual([])
     agent.destroy()
   })
@@ -117,32 +107,20 @@ describe('PiAgent process recovery', () => {
     const staleRuntime = { runtimeId: 'pi-runtime-stale', sessionId: 'session-test' }
     const currentRuntime = { runtimeId: 'pi-runtime-current', sessionId: 'session-test' }
     const confirmed: Array<{ runtimeId: string; sessionId: string }> = []
-    const internals = agent as unknown as {
-      subprocess: ChildProcess | null
-      subprocessRuntimeContext: { runtimeId: string; sessionId: string } | null
-      subprocessRuntimeContexts: WeakMap<ChildProcess, { runtimeId: string; sessionId: string }>
-      confirmContextualGmailRuntimeTeardown: (runtime: { runtimeId: string; sessionId: string }) => boolean
-      handleSubprocessExit: (
-        code: number | null,
-        signal: string | null,
-        child: ChildProcess,
-        processError?: Error,
-        runtime?: { runtimeId: string; sessionId: string },
-      ) => void
-    }
-    internals.subprocess = currentChild
-    internals.subprocessRuntimeContext = currentRuntime
-    internals.subprocessRuntimeContexts.set(staleChild, staleRuntime)
-    internals.confirmContextualGmailRuntimeTeardown = runtime => {
+    const internals = agent
+    internals["subprocess"] = currentChild
+    internals["subprocessRuntimeContext"] = currentRuntime
+    internals["subprocessRuntimeContexts"].set(staleChild, staleRuntime)
+    internals["confirmContextualGmailRuntimeTeardown"] = runtime => {
       confirmed.push(runtime)
       return true
     }
 
-    internals.handleSubprocessExit(0, null, staleChild, undefined, staleRuntime)
+    internals["handleSubprocessExit"](0, null, staleChild, undefined, staleRuntime)
 
     expect(confirmed).toEqual([staleRuntime])
-    expect(internals.subprocess).toBe(currentChild)
-    expect(internals.subprocessRuntimeContext).toEqual(currentRuntime)
+    expect(internals["subprocess"]).toBe(currentChild)
+    expect(internals["subprocessRuntimeContext"]).toEqual(currentRuntime)
     agent.destroy()
   })
 
@@ -153,32 +131,21 @@ describe('PiAgent process recovery', () => {
     const confirmed: Array<{ runtimeId: string; sessionId: string }> = []
     let rejectReady!: (error: Error) => void
     const readyFailure = new Promise<void>((_resolve, reject) => { rejectReady = reject })
-    const internals = agent as unknown as {
-      subprocess: ChildProcess | null
-      subprocessRuntimeContext: { runtimeId: string; sessionId: string } | null
-      subprocessRuntimeContexts: WeakMap<ChildProcess, { runtimeId: string; sessionId: string }>
-      subprocessReadyReject: ((error: Error) => void) | null
-      confirmContextualGmailRuntimeTeardown: (runtime: { runtimeId: string; sessionId: string }) => boolean
-      handleSubprocessError: (
-        error: Error,
-        child: ChildProcess,
-        runtime?: { runtimeId: string; sessionId: string },
-      ) => void
-    }
-    internals.subprocess = child
-    internals.subprocessRuntimeContext = runtime
-    internals.subprocessRuntimeContexts.set(child, runtime)
-    internals.subprocessReadyReject = rejectReady
-    internals.confirmContextualGmailRuntimeTeardown = context => {
+    const internals = agent
+    internals["subprocess"] = child
+    internals["subprocessRuntimeContext"] = runtime
+    internals["subprocessRuntimeContexts"].set(child, runtime)
+    internals["subprocessReadyReject"] = rejectReady
+    internals["confirmContextualGmailRuntimeTeardown"] = context => {
       confirmed.push(context)
       return true
     }
 
-    internals.handleSubprocessError(new Error('child process error'), child, runtime)
+    internals["handleSubprocessError"](new Error('child process error'), child, runtime)
 
     await expect(readyFailure).rejects.toThrow('Pi subprocess error (child process error)')
-    expect(internals.subprocess).toBe(child)
-    expect(internals.subprocessRuntimeContext).toEqual(runtime)
+    expect(internals["subprocess"]).toBe(child)
+    expect(internals["subprocessRuntimeContext"]).toEqual(runtime)
     expect(confirmed).toEqual([])
     agent.destroy()
   })
@@ -188,39 +155,22 @@ describe('PiAgent process recovery', () => {
     const child = fakeChild(232)
     const runtime = { runtimeId: 'pi-runtime-error-then-exit', sessionId: 'session-test' }
     const confirmed: Array<{ runtimeId: string; sessionId: string }> = []
-    const internals = agent as unknown as {
-      subprocess: ChildProcess | null
-      subprocessRuntimeContext: { runtimeId: string; sessionId: string } | null
-      subprocessRuntimeContexts: WeakMap<ChildProcess, { runtimeId: string; sessionId: string }>
-      confirmContextualGmailRuntimeTeardown: (runtime: { runtimeId: string; sessionId: string }) => boolean
-      handleSubprocessError: (
-        error: Error,
-        child: ChildProcess,
-        runtime?: { runtimeId: string; sessionId: string },
-      ) => void
-      handleSubprocessExit: (
-        code: number | null,
-        signal: string | null,
-        child: ChildProcess,
-        processError?: Error,
-        runtime?: { runtimeId: string; sessionId: string },
-      ) => void
-    }
-    internals.subprocess = child
-    internals.subprocessRuntimeContext = runtime
-    internals.subprocessRuntimeContexts.set(child, runtime)
-    internals.confirmContextualGmailRuntimeTeardown = context => {
+    const internals = agent
+    internals["subprocess"] = child
+    internals["subprocessRuntimeContext"] = runtime
+    internals["subprocessRuntimeContexts"].set(child, runtime)
+    internals["confirmContextualGmailRuntimeTeardown"] = context => {
       confirmed.push(context)
       return true
     }
 
-    internals.handleSubprocessError(new Error('transport watcher failed'), child, runtime)
+    internals["handleSubprocessError"](new Error('transport watcher failed'), child, runtime)
     expect(confirmed).toEqual([])
 
-    internals.handleSubprocessExit(1, null, child, undefined, runtime)
+    internals["handleSubprocessExit"](1, null, child, undefined, runtime)
 
-    expect(internals.subprocess).toBeNull()
-    expect(internals.subprocessRuntimeContext).toBeNull()
+    expect(internals["subprocess"]).toBeNull()
+    expect(internals["subprocessRuntimeContext"]).toBeNull()
     expect(confirmed).toEqual([runtime])
     agent.destroy()
   })
@@ -232,42 +182,25 @@ describe('PiAgent process recovery', () => {
     const staleRuntime = { runtimeId: 'pi-runtime-error-stale', sessionId: 'session-test' }
     const currentRuntime = { runtimeId: 'pi-runtime-error-current', sessionId: 'session-test' }
     const confirmed: Array<{ runtimeId: string; sessionId: string }> = []
-    const internals = agent as unknown as {
-      subprocess: ChildProcess | null
-      subprocessRuntimeContext: { runtimeId: string; sessionId: string } | null
-      subprocessRuntimeContexts: WeakMap<ChildProcess, { runtimeId: string; sessionId: string }>
-      confirmContextualGmailRuntimeTeardown: (runtime: { runtimeId: string; sessionId: string }) => boolean
-      handleSubprocessError: (
-        error: Error,
-        child: ChildProcess,
-        runtime?: { runtimeId: string; sessionId: string },
-      ) => void
-      handleSubprocessExit: (
-        code: number | null,
-        signal: string | null,
-        child: ChildProcess,
-        processError?: Error,
-        runtime?: { runtimeId: string; sessionId: string },
-      ) => void
-    }
-    internals.subprocess = staleChild
-    internals.subprocessRuntimeContext = staleRuntime
-    internals.subprocessRuntimeContexts.set(staleChild, staleRuntime)
-    internals.handleSubprocessError(new Error('old runtime error'), staleChild, staleRuntime)
+    const internals = agent
+    internals["subprocess"] = staleChild
+    internals["subprocessRuntimeContext"] = staleRuntime
+    internals["subprocessRuntimeContexts"].set(staleChild, staleRuntime)
+    internals["handleSubprocessError"](new Error('old runtime error'), staleChild, staleRuntime)
 
-    internals.subprocess = currentChild
-    internals.subprocessRuntimeContext = currentRuntime
-    internals.subprocessRuntimeContexts.set(currentChild, currentRuntime)
-    internals.confirmContextualGmailRuntimeTeardown = context => {
+    internals["subprocess"] = currentChild
+    internals["subprocessRuntimeContext"] = currentRuntime
+    internals["subprocessRuntimeContexts"].set(currentChild, currentRuntime)
+    internals["confirmContextualGmailRuntimeTeardown"] = context => {
       confirmed.push(context)
       return true
     }
 
-    internals.handleSubprocessExit(1, null, staleChild, undefined, staleRuntime)
+    internals["handleSubprocessExit"](1, null, staleChild, undefined, staleRuntime)
 
     expect(confirmed).toEqual([staleRuntime])
-    expect(internals.subprocess).toBe(currentChild)
-    expect(internals.subprocessRuntimeContext).toEqual(currentRuntime)
+    expect(internals["subprocess"]).toBe(currentChild)
+    expect(internals["subprocessRuntimeContext"]).toEqual(currentRuntime)
     agent.destroy()
   })
 
@@ -276,32 +209,19 @@ describe('PiAgent process recovery', () => {
     const child = fakeChild(333)
     const runtime = { runtimeId: 'pi-runtime-delayed-exit', sessionId: 'session-test' }
     const confirmed: Array<{ runtimeId: string; sessionId: string }> = []
-    const internals = agent as unknown as {
-      subprocess: ChildProcess | null
-      subprocessRuntimeContext: { runtimeId: string; sessionId: string } | null
-      subprocessRuntimeContexts: WeakMap<ChildProcess, { runtimeId: string; sessionId: string }>
-      confirmContextualGmailRuntimeTeardown: (context: { runtimeId: string; sessionId: string }) => boolean
-      killSubprocess: () => void
-      handleSubprocessExit: (
-        code: number | null,
-        signal: string | null,
-        child: ChildProcess,
-        processError?: Error,
-        runtime?: { runtimeId: string; sessionId: string },
-      ) => void
-    }
-    internals.subprocess = child
-    internals.subprocessRuntimeContext = runtime
-    internals.subprocessRuntimeContexts.set(child, runtime)
-    internals.confirmContextualGmailRuntimeTeardown = context => {
+    const internals = agent
+    internals["subprocess"] = child
+    internals["subprocessRuntimeContext"] = runtime
+    internals["subprocessRuntimeContexts"].set(child, runtime)
+    internals["confirmContextualGmailRuntimeTeardown"] = context => {
       confirmed.push(context)
       return true
     }
 
-    internals.killSubprocess()
+    internals["killSubprocess"]()
     expect(confirmed).toEqual([])
 
-    internals.handleSubprocessExit(null, 'SIGTERM', child, undefined, runtime)
+    internals["handleSubprocessExit"](null, 'SIGTERM', child, undefined, runtime)
     expect(confirmed).toEqual([runtime])
     agent.destroy()
   })
@@ -318,27 +238,13 @@ describe('PiAgent process recovery', () => {
         signals.push(String(signal))
         return true
       }) as ChildProcess['kill']
-      const internals = agent as unknown as {
-        subprocess: ChildProcess | null
-        subprocessRuntimeContext: { runtimeId: string; sessionId: string } | null
-        subprocessRuntimeContexts: WeakMap<ChildProcess, { runtimeId: string; sessionId: string }>
-        hasContextualGmailInFlightForCurrentRuntime: () => boolean
-        invalidateContextualGmailStateForCurrentSession: () => void
-        confirmContextualGmailRuntimeTeardown: (context: { runtimeId: string; sessionId: string }) => boolean
-        handleSubprocessExit: (
-          code: number | null,
-          signal: string | null,
-          child: ChildProcess,
-          processError?: Error,
-          runtime?: { runtimeId: string; sessionId: string },
-        ) => void
-      }
-      internals.subprocess = child
-      internals.subprocessRuntimeContext = runtime
-      internals.subprocessRuntimeContexts.set(child, runtime)
-      internals.hasContextualGmailInFlightForCurrentRuntime = () => true
-      internals.invalidateContextualGmailStateForCurrentSession = () => {}
-      internals.confirmContextualGmailRuntimeTeardown = context => {
+      const internals = agent
+      internals["subprocess"] = child
+      internals["subprocessRuntimeContext"] = runtime
+      internals["subprocessRuntimeContexts"].set(child, runtime)
+      internals["hasContextualGmailInFlightForCurrentRuntime"] = () => true
+      internals["invalidateContextualGmailStateForCurrentSession"] = () => {}
+      internals["confirmContextualGmailRuntimeTeardown"] = context => {
         confirmed.push(context)
         return true
       }
@@ -351,7 +257,7 @@ describe('PiAgent process recovery', () => {
       expect(signals).toEqual(['SIGTERM', 'SIGKILL'])
       expect(confirmed).toEqual([])
 
-      internals.handleSubprocessExit(null, 'SIGKILL', child, undefined, runtime)
+      internals["handleSubprocessExit"](null, 'SIGKILL', child, undefined, runtime)
       expect(confirmed).toEqual([runtime])
       agent.destroy()
     } finally {
@@ -377,27 +283,22 @@ describe('PiAgent process recovery', () => {
         currentSignals.push(String(signal))
         return true
       }) as ChildProcess['kill']
-      const internals = agent as unknown as {
-        subprocess: ChildProcess | null
-        subprocessRuntimeContext: { runtimeId: string; sessionId: string } | null
-        subprocessRuntimeContexts: WeakMap<ChildProcess, { runtimeId: string; sessionId: string }>
-        killSubprocess: () => void
-      }
-      internals.subprocess = staleChild
-      internals.subprocessRuntimeContext = staleRuntime
-      internals.subprocessRuntimeContexts.set(staleChild, staleRuntime)
+      const internals = agent
+      internals["subprocess"] = staleChild
+      internals["subprocessRuntimeContext"] = staleRuntime
+      internals["subprocessRuntimeContexts"].set(staleChild, staleRuntime)
 
-      internals.killSubprocess()
-      internals.subprocess = currentChild
-      internals.subprocessRuntimeContext = currentRuntime
-      internals.subprocessRuntimeContexts.set(currentChild, currentRuntime)
+      internals["killSubprocess"]()
+      internals["subprocess"] = currentChild
+      internals["subprocessRuntimeContext"] = currentRuntime
+      internals["subprocessRuntimeContexts"].set(currentChild, currentRuntime)
 
       jest.advanceTimersByTime(PI_SUBPROCESS_FORCE_KILL_DELAY_MS)
       expect(staleSignals).toEqual(['SIGTERM', 'SIGKILL'])
       expect(currentSignals).toEqual([])
 
-      internals.subprocess = null
-      internals.subprocessRuntimeContext = null
+      internals["subprocess"] = null
+      internals["subprocessRuntimeContext"] = null
       agent.destroy()
     } finally {
       jest.useRealTimers()
@@ -408,21 +309,17 @@ describe('PiAgent process recovery', () => {
     const agent = new PiAgent(createConfig())
     const child = fakeChild(303)
     const decisions: boolean[] = []
-    const internals = agent as unknown as {
-      subprocess: ChildProcess | null
-      pendingPermissions: Map<string, { resolve: (allowed: boolean) => void; toolName: string }>
-      handleSubprocessExit: (code: number | null, signal: string | null, child: ChildProcess) => void
-    }
-    internals.subprocess = child
-    internals.pendingPermissions.set('permission-1', {
+    const internals = agent
+    internals["subprocess"] = child
+    internals["pendingPermissions"].set('permission-1', {
       resolve: allowed => decisions.push(allowed),
       toolName: 'Bash',
     })
 
-    internals.handleSubprocessExit(0, null, child)
+    internals["handleSubprocessExit"](0, null, child)
 
     expect(decisions).toEqual([false])
-    expect(internals.pendingPermissions.size).toBe(0)
+    expect(internals["pendingPermissions"].size).toBe(0)
     agent.destroy()
     expect(decisions).toEqual([false])
   })
@@ -430,7 +327,7 @@ describe('PiAgent process recovery', () => {
   it('settles pending permissions fail-closed when an idle runtime is destroyed', () => {
     const agent = new PiAgent(createConfig())
     const decisions: boolean[] = []
-    const internals = agent as unknown as {
+    const internals = (agent) as {
       pendingPermissions: Map<string, { resolve: (allowed: boolean) => void; toolName: string }>
     }
     internals.pendingPermissions.set('permission-1', {
@@ -448,21 +345,16 @@ describe('PiAgent process recovery', () => {
     const agent = new PiAgent(createConfig())
     let gracefulKills = 0
     const sent: Array<Record<string, unknown>> = []
-    const internals = agent as unknown as {
-      hasContextualGmailInFlightForCurrentRuntime: () => boolean
-      invalidateContextualGmailStateForCurrentSession: () => void
-      killSubprocessGracefully: () => Promise<void>
-      send: (message: Record<string, unknown>) => void
-    }
-    internals.hasContextualGmailInFlightForCurrentRuntime = () => true
-    internals.invalidateContextualGmailStateForCurrentSession = () => {}
-    internals.killSubprocessGracefully = async () => { gracefulKills += 1 }
-    internals.send = message => sent.push(message)
+    const internals = agent
+    internals["hasContextualGmailInFlightForCurrentRuntime"] = () => true
+    internals["invalidateContextualGmailStateForCurrentSession"] = () => {}
+    internals["killSubprocessGracefully"] = async () => { gracefulKills += 1 }
+    internals["send"] = message => { sent.push(message); return true }
 
     await agent.abort('test')
 
     expect(gracefulKills).toBe(1)
-    expect(sent.some(message => message.type === 'abort')).toBe(false)
+    expect(sent.some(message => message["type"] === 'abort')).toBe(false)
     agent.destroy()
   })
 
@@ -471,7 +363,7 @@ describe('PiAgent process recovery', () => {
     let spawnCalls = 0
     let releaseSpawn!: () => void
     const spawnGate = new Promise<void>(resolve => { releaseSpawn = resolve })
-    const internals = agent as unknown as {
+    const internals = (agent) as {
       ensureSubprocess: () => Promise<void>
       spawnSubprocess: () => Promise<void>
     }

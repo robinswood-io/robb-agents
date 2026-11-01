@@ -1,11 +1,10 @@
+import type { z } from 'zod';
+import type { SetSessionStatusSchema } from '../tool-defs/schemas.ts';
 import type { SessionToolContext } from '../context.ts';
 import type { ToolResult } from '../types.ts';
 import { successResponse, errorResponse } from '../response.ts';
 
-export interface SetSessionStatusArgs {
-  sessionId?: string;
-  status: string;
-}
+export type SetSessionStatusArgs = z.infer<typeof SetSessionStatusSchema>;
 
 /** Compatibility for the spelling advertised by older system prompts. */
 function normalizeLegacyStatusAlias(status: string): string {

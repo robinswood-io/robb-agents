@@ -1,0 +1,113 @@
+{
+  "status": "passed",
+  "updatedPackages": [
+    {
+      "name": "prosemirror-model",
+      "from": "prosemirror-model@1.25.11",
+      "to": "prosemirror-model@1.25.12"
+    },
+    {
+      "name": "prosemirror-transform",
+      "from": "prosemirror-transform@1.12.0",
+      "to": "prosemirror-transform@1.12.4"
+    }
+  ],
+  "removedRedundantLockEntries": [
+    "@tiptap/pm/prosemirror-model",
+    "@tiptap/pm/prosemirror-transform",
+    "prosemirror-view/prosemirror-model",
+    "@tiptap/pm/prosemirror-transform/prosemirror-model"
+  ],
+  "manifestUnchanged": true,
+  "newDependencies": 0,
+  "newOverrides": 0,
+  "lockfile": {
+    "generated": true,
+    "sha256": "8c8ade3dd6cc10d93dcfb41696489b0a1048cca60502f62ddbb18b6e63c744a5"
+  },
+  "reproducedBeforeRepair": {
+    "status": "observed",
+    "rootVersion": "1.25.11",
+    "nativeVersion": "1.25.12",
+    "sameFragmentConstructor": false,
+    "conversionError": "Can not convert <\"QA\"> to a Fragment (looks like multiple versions of prosemirror-model were loaded)",
+    "browserReproduction": {
+      "status": "failed",
+      "error": "page.waitForFunction: Timeout 30000ms exceeded.",
+      "steps": [
+        {
+          "engine": "legacy",
+          "action": "Native heading and paragraph are rendered",
+          "status": "passed"
+        },
+        {
+          "engine": "legacy",
+          "action": "Typing and native bold keyboard shortcut update Markdown",
+          "status": "passed"
+        },
+        {
+          "engine": "legacy",
+          "action": "Slash command menu opens and Escape dismisses it",
+          "status": "passed"
+        },
+        {
+          "engine": "official",
+          "action": "Native heading and paragraph are rendered",
+          "status": "passed"
+        }
+      ],
+      "errors": [
+        "Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)",
+        "Can not convert <> to a Fragment (looks like multiple versions of prosemirror-model were loaded)",
+        "Can not convert <\"QA editor content\"> to a Fragment (looks like multiple versions of prosemirror-model were loaded)"
+      ],
+      "consoleErrors": []
+    }
+  },
+  "identity": {
+    "status": "passed",
+    "checks": [
+      {
+        "package": "prosemirror-model",
+        "singleCopy": true,
+        "resolvedPath": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/node_modules/prosemirror-model/dist/index.cjs"
+      },
+      {
+        "package": "prosemirror-state",
+        "singleCopy": true,
+        "resolvedPath": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/node_modules/prosemirror-state/dist/index.cjs"
+      },
+      {
+        "package": "prosemirror-transform",
+        "singleCopy": true,
+        "resolvedPath": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/node_modules/prosemirror-transform/dist/index.cjs"
+      },
+      {
+        "package": "prosemirror-view",
+        "singleCopy": true,
+        "resolvedPath": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/node_modules/prosemirror-view/dist/index.cjs"
+      },
+      {
+        "package": "prosemirror-commands",
+        "singleCopy": true,
+        "resolvedPath": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/node_modules/prosemirror-commands/dist/index.cjs"
+      },
+      {
+        "package": "prosemirror-history",
+        "singleCopy": true,
+        "resolvedPath": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/node_modules/prosemirror-history/dist/index.cjs"
+      },
+      {
+        "package": "prosemirror-keymap",
+        "singleCopy": true,
+        "resolvedPath": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/node_modules/prosemirror-keymap/dist/index.cjs"
+      },
+      {
+        "package": "prosemirror-schema-list",
+        "singleCopy": true,
+        "resolvedPath": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/node_modules/prosemirror-schema-list/dist/index.cjs"
+      }
+    ]
+  },
+  "conversionAfterRepair": "QA"
+}

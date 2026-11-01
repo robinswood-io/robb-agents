@@ -6,8 +6,8 @@ export interface DismissibleLayerRegistration {
   priority?: number
   isOpen?: boolean
   close: () => void
-  canBack?: () => boolean
-  back?: () => boolean
+  canBack?: (() => boolean) | undefined
+  back?: (() => boolean) | undefined
 }
 
 export interface DismissibleLayerSnapshot {

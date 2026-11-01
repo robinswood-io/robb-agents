@@ -84,8 +84,8 @@ describe('validateSessionId', () => {
     });
 
     it('rejects null/undefined', () => {
-      expect(() => validateSessionId(null as unknown as string)).toThrow('Security Error');
-      expect(() => validateSessionId(undefined as unknown as string)).toThrow('Security Error');
+      expect(() => validateSessionId(null)).toThrow('Security Error');
+      expect(() => validateSessionId(undefined)).toThrow('Security Error');
     });
 
     it('rejects IDs with spaces', () => {
@@ -124,8 +124,8 @@ describe('sanitizeSessionId', () => {
   });
 
   it('returns empty string for null/undefined', () => {
-    expect(sanitizeSessionId(null as unknown as string)).toBe('');
-    expect(sanitizeSessionId(undefined as unknown as string)).toBe('');
+    expect(sanitizeSessionId(null)).toBe('');
+    expect(sanitizeSessionId(undefined)).toBe('');
   });
 
   it('returns basename for absolute paths', () => {

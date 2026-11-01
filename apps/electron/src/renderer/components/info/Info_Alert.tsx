@@ -31,7 +31,7 @@ export interface Info_AlertProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof alertVariants> {
   /** Optional leading icon */
-  icon?: React.ReactNode
+  icon?: React.ReactNode | undefined
 }
 
 function Info_AlertRoot({

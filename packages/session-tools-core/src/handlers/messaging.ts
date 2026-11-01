@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+import type { ListMessagingChannelsSchema, UnbindMessagingChannelSchema } from '../tool-defs/schemas.ts';
 /**
  * Messaging session tools — list bindings and unbind channels.
  *
@@ -14,9 +16,7 @@ import { successResponse, errorResponse } from '../response.ts';
 // list_messaging_channels
 // ---------------------------------------------------------------------------
 
-export interface ListMessagingChannelsArgs {
-  sessionId?: string;
-}
+export type ListMessagingChannelsArgs = z.infer<typeof ListMessagingChannelsSchema>;
 
 export async function handleListMessagingChannels(
   ctx: SessionToolContext,
@@ -58,9 +58,7 @@ export async function handleListMessagingChannels(
 // unbind_messaging_channel
 // ---------------------------------------------------------------------------
 
-export interface UnbindMessagingChannelArgs {
-  platform?: 'telegram' | 'whatsapp';
-}
+export type UnbindMessagingChannelArgs = z.infer<typeof UnbindMessagingChannelSchema>;
 
 export async function handleUnbindMessagingChannel(
   ctx: SessionToolContext,

@@ -3,17 +3,30 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import os
 import time
-from datetime import datetime, timezone
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING, Protocol, cast
+
+from pydantic import JsonValue, TypeAdapter
+
+if TYPE_CHECKING:
+    from nats.aio.msg import Msg
+    from nats.aio.subscription import Subscription
+from datetime import UTC, datetime
 from pathlib import Path
 
+from nats.aio.client import Client as NATS
 from temporalio.client import Client
 
-try:
-    from nats.aio.client import Client as NATS
-except Exception:
-    NATS = None
+logger = logging.getLogger(__name__)
+
+
+class Subscriber(Protocol):
+    """The callback subscription used here; the SDK also has an untyped future API."""
+
+    async def subscribe(self, subject: str, *, cb: Callable[[Msg], Awaitable[None]]) -> Subscription: ...
 
 
 EVENT_MANIFEST = Path('/srv/rbw-agents-oss/config/temporal/event-triggers.json')
@@ -28,10 +41,10 @@ MAX_IN_MEMORY_KEYS = int(os.getenv('RBW_EVENT_DEDUPE_MAX_KEYS', '10000'))
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
-def _canonical_event_key(trigger_type: str, legacy_id: str, event: dict) -> str:
+def _canonical_event_key(trigger_type: str, legacy_id: str, event: dict[str, JsonValue]) -> str:
     payload = {
         'trigger_type': trigger_type,
         'legacy_id': legacy_id,
@@ -54,20 +67,20 @@ def _load_recent_dedupe_keys() -> dict[str, float]:
             if not line.strip():
                 continue
             try:
-                row = json.loads(line)
-            except Exception:
+                row = TypeAdapter(dict[str, JsonValue]).validate_json(line)
+            except ValueError:
                 continue
             key = row.get('event_key')
             ts = row.get('ts_unix')
-            if not key or ts is None:
+            if not isinstance(key, str) or not key or not isinstance(ts, (str, int, float)):
                 continue
             try:
                 tsf = float(ts)
-            except Exception:
+            except ValueError:
                 continue
             if tsf >= cutoff:
                 keys[key] = tsf
-    except Exception as exc:
+    except OSError as exc:
         print(f"[event-bridge] failed loading dedupe ledger: {exc}", flush=True)
 
     return keys
@@ -85,7 +98,7 @@ def _append_dedupe_ledger(event_key: str, trigger_type: str, legacy_id: str, sta
         'workflow_id': workflow_id,
     }
     with DEDUPE_LEDGER.open('a', encoding='utf-8') as f:
-        f.write(json.dumps(row, ensure_ascii=False) + '\n')
+        _ = f.write(json.dumps(row, ensure_ascii=False) + '\n')
 
 
 def _prune_in_memory(keys: dict[str, float]) -> None:
@@ -105,15 +118,16 @@ def _is_recent_duplicate(keys: dict[str, float], event_key: str) -> bool:
 
 
 async def main() -> None:
-    if NATS is None:
-        raise RuntimeError('nats-py not installed. pip install nats-py')
-
-    mapping = json.loads(EVENT_MANIFEST.read_text(encoding='utf-8')).get('triggers', [])
-    by_trigger: dict[str, list[dict]] = {}
+    manifest = TypeAdapter(dict[str, JsonValue]).validate_json(EVENT_MANIFEST.read_bytes())
+    mapping = TypeAdapter(list[dict[str, JsonValue]]).validate_python(manifest.get('triggers', []))
+    by_trigger: dict[str, list[dict[str, JsonValue]]] = {}
     for row in mapping:
         if not row.get('enabled', True):
             continue
-        by_trigger.setdefault(row['triggerType'], []).append(row)
+        trigger_type = row['triggerType']
+        if not isinstance(trigger_type, str):
+            raise TypeError('triggerType must be a string')
+        by_trigger.setdefault(trigger_type, []).append(row)
 
     dedupe_keys = _load_recent_dedupe_keys()
     print(f"[event-bridge] loaded {len(dedupe_keys)} recent dedupe keys", flush=True)
@@ -127,11 +141,11 @@ async def main() -> None:
         max_reconnect_attempts=-1,
     )
 
-    async def mk_handler(trigger_type: str):
-        async def handler(msg):
+    async def mk_handler(trigger_type: str) -> Callable[[Msg], Awaitable[None]]:
+        async def handler(msg: Msg) -> None:
             try:
-                event = json.loads(msg.data.decode('utf-8'))
-            except Exception as exc:
+                event = TypeAdapter(dict[str, JsonValue]).validate_json(msg.data)
+            except ValueError as exc:
                 print(f"[event-bridge] invalid JSON for {trigger_type}: {exc}", flush=True)
                 return
 
@@ -141,6 +155,8 @@ async def main() -> None:
 
             for row in rows:
                 legacy_id = row.get('legacy_id') or '<unknown>'
+                if not isinstance(legacy_id, str):
+                    raise TypeError('legacy_id must be a string')
                 workflow_base = row.get('workflow_id') or f"rbw.{legacy_id}"
 
                 try:
@@ -154,18 +170,21 @@ async def main() -> None:
                         continue
 
                     workflow_id = f"{workflow_base}-{event_key[:12]}"
-                    payload = {
+                    payload: dict[str, JsonValue] = {
                         'legacy_id': legacy_id,
                         'name': row.get('name'),
                         'event': event,
                     }
 
                     try:
-                        await temporal.start_workflow(
+                        task_queue = row.get('task_queue', 'default')
+                        if not isinstance(task_queue, str):
+                            raise TypeError('task_queue must be a string')
+                        _ = await temporal.start_workflow(
                             'RbwAutomationWorkflow',
                             payload,
                             id=workflow_id,
-                            task_queue=row.get('task_queue', 'default'),
+                            task_queue=task_queue,
                         )
                         dedupe_keys[event_key] = time.time()
                         _append_dedupe_ledger(event_key, trigger_type, legacy_id, 'started', workflow_id)
@@ -174,6 +193,7 @@ async def main() -> None:
                             flush=True,
                         )
                     except Exception as exc:
+                        logger.exception("Temporal event dispatch failed")
                         msg_text = str(exc).lower()
                         if 'already' in msg_text and 'workflow' in msg_text:
                             dedupe_keys[event_key] = time.time()
@@ -188,6 +208,7 @@ async def main() -> None:
                                 flush=True,
                             )
                 except Exception as exc:
+                    logger.exception("Event handler failed")
                     print(
                         f"[event-bridge] handler error trigger_type={trigger_type} legacy_id={legacy_id} err={exc}",
                         flush=True,
@@ -197,8 +218,9 @@ async def main() -> None:
 
         return handler
 
+    subscriber = cast(Subscriber, nc)
     for trigger_type, subject in SUBJECT_MAP.items():
-        await nc.subscribe(subject, cb=await mk_handler(trigger_type))
+        _ = await subscriber.subscribe(subject, cb=await mk_handler(trigger_type))
         print(f"subscribed: {subject} ({trigger_type})", flush=True)
 
     while True:
@@ -207,3 +229,5 @@ async def main() -> None:
 
 if __name__ == '__main__':
     asyncio.run(main())
+
+__all__ = ["_append_dedupe_ledger", "_canonical_event_key", "_is_recent_duplicate", "_load_recent_dedupe_keys", "_prune_in_memory", "main"]

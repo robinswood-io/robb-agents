@@ -24,15 +24,15 @@ import { useTransportConnectionState } from "@/hooks/useTransportConnectionState
 import type { Workspace } from "../../../shared/types"
 
 interface WorkspaceSwitcherProps {
-  variant?: 'sidebar' | 'topbar'
-  isCollapsed?: boolean
+  variant?: 'sidebar' | 'topbar' | undefined
+  isCollapsed?: boolean | undefined
   workspaces: Workspace[]
   activeWorkspaceId: string | null
   onSelect: (workspaceId: string, openInNewWindow?: boolean) => void | Promise<void>
-  onWorkspaceCreated?: (workspace: Workspace) => void
-  onWorkspaceRemoved?: () => void
+  onWorkspaceCreated?: ((workspace: Workspace) => void) | undefined
+  onWorkspaceRemoved?: (() => void) | undefined
   /** workspaceId -> has unread */
-  workspaceUnreadMap?: Record<string, boolean>
+  workspaceUnreadMap?: Record<string, boolean> | undefined
 }
 
 /**
@@ -149,7 +149,7 @@ export function WorkspaceSwitcher({
       toast.success(t('toast.removedWorkspace', { name: workspace.name }))
       onWorkspaceRemoved?.()
     }
-  }, [activeWorkspaceId, onWorkspaceRemoved])
+  }, [activeWorkspaceId, onWorkspaceRemoved, t])
 
   const handleCloseCreationScreen = useCallback(() => {
     setShowCreationScreen(false)
@@ -170,7 +170,7 @@ export function WorkspaceSwitcher({
 
     handleCloseCreationScreen()
     toast.success(t('toast.workspaceReconnected'))
-  }, [activeWorkspaceId, handleCloseCreationScreen, onSelect])
+  }, [activeWorkspaceId, handleCloseCreationScreen, onSelect, t])
 
   return (
     <>

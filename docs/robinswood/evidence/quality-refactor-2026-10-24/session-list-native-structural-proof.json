@@ -1,0 +1,36 @@
+{
+  "status": "passed",
+  "nativeGroupingBodyPreserved": true,
+  "reviewedChanges": [
+    "pure scope string calculated directly",
+    "explicit stable i18n and state setter dependencies"
+  ],
+  "nativeCollapseStateHooksAndEffectsPreserved": true,
+  "nativeActionsAndRootHookOrderPreserved": true,
+  "nativeMainAndEmptyJSXAndCallbacksPreserved": true,
+  "valuesPassedDirectly": true,
+  "publicExportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/SessionList.tsx",
+      "lines": 479,
+      "sha256": "884a2627866d5eb18452c5db4e87e3b278be94621ebd291f4c6cb920251664b1"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/session-list-data.ts",
+      "lines": 355,
+      "sha256": "dd508938c22dca836718acefc48a79f70ecba51c200cdc94963ba53fa2bc76db"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-session-list-collapse.ts",
+      "lines": 70,
+      "sha256": "73f207cceb477cc6c5327bf1035f4fc19603029e3f9b35ba1c1f90c6b8bc39c4"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/session-list-view.tsx",
+      "lines": 235,
+      "sha256": "bbd7023dd60769f5af373b9036d7e882c832acb52474359a73c09c5424ba4f90"
+    }
+  ]
+}

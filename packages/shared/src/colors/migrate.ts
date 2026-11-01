@@ -92,11 +92,16 @@ export function migrateStatusColors(config: { statuses: Array<{ color?: unknown 
  * Migrate all color values in a labels config object.
  * Mutates the config in place and returns whether any changes were made.
  */
-export function migrateLabelColors(config: { labels: Array<{ color?: unknown; children?: any[] }> }): boolean {
+interface ColorMigrationLabel {
+  color?: unknown
+  children?: ColorMigrationLabel[]
+}
+
+export function migrateLabelColors(config: { labels: ColorMigrationLabel[] }): boolean {
   let changed = false
 
   // Recursively migrate colors in the label tree
-  function migrateTree(labels: Array<{ color?: unknown; children?: any[] }>): void {
+  function migrateTree(labels: ColorMigrationLabel[]): void {
     for (const label of labels) {
       const result = migrateColorValue(label.color)
       if (result?.changed) {

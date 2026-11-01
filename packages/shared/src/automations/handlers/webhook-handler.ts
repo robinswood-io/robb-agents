@@ -1,3 +1,4 @@
+import { isJsonObject } from '../../utils/json.ts';
 /**
  * WebhookHandler - Processes webhook actions for App events
  *
@@ -151,7 +152,7 @@ export class WebhookHandler implements AutomationHandler {
     const webhookTasks: WebhookTask[] = [];
 
     for (const matcher of matchers) {
-      if (!matcherMatches(matcher, event, payload as unknown as Record<string, unknown>)) continue;
+      if (!matcherMatches(matcher, event, payload)) continue;
 
       for (const action of matcher.actions) {
         if (action.type === 'webhook') {
@@ -169,7 +170,7 @@ export class WebhookHandler implements AutomationHandler {
 
     // Apply per-endpoint rate limiting before execution.
     // Resolve URLs first (expand env vars) so rate limiting works on actual endpoints.
-    const results: WebhookActionResult[] = new Array(webhookTasks.length);
+    const results: WebhookActionResult[] = new Array<WebhookActionResult>(webhookTasks.length);
     const toExecute: Array<{ index: number; task: WebhookTask }> = [];
 
     for (let i = 0; i < webhookTasks.length; i++) {
@@ -206,12 +207,13 @@ export class WebhookHandler implements AutomationHandler {
         if (outcome.status === 'fulfilled') {
           results[index] = outcome.value;
         } else {
+          const failure: unknown = outcome.reason;
           results[index] = {
             type: 'webhook',
             url: task.action.url,
             statusCode: 0,
             success: false,
-            error: outcome.reason?.message ?? 'Unknown error',
+            error: isJsonObject(failure) && typeof failure['message'] === 'string' ? failure['message'] : 'Unknown error',
           };
         }
       }
@@ -231,13 +233,13 @@ export class WebhookHandler implements AutomationHandler {
       const entry = createWebhookHistoryEntry({
         matcherId: task.matcherId,
         ok: result.success,
-        method: task.action.method,
+        ...(task.action.method !== undefined ? { method: task.action.method } : {}),
         url: result.url,
         statusCode: result.statusCode,
         durationMs: result.durationMs ?? 0,
-        attempts: result.attempts,
-        error: result.error,
-        responseBody: result.responseBody,
+        ...(result.attempts !== undefined ? { attempts: result.attempts } : {}),
+        ...(result.error !== undefined ? { error: result.error } : {}),
+        ...(result.responseBody !== undefined ? { responseBody: result.responseBody } : {}),
       });
       try {
         await appendAutomationHistoryEntry(this.options.workspaceRootPath, entry);
@@ -253,7 +255,7 @@ export class WebhookHandler implements AutomationHandler {
           try {
             const deferredAction = prepareWebhookActionForDeferredRetry(task.action, env);
             this.retryScheduler.enqueue(task.matcherId, deferredAction, redactUrl(result.url), result.error)
-              .catch(e => log.debug(`[WebhookHandler] Failed to enqueue for deferred retry: ${e}`));
+              .catch((e: unknown) => log.debug(`[WebhookHandler] Failed to enqueue for deferred retry: ${e}`));
           } catch (e) {
             log.debug(`[WebhookHandler] Deferred retry rejected by secret policy: ${e}`);
           }

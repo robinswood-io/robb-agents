@@ -4,13 +4,9 @@ import { dirname, join } from 'node:path';
 import { isPathWithinDirectory, isPathWithinDirectoryForCreation } from '../runtime/path-security.ts';
 import { isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from '../runtime/application-protection.ts';
 
-export interface DeterministicRecipe {
-  name: 'json-records-v1';
-  recordsPath?: string[];
-  select?: string[];
-  filter?: { field: string; equals: string | number | boolean | null };
-  aggregate?: { groupBy?: string; sums?: string[] };
-}
+import type { z } from 'zod';
+import type { TransformDataSchema } from '../tool-defs/schemas.ts';
+export type DeterministicRecipe = NonNullable<z.infer<typeof TransformDataSchema>['recipe']>;
 
 const MAX_INPUT_BYTES = 8 * 1024 * 1024;
 const MAX_TOTAL_INPUT_BYTES = 32 * 1024 * 1024;
@@ -119,7 +115,7 @@ export function runDeterministicRecipe(
   if (totalBytes > MAX_TOTAL_INPUT_BYTES) throw new Error('Recipe batch exceeds 32 MiB');
   // Count interrupted temporary writes as well, so crashes cannot evade the cap.
   let cacheCount = existsSync(cacheDir) ? readdirSync(cacheDir).length : 0;
-  const files: RecipeFileResult[] = inputs.map(input => {
+  const files: RecipeFileResult[] = inputs.map((input): RecipeFileResult => {
     let inputSha256: string | undefined;
     try {
       const stat = statSync(input);
@@ -159,7 +155,7 @@ export function runDeterministicRecipe(
       }
       return { input, inputSha256, status: 'ok', reused, rowCount: rows.length, rows };
     } catch (error) {
-      return { input, inputSha256, status: 'error', error: error instanceof Error ? error.message : String(error) };
+      return { input, ...(inputSha256 !== undefined ? { inputSha256 } : {}), status: 'error', error: error instanceof Error ? error.message : String(error) };
     }
   });
   const report = { files, succeeded: files.filter(file => file.status === 'ok').length, failed: files.filter(file => file.status === 'error').length, reused: files.filter(file => file.reused).length };

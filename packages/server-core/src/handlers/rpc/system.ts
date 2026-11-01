@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { resolve } from 'path'
 import { join } from 'path'
 import { homedir } from 'os'
@@ -57,7 +58,7 @@ const COMPOUND_ROUTE_PREFIXES = new Set([
 
 function collectDeepLinkParams(parsed: URL, pathId?: string): Record<string, string> | undefined {
   const params: Record<string, string> = {}
-  if (pathId) params.id = pathId
+  if (pathId) params["id"] = pathId
 
   parsed.searchParams.forEach((value, key) => {
     if (key === 'window' || key === 'sidebar') return
@@ -97,7 +98,7 @@ function parseInternalCraftAgentsDeepLink(parsed: URL): ParsedInternalDeepLink |
     return {
       navigation: {
         action,
-        actionParams,
+        ...(actionParams !== undefined ? { actionParams: actionParams } : {}),
       },
     }
   }
@@ -122,10 +123,10 @@ function parseInternalCraftAgentsDeepLink(parsed: URL): ParsedInternalDeepLink |
 
       return {
         workspaceId,
-        navigation: {
+        navigation: omitUndefined({
           action,
           actionParams: collectDeepLinkParams(parsed, pathParts[3]),
-        },
+        }),
       }
     }
   }
@@ -142,8 +143,6 @@ function assertLocalWorkspace(ctx: { workspaceId: string | null }, action: strin
 }
 
 export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps): void {
-  const windowManager = deps.windowManager
-
   // Get system theme preference (dark = true, light = false)
   server.handle(RPC_CHANNELS.theme.GET_SYSTEM_PREFERENCE, async () => {
     return deps.platform.systemDarkMode?.() ?? false
@@ -205,14 +204,14 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
     const commonPaths = [
       'C:\\Program Files\\Git\\bin\\bash.exe',
       'C:\\Program Files (x86)\\Git\\bin\\bash.exe',
-      join(process.env.LOCALAPPDATA || '', 'Programs', 'Git', 'bin', 'bash.exe'),
-      join(process.env.PROGRAMFILES || '', 'Git', 'bin', 'bash.exe'),
+      join(process.env["LOCALAPPDATA"] || '', 'Programs', 'Git', 'bin', 'bash.exe'),
+      join(process.env["PROGRAMFILES"] || '', 'Git', 'bin', 'bash.exe'),
     ]
 
     const persistedPath = getGitBashPath()
     if (persistedPath) {
       if (await isUsableGitBashPath(persistedPath)) {
-        process.env.CLAUDE_CODE_GIT_BASH_PATH = persistedPath.trim()
+        process.env["CLAUDE_CODE_GIT_BASH_PATH"] = persistedPath.trim()
         return { found: true, path: persistedPath, platform }
       }
       clearGitBashPath()
@@ -220,7 +219,7 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
 
     for (const bashPath of commonPaths) {
       if (await isUsableGitBashPath(bashPath)) {
-        process.env.CLAUDE_CODE_GIT_BASH_PATH = bashPath
+        process.env["CLAUDE_CODE_GIT_BASH_PATH"] = bashPath
         setGitBashPath(bashPath)
         return { found: true, path: bashPath, platform }
       }
@@ -234,7 +233,7 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
       }).trim()
       const firstPath = result.split('\n')[0]?.trim()
       if (firstPath && firstPath.toLowerCase().includes('git') && await isUsableGitBashPath(firstPath)) {
-        process.env.CLAUDE_CODE_GIT_BASH_PATH = firstPath
+        process.env["CLAUDE_CODE_GIT_BASH_PATH"] = firstPath
         setGitBashPath(firstPath)
         return { found: true, path: firstPath, platform }
       }
@@ -242,7 +241,7 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
       // where command failed
     }
 
-    delete process.env.CLAUDE_CODE_GIT_BASH_PATH
+    delete process.env["CLAUDE_CODE_GIT_BASH_PATH"]
     return { found: false, path: null, platform }
   })
 
@@ -268,7 +267,7 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
     }
 
     setGitBashPath(validation.path)
-    process.env.CLAUDE_CODE_GIT_BASH_PATH = validation.path
+    process.env["CLAUDE_CODE_GIT_BASH_PATH"] = validation.path
     return { success: true }
   })
 

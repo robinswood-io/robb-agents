@@ -1,0 +1,47 @@
+import type { Message } from '@craft-agent/core/types';
+import type { SessionOperationContext, SessionMessageState } from '../operation-context.ts';
+import type { UserInputRequest } from '@craft-agent/core';
+import type { FileAttachment } from '@craft-agent/shared/protocol';
+import type { StoredAttachment } from '@craft-agent/core/types';
+import type { ManagedSession } from '../managed-session.ts';
+import type { SourceActivationOrigin } from '../source-activation.ts';
+
+export interface SessionMessageTurnInput {
+    readonly attachments: FileAttachment[] | undefined;
+    readonly activeMessageState: SessionMessageState;
+    readonly managed: ManagedSession;
+    readonly sessionOperationContext: SessionOperationContext;
+    readonly userMessage: Message;
+    readonly queuedAgentDeliveryDispatch: ReturnType<SessionOperationContext['state']['queuedAgentDeliveryDispatches']['get']>;
+    readonly queuedItem: ManagedSession['messageQueue'][number] | undefined;
+    readonly queuedDispatchToken: symbol | undefined;
+    readonly sessionId: string;
+    readonly myGeneration: number;
+    readonly trustedUserInput: UserInputRequest | undefined;
+    readonly explicitRetry: boolean;
+    readonly assertActivePreparation: () => void;
+    readonly ownsActiveTurn: () => boolean;
+    readonly abandonStoppedTurn: () => Promise<void>;
+    readonly finishSupersededAutomaticRecovery: () => Promise<boolean>;
+    readonly _isAuthRetry: boolean | undefined;
+    readonly storedAttachments: StoredAttachment[] | undefined;
+    readonly durablyAcknowledged: boolean;
+    readonly cleanExplicitRetry: boolean;
+    readonly resetProviderResumeStateForCleanBoundary: (boundaryMessageId: string) => void;
+    readonly cleanRecoveryProviderStateAtomized: boolean;
+    readonly directHumanContinuation: boolean;
+    readonly ownsQueuedDispatch: boolean;
+    readonly removeSyntheticAutomaticMessage: () => boolean;
+    readonly existingTurnRollback: (() => void) | undefined;
+    readonly diagnosticFromMessageCount: number;
+    readonly existingMessageId: string | undefined;
+    readonly retryWithRetainedInbox: boolean;
+    readonly onAck: ((messageId: string) => void) | undefined;
+    readonly restoreStartedAutomaticDispatch: () => boolean;
+    readonly sourceActivationOrigin: SourceActivationOrigin | undefined;
+    readonly authenticatedInternalContinuationToken: symbol | undefined;
+    readonly delegatedDispatchContinuationToken: symbol | undefined;
+    readonly cleanExplicitRetrySetupRollback: (() => string | undefined) | undefined;
+    readonly lastMessageRoleBeforeDispatch: ManagedSession['lastMessageRole'];
+    readonly recoveryHandoffPaused: () => boolean;
+}

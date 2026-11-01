@@ -13,7 +13,7 @@ import type { Context } from 'grammy'
 import { isPrivateChat } from './index'
 
 function ctxWithChatType(type: string | undefined): Context {
-  return { chat: type ? { type } : undefined } as unknown as Context
+  return { chat: type ? { type } : undefined } as Context
 }
 
 describe('isPrivateChat', () => {

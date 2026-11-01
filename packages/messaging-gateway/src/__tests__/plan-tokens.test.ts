@@ -17,13 +17,15 @@ describe('PlanTokenRegistry', () => {
     expect(token).toHaveLength(8)
 
     const resolved = reg.resolve(token)
-    expect(resolved).toEqual({
+    if (!resolved) throw new Error('Expected the issued token to resolve')
+    const { createdAt, ...identity } = resolved
+    expect(createdAt).toBeNumber()
+    expect(identity).toEqual({
       bindingId: 'b1',
       sessionId: 's1',
       planPath: '/tmp/plan.md',
-      messageId: undefined,
-      createdAt: expect.any(Number),
     })
+    expect(Object.hasOwn(resolved ?? {}, 'messageId')).toBe(false)
   })
 
   it('returns null for unknown tokens', () => {

@@ -4,6 +4,7 @@
  * See docs/adr-transport-locality.md for the locality boundary definition.
  */
 
+import { z } from 'zod'
 import type { BrowserCapabilityRequest } from './browser-capability'
 import type { RpcServer } from './types'
 
@@ -55,7 +56,7 @@ export async function requestClientOpenExternal(
     await server.invokeClient(clientId, CLIENT_OPEN_EXTERNAL, url)
     return { opened: true }
   } catch (err) {
-    const code = (err as any)?.code
+    const code = (err as { code?: unknown } | null)?.code
     const message = err instanceof Error ? err.message : String(err)
     return { opened: false, error: `${code ?? 'UNKNOWN'}: ${message}`, authUrl: url }
   }
@@ -72,7 +73,11 @@ export async function requestClientOpenPath(
 ): Promise<{ error?: string }> {
   try {
     const result = await server.invokeClient(clientId, CLIENT_OPEN_PATH, path)
-    return result ?? {}
+    if (result == null) return {}
+    if (typeof result !== 'object' || ('error' in result && result.error !== undefined && typeof result.error !== 'string')) {
+      throw new Error('Invalid open-path response from client')
+    }
+    return result
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     return { error: message }
@@ -92,15 +97,16 @@ export async function requestClientShowInFolder(
 }
 
 /** Spec for a confirmation dialog (maps to Electron's MessageBoxOptions). */
-export interface ConfirmDialogSpec {
-  type?: 'none' | 'info' | 'warning' | 'error' | 'question'
-  title: string
-  message: string
-  detail?: string
-  buttons: string[]
-  defaultId?: number
-  cancelId?: number
-}
+export const ConfirmDialogSpecSchema = z.object({
+  type: z.enum(['none', 'info', 'warning', 'error', 'question']).optional(),
+  title: z.string(),
+  message: z.string(),
+  detail: z.string().optional(),
+  buttons: z.array(z.string()),
+  defaultId: z.number().optional(),
+  cancelId: z.number().optional(),
+}).strict();
+export type ConfirmDialogSpec = z.infer<typeof ConfirmDialogSpecSchema>;
 
 /**
  * Ask the client to show a confirmation dialog.
@@ -111,16 +117,23 @@ export async function requestClientConfirmDialog(
   clientId: string,
   spec: ConfirmDialogSpec,
 ): Promise<{ response: number }> {
-  return await server.invokeClient(clientId, CLIENT_CONFIRM_DIALOG, spec)
+  const result = await server.invokeClient(clientId, CLIENT_CONFIRM_DIALOG, spec)
+  if (!result || typeof result !== 'object' || !('response' in result) || typeof result.response !== 'number') {
+    throw new Error('Invalid confirmation response from client')
+  }
+  return { ...result, response: result.response }
 }
 
 /** Spec for a file/folder picker dialog (maps to Electron's OpenDialogOptions). */
-export interface FileDialogSpec {
-  title?: string
-  defaultPath?: string
-  properties?: string[]
-  filters?: Array<{ name: string; extensions: string[] }>
-}
+export const FileDialogSpecSchema = z.object({
+  title: z.string().optional(),
+  defaultPath: z.string().optional(),
+  properties: z.array(z.enum(['openFile', 'openDirectory', 'multiSelections',
+    'showHiddenFiles', 'createDirectory', 'promptToCreate', 'noResolveAliases',
+    'treatPackageAsDirectory', 'dontAddToRecent'])).optional(),
+  filters: z.array(z.object({ name: z.string(), extensions: z.array(z.string()) }).strict()).optional(),
+}).strict();
+export type FileDialogSpec = z.infer<typeof FileDialogSpecSchema>;
 
 /**
  * Ask the client to show a native file/folder picker.
@@ -131,14 +144,23 @@ export async function requestClientOpenFileDialog(
   clientId: string,
   spec: FileDialogSpec,
 ): Promise<{ canceled: boolean; filePaths: string[] }> {
-  return await server.invokeClient(clientId, CLIENT_OPEN_FILE_DIALOG, spec)
+  const result = await server.invokeClient(clientId, CLIENT_OPEN_FILE_DIALOG, spec)
+  if (!result || typeof result !== 'object' || !('canceled' in result) || typeof result.canceled !== 'boolean'
+    || !('filePaths' in result) || !Array.isArray(result.filePaths)) {
+    throw new Error('Invalid file-dialog response from client')
+  }
+  const filePaths = result.filePaths.map((path: unknown) => {
+    if (typeof path !== 'string') throw new Error('Invalid file path from client')
+    return path
+  })
+  return { ...result, canceled: result.canceled, filePaths }
 }
 
 /**
  * Ask the client to invoke a `BrowserPaneManager` method.
  *
  * Errors propagate with `.code` preserved (see transport error-code preservation
- * in `client.ts` / `server.ts`). Callers can branch on `(err as any).code`.
+ * in `client.ts` / `server.ts`). Callers can inspect the error's `code` field.
  */
 export async function requestClientBrowserInvoke<T>(
   server: RpcServer,

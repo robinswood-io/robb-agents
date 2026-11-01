@@ -24,19 +24,19 @@ export interface LabelValuePopoverProps {
   /** Label configuration (color, name, valueType) */
   label: LabelConfig
   /** Current raw value string */
-  value?: string
+  value?: string | undefined
   /** Called when user commits a new value (Enter or blur) */
-  onValueChange?: (newValue: string | undefined) => void
+  onValueChange?: ((newValue: string | undefined) => void) | undefined
   /** Called when user clicks "Remove" */
-  onRemove?: () => void
+  onRemove?: (() => void) | undefined
   /** Quick filter callback for this label */
-  onFilterByLabel?: () => void
+  onFilterByLabel?: (() => void) | undefined
   /** Controlled open state */
   open: boolean
   /** Open state change handler */
   onOpenChange: (open: boolean) => void
   /** Session identifier for scoped focus restoration */
-  sessionId?: string
+  sessionId?: string | undefined
   /** The trigger element (typically a LabelBadge) */
   children: React.ReactNode
 }
@@ -244,7 +244,7 @@ export function LabelValuePopover({
                       mode="single"
                       selected={calendarDate}
                       captionLayout="dropdown"
-                      defaultMonth={calendarDate}
+                      {...(calendarDate ? { defaultMonth: calendarDate } : {})}
                       onSelect={(date) => {
                         if (date) {
                           // Commit directly and update draft for display

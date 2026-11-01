@@ -1,19 +1,15 @@
-import { runShutdownCleanup } from './shutdown-cleanup'
+import { mainState } from './main-state';
+import { runShutdownCleanup } from './shutdown-cleanup';
 // Load user's shell environment first (before other imports that may use env)
 // This ensures tools like Homebrew, nvm, etc. are available to the agent
-import { loadShellEnv } from './shell-env'
+import { loadShellEnv } from './shell-env';
 loadShellEnv()
+import { app, BrowserWindow } from 'electron';
+import { createHash } from 'crypto';
+import { hostname, homedir } from 'os';
+import * as Sentry from '@sentry/electron/main';
+import { getDefaultAppName, getDefaultDeepLinkScheme, resolveAppChannel } from './app-channel';
 
-import { app, BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, shell } from 'electron'
-import { createHash, randomUUID } from 'crypto'
-import { hostname, homedir, networkInterfaces } from 'os'
-import * as Sentry from '@sentry/electron/main'
-import {
-  getDefaultAppName,
-  getDefaultDeepLinkScheme,
-  resolveAppChannel,
-} from './app-channel'
-import { configurePlatformWebAuthn } from './webauthn'
 
 const APP_CHANNEL = resolveAppChannel(app.isPackaged)
 const IS_DEVELOPMENT_CHANNEL = APP_CHANNEL === 'development'
@@ -28,11 +24,11 @@ const IS_DEVELOPMENT_CHANNEL = APP_CHANNEL === 'development'
 //   2. Re-enable the @sentry/vite-plugin in vite.config.ts (handles renderer maps)
 //   3. Add @sentry/esbuild-plugin to scripts/electron-build-main.ts (handles main process maps)
 Sentry.init({
-  dsn: process.env.SENTRY_ELECTRON_INGEST_URL,
+  dsn: process.env["SENTRY_ELECTRON_INGEST_URL"],
   environment: APP_CHANNEL,
   release: app.getVersion(),
   // Opt-in only (ROBB_ENABLE_SENTRY=1) to preserve strict local confidentiality by default.
-  enabled: !!process.env.SENTRY_ELECTRON_INGEST_URL && process.env.ROBB_ENABLE_SENTRY === '1',
+  enabled: !!process.env["SENTRY_ELECTRON_INGEST_URL"] && process.env["ROBB_ENABLE_SENTRY"] === '1',
 
   // Scrub sensitive data before sending to Sentry.
   // Removes authorization headers, API keys/tokens, and credential-like values.
@@ -76,8 +72,8 @@ Sentry.init({
 // renderer would restore its language from localStorage on every restart while
 // the main process silently stayed at English — breaking session title language,
 // the system prompt's "Preferred language" line, and the native menu.
-import { setupI18n, i18n, SUPPORTED_LANGUAGE_CODES, type LanguageCode } from '@craft-agent/shared/i18n'
-import { getPersistedUiLanguage, setPersistedUiLanguage } from '@craft-agent/shared/config'
+import { setupI18n, i18n } from '@craft-agent/shared/i18n';
+import { getPersistedUiLanguage } from '@craft-agent/shared/config';
 setupI18n()
 const persistedUiLanguage = getPersistedUiLanguage()
 if (persistedUiLanguage) {
@@ -87,72 +83,54 @@ if (persistedUiLanguage) {
 
 // Set anonymous machine ID for Sentry user tracking (no PII — just a hash).
 // Uses hostname + homedir to produce a stable per-machine identifier.
-if (process.env.ROBB_ENABLE_SENTRY === '1') {
+if (process.env["ROBB_ENABLE_SENTRY"] === '1') {
   const machineId = createHash('sha256').update(hostname() + homedir()).digest('hex').slice(0, 16)
   Sentry.setUser({ id: machineId })
 }
 
-import { join, delimiter } from 'path'
-import { existsSync, readFileSync } from 'fs'
-import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
-import { SessionManager, setSessionPlatform, setSessionRuntimeHooks } from '@craft-agent/server-core/sessions'
-import { registerAllRpcHandlers } from './handlers/index'
-import { registerCoreRpcHandlers, cleanupSessionFileWatchForClient } from '@craft-agent/server-core/handlers/rpc'
-import type { PlatformServices } from '../runtime/platform'
-import { createElectronPlatform, resolveElectronRuntimeAppRoot } from './platform'
-import type { HandlerDeps } from './handlers/handler-deps'
-import { bootstrapServer, releaseServerLock } from '@craft-agent/server-core/bootstrap'
-import { createMessagingBootstrap, type MessagingBootstrapHandle } from '@craft-agent/messaging-gateway'
-import { getCredentialManager } from '@craft-agent/shared/credentials'
-import { initModelRefreshService, getModelRefreshService, setFetcherPlatform } from '@craft-agent/server-core/model-fetchers'
-import { setSearchPlatform, setImageProcessor } from '@craft-agent/server-core/services'
-import { createApplicationMenu } from './menu'
-import { WindowManager } from './window-manager'
-import { loadWindowState, saveWindowState } from './window-state'
-import { CONFIG_DIR, getWorkspaces, getWorkspaceByNameOrId, loadStoredConfig, addWorkspace, saveConfig } from '@craft-agent/shared/config'
-import {
-  isLoopbackHost,
-  remoteServerNeedsRestart,
-  resolveAllowedSessionCookieOrigins,
-  resolveRemoteServerUrls,
-  resolveSecureRemoteHost,
-} from './remote-access-security'
-import { getDefaultWorkspacesDir, loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
-import { initializeDocs } from '@craft-agent/shared/docs'
-import { initializeReleaseNotes } from '@craft-agent/shared/release-notes'
-import { validateBundle, type SessionBundle } from '@craft-agent/shared/sessions'
-import { ensureDefaultPermissions } from '@craft-agent/shared/agent/permissions-config'
-import { ensureToolIcons, ensurePresetThemes } from '@craft-agent/shared/config'
-import { setBundledAssetsRoot } from '@craft-agent/shared/utils'
-import { initializeBackendHostRuntime } from '@craft-agent/shared/agent/backend'
-import { setPowerShellValidatorRoot } from '@craft-agent/shared/agent'
-import { handleDeepLink } from './deep-link'
-import { BrowserPaneManager } from './browser-pane-manager'
-import { OAuthFlowStore } from '@craft-agent/shared/auth'
-import { registerThumbnailScheme, registerThumbnailHandler } from './thumbnail-protocol'
-import log, { isDebugMode, mainLog, getLogFilePath, getMessagingGatewayLogFilePath, messagingGatewayLog, autoUpdateLog } from './logger'
-import { setPerfEnabled, enableDebug } from '@craft-agent/shared/utils'
-import { registerPiModelResolver } from '@craft-agent/shared/config'
-import { getPiModelsForAuthProvider, getAllPiModels } from '@craft-agent/shared/config'
-import { initNotificationService, initBadgeIcon, initInstanceBadge, updateBadgeCount } from './notifications'
-import {
-  isUpdating,
-  setAutoUpdateEventSink,
-  setBeforeUpdateQuitHook,
-  startAutomaticUpdateChecks,
-  stopAutomaticUpdateChecks,
-} from './auto-update'
-import type { EventSink } from '@craft-agent/server-core/transport'
-import { validateGitBashPath, checkVCRedistInstalled } from '@craft-agent/server-core/services'
-import { createLocalRpcEndpoint } from '../transport/local-rpc-endpoint'
-import {
-  createWebuiHandler,
-  nodeHttpAdapter,
-  RemoteDeviceRegistry,
-  createWebuiRpcAuthorizer,
-  validateSession,
-  type WebuiHandler,
-} from '@craft-agent/server-core/webui'
+import { join, delimiter } from 'path';
+import { existsSync } from 'fs';
+
+
+
+
+
+import { resolveElectronRuntimeAppRoot } from './platform';
+
+import { releaseServerLock } from '@craft-agent/server-core/bootstrap';
+
+
+import { getModelRefreshService } from '@craft-agent/server-core/model-fetchers';
+import { loadRobbOperationsModule } from '@craft-agent/server-core/operations';
+
+
+
+import { saveWindowState } from './window-state';
+import { CONFIG_DIR } from '@craft-agent/shared/config';
+
+
+
+
+
+
+
+
+
+
+import { handleDeepLink } from './deep-link';
+
+
+import { registerThumbnailScheme } from './thumbnail-protocol';
+import log, { isDebugMode, mainLog, autoUpdateLog } from './logger';
+import { setPerfEnabled, enableDebug } from '@craft-agent/shared/utils';
+import { registerPiModelResolver } from '@craft-agent/shared/config';
+import { getPiModelsForAuthProvider, getAllPiModels } from '@craft-agent/shared/config';
+
+import { isUpdating, stopAutomaticUpdateChecks } from './auto-update';
+
+
+
+
 
 // Initialize electron-log for renderer process support
 log.initialize()
@@ -166,9 +144,9 @@ mainLog.info('[i18n] startup hydration', {
 
 // Enable debug/perf in dev mode (running from source)
 if (isDebugMode) {
-  process.env.CRAFT_DEBUG = '1'
+  process.env["CRAFT_DEBUG"] = '1'
   // Do not implicitly enable developer feedback in dev mode unless explicitly opted in.
-  process.env.CRAFT_FEATURE_DEVELOPER_FEEDBACK ??= '0'
+  process.env["CRAFT_FEATURE_DEVELOPER_FEEDBACK"] ??= '0'
   enableDebug()
   setPerfEnabled(true)
 }
@@ -194,44 +172,44 @@ const runtimeAppRoot = resolveElectronRuntimeAppRoot(app)
   const fallbackUv = bundledUvExists ? null : 'uv'
 
   // Runtime resolver hints for shared session tools
-  process.env.CRAFT_IS_PACKAGED = app.isPackaged ? '1' : '0'
-  process.env.CRAFT_RESOURCES_BASE = resourcesBase
-  process.env.CRAFT_APP_ROOT = runtimeAppRoot
+  process.env["CRAFT_IS_PACKAGED"] = app.isPackaged ? '1' : '0'
+  process.env["CRAFT_RESOURCES_BASE"] = resourcesBase
+  process.env["CRAFT_APP_ROOT"] = runtimeAppRoot
 
-  process.env.CRAFT_UV = bundledUvExists ? uvBinary : (fallbackUv ?? uvBinary)
+  process.env["CRAFT_UV"] = bundledUvExists ? uvBinary : (fallbackUv ?? uvBinary)
 
   // Bun runtime (packaged builds should prefer bundled runtime over PATH)
   const bunBinary = join(resourcesBase, 'vendor', 'bun', process.platform === 'win32' ? 'bun.exe' : 'bun')
   if (existsSync(bunBinary)) {
-    process.env.CRAFT_BUN = bunBinary
+    process.env["CRAFT_BUN"] = bunBinary
   }
 
-  process.env.CRAFT_SCRIPTS = scriptsDir
-  process.env.CRAFT_COMMANDS_ENTRY = app.isPackaged
+  process.env["CRAFT_SCRIPTS"] = scriptsDir
+  process.env["CRAFT_COMMANDS_ENTRY"] = app.isPackaged
     ? join(runtimeAppRoot, 'packages', 'craft-agents-commands', 'src', 'main.ts')
     : join(process.cwd(), 'packages', 'craft-agents-commands', 'src', 'main.ts')
-  process.env.CRAFT_CLI_ENTRY = app.isPackaged
+  process.env["CRAFT_CLI_ENTRY"] = app.isPackaged
     ? join(runtimeAppRoot, 'packages', 'craft-cli', 'src', 'cli.ts')
     : join(process.cwd(), 'packages', 'craft-cli', 'src', 'cli.ts')
-  process.env.CRAFT_COMMANDS_DOC_PATH = app.isPackaged
+  process.env["CRAFT_COMMANDS_DOC_PATH"] = app.isPackaged
     ? join(resourcesBase, 'resources', 'docs', 'craft-cli.md')
     : join(process.cwd(), 'apps', 'electron', 'resources', 'docs', 'craft-cli.md')
-  process.env.CRAFT_CLI_DOC_PATH = process.env.CRAFT_COMMANDS_DOC_PATH
-  process.env.CRAFT_AGENT_VERSION = app.getVersion()
+  process.env["CRAFT_CLI_DOC_PATH"] = process.env["CRAFT_COMMANDS_DOC_PATH"]
+  process.env["CRAFT_AGENT_VERSION"] = app.getVersion()
   // Prepend both generic wrappers dir and platform uv dir:
   // - binDir exposes wrapper commands (pdf-tool, docx-tool, ...)
   // - uvPlatformDir exposes raw `uv` for direct shell usage / debugging
-  process.env.PATH = `${binDir}${delimiter}${uvPlatformDir}${delimiter}${process.env.PATH}`
+  process.env["PATH"] = `${binDir}${delimiter}${uvPlatformDir}${delimiter}${process.env["PATH"]}`
 
   if (!bundledUvExists) {
     mainLog.warn('Bundled uv binary missing, CLI document tools may fail unless uv is available on PATH.', {
       expectedUvPath: uvBinary,
-      usingCraftUv: process.env.CRAFT_UV,
+      usingCraftUv: process.env["CRAFT_UV"],
     })
   }
 
   if (isDebugMode) {
-    mainLog.info('CLI tools configured:', { uvBinary: process.env.CRAFT_UV, binDir, scriptsDir, bundledUvExists })
+    mainLog.info('CLI tools configured:', { uvBinary: process.env["CRAFT_UV"], binDir, scriptsDir, bundledUvExists })
   }
 }
 
@@ -243,35 +221,12 @@ registerPiModelResolver((piAuthProvider) =>
 
 // Custom URL scheme for deeplinks (e.g., craftagents://auth-complete)
 // Supports multi-instance dev: CRAFT_DEEPLINK_SCHEME env var (craftagents1, craftagents2, etc.)
-const DEEPLINK_SCHEME = process.env.CRAFT_DEEPLINK_SCHEME || getDefaultDeepLinkScheme(APP_CHANNEL)
-
-let windowManager: WindowManager | null = null
-let sessionManager: SessionManager | null = null
-let browserPaneManager: BrowserPaneManager | null = null
-let oauthFlowStore: OAuthFlowStore | null = null
-let moduleSink: EventSink | null = null
-let moduleClientResolver: ((webContentsId: number) => string | undefined) | null = null
-let embeddedWebuiHandler: WebuiHandler | null = null
-
-// Messaging gateway: the bootstrap handle is created once sessionManager is
-// available (inside createHandlerDeps) and populated with the WS publisher
-// after bootstrapServer resolves. Both hosts (Electron + standalone) wire
-// through createMessagingBootstrap — do not construct MessagingGatewayRegistry
-// directly.
-let messagingHandle: MessagingBootstrapHandle | null = null
-
-function hasTransferSummary(value: unknown): value is { summary: string } {
-  if (typeof value !== 'object' || value === null || !('summary' in value)) return false
-  return typeof value.summary === 'string' && value.summary.length > 0
-}
-
-// Store pending deep link if app not ready yet (cold start)
-let pendingDeepLink: string | null = null
+const DEEPLINK_SCHEME = process.env["CRAFT_DEEPLINK_SCHEME"] || getDefaultDeepLinkScheme(APP_CHANNEL)
 
 // Set app name early (before app.whenReady) to ensure correct macOS menu bar title
 // Supports isolated development instances while preserving the stable
 // production identity in release builds.
-app.setName(process.env.CRAFT_APP_NAME || getDefaultAppName(APP_CHANNEL))
+app.setName(process.env["CRAFT_APP_NAME"] || getDefaultAppName(APP_CHANNEL))
 
 // Share the established Craft data root (sessions, sources, projects and
 // credentials) while isolating Electron's cache, single-instance lock and
@@ -279,15 +234,16 @@ app.setName(process.env.CRAFT_APP_NAME || getDefaultAppName(APP_CHANNEL))
 // without a data migration.
 const robbRuntimeDir = join(CONFIG_DIR, 'robb-electron')
 app.setPath('userData', robbRuntimeDir)
-process.env.CRAFT_SERVER_LOCK_DIR = robbRuntimeDir
-process.env.CRAFT_CONFIG_DIR = CONFIG_DIR
+process.env["CRAFT_SERVER_LOCK_DIR"] = robbRuntimeDir
+process.env["CRAFT_CONFIG_DIR"] = CONFIG_DIR
 
 // Register as default protocol client for craftagents:// URLs
 // This must be done before app.whenReady() on some platforms
 if (process.defaultApp) {
   // Development mode: need to pass the app path
-  if (process.argv.length >= 2) {
-    app.setAsDefaultProtocolClient(DEEPLINK_SCHEME, process.execPath, [process.argv[1]])
+  const appPath = process.argv[1]
+  if (appPath !== undefined) {
+    app.setAsDefaultProtocolClient(DEEPLINK_SCHEME, process.execPath, [appPath])
   }
 } else {
   // Production mode
@@ -295,7 +251,7 @@ if (process.defaultApp) {
 }
 
 // Apply network proxy settings early (Node-level only — Electron sessions require app.whenReady)
-import { applyConfiguredProxySettings } from './network-proxy'
+import { applyConfiguredProxySettings } from './network-proxy';
 void applyConfiguredProxySettings()
 
 // Accept self-signed / untrusted certificates when connecting to a user-configured remote server.
@@ -312,17 +268,17 @@ function normalizeOriginForCert(urlStr: string): string {
   return u.origin
 }
 
-if (process.env.CRAFT_SERVER_URL) {
+if (process.env["CRAFT_SERVER_URL"]) {
   let serverOrigin: string | undefined
   let allowSelfSignedCert = false
   try {
-    serverOrigin = normalizeOriginForCert(process.env.CRAFT_SERVER_URL)
+    serverOrigin = normalizeOriginForCert(process.env["CRAFT_SERVER_URL"])
     const parsedHost = new URL(serverOrigin).hostname.replace(/^\[|\]$/g, '').toLowerCase()
     const isLoopbackServer =
       parsedHost === '127.0.0.1' ||
       parsedHost === 'localhost' ||
       parsedHost === '::1'
-    const insecureTlsFlag = process.env.CRAFT_ALLOW_INSECURE_TLS?.trim().toLowerCase()
+    const insecureTlsFlag = process.env["CRAFT_ALLOW_INSECURE_TLS"]?.trim().toLowerCase()
     allowSelfSignedCert =
       isLoopbackServer ||
       insecureTlsFlag === '1' ||
@@ -355,13 +311,13 @@ app.on('open-url', (event, url) => {
   event.preventDefault()
   mainLog.info('Received deeplink:', url)
 
-  if (windowManager) {
-    handleDeepLink(url, windowManager, moduleSink ?? undefined, moduleClientResolver ?? undefined).catch(err => {
+  if (mainState.windowManager) {
+    handleDeepLink(url, mainState.windowManager, mainState.moduleSink ?? undefined, mainState.moduleClientResolver ?? undefined).catch((err: unknown) => {
       mainLog.error('Failed to handle deep link:', err)
     })
   } else {
     // App not ready - store for later
-    pendingDeepLink = url
+    mainState.pendingDeepLink = url
   }
 })
 
@@ -376,1027 +332,52 @@ if (!gotTheLock) {
     // Someone tried to run a second instance, we should focus our window.
     // On Windows/Linux, the deeplink is in commandLine
     const url = commandLine.find(arg => arg.startsWith(`${DEEPLINK_SCHEME}://`))
-    if (url && windowManager) {
+    if (url && mainState.windowManager) {
       mainLog.info('Received deeplink from second instance:', url)
-      handleDeepLink(url, windowManager, moduleSink ?? undefined, moduleClientResolver ?? undefined).catch(err => {
+      handleDeepLink(url, mainState.windowManager, mainState.moduleSink ?? undefined, mainState.moduleClientResolver ?? undefined).catch((err: unknown) => {
         mainLog.error('Failed to handle deep link:', err)
       })
-    } else if (windowManager) {
+    } else if (mainState.windowManager) {
       // No deep link - just focus the first window
-      const windows = windowManager.getAllWindows()
-      if (windows.length > 0) {
-        const win = windows[0].window
+      const windows = mainState.windowManager.getAllWindows()
+      const win = windows[0]?.window
+      if (win) {
         if (win.isMinimized()) win.restore()
         win.focus()
       }
     }
   })
 }
-
-// Helper to create initial windows on startup
-async function createInitialWindows(): Promise<void> {
-  if (!windowManager) return
-
-  // Load saved window state
-  const savedState = loadWindowState()
-  let workspaces = getWorkspaces()
-
-  // If no workspaces exist, create default "My Workspace" on first run
-  if (workspaces.length === 0) {
-    // Ensure config file exists (addWorkspace requires it)
-    if (!loadStoredConfig()) {
-      saveConfig({ workspaces: [], activeWorkspaceId: null, activeSessionId: null })
-    }
-    const defaultPath = join(getDefaultWorkspacesDir(), 'my-workspace')
-    addWorkspace({ rootPath: defaultPath, name: 'My Workspace' })
-    workspaces = getWorkspaces() // Refresh after creation
-    mainLog.info('Created default workspace on first run')
-  }
-
-  const validWorkspaceIds = workspaces.map(ws => ws.id)
-
-  if (savedState?.windows.length) {
-    // Restore windows from saved state
-    let restoredCount = 0
-
-    for (const saved of savedState.windows) {
-      // Skip invalid workspaces
-      if (!validWorkspaceIds.includes(saved.workspaceId)) continue
-
-      // Restore main window with focused mode if it was saved
-      mainLog.info(`Restoring window: workspaceId=${saved.workspaceId}, focused=${saved.focused ?? false}, url=${saved.url ?? 'none'}`)
-      const win = windowManager.createWindow({
-        workspaceId: saved.workspaceId,
-        focused: saved.focused,
-        restoreUrl: saved.url,
-      })
-      win.setBounds(saved.bounds)
-
-      restoredCount++
-    }
-
-    if (restoredCount > 0) {
-      mainLog.info(`Restored ${restoredCount} window(s) from saved state`)
-      return
-    }
-  }
-
-  // Default: open window for first workspace
-  windowManager.createWindow({ workspaceId: workspaces[0].id })
-  mainLog.info(`Created window for first workspace: ${workspaces[0].name}`)
-}
-
 app.whenReady().then(async () => {
-  console.error('[Robb startup] Electron ready')
-  // Export packaged state as env var so logger.ts (and headless Bun) don't need 'electron'
-  process.env.CRAFT_IS_PACKAGED = app.isPackaged ? 'true' : 'false'
-
-  const webAuthnConfiguration = configurePlatformWebAuthn(app, {
-    platform: process.platform,
-    channel: APP_CHANNEL,
+  const packagedOperationsPath = join(process.resourcesPath, 'app', 'resources', 'operations', 'index.mjs')
+  const operations = await loadRobbOperationsModule({
+    dataRoot: CONFIG_DIR,
+    appVersion: app.getVersion(),
+    buildChannel: IS_DEVELOPMENT_CHANNEL ? 'development' : 'production',
+    isPackaged: app.isPackaged,
+    env: process.env,
+    modulePath: app.isPackaged && existsSync(packagedOperationsPath)
+      ? packagedOperationsPath
+      : undefined,
+  }).catch((error: unknown) => {
+    mainLog.error('[operations] Commercial module unavailable:', error)
+    return null
   })
-  if (webAuthnConfiguration.enabled) {
-    mainLog.info('[webauthn] Touch ID platform authenticator enabled')
-  } else if (webAuthnConfiguration.reason === 'configuration-failed') {
-    mainLog.warn('[webauthn] Touch ID platform authenticator configuration failed', webAuthnConfiguration.error)
-  }
-
-  // Register bundled assets root so all seeding functions can find their files
-  // (docs, permissions, themes, tool-icons resolve via getBundledAssetsDir)
-  setBundledAssetsRoot(app.isPackaged ? runtimeAppRoot : __dirname)
-
-  // Initialize backend runtime bootstrapping (Codex vendor root, Claude SDK runtime paths).
-  initializeBackendHostRuntime({
-    hostRuntime: {
-      appRootPath: runtimeAppRoot,
-      resourcesPath: process.resourcesPath,
-      isPackaged: app.isPackaged,
-    },
+  mainLog.info(operations
+    ? `[operations] Loaded ${operations.id}`
+    : '[operations] Commercial module not loaded (OSS mode)')
+  const { startMainProcess } = await import('./main-ready')
+  const { createInitialWindows } = await import('./initial-windows')
+  await startMainProcess({
+    APP_CHANNEL, IS_DEVELOPMENT_CHANNEL, runtimeAppRoot,
+    createInitialWindows, captureAndSaveWindowState,
   })
-
-  // Register PowerShell validator root so it can find the bundled parser script
-  // (Windows only: validates PowerShell commands in Explore mode using AST analysis)
-  setPowerShellValidatorRoot(join(app.isPackaged ? runtimeAppRoot : __dirname, 'resources'))
-
-  // Initialize bundled docs
-  initializeDocs()
-  console.error('[Robb startup] docs initialized')
-
-  // Initialize bundled release notes
-  initializeReleaseNotes()
-  console.error('[Robb startup] release notes initialized')
-
-  // Ensure default permissions file exists (copies bundled default.json on first run)
-  ensureDefaultPermissions()
-  console.error('[Robb startup] permissions initialized')
-
-  // Seed tool icons to ~/.craft-agent/tool-icons/ (copies bundled SVGs on first run)
-  ensureToolIcons()
-  console.error('[Robb startup] tool icons initialized')
-
-  // Seed preset themes to ~/.craft-agent/themes/ (copies bundled theme JSONs on first run)
-  ensurePresetThemes()
-  console.error('[Robb startup] themes initialized')
-
-  // Register thumbnail:// protocol handler (scheme was registered earlier, before app.whenReady)
-  registerThumbnailHandler()
-  console.error('[Robb startup] thumbnail protocol initialized')
-
-  // Re-apply proxy settings now that Electron sessions are available
-  // (first call before app.whenReady only configured Node-level proxy)
-  await applyConfiguredProxySettings()
-  console.error('[Robb startup] proxy settings applied')
-
-  // Note: electron-updater handles pending updates internally via autoInstallOnAppQuit
-
-  // Application menu is created after windowManager initialization (see below)
-
-  // Set dock icon on macOS (required for dev mode, bundled apps use Info.plist)
-  if (process.platform === 'darwin' && app.dock) {
-    // In packaged app, resources are at dist/resources/ (same level as __dirname)
-    // In dev, resources are at ../resources/ (sibling of dist/)
-    const dockIconPath = [
-      join(__dirname, 'resources/robinswood-icon.png'),
-      join(__dirname, '../resources/robinswood-icon.png'),
-    ].find(p => existsSync(p))
-
-    if (dockIconPath) {
-      if (!app.isPackaged) {
-        app.dock.setIcon(dockIconPath)
-      }
-      // Initialize badge icon for canvas-based badge overlay
-      initBadgeIcon(dockIconPath)
-    }
-
-    // Multi-instance dev: show instance number badge on dock icon
-    // CRAFT_INSTANCE_NUMBER is set by detect-instance.sh for numbered folders
-    const instanceNum = process.env.CRAFT_INSTANCE_NUMBER
-    if (instanceNum) {
-      const num = parseInt(instanceNum, 10)
-      if (!isNaN(num) && num > 0) {
-        initInstanceBadge(num)
-      }
-    }
-  }
-
-  try {
-    console.error('[Robb startup] initializing window manager')
-    // Initialize window manager
-    windowManager = new WindowManager()
-    console.error('[Robb startup] window manager initialized')
-
-    // Create the application menu (needs windowManager for New Window action)
-    createApplicationMenu(windowManager)
-    console.error('[Robb startup] application menu initialized')
-
-    // When CRAFT_SERVER_URL is set, this Electron instance is a thin client —
-    // it only creates windows whose preload connects to the remote server.
-    // Skip server-side initialization (SessionManager, model refresh, platform injection).
-    const isClientOnly = !!process.env.CRAFT_SERVER_URL
-    const isHeadless = !!process.env.CRAFT_HEADLESS
-
-    if (isClientOnly) {
-      mainLog.info(`Client-only mode: CRAFT_SERVER_URL=${process.env.CRAFT_SERVER_URL} (server initialization skipped)`)
-    }
-
-    // Initialize notification service (always — triggered by server push events)
-    initNotificationService(windowManager)
-
-    // Initialize browser pane manager (always — even in headless, for deps wiring)
-    browserPaneManager = new BrowserPaneManager()
-    browserPaneManager.setWindowManager(windowManager)
-    browserPaneManager.registerToolbarIpc()
-    browserPaneManager.registerCapabilityIpc()
-
-    // Build real PlatformServices from Electron APIs
-    const platform: PlatformServices = createElectronPlatform({
-      app,
-      nativeImage,
-      shell,
-      nativeTheme,
-      logger: log,
-      isDebugMode: IS_DEVELOPMENT_CHANNEL || isDebugMode,
-      buildCommit: process.env.ROBB_BUILD_COMMIT,
-      buildChannel: APP_CHANNEL,
-      buildDirty: process.env.ROBB_BUILD_DIRTY === 'true'
-        ? true
-        : process.env.ROBB_BUILD_DIRTY === 'false'
-          ? false
-          : undefined,
-      runtimeAppRoot,
-      getLogFilePath,
-      captureError: (err) => Sentry.captureException(err),
-    })
-
-    // Bootstrap IPC handlers — preload uses sendSync for window-local details
-    ipcMain.on('__get-web-contents-id', (e) => {
-      e.returnValue = e.sender.id
-    })
-    ipcMain.on('__get-workspace-id', (e) => {
-      e.returnValue = windowManager?.getWorkspaceForWindow(e.sender.id) ?? ''
-    })
-
-    // Transport diagnostics bridge — preload reports remote WS connection state changes
-    // so failures are visible in terminal/main.log (not only renderer console).
-    ipcMain.on('__transport:status', (_event, payload: unknown) => {
-      if (!payload || typeof payload !== 'object') return
-      const p = payload as {
-        level?: 'info' | 'warn' | 'error'
-        message?: string
-        status?: string
-        attempt?: number
-        nextRetryInMs?: number
-        error?: unknown
-        close?: unknown
-        url?: string
-      }
-
-      const level = p.level ?? 'info'
-      const message = p.message ?? '[transport] status update'
-      const context = {
-        status: p.status,
-        attempt: p.attempt,
-        nextRetryInMs: p.nextRetryInMs,
-        error: p.error,
-        close: p.close,
-        url: p.url,
-      }
-
-      if (level === 'error') {
-        mainLog.error(message, context)
-      } else if (level === 'warn') {
-        mainLog.warn(message, context)
-      } else {
-        mainLog.info(message, context)
-      }
-    })
-
-    // Dialog bridge — preload capability handlers use ipcRenderer.invoke to
-    // call main-process-only dialog APIs (dialog, BrowserWindow).
-    ipcMain.handle('__dialog:showMessageBox', async (event, spec) => {
-      const win = BrowserWindow.fromWebContents(event.sender)
-        || BrowserWindow.getFocusedWindow()
-        || BrowserWindow.getAllWindows()[0]
-      const result = await dialog.showMessageBox(win, spec)
-      return { response: result.response }
-    })
-    ipcMain.handle('__dialog:showOpenDialog', async (event, spec) => {
-      const win = BrowserWindow.fromWebContents(event.sender)
-        || BrowserWindow.getFocusedWindow()
-        || BrowserWindow.getAllWindows()[0]
-      const result = await dialog.showOpenDialog(win, spec)
-      return { canceled: result.canceled, filePaths: result.filePaths }
-    })
-
-    if (!isClientOnly) {
-      // Restore persisted Git Bash path on Windows (must happen before any SDK subprocess spawn)
-      if (process.platform === 'win32') {
-        const { getGitBashPath, clearGitBashPath } = await import('@craft-agent/shared/config')
-        const gitBashPath = getGitBashPath()
-        if (gitBashPath) {
-          const validation = await validateGitBashPath(gitBashPath)
-          if (validation.valid) {
-            process.env.CLAUDE_CODE_GIT_BASH_PATH = validation.path
-          } else {
-            clearGitBashPath()
-            delete process.env.CLAUDE_CODE_GIT_BASH_PATH
-            mainLog.warn(`Cleared invalid persisted Git Bash path: ${gitBashPath}`)
-          }
-        }
-      }
-
-      // Check for VC++ Redistributable on Windows (required by onnxruntime / markitdown).
-      // Without it, document conversion tools (PDF, PPTX, DOCX, XLSX) crash with DLL errors.
-      // Sets env var so renderer can show an actionable toast with install button.
-      if (process.platform === 'win32') {
-        const vcCheck = checkVCRedistInstalled()
-        if (!vcCheck.installed) {
-          mainLog.warn('[vcredist]', vcCheck.message)
-          process.env.CRAFT_VCREDIST_MISSING = '1'
-          if (vcCheck.downloadUrl) {
-            process.env.CRAFT_VCREDIST_URL = vcCheck.downloadUrl
-          }
-        } else if (isDebugMode) {
-          mainLog.info('[vcredist]', vcCheck.message)
-        }
-      }
-
-      // Pre-import power manager (async import needed for applyPlatformToSubsystems)
-      const { onSessionStarted, onSessionStopped } = await import('./power-manager')
-
-      // Client ID tracking for Electron IPC bridge (webContentsId → clientId)
-      const clientMap = new Map<number, string>()
-      const resolveClientId = (wcId: number) => clientMap.get(wcId)
-
-      // Read embedded server config (Server settings page)
-      const {
-        getServerConfig,
-        normalizeServerConfigPublicUrls,
-      } = await import('@craft-agent/shared/config')
-      const persistedEmbeddedServerConfig = getServerConfig()
-      let embeddedServerConfig = persistedEmbeddedServerConfig
-      try {
-        embeddedServerConfig = normalizeServerConfigPublicUrls(persistedEmbeddedServerConfig)
-      } catch {
-        // A manually edited or corrupted public endpoint must never be trusted
-        // at startup. Keep the local app available and require the owner to
-        // correct the persisted settings before Remote can start again.
-        embeddedServerConfig = {
-          ...persistedEmbeddedServerConfig,
-          enabled: false,
-          publicWebuiUrl: undefined,
-          publicWsUrl: undefined,
-        }
-        mainLog.error('[server-mode] Invalid public Remote URL configuration; Remote access is disabled')
-      }
-      const serverModeEnabled = embeddedServerConfig.enabled && !isClientOnly
-
-      // Derive host/port/token from server config (or env overrides)
-      const serverToken = serverModeEnabled && embeddedServerConfig.token
-        ? embeddedServerConfig.token
-        : randomUUID()
-      let rpcHost = process.env.CRAFT_RPC_HOST
-        ?? (serverModeEnabled ? '0.0.0.0' : '127.0.0.1')
-      const rpcPort = process.env.CRAFT_RPC_PORT
-        ? parseInt(process.env.CRAFT_RPC_PORT, 10)
-        : (serverModeEnabled ? embeddedServerConfig.port : 0)
-
-      // Load TLS certificates if configured
-      let tls: import('@craft-agent/server-core/transport').WsRpcTlsOptions | undefined
-      if (serverModeEnabled && embeddedServerConfig.tlsCertPath && embeddedServerConfig.tlsKeyPath) {
-        try {
-          tls = {
-            cert: readFileSync(embeddedServerConfig.tlsCertPath),
-            key: readFileSync(embeddedServerConfig.tlsKeyPath),
-          }
-          mainLog.info('[server-mode] TLS enabled')
-        } catch (err) {
-          mainLog.error('[server-mode] Failed to load TLS certificates:', err)
-        }
-      }
-
-      const hasPublicReverseProxy = Boolean(
-        embeddedServerConfig.publicWebuiUrl && embeddedServerConfig.publicWsUrl,
-      )
-      const hasSecureBrowserTransport = Boolean(tls) || hasPublicReverseProxy
-
-      const secureHost = resolveSecureRemoteHost(rpcHost, Boolean(tls))
-      if (secureHost.networkBindRejected) {
-        if (hasPublicReverseProxy) {
-          mainLog.info(
-            '[server-mode] TLS terminates at the configured reverse proxy; restricting its plaintext upstream to 127.0.0.1.',
-          )
-        } else {
-          mainLog.error(
-            '[server-mode] TLS is unavailable; refusing the network bind and falling back to 127.0.0.1. ' +
-            'Configure a certificate and private key, then restart to enable Remote access.'
-          )
-        }
-      }
-      rpcHost = secureHost.host
-
-      if (serverModeEnabled) {
-        mainLog.info(`[server-mode] Enabled — binding ${rpcHost}:${rpcPort}${tls ? ' (TLS)' : ''}`)
-      }
-
-      // Remote mobile UI is served by the embedded server itself. The phone
-      // receives only a short-lived one-time ticket; the durable server token
-      // never leaves the host UI or appears in the QR code.
-      const webuiDir = app.isPackaged
-        ? join(process.resourcesPath, 'app', 'webui')
-        : join(process.cwd(), 'apps', 'webui', 'dist')
-      const remoteDeviceRegistry = new RemoteDeviceRegistry({
-        filePath: join(CONFIG_DIR, 'remote-devices.json'),
-      })
-      const authorizeWebuiRpcRequest = createWebuiRpcAuthorizer(remoteDeviceRegistry)
-      let disconnectRemoteDevice: ((deviceId: string) => void) | null = null
-      let webuiNodeHandler: ReturnType<typeof nodeHttpAdapter> | undefined
-
-      if (serverModeEnabled && existsSync(webuiDir)) {
-        embeddedWebuiHandler = createWebuiHandler({
-          webuiDir,
-          secret: serverToken,
-          secureCookies: hasSecureBrowserTransport,
-          publicWebuiUrl: embeddedServerConfig.publicWebuiUrl,
-          publicWsUrl: embeddedServerConfig.publicWsUrl,
-          remoteAuthMode: embeddedServerConfig.remoteAuthMode,
-          wsProtocol: tls ? 'wss' : 'ws',
-          wsPort: rpcPort,
-          hostLabel: hostname(),
-          getHealthCheck: () => ({ status: sessionManager ? 'ok' : 'starting' }),
-          logger: mainLog,
-          remoteDeviceRegistry,
-          getRemoteWorkspaceIds: () => getWorkspaces()
-            .filter((workspace) => !workspace.remoteServer)
-            .map((workspace) => workspace.id),
-          onRemoteDeviceRevoked: (deviceId) => disconnectRemoteDevice?.(deviceId),
-        })
-        webuiNodeHandler = nodeHttpAdapter(embeddedWebuiHandler.fetch, {
-          onError: (context) => {
-            mainLog.error('[server-mode] Remote mobile UI request failed', context)
-          },
-        })
-        mainLog.info(`[server-mode] Remote mobile UI enabled from ${webuiDir}`)
-      } else if (serverModeEnabled) {
-        mainLog.error(`[server-mode] Remote mobile UI assets are missing from ${webuiDir}`)
-      }
-
-      // Bootstrap the WS RPC server via shared bootstrap function.
-      const instance = await bootstrapServer<SessionManager, HandlerDeps>({
-        serverToken,
-        rpcHost,
-        rpcPort,
-        tls,
-        validateSessionCookie: embeddedWebuiHandler && hasSecureBrowserTransport
-          ? async (cookieHeader) => {
-              const remoteSession = await validateSession(cookieHeader, serverToken)
-              if (!remoteSession) return false
-              if (remoteSession.kind === 'remote-device') {
-                if (!remoteSession.deviceId) return false
-                const device = remoteDeviceRegistry.authorize(
-                  remoteSession.deviceId,
-                  remoteSession.authorizationGeneration,
-                )
-                if (!device) return false
-                return {
-                  actorId: `remote-device:${remoteSession.deviceId}`,
-                  allowedWorkspaceIds: device.allowedWorkspaceIds,
-                  capabilities: [],
-                  roles: ['remote-device'],
-                  authorizationGeneration: device.authorizationGeneration,
-                }
-              }
-              return {
-                actorId: 'local-owner',
-                allowedWorkspaceIds: '*',
-                capabilities: '*',
-                roles: ['owner'],
-                authorizationGeneration: remoteSession.authorizationGeneration,
-              }
-            }
-          : undefined,
-        allowedSessionCookieOrigins: resolveAllowedSessionCookieOrigins(
-          embeddedServerConfig.publicWebuiUrl,
-        ),
-        authorizeRequest: embeddedWebuiHandler ? authorizeWebuiRpcRequest : undefined,
-        httpHandler: webuiNodeHandler,
-        bundledAssetsRoot: __dirname,
-        serverId: 'local',
-        serverVersion: app.getVersion(),
-        platformFactory: () => platform,
-        applyPlatformToSubsystems: (p) => {
-          setFetcherPlatform(p)
-          setSessionPlatform(p)
-          setSessionRuntimeHooks({
-            updateBadgeCount,
-            onSessionStarted,
-            onSessionStopped,
-            captureException: (error, context) => {
-              if (process.env.ROBB_ENABLE_SENTRY !== '1') return
-              Sentry.captureException(error instanceof Error ? error : new Error(String(error)), {
-                tags: {
-                  ...(context?.errorSource ? { errorSource: context.errorSource } : {}),
-                  ...(context?.sessionId ? { sessionId: context.sessionId } : {}),
-                },
-              })
-            },
-          })
-          setSearchPlatform(p)
-          setImageProcessor(p.imageProcessor)
-        },
-        createSessionManager: () => {
-          const sm = new SessionManager()
-          sm.setBrowserPaneManager(browserPaneManager!)
-          return sm
-        },
-        bindRpcServer: (sm, server) => sm.setRpcServer(server),
-        createHandlerDeps: ({ sessionManager: sm, platform: p, oauthFlowStore: ofs }) => {
-          // The messaging handle is built here because it needs sessionManager.
-          // The WS publisher is attached after bootstrapServer resolves (via
-          // handle.setPublisher) because wsServer isn't available yet.
-          messagingHandle = createMessagingBootstrap({
-            sessionManager: sm,
-            credentialManager: getCredentialManager(),
-            getMessagingDir: (wsId: string) =>
-              join(homedir(), '.craft-agent', 'workspaces', wsId, 'messaging'),
-            getLegacyMessagingDir: (wsId: string) => {
-              const ws = getWorkspaces().find((w) => w.id === wsId)
-              return ws ? join(ws.rootPath, 'messaging') : undefined
-            },
-            // Route messaging diagnostics through the dedicated messaging log
-            // at ~/.craft-agent/logs/messaging-gateway.log.
-            logger: messagingGatewayLog,
-            // WhatsApp worker runs under Electron's embedded Node via
-            // ELECTRON_RUN_AS_NODE (WhatsAppAdapter defaults nodeBin to
-            // process.execPath). In dev we resolve worker.cjs from the
-            // monorepo; in packaged builds it's shipped via extraResources
-            // (see apps/electron/electron-builder.yml).
-            whatsapp: {
-              workerEntry: app.isPackaged
-                ? join(process.resourcesPath, 'messaging-whatsapp-worker', 'worker.cjs')
-                : join(process.cwd(), 'packages', 'messaging-whatsapp-worker', 'dist', 'worker.cjs'),
-              pairingMode: 'qr',
-            },
-          })
-          return {
-            sessionManager: sm,
-            platform: p,
-            windowManager: windowManager ?? undefined,
-            browserPaneManager: browserPaneManager ?? undefined,
-            oauthFlowStore: ofs,
-            messagingRegistry: messagingHandle.registry,
-          }
-        },
-        // Headless: register only core handlers (no GUI handlers for browser, settings, etc.)
-        // GUI: register all handlers (core + GUI)
-        registerAllRpcHandlers: isHeadless
-          ? (server, deps, serverCtx) => registerCoreRpcHandlers(server, deps, serverCtx)
-          : registerAllRpcHandlers,
-        setSessionEventSink: (sm, sink) => sm.setEventSink(sink),
-        initializeSessionManager: (sm) => sm.initialize(),
-        initModelRefreshService: () => initModelRefreshService(async (slug: string) => {
-          const { getCredentialManager } = await import('@craft-agent/shared/credentials')
-          const manager = getCredentialManager()
-          const [apiKey, oauth] = await Promise.all([
-            manager.getLlmApiKey(slug).catch(() => null),
-            manager.getLlmOAuth(slug).catch(() => null),
-          ])
-          return {
-            apiKey: apiKey ?? undefined,
-            oauthAccessToken: oauth?.accessToken,
-            oauthRefreshToken: oauth?.refreshToken,
-            oauthIdToken: oauth?.idToken,
-          }
-        }),
-        onClientConnected: ({ clientId, webContentsId }) => {
-          if (webContentsId != null) clientMap.set(webContentsId, clientId)
-        },
-        cleanupClientResources: (clientId) => {
-          for (const [wcId, cId] of clientMap) {
-            if (cId === clientId) { clientMap.delete(wcId); break }
-          }
-          cleanupSessionFileWatchForClient(clientId)
-        },
-      })
-
-      // Capture module-level references for before-quit cleanup and deep-link handlers
-      sessionManager = instance.sessionManager
-      browserPaneManager?.setPermissionAutonomyResolver(({ sessionId, workspaceId }) => {
-        const permissionMode = sessionManager?.getSessionPermissionModeState(sessionId)?.permissionMode
-        const workspace = getWorkspaceByNameOrId(workspaceId)
-        const workspaceConfig = workspace ? loadWorkspaceConfig(workspace.rootPath) : null
-
-        if (!permissionMode || !workspaceConfig) return null
-        return {
-          permissionMode,
-          externalActionPolicy: workspaceConfig.defaults?.externalActionPolicy,
-        }
-      })
-      oauthFlowStore = instance.oauthFlowStore
-      moduleSink = instance.wsServer.push.bind(instance.wsServer)
-      moduleClientResolver = resolveClientId
-
-      // -----------------------------------------------------------------------
-      // Messaging Gateway — attach the WS publisher, init local workspaces,
-      // install the fan-out event sink. The handle was created inside
-      // createHandlerDeps so the registry could be wired into HandlerDeps.
-      // -----------------------------------------------------------------------
-      try {
-        if (!messagingHandle) {
-          throw new Error('Messaging handle was not constructed in createHandlerDeps')
-        }
-
-        messagingHandle.setPublisher(instance.wsServer.push.bind(instance.wsServer))
-
-        // Skip remote-owned workspaces — messaging runs on the remote server.
-        const localWorkspaceIds = getWorkspaces()
-          .filter((ws) => !ws.remoteServer)
-          .map((ws) => ws.id)
-        await messagingHandle.initializeWorkspaces(localWorkspaceIds)
-
-        // Compose fan-out event sink: RPC push + messaging gateway dispatch.
-        // Always install — this lets workspaces enable messaging at runtime
-        // without a process restart.
-        const baseSink = instance.wsServer.push.bind(instance.wsServer)
-        instance.sessionManager.setEventSink(messagingHandle.wrapSink(baseSink))
-        if (messagingHandle.registry.size > 0) {
-          mainLog.info(`[messaging] Fan-out sink active for ${messagingHandle.registry.size} workspace(s)`)
-        }
-      } catch (err) {
-        mainLog.error('[messaging] Gateway initialization failed:', err)
-      }
-
-      // IPC handlers — preload uses sendSync to get WS connection details
-
-      // Remove workspace from config (cleanup stale entries)
-      ipcMain.handle('workspace:remove', async (_event, workspaceId: string) => {
-        const { removeWorkspace: remove } = await import('@craft-agent/shared/config')
-        return remove(workspaceId)
-      })
-
-      // Cross-server RPC — invoke a channel on an arbitrary remote server
-      ipcMain.handle('server:invokeOnServer', async (_event, url: string, token: string, channel: string, ...args: unknown[]) => {
-        const { connectToRemote } = await import('./handlers/workspace')
-        const { client, error } = await connectToRemote(url, token)
-        if (!client) throw new Error(error ?? 'Connection failed')
-        try {
-          return await client.invoke(channel, ...args)
-        } finally {
-          client.destroy()
-        }
-      })
-
-      // Transfer session to another workspace — orchestrated in main process
-      // so large bundles can be moved directly between owning servers.
-      ipcMain.handle('session:transferToRemoteWorkspace', async (_event, sessionId: string, targetWorkspaceId: string, sessionIndex?: number, sessionCount?: number) => {
-        const idx = sessionIndex ?? 0
-        const count = sessionCount ?? 1
-        const { getWorkspaceByNameOrId } = await import('@craft-agent/shared/config')
-        const { connectToRemote } = await import('./handlers/workspace')
-        const { CHUNKED_TRANSFER_THRESHOLD, getChunkCount, invokeChunked, prepareChunkedPayload } = await import('./chunked-rpc')
-
-        const targetWorkspace = getWorkspaceByNameOrId(targetWorkspaceId)
-        if (!targetWorkspace?.remoteServer) throw new Error(`Workspace ${targetWorkspaceId} has no remote server`)
-        if (!sessionManager) throw new Error('Session manager not initialized')
-
-        const sourceWorkspaceLocalId = windowManager?.getWorkspaceForWindow(_event.sender.id)
-        if (!sourceWorkspaceLocalId) throw new Error('Unable to resolve source workspace for transfer')
-
-        const sourceWorkspace = getWorkspaceByNameOrId(sourceWorkspaceLocalId)
-        if (!sourceWorkspace) throw new Error(`Source workspace ${sourceWorkspaceLocalId} not found`)
-
-        let bundle: SessionBundle | null = null
-
-        if (sourceWorkspace.remoteServer) {
-          const { url: sourceUrl, token: sourceToken, remoteWorkspaceId: sourceRemoteWorkspaceId } = sourceWorkspace.remoteServer
-          console.log(`[Transfer] Exporting remote-owned session ${sessionId} from workspace ${sourceRemoteWorkspaceId}...`)
-          const { client: sourceClient, error: sourceError } = await connectToRemote(sourceUrl, sourceToken, sourceRemoteWorkspaceId)
-          if (!sourceClient) throw new Error(sourceError ?? 'Connection failed to source remote server')
-
-          try {
-            const exportedBundle: unknown = await sourceClient.invoke('sessions:export', sessionId)
-            if (!validateBundle(exportedBundle)) {
-              throw new Error(`Failed to export a valid session bundle for ${sessionId}`)
-            }
-            bundle = exportedBundle
-
-            try {
-              console.log('[Transfer] Generating conversation summary on source server...')
-              const transferPayload: unknown = await sourceClient.invoke('sessions:exportRemoteTransfer', sessionId)
-              if (hasTransferSummary(transferPayload)) {
-                bundle.session.header.transferredSessionSummary = transferPayload.summary
-                bundle.session.header.transferredSessionSummaryApplied = false
-                console.log(`[Transfer] Summary generated: ${transferPayload.summary.length} chars`)
-              }
-            } catch (err) {
-              console.warn('[Transfer] Source-server summary generation failed:', err)
-            }
-          } finally {
-            sourceClient.destroy()
-          }
-        } else {
-          console.log(`[Transfer] Exporting local-owned session ${sessionId} from workspace ${sourceWorkspace.id}...`)
-          bundle = await sessionManager.exportSession(sessionId, sourceWorkspace.id)
-          if (!bundle) throw new Error(`Failed to export session ${sessionId}`)
-
-          try {
-            console.log('[Transfer] Generating conversation summary...')
-            const transferPayload = await sessionManager.exportRemoteSessionTransfer(sessionId, sourceWorkspace.id)
-            if (hasTransferSummary(transferPayload)) {
-              bundle.session.header.transferredSessionSummary = transferPayload.summary
-              bundle.session.header.transferredSessionSummaryApplied = false
-              console.log(`[Transfer] Summary generated: ${transferPayload.summary.length} chars`)
-            }
-          } catch (err) {
-            console.warn('[Transfer] Summary generation failed:', err)
-          }
-        }
-
-        if (!bundle) throw new Error(`Failed to export session ${sessionId}`)
-        console.log(`[Transfer] Export complete: ${bundle.session.messages.length} messages, ${bundle.files.length} files`)
-
-        const { url, token, remoteWorkspaceId } = targetWorkspace.remoteServer
-        console.log(`[Transfer] Connecting to target remote server: ${url}`)
-        const { client, error } = await connectToRemote(url, token, remoteWorkspaceId)
-        if (!client) throw new Error(error ?? 'Connection failed to target remote server')
-        console.log('[Transfer] Connected to target remote server')
-
-        try {
-          const preparedBundle = prepareChunkedPayload(bundle)
-          const payloadSize = preparedBundle.bytes.length
-          const payloadMB = (payloadSize / (1024 * 1024)).toFixed(1)
-
-          const emitProgress = (chunkSent: number, chunkTotal: number) => {
-            try { _event.sender.send('transfer:progress', { sessionIndex: idx, sessionCount: count, chunkSent, chunkTotal }) } catch { /* renderer may be gone */ }
-          }
-
-          if (payloadSize < CHUNKED_TRANSFER_THRESHOLD) {
-            console.log(`[Transfer] Bundle size: ${payloadMB}MB (< 5MB threshold) → using direct RPC`)
-            emitProgress(0, 1)
-            const result = await client.invoke('sessions:import', remoteWorkspaceId, bundle, 'fork')
-            emitProgress(1, 1)
-            return result
-          }
-
-          const chunkCount = getChunkCount(payloadSize)
-          console.log(`[Transfer] Bundle size: ${payloadMB}MB (>= 5MB threshold) → using chunked transfer (${chunkCount} chunks)`)
-          return await invokeChunked(
-            client,
-            'sessions:import',
-            [remoteWorkspaceId, bundle, 'fork'],
-            1,
-            emitProgress,
-            preparedBundle,
-          )
-        } finally {
-          client.destroy()
-        }
-      })
-
-      // App relaunch (for server config changes — NOT an update install)
-      ipcMain.handle('app:relaunch', () => {
-        app.relaunch()
-        app.exit(0)
-      })
-
-      // Language change: sync from renderer to main process, persist, and rebuild native menu.
-      // Persistence here is what lets the next app launch hydrate main's i18n correctly —
-      // see the `getPersistedUiLanguage()` block at the top of this file.
-      ipcMain.handle('i18n:changeLanguage', async (_event, lang: unknown) => {
-        const previousResolved = i18n.resolvedLanguage ?? null
-        if (typeof lang !== 'string' || !SUPPORTED_LANGUAGE_CODES.includes(lang as LanguageCode)) {
-          // Defense-in-depth: renderer guarantees a supported code, but if a renegade
-          // caller hands us garbage we drop it silently rather than poison i18n state.
-          mainLog.warn('[i18n] changeLanguage IPC rejected — unsupported code', {
-            incoming: lang,
-            previousResolved,
-          })
-          return
-        }
-        const code = lang as LanguageCode
-        await i18n.changeLanguage(code)
-        setPersistedUiLanguage(code)
-        mainLog.info('[i18n] changeLanguage IPC applied', {
-          incoming: code,
-          previousResolved,
-          newResolved: i18n.resolvedLanguage ?? null,
-        })
-        const { rebuildMenu } = await import('./menu')
-        await rebuildMenu()
-      })
-
-      ipcMain.on('__get-ws-port', (e) => {
-        e.returnValue = instance.port
-      })
-      ipcMain.on('__get-ws-endpoint', (e) => {
-        e.returnValue = createLocalRpcEndpoint(instance.port, Boolean(tls))
-      })
-      ipcMain.on('__get-ws-token', (e) => {
-        e.returnValue = instance.token
-      })
-      ipcMain.on('__get-workspace-remote-config', (e) => {
-        const wsId = windowManager?.getWorkspaceForWindow(e.sender.id)
-        if (!wsId) { e.returnValue = null; return }
-        const ws = getWorkspaceByNameOrId(wsId)
-        e.returnValue = ws?.remoteServer ?? null
-      })
-
-      // Server config RPC handlers (LOCAL_ONLY — Electron-specific)
-      const runningServerState = {
-        host: rpcHost,
-        port: instance.port,
-        tls: !!tls,
-        tlsCertPath: tls ? embeddedServerConfig.tlsCertPath : undefined,
-        tlsKeyPath: tls ? embeddedServerConfig.tlsKeyPath : undefined,
-        token: serverToken,
-        enabled: serverModeEnabled,
-        publicWebuiUrl: embeddedServerConfig.publicWebuiUrl,
-        publicWsUrl: embeddedServerConfig.publicWsUrl,
-        tunnelProvider: embeddedServerConfig.tunnelProvider,
-        remoteAuthMode: embeddedServerConfig.remoteAuthMode,
-      }
-
-      disconnectRemoteDevice = (deviceId) => {
-        instance.wsServer.disconnectClientsByActor(`remote-device:${deviceId}`)
-      }
-
-      const getDisplayHost = (): string => {
-        if (runningServerState.host !== '0.0.0.0' && runningServerState.host !== '::') {
-          return runningServerState.host
-        }
-        for (const addresses of Object.values(networkInterfaces())) {
-          const address = addresses?.find((candidate) => candidate.family === 'IPv4' && !candidate.internal)
-          if (address) return address.address
-        }
-        return '127.0.0.1'
-      }
-
-      const getRunningRemoteUrls = () => resolveRemoteServerUrls(
-        runningServerState,
-        getDisplayHost(),
-        Boolean(embeddedWebuiHandler),
-      )
-
-      instance.wsServer.handle(RPC_CHANNELS.settings.GET_SERVER_CONFIG, async () => {
-        const { getServerConfig: getConfig } = await import('@craft-agent/shared/config')
-        return getConfig()
-      })
-
-      instance.wsServer.handle(RPC_CHANNELS.settings.SET_SERVER_CONFIG, async (_ctx: unknown, config: unknown) => {
-        const { setServerConfig: setConfig } = await import('@craft-agent/shared/config')
-        const cfg = config as import('@craft-agent/shared/config').ServerConfig
-        // Validate port range
-        if (cfg.port < 1024 || cfg.port > 65535) {
-          throw new Error(`Port must be between 1024 and 65535, got ${cfg.port}`)
-        }
-        // Validate cert/key files exist if provided
-        if (cfg.tlsCertPath && !existsSync(cfg.tlsCertPath)) {
-          throw new Error(`Certificate file not found: ${cfg.tlsCertPath}`)
-        }
-        if (cfg.tlsKeyPath && !existsSync(cfg.tlsKeyPath)) {
-          throw new Error(`Private key file not found: ${cfg.tlsKeyPath}`)
-        }
-        setConfig(cfg)
-      })
-
-      instance.wsServer.handle(RPC_CHANNELS.settings.GET_SERVER_STATUS, async () => {
-        const { getServerConfig: getConfig } = await import('@craft-agent/shared/config')
-        const saved = getConfig()
-        // Only compare port/tls/token when at least one side has server mode enabled.
-        // When both are disabled, the running port is random — comparing it to the
-        // saved default (9100) would always produce a false "restart required" banner.
-        const needsRestart = remoteServerNeedsRestart(saved, runningServerState)
-        const publicUrls = getRunningRemoteUrls()
-
-        return {
-          running: true,
-          host: runningServerState.host,
-          port: runningServerState.port,
-          tls: hasSecureBrowserTransport,
-          url: publicUrls.url,
-          webUrl: publicUrls.webUrl,
-          token: runningServerState.token,
-          needsRestart,
-          insecureWarning: isInsecureBind,
-        }
-      })
-
-      instance.wsServer.handle(RPC_CHANNELS.settings.CREATE_REMOTE_PAIRING, async () => {
-        if (!serverModeEnabled || !embeddedWebuiHandler) {
-          throw new Error('Enable Remote access and restart Robb Agents before pairing a phone')
-        }
-        if (!hasSecureBrowserTransport) {
-          throw new Error('Configure TLS or an HTTPS/WSS reverse proxy, then restart Robb Agents before pairing a phone')
-        }
-        const publicWebUrl = getRunningRemoteUrls().webUrl
-        if (!publicWebUrl) {
-          throw new Error('Remote Web UI is unavailable')
-        }
-        return embeddedWebuiHandler.createRemotePairing(publicWebUrl, hostname())
-      })
-
-      instance.wsServer.handle(RPC_CHANNELS.settings.LIST_REMOTE_DEVICES, async () => {
-        return embeddedWebuiHandler?.listRemoteDevices() ?? []
-      })
-
-      instance.wsServer.handle(RPC_CHANNELS.settings.REVOKE_REMOTE_DEVICE, async (_ctx: unknown, deviceId: string) => {
-        if (!embeddedWebuiHandler) return false
-        return embeddedWebuiHandler.revokeRemoteDevice(deviceId)
-      })
-
-      // Defensive status guard. Startup has already forced an insecure network
-      // bind back to loopback, so this should remain false in normal operation.
-      const isInsecureBind = serverModeEnabled && !tls
-        && !isLoopbackHost(rpcHost)
-      if (isInsecureBind) {
-        mainLog.warn(
-          '[server-mode] WARNING: Listening on a network address without TLS. ' +
-          'Auth tokens will be sent in cleartext. ' +
-          'Configure TLS certificates in Settings > Server.'
-        )
-      }
-
-      // Wire EventSink to Electron-specific services
-      // Must happen BEFORE createInitialWindows() so event handlers use WS from the start
-      windowManager.setRpcEventSink(moduleSink!, resolveClientId)
-      const { setMenuEventSink } = await import('./menu')
-      setMenuEventSink(moduleSink!, resolveClientId)
-      const { setNotificationEventSink } = await import('./notifications')
-      setNotificationEventSink(moduleSink!, resolveClientId)
-
-      // Headless: print connection details
-      if (isHeadless) {
-        console.log(`CRAFT_SERVER_URL=${instance.protocol}://${instance.host}:${instance.port}`)
-        console.log(`CRAFT_SERVER_TOKEN=${instance.token}`)
-      }
-    }
-
-    // Create initial windows (restores from saved state or opens first workspace)
-    // In headless mode the server runs without any UI — skip window creation.
-    if (!isHeadless) {
-      await createInitialWindows()
-    }
-
-    // Run credential health check at startup to detect issues early
-    // (corruption, machine migration, missing credentials for default connection)
-    // Skip in thin-client mode — credentials are managed by the remote server.
-    if (!isClientOnly) {
-      try {
-        const { getCredentialManager } = await import('@craft-agent/shared/credentials')
-        const credentialManager = getCredentialManager()
-        const health = await credentialManager.checkHealth()
-        if (!health.healthy) {
-          mainLog.warn('Credential health check failed:', health.issues)
-          // Issues will be displayed in Settings → AI when user navigates there
-        }
-      } catch (err) {
-        mainLog.error('Credential health check error:', err)
-      }
-    }
-
-    // Initialize power manager (loads setting, must happen after config is available)
-    // Non-critical — powerSaveBlocker may not work on headless/xvfb setups
-    try {
-      const { initPowerManager } = await import('./power-manager')
-      await initPowerManager()
-    } catch (err) {
-      mainLog.warn('[power] Power manager init failed (non-critical):', err instanceof Error ? err.message : err)
-    }
-
-    // Set Sentry context tags for error grouping (no PII — just config classification).
-    // Runs after init so config and auth state are available.
-    // Derives values from the default LLM connection instead of legacy config fields.
-    try {
-      const { getLlmConnection, getDefaultLlmConnection } = await import('@craft-agent/shared/config')
-      const workspaces = getWorkspaces()
-      const defaultConnSlug = getDefaultLlmConnection()
-      const defaultConn = defaultConnSlug ? getLlmConnection(defaultConnSlug) : null
-      Sentry.setTag('authType', defaultConn?.authType ?? 'unknown')
-      Sentry.setTag('providerType', defaultConn?.providerType ?? 'unknown')
-      Sentry.setTag('hasCustomEndpoint', String(!!defaultConn?.baseUrl))
-      Sentry.setTag('model', defaultConn?.defaultModel ?? 'default')
-      Sentry.setTag('workspaceCount', String(workspaces.length))
-    } catch (err) {
-      mainLog.warn('Failed to set Sentry context tags:', err)
-    }
-
-    // Register the update bridge, then schedule bounded availability checks in
-    // the main process. Downloads and installs always require explicit consent.
-    // Development builds are rejected by the updater itself.
-    if (moduleSink) setAutoUpdateEventSink(moduleSink)
-    // Snapshot multi-window state BEFORE quitAndInstall. electron-updater
-    // (Squirrel.Mac) destroys BrowserWindows between quitAndInstall and
-    // before-quit firing; saving from before-quit alone would overwrite
-    // window-state.json with an empty array.
-    setBeforeUpdateQuitHook(() => captureAndSaveWindowState('pre-update'))
-    startAutomaticUpdateChecks()
-    mainLog.info(
-      APP_CHANNEL === 'production'
-        ? '[auto-update] Stable update checks enabled; downloads require confirmation'
-        : '[auto-update] Disabled for the development channel',
-    )
-
-    // Process pending deep link from cold start
-    if (pendingDeepLink) {
-      mainLog.info('Processing pending deep link:', pendingDeepLink)
-      await handleDeepLink(pendingDeepLink, windowManager, moduleSink ?? undefined, moduleClientResolver ?? undefined)
-      pendingDeepLink = null
-    }
-
-    mainLog.info('App initialized successfully')
-    if (isDebugMode) {
-      mainLog.info('Debug mode enabled - logs at:', getLogFilePath())
-    }
-    mainLog.info('Messaging gateway log path:', getMessagingGatewayLogFilePath())
-  } catch (error) {
-    const stack = error instanceof Error ? error.stack : undefined
-    mainLog.error('Failed to initialize app:', error instanceof Error ? error.message : error, stack)
-    // Continue anyway - the app will show errors in the UI
-  }
-
-  // macOS: Re-create window when dock icon is clicked
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0 && windowManager) {
-      // Open first workspace or last focused
-      const workspaces = getWorkspaces()
-      if (workspaces.length > 0) {
-        const savedState = loadWindowState()
-        const wsId = savedState?.lastFocusedWorkspaceId || workspaces[0].id
-        // Verify workspace still exists
-        if (workspaces.some(ws => ws.id === wsId)) {
-          windowManager.createWindow({ workspaceId: wsId })
-        } else {
-          windowManager.createWindow({ workspaceId: workspaces[0].id })
-        }
-      }
-    }
-  })
-}).catch((error) => {
+}).catch((error: unknown) => {
   console.error('[Robb startup] initialization failed:', error)
 })
 
 app.on('window-all-closed', () => {
-  if (process.env.CRAFT_HEADLESS) return  // headless server stays alive
+  if (process.env["CRAFT_HEADLESS"]) return  // headless server stays alive
   // On macOS, apps typically stay active until explicitly quit
   if (process.platform !== 'darwin') {
     app.quit()
@@ -1417,13 +398,13 @@ let isQuitting = false
  * Returns the number of windows saved, or -1 if windowManager isn't ready.
  */
 function captureAndSaveWindowState(reason: 'before-quit' | 'pre-update'): number {
-  if (!windowManager) return -1
-  const windows = windowManager.getWindowStates()
+  if (!mainState.windowManager) return -1
+  const windows = mainState.windowManager.getWindowStates()
   const focusedWindow = BrowserWindow.getFocusedWindow()
   const lastFocusedWorkspaceId = focusedWindow
-    ? windowManager.getWorkspaceForWindow(focusedWindow.webContents.id) ?? undefined
+    ? mainState.windowManager.getWorkspaceForWindow(focusedWindow.webContents.id) ?? undefined
     : undefined
-  saveWindowState({ windows, lastFocusedWorkspaceId })
+  saveWindowState({ windows, ...(lastFocusedWorkspaceId !== undefined ? { lastFocusedWorkspaceId: lastFocusedWorkspaceId } : {}) })
   mainLog.info('[window-state] saved', { windowCount: windows.length, reason })
   return windows.length
 }
@@ -1436,10 +417,10 @@ app.on('before-quit', async (event) => {
   stopAutomaticUpdateChecks()
 
   // Ensure Cmd+Q/app quit bypasses layered window close interception (Cmd+W behavior).
-  windowManager?.setAppQuitting(true)
+  mainState.windowManager?.setAppQuitting(true)
 
-  if (windowManager) {
-    const windows = windowManager.getWindowStates()
+  if (mainState.windowManager) {
+    const windows = mainState.windowManager.getWindowStates()
     // Empty-snapshot guard: during update-quit, electron-updater has already
     // destroyed all BrowserWindows by the time before-quit fires. The pre-update
     // hook already saved the real state — don't let this late save overwrite it.
@@ -1467,22 +448,22 @@ app.on('before-quit', async (event) => {
   }
 
   // Flush all pending session writes before quitting
-  if (sessionManager) {
+  if (mainState.sessionManager) {
     // Prevent quit until sessions are flushed
     event.preventDefault()
     try {
-      await sessionManager.flushAllSessions()
+      await mainState.sessionManager.flushAllSessions()
       mainLog.info('Flushed all pending session writes')
     } catch (error) {
       mainLog.error('Failed to flush sessions:', error)
     }
     await runShutdownCleanup([
-      ['sessions', () => sessionManager!.cleanup()],
-      ['browser panes', () => browserPaneManager?.destroyAll()],
-      ['OAuth flows', () => oauthFlowStore?.dispose()],
+      ['sessions', () => mainState.sessionManager!.cleanup()],
+      ['browser panes', () => mainState.browserPaneManager?.destroyAll()],
+      ['OAuth flows', () => mainState.oauthFlowStore?.dispose()],
       ['model refresh', () => getModelRefreshService().stopAll()],
-      ['messaging', () => messagingHandle?.dispose()],
-      ['web UI', () => { embeddedWebuiHandler?.dispose(); embeddedWebuiHandler = null }],
+      ['messaging', () => mainState.messagingHandle?.dispose()],
+      ['web UI', () => { mainState.embeddedWebuiHandler?.dispose(); mainState.embeddedWebuiHandler = null }],
       ['power manager', async () => { const { cleanup } = await import('./power-manager'); cleanup() }],
       ['server lock', () => releaseServerLock()],
     ], (step, error) => mainLog.error(`[shutdown] ${step} cleanup failed:`, error))

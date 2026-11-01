@@ -11,7 +11,7 @@
  * - Read-only mode support
  */
 
-import * as React from 'react'
+
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Editor from 'react-simple-code-editor'
 import { codeToHtml, bundledLanguages, type BundledLanguage } from 'shiki'
@@ -22,17 +22,17 @@ export interface ShikiCodeEditorProps {
   /** The code/markdown content */
   value: string
   /** Language for syntax highlighting (default: 'markdown') */
-  language?: string
+  language?: string | undefined
   /** Callback when content changes */
-  onChange?: (value: string) => void
+  onChange?: ((value: string) => void) | undefined
   /** Whether the editor is read-only */
-  readOnly?: boolean
+  readOnly?: boolean | undefined
   /** Callback when ready */
-  onReady?: () => void
+  onReady?: (() => void) | undefined
   /** Additional class names */
-  className?: string
+  className?: string | undefined
   /** Placeholder text when empty */
-  placeholder?: string
+  placeholder?: string | undefined
 }
 
 // Map aliases to Shiki language names
@@ -96,7 +96,7 @@ export function ShikiCodeEditor({
       // Extract just the content inside <pre><code>...</code></pre>
       // Shiki returns: <pre class="..." style="..."><code>...</code></pre>
       const match = html.match(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/)
-      const content = match ? match[1] : code
+      const content = match?.[1] ?? code
 
       // Cache the result
       if (highlightCache.size >= CACHE_MAX_SIZE) {

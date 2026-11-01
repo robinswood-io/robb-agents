@@ -1,0 +1,86 @@
+{
+  "status": "passed",
+  "applied": true,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/pages/SourceInfoPage.tsx",
+      "nativeSourceHash": "89afab442cc4c6e9ad3dc85a44067fd0c8a00aed801bee0a90689ba8f783b2ec",
+      "preparedSourceHash": "e408ced39ea71a2188c38ee4f5ee43a817843912304ce97dc44843693696e209",
+      "changes": [
+        {
+          "start": 6897,
+          "end": 6922,
+          "kind": "track translation dependency",
+          "before": "[workspaceId, sourceSlug]",
+          "after": "[workspaceId, sourceSlug, t]",
+          "preparedStart": 6897,
+          "preparedEnd": 6925
+        },
+        {
+          "start": 7864,
+          "end": 7897,
+          "kind": "track translation dependency",
+          "before": "[source, workspaceId, sourceSlug]",
+          "after": "[source, workspaceId, sourceSlug, t]",
+          "preparedStart": 7867,
+          "preparedEnd": 7903
+        },
+        {
+          "start": 11047,
+          "end": 11108,
+          "kind": "track translation dependency",
+          "before": "[source, workspaceId, sourceSlug, onDelete, navigateToSource]",
+          "after": "[source, workspaceId, sourceSlug, onDelete, navigateToSource, t]",
+          "preparedStart": 11053,
+          "preparedEnd": 11117
+        }
+      ]
+    },
+    {
+      "file": "apps/electron/src/renderer/components/ui/rich-text-input.tsx",
+      "nativeSourceHash": "91c196faaadcf797672bcdcfae3252eeb2fb64a3e24bc73d3662ed7154859580",
+      "preparedSourceHash": "4ff381204bbbc41ff41424c3142ee1fd85f83e721f6fb09bf2ffad20cc6988ed",
+      "changes": [
+        {
+          "start": 33517,
+          "end": 33530,
+          "kind": "track translation dependency",
+          "before": "[placeholder]",
+          "after": "[placeholder, t]",
+          "preparedStart": 33623,
+          "preparedEnd": 33639
+        },
+        {
+          "start": 11572,
+          "end": 11572,
+          "kind": "ignore browser empty caret placeholder",
+          "before": "",
+          "after": "\n  // A single BR is the browser's empty caret placeholder.\n  if (element.innerHTML === '<br>') return ''\n",
+          "preparedStart": 11572,
+          "preparedEnd": 11678
+        }
+      ]
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/CompactModelSelector.tsx",
+      "nativeSourceHash": "435a73c68f3889c33cba0841992120e5fba37378d66a68e779be9153dabbbb81",
+      "preparedSourceHash": "881969360d022ce548cc83a57d92e71ae1a196a1b5f8579178aafe3ae17fa2c8",
+      "changes": [
+        {
+          "start": 2327,
+          "end": 2360,
+          "kind": "memoize optional connection fallback",
+          "before": "appShellCtx?.llmConnections ?? []",
+          "after": "React.useMemo(() => appShellCtx?.llmConnections ?? [], [appShellCtx?.llmConnections])",
+          "preparedStart": 2327,
+          "preparedEnd": 2412
+        }
+      ]
+    }
+  ],
+  "translationDependencyArrays": 4,
+  "existingConnectionFallbackMemoized": 1,
+  "browserEmptyCaretPlaceholderNormalized": true,
+  "allOtherSourceBytesPreserved": true,
+  "newContextOrWorkflow": 0
+}

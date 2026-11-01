@@ -1,5 +1,10 @@
+import type { BackendHostRuntimeContext } from '../../types.ts';
 import { afterEach, describe, expect, it } from 'bun:test';
 import { anthropicDriver } from './anthropic.ts';
+
+const hostRuntime: BackendHostRuntimeContext = {
+  appRootPath: '/tmp/robb-driver-fixture', isPackaged: false,
+};
 
 const originalFetch = globalThis.fetch;
 
@@ -9,7 +14,7 @@ afterEach(() => {
 
 describe('anthropicDriver.fetchModels', () => {
   it('filters deprecated Opus models from live startup refresh and prefers Opus 4.8 as default', async () => {
-    globalThis.fetch = (async () => new Response(JSON.stringify({
+    globalThis.fetch = Object.assign(async () => new Response(JSON.stringify({
       data: [
         { id: 'claude-opus-4-6', display_name: 'Claude Opus 4.6', created_at: '2026-01-01T00:00:00Z', type: 'model' },
         { id: 'claude-opus-4-8', display_name: 'Claude Opus 4.8', created_at: '2026-05-01T00:00:00Z', type: 'model' },
@@ -20,7 +25,7 @@ describe('anthropicDriver.fetchModels', () => {
       has_more: false,
       first_id: 'claude-opus-4-6',
       last_id: 'claude-sonnet-4-6',
-    }), { status: 200 })) as unknown as typeof fetch;
+    }), { status: 200 }), { preconnect: originalFetch.preconnect });
 
     const result = await anthropicDriver.fetchModels!({
       connection: {
@@ -29,10 +34,10 @@ describe('anthropicDriver.fetchModels', () => {
         providerType: 'anthropic',
         authType: 'api_key',
         createdAt: Date.now(),
-      } as any,
+      },
       credentials: { apiKey: 'sk-ant-test' },
-      hostRuntime: {} as any,
-      resolvedPaths: {} as any,
+      hostRuntime,
+      resolvedPaths: {},
       timeoutMs: 30_000,
     });
 

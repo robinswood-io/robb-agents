@@ -1,23 +1,34 @@
 import * as React from 'react'
 import type {
-  ColumnDef,
+  ColumnDef as TanStackColumnDef,
   ColumnFiltersState,
   ColumnSizingState,
   SortingState,
   PaginationState,
   ExpandedState,
-  Column,
-  Row,
-  Table as TableInstance,
+  Column as TanStackColumn,
+  Row as TanStackRow,
+  Table as TanStackTable,
 } from '@tanstack/react-table'
 import {
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  getPaginationRowModel,
-  getExpandedRowModel,
-  useReactTable,
+  tableFeatures,
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  columnSizingFeature,
+  columnResizingFeature,
+  globalFilteringFeature,
+  rowExpandingFeature,
+  rowPaginationFeature,
+  rowSelectionFeature,
+  rowSortingFeature,
+  createFilteredRowModel,
+  createSortedRowModel,
+  createPaginatedRowModel,
+  createExpandedRowModel,
+  filterFns,
+  sortFns,
+  useTable,
 } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
 import {
@@ -30,39 +41,62 @@ import {
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
-interface DataTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[]
+const features = tableFeatures({
+  columnFilteringFeature,
+  columnVisibilityFeature,
+  globalFilteringFeature,
+  filteredRowModel: createFilteredRowModel(),
+  filterFns,
+  rowSortingFeature,
+  sortedRowModel: createSortedRowModel(),
+  sortFns,
+  rowExpandingFeature,
+  expandedRowModel: createExpandedRowModel(),
+  rowPaginationFeature,
+  paginatedRowModel: createPaginatedRowModel(),
+  rowSelectionFeature,
+  columnSizingFeature,
+  columnResizingFeature,
+})
+
+type ColumnDef<TData extends object, TValue = unknown> = TanStackColumnDef<typeof features, TData, TValue>
+type Column<TData extends object, TValue = unknown> = TanStackColumn<typeof features, TData, TValue>
+type Row<TData extends object> = TanStackRow<typeof features, TData>
+type TableInstance<TData extends object> = TanStackTable<typeof features, TData>
+
+interface DataTableProps<TData extends object> {
+  columns: ColumnDef<TData>[]
   data: TData[]
   /** Global filter value (searches across all columns) */
-  globalFilter?: string
+  globalFilter?: string | undefined
   /** Column ID to apply column-specific filter to */
-  filterColumn?: string
+  filterColumn?: string | undefined
   /** Column-specific filter value */
-  filterValue?: string
+  filterValue?: string | undefined
   /** Custom class for the table container */
-  className?: string
+  className?: string | undefined
   /** Empty state content */
-  emptyContent?: React.ReactNode
+  emptyContent?: React.ReactNode | undefined
   /** Callback to get table instance for external control */
-  onTableReady?: (table: TableInstance<TData>) => void
+  onTableReady?: ((table: TableInstance<TData>) => void) | undefined
   /** Skip the border wrapper (when parent provides it) */
-  noBorder?: boolean
+  noBorder?: boolean | undefined
   /** Skip the table overflow wrapper (required for sticky headers) */
-  noWrapper?: boolean
+  noWrapper?: boolean | undefined
   /** Enable pagination */
-  pagination?: boolean
+  pagination?: boolean | undefined
   /** Page size when pagination is enabled (default: 50) */
-  pageSize?: number
+  pageSize?: number | undefined
   /**
    * Enable tree/hierarchical rows. Provide a function that returns child rows.
    * When set, rows can be expanded/collapsed. All rows start expanded by default.
    */
-  getSubRows?: (row: TData) => TData[] | undefined
+  getSubRows?: ((row: TData) => TData[] | undefined) | undefined
   /** Initial expanded state (default: all expanded when getSubRows is provided) */
-  defaultExpanded?: boolean
+  defaultExpanded?: boolean | undefined
 }
 
-export function DataTable<TData, TValue>({
+export function DataTable<TData extends object>({
   columns,
   data,
   globalFilter,
@@ -77,7 +111,7 @@ export function DataTable<TData, TValue>({
   pageSize = 50,
   getSubRows,
   defaultExpanded = true,
-}: DataTableProps<TData, TValue>) {
+}: DataTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
   const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>({})
@@ -111,15 +145,13 @@ export function DataTable<TData, TValue>({
     }
   }, [filterValue, filterColumn])
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    ...(paginationEnabled && { getPaginationRowModel: getPaginationRowModel() }),
+    manualPagination: !paginationEnabled,
     // Tree/expand support: only enabled when getSubRows is provided
-    ...(getSubRows && { getExpandedRowModel: getExpandedRowModel(), getSubRows }),
+    ...(getSubRows && { getSubRows }),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnSizingChange: setColumnSizing,
@@ -257,7 +289,7 @@ export function DataTable<TData, TValue>({
           Previous
         </Button>
         <span className="text-sm text-muted-foreground">
-          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+          Page {table.state.pagination.pageIndex + 1} of {table.getPageCount()}
         </span>
         <Button
           variant="outline"
@@ -294,13 +326,13 @@ export function DataTable<TData, TValue>({
  * Sortable column header component
  * Use in column definitions: header: ({ column }) => <SortableHeader column={column} title="Name" />
  */
-interface SortableHeaderProps<TData, TValue> {
+interface SortableHeaderProps<TData extends object, TValue> {
   column: Column<TData, TValue>
   title: string
-  className?: string
+  className?: string | undefined
 }
 
-export function SortableHeader<TData, TValue>({
+export function SortableHeader<TData extends object, TValue>({
   column,
   title,
   className,

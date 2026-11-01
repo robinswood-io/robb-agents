@@ -1,0 +1,416 @@
+[
+  {
+    "legacy_id": "sellsy-pipeline-hygiene-board",
+    "name": "Sellsy — pipeline hygiene board prepare-only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/sellsy_pipeline_hygiene_board.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "triggerType": "Schedule",
+    "task_queue": "sync",
+    "riskClass": "observability_prepare_only",
+    "sideEffects": [
+      "reads_sellsy_opportunities",
+      "writes_reports",
+      "writes_action_queue"
+    ],
+    "category": "revenue-ops",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-pipeline-hygiene-board-last.json",
+    "note": "Prepare-only board: identifies zero-amount opportunities, inflated forecast and closing actions. No Sellsy update or external message.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/sellsy_pipeline_hygiene_board.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-pipeline-hygiene-board-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-pipeline-hygiene-board.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-pipeline-hygiene-board.md",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "sellsy-pipeline-hygiene-board-tests",
+    "name": "Sellsy — pipeline hygiene board guardrail tests",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/sellsy_pipeline_hygiene_board_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "triggerType": "ScheduleStep",
+    "task_queue": "sync",
+    "riskClass": "guardrail_tests",
+    "sideEffects": [
+      "reads_reports",
+      "writes_test_report"
+    ],
+    "category": "revenue-ops",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-pipeline-hygiene-board-tests-last.json",
+    "note": "Verifies prepare-only flags, blocked Sellsy mutation/external dispatch and zero-amount consistency.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/sellsy_pipeline_hygiene_board_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-pipeline-hygiene-board-tests-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-pipeline-hygiene-board-tests.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-campaign-safety-guard",
+    "name": "Robinswood PME HDF — safety guard autonomous first send",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_pme_hdf_campaign_safety_guard.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "riskClass": "autonomous_first_send_safety_guard",
+    "sideEffects": [
+      "read_campaign_artifacts",
+      "validate_autonomous_send_controls",
+      "write_safety_reports",
+      "no_outbound_message"
+    ],
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-campaign-safety-guard-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Validates autonomous first-send policy, gates, Gmail reply HITL loop, ledgers and absence of legacy queues.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_pme_hdf_campaign_safety_guard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-campaign-safety-guard-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-campaign-safety-guard-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-campaign-safety-guard-last.md",
+    "businessContractVersion": "robinswood-pme-hdf-safety-guard-v2-autonomous-first-send"
+  },
+  {
+    "legacy_id": "sellsy-revenue-operator-approval-pack",
+    "name": "Sellsy — approval pack opérateur revenue/cash",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/sellsy_revenue_operator_approval_pack.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "triggerType": "Schedule",
+    "task_queue": "sync",
+    "riskClass": "human_approval_prepare_only",
+    "sideEffects": [
+      "reads_cash_queue",
+      "reads_pipeline_queue",
+      "writes_approval_template",
+      "writes_dispatch_plan_prepare_only"
+    ],
+    "category": "revenue-ops",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-revenue-operator-approval-pack-last.json",
+    "note": "Combines Sellsy cash and pipeline action queues into a human approval inbox and prepare-only dispatch plan. No Sellsy mutation, no email, no Rubypayeur debt creation.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/sellsy_revenue_operator_approval_pack.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-revenue-operator-approval-pack-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-revenue-operator-approval-pack.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-revenue-operator-approval-pack.md",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "sellsy-revenue-operator-approval-pack-tests",
+    "name": "Sellsy — approval pack opérateur guardrail tests",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/sellsy_revenue_operator_approval_pack_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "triggerType": "ScheduleStep",
+    "task_queue": "sync",
+    "riskClass": "guardrail_tests",
+    "sideEffects": [
+      "reads_test_fixtures",
+      "writes_test_report"
+    ],
+    "category": "revenue-ops",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-revenue-operator-approval-pack-tests-last.json",
+    "note": "Anti-regression tests: blocked effects, unknown IDs, invalid statuses and prepare-only dispatch.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/sellsy_revenue_operator_approval_pack_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-revenue-operator-approval-pack-tests-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-revenue-operator-approval-pack-tests.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "prospect-research-sellsy-intake",
+    "name": "Recherche nouveau prospect et centralisation Sellsy",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/prospect_research_sellsy_intake.py process --max 5 --continue-on-error",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "triggerType": "AgentTaskOrDirectQueue",
+    "task_queue": "sync",
+    "riskClass": "bounded_crm_write_no_outbound",
+    "sideEffects": [
+      "reads_agent_task_status",
+      "fetch_public_company_web_pages",
+      "reads_public_company_registry",
+      "creates_or_finds_sellsy_company",
+      "creates_sellsy_followup_task",
+      "writes_reports",
+      "no_external_outbound_message"
+    ],
+    "category": "sales",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/prospect-research-sellsy-intake-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Autonomous intake for tasks mentioning nouveau prospect/new prospect/lead with name, website, or meeting context. Reuses public website research, Recherche Entreprises corporate/director enrichment, contact context, Robinswood ICP gate, and creates a sanitized Sellsy follow-up task. No external outreach; budget/mandate are not inferred.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/prospect_research_sellsy_intake.py",
+        "process",
+        "--max",
+        "5",
+        "--continue-on-error"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/prospect-research-sellsy-intake-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/prospect-research-sellsy-intake-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/prospect-research-sellsy-intake-last.md",
+    "businessContractVersion": "prospect-research-sellsy-intake-v1"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-launch-readiness",
+    "name": "Robinswood PME HDF — launch readiness prepare-only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_pme_hdf_launch_readiness.py",
+    "timeout_seconds": 240,
+    "cutover_ready": true,
+    "riskClass": "prepare_only_no_outbound",
+    "sideEffects": [
+      "write_campaign_ops_reports",
+      "write_prepare_only_drafts",
+      "write_human_approval_queue",
+      "no_send_queue",
+      "no_outbound_message"
+    ],
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-launch-readiness-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Transforms consolidated HDF human-review pack into ICP/profile controls, prepare-only email drafts and human approval queue. Does not send and does not create outbound send queue.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_pme_hdf_launch_readiness.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 240
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-launch-readiness-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-launch-readiness-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-launch-readiness-last.md",
+    "businessContractVersion": "robinswood-pme-hdf-launch-readiness-v1"
+  },
+  {
+    "legacy_id": "sellsy-revenue-operator-dispatcher",
+    "name": "Sellsy — dispatcher opérateur revenue ultra-gardé",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/sellsy_revenue_operator_dispatcher.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "triggerType": "Schedule",
+    "task_queue": "sync",
+    "riskClass": "post_approval_prepare_only_dispatcher",
+    "sideEffects": [
+      "reads_dispatch_plan",
+      "writes_sellsy_task_drafts",
+      "writes_message_drafts",
+      "writes_rubypayeur_drafts_non_approved",
+      "writes_sellsy_update_proposals"
+    ],
+    "category": "revenue-ops",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-revenue-operator-dispatcher-last.json",
+    "note": "Scheduled command is prepare-only. It never sends external messages or creates Rubypayeur debts. Sellsy task creation requires manual CLI --apply-sellsy-tasks and dispatch items approved line-by-line.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/sellsy_revenue_operator_dispatcher.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-revenue-operator-dispatcher-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-revenue-operator-dispatcher.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-revenue-operator-dispatcher.md",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "sellsy-revenue-operator-dispatcher-tests",
+    "name": "Sellsy — dispatcher opérateur guardrail tests",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/sellsy_revenue_operator_dispatcher_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "triggerType": "ScheduleStep",
+    "task_queue": "sync",
+    "riskClass": "guardrail_tests",
+    "sideEffects": [
+      "reads_test_fixtures",
+      "writes_test_report"
+    ],
+    "category": "revenue-ops",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-revenue-operator-dispatcher-tests-last.json",
+    "note": "Anti-regression tests: blocked effects, non-mutating drafts, Rubypayeur draft not approved, unknown effects rejected.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/sellsy_revenue_operator_dispatcher_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-revenue-operator-dispatcher-tests-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-revenue-operator-dispatcher-tests.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-pre-send-gate",
+    "name": "Robinswood PME HDF — autonomous first-send pre-send gate",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_pme_hdf_pre_send_gate.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "riskClass": "autonomous_first_send_gate",
+    "sideEffects": [
+      "read_profile_drafts",
+      "fresh_suppression_check",
+      "fresh_contact_quality_gate",
+      "write_autonomous_send_plan",
+      "no_direct_outbound_message"
+    ],
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-pre-send-gate-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Builds an autonomous first-send plan from high-confidence Tier A contacts only. Human approval is not required before first send; human-in-loop starts on positive/ambiguous replies.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_pme_hdf_pre_send_gate.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-pre-send-gate-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-pre-send-gate-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-pre-send-gate-last.md",
+    "businessContractVersion": "robinswood-pme-hdf-pre-send-gate-v2-autonomous-first-send"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-audited-mailer",
+    "name": "Robinswood PME HDF — audited Gmail mailer autonomous first send",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_pme_hdf_audited_mailer.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "riskClass": "bounded_autonomous_email_send",
+    "sideEffects": [
+      "read_autonomous_send_plan",
+      "gmail_send_messages",
+      "enforce_caps",
+      "enforce_business_window",
+      "append_dispatch_ledger"
+    ],
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-audited-mailer-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Sends first outreach autonomously through Gmail only from the audited HDF send plan after gates; caps and ledger enforced; replies/interests are human-in-loop.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_pme_hdf_audited_mailer.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-audited-mailer-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-audited-mailer-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-audited-mailer-last.md",
+    "businessContractVersion": "robinswood-pme-hdf-audited-mailer-v2-gmail-autonomous-first-send"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-reply-unsubscribe-loop",
+    "name": "Robinswood PME HDF — Gmail reply/unsubscribe HITL loop",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_pme_hdf_reply_unsubscribe_loop.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "riskClass": "gmail_reply_ingest_human_interest_auto_suppression",
+    "sideEffects": [
+      "read_audited_mailer_ledger",
+      "gmail_read_threads",
+      "write_human_reply_action_queue",
+      "apply_unsubscribe_suppression",
+      "write_reply_reports",
+      "no_auto_reply_to_interest"
+    ],
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-reply-unsubscribe-loop-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Ingests Gmail replies from audited HDF sent-thread ledgers. Positive/ambiguous replies become human action items; unsubscribe/negative replies update suppression automatically. No autonomous reply to interest.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_pme_hdf_reply_unsubscribe_loop.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-reply-unsubscribe-loop-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-reply-unsubscribe-loop-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-reply-unsubscribe-loop-last.md",
+    "businessContractVersion": "robinswood-pme-hdf-reply-loop-v3-gmail-hitl-interest-auto-suppression"
+  }
+]

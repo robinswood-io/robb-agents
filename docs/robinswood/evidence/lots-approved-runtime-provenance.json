@@ -1,0 +1,129 @@
+{
+  "observedAt": "2026-10-24T18:18:44.868074+00:00",
+  "runtimeCommit": "76e185d9dbd95a652319825eae8fc7dea1ad3a2e",
+  "application": "/Applications/Robb Agents.app",
+  "profile": "~/.craft-agent",
+  "identity": {
+    "architecture": "Mach-O 64-bit executable arm64",
+    "asarSha256": "61268e8a01dee12da5444b257124e3c4d0395711f8eb157e6298852fec712075",
+    "buildChannel": "production",
+    "buildCommit": "76e185d9dbd95a652319825eae8fc7dea1ad3a2e",
+    "buildDirty": "false",
+    "bundleIdentifier": "io.robinswood.robbagents",
+    "bundleTreeSha256": "037eaba3c18635fcc3563f6a90f0d6ef54133616e7249e96da6fdda1a40a71c3",
+    "executable": "Robb Agents",
+    "executableSha256": "ed111afcb16b0caa20f68a2e3f91a5a71812703b54c5f78f54a43de5273fb5c3",
+    "infoPlistSha256": "27c69ef75662de89f82fe0bb4745bb29d72e8276abd03d6652746eeecde26202",
+    "signatureKind": "developer-id",
+    "version": "0.12.10"
+  },
+  "runtime": {
+    "command": "/Applications/Robb Agents.app/Contents/MacOS/Robb Agents",
+    "pid": 64355,
+    "startedAt": 1792865586257
+  },
+  "status": "verified",
+  "backupCheckpoint": "/Users/thibault/Library/Application Support/Robb Agents/Staging Backups/20261024-181003-297443",
+  "backupCheckpointConfirmed": true,
+  "sourceIntegration": {
+    "state": "Deferred: concurrent uncommitted changes in the primary local repository",
+    "primaryPath": "/Users/thibault/Documents/Robb Agents",
+    "primaryHeadAtObservation": "1387187593f23718e35088a5f5cbfeb3da332ce1",
+    "concurrentChangedFiles": [
+      "apps/electron/src/renderer/components/app-shell/AgentLifecyclePin.tsx",
+      "apps/electron/src/renderer/pages/MissionControlRoomPage.tsx",
+      "apps/electron/src/renderer/pages/mission-digital-twin-panel.tsx",
+      "apps/electron/src/renderer/pages/settings/GovernanceSettingsPage.tsx",
+      "apps/electron/src/renderer/playground/demos/messaging/PairingCodeDialogPreview.tsx",
+      "apps/electron/src/renderer/playground/registry/types.ts",
+      "bun.lock",
+      "package.json",
+      "packages/server-core/src/__tests__/security-hardening.test.ts",
+      "packages/server-core/src/handlers/rpc/llm-connections.ts",
+      "packages/server-core/src/handlers/rpc/oauth.ts",
+      "packages/server-core/src/handlers/rpc/sessions.ts",
+      "packages/server-core/src/handlers/rpc/settings.ts",
+      "packages/server-core/src/handlers/rpc/sources.ts",
+      "packages/server-core/src/handlers/rpc/system.ts",
+      "packages/server-core/src/handlers/rpc/tasks.ts",
+      "packages/server-core/src/handlers/rpc/transfer.ts",
+      "packages/server-core/src/handlers/rpc/workspace.ts",
+      "packages/server-core/src/missions/MissionRuntimeService.ts",
+      "packages/server-core/src/services/vcredist.test.ts",
+      "packages/server-core/src/sessions/SessionManager.ts",
+      "packages/server-core/src/sessions/adopt-task-draft.test.ts",
+      "packages/server-core/src/sessions/native-question-completion.ts",
+      "packages/server-core/src/sessions/objective-amendment-evidence.test.ts",
+      "packages/server-core/src/sessions/objective-legacy-context.test.ts",
+      "packages/server-core/src/sessions/session-wait.ts",
+      "packages/server-core/src/transport/capabilities.ts",
+      "packages/session-mcp-server/package.json",
+      "packages/session-tools-core/package.json",
+      "packages/shared/src/agent/session-scoped-tools.ts",
+      "packages/shared/src/automations/sdk-bridge.test.ts",
+      "packages/shared/src/config/storage.ts",
+      "packages/shared/src/i18n/setupI18n.ts",
+      "packages/shared/src/projects/storage.ts",
+      "packages/shared/src/prompts/system.ts",
+      "packages/shared/src/telemetry/local-jsonl-telemetry.test.ts",
+      "packages/shared/src/utils/debug.ts",
+      "scripts/robb-provider-canaries.ts"
+    ],
+    "primaryEditedByThisFinalCorrection": false,
+    "acceptedSourceCheckout": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-autonomy-candidate",
+    "acceptedRuntimeCommit": "76e185d9dbd95a652319825eae8fc7dea1ad3a2e"
+  },
+  "checks": [
+    {
+      "command": [
+        "bun",
+        "test",
+        "packages/server-core/src/sessions/restart-recovery.test.ts",
+        "packages/server-core/src/sessions/turn-recovery.test.ts",
+        "packages/server-core/src/sessions/turn-completion.test.ts",
+        "packages/server-core/src/sessions/objective-contract.test.ts",
+        "packages/server-core/src/sessions/objective-outcome.test.ts",
+        "packages/server-core/src/sessions/tool-start-durability.test.ts",
+        "packages/server-core/src/sessions/runtime-interruption-recovery.test.ts",
+        "packages/server-core/src/sessions/session-shutdown-fences.test.ts",
+        "packages/server-core/src/sessions/source-activated-auto-retry.test.ts",
+        "packages/server-core/src/sessions/context-compaction.test.ts",
+        "packages/server-core/src/sessions/pi-retry-streaming.test.ts"
+      ],
+      "exitCode": 0,
+      "tail": [
+        "(pass) classifyLatestTurnTerminalState > does not reject a completed report when ending with a polite closing or conditional offer [0.03ms]",
+        "",
+        " 1138 pass",
+        " 0 fail",
+        " 6700 expect() calls",
+        "Ran 1138 tests across 11 files. [28.87s]"
+      ]
+    },
+    {
+      "command": [
+        "bun",
+        "run",
+        "typecheck:electron"
+      ],
+      "exitCode": 0
+    },
+    {
+      "command": [
+        "bun",
+        "run",
+        "typecheck:release-contract"
+      ],
+      "exitCode": 0
+    },
+    {
+      "command": [
+        "bun",
+        "run",
+        "typecheck:shared"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "publicRelease": false
+}

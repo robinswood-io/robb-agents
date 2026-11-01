@@ -1,0 +1,121 @@
+{
+  "generated_at": "2026-10-28T19:12:57.582Z",
+  "scope": "Current headless source runtime and freshly built subprocesses; normal OAuth connection, new QA sessions and local synthetic files only; not the packaged Electron UI",
+  "passed": 7,
+  "results": [
+    {
+      "name": "two-targets",
+      "passed": true,
+      "checks": [
+        "Both named targets read and represented",
+        "True and false states preserved",
+        "Deliverable linked"
+      ],
+      "durationMs": 13718,
+      "toolCalls": 2,
+      "toolErrors": 0,
+      "sourceErrors": 0
+    },
+    {
+      "name": "three-deliverables",
+      "passed": true,
+      "checks": [
+        "Correct count and total",
+        "Three real deliverables inspected independently",
+        "All final files linked"
+      ],
+      "durationMs": 17381,
+      "toolCalls": 2,
+      "toolErrors": 0,
+      "sourceErrors": 0
+    },
+    {
+      "name": "missing-input-recovery",
+      "passed": true,
+      "checks": [
+        "Missing initial input did not block completion",
+        "Fallback source identified",
+        "Both outputs checked independently"
+      ],
+      "durationMs": 21130,
+      "toolCalls": 4,
+      "toolErrors": 1,
+      "sourceErrors": 0
+    },
+    {
+      "name": "midstream-amendment",
+      "passed": true,
+      "checks": [
+        "A real human correction arrived during tool execution",
+        "Latest requested content retained",
+        "Additional requirement delivered and linked"
+      ],
+      "durationMs": 19932,
+      "toolCalls": 2,
+      "toolErrors": 1,
+      "sourceErrors": 0
+    },
+    {
+      "name": "source-activation-amendment",
+      "passed": true,
+      "checks": [
+        "A correction arrived during source testing",
+        "Corrected arithmetic came from the read-only local connector",
+        "Both corrected requirements delivered and linked"
+      ],
+      "durationMs": 49946,
+      "toolCalls": 7,
+      "toolErrors": 1,
+      "sourceErrors": 0
+    },
+    {
+      "name": "compaction-continuation",
+      "passed": true,
+      "checks": [
+        "Real SDK compaction completed",
+        "Previously accepted objective and presentation requirement retained",
+        "Acquired file unchanged",
+        "New outputs and hashes verified"
+      ],
+      "durationMs": 40485,
+      "toolCalls": 4,
+      "toolErrors": 0,
+      "sourceErrors": 0
+    },
+    {
+      "name": "continuation",
+      "passed": true,
+      "checks": [
+        "Original result preserved without rewrite",
+        "Amendment delivered",
+        "Independent byte hashes match",
+        "Final deliverables linked"
+      ],
+      "durationMs": 24710,
+      "toolCalls": 3,
+      "toolErrors": 1,
+      "sourceErrors": 0
+    }
+  ],
+  "source_files": {
+    "packages/server-core/src/sessions/SessionManager.ts": "b80a401363c070a68b48f460ca749415763491bb92f2dfaaa53ad61585248035",
+    "packages/server-core/src/sessions/turn-completion.ts": "f23e19d48d0e196005827b42e0c372b5e7e60972e453780e19a397e99477b7bb",
+    "packages/shared/src/prompts/result-presentation.ts": "5b015522044b23e2ac6db6b704bfbd1fb7308f7a1426113b949dda8923ea9bdd"
+  },
+  "bundles": {
+    "packages/session-mcp-server/dist/index.js": "2ec564e39619468cdc8beae10cb7d024d312774629242bc1ef8c78c3157920be",
+    "packages/pi-agent-server/dist/index.js": "d2e5ce95e55f5da8de8dfeec6bdb2eb6284bf14c54866e21e5c827ce131e821e",
+    "packages/pi-agent-server/dist/vibe-acp-server.js": "f6ac49b7abf56e2a54f8d680e6a79e96a5e95b0bacbd9d9c243f0d8ec5260a6c",
+    "packages/pi-agent-server/dist/antigravity-server.js": "2eaa028ca039e3714257d6712c4d10c504d818e59a3dd97b781be4cdf24b6913"
+  },
+  "source_tree_sha256": "294557f351e45cdf26f959638e9c2d146c46fb2130734a02e2123e77935fc74b",
+  "source_unchanged_during_missions": true,
+  "raw_report_sha256": "dba7125b58c10dd0a64bf47409ae9ab43533d2bcf897968ac083fd5f08799413",
+  "diagnostic_counts": {
+    "warnings": 6
+  },
+  "limitations": [
+    "Real provider calls and real file operations; headless session runtime, not an Electron UI journey.",
+    "Seven synthetic local missions do not establish a general success rate; the QA connector is local and read-only."
+  ]
+}

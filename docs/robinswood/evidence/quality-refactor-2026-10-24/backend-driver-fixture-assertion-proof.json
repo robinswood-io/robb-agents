@@ -1,0 +1,27 @@
+{
+  "valid": true,
+  "method": "Compare every expect-rooted call expression after TypeScript erasure, in original order; no assertion is removed, weakened or changed.",
+  "files": [
+    {
+      "source": "packages/shared/src/agent/backend/internal/drivers/pi.test.ts",
+      "assertionExpressionsPreserved": true,
+      "assertionCallNodes": 22,
+      "beforeHash": "00bdce7e26cf602fdff517b412701d6908f40861c9b4b64774c4053b3955ec5b",
+      "afterHash": "a1c3177f3e26bb439ad7d91ee0916a73f8a6f3e5381229b2e50798d40629c459"
+    },
+    {
+      "source": "packages/shared/src/agent/backend/internal/drivers/anthropic.test.ts",
+      "assertionExpressionsPreserved": true,
+      "assertionCallNodes": 8,
+      "beforeHash": "ad6d243784f0408ac2f77f03e331f97656bb0a3535998d6f73e0b018d76e762d",
+      "afterHash": "d06e385cfbe7b2cdffe5ed6478d7f82ac911d489533e713c264d0976fdff6fc4"
+    },
+    {
+      "source": "packages/shared/src/agent/backend/__tests__/factory.test.ts",
+      "assertionExpressionsPreserved": true,
+      "assertionCallNodes": 114,
+      "beforeHash": "41faa1a4b048c9f8fa0a6f7fc0e2883eff16c8d9c23f717f96f9371f4ec85b21",
+      "afterHash": "4882e936b63bc630c96614c3871ebd1e28f2a7c19887bb5d29ba7d88c44c9ae1"
+    }
+  ]
+}

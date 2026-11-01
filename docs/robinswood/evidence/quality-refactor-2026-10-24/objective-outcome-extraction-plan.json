@@ -1,0 +1,871 @@
+{
+  "source": "packages/server-core/src/sessions/objective-outcome.ts",
+  "units": [
+    {
+      "names": [
+        "DeclaredObjectiveState"
+      ],
+      "group": "declaration",
+      "bodySha256": "830a56b30ccfefd35262018072553a4ed6459ed2296e96d2410c48e3eaf02091"
+    },
+    {
+      "names": [
+        "ObjectiveBlockerKind"
+      ],
+      "group": "declaration",
+      "bodySha256": "17c9164ceb194afbdc96979fdf30f181de18c57e73bf7ef6a7b69c44b8c00a2c"
+    },
+    {
+      "names": [
+        "ExtractedObjectiveOutcome"
+      ],
+      "group": "declaration",
+      "bodySha256": "6539855372dca83a5029dcba5aa56bd67a28fb60125d4a905d9b4c534cd31be1"
+    },
+    {
+      "names": [
+        "ObjectiveOutcomeValidation"
+      ],
+      "group": "declaration",
+      "bodySha256": "ed0a1a597f3ca160e327304dcd49fd32d178eaf4f4d88648c7e158df8446a8b0"
+    },
+    {
+      "names": [
+        "OUTCOME_COMMENT_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "d5195fb6ed86f0eceb440d94e8fdb6ca11a585dd47606f1ac5afcae4f60a1695"
+    },
+    {
+      "names": [
+        "MAX_DECLARATION_CHARS"
+      ],
+      "group": "declaration",
+      "bodySha256": "1d94d0d070b5e2d92b7c316b74d64a4f1eeefeb64b08ccc50bdf05effdd12668"
+    },
+    {
+      "names": [
+        "MAX_CRITERIA"
+      ],
+      "group": "declaration",
+      "bodySha256": "1050d582080e6895a303a1906cec3e784fd61c1ef95178a664dd794bd52d5f66"
+    },
+    {
+      "names": [
+        "MAX_EVIDENCE_PER_ITEM"
+      ],
+      "group": "declaration",
+      "bodySha256": "807a1bc31b755387b80aff3acbf83db2aba4005ff3ff6424ec03e30f581cc826"
+    },
+    {
+      "names": [
+        "MAX_REMAINING_WORK"
+      ],
+      "group": "declaration",
+      "bodySha256": "58b6984047fd5d7e7b30dc89f321d6385c82efd10e8d85caaf376620a670eb82"
+    },
+    {
+      "names": [
+        "MAX_TEXT_CHARS"
+      ],
+      "group": "declaration",
+      "bodySha256": "e586701fe1c9c443abc330591f6e226233e0c6837de42e8cf18b9197b1a99ef3"
+    },
+    {
+      "names": [
+        "STATES"
+      ],
+      "group": "declaration",
+      "bodySha256": "a08441f0d9e03dd7f6fa07c3af9a6280d2fb4b0a558c33a58dd7c44e12220b69"
+    },
+    {
+      "names": [
+        "BLOCKER_KINDS"
+      ],
+      "group": "declaration",
+      "bodySha256": "fb417743c0b8e8dab284748753434e92c077c583e6f0ca13343d9edc6303750b"
+    },
+    {
+      "names": [
+        "HUMAN_BLOCKER_KINDS"
+      ],
+      "group": "declaration",
+      "bodySha256": "f808bdd93dbda8e5b213860bdc65992545ef35713d557c341393c3013fa79aeb"
+    },
+    {
+      "names": [
+        "OBSERVATION_TOOL_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "c4ae5379ffb8c3094f0be13c42ed147d90d033a8c418a520c9da880ad3357109"
+    },
+    {
+      "names": [
+        "NON_VALIDATION_TOOL_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "a8bf7e188a5f521534e6f3a5adc3af4ea527d760fbdc656b634f32e5bee54fd1"
+    },
+    {
+      "names": [
+        "OBSERVATION_ACTION_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "204f9b7a899acabf3eb8b0a636cb071be501309a9c570201f64541ed760de3c0"
+    },
+    {
+      "names": [
+        "OBSERVATION_HTTP_METHOD_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "ed215a77afb5cc08d7238d2dfe42f9d35f4518670dc653120a6b5bc4a12acf63"
+    },
+    {
+      "names": [
+        "OBSERVATION_SQL_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "760c31044462b7a9dd5903d2775936e7f3c8baf07b415ca8f22c498b78f05773"
+    },
+    {
+      "names": [
+        "REVIEW_TOOL_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "fea2b73942bc265966c7050f6bb07a8040cdd0bb02106e4b4c97641a5b0c5235"
+    },
+    {
+      "names": [
+        "CALL_LLM_TOOL_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "a38a0a12433cbf6670aab5e549581e844672f1e19f8663e188eeb12d64f29339"
+    },
+    {
+      "names": [
+        "MAX_AUTHENTICATION_RECEIPT_CHARS"
+      ],
+      "group": "declaration",
+      "bodySha256": "b76057a178ef70bea2605ece24b30a2a462dea15f45435f5604cb3107e384003"
+    },
+    {
+      "names": [
+        "MAX_AUTHORIZATION_RECEIPT_TTL_MS"
+      ],
+      "group": "declaration",
+      "bodySha256": "f80f071101a133d8e29ce6959d5b8f3f434430c2031d8d2af74b4d23f5438473"
+    },
+    {
+      "names": [
+        "AUTHENTICATION_SUCCESS_STATES"
+      ],
+      "group": "declaration",
+      "bodySha256": "f6f259795a581169a08a2d5e8f0cbccb19801307fadd5b1ad25a388fb87b2013"
+    },
+    {
+      "names": [
+        "AUTHENTICATION_PENDING_STATES"
+      ],
+      "group": "declaration",
+      "bodySha256": "d5c58366ee345868bfc43258d49712cd04c4ee67005e2c4a2a3f60867d7f0f00"
+    },
+    {
+      "names": [
+        "KNOWN_AUTHENTICATION_HOSTS"
+      ],
+      "group": "declaration",
+      "bodySha256": "1e95e7dadca7ef0624d238f55a6313d719e14ef7cdfaede6a3677d09801f6e3a"
+    },
+    {
+      "names": [
+        "VAGUE_REMAINING_WORK_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "7659e05db33d7336c4796b329c5cccf4267721f5d86d3a45852e1f3cab1d0673"
+    },
+    {
+      "names": [
+        "PASSIVE_EXTERNAL_WAIT_ACTION_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "6aa625c6abdbbac049ab12aba7e9ae3081200261497b464edc71f7596cdb82de"
+    },
+    {
+      "names": [
+        "PASSIVE_EXTERNAL_WAIT_RESULT_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "16db6338296478d8dd31a0f0c440b9de45bf361490dde08f25a2d597357c99db"
+    },
+    {
+      "names": [
+        "PASSIVE_HUMAN_ACTOR_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "ef8653a102505974c352e79ebea34c2f9bded6d6f63bc7c0d52dfab6846f4aa0"
+    },
+    {
+      "names": [
+        "PASSIVE_EXTERNAL_AUTHORITY_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "4c413a611fd823e57f546a47a7b7ffdb874389e760e2fa26028d33f68e4d189b"
+    },
+    {
+      "names": [
+        "PASSIVE_EXTERNAL_POLL_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "7de1941f86671ba507272dfecd3cb197ec0628caec3eb03ca84d9bbbdd3e2cbb"
+    },
+    {
+      "names": [
+        "EXTERNAL_WAIT_FOLLOWUP_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "878f97088bd433aa6748bc385277cbf6f04e1c1f1db3176322bf81a3a782348c"
+    },
+    {
+      "names": [
+        "HUMAN_CONFIRMATION_SOURCE"
+      ],
+      "group": "declaration",
+      "bodySha256": "ac28e8f9436a97a8efe4bbbc0cbece1480acdf75445480e5cfbe0b4652ba8f23"
+    },
+    {
+      "names": [
+        "HUMAN_CONFIRMATION_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "8e1718113ff45d47574c910d0fa34711fec94068075c3ebdd761fc3f8bfb9863"
+    },
+    {
+      "names": [
+        "PENDING_CONFIRMATION_ACTION_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "95eecc01d47c2ac1379ca7b4f1ed049c062e680549a622ef0e9869e2ea7ebd3a"
+    },
+    {
+      "names": [
+        "CLAIMED_PENDING_CONFIRMATION_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "4a56f728a4dd859bb9cb34886d1e788eec41245571b42591dcb2fa614a951b6a"
+    },
+    {
+      "names": [
+        "CONFIRMATION_CLAIM_SUBJECT_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "87731a1bfa5b8e70cd738f797f911e202212aacb220b38e9d11aa6e544e83d13"
+    },
+    {
+      "names": [
+        "AUTOMATED_CONFIRMATION_PROCESS_SOURCE"
+      ],
+      "group": "declaration",
+      "bodySha256": "f1e02a7676f5f77b0585dc900b1d7cad441e9cc7abfed9e3449e178fd7b6716d"
+    },
+    {
+      "names": [
+        "MACHINE_CONFIRMATION_SOURCE"
+      ],
+      "group": "declaration",
+      "bodySha256": "45cf1813237b3f9a171a96390c04b5534df430e468436be5ba8f58c8a0dfc25e"
+    },
+    {
+      "names": [
+        "AUTOMATED_CONFIRMATION_BINDING_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "f55097032fbbdcdff1628460db2112ec7e88cf79cd605bf373a893c6b9684aa9"
+    },
+    {
+      "names": [
+        "AUTOMATED_PROCESS_WAIT_PATTERN"
+      ],
+      "group": "declaration",
+      "bodySha256": "a8c0cdbbb6407dc8473d392c8201efaa646b57c7b8d0fccb385d385d72f47151"
+    },
+    {
+      "names": [
+        "GMAIL_QUERY_NON_BINDING_TERMS"
+      ],
+      "group": "declaration",
+      "bodySha256": "9588d9fc32501e0bbc1f95b5af7e6110ea00b464bb0692dd0fac38daafd826fe"
+    },
+    {
+      "names": [
+        "isBoundedString"
+      ],
+      "group": "declaration",
+      "bodySha256": "c4f5a6966c6b918a77eaa253e27eaeb25a1cd2f9f6faadc11dc513bdcff55f78"
+    },
+    {
+      "names": [
+        "boundedStringArray"
+      ],
+      "group": "declaration",
+      "bodySha256": "25dae7ca46ef78720b4dfc065ff809ab4f613c471c3b8d5adde23ff4791b4c34"
+    },
+    {
+      "names": [
+        "concreteRemainingWork"
+      ],
+      "group": "declaration",
+      "bodySha256": "b6d2dcbe7de5e6e12ce826b7ae0e4d3071a0e85c3eab46bbb7cb34c8f7f3ca39"
+    },
+    {
+      "names": [
+        "passiveExternalWait"
+      ],
+      "group": "declaration",
+      "bodySha256": "2a4445827c2690c2d5e47aafdf47b6a5d5d9f1b2f4a99aa6ed1a090bdeec5c8c"
+    },
+    {
+      "names": [
+        "whollyDependentOnExternalWait"
+      ],
+      "group": "declaration",
+      "bodySha256": "8dad7b05d249ae6aa3b678e5607c8e155dbfbedf2c3d47201f77010689bd3681"
+    },
+    {
+      "names": [
+        "claimsPendingHumanConfirmation"
+      ],
+      "group": "declaration",
+      "bodySha256": "769b1ae465373532800c1cc7b87fd7b61396f5b81ff1ba0f48c645efd48c5ca5"
+    },
+    {
+      "names": [
+        "foldedWords"
+      ],
+      "group": "declaration",
+      "bodySha256": "4a52661242759f8288b39edf42b47848172fe6902d5a339a25ab8a8ca625f08a"
+    },
+    {
+      "names": [
+        "gmailIdentityTerms"
+      ],
+      "group": "declaration",
+      "bodySha256": "4523ec97da89c09c22c27d6ccc4d01e2f4279dffa6b513788e94b9d5aee60844"
+    },
+    {
+      "names": [
+        "parseDeclaration"
+      ],
+      "group": "declaration",
+      "bodySha256": "983ae1a21140c9978e14fa2cd80c5bf01a98a79f1631c5e5e63fc64f8bf8d0f8"
+    },
+    {
+      "names": [
+        "extractObjectiveOutcome"
+      ],
+      "group": "declaration",
+      "bodySha256": "5c02d4021c4269f0eb6ac711303fb47532fd1a8807ffd975004843712cbe1cf7"
+    },
+    {
+      "names": [
+        "messagesForObjective"
+      ],
+      "group": "declaration",
+      "bodySha256": "5ab84ae9d3d57e92a366830961007a875a069a39762130006ae868797d1c408b"
+    },
+    {
+      "names": [
+        "normalizedToolName"
+      ],
+      "group": "declaration",
+      "bodySha256": "cda884e544b33d0238266047ef53a2a37e80051a3ab596de446dc4877bc19198"
+    },
+    {
+      "names": [
+        "BUILTIN_BASH_TOOL_NAMES"
+      ],
+      "group": "declaration",
+      "bodySha256": "4b877082a57b15885bd6643eba2a17edfc4264eca7be2748b2b4daffb14e7f49"
+    },
+    {
+      "names": [
+        "BUILTIN_BASH_EVIDENCE_ALIASES"
+      ],
+      "group": "declaration",
+      "bodySha256": "45f0c5bb583491cdd3d5f3fd53411cd880d89280dec4f5294e53c9c912bc63c8"
+    },
+    {
+      "names": [
+        "identityAnagram"
+      ],
+      "group": "gmail-negative-search",
+      "bodySha256": "cf8bb5dc43d1e43a31ec1ed4f1bcbba75431c800ab4344289d22ff87917ad9fb"
+    },
+    {
+      "names": [
+        "gmailExplicitIdentityTerms"
+      ],
+      "group": "gmail-negative-search",
+      "bodySha256": "7a7abb1e2b95ebf66dcb7f68bb0751204fe9667a83e02ec763078b3fbcd907c3"
+    },
+    {
+      "names": [
+        "stronglyMatchingGmailIdentity"
+      ],
+      "group": "gmail-negative-search",
+      "bodySha256": "0b4a7fbef81c4cfadffcb48cbf77126c4f128d3275ecb62e3e6d83c54899f2dc"
+    },
+    {
+      "names": [
+        "gmailTargetInputText"
+      ],
+      "group": "gmail-negative-search",
+      "bodySha256": "6708aa4df2e1fbe8491854af79b988fab0c1ebb9745f5f4c4221e8382d418626"
+    },
+    {
+      "names": [
+        "gmailNegativeSearchBoundToObjective"
+      ],
+      "group": "gmail-negative-search",
+      "bodySha256": "b224d7529f7bd03d9d0278880071d1b9f15100669cb7a9f3dbdb45723b7b50b0"
+    },
+    {
+      "names": [
+        "ToolAliasCandidateGroup"
+      ],
+      "group": "blocker-identities",
+      "bodySha256": "20e845727152480cb4cd039be2fc1c82f84d01addfdef5e892d301cb8364ef8a"
+    },
+    {
+      "names": [
+        "ROOT_TOOL_REQUEST_UI_METADATA"
+      ],
+      "group": "blocker-identities",
+      "bodySha256": "e703362ecc2c2168c3ecf0402a8a6399c5dcb3414b8595ead3a822a98a6f95f5"
+    },
+    {
+      "names": [
+        "CurrentObjectiveBlockerObservation"
+      ],
+      "group": "blocker-identities",
+      "bodySha256": "c45cb683c70c47c81ca9d4864f3ec9c8c44b922e11ad36e8e72e846af6466241"
+    },
+    {
+      "names": [
+        "toolAliasDescriptor"
+      ],
+      "group": "blocker-identities",
+      "bodySha256": "d3f71409461c372dad6e893f355742a994f54330f0fd73c637d0304b2969d325"
+    },
+    {
+      "names": [
+        "stableRequestValue"
+      ],
+      "group": "blocker-identities",
+      "bodySha256": "09422e556fb2281f757da7ef6e3e3b7755261453d0e2ec16d23e2e4899c25418"
+    },
+    {
+      "names": [
+        "sameToolRequest"
+      ],
+      "group": "blocker-identities",
+      "bodySha256": "0840b890e59a571613e3f2d776ddd540c4a9cd46768a3a22f6fd5520930af068"
+    },
+    {
+      "names": [
+        "blockerKindsForFailureSignal"
+      ],
+      "group": "blocker-identities",
+      "bodySha256": "367c3cd8bcfac12cd22572e788cee6dee700fb3077f4e367dad16e976c2fb65f"
+    },
+    {
+      "names": [
+        "failureBlockerKinds"
+      ],
+      "group": "blocker-identities",
+      "bodySha256": "eaf5a323bf9a0973baae6b56a8a729aff6b456a7ac20bdaef701d5464b4b3bef"
+    },
+    {
+      "names": [
+        "isStructuredAuthenticationReceiptTool"
+      ],
+      "group": "authentication",
+      "bodySha256": "95b4a108f2172149a0e6488d6397723f03d82ddef0b7ca6b04a7bca6ae9c77f7"
+    },
+    {
+      "names": [
+        "StructuredAuthenticationToolName"
+      ],
+      "group": "authentication",
+      "bodySha256": "d4cf5b2aae5bec8a93d529056dd40ccc766c8e0ed498073d048637d6b560d9f6"
+    },
+    {
+      "names": [
+        "StructuredAuthenticationPollBinding"
+      ],
+      "group": "authentication",
+      "bodySha256": "c132ae61d037652c7ba23051f51f5bfb841c0e42f48e160622e1eac8583ec0bf"
+    },
+    {
+      "names": [
+        "StructuredAuthenticationStartReceipt"
+      ],
+      "group": "authentication",
+      "bodySha256": "4380b3634bbec8871189c265fdb87d5d39136b8e30759cd688c277c0f8d8d90e"
+    },
+    {
+      "names": [
+        "AuthCorrelationKind"
+      ],
+      "group": "authentication",
+      "bodySha256": "c1ecf96c013cbcec8d518f0d24fb74f417e598f8f90815901eec7591fe71bc0f"
+    },
+    {
+      "names": [
+        "AuthCorrelations"
+      ],
+      "group": "authentication",
+      "bodySha256": "00c0fbc6648c42d8c7815fc3dbd3097314a6b5d5fe1edc5f81082ebd3ff5d8e2"
+    },
+    {
+      "names": [
+        "structuredAuthenticationToolName"
+      ],
+      "group": "authentication",
+      "bodySha256": "d8bd0ded822515f8122903dc8ded782192200ba09d6039a93e621a616a41444b"
+    },
+    {
+      "names": [
+        "boundedStringField"
+      ],
+      "group": "authentication",
+      "bodySha256": "aec8c4b770a95b4fd49c2830f1e0603b9f459b70782dbafb30813546c7aeac65"
+    },
+    {
+      "names": [
+        "authCorrelationDescriptor"
+      ],
+      "group": "authentication",
+      "bodySha256": "549404b5bce47d731d369391b8f180e1b6989c531938a200adc141e81f68bd8d"
+    },
+    {
+      "names": [
+        "authCorrelationValue"
+      ],
+      "group": "authentication",
+      "bodySha256": "971ab3a9968d7ccc3f9007f828f74ae68cf1257e3148005501e59256a18385fe"
+    },
+    {
+      "names": [
+        "setAuthCorrelation"
+      ],
+      "group": "authentication",
+      "bodySha256": "a9dd86ae51d13752988dce27db1b50d7873c351e595a0ec2ee23cd2a5185adaa"
+    },
+    {
+      "names": [
+        "authCorrelations"
+      ],
+      "group": "authentication",
+      "bodySha256": "5bdb607fd8faf7663cab004cdece8d511c857ca8769c95117ef8aef69879e5f8"
+    },
+    {
+      "names": [
+        "mergeAuthCorrelations"
+      ],
+      "group": "authentication",
+      "bodySha256": "618d718cffb5fa2cbbe7d68adfc325a9d757c4c02c24e5005f63cad486cda6df"
+    },
+    {
+      "names": [
+        "hasAuthCorrelation"
+      ],
+      "group": "authentication",
+      "bodySha256": "44eaa43a70769942982e9b82abe67ee79d3a9ee2dd45702eab6bf244e74672d7"
+    },
+    {
+      "names": [
+        "matchingAuthCorrelations"
+      ],
+      "group": "authentication",
+      "bodySha256": "c13d09af8b6eea3da3f62ee52d7b32c19b67f3d95118a34fb65a407548f21d90"
+    },
+    {
+      "names": [
+        "structuredAuthenticationStartReceipt"
+      ],
+      "group": "authentication",
+      "bodySha256": "e7ca012fa5b78775d796007917517005d07a8ea6b98bfac3890084d3a98ba88d"
+    },
+    {
+      "names": [
+        "matchingAuthenticationPoll"
+      ],
+      "group": "authentication",
+      "bodySha256": "e74bccc1fa07d95ab51b006dfbeb021c5f3e5a41c496324a441dfa151fd273b9"
+    },
+    {
+      "names": [
+        "successfulAuthenticationPollReceipt"
+      ],
+      "group": "authentication",
+      "bodySha256": "78cc5a82a645f6a16294395434e7f5ba6868ae318f00f88b14c986cece4228ea"
+    },
+    {
+      "names": [
+        "pendingAuthenticationPollReceipt"
+      ],
+      "group": "authentication",
+      "bodySha256": "bdec14307ac01275554e8e996adf852cfd1b03fec6309cb26e57bab3a6abb8e2"
+    },
+    {
+      "names": [
+        "structuredAuthenticationPollBlocker"
+      ],
+      "group": "authentication",
+      "bodySha256": "c22b5abc9dd689c2e5f9e41839e79d9fd972ea518dd349dec700776f3acc47b3"
+    },
+    {
+      "names": [
+        "structuredAuthenticationSurface"
+      ],
+      "group": "authentication",
+      "bodySha256": "1e82a271aee6d72525747e589bfe4bf8fa64ac718e4b80487f1614a119d1a568"
+    },
+    {
+      "names": [
+        "completedToolBlockerKinds"
+      ],
+      "group": "blocker-observations",
+      "bodySha256": "2c0143c911431c3f3b652635e31df8bf7b5704dd2b9cf19078b0296490b89153"
+    },
+    {
+      "names": [
+        "objectiveBlockerKinds"
+      ],
+      "group": "blocker-observations",
+      "bodySha256": "11215cc4c72cf0b0e227813b7474468df87d273b79be33d5c41fdabab538ac87"
+    },
+    {
+      "names": [
+        "matchingAuthResolved"
+      ],
+      "group": "blocker-observations",
+      "bodySha256": "a7b55e631fe6d6c9fc0f4ef39e95002192611f0c6156f4d097cb7d4d2fc3b653"
+    },
+    {
+      "names": [
+        "currentObjectiveBlockerObservations"
+      ],
+      "group": "blocker-observations",
+      "bodySha256": "f8b1542f84e01bc00ea104e85afd28dc3ea454bcf05075b7b77eda7ac62182fe"
+    },
+    {
+      "names": [
+        "currentAutonomyBlockerEvents"
+      ],
+      "group": "blocker-observations",
+      "bodySha256": "51fc433e4602a8d829470798d1c99daf832ac9c124021fd4ec6205addb730d2a"
+    },
+    {
+      "names": [
+        "addAutonomyBlockerRefs"
+      ],
+      "group": "blocker-observations",
+      "bodySha256": "4c27d409e8cf9524394de2f12b132b5f16f1b9b4e888d4c44f415fe16e15cc79"
+    },
+    {
+      "names": [
+        "substantiveToolResult"
+      ],
+      "group": "execution-evidence",
+      "bodySha256": "f458a0e2671d135819ba2bfebceae5e2b7c41e172db2718f14b0dddda0a75ae4"
+    },
+    {
+      "names": [
+        "observationOrValidationTool"
+      ],
+      "group": "execution-evidence",
+      "bodySha256": "54dd9df68ce8a45160310de6561b37246b2d96ccfb0fb6364beb1c0131c09cbb"
+    },
+    {
+      "names": [
+        "hostEvidenceRefs"
+      ],
+      "group": "execution-evidence",
+      "bodySha256": "9d1db4477061aada80e5b8ddb9cdfbe1eef2f042b75f0ff83ecad665416461b0"
+    },
+    {
+      "names": [
+        "hasCurrentObjectiveIndependentReviewPass"
+      ],
+      "group": "execution-evidence",
+      "bodySha256": "773cf472506dfa5b2157d025c79d5842e5da9c44ec1a5639b834d493ffe34ae4"
+    },
+    {
+      "names": [
+        "AUTHORITY_ONLY_MUTATION_PATTERN"
+      ],
+      "group": "execution-evidence",
+      "bodySha256": "9d855f8d0923a69e6c4ca285e8c86e5a870d2d72881d943bd786b40a311d0756"
+    },
+    {
+      "names": [
+        "AUTHORITY_DEPENDENCY_PATTERN"
+      ],
+      "group": "execution-evidence",
+      "bodySha256": "ad184428698ba82448903ff0e6f1b3024559d7f9ce46ff68c97d80b2285f9767"
+    },
+    {
+      "names": [
+        "SAFE_REMAINING_WORK_PATTERN"
+      ],
+      "group": "execution-evidence",
+      "bodySha256": "8c0268984c705b5348bae5df29adb71aceb9063968e8e0c93133f0b522f9e861"
+    },
+    {
+      "names": [
+        "AUTHORITY_MUTATION_ACTION_PATTERNS"
+      ],
+      "group": "execution-evidence",
+      "bodySha256": "a8519fe75701f9e85dd666fe3d8c2d509b04a17cc6ef855b4770bb1ff942dd05"
+    },
+    {
+      "names": [
+        "AUTHORITY_TARGET_GENERIC_TOKENS"
+      ],
+      "group": "execution-evidence",
+      "bodySha256": "a0c20e39f83489793c936c32efbdb4a895fbf29c8f54c5f365742878662a46c4"
+    },
+    {
+      "names": [
+        "AUTHORITY_ENVIRONMENT_PATTERNS"
+      ],
+      "group": "execution-evidence",
+      "bodySha256": "028060790ee7a0ad1a4dc806690af9c8d48e1021e97faeec772713d9f27f5dcc"
+    },
+    {
+      "names": [
+        "normalizedAuthorityText"
+      ],
+      "group": "read-only-authority",
+      "bodySha256": "87cb8d81fed96247eb0a156c063412f2619b1942bea8f59ab9faa890edea748a"
+    },
+    {
+      "names": [
+        "authorityMutationActionIndexes"
+      ],
+      "group": "read-only-authority",
+      "bodySha256": "a5dc398855a5220df8aa21075f96f8b385764efe50c2a9b156cb0c4b919d96fe"
+    },
+    {
+      "names": [
+        "authorityEnvironmentIndexes"
+      ],
+      "group": "read-only-authority",
+      "bodySha256": "7e5460c543030324ee6472f70cb2a09c874dfb4d99738166db8dc850c5c70edf"
+    },
+    {
+      "names": [
+        "authorityTargetTerms"
+      ],
+      "group": "read-only-authority",
+      "bodySha256": "572cf934c49a861cd9a05014df15d0010f56353470422b35bf872119b1d7ba5b"
+    },
+    {
+      "names": [
+        "remainingAuthorityTargetMatches"
+      ],
+      "group": "read-only-authority",
+      "bodySha256": "811078c7cfb6eb3fe99b8cafc5e01dc1d919fe44a61080fe670ff90655ea0359"
+    },
+    {
+      "names": [
+        "authorityOnlyRemainingWork"
+      ],
+      "group": "read-only-authority",
+      "bodySha256": "e530140ec22fbba18a4e93f9a007592ca43bffd487f44c28cd1b65614995d4fa"
+    },
+    {
+      "names": [
+        "explicitReadOnlyAuthorityBlocker"
+      ],
+      "group": "read-only-authority",
+      "bodySha256": "d8b22e857e337a36e4f79410c32b3952ba6b06c9ac0c96270cb802016a247e6c"
+    },
+    {
+      "names": [
+        "validateObjectiveOutcome"
+      ],
+      "group": "validation",
+      "bodySha256": "ebecbd1464aa8d5e0a606f17ef95ac433dbac2c617648077c828dd731633fe7d"
+    }
+  ],
+  "modules": [
+    {
+      "name": "declaration",
+      "lines": 298
+    },
+    {
+      "name": "gmail-negative-search",
+      "lines": 86
+    },
+    {
+      "name": "blocker-identities",
+      "lines": 92
+    },
+    {
+      "name": "authentication",
+      "lines": 315
+    },
+    {
+      "name": "blocker-observations",
+      "lines": 198
+    },
+    {
+      "name": "execution-evidence",
+      "lines": 250
+    },
+    {
+      "name": "read-only-authority",
+      "lines": 107
+    },
+    {
+      "name": "validation",
+      "lines": 219
+    }
+  ],
+  "dependencies": {
+    "declaration": [],
+    "gmail-negative-search": [
+      "declaration"
+    ],
+    "blocker-identities": [
+      "declaration"
+    ],
+    "authentication": [
+      "declaration"
+    ],
+    "blocker-observations": [
+      "declaration",
+      "gmail-negative-search",
+      "authentication",
+      "blocker-identities"
+    ],
+    "execution-evidence": [
+      "declaration",
+      "blocker-identities",
+      "blocker-observations"
+    ],
+    "read-only-authority": [
+      "execution-evidence"
+    ],
+    "validation": [
+      "declaration",
+      "execution-evidence",
+      "blocker-observations",
+      "read-only-authority"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

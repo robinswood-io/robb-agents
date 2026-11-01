@@ -39,7 +39,7 @@ export interface SendToWorkspaceDialogProps {
   /** Current workspace ID (excluded from picker) */
   activeWorkspaceId: string | null
   /** Called after successful transfer with target workspace ID and new session IDs */
-  onTransferComplete?: (targetWorkspaceId: string, newSessionIds: string[]) => void
+  onTransferComplete?: ((targetWorkspaceId: string, newSessionIds: string[]) => void) | undefined
 }
 
 export function SendToWorkspaceDialog({
@@ -78,7 +78,10 @@ export function SendToWorkspaceDialog({
   const healthCheckAbort = useRef<AbortController | null>(null)
 
   // Only show remote workspaces (local-to-local is pointless)
-  const remoteWorkspaces = workspaces.filter(w => w.id !== activeWorkspaceId && w.remoteServer)
+  const remoteWorkspaces = React.useMemo(
+    () => workspaces.filter(w => w.id !== activeWorkspaceId && w.remoteServer),
+    [workspaces, activeWorkspaceId],
+  )
 
   // Check connectivity for all remote workspaces when dialog opens
   useEffect(() => {
@@ -115,7 +118,7 @@ export function SendToWorkspaceDialog({
     }
 
     return () => abort.abort()
-  }, [open, remoteWorkspaces.map(w => w.id).join(',')])
+  }, [open, remoteWorkspaces])
 
   const handleTransfer = useCallback(async () => {
     if (!selectedWorkspaceId || sessionIds.length === 0) return
@@ -132,8 +135,7 @@ export function SendToWorkspaceDialog({
     try {
       const newSessionIds: string[] = []
 
-      for (let i = 0; i < sessionIds.length; i++) {
-        const sessionId = sessionIds[i]
+      for (const [i, sessionId] of sessionIds.entries()) {
         // Main process handles export + summary + transport (chunked for large bundles)
         const result = await window.electronAPI.transferSessionToWorkspace(sessionId, selectedWorkspaceId, i, sessionIds.length)
         newSessionIds.push(result.sessionId)
@@ -158,7 +160,7 @@ export function SendToWorkspaceDialog({
     } finally {
       setIsTransferring(false)
     }
-  }, [selectedWorkspaceId, sessionIds, workspaces, onOpenChange, onTransferComplete])
+  }, [selectedWorkspaceId, sessionIds, workspaces, onOpenChange, onTransferComplete, t])
 
   const count = sessionIds.length
 

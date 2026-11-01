@@ -1,4 +1,3 @@
-import type { RoutingMeta } from '@craft-agent/core/types';
 export type SourceSensitivity = 'public' | 'internal' | 'confidential' | 'restricted';
 /** Read compatibility for historical receipts; no model is selected from these values. */
 export type LegacyAutomaticModelTier = 'routine' | 'standard' | 'complex' | 'highRisk';

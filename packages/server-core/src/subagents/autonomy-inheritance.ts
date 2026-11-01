@@ -10,14 +10,14 @@ import type { ExternalActionPolicy } from '@craft-agent/shared/workspaces';
  * stale parent reference into a privilege escalation.
  */
 export interface SubagentAutonomyContext {
-  workspacePermissionMode?: PermissionMode;
-  parentPermissionMode?: PermissionMode;
-  externalActionPolicy?: ExternalActionPolicy;
+  workspacePermissionMode?: PermissionMode | undefined;
+  parentPermissionMode?: PermissionMode | undefined;
+  externalActionPolicy?: ExternalActionPolicy | undefined;
 }
 
 export interface ResolveSubagentAutonomyInput extends SubagentAutonomyContext {
   /** Explicit child/profile request. Omission inherits only a fully opted-in Execute parent. */
-  requestedPermissionMode?: PermissionMode;
+  requestedPermissionMode?: PermissionMode | undefined;
 }
 
 export interface SubagentAutonomyDecision {

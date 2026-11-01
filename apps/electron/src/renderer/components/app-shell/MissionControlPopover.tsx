@@ -8,8 +8,8 @@ import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton
 interface MissionControlPopoverProps {
   workspaceId: string
   sessionId: string
-  cwd?: string
-  projectId?: string
+  cwd?: string | undefined
+  projectId?: string | undefined
 }
 
 const TERMINAL = new Set(['completed', 'failed', 'cancelled'])

@@ -1,0 +1,9 @@
+{
+  "beforeCases": 353,
+  "afterCases": 353,
+  "identitiesAndMultiplicityEqual": true,
+  "afterFailures": 0,
+  "afterSkipped": 0,
+  "beforeAssertions": 2329,
+  "afterAssertions": 2329
+}

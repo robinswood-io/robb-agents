@@ -1,3 +1,5 @@
+import type { ServerWebSocket } from 'bun'
+import type { CliWorkspace } from './rpc-shapes.ts'
 import { describe, it, expect, afterEach, mock, beforeEach } from 'bun:test'
 import {
   serializeEnvelope,
@@ -21,13 +23,13 @@ interface MockServer {
   /** Channels invoked by the client, in order */
   invokedChannels: string[]
   /** Arguments passed to sessions:create */
-  createSessionArgs?: unknown[]
+  createSessionArgs?: unknown[] | undefined
   /** All invocation args, keyed by channel */
   invokeArgs: Record<string, unknown[][]>
 }
 
 function pushSessionEvents(
-  ws: any,
+  ws: Pick<ServerWebSocket<unknown>, 'send'>,
   sessionId: string,
   events: Array<Record<string, unknown>>,
 ): void {
@@ -226,10 +228,12 @@ describe('run command', () => {
     await client.connect()
 
     // Simulate what cmdRun does: resolve workspace, create session
-    const workspaces = await client.invoke('workspaces:get') as any[]
+    const workspaces = await client.invoke('workspaces:get') as CliWorkspace[]
     expect(workspaces).toHaveLength(1)
 
-    await client.invoke('window:switchWorkspace', workspaces[0].id)
+    const first = workspaces[0]
+    if (!first) throw new Error('The fixture must return one workspace')
+    await client.invoke('window:switchWorkspace', first.id)
 
     const session = await client.invoke('sessions:create', 'ws-1', {
       permissionMode: 'allow-all',
@@ -376,7 +380,7 @@ describe('run command', () => {
     await client.connect()
 
     // Simulate the LLM bootstrap path from cmdRun
-    const connections = (await client.invoke('LLM_Connection:list')) as any[]
+    const connections = await client.invoke('LLM_Connection:list')
     expect(connections).toEqual([])
 
     await client.invoke('LLM_Connection:save', {
@@ -417,7 +421,7 @@ describe('run command', () => {
     await client.connect()
 
     // Simulate: check connections — they exist, so skip bootstrap
-    const connections = (await client.invoke('LLM_Connection:list')) as any[]
+    const connections = await client.invoke('LLM_Connection:list')
     expect(connections).toHaveLength(1)
 
     // No further LLM calls should be needed

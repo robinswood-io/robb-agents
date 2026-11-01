@@ -7,4 +7,3 @@ export * from './MissionEvidenceResolver.ts';
 export * from './MissionProofPassportService.ts';
 export * from './proof-passport-runtime.ts';
 export * from './MissionPlanner.ts';
-export * from './evaluation/index.ts';

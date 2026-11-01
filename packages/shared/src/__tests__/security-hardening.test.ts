@@ -1,3 +1,4 @@
+import type { LoadedSource } from '../sources/types.ts';
 import { describe, it, expect } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -128,10 +129,10 @@ describe('Shared Package Security Hardening Regressions', () => {
               state: `state-${i}`,
               codeVerifier: 'verifier',
               redirectUri: 'https://127.0.0.1/callback',
-              source: {} as any,
+              source: { config: { id: 'qa-source', slug: 'src-1', name: 'QA', enabled: true, provider: 'qa', type: 'mcp' }, guide: null, folderPath: '/tmp/qa-source', workspaceRootPath: '/tmp/qa-workspace', workspaceId: 'ws-1' } satisfies LoadedSource,
               clientId: 'client-1',
               tokenEndpoint: 'https://auth.example.com/token',
-              provider: 'mcp' as any,
+              provider: 'mcp',
               ownerClientId: 'ws-client-1',
               workspaceId: 'ws-1',
               sourceSlug: 'src-1',
@@ -154,7 +155,7 @@ describe('Shared Package Security Hardening Regressions', () => {
 
   describe('Hardened sprintf-js (GHSA-hp3w-g68c-fv3c Precision/Width Bounds)', () => {
     it('formats normal specifiers and rejects excessive precision/width DoS specifiers', () => {
-      const { sprintf } = require('../../../../scripts/vendor/sprintf-js/src/sprintf.js');
+      const { sprintf } = require('../../../../scripts/vendor/sprintf-js/src/sprintf.js') as { sprintf: (format: string, ...values: unknown[]) => string };
       expect(sprintf('%04d %.2f %s', 7, 3.14159, 'ok')).toBe('0007 3.14 ok');
       expect(() => sprintf('%5000s', 'dos')).toThrow(RangeError);
       expect(() => sprintf('%.5000s', 'dos')).toThrow(RangeError);

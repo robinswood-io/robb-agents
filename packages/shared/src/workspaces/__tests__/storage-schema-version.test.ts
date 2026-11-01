@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 import { afterEach, describe, expect, it } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -61,11 +62,11 @@ describe('workspace config schema envelope', () => {
     expect(loaded?.defaults?.defaultLlmConnection).toBeUndefined();
     expect(loaded?.defaults?.workingDirectory).toBeUndefined();
 
-    const migrated = JSON.parse(readFileSync(join(workspaceRoot, 'config.json'), 'utf8'));
-    expect(migrated.schemaVersion).toBe(1);
-    expect(migrated.defaults).not.toHaveProperty('model');
-    expect(migrated.defaults).not.toHaveProperty('defaultLlmConnection');
-    expect(migrated.defaults).not.toHaveProperty('workingDirectory');
+    const migrated = parseJsonObject(readFileSync(join(workspaceRoot, 'config.json'), 'utf8'));
+    expect(migrated["schemaVersion"]).toBe(1);
+    expect(migrated["defaults"]).not.toHaveProperty('model');
+    expect(migrated["defaults"]).not.toHaveProperty('defaultLlmConnection');
+    expect(migrated["defaults"]).not.toHaveProperty('workingDirectory');
   });
 
   it('fails closed on a future schema instead of treating it as a missing workspace', () => {
@@ -73,7 +74,7 @@ describe('workspace config schema envelope', () => {
     writeFileSync(join(workspaceRoot, 'config.json'), JSON.stringify({ ...legacyConfig(), schemaVersion: 2 }));
 
     expect(() => loadWorkspaceConfig(workspaceRoot)).toThrow(UnsupportedWorkspaceConfigVersionError);
-    expect(JSON.parse(readFileSync(join(workspaceRoot, 'config.json'), 'utf8')).schemaVersion).toBe(2);
+    expect(parseJsonObject(readFileSync(join(workspaceRoot, 'config.json'), 'utf8'))["schemaVersion"]).toBe(2);
   });
 
   it('always emits the current schema on atomic save', () => {

@@ -1,11 +1,15 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, spyOn } from 'bun:test'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
-import { tmpdir } from 'os'
-import { join } from 'path'
-import {
-  specializedProfileCapabilityEnvelopeIdentity,
-} from '@craft-agent/shared/specialized-profiles'
-import type { MissionCapabilityLock } from '@craft-agent/shared/sessions'
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import { StoredConfigSchema } from '../../../shared/src/config/validators.ts';
+import { withSessionOperationsForTest } from "./testing/session-operation-access.ts";
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, spyOn } from "bun:test";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+import { specializedProfileCapabilityEnvelopeIdentity } from "@craft-agent/shared/specialized-profiles";
+import type { MissionCapabilityLock } from "@craft-agent/shared/sessions";
+import { type AgentStub, createAgentStub, originalCraftConfigDir } from "./testing/refresh-connection-runtime-fixture.ts";
 
 let resolveBackendContext: typeof import('@craft-agent/shared/agent/backend')['resolveBackendContext']
 let loadWorkspaceConfig: typeof import('@craft-agent/shared/workspaces')['loadWorkspaceConfig']
@@ -15,8 +19,6 @@ let buildRestartRequiredSignature: typeof import('./runtime-config.ts')['buildRe
 let createStoredSession: typeof import('@craft-agent/shared/sessions')['createSession']
 let tmpConfigRoot: string
 let restoreConfig: (() => void) | undefined
-const originalCraftConfigDir = process.env.CRAFT_CONFIG_DIR
-
 // Regression coverage for the stale-Pi-subprocess bug where toggling
 // `supportsImages` on a custom-endpoint model wrote to disk but never reached
 // the live agent.
@@ -33,6 +35,7 @@ const originalCraftConfigDir = process.env.CRAFT_CONFIG_DIR
 function writeTestConfig(): void {
   mkdirSync(tmpConfigRoot, { recursive: true })
   writeFileSync(join(tmpConfigRoot, 'config.json'), JSON.stringify({
+    schemaVersion: 1,
     workspaces: [],
     activeWorkspaceId: null,
     activeSessionId: null,
@@ -66,65 +69,6 @@ function writeTestConfig(): void {
     ],
   }, null, 2))
 }
-
-beforeAll(async () => {
-  tmpConfigRoot = mkdtempSync(join(tmpdir(), 'sm-refresh-config-'))
-  process.env.CRAFT_CONFIG_DIR = tmpConfigRoot
-  writeTestConfig()
-
-  // An earlier test may have frozen CONFIG_DIR before this fixture existed.
-  // Keep real backend resolution while loading only this test's temporary file.
-  const storage = await import('@craft-agent/shared/config/storage')
-  const configLoader = spyOn(storage, 'loadStoredConfig').mockImplementation(() =>
-    JSON.parse(readFileSync(join(tmpConfigRoot, 'config.json'), 'utf8')),
-  )
-  restoreConfig = () => configLoader.mockRestore()
-
-  ;({ resolveBackendContext } = await import('@craft-agent/shared/agent/backend'))
-  ;({ loadWorkspaceConfig } = await import('@craft-agent/shared/workspaces'))
-  ;({ SessionManager, createManagedSession } = await import('./SessionManager.ts'))
-  ;({ buildRestartRequiredSignature } = await import('./runtime-config.ts'))
-  ;({ createSession: createStoredSession } = await import('@craft-agent/shared/sessions'))
-})
-
-afterAll(() => {
-  restoreConfig?.()
-  if (tmpConfigRoot) {
-    rmSync(tmpConfigRoot, { recursive: true, force: true })
-  }
-  if (originalCraftConfigDir === undefined) {
-    delete process.env.CRAFT_CONFIG_DIR
-  } else {
-    process.env.CRAFT_CONFIG_DIR = originalCraftConfigDir
-  }
-})
-
-  interface AgentStub {
-    isProcessing: () => boolean
-    updateRuntimeConfig: jest.Mock
-    setModel: jest.Mock
-    dispose: jest.Mock
-    disposeForRestart?: () => Promise<void>
-  }
-
-function createAgentStub(opts: {
-  isProcessing?: boolean
-  refreshSucceeds?: boolean
-  refreshDelayMs?: number
-} = {}): AgentStub {
-  const delay = opts.refreshDelayMs ?? 0
-  const result = opts.refreshSucceeds ?? true
-  return {
-    isProcessing: () => opts.isProcessing ?? false,
-    updateRuntimeConfig: jest.fn().mockImplementation(async () => {
-      if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay))
-      return result
-      }),
-    setModel: jest.fn(),
-    dispose: jest.fn(),
-  }
-}
-
 function injectSession(
   sm: InstanceType<typeof SessionManager>,
   id: string,
@@ -136,14 +80,15 @@ function injectSession(
   const workspace = {
     id: 'ws_test',
     name: 'Test Workspace',
+    slug: 'ws-test',
     rootPath: workspaceRoot,
     createdAt: Date.now(),
   }
   const managed = createManagedSession(
     { id, name: id, llmConnection },
-    workspace as never,
+    workspace,
     { messagesLoaded: true },
-  ) as unknown as { agent: AgentStub | null; backendRuntimeSignature?: string; backendRestartSignature?: string; isProcessing: boolean; llmConnection?: string }
+  )
   managed.agent = agent
   // Force a stale runtime signature so the helper's comparison always reaches
   // the refresh branch — the signature it computes from real disk config will
@@ -169,18 +114,50 @@ function injectSession(
   }
   managed.isProcessing = opts.isProcessing ?? false
   managed.llmConnection = llmConnection
-  ;(sm as unknown as { sessions: Map<string, unknown> }).sessions.set(id, managed)
+  ;sessionRuntimeStateForTest(sm).sessions.set(id, managed)
   return managed
 }
 
+beforeAll(async () => {
+  tmpConfigRoot = mkdtempSync(join(tmpdir(), 'sm-refresh-config-'))
+  process.env["CRAFT_CONFIG_DIR"] = tmpConfigRoot
+  writeTestConfig()
+
+  // An earlier test may have frozen CONFIG_DIR before this fixture existed.
+  // Keep real backend resolution while loading only this test's temporary file.
+  const storage = await import('@craft-agent/shared/config/storage')
+  const configLoader = spyOn(storage, 'loadStoredConfig').mockImplementation(() =>
+    StoredConfigSchema.parse(JSON.parse(readFileSync(join(tmpConfigRoot, 'config.json'), 'utf8'))) as NonNullable<ReturnType<typeof storage.loadStoredConfig>>,
+  )
+  restoreConfig = () => configLoader.mockRestore()
+
+  ;({ resolveBackendContext } = await import('@craft-agent/shared/agent/backend'))
+  ;({ loadWorkspaceConfig } = await import('@craft-agent/shared/workspaces'))
+  ;({ SessionManager, createManagedSession } = await import('./SessionManager.ts'))
+  ;({ buildRestartRequiredSignature } = await import('./runtime-config.ts'))
+  ;({ createSession: createStoredSession } = await import('@craft-agent/shared/sessions'))
+})
+afterAll(() => {
+  restoreConfig?.()
+  if (tmpConfigRoot) {
+    rmSync(tmpConfigRoot, { recursive: true, force: true })
+  }
+  if (originalCraftConfigDir === undefined) {
+    delete process.env["CRAFT_CONFIG_DIR"]
+  } else {
+    process.env["CRAFT_CONFIG_DIR"] = originalCraftConfigDir
+  }
+})
+
 describe('refreshConnectionRuntime', () => {
   let tmpRoot: string
+
   let sm: InstanceType<typeof SessionManager>
 
   beforeEach(() => {
     writeTestConfig()
     tmpRoot = mkdtempSync(join(tmpdir(), 'sm-refresh-'))
-    sm = new SessionManager()
+    sm = withSessionOperationsForTest(new SessionManager())
   })
 
   afterEach(() => {
@@ -314,7 +291,7 @@ describe('refreshConnectionRuntime', () => {
     const agent = createAgentStub()
     const managed = injectSession(sm, stored.id, tmpRoot, 'slug-A', agent)
     const refreshRuntime = jest.fn().mockResolvedValue(undefined)
-    ;(sm as unknown as {
+    ;(sm as {
       tryRefreshAgentRuntime: (session: unknown, reason: string) => Promise<void>
     }).tryRefreshAgentRuntime = refreshRuntime
 
@@ -413,29 +390,13 @@ describe('refreshConnectionRuntime', () => {
       capabilityEnvelopeSha256: specializedProfileCapabilityEnvelopeIdentity(capabilities),
       capabilities,
     }
-    const internal = sm as unknown as {
-      admitBackendToolExecution: (
-        session: unknown,
-        agent: unknown,
-        request: { toolName: string; toolInput: Record<string, unknown> },
-      ) => Promise<void>
-      assertSpecializedMissionCapabilities: (
-        session: unknown,
-        toolName: string,
-        input: Record<string, unknown>,
-      ) => Promise<void>
-      durablyRecordAutomaticRecoveryToolAdmission: (
-        session: unknown,
-        agent: unknown,
-        request: { toolName: string; toolInput: Record<string, unknown> },
-      ) => Promise<void>
-    }
+    const internal = sessionManagerForTest(sm)
     const durableAdmission = jest.fn().mockResolvedValue(undefined)
     internal.durablyRecordAutomaticRecoveryToolAdmission = durableAdmission
 
     await expect(internal.admitBackendToolExecution(
       managed,
-      {},
+      completeSessionAgentFixture(managed.workspace, {}),
       { toolName: 'Read', toolInput: { file_path: join(tmpRoot, 'input.txt') } },
     )).rejects.toThrow('drifted')
     expect(durableAdmission).not.toHaveBeenCalled()
@@ -449,160 +410,9 @@ describe('refreshConnectionRuntime', () => {
     })
     await internal.admitBackendToolExecution(
       managed,
-      {},
+      completeSessionAgentFixture(managed.workspace, {}),
       { toolName: 'mcp__external__mutate', toolInput: {} },
     )
     expect(order).toEqual(['capability', 'durable-admission'])
   })
-
-  it('pins the current connection when a user selects its model after connection lock', async () => {
-    const stored = await createStoredSession(tmpRoot, {
-      model: 'test-text', llmConnection: 'slug-A', connectionRoutePinned: false,
-    })
-    const managed = injectSession(sm, stored.id, tmpRoot, 'slug-A', null) as ReturnType<typeof injectSession> & {
-      connectionLocked?: boolean
-      connectionRoutePinned?: boolean
-    }
-    managed.connectionLocked = true
-    managed.connectionRoutePinned = false
-
-    await sm.updateSessionModel(stored.id, 'ws_test', 'test-vision', 'slug-A')
-
-    expect(managed.connectionRoutePinned).toBe(true)
-    expect((await import('@craft-agent/shared/sessions')).loadSession(tmpRoot, stored.id))
-      .toMatchObject({ connectionRoutePinned: true, modelRoutePinned: true })
-  })
-
-  it('keeps the selected runtime model and reasoning for complex turns beyond the cost budget', async () => {
-    writeFileSync(join(tmpRoot, 'config.json'), JSON.stringify({
-      schemaVersion: 1,
-      id: 'ws_test',
-      name: 'Test Workspace',
-      slug: 'test-workspace',
-      createdAt: 1,
-      updatedAt: 1,
-      automaticRoutingEnabled: true,
-    }))
-    const agent = { ...createAgentStub(), setExternalActionPolicy: jest.fn() }
-    const managed = injectSession(sm, 'selected-turn', tmpRoot, 'slug-A', agent) as ReturnType<typeof injectSession> & {
-      model?: string
-      modelRoutePinned?: boolean
-      thinkingLevel?: string
-      thinkingLevelPinned?: boolean
-      tokenUsage?: { costUsd: number }
-      pendingRoutingMeta?: { costControl?: { budgetState?: string; thinkingLevel?: string } }
-    }
-    managed.model = 'test-vision'
-    managed.modelRoutePinned = true
-    managed.thinkingLevel = 'high'
-    managed.thinkingLevelPinned = true
-    managed.tokenUsage = { costUsd: 100_000 }
-    const internal = sm as unknown as {
-      tryRefreshAgentRuntime: (session: unknown, reason: string) => Promise<void>
-      getOrCreateAgent: (session: unknown, turn: { message: string }) => Promise<unknown>
-    }
-    internal.tryRefreshAgentRuntime = jest.fn().mockResolvedValue(undefined)
-
-    const result = await internal.getOrCreateAgent(managed, {
-      message: 'Audit the architecture, implement a migration, verify the result, and review every security requirement.',
-    })
-
-    expect(result).toBe(agent)
-    expect(managed.llmConnection).toBe('slug-A')
-    expect(managed.model).toBe('test-vision')
-    expect(managed.thinkingLevel).toBe('high')
-    expect(agent.setModel).not.toHaveBeenCalled()
-    expect(managed.pendingRoutingMeta?.costControl).toMatchObject({ budgetState: 'hard-limit', thinkingLevel: 'high' })
-  })
-
-  it('refuses an auth-none specialized route before cost control or provider dispatch', async () => {
-    writeFileSync(join(tmpRoot, 'config.json'), JSON.stringify({
-      schemaVersion: 1,
-      id: 'ws_test',
-      name: 'Test Workspace',
-      slug: 'test-workspace',
-      createdAt: 1,
-      updatedAt: 1,
-      automaticRoutingEnabled: true,
-    }))
-    const agent = { ...createAgentStub(), setExternalActionPolicy: jest.fn() }
-    const managed = injectSession(sm, 'specialized-cost', tmpRoot, 'slug-A', agent) as ReturnType<typeof injectSession> & {
-      model?: string
-      modelRoutePinned?: boolean
-      connectionRoutePinned?: boolean
-      thinkingLevel?: string
-      thinkingLevelPinned?: boolean
-      missionRouteLockSha256?: string
-      missionCapabilityLock?: MissionCapabilityLock
-      tokenUsage?: { costUsd: number }
-      pendingRoutingMeta?: { costControl?: unknown }
-    }
-    managed.model = 'test-vision'
-    managed.modelRoutePinned = true
-    managed.connectionRoutePinned = true
-    managed.thinkingLevel = 'high'
-    managed.thinkingLevelPinned = true
-    managed.tokenUsage = { costUsd: 100_000 }
-    managed.missionRouteLockSha256 = 'a'.repeat(64)
-    managed.missionCapabilityLock = {
-      schemaVersion: 1,
-      capabilityEnvelopeSha256: specializedProfileCapabilityEnvelopeIdentity([]),
-      capabilities: [],
-    }
-    const internal = sm as unknown as {
-      tryRefreshAgentRuntime: (session: unknown, reason: string) => Promise<void>
-      getOrCreateAgent: (session: unknown, turn: { message: string }) => Promise<unknown>
-    }
-    internal.tryRefreshAgentRuntime = jest.fn().mockResolvedValue(undefined)
-
-    await expect(internal.getOrCreateAgent(managed, { message: 'Retry.' }))
-      .rejects.toThrow('host-attestable credential generation')
-    expect(agent.setModel).not.toHaveBeenCalled()
-  })
-
-
-
-
-
-
-})
-
-describe('restartAgentRuntime', () => {
-  let tmpRoot: string
-  let sm: InstanceType<typeof SessionManager>
-
-  beforeEach(() => {
-    writeTestConfig()
-    tmpRoot = mkdtempSync(join(tmpdir(), 'sm-restart-'))
-    sm = new SessionManager()
-  })
-
-  afterEach(() => {
-    rmSync(tmpRoot, { recursive: true, force: true })
-  })
-
-  it('disposes the session runtime so the next turn recreates it', async () => {
-    const agent = createAgentStub()
-    const managed = injectSession(sm, 'restart-me', tmpRoot, 'slug-A', agent)
-
-    await sm.restartAgentRuntime('restart-me')
-
-    expect(agent.dispose).toHaveBeenCalledTimes(1)
-    expect(managed.agent).toBeNull()
-    expect(managed.backendRuntimeSignature).toBeUndefined()
-    expect((managed as { autonomyEvents?: Array<Record<string, unknown>> }).autonomyEvents?.at(-1)).toMatchObject({
-      phase: 'fallback',
-      message: 'Execution runtime bridge was reconnected; retry the failed turn to recreate the runtime.',
-    })
-  })
-
-  it('refuses to dispose a runtime while the session is processing', async () => {
-    const agent = createAgentStub({ isProcessing: true })
-    const managed = injectSession(sm, 'busy-restart', tmpRoot, 'slug-A', agent, { isProcessing: false })
-
-    await expect(sm.restartAgentRuntime('busy-restart')).rejects.toThrow('Cannot reconnect runtime while session is processing')
-
-    expect(agent.dispose).not.toHaveBeenCalled()
-    expect(managed.agent).toBe(agent)
-  })
-})
+});

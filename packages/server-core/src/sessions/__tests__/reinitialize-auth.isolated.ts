@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from '../testing/session-operation-access.ts';
 import { afterEach, beforeEach, describe, expect, it, jest } from 'bun:test'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
@@ -9,16 +10,16 @@ describe('SessionManager reinitializeAuth', () => {
   let previousConfigDir: string | undefined
 
   beforeEach(() => {
-    previousConfigDir = process.env.CRAFT_CONFIG_DIR
+    previousConfigDir = process.env["CRAFT_CONFIG_DIR"]
     tmpConfigRoot = mkdtempSync(join(tmpdir(), 'sm-reinitialize-auth-'))
-    process.env.CRAFT_CONFIG_DIR = tmpConfigRoot
+    process.env["CRAFT_CONFIG_DIR"] = tmpConfigRoot
   })
 
   afterEach(() => {
     if (previousConfigDir === undefined) {
-      delete process.env.CRAFT_CONFIG_DIR
+      delete process.env["CRAFT_CONFIG_DIR"]
     } else {
-      process.env.CRAFT_CONFIG_DIR = previousConfigDir
+      process.env["CRAFT_CONFIG_DIR"] = previousConfigDir
     }
     rmSync(tmpConfigRoot, { recursive: true, force: true })
   })
@@ -53,7 +54,7 @@ describe('SessionManager reinitializeAuth', () => {
     const { SessionManager, setSessionPlatform } = await import('../SessionManager.ts')
     setSessionPlatform(platform)
 
-    const sm = new SessionManager()
+    const sm = withSessionOperationsForTest(new SessionManager())
     await sm.reinitializeAuth()
 
     expect(logger.warn).toHaveBeenCalledWith('[session]', 'No LLM connection slug available for reinitializeAuth')

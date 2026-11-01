@@ -10,10 +10,10 @@ import type { AnnotationOverlayChip } from './annotation-overlay-geometry'
 export interface AnnotationOverlayLayerProps {
   rects: AnnotationOverlayRect[]
   chips: AnnotationOverlayChip[]
-  annotations?: AnnotationV1[]
-  getTooltipText?: (annotation: AnnotationV1, index: number) => string
+  annotations?: AnnotationV1[] | undefined
+  getTooltipText?: ((annotation: AnnotationV1, index: number) => string) | undefined
   /** Whether clicking a chip should open the annotation island/details view. */
-  allowChipOpen?: boolean
+  allowChipOpen?: boolean | undefined
   onChipOpen: (params: { annotationId: string; index: number; anchorX: number; anchorY: number; mode: 'view' }) => void
 }
 

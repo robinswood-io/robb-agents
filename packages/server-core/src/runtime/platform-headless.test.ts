@@ -38,10 +38,10 @@ describe('headless platform build provenance', () => {
   })
 
   it('lets canonical environment metadata override host defaults', () => {
-    process.env.CRAFT_VERSION = '0.12.0'
-    process.env.CRAFT_BUILD_COMMIT = 'def456'
-    process.env.CRAFT_BUILD_CHANNEL = 'production'
-    process.env.CRAFT_BUILD_DIRTY = 'false'
+    process.env["CRAFT_VERSION"] = '0.12.0'
+    process.env["CRAFT_BUILD_COMMIT"] = 'def456'
+    process.env["CRAFT_BUILD_CHANNEL"] = 'production'
+    process.env["CRAFT_BUILD_DIRTY"] = 'false'
 
     const platform = createHeadlessPlatform({
       appVersion: 'ignored',

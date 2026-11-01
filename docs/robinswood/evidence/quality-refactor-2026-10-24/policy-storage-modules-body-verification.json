@@ -1,0 +1,82 @@
+[
+  {
+    "source": "packages/shared/src/interop/agent-interop.ts",
+    "declarations": 25,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic/type imports and CommonJS require paths resolved against their original module directory; overload declaration order preserved",
+    "maxModuleLines": 240,
+    "retainedModuleLines": 0,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/governance/capability-broker.ts",
+    "declarations": 43,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic/type imports and CommonJS require paths resolved against their original module directory; overload declaration order preserved",
+    "maxModuleLines": 412,
+    "retainedModuleLines": 0,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/server-core/src/sessions/completed-chat-retention.ts",
+    "declarations": 44,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic/type imports and CommonJS require paths resolved against their original module directory; overload declaration order preserved",
+    "maxModuleLines": 293,
+    "retainedModuleLines": 0,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/telemetry/execution-telemetry.ts",
+    "declarations": 66,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic/type imports and CommonJS require paths resolved against their original module directory; overload declaration order preserved",
+    "maxModuleLines": 278,
+    "retainedModuleLines": 0,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/evals/provider-eval-runner.ts",
+    "declarations": 55,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic/type imports and CommonJS require paths resolved against their original module directory; overload declaration order preserved",
+    "maxModuleLines": 280,
+    "retainedModuleLines": 0,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/governance/sovereign-team-mesh.ts",
+    "declarations": 38,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic/type imports and CommonJS require paths resolved against their original module directory; overload declaration order preserved",
+    "maxModuleLines": 319,
+    "retainedModuleLines": 0,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/governance/verified-learning.ts",
+    "declarations": 54,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic/type imports and CommonJS require paths resolved against their original module directory; overload declaration order preserved",
+    "maxModuleLines": 238,
+    "retainedModuleLines": 0,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/workspaces/storage.ts",
+    "declarations": 28,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic/type imports and CommonJS require paths resolved against their original module directory; overload declaration order preserved",
+    "maxModuleLines": 271,
+    "retainedModuleLines": 0,
+    "moduleCycles": [],
+    "issues": []
+  }
+]

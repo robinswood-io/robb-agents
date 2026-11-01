@@ -1,0 +1,92 @@
+{
+  "status": "testé dans le candidat local, non intégré",
+  "mainFileLines": 754,
+  "newModuleLines": 180,
+  "scope": "Classification des effets, des cibles distantes, des actions sensibles et des périmètres signés ; rejets natifs conservés",
+  "preserved": "19 instructions de tête et blocs comparés indépendamment ; huit faits calculés avec leurs types natifs ; même ordre, mêmes valeurs d’entrée et même contexte original",
+  "checks": {
+    "pretool-tool-authority-types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 1.32,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-tool-authority-types.log"
+    },
+    "pretool-tool-authority-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-browser-channel.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-admission.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-input-transforms.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-ask-gate.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-pipeline-ordering.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-resume-authority.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-checks.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.03,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-tool-authority-tests.log"
+    },
+    "pretool-tool-authority-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/shared/src/agent/core/pre-tool-use/tool-authority.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 0.86,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-tool-authority-lint.log"
+    },
+    "pretool-tool-authority-all-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 19.19,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-tool-authority-all-types.log"
+    },
+    "pretool-tool-authority-full-suite": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 142.29,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-tool-authority-full-suite.log"
+    },
+    "pretool-tool-authority-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 17.26,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-tool-authority-build.log"
+    }
+  },
+  "remaining": {
+    "oversizedCodeFiles": 209,
+    "explicitAny": 708
+  },
+  "installedApplication": "Inchangée"
+}

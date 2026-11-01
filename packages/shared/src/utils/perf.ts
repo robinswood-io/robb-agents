@@ -206,7 +206,7 @@ export function start(
       endTime,
       duration,
       marks: [],
-      metadata,
+      ...(metadata !== undefined ? { metadata } : {}),
     };
 
     logMetric(metric);
@@ -290,8 +290,7 @@ export function span(name: string, metadata?: Record<string, unknown>): PerfSpan
         endTime,
         duration,
         marks,
-        metadata:
-          Object.keys(spanMetadata).length > 0 ? spanMetadata : undefined,
+        ...(Object.keys(spanMetadata).length > 0 ? { metadata: spanMetadata } : {}),
       };
 
       logMetric(metric);

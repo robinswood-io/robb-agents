@@ -217,7 +217,7 @@ export const actionList = Object.values(actions)
 
 // Get actions by category (for organized display)
 export const actionsByCategory = actionList.reduce((acc, action) => {
-  if (!acc[action.category]) acc[action.category] = []
-  acc[action.category].push(action)
+  const category = acc[action.category] ??= []
+  category.push(action)
   return acc
 }, {} as Record<string, ActionDefinition[]>)

@@ -1,4 +1,4 @@
-import * as React from 'react'
+
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
@@ -14,7 +14,7 @@ interface TableOfContentsProps {
   content: string
   cursorLine: number
   onHeadingClick: (line: number) => void
-  className?: string
+  className?: string | undefined
 }
 
 /**
@@ -65,8 +65,8 @@ export function TableOfContents({
       const match = line.match(/^(#{1,6})\s+(.+)$/)
       if (match) {
         extracted.push({
-          text: stripMarkdown(match[2]),
-          level: match[1].length,
+          text: stripMarkdown(match[2] ?? ''),
+          level: match[1]?.length ?? 0,
           line: index + 1, // Monaco uses 1-based line numbers
         })
       }
@@ -81,8 +81,8 @@ export function TableOfContents({
 
     // Find the last heading that's at or before the cursor
     let activeIndex = -1
-    for (let i = 0; i < headings.length; i++) {
-      if (headings[i].line <= cursorLine) {
+    for (const [i, heading] of headings.entries()) {
+      if (heading.line <= cursorLine) {
         activeIndex = i
       } else {
         break

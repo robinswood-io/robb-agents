@@ -1,24 +1,31 @@
 from __future__ import annotations
 
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from typing import ClassVar, override
 
 from ._tool_test_harness import build_env, run_tool
 
 
 class DocxToolSmokeTests(unittest.TestCase):
+    env: ClassVar[dict[str, str]]
+    tmpdir_obj: ClassVar[tempfile.TemporaryDirectory[str]]
+    tmpdir: ClassVar[Path]
     @classmethod
+    @override
     def setUpClass(cls) -> None:
         cls.env = build_env()
         cls.tmpdir_obj = tempfile.TemporaryDirectory(prefix="docx-tool-smoke-")
         cls.tmpdir = Path(cls.tmpdir_obj.name)
 
     @classmethod
+    @override
     def tearDownClass(cls) -> None:
         cls.tmpdir_obj.cleanup()
 
-    def run_tool(self, *args: str):
+    def run_tool(self, *args: str) -> subprocess.CompletedProcess[str]:
         return run_tool("docx-tool", *args, env=self.env)
 
     def test_create_extract_template_and_replace(self) -> None:
@@ -87,4 +94,4 @@ class DocxToolSmokeTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    _ = unittest.main()

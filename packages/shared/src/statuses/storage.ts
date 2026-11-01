@@ -10,16 +10,14 @@
  * - URL: Auto-downloaded to statuses/icons/{id}.{ext}
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import type { WorkspaceStatusConfig, StatusConfig, StatusCategory } from './types.ts';
 import { readJsonFileSync } from '../utils/files.ts';
 import { DEFAULT_ICON_SVGS } from './default-icons.ts';
 import {
-  validateIconValue,
   downloadIcon,
   needsIconDownload,
-  isIconUrl,
   ICON_EXTENSIONS,
 } from '../utils/icon.ts';
 import { migrateStatusColors } from '../colors/migrate.ts';

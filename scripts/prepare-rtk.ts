@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { parseJsonObject } from '../packages/shared/src/utils/json.ts';
 /**
  * Stages a pinned, checksum-verified RTK binary for an Electron packaging target.
  * RTK is distributed by rtk-ai under Apache-2.0; see THIRD_PARTY_NOTICES.
@@ -55,9 +56,9 @@ function findFile(root: string, fileName: string): string | null {
 export function validateRtkBinary(binaryPath: string, version: string, archiveSha256: string, nativeTarget: boolean): boolean {
   try {
     if (!existsSync(binaryPath) || statSync(binaryPath).size < 1_000_000) return false
-    const receipt = JSON.parse(readFileSync(`${binaryPath}.provenance.json`, 'utf8'))
-    if (receipt.version !== version || receipt.archiveSha256 !== archiveSha256
-      || receipt.binarySha256 !== createHash('sha256').update(readFileSync(binaryPath)).digest('hex')) return false
+    const receipt = parseJsonObject(readFileSync(`${binaryPath}.provenance.json`, 'utf8'))
+    if (receipt['version'] !== version || receipt['archiveSha256'] !== archiveSha256
+      || receipt['binarySha256'] !== createHash('sha256').update(readFileSync(binaryPath)).digest('hex')) return false
     // A checksum-verified cross-target binary cannot be executed on this host.
     if (!nativeTarget) return true
     const result = Bun.spawnSync([binaryPath, '--version'], {

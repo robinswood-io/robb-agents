@@ -39,10 +39,27 @@ describe('PWA capability detection', () => {
     expect(snapshot.webAssembly.threads).toBe(false)
   })
 
+  it('does not mistake a 32-bit engine that ignores unknown dictionary keys for memory64 support', async () => {
+    class Memory32 {
+      constructor(descriptor: Record<string, unknown>) {
+        if (typeof descriptor['initial'] !== 'number') throw new TypeError('32-bit memory requires numeric limits')
+      }
+    }
+    replaceGlobal('window', { isSecureContext: true })
+    replaceGlobal('navigator', {})
+    replaceGlobal('PublicKeyCredential', undefined)
+    replaceGlobal('WebAssembly', { Memory: Memory32 })
+    const snapshot = await detectPwaCapabilities()
+    expect(snapshot.webAssembly.api).toBe(true)
+    expect(snapshot.webAssembly.memory64).toBe(false)
+  })
+
   it('classifies passkeys, File System Access, Badging, WebGPU, and WASM runtime support', async () => {
     class Memory64 {
       constructor(descriptor: Record<string, unknown>) {
-        if (descriptor.index !== 'i64') throw new Error('expected memory64 probe')
+        if (descriptor['address'] !== 'i64' || typeof descriptor['initial'] !== 'bigint' || typeof descriptor['maximum'] !== 'bigint') {
+          throw new Error('expected an actual 64-bit memory descriptor')
+        }
       }
     }
     replaceGlobal('window', {

@@ -1,3 +1,4 @@
+import { isJsonObject, parseJsonObject, isUnknownArray } from '../../utils/json.ts';
 import { describe, expect, it } from 'bun:test'
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
@@ -106,8 +107,10 @@ function setupConfig(llmConnections: LlmConnection[]) {
   }
 
   function readConnection(slug: string) {
-    const config = JSON.parse(readFileSync(configPath, 'utf-8'))
-    return config.llmConnections.find((c: { slug: string }) => c.slug === slug)
+    const config = parseJsonObject(readFileSync(configPath, 'utf-8'))
+    const connections = config["llmConnections"];
+    if (!isUnknownArray(connections)) throw new Error("Connections must be an array");
+    return (connections as unknown[]).filter(isJsonObject).find((c) => c["slug"] === slug)
   }
 
   return { runUpdate, readConnection }
@@ -129,7 +132,7 @@ describe('updateLlmConnection persists midStreamBehavior', () => {
   it("flips midStreamBehavior from 'steer' to 'queue'", () => {
     const { runUpdate, readConnection } = setupConfig([makeConnection({ midStreamBehavior: 'steer' })])
     expect(runUpdate('pi-test', { midStreamBehavior: 'queue' })).toBe(true)
-    expect(readConnection('pi-test').midStreamBehavior).toBe('queue')
+    expect(readConnection('pi-test')?.["midStreamBehavior"]).toBe('queue')
   })
 
   it("flips midStreamBehavior from 'queue' to 'steer'", () => {
@@ -137,21 +140,21 @@ describe('updateLlmConnection persists midStreamBehavior', () => {
       makeConnection({ providerType: 'anthropic', authType: 'api_key', midStreamBehavior: 'queue' }),
     ])
     expect(runUpdate('pi-test', { midStreamBehavior: 'steer' })).toBe(true)
-    expect(readConnection('pi-test').midStreamBehavior).toBe('steer')
+    expect(readConnection('pi-test')?.["midStreamBehavior"]).toBe('steer')
   })
 
   it('preserves existing midStreamBehavior when other fields are updated', () => {
     const { runUpdate, readConnection } = setupConfig([makeConnection({ midStreamBehavior: 'queue' })])
     expect(runUpdate('pi-test', { name: 'Renamed' })).toBe(true)
     const updated = readConnection('pi-test')
-    expect(updated.name).toBe('Renamed')
-    expect(updated.midStreamBehavior).toBe('queue')
+    expect(updated?.["name"]).toBe('Renamed')
+    expect(updated?.["midStreamBehavior"]).toBe('queue')
   })
 
   it('seeds midStreamBehavior from undefined when patch sets it explicitly', () => {
     // Legacy connection (no midStreamBehavior on disk) — patch sets it.
-    const { runUpdate, readConnection } = setupConfig([makeConnection({ midStreamBehavior: undefined })])
+    const { runUpdate, readConnection } = setupConfig([makeConnection({  })])
     expect(runUpdate('pi-test', { midStreamBehavior: 'queue' })).toBe(true)
-    expect(readConnection('pi-test').midStreamBehavior).toBe('queue')
+    expect(readConnection('pi-test')?.["midStreamBehavior"]).toBe('queue')
   })
 })

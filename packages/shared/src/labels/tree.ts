@@ -54,12 +54,12 @@ export function flattenLabels(labels: LabelConfig[]): LabelConfig[] {
  */
 export function sortLabelsForDisplay(labels: LabelConfig[]): LabelConfig[] {
   return [...labels]
-    .map((label) => ({
-      ...label,
-      children: label.children && label.children.length > 0
+    .map((label): LabelConfig => {
+      const children = label.children && label.children.length > 0
         ? sortLabelsForDisplay(label.children)
-        : label.children,
-    }))
+        : label.children;
+      return { ...label, ...(children !== undefined ? { children } : {}) };
+    })
     .sort(compareLabelNamesForDisplay);
 }
 
@@ -82,7 +82,7 @@ export function flattenLabelsWithParentPath(labels: LabelConfig[]): FlattenedLab
       result.push({
         label: node,
         parentNames,
-        parentPath: parentNames.length > 0 ? `${parentNames.join(' / ')} / ` : undefined,
+        ...(parentNames.length > 0 ? { parentPath: `${parentNames.join(' / ')} / ` } : {}),
       });
       if (node.children && node.children.length > 0) {
         walk(node.children, [...parentNames, node.name]);

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { LabelConfig } from '@craft-agent/shared/labels'
 import { flattenLabelsWithParentPath } from '@craft-agent/shared/labels'
 
@@ -27,12 +28,12 @@ export function createLabelMenuItems(labels: LabelConfig[], excludedLabelIds: It
 
   return flattenLabelsWithParentPath(labels)
     .filter(({ label }) => !excluded.has(label.id))
-    .map(({ label, parentPath }) => ({
+    .map(({ label, parentPath }) => (omitUndefined({
       id: label.id,
       label: label.name,
       config: label,
       parentPath,
-    }))
+    })))
     .sort(compareLabelMenuItems)
 }
 
@@ -79,7 +80,9 @@ export function filterItems(items: LabelMenuItem[], filter: string): LabelMenuIt
       let bestScore = 0
       let found = false
       while (partIndex < fullParts.length) {
-        const score = segmentScore(fullParts[partIndex], seg)
+        const part = fullParts[partIndex]
+        if (part === undefined) break
+        const score = segmentScore(part, seg)
         if (score > 0) {
           bestScore = score
           found = true

@@ -1,0 +1,334 @@
+{
+  "source": "packages/shared/src/specialized-profiles/opportunity-engine.ts",
+  "units": [
+    {
+      "names": [
+        "SPECIALIZATION_SIGNALS"
+      ],
+      "group": "contracts",
+      "bodySha256": "4d229441876a6e7e637dbec025ccedec6fff364f47bad4de19390199ca6da376"
+    },
+    {
+      "names": [
+        "SpecializationSignal"
+      ],
+      "group": "contracts",
+      "bodySha256": "5c8778cb613bae1ef25a69d8f091d7c005c464c76671b95f2ae756d637c8cece"
+    },
+    {
+      "names": [
+        "SPECIALIZATION_OPPORTUNITY_CATEGORIES"
+      ],
+      "group": "contracts",
+      "bodySha256": "2d16e8f36377857762c8d12c193234a74c549f246a8330bb6f366ec892cfc14d"
+    },
+    {
+      "names": [
+        "SpecializationOpportunityCategory"
+      ],
+      "group": "contracts",
+      "bodySha256": "ffa279fed2d81a4acf9a39cc2aea0d9d6e39285bba7a7ea8b11b66e1f86f0502"
+    },
+    {
+      "names": [
+        "RootMissionSpecializationObservation"
+      ],
+      "group": "contracts",
+      "bodySha256": "43c07b78c71da35ef02f894d26050fdd445327029b816d613aaca88f641581dd"
+    },
+    {
+      "names": [
+        "SpecializationCategoryThreshold"
+      ],
+      "group": "contracts",
+      "bodySha256": "3905a838aa448129d454886939feacb5d1b952e039ed3a10bbd734590751e950"
+    },
+    {
+      "names": [
+        "AgentProfileOpportunityThreshold"
+      ],
+      "group": "contracts",
+      "bodySha256": "72a88fd2b07d1d165e6238d0e245169ff8377b0161d6d94185248411175eb269"
+    },
+    {
+      "names": [
+        "SpecializationOpportunityThresholds"
+      ],
+      "group": "contracts",
+      "bodySha256": "7cb770937da4f39275d99c54219ffc8f66200190fe5e80ed8604d5b62839960d"
+    },
+    {
+      "names": [
+        "SpecializationOpportunityThresholdOverrides"
+      ],
+      "group": "contracts",
+      "bodySha256": "db6b2ef9b4209907943944229cfa04a56f2c49b17985a783ed12122c22e47b2c"
+    },
+    {
+      "names": [
+        "DEFAULT_SPECIALIZATION_OPPORTUNITY_THRESHOLDS"
+      ],
+      "group": "contracts",
+      "bodySha256": "ad37f9d1bb84420edbd346935a77ce0685d2ea8137766dc3c101bc9e82eb1990"
+    },
+    {
+      "names": [
+        "SpecializationCandidateAssessment"
+      ],
+      "group": "contracts",
+      "bodySha256": "21289cb9e1109e2411159dfec88a83e3db545c2fcf3a85d915e9155f08174bcc"
+    },
+    {
+      "names": [
+        "SpecializationFamilyAnalysis"
+      ],
+      "group": "contracts",
+      "bodySha256": "82a80c0ffb1f51e3997e0dd34c42c10db1c10a7195b040c661447946f9d94922"
+    },
+    {
+      "names": [
+        "SpecializationOpportunityProposal"
+      ],
+      "group": "contracts",
+      "bodySha256": "539a61b005bab115ff8d4eaf979833bbe0029c7880c9029c136cc15517714f6b"
+    },
+    {
+      "names": [
+        "SpecializationOpportunityReport"
+      ],
+      "group": "contracts",
+      "bodySha256": "8560a123c2a1a01278d43a8a4141e56612257bf910de8f14886c0a6b5bec6d4d"
+    },
+    {
+      "names": [
+        "DeduplicatedRootMission"
+      ],
+      "group": "contracts",
+      "bodySha256": "4c8fef980d035f87d880fcbd071ec111a3f703a4e0fb62f7b63b90054e945b6c"
+    },
+    {
+      "names": [
+        "OBSERVATION_KEYS"
+      ],
+      "group": "contracts",
+      "bodySha256": "fce98874857378ee0f5add1b63f076690fa3f4376374c8d215aab4982aecf075"
+    },
+    {
+      "names": [
+        "SIGNAL_SET"
+      ],
+      "group": "contracts",
+      "bodySha256": "e05a13835bf86bd5f23b73526b6bec5a64dd57eea0e2e6e358e7ecbb347f1e8d"
+    },
+    {
+      "names": [
+        "CATEGORY_SET"
+      ],
+      "group": "contracts",
+      "bodySha256": "3e556ca0f6f4112c24474687622193fd7122d8a48d24c6d944fecae00c3012b6"
+    },
+    {
+      "names": [
+        "BASE_THRESHOLD_KEYS"
+      ],
+      "group": "contracts",
+      "bodySha256": "75c2e301e9aa9cb8f84847a299b288094e7664e9e85cecc87975c24e9c67ff08"
+    },
+    {
+      "names": [
+        "AGENT_THRESHOLD_KEYS"
+      ],
+      "group": "contracts",
+      "bodySha256": "415e88d2dc686c65ce4cb9826403ca84514c5aecd972b2ec1cab80be595a9e5f"
+    },
+    {
+      "names": [
+        "MEMORY_SIGNALS"
+      ],
+      "group": "contracts",
+      "bodySha256": "6d4f21e0fae4abf12d037506866ccf9fa28869e1e9bd55c13d74e8ca777f6551"
+    },
+    {
+      "names": [
+        "AGENT_BOUNDARY_SIGNALS"
+      ],
+      "group": "contracts",
+      "bodySha256": "304aee454959383963238c23194802cba050c0df09f08952aaeca2b6c1872709"
+    },
+    {
+      "names": [
+        "CATEGORY_SIGNAL_DESCRIPTIONS"
+      ],
+      "group": "contracts",
+      "bodySha256": "fbe7fce526fd343efc5bfda95036cb45dbd6c4f576ff6e01ee9614fca17e5841"
+    },
+    {
+      "names": [
+        "detectSpecializationOpportunities"
+      ],
+      "group": "opportunities",
+      "bodySha256": "2b6c9b7f0d35d8e0163afce0d86b5bfc4f5d8562464082273b3e7498cf2c7fd2"
+    },
+    {
+      "names": [
+        "assessCategory"
+      ],
+      "group": "opportunities",
+      "bodySha256": "095d82ed13fe4f059f88cddd9de265f9075b3875d1bc67903577a37af5fc5cf0"
+    },
+    {
+      "names": [
+        "rootSupportsCategory"
+      ],
+      "group": "opportunities",
+      "bodySha256": "731e6c6615b7d467b8e71dd700fd0e0b0503472b1c2144a1434e5a294ac1e137"
+    },
+    {
+      "names": [
+        "resolveSpecializationOpportunityThresholds"
+      ],
+      "group": "validation",
+      "bodySha256": "ac35de11c45247d1b3711784c04f2aaa0a641e6515a4578f1b273fdc0f1594f8"
+    },
+    {
+      "names": [
+        "validateBaseThreshold"
+      ],
+      "group": "validation",
+      "bodySha256": "61b7157807205d1c69a65f4b11a918e66fceb2bd4d6964682071574ef0460a58"
+    },
+    {
+      "names": [
+        "validateBoundedString"
+      ],
+      "group": "validation",
+      "bodySha256": "93b01954d13f0f5380ddc3498ce04a81e4aa13d3f2856ec426840c84e352afa2"
+    },
+    {
+      "names": [
+        "assertPlainRecord"
+      ],
+      "group": "validation",
+      "bodySha256": "da03581e3d31b5caba6ea0c9b7976066aa263ced05833025510d648c15cf5d5f"
+    },
+    {
+      "names": [
+        "assertNoUnknownKeys"
+      ],
+      "group": "validation",
+      "bodySha256": "66d874830cf002548b8b17da8493d41dfd8188a72114aab328366248e7abb609"
+    },
+    {
+      "names": [
+        "deduplicateRootMissionObservations"
+      ],
+      "group": "observations",
+      "bodySha256": "7935b0b50c5212bd1e61d6dd1c07fd12c80db0e30b924a572a9734131b4e004a"
+    },
+    {
+      "names": [
+        "validateObservation"
+      ],
+      "group": "observations",
+      "bodySha256": "8b7ef86b4c8864593b49232e5543a041fe204bd9f0cd3010f17efa2d70c0856b"
+    },
+    {
+      "names": [
+        "normalizeIdentity"
+      ],
+      "group": "observations",
+      "bodySha256": "956a98442dbeac149d7d3100efbc9eec1836ca3a8cec1e9f740d58d2e24673cd"
+    },
+    {
+      "names": [
+        "canonicalFamily"
+      ],
+      "group": "observations",
+      "bodySha256": "7e93e7abcb15b99bbb3f3a7e714c6473d138f2eeefcc628497baa16daa296284"
+    },
+    {
+      "names": [
+        "sortedEntries"
+      ],
+      "group": "observations",
+      "bodySha256": "4ae7a25e43b8f9c83ce13c6a2ba42ac582c014452af4a7b4935e740685595860"
+    },
+    {
+      "names": [
+        "sortedStrings"
+      ],
+      "group": "observations",
+      "bodySha256": "4b00bbb320ee149ae8f4f3073e97fcf86598a204136924868c28778bee00e87e"
+    },
+    {
+      "names": [
+        "lexical"
+      ],
+      "group": "observations",
+      "bodySha256": "236686bd0b45c0aba4d8b46c3a95edab9e5a6286dc23b51ac6d1eff02bd1e178"
+    },
+    {
+      "names": [
+        "passFail"
+      ],
+      "group": "observations",
+      "bodySha256": "5cd3c8350447cf86757e575049eaacb46f2346c01c15a7611d5e6037e5d70c58"
+    },
+    {
+      "names": [
+        "formatRate"
+      ],
+      "group": "observations",
+      "bodySha256": "a3a694ef2bca1ef4904c3558abbdad6ac50c1faeda02f3ef9f625f3ffbe04da5"
+    },
+    {
+      "names": [
+        "proposalId"
+      ],
+      "group": "observations",
+      "bodySha256": "59e9ed30c4442462d197dbabdf2a4511d50ef785a21f2afd5ff79277cf338a4c"
+    },
+    {
+      "names": [
+        "stableHash"
+      ],
+      "group": "observations",
+      "bodySha256": "36923b22813b56f1361fa5c07bdb6a85bea662c8002ba85594638466aa4abc0b"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 201
+    },
+    {
+      "name": "opportunities",
+      "lines": 155
+    },
+    {
+      "name": "validation",
+      "lines": 76
+    },
+    {
+      "name": "observations",
+      "lines": 114
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "opportunities": [
+      "contracts",
+      "validation",
+      "observations"
+    ],
+    "validation": [
+      "contracts"
+    ],
+    "observations": [
+      "contracts",
+      "validation"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

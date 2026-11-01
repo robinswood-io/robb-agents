@@ -77,3 +77,7 @@ credentials.enc
 # act (local GitHub Actions runner)
 .secrets
 .actrc
+
+# Generated canonical results are bound to sources and retained outside Git.
+bmad/quality-evidence.json
+bmad/quality-logs/

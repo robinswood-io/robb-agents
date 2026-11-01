@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
 import { canonicalOperationValue } from './capability-broker.ts';
@@ -136,7 +137,7 @@ export class StructuredEgressFirewall {
     destinationOrigin: string;
     policy: StructuredEgressPolicy;
   }): PreparedStructuredEgress {
-    if (!input.payload || typeof input.payload !== 'object' || Array.isArray(input.payload)) {
+    if (!input.payload || typeof input.payload !== 'object' || isUnknownArray(input.payload)) {
       throw new StructuredEgressDeniedError('OPAQUE_PAYLOAD', [], 'Only structured object payloads may cross this egress boundary');
     }
     const policy = StructuredEgressPolicySchema.parse(input.policy);
@@ -154,10 +155,10 @@ export class StructuredEgressFirewall {
       if (depth > 32 || fieldCount > 10_000) {
         throw new StructuredEgressDeniedError('OPAQUE_PAYLOAD', [path], 'Structured payload exceeds safety bounds');
       }
-      if (Array.isArray(value)) {
+      if (isUnknownArray(value)) {
         if (ancestors.has(value)) throw new StructuredEgressDeniedError('OPAQUE_PAYLOAD', [path], 'Cyclic payloads are forbidden');
         ancestors.add(value);
-        const output = value.map((child, index) => visit(child, `${path}.${index}`, depth + 1)).filter((child) => child !== OMIT);
+        const output = value.map((child: unknown, index) => visit(child, `${path}.${index}`, depth + 1)).filter((child: unknown) => child !== OMIT);
         ancestors.delete(value);
         return output;
       }

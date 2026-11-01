@@ -1,0 +1,260 @@
+{
+  "source": "packages/shared/src/agent/permissions-config.ts",
+  "units": [
+    {
+      "names": [
+        "permissionsInitialized"
+      ],
+      "group": "app-defaults",
+      "bodySha256": "a0d6a113f17d1143b52d25b499cefc281e68918be782ce597e0358ebf15b3fe0"
+    },
+    {
+      "names": [
+        "REVOKED_BUNDLED_BASH_PATTERNS"
+      ],
+      "group": "app-defaults",
+      "bodySha256": "a4897a78de25ef67638c1c6bae141fb46465575007d47ce469a9d47aed4fe00a"
+    },
+    {
+      "names": [
+        "getBlockedCommandHintKey"
+      ],
+      "group": "app-defaults",
+      "bodySha256": "18e7c1d8e3bc1faefcb0572e021cd75f1851c2acb704c98efc031bba0f4587dd"
+    },
+    {
+      "names": [
+        "REVOKED_BUNDLED_BLOCKED_COMMAND_HINT_KEYS"
+      ],
+      "group": "app-defaults",
+      "bodySha256": "53d78188d2b819882e2d6acb069c8e3c1428d485a1de2426baa575f3f7ffcb39"
+    },
+    {
+      "names": [
+        "getAppPermissionsDir"
+      ],
+      "group": "app-defaults",
+      "bodySha256": "b153f2b399b6a28eb24934b2770549959e57dd13f18ea308f2b04c6e2bf35f54"
+    },
+    {
+      "names": [
+        "ensureDefaultPermissions"
+      ],
+      "group": "app-defaults",
+      "bodySha256": "1f4c8aea7045178c3e8aaf31cb86a433f3b3b723d00e0232b20eb0ec3ec1e94c"
+    },
+    {
+      "names": [
+        "migratePermissions"
+      ],
+      "group": "app-defaults",
+      "bodySha256": "c0b94c51aaf77c55e7651e05dc41131a4ebd9c5d90a2daf5231ac266e654935e"
+    },
+    {
+      "names": [
+        "loadDefaultPermissions"
+      ],
+      "group": "app-defaults",
+      "bodySha256": "0a79998fcfe0dfd4668f769a983689283204be8722aedf927c1c824a4b081372"
+    },
+    {
+      "names": [
+        "PatternWithComment"
+      ],
+      "group": "contracts",
+      "bodySha256": "ee7b8693a5a27d4a85b5e1d08aa7e02ad7720e5c36fa2bfbfe9cac4eb25d7702"
+    },
+    {
+      "names": [
+        "PermissionsCustomConfig"
+      ],
+      "group": "contracts",
+      "bodySha256": "29de0bcb99279e67a4519da8a9d30b6ad13050bc924f4e97bbbdf1fe49c0dd67"
+    },
+    {
+      "names": [
+        "MergedPermissionsConfig"
+      ],
+      "group": "contracts",
+      "bodySha256": "ba9dbe0d3d48b0aef8efad77a8136e7b853eecb23d5d14bcb80c71fc8b7c96d5"
+    },
+    {
+      "names": [
+        "PermissionsContext"
+      ],
+      "group": "contracts",
+      "bodySha256": "cb90bd6798ee95d650a1044e86c690b7b0ed5e29777cf57d806b5827433ca553"
+    },
+    {
+      "names": [
+        "parsePermissionsJson"
+      ],
+      "group": "validation",
+      "bodySha256": "36a3d9b5c23716dfb271c457abf009a7e1a9b1adc85ad0d1fe6ff2a9dcf77e5c"
+    },
+    {
+      "names": [
+        "validateRegex"
+      ],
+      "group": "validation",
+      "bodySha256": "a1839c1196e794479071de26ef11535c0c3383abe2c8968883854cb8b24aa349"
+    },
+    {
+      "names": [
+        "compileBlockedCommandHint"
+      ],
+      "group": "validation",
+      "bodySha256": "1fa34a5d235ee1726f01623a14f344f68b2df30efeb92158bd29c9f6872430fb"
+    },
+    {
+      "names": [
+        "shouldCompileBashPattern"
+      ],
+      "group": "validation",
+      "bodySha256": "1f1a14d12dc13211997be98461438ae76df6e8843a96c3edd056d55a68231ec3"
+    },
+    {
+      "names": [
+        "validatePermissionsConfig"
+      ],
+      "group": "validation",
+      "bodySha256": "a0c10fe1adfb638f37f2c847b3151ab2fd9ab85f42f4709b502cf8c3806abf0a"
+    },
+    {
+      "names": [
+        "getWorkspacePermissionsPath"
+      ],
+      "group": "storage",
+      "bodySha256": "8775a757012a512a92e986553d06ccf0099fc51e2d6ba60237a493f2c7fd554e"
+    },
+    {
+      "names": [
+        "getSourcePermissionsPath"
+      ],
+      "group": "storage",
+      "bodySha256": "80b018abe1d3198b08c97c30b7494a8d39d66a6bfcfda563a202d713266da20a"
+    },
+    {
+      "names": [
+        "loadWorkspacePermissionsConfig"
+      ],
+      "group": "storage",
+      "bodySha256": "3a19005a04f4fdad745a3bb142c16ca06f4d3b7ae5ef6d924ac8587c3864cdcc"
+    },
+    {
+      "names": [
+        "loadSourcePermissionsConfig"
+      ],
+      "group": "storage",
+      "bodySha256": "f6f9f449e59f9277c09f89028ee2c01a316e2a7877c95346f6d390e58fed35d1"
+    },
+    {
+      "names": [
+        "loadRawWorkspacePermissions"
+      ],
+      "group": "storage",
+      "bodySha256": "ea1eb92b893c2a8fd1d1fba111b67ca6aeec32c403b9e3f7e32ef126972c576b"
+    },
+    {
+      "names": [
+        "loadRawSourcePermissions"
+      ],
+      "group": "storage",
+      "bodySha256": "1d77889635f96082ba9ed19b5c04b25cfc1a6a4f7f1e0d900aad25cf395c8982"
+    },
+    {
+      "names": [
+        "saveWorkspacePermissions"
+      ],
+      "group": "storage-writes",
+      "bodySha256": "530174a60af336367391c54e2da1a702fc69beef16c6cf64769bf1d8dae3a8f4"
+    },
+    {
+      "names": [
+        "saveSourcePermissions"
+      ],
+      "group": "storage-writes",
+      "bodySha256": "85a2a7be684df5bcbc8ad1ff9db027e9e473dfea7502da25c7ae20c6c676a48f"
+    },
+    {
+      "names": [
+        "isApiEndpointAllowed"
+      ],
+      "group": "api-endpoints",
+      "bodySha256": "9f564b398fde62df40f216518596f0d5bec5c289e5708b47e78236b0629939bf"
+    },
+    {
+      "names": [
+        "PermissionsConfigCache"
+      ],
+      "group": "cache",
+      "bodySha256": "951eba291147624b7db2fbce73fef06455d252bcc2b07e0dff007e6faf2723b8"
+    },
+    {
+      "names": [
+        "permissionsConfigCache"
+      ],
+      "group": "cache",
+      "bodySha256": "de12f1217ccba50055f34dd70022d314cf85c34cd150bff03911ad44634300a1"
+    }
+  ],
+  "modules": [
+    {
+      "name": "app-defaults",
+      "lines": 278
+    },
+    {
+      "name": "contracts",
+      "lines": 67
+    },
+    {
+      "name": "validation",
+      "lines": 155
+    },
+    {
+      "name": "storage",
+      "lines": 109
+    },
+    {
+      "name": "storage-writes",
+      "lines": 39
+    },
+    {
+      "name": "api-endpoints",
+      "lines": 29
+    },
+    {
+      "name": "cache",
+      "lines": 379
+    }
+  ],
+  "dependencies": {
+    "app-defaults": [
+      "contracts",
+      "validation"
+    ],
+    "contracts": [],
+    "validation": [
+      "contracts"
+    ],
+    "storage": [
+      "contracts",
+      "validation"
+    ],
+    "storage-writes": [
+      "storage",
+      "cache"
+    ],
+    "api-endpoints": [
+      "contracts"
+    ],
+    "cache": [
+      "contracts",
+      "app-defaults",
+      "storage",
+      "validation"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

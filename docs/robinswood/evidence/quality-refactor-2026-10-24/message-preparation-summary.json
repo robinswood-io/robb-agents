@@ -1,0 +1,110 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Préparation des messages et admission de leur objectif",
+  "parentLinesBefore": 2251,
+  "parentLinesAfter": 1304,
+  "newFileLines": {
+    "prepare-clean-retry-user-message.ts": 195,
+    "create-new-session-user-message.ts": 359,
+    "reuse-session-user-message.ts": 115,
+    "user-message-preparation-input.ts": 55,
+    "context-limit-answer-rollback.ts": 172,
+    "admit-session-message-objective.ts": 380,
+    "objective-admission-input.ts": 42
+  },
+  "changes": [
+    "Création, réutilisation et relance explicite des messages séparées en fonctions directes ; la branche de réutilisation reste synchrone.",
+    "Les huit sorties anticipées de l’admission de l’objectif et les cinq de la création du message sont propagées.",
+    "Les callbacks conservent l’objet du message partagé et leurs identités natives.",
+    "Suppression d’une affectation de drapeau effectuée dans un rollback appelé après la dernière lecture de ce drapeau.",
+    "Contrôle de propriété du tour après chaque nouvelle frontière asynchrone."
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 27.89,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/message-preparation-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 26.81,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/message-preparation-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 27.84,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/message-preparation-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/server-core/src/sessions/SessionManager/operations/perform-send-message.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/prepare-clean-retry-user-message.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/create-new-session-user-message.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/reuse-session-user-message.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/user-message-preparation-input.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/context-limit-answer-rollback.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/admit-session-message-objective.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/objective-admission-input.ts",
+        "--max-warnings",
+        "0",
+        "--rule",
+        "max-lines: off"
+      ],
+      "exitCode": 0,
+      "seconds": 2.82,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/message-preparation-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 141.12,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/message-preparation-test.log"
+    }
+  ],
+  "equivalenceProofs": [
+    "user-message-structural-proof.json",
+    "objective-admission-structural-proof.json"
+  ],
+  "sourceGate": {
+    "max-lines": 126,
+    "no-explicit-any": 403
+  },
+  "limits": [
+    "Le parent reste au-dessus du seuil de 500 lignes. Aucune exemption du contrôle global ajoutée.",
+    "Le lint ciblé désactive max-lines uniquement dans cette commande pour le parent ; les tailles physiques des nouveaux fichiers sont vérifiées séparément.",
+    "Missions réelles et installation locale prévues après résolution du reliquat global."
+  ],
+  "installedApplication": "Aucune installation de ce lot effectuée.",
+  "updatedAt": "2026-10-25T16:09:23.044245+00:00"
+}

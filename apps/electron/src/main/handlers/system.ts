@@ -131,14 +131,14 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
     const commonPaths = [
       'C:\\Program Files\\Git\\bin\\bash.exe',
       'C:\\Program Files (x86)\\Git\\bin\\bash.exe',
-      join(process.env.LOCALAPPDATA || '', 'Programs', 'Git', 'bin', 'bash.exe'),
-      join(process.env.PROGRAMFILES || '', 'Git', 'bin', 'bash.exe'),
+      join(process.env["LOCALAPPDATA"] || '', 'Programs', 'Git', 'bin', 'bash.exe'),
+      join(process.env["PROGRAMFILES"] || '', 'Git', 'bin', 'bash.exe'),
     ]
 
     const persistedPath = getGitBashPath()
     if (persistedPath) {
       if (await isUsableGitBashPath(persistedPath)) {
-        process.env.CLAUDE_CODE_GIT_BASH_PATH = persistedPath.trim()
+        process.env["CLAUDE_CODE_GIT_BASH_PATH"] = persistedPath.trim()
         return { found: true, path: persistedPath, platform }
       }
       clearGitBashPath()
@@ -146,7 +146,7 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
 
     for (const bashPath of commonPaths) {
       if (await isUsableGitBashPath(bashPath)) {
-        process.env.CLAUDE_CODE_GIT_BASH_PATH = bashPath
+        process.env["CLAUDE_CODE_GIT_BASH_PATH"] = bashPath
         setGitBashPath(bashPath)
         return { found: true, path: bashPath, platform }
       }
@@ -160,7 +160,7 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
       }).trim()
       const firstPath = result.split('\n')[0]?.trim()
       if (firstPath && firstPath.toLowerCase().includes('git') && await isUsableGitBashPath(firstPath)) {
-        process.env.CLAUDE_CODE_GIT_BASH_PATH = firstPath
+        process.env["CLAUDE_CODE_GIT_BASH_PATH"] = firstPath
         setGitBashPath(firstPath)
         return { found: true, path: firstPath, platform }
       }
@@ -168,7 +168,7 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
       // where command failed
     }
 
-    delete process.env.CLAUDE_CODE_GIT_BASH_PATH
+    delete process.env["CLAUDE_CODE_GIT_BASH_PATH"]
     return { found: false, path: null, platform }
   })
 
@@ -194,7 +194,7 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
     }
 
     setGitBashPath(validation.path)
-    process.env.CLAUDE_CODE_GIT_BASH_PATH = validation.path
+    process.env["CLAUDE_CODE_GIT_BASH_PATH"] = validation.path
     return { success: true }
   })
 
@@ -434,7 +434,7 @@ export function registerSystemGuiHandlers(server: RpcServer, deps: HandlerDeps):
   })
 
   server.handle(RPC_CHANNELS.window.GET_FOCUS_STATE, async () => {
-    const { isAnyWindowFocused } = require('../notifications')
+    const { isAnyWindowFocused } = await import('../notifications')
     return isAnyWindowFocused()
   })
 }

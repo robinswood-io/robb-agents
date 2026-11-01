@@ -98,7 +98,7 @@ describe('validateEnvelopeShape', () => {
 describe('deserializeEnvelope', () => {
   it('roundtrips a valid envelope', () => {
     const envelope = { id: '1', type: 'request' as const, channel: 'test', args: [1, 'two'] }
-    const raw = serializeEnvelope(envelope as any)
+    const raw = serializeEnvelope(envelope)
     const decoded = deserializeEnvelope(raw)
     expect(decoded.id).toBe('1')
     expect(decoded.channel).toBe('test')

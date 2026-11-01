@@ -1,6 +1,14 @@
-import { describe, expect, it, mock } from 'bun:test';
+import type { SDKMessage, SDKUserMessage } from '@anthropic-ai/claude-agent-sdk';
+import { createPushableInputStream } from '../backend/claude/persistent-input.ts';
+import { describe, expect, it, mock, spyOn } from 'bun:test';
 import { ClaudeAgent } from '../claude-agent.ts';
 
+function observedStream<T>() {
+  const stream = createPushableInputStream<T>();
+  spyOn(stream, 'push');
+  spyOn(stream, 'end');
+  return stream;
+}
 function deferred<T>() {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((resolver) => {
@@ -17,8 +25,8 @@ async function flushConsumers(): Promise<void> {
 
 describe('Claude persistent runtime generations', () => {
   it('uses globally unique Gmail runtime ids across agent instances', () => {
-    const firstAgent = Object.create(ClaudeAgent.prototype) as any;
-    const secondAgent = Object.create(ClaudeAgent.prototype) as any;
+    const firstAgent = Object.create(ClaudeAgent.prototype) as ClaudeAgent;
+    const secondAgent = Object.create(ClaudeAgent.prototype) as ClaudeAgent;
 
     const firstRuntimeId = firstAgent.createGmailRuntimeId('same-session');
     const secondRuntimeId = secondAgent.createGmailRuntimeId('same-session');
@@ -33,65 +41,59 @@ describe('Claude persistent runtime generations', () => {
   });
 
   it('drops a retired consumer result instead of pushing to or closing its replacement channel', async () => {
-    const agent = Object.create(ClaudeAgent.prototype) as any;
-    const oldNext = deferred<IteratorResult<Record<string, unknown>>>();
-    const oldReturn = deferred<IteratorResult<Record<string, unknown>>>();
+    const agent = Object.create(ClaudeAgent.prototype) as ClaudeAgent;
+    const oldNext = deferred<IteratorResult<Record<string, unknown>, void>>();
+    const oldReturn = deferred<IteratorResult<Record<string, unknown>, void>>();
     let oldNextCalls = 0;
     const oldIterator = {
       next: mock(() => {
         oldNextCalls += 1;
         return oldNextCalls === 1
           ? oldNext.promise
-          : Promise.resolve({ done: true, value: undefined });
+          : Promise.resolve({ done: true as const, value: undefined });
       }),
       return: mock(() => oldReturn.promise),
     };
-    const oldChannel = {
-      push: mock((_value: unknown) => {}),
-      end: mock(() => {}),
-    };
+    const oldChannel = observedStream<SDKMessage>();
 
-    agent.debug = mock((_message: string) => {});
-    agent.config = { session: { id: 'same-session' } };
-    agent.pendingPermissions = new Map();
-    agent.persistentQueryGeneration = 1;
-    agent.persistentConsumerGeneration = null;
-    agent.persistentInput = { end: mock(() => {}) };
-    agent.persistentIterator = oldIterator;
-    agent.persistentAbortController = { abort: mock(() => {}) };
-    agent.persistentGmailRuntimeId = 'old-runtime';
-    agent.persistentGmailSessionId = 'same-session';
-    agent.activeTurnChannel = oldChannel;
+    agent["debug"] = mock((_message: string) => {});
+    agent["config"] = ({ session: { id: 'same-session' } } satisfies { session: Pick<NonNullable<ClaudeAgent['config']['session']>, 'id'> }) as ClaudeAgent["config"];
+    agent.pendingPermissions = (new Map() satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"];
+    agent["persistentQueryGeneration"] = 1;
+    agent["persistentConsumerGeneration"] = null;
+    agent["persistentInput"] = observedStream<SDKUserMessage>();
+    agent["persistentIterator"] = (oldIterator satisfies AsyncIterator<Record<string, unknown>, void>) as ClaudeAgent["persistentIterator"];
+    agent["persistentAbortController"] = new AbortController();
+    agent["persistentGmailRuntimeId"] = 'old-runtime';
+    agent["persistentGmailSessionId"] = 'same-session';
+    agent["activeTurnChannel"] = oldChannel;
 
-    agent.startPersistentConsumer();
+    agent["startPersistentConsumer"]();
     expect(oldIterator.next).toHaveBeenCalledTimes(1);
 
     // Retire the old generation while next() and iterator.return() are both
     // unresolved, exactly as an SDK process can behave during force-abort.
-    agent.teardownPersistentQuery('test-replacement');
+    agent["teardownPersistentQuery"]('test-replacement');
     expect(oldIterator.return).toHaveBeenCalledTimes(1);
 
-    const newFirst = deferred<IteratorResult<Record<string, unknown>>>();
-    const newDone = deferred<IteratorResult<Record<string, unknown>>>();
+    const newFirst = deferred<IteratorResult<Record<string, unknown>, void>>();
+    const newDone = deferred<IteratorResult<Record<string, unknown>, void>>();
     let newNextCalls = 0;
     const newIterator = {
       next: mock(() => {
         newNextCalls += 1;
         return newNextCalls === 1 ? newFirst.promise : newDone.promise;
       }),
-      return: mock(async () => ({ done: true, value: undefined })),
+      return: mock(async () => ({ done: true as const, value: undefined })),
     };
-    const newChannel = {
-      push: mock((_value: unknown) => {}),
-      end: mock(() => {}),
-    };
+    const newChannel = observedStream<SDKMessage>();
 
-    agent.persistentQueryGeneration += 1;
-    agent.persistentIterator = newIterator;
-    agent.persistentGmailRuntimeId = 'new-runtime';
-    agent.persistentGmailSessionId = 'same-session';
-    agent.activeTurnChannel = newChannel;
-    agent.startPersistentConsumer();
+    agent["persistentQueryGeneration"] += 1;
+    agent["persistentIterator"] = (newIterator satisfies AsyncIterator<Record<string, unknown>, void>) as ClaudeAgent["persistentIterator"];
+    agent["persistentGmailRuntimeId"] = 'new-runtime';
+    agent["persistentGmailSessionId"] = 'same-session';
+    agent["activeTurnChannel"] = newChannel;
+    agent["startPersistentConsumer"]();
 
     // The replacement consumer is allowed to start before the old SDK iterator
     // finishes, but only under its own correlated generation.
@@ -107,73 +109,75 @@ describe('Claude persistent runtime generations', () => {
     expect(newChannel.push).toHaveBeenCalledTimes(1);
     expect(newChannel.end).not.toHaveBeenCalled();
 
-    newDone.resolve({ done: true, value: undefined });
-    oldReturn.resolve({ done: true, value: undefined });
+    newDone.resolve({ done: true as const, value: undefined });
+    oldReturn.resolve({ done: true as const, value: undefined });
     await flushConsumers();
   });
 
   it('confirms the exact runtime when a completed consumer has no iterator return method', async () => {
-    const agent = Object.create(ClaudeAgent.prototype) as any;
+    const agent = Object.create(ClaudeAgent.prototype) as ClaudeAgent;
     const runtime = { sessionId: 'same-session', runtimeId: 'runtime-without-return' };
     const confirmRuntimeTeardown = mock((_runtime: typeof runtime) => true);
-    const abort = mock(() => {});
+    const abortController = new AbortController();
+    const abort = spyOn(abortController, 'abort');
 
-    agent.debug = mock((_message: string) => {});
-    agent.config = { session: { id: runtime.sessionId } };
-    agent.pendingPermissions = new Map();
-    agent.persistentQueryGeneration = 1;
-    agent.persistentConsumerGeneration = null;
-    agent.persistentInput = { end: mock(() => {}) };
-    agent.persistentIterator = {
-      next: mock(async () => ({ done: true, value: undefined })),
-    };
-    agent.persistentAbortController = { abort };
-    agent.persistentGmailRuntimeId = runtime.runtimeId;
-    agent.persistentGmailSessionId = runtime.sessionId;
-    agent.activeTurnChannel = { push: mock(() => {}), end: mock(() => {}) };
-    agent.confirmContextualGmailRuntimeTeardown = confirmRuntimeTeardown;
+    agent["debug"] = mock((_message: string) => {});
+    agent["config"] = ({ session: { id: runtime["sessionId"] } } satisfies { session: Pick<NonNullable<ClaudeAgent['config']['session']>, 'id'> }) as ClaudeAgent["config"];
+    agent.pendingPermissions = (new Map() satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"];
+    agent["persistentQueryGeneration"] = 1;
+    agent["persistentConsumerGeneration"] = null;
+    agent["persistentInput"] = observedStream<SDKUserMessage>();
+    agent["persistentIterator"] = ({
+      next: mock(async () => ({ done: true as const, value: undefined })),
+    } satisfies AsyncIterator<Record<string, unknown>, void>) as ClaudeAgent["persistentIterator"];
+    agent["persistentAbortController"] = abortController;
+    agent["persistentGmailRuntimeId"] = runtime.runtimeId;
+    agent["persistentGmailSessionId"] = runtime["sessionId"];
+    agent["activeTurnChannel"] = observedStream<SDKMessage>();
+    agent["confirmContextualGmailRuntimeTeardown"] = confirmRuntimeTeardown;
 
-    agent.startPersistentConsumer();
+    agent["startPersistentConsumer"]();
     await flushConsumers();
 
     expect(confirmRuntimeTeardown).toHaveBeenCalledTimes(1);
     expect(confirmRuntimeTeardown).toHaveBeenCalledWith(runtime);
     expect(abort).toHaveBeenCalledTimes(1);
-    expect(agent.persistentIterator).toBeNull();
+    expect(agent["persistentIterator"]).toBeNull();
   });
 
   it('confirms the exact runtime when iterator return throws after consumer completion', async () => {
-    const agent = Object.create(ClaudeAgent.prototype) as any;
+    const agent = Object.create(ClaudeAgent.prototype) as ClaudeAgent;
     const runtime = { sessionId: 'same-session', runtimeId: 'runtime-return-throws' };
     const confirmRuntimeTeardown = mock((_runtime: typeof runtime) => true);
-    const abort = mock(() => {});
+    const abortController = new AbortController();
+    const abort = spyOn(abortController, 'abort');
     const close = mock(() => {
       throw new Error('iterator close failed');
     });
 
-    agent.debug = mock((_message: string) => {});
-    agent.config = { session: { id: runtime.sessionId } };
-    agent.pendingPermissions = new Map();
-    agent.persistentQueryGeneration = 1;
-    agent.persistentConsumerGeneration = null;
-    agent.persistentInput = { end: mock(() => {}) };
-    agent.persistentIterator = {
-      next: mock(async () => ({ done: true, value: undefined })),
+    agent["debug"] = mock((_message: string) => {});
+    agent["config"] = ({ session: { id: runtime["sessionId"] } } satisfies { session: Pick<NonNullable<ClaudeAgent['config']['session']>, 'id'> }) as ClaudeAgent["config"];
+    agent.pendingPermissions = (new Map() satisfies Map<string, Pick<NonNullable<ReturnType<ClaudeAgent['pendingPermissions']['get']>>, 'resolve'>>) as ClaudeAgent["pendingPermissions"];
+    agent["persistentQueryGeneration"] = 1;
+    agent["persistentConsumerGeneration"] = null;
+    agent["persistentInput"] = observedStream<SDKUserMessage>();
+    agent["persistentIterator"] = ({
+      next: mock(async () => ({ done: true as const, value: undefined })),
       return: close,
-    };
-    agent.persistentAbortController = { abort };
-    agent.persistentGmailRuntimeId = runtime.runtimeId;
-    agent.persistentGmailSessionId = runtime.sessionId;
-    agent.activeTurnChannel = { push: mock(() => {}), end: mock(() => {}) };
-    agent.confirmContextualGmailRuntimeTeardown = confirmRuntimeTeardown;
+    } satisfies AsyncIterator<Record<string, unknown>, void>) as ClaudeAgent["persistentIterator"];
+    agent["persistentAbortController"] = abortController;
+    agent["persistentGmailRuntimeId"] = runtime.runtimeId;
+    agent["persistentGmailSessionId"] = runtime["sessionId"];
+    agent["activeTurnChannel"] = observedStream<SDKMessage>();
+    agent["confirmContextualGmailRuntimeTeardown"] = confirmRuntimeTeardown;
 
-    agent.startPersistentConsumer();
+    agent["startPersistentConsumer"]();
     await flushConsumers();
 
     expect(close).toHaveBeenCalledTimes(1);
     expect(confirmRuntimeTeardown).toHaveBeenCalledTimes(1);
     expect(confirmRuntimeTeardown).toHaveBeenCalledWith(runtime);
     expect(abort).toHaveBeenCalledTimes(1);
-    expect(agent.persistentIterator).toBeNull();
+    expect(agent["persistentIterator"]).toBeNull();
   });
 });

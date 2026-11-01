@@ -6,27 +6,20 @@ import { useShikiTheme } from '../../context/ShikiThemeContext'
 
 export interface CodeBlockProps {
   code: string
-  language?: string
-  className?: string
+  language?: string | undefined
+  className?: string | undefined
   /**
    * Render mode affects code block styling:
    * - 'terminal': Minimal, keeps control chars visible
    * - 'minimal': Clean code, basic styling
    * - 'full': Rich styling with background, copy button, etc.
    */
-  mode?: 'terminal' | 'minimal' | 'full'
+  mode?: 'terminal' | 'minimal' | 'full' | undefined
   /**
    * Force a specific theme. If not provided, detects from document.documentElement.classList
    */
-  forcedTheme?: 'light' | 'dark'
+  forcedTheme?: 'light' | 'dark' | undefined
 }
-
-// Languages to pre-load (most common in chat contexts)
-const PRELOADED_LANGUAGES = [
-  'javascript', 'typescript', 'python', 'json', 'bash', 'shell',
-  'markdown', 'html', 'css', 'sql', 'yaml', 'go', 'rust', 'java',
-  'c', 'cpp', 'tsx', 'jsx', 'swift', 'kotlin', 'ruby', 'php'
-] as const
 
 // Map common aliases to Shiki language names
 const LANGUAGE_ALIASES: Record<string, BundledLanguage> = {
@@ -224,7 +217,7 @@ export function CodeBlock({ code, language = 'text', className, mode = 'full', f
  * InlineCode - Styled inline code span
  * Features: subtle background (3%), no border, 75% opacity text
  */
-export function InlineCode({ children, className }: { children: React.ReactNode; className?: string }) {
+export function InlineCode({ children, className }: { children: React.ReactNode; className?: string | undefined }) {
   return (
     <code className={cn(
       'pl-1 pr-1 py-0 rounded bg-foreground/[0.04] font-mono text-[13px]',

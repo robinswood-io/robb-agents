@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * sort-locales.ts — Sort top-level keys alphabetically in every locale JSON.
+ * sort-locales.ts — Sort top-level keys alphabetically in every locale domain JSON.
  *
  * Convention enforced by `packages/shared/CLAUDE.md` § i18n Rules #7 and the
  * `locale-parity.test.ts` test. New keys appended to a file in any order get
@@ -24,7 +24,7 @@ const LOCALES_DIR = resolve(
 
 const checkOnly = process.argv.includes('--check')
 
-const localeFiles = readdirSync(LOCALES_DIR)
+const localeFiles = readdirSync(LOCALES_DIR, { recursive: true, encoding: 'utf8' })
   .filter(f => f.endsWith('.json'))
   .sort()
 

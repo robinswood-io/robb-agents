@@ -1,7 +1,13 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import type { SessionOperations } from './SessionManager/operation-types.ts';
+import type { SessionEvent } from '@craft-agent/shared/protocol';
+type BrowserManagerFixture = NonNullable<ReturnType<SessionOperations['getBrowserPaneManagerForSession']>>;
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from 'bun:test'
 import { SessionManager, createManagedSession } from './SessionManager'
 import { createPendingTurnRecovery } from './turn-recovery'
 import { USER_INPUT_ANSWER_MESSAGE_PREFIX } from '@craft-agent/core'
+import { SessionRuntimeState } from './SessionManager/runtime-state.ts'
 
 function deferred() {
   let resolve!: () => void
@@ -9,7 +15,7 @@ function deferred() {
   return { promise, resolve }
 }
 
-type Boundary = 'provider-fallback' | 'runtime-disposal' | 'browser-visuals' | 'delivery-flush'
+type Boundary = 'runtime-disposal' | 'browser-visuals' | 'delivery-flush'
   | 'read-marker' | 'mini-status' | 'terminal-status' | 'browser-release'
 
 /** Exercise the real stop lifecycle, pausing only external cleanup/storage boundaries. */
@@ -19,11 +25,14 @@ function harness(boundary?: Boundary, rejectBoundary = false) {
   const effects: string[] = []
   const terminalReasons: string[] = []
   const managed = createManagedSession({ id: 'stop-ownership' }, {
-    id: 'workspace', rootPath: '/tmp/processing-stop-fixture', name: 'Fixture', createdAt: 1,
-  } as never, { messagesLoaded: true })
+    id: 'workspace', slug: 'fixture', rootPath: '/tmp/processing-stop-fixture', name: 'Fixture', createdAt: 1,
+  }, { messagesLoaded: true })
   managed.isProcessing = true
   managed.processingGeneration = 1
   managed.messages = [{ id: 'human', role: 'user', content: 'Fixture request', timestamp: 1 }]
+  if (boundary === 'read-marker') {
+    managed.messages.push({ id: 'final', role: 'assistant', content: 'Fixture result', timestamp: 2 })
+  }
   const checkpoint = async (name: Boundary) => {
     effects.push(name)
     if (name === boundary) {
@@ -32,20 +41,21 @@ function harness(boundary?: Boundary, rejectBoundary = false) {
       if (rejectBoundary) throw new Error('Fixture cleanup failed')
     }
   }
+  const unexpectedBrowserCall = (): never => { throw new Error('Unexpected browser capability in stop lifecycle'); };
   let browserCalls = 0
-  const prototype = SessionManager.prototype as any
-  const runtime: any = {
+  const prototype = sessionManagerForTest(SessionManager.prototype)
+  const runtime = Object.assign(sessionManagerForTest(new SessionManager()), ({
+    ...new SessionRuntimeState(),
     hasConsumedCleanRecoveryDispatch: () => false,
     retryableContextLimitRequest: () => undefined,
     isManagedSessionYolo: () => false,
     shuttingDown: false, sessions: new Map([[managed.id, managed]]), retentionDeleting: new Set<string>(),
-    retiringSessions: new WeakSet<object>(),
-    sessionOperationsInFlight: new WeakMap<object, Set<Promise<unknown>>>(),
+    retiringSessions: new WeakSet<ReturnType<typeof createManagedSession>>(),
+    sessionOperationsInFlight: new WeakMap<ReturnType<typeof createManagedSession>, Set<Promise<unknown>>>(),
     deferredAutomaticSessions: new Set<string>(), automaticAdmissionReservations: new Set<string>(),
     queuedMessageDispatches: new Map<string, symbol>(),
-    permissionExpiryStopGenerations: new WeakMap<object, number>(),
-    finishGenerationTelemetry: () => effects.push('telemetry'),
-    recordObjectiveRoutingEvaluation: () => undefined,
+    permissionExpiryStopGenerations: new WeakMap<ReturnType<typeof createManagedSession>, number>(),
+    finishGenerationTelemetry: () => { effects.push('telemetry') },
     hasAcceptedHumanContinuationQueued: () => false,
     hasTerminalObjectiveState: prototype.hasTerminalObjectiveState,
     hasPendingUserInput: () => false, hasQueuedUserInput: () => false, hasPendingDecision: () => false,
@@ -68,57 +78,76 @@ function harness(boundary?: Boundary, rejectBoundary = false) {
     markOrphanedBackgroundTasks: () => effects.push('orphan-backstop'),
     hasRunningBackgroundTasks: () => false,
     disposeManagedAgentRuntime: () => checkpoint('runtime-disposal'),
-    getBrowserPaneManagerForSession: () => ({
-      clearVisualsForSession: () => checkpoint(browserCalls++ === 0 ? 'browser-visuals' : 'browser-release'),
-      unbindAllForSession: () => effects.push('unbind'),
-    }),
+    getBrowserPaneManagerForSession: () => (({setSessionPathResolver: unexpectedBrowserCall,
+destroyForSession: unexpectedBrowserCall,
+getOrCreateForSession: unexpectedBrowserCall,
+getOrCreateForSessionAsync: unexpectedBrowserCall,
+setAgentControl: unexpectedBrowserCall,
+createForSession: unexpectedBrowserCall,
+createForSessionAsync: unexpectedBrowserCall,
+getInstance: unexpectedBrowserCall,
+getInstanceAsync: unexpectedBrowserCall,
+listInstances: unexpectedBrowserCall,
+listInstancesAsync: unexpectedBrowserCall,
+focusBoundForSession: unexpectedBrowserCall,
+focusBoundForSessionAsync: unexpectedBrowserCall,
+bindSession: unexpectedBrowserCall,
+focus: unexpectedBrowserCall,
+destroyInstance: unexpectedBrowserCall,
+hide: unexpectedBrowserCall,
+clearAgentControl: unexpectedBrowserCall,
+clearAgentControlForInstance: unexpectedBrowserCall,
+navigate: unexpectedBrowserCall,
+goBack: unexpectedBrowserCall,
+goForward: unexpectedBrowserCall,
+getAccessibilitySnapshot: unexpectedBrowserCall,
+clickElement: unexpectedBrowserCall,
+clickAtCoordinates: unexpectedBrowserCall,
+drag: unexpectedBrowserCall,
+fillElement: unexpectedBrowserCall,
+typeText: unexpectedBrowserCall,
+selectOption: unexpectedBrowserCall,
+setClipboard: unexpectedBrowserCall,
+getClipboard: unexpectedBrowserCall,
+scroll: unexpectedBrowserCall,
+sendKey: unexpectedBrowserCall,
+uploadFile: unexpectedBrowserCall,
+evaluate: unexpectedBrowserCall,
+screenshot: unexpectedBrowserCall,
+screenshotRegion: unexpectedBrowserCall,
+getConsoleLogs: unexpectedBrowserCall,
+windowResize: unexpectedBrowserCall,
+getNetworkLogs: unexpectedBrowserCall,
+waitFor: unexpectedBrowserCall,
+getDownloads: unexpectedBrowserCall,
+detectSecurityChallenge: unexpectedBrowserCall,
+clearVisualsForSession: () => checkpoint(browserCalls++ === 0 ? 'browser-visuals' : 'browser-release'),
+unbindAllForSession: () => effects.push('unbind')} satisfies BrowserManagerFixture)),
     isSessionBeingViewed: () => true,
-    getLastFinalAssistantMessageId: () => boundary === 'read-marker' ? 'final' : undefined,
     markSessionRead: () => checkpoint('read-marker'),
     flushSession: () => checkpoint('delivery-flush'),
-    setSessionStatus: () => checkpoint('mini-status'),
+    setSessionStatus: (_sessionId: string, _status: string) => checkpoint('mini-status'),
     finishAutomaticSessionStatusLifecycle: (_session: unknown, reason: string) => {
       terminalReasons.push(reason)
       return checkpoint('terminal-status')
     },
-    tryApplyRoutingFallbackAfterAgentFailure: async () => { await checkpoint('provider-fallback'); return true },
-    monotonic: () => 10,
     emitObjectiveChanged: () => effects.push('objective'),
-    sendEvent: (event: any) => events.push(event),
-    executionProofCollector: { take: () => { effects.push('take-proof'); return undefined } },
+    sendEvent: (event: SessionEvent) => events.push(event),
+    executionProofCollector: Object.assign(new SessionRuntimeState().executionProofCollector, { take: () => { effects.push('take-proof'); return undefined } }),
     emitSessionComplete: () => effects.push('conductor'),
-    persistSession: () => effects.push('persist'),
+    persistSession: () => { effects.push('persist'); return true },
     processNextQueuedMessage: () => effects.push('dispatch-queue'),
     isAutonomousMessage: prototype.isAutonomousMessage,
     hasOnlyMachineInbox: prototype.hasOnlyMachineInbox,
-  }
+  } satisfies Partial<SessionRuntimeState & SessionOperations>))
+  Object.defineProperty(runtime, 'runtimeState', { value: runtime, configurable: true });
   if (boundary === 'delivery-flush') {
     managed.lastSentOptions = { internalOrigin: { kind: 'agent-message', deliveryId: 'delivery' } }
     managed.messages.push({ id: 'delivery', role: 'user', content: 'Internal report', timestamp: 2,
       agentDelivery: { id: 'delivery', status: 'processing', attempts: 1 } })
   }
   if (boundary === 'mini-status') managed.systemPromptPreset = 'mini'
-  if (boundary === 'provider-fallback') {
-    managed.pendingRuntimeProviderFallback = { generation: 1, error: new Error('Fixture provider stopped') } as never
-    managed.pendingTurnRecovery = {
-      ...createPendingTurnRecovery('human'),
-      attempts: 1,
-      lastCause: 'tool_checkpoint',
-      recoveryDispatch: {
-        schemaVersion: 1,
-        id: 'checkpoint-dispatch',
-        attempt: 1,
-        cause: 'tool_checkpoint',
-        origin: 'automatic',
-        allocatedAt: 1,
-        phase: 'allocated',
-      },
-    }
-    managed.messageQueue.push({ message: 'Recovery', options: { automaticRecovery: {
-      originalUserMessageId: 'human', cause: 'tool_checkpoint', dispatchId: 'checkpoint-dispatch',
-      dispatchAttempt: 1, dispatchOrigin: 'automatic', dispatchAllocatedAt: 1,
-    } } })
-  }
+
   const stop = (generation = 1, reason?: 'complete' | 'interrupted' | 'error' | 'timeout') => (
     prototype.onProcessingStopped.call(runtime, managed.id,
       reason ?? (boundary === 'runtime-disposal' ? 'error' : 'complete'), generation) as Promise<void>
@@ -171,7 +200,7 @@ describe('processing stop ownership', () => {
       orchestrationMode: 'mission', risk: 'high-stakes', completionCriteria: ['requested-outcome-delivered'],
       terminalState: 'blocked_human', completedAt: 2,
     }
-    h.runtime.permissionExpiryStopGenerations.set(h.managed, 1)
+    sessionRuntimeStateForTest(h.runtime).permissionExpiryStopGenerations.set(h.managed, 1)
 
     await h.stop(1, 'complete')
 
@@ -196,9 +225,9 @@ describe('processing stop ownership', () => {
 
   it('prevents the real status setter from publishing an old done status after its flush', async () => {
     const h = harness('mini-status')
-    h.runtime.setSessionStatus = (SessionManager.prototype as any).setSessionStatus
+    h.runtime.setSessionStatus = (sessionManagerForTest(SessionManager.prototype)).setSessionStatus
     h.runtime.setMetadataWriteGuard = () => {}
-    h.runtime.configWatchers = new Map()
+    sessionRuntimeStateForTest(h.runtime).configWatchers = new Map()
     h.runtime.flushSession = async () => { h.reached.resolve(); await h.release.promise }
     const stopping = h.stop()
     await h.reached.promise
@@ -259,7 +288,7 @@ describe('processing stop ownership', () => {
     expect(h.events.filter(event => event.type === 'complete')).toHaveLength(1)
     expect(h.events.find(event => event.type === 'complete')?.reason).toBe(fixture.reason)
     expect(h.effects.filter(effect => effect === 'conductor')).toHaveLength(1)
-    expect(h.runtime.deferredAutomaticSessions.has(h.managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).deferredAutomaticSessions.has(h.managed.id)).toBe(false)
   })
 
   it('keeps an explicit user Stop interrupted when a blocked objective races with cleanup', async () => {

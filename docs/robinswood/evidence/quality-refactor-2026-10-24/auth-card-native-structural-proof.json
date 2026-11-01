@@ -1,0 +1,28 @@
+{
+  "status": "passed",
+  "nativeDeclarationBodiesPreserved": true,
+  "reviewedStableDependencyAdditions": {},
+  "nativeMainJSXAndInlineCallbacksPreserved": true,
+  "nativeRootAndActionHooksReinlinedExactly": true,
+  "viewAddsNoStateOrEffects": true,
+  "nativeValuesPassedDirectly": true,
+  "nativeImportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/chat/AuthRequestCard.tsx",
+      "lines": 326,
+      "sha256": "f5aa10b80d739eb604e9607166cd6be41dc37a36bf258b87b044cb7addae48c5"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/chat/auth-request-primitives.tsx",
+      "lines": 127,
+      "sha256": "34c76b50e75a3d35088544f0ea69b140750857aef69b8c5ea8ddbc5cf7dd1a1b"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/chat/auth-request-content.tsx",
+      "lines": 395,
+      "sha256": "432ae40c97b2e0cb0432949bfc1944075de88f9ce8f3ef720015e3f74f43d969"
+    }
+  ]
+}

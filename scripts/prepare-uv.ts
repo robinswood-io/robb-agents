@@ -70,7 +70,7 @@ export async function prepareUv(
   // Packaging always uses --refresh: ignored build artifacts are not source
   // provenance and must never be trusted merely because a file already exists.
   if (options.refresh || (existsSync(targetPath)
-    && !validateUvBinary(targetPath, platform, UV_VERSION, nativeTarget))) {
+    && (!nativeTarget || !validateUvBinary(targetPath, platform, UV_VERSION, true)))) {
     rmSync(targetPath, { force: true });
   }
 

@@ -1,13 +1,9 @@
-import type { ThinkingLevel } from '@craft-agent/shared/agent';
+import type { ManagedSession } from '../sessions/SessionManager/managed-session.ts';
 
-interface MissionModelSettings {
-  llmConnection?: string;
-  connectionRoutePinned?: boolean;
-  model?: string;
-  thinkingLevel?: ThinkingLevel;
-  modelRoutePinned?: boolean;
-  thinkingLevelPinned?: boolean;
-}
+type MissionModelSettings = Pick<ManagedSession,
+  | 'llmConnection' | 'connectionRoutePinned' | 'model' | 'thinkingLevel'
+  | 'modelRoutePinned' | 'thinkingLevelPinned'
+>;
 
 /** Profile overrides win; otherwise preserve the origin's materialized selection. */
 export function inheritMissionModelSettings(
@@ -19,10 +15,10 @@ export function inheritMissionModelSettings(
   const model = requested.model ?? (llmConnection === origin?.llmConnection ? origin?.model : undefined);
   const thinkingLevel = requested.thinkingLevel ?? origin?.thinkingLevel;
   return {
-    llmConnection,
+    ...(llmConnection !== undefined ? { llmConnection: llmConnection } : {}),
     connectionRoutePinned: llmConnection !== undefined,
-    model,
-    thinkingLevel,
+    ...(model !== undefined ? { model: model } : {}),
+    ...(thinkingLevel !== undefined ? { thinkingLevel: thinkingLevel } : {}),
     modelRoutePinned: model !== undefined,
     thinkingLevelPinned: thinkingLevel !== undefined,
   };

@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+import type { ScriptSandboxSchema } from '../tool-defs/schemas.ts';
 import { protectApplicationCommand, isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from '../runtime/application-protection.ts';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -11,13 +13,7 @@ import { isPathWithinDirectory } from '../runtime/path-security.ts';
 import { resolveScriptRuntime } from '../runtime/resolve-script-runtime.ts';
 import { createScriptRuntimeEnv } from '../runtime/sandbox-env.ts';
 
-export interface ScriptSandboxArgs {
-  language: 'python3' | 'node' | 'bun';
-  script: string;
-  inputFiles?: string[];
-  stdin?: string;
-  timeoutMs?: number;
-}
+export type ScriptSandboxArgs = z.infer<typeof ScriptSandboxSchema>;
 
 const DEFAULT_TIMEOUT_MS = 5_000;
 const MAX_TIMEOUT_MS = 15_000;

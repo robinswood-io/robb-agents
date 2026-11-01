@@ -60,7 +60,7 @@ export function classifyExternalUrl(rawUrl: string): UrlClassification {
     return { kind: 'dangerous', scheme: protocol, reason: blockedReason }
   }
 
-  const customScheme = process.env.CRAFT_DEEPLINK_SCHEME?.trim().toLowerCase()
+  const customScheme = process.env["CRAFT_DEEPLINK_SCHEME"]?.trim().toLowerCase()
   const customProtocol = customScheme
     ? (customScheme.endsWith(':') ? customScheme : `${customScheme}:`)
     : null

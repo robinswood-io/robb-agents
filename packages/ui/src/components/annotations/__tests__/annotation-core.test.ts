@@ -28,9 +28,9 @@ describe('annotation core helpers', () => {
     const noteBody = annotation.body.find(body => body.type === 'note')
     expect(noteBody && 'text' in noteBody ? noteBody.text : '').toBe('Need follow-up')
 
-    const followUp = (annotation.meta as Record<string, unknown> | undefined)?.followUp as Record<string, unknown> | undefined
-    expect(followUp?.text).toBe('Need follow-up')
-    expect(typeof followUp?.createdAt).toBe('number')
+    const followUp = (annotation.meta as Record<string, unknown> | undefined)?.["followUp"] as Record<string, unknown> | undefined
+    expect(followUp?.["text"]).toBe('Need follow-up')
+    expect(typeof followUp?.["createdAt"]).toBe('number')
   })
 
   it('creates preview annotation marked ephemeral with explicit source', () => {
@@ -47,8 +47,8 @@ describe('annotation core helpers', () => {
     )
 
     expect(preview.target.source).toEqual({ sessionId: 'session-preview', messageId: 'msg-2' })
-    expect((preview.meta as Record<string, unknown>)?.ephemeral).toBe(true)
-    expect((preview.meta as Record<string, unknown>)?.source).toBe('follow-up-selection-preview')
+    expect((preview.meta as Record<string, unknown>)?.["ephemeral"]).toBe(true)
+    expect((preview.meta as Record<string, unknown>)?.["source"]).toBe('follow-up-selection-preview')
   })
 
   it('keeps chip visuals consistent across pending and sent states', () => {

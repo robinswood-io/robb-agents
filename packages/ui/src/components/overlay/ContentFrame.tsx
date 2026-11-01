@@ -41,18 +41,18 @@ export interface ContentFrameProps {
   title: string
   /** Max width of the card (default: 850). Sidebars are outside this constraint.
    *  Ignored when fitContent is true (card uses max-content width instead). */
-  maxWidth?: number
+  maxWidth?: number | undefined
   /** Minimum width of the card. Only used when fitContent is true. */
-  minWidth?: number
+  minWidth?: number | undefined
   /** When true, the card uses CSS `width: max-content` to naturally grow to fit
    *  its content width (e.g., wide diff tables). The card is capped at 100% of
    *  the viewport (minus padding) and floored at minWidth. This is more reliable
    *  than JS-based measurement because it works with async-rendered content (Shiki). */
-  fitContent?: boolean
+  fitContent?: boolean | undefined
   /** Optional content rendered to the left of the card (e.g., sidebar navigation) */
-  leftSidebar?: ReactNode
+  leftSidebar?: ReactNode | undefined
   /** Optional content rendered to the right of the card */
-  rightSidebar?: ReactNode
+  rightSidebar?: ReactNode | undefined
   /** Content rendered inside the card, below the title bar */
   children: ReactNode
 }

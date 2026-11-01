@@ -1,0 +1,200 @@
+{
+  "source": "packages/shared/src/sources/storage.ts",
+  "units": [
+    {
+      "names": [
+        "getSourcePath"
+      ],
+      "group": "source-config",
+      "bodySha256": "34b11f14a924b0ce7bd21b5f0660c579a6b32aeab5ff8468d50b9d5c8f94d47c"
+    },
+    {
+      "names": [
+        "ensureSourcesDir"
+      ],
+      "group": "source-config",
+      "bodySha256": "1c31215fbcfa28afd407b22860ba0de3fe4dc901b94c0c5f9f0c1c32cfa2fd8b"
+    },
+    {
+      "names": [
+        "loadSourceConfig"
+      ],
+      "group": "source-config",
+      "bodySha256": "b231c84b3c765d62b6365d9367ad915dca4e27c9dbbf95cb76d63c86382f9717"
+    },
+    {
+      "names": [
+        "markSourceAuthenticated"
+      ],
+      "group": "source-config",
+      "bodySha256": "1fc53eb18bb18982c7174aa2079489c95bb628b4a65ea4dbd2a2b76fda84b0b2"
+    },
+    {
+      "names": [
+        "saveSourceConfig"
+      ],
+      "group": "source-config",
+      "bodySha256": "2ae7792203511ebfb79480f4f9256774fa8fc863f5dc653890a95674b7f7c42a"
+    },
+    {
+      "names": [
+        "deleteApiKeyCredentialBestEffort"
+      ],
+      "group": "source-config",
+      "bodySha256": "eefea38666c44259999eed4c8b85cce534502300c34d7886fa0466d422c1680f"
+    },
+    {
+      "names": [
+        "parseGuideMarkdown"
+      ],
+      "group": "source-guides",
+      "bodySha256": "d017be7b1f5364b2789d7525808d371447429beb6fd51fc66780044188436c60"
+    },
+    {
+      "names": [
+        "loadSourceGuide"
+      ],
+      "group": "source-guides",
+      "bodySha256": "9a2e8ba1024803b1a48bb540379b013f5e5c84c23f54fc8606abc59be4e65162"
+    },
+    {
+      "names": [
+        "extractTagline"
+      ],
+      "group": "source-guides",
+      "bodySha256": "2351da8b64b17b4ee215ca4b9738c793e0692a1b5d30e7611d454811e9acd44a"
+    },
+    {
+      "names": [
+        "saveSourceGuide"
+      ],
+      "group": "source-guides",
+      "bodySha256": "fd001bfc46d74e756f1b4418934d07d3a14f9b7672b4b21de0d558528f6ddbfa"
+    },
+    {
+      "names": [
+        "findSourceIcon"
+      ],
+      "group": "source-guides",
+      "bodySha256": "2e526a86fd697e87716f0f0a39e36219d1611919c127ddcb1cfea604161d702a"
+    },
+    {
+      "names": [
+        "downloadSourceIcon"
+      ],
+      "group": "source-guides",
+      "bodySha256": "3701e2894c1997ee80024cf44e85c2c07ae1d26e58aac9cec67fceaa92f00a20"
+    },
+    {
+      "names": [
+        "sourceNeedsIconDownload"
+      ],
+      "group": "source-guides",
+      "bodySha256": "0bd06eb61a33f45e6c13cae4cafb1d6584a65ed70a5ebfecf1f633118fc172fe"
+    },
+    {
+      "names": [
+        "loadSource"
+      ],
+      "group": "source-inventory",
+      "bodySha256": "489a039517a6911846c4819e4aec1ded3d1c43b222a062616c0ca7c63426d556"
+    },
+    {
+      "names": [
+        "loadWorkspaceSources"
+      ],
+      "group": "source-inventory",
+      "bodySha256": "df6725f9ac8b6f4a4cb40ad51eef11066d55a942dbbf4a9837e73d62e847e4fa"
+    },
+    {
+      "names": [
+        "getEnabledSources"
+      ],
+      "group": "source-inventory",
+      "bodySha256": "e44b1aef9fa0783e48a83d8c763141aa5b147bb8ff835254c98b586c2f1f26ea"
+    },
+    {
+      "names": [
+        "isSourceUsable"
+      ],
+      "group": "source-inventory",
+      "bodySha256": "733d1a4ec0d78f30ee28787c7bc9aa436f07bb88c59d15580324778b0195c069"
+    },
+    {
+      "names": [
+        "getSourcesBySlugs"
+      ],
+      "group": "source-inventory",
+      "bodySha256": "23e49d50426ffaecb8c96e5abe6f233ae6e075def5732f50d7bfb653624ab745"
+    },
+    {
+      "names": [
+        "loadAllSources"
+      ],
+      "group": "source-inventory",
+      "bodySha256": "71320ec2fc940452ebc9340eba577a608a1d0d6c07f1659c7bf851fcb17777cc"
+    },
+    {
+      "names": [
+        "generateSourceSlug"
+      ],
+      "group": "source-creation",
+      "bodySha256": "315632080d141226688fdc0387a5db08d5d703445b7e1105e006f38e93054f89"
+    },
+    {
+      "names": [
+        "createSource"
+      ],
+      "group": "source-creation",
+      "bodySha256": "09d960c0985dc27afbb51a5039848219ce270f97c3040f0ee6d3bc10618000aa"
+    },
+    {
+      "names": [
+        "deleteSource"
+      ],
+      "group": "source-creation",
+      "bodySha256": "aff658891fb77c138341eb974807fe73b39c666670a00fbd23290c297ef46968"
+    },
+    {
+      "names": [
+        "sourceExists"
+      ],
+      "group": "source-creation",
+      "bodySha256": "2ad68a9c9db6c08d7f1e005ec27e0bd6194c6b7a2d1c848b42a921028e5ebef1"
+    }
+  ],
+  "modules": [
+    {
+      "name": "source-config",
+      "lines": 196
+    },
+    {
+      "name": "source-guides",
+      "lines": 166
+    },
+    {
+      "name": "source-inventory",
+      "lines": 142
+    },
+    {
+      "name": "source-creation",
+      "lines": 177
+    }
+  ],
+  "dependencies": {
+    "source-config": [],
+    "source-guides": [
+      "source-config"
+    ],
+    "source-inventory": [
+      "source-config",
+      "source-guides"
+    ],
+    "source-creation": [
+      "source-config",
+      "source-guides"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

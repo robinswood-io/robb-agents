@@ -68,7 +68,7 @@ describe('MCP Tasks dual-era projection', () => {
       ...completed,
       lifecycleStatus: 'waiting-approval',
       status: 'waiting-approval',
-      output: undefined,
+      
     }
     const task = projectCanonicalTaskToMcp(waiting, {
       era: 'modern',

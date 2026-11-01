@@ -10,7 +10,7 @@
  * Hovering shows a tooltip with the status description.
  */
 
-import * as React from 'react'
+
 import { cn } from '@/lib/utils'
 import {
   Tooltip,
@@ -21,13 +21,13 @@ import type { SourceConnectionStatus } from '../../../shared/types'
 
 export interface SourceStatusIndicatorProps {
   /** Connection status */
-  status?: SourceConnectionStatus
+  status?: SourceConnectionStatus | undefined
   /** Error message (shown in tooltip if status is 'failed') */
-  errorMessage?: string
+  errorMessage?: string | undefined
   /** Size variant */
-  size?: 'xs' | 'sm' | 'md'
+  size?: 'xs' | 'sm' | 'md' | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
 }
 
 // Status configurations

@@ -1,0 +1,13 @@
+diff --git a/dist/core/tools/find.d.ts b/dist/core/tools/find.d.ts
+index 531a5904c619fe4146bb7b692dcc4862b57e3a0b..060fc8d0a0b48ec84ba578fe4ca4928867376623 100644
+--- a/dist/core/tools/find.d.ts
++++ b/dist/core/tools/find.d.ts
+@@ -4,7 +4,7 @@ import { type Static, Type } from "typebox";
+ import type { ToolDefinition } from "../extensions/types.ts";
+ import { type TruncationResult } from "./truncate.ts";
+ /** Relativize a find result against the search root and normalize it to posix separators. */
+-export declare function relativizeFindResultPath(resultPath: string, searchPath: string, pathModule?: path.PlatformPath): string;
++export declare function relativizeFindResultPath(resultPath: string, searchPath: string, pathModule?: typeof path): string;
+ declare const findSchema: Type.TObject<{
+     pattern: Type.TString;
+     path: Type.TOptional<Type.TString>;

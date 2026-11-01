@@ -1,3 +1,5 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import { requiredTestValue } from '@craft-agent/shared/testing/fixture-values';
 /**
  * Tests for the ensureSessionMessagesLoadedAtom merge logic.
  *
@@ -31,7 +33,7 @@ function mergeSessionMessages(
     return loadedSession
   }
 
-  return {
+  return omitUndefined<SessionLike>({
     ...existingSession,
     // CRITICAL: Don't clobber messages if session is actively streaming
     // AND already has messages in the atom. After Cmd+R reload, the atom
@@ -41,7 +43,7 @@ function mergeSessionMessages(
       : loadedSession.messages,
     tokenUsage: loadedSession.tokenUsage ?? existingSession.tokenUsage,
     sessionFolderPath: loadedSession.sessionFolderPath ?? existingSession.sessionFolderPath,
-  }
+  })
 }
 
 // ============================================================================
@@ -72,8 +74,8 @@ describe('ensureSessionMessagesLoadedAtom merge logic', () => {
     const result = mergeSessionMessages(existing, loaded)
 
     expect(result.messages).toHaveLength(2)
-    expect(result.messages[0].id).toBe('m1')
-    expect(result.messages[1].id).toBe('m2')
+    expect(requiredTestValue(result.messages[0]).id).toBe('m1')
+    expect(requiredTestValue(result.messages[1]).id).toBe('m2')
   })
 
   it('active streaming: non-empty atom + isProcessing=true → keeps existing messages', () => {
@@ -94,8 +96,8 @@ describe('ensureSessionMessagesLoadedAtom merge logic', () => {
     const result = mergeSessionMessages(existing, loaded)
 
     expect(result.messages).toHaveLength(2)
-    expect(result.messages[1].id).toBe('m2')
-    expect(result.messages[1].isStreaming).toBe(true)
+    expect(requiredTestValue(result.messages[1]).id).toBe('m2')
+    expect(requiredTestValue(result.messages[1]).isStreaming).toBe(true)
   })
 
   it('normal lazy-load: isProcessing=false → uses IPC response', () => {
@@ -119,7 +121,7 @@ describe('ensureSessionMessagesLoadedAtom merge logic', () => {
       isProcessing: true,
       messages: [msg('m1')],  // Non-empty, guard is active
       tokenUsage: null,
-      sessionFolderPath: undefined,
+
     }
     const loaded: SessionLike = {
       isProcessing: true,

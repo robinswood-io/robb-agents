@@ -1,3 +1,5 @@
+import { useEffectEvent } from 'react';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * WhatsAppConnectDialog — drives the Baileys QR-scan pairing flow from the UI.
  */
@@ -20,7 +22,7 @@ import type { WhatsAppUiEvent } from '../../../shared/types'
 interface WhatsAppConnectDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onConnected?: () => void
+  onConnected?: (() => void) | undefined
 }
 
 type Phase =
@@ -47,7 +49,6 @@ export function WhatsAppConnectDialog({ open, onOpenChange, onConnected }: Whats
       handleEvent(event)
     })
     return off
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, activeWorkspaceId])
 
   React.useEffect(() => {
@@ -55,9 +56,8 @@ export function WhatsAppConnectDialog({ open, onOpenChange, onConnected }: Whats
     setPhase({ kind: 'starting' })
     window.electronAPI
       .startWhatsAppConnect()
-      .catch((err) => setPhase({ kind: 'error', message: errorMsg(err) }))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+      .catch((err: unknown) => setPhase({ kind: 'error', message: errorMsg(err) }))
+  }, [open, phase.kind])
 
   React.useEffect(() => {
     if (!open) {
@@ -65,13 +65,13 @@ export function WhatsAppConnectDialog({ open, onOpenChange, onConnected }: Whats
     }
   }, [open])
 
-  const handleEvent = (event: WhatsAppUiEvent) => {
+  const handleEvent = useEffectEvent((event: WhatsAppUiEvent) => {
     switch (event.type) {
       case 'qr':
         setPhase({ kind: 'show_qr', qr: event.qr })
         return
       case 'connected':
-        setPhase({ kind: 'connected', name: event.name })
+        setPhase(omitUndefined({ kind: 'connected' as const, name: event.name }))
         setTimeout(() => {
           if (onConnected) {
             onConnected()
@@ -92,7 +92,7 @@ export function WhatsAppConnectDialog({ open, onOpenChange, onConnected }: Whats
         setPhase({ kind: 'error', message: event.message })
         return
     }
-  }
+  })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

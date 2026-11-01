@@ -1,3 +1,6 @@
+import { z } from 'zod';
+import { isUnknownArray } from '@craft-agent/shared/utils/json';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * BindingStore — workspace-scoped persistence for channel bindings.
  *
@@ -103,7 +106,7 @@ export class BindingStore {
       (b) => !(b.platform === platform && b.channelId === channelId && (b.threadId ?? undefined) === threadId),
     )
 
-    const binding: ChannelBinding = {
+    const binding: ChannelBinding = omitUndefined<ChannelBinding>({
       id: randomUUID(),
       workspaceId,
       sessionId,
@@ -114,7 +117,7 @@ export class BindingStore {
       enabled: true,
       createdAt: Date.now(),
       config: normalizeBindingConfig(platform, config),
-    }
+    })
 
     this.bindings.push(binding)
     this.save()
@@ -246,8 +249,8 @@ export class BindingStore {
     try {
       if (existsSync(this.filePath)) {
         const raw = readFileSync(this.filePath, 'utf-8')
-        const parsed = JSON.parse(raw)
-        if (Array.isArray(parsed)) {
+        const parsed: unknown = JSON.parse(raw)
+        if (isUnknownArray(parsed)) {
           this.bindings = parsed.map(normalizeBinding)
         }
       }
@@ -285,9 +288,24 @@ export class BindingStore {
 // Migration helpers
 // ---------------------------------------------------------------------------
 
-function normalizeBinding(raw: ChannelBinding): ChannelBinding {
-  return {
-    ...raw,
-    config: normalizeBindingConfig(raw.platform, raw.config ?? {}),
-  }
+const PersistedBindingSchema = z.object({
+  id: z.string(), workspaceId: z.string(), sessionId: z.string(),
+  platform: z.enum(['telegram', 'whatsapp', 'lark']), channelId: z.string(),
+  threadId: z.number().optional(), channelName: z.string().optional(),
+  enabled: z.boolean(), createdAt: z.number(),
+  config: z.object({
+    responseMode: z.enum(['streaming', 'progress', 'final_only']).optional(),
+    streamResponses: z.boolean().optional(), showToolActivity: z.boolean().optional(),
+    approvalChannel: z.enum(['chat', 'app']).optional(), editIntervalMs: z.number().optional(),
+    accessMode: z.enum(['inherit', 'allow-list', 'open']).optional(),
+    allowedSenderIds: z.array(z.string()).optional(),
+  }).passthrough().nullish(),
+}).passthrough()
+
+function normalizeBinding(raw: unknown): ChannelBinding {
+  const parsed = PersistedBindingSchema.parse(raw)
+  return omitUndefined<ChannelBinding>({
+    ...parsed,
+    config: normalizeBindingConfig(parsed.platform, omitUndefined(parsed.config ?? {})),
+  })
 }

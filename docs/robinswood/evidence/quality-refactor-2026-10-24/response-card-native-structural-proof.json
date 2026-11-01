@@ -1,0 +1,105 @@
+{
+  "status": "passed",
+  "nativeDeclarationBodiesPreserved": true,
+  "reviewedStableDependencyAdditions": {},
+  "reviewedStableEffectDependencyAdditions": {},
+  "reviewedEffectDependencyRemovals": {},
+  "reviewedDependencyRemovals": {},
+  "reviewedDeferredCaptures": {},
+  "nestedPlansVerified": [
+    "turn-card-native"
+  ],
+  "nativeMainJSXAndInlineCallbacksPreserved": true,
+  "nativeRootAndActionHooksReinlinedExactly": true,
+  "viewAddsNoStateOrEffects": false,
+  "nativeValuesPassedDirectly": true,
+  "nativeImportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "packages/ui/src/components/chat/TurnCard.tsx",
+      "lines": 452,
+      "sha256": "99ebcd8277c5b051ee7954308a1606026ddf072375c28f3c71ba744362fe60cf"
+    },
+    {
+      "file": "packages/ui/src/components/chat/turn-card-contracts.ts",
+      "lines": 280,
+      "sha256": "1f19226cbd519e8ff1e4055d810a104f34066972674bc1974175b5ad8c2f22c0"
+    },
+    {
+      "file": "packages/ui/src/components/chat/turn-card-buffering.ts",
+      "lines": 143,
+      "sha256": "b99dc53896c0c8103e0c0e04aed30adfb68737aec956ab95dac7c7b3aab924a6"
+    },
+    {
+      "file": "packages/ui/src/components/chat/turn-card-tool-display.ts",
+      "lines": 240,
+      "sha256": "66f392138a7da7834f6959b16d8c1e53ca7b9a9e0fbc26a6f0a836d7b5e9b752"
+    },
+    {
+      "file": "packages/ui/src/components/chat/turn-card-activity-icon.tsx",
+      "lines": 117,
+      "sha256": "b13483059812497735a2977780200630719cd1424217743ddcfead0b31fd9028"
+    },
+    {
+      "file": "packages/ui/src/components/chat/turn-card-activity-row.tsx",
+      "lines": 336,
+      "sha256": "8b3303f4493abba1723dca46fe470a5a2f40cb1331a29f14c388c51ef18d9859"
+    },
+    {
+      "file": "packages/ui/src/components/chat/turn-card-activity-group.tsx",
+      "lines": 191,
+      "sha256": "2dded221b5da68f987504ab9caa1b75b9786bfa5742f72e6ebdbcb0b45a38f81"
+    },
+    {
+      "file": "packages/ui/src/components/chat/turn-card-response-helpers.tsx",
+      "lines": 264,
+      "sha256": "3cc1a87207cddaa9b1a0ae208993cd1e72ee9224b926bda743485a338095389f"
+    },
+    {
+      "file": "packages/ui/src/components/chat/turn-card-todo.tsx",
+      "lines": 76,
+      "sha256": "5d004a7abd4560af893782d479644bae1212e8ee2125cb8f5e4dc7e404f7340d"
+    },
+    {
+      "file": "packages/ui/src/components/chat/use-response-selection.tsx",
+      "lines": 158,
+      "sha256": "2ee19ded877bb4b04f2ec87d87427d267a3ccf77f1ee7de79faf56bbc02007d8"
+    },
+    {
+      "file": "packages/ui/src/components/chat/use-response-annotations.tsx",
+      "lines": 233,
+      "sha256": "4d0e46fa7acf917f46a796a6057faaa111790972debd96f4d3060f890bfe1f6c"
+    },
+    {
+      "file": "packages/ui/src/components/chat/use-response-follow-ups.tsx",
+      "lines": 245,
+      "sha256": "0c53e8ab516e1c7f8d867c0b16ad0b44d63a4ce8bdb46018ff3356c1323797cd"
+    },
+    {
+      "file": "packages/ui/src/components/chat/use-response-text-selection.tsx",
+      "lines": 243,
+      "sha256": "214989b4583d688eb5ee8db350aa63f9c2b9dc7f43f68ff3400ec54de11eebbd"
+    },
+    {
+      "file": "packages/ui/src/components/chat/use-response-selection-menu.tsx",
+      "lines": 180,
+      "sha256": "cc167868a013f63df9281d03eaf87b3011057585e46428d32efa5fa7a6fdba11"
+    },
+    {
+      "file": "packages/ui/src/components/chat/use-response-buffer.ts",
+      "lines": 61,
+      "sha256": "7ac7043c171d65fec93edc3a995faf2a49e91703feb5e485fcae07c355c1d07e"
+    },
+    {
+      "file": "packages/ui/src/components/chat/ResponseCard.tsx",
+      "lines": 487,
+      "sha256": "c04503659c5da294e756d720e0f206373b3fbc67f1b3d2a0b9279be30083cdf3"
+    },
+    {
+      "file": "packages/ui/src/components/chat/turn-card-view.tsx",
+      "lines": 419,
+      "sha256": "55b5cd1c60b1cecb6a32bb1ed515e0a92ddf8a0030f6daa39f0a5d600448aed5"
+    }
+  ]
+}

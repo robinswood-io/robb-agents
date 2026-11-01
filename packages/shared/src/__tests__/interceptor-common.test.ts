@@ -68,7 +68,7 @@ describe('interceptor-common', () => {
     });
 
     const persisted = JSON.parse(readFileSync(join(sessionDirA, 'tool-metadata.json'), 'utf-8')) as Record<string, unknown>;
-    expect(persisted.existingTool).toBeDefined();
-    expect(persisted.newTool).toBeDefined();
+    expect(persisted["existingTool"]).toBeDefined();
+    expect(persisted["newTool"]).toBeDefined();
   });
 });

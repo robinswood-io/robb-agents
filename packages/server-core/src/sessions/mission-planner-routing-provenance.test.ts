@@ -1,30 +1,34 @@
+import { authenticatedTaskFor as policyAuthenticatedTaskFor } from "./SessionManager/policy.ts";
 import { describe, expect, it } from 'bun:test'
-import { SessionManager } from './SessionManager'
+import { createManagedSession } from './SessionManager'
+import type { Message } from '@craft-agent/core/types'
+type InternalMessageOrigin = NonNullable<Message['internalOrigin']>
 
 type RoutingTask = {
   authenticatedTaskText?: string
 }
 
-type RoutingTaskResolver = {
-  authenticatedTaskFor(
-    managed: Record<string, unknown>,
-    message: Record<string, unknown>,
-  ): RoutingTask
+type RoutingPlannerState = Pick<ReturnType<typeof createManagedSession>, 'missionRole' | 'parentSessionId'> & {
+  workspace: { rootPath: string }
 }
-
 const resolvePlannerRoutingTask = (
-  managed: Record<string, unknown>,
-  internalOrigin: Record<string, unknown>,
+  managed: RoutingPlannerState,
+  internalOrigin: InternalMessageOrigin,
 ): RoutingTask => {
-  const resolver = SessionManager.prototype as unknown as RoutingTaskResolver
-  return resolver.authenticatedTaskFor.call({}, managed, {
+  const session = createManagedSession({ id: 'planner-routing-fixture' }, {
+    id: 'routing-workspace', name: 'Routing fixture', slug: 'routing-fixture',
+    rootPath: managed.workspace.rootPath, createdAt: 1,
+  }, { messagesLoaded: true })
+  session.parentSessionId = managed.parentSessionId
+  session.missionRole = managed.missionRole
+  return policyAuthenticatedTaskFor(session, {
     content: '<mission-plan-request>host contract mentioning permissions and workspace writes</mission-plan-request>',
     internalOrigin,
   })
 }
 
 describe('Mission planner routing provenance', () => {
-  const managed = {
+  const managed: RoutingPlannerState = {
     missionRole: 'planner',
     parentSessionId: 'origin-session',
     workspace: { rootPath: '/tmp/unused-planner-routing-test' },
@@ -42,7 +46,7 @@ describe('Mission planner routing provenance', () => {
   it.each([
     ['wrong sender', { kind: 'spawned-session', senderSessionId: 'other-session' }],
     ['wrong origin kind', { kind: 'agent-message', senderSessionId: 'origin-session' }],
-  ])('rejects planner task text with %s', (_label, origin) => {
+  ] as const)('rejects planner task text with %s', (_label, origin) => {
     expect(resolvePlannerRoutingTask(managed, {
       ...origin,
       authenticatedTaskText: 'Merci.',

@@ -13,7 +13,7 @@ import type { TestResult } from './types'
 
 export interface AutomationTestPanelProps {
   result: TestResult
-  className?: string
+  className?: string | undefined
 }
 
 export function AutomationTestPanel({ result, className }: AutomationTestPanelProps) {

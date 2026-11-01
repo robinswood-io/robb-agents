@@ -28,7 +28,7 @@ export interface NavigatorProps {
   /** Called when a details item is selected */
   onSelectDetails: (detailsType: string, detailsId: string) => void
   /** Currently selected details */
-  selectedDetails?: { type: string; id: string }
+  selectedDetails?: { type: string; id: string } | undefined
 }
 
 /**

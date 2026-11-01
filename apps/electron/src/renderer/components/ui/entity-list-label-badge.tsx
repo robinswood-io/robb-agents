@@ -10,10 +10,10 @@ import type { LabelConfig } from "@craft-agent/shared/labels"
 
 interface EntityListLabelBadgeProps {
   label: LabelConfig
-  rawValue?: string
+  rawValue?: string | undefined
   sessionLabels: string[]
-  onLabelsChange?: (updatedLabels: string[]) => void
-  onToggleFilter?: (labelId: string) => void
+  onLabelsChange?: ((updatedLabels: string[]) => void) | undefined
+  onToggleFilter?: ((labelId: string) => void) | undefined
 }
 
 export function EntityListLabelBadge({ label, rawValue, sessionLabels, onLabelsChange, onToggleFilter }: EntityListLabelBadgeProps) {

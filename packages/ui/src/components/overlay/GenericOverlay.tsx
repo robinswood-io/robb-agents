@@ -6,7 +6,7 @@
  * Supports optional diff mode for side-by-side comparison.
  */
 
-import * as React from 'react'
+
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FileCode } from 'lucide-react'
@@ -18,25 +18,25 @@ export interface GenericOverlayProps {
   /** Content to display (used when not in diff mode) */
   content: string
   /** Language for syntax highlighting (auto-detected if not provided) */
-  language?: string
+  language?: string | undefined
   /** Whether the overlay is visible */
   isOpen: boolean
   /** Callback when the overlay should close */
   onClose: () => void
   /** Optional title to display in the header */
-  title?: string
+  title?: string | undefined
   /** Theme mode for dark/light styling (defaults to 'light') */
-  theme?: 'light' | 'dark'
+  theme?: 'light' | 'dark' | undefined
   /** Enable diff mode for side-by-side comparison */
-  diffMode?: boolean
+  diffMode?: boolean | undefined
   /** Original content (left side) for diff mode */
-  originalContent?: string
+  originalContent?: string | undefined
   /** Modified content (right side) for diff mode */
-  modifiedContent?: string
+  modifiedContent?: string | undefined
   /** Render inline without dialog (for playground) */
-  embedded?: boolean
+  embedded?: boolean | undefined
   /** Error message if the tool failed */
-  error?: string
+  error?: string | undefined
 }
 
 /**

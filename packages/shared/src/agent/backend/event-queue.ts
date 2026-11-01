@@ -49,7 +49,7 @@ export class EventQueue {
    * Async generator that yields events as they arrive.
    * Completes when complete() is called and the queue is drained.
    */
-  async *drain(): AsyncGenerator<AgentEvent> {
+  async *drain(): AsyncGenerator<AgentEvent, void, unknown> {
     while (true) {
       const isDone = await this.waitForEvent();
 

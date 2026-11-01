@@ -17,31 +17,31 @@ import { CHAT_LAYOUT } from '@/config/layout'
 export interface Info_PageProps {
   children: React.ReactNode
   /** Show loading spinner */
-  loading?: boolean
+  loading?: boolean | undefined
   /** Show error state with message */
-  error?: string
+  error?: string | undefined
   /** Show empty state with message */
-  empty?: string
-  className?: string
+  empty?: string | undefined
+  className?: string | undefined
 }
 
 export interface Info_PageHeaderProps extends Omit<PanelHeaderProps, 'className'> {
-  className?: string
+  className?: string | undefined
 }
 
 export interface Info_PageHeroProps {
   /** Avatar element */
   avatar: React.ReactNode
   /** Title displayed next to avatar */
-  title?: string
+  title?: string | undefined
   /** Tagline/description text below title */
-  tagline?: string | null
-  className?: string
+  tagline?: string | null | undefined
+  className?: string | undefined
 }
 
 export interface Info_PageContentProps {
   children: React.ReactNode
-  className?: string
+  className?: string | undefined
 }
 
 function Info_PageRoot({

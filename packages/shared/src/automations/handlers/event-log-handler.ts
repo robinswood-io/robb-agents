@@ -52,7 +52,7 @@ export class EventLogHandler implements AutomationHandler {
 
     this.logger.log({
       type: event,
-      sessionId: payload.sessionId,
+      ...(payload.sessionId !== undefined ? { sessionId: payload.sessionId } : {}),
       workspaceId: this.options.workspaceId,
       data: { ...payload },
       results: [], // Results are logged separately by handlers that produce them

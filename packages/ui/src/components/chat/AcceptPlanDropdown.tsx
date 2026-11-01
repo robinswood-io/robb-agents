@@ -29,11 +29,11 @@ interface AcceptPlanDropdownProps {
   /** Callback when user selects "Accept & Compact" (compact first, then execute) */
   onAcceptWithCompact: () => void
   /** Trigger label */
-  acceptLabel?: string
+  acceptLabel?: string | undefined
   /** Primary dropdown option label */
-  acceptOptionLabel?: string
+  acceptOptionLabel?: string | undefined
   /** Additional className for the trigger button */
-  className?: string
+  className?: string | undefined
 }
 
 export function AcceptPlanDropdown({

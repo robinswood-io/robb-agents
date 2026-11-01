@@ -72,7 +72,7 @@ describe('Mission digital twin', () => {
       },
       pathPolicyAllowedByWorkItemId: Object.fromEntries(ids.map((id) => [id, true])),
       estimatedCostUsdByWorkItemId: Object.fromEntries(ids.map((id) => [id, 0.1])),
-      availableBudgetUsd: mission.policy.maxTotalCostUsd,
+      ...(mission.policy.maxTotalCostUsd !== undefined ? { availableBudgetUsd: mission.policy.maxTotalCostUsd } : {}),
       generatedAt: '2026-09-04T12:00:00Z',
     });
 

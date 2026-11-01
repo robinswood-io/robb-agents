@@ -11,7 +11,7 @@ describe('isIslandBlockerTarget', () => {
       closest: (selector: string) => (selector === ISLAND_BLOCKER_SELECTOR ? ({}) as Element : null),
     }
 
-    expect(isIslandBlockerTarget(target as unknown as EventTarget)).toBe(true)
+    expect(isIslandBlockerTarget(Object.assign(new EventTarget(), target))).toBe(true)
   })
 
   it('falls back to parentElement.closest when target has no closest', () => {
@@ -21,7 +21,7 @@ describe('isIslandBlockerTarget', () => {
       },
     }
 
-    expect(isIslandBlockerTarget(target as unknown as EventTarget)).toBe(true)
+    expect(isIslandBlockerTarget(Object.assign(new EventTarget(), target))).toBe(true)
   })
 
   it('returns false when neither target nor parent match blocker selector', () => {
@@ -32,6 +32,6 @@ describe('isIslandBlockerTarget', () => {
       },
     }
 
-    expect(isIslandBlockerTarget(target as unknown as EventTarget)).toBe(false)
+    expect(isIslandBlockerTarget(Object.assign(new EventTarget(), target))).toBe(false)
   })
 })

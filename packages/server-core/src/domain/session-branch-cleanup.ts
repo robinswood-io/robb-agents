@@ -1,6 +1,6 @@
 export interface BranchRollbackManagedSession {
-  agent?: { destroy?: () => void } | null
-  poolServer?: { stop?: () => void }
+  agent?: { destroy?: () => void | Promise<void> } | null | undefined
+  poolServer?: { stop?: () => void | Promise<void> } | undefined
 }
 
 interface RollbackParams {
@@ -19,7 +19,7 @@ export async function rollbackFailedBranchCreation(params: RollbackParams): Prom
   const { managed, workspaceRootPath, sessionId, deleteFromRuntimeSessions, deleteStoredSession } = params
 
   try {
-    managed.agent?.destroy?.()
+    await managed.agent?.destroy?.()
   } catch {
     // Best-effort cleanup
   }
@@ -27,11 +27,11 @@ export async function rollbackFailedBranchCreation(params: RollbackParams): Prom
 
   if (managed.poolServer) {
     try {
-      managed.poolServer.stop?.()
+      await managed.poolServer.stop?.()
     } catch {
       // Best-effort cleanup
     }
-    managed.poolServer = undefined
+    delete managed.poolServer;
   }
 
   deleteFromRuntimeSessions(sessionId)

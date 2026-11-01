@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Headless PlatformServices — runs under Bun without Electron.
  *
@@ -24,7 +25,7 @@ function createConsoleLogger(): Logger {
     warn: (...args) => console.warn(fmt('warn', args)),
     error: (...args) => console.error(fmt('error', args)),
     debug: (...args) => {
-      if (process.env.CRAFT_DEBUG === 'true' || process.env.CRAFT_IS_PACKAGED !== 'true') {
+      if (process.env["CRAFT_DEBUG"] === 'true' || process.env["CRAFT_IS_PACKAGED"] !== 'true') {
         console.debug(fmt('debug', args))
       }
     },
@@ -51,15 +52,15 @@ export function createHeadlessPlatform(options?: {
   buildDirty?: boolean
 }): PlatformServices {
   const logger = createConsoleLogger()
-  const isDebugMode = process.env.CRAFT_DEBUG === 'true' || process.env.CRAFT_IS_PACKAGED !== 'true'
-  const buildCommit = process.env.CRAFT_BUILD_COMMIT
-    || process.env.ROBB_BUILD_COMMIT
-    || process.env.GITHUB_SHA
+  const isDebugMode = process.env["CRAFT_DEBUG"] === 'true' || process.env["CRAFT_IS_PACKAGED"] !== 'true'
+  const buildCommit = process.env["CRAFT_BUILD_COMMIT"]
+    || process.env["ROBB_BUILD_COMMIT"]
+    || process.env["GITHUB_SHA"]
     || options?.buildCommit
-  const buildChannel = process.env.CRAFT_BUILD_CHANNEL
-    || process.env.ROBB_BUILD_CHANNEL
+  const buildChannel = process.env["CRAFT_BUILD_CHANNEL"]
+    || process.env["ROBB_BUILD_CHANNEL"]
     || options?.buildChannel
-  const declaredBuildDirty = (process.env.CRAFT_BUILD_DIRTY ?? process.env.ROBB_BUILD_DIRTY)
+  const declaredBuildDirty = (process.env["CRAFT_BUILD_DIRTY"] ?? process.env["ROBB_BUILD_DIRTY"])
     ?.trim()
     .toLowerCase()
   const buildDirty = declaredBuildDirty === 'true' || declaredBuildDirty === '1' || declaredBuildDirty === 'dirty'
@@ -68,14 +69,14 @@ export function createHeadlessPlatform(options?: {
       ? false
       : options?.buildDirty
 
-  return {
-    appRootPath: process.env.CRAFT_APP_ROOT || process.cwd(),
-    resourcesPath: process.env.CRAFT_RESOURCES_PATH || join(process.cwd(), 'resources'),
-    isPackaged: process.env.CRAFT_IS_PACKAGED === 'true',
-    appVersion: process.env.CRAFT_VERSION || options?.appVersion || '0.0.0-dev',
+  return omitUndefined<PlatformServices>({
+    appRootPath: process.env["CRAFT_APP_ROOT"] || process.cwd(),
+    resourcesPath: process.env["CRAFT_RESOURCES_PATH"] || join(process.cwd(), 'resources'),
+    isPackaged: process.env["CRAFT_IS_PACKAGED"] === 'true',
+    appVersion: process.env["CRAFT_VERSION"] || options?.appVersion || '0.0.0-dev',
     buildCommit: buildCommit?.trim() || undefined,
     buildChannel: buildChannel?.trim() || undefined,
-    buildDirty,
+    ...(buildDirty !== undefined ? { buildDirty: buildDirty } : {}),
 
     imageProcessor: {
       async getMetadata(buffer) {
@@ -110,5 +111,5 @@ export function createHeadlessPlatform(options?: {
     // GUI methods intentionally undefined — headless mode.
     // Handlers guard these with optional chaining (?.) or capability routing.
     // openPath, openExternal, showItemInFolder, quit, systemDarkMode → undefined
-  }
+  })
 }

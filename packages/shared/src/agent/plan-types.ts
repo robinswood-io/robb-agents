@@ -168,7 +168,7 @@ export function createPlanStep(description: string, details?: string): PlanStep 
     id: randomUUID(),
     description,
     status: 'pending',
-    details,
+    ...(details !== undefined ? { details } : {}),
   };
 }
 

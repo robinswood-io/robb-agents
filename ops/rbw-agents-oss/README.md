@@ -2,7 +2,7 @@
 
 Stack open source multi-agents (CLI-first) installée sous `/srv/rbw-agents-oss`.
 
-## Statut actuel — 2026-04-27
+## Instantané historique du runtime interne — 2026-04-27
 - **Source de vérité runtime** : `/srv/rbw-agents-oss` sur `interne`
 - **Miroir local modifiable** : `local-sources/rbw-oss-control/oss`
 - **Schedules configurés et contrôlés** : 139
@@ -13,6 +13,15 @@ Stack open source multi-agents (CLI-first) installée sous `/srv/rbw-agents-oss`
 - **Smoke suite OSS** : `ok=true`
 - **Backlog OSS live** : `blockedOrDegraded=0`, `stale=0`
 - **Backlog événementiel restant** : aucun (event-bridge v2.1 activé, labels appliqués via métadonnées de session)
+
+## Périmètre du miroir public
+
+Le manifeste public contient 192 agents depuis le retrait de `provider-routing-guard`
+au commit `cbb4e2f4`. La référence approuvée est `config/agents-v2/baseline.json`.
+Les contrôles comparent ce nombre déclaré au manifeste ; ils refusent une référence
+absente ou invalide et ne la recalculent pas à partir des fichiers à contrôler.
+Les chiffres du runtime interne ci-dessus restent des preuves historiques, pas une
+qualification du miroir public courant.
 
 ## Démarrage rapide
 ```bash

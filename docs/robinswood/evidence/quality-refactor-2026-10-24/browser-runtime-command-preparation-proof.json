@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "source": "packages/shared/src/agent/browser-tool-runtime.ts",
+  "nativeSourceHash": "caba25f981f02c7bbd9d2cad6d1f64e75b82e33677ed1447a298d20bcf7931e9",
+  "preparedSourceHash": "763e710961b318d80330a38b868ca0d17fb7a3998b03edfebfd46653bea6fea6",
+  "commands": 33,
+  "nativeCommandBodiesAndConditionsPreserved": true,
+  "nativeCaptureReferencesAndArgumentOrderPreserved": true,
+  "inputContractPreserved": true,
+  "allOtherNativeDeclarationsAndSafetyFencesPreserved": true,
+  "additionalMutableState": 0,
+  "additionalWorkflow": 0
+}

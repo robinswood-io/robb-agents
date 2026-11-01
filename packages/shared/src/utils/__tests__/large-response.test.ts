@@ -20,6 +20,8 @@ import {
   extractLargeResultMetadataJson,
   estimateTokens,
   estimateTokensDensityAware,
+  buildHeadTailPreview,
+  isAlreadyGuardedLargeResponse,
 } from '../large-response.ts';
 
 describe('large-response artifact publication', () => {
@@ -261,6 +263,37 @@ describe('handleLargeResponse contextWindow handling', () => {
       summarize: fakeSummarize,
     });
     expect(result).not.toBeNull();
+  });
+
+  test('produces a head+tail preview without LLM call when summarize is omitted', async () => {
+    const textWithHeadAndTail = `HEAD_MARKER\n${eightKTokenText}\nTAIL_EXIT_CODE_0`;
+    const result = await handleLargeResponse({
+      text: textWithHeadAndTail,
+      sessionPath,
+      context: { toolName: 'Bash' },
+    });
+    expect(result).not.toBeNull();
+    expect(result?.wasSummarized).toBe(false);
+    expect(result?.message).toContain('HEAD_MARKER');
+    expect(result?.message).toContain('TAIL_EXIT_CODE_0');
+    expect(result?.message).toContain('chars omitted');
+    // Already-guarded messages are idempotent and not re-spilled
+    expect(isAlreadyGuardedLargeResponse(result!.message)).toBe(true);
+    const secondPass = await handleLargeResponse({
+      text: result!.message + eightKTokenText,
+      sessionPath,
+      context: { toolName: 'mcp__server__tool' },
+      summarize: fakeSummarize,
+    });
+    expect(secondPass).toBeNull();
+  });
+
+  test('buildHeadTailPreview retains short strings verbatim and splits long strings', () => {
+    expect(buildHeadTailPreview('short text', 100)).toBe('short text');
+    const preview = buildHeadTailPreview('A'.repeat(1_500) + 'B'.repeat(1_500), 2_000);
+    expect(preview).toContain('A'.repeat(100));
+    expect(preview).toContain('B'.repeat(100));
+    expect(preview).toContain('[1000 chars omitted]');
   });
 });
 

@@ -1,3 +1,4 @@
+import { isJsonObject } from '../utils/json.ts';
 import i18n, { type i18n as I18nInstance, type InitOptions } from "i18next";
 import { LOCALE_REGISTRY } from "./registry";
 import { SUPPORTED_LANGUAGE_CODES } from "./languages";
@@ -25,12 +26,13 @@ let initialized = false;
  * (e.g. initReactI18next for React apps, LanguageDetector for browser apps).
  */
 export function setupI18n(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  plugins: any[] = [],
+  plugins: Array<Parameters<I18nInstance["use"]>[0]> = [],
 ): I18nInstance {
   if (initialized) {
     for (const [code, entry] of Object.entries(LOCALE_REGISTRY)) {
-      if (!i18n.hasResourceBundle(code, "translation") || !i18n.getResourceBundle(code, "translation")?.["transport.failed"]) {
+      const bundle: unknown = i18n.getResourceBundle(code, "translation");
+      if (!i18n.hasResourceBundle(code, "translation") || !isJsonObject(bundle)
+        || typeof bundle["transport.failed"] !== "string" || !bundle["transport.failed"]) {
         i18n.addResourceBundle(code, "translation", entry.messages, true, true);
       }
     }

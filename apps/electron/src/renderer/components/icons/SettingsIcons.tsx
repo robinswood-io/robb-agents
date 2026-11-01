@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 import type { SettingsSubpage } from '../../../shared/types'
 
-type IconProps = { className?: string }
+type IconProps = { className?: string | undefined }
 
 export const AppSettingsIcon = ({ className }: IconProps) => <ToggleRight className={className} />
 export const AiSettingsIcon = ({ className }: IconProps) => <Sparkles className={className} />

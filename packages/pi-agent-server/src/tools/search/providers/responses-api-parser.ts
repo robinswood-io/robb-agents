@@ -1,3 +1,4 @@
+import { z } from 'zod';
 /**
  * Shared parser for the OpenAI Responses API format.
  *
@@ -8,29 +9,26 @@
 
 import type { WebSearchResult } from '../types.ts';
 
-interface UrlCitation {
-  type?: string;
-  url?: string;
-  title?: string;
-  start_index?: number;
-  end_index?: number;
-}
-
-interface ResponsesOutputTextPart {
-  type?: string;
-  text?: string;
-  annotations?: UrlCitation[];
-}
-
-interface ResponsesOutputItem {
-  type?: string;
-  content?: ResponsesOutputTextPart[];
-}
-
-export interface ResponsesApiResponse {
-  output?: ResponsesOutputItem[];
-  output_text?: string;
-}
+const citationSchema = z.object({
+  type: z.string().optional(), url: z.string().optional(), title: z.string().optional(),
+  start_index: z.number().optional(), end_index: z.number().optional(),
+});
+const outputTextPartSchema = z.object({
+  type: z.string().optional(), text: z.string().optional(),
+  annotations: z.array(citationSchema).optional(),
+});
+const outputItemSchema = z.object({
+  type: z.string().optional(), content: z.array(outputTextPartSchema).optional(),
+});
+export const responsesApiResponseSchema = z.object({
+  output: z.array(outputItemSchema).optional(), output_text: z.string().optional(),
+});
+export const responsesApiEventSchema = z.object({
+  type: z.string().optional(), item: outputItemSchema.optional(),
+  response: responsesApiResponseSchema.optional(),
+});
+type UrlCitation = z.infer<typeof citationSchema>;
+export type ResponsesApiResponse = z.infer<typeof responsesApiResponseSchema>;
 
 export function collectOutputText(data: ResponsesApiResponse): string {
   const pieces: string[] = [];

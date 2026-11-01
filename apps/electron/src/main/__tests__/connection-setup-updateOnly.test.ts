@@ -50,10 +50,10 @@ function evaluateSetupGuard(
 // ============================================================
 
 describe('SETUP_LLM_CONNECTION updateOnly guard', () => {
-  let mockDeleteCreds: ReturnType<typeof mock>
+  let mockDeleteCreds: ReturnType<typeof mock<MockDeps['deleteLlmCredentials']>>
 
   beforeEach(() => {
-    mockDeleteCreds = mock(() => Promise.resolve())
+    mockDeleteCreds = mock<MockDeps['deleteLlmCredentials']>(() => Promise.resolve())
   })
 
   it('updateOnly=true + missing slug → rejects', () => {
@@ -61,7 +61,7 @@ describe('SETUP_LLM_CONNECTION updateOnly guard', () => {
       { slug: 'nonexistent', updateOnly: true },
       {
         getLlmConnection: () => null,
-        deleteLlmCredentials: mockDeleteCreds as any,
+        deleteLlmCredentials: mockDeleteCreds,
         createBuiltInConnection,
         addLlmConnection: () => true,
       },
@@ -75,7 +75,7 @@ describe('SETUP_LLM_CONNECTION updateOnly guard', () => {
       { slug: 'chatgpt-plus-2', updateOnly: true },
       {
         getLlmConnection: () => null,
-        deleteLlmCredentials: mockDeleteCreds as any,
+        deleteLlmCredentials: mockDeleteCreds,
         createBuiltInConnection,
         addLlmConnection: () => true,
       },
@@ -88,7 +88,7 @@ describe('SETUP_LLM_CONNECTION updateOnly guard', () => {
       { slug: 'chatgpt-plus', updateOnly: true },
       {
         getLlmConnection: () => ({ slug: 'chatgpt-plus', name: 'ChatGPT Plus' }),
-        deleteLlmCredentials: mockDeleteCreds as any,
+        deleteLlmCredentials: mockDeleteCreds,
         createBuiltInConnection,
         addLlmConnection: () => true,
       },
@@ -102,7 +102,7 @@ describe('SETUP_LLM_CONNECTION updateOnly guard', () => {
       { slug: 'chatgpt-plus-2' },
       {
         getLlmConnection: () => null,
-        deleteLlmCredentials: mockDeleteCreds as any,
+        deleteLlmCredentials: mockDeleteCreds,
         createBuiltInConnection,
         addLlmConnection: () => true,
       },
@@ -116,7 +116,7 @@ describe('SETUP_LLM_CONNECTION updateOnly guard', () => {
       { slug: 'chatgpt-plus' },
       {
         getLlmConnection: () => ({ slug: 'chatgpt-plus' }),
-        deleteLlmCredentials: mockDeleteCreds as any,
+        deleteLlmCredentials: mockDeleteCreds,
         createBuiltInConnection,
         addLlmConnection: () => true,
       },

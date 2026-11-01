@@ -1,13 +1,13 @@
 export interface SessionVisibilityInput {
   id: string
-  hidden?: boolean
-  parentSessionId?: string
+  hidden?: boolean | undefined
+  parentSessionId?: string | undefined
   /** Host-owned delegation lineage survives hydration/order races. */
-  delegation?: { rootSessionId?: string } | null
+  delegation?: { rootSessionId?: string } | null | undefined
   /** Conductor and Mission OS child markers are internal even if lineage is incomplete. */
-  taskNodeId?: string
-  missionWorkItemId?: string
-  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor'
+  taskNodeId?: string | undefined
+  missionWorkItemId?: string | undefined
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor' | undefined
 }
 
 /**

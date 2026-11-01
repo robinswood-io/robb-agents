@@ -1,12 +1,12 @@
 import * as React from 'react'
 import { useTranslation } from "react-i18next"
-import { ChevronDown, Square, ArrowUpRight, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
+import { ChevronDown,Square,ArrowUpRight,CheckCircle2,XCircle,AlertTriangle } from 'lucide-react'
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  StyledDropdownMenuContent,
-  StyledDropdownMenuItem,
-  StyledDropdownMenuSeparator,
+DropdownMenu,
+DropdownMenuTrigger,
+StyledDropdownMenuContent,
+StyledDropdownMenuItem,
+StyledDropdownMenuSeparator,
 } from '@/components/ui/styled-dropdown'
 import { Spinner } from '@craft-agent/ui'
 import { cn } from '@/lib/utils'
@@ -47,11 +47,11 @@ export interface TaskActionMenuProps {
   /** Callback when kill button is clicked */
   onKillTask: (taskId: string) => void
   /** Callback to insert message into input field */
-  onInsertMessage?: (text: string) => void
+  onInsertMessage?: ((text: string) => void) | undefined
   /** Callback to show terminal output overlay */
-  onShowTerminalOverlay?: (data: TerminalOverlayData) => void
+  onShowTerminalOverlay?: ((data: TerminalOverlayData) => void) | undefined
   /** Additional class name */
-  className?: string
+  className?: string | undefined
 }
 
 /**
@@ -61,7 +61,7 @@ export interface TaskActionMenuProps {
  * - View Output: Opens task output in terminal overlay
  * - Stop Task: Kills shell tasks (agent tasks show warning)
  */
-export function TaskActionMenu({ task, sessionId, onKillTask, onInsertMessage, onShowTerminalOverlay, className }: TaskActionMenuProps) {
+export function TaskActionMenu({ task, onKillTask, onShowTerminalOverlay, className }: TaskActionMenuProps) {
   const { t } = useTranslation()
   const [open, setOpen] = React.useState(false)
 
@@ -100,7 +100,7 @@ export function TaskActionMenu({ task, sessionId, onKillTask, onInsertMessage, o
         onShowTerminalOverlay({
           command: task.intent || `${task.type} task`,
           output: output || t('chat.noOutputYet'),
-          description: task.intent,
+          ...(task.intent !== undefined ? { description: task.intent } : {}),
           toolType: 'bash', // Use 'bash' for both shell and agent tasks
         })
       } else if (output) {

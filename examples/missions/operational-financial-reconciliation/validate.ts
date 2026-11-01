@@ -184,12 +184,12 @@ export function validateFinancialReconciliationPack(): FinancialPackQualificatio
       `Local qualification gate ${gate} is not closed`,
     );
   }
-  assert(manifest.kpis.duplicateMutationCount === 0, 'Duplicate mutation KPI must be zero');
-  assert(manifest.kpis.unreconciledMutationCount === 0, 'Unreconciled mutation KPI must be zero');
-  assert(manifest.kpis.requiredEvidenceCoveragePercent === 100, 'Evidence coverage KPI must be 100%');
-  assert(manifest.kpis.approvalCoveragePercent === 100, 'Approval coverage KPI must be 100%');
-  assert(manifest.kpis.proofVerificationPercent === 100, 'Proof verification KPI must be 100%');
-  assert(manifest.kpis.privacyReceiptCoveragePercent === 100, 'Privacy receipt KPI must be 100%');
+  assert(manifest.kpis["duplicateMutationCount"] === 0, 'Duplicate mutation KPI must be zero');
+  assert(manifest.kpis["unreconciledMutationCount"] === 0, 'Unreconciled mutation KPI must be zero');
+  assert(manifest.kpis["requiredEvidenceCoveragePercent"] === 100, 'Evidence coverage KPI must be 100%');
+  assert(manifest.kpis["approvalCoveragePercent"] === 100, 'Approval coverage KPI must be 100%');
+  assert(manifest.kpis["proofVerificationPercent"] === 100, 'Proof verification KPI must be 100%');
+  assert(manifest.kpis["privacyReceiptCoveragePercent"] === 100, 'Privacy receipt KPI must be 100%');
 
   const mocks = readJson<MockContracts>(manifest.contractMocks);
   assert(mocks.schemaVersion === 1, 'Unsupported mock contract version');

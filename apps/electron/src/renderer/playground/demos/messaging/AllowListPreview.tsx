@@ -184,8 +184,8 @@ export function AllowListPreview({
       ...prev,
       {
         userId: sender.userId,
-        displayName: sender.displayName,
-        username: sender.username,
+        ...(sender.displayName !== undefined ? { displayName: sender.displayName } : {}),
+        ...(sender.username !== undefined ? { username: sender.username } : {}),
         addedAt: Date.now(),
       },
     ])
@@ -406,7 +406,7 @@ function BindingRow({
   onChange,
 }: {
   icon: typeof MessageSquare
-  indent?: boolean
+  indent?: boolean | undefined
   title: string
   subtitle: string
   access: BindingAccess

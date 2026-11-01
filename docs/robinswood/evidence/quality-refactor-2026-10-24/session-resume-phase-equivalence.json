@@ -1,0 +1,147 @@
+{
+  "sources": [
+    {
+      "source": "packages/server-core/src/sessions/SessionManager/operations/restore-durable-runtime-state.ts",
+      "phases": [
+        {
+          "name": "publishColdProviderReconciliation",
+          "nativeBodyPreserved": true,
+          "captures": [
+            "managed",
+            "sessionOperationContext",
+            "providerDispatchSnapshotNeedsDurability",
+            "providerDispatchRollbackSnapshot",
+            "providerDispatchQuarantineMessage",
+            "durableRuntimeStateChanged",
+            "retainedMachineInbox",
+            "closedColdResumeStatus",
+            "recoveredConsumedAgentDeliveryNeedsContinuation",
+            "recoveredProviderDispatchNeedsContinuation"
+          ],
+          "guardAndExitPreserved": true
+        }
+      ],
+      "surroundingNativeBehaviorAndOrderPreserved": true
+    },
+    {
+      "source": "packages/server-core/src/sessions/SessionManager/operations/perform-create-session.ts",
+      "phases": [
+        {
+          "name": "copySessionBranchStorage",
+          "nativeBodyPreserved": true,
+          "captures": [
+            "validatedBranch",
+            "workspaceRootPath",
+            "storedSession"
+          ],
+          "guardAndExitPreserved": true
+        },
+        {
+          "name": "prepareSessionBranchRuntime",
+          "nativeBodyPreserved": true,
+          "captures": [
+            "managed",
+            "sessionOperationContext",
+            "isBranch",
+            "workspaceId",
+            "storedSession",
+            "validatedBranch",
+            "workspaceRootPath"
+          ],
+          "guardAndExitPreserved": true
+        }
+      ],
+      "surroundingNativeBehaviorAndOrderPreserved": true
+    },
+    {
+      "source": "packages/server-core/src/sessions/SessionManager/operations/message-dispatch.ts",
+      "phases": [
+        {
+          "name": "scheduleQueuedMessageDispatch",
+          "nativeBodyPreserved": true,
+          "captures": [
+            "managed",
+            "sessionOperationContext",
+            "dispatchGeneration",
+            "sessionId",
+            "dispatchToken",
+            "next",
+            "nextIndex",
+            "selectedDirectHumanId",
+            "selectedLiveDirectId",
+            "actionableUpwardSenderId",
+            "autonomous"
+          ],
+          "guardAndExitPreserved": true
+        }
+      ],
+      "surroundingNativeBehaviorAndOrderPreserved": true
+    },
+    {
+      "source": "packages/server-core/src/sessions/SessionManager/operations/durably-record-automatic-recovery-tool-admission-locked.ts",
+      "phases": [
+        {
+          "name": "enforceUncertainToolEffectPolicy",
+          "nativeBodyPreserved": true,
+          "captures": [
+            "managed",
+            "quarantinesUncertainObjectiveEffect",
+            "request",
+            "safeReceiptInput",
+            "durableMessages",
+            "toolUseId"
+          ],
+          "guardAndExitPreserved": true
+        }
+      ],
+      "surroundingNativeBehaviorAndOrderPreserved": true
+    },
+    {
+      "source": "packages/server-core/src/sessions/SessionManager/operations/resume-pending-turn-after-restart-once.ts",
+      "phases": [
+        {
+          "name": "resumeColdCleanAnswerRetry",
+          "nativeBodyPreserved": true,
+          "captures": [
+            "managed",
+            "sessionOperationContext",
+            "restartRecoveryStillAuthorized",
+            "pending",
+            "startedCleanAnswerRetry",
+            "sessionId"
+          ],
+          "guardAndExitPreserved": true
+        },
+        {
+          "name": "reclaimColdStartedDispatch",
+          "nativeBodyPreserved": true,
+          "captures": [
+            "managed",
+            "sessionOperationContext",
+            "pending",
+            "reclaimObjective",
+            "restartRecoveryStillAuthorized",
+            "sessionId"
+          ],
+          "guardAndExitPreserved": true
+        },
+        {
+          "name": "resumeColdRecoveryQueue",
+          "nativeBodyPreserved": true,
+          "captures": [
+            "managed",
+            "sessionOperationContext",
+            "queued",
+            "sessionId",
+            "invalidFinal",
+            "validationGaps",
+            "restartRecoveryCause"
+          ],
+          "guardAndExitPreserved": true
+        }
+      ],
+      "surroundingNativeBehaviorAndOrderPreserved": true
+    }
+  ],
+  "allFilesWithin500Lines": true
+}

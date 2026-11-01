@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rtk",
+    "bun",
+    "run",
+    "test"
+  ],
+  "exitCode": 0,
+  "seconds": 142.81,
+  "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/quality-migration-all-tests-5.log"
+}

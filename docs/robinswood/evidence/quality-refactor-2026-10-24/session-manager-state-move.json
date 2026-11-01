@@ -1,0 +1,392 @@
+{
+  "fields": [
+    "sessions",
+    "retiringSessions",
+    "sessionOperationsInFlight",
+    "managerOperationsInFlight",
+    "sessionDeletionsInFlight",
+    "missionPendingTurnRecoveryClaims",
+    "missionRuntimeOwnedRestoredRecoverySessionIds",
+    "contextLimitUserInputCapability",
+    "delegationBudget",
+    "objectiveSnapshots",
+    "executionProofCollector",
+    "pendingDeltas",
+    "deltaFlushTimers",
+    "configWatchers",
+    "automationSystems",
+    "completedChatRetentionTimer",
+    "completedChatRetentionSweep",
+    "retentionDeleting",
+    "retentionStopping",
+    "pendingCredentialResolvers",
+    "credentialResponsesInFlight",
+    "oauthResponsesInFlight",
+    "pendingPermissionRequests",
+    "telemetrySinks",
+    "localTelemetrySinks",
+    "generationTelemetryLifecycle",
+    "privilegedExecutionBroker",
+    "adminRememberApprovals",
+    "messageLoadingPromises",
+    "activeViewingSession",
+    "initGate",
+    "taskOutputIndex",
+    "keepBackgroundTasksAlive",
+    "agentRefreshLocks",
+    "runtimeEvictionTimer",
+    "runtimeEvictionSweepInFlight",
+    "runtimeIdleTimeoutMs",
+    "runtimeDisposalsInFlight",
+    "runtimeDisposalBarriers",
+    "strongCancellationStops",
+    "lastTimestamp",
+    "automationBinder",
+    "browserPaneManager",
+    "rpcServer",
+    "remoteBpms",
+    "browserHostByCanvas",
+    "eventSink",
+    "userInputResponsesInFlight",
+    "retryTurnsInFlight",
+    "providerRetryReconciliationTransactions",
+    "providerLiveReconciliationTransactions",
+    "syntheticAutomaticMessagesInFlight",
+    "explicitRetryAllowanceTokens",
+    "deferredAutomaticSessions",
+    "automaticAdmissionReservations",
+    "coldProviderReconciliationsInFlight",
+    "sessionPersistenceEpochs",
+    "providerStopTransitionsInFlight",
+    "pendingSpawnRoots",
+    "automaticAdmissionDrain",
+    "automaticAdmissionWakeScheduled",
+    "automaticAdmissionDrainWakeRequested",
+    "deferredAutomaticRetryAttempts",
+    "deferredAutomaticRetryTimers",
+    "cleanRetrySetupPersistenceFences",
+    "agentDeliverySetupPersistenceFences",
+    "delegatedTerminalResultRetryAttempts",
+    "delegatedTerminalResultRetryTimers",
+    "sessionCompletionListeners",
+    "sessionWaitListeners",
+    "activeDelegations",
+    "terminalReviewDispatchReservations",
+    "queuedMessageDispatches",
+    "queuedAgentDeliveryDispatches",
+    "agentDeliveryAppendsInFlight",
+    "permissionInboxRetryDispatches",
+    "coldAuthHumanContinuationSessions",
+    "liveDirectHumanContinuationIds",
+    "directHumanSupersessionsInFlight",
+    "directHumanSupersessionTransactions",
+    "sourceActivationTransactions",
+    "turnCancellationEpochs",
+    "objectiveAuthorityEpochs",
+    "terminalInvocationCapabilities",
+    "delegatedDispatchContinuations",
+    "authenticatedInternalContinuations",
+    "checkpointToolStarts",
+    "shuttingDown",
+    "shutdownTerminalResultAdmissionOpen",
+    "cleanupPromise",
+    "restartRecoveriesInFlight",
+    "permissionExpiryStopGenerations",
+    "permissionDeniedToolUseIdsByGeneration",
+    "runtimeProcessingGenerations",
+    "toolAdmissionTransactions",
+    "runtimeToolAdmissionBindings"
+  ],
+  "stateLines": 407,
+  "tests": [
+    {
+      "file": "packages/server-core/src/handlers/rpc/remote-user-input.test.ts",
+      "references": 2,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/adopt-task-draft.test.ts",
+      "references": 9,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/agent-delivery.test.ts",
+      "references": 40,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/background-task-surface.test.ts",
+      "references": 4,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/cold-session-metadata.test.ts",
+      "references": 5,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/collection-cache-runtime.test.ts",
+      "references": 2,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/combined-delegation-guards.test.ts",
+      "references": 6,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/completed-chat-retention.test.ts",
+      "references": 21,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/credential-response-concurrency.test.ts",
+      "references": 8,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/delegation-host.test.ts",
+      "references": 12,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/explicit-retry-allowance.test.ts",
+      "references": 1,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/external-action-authorization.test.ts",
+      "references": 2,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/external-action-policy-refresh.test.ts",
+      "references": 1,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/internal-tool-recovery.test.ts",
+      "references": 2,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/mission-ordinary-route-fence.test.ts",
+      "references": 4,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/model-provenance.test.ts",
+      "references": 1,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/native-question-completion.runtime.test.ts",
+      "references": 3,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/native-question-retry.test.ts",
+      "references": 3,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-amendment-evidence.test.ts",
+      "references": 3,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/objective-legacy-context.test.ts",
+      "references": 1,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/permission-request-broker-cleanup.test.ts",
+      "references": 23,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/pi-retry-streaming.test.ts",
+      "references": 6,
+      "prototypeFixtures": [
+        "host"
+      ]
+    },
+    {
+      "file": "packages/server-core/src/sessions/processing-stop-ownership.test.ts",
+      "references": 3,
+      "prototypeFixtures": [
+        "runtime"
+      ]
+    },
+    {
+      "file": "packages/server-core/src/sessions/project-learning-runtime.test.ts",
+      "references": 1,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/refresh-connection-runtime.test.ts",
+      "references": 1,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/response-app-provenance.test.ts",
+      "references": 1,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/restart-recovery.test.ts",
+      "references": 264,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/retry-turn.test.ts",
+      "references": 4,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/review-delegation-integration.test.ts",
+      "references": 4,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/reviewer-collection-cache.test.ts",
+      "references": 2,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/runtime-error-receipts.test.ts",
+      "references": 1,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/selected-model-persistence.test.ts",
+      "references": 2,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/sendmessage-durability.test.ts",
+      "references": 4,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/sendmessage-oauth-refresh.test.ts",
+      "references": 1,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-auth-request-snapshot.test.ts",
+      "references": 1,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-delete-external-operations.test.ts",
+      "references": 11,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-delete-persistence.test.ts",
+      "references": 41,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-objective-outcome-integration.test.ts",
+      "references": 19,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-permission-alias.test.ts",
+      "references": 6,
+      "prototypeFixtures": [
+        "host",
+        "host"
+      ]
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-persistence-root-identity.test.ts",
+      "references": 4,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-runtime-eviction.test.ts",
+      "references": 2,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-shutdown-fences.test.ts",
+      "references": 9,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-source-delete-fence.test.ts",
+      "references": 13,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-wait-diagnostic.test.ts",
+      "references": 5,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-wait-integration.test.ts",
+      "references": 18,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/source-activated-auto-retry.test.ts",
+      "references": 5,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/synthetic-objective-authority.test.ts",
+      "references": 1,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/tool-execution-truth.test.ts",
+      "references": 1,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/tool-start-durability.test.ts",
+      "references": 1,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/transient-network-recovery.test.ts",
+      "references": 3,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/user-input-lifecycle.test.ts",
+      "references": 23,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/workflow-task-progress.test.ts",
+      "references": 2,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/yolo-runtime.test.ts",
+      "references": 4,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner.test.ts",
+      "references": 26,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "apps/electron/src/main/__tests__/session-branch-rollback.isolated.ts",
+      "references": 1,
+      "prototypeFixtures": []
+    },
+    {
+      "file": "apps/electron/src/main/__tests__/sessions-annotations.isolated.ts",
+      "references": 2,
+      "prototypeFixtures": [
+        "manager"
+      ]
+    }
+  ]
+}

@@ -190,15 +190,15 @@ export function buildClaudeSubprocessEnv(
         ...getProxyEnvVars(),
         ...envOverrides,
         // Propagate debug mode from argv flag OR existing env var
-        CRAFT_DEBUG: (process.argv.includes('--debug') || process.env.CRAFT_DEBUG === '1') ? '1' : '0',
+        CRAFT_DEBUG: (process.argv.includes('--debug') || process.env["CRAFT_DEBUG"] === '1') ? '1' : '0',
     };
 
     // Bedrock must never be routed through the Claude SDK path.
     // Strip only Claude-specific Bedrock routing vars here; keep generic AWS_*
     // untouched so user shell/tooling behavior inside the subprocess remains intact.
-    delete env.CLAUDE_CODE_USE_BEDROCK;
-    delete env.AWS_BEARER_TOKEN_BEDROCK;
-    delete env.ANTHROPIC_BEDROCK_BASE_URL;
+    delete env["CLAUDE_CODE_USE_BEDROCK"];
+    delete env["AWS_BEARER_TOKEN_BEDROCK"];
+    delete env["ANTHROPIC_BEDROCK_BASE_URL"];
 
     return env;
 }

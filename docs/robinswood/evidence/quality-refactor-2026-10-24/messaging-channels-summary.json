@@ -1,0 +1,73 @@
+{
+  "status": "testé dans le candidat local ; chantier global en cours",
+  "scope": "Catalogue RPC de messagerie",
+  "change": "Extraction du seul domaine messaging dans un module de constantes ; le point d’entrée RPC est conservé.",
+  "membersMoved": 40,
+  "maximumLines": 483,
+  "proof": "Arbre complet des canaux et liste aplatie importés avec Bun et comparés octet pour octet, ordre des clés et des valeurs inclus.",
+  "checks": {
+    "messaging-channels-runtime": {
+      "command": [
+        "rtk",
+        "bun",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/check-messaging-channels.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.08,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-channels-runtime.log"
+    },
+    "messaging-channels-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/protocol"
+      ],
+      "exitCode": 0,
+      "seconds": 0.12,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-channels-tests.log"
+    },
+    "messaging-channels-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 20.12,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-channels-types.log"
+    },
+    "messaging-channels-lint": {
+      "command": [
+        "rtk",
+        "bunx",
+        "eslint",
+        "--max-warnings",
+        "0",
+        "packages/shared/src/protocol/channels.ts",
+        "packages/shared/src/protocol/channels/messaging.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.58,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-channels-lint.log"
+    },
+    "messaging-channels-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 17.55,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-channels-build.log"
+    }
+  },
+  "validationReason": "Constantes littérales uniquement : comparaison exhaustive à l’exécution, tests de protocole, seize configurations de types, lint ciblé et build. La dernière suite complète était verte avant cette extraction.",
+  "remaining": {
+    "max-lines": 164,
+    "no-explicit-any": 506
+  },
+  "installedApplication": "inchangée ; vérification UI et missions réelles finales restantes"
+}

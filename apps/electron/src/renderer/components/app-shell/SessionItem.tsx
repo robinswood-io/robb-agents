@@ -1,11 +1,10 @@
 import { formatDistanceToNowStrict } from "date-fns"
 import type { Locale } from "date-fns"
-import { Flag, Network, ShieldAlert } from "lucide-react"
+import { Flag,Network } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { useActionLabel } from "@/actions"
 import { cn } from "@/lib/utils"
 import { rendererPerf } from "@/lib/perf"
-import { Spinner } from "@craft-agent/ui"
 import { EntityRow } from "@/components/ui/entity-row"
 import { EntityListBadge } from "@/components/ui/entity-list-badge"
 import { SessionMenu } from "./SessionMenu"
@@ -15,10 +14,10 @@ import { AgentLifecyclePin } from "./AgentLifecyclePin"
 import { SessionBadges } from "./SessionBadges"
 import { SessionProjectColorWrapper } from "./SessionProjectColorWrapper"
 import { useProjectColorTreatment } from "@/hooks/useProjectColorTreatment"
-import { getSessionTitle, getSessionPreviewText, highlightMatch, hasUnreadMeta, shortTimeLocale } from "@/utils/session"
+import { getSessionTitle,getSessionPreviewText,highlightMatch,hasUnreadMeta,shortTimeLocale } from "@/utils/session"
 import { useSessionListContext } from "@/context/SessionListContext"
 import { useAppShellContext } from "@/context/AppShellContext"
-import { navigate, routes } from "@/lib/navigate"
+import { navigate,routes } from "@/lib/navigate"
 import type { SessionMeta } from "@/atoms/sessions"
 import { messagingBindingsBySessionAtom } from "@/atoms/messaging"
 import { useAtomValue } from "jotai"
@@ -44,10 +43,10 @@ export interface SessionItemProps {
   isFirstInGroup: boolean
   isInMultiSelect: boolean
   /** Aggregated descendants hidden from direct sidebar navigation. */
-  subagentSummary?: SessionSubagentSummary
+  subagentSummary?: SessionSubagentSummary | undefined
   onSelect: () => void
-  onToggleSelect?: () => void
-  onRangeSelect?: () => void
+  onToggleSelect?: (() => void) | undefined
+  onRangeSelect?: (() => void) | undefined
 }
 
 export function SessionItem({
@@ -65,7 +64,7 @@ export function SessionItem({
   const ctx = useSessionListContext()
   const { workspaces, isCompactMode } = useAppShellContext()
   const hasRemoteWorkspaces = workspaces?.some(w => w.remoteServer) ?? false
-  const isConversationProcessing = item.isProcessing || (subagentSummary?.runningCount ?? 0) > 0
+
   const { hotkey: nextHotkey } = useActionLabel('chat.nextSearchMatch')
   const { hotkey: prevHotkey } = useActionLabel('chat.prevSearchMatch')
   const title = getSessionTitle(item)
@@ -171,7 +170,7 @@ export function SessionItem({
       isCompactMode={isCompactMode}
       buttonProps={{
         ...itemProps,
-        className: (itemProps as Record<string, unknown>)?.className as string | undefined,
+        className: (itemProps as Record<string, unknown>)?.["className"] as string | undefined,
         onKeyDown: (e: React.KeyboardEvent) => {
           ;(itemProps as { onKeyDown: (event: React.KeyboardEvent) => void }).onKeyDown(e)
           ctx.onKeyDown(e, item)

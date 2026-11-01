@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "runtimeJavaScriptPreservedOutsideNativeFixtureCompletions": true,
+  "nativeFixtureCompletions": [
+    "Telemetry mock returns undefined; persist mock returns true with the same positive-count truthiness; automation mock resolves Promise<void>; unused retired routing and clock overrides and never-exercised provider-fallback setup removed"
+  ],
+  "nativeLiteralPropertyAccessEquivalent": true,
+  "removedExplicitAny": 13,
+  "newExplicitAny": 0,
+  "newRuntimeStateOrWorkflow": false,
+  "files": [
+    {
+      "file": "packages/server-core/src/sessions/processing-stop-ownership.test.ts",
+      "lines": 347,
+      "sha256": "6be2a469eff6d7b5c2906687b5b9bf429e50778001c1ab5676f2c91245ddef98"
+    },
+    {
+      "file": "packages/server-core/src/sessions/reviewer-collection-cache.test.ts",
+      "lines": 88,
+      "sha256": "d022e1c816b38264281c8b42980289511309637e71aa3f50c7c228c8a18630f5"
+    },
+    {
+      "file": "packages/server-core/src/webui/__tests__/oauth-callback.test.ts",
+      "lines": 142,
+      "sha256": "9b0eb7116465448e4f0862e2875b1dbe106867b9ea7b001d75c78e81dc4e7d6b"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/agent-invalid-working-directory.test.ts",
+      "lines": 89,
+      "sha256": "38df85675700f939349c0e51018a0854bb88a89795e66baf9c7c40be71935034"
+    }
+  ]
+}

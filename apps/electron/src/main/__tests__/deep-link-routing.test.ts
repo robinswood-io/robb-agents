@@ -2,7 +2,6 @@ import { describe, expect, it } from 'bun:test'
 import { handleDeepLink } from '../deep-link'
 import { RPC_CHANNELS } from '../../shared/types'
 import type { EventSink } from '@craft-agent/server-core/transport'
-import type { WindowManager } from '../window-manager'
 
 function createMockWindow(webContentsId: number) {
   return {
@@ -23,12 +22,12 @@ describe('handleDeepLink routing', () => {
   it('prefers resolved target client over preferred caller client', async () => {
     const targetWindow = createMockWindow(22)
 
-    const windowManager = {
-      focusOrCreateWindow: () => targetWindow,
-      getFocusedWindow: () => targetWindow,
-      getLastActiveWindow: () => targetWindow,
-      getWorkspaceForWindow: (webContentsId: number) => webContentsId === 22 ? 'ws-target' : 'ws-other',
-    } as unknown as WindowManager
+    const windowManager = ({focusOrCreateWindow: () => targetWindow,
+getFocusedWindow: () => targetWindow,
+getLastActiveWindow: () => targetWindow,
+getWorkspaceForWindow: (webContentsId: number) => webContentsId === 22 ? 'ws-target' : 'ws-other',
+getAllWindows: () => [],
+createWindow: () => { throw new Error('Unexpected window creation in navigation test'); }} satisfies Parameters<typeof handleDeepLink>[1])
 
     const sent: Array<{ channel: string; target: unknown; args: unknown[] }> = []
     const sink: EventSink = (channel, target, ...args) => {
@@ -51,12 +50,12 @@ describe('handleDeepLink routing', () => {
   it('uses preferred client only when no resolver is provided', async () => {
     const targetWindow = createMockWindow(31)
 
-    const windowManager = {
-      focusOrCreateWindow: () => targetWindow,
-      getFocusedWindow: () => targetWindow,
-      getLastActiveWindow: () => targetWindow,
-      getWorkspaceForWindow: () => 'ws-target',
-    } as unknown as WindowManager
+    const windowManager = ({focusOrCreateWindow: () => targetWindow,
+getFocusedWindow: () => targetWindow,
+getLastActiveWindow: () => targetWindow,
+getWorkspaceForWindow: () => 'ws-target',
+getAllWindows: () => [],
+createWindow: () => { throw new Error('Unexpected window creation in navigation test'); }} satisfies Parameters<typeof handleDeepLink>[1])
 
     const sent: Array<{ channel: string; target: unknown; args: unknown[] }> = []
     const sink: EventSink = (channel, target, ...args) => {
@@ -78,12 +77,12 @@ describe('handleDeepLink routing', () => {
   it('falls back to workspace routing when resolver exists but target client is unresolved', async () => {
     const targetWindow = createMockWindow(44)
 
-    const windowManager = {
-      focusOrCreateWindow: () => targetWindow,
-      getFocusedWindow: () => targetWindow,
-      getLastActiveWindow: () => targetWindow,
-      getWorkspaceForWindow: () => 'ws-target',
-    } as unknown as WindowManager
+    const windowManager = ({focusOrCreateWindow: () => targetWindow,
+getFocusedWindow: () => targetWindow,
+getLastActiveWindow: () => targetWindow,
+getWorkspaceForWindow: () => 'ws-target',
+getAllWindows: () => [],
+createWindow: () => { throw new Error('Unexpected window creation in navigation test'); }} satisfies Parameters<typeof handleDeepLink>[1])
 
     const sent: Array<{ channel: string; target: unknown; args: unknown[] }> = []
     const sink: EventSink = (channel, target, ...args) => {

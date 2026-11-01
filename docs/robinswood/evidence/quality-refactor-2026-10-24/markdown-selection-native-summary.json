@@ -1,0 +1,117 @@
+{
+  "status": "tested; local integration pending remaining quality work",
+  "scope": "markdown-selection-native",
+  "files": [
+    {
+      "file": "packages/ui/src/components/overlay/AnnotatableMarkdownDocument.tsx",
+      "lines": 427,
+      "sha256": "b17fd92c439ddf37fa5d50f85b517d317a25a96078b590e899fdd16b513310b2"
+    },
+    {
+      "file": "packages/ui/src/components/overlay/use-markdown-selection.ts",
+      "lines": 307,
+      "sha256": "848b0d7efe2bf3f334c91b2bb68a19db6b367296acdbdaf544d0bacee3b1fd56"
+    }
+  ],
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/ui/src/components/overlay/AnnotatableMarkdownDocument.tsx",
+        "packages/ui/src/components/overlay/use-markdown-selection.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.13,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/markdown-selection-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "packages/ui/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 3.08,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/markdown-selection-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/ui/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 11.84,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/markdown-selection-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/ui/src/components/annotations/__tests__/annotation-core.test.ts",
+        "packages/ui/src/components/annotations/__tests__/interaction-state-machine.test.ts",
+        "packages/ui/src/components/annotations/__tests__/interaction-policy.test.ts",
+        "packages/ui/src/components/annotations/__tests__/selection-restore.test.ts",
+        "packages/ui/src/components/annotations/__tests__/use-annotation-island-events.test.ts",
+        "packages/ui/src/components/annotations/__tests__/annotation-host-config.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.19,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/markdown-selection-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 12.72,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/markdown-selection-native-build.log"
+    }
+  },
+  "targetedTests": {
+    "pass": 20,
+    "fail": 0
+  },
+  "browser": {
+    "before": 7,
+    "after": 7,
+    "nativeCallbackPayloadsEqual": true,
+    "errors": 0
+  },
+  "sourceGate": {
+    "max-lines": 15
+  },
+  "globalLint": {
+    "files": 3666,
+    "errors": 15,
+    "warnings": 71,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 15,
+      "react-hooks/exhaustive-deps": 71
+    }
+  },
+  "limits": [
+    "Other historical files and lint findings remain",
+    "No installation or final real-model mission claim",
+    "Global suite rerun prohibited by PreToolUse; last full suite f521166: 10759 passed"
+  ]
+}

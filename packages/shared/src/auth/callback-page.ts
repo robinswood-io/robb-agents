@@ -43,7 +43,7 @@ export function generateCallbackPage(options: {
   isSuccess: boolean;
   errorDetail?: string;
   appType?: AppType;
-  deeplinkUrl?: string;
+  deeplinkUrl?: string | undefined;
 }): string {
   const { title, isSuccess, errorDetail } = options;
   const deeplinkUrl = safeDeepLink(options.deeplinkUrl);

@@ -1,0 +1,1108 @@
+{
+  "source": "packages/shared/src/config/storage.ts",
+  "units": [
+    {
+      "names": [
+        "StoredConfig"
+      ],
+      "group": "config-types",
+      "bodySha256": "35b19a06881935f6416b2ea42317c657bf12446ddf350f8a871e2e962b199e4d"
+    },
+    {
+      "names": [
+        "STORED_CONFIG_SCHEMA_VERSION"
+      ],
+      "group": "config-types",
+      "bodySha256": "494cca3b45d9e85b05ec8a329795ed3a9c94b4e722ab9c14a158cae762d7d192"
+    },
+    {
+      "names": [
+        "CONFIG_FILE"
+      ],
+      "group": "config-types",
+      "bodySha256": "54d54472c491815382f9cf997a44d4515f12d58609d8eefb1400aecc50765ec9"
+    },
+    {
+      "names": [
+        "CONFIG_DEFAULTS_FILE"
+      ],
+      "group": "config-types",
+      "bodySha256": "4637ef9f8953f4ed102d80d10a9fc2ab795d7e600b5d543145cac2cc48ab642d"
+    },
+    {
+      "names": [
+        "FALLBACK_CONFIG_DEFAULTS"
+      ],
+      "group": "config-types",
+      "bodySha256": "4787c3112d9bb66df65116db4747003acbc34e3961ea48b49313fc51a828b03b"
+    },
+    {
+      "names": [
+        "configDefaultsSynced"
+      ],
+      "group": "config-defaults",
+      "bodySha256": "3bfd4892453f08187ff6f13ca985fa89f8d4a982ab3effabc14fcda1d112fc34"
+    },
+    {
+      "names": [
+        "syncConfigDefaults"
+      ],
+      "group": "config-defaults",
+      "bodySha256": "c5060a2a2c723dbf310010135f8c3e0a9f05644a721d13af28600cac35413b60"
+    },
+    {
+      "names": [
+        "loadConfigDefaults"
+      ],
+      "group": "config-defaults",
+      "bodySha256": "e49fccb71b3155f1426a3b6c483c8cc95432055dc45ff95b48d48ff4036a22c1"
+    },
+    {
+      "names": [
+        "ensureConfigDefaults"
+      ],
+      "group": "config-defaults",
+      "bodySha256": "0c38f9accfed39b0c9c8acec1dc5f393ec161924c48a698fdf3e85adeec89c7e"
+    },
+    {
+      "names": [
+        "MAX_CONFIG_BACKUPS"
+      ],
+      "group": "config-defaults",
+      "bodySha256": "c9d204fbc4ae3f9e7f09cb7dbde52d530407d41ac5907097775bc4bb387fa87c"
+    },
+    {
+      "names": [
+        "CONFIG_BACKUP_DATE_RE"
+      ],
+      "group": "config-defaults",
+      "bodySha256": "c6309ee1e67a31365624229aac712c242d5eb7d4217596333640791a81eda3f2"
+    },
+    {
+      "names": [
+        "configDirInitialized"
+      ],
+      "group": "config-file",
+      "bodySha256": "b3a05d2c780c7e1ff1fea0cc4be2dad729d5e3748af782d20e9b6513606d2260"
+    },
+    {
+      "names": [
+        "backupConfigFile"
+      ],
+      "group": "config-file",
+      "bodySha256": "d9625874ae3de28bb12f8edb978b2154cda7b39b242a4b4700232ef282c30b1c"
+    },
+    {
+      "names": [
+        "ensureConfigDir"
+      ],
+      "group": "config-file",
+      "bodySha256": "d3066f26a95e4e8283f44834f1854e1f340f9cbd8ec8a1b7e6e9a4548e3c3a8f"
+    },
+    {
+      "names": [
+        "loadStoredConfig"
+      ],
+      "group": "config-file",
+      "bodySha256": "336df5a7f28073354415046e6eaf7fd1b444bd03a2c318c179f0cd21430c04dc"
+    },
+    {
+      "names": [
+        "saveConfig"
+      ],
+      "group": "config-file",
+      "bodySha256": "42cf64378e90f5d557076323749c86aa6887f657281b71b9cbf831145e99fe1b"
+    },
+    {
+      "names": [
+        "migrateStoredConfig"
+      ],
+      "group": "config-file",
+      "bodySha256": "0cb3620678cc54c9444a94e76ac7b4c20b22d586aa15e9223aef1496eea08ebe"
+    },
+    {
+      "names": [
+        "getNotificationsEnabled"
+      ],
+      "group": "preferences",
+      "bodySha256": "0ba1e4ac65975ea1ee808633b446a233b31d9b00f85b8dadc1af013f065f6aca"
+    },
+    {
+      "names": [
+        "setNotificationsEnabled"
+      ],
+      "group": "preferences",
+      "bodySha256": "ea2515a079809d7a351190d41df5e1de1fa71756aac53ac26c6afe0af695ab91"
+    },
+    {
+      "names": [
+        "getAutoCapitalisation"
+      ],
+      "group": "preferences",
+      "bodySha256": "ac85f3d39f1a28923dd86fb764ca47a978325eea082e61869bfd230e4a230a7b"
+    },
+    {
+      "names": [
+        "setAutoCapitalisation"
+      ],
+      "group": "preferences",
+      "bodySha256": "0481d4b18ce82eb2f3c1f03958a29dc2652f4ba88b78a823bb686001cd53abb0"
+    },
+    {
+      "names": [
+        "getSendMessageKey"
+      ],
+      "group": "preferences",
+      "bodySha256": "221b8071ad4734313eccb7307217163e143e74f718c9822f9cfa4e1310bcf2a5"
+    },
+    {
+      "names": [
+        "setSendMessageKey"
+      ],
+      "group": "preferences",
+      "bodySha256": "7aeeee11fa1a6241e2508784c996c5ac987bd725531ba50124af36800c1e2db3"
+    },
+    {
+      "names": [
+        "getSpellCheck"
+      ],
+      "group": "preferences",
+      "bodySha256": "9434544b0db44bafc8613230c87c5a4003443d13bd08f4ce987e499c123c0797"
+    },
+    {
+      "names": [
+        "setSpellCheck"
+      ],
+      "group": "preferences",
+      "bodySha256": "89bd07305b691266940bc57d5048893e556d132806dab249f7d0afa0a442595e"
+    },
+    {
+      "names": [
+        "getKeepAwakeWhileRunning"
+      ],
+      "group": "preferences",
+      "bodySha256": "1799c3328fc840058a872de135103a1a50f3ba0f9133fcd1154c278582801fe1"
+    },
+    {
+      "names": [
+        "setKeepAwakeWhileRunning"
+      ],
+      "group": "preferences",
+      "bodySha256": "d7627fff0c18bbafd1de1af0668c6643c1e840a1dc4e5dcf0a1d3c9b09ded881"
+    },
+    {
+      "names": [
+        "getRichToolDescriptions"
+      ],
+      "group": "preferences",
+      "bodySha256": "ccee7845c4c8e14f33f1789f0ca5f855adadd6d8828e5ab7bf48cd7b97eb44de"
+    },
+    {
+      "names": [
+        "setRichToolDescriptions"
+      ],
+      "group": "preferences",
+      "bodySha256": "9a22495ce9791e1cd8a4902bc8dfe44c67d6e554093034620c25e05e03f3eaa9"
+    },
+    {
+      "names": [
+        "getExtendedPromptCache"
+      ],
+      "group": "preferences",
+      "bodySha256": "b0b62cf193e642dbc613dc24b80bb9791cc0e32fbc9e9fd4e7e4d009d3e6985d"
+    },
+    {
+      "names": [
+        "setExtendedPromptCache"
+      ],
+      "group": "preferences",
+      "bodySha256": "cac4458ca74958d4f78a7a2a01bd585977d1b9abc99be7a0fbc7a162523b522f"
+    },
+    {
+      "names": [
+        "getBrowserToolEnabled"
+      ],
+      "group": "preferences",
+      "bodySha256": "8522f4efcbae6bb9c1b59b40fbd4646c7fec56a25a1c20381380d171a95eba9d"
+    },
+    {
+      "names": [
+        "setBrowserToolEnabled"
+      ],
+      "group": "preferences",
+      "bodySha256": "6fe2abe84f5510192f1400c4e7341a8c5c02eecb114f90f7b071f79a3b702e2d"
+    },
+    {
+      "names": [
+        "getAllowRemoteEvaluate"
+      ],
+      "group": "preferences",
+      "bodySha256": "ea0be892c2e13d3ba2e77bd0818c9e3f2eec3bdd11157b73a22709afe5e55f16"
+    },
+    {
+      "names": [
+        "setAllowRemoteEvaluate"
+      ],
+      "group": "preferences",
+      "bodySha256": "c9d2e8c8439317177aeafc395a1837df4d6ccb24b70b188f561314000697705e"
+    },
+    {
+      "names": [
+        "getEnable1MContext"
+      ],
+      "group": "preferences",
+      "bodySha256": "8287de4ac838c8ad81a8d4c81123527e6993961b8d1412f5ff8cf6ce51057d4a"
+    },
+    {
+      "names": [
+        "setEnable1MContext"
+      ],
+      "group": "preferences",
+      "bodySha256": "5c9118c8d5b0f40aad47333b5fa03df6eb5ac6e287e167e85057df2301cd8898"
+    },
+    {
+      "names": [
+        "getRtkEnabled"
+      ],
+      "group": "preferences",
+      "bodySha256": "2f9c3a5181bc944a9cf8dba457dfa8226ebdd1bbac0c5cec58673ed46e49f709"
+    },
+    {
+      "names": [
+        "setRtkEnabled"
+      ],
+      "group": "preferences",
+      "bodySha256": "2f034aa1b2aa16753da0f758214aa05762f6a6e8734906a43f4d4f7a68896bab"
+    },
+    {
+      "names": [
+        "getGitBashPath"
+      ],
+      "group": "preferences",
+      "bodySha256": "3079749012735a1f55ca809e0401dcf77c1f53e8deb89ba518169df28d2c7bc4"
+    },
+    {
+      "names": [
+        "setGitBashPath"
+      ],
+      "group": "preferences",
+      "bodySha256": "7ee5dd8c2d5d086dd357a63e73194777a66191a2ca296110d980bfb3d829066c"
+    },
+    {
+      "names": [
+        "clearGitBashPath"
+      ],
+      "group": "preferences",
+      "bodySha256": "5180704b11482e5f2fac7e4bad13bdb463e936708b6e2676ac3465e88654e505"
+    },
+    {
+      "names": [
+        "getConfigPath"
+      ],
+      "group": "config-lifecycle",
+      "bodySha256": "864c459974aa40eb9758d431aec631f19df042716c24d45c3e610550775ae5ed"
+    },
+    {
+      "names": [
+        "clearAllConfig"
+      ],
+      "group": "config-lifecycle",
+      "bodySha256": "8f2b344da9df6e183a6877a7d4a3a692e6c8a28ef71cd70cdb1d8772dd7be877"
+    },
+    {
+      "names": [
+        "generateWorkspaceId"
+      ],
+      "group": "workspaces",
+      "bodySha256": "514b05434373caa83870dc02965ed6c5e383d43d383f35bc8b5d611d1a28d669"
+    },
+    {
+      "names": [
+        "findWorkspaceIcon"
+      ],
+      "group": "workspaces",
+      "bodySha256": "623f47efc897db79f8cde90fceea77803980101ef1ecba42f178b19d9b698617"
+    },
+    {
+      "names": [
+        "getWorkspaces"
+      ],
+      "group": "workspaces",
+      "bodySha256": "a9e96e7d49ab93dcb0bdb1c91a8e4a38e465edef71a378b8f2a6cddb32ba8078"
+    },
+    {
+      "names": [
+        "getActiveWorkspace"
+      ],
+      "group": "workspaces",
+      "bodySha256": "4ad783a0cde664b476b6a919b0ca109cb02e6523e818efbf79322b9d37fa1450"
+    },
+    {
+      "names": [
+        "getWorkspaceByNameOrId"
+      ],
+      "group": "workspaces",
+      "bodySha256": "7f0127e9675ba62695805a24ad2c4608e0d1780311461f6c274be931ac4cbdbb"
+    },
+    {
+      "names": [
+        "updateWorkspaceRemoteServer"
+      ],
+      "group": "workspaces",
+      "bodySha256": "559f18b4bb80703f1d589f8a4c0c3164fe22381ba20e31f46aa7d34527ff5739"
+    },
+    {
+      "names": [
+        "setActiveWorkspace"
+      ],
+      "group": "workspaces",
+      "bodySha256": "cae07043683119ca7a267f4d085e1072f307567b8a28823d7ad425c132046a86"
+    },
+    {
+      "names": [
+        "switchWorkspaceAtomic"
+      ],
+      "group": "workspaces",
+      "bodySha256": "788667ab1779c3e8e2e07635ab070bc29508cea60d2e4c6cac941435f737e543"
+    },
+    {
+      "names": [
+        "addWorkspace"
+      ],
+      "group": "workspaces",
+      "bodySha256": "a95fe7c8d9ef4f63086445b0437e199700025cf73256fa8bd126ce1e76c3eb09"
+    },
+    {
+      "names": [
+        "syncWorkspaces"
+      ],
+      "group": "workspaces",
+      "bodySha256": "3164bcc84eb89db60e310707cd1059615ce48aeefc8aa5a8ca6d271f7d815c39"
+    },
+    {
+      "names": [
+        "removeWorkspace"
+      ],
+      "group": "workspaces",
+      "bodySha256": "0d40e9072533034d86a59db2bbce271c675c83a258ec4a193d8d1b36661550d5"
+    },
+    {
+      "names": [
+        "WORKSPACES_DIR"
+      ],
+      "group": "workspaces",
+      "bodySha256": "fb4b32c996f00aa900f5d2cc92510781b16d0a72b91a7328f9ebd567799ddd75"
+    },
+    {
+      "names": [
+        "ensureWorkspaceDir"
+      ],
+      "group": "workspaces",
+      "bodySha256": "5ad7f983e15602c21caa76cb6908ace96afbd0a63242201b5f06f1cca37f94d9"
+    },
+    {
+      "names": [
+        "WorkspaceConversation"
+      ],
+      "group": "workspace-history",
+      "bodySha256": "890a189ab46d77833fde113dd401897db0d11497c8779d89ccf50fedcc09a2a8"
+    },
+    {
+      "names": [
+        "saveWorkspaceConversation"
+      ],
+      "group": "workspace-history",
+      "bodySha256": "90e1da48c0ffcf3f007461870409174c7f0a1292822cb8e0b7bbb020ba3135a2"
+    },
+    {
+      "names": [
+        "loadWorkspaceConversation"
+      ],
+      "group": "workspace-history",
+      "bodySha256": "fef90e6f1d43e7025c19846b5f77dd7249036be496da6f36a0e8b84d8b72f378"
+    },
+    {
+      "names": [
+        "getWorkspaceDataPath"
+      ],
+      "group": "workspace-history",
+      "bodySha256": "385582d0159a0e833963a8bc94babbe545f96b2a360bf91699f3aaddc40cc8b7"
+    },
+    {
+      "names": [
+        "clearWorkspaceConversation"
+      ],
+      "group": "workspace-history",
+      "bodySha256": "6fa0efbe1a4f95c0f9ef9bd0ec150a7f17fd498f694953d57de7ffeaf08a93c7"
+    },
+    {
+      "names": [
+        "saveWorkspacePlan"
+      ],
+      "group": "workspace-history",
+      "bodySha256": "f3e22baac3f5408553077e34994a2c12676f3ee5a9146cef628f846785c1880f"
+    },
+    {
+      "names": [
+        "loadWorkspacePlan"
+      ],
+      "group": "workspace-history",
+      "bodySha256": "3ddd39d842c4510346d5f02bcc40329bdfd32b0ab91ee51156301529f7c0d977"
+    },
+    {
+      "names": [
+        "clearWorkspacePlan"
+      ],
+      "group": "workspace-history",
+      "bodySha256": "f6bb06969acae2cd6e2d04dbd4699ee751a75388c4e5e290953b44ef8e13b249"
+    },
+    {
+      "names": [
+        "DRAFTS_FILE"
+      ],
+      "group": "workspace-history",
+      "bodySha256": "7c73c6fbff0bd9f627096fb2bb9a0616459980ba7e7d935a56b8b6c17b1d7017"
+    },
+    {
+      "names": [
+        "DraftAttachmentContent"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "db367c844d79f7f7d18f4451b19345b2913209d160feeb02f14fe43179db1a54"
+    },
+    {
+      "names": [
+        "DraftAttachmentRef"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "10d9650cb3ead254773c72633326aff33f28bb47e7db742549204e44aa5f6d99"
+    },
+    {
+      "names": [
+        "SessionDraft"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "ec3007bbb32f7e034468bd63780b7cfb0e207c2efc6c7e568ba4fd9ac705e80a"
+    },
+    {
+      "names": [
+        "DraftsData"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "a86941828eb9326e131d998752388dc1a6b16b0cb9a50a5c07e8882df7cd6465"
+    },
+    {
+      "names": [
+        "ATTACHMENT_CONTENT_TYPES"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "d33c6d3c9e540040b34819ba8f7e29b3b0caa6457c8f693e7d90c19619dfaa80"
+    },
+    {
+      "names": [
+        "isAbsoluteDraftPath"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "a824e3b9ba35618f7cf0f327bc44c0cc44fada4a2463a34ea50a98d7e9b2c439"
+    },
+    {
+      "names": [
+        "isDraftAttachmentContent"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "6ca19fd4fb809ac072569ac271063f7458cf79c05b7ed0c4132c831404914047"
+    },
+    {
+      "names": [
+        "isDraftAttachmentRef"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "bacad962e2a7f9a31028a2254368d60b6c3d4fa609c64fd5e707e8e73dceb013"
+    },
+    {
+      "names": [
+        "isSessionDraft"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "c1d521ae6e2bbadd4c0de6256feb57087c8febbab0c622baefaf7bdfc41c9122"
+    },
+    {
+      "names": [
+        "isEmptyDraft"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "f28a9674e1c43958bc1c5223e5cd8bdb4c7a956fddf6dbaa54c3bb673a0d834e"
+    },
+    {
+      "names": [
+        "loadDraftsData"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "e9eb930e91168ce00aefd50d0429a98e4cb7bc496a8d7856aa91ea8aa48bcd88"
+    },
+    {
+      "names": [
+        "saveDraftsData"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "042b99e98f1da598a3c6b42889ca21f3c64f3082d51cbf8550d59df732dcb068"
+    },
+    {
+      "names": [
+        "getSessionDraft"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "69571638e5f7abea48700767dcd23135786b075bb656c4546ea309c284ca9425"
+    },
+    {
+      "names": [
+        "setSessionDraft"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "9a8d6baae5e34f461da7e0fccf61d41992d05423b9fe9fcf8561c70d973017d5"
+    },
+    {
+      "names": [
+        "normalizeDraftAttachment"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "83a4dcfd437eb2c7f9b0a9f0b74b8eac62f32cfa2c30862f250f5070041b1d1c"
+    },
+    {
+      "names": [
+        "deleteSessionDraft"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "8fb4c7188147e57ae1b5c71ce0012c0975d244574703a243edc3352a22662788"
+    },
+    {
+      "names": [
+        "getAllSessionDrafts"
+      ],
+      "group": "session-drafts",
+      "bodySha256": "6b15d239a5c40931f7a217560b072b0df547f6aee7af1a712ba749833aa9e7de"
+    },
+    {
+      "names": [
+        "APP_THEME_FILE"
+      ],
+      "group": "themes",
+      "bodySha256": "158100bcf639bf7f7bd50ad754a4a7322f417c678aa9c4f94c4a7e4f09a3effd"
+    },
+    {
+      "names": [
+        "APP_THEMES_DIR"
+      ],
+      "group": "themes",
+      "bodySha256": "750cf86f2bd36d7a8b9802dab5ed75761b6a09bcb31cad2dc53f96527bea3311"
+    },
+    {
+      "names": [
+        "getAppThemePath"
+      ],
+      "group": "themes",
+      "bodySha256": "b3eeebb11f94d0c391a60b2504d96c17317e9ff9e6292916c6c513ec5d0f0833"
+    },
+    {
+      "names": [
+        "presetsInitialized"
+      ],
+      "group": "themes",
+      "bodySha256": "1ae754a175162557a06bb6c64c7266b2cb0773f1d8914d9eb551f84047bf340d"
+    },
+    {
+      "names": [
+        "getAppThemesDir"
+      ],
+      "group": "themes",
+      "bodySha256": "ed9e2157fd0618791824b6913de41e4120a699a88b37e377d90651583a9ca079"
+    },
+    {
+      "names": [
+        "loadAppTheme"
+      ],
+      "group": "themes",
+      "bodySha256": "01c4870e7c43e094c3a121759695fba3497fc110a52f2378be8f987182d40e70"
+    },
+    {
+      "names": [
+        "saveAppTheme"
+      ],
+      "group": "themes",
+      "bodySha256": "9bc533d7b26a6e007cc16e079dcf6e6f59bd54afe5f40c6f2d853e0c7bfa30ed"
+    },
+    {
+      "names": [
+        "clearAppTheme"
+      ],
+      "group": "themes",
+      "bodySha256": "b1c16b5b8b5c49586aace60d2b5624c391e5ec64d54a61b6e4b3b26b94d7754d"
+    },
+    {
+      "names": [
+        "ensurePresetThemes"
+      ],
+      "group": "themes",
+      "bodySha256": "94ba0540dc77a9eb7f65df591744f0bdc54b43b234862c48d1c56af16ab6fe1f"
+    },
+    {
+      "names": [
+        "loadPresetThemes"
+      ],
+      "group": "themes",
+      "bodySha256": "2f46f82d79033c9718f504e135c6525360287dba18cfcb4e3889419b3c312a4a"
+    },
+    {
+      "names": [
+        "getMimeType"
+      ],
+      "group": "themes",
+      "bodySha256": "afed9eae10c7f48f280efbb8326992f73cf7802eeca48e8a9ee190e3e00bddc9"
+    },
+    {
+      "names": [
+        "resolveThemeBackgroundImage"
+      ],
+      "group": "themes",
+      "bodySha256": "9d06bb1b92889bced57b72e163286f09a1ced01c61a8dd3364f6fc2596e40eff"
+    },
+    {
+      "names": [
+        "loadPresetTheme"
+      ],
+      "group": "themes",
+      "bodySha256": "2bbe8b39736d7c8175194b589f32808ffc153b1a3b66ed35031defbf67524ef8"
+    },
+    {
+      "names": [
+        "getPresetThemesDir"
+      ],
+      "group": "themes",
+      "bodySha256": "5fd10fc13097076a54113efd5875b658dc595edd14d4d38a1643f6a028ebabb3"
+    },
+    {
+      "names": [
+        "resetPresetTheme"
+      ],
+      "group": "themes",
+      "bodySha256": "1c44fd5bd7f0bb0885a88f17332b781f0d35e65cb09d8ec9c908e1c1ff968569"
+    },
+    {
+      "names": [
+        "getColorTheme"
+      ],
+      "group": "themes",
+      "bodySha256": "7ef8c1b45055db8f67ca063ee10263cfd68de2e27db25a5c86c1c00a25505fe9"
+    },
+    {
+      "names": [
+        "setColorTheme"
+      ],
+      "group": "themes",
+      "bodySha256": "588d62828d24cd6268f922cbbdf07f97fe19fdac795de08fa5614720e60e7b46"
+    },
+    {
+      "names": [
+        "getDismissedUpdateVersion"
+      ],
+      "group": "update-preferences",
+      "bodySha256": "214107722a4d92ca2d57bbaa2989bbc43fb9213b4aa7fb42cdec09c8c21435a1"
+    },
+    {
+      "names": [
+        "setDismissedUpdateVersion"
+      ],
+      "group": "update-preferences",
+      "bodySha256": "f6957999006d71b588c8d64b4847846b9e32c97f9d11261f33e8bed3a1721c5d"
+    },
+    {
+      "names": [
+        "clearDismissedUpdateVersion"
+      ],
+      "group": "update-preferences",
+      "bodySha256": "4d332e6da3a9a61cd6cbde858367b766438e00336315ec952ead1060b4035e4b"
+    },
+    {
+      "names": [
+        "migrateCodexCopilotToPi"
+      ],
+      "group": "provider-migrations",
+      "bodySha256": "b55dd2aa336fa4ef2d82a59071dc24a921ec122e7dad82d2bc216ff4052e8762"
+    },
+    {
+      "names": [
+        "shouldMigratePiOpenAiProvider"
+      ],
+      "group": "provider-migrations",
+      "bodySha256": "70644061e0c5fe1b351befcb618d5f7e5d1b14ce0da2398e75f3533078f82a04"
+    },
+    {
+      "names": [
+        "shouldRepairPiApiKeyCodexProvider"
+      ],
+      "group": "provider-migrations",
+      "bodySha256": "ab62d26c72c112c7c6615377faba78b766d47238fb1b9bfb0f613312dceaf70e"
+    },
+    {
+      "names": [
+        "normalizeModelIds"
+      ],
+      "group": "provider-migrations",
+      "bodySha256": "a06bea1395538e9c34623dd62cb425b1466c39af0f5e9f1bcdcfabd4cc7a195f"
+    },
+    {
+      "names": [
+        "modelSetEquals"
+      ],
+      "group": "provider-migrations",
+      "bodySha256": "ddae7549ac069164760f72cb5007e03ceac265ce0438847a37f0abb9196d489d"
+    },
+    {
+      "names": [
+        "inferModelSelectionMode"
+      ],
+      "group": "provider-migrations",
+      "bodySha256": "8f75ac3b159c915311eb4ef5e47ebedbde0361fe5907afaa66d7d365e5bce8bb"
+    },
+    {
+      "names": [
+        "backfillAllConnectionModels"
+      ],
+      "group": "provider-migrations",
+      "bodySha256": "43171731da251b543719e691d83495f52cc1b64257ca0b5c14d13e411c7fcfeb"
+    },
+    {
+      "names": [
+        "migrateLegacyProviderTypes"
+      ],
+      "group": "provider-migrations",
+      "bodySha256": "dd0d22782af565029fdd839645c40e5594198614d000cfd1cbe22a8c5e6503a3"
+    },
+    {
+      "names": [
+        "normalizePiBedrockId"
+      ],
+      "group": "provider-migrations",
+      "bodySha256": "5150e4868cdecb8ef39396e165fdd3636316ef97844a7ee0357ddbc8a978030d"
+    },
+    {
+      "names": [
+        "migrateModelDefaultsToConnections"
+      ],
+      "group": "connection-migrations",
+      "bodySha256": "b60c55d4a552b00abe430cb51112f0227dbd020ca4bed7e9e2d0920a131cf9b2"
+    },
+    {
+      "names": [
+        "migrateLegacyLlmConnectionsConfig"
+      ],
+      "group": "connection-migrations",
+      "bodySha256": "5611ab7614bb482168d23a5c4ae5658a8124b279f2463c7f4a16f22a4c4fa985"
+    },
+    {
+      "names": [
+        "migrateOrphanedDefaultConnections"
+      ],
+      "group": "connection-migrations",
+      "bodySha256": "a5b0be9423a2e71918d8f78d4446bedd7dd98c44ab5a0700eb415087b0608450"
+    },
+    {
+      "names": [
+        "ensureDefaultLlmConnection"
+      ],
+      "group": "connection-migrations",
+      "bodySha256": "c4ca2d719038d38e3a973edb2eed91c5c7a7d8adcdb45bf215f07f95bcc52cdc"
+    },
+    {
+      "names": [
+        "migrateLegacyCredentials"
+      ],
+      "group": "credential-migration",
+      "bodySha256": "162e59bec3836223a7111e49f1e81d040e0981863cfaeac59e6f2cbc99cd9720"
+    },
+    {
+      "names": [
+        "getLlmConnections"
+      ],
+      "group": "connections",
+      "bodySha256": "8b116c4c7ad2225c57586505aa32d38d6bc8e88124565d726406a70ed7ac166f"
+    },
+    {
+      "names": [
+        "getLlmConnection"
+      ],
+      "group": "connections",
+      "bodySha256": "8f7ce5caadd064b7eda982c4c8278167e667d71cc7d5bdb32074c9a7e0263dc8"
+    },
+    {
+      "names": [
+        "addLlmConnection"
+      ],
+      "group": "connections",
+      "bodySha256": "b330decfef60d03a325b8f43c86cc141df532e9c94e368fcd6a263a366d76a7a"
+    },
+    {
+      "names": [
+        "updateLlmConnection"
+      ],
+      "group": "connections",
+      "bodySha256": "a847bda304be489a4f6d25a7cc01309c53e21d4e5b4efd4904391544dfdc8b9d"
+    },
+    {
+      "names": [
+        "deleteLlmConnection"
+      ],
+      "group": "connections",
+      "bodySha256": "c70f95368cbdc70cc88e7d83a1be7f43899fa20e3b4e2a1014ab42a36cb53078"
+    },
+    {
+      "names": [
+        "getDefaultLlmConnection"
+      ],
+      "group": "connections",
+      "bodySha256": "02856e38c4164718f2fe8ad05d822955a3cdfc2cc7cb303d844618090d417775"
+    },
+    {
+      "names": [
+        "setDefaultLlmConnection"
+      ],
+      "group": "connections",
+      "bodySha256": "b08dd2e1e6f3d2b4bb45d97c345c3360b1e33e8da52d7e2f69e7ab89a848d4ca"
+    },
+    {
+      "names": [
+        "getDefaultThinkingLevel"
+      ],
+      "group": "connection-preferences",
+      "bodySha256": "2d5ccc5058f9569981566d779716f3103426a2d3c30bdd62b8d5731124f9e6ba"
+    },
+    {
+      "names": [
+        "setDefaultThinkingLevel"
+      ],
+      "group": "connection-preferences",
+      "bodySha256": "24ff79ce1828f05295687ee3181a3f4564b35c8b6f4771ff0fc1db5f98919fe1"
+    },
+    {
+      "names": [
+        "touchLlmConnection"
+      ],
+      "group": "connection-preferences",
+      "bodySha256": "463c86d0825d0bda440fd3d60c99c5d8da71e7346d568ceb13682402b1d3a04d"
+    },
+    {
+      "names": [
+        "normalizeProxyString"
+      ],
+      "group": "network-settings",
+      "bodySha256": "15a36f86d10fed54774f090ff854d300880ff9409cb80ebcee33082986fef409"
+    },
+    {
+      "names": [
+        "normalizeNetworkProxySettings"
+      ],
+      "group": "network-settings",
+      "bodySha256": "8ca3e1cb5b58de9b7accc23d3e69dc2692e90bdc94eab843921b4abde1664745"
+    },
+    {
+      "names": [
+        "getNetworkProxySettings"
+      ],
+      "group": "network-settings",
+      "bodySha256": "d25f1256f92d2214a60a1678d6b8efe65a1e4b460bbee61a4b3e134410b2ce6c"
+    },
+    {
+      "names": [
+        "setNetworkProxySettings"
+      ],
+      "group": "network-settings",
+      "bodySha256": "67b5ba47789e320c4a35e2401dc7dafc31e7294e9c45dcbf8f42e967ffb16375"
+    },
+    {
+      "names": [
+        "isSetupDeferred"
+      ],
+      "group": "network-settings",
+      "bodySha256": "502e07fd619110fc0c2000128e34e926b401440e3bbd9b166b9311346a3c620b"
+    },
+    {
+      "names": [
+        "setSetupDeferred"
+      ],
+      "group": "network-settings",
+      "bodySha256": "5b52e210eee2770abe2dd9d8fc108193f581b4ece3bebe66e6c4e9579191a3d4"
+    },
+    {
+      "names": [
+        "TOOL_ICONS_DIR_NAME"
+      ],
+      "group": "tool-icons",
+      "bodySha256": "a9562925149190497bf3970da42c8f37bf0b42b6daca20d5c5b6e12a02600d5d"
+    },
+    {
+      "names": [
+        "getToolIconsDir"
+      ],
+      "group": "tool-icons",
+      "bodySha256": "324a2ad2bc98fd77d7c7637e0b89ff9067cfab281482a4c592df7394258d8fcb"
+    },
+    {
+      "names": [
+        "ensureToolIcons"
+      ],
+      "group": "tool-icons",
+      "bodySha256": "9b19c57a4956864462f33171ee5b7ffaef44180b75629c87f756b87909b8e1d5"
+    },
+    {
+      "names": [
+        "getServerConfig"
+      ],
+      "group": "server-settings",
+      "bodySha256": "d0e9fbf266cadd3b2bd975ade32378a2ff60412deb62a543b513fb700005b551"
+    },
+    {
+      "names": [
+        "setServerConfig"
+      ],
+      "group": "server-settings",
+      "bodySha256": "172328cce11cc6947ef6c1628dabbf37c8b2c65913c0ff731390647c4bb12753"
+    }
+  ],
+  "modules": [
+    {
+      "name": "config-types",
+      "lines": 96
+    },
+    {
+      "name": "config-defaults",
+      "lines": 101
+    },
+    {
+      "name": "config-file",
+      "lines": 166
+    },
+    {
+      "name": "preferences",
+      "lines": 306
+    },
+    {
+      "name": "config-lifecycle",
+      "lines": 37
+    },
+    {
+      "name": "workspaces",
+      "lines": 279
+    },
+    {
+      "name": "workspace-history",
+      "lines": 156
+    },
+    {
+      "name": "session-drafts",
+      "lines": 165
+    },
+    {
+      "name": "themes",
+      "lines": 311
+    },
+    {
+      "name": "update-preferences",
+      "lines": 37
+    },
+    {
+      "name": "provider-migrations",
+      "lines": 294
+    },
+    {
+      "name": "connection-migrations",
+      "lines": 350
+    },
+    {
+      "name": "credential-migration",
+      "lines": 65
+    },
+    {
+      "name": "connections",
+      "lines": 255
+    },
+    {
+      "name": "connection-preferences",
+      "lines": 50
+    },
+    {
+      "name": "network-settings",
+      "lines": 70
+    },
+    {
+      "name": "tool-icons",
+      "lines": 54
+    },
+    {
+      "name": "server-settings",
+      "lines": 35
+    }
+  ],
+  "dependencies": {
+    "config-types": [],
+    "config-defaults": [
+      "config-types"
+    ],
+    "config-file": [
+      "config-types",
+      "config-defaults",
+      "tool-icons"
+    ],
+    "preferences": [
+      "config-file",
+      "config-defaults"
+    ],
+    "config-lifecycle": [
+      "config-types"
+    ],
+    "workspaces": [
+      "config-file"
+    ],
+    "workspace-history": [
+      "workspaces"
+    ],
+    "session-drafts": [
+      "workspace-history",
+      "config-file"
+    ],
+    "themes": [
+      "config-file",
+      "config-defaults"
+    ],
+    "update-preferences": [
+      "config-file"
+    ],
+    "provider-migrations": [
+      "config-types"
+    ],
+    "connection-migrations": [
+      "config-types",
+      "config-file",
+      "provider-migrations"
+    ],
+    "credential-migration": [],
+    "connections": [
+      "config-file",
+      "connection-migrations",
+      "provider-migrations",
+      "workspaces"
+    ],
+    "connection-preferences": [
+      "config-file",
+      "config-defaults"
+    ],
+    "network-settings": [
+      "config-file"
+    ],
+    "tool-icons": [],
+    "server-settings": [
+      "config-file"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

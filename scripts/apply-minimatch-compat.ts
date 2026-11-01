@@ -81,7 +81,8 @@ function verifyTargetPackage(packageDir: string): void {
     throw new Error(`${packageDir} does not export a minimatch function`)
   }
 
-  if (!minimatch('src/index.ts', '{src,test}/index.ts')) {
+  const matched: unknown = Reflect.apply(minimatch, undefined, ['src/index.ts', '{src,test}/index.ts']);
+  if (matched !== true) {
     throw new Error(`${packageDir} failed the brace-expansion compatibility smoke test`)
   }
 }

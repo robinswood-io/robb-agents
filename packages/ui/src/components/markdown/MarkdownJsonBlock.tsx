@@ -1,3 +1,4 @@
+import { isUnknownArray } from "../../../../shared/src/utils/json.ts";
 /**
  * MarkdownJsonBlock - Interactive JSON tree viewer for markdown code blocks
  *
@@ -59,13 +60,13 @@ function deepParseJson(value: unknown): unknown {
     return value
   }
 
-  if (Array.isArray(value)) {
+  if (isUnknownArray(value)) {
     return value.map(deepParseJson)
   }
 
   if (typeof value === 'object') {
     const result: Record<string, unknown> = {}
-    for (const [key, val] of Object.entries(value)) {
+    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
       result[key] = deepParseJson(val)
     }
     return result
@@ -88,17 +89,17 @@ class JsonErrorBoundary extends React.Component<
   { children: React.ReactNode; fallback: React.ReactNode },
   ErrorBoundaryState
 > {
-  state: ErrorBoundaryState = { hasError: false }
+  override state: ErrorBoundaryState = { hasError: false }
 
   static getDerivedStateFromError(): ErrorBoundaryState {
     return { hasError: true }
   }
 
-  componentDidCatch(error: Error) {
+  override componentDidCatch(error: Error) {
     console.warn('[MarkdownJsonBlock] JsonView render failed, falling back to CodeBlock:', error)
   }
 
-  render() {
+  override render() {
     if (this.state.hasError) return this.props.fallback
     return this.props.children
   }
@@ -116,7 +117,7 @@ function isDarkMode(): boolean {
 export interface MarkdownJsonBlockProps {
   /** Raw JSON string from the markdown code block */
   code: string
-  className?: string
+  className?: string | undefined
 }
 
 export function MarkdownJsonBlock({ code, className }: MarkdownJsonBlockProps) {
@@ -126,7 +127,7 @@ export function MarkdownJsonBlock({ code, className }: MarkdownJsonBlockProps) {
   // Try to parse – fall back to syntax-highlighted CodeBlock if invalid JSON
   const parsed = React.useMemo(() => {
     try {
-      const raw = JSON.parse(code)
+      const raw: unknown = JSON.parse(code)
       return deepParseJson(raw) as object
     } catch {
       return null
@@ -178,28 +179,7 @@ export function MarkdownJsonBlock({ code, className }: MarkdownJsonBlockProps) {
             collapsed={2}
             enableClipboard={true}
             displayDataTypes={false}
-            shortenTextAfterLength={100}
-          >
-            {/* Custom copy icon — same as JSONPreviewOverlay */}
-            <JsonView.Copied
-              render={(props) => {
-                const isCopied = (props as Record<string, unknown>)['data-copied']
-                return isCopied ? (
-                  <Check
-                    className="ml-1.5 inline-flex cursor-pointer text-green-500"
-                    size={10}
-                    onClick={props.onClick}
-                  />
-                ) : (
-                  <Copy
-                    className="ml-1.5 inline-flex cursor-pointer text-muted-foreground hover:text-foreground"
-                    size={10}
-                    onClick={props.onClick}
-                  />
-                )
-              }}
-            />
-          </JsonView>
+            shortenTextAfterLength={100} />
         </div>
       </div>
     </JsonErrorBoundary>

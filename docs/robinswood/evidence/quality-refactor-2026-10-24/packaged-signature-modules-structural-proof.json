@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "nativeFunctionsPreserved": 18,
+  "files": [
+    {
+      "file": "scripts/robinswood-packaged-smoke.py",
+      "lines": 479
+    },
+    {
+      "file": "scripts/robb_package_signatures.py",
+      "lines": 70
+    }
+  ],
+  "finalWhitespaceCheck": "Removed one extra EOF newline only; Python AST identical."
+}

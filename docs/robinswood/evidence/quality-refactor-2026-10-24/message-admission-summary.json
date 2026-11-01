@@ -1,0 +1,121 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Orchestration des messages, autorité des reprises et finalisation",
+  "parentLinesBefore": 1304,
+  "parentLinesAfter": 483,
+  "operationModules": 140,
+  "operationModulesAllBelow500Lines": true,
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 23.14,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/message-admission-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 23.03,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/message-admission-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 23.63,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/message-admission-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/server-core/src/sessions/SessionManager/operations",
+        "packages/server-core/src/sessions/SessionManager/operation-context.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 2.67,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/message-admission-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 142.01,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/message-admission-test.log"
+    }
+  ],
+  "fullTestSummary": {
+    "pass": 10741,
+    "fail": 0,
+    "skip": 12,
+    "groups": 29
+  },
+  "moduleGraph": {
+    "files": 167,
+    "operationFiles": 140,
+    "operationFunctions": 483,
+    "runtimeImportCycles": 0,
+    "cycles": []
+  },
+  "equivalenceProofs": [
+    "message-turn-tail-structural-proof.json",
+    "message-admission-chain-proof.json"
+  ],
+  "changes": [
+    "Préparation du tour et exécution regroupées par responsabilité en fonctions statiques directes.",
+    "Les admissions acceptées restent synchrones jusqu’à la prise en charge native du tour. Seul un refus de source suspend l’admission pour sa vidange d’origine.",
+    "La génération du dispatch automatique rejoint l’objet partagé du message ; les deux lectures et l’écriture restent vivantes pour les callbacks.",
+    "Les cinq callbacks de finalisation gardent leur identité et leurs corps natifs.",
+    "Un contrôle de propriété du tour protège le retour de la préparation asynchrone après sa prise en charge."
+  ],
+  "sourceGate": {
+    "max-lines": 125,
+    "no-explicit-any": 403
+  },
+  "globalLint": {
+    "files": 3218,
+    "errors": 498,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 384,
+      "max-lines": 114,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "limits": [
+    "Le lint global reste en échec sur le reliquat indiqué.",
+    "Les tests ignorés par la suite officielle sont conservés ; les missions réelles et le contrôle UI final restent à effectuer.",
+    "Aucune installation du candidat qualité effectuée."
+  ],
+  "updatedAt": "2026-10-25T16:29:11.938056+00:00"
+}

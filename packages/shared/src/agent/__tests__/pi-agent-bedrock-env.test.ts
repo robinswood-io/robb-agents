@@ -5,17 +5,17 @@ import type { BackendConfig } from '../backend/types.ts'
 function createConfig(overrides: Partial<BackendConfig> = {}): BackendConfig {
   return {
     provider: 'pi',
-    workspace: {
+    workspace: { slug: 'test-workspace', createdAt: 1,
       id: 'ws-test',
       name: 'Test Workspace',
       rootPath: '/tmp/craft-agent-test',
-    } as any,
+    },
     session: {
       id: 'session-test',
       workspaceRootPath: '/tmp/craft-agent-test',
       createdAt: Date.now(),
       lastUsedAt: Date.now(),
-    } as any,
+    },
     isHeadless: true,
     ...overrides,
   }
@@ -25,8 +25,9 @@ describe('PiAgent Bedrock env handling', () => {
   it('buildAwsEnv uses AWS env only and never sets CLAUDE_CODE_USE_BEDROCK', () => {
     const agent = new PiAgent(createConfig())
 
-    const env = (agent as any).buildAwsEnv(
+    const env = agent.buildAwsEnv(
       {
+        provider: 'amazon-bedrock',
         credential: {
           type: 'iam',
           accessKeyId: 'AKIA_TEST',
@@ -38,12 +39,12 @@ describe('PiAgent Bedrock env handling', () => {
       { piAuthProvider: 'amazon-bedrock' },
     ) as Record<string, string>
 
-    expect(env.AWS_ACCESS_KEY_ID).toBe('AKIA_TEST')
-    expect(env.AWS_SECRET_ACCESS_KEY).toBe('secret')
-    expect(env.AWS_SESSION_TOKEN).toBe('session')
-    expect(env.AWS_REGION).toBe('eu-central-1')
-    expect(env.AWS_BEDROCK_FORCE_HTTP1).toBe('1')
-    expect(env.CLAUDE_CODE_USE_BEDROCK).toBeUndefined()
+    expect(env["AWS_ACCESS_KEY_ID"]).toBe('AKIA_TEST')
+    expect(env["AWS_SECRET_ACCESS_KEY"]).toBe('secret')
+    expect(env["AWS_SESSION_TOKEN"]).toBe('session')
+    expect(env["AWS_REGION"]).toBe('eu-central-1')
+    expect(env["AWS_BEDROCK_FORCE_HTTP1"]).toBe('1')
+    expect(env["CLAUDE_CODE_USE_BEDROCK"]).toBeUndefined()
 
     agent.destroy()
   })
@@ -51,8 +52,9 @@ describe('PiAgent Bedrock env handling', () => {
   it('buildAwsEnv returns empty env for non-Bedrock Pi providers', () => {
     const agent = new PiAgent(createConfig())
 
-    const env = (agent as any).buildAwsEnv(
+    const env = agent.buildAwsEnv(
       {
+        provider: 'amazon-bedrock',
         credential: {
           type: 'iam',
           accessKeyId: 'AKIA_TEST',
@@ -90,29 +92,29 @@ describe('PiAgent Bedrock env handling', () => {
     const environmentAgent = new PiAgent(createConfig({ authType: 'environment' }))
     const apiKeyAgent = new PiAgent(createConfig({ authType: 'api_key' }))
     try {
-      const environmentEnv = (environmentAgent as any).buildAwsEnv(
+      const environmentEnv = environmentAgent.buildAwsEnv(
         null,
         { piAuthProvider: 'amazon-bedrock' },
       ) as Record<string, string>
-      const apiKeyEnv = (apiKeyAgent as any).buildAwsEnv(
+      const apiKeyEnv = apiKeyAgent.buildAwsEnv(
         null,
         { piAuthProvider: 'amazon-bedrock' },
       ) as Record<string, string>
 
-      expect(environmentEnv.AWS_PROFILE).toBe('robb-bedrock')
-      expect(environmentEnv.AWS_SHARED_CREDENTIALS_FILE).toBe('/secure/aws/credentials')
-      expect(environmentEnv.AWS_CONFIG_FILE).toBe('/secure/aws/config')
-      expect(environmentEnv.AWS_ACCESS_KEY_ID).toBe('AKIA_ENV_TEST')
-      expect(environmentEnv.AWS_SECRET_ACCESS_KEY).toBe('environment-secret')
-      expect(environmentEnv.AWS_SESSION_TOKEN).toBe('environment-session')
-      expect(environmentEnv.AWS_REGION).toBe('eu-west-1')
-      expect(environmentEnv.AZURE_CLIENT_SECRET).toBeUndefined()
-      expect(environmentEnv.AWS_BEDROCK_FORCE_HTTP1).toBe('0')
+      expect(environmentEnv["AWS_PROFILE"]).toBe('robb-bedrock')
+      expect(environmentEnv["AWS_SHARED_CREDENTIALS_FILE"]).toBe('/secure/aws/credentials')
+      expect(environmentEnv["AWS_CONFIG_FILE"]).toBe('/secure/aws/config')
+      expect(environmentEnv["AWS_ACCESS_KEY_ID"]).toBe('AKIA_ENV_TEST')
+      expect(environmentEnv["AWS_SECRET_ACCESS_KEY"]).toBe('environment-secret')
+      expect(environmentEnv["AWS_SESSION_TOKEN"]).toBe('environment-session')
+      expect(environmentEnv["AWS_REGION"]).toBe('eu-west-1')
+      expect(environmentEnv["AZURE_CLIENT_SECRET"]).toBeUndefined()
+      expect(environmentEnv["AWS_BEDROCK_FORCE_HTTP1"]).toBe('0')
 
-      expect(apiKeyEnv.AWS_ACCESS_KEY_ID).toBeUndefined()
-      expect(apiKeyEnv.AWS_SECRET_ACCESS_KEY).toBeUndefined()
-      expect(apiKeyEnv.AWS_PROFILE).toBeUndefined()
-      expect(apiKeyEnv.AWS_BEDROCK_FORCE_HTTP1).toBe('0')
+      expect(apiKeyEnv["AWS_ACCESS_KEY_ID"]).toBeUndefined()
+      expect(apiKeyEnv["AWS_SECRET_ACCESS_KEY"]).toBeUndefined()
+      expect(apiKeyEnv["AWS_PROFILE"]).toBeUndefined()
+      expect(apiKeyEnv["AWS_BEDROCK_FORCE_HTTP1"]).toBe('0')
     } finally {
       environmentAgent.destroy()
       apiKeyAgent.destroy()

@@ -47,10 +47,10 @@ describe('subprocess environment boundary', () => {
       },
     );
 
-    expect(env.PATH).toBe('/safe/bin');
-    expect(env.MCP_SOURCE_TOKEN).toBe('explicit-source-secret');
-    expect(env.CUSTOM_RUNTIME_FLAG).toBe('enabled');
-    expect(env.ROBB_SENTINEL_SECRET).toBeUndefined();
+    expect(env["PATH"]).toBe('/safe/bin');
+    expect(env["MCP_SOURCE_TOKEN"]).toBe('explicit-source-secret');
+    expect(env["CUSTOM_RUNTIME_FLAG"]).toBe('enabled');
+    expect(env["ROBB_SENTINEL_SECRET"]).toBeUndefined();
   });
 
   it('preserves Windows Path casing and ignores exported shell functions', () => {
@@ -59,9 +59,9 @@ describe('subprocess environment boundary', () => {
       LANG: '() { :; }; echo unsafe',
     }, 'win32');
 
-    expect(env.Path).toBe('C:\\Windows\\System32');
-    expect(env.PATH).toBeUndefined();
-    expect(env.LANG).toBeUndefined();
+    expect(env["Path"]).toBe('C:\\Windows\\System32');
+    expect(env["PATH"]).toBeUndefined();
+    expect(env["LANG"]).toBeUndefined();
   });
 
   it('blocks dynamic-loader, runtime-preload, shell-hook, and server-secret keys even in explicitEnv', () => {
@@ -86,21 +86,21 @@ describe('subprocess environment boundary', () => {
       { PATH: '/usr/bin' },
     );
 
-    expect(env.PATH).toBe('/usr/bin');
-    expect(env.MCP_SOURCE_TOKEN).toBe('allowed-token');
-    expect(env.NODE_OPTIONS).toBeUndefined();
-    expect(env.BUN_OPTIONS).toBeUndefined();
-    expect(env.LD_PRELOAD).toBeUndefined();
-    expect(env.LD_LIBRARY_PATH).toBeUndefined();
-    expect(env.DYLD_INSERT_LIBRARIES).toBeUndefined();
-    expect(env.DYLD_LIBRARY_PATH).toBeUndefined();
-    expect(env.BASH_ENV).toBeUndefined();
-    expect(env.ENV).toBeUndefined();
-    expect(env.PROMPT_COMMAND).toBeUndefined();
-    expect(env.SHELLOPTS).toBeUndefined();
-    expect(env.CRAFT_SERVER_TOKEN).toBeUndefined();
-    expect(env.CRAFT_WEBUI_PASSWORD).toBeUndefined();
-    expect(env.SHELL_FN_INJECT).toBeUndefined();
-    expect(env.NULL_BYTE_VAL).toBeUndefined();
+    expect(env["PATH"]).toBe('/usr/bin');
+    expect(env["MCP_SOURCE_TOKEN"]).toBe('allowed-token');
+    expect(env["NODE_OPTIONS"]).toBeUndefined();
+    expect(env["BUN_OPTIONS"]).toBeUndefined();
+    expect(env["LD_PRELOAD"]).toBeUndefined();
+    expect(env["LD_LIBRARY_PATH"]).toBeUndefined();
+    expect(env["DYLD_INSERT_LIBRARIES"]).toBeUndefined();
+    expect(env["DYLD_LIBRARY_PATH"]).toBeUndefined();
+    expect(env["BASH_ENV"]).toBeUndefined();
+    expect(env["ENV"]).toBeUndefined();
+    expect(env["PROMPT_COMMAND"]).toBeUndefined();
+    expect(env["SHELLOPTS"]).toBeUndefined();
+    expect(env["CRAFT_SERVER_TOKEN"]).toBeUndefined();
+    expect(env["CRAFT_WEBUI_PASSWORD"]).toBeUndefined();
+    expect(env["SHELL_FN_INJECT"]).toBeUndefined();
+    expect(env["NULL_BYTE_VAL"]).toBeUndefined();
   });
 });

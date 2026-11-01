@@ -2,10 +2,10 @@ import { randomUUID } from 'node:crypto'
 import { join, resolve } from 'node:path'
 
 const profileDir = resolve(
-  process.env.CRAFT_CONFIG_DIR ?? '/tmp/robb-agents-playwright',
+  process.env["CRAFT_CONFIG_DIR"] ?? '/tmp/robb-agents-playwright',
 )
 const serverPort = Number.parseInt(
-  process.env.ROBB_PLAYWRIGHT_SERVER_PORT ?? '19100',
+  process.env["ROBB_PLAYWRIGHT_SERVER_PORT"] ?? '19100',
   10,
 )
 
@@ -15,7 +15,7 @@ if (!Number.isInteger(serverPort) || serverPort < 1024 || serverPort > 65535) {
 
 // Config paths are resolved when the shared modules are imported, so set the
 // isolated profile first and keep these imports dynamic.
-process.env.CRAFT_CONFIG_DIR = profileDir
+process.env["CRAFT_CONFIG_DIR"] = profileDir
 
 const [{ ensureConfigDir, loadStoredConfig, saveConfig }, { createWorkspaceAtPath }] = await Promise.all([
   import('../packages/shared/src/config/storage.ts'),
@@ -44,7 +44,7 @@ if (!config) {
   }
 }
 
-const publicHost = process.env.ROBB_PLAYWRIGHT_PUBLIC_HOST?.trim() || 'remote.robb.local'
+const publicHost = process.env["ROBB_PLAYWRIGHT_PUBLIC_HOST"]?.trim() || 'remote.robb.local'
 config.setupDeferred = true
 config.serverConfig = {
   enabled: true,

@@ -194,8 +194,8 @@ function SubRowIcon({
   strokeWidth = SUB_ROW_ICON_STROKE,
 }: {
   icon: typeof MessageSquare
-  size?: number
-  strokeWidth?: number
+  size?: number | undefined
+  strokeWidth?: number | undefined
 }) {
   return (
     <div

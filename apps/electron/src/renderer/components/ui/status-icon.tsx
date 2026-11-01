@@ -19,17 +19,17 @@ interface StatusIconProps {
   /** Status identifier (used to discover icon file) */
   statusId: string
   /** Icon value from config (emoji string) */
-  icon?: string
+  icon?: string | undefined
   /** Workspace ID for loading local icons */
   workspaceId: string
   /** Size variant (default: 'sm' - statuses are typically small) */
-  size?: IconSize
+  size?: IconSize | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
   /** When true, emoji icons render without container chrome (bg, ring, rounded) */
-  chromeless?: boolean
+  chromeless?: boolean | undefined
   /** When true, renders without any container (just the SVG/emoji) */
-  bare?: boolean
+  bare?: boolean | undefined
 }
 
 export function resolveStatusIconSource(
@@ -45,7 +45,7 @@ export function resolveStatusIconSource(
   }
 
   return {
-    iconValue: trimmedIcon,
+    ...(trimmedIcon !== undefined ? { iconValue: trimmedIcon } : {}),
     iconFileName: statusId,
   }
 }
@@ -64,11 +64,11 @@ export function StatusIcon({
     workspaceId,
     entityType: 'status',
     identifier: statusId,
-    iconPath,
+    ...(iconPath !== undefined ? { iconPath: iconPath } : {}),
     iconDir: 'statuses/icons',
-    iconValue,
+    ...(iconValue !== undefined ? { iconValue: iconValue } : {}),
     // Status icons use {statusId}.ext naming (not icon.ext)
-    iconFileName,
+    ...(iconFileName !== undefined ? { iconFileName: iconFileName } : {}),
   })
 
   return (

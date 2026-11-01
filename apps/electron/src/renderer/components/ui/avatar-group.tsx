@@ -9,8 +9,8 @@ import { cn } from '@/lib/utils'
 
 interface AvatarGroupProps {
   children: React.ReactNode
-  max?: number  // Max avatars to show before "+N" indicator
-  className?: string
+  max?: number | undefined  // Max avatars to show before "+N" indicator
+  className?: string | undefined
 }
 
 export function AvatarGroup({ children, max = 3, className }: AvatarGroupProps) {

@@ -1,0 +1,1211 @@
+{
+  "source": "packages/server-core/src/sessions/objective-contract.ts",
+  "units": [
+    {
+      "names": [
+        "MULTI_STEP_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "545b1f7962f1d4a071617d31582863dd0d6cff82bec670a251ff27d6a9aa16be"
+    },
+    {
+      "names": [
+        "OBSERVATION_REQUEST_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "0b213c97bf985381751c9e1a2a6f6137a81524f5fc6fa4a24f02a065e1f43fd0"
+    },
+    {
+      "names": [
+        "AMENDMENT_REQUEST_PREFIX"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "5db48f576e3b5cf749e3886d8668e14c0fbcb2b274ac8bbba1d5c8c6b4de6710"
+    },
+    {
+      "names": [
+        "AMENDMENT_OBSERVATION_REQUEST"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "c8b7f5badc5696f3e9b00a9cbc109812854b788c81fec1511ff512f1d64e0905"
+    },
+    {
+      "names": [
+        "EXPLICIT_NEW_OBJECTIVE_PATTERNS"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "bcb76ec73b7783afbb3963e47d467c782f038eb476af65ac0cc0204913f3ca80"
+    },
+    {
+      "names": [
+        "CONTINUATION_FILLER_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "d8e19b33342b1247a16628eb063596d692971031dbcd46d0e49d8209ffda177e"
+    },
+    {
+      "names": [
+        "CONTINUATION_REFERENCE_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "6502fbe073f43d142beb177ad1e7b400081a2c040089289b5a7fb2241e9f19e2"
+    },
+    {
+      "names": [
+        "CONTINUATION_REOPEN_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "ece511231843c4d5debdae2e3a9929a95a4b2c1d8dcba2acefa70f64bf7e4b32"
+    },
+    {
+      "names": [
+        "PRECISION_OR_COMPLETENESS_CHALLENGE_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "60eb86f4889543083f6288dcc624827363b4b94208e9813e44fa5c45a29a5092"
+    },
+    {
+      "names": [
+        "isPrecisionOrCompletenessChallenge"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "c5eb5ec2f157edd9d49ed332d7eb3b2850c4b1cb425b04f958258a5ede550cc5"
+    },
+    {
+      "names": [
+        "CONTINUATION_VERBS"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "0ed4bcb72d4775604dc5e9ff7d1f1a4291a19d8a62cc550971858587d2d42955"
+    },
+    {
+      "names": [
+        "isExecutionChannelCorrection"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "b9f816f8b9d13d8058491b9cb5d498cbebe7a0ac509a348d0cb7fc3bb7533805"
+    },
+    {
+      "names": [
+        "OBSERVATION_TARGET_KEY_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "b0b97c2dd8f7e21504a4f104773250eed3123ba2ac8ef36902dfa9eead936589"
+    },
+    {
+      "names": [
+        "MUTATION_TRANSFORM_KEY_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "7bc3cc7484d420d5cd8d4293ef962157a7738d77b90b96c947026fc6a20ce637"
+    },
+    {
+      "names": [
+        "PASSIVE_NO_PROGRESS_TOOL_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "47fb70e2419786e187a4cb4bbb9b52ee2dfde1695cf13dc83e5b4e6bf1ba40db"
+    },
+    {
+      "names": [
+        "PASSIVE_NO_PROGRESS_ACTION_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "7a657b0cdbb708cf1a82406c1ba248242f502702038123171a4ce58fe972be23"
+    },
+    {
+      "names": [
+        "NON_EXECUTED_CHECKPOINT_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "12717e1bd6a19a4e2a9d0ae685bd372a3c197f6189eefe8e8e554a027897e7e7"
+    },
+    {
+      "names": [
+        "NON_SUBSTANTIVE_TOOL_RESULT_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "e0fcf1e2e5419ed9dd3f4be86877fcbdee61a7b1b162261b225e8dacdd8591f8"
+    },
+    {
+      "names": [
+        "GENERIC_EXECUTE_TOOL_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "ee4dff8c4ab68b5b8e80a29339405bda6bfc772b0017e7835dc2e14845c2993a"
+    },
+    {
+      "names": [
+        "SESSION_COORDINATION_TOOL_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "284f2975b90a06ed373146afcea442bf04d594e4166afc6d15c3cb04bb9490be"
+    },
+    {
+      "names": [
+        "PLAN_TRACKING_TOOL_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "a98e8ad129d3a561539c469e5679303574b9cdf23948b49f503bcdcbb20b232e"
+    },
+    {
+      "names": [
+        "OBJECTIVE_NON_EXECUTING_PREFLIGHT_TOOLS"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "fbd835588dc75ac63b5b9e04f4679814a04b454f42919922f1acab1613f5f15e"
+    },
+    {
+      "names": [
+        "MUTATION_HTTP_METHOD_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "20ec754e2e38bb57de04dbb26a826014ba4aa544cf7b04aadb6fbea7c4562acf"
+    },
+    {
+      "names": [
+        "POSITIVE_MUTATION_HTTP_METHOD_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "e223054081807e17ce904dbdcacbad4fa56e4eeb868c712d4b0058ae4502263e"
+    },
+    {
+      "names": [
+        "POSITIVE_HTTP_POST_TARGET_TOKENS"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "de766617a1c6692768ab744c689c49572e77eb9dcbb966ab0d27ad56c264e5f5"
+    },
+    {
+      "names": [
+        "MUTATION_SQL_PATTERN"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "f950f00e4d3ba7968a55de3faec250889b9b962e7d72f4701867e8dd40646764"
+    },
+    {
+      "names": [
+        "MAX_CANONICAL_INPUT_CHARS"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "9207748defeb1d73ad63c65959c8e7f946a71e60b94a2778a59cec100e80851b"
+    },
+    {
+      "names": [
+        "MAX_RESULT_DIGEST_CHARS"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "a5c186d719c9d1fb8b7d9438c6d0ba37e5f36a65f4806c8c91de8a82cd97c703"
+    },
+    {
+      "names": [
+        "MAX_TRANSFORM_DIGEST_CHARS"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "79e67a6e4231524477db3bb379a8b2bf3785a962c74c57b9c5d8eb750ad1217c"
+    },
+    {
+      "names": [
+        "OBJECTIVE_OUTCOME_CONTINUE_EXAMPLE"
+      ],
+      "group": "intent-vocabulary",
+      "bodySha256": "2cd319b16d623f5cc98a09a94c56f84129e1a9d4cdb76a2ffc8334c87fbf409f"
+    },
+    {
+      "names": [
+        "ObjectiveTransitionInput"
+      ],
+      "group": "types",
+      "bodySha256": "076a5f6ea5e1739561220927f5ff487aa3b35c0cf5721f44e025969bf010cd7e"
+    },
+    {
+      "names": [
+        "foldForIntent"
+      ],
+      "group": "types",
+      "bodySha256": "e5b7527fb05f1d8a3858280d5a7310bce5acbb0df4fb9218f416c38c39f51c0d"
+    },
+    {
+      "names": [
+        "REQUESTED_ACTION_NOUN_AFTER_ANALYSIS"
+      ],
+      "group": "request-intent",
+      "bodySha256": "3af3a89070209d008f2e09c47e9aa8b60446060a6ec4b2745a75c1b18e9afded"
+    },
+    {
+      "names": [
+        "REALYSE_MUTATION_TARGET"
+      ],
+      "group": "request-intent",
+      "bodySha256": "90f1545af2db8bd490393cb497924b1912b4d350a314553f0488932a6faa37b3"
+    },
+    {
+      "names": [
+        "FRENCH_ACTION_NOUN_TARGET"
+      ],
+      "group": "request-intent",
+      "bodySha256": "7eda817119cd1f3f6c4dd7087eeb0b5d7e36b657f697ec1442c141b7b11eb6b4"
+    },
+    {
+      "names": [
+        "ENGLISH_ACTION_NOUN_TARGET"
+      ],
+      "group": "request-intent",
+      "bodySha256": "3327b8d488d60f84a9ed46c945267c9efbfba110addf6061b71f0220592b6cda"
+    },
+    {
+      "names": [
+        "ENGLISH_ANALYSIS_MUTATION_TARGET"
+      ],
+      "group": "request-intent",
+      "bodySha256": "c1b3282ae57a62878cda7e1ae8de1d7b262259896338b3433a34525e1f8cded9"
+    },
+    {
+      "names": [
+        "SUPPORT_VERB_MUTATION_SOURCE"
+      ],
+      "group": "request-intent",
+      "bodySha256": "78630ad9cec8a05823e67caf5500d5fa81c3c833fc18f1dda79e064e831e818c"
+    },
+    {
+      "names": [
+        "NON_MUTATING_REALISATION_TARGET"
+      ],
+      "group": "request-intent",
+      "bodySha256": "fe0b27b39c674f1178c79e7acc7aee70e25d1e540496ff4edb16f3c2aa924f32"
+    },
+    {
+      "names": [
+        "CONTINUED_FRENCH_ANALYSIS_AND_ACTION"
+      ],
+      "group": "request-intent",
+      "bodySha256": "ffaf70cac408eda18ee67bad0de6d934a8375017abcb38596b0d330fa2acf1d5"
+    },
+    {
+      "names": [
+        "CONTINUED_ENGLISH_ANALYSIS_AND_ACTION"
+      ],
+      "group": "request-intent",
+      "bodySha256": "3c39b371fb41afeb751c4f94ffa87b8ea20b48b1bfaff2d0f1cf84a6b937398f"
+    },
+    {
+      "names": [
+        "CONTINUED_ARTIFACT_MUTATION_SOURCE"
+      ],
+      "group": "request-intent",
+      "bodySha256": "6f3fad1a555400dba3809fe7ee1da3539b74ee143c6be7447f44236af105891b"
+    },
+    {
+      "names": [
+        "OBJECTIVE_ARTIFACT_MUTATION_SOURCE"
+      ],
+      "group": "request-intent",
+      "bodySha256": "a6eb0423ed40c5a929778e942495059d70164abacea4e1e4c6247b1f78c135e5"
+    },
+    {
+      "names": [
+        "OBJECTIVE_ARTIFACT_MUTATION_REQUEST"
+      ],
+      "group": "request-intent",
+      "bodySha256": "4ef4ef22142d069c4926d562b23488747cf5e99fb5046c1f552918cc30fab88a"
+    },
+    {
+      "names": [
+        "DIRECT_FRENCH_CLINICAL_PROCEDURE_REQUEST"
+      ],
+      "group": "request-intent",
+      "bodySha256": "5ff91ca1836715dbe63da6296306c5e796c0d64f462c988a24adf20ffaffb08d"
+    },
+    {
+      "names": [
+        "DIRECT_MISSPELLED_SEND_REQUEST_PREFIX"
+      ],
+      "group": "request-intent",
+      "bodySha256": "1a5eadf0a615d4c17f880d225372ac1e465808cd2b89c5854809e70b6d9599b7"
+    },
+    {
+      "names": [
+        "MISSPELLED_SEND_IMPERATIVE_REQUEST"
+      ],
+      "group": "request-intent",
+      "bodySha256": "8bbcd6857934a4fc8c11bbb291ee476daa860672fafb2d87c29dccd85b213b4e"
+    },
+    {
+      "names": [
+        "canonicalizeMisspelledSendImperative"
+      ],
+      "group": "request-intent",
+      "bodySha256": "13616b4e041a4a5734714ec82fa5dc727c8de02e5102a374fb3003219e0ceb7d"
+    },
+    {
+      "names": [
+        "isDirectInvoiceEmailFulfillmentRequest"
+      ],
+      "group": "request-intent",
+      "bodySha256": "67e32b867e7912395389cb2980748e5870a1b35b6a2a1937efb3f1bfad6a51f5"
+    },
+    {
+      "names": [
+        "isDirectAutomatedFormCreationRequest"
+      ],
+      "group": "request-intent",
+      "bodySha256": "c5b99eb3ff125e0685cef1f02066b058bcf4d7aa57a554e8f778b7f969c679d4"
+    },
+    {
+      "names": [
+        "DEV_LOGIN_REACTIVATION_REQUEST"
+      ],
+      "group": "request-intent",
+      "bodySha256": "87b925907101dacdc3325f55acc5d3557900c0779c1952ea2141955b7575adc8"
+    },
+    {
+      "names": [
+        "isLegacyPlanImplementationRequest"
+      ],
+      "group": "request-intent",
+      "bodySha256": "0c5b81bbf7f782996a18d6d01fbaf028dad53db5adaa71cbd4c02e049a6eb317"
+    },
+    {
+      "names": [
+        "ACTION_STATE_QUESTION_PATTERN"
+      ],
+      "group": "request-intent",
+      "bodySha256": "7cb7e57910af425a1f77a2a4a63f1a3500b5e08271f199ead9b61ef2e8fed175"
+    },
+    {
+      "names": [
+        "isReportedSpeechArtifactMatch"
+      ],
+      "group": "request-intent",
+      "bodySha256": "0c8e554df9fe608126a0ed2d4c002f25843005ad4bafdbb40b33df2c16f9e502"
+    },
+    {
+      "names": [
+        "canonicalizeObjectiveArtifactMutations"
+      ],
+      "group": "request-intent",
+      "bodySha256": "d4d6b9bf65624c38e5793418f8acaa6c9b1c9c8f334637eb0241555fca24fb04"
+    },
+    {
+      "names": [
+        "hasDirectObjectiveArtifactMutation"
+      ],
+      "group": "request-intent",
+      "bodySha256": "99eced2ba0a46b2d6224f01b8c66703863c7bfba7ba56bad8f3e1c4c559c269d"
+    },
+    {
+      "names": [
+        "ANALYTICAL_DECISION_CLAUSE_PATTERN"
+      ],
+      "group": "request-intent",
+      "bodySha256": "3c52d479fc86459acca028584ba1878ff7d645a0b608f5691e242e8394d9f9b4"
+    },
+    {
+      "names": [
+        "isAnalyticalDecisionDiscussion"
+      ],
+      "group": "request-intent",
+      "bodySha256": "8b466d335e2b736a31b632c7dc7e071231fa2ceb1b811ead6bfa1377a764ac6c"
+    },
+    {
+      "names": [
+        "ACCESS_GRANT_DECISION_PATTERN"
+      ],
+      "group": "request-intent",
+      "bodySha256": "7f5977978fb218b33f3fc6a0ecaa2fc5d2aa497e857e7eaa2a8dc4b6d2433e3f"
+    },
+    {
+      "names": [
+        "awaitsFutureExecutionAuthority"
+      ],
+      "group": "execution-authority",
+      "bodySha256": "655f019c065a0c95dfa163b76c62e4ec004db98a8415ca624f60aa332e651822"
+    },
+    {
+      "names": [
+        "accessGrantDecisionDisposition"
+      ],
+      "group": "execution-authority",
+      "bodySha256": "1bc6eef2a8dd316d82ff8f7876dfd8cad99f4e5aa4349469b8f58f774e6f433a"
+    },
+    {
+      "names": [
+        "independentNonAccessMutationRequested"
+      ],
+      "group": "execution-authority",
+      "bodySha256": "fe18d49145c4e38b2ea0b4066b3fe1c7b44ef05ac24c5c79fbb00921f96fd993"
+    },
+    {
+      "names": [
+        "classifyObjectiveRequest"
+      ],
+      "group": "execution-authority",
+      "bodySha256": "49ed3725ea3cab3de036f4bffc9b3c1b0550ba932cf252405fa5f88e2ab081b1"
+    },
+    {
+      "names": [
+        "classifyAuthorizedObjectiveEvidenceDomain"
+      ],
+      "group": "execution-authority",
+      "bodySha256": "0488b4bf4aa4ef442804d2083bae3b2dc7b7e06107a435ac03d620bc1a67264a"
+    },
+    {
+      "names": [
+        "boundedObjectiveRiskText"
+      ],
+      "group": "execution-authority",
+      "bodySha256": "5daf329fc60d57fd089462f6ddd4c3fe3c6485faf99c6538d2c7383eb3cfed29"
+    },
+    {
+      "names": [
+        "objectiveRiskContext"
+      ],
+      "group": "execution-authority",
+      "bodySha256": "5f8a029fefd4da1daa5f0858327ff1fd51afb5be5af28c22025825dd7ecf55b5"
+    },
+    {
+      "names": [
+        "isObjectiveMutationRequested"
+      ],
+      "group": "execution-authority",
+      "bodySha256": "84f6864acd964a4d08048bb78791eede9f873bb8249bf78eb15a41f9c1578b5b"
+    },
+    {
+      "names": [
+        "isChatResponseOnlyEdit"
+      ],
+      "group": "amendment-intent",
+      "bodySha256": "a5e7d51b7ef594132e0c821154d4d995268c6d35dab8d98765ec74020514c010"
+    },
+    {
+      "names": [
+        "isResponsePresentationOnlyAmendment"
+      ],
+      "group": "amendment-intent",
+      "bodySha256": "b919f06e667b780105322b2ef982bd3d2bd13d788b523daa708661ef8456bd61"
+    },
+    {
+      "names": [
+        "isBareObjectiveContinuation"
+      ],
+      "group": "amendment-intent",
+      "bodySha256": "de34054aceb14b7e38124e1d61695171119b69fafa8ff005562a0d8c8a9b6359"
+    },
+    {
+      "names": [
+        "amendmentEvidenceRequests"
+      ],
+      "group": "amendment-intent",
+      "bodySha256": "7992bb89e14d5fdbc2cb10bcfc18f758e1d75f4ee0da16d6b529a58bf14b25c7"
+    },
+    {
+      "names": [
+        "independentInstructionClauses"
+      ],
+      "group": "amendment-intent",
+      "bodySha256": "2b6e1402439b36581a9bd9f38bb264d1db91004b85a8f318a3c7dd63647adf06"
+    },
+    {
+      "names": [
+        "withoutClauseConnector"
+      ],
+      "group": "amendment-intent",
+      "bodySha256": "b7a4279571f7feca4c883c6d6b4402e769a34df9e618f2dd3810806584222805"
+    },
+    {
+      "names": [
+        "hasNonAuthoritativeStructuredLead"
+      ],
+      "group": "instruction-clause-syntax",
+      "bodySha256": "69664377fee04f32f80741b8b04e8a50de974b56e5e2c3155ee1dcbdb14bbbb4"
+    },
+    {
+      "names": [
+        "matchesExecutionAuthorityRevocation"
+      ],
+      "group": "instruction-clause-syntax",
+      "bodySha256": "2fde2c5f7cd0eed75b29c3fb144d216a6c603788320a70da7230ad9298a22879"
+    },
+    {
+      "names": [
+        "boundedInstructionClauses"
+      ],
+      "group": "execution-revocation",
+      "bodySha256": "ad57e9400e66721c6f5159669bd876b2fa67c9c2478361878518d2831ef897f1"
+    },
+    {
+      "names": [
+        "latestClauseRequestsExecution"
+      ],
+      "group": "execution-revocation",
+      "bodySha256": "7634c5ab84d64bbe53117cffa0e8898f621919e28db0bf3d07c5125e6415ccd5"
+    },
+    {
+      "names": [
+        "explicitlyRevokesExecutionAuthority"
+      ],
+      "group": "execution-revocation",
+      "bodySha256": "0077c32bb01fe913425ab685f9a1a031bc57f28de76c7276fd60cd1ac4eb3003"
+    },
+    {
+      "names": [
+        "editDistanceWithin"
+      ],
+      "group": "amendment-history",
+      "bodySha256": "6fb7087a47dc940d981c334bd23fc49fcb4dc1101a9366ba756a5b12eb9a6935"
+    },
+    {
+      "names": [
+        "looksLikeContinuation"
+      ],
+      "group": "amendment-history",
+      "bodySha256": "2a341b7c170a95a17a8e70ea960d91996325b2a02cecead880e29c7ecec498cc"
+    },
+    {
+      "names": [
+        "isTerseContextualRepairAmendment"
+      ],
+      "group": "amendment-history",
+      "bodySha256": "41a0a991e914fba4fb90e02e0e098e1b5e326b10f544b5e978203432c556ae81"
+    },
+    {
+      "names": [
+        "isLegacyContextualObjectiveRoot"
+      ],
+      "group": "amendment-history",
+      "bodySha256": "a552d00bd235a45a53a52b26b2291f64d2b0bdef36e72c8d9df3aceb76ba4040"
+    },
+    {
+      "names": [
+        "retainedObjectiveEvidenceDomain"
+      ],
+      "group": "amendment-history",
+      "bodySha256": "3e146691560243814b8181ecc5fa60f708daa57c58b7f3055a003e66070ef268"
+    },
+    {
+      "names": [
+        "objectiveAmendmentAuthorityText"
+      ],
+      "group": "amendment-authority",
+      "bodySha256": "e9fdc80deb28222c803d5ac7f0749088d4b66bc5f460f76f09a574f879bd857a"
+    },
+    {
+      "names": [
+        "objectiveAuthorityAmendments"
+      ],
+      "group": "amendment-authority",
+      "bodySha256": "dcae9e54f0bac78b947f4daf02efee8b2e8b269debe410864d3a2de4beb8f118"
+    },
+    {
+      "names": [
+        "canCorrectLegacyMedicalFalsePositive"
+      ],
+      "group": "evidence-domain",
+      "bodySha256": "59a4d639f5ffde53fc863b9112047ef306f85232e8accb606e2640bcc4041fd1"
+    },
+    {
+      "names": [
+        "canCorrectLegacyTechnicalLegalFalsePositive"
+      ],
+      "group": "evidence-domain",
+      "bodySha256": "c3f97b15774d0badac855835d475a93230431325ff98165b6d07ce4b49b72a54"
+    },
+    {
+      "names": [
+        "reclassifiedHighStakesClarification"
+      ],
+      "group": "evidence-domain",
+      "bodySha256": "297150b11a1e6309b4b9c99502eb457dd59d8e388dff09ea77ed20201f9d7c2a"
+    },
+    {
+      "names": [
+        "reclassifiedPersistedHighStakesObjective"
+      ],
+      "group": "evidence-domain",
+      "bodySha256": "e0ea07182c76ae9b69fbb3b22b08d1c9fd5425e4294357ad4a0289c2b3e4cdc4"
+    },
+    {
+      "names": [
+        "latestExplicitAuditEvidenceDomain"
+      ],
+      "group": "evidence-domain",
+      "bodySha256": "0d5c216ee0b7914a54a8cc182cf62669b445d4159e405a53f4417d7510cbaffa"
+    },
+    {
+      "names": [
+        "startsExplicitNewObjective"
+      ],
+      "group": "evidence-domain",
+      "bodySha256": "97124153999b48452345570738bdde5aebd59145a526ad1d80df87401735797e"
+    },
+    {
+      "names": [
+        "isObjectiveStatusOnly"
+      ],
+      "group": "evidence-domain",
+      "bodySha256": "d688438691f72c33d9ce9477c5166025c55862f31371ceef90f85c15985525ef"
+    },
+    {
+      "names": [
+        "isExplicitReadOnlyReview"
+      ],
+      "group": "closure-intent",
+      "bodySha256": "93f8826abf427ac37899d260a7227fc07d2e35bf45a3c57722b022a90e3c7e17"
+    },
+    {
+      "names": [
+        "TERMINAL_RECONCILIATION_MARKER_DISCLAIMER"
+      ],
+      "group": "closure-intent",
+      "bodySha256": "17451f017442d3c3df35edb619aaa55580f4e987f6de0558eedced81e0d057fd"
+    },
+    {
+      "names": [
+        "TERMINAL_RECONCILIATION_INSTRUCTION"
+      ],
+      "group": "closure-intent",
+      "bodySha256": "fe8bfb758b37025646a7760be5d2687b6d916d1d1f87599d535df1fd9032ed1d"
+    },
+    {
+      "names": [
+        "isStrictMarkedTerminalReconciliationEnvelope"
+      ],
+      "group": "closure-intent",
+      "bodySha256": "865eb08a5af58df1b46dd070274fe35db486430d820a4b9acdfb86af12485ae7"
+    },
+    {
+      "names": [
+        "isExplicitReadOnlyClosureRequest"
+      ],
+      "group": "closure-intent",
+      "bodySha256": "20527840f1701e96a5122bc2945c3de8af1213fc2c6e4880cafa4d8f030b219e"
+    },
+    {
+      "names": [
+        "isLiteralQuestionAnswerScript"
+      ],
+      "group": "closure-intent",
+      "bodySha256": "fa18802aee6e82f14a3e792d3fc807aa16ca35b8616b86b92f72f64cb38434a6"
+    },
+    {
+      "names": [
+        "BoundedQuestionAnswerEnvelope"
+      ],
+      "group": "closure-intent",
+      "bodySha256": "f5fafef343afc7d6a7f9c73d1b767c0e19c339a23a35de8fd934df150d628d04"
+    },
+    {
+      "names": [
+        "normalizedQuestionAnswerRequest"
+      ],
+      "group": "closure-intent",
+      "bodySha256": "9829f6102849d64ff1389d617743b4bec428bb29e96b6ca7db1e827751cc951d"
+    },
+    {
+      "names": [
+        "parseBoundedQuestionAnswerEnvelope"
+      ],
+      "group": "closure-intent",
+      "bodySha256": "feb70afe8906a27bac4feb4ea2b8681c2d7417066f4784b7df3d4519378ba5ba"
+    },
+    {
+      "names": [
+        "hasBoundedQuestionAnswerEnvelope"
+      ],
+      "group": "closure-intent",
+      "bodySha256": "b97a2af73fb88cda86f541ac891387d1a7724c8f14d2bab15088e32457320b21"
+    },
+    {
+      "names": [
+        "hasExplicitTerminalContractMutation"
+      ],
+      "group": "terminal-contract-mutation",
+      "bodySha256": "fe79b9e9208336881b548b7ea1a3d0a34cb0be1ccde2e0b273e8f26fac785f61"
+    },
+    {
+      "names": [
+        "isExplicitQuestionAnswerOnlyRequest"
+      ],
+      "group": "question-answer-authority",
+      "bodySha256": "581744f984432b5392b06b67b770d158a20d6bf4624775c26388ca01d91186c4"
+    },
+    {
+      "names": [
+        "objectiveRequiresExecutionEvidence"
+      ],
+      "group": "execution-requirements",
+      "bodySha256": "381cafc1e07846a1e5c6db2b8a5990dfafeefd1606b2187f30e65fc38c1c1442"
+    },
+    {
+      "names": [
+        "projectLegacyObjectiveCompletionRequirements"
+      ],
+      "group": "execution-requirements",
+      "bodySha256": "784b60ec1ea6b4d3c5425e3aee4f734e735f12d065e20079b8f4aeee39754c45"
+    },
+    {
+      "names": [
+        "transitionObjectiveContract"
+      ],
+      "group": "transition",
+      "bodySha256": "ae43f1f43278f255a95ab65143f4f357d6b8b530041bd6d8392f923e056d3ead"
+    },
+    {
+      "names": [
+        "objectiveCostUsd"
+      ],
+      "group": "history-reconstruction",
+      "bodySha256": "c5a8685eed333a04179edfdf410808db037f9d0c7a2c5adb01998c6deb00970e"
+    },
+    {
+      "names": [
+        "findObjectiveText"
+      ],
+      "group": "history-reconstruction",
+      "bodySha256": "746eb0b6c7094e8af4c756b1416315f496ab206c0b6764c6059b9f4fecd60914"
+    },
+    {
+      "names": [
+        "LEGACY_SOURCE_ACTIVATION_SUFFIX"
+      ],
+      "group": "history-reconstruction",
+      "bodySha256": "cdf22572c9a844e39d7a3d26a3d1514733664db535ce20e8336c39cc74a8619e"
+    },
+    {
+      "names": [
+        "LEGACY_AUTONOMY_FALLBACK_MESSAGE"
+      ],
+      "group": "history-reconstruction",
+      "bodySha256": "ee70757fe9cb5e5fafe9f3b43c10e8ab13902d7c8ee892a92a9c9c0ca6e0a934"
+    },
+    {
+      "names": [
+        "LEGACY_AUTOMATIC_RECOVERY_MESSAGE"
+      ],
+      "group": "history-reconstruction",
+      "bodySha256": "a73de1fed058689a2640f6afade406f8a84a134377d92eeb9c586147c0cb73af"
+    },
+    {
+      "names": [
+        "isHostSyntheticObjectiveText"
+      ],
+      "group": "history-reconstruction",
+      "bodySha256": "7b9b4d4cb42c92b961bba326556d5bf499b875bfe58635eb07bace5b19e098f6"
+    },
+    {
+      "names": [
+        "isHostSyntheticObjectiveMessage"
+      ],
+      "group": "history-reconstruction",
+      "bodySha256": "e317b71c3d8e11f5d1144c6cf9c20ffe9fc9ad4216b5b918f91f21eab07ae682"
+    },
+    {
+      "names": [
+        "reconstructObjectiveForBranch"
+      ],
+      "group": "history-reconstruction",
+      "bodySha256": "f3b15173d62cfaaeac36c6fe06a84e6b442f0dc8d3ebaeab694a849f539e6901"
+    },
+    {
+      "names": [
+        "stableValue"
+      ],
+      "group": "tool-evidence",
+      "bodySha256": "99fcda707be630c418872f216766e0836c77598bbd2c6b0be0023fa34aff186f"
+    },
+    {
+      "names": [
+        "normalizedToolTarget"
+      ],
+      "group": "tool-evidence",
+      "bodySha256": "d018a088d84076dc83cc9a0ec3eb639b3cf5d6c20077d48c0976f94590c57d3b"
+    },
+    {
+      "names": [
+        "resultDigest"
+      ],
+      "group": "tool-evidence",
+      "bodySha256": "7d3c6076e406c000d592f413817ad2b48af864b93c3d2a49ccc9626622e41bf1"
+    },
+    {
+      "names": [
+        "mutationTransformDigest"
+      ],
+      "group": "tool-evidence",
+      "bodySha256": "8a9800a287ad9f0b86cc7c27e04aca4e52612a7771dc58e0935dfa77a116f9e2"
+    },
+    {
+      "names": [
+        "isPassiveNoProgressTool"
+      ],
+      "group": "tool-evidence",
+      "bodySha256": "ecbe5c1c55685f25512ad56bbc829f6c25d97d51bbcbe132eb0f58d9948e162f"
+    },
+    {
+      "names": [
+        "isObjectiveToolExecutedSuccessfully"
+      ],
+      "group": "tool-evidence",
+      "bodySha256": "5658990b56fc93b8204950d321b4ea49006509ca7f27d425cd2cfef41ad5f9b1"
+    },
+    {
+      "names": [
+        "isObjectiveCoordinationTool"
+      ],
+      "group": "tool-evidence",
+      "bodySha256": "995b0e66471db87c60ecef69abb1e1d0cf90a371ff5e5c4f0e6258e64985ad34"
+    },
+    {
+      "names": [
+        "hasObjectiveSubstantiveToolResult"
+      ],
+      "group": "tool-evidence",
+      "bodySha256": "3464460227b0188a76e9f3bcc16a5663141eeffe23db5b21d7801ee64e48c5f1"
+    },
+    {
+      "names": [
+        "positiveHttpPostTargetMutation"
+      ],
+      "group": "tool-evidence",
+      "bodySha256": "805bee61b5d7a694521bf7c17e84c161f7ea62e0de24110dae5598e059f80c65"
+    },
+    {
+      "names": [
+        "isObjectiveMutationTool"
+      ],
+      "group": "tool-evidence",
+      "bodySha256": "da403c21c622402b3382696818782889715e422e1d33d0db6041f00446b6fa95"
+    },
+    {
+      "names": [
+        "isObjectiveEvidenceInvalidatingMutation"
+      ],
+      "group": "progress-evidence",
+      "bodySha256": "52cdf77a53da3a405d21873cbef63b1ac7a9dd13ddd6aa56e76ef93cba76fa90"
+    },
+    {
+      "names": [
+        "TurnProgressFingerprints"
+      ],
+      "group": "progress-evidence",
+      "bodySha256": "e0a79287065b8e26289346c429a1e5aa797125b51a5305e762ae98935f11c3f8"
+    },
+    {
+      "names": [
+        "turnProgressFingerprints"
+      ],
+      "group": "progress-evidence",
+      "bodySha256": "1231eca861f000f00e53e27dc69f348bddc2193e10f75ed8ca1d309767478a30"
+    },
+    {
+      "names": [
+        "turnProgressFingerprint"
+      ],
+      "group": "progress-evidence",
+      "bodySha256": "524e8453bcbe530acecd944f94fbf4239b9e777150c2a359020437ebafce6f8b"
+    },
+    {
+      "names": [
+        "hasObjectiveExecutionEvidence"
+      ],
+      "group": "progress-evidence",
+      "bodySha256": "979c27ffaf40d9271c929169a4eceef74faf974e4fe5dc2944427da5361bcc5c"
+    },
+    {
+      "names": [
+        "MUTATION_BASH_PATTERN"
+      ],
+      "group": "mutation-vocabulary",
+      "bodySha256": "529ae4b185bad951da5959145847a9fc9ef5b8f708bd0f0c0daa1b43eebdbcf5"
+    },
+    {
+      "names": [
+        "objectiveReviewBinding"
+      ],
+      "group": "review-binding",
+      "bodySha256": "0d664e4704ed33f75ad44ac0b44b020cc96cd4df441c82741f9b4f07921fc09c"
+    },
+    {
+      "names": [
+        "objectiveRequiresScopeCoverageReview"
+      ],
+      "group": "review-binding",
+      "bodySha256": "c77cf6791c4828cd3ac34d49f6fcae022547e966ac668975cece2340063f66e7"
+    },
+    {
+      "names": [
+        "buildObjectiveScopePrompt"
+      ],
+      "group": "review-binding",
+      "bodySha256": "cdf0a08c58cf2e1fc9b79f1a4df0a21c4132937e6b51c1e47066e1cf714a0184"
+    },
+    {
+      "names": [
+        "objectiveAllowsContentCheckReview"
+      ],
+      "group": "review-binding",
+      "bodySha256": "a0c1911aa45e743a7156523555f8306593f983588f16e5e57d87df77e532bddb"
+    },
+    {
+      "names": [
+        "objectivePromptAmendments"
+      ],
+      "group": "prompt-authority",
+      "bodySha256": "3e2426a5d4c197140472a5b95c12b0a7a29e4c39c8a2cd4d13940699d91c4a28"
+    },
+    {
+      "names": [
+        "ExplicitReadOnlyAuthorityBoundary"
+      ],
+      "group": "prompt-authority",
+      "bodySha256": "fcd7e2242d75325a46e132f6ba1b009e20411ba8338062451ae755cdcc6fbf6b"
+    },
+    {
+      "names": [
+        "currentExplicitReadOnlyAuthorityBoundary"
+      ],
+      "group": "prompt-authority",
+      "bodySha256": "5476c48103a29a164b03a8025541edf31324faacdd68331170c68d2b9460ba59"
+    },
+    {
+      "names": [
+        "objectiveEvidenceContractSegments"
+      ],
+      "group": "prompt-authority",
+      "bodySha256": "3ea292281f68b6cb20111b8f0863578e766f158afdaecaf3fab0d1464520fa67"
+    },
+    {
+      "names": [
+        "buildObjectiveContractPrompt"
+      ],
+      "group": "prompt",
+      "bodySha256": "927574aaf2566d0d9ba9d5cc54681ee85baed25221841ca9fd54e8ac95d5cc51"
+    }
+  ],
+  "modules": [
+    {
+      "name": "intent-vocabulary",
+      "lines": 158
+    },
+    {
+      "name": "types",
+      "lines": 23
+    },
+    {
+      "name": "request-intent",
+      "lines": 207
+    },
+    {
+      "name": "execution-authority",
+      "lines": 173
+    },
+    {
+      "name": "amendment-intent",
+      "lines": 74
+    },
+    {
+      "name": "instruction-clause-syntax",
+      "lines": 40
+    },
+    {
+      "name": "execution-revocation",
+      "lines": 99
+    },
+    {
+      "name": "amendment-history",
+      "lines": 98
+    },
+    {
+      "name": "amendment-authority",
+      "lines": 41
+    },
+    {
+      "name": "evidence-domain",
+      "lines": 177
+    },
+    {
+      "name": "closure-intent",
+      "lines": 153
+    },
+    {
+      "name": "terminal-contract-mutation",
+      "lines": 41
+    },
+    {
+      "name": "question-answer-authority",
+      "lines": 26
+    },
+    {
+      "name": "execution-requirements",
+      "lines": 100
+    },
+    {
+      "name": "transition",
+      "lines": 308
+    },
+    {
+      "name": "history-reconstruction",
+      "lines": 104
+    },
+    {
+      "name": "tool-evidence",
+      "lines": 152
+    },
+    {
+      "name": "progress-evidence",
+      "lines": 166
+    },
+    {
+      "name": "mutation-vocabulary",
+      "lines": 3
+    },
+    {
+      "name": "review-binding",
+      "lines": 67
+    },
+    {
+      "name": "prompt-authority",
+      "lines": 144
+    },
+    {
+      "name": "prompt",
+      "lines": 161
+    }
+  ],
+  "dependencies": {
+    "intent-vocabulary": [
+      "instruction-clause-syntax",
+      "types"
+    ],
+    "types": [],
+    "request-intent": [
+      "intent-vocabulary",
+      "types",
+      "instruction-clause-syntax"
+    ],
+    "execution-authority": [
+      "request-intent",
+      "types",
+      "instruction-clause-syntax",
+      "amendment-authority"
+    ],
+    "amendment-intent": [
+      "types",
+      "execution-authority",
+      "intent-vocabulary",
+      "closure-intent",
+      "question-answer-authority"
+    ],
+    "instruction-clause-syntax": [],
+    "execution-revocation": [
+      "amendment-intent",
+      "types",
+      "request-intent",
+      "instruction-clause-syntax",
+      "execution-authority",
+      "closure-intent"
+    ],
+    "amendment-history": [
+      "intent-vocabulary",
+      "types",
+      "instruction-clause-syntax",
+      "request-intent",
+      "amendment-authority",
+      "execution-authority"
+    ],
+    "amendment-authority": [
+      "closure-intent"
+    ],
+    "evidence-domain": [
+      "amendment-authority",
+      "execution-authority",
+      "execution-requirements",
+      "amendment-intent",
+      "types",
+      "intent-vocabulary"
+    ],
+    "closure-intent": [
+      "request-intent",
+      "instruction-clause-syntax",
+      "types"
+    ],
+    "terminal-contract-mutation": [
+      "types",
+      "execution-revocation",
+      "amendment-intent",
+      "instruction-clause-syntax"
+    ],
+    "question-answer-authority": [
+      "execution-authority",
+      "closure-intent",
+      "intent-vocabulary"
+    ],
+    "execution-requirements": [
+      "amendment-authority",
+      "execution-revocation",
+      "request-intent",
+      "amendment-intent",
+      "execution-authority",
+      "closure-intent",
+      "instruction-clause-syntax"
+    ],
+    "transition": [
+      "types",
+      "amendment-authority",
+      "closure-intent",
+      "amendment-history",
+      "intent-vocabulary",
+      "evidence-domain",
+      "amendment-intent",
+      "terminal-contract-mutation",
+      "execution-authority",
+      "execution-revocation",
+      "execution-requirements",
+      "question-answer-authority"
+    ],
+    "history-reconstruction": [
+      "transition"
+    ],
+    "tool-evidence": [
+      "intent-vocabulary",
+      "mutation-vocabulary"
+    ],
+    "progress-evidence": [
+      "tool-evidence",
+      "intent-vocabulary"
+    ],
+    "mutation-vocabulary": [],
+    "review-binding": [
+      "amendment-authority",
+      "evidence-domain",
+      "amendment-intent",
+      "closure-intent",
+      "history-reconstruction",
+      "prompt-authority",
+      "execution-authority",
+      "intent-vocabulary",
+      "execution-requirements"
+    ],
+    "prompt-authority": [
+      "evidence-domain",
+      "history-reconstruction",
+      "amendment-authority",
+      "amendment-intent",
+      "execution-revocation",
+      "types",
+      "closure-intent",
+      "execution-authority"
+    ],
+    "prompt": [
+      "execution-requirements",
+      "history-reconstruction",
+      "prompt-authority",
+      "closure-intent",
+      "amendment-authority",
+      "review-binding",
+      "intent-vocabulary"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

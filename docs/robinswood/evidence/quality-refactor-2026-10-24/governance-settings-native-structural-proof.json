@@ -1,0 +1,38 @@
+{
+  "status": "passed",
+  "nativeDeclarationBodiesPreserved": true,
+  "reviewedStableDependencyAdditions": {},
+  "nativeMainJSXAndInlineCallbacksPreserved": true,
+  "nativeRootAndActionHooksReinlinedExactly": true,
+  "viewAddsNoStateOrEffects": true,
+  "nativeValuesPassedDirectly": true,
+  "nativeImportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/pages/settings/GovernanceSettingsPage.tsx",
+      "lines": 334,
+      "sha256": "a2670c47f62cf74c0b2cf0afe23a71f5702f2393ba3529b8d5d6dbb6ae77d59c"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/governance-settings-options.ts",
+      "lines": 45,
+      "sha256": "a57c36657602adf8e60cdc02c1fe54aa065930a8e93f072f89b78f1ea9d8fec9"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/governance-emergency-controls.tsx",
+      "lines": 177,
+      "sha256": "9a0a16329da60a27e1691765f5e275a08ac29d75607fff3d71fb453d4003c15f"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/governance-remote-supervision.tsx",
+      "lines": 141,
+      "sha256": "a4846a4b36ec651841c82a0e141f24cc968e0405c4beaf815fac04cea10c805d"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/governance-settings-content.tsx",
+      "lines": 478,
+      "sha256": "89ca9c3f2d42490812b1c9e05d152fc01a46231ff04f3c29a1f86295108f483b"
+    }
+  ]
+}

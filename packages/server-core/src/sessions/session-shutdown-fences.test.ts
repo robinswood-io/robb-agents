@@ -1,3 +1,7 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { ConfigWatcher } from '@craft-agent/shared/config';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -19,13 +23,13 @@ async function managedSession(name: string) {
   const root = mkdtempSync(join(tmpdir(), 'robb-session-shutdown-'))
   roots.push(root)
   const stored = await createSession(root, { name })
-  const manager = new SessionManager()
+  const manager = withSessionOperationsForTest(new SessionManager())
   const managed = createManagedSession(
     stored,
     { id: `workspace-${stored.id}`, name: 'Shutdown', rootPath: root, createdAt: 1 } as never,
     { messagesLoaded: true },
   )
-  ;(manager as unknown as { sessions: Map<string, typeof managed> }).sessions.set(managed.id, managed)
+  ;sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
   return { root, manager, managed }
 }
 
@@ -33,9 +37,7 @@ describe('session shutdown operation and runtime fences', () => {
   it('waits for an admitted share, rejects new leases, and leaves no late write or event', async () => {
     const { root, manager, managed } = await managedSession('Shutdown share')
     const events: Array<{ type: string }> = []
-    const runtime = manager as unknown as {
-      sendEvent: (event: { type: string }) => void
-    }
+    const runtime = sessionManagerForTest(manager)
     runtime.sendEvent = event => { events.push(event) }
 
     let releaseUpload!: () => void
@@ -100,10 +102,7 @@ describe('session shutdown operation and runtime fences', () => {
     } as never)
 
     const events: Array<{ type: string; result?: string }> = []
-    const runtime = manager as unknown as {
-      processEvent: (session: typeof managed, event: unknown, generation?: number) => Promise<void>
-      sendEvent: (event: { type: string; result?: string }) => void
-    }
+    const runtime = sessionManagerForTest(manager)
     runtime.sendEvent = event => { events.push(event) }
     managed.agent = {
       dispose: () => undefined,
@@ -141,9 +140,7 @@ describe('session shutdown operation and runtime fences', () => {
     let releaseSend!: () => void
     const sendGate = new Promise<void>(resolve => { releaseSend = resolve })
     const order: string[] = []
-    const runtime = manager as unknown as {
-      performSendMessage: (...args: unknown[]) => Promise<void>
-    }
+    const runtime = sessionManagerForTest(manager)
     runtime.performSendMessage = async () => {
       notifySendEntered()
       await sendGate
@@ -178,18 +175,14 @@ describe('session shutdown operation and runtime fences', () => {
       content: 'original',
       timestamp: Date.now(),
     })
-    const runtime = manager as unknown as {
-      configWatchers: Map<string, { stop: () => void }>
-      persistSession: (session: typeof managed) => boolean
-      sendEvent: (event: { type: string }) => void
-    }
+    const runtime = sessionManagerForTest(manager)
     const events: Array<{ type: string }> = []
     runtime.sendEvent = event => { events.push(event) }
     runtime.persistSession(managed)
     await manager.flushSession(managed.id)
 
     let watcherStopped = false
-    runtime.configWatchers.set(root, { stop: () => { watcherStopped = true } })
+    sessionRuntimeStateForTest(manager).configWatchers.set(root, Object.assign(new ConfigWatcher(root, {}), { stop: () => { watcherStopped = true } }))
     const cleanup = manager.cleanup()
     expect(watcherStopped).toBe(true)
     await cleanup
@@ -223,9 +216,7 @@ describe('session shutdown operation and runtime fences', () => {
     let releaseCreate!: () => void
     const createGate = new Promise<void>(resolve => { releaseCreate = resolve })
     const order: string[] = []
-    const runtime = manager as unknown as {
-      performCreateSession: (...args: unknown[]) => Promise<unknown>
-    }
+    const runtime = sessionManagerForTest(manager)
     runtime.performCreateSession = async () => {
       notifyCreateEntered()
       await createGate
@@ -251,9 +242,6 @@ describe('session shutdown operation and runtime fences', () => {
 
   it('drains a restart recovery before the final shutdown persistence barrier', async () => {
     const { root, manager, managed } = await managedSession('Shutdown restart recovery')
-    const runtime = manager as unknown as {
-      restartRecoveriesInFlight: Map<string, Promise<void>>
-    }
     let releaseRecovery!: () => void
     const recoveryGate = new Promise<void>(resolve => { releaseRecovery = resolve })
     let notifyRecoveryStarted!: () => void
@@ -266,11 +254,11 @@ describe('session shutdown operation and runtime fences', () => {
       mkdirSync(metaPath, { recursive: true })
       writeFileSync(join(metaPath, 'shutdown-recovery.json'), '{}')
     })().finally(() => {
-      if (runtime.restartRecoveriesInFlight.get(managed.id) === recovery) {
-        runtime.restartRecoveriesInFlight.delete(managed.id)
+      if (sessionRuntimeStateForTest(manager).restartRecoveriesInFlight.get(managed.id) === recovery) {
+        sessionRuntimeStateForTest(manager).restartRecoveriesInFlight.delete(managed.id)
       }
     })
-    runtime.restartRecoveriesInFlight.set(managed.id, recovery)
+    sessionRuntimeStateForTest(manager).restartRecoveriesInFlight.set(managed.id, recovery)
     await recoveryStarted
 
     let cleanupSettled = false
@@ -292,12 +280,7 @@ describe('session shutdown operation and runtime fences', () => {
 
   it('drains an admitted strong cancellation proof without nesting its silent stop lease', async () => {
     const { manager, managed } = await managedSession('Shutdown strong cancellation')
-    const runtime = manager as unknown as {
-      performCancelProcessingAndWait: (
-        candidate: typeof managed,
-        timeoutMs: number,
-      ) => Promise<unknown>
-    }
+    const runtime = sessionManagerForTest(manager)
     let releaseCancellation!: () => void
     const cancellationGate = new Promise<void>(resolve => { releaseCancellation = resolve })
     let notifyCancellationStarted!: () => void
@@ -325,9 +308,7 @@ describe('session shutdown operation and runtime fences', () => {
 
   it('drains the retained silent stop after its strong-cancellation caller times out', async () => {
     const { manager, managed } = await managedSession('Shutdown timed-out strong cancellation')
-    const runtime = manager as unknown as {
-      cancelProcessing: (sessionId: string, silent?: boolean) => Promise<void>
-    }
+    const runtime = sessionManagerForTest(manager)
     let releaseStop!: () => void
     const stopGate = new Promise<void>(resolve => { releaseStop = resolve })
     let notifyStopStarted!: () => void
@@ -363,16 +344,12 @@ describe('session shutdown operation and runtime fences', () => {
         if (disposalCalls === 1) throw new Error('fixture first shutdown disposal failure')
       },
     } as never
-    const runtime = manager as unknown as {
-      runtimeDisposalBarriers: Map<string, Map<symbol, unknown>>
-      runtimeDisposalsInFlight: Map<string, Set<Promise<void>>>
-    }
 
     await manager.cleanup()
 
     expect(disposalCalls).toBe(2)
-    expect(runtime.runtimeDisposalBarriers.has(managed.id)).toBe(false)
-    expect(runtime.runtimeDisposalsInFlight.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).runtimeDisposalBarriers.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).runtimeDisposalsInFlight.has(managed.id)).toBe(false)
   })
 
   it('fails cleanup explicitly when a detached runtime destructor remains unproven', async () => {
@@ -394,9 +371,7 @@ describe('session shutdown operation and runtime fences', () => {
 
   it('remains fail-closed after the drain deadline until the admitted lease finishes', async () => {
     const { manager, managed } = await managedSession('Shutdown drain deadline')
-    const runtime = manager as unknown as {
-      trackSessionOperation: <T>(candidate: typeof managed, operation: () => Promise<T>) => Promise<T>
-    }
+    const runtime = sessionManagerForTest(manager)
     let releaseOperation!: () => void
     const operationGate = new Promise<void>(resolve => { releaseOperation = resolve })
     let notifyOperationStarted!: () => void
@@ -414,7 +389,7 @@ describe('session shutdown operation and runtime fences', () => {
     let cleanupSettled = false
     const cleanupResult = manager.cleanup().then(
       () => ({ error: undefined as unknown }),
-      error => ({ error }),
+      (error: unknown) => ({ error }),
     ).finally(() => { cleanupSettled = true })
     try {
       await new Promise<void>(resolve => setTimeout(resolve, 30))
@@ -435,22 +410,19 @@ describe('session shutdown operation and runtime fences', () => {
 
   it('continues teardown when a watcher stop throws and keeps admission closed', async () => {
     const { root, manager, managed } = await managedSession('Shutdown watcher failure')
-    const runtime = manager as unknown as {
-      configWatchers: Map<string, { stop: () => void }>
-    }
     let disposalCalls = 0
     managed.agent = {
       dispose: () => undefined,
       disposeForRestart: async () => { disposalCalls += 1 },
     } as never
-    runtime.configWatchers.set(root, {
+    sessionRuntimeStateForTest(manager).configWatchers.set(root, Object.assign(new ConfigWatcher(root, {}), {
       stop: () => { throw new Error('fixture watcher stop failure') },
-    })
+    }))
 
     await expect(manager.cleanup()).rejects.toThrow('fixture watcher stop failure')
 
     expect(disposalCalls).toBeGreaterThanOrEqual(1)
-    expect(runtime.configWatchers.size).toBe(0)
+    expect(sessionRuntimeStateForTest(manager).configWatchers.size).toBe(0)
     await expect(manager.restartAgentRuntime(managed.id))
       .rejects.toThrow('session manager is shutting down')
   })

@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { app, BrowserWindow } from 'electron'
 import { readFileSync } from 'node:fs'
 import { createServer } from 'node:http'
@@ -9,7 +10,7 @@ import { executeBrowserToolCommand } from '../../../../../../packages/shared/src
 import type { BrowserPaneFns } from '../../../../../../packages/shared/src/agent/browser-tools'
 
 app.setName('Robb Browser Input Fixture')
-app.setPath('userData', process.env.ROBB_INPUT_FIXTURE_PROFILE!)
+app.setPath('userData', process.env["ROBB_INPUT_FIXTURE_PROFILE"]!)
 app.commandLine.appendSwitch('disable-background-networking')
 const deadline = setTimeout(() => app.exit(2), 20_000)
 app.whenReady().then(async () => {
@@ -18,7 +19,7 @@ app.whenReady().then(async () => {
   let clipboardChecks = 0
   window.webContents.session.setPermissionCheckHandler((_wc, permission) => { if (permission.startsWith('clipboard')) clipboardChecks++; return isBrowserPanePermissionAllowed(permission) })
   window.webContents.session.setPermissionRequestHandler((_wc, permission, callback) => { permissionRequests++; callback(isBrowserPanePermissionAllowed(permission)) })
-  const keyboard = readFileSync(process.env.ROBB_INPUT_FIXTURE_KEYBOARD!, 'utf8')
+  const keyboard = readFileSync(process.env["ROBB_INPUT_FIXTURE_KEYBOARD"]!, 'utf8')
   const html = `<canvas tabindex="0"></canvas><textarea></textarea><script>${keyboard}
     window.received=[]; window.released=[]; window.keys=[];
     const receiver=new Guacamole.Keyboard(document.querySelector('canvas'));
@@ -49,9 +50,12 @@ app.whenReady().then(async () => {
   assert.equal(await window.webContents.executeJavaScript('document.activeElement.tagName'), 'CANVAS')
   const receipt = await executeBrowserToolCommand({ command: ['type-keys', requested], fns, sessionId: 'fixture' })
   assert.match(receipt.output, /not verified/)
-  const got = await window.webContents.executeJavaScript('({received,released,keys})')
+  const got = z.object({
+    received: z.array(z.number()), released: z.array(z.number()),
+    keys: z.array(z.object({ trusted: z.boolean(), key: z.string() })),
+  }).parse(await window.webContents.executeJavaScript('({received,released,keys})'))
   const rendered = got.received.map((k: number) => String.fromCodePoint(k >= 0x1000000 ? k - 0x1000000 : k)).join('')
-  if (rendered !== requested) console.log(JSON.stringify({ fixtureDebug: true, activeTag: await window.webContents.executeJavaScript('document.activeElement.tagName'), keyEvents: got.keys.length, receivedCount: got.received.length, permissionRequests, clipboardChecks }))
+  if (rendered !== requested) console.log(JSON.stringify({ fixtureDebug: true, activeTag: z.string().parse(await window.webContents.executeJavaScript('document.activeElement.tagName')), keyEvents: got.keys.length, receivedCount: got.received.length, permissionRequests, clipboardChecks }))
   assert.equal(rendered, requested)
   assert.deepEqual(got.released, got.received)
   assert(got.keys.every((k: { trusted: boolean }) => k.trusted))
@@ -73,11 +77,11 @@ app.whenReady().then(async () => {
   // A separate secure loopback document exercises real clipboard policy denials.
   await window.loadURL(`http://127.0.0.1:${(server.address() as AddressInfo).port}/`)
   assert.equal(await window.webContents.executeJavaScript('typeof navigator.clipboard?.writeText'), 'function')
-  const keysBeforeDeniedClipboard = await window.webContents.executeJavaScript('keys.length')
+  const keysBeforeDeniedClipboard = z.number().parse(await window.webContents.executeJavaScript('keys.length'))
   // Real Chromium rejection response (exceptionDetails), without reading the OS clipboard.
   await assert.rejects(() => executeBrowserToolCommand({ command: ['paste', 'never paste this'], fns, sessionId: 'fixture' }), /Clipboard write failed/)
   await assert.rejects(() => cdp.getClipboard(), /Clipboard read failed/)
   assert.equal(await window.webContents.executeJavaScript('keys.length'), keysBeforeDeniedClipboard)
   console.log(JSON.stringify({ passed: true, receiver: 'Apache Guacamole.Keyboard 1.5.5', exactUnicodeRoundTrip: true, balancedKeyReleases: true, trustedKeyboardEvents: true, enterOrModifierEvents: 0, keyboardClipboardRequests: 0, deniedClipboardHasNoShortcut: true, clipboardPolicyRequests: permissionRequests, clipboardContext: 'isolated loopback HTTP', keyboardContext: 'isolated data document with emulated focus', nativeWindowFocusQualified: false, domAndCanvasDistinguished: true, remoteServerOrERPAccess: false }))
   cdp.detach(); window.destroy(); server.close(); clearTimeout(deadline); app.quit()
-}).catch(error => { console.error(error); app.exit(1) })
+}).catch((error: unknown) => { console.error(error); app.exit(1) })

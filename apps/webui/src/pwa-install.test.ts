@@ -12,7 +12,7 @@ function setNavigator(userAgent: string, maxTouchPoints = 0): void {
 
 afterEach(() => {
   if (originalNavigator) Object.defineProperty(globalThis, 'navigator', originalNavigator)
-  else delete (globalThis as Record<string, unknown>).navigator
+  else delete (globalThis as Record<string, unknown>)["navigator"]
 })
 
 describe('isAppleMobileDevice', () => {

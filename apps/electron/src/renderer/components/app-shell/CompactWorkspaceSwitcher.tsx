@@ -27,9 +27,9 @@ interface CompactWorkspaceSwitcherProps {
   workspaces: Workspace[]
   activeWorkspaceId: string | null
   onSelect: (workspaceId: string, openInNewWindow?: boolean) => void | Promise<void>
-  onWorkspaceCreated?: (workspace: Workspace) => void
-  onWorkspaceRemoved?: () => void
-  workspaceUnreadMap?: Record<string, boolean>
+  onWorkspaceCreated?: ((workspace: Workspace) => void) | undefined
+  onWorkspaceRemoved?: (() => void) | undefined
+  workspaceUnreadMap?: Record<string, boolean> | undefined
 }
 
 /**

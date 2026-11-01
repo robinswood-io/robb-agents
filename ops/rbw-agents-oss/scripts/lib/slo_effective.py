@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+from pydantic import JsonValue, TypeAdapter
+
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
+JSON_ARRAY = TypeAdapter(list[JsonValue])
+JSON_ROWS = TypeAdapter(list[dict[str, JsonValue]])
+
 GOVERNANCE_TARGETS = {'oss-agent-control-plane', 'oss-industrialization-dashboard'}
 CONTROL_PLANE_ALLOWED_REASONS = {'wrapper_failure_rate_warn', 'wrapper_failure_rate_breach', 'current:canaryPlanner', 'current:canaryOutcome'}
 DASHBOARD_ALLOWED_REASONS = {
@@ -16,24 +22,25 @@ GOVERNANCE_BLOCKERS = {
     'canaryOutcome',
 }
 
-def _counts(report):
-    return report.get('counts') if isinstance(report, dict) and isinstance(report.get('counts'), dict) else {}
+def _counts(report: JsonValue) -> dict[str, JsonValue]:
+    value = report.get('counts') if isinstance(report, dict) else None
+    return value if isinstance(value, dict) else {}
 
-def _int(value, default=0):
+def _int(value: JsonValue, default: int = 0) -> int:
     try:
-        return int(value or default)
-    except Exception:
+        return int(TypeAdapter(str | int | float).validate_python(value or default))
+    except (ValueError, TypeError, OverflowError):
         return int(default)
 
-def _reasons(item):
-    return [str(r) for r in (item.get('reasons') or [])]
+def _reasons(item: dict[str, JsonValue]) -> list[str]:
+    return [str(r) for r in JSON_ARRAY.validate_python(item.get('reasons') or [])]
 
-def _current_blockers(item):
-    metrics = item.get('metrics') if isinstance(item.get('metrics'), dict) else {}
-    health = metrics.get('currentHealth') if isinstance(metrics.get('currentHealth'), dict) else {}
-    return [str(r) for r in (health.get('blockingReasons') or [])]
+def _current_blockers(item: dict[str, JsonValue]) -> list[str]:
+    metrics = JSON_OBJECT.validate_python(item.get('metrics') or {})
+    health = JSON_OBJECT.validate_python(metrics.get('currentHealth') or {})
+    return [str(r) for r in JSON_ARRAY.validate_python(health.get('blockingReasons') or [])]
 
-def is_governance_self_cycle_item(item):
+def is_governance_self_cycle_item(item: JsonValue) -> bool:
     """True only for P7 governance deadlock SLO items.
 
     This deliberately does *not* ignore business, finance, domain, mail, or external
@@ -46,8 +53,8 @@ def is_governance_self_cycle_item(item):
     target = item.get('target')
     reasons = set(_reasons(item))
     blockers = set(_current_blockers(item))
-    metrics = item.get('metrics') if isinstance(item.get('metrics'), dict) else {}
-    health = metrics.get('currentHealth') if isinstance(metrics.get('currentHealth'), dict) else {}
+    metrics = JSON_OBJECT.validate_python(item.get('metrics') or {})
+    health = JSON_OBJECT.validate_python(metrics.get('currentHealth') or {})
 
     if target == 'oss-agent-control-plane':
         if health.get('ok') is True and not blockers:
@@ -59,7 +66,7 @@ def is_governance_self_cycle_item(item):
 
     return False
 
-def is_recovered_watch_item(item):
+def is_recovered_watch_item(item: JsonValue) -> bool:
     """True for non-blocking SLO actions already recovered by current artifact.
 
     These items must remain visible as watch/action queue evidence, but they should
@@ -71,15 +78,16 @@ def is_recovered_watch_item(item):
         return False
     if str(item.get('severity') or '').lower() == 'blocking':
         return False
-    metrics = item.get('metrics') if isinstance(item.get('metrics'), dict) else {}
-    health = metrics.get('currentHealth') if isinstance(metrics.get('currentHealth'), dict) else {}
+    metrics = JSON_OBJECT.validate_python(item.get('metrics') or {})
+    health = JSON_OBJECT.validate_python(metrics.get('currentHealth') or {})
     return bool(metrics.get('recoveredByCurrentArtifact') is True or health.get('ok') is True)
 
-def effective_slo_state(slo_report, action_queue):
+def effective_slo_state(slo_report: dict[str, JsonValue], action_queue: JsonValue) -> dict[str, JsonValue]:
     sc = _counts(slo_report)
-    raw = _int(sc.get('actions') or len(slo_report.get('actions') or []))
+    raw = _int(sc.get('actions') or len(JSON_ARRAY.validate_python(slo_report.get('actions') or [])))
     raw_blocking = _int(sc.get('blockingIssues'))
-    items = action_queue.get('items') if isinstance(action_queue, dict) and isinstance(action_queue.get('items'), list) else []
+    raw_items = action_queue.get('items') if isinstance(action_queue, dict) else None
+    items = JSON_ROWS.validate_python(raw_items or [])
     governance_ignored = [i for i in items if is_governance_self_cycle_item(i)]
     recovered_watch_ignored = [i for i in items if not is_governance_self_cycle_item(i) and is_recovered_watch_item(i)]
     ignored = governance_ignored + recovered_watch_ignored

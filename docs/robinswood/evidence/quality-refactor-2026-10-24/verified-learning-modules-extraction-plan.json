@@ -1,0 +1,426 @@
+{
+  "source": "packages/shared/src/governance/verified-learning.ts",
+  "units": [
+    {
+      "names": [
+        "SHA256"
+      ],
+      "group": "contracts",
+      "bodySha256": "d220f484386df14aa7675ec342eee1e9e0275e4c5024bcfa6051d1a10d3a67fd"
+    },
+    {
+      "names": [
+        "BASE64URL_ED25519_SIGNATURE"
+      ],
+      "group": "contracts",
+      "bodySha256": "de6735eb20936f1bdb58aab094e6439441d8966f115a345ea179d2477a4a9bf9"
+    },
+    {
+      "names": [
+        "MAX_LEDGER_BYTES"
+      ],
+      "group": "contracts",
+      "bodySha256": "9c05f81b93069783505476f58e8303b7559490d1113f590c3662c7c4c124f0e9"
+    },
+    {
+      "names": [
+        "identifier"
+      ],
+      "group": "contracts",
+      "bodySha256": "c4eedadb2443e7579a7b9299b0a18c57b86c2b48f25d101280d6bc680ad17198"
+    },
+    {
+      "names": [
+        "version"
+      ],
+      "group": "contracts",
+      "bodySha256": "7d8fdac1dde0d470bfa40a5920c570b1b657ba0dc8449563702bde7ee4c4bde0"
+    },
+    {
+      "names": [
+        "LearningTrajectorySourceSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "c00b9e0591c9a6bdbbc2b04af53510885fc1df5b230a971a46905c8d6589534a"
+    },
+    {
+      "names": [
+        "LearningTrajectorySource"
+      ],
+      "group": "contracts",
+      "bodySha256": "fe6a53d559f9f4adf33395e65cb11982839b8995d209c2c1690ce8d88a3584a6"
+    },
+    {
+      "names": [
+        "LearningTrajectorySchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "f9e5ff8b98dc8ec5dd31b610aa3fc0d0b2d72029fc8e93cb1f8de46c59864fcd"
+    },
+    {
+      "names": [
+        "VerifiedLearningProposalSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "6c15e586804cc38e6c11e21df0e998421c1f610be8c2a3b26f418e4ab247f2a4"
+    },
+    {
+      "names": [
+        "VerifiedLearningProposal"
+      ],
+      "group": "contracts",
+      "bodySha256": "7a078a107cf87401126975b267f31ef9ec51611d43f3c097accd0dd99a16650c"
+    },
+    {
+      "names": [
+        "VerifiedLearningAction"
+      ],
+      "group": "contracts",
+      "bodySha256": "bb37fcba785215089b4df3a9bc80d389082b885d9f9c4085d24a64337ccf9594"
+    },
+    {
+      "names": [
+        "LearningSignatureSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "062057a9c6a45aa08cafc3bbf95fb83550cb9106bf2ec3a3aea7c152da780dd7"
+    },
+    {
+      "names": [
+        "LearningEventBaseSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "f9c73c370c5946375232ec4c7b5822551617881816d4c24ee2f1b8737e91ca97"
+    },
+    {
+      "names": [
+        "VerifiedLearningEventSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "603fa7371da9e15985e9d852b70f112624aa29874c772f2ca6dbd2a1c7f5dd38"
+    },
+    {
+      "names": [
+        "VerifiedLearningEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "7c94b66c65b1a738458ccd2215b59242296820ee4217db1c0699eb06e46663e6"
+    },
+    {
+      "names": [
+        "LearningEventSigner"
+      ],
+      "group": "contracts",
+      "bodySha256": "1c1b533e49d50afb2dac869301380609c490d210a6982595941f45db31527b0f"
+    },
+    {
+      "names": [
+        "LearningKeyResolver"
+      ],
+      "group": "contracts",
+      "bodySha256": "78218d8c035ff4446b0d5e40ad7106d1aaa12fffe9b77ef0c1c8f2942e8c3b8c"
+    },
+    {
+      "names": [
+        "LearningActorRoleSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "64119f7389e90d35e1c1ce13ebe31a6a4893c437d84db555175fc5c0cb68f540"
+    },
+    {
+      "names": [
+        "LearningActorRole"
+      ],
+      "group": "contracts",
+      "bodySha256": "8a3f89a17ac9703b80b77e76868ea432de8fea60b47fd3d6626e120dc973498b"
+    },
+    {
+      "names": [
+        "LearningIdentityBaseSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "c2ea20cbb29f77ad57fe24eea9a420698db2f08e6bae2d62a4701bb689851c2d"
+    },
+    {
+      "names": [
+        "HostVerifiedLearningIdentitySchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "2e511523763451bf18e4ddfa15b947ee99dcfe67076905d70e990a8883c516f9"
+    },
+    {
+      "names": [
+        "HostVerifiedLearningIdentity"
+      ],
+      "group": "contracts",
+      "bodySha256": "d9d8970916c3581af131e0a7d737a0c2ca64847c21a1e785437d0635cf3d0f33"
+    },
+    {
+      "names": [
+        "LearningIdentityResolver"
+      ],
+      "group": "contracts",
+      "bodySha256": "467bee92f1f0e22b77e457d8dc6c72157c54be5307348ddc752f4a5797fbe43a"
+    },
+    {
+      "names": [
+        "VerifiedLearningAuthority"
+      ],
+      "group": "contracts",
+      "bodySha256": "c15b349f3309f1d022b71185de8d4b726520272b687c1cb319f889428f87dccb"
+    },
+    {
+      "names": [
+        "VerifiedLearningState"
+      ],
+      "group": "contracts",
+      "bodySha256": "f8661c3ea7a43b4b17c5a94dc06e9c67f4fe86531880f17c717c7f39997b8747"
+    },
+    {
+      "names": [
+        "VerifiedLearningProjection"
+      ],
+      "group": "contracts",
+      "bodySha256": "1d1fd80430035aaa2caa6f64bff8004f2cb0269dbb15eb2f766e54870919acd4"
+    },
+    {
+      "names": [
+        "UnsignedLearningEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "8ffa923dd8334abc01373e31ac849a1fc40a4981ee85b0b4d7732bdb55113e98"
+    },
+    {
+      "names": [
+        "VerifiedLearningStore"
+      ],
+      "group": "store",
+      "bodySha256": "00c310032f5dc6246cd53896bfc9d808e5109ceb78cf8d01515ab410ab6b1339"
+    },
+    {
+      "names": [
+        "LearningLedgerSchema"
+      ],
+      "group": "store",
+      "bodySha256": "2f192bcbdda6a1fe6c46eb08395ed3d16301a37d73d15fbe447d8855ec6b4251"
+    },
+    {
+      "names": [
+        "withLearningLock"
+      ],
+      "group": "store",
+      "bodySha256": "4efc7fe3b88cf1096534ee4b0ed744302f9ff43c069573978f48da556e56e5f0"
+    },
+    {
+      "names": [
+        "learningErrorCode"
+      ],
+      "group": "store",
+      "bodySha256": "d344b7d677a732032d8250e96b7371951879ca3d4a35ef2bffc4bcead3905047"
+    },
+    {
+      "names": [
+        "createVerifiedLearningProposal"
+      ],
+      "group": "actions",
+      "bodySha256": "fc6118aa4e6496afe5c7ee7a5e0af14f52de6966806dc0a846d5aa884fbb76e7"
+    },
+    {
+      "names": [
+        "recordVerifiedLearningEval"
+      ],
+      "group": "actions",
+      "bodySha256": "c21ddf777bde813b68d1a5a1293d5d23495b08f3164a8e7c335411829e9e4db8"
+    },
+    {
+      "names": [
+        "approveVerifiedLearningProposal"
+      ],
+      "group": "actions",
+      "bodySha256": "7abb8b335108a714ad455a8ee3cb11d8b81b73e55199b1724c89ba69662dc481"
+    },
+    {
+      "names": [
+        "recordVerifiedLearningCanary"
+      ],
+      "group": "actions",
+      "bodySha256": "135e95f208f14116991a5bf2514e9dc478b1c4fd24e293e8b0fd08dcf5285efa"
+    },
+    {
+      "names": [
+        "rollbackVerifiedLearningCanary"
+      ],
+      "group": "actions",
+      "bodySha256": "b585afc0980f8e89dde6593db80e4bd3c9da884b68fc7a1da971024bb96697a9"
+    },
+    {
+      "names": [
+        "revokeVerifiedLearningProposal"
+      ],
+      "group": "actions",
+      "bodySha256": "234a29135d7486c7bc9555db19efeebd2536223e22e2eb9a974a5749fb3f3c25"
+    },
+    {
+      "names": [
+        "appendReasonEvent"
+      ],
+      "group": "actions",
+      "bodySha256": "ec2193ed85ee04f53b236e767c2e6e320a42584eceee9d690277754ee31ebec2"
+    },
+    {
+      "names": [
+        "verifyVerifiedLearningHistory"
+      ],
+      "group": "history",
+      "bodySha256": "f4db236bd4b9803716bbc9e778edd004efc5ebb6841c05883587d6e4a98f363f"
+    },
+    {
+      "names": [
+        "canaryActionMatchesPayload"
+      ],
+      "group": "history",
+      "bodySha256": "c4531deeaff99e7941c59b3d8f5cb7843346fde8134fa1b45963b113f5474817"
+    },
+    {
+      "names": [
+        "requiredRole"
+      ],
+      "group": "history",
+      "bodySha256": "58ca4d98eb18a1d96205fbef22af751528fda3a55101fb13fc7ce41877280159"
+    },
+    {
+      "names": [
+        "resolveLearningIdentity"
+      ],
+      "group": "history",
+      "bodySha256": "6856dc08184742c29837e670ce7a4a1b71b8ea234c09e0e45f34dcf716a4ad8d"
+    },
+    {
+      "names": [
+        "hashLearningIdentity"
+      ],
+      "group": "history",
+      "bodySha256": "38f6d5f2b02dd1bcd5cb6050bbccdd282583ef15a76ad5502ffa3e11e83e92db"
+    },
+    {
+      "names": [
+        "learningErrorMessage"
+      ],
+      "group": "history",
+      "bodySha256": "7e7dbc9566364d2863279b6f9d891b307b061c4441cda36fbf4257195b3c3e49"
+    },
+    {
+      "names": [
+        "transition"
+      ],
+      "group": "history",
+      "bodySha256": "d5c8cee60c4aa11fc152ea9f8eef7e5ced45c1bc763a52498f1cb0d5b26c0f1a"
+    },
+    {
+      "names": [
+        "requireVerifiedHistory"
+      ],
+      "group": "history",
+      "bodySha256": "d14a289e6e058605eac5c7192be106526ac1cfe5ac89c2e85522b431453bb511"
+    },
+    {
+      "names": [
+        "requireProjection"
+      ],
+      "group": "history",
+      "bodySha256": "29967ce9750018b974c9270730f6a30d8f091a1dc4df50a09cafea27b0f4b454"
+    },
+    {
+      "names": [
+        "appendVerifiedEvent"
+      ],
+      "group": "history",
+      "bodySha256": "f16ceca5fc057582c5089183100c82289656fd0d01fc7eaf900eee2ed43a31cd"
+    },
+    {
+      "names": [
+        "signEvent"
+      ],
+      "group": "signatures",
+      "bodySha256": "19b4e989f7867c341fd8b35f7c2a4627043097307a7b45bb7cc9edae508016f8"
+    },
+    {
+      "names": [
+        "eventSigningBytes"
+      ],
+      "group": "signatures",
+      "bodySha256": "20f57b614e86f01bc5c140a82d731aa6fdc60eac2d2d61e0157c7b4b5b99b7fc"
+    },
+    {
+      "names": [
+        "keyObject"
+      ],
+      "group": "signatures",
+      "bodySha256": "076eb90f84d7b27befad5ea48c2245aca1d1e0b6be3d9bb48ef3857ed426319c"
+    },
+    {
+      "names": [
+        "hashEvent"
+      ],
+      "group": "signatures",
+      "bodySha256": "6c5500c786b1a2a30af800996b190a4ce0902f6d0e73391a6af86f5b27180497"
+    },
+    {
+      "names": [
+        "sha256"
+      ],
+      "group": "signatures",
+      "bodySha256": "5c0c4e025a53ba4318fc4f8dc1b2c5199ccc493c91e04246b207c08717965ee7"
+    },
+    {
+      "names": [
+        "canonicalJson"
+      ],
+      "group": "signatures",
+      "bodySha256": "b82b8c3391836d3f13ad41452466f0d19899f16384a4aa23eebce603209c103d"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 217
+    },
+    {
+      "name": "store",
+      "lines": 108
+    },
+    {
+      "name": "actions",
+      "lines": 187
+    },
+    {
+      "name": "history",
+      "lines": 239
+    },
+    {
+      "name": "signatures",
+      "lines": 49
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "store": [
+      "contracts",
+      "history"
+    ],
+    "actions": [
+      "contracts",
+      "signatures",
+      "history"
+    ],
+    "history": [
+      "contracts",
+      "signatures"
+    ],
+    "signatures": [
+      "contracts"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

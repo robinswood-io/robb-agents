@@ -1,0 +1,58 @@
+[
+  {
+    "locale": "de",
+    "keys": 2230,
+    "semanticSha256Before": "8f35f6d4bbad889a9c72761e79660bbf32284a457a0ac338a7db6db1d2c1ca0d",
+    "semanticSha256After": "8f35f6d4bbad889a9c72761e79660bbf32284a457a0ac338a7db6db1d2c1ca0d",
+    "maxChunkLines": 362
+  },
+  {
+    "locale": "en",
+    "keys": 2230,
+    "semanticSha256Before": "98190ab98fe3ee30c91d805c3f5b87f3f7832b4d45590c54e50444f2348a6d33",
+    "semanticSha256After": "98190ab98fe3ee30c91d805c3f5b87f3f7832b4d45590c54e50444f2348a6d33",
+    "maxChunkLines": 362
+  },
+  {
+    "locale": "es",
+    "keys": 2230,
+    "semanticSha256Before": "0a9bdaa5f85347ab532f7531a1efd15494dbc30ec0bd4be0884ffd18a8ec684b",
+    "semanticSha256After": "0a9bdaa5f85347ab532f7531a1efd15494dbc30ec0bd4be0884ffd18a8ec684b",
+    "maxChunkLines": 362
+  },
+  {
+    "locale": "fr",
+    "keys": 2230,
+    "semanticSha256Before": "6234439f37e81583356eccb87a479e777d42cb054ab1d009da00639872f8fca6",
+    "semanticSha256After": "6234439f37e81583356eccb87a479e777d42cb054ab1d009da00639872f8fca6",
+    "maxChunkLines": 362
+  },
+  {
+    "locale": "hu",
+    "keys": 2230,
+    "semanticSha256Before": "d64629608884a6d87c4cf8e77afa0e56b74f961bc6030125b6b82b371d98562e",
+    "semanticSha256After": "d64629608884a6d87c4cf8e77afa0e56b74f961bc6030125b6b82b371d98562e",
+    "maxChunkLines": 362
+  },
+  {
+    "locale": "ja",
+    "keys": 2230,
+    "semanticSha256Before": "acc698fc2501ac8497690515975b3178efcbfc6a65f626f3231e717a081bcafa",
+    "semanticSha256After": "acc698fc2501ac8497690515975b3178efcbfc6a65f626f3231e717a081bcafa",
+    "maxChunkLines": 362
+  },
+  {
+    "locale": "pl",
+    "keys": 2230,
+    "semanticSha256Before": "d1a9eca75bc490778c6ab60820db51abd1821d1fc3bed9fa03d01cc1682a061c",
+    "semanticSha256After": "d1a9eca75bc490778c6ab60820db51abd1821d1fc3bed9fa03d01cc1682a061c",
+    "maxChunkLines": 362
+  },
+  {
+    "locale": "zh-Hans",
+    "keys": 2230,
+    "semanticSha256Before": "60dc53b517bde4a802d3b35eed1b18fca00466a118078b80328f82abb704a7cd",
+    "semanticSha256After": "60dc53b517bde4a802d3b35eed1b18fca00466a118078b80328f82abb704a7cd",
+    "maxChunkLines": 362
+  }
+]

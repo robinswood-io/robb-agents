@@ -1,17 +1,28 @@
-#!/usr/bin/env python3
 """Run reviewed monitors without confusing a finding with a crashed observer.
 
 ok means a fresh, attributable observation was produced. observedOk and the
 unchanged business report govern domain readiness. No readiness gate is lifted.
 """
 from __future__ import annotations
-import argparse, fcntl, hashlib, json, os, subprocess, sys, time
-from datetime import datetime, timezone
+
+import argparse
+import fcntl
+import hashlib
+import json
+import logging
+import os
+import subprocess
+import time
+from datetime import UTC, datetime
 from pathlib import Path
+
+from pydantic import JsonValue, TypeAdapter
+
+logger = logging.getLogger(__name__)
 
 ROOT = Path('/srv/rbw-agents-oss')
 OPS = Path('/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops')
-SPECS = {
+SPECS: dict[str, tuple[str, str, int, tuple[str, ...]]] = {
  'temporal-rtk-token-optimization-report': ('temporal_rtk_token_optimization_report.py','temporal-rtk-token-optimization-report.json',110,()),
  'oss-runtime-warning-processor': ('oss_runtime_warning_processor.py','oss-runtime-warning-processor-last.json',840,()),
  'oss-agent-production-health-audit': ('oss_agent_production_health_audit.py','oss-agent-production-health-audit.json',280,()),
@@ -21,7 +32,7 @@ SPECS = {
  'traid-onchain-liquidation-shadow-monitor': ('traid_onchain_liquidation_shadow_monitor.py','traid-onchain-liquidation-shadow-monitor-last.json',100,()),
 }
 
-def validate_observation(legacy_id, path, started_ns, returncode, stderr, previous_digest=None):
+def validate_observation(legacy_id: str, path: Path, started_ns: int, returncode: int, stderr: str, previous_digest: str | None = None) -> tuple[dict[str, JsonValue], str]:
     if legacy_id not in SPECS:
         raise ValueError('unreviewed_observer')
     if returncode not in (0, 1):
@@ -33,12 +44,12 @@ def validate_observation(legacy_id, path, started_ns, returncode, stderr, previo
     raw = path.read_bytes()
     if previous_digest is not None and hashlib.sha256(raw).hexdigest() == previous_digest:
         raise ValueError('report_not_refreshed')
-    report = json.loads(raw)
+    report = TypeAdapter(JsonValue).validate_json(raw)
     if not isinstance(report,dict) or report.get('capabilityId') != legacy_id:
         raise ValueError('report_identity_mismatch')
     if type(report.get('ok')) is not bool or not isinstance(report.get('status'),str):
         raise ValueError('invalid_report_envelope')
-    generated = datetime.fromisoformat(str(report['generatedAt']).replace('Z','+00:00'))
+    generated = datetime.fromisoformat(str(report['generatedAt']))
     if generated.tzinfo is None or not started_ns / 1e9 - 2 <= generated.timestamp() <= time.time() + 2:
         raise ValueError('report_generation_not_current')
     if returncode == 1 and report['ok'] is True:
@@ -47,16 +58,20 @@ def validate_observation(legacy_id, path, started_ns, returncode, stderr, previo
         raise ValueError('observer_technical_failure')
     return report, hashlib.sha256(raw).hexdigest()
 
-def atomic_json(path, payload):
+def atomic_json(path: Path, payload: dict[str, JsonValue]) -> None:
     path.parent.mkdir(parents=True,exist_ok=True)
     tmp = path.with_name('.'+path.name+'.'+str(os.getpid())+'.tmp')
-    tmp.write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n')
+    _ = tmp.write_text(json.dumps(payload,ensure_ascii=False,indent=2)+'\n')
     os.replace(tmp,path)
 
-def main():
+class Arguments(argparse.Namespace):
+    legacy_id: str = ''
+
+
+def main() -> int:
     parser=argparse.ArgumentParser()
-    parser.add_argument('--legacy-id',choices=sorted(SPECS),required=True)
-    aid=parser.parse_args().legacy_id
+    _ = parser.add_argument('--legacy-id',choices=sorted(SPECS),required=True)
+    aid=parser.parse_args(namespace=Arguments()).legacy_id
     script, report_name, budget, args = SPECS[aid]
     lock_path=ROOT/'.locks'/('observation-'+aid+'.lock')
     lock_path.parent.mkdir(parents=True,exist_ok=True)
@@ -71,10 +86,10 @@ def main():
         started_ns=time.time_ns()
         try:
             proc=subprocess.run([str(ROOT/'.venv/bin/python'),str(ROOT/'scripts'/script),*args],
-                                cwd=ROOT,timeout=budget,text=True,capture_output=True)
+                                cwd=ROOT,timeout=budget,text=True,capture_output=True,check=False)
             report,digest=validate_observation(aid,OPS/report_name,started_ns,proc.returncode,proc.stderr,previous_digest)
-            payload={
-              'generatedAt':datetime.now(timezone.utc).isoformat(),
+            payload: dict[str, JsonValue] = {
+              'generatedAt':datetime.now(UTC).isoformat(),
               'contractVersion':'watchdog-observation-execution-v1',
               'capabilityId':aid,'ok':True,
               'status':'observed' if report['ok'] else 'observed_with_findings',
@@ -93,7 +108,7 @@ def main():
             directory=OPS/'watchdog-observations'
             atomic_json(directory/(aid+'-last.json'),payload)
             with (directory/(aid+'-history.jsonl')).open('a') as out:
-                out.write(json.dumps(payload,ensure_ascii=False,separators=(',',':'))+'\n')
+                _ = out.write(json.dumps(payload,ensure_ascii=False,separators=(',',':'))+'\n')
             if not report['ok']:
                 atomic_json(directory/(aid+'-findings.json'),{
                     'generatedAt':payload['generatedAt'],'capabilityId':aid,
@@ -108,6 +123,7 @@ def main():
             print(json.dumps(payload,ensure_ascii=False,separators=(',',':')))
             return 0
         except Exception as exc:
+            logger.exception("Observer did not produce verified evidence")
             print(json.dumps({'executionFailed':True,'status':'technical_failed',
                               'capabilityId':aid,'errorType':type(exc).__name__,
                               'error':str(exc) if isinstance(exc,ValueError) else 'observation_not_verified'}))

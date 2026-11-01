@@ -1,0 +1,203 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Derniers contrats natifs des tests de sessions et OAuth",
+  "changes": [
+    "Treize any supprimés dans quatre tests avec les contrats SessionOperations, AgentBackend, PiAgent, ClaudeAgent et LoadedSource natifs.",
+    "Les callbacks de test respectent les retours void, Promise<void> et boolean du runtime actuel.",
+    "Les simulations inutilisées de l’ancienne reprise fournisseur et de son horloge sont retirées ; aucun cas de test ne les utilisait, ce qui est vérifié sur l’AST.",
+    "Les mêmes 26 tests et 132 assertions passent avant et après."
+  ],
+  "files": [
+    {
+      "file": "packages/server-core/src/sessions/processing-stop-ownership.test.ts",
+      "lines": 347,
+      "sha256": "6be2a469eff6d7b5c2906687b5b9bf429e50778001c1ab5676f2c91245ddef98"
+    },
+    {
+      "file": "packages/server-core/src/sessions/reviewer-collection-cache.test.ts",
+      "lines": 88,
+      "sha256": "d022e1c816b38264281c8b42980289511309637e71aa3f50c7c228c8a18630f5"
+    },
+    {
+      "file": "packages/server-core/src/webui/__tests__/oauth-callback.test.ts",
+      "lines": 142,
+      "sha256": "9b0eb7116465448e4f0862e2875b1dbe106867b9ea7b001d75c78e81dc4e7d6b"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/agent-invalid-working-directory.test.ts",
+      "lines": 89,
+      "sha256": "38df85675700f939349c0e51018a0854bb88a89795e66baf9c7c40be71935034"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 19.95,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-session-test-contracts-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 14.01,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-session-test-contracts-shared-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 18.49,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-session-test-contracts-server-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/run-owned-files-eslint.py",
+        "remaining-session-test-contracts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.36,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-session-test-contracts-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/server-core/src/sessions/processing-stop-ownership.test.ts",
+        "packages/server-core/src/sessions/reviewer-collection-cache.test.ts",
+        "packages/server-core/src/webui/__tests__/oauth-callback.test.ts",
+        "packages/shared/src/agent/__tests__/agent-invalid-working-directory.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.96,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-session-test-contracts-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 150.17,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-session-test-contracts-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "runtimeJavaScriptPreservedOutsideNativeFixtureCompletions": true,
+    "nativeFixtureCompletions": [
+      "Telemetry mock returns undefined; persist mock returns true with the same positive-count truthiness; automation mock resolves Promise<void>; unused retired routing and clock overrides and never-exercised provider-fallback setup removed"
+    ],
+    "nativeLiteralPropertyAccessEquivalent": true,
+    "removedExplicitAny": 13,
+    "newExplicitAny": 0,
+    "newRuntimeStateOrWorkflow": false,
+    "files": [
+      {
+        "file": "packages/server-core/src/sessions/processing-stop-ownership.test.ts",
+        "lines": 347,
+        "sha256": "6be2a469eff6d7b5c2906687b5b9bf429e50778001c1ab5676f2c91245ddef98"
+      },
+      {
+        "file": "packages/server-core/src/sessions/reviewer-collection-cache.test.ts",
+        "lines": 88,
+        "sha256": "d022e1c816b38264281c8b42980289511309637e71aa3f50c7c228c8a18630f5"
+      },
+      {
+        "file": "packages/server-core/src/webui/__tests__/oauth-callback.test.ts",
+        "lines": 142,
+        "sha256": "9b0eb7116465448e4f0862e2875b1dbe106867b9ea7b001d75c78e81dc4e7d6b"
+      },
+      {
+        "file": "packages/shared/src/agent/__tests__/agent-invalid-working-directory.test.ts",
+        "lines": 89,
+        "sha256": "38df85675700f939349c0e51018a0854bb88a89795e66baf9c7c40be71935034"
+      }
+    ]
+  },
+  "fullTestSummary": {
+    "pass": 10748,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "remaining-session-test-contracts-targeted": {
+      "pass": 26,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": {
+    "targetedPass": 26,
+    "targetedExpectCalls": 132
+  },
+  "sourceGate": {
+    "max-lines": 36,
+    "no-explicit-any": 4
+  },
+  "globalLint": {
+    "files": 3633,
+    "errors": 29,
+    "warnings": 100,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 25,
+      "react-hooks/exhaustive-deps": 79,
+      "@typescript-eslint/no-explicit-any": 4,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "36 fichiers trop longs et 4 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T08:45:23.420510+00:00",
+  "additionalProofs": {
+    "remaining-session-test-contracts-legacy-fixture-proof.json": {
+      "status": "passed",
+      "source": "packages/server-core/src/sessions/processing-stop-ownership.test.ts",
+      "retiredBoundaryIsAbsentFromAllTestInputs": true,
+      "retiredBoundaryOccurrences": [
+        {
+          "line": 15,
+          "owner": "fixture boundary type"
+        },
+        {
+          "line": 90,
+          "owner": "private fixture helper"
+        },
+        {
+          "line": 109,
+          "owner": "private fixture helper"
+        }
+      ],
+      "removedOnlyUnexercisedFallbackSetup": true
+    }
+  }
+}

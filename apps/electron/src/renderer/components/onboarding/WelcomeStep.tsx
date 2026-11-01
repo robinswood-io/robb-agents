@@ -5,9 +5,9 @@ import { StepFormLayout, ContinueButton } from "./primitives"
 interface WelcomeStepProps {
   onContinue: () => void
   /** Whether this is an existing user updating settings */
-  isExistingUser?: boolean
+  isExistingUser?: boolean | undefined
   /** Whether the app is loading (e.g., checking Git Bash on Windows) */
-  isLoading?: boolean
+  isLoading?: boolean | undefined
 }
 
 /**

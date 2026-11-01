@@ -10,8 +10,8 @@ import { sourceSelection } from '@/hooks/useEntitySelection'
 import { SourceMenu } from './SourceMenu'
 import { SendResourceToWorkspaceDialog } from './SendResourceToWorkspaceDialog'
 import { useAppShellContext } from '@/context/AppShellContext'
-import { EditPopover, getEditConfig, type EditContextKey } from '@/components/ui/EditPopover'
-import type { LoadedSource, SourceConnectionStatus, SourceFilter } from '../../../shared/types'
+import { EditPopover,getEditConfig,type EditContextKey } from '@/components/ui/EditPopover'
+import type { LoadedSource,SourceFilter } from '../../../shared/types'
 
 const SOURCE_TYPE_CONFIG: Record<string, { labelKey: string; colorClass: string }> = {
   mcp: { labelKey: 'sourcesList.typeMcp', colorClass: 'bg-accent/10 text-accent' },
@@ -35,13 +35,13 @@ const SOURCE_TYPE_FILTER_LABEL_KEYS: Record<string, string> = {
 
 export interface SourcesListPanelProps {
   sources: LoadedSource[]
-  sourceFilter?: SourceFilter | null
-  workspaceRootPath?: string
+  sourceFilter?: SourceFilter | null | undefined
+  workspaceRootPath?: string | undefined
   onDeleteSource: (sourceSlug: string) => void
   onSourceClick: (source: LoadedSource) => void
-  selectedSourceSlug?: string | null
-  localMcpEnabled?: boolean
-  className?: string
+  selectedSourceSlug?: string | null | undefined
+  localMcpEnabled?: boolean | undefined
+  className?: string | undefined
 }
 
 export function SourcesListPanel({

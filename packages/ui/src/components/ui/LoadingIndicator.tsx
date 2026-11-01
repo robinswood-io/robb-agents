@@ -17,7 +17,7 @@ function formatDuration(ms: number): string {
 
 export interface SpinnerProps {
   /** Additional className */
-  className?: string
+  className?: string | undefined
 }
 
 /**
@@ -63,15 +63,15 @@ export function Spinner({ className }: SpinnerProps) {
 
 export interface LoadingIndicatorProps {
   /** Optional label to show next to spinner */
-  label?: string
+  label?: string | undefined
   /** Whether to animate the spinner */
-  animated?: boolean
+  animated?: boolean | undefined
   /** Show elapsed time (pass start timestamp or true to auto-track) */
-  showElapsed?: boolean | number
+  showElapsed?: boolean | number | undefined
   /** Additional className for the container */
-  className?: string
+  className?: string | undefined
   /** Additional className for the spinner (e.g., "text-xs" to make it smaller) */
-  spinnerClassName?: string
+  spinnerClassName?: string | undefined
 }
 
 /**

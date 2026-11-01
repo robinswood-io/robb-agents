@@ -8,7 +8,7 @@ describe('applyTokenUpdate', () => {
     credential: { type: 'api_key', key: 'fresh-token' },
   };
 
-  it('updates init state before the model registry exists', () => {
+  it('updates init state before the model registry exists', async () => {
     const initConfig: { piAuth?: PiAuthUpdate } = {
       piAuth: {
         provider: 'openai-codex',
@@ -16,15 +16,15 @@ describe('applyTokenUpdate', () => {
       },
     };
 
-    expect(applyTokenUpdate(fresh, initConfig)).toBe(false);
+    expect(await applyTokenUpdate(fresh, initConfig)).toBe(false);
     expect(initConfig.piAuth).toEqual(fresh);
   });
 
-  it('updates init state before pushing the credential into a live registry', () => {
+  it('updates init state before pushing the credential into a live registry', async () => {
     const initConfig: { piAuth?: PiAuthUpdate } = {};
     const stored: PiAuthUpdate[] = [];
 
-    expect(applyTokenUpdate(fresh, initConfig, (provider, credential) => {
+    expect(await applyTokenUpdate(fresh, initConfig, (provider, credential) => {
       expect(initConfig.piAuth).toBe(fresh);
       stored.push({ provider, credential });
     })).toBe(true);

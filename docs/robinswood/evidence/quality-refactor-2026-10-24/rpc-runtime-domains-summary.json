@@ -1,0 +1,431 @@
+{
+  "status": "testé localement ; intégration finale restante",
+  "scope": "Domaines RPC connexions modèles, conversations et tâches",
+  "sourceGate": {
+    "max-lines": 129,
+    "no-explicit-any": 403
+  },
+  "changes": [
+    "Huit fonctions directes de déclaration des gestionnaires, sans registre supplémentaire",
+    "95 instructions et ordre conservés ; paramètres et fonctions capturées passés avec les mêmes valeurs",
+    "Cartes OAuth toujours créées une fois par déclaration des gestionnaires ; état des runners et kill switch conservé dans son propriétaire initial",
+    "Signatures natives des données, validations et autorisations conservées ; aucun paramètre inutilisé ajouté"
+  ],
+  "decompositions": [
+    {
+      "source": "packages/server-core/src/handlers/rpc/llm-connections.ts",
+      "function": "registerLlmConnectionsHandlers",
+      "sourceHash": "d4a4b4ff46d3728131ba72a94b14537f41c8043e747e36fadefc5fd273bbe9c2",
+      "groups": [
+        {
+          "start": 1,
+          "end": 2,
+          "name": "registerLlmSetupHandlers",
+          "file": "packages/server-core/src/handlers/rpc/llm-connections/setup.ts",
+          "captures": [
+            {
+              "name": "sessionManager",
+              "type": "HandlerDeps['sessionManager']"
+            }
+          ],
+          "parameters": [
+            "server",
+            "deps"
+          ],
+          "sourceStatements": [
+            "6a66a4ef17fcd218ef8adf535534e3df31337f8008f3ebef2839a7394698eeed",
+            "dfba2a2aec23061cf3024715c897cdd8b20ecb61f25bc1c1d06ad3ab0ab328a8"
+          ]
+        },
+        {
+          "start": 3,
+          "end": 15,
+          "name": "registerLlmCatalogHandlers",
+          "file": "packages/server-core/src/handlers/rpc/llm-connections/catalog.ts",
+          "captures": [
+            {
+              "name": "sessionManager",
+              "type": "HandlerDeps['sessionManager']"
+            }
+          ],
+          "parameters": [
+            "server",
+            "deps"
+          ],
+          "sourceStatements": [
+            "b7210dfa9306f53c5ae5db94445040ac76be96292d062f617b14619f3ab6aaa2",
+            "c3e4fa52e1f332492ad2d77de5a86d6c64d59ad21e409e7d528ed8582fb2b7a8",
+            "6ce7c047dad6f45fc356986e766448f46ef7cf64c630cbe03f1395a2f76dc31c",
+            "dbc3d1496080fc48b2a0af287bb5e014558783cc4effa1e50bd3b165889bdc98",
+            "ecb2801989b306686ff1a6cec105346ac80306092f6c0a0bd154aeb32722f84b",
+            "74f0c7e46fe23fa8a55157213335744735094dfa718ac955cd09f42bb33fbdab",
+            "2dda8348b1e26a5f0b9a258e26086a46583ae810d6f9b277f9e989ea5fddbf0c",
+            "7fb59f179d92ec1be36b2871f463d7b3adb684eced065acd8b51c9b1d8f564f8",
+            "8fa70b996a4cfb2a3fc42c95bf416d1755fcea1ab12a92d422fe3dfc348fe8a6",
+            "af965d1353b1eef3624644b7ef6a86fd707d0d50bc5cef555b3b9f9ae8d9aa76",
+            "8edd6ca8c7e7cebd24fa0d4be387ad31a778948016ad3b703d9a937d0773653e",
+            "873ba1f966a84c1350991762f03fccdfbc70327f25198cba420c27592915c958",
+            "2dd44df591df2795306a2d60b05018ff534d394f03c5e2004fd12a540d34cc4d"
+          ]
+        },
+        {
+          "start": 16,
+          "end": 24,
+          "name": "registerChatGptAuthHandlers",
+          "file": "packages/server-core/src/handlers/rpc/llm-connections/chatgpt.ts",
+          "captures": [],
+          "parameters": [
+            "server",
+            "deps"
+          ],
+          "sourceStatements": [
+            "2dd982ac942d4042efee5cfbc722636a17a46794141a1dc62d9887b31ea07868",
+            "198330bf1341382ea0d7aba5c1185567f7454a5f8b70f1beac4c4e3880151d6c",
+            "c3424a768b9461c50caaccf9546ac7237cdabd4fe80f0a84738d747d3beb03b8",
+            "200021ae7c1f2823fd3ac9e4403d45fbee5079918c611b8f1f6730383b4f1c1c",
+            "ec2dd0517314d007748c3247eaf8774c308c7b4ef5e672c56c698f654f39cf9d",
+            "e63271e6c8611c802c57946a2087a47282c8d120088f718abec22031ca912d5d",
+            "ec6e1eb8c74b9c2338aa42de813088e8c843896152b062b2be79a5285f4e988c",
+            "2457a531bd57d8a0d18b7696ca3c3a14323f120499ce886dd2f0e6cad0e9cfab",
+            "c2fe75a61f76a24004238bee613bf386afeeb9b5e0a311dee4ab3d96a3326eee"
+          ]
+        },
+        {
+          "start": 25,
+          "end": 33,
+          "name": "registerGeminiAuthHandlers",
+          "file": "packages/server-core/src/handlers/rpc/llm-connections/gemini.ts",
+          "captures": [],
+          "parameters": [
+            "server",
+            "deps"
+          ],
+          "sourceStatements": [
+            "2927b01733f933944ed906ea0b7a8ab3349f0a8a1acd62fceb7791dc76c5f577",
+            "d09782ab56bce1a9d8afcc220e995d90f2133df727f7abbb94e12479a50e1fc6",
+            "b17500353e97f1b1db30c2d5274fae251adf68df103690db43a2107d01ca82b7",
+            "984d27f971a0e6c1288834a6eeafd8d9faadfe555b0906de4d257cb52512b676",
+            "27b4be7a9381a0be2df660f33014cb5ce0b6c83450665658bfae18765ea84f1a",
+            "3be278f9d76761a77cc332e105b169a5a63bae23afd586de64b3085953dd362d",
+            "45ed00b1101fc915990291c2070f546826a13cf331184827f24c7b529464369a",
+            "950499b5232cc4305f5a353676d8fb86549651dc97c7baeb837b47b997fe1b89",
+            "b31d5933469074a7d98989cfc5d29803fd0c65ec39384905f61606190f4b2bf7"
+          ]
+        }
+      ],
+      "files": [
+        {
+          "file": "packages/server-core/src/handlers/rpc/llm-connections/setup.ts",
+          "lines": 340,
+          "hash": "8a023a1d6aeb63b32a34db13766047fc96e8d527164bedae3c4a70ed2ebb2cc9"
+        },
+        {
+          "file": "packages/server-core/src/handlers/rpc/llm-connections/catalog.ts",
+          "lines": 272,
+          "hash": "ce705bd8ac76b2d40333ca137f0454dc5e77dc05527ca7e22f38cea14e6a060f"
+        },
+        {
+          "file": "packages/server-core/src/handlers/rpc/llm-connections/chatgpt.ts",
+          "lines": 172,
+          "hash": "c7016822c4d2b06289bcdb6e7965d36d9bf32d4a4b631822537b840269a6e123"
+        },
+        {
+          "file": "packages/server-core/src/handlers/rpc/llm-connections/gemini.ts",
+          "lines": 152,
+          "hash": "36390794470e7d0cfdd6e2b13a976b67f66ead51beaf10e0e736d55051191522"
+        },
+        {
+          "file": "packages/server-core/src/handlers/rpc/llm-connections.ts",
+          "lines": 181,
+          "hash": "d93c538fca44a4c20fe236570b7accd1014582834967f76e86a8a2f4273951c7"
+        }
+      ]
+    },
+    {
+      "source": "packages/server-core/src/handlers/rpc/sessions.ts",
+      "function": "registerSessionsHandlers",
+      "sourceHash": "d018f3f4226aefc1916bbdba6f86300005032e3d4ff60af79adcd3974d6b52db",
+      "groups": [
+        {
+          "start": 10,
+          "end": 19,
+          "name": "registerConversationHandlers",
+          "file": "packages/server-core/src/handlers/rpc/sessions/conversation.ts",
+          "captures": [
+            {
+              "name": "sessionManager",
+              "type": "HandlerDeps['sessionManager']"
+            },
+            {
+              "name": "log",
+              "type": "HandlerDeps['platform']['logger']"
+            },
+            {
+              "name": "assertSessionAccess",
+              "type": "(ctx: RequestContext, sessionId: string) => void"
+            },
+            {
+              "name": "assertRpcSendMessageOptions",
+              "type": "(options?: SendMessageOptions) => void"
+            },
+            {
+              "name": "VALID_THINKING_LEVELS_LIST",
+              "type": "string"
+            }
+          ],
+          "parameters": [
+            "server",
+            "deps"
+          ],
+          "sourceStatements": [
+            "9852c32dfe2ae64dd8b87544818b578b01c08811a46e5dbdf01f8552b384094e",
+            "ab1fde16ccedfacdbeec75262f56a2d4774fe24ca286d0c7cb7418fb5b20d7e9",
+            "d1fdec18038c1b3232c71ecd55c6fdc9ff7a3a571b5a1ea507ad5eb34050b654",
+            "fdf8f384fee9654869611aaba9153efc693ec86a6a96c23f7ecad1c532c47eeb",
+            "a57608b69316ce4c760663747cf75f977a3df598f20fd1ddedf5e1e09f505d78",
+            "ad39a6edf278d96a2e67477a1189bff93a565c3cb7a841526d0c8008963c2de3",
+            "32237a4ef92ff8124834d8ecffa2348f742a58ebe996fae5bca89f93966b826d",
+            "c04d691e34578aad2d5b80bc2445ee4dfadd5af09b3f601f3e8718405c1094a7",
+            "e6c2f141be0b16f1705eb8b21e530b0c703bc15d04b9ec12a47f96abc3af4261",
+            "fad713e1c6e3098a742589e3b4f04ea06e6276942c526b26cad50c4b0a8a4990"
+          ]
+        }
+      ],
+      "files": [
+        {
+          "file": "packages/server-core/src/handlers/rpc/sessions/conversation.ts",
+          "lines": 259,
+          "hash": "9f9ecd782aeab5a3b368f17d4fc13d7952636a9af3d186307a83c4e3b30b583e"
+        },
+        {
+          "file": "packages/server-core/src/handlers/rpc/sessions.ts",
+          "lines": 447,
+          "hash": "699460cfb2c3c7cddccc25c3619e14547ac87825757c13b0daeb8ad60ab2e0f7"
+        }
+      ]
+    },
+    {
+      "source": "packages/server-core/src/handlers/rpc/tasks.ts",
+      "function": "registerTasksHandlers",
+      "sourceHash": "2895d6e2f336865725a8f67f35ddb08076e0abf2d1c148af67c7ac280250a6a7",
+      "groups": [
+        {
+          "start": 7,
+          "end": 9,
+          "name": "registerTaskAuthoringHandlers",
+          "file": "packages/server-core/src/handlers/rpc/tasks/authoring.ts",
+          "captures": [
+            {
+              "name": "authorizeTaskAction",
+              "type": "(context: RequestContext, workspaceId: string, action: SpaceAction) => NonNullable<ReturnType<typeof getWorkspaceByNameOrId>>"
+            },
+            {
+              "name": "toValidationDto",
+              "type": "(result: ReturnType<typeof parseTaskYaml>) => TaskValidationResultDto"
+            },
+            {
+              "name": "tasksLog",
+              "type": "ReturnType<typeof createLogger>"
+            },
+            {
+              "name": "GENERATE_TIMEOUT_MS",
+              "type": "number"
+            },
+            {
+              "name": "MAX_GENERATE_ATTEMPTS",
+              "type": "number"
+            },
+            {
+              "name": "extractYaml",
+              "type": "(text: string) => string"
+            }
+          ],
+          "parameters": [
+            "server",
+            "deps"
+          ],
+          "sourceStatements": [
+            "0e9350d9e00ccae3aab5771cbce196325c4f8cb92a9f27510f608f8d70682731",
+            "c4206e6b7187e20d190caa8f03146ae5a7642970a6c8f512fb0c2a8ccc9cdfb2",
+            "017839d4d263cbe3589084b116c81f41d9f820e45e120135bc15665a48d87d5b"
+          ]
+        },
+        {
+          "start": 10,
+          "end": 17,
+          "name": "registerTaskExecutionHandlers",
+          "file": "packages/server-core/src/handlers/rpc/tasks/execution.ts",
+          "captures": [
+            {
+              "name": "authorizeTaskAction",
+              "type": "(context: RequestContext, workspaceId: string, action: SpaceAction) => NonNullable<ReturnType<typeof getWorkspaceByNameOrId>>"
+            },
+            {
+              "name": "runnerFor",
+              "type": "(workspaceId: string) => Promise<TaskRunner>"
+            },
+            {
+              "name": "killSwitchRegistry",
+              "type": "DurableKillSwitchRegistry"
+            }
+          ],
+          "parameters": [
+            "server"
+          ],
+          "sourceStatements": [
+            "5ebff8da95cfcceaafe26f4a0ad91517b2618b16c4d1e4979e2cfbb2560360b1",
+            "397ca1035a048f1bb08794d2bdfc7c03bbf72f13dc88915bb2ce4558312ccf4c",
+            "ca7f886ede992ca35b105ac629613e3926e980bd3fdd69883167f4afce008487",
+            "85f245d44cdfe8667b5154df5e355007328909d0da4da2bd37e7014bafcc064c",
+            "d74ba2766a9076627be4f545712c760c7456e18c3a634ec7fff29e704c70b701",
+            "58bc11e45b4b9838eaba0d445264dbdc6111adacd36aa7ea54e2873f0f1a26c6",
+            "a6477bba31182b6d6e0623a295f546cf7d5eeafc98a5830c0cb5e2fdedbd84ba",
+            "0c451a8f8add60782f3ae59ad290be38452b6a2edddef1e5fb0c8c11869b70cd"
+          ]
+        },
+        {
+          "start": 19,
+          "end": 24,
+          "name": "registerTaskResultHandlers",
+          "file": "packages/server-core/src/handlers/rpc/tasks/results.ts",
+          "captures": [
+            {
+              "name": "authorizeTaskAction",
+              "type": "(context: RequestContext, workspaceId: string, action: SpaceAction) => NonNullable<ReturnType<typeof getWorkspaceByNameOrId>>"
+            },
+            {
+              "name": "runnerFor",
+              "type": "(workspaceId: string) => Promise<TaskRunner>"
+            },
+            {
+              "name": "durableTaskFor",
+              "type": "(workspaceId: string, slug: string, runId?: string) => Promise<DurableTaskSnapshotDto>"
+            },
+            {
+              "name": "toValidationDto",
+              "type": "(result: ReturnType<typeof parseTaskYaml>) => TaskValidationResultDto"
+            }
+          ],
+          "parameters": [
+            "server",
+            "deps"
+          ],
+          "sourceStatements": [
+            "98d8d4e51a197730758e42c33b86c0ac63295cf78762e29fe50d777e5d532666",
+            "87ba1cc801315dc313187e8295cd934b183d6ca30aad5511d00739b37cd98a35",
+            "295a8e7d4f24dae7a0dd7fca367e6bd0f478bb84b5bd5b6e2eeb9d821837eadd",
+            "e5a7dbff47d1d28837abd8590412e07c3fa1cb2743712eaf8c0b08cd4b2b39fc",
+            "071adc9891186d8381dc9df73e1fa1b16361f633981c60deeef2cdc079a13043",
+            "2e7676c4984ba2bd5899a54ab64b741eb9efe986992849fa1561a8963d42dbb2"
+          ]
+        }
+      ],
+      "files": [
+        {
+          "file": "packages/server-core/src/handlers/rpc/tasks/authoring.ts",
+          "lines": 240,
+          "hash": "3d9e1cd895a5e6bb6461240b4cba91601456b7a68e48a198e3ef03c0255c0538"
+        },
+        {
+          "file": "packages/server-core/src/handlers/rpc/tasks/execution.ts",
+          "lines": 80,
+          "hash": "f98070a2824be7d75e6b78463700c165acf776fb943ef51152940cb5d909c527"
+        },
+        {
+          "file": "packages/server-core/src/handlers/rpc/tasks/results.ts",
+          "lines": 241,
+          "hash": "b12a5110ec46f25f422a02bba055c9b09a7f284da4d13948f4239842f2b822d5"
+        },
+        {
+          "file": "packages/server-core/src/handlers/rpc/tasks.ts",
+          "lines": 373,
+          "hash": "16cdd35cfbef72fde0b57369e83f5d2708424aef37395805e96ef6c1db5c75a1"
+        }
+      ]
+    }
+  ],
+  "maximumOutputLines": 447,
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 18.51,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-runtime-domains-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/server-core/src/handlers/rpc/llm-connections/setup.ts",
+        "packages/server-core/src/handlers/rpc/llm-connections/catalog.ts",
+        "packages/server-core/src/handlers/rpc/llm-connections/chatgpt.ts",
+        "packages/server-core/src/handlers/rpc/llm-connections/gemini.ts",
+        "packages/server-core/src/handlers/rpc/llm-connections.ts",
+        "packages/server-core/src/handlers/rpc/sessions/conversation.ts",
+        "packages/server-core/src/handlers/rpc/sessions.ts",
+        "packages/server-core/src/handlers/rpc/tasks/authoring.ts",
+        "packages/server-core/src/handlers/rpc/tasks/execution.ts",
+        "packages/server-core/src/handlers/rpc/tasks/results.ts",
+        "packages/server-core/src/handlers/rpc/tasks.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 2.0,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-runtime-domains-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 17.18,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-runtime-domains-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/server-core/src/handlers/rpc",
+        "--reporter=junit",
+        "--reporter-outfile=/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-runtime-domains-after.xml"
+      ],
+      "exitCode": 0,
+      "seconds": 1.71,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-runtime-domains-after.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 139.53,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-runtime-domains-full-suite.log"
+    }
+  ],
+  "regressionParity": {
+    "cases": 46,
+    "assertions": 132,
+    "identical": true
+  },
+  "installedApplication": "inchangée",
+  "limits": [
+    "Seuils et lint globaux encore en cours",
+    "Missions réelles finales du candidat non encore vérifiées"
+  ]
+}

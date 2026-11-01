@@ -1,0 +1,10 @@
+{
+  "status": "passed",
+  "regions": 3,
+  "preservedInputFields": 27,
+  "movedLocalBindings": 4,
+  "additionalOwnershipCheckAfterCompaction": true,
+  "nativeCompactionAndErrorBodies": true,
+  "nativePreparationControlFlow": true,
+  "untouchedRootSequence": true
+}

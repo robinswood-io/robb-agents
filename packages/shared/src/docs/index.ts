@@ -8,9 +8,10 @@
  * Source content lives in apps/electron/resources/docs/*.md for easier editing.
  */
 
-import { join } from 'path';
+import { basename, join } from 'path';
+import { isUnknownArray } from '../utils/json.ts';
 import { homedir } from 'os';
-import { existsSync, mkdirSync, writeFileSync, readdirSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, readdirSync, readFileSync, statSync } from 'fs';
 import { getBundledAssetsDir } from '../utils/paths.ts';
 import { debug } from '../utils/debug.ts';
 
@@ -51,7 +52,15 @@ function loadBundledDocs(): Record<string, string> {
   for (const filename of files) {
     const filePath = join(assetsDir, filename);
     try {
-      docs[filename] = readFileSync(filePath, 'utf-8');
+      if (statSync(filePath).isDirectory()) {
+        const parts: unknown = JSON.parse(readFileSync(join(filePath, 'index.json'), 'utf-8'));
+        if (!isUnknownArray(parts) || parts.length === 0 || !parts.every(
+          (part): part is string => typeof part === 'string' && basename(part) === part && part.endsWith('.md'),
+        )) throw new Error('Invalid documentation section index');
+        docs[filename + '.md'] = parts.map(part => readFileSync(join(filePath, part), 'utf-8')).join('');
+      } else {
+        docs[filename] = readFileSync(filePath, 'utf-8');
+      }
     } catch (error) {
       console.error(`[docs] Failed to load ${filename}:`, error);
     }

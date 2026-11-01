@@ -1,0 +1,37 @@
+{
+  "status": "passed",
+  "source": "apps/electron/src/main/auto-update.ts",
+  "nativeSourceHash": "9be571e6b89fffdd2ec7f858c01344aea36f34b4a8f9fc4772df4e6af9ed58b7",
+  "nativeDeclarations": 35,
+  "extractedDeclarations": 5,
+  "nativeBodiesStateAndEffectOrderPreserved": true,
+  "nativePublicExportsAndImportedBindingsPreserved": true,
+  "nativeExternalImportOrder": [
+    "node:child_process",
+    "node:os",
+    "node:path",
+    "node:fs",
+    "electron",
+    "electron-updater",
+    "@craft-agent/shared/config",
+    "@craft-agent/shared/version",
+    "../shared/types",
+    "./app-channel",
+    "./logger"
+  ],
+  "runtimeImportCycles": 0,
+  "newStateOrWorkflowAdded": false,
+  "maximumFileLines": 418,
+  "files": [
+    {
+      "file": "apps/electron/src/main/auto-update.ts",
+      "lines": 418,
+      "sha256": "e612b363fd811d47f129577fa7209919ffd7b80823149b131a5a2896ed7b9453"
+    },
+    {
+      "file": "apps/electron/src/main/auto-update-mac.ts",
+      "lines": 253,
+      "sha256": "de6782b3a5985fae59a81f89db12f047572749d8a98c4e721d6d05b43f8f32ef"
+    }
+  ]
+}

@@ -1,84 +1,11 @@
-import { afterEach, describe, expect, it, spyOn } from 'bun:test'
-import * as credentials from '@craft-agent/shared/credentials'
-import { SessionManager, createManagedSession } from './SessionManager'
-import { transitionObjectiveContract } from './objective-contract'
-import { createPendingTurnRecovery } from './turn-recovery'
-
-const deferred = () => {
-  let resolve!: () => void
-  const promise = new Promise<void>(done => { resolve = done })
-  return { promise, resolve }
-}
-
-const managers: SessionManager[] = []
-const spies: Array<{ mockRestore(): void }> = []
-
-function harness(id: string) {
-  const manager = new SessionManager()
-  managers.push(manager)
-  const managed = createManagedSession({ id }, {
-    id: 'credential-workspace',
-    name: 'Credential workspace',
-    rootPath: '/tmp/credential-response-concurrency',
-    createdAt: 1,
-  } as never, { messagesLoaded: true })
-  const request = {
-    type: 'credential' as const,
-    requestId: `${id}-request`,
-    sessionId: id,
-    sourceSlug: 'fixture-source',
-    sourceName: 'Fixture source',
-    mode: 'bearer' as const,
-  }
-  managed.pendingAuthRequestId = request.requestId
-  managed.pendingAuthRequest = request
-  managed.activeObjective = transitionObjectiveContract({
-    messageId: `${id}-objective`,
-    text: 'Inspecte la source autorisée et termine la mission.',
-    nowMs: 1,
-  })
-  managed.messages = [{
-    id: `${id}-auth-message`,
-    role: 'auth-request',
-    content: 'Authenticate',
-    timestamp: 1,
-    authRequestId: request.requestId,
-    authRequestType: 'credential',
-    authSourceSlug: request.sourceSlug,
-    authSourceName: request.sourceName,
-    authStatus: 'pending',
-  }]
-  const events: Array<Record<string, unknown>> = []
-  const runtime = manager as unknown as {
-    sessions: Map<string, typeof managed>
-    sendEvent: (event: Record<string, unknown>) => void
-    handleCredentialInput: (...args: unknown[]) => Promise<boolean>
-    credentialResponsesInFlight: Map<string, unknown>
-    oauthResponsesInFlight: Map<string, unknown>
-    cancelPendingAuthForHumanContinuation: (session: typeof managed) => boolean
-    persistSession: () => boolean
-    scheduleDeferredAutomaticSessions: () => void
-    pendingCredentialResolvers: Map<string, (response: unknown) => void>
-    ensureMessagesLoaded: (session: typeof managed) => Promise<void>
-    mintAuthenticatedInternalContinuation: (
-      session: typeof managed,
-      kind: 'auth-result' | 'auth-retry',
-    ) => symbol | undefined
-    sendAuthenticatedInternalContinuation: (
-      session: typeof managed,
-      message: string,
-      kind: 'auth-result' | 'auth-retry',
-      token: symbol,
-      input?: { existingMessageId?: string; isAuthRetry?: boolean },
-    ) => Promise<void>
-    flushSession: (sessionId: string) => Promise<void>
-    processNextQueuedMessage: (sessionId: string) => void
-    deferredAutomaticSessions: Set<string>
-  }
-  runtime.sessions.set(id, managed)
-  runtime.sendEvent = (event: Record<string, unknown>) => events.push(event)
-  return { manager, managed, request, runtime, events }
-}
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
+import { afterEach, describe, expect, it, spyOn } from "bun:test";
+import * as credentials from "@craft-agent/shared/credentials";
+import { SessionManager } from "./SessionManager";
+import { transitionObjectiveContract } from "./objective-contract";
+import { createPendingTurnRecovery } from "./turn-recovery";
+import { deferred, harness, managers, spies } from "./testing/credential-response-concurrency-fixture.ts";
 
 afterEach(async () => {
   spies.splice(0).forEach(spy => spy.mockRestore())
@@ -106,7 +33,7 @@ describe('credential response concurrency', () => {
     expect(handled).toHaveLength(1)
     release.resolve()
     await expect(Promise.all([first, second])).resolves.toEqual([true, true])
-    expect(h.runtime.credentialResponsesInFlight.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).credentialResponsesInFlight.size).toBe(0)
   })
 
   it('does not activate or complete an old auth after cold-human cancellation wins during secure storage', async () => {
@@ -140,7 +67,7 @@ describe('credential response concurrency', () => {
     expect(h.managed.pendingAuthRequest).toBeUndefined()
     expect(h.managed.messages[0]?.authStatus).toBe('cancelled')
     expect(h.managed.enabledSourceSlugs).toBeUndefined()
-    expect(h.events.filter(event => event.type === 'auth_completed')).toEqual([{
+    expect(h.events.filter(event => event["type"] === 'auth_completed')).toEqual([{
       type: 'auth_completed',
       sessionId: h.managed.id,
       requestId: h.request.requestId,
@@ -176,9 +103,9 @@ describe('credential response concurrency', () => {
     expect(resumed).toBe(1)
     expect(h.managed.pendingAuthRequestId).toBeUndefined()
     expect(h.managed.pendingAuthRequest).toBeUndefined()
-    expect(h.runtime.oauthResponsesInFlight.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).oauthResponsesInFlight.size).toBe(0)
     expect(h.managed.messages[0]?.authStatus).toBe('cancelled')
-    expect(h.events.filter(event => event.type === 'auth_completed')).toHaveLength(1)
+    expect(h.events.filter(event => event["type"] === 'auth_completed')).toHaveLength(1)
   })
 
   it('drains credential cancellation before deletion and never requeues the deleted session', async () => {
@@ -208,17 +135,17 @@ describe('credential response concurrency', () => {
     let deletionSettled = false
     const deletion = h.manager.deleteSession(h.managed.id, () => true)
       .finally(() => { deletionSettled = true })
-    while (h.runtime.sessions.has(h.managed.id)) await Promise.resolve()
+    while (sessionRuntimeStateForTest(h.runtime).sessions.has(h.managed.id)) await Promise.resolve()
     await Promise.resolve()
 
     expect(deletionSettled).toBe(false)
-    expect(h.runtime.deferredAutomaticSessions.has(h.managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).deferredAutomaticSessions.has(h.managed.id)).toBe(false)
 
     release.resolve()
     await expect(Promise.all([cancellation, deletion])).resolves.toEqual([true, undefined])
     expect(deletionSettled).toBe(true)
-    expect(h.runtime.sessions.has(h.managed.id)).toBe(false)
-    expect(h.runtime.deferredAutomaticSessions.has(h.managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).sessions.has(h.managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).deferredAutomaticSessions.has(h.managed.id)).toBe(false)
     expect(schedulerCalls).toBe(0)
   })
 
@@ -251,7 +178,7 @@ describe('credential response concurrency', () => {
     expect(prompts).toHaveLength(1)
     expect(prompts[0]!.message).not.toContain(hostile)
     expect(prompts[0]!.message).toContain('untrusted host data')
-    expect(prompts[0]!.options?.internalOrigin).toMatchObject({ kind: 'auth-result' })
+    expect(prompts[0]!.options?.["internalOrigin"]).toMatchObject({ kind: 'auth-result' })
   })
 
   it('abandons an auth continuation when a human objective wins during send hydration', async () => {
@@ -485,17 +412,15 @@ describe('credential response concurrency', () => {
   })
 
   it('consumes a legacy credential callback before invoking it', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
-    const runtime = manager as unknown as {
-      pendingCredentialResolvers: Map<string, (response: unknown) => void>
-    }
+
     let deliveries = 0
-    runtime.pendingCredentialResolvers.set('legacy-request', () => { deliveries++ })
+    sessionRuntimeStateForTest(manager).pendingCredentialResolvers.set('legacy-request', () => { deliveries++ })
     const response = { type: 'credential' as const, cancelled: true }
 
     await expect(manager.respondToCredential('legacy-session', 'legacy-request', response)).resolves.toBe(true)
     await expect(manager.respondToCredential('legacy-session', 'legacy-request', response)).resolves.toBe(false)
     expect(deliveries).toBe(1)
   })
-})
+});

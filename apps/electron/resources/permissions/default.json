@@ -26,12 +26,16 @@
       "comment": "Evaluate file and value conditions without modifying them"
     },
     {
-      "pattern": "^cmp\\s+-s\\s+(?!-)(?!\\.\\.(?:/|\\s))(?![^\\s]*/\\.\\.(?:/|\\s))[A-Za-z0-9_@%+=:,./-]+\\s+(?!-)(?!\\.\\.(?:/|$))(?![^\\s]*/\\.\\.(?:/|$))[A-Za-z0-9_@%+=:,./-]+$",
+      "pattern": "^cmp\\s+-s\\s+(?!-)(?!\\.\\.(?:/|\\s))(?![^\\r\\n]*/\\.\\.(?:/|\\s|$))[A-Za-z0-9_@%+=:,./-]+(?: [A-Za-z0-9_@%+=:,./-]+)*\\s+(?!-)(?!\\.\\.(?:/|$))(?![^\\r\\n]*/\\.\\.(?:/|\\s|$))[A-Za-z0-9_@%+=:,./-]+(?: [A-Za-z0-9_@%+=:,./-]+)*$",
       "comment": "Silently compare exactly two static file paths"
     },
     {
-      "pattern": "^shasum\\s+-a\\s+256\\s+(?!-)(?!\\.\\.(?:/|$))(?![^\\s]*/\\.\\.(?:/|$))[A-Za-z0-9_@%+=:,./-]+$",
+      "pattern": "^shasum\\s+-a\\s+256\\s+(?!-)(?!\\.\\.(?:/|$))(?![^\\r\\n]*/\\.\\.(?:/|\\s|$))[A-Za-z0-9_@%+=:,./-]+(?: [A-Za-z0-9_@%+=:,./-]+)*$",
       "comment": "Compute SHA-256 for one static file path"
+    },
+    {
+      "pattern": "^diff\\b(?![^\\r\\n]*\\s--output(?:=|\\s|$))",
+      "comment": "Compare files or directories without writing an output file"
     },
     {
       "pattern": "^stat\\b",

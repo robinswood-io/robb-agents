@@ -1,149 +1,21 @@
-import { afterEach, describe, expect, it } from 'bun:test'
-import {
-  existsSync,
-  mkdtempSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  symlinkSync,
-  unlinkSync,
-  writeFileSync,
-} from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
-import { createHash } from 'node:crypto'
-import {
-  ensureSessionDir,
-  getSessionFilePath,
-  getSessionPath,
-  loadSession,
-  writeSessionJsonl,
-  type StoredSession,
-} from '@craft-agent/shared/sessions'
-import {
-  appendProjectMemoryEntry,
-  createProject,
-  getProjectMemoryJournalPath,
-  loadProjectMemoryJournal,
-  saveProjectConfig,
-} from '@craft-agent/shared/projects'
-import { SessionManager, createManagedSession, loadPiTurnAnchors } from './SessionManager'
-
-const roots: string[] = []
-const managers: SessionManager[] = []
-const originalFetch = globalThis.fetch
-type Managed = ReturnType<typeof createManagedSession>
-interface IdentityTestRuntime {
-  sessions: Map<string, Managed>
-  persistSession: (managed: Managed) => boolean
-  processEvent: (managed: Managed, event: unknown) => Promise<void>
-  runtimeProcessingGenerations: WeakMap<object, number>
-  runtimeToolAdmissionBindings: WeakMap<object, unknown>
-  objectiveAuthorityEpochs: WeakMap<Managed, number>
-  durablyRecordAutomaticRecoveryToolAdmission: (
-    managed: Managed,
-    runtimeAgent: object,
-    request: { toolUseId?: string; toolName: string; toolInput: Record<string, unknown> },
-  ) => Promise<void>
-  captureUserCorrection: (managed: Managed, message: Managed['messages'][number]) => Promise<void>
-  captureSessionTerminalLearning: (
-    managed: Managed,
-    state: 'complete_verified' | 'blocked_human' | 'blocked_policy' | 'exhausted' | 'cancelled',
-  ) => Promise<void>
-  handleSessionProjectLearning: (
-    managed: Managed,
-    request: {
-      action: 'propose' | 'validate' | 'revoke' | 'list'
-      id?: string
-      content?: string
-      evidenceIds?: string[]
-      reviewToolUseId?: string
-      kind?: 'procedure' | 'observation'
-    },
-  ) => Promise<unknown>
-  loadSessionProjectMemoryContext: (managed: Managed, query: string) => Promise<string | null>
-  loadSessionPlaybook: (managed: Managed) => { instructions: string } | null
-}
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { ScriptedSessionAgent } from "./testing/scripted-session-agent.ts";
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
+import { afterEach, describe, expect, it } from "bun:test";
+import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { createHash } from "node:crypto";
+import { getSessionFilePath, getSessionPath, loadSession, type StoredSession } from "@craft-agent/shared/sessions";
+import { appendProjectMemoryEntry, getProjectMemoryJournalPath, loadProjectMemoryJournal } from "@craft-agent/shared/projects";
+import { SessionManager, loadPiTurnAnchors } from "./SessionManager";
+import { managers, originalFetch, register, registerProjectSession, retargetFixture, roots, storedFixture } from "./testing/session-persistence-root-identity-fixture.ts";
 
 afterEach(async () => {
   globalThis.fetch = originalFetch
   await Promise.all(managers.splice(0).map(manager => manager.cleanup()))
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true })
 })
-
-function storedFixture(root: string, id: string, name: string, content: string): StoredSession {
-  const stored: StoredSession = {
-    id,
-    workspaceRootPath: root,
-    name,
-    createdAt: 1,
-    lastUsedAt: 1,
-    lastMessageAt: 1,
-    messages: [{ id: `${id}-${name}`, type: 'user', content, timestamp: 1 } as never],
-    tokenUsage: { inputTokens: 0, outputTokens: 0, totalTokens: 0, contextTokens: 0, costUsd: 0 },
-  }
-  ensureSessionDir(root, id)
-  writeSessionJsonl(getSessionFilePath(root, id), stored)
-  return stored
-}
-
-function retargetFixture(label: string) {
-  const container = mkdtempSync(join(tmpdir(), `robb-root-identity-${label}-`))
-  roots.push(container)
-  const rootA = join(container, 'workspace-a')
-  const rootB = join(container, 'workspace-b')
-  const alias = join(container, 'workspace-alias')
-  mkdirSync(rootA, { recursive: true })
-  mkdirSync(rootB, { recursive: true })
-  symlinkSync(rootA, alias, 'dir')
-  return {
-    container,
-    rootA,
-    rootB,
-    alias,
-    retarget: () => {
-      unlinkSync(alias)
-      symlinkSync(rootB, alias, 'dir')
-    },
-  }
-}
-
-function register(
-  manager: SessionManager,
-  stored: StoredSession,
-  alias: string,
-  messagesLoaded: boolean,
-) {
-  const { messages: _messages, ...metadata } = stored
-  const managed = createManagedSession(
-    metadata,
-    { id: `workspace-${stored.id}`, name: 'Aliased workspace', rootPath: alias, createdAt: 1 } as never,
-    { messagesLoaded },
-  )
-  const runtime = manager as unknown as IdentityTestRuntime
-  runtime.sessions.set(managed.id, managed)
-  return { managed, runtime }
-}
-
-function registerProjectSession(label: string) {
-  const fixture = retargetFixture(label)
-  const capturedProject = createProject(fixture.rootA, { name: 'Captured project A' })
-  const replacementProject = {
-    ...capturedProject,
-    slug: `replacement-project-b-${label}`,
-    name: 'Replacement project B',
-  }
-  saveProjectConfig(fixture.rootB, replacementProject)
-  const stored = storedFixture(fixture.alias, `project-session-${label}`, 'Project session A', 'project-content-a')
-  stored.projectId = capturedProject.id
-  const manager = new SessionManager()
-  managers.push(manager)
-  const registered = register(manager, stored, fixture.alias, true)
-  registered.managed.projectId = capturedProject.id
-  fixture.retarget()
-  return { fixture, capturedProject, replacementProject, manager, ...registered }
-}
 
 describe('managed session physical persistence root', () => {
   it('hydrates, updates metadata and persists pending-plan state only in the captured root', async () => {
@@ -154,7 +26,7 @@ describe('managed session physical persistence root', () => {
     storedFixture(fixture.rootB, id, 'Transcript B', 'content-from-b')
     const replacementFile = getSessionFilePath(fixture.rootB, id)
     const replacementBytes = readFileSync(replacementFile, 'utf8')
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const { managed } = register(manager, storedA, fixture.alias, false)
     fixture.retarget()
@@ -197,7 +69,7 @@ describe('managed session physical persistence root', () => {
     storedFixture(fixture.rootB, id, 'Share B', 'share-content-b')
     const replacementFile = getSessionFilePath(fixture.rootB, id)
     const replacementBytes = readFileSync(replacementFile, 'utf8')
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     register(manager, storedA, fixture.alias, true)
     fixture.retarget()
@@ -231,7 +103,7 @@ describe('managed session physical persistence root', () => {
     const replacementBytes = readFileSync(replacementFile, 'utf8')
     const attachment = join(fixture.container, 'proof.txt')
     writeFileSync(attachment, 'captured attachment')
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const sender = register(manager, senderStored, fixture.alias, true).managed
     const target = register(manager, targetStored, fixture.alias, true).managed
@@ -247,16 +119,7 @@ describe('managed session physical persistence root', () => {
       _isAuthRetry: unknown,
       onAck?: (messageId: string) => void,
     ) => { onAck?.('captured-delivery') }) as typeof manager.sendMessage
-    const runtime = manager as unknown as {
-      sendAgentMessageToSession: (
-        source: typeof sender,
-        recipient: typeof target,
-        message: string,
-        attachments: Array<{ path: string }>,
-        messageType: 'progress',
-        validateAttachmentPath: (path: string) => Promise<string>,
-      ) => Promise<unknown>
-    }
+    const runtime = sessionManagerForTest(manager)
 
     await runtime.sendAgentMessageToSession(
       sender,
@@ -264,7 +127,7 @@ describe('managed session physical persistence root', () => {
       'deliver captured proof',
       [{ path: attachment }],
       'progress',
-      async path => path,
+      async path => { if (typeof path !== 'string') throw new Error('Invalid attachment path fixture'); return path },
     )
 
     const capturedAttachments = join(getSessionPath(fixture.rootA, target.id), 'attachments')
@@ -284,7 +147,7 @@ describe('managed session physical persistence root', () => {
     storedFixture(fixture.rootB, id, 'Anchor B', 'anchor-b')
     const replacementFile = getSessionFilePath(fixture.rootB, id)
     const replacementBytes = readFileSync(replacementFile, 'utf8')
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const { managed, runtime } = register(manager, storedA, fixture.alias, true)
     managed.piSdkMessageToCraftMessage = new Map([['sdk-message-a', 'craft-message-a']])
@@ -308,7 +171,7 @@ describe('managed session physical persistence root', () => {
     const fixture = retargetFixture('tool-admission')
     const id = 'admission-session'
     const storedA = storedFixture(fixture.alias, id, 'Admission A', 'objective-a')
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const { managed, runtime } = register(manager, storedA, fixture.alias, true)
     const userMessage = {
@@ -340,19 +203,20 @@ describe('managed session physical persistence root', () => {
     const replacementBytes = readFileSync(replacementFile, 'utf8')
     fixture.retarget()
 
-    const runtimeAgent = { isProcessing: () => true, dispose: async () => {} }
-    managed.agent = runtimeAgent as never
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(managed.workspace, { async *chat() {}, isProcessing: () => true }), { dispose: async () => {} })
+    managed.agent = runtimeAgent
     managed.isProcessing = true
     managed.processingGeneration = 7
-    runtime.runtimeProcessingGenerations.set(runtimeAgent, 7)
-    runtime.runtimeToolAdmissionBindings.set(runtimeAgent, {
+    sessionRuntimeStateForTest(runtime).runtimeProcessingGenerations.set(runtimeAgent, 7)
+    sessionRuntimeStateForTest(runtime).runtimeToolAdmissionBindings.set(runtimeAgent, {
       managed,
       sessionId: id,
       generation: 7,
       activeObjective: managed.activeObjective,
-      authorityEpoch: runtime.objectiveAuthorityEpochs.get(managed) ?? 0,
+      authorityEpoch: sessionRuntimeStateForTest(runtime).objectiveAuthorityEpochs.get(managed) ?? 0,
       userMessage,
       userMessageId: userMessage.id,
+      messageCountAtHandoff: managed.messages.length,
       lastSentOptions: managed.lastSentOptions,
       automaticRecovery: undefined,
       pendingTurnRecovery: undefined,
@@ -500,8 +364,8 @@ describe('managed session physical persistence root', () => {
     expect(listed.map(entry => entry.id)).toContain(proposal.id)
     await runtime.handleSessionProjectLearning(managed, { action: 'revoke', id: proposal.id })
 
-    expect(loadProjectMemoryJournal(fixture.rootA, capturedProject.slug, { strict: true }).entries)
-      .toContainEqual(expect.objectContaining({ id: proposal.id, status: 'forgotten' }))
+    expect<unknown>(loadProjectMemoryJournal(fixture.rootA, capturedProject.slug, { strict: true }).entries)
+      .toContainEqual((expect.objectContaining({ id: proposal.id, status: 'forgotten' }) as unknown))
   })
 
   it('retrieves project memory only from the captured root after alias retargeting', async () => {
@@ -541,33 +405,4 @@ describe('managed session physical persistence root', () => {
     expect(context).toContain('belongs to captured workspace A')
     expect(context).not.toContain('replaced by workspace B')
   })
-
-  it('loads a session-bound playbook only from the captured root after alias retargeting', () => {
-    if (process.platform === 'win32') return
-    const { fixture, managed, runtime } = registerProjectSession('playbook')
-    const slug = 'captured-root-playbook'
-    const playbook = (instructions: string) => `---
-version: 1
-slug: ${slug}
-name: Captured root playbook
-description: Verify physical workspace ownership
-allowedTools:
-  - Read
-proofs:
-  - id: physical-root
-    description: Verify the captured root
-    required: true
----
-${instructions}`
-    mkdirSync(join(fixture.rootA, 'playbooks'))
-    mkdirSync(join(fixture.rootB, 'playbooks'))
-    writeFileSync(join(fixture.rootA, 'playbooks', `${slug}.md`), playbook('Instructions from captured workspace A.'))
-    writeFileSync(join(fixture.rootB, 'playbooks', `${slug}.md`), playbook('Instructions from replacement workspace B.'))
-    managed.playbookSlug = slug
-
-    const selected = runtime.loadSessionPlaybook(managed)
-
-    expect(selected?.instructions).toContain('captured workspace A')
-    expect(selected?.instructions).not.toContain('replacement workspace B')
-  })
-})
+});

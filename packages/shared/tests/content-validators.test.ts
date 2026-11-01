@@ -63,7 +63,7 @@ describe('validateSourceConfigContent', () => {
   it('fails for invalid JSON', () => {
     const result = validateSourceConfigContent('{ invalid json }');
     expect(result.valid).toBe(false);
-    expect(result.errors[0].message).toContain('Invalid JSON');
+    expect(result.errors[0]!.message).toContain('Invalid JSON');
   });
 
   it('fails when required fields are missing', () => {
@@ -197,7 +197,7 @@ Content.
 `;
     const result = validateSkillContent(content, 'test-skill');
     expect(result.valid).toBe(false);
-    expect(result.errors[0].message).toContain('frontmatter');
+    expect(result.errors[0]!.message).toContain('frontmatter');
   });
 });
 
@@ -226,7 +226,7 @@ describe('validateStatusesContent', () => {
   it('fails for invalid JSON', () => {
     const result = validateStatusesContent('not json');
     expect(result.valid).toBe(false);
-    expect(result.errors[0].message).toContain('Invalid JSON');
+    expect(result.errors[0]!.message).toContain('Invalid JSON');
   });
 
   it('fails when required fixed status is missing', () => {
@@ -329,7 +329,7 @@ describe('validatePermissionsContent', () => {
   it('fails for invalid JSON', () => {
     const result = validatePermissionsContent('{{bad}}');
     expect(result.valid).toBe(false);
-    expect(result.errors[0].message).toContain('Invalid JSON');
+    expect(result.errors[0]!.message).toContain('Invalid JSON');
   });
 
   it('fails for invalid regex patterns', () => {
@@ -343,7 +343,7 @@ describe('validatePermissionsContent', () => {
 
   it('uses custom displayFile for error messages', () => {
     const result = validatePermissionsContent('bad', 'sources/github/permissions.json');
-    expect(result.errors[0].file).toBe('sources/github/permissions.json');
+    expect(result.errors[0]!.file).toBe('sources/github/permissions.json');
   });
 });
 

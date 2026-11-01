@@ -1,4 +1,5 @@
 import { protectApplicationCommand } from '@craft-agent/session-tools-core';
+import type { Tool as McpTool } from '@modelcontextprotocol/sdk/types.js';
 /**
  * MCP client using the official split @modelcontextprotocol/client SDK
  * Supports both HTTP and stdio transports for remote and local MCP servers
@@ -46,17 +47,9 @@ export type McpClientConfig = HttpMcpClientConfig | StdioMcpClientConfig;
  * adapter. Keeping this pool boundary structural avoids coupling the rest of
  * the application to either SDK era's JSON Schema type aliases.
  */
-export interface PoolTool {
-  name: string;
-  description?: string;
+export interface PoolTool extends Pick<McpTool, 'name' | 'description' | 'annotations'> {
   inputSchema: Record<string, unknown>;
-  outputSchema?: Record<string, unknown>;
-  annotations?: {
-    readOnlyHint?: boolean;
-    idempotentHint?: boolean;
-    destructiveHint?: boolean;
-    openWorldHint?: boolean;
-  };
+  outputSchema?: Record<string, unknown> | undefined;
 }
 
 /**
@@ -118,7 +111,7 @@ export class CraftMcpClient {
         new URL(config.url),
         {
           requestInit: {
-            headers: config.headers,
+            ...(config.headers !== undefined ? { headers: config.headers } : {}),
           },
         }
       );
@@ -193,7 +186,7 @@ export class CraftMcpClient {
       }
     } finally {
       this.expectedChildHandle?.release();
-      this.expectedChildHandle = undefined;
+      delete this.expectedChildHandle
     }
   }
 }

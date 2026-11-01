@@ -36,9 +36,9 @@ import { navigate, routes } from '@/lib/navigate'
 const DEFAULT_MAX_VISIBLE_BADGES = 3
 
 interface BrowserTabStripProps {
-  activeSessionId?: string | null
-  instancesOverride?: BrowserInstanceInfo[]
-  maxVisibleBadges?: number
+  activeSessionId?: string | null | undefined
+  instancesOverride?: BrowserInstanceInfo[] | undefined
+  maxVisibleBadges?: number | undefined
 }
 
 export function BrowserTabStrip({
@@ -106,9 +106,9 @@ export function BrowserTabStrip({
           setActiveInstanceId(null)
           return
         }
-        setActiveInstanceId((prev) => prev ?? items[0].id)
+        setActiveInstanceId((prev) => prev ?? items[0]?.id ?? null)
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         console.warn('[BrowserTabStrip] Failed to list browser panes:', error)
         setInstances([])
         setActiveInstanceId(null)
@@ -147,7 +147,7 @@ export function BrowserTabStrip({
               return items.some((item) => item.id === prev) ? prev : (items[0]?.id ?? null)
             })
           })
-          .catch((error) => {
+          .catch((error: unknown) => {
             console.warn('[BrowserTabStrip] Reconcile list failed after remove:', error)
           })
       }, 75)
@@ -174,7 +174,7 @@ export function BrowserTabStrip({
       return
     }
     if (!activeInstanceId || !orderedInstances.some((item) => item.id === activeInstanceId)) {
-      setActiveInstanceId(orderedInstances[0].id)
+      setActiveInstanceId(orderedInstances[0]?.id ?? null)
     }
   }, [orderedInstances, activeInstanceId, setActiveInstanceId])
 
@@ -188,7 +188,7 @@ export function BrowserTabStrip({
       return
     }
 
-    void browserPaneApi.focus(instance.id).catch((error) => {
+    void browserPaneApi.focus(instance.id).catch((error: unknown) => {
       console.warn(`[BrowserTabStrip] Failed to focus browser window ${instance.id}:`, error)
     })
   }, [instancesOverride, setActiveInstanceId])
@@ -205,7 +205,7 @@ export function BrowserTabStrip({
       if (!browserPaneApi) {
         console.warn('[BrowserTabStrip] browserPane API unavailable for terminate action')
       } else {
-        void browserPaneApi.destroy(instance.id).catch((error) => {
+        void browserPaneApi.destroy(instance.id).catch((error: unknown) => {
           console.warn(`[BrowserTabStrip] Failed to terminate browser window ${instance.id}:`, error)
         })
       }

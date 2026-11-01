@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+import type { UpdatePreferencesSchema } from '../tool-defs/schemas.ts';
 /**
  * Update User Preferences Handler
  *
@@ -12,15 +14,7 @@ import type { SessionToolContext } from '../context.ts';
 import type { ToolResult } from '../types.ts';
 import { successResponse, errorResponse } from '../response.ts';
 
-export interface UpdatePreferencesArgs {
-  name?: string;
-  timezone?: string;
-  city?: string;
-  region?: string;
-  country?: string;
-  notes?: string;
-  includeCoAuthoredBy?: boolean;
-}
+export type UpdatePreferencesArgs = z.infer<typeof UpdatePreferencesSchema>;
 
 /**
  * Handle the update_user_preferences tool call.
@@ -40,41 +34,41 @@ export async function handleUpdatePreferences(
     const updates: Record<string, unknown> = {};
 
     if (args.name && typeof args.name === 'string') {
-      updates.name = args.name;
+      updates["name"] = args.name;
     }
     if (args.timezone && typeof args.timezone === 'string') {
-      updates.timezone = args.timezone;
+      updates["timezone"] = args.timezone;
     }
 
     // Handle location fields
     if (args.city || args.region || args.country) {
       const location: Record<string, string> = {};
       if (args.city && typeof args.city === 'string') {
-        location.city = args.city;
+        location["city"] = args.city;
       }
       if (args.region && typeof args.region === 'string') {
-        location.region = args.region;
+        location["region"] = args.region;
       }
       if (args.country && typeof args.country === 'string') {
-        location.country = args.country;
+        location["country"] = args.country;
       }
-      updates.location = location;
+      updates["location"] = location;
     }
 
     // Handle notes (replace)
     if (args.notes && typeof args.notes === 'string') {
-      updates.notes = args.notes;
+      updates["notes"] = args.notes;
     }
 
     // Handle co-author preference (explicit boolean)
     if (typeof args.includeCoAuthoredBy === 'boolean') {
-      updates.includeCoAuthoredBy = args.includeCoAuthoredBy;
+      updates["includeCoAuthoredBy"] = args.includeCoAuthoredBy;
     }
 
     // Check if anything was actually updated
     const fields = Object.keys(updates).filter(k => k !== 'location');
-    if (updates.location) {
-      fields.push(...Object.keys(updates.location as Record<string, string>).map(k => `location.${k}`));
+    if (updates["location"]) {
+      fields.push(...Object.keys(updates["location"] as Record<string, string>).map(k => `location.${k}`));
     }
 
     if (fields.length === 0) {

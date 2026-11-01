@@ -1,0 +1,232 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Protocole public ACP et isolation des réponses Vibe",
+  "changes": [
+    "Le connecteur utilise les méthodes publiques typées du SDK ACP 2.0.2 pour créer, charger, interroger et observer une session. L’appel privé attachSession et la file ActiveSession sont supprimés.",
+    "Un ancien fragment reçu entre deux demandes ne peut plus contaminer la suivante. Le défaut est reproduit avant correction puis vérifié sur deux tours avec permissions.",
+    "15 any supprimés. La capacité de contexte vient du champ natif size ; les capacités client annoncées sont vérifiées par InitializeRequest. Les instructions hôte, la preuve d’envoi fournisseur et les événements natifs restent conservés."
+  ],
+  "files": [
+    {
+      "file": "packages/pi-agent-server/src/vibe-acp-public-protocol.test.ts",
+      "lines": 121,
+      "sha256": "643ce2d186b2d01223388c816ce83d9af46be6062f8bb77018d05ae3e4ac5124"
+    },
+    {
+      "file": "packages/pi-agent-server/src/vibe-acp-server.test.ts",
+      "lines": 210,
+      "sha256": "759b2acc3d680f7710a3f47efc1ff9a63f70409dc871fb9ce11773d80864d7bf"
+    },
+    {
+      "file": "packages/pi-agent-server/src/vibe-acp-server.ts",
+      "lines": 453,
+      "sha256": "d91cc890ecad20e34cc3e35ac958b1efc3767d70ab663cc947af46d57ad59af5"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/pi-agent-server/src/vibe-acp-server.test.ts",
+        "packages/pi-agent-server/src/provider-handoff.test.ts",
+        "packages/pi-agent-server/src/vibe-subprocess.test.ts",
+        "packages/pi-agent-server/src/vibe-acp-public-protocol.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 3.3,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/vibe-public-protocol-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/pi-agent-server/tsconfig.typecheck.json"
+      ],
+      "exitCode": 0,
+      "seconds": 7.0,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/vibe-public-protocol-pi-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 20.76,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/vibe-public-protocol-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/run-owned-files-eslint.py",
+        "vibe-public-protocol"
+      ],
+      "exitCode": 0,
+      "seconds": 0.86,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/vibe-public-protocol-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 20.16,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/vibe-public-protocol-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 138.09,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/vibe-public-protocol-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "sdkVersion": "2.0.2",
+    "removedExplicitAny": 15,
+    "nativeHelpersPreserved": [
+      "send",
+      "debug",
+      "reportVibeError",
+      "randomId",
+      "textFromContent",
+      "isExactPromptRequest",
+      "emitEvent",
+      "selectPermissionOption",
+      "waitForPermission",
+      "emitToolUpdate",
+      "handle"
+    ],
+    "nativeHostInstructionsAndLifecyclePreserved": true,
+    "nativeCorrelatedWriteAndPreWriteProofPreserved": true,
+    "noNewQueueOrRegistry": true,
+    "removedPrivateApi": "ClientContext.attachSession",
+    "removedActiveSessionUpdateQueue": true,
+    "changes": [
+      "Typed public ACP requests and notifications",
+      "Only the current session and active turn consume streamed response chunks",
+      "Context capacity uses the native usage_update.size value",
+      "Only supported client capabilities are advertised"
+    ],
+    "officialSources": [
+      "https://agentclientprotocol.com/protocol/v1/session-setup",
+      "https://agentclientprotocol.com/protocol/v1/prompt-turn"
+    ],
+    "files": [
+      {
+        "file": "packages/pi-agent-server/src/vibe-acp-server.ts",
+        "lines": 453,
+        "sha256": "d91cc890ecad20e34cc3e35ac958b1efc3767d70ab663cc947af46d57ad59af5"
+      },
+      {
+        "file": "packages/pi-agent-server/src/vibe-acp-server.test.ts",
+        "lines": 210,
+        "sha256": "759b2acc3d680f7710a3f47efc1ff9a63f70409dc871fb9ce11773d80864d7bf"
+      },
+      {
+        "file": "packages/pi-agent-server/src/vibe-acp-public-protocol.test.ts",
+        "lines": 121,
+        "sha256": "643ce2d186b2d01223388c816ce83d9af46be6062f8bb77018d05ae3e4ac5124"
+      }
+    ]
+  },
+  "fullTestSummary": {
+    "pass": 10747,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "vibe-public-protocol-targeted": {
+      "pass": 17,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": {
+    "beforeTargetedPass": 16,
+    "beforeTargetedExpectCalls": 75,
+    "afterTargetedPass": 17,
+    "afterTargetedExpectCalls": 88
+  },
+  "sourceGate": {
+    "max-lines": 44,
+    "no-explicit-any": 112
+  },
+  "globalLint": {
+    "files": 3599,
+    "errors": 140,
+    "warnings": 100,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 107,
+      "max-lines": 33,
+      "react-hooks/exhaustive-deps": 79,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "44 fichiers trop longs et 112 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T04:44:07.659669+00:00",
+  "additionalProofs": {
+    "vibe-public-protocol-regression-proof.json": {
+      "status": "passed",
+      "before": {
+        "command": [
+          "rtk",
+          "bun",
+          "test",
+          "packages/pi-agent-server/src/vibe-acp-public-protocol.test.ts"
+        ],
+        "exitCode": 1,
+        "seconds": 0.61,
+        "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/vibe-public-protocol-regression-before.log"
+      },
+      "observedFailure": "idle replay must stay outside the next turnfresh turn 1",
+      "after": {
+        "command": [
+          "rtk",
+          "bun",
+          "test",
+          "packages/pi-agent-server/src/vibe-acp-server.test.ts",
+          "packages/pi-agent-server/src/provider-handoff.test.ts",
+          "packages/pi-agent-server/src/vibe-subprocess.test.ts",
+          "packages/pi-agent-server/src/vibe-acp-public-protocol.test.ts"
+        ],
+        "exitCode": 0,
+        "seconds": 3.3,
+        "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/vibe-public-protocol-targeted.log"
+      },
+      "coverage": [
+        "Restored session retained across two prompt turns",
+        "Idle and foreign-session chunks excluded",
+        "Native permission callbacks, provider handoff, tool, thought and usage events",
+        "Native reported context capacity",
+        "Existing pre-write rejection, child exit and allow/block/modify behavior"
+      ],
+      "limits": [
+        "Serveur ACP local simulé ; aucun binaire Vibe ni compte réel utilisé."
+      ]
+    }
+  }
+}

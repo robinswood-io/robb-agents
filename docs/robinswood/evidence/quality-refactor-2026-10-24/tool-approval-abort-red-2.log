@@ -1,0 +1,22 @@
+
+packages/pi-agent-server/src/tool-approval-abort.test.ts:
+70 |     stopping = abortSessionWithPendingApprovals(session, pending);
+71 |     const stopped = await Promise.race([
+72 |       stopping.then(() => 'settled'),
+73 |       new Promise<string>(resolve => { timeout = setTimeout(() => resolve('blocked'), 500); }),
+74 |     ]);
+75 |     expect(stopped).toBe('settled');
+                         ^
+error: expect(received).toBe(expected)
+
+Expected: "settled"
+Received: "blocked"
+
+      at <anonymous> (/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-quality/packages/pi-agent-server/src/tool-approval-abort.test.ts:75:21)
+(fail) cancels a blocked permission before SDK abort waits for the tool, then accepts the next request [526.34ms]
+
+ 0 pass
+ 1 fail
+ 3 expect() calls
+Ran 1 test across 1 file. [894.00ms]
+bun test v1.4.4 (38afee6c8)

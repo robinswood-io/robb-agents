@@ -1,0 +1,9 @@
+{
+  "status": "passed",
+  "nativeTailSequence": true,
+  "nativeFinalizerBodies": true,
+  "nativeFinalizerIdentities": true,
+  "noNewAwaitBeforeProcessingClaim": true,
+  "rootReturnDelegation": true,
+  "untouchedAdmissionPrefix": true
+}

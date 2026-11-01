@@ -1,0 +1,1188 @@
+{
+  "source": "packages/server-core/src/sessions/SessionManager.ts",
+  "units": [
+    {
+      "names": [
+        "_platform"
+      ],
+      "group": "runtime-platform",
+      "bodySha256": "5af135aa5b769a5f56290dbc7c626e08157ea85db00bc7fdbc580228cc7c52f9"
+    },
+    {
+      "names": [
+        "sessionLog"
+      ],
+      "group": "runtime-platform",
+      "bodySha256": "c14ef8d4d28e58897a6c8bb83d17804cf4585692b05f2f3651449c126680d1d0"
+    },
+    {
+      "names": [
+        "setSessionPlatform"
+      ],
+      "group": "runtime-platform",
+      "bodySha256": "7f5450135500141d291e4691a80fd522c657de6be36608df9366ac39f3488f5a"
+    },
+    {
+      "names": [
+        "SessionRuntimeHooks"
+      ],
+      "group": "runtime-platform",
+      "bodySha256": "45ccc337ec012ff0583475c91f98f4e1561e25d95de56d58845e246b76e575a6"
+    },
+    {
+      "names": [
+        "defaultSessionRuntimeHooks"
+      ],
+      "group": "runtime-platform",
+      "bodySha256": "4c8da1add097c669ad3586d874992e7845ca349770424f1657c9051c3fcb2422"
+    },
+    {
+      "names": [
+        "sessionRuntimeHooks"
+      ],
+      "group": "runtime-platform",
+      "bodySha256": "c8da191cbb2a57894b1ec39a67032cf2eea3652063d90d7a9fa2814ec505eb77"
+    },
+    {
+      "names": [
+        "setSessionRuntimeHooks"
+      ],
+      "group": "runtime-platform",
+      "bodySha256": "b905cff0f8f3d9bfbf2785d6fd04d98122ce086057312bffbc774880d3ee8e9c"
+    },
+    {
+      "names": [
+        "buildBackendHostRuntimeContext"
+      ],
+      "group": "mission-route",
+      "bodySha256": "01382ef621a517e57b9cfff359ddef43d8f53a6e4f06e0b002875ef3c0894b8e"
+    },
+    {
+      "names": [
+        "specializedRuntimeIdentitySha256"
+      ],
+      "group": "mission-route",
+      "bodySha256": "d5e49d333c8ccd6cdbdcb5ec729517bf17b1812657f60232d49d25e8e0b8adff"
+    },
+    {
+      "names": [
+        "freezeRuntimeSnapshot"
+      ],
+      "group": "mission-route",
+      "bodySha256": "7b7fe8e1cb2b463c7e3358e31d75c71236265c4bd7e4882c90ee96e72642bba3"
+    },
+    {
+      "names": [
+        "hasImmutableMissionRoute"
+      ],
+      "group": "mission-route",
+      "bodySha256": "60bff6e5de91a76d05c50cdbeb562b3428eecf770c11938f5acf15f97f0a1d07"
+    },
+    {
+      "names": [
+        "hasMissionDispatchTriplet"
+      ],
+      "group": "mission-route",
+      "bodySha256": "dfc15e515f2137efa5e8f164d4ab4c098e412126474dbc3ae769ffbd4ce8a064"
+    },
+    {
+      "names": [
+        "canonicalMissionSourceSlugs"
+      ],
+      "group": "mission-route",
+      "bodySha256": "3ec3b27b4de8a4a8150c42781b27cbb4537b389fe1ee18c6ddcc6d7639a6dc04"
+    },
+    {
+      "names": [
+        "expectedOrdinaryMissionRouteDecisionIdentity"
+      ],
+      "group": "mission-route",
+      "bodySha256": "beb755f68b825387af7b3ff628b640b7061b14f8a99c2937ba336429f7f750ef"
+    },
+    {
+      "names": [
+        "assertValidOrdinaryMissionRouteLock"
+      ],
+      "group": "mission-route",
+      "bodySha256": "1390d848a1a31ca4b9851ad6117f1df9e3d577af5cb8a4ec433fc3db841cd000"
+    },
+    {
+      "names": [
+        "MissionToolPreflightInput"
+      ],
+      "group": "mission-route",
+      "bodySha256": "71e74fcfbec521a014e1901d4f80811348ed72a040504ba4627b5a9492cf99d9"
+    },
+    {
+      "names": [
+        "MissionToolPreflightDecision"
+      ],
+      "group": "mission-route",
+      "bodySha256": "f03062a7c2ecefa13dbecb648d1267a0aebee3f758dbcf14fb99fabdbbf58d95"
+    },
+    {
+      "names": [
+        "MissionDeclaredToolCapabilities"
+      ],
+      "group": "mission-route",
+      "bodySha256": "3521aae83a5ac6f705dc32279fae96c885c12aa3ec957712dec8d9cbf9bf04b1"
+    },
+    {
+      "names": [
+        "MissionLiveToolDefinition"
+      ],
+      "group": "mission-route",
+      "bodySha256": "5a5d78008b6f5e7e678906b1e3331de272fb1d7b2bb53bff1e17b9275d318026"
+    },
+    {
+      "names": [
+        "MissionSourceToolCatalogDecision"
+      ],
+      "group": "mission-route",
+      "bodySha256": "82b5590d97be35c4f51c72167e56f237bcb9cea394319c445791152fea3e966c"
+    },
+    {
+      "names": [
+        "MissionSourceToolCatalogCache"
+      ],
+      "group": "mission-route",
+      "bodySha256": "37afca4e81067a50d76515bb5ce6970fc360645fb539ee4d31e0906749cb2e90"
+    },
+    {
+      "names": [
+        "missionMcpInputValidator"
+      ],
+      "group": "mission-route",
+      "bodySha256": "9a6af24252ea0c5dfc29040dd025ca8d0eedf849055a4d897d5a32ce2abb1e55"
+    },
+    {
+      "names": [
+        "AGENT_FLAGS"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "981eabd54ad139cf8f4b439691bd844e65b4f71ef31430bb1dc50bad1b77803b"
+    },
+    {
+      "names": [
+        "RECOVERY_BUDGET_UNAVAILABLE_MESSAGE"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "5a924fa5c0c30e377c68be23e1bbc8fc7858c69c6149396437a191e7fba0bab9"
+    },
+    {
+      "names": [
+        "MAX_ADMIN_REMEMBER_MINUTES"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "1a4d53d5df3db6be6b4a6f7607aba8deaeb97fa123992823f00e975932939c23"
+    },
+    {
+      "names": [
+        "RetryTurnAlreadyRunningError"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "107fce02cd3dad3e890af2210efc45a36b7884734ad3e5c729bcec33216caa93"
+    },
+    {
+      "names": [
+        "AutonomousAdmissionDeferredError"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "1fa226f0f0ae56dee476c9a56e42e087ffcd3421fcb52af70d0cac6e9590feeb"
+    },
+    {
+      "names": [
+        "AutomaticRecoverySupersededError"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "9e3e19d5fcfda804498f0ec6153108f2dcb9409c2cc56e1dcf8e654c84f70872"
+    },
+    {
+      "names": [
+        "SourceActivationSupersededError"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "17059afba03b9bda78c468f4f529eb3740144f1c56a6c2a71fc66538d3538998"
+    },
+    {
+      "names": [
+        "InternalContinuationSupersededError"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "74049eda326efd6e3ecebf14f808f5e2aa58a322e1fbb46da52d63c2d2e5aa91"
+    },
+    {
+      "names": [
+        "DelegatedDispatchSupersededError"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "bc75943353d08e4d8543c16c34ee1753ff3d2d131be10a83fa87a305eb68fc71"
+    },
+    {
+      "names": [
+        "CleanRecoveryDispatchAuthenticationError"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "bcfd12996a6c4d86a78fd3664f673c39d4974fbaf2e1cd4969154f5f87d265bb"
+    },
+    {
+      "names": [
+        "MAX_ANNOTATIONS_PER_MESSAGE"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "b6a8b761d4df6540895e4b0d2e5f54d00679d85468e95e109d5a1fa7f7488862"
+    },
+    {
+      "names": [
+        "MAX_ANNOTATION_JSON_BYTES"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "2833b1d60ef9209cffed9ecc168ac89fb17fffd1b30e3a3c9ea3ea73240267e1"
+    },
+    {
+      "names": [
+        "METADATA_WRITE_GUARD_MS"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "224adda9fa60a7203d703278e54a9d3e43bae3cee2491e52a42ca99292984114"
+    },
+    {
+      "names": [
+        "PLAN_APPROVAL_MESSAGE"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "ff99ef3f167f6fb5713abc995a1bf7eefd8fadc6e4cb8243fbc9d8211b48cfd0"
+    },
+    {
+      "names": [
+        "PI_TURN_ANCHORS_VERSION"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "bf76d3a8d093864da90111c347aff65b5e87a98cd32fea9ee38d2a29113652c9"
+    },
+    {
+      "names": [
+        "DELTA_BATCH_INTERVAL_MS"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "e1dbfee6940b41c3333151ea7810c6516bd215dd4b3b7136e29a9e9895949a39"
+    },
+    {
+      "names": [
+        "DEFAULT_SESSION_RUNTIME_IDLE_TIMEOUT_MS"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "9316c88b731cfc5ca42fbd0ddd7b6911e7349f99dca3159b94657b6fb5610c3d"
+    },
+    {
+      "names": [
+        "DELEGATED_TERMINAL_RESULT_PROTOCOL"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "1e776ce83e29bc38850dd7ea1a41d306382e1477492aadcfb302dd5f95877ecf"
+    },
+    {
+      "names": [
+        "MIN_SESSION_RUNTIME_IDLE_TIMEOUT_MS"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "b3396a97c37c0f177399baeeddeda4d2dc65fd1862987bd2231807799b055a2e"
+    },
+    {
+      "names": [
+        "SESSION_RUNTIME_SWEEP_INTERVAL_MS"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "aae3969e7e89d83ff0e5f2431132d6a3f7d92f28e1df124023abf8cf5ca20020"
+    },
+    {
+      "names": [
+        "SESSION_RUNTIME_DISPOSE_TIMEOUT_MS"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "ad967b178fbc9153130663a977607b8c2bf236136baa7f57054251196d6573e1"
+    },
+    {
+      "names": [
+        "SESSION_RUNTIME_EVICTION_CONCURRENCY"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "306f82e116da331d828417f4e077c81f6c7405bf366faf482f8fc99c929f3a7c"
+    },
+    {
+      "names": [
+        "withRuntimeDisposeTimeout"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "ca85b99539a45e73f03a85e60f71c462317a954c8091b12b3fdc4223119d01f9"
+    },
+    {
+      "names": [
+        "resolveSessionRuntimeIdleTimeoutMs"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "f1094f0098323133972bf9be68096586e283c804936814be170228d8c4ed2c8e"
+    },
+    {
+      "names": [
+        "PendingDelta"
+      ],
+      "group": "runtime-policy",
+      "bodySha256": "9fcd37183bbbdf3eb5ffeafe99cdabffd0061acac8e7900411311a7b212ca774"
+    },
+    {
+      "names": [
+        "PI_TURN_ANCHORS_FILE"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "d73a2b0a03cbca4fa6b1303181d8a4fecc032f933371faf765187c356af252e3"
+    },
+    {
+      "names": [
+        "PiTurnAnchorsIndex"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "393641258b3bb3445f81959ca789bec79511c697533eb8efc99a9ac599573342"
+    },
+    {
+      "names": [
+        "getPiTurnAnchorsPath"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "9bfee8b623a514257f0c1062d4f2f110dc70ee3f51e6636e998b5d141ba11055"
+    },
+    {
+      "names": [
+        "loadPiTurnAnchors"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "766177792cca08181187a4417f5c78613325f5cb74c31b9bece9b853ab00bac1"
+    },
+    {
+      "names": [
+        "getPiTurnAnchor"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "fe9f52fe4fa88497f5184d25734cf42fe481da79e9946db0644f8021cf640c58"
+    },
+    {
+      "names": [
+        "savePiTurnAnchor"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "d15ea33bc2639de99295eb08ba6c164f37c3aaa33c026f8e2ca5b9aad2f52db8"
+    },
+    {
+      "names": [
+        "copyPiTurnAnchorsForBranch"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "0cadbbd691d05f818a45402a18060a44af438c5b7f606f0e7f13fd3359d7a3cf"
+    },
+    {
+      "names": [
+        "CLAUDE_TURN_ANCHORS_VERSION"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "875c03cecc504484ab9e226e6234006f96c75ada4053d0b5d4520f5c9e37dce8"
+    },
+    {
+      "names": [
+        "CLAUDE_TURN_ANCHORS_FILE"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "16f1aafe406b043d684fbd16f2a85e6f1f7e98f7c4953c85bba9965590ca6cb0"
+    },
+    {
+      "names": [
+        "ClaudeTurnAnchorRecord"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "e9f3cf0e7a3c3f2316e50805782421c7cb72eb1701ba4465461225b01878dd1e"
+    },
+    {
+      "names": [
+        "ClaudeTurnAnchorsIndex"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "b56ead9be2400474391850f1823766631bee4309bb206d4990cf2a776d463605"
+    },
+    {
+      "names": [
+        "getClaudeTurnAnchorsPath"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "216b8f740085fe8feab5a4f8ce753316900ff0ebf8d313dc9b56078304b65bab"
+    },
+    {
+      "names": [
+        "isClaudeMessageUuid"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "f3b0aaf04b5dfc8305756179afa2bbcfda7c2d3ee2cd1c9ab8c804b30be0b8b5"
+    },
+    {
+      "names": [
+        "loadClaudeTurnAnchors"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "50f61705caad78d4c16dad7f9ee5d0ce0e38a82244e24a72def621954308aa70"
+    },
+    {
+      "names": [
+        "getClaudeTurnAnchor"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "dfc690019d72e64c0ea8bb9e2aa9d1c179e407dff2bef43c2a4504303d5cb1f1"
+    },
+    {
+      "names": [
+        "saveClaudeTurnAnchor"
+      ],
+      "group": "turn-anchors",
+      "bodySha256": "cde078ea45ce553b5fb41b48d20d5438479c4d0953ab7848e4005a909ceeb3f2"
+    },
+    {
+      "names": [
+        "BuildServersFromSourcesOptions"
+      ],
+      "group": "source-build",
+      "bodySha256": "4ba658adf14c279fa01e50bfdd1ec7a20eddbb21247b7302d8295ad253bc2532"
+    },
+    {
+      "names": [
+        "buildServersFromSources"
+      ],
+      "group": "source-build",
+      "bodySha256": "136306663531c8f1e0b44252988de5888a620904b871c4e0233775a1ef1e6617"
+    },
+    {
+      "names": [
+        "RefreshExpiredCredentialsResult"
+      ],
+      "group": "source-build",
+      "bodySha256": "182c5e5c11fda2e756950e9a18b8ca0c53fe88d1b360002e32daa9f44c9f759b"
+    },
+    {
+      "names": [
+        "refreshExpiredCredentials"
+      ],
+      "group": "source-build",
+      "bodySha256": "2ec0be5bc6dd14eb495124aadef6df0f396ae8fe3e31cb3ea879ea79b234493d"
+    },
+    {
+      "names": [
+        "commitRevocableSourceActivationRuntime"
+      ],
+      "group": "source-activation",
+      "bodySha256": "40ae2f0eb02aa40e3a4edc83cd18a8f7d344bb3138b4c85b0cc208762367157c"
+    },
+    {
+      "names": [
+        "PI_SDK_MESSAGE_ID_CACHE_LIMIT"
+      ],
+      "group": "source-activation",
+      "bodySha256": "f7a9804058891cf303432e0e2d92f6c43b762589791df9b9e0b72e6305f03c31"
+    },
+    {
+      "names": [
+        "SOURCE_ACTIVATION_DEDUP_WINDOW_MS"
+      ],
+      "group": "source-activation",
+      "bodySha256": "c4cb671f4452c19dd8a6ff11ff873fec10c45343b4db4fd561313b8381fbc337"
+    },
+    {
+      "names": [
+        "SOURCE_ACTIVATION_TOMBSTONE_TTL_MS"
+      ],
+      "group": "source-activation",
+      "bodySha256": "8013eaa29051cc6d03c6ead6af3bbb2552e68fbfbf18aef46449f3a3e533be75"
+    },
+    {
+      "names": [
+        "SOURCE_ACTIVATION_TOMBSTONE_LIMIT"
+      ],
+      "group": "source-activation",
+      "bodySha256": "1c82800ef8cdceff21c9ffb686231fdb3405af2f3fa416cf710beb8dda4b09ef"
+    },
+    {
+      "names": [
+        "SOURCE_ACTIVATION_MAX_DISPATCH_ATTEMPTS"
+      ],
+      "group": "source-activation",
+      "bodySha256": "9fbd1471744205ce56ab671d8bd8a4177fbb5615f1f047ece278462bfae372a3"
+    },
+    {
+      "names": [
+        "SOURCE_ACTIVATION_PROTOCOL_SUFFIX"
+      ],
+      "group": "source-activation",
+      "bodySha256": "88314d23ec0cf010ff0900bf25303c6ead5fc764700d05ab4d1234be4757ad09"
+    },
+    {
+      "names": [
+        "AutoRetryPendingHost"
+      ],
+      "group": "source-activation",
+      "bodySha256": "0240632eda2f78c76131bb8aee999f3edb8b7e395000b6b3b7576ef95d4b75dd"
+    },
+    {
+      "names": [
+        "pruneAutoRetryTombstones"
+      ],
+      "group": "source-activation",
+      "bodySha256": "aedc525dce6d77995ff2c06031199fa4e7d912fec4c0c677898c692fa4d912bb"
+    },
+    {
+      "names": [
+        "rememberAutoRetryTombstone"
+      ],
+      "group": "source-activation",
+      "bodySha256": "645fd476a43c7e5845e83e40b9830b7d8b2e85ee963f3f814b7996b1b1d6f202"
+    },
+    {
+      "names": [
+        "claimAutoRetryPending"
+      ],
+      "group": "source-activation",
+      "bodySha256": "f658016a8aa1b99a7091e4238461b522d881bcfb45f814b86d4a268301f2554b"
+    },
+    {
+      "names": [
+        "SourceActivationOrigin"
+      ],
+      "group": "source-activation",
+      "bodySha256": "96dfb1af5621769ad91670b4fb74912274104bdcf5318576639d2699b4fa9789"
+    },
+    {
+      "names": [
+        "sourceActivationObjectiveBinding"
+      ],
+      "group": "source-activation",
+      "bodySha256": "486283509e5e040900d42448e6f37be50a8c7a4fd25ed73afae73387f7564868"
+    },
+    {
+      "names": [
+        "isSourceActivationOriginCurrent"
+      ],
+      "group": "source-activation",
+      "bodySha256": "ce97c4c130d720f11bfa1eed2df4bd082b4d100954639fa381b3d90f8e3d821d"
+    },
+    {
+      "names": [
+        "SourceActivationRestartHost"
+      ],
+      "group": "source-activation",
+      "bodySha256": "f7ce5c73e9eb257efe9cd1180c5d2af402f5e87240cc53bf79c16db6ad0db89f"
+    },
+    {
+      "names": [
+        "BROWSER_TOOL_ICON_FILENAME"
+      ],
+      "group": "tool-display",
+      "bodySha256": "da99c22ef8f2b43847f103b428dfd80c26300bbbce2f8f539126100ef0b34d16"
+    },
+    {
+      "names": [
+        "browserToolIconDataUrlCache"
+      ],
+      "group": "tool-display",
+      "bodySha256": "2e5df317ccbbd40fb5d401dd5f149f028987da9a3fbbd20f908b9e6a6581cf35"
+    },
+    {
+      "names": [
+        "getBrowserToolIconDataUrl"
+      ],
+      "group": "tool-display",
+      "bodySha256": "bb3dd613a05408bb70deff3c1599197c6a5fbf6b826542c897a2e29a393aafa5"
+    },
+    {
+      "names": [
+        "resolveToolDisplayMeta"
+      ],
+      "group": "tool-display",
+      "bodySha256": "79b1ac0f94a29250b42c7bde04298ec0781df7e51259f25fb13ee751af893ff4"
+    },
+    {
+      "names": [
+        "AgentInstance"
+      ],
+      "group": "runtime-types",
+      "bodySha256": "84601da9cc6c8d53caf668dde2bc10afe8bd45620a18bf3b0f20433e953f9a43"
+    },
+    {
+      "names": [
+        "CostControlledTurnContext"
+      ],
+      "group": "runtime-types",
+      "bodySha256": "0ece1b595f6b4bda544d59939009238025595ffa2b94546b97b688b5c5931589"
+    },
+    {
+      "names": [
+        "BackgroundTaskStatus"
+      ],
+      "group": "runtime-types",
+      "bodySha256": "d9a840b6b746b86455fca2959dd2d215e3d4145b1599524308a882d2fc387e72"
+    },
+    {
+      "names": [
+        "RunningBackgroundTask"
+      ],
+      "group": "runtime-types",
+      "bodySha256": "52f4dbd4c11f2741f963fe2e712a3798ea13b21b1135ecb8b424026db56ad66c"
+    },
+    {
+      "names": [
+        "RuntimeGenerationTelemetryRef"
+      ],
+      "group": "runtime-types",
+      "bodySha256": "1f7530f37f12826ed57541aabfd80cce40046928f0b5e024f8854da35564c1de"
+    },
+    {
+      "names": [
+        "RuntimeCompactionTelemetry"
+      ],
+      "group": "runtime-types",
+      "bodySha256": "15766068193ccf05b3ab08887ccbd4eb874c8690819e47c182f194cf2f70b8e1"
+    },
+    {
+      "names": [
+        "SessionCompletionEvent"
+      ],
+      "group": "runtime-types",
+      "bodySha256": "57c59b3872b69f803825d3695391d419fc02bbb146f6ed512b0928ebca71ef14"
+    },
+    {
+      "names": [
+        "MissionPendingTurnRecoveryClaim"
+      ],
+      "group": "runtime-types",
+      "bodySha256": "1b27d0c488c33bee72b6e61e7bc56ae0f4ed5d04977d16b0e7e3c54ab6b15270"
+    },
+    {
+      "names": [
+        "MissionPendingTurnRecoveryClaimDecision"
+      ],
+      "group": "runtime-types",
+      "bodySha256": "786042ff4d9fd0ffc9535f3cb230b83985490ec9d01fcd27b67d47cd296d87ac"
+    },
+    {
+      "names": [
+        "MissionPendingTurnRecoveryClaimRecord"
+      ],
+      "group": "runtime-types",
+      "bodySha256": "6c0c445631c5208dd2ecc0a1db37dc292268f1396b844d8b48db1f405c2e2507"
+    },
+    {
+      "names": [
+        "ManagedSession"
+      ],
+      "group": "managed-session",
+      "bodySha256": "88f98ba0e9d798591286935734220522ecbb92a3a3ff3577cd4f2ad423a78e8d"
+    },
+    {
+      "names": [
+        "SessionReviewRole"
+      ],
+      "group": "review-lifecycle",
+      "bodySha256": "09b5d7facfe2d3e55ac2ef1b50a753b3b21d1d19b0eaa0d827c7d4d2c842853a"
+    },
+    {
+      "names": [
+        "isTerminalReviewSession"
+      ],
+      "group": "review-lifecycle",
+      "bodySha256": "75f914e0198f166c5170adc81dfa036d4dd9740b1c8bebce789b30034e319cdc"
+    },
+    {
+      "names": [
+        "MissionRecoveryOwnership"
+      ],
+      "group": "review-lifecycle",
+      "bodySha256": "2d9fa0a0d24b7a6b628bb5d69ae2394cba00e9ccb12ac4fdc13c4eb2e887cadd"
+    },
+    {
+      "names": [
+        "isMissionRuntimeOwnedRecovery"
+      ],
+      "group": "review-lifecycle",
+      "bodySha256": "e12bd82317ed078da12c3f75269d620fc83e2f08ca6d8d34ff356414c1c1a074"
+    },
+    {
+      "names": [
+        "delegatedObjectiveRoleForSession"
+      ],
+      "group": "review-lifecycle",
+      "bodySha256": "1a49ccf97707edcd67c8ddd0f779b49fadc2edc791dae6787cbe530d150f0cf5"
+    },
+    {
+      "names": [
+        "terminalReviewExecutionIsolation"
+      ],
+      "group": "review-lifecycle",
+      "bodySha256": "c808446c631af5f713db82c2dc5308073f908c4e1750e0193a2339779eb87812"
+    },
+    {
+      "names": [
+        "AUTHENTICATED_USER_ANSWER_MARKER"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "85fda92ec7426068a7e0ab10fbc998e1e4def7a32f6313ca97ad71018d1e250c"
+    },
+    {
+      "names": [
+        "AUTHENTICATED_USER_AUTHORIZATION_MARKER"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "2b4a877c71aa2ff8267fad2f328231f4d22c663cd15193558cd807582ca09af6"
+    },
+    {
+      "names": [
+        "MAX_CLEAN_RETRY_SAFE_SETUP_FAILURES"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "9008d3d682c3821edcdb8d525721f5d7e27b6ae257da8f12c7cd16484f471189"
+    },
+    {
+      "names": [
+        "MAX_CLEAN_RETRY_CONDITIONAL_SETUP_FAILURES"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "9432c85220897e8ea7120d9d844a5a604d55d1bda5e9c7721aaeca0c4b60e18f"
+    },
+    {
+      "names": [
+        "MAX_CLEAN_RETRY_SETUP_BACKOFF_MS"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "8d298239e5f7ed3e9d0b51eb445a6e63cb191e70fb4ade20d389dbba91554569"
+    },
+    {
+      "names": [
+        "CLEAN_RETRY_SETUP_FAILURE_CLASSES"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "6fb4e83cbd12ae264d4c1d75b025ee96b8db931381d8f485bed1d3d501beba99"
+    },
+    {
+      "names": [
+        "CLEAN_RETRY_NEVER_SETUP_FAILURE_CLASSES"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "f247a601b1b9d3a8a41e16f762e7b8cc26d6ec9de4053ef9b2b1e25d64d24ea8"
+    },
+    {
+      "names": [
+        "CLEAN_RETRY_CONDITIONAL_SETUP_FAILURE_CLASSES"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "8d467194808c0b767267f837d72f974893f63800a61f89f0aa95e7b91f556d91"
+    },
+    {
+      "names": [
+        "CONTEXT_LIMIT_NEXT_STEP_QUESTIONS"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "a07dda2a353152e480d79f51bb3af112d1dcc6bfaa204f44ce16d200e61e6d7a"
+    },
+    {
+      "names": [
+        "LEGACY_AUTOMATIC_RECOVERY_NEXT_STEP_QUESTION"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "2950e4565b95f667134e30d59238cf14970b38c9e77a8dbd4d327611d50f48d8"
+    },
+    {
+      "names": [
+        "COST_LIMIT_NEXT_STEP_QUESTIONS"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "eda9175a58c07c1b1a66b3d4625bde74e1b924d409477f0967dbb2101e1976e4"
+    },
+    {
+      "names": [
+        "LEGACY_ALLOCATED_CONTEXT_LIMIT_PROMPT_WINDOW_MS"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "85193de680607fc4baad5082ea9fe97f1e451fea4b15c7aba20ac286bb26625e"
+    },
+    {
+      "names": [
+        "resolveManagedSessionContextWindow"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "128fcf612ebad47265d32e799406169c5df07fe9cdcd52cc027556494452a2fb"
+    },
+    {
+      "names": [
+        "isExactContextLimitNextStepQuestion"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "3f2203aeb50f5be66954c539384ac2db94f66ea9a381a50a14ddf5ff73c9a29a"
+    },
+    {
+      "names": [
+        "isExactCostLimitNextStepQuestion"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "e6909e41421a5056be58e7e00d61d13b9f00dd592a5d06af313478cc63049e89"
+    },
+    {
+      "names": [
+        "isCostLimitContinuationAnswer"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "bf23714e28b7ca2cfc2b8fbe40a3e601e944eab53589193c38d54c9492579091"
+    },
+    {
+      "names": [
+        "userInputAnswerMessageContent"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "50894bbe8d7404e6c41170028def1e25bfb21bdec8813e2d7ff68b8696970f97"
+    },
+    {
+      "names": [
+        "legacyUserInputAnswerMessageContent"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "e233a1cef2e8f0c1f3965b5e505cf1f815a570a1048ac956f98d0f9366f8abcb"
+    },
+    {
+      "names": [
+        "canonicalUserInputAnswerContents"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "4d7d479ef669a72ce1da94bfe51d4ae1d4a22e9e7fb2bf23fadd30514db60498"
+    },
+    {
+      "names": [
+        "foldedUserInputAnswer"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "febe1e0e59c9c2325d0b36be22cf0797f37fda07e003d4112f1538bdca6d5b7b"
+    },
+    {
+      "names": [
+        "STRUCTURED_ANSWER_ACTION_FAMILIES"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "75e180e278b5f6b1be4de3567fe52dcba7a114a871e0a9197e264f163ad244e9"
+    },
+    {
+      "names": [
+        "structuredAnswerNegatesAction"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "4cf9a120bba28048d257809ff17f82d1b3c83ebda7b343871a74df3e5031aec3"
+    },
+    {
+      "names": [
+        "structuredAnswerMentionsAction"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "0f4203b9ed60c0881e715e049876eda02c1bb147c87e6ae4770322df8c6acbe3"
+    },
+    {
+      "names": [
+        "answerAffirmativelyConfirmsDisplayedScope"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "abb1911b159a216054a39c0158a73144ab0259d7f9855707bae92bf73e31f347"
+    },
+    {
+      "names": [
+        "authenticatedUserInputAnswerAuthoritySegments"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "37ee85f7fd411f46a6ba45d243cb7cfd847b1134fb26690fe11cc0681b4c030a"
+    },
+    {
+      "names": [
+        "consumeSourceActivationRestart"
+      ],
+      "group": "user-input-authority",
+      "bodySha256": "0f1a4f3cf4ea18e66384d41ba25ec854b4064af188837a5aa74fdf010eb64170"
+    },
+    {
+      "names": [
+        "SpawnRouteSelection"
+      ],
+      "group": "session-creation",
+      "bodySha256": "0cb156f87b0f282def0f63109c71a026369f191b456c097094477a2cebdda9e7"
+    },
+    {
+      "names": [
+        "SessionCreationRouteRequest"
+      ],
+      "group": "session-creation",
+      "bodySha256": "a7b26a5cc8f5b4283d095b2e0df4872a7e16d43f1a8a30277aacfddad5b37b31"
+    },
+    {
+      "names": [
+        "resolveCreateSessionRouteProvenance"
+      ],
+      "group": "session-creation",
+      "bodySha256": "50d4a3846a076e7d031b889c045b88536b3eb4321ef170ad06c17fae5bc4fcb0"
+    },
+    {
+      "names": [
+        "resolveSpawnedSessionRoute"
+      ],
+      "group": "session-creation",
+      "bodySha256": "961e36fc6088c0463cdb87ad7be090aba0974a98c5828ab7967d5ae1a34cb40e"
+    },
+    {
+      "names": [
+        "resolveExplicitSpawnedSessionRoute"
+      ],
+      "group": "session-creation",
+      "bodySha256": "759492046476acaa1a93aad33d1346ebc83051835ba7fc354e9d54846c715279"
+    },
+    {
+      "names": [
+        "PARENT_SESSION_LABEL_ID"
+      ],
+      "group": "session-creation",
+      "bodySha256": "96d8278811bfd603c00202820fb248858a4aac3788032eec5607d7ab171ee412"
+    },
+    {
+      "names": [
+        "sanitizeParentSessionLabels"
+      ],
+      "group": "session-creation",
+      "bodySha256": "f7204273b60630984bdfdac7de8f1a509f56325f7b59e849974ffa1149020d55"
+    },
+    {
+      "names": [
+        "repairPersistedFalseCompletion"
+      ],
+      "group": "session-creation",
+      "bodySha256": "20b3ed4edf7e5706e43f8174c20dd252f6bac3fc04731891315d7ca448ab8b19"
+    },
+    {
+      "names": [
+        "createManagedSession"
+      ],
+      "group": "session-creation",
+      "bodySha256": "72738ed737653b219fefb105a9a4b756305b287e6ffaa323db38cae43dac578c"
+    },
+    {
+      "names": [
+        "EffectiveSessionSourceSelection"
+      ],
+      "group": "source-selection",
+      "bodySha256": "126d5188db874cdc35f205daf8f881db3652e3aec88e07c967eb4ab1ea2afaac"
+    },
+    {
+      "names": [
+        "resolveEffectiveSessionSourceSelection"
+      ],
+      "group": "source-selection",
+      "bodySha256": "f2daedd54be0e60c0f94282cf30efd1b444c85a3d94504d4fefa225d9c49afec"
+    },
+    {
+      "names": [
+        "refreshInheritedSessionSourceSelection"
+      ],
+      "group": "source-selection",
+      "bodySha256": "7328272056a231bdd8f375b1e6a1d710cae99499b82b2bc286c725c31978fa21"
+    },
+    {
+      "names": [
+        "sessionSourceSlugsForPersistence"
+      ],
+      "group": "source-selection",
+      "bodySha256": "b61bcc1b990eb77b9aa46630e4b809976606fb76c3d769e68a0ad4fcc85d7c15"
+    },
+    {
+      "names": [
+        "resolveBranchedSessionSourceSelection"
+      ],
+      "group": "source-selection",
+      "bodySha256": "d33103ddcb052268ee1b13f00577132450d1f0f4cf84ca50aeb08ada776d9426"
+    },
+    {
+      "names": [
+        "resolveSupportsBranching"
+      ],
+      "group": "source-selection",
+      "bodySha256": "8ed1c798d5148e49be4f341511414c783ca1bc5c903d522020ce07ef4d68021c"
+    },
+    {
+      "names": [
+        "DEFAULT_TOKEN_USAGE"
+      ],
+      "group": "session-presentation",
+      "bodySha256": "510cb8fa3862bb596ba0b2a4c5d9d1137744f0a827101aec30afbce999dd3c32"
+    },
+    {
+      "names": [
+        "managedToSession"
+      ],
+      "group": "session-presentation",
+      "bodySha256": "b1620a5215fb89a890aff5c88ab92aa7b1d6f341dcd1769a7132089bac9770b4"
+    },
+    {
+      "names": [
+        "SessionManager"
+      ],
+      "group": "retained-manager",
+      "bodySha256": "c8690b0d4b697472cf273809a81aabebf1374d21491d93ecde25c060dde636c6"
+    }
+  ],
+  "modules": [
+    {
+      "name": "runtime-platform",
+      "lines": 49,
+      "file": "packages/server-core/src/sessions/SessionManager/runtime-platform.ts",
+      "retained": false
+    },
+    {
+      "name": "mission-route",
+      "lines": 138,
+      "file": "packages/server-core/src/sessions/SessionManager/mission-route.ts",
+      "retained": false
+    },
+    {
+      "name": "runtime-policy",
+      "lines": 104,
+      "file": "packages/server-core/src/sessions/SessionManager/runtime-policy.ts",
+      "retained": false
+    },
+    {
+      "name": "turn-anchors",
+      "lines": 206,
+      "file": "packages/server-core/src/sessions/SessionManager/turn-anchors.ts",
+      "retained": false
+    },
+    {
+      "name": "source-build",
+      "lines": 325,
+      "file": "packages/server-core/src/sessions/SessionManager/source-build.ts",
+      "retained": false
+    },
+    {
+      "name": "source-activation",
+      "lines": 152,
+      "file": "packages/server-core/src/sessions/SessionManager/source-activation.ts",
+      "retained": false
+    },
+    {
+      "name": "tool-display",
+      "lines": 231,
+      "file": "packages/server-core/src/sessions/SessionManager/tool-display.ts",
+      "retained": false
+    },
+    {
+      "name": "runtime-types",
+      "lines": 119,
+      "file": "packages/server-core/src/sessions/SessionManager/runtime-types.ts",
+      "retained": false
+    },
+    {
+      "name": "managed-session",
+      "lines": 377,
+      "file": "packages/server-core/src/sessions/SessionManager/managed-session.ts",
+      "retained": false
+    },
+    {
+      "name": "review-lifecycle",
+      "lines": 74,
+      "file": "packages/server-core/src/sessions/SessionManager/review-lifecycle.ts",
+      "retained": false
+    },
+    {
+      "name": "user-input-authority",
+      "lines": 284,
+      "file": "packages/server-core/src/sessions/SessionManager/user-input-authority.ts",
+      "retained": false
+    },
+    {
+      "name": "session-creation",
+      "lines": 234,
+      "file": "packages/server-core/src/sessions/SessionManager/session-creation.ts",
+      "retained": false
+    },
+    {
+      "name": "source-selection",
+      "lines": 75,
+      "file": "packages/server-core/src/sessions/SessionManager/source-selection.ts",
+      "retained": false
+    },
+    {
+      "name": "session-presentation",
+      "lines": 42,
+      "file": "packages/server-core/src/sessions/SessionManager/session-presentation.ts",
+      "retained": false
+    },
+    {
+      "name": "retained-manager",
+      "lines": 29829,
+      "file": "packages/server-core/src/sessions/SessionManager.ts",
+      "retained": true
+    }
+  ],
+  "dependencies": {
+    "runtime-platform": [],
+    "mission-route": [
+      "runtime-platform",
+      "managed-session"
+    ],
+    "runtime-policy": [
+      "runtime-platform"
+    ],
+    "turn-anchors": [
+      "runtime-policy"
+    ],
+    "source-build": [
+      "runtime-platform"
+    ],
+    "source-activation": [],
+    "tool-display": [],
+    "runtime-types": [],
+    "managed-session": [
+      "runtime-types"
+    ],
+    "review-lifecycle": [
+      "managed-session"
+    ],
+    "user-input-authority": [
+      "managed-session",
+      "source-activation"
+    ],
+    "session-creation": [
+      "managed-session",
+      "runtime-platform"
+    ],
+    "source-selection": [
+      "managed-session"
+    ],
+    "session-presentation": [
+      "managed-session",
+      "source-selection"
+    ],
+    "retained-manager": [
+      "managed-session",
+      "runtime-types",
+      "runtime-policy",
+      "runtime-platform",
+      "session-creation",
+      "source-selection",
+      "source-build",
+      "user-input-authority",
+      "review-lifecycle",
+      "source-activation",
+      "session-presentation",
+      "mission-route",
+      "turn-anchors",
+      "tool-display"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": [],
+  "retainedTransformProofs": [
+    "session-manager-policy-body-proof.json",
+    "session-manager-state-body-proof.json"
+  ]
+}

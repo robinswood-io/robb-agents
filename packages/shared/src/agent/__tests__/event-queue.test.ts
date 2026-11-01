@@ -13,9 +13,6 @@ function textDelta(text: string): AgentEvent {
   return { type: 'text_delta', text };
 }
 
-function completeEvent(): AgentEvent {
-  return { type: 'complete' };
-}
 
 // Helper: collect all events from drain()
 async function collectDrain(queue: EventQueue): Promise<AgentEvent[]> {
@@ -101,7 +98,7 @@ describe('EventQueue', () => {
 
       await drainPromise;
       expect(events).toHaveLength(3);
-      expect(events.map(e => (e as any).text)).toEqual(['1', '2', '3']);
+      expect(events.map(e => (e as Extract<AgentEvent, { type: 'text_delta' }>).text)).toEqual(['1', '2', '3']);
     });
   });
 

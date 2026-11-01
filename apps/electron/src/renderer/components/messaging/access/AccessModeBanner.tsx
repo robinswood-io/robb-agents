@@ -4,7 +4,7 @@
  * list with the senders the gateway has already observed.
  */
 
-import * as React from 'react'
+
 import { useTranslation } from 'react-i18next'
 import { ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 interface Props {
   onLockDown: () => void
   /** Optional override of the default copy (e.g. for non-Telegram platforms). */
-  description?: string
+  description?: string | undefined
 }
 
 export function AccessModeBanner({ onLockDown, description }: Props) {

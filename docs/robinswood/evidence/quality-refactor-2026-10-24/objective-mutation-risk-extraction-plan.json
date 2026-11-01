@@ -1,0 +1,730 @@
+{
+  "source": "packages/shared/src/config/objective-mutation-risk.ts",
+  "units": [
+    {
+      "names": [
+        "SENSITIVE_DOMAIN_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "5d4ce1bfb2e19cc1a831152766cb86fb6c25a87e2f5d9aa6a3238aa80bd81fb5"
+    },
+    {
+      "names": [
+        "DIRECT_RBAC_DOMAIN_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "94b7f37b475e52dd974e3312deadf9a520254df6dd0b7445f045e79b89329c4b"
+    },
+    {
+      "names": [
+        "CRITICAL_DOMAIN_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "d8489862d6ee5d82a0bf6c2715028f3bf7b2505ee557a52ca4615860bdf5dfa8"
+    },
+    {
+      "names": [
+        "NON_CREDENTIAL_OBSERVATION_IDENTIFIER_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "9c0ef97ac09d59ff9fdacac670ab88fb582704390eab950a7fb3856901254108"
+    },
+    {
+      "names": [
+        "SENSITIVE_OBSERVATION_IDENTIFIER_QUALIFIER_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "d190d2b697124700e6b695bc869075551f7e37a298c299022337b8e3bf539c88"
+    },
+    {
+      "names": [
+        "PRODUCTION_ENVIRONMENT_RISK_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "0cf73328e823da1c5c33435083a023d0beb668293b501e9201d3bdba4deaf6d8"
+    },
+    {
+      "names": [
+        "FRENCH_PRODUCTION_PROMOTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "64f47121551c02afe3331bc56a19010a5afdc00acf2660d6aed489d364667105"
+    },
+    {
+      "names": [
+        "EXPLICIT_READ_ONLY_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "91d36a4af5f47b4d8b4ec6bbf297f18ce5ba026f020e4f393d409022cdb16c84"
+    },
+    {
+      "names": [
+        "ENGLISH_SENSITIVE_TRANSFER_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "f74dbbaedd58823c0639366e9c2c9a1a48493b1b6a5650e5ab386c8045cdef98"
+    },
+    {
+      "names": [
+        "STRUCTURED_SOURCE_TRANSFER_VERB_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "01ddc554ddf541e2619dbb4a6350405612532aa4a6c3c3e0c497634db73ed0e3"
+    },
+    {
+      "names": [
+        "STRUCTURED_SOURCE_TRANSFER_TARGET_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "063c1ff048aa9b7cad0f096f688ee19d31825f901431431628d35a95de7cb7ff"
+    },
+    {
+      "names": [
+        "STRUCTURED_SOURCE_TRANSFER_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "37cb447e33c241bb9e6270e688d22402f1188fe6532442be4f9ca22a74076f71"
+    },
+    {
+      "names": [
+        "ENGLISH_MUTATION_VERB_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "66eff189ce10bcdef6e64ab5ee025e604811ef9d5670016c1eb2bb4a458bc33d"
+    },
+    {
+      "names": [
+        "FRENCH_SENSITIVE_TRANSFER_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "0ec535476754027bf0fb38172ebd8679b99fccc5b587b9344b1357bc656297b8"
+    },
+    {
+      "names": [
+        "ENGLISH_EXTERNAL_COMMUNICATION_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "41d863abe71cabf25543d054dc352ed52d06c8232610cd1f27e20dd06b497add"
+    },
+    {
+      "names": [
+        "FRENCH_EXTERNAL_COMMUNICATION_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "0dbabc3c1a6e97b4c8990f35b74f7507f8232affd1b5f3c7e146d315c31c0f67"
+    },
+    {
+      "names": [
+        "FRENCH_MUTATION_VERB_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "7cc46003715ce4589d48dd904195a56d7b3c0fe63a7e3c4d5a62e9c4c2e5e1b5"
+    },
+    {
+      "names": [
+        "ADDITIONAL_FRENCH_LEGAL_MUTATION_VERB_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "935102fdb23d630d386d56e8566a110e1cab1cef7ea66a44ea0f30541715abc7"
+    },
+    {
+      "names": [
+        "MUTATION_VERB_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "1b225f334fc58962b6a1ff5dcafbad6a048eac32cf62fb1a0c0ae108b825e3fd"
+    },
+    {
+      "names": [
+        "MODAL_PASSIVE_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "b7f2cf506ca1a71a81b23e3bd4f41b4a7d7eeedf429223afdd7b1fea3c7cb669"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_MEDICAL_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "3b9c8b2e28116541e8b977c58d61821756be1d460bff51ccfe25728989e3d0ec"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_PRESCRIPTION_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "fdc9f7561f2cfc4eac6fa81f88a045949c7430851da8838d9d585cad4b0e20fb"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_PROCEDURE_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "9c484c8ae71b6c703c26b87eec518caabfbbc8f394e2bd4aa3e7435055bfb260"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_PATIENT_CARE_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "a92ae4951fcee4ed35bef4f0b31b1cf7f12ff981f9d3fd4741d9f0c8b23ef311"
+    },
+    {
+      "names": [
+        "LOCALLY_BOUND_CLINICAL_PROCEDURE_TARGET_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "d6d0fa6edda6dde208f51659219b7ccb28321789b05e9491742205a4590b7d1c"
+    },
+    {
+      "names": [
+        "LOCALLY_BOUND_CLINICAL_PROCEDURE_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "8d87d371f5e3ab2571e964ce2d2f30904090598ee3d47969c58b80de9d5b8053"
+    },
+    {
+      "names": [
+        "LOCALLY_BOUND_CLINICAL_PATIENT_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "6e4cbb3556e5599d5dc291ec3d0352f98d2bbd29a93a8b7d3df62c46079d01e8"
+    },
+    {
+      "names": [
+        "LOCALLY_BOUND_CLINICAL_TRANSITION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "d674a70593ed65a68be6843527c24088ce7a09de341a679fd73f442b2457f33a"
+    },
+    {
+      "names": [
+        "LOCALLY_BOUND_CLINICAL_NAMED_PERSON_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "d71769491cc61d263135a6319ded24ea3de7568d266250f9c4d533f162e12e5a"
+    },
+    {
+      "names": [
+        "ANY_ENGLISH_CLINICAL_ACTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "b894c3e4b989b594afecc182a672b671fa233e5e249b2bb9ef81899848281615"
+    },
+    {
+      "names": [
+        "BARE_ENGLISH_CLINICAL_ACTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "d57a9e1a99b1bce772635ced842c0fd84ce247061245ee885771a067bc013663"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_MEDICAL_TARGET_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "43af39136f67e8672d9162b916e2a09df34af271eafb7c2962916f189d9bce19"
+    },
+    {
+      "names": [
+        "LOCALLY_BOUND_CLINICAL_QUALIFIER_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "ef2f6ea3602ebddd6d437aa2a46d9632ff9c7fb09c2b4055a2831a1cca419ed4"
+    },
+    {
+      "names": [
+        "LOCALLY_BOUND_MEDICAL_TARGET_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "611dba80e6eb0f7f664d865f6ceaddea0e81194f92048dc4564f0f6c1edc2b13"
+    },
+    {
+      "names": [
+        "LOCALLY_BOUND_CLINICAL_PATIENT_ADMINISTRATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "a19ca52ad2561ece9f28779b74457b195bde1da44da9aff4918433348486f631"
+    },
+    {
+      "names": [
+        "DIRECT_RBAC_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "d80b5f1f75be0bd0cae68d1ba41bee23f143b97d07a9b9db9b7fc24062afdcb6"
+    },
+    {
+      "names": [
+        "OPERATIONAL_TREATMENT_OBJECT_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "453d9ec27d0a92f55344bedb540ff8c83c76740fe67921f552c4caffa2bb47ac"
+    },
+    {
+      "names": [
+        "EXPLICIT_OPERATIONAL_TREATMENT_COMPLEMENT_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "7d62a8700ba8d424aa92d59bae34e4766ba8ebd09435b640cc3dca2ef6040de5"
+    },
+    {
+      "names": [
+        "LOCALLY_BOUND_OPERATIONAL_TREATMENT_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "ab65d32f717040f3ead56d6dd120c110bdd5bc9c72c00d0a899587127e55acd0"
+    },
+    {
+      "names": [
+        "hasLocallyBoundOperationalTreatmentTarget"
+      ],
+      "group": "patterns",
+      "bodySha256": "efd2a74a2aeeed1ed110ef254e6eea98d3a9b20f99879ae237559308621411a0"
+    },
+    {
+      "names": [
+        "FRENCH_INFINITIVE_STATE_PREDICATE_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "71e236515fe338b92e096a5a2168995f89e005f70db8920ced8ba2bea07fdb3f"
+    },
+    {
+      "names": [
+        "FRENCH_REACTIVATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "c2df94236cd1da51f5322d33db020f09dfd23981c6bb4ad4eea14d875cea9f9e"
+    },
+    {
+      "names": [
+        "EXTERNAL_COMMUNICATION_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "2dc309dce3674b65052ea9bde2b04a7e87140c915fcf420d88d0c6f616ee5d48"
+    },
+    {
+      "names": [
+        "READ_ONLY_OPERATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "ed05c8550e1f5ed2714ea9eeb7dc2635390af343ab27511044e0b50d56bf46aa"
+    },
+    {
+      "names": [
+        "ENGLISH_OBJECT_STATE_QUESTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "399ff3b978e46c5b0b0e4b9a50f5cb41274acfcd5debf241fb3a74be6b83baaf"
+    },
+    {
+      "names": [
+        "FRENCH_OBJECT_STATE_QUESTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "84b793133e67cd70b4a11994bd06a9eb0c49d7fa81b7b0cd9e237cc7544e7733"
+    },
+    {
+      "names": [
+        "AUDITED_PNS_POSTGRES_PREFIX_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "68fcf9bb22b50cf7daa26cd23143be6d319495be908377153b5fac82796f69ec"
+    },
+    {
+      "names": [
+        "AUDITED_PNS_POSTGRES_PROSE_BASE_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "04a8ce8c01d54864cf874c8ab33593c7a2c3f37fa769690457626e241cd78cfa"
+    },
+    {
+      "names": [
+        "AUDITED_PNS_POSTGRES_PROSE_QUERY_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "cb03273550675e7d6d71951211d000512d22b67aa78f1f5ffe4cf8350f6dc051"
+    },
+    {
+      "names": [
+        "AUDITED_PNS_POSTGRES_FORM_CUE_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "acc4aea8a395958f7bed971d8502e3bd1e395858aa33c122cebca20325f6d833"
+    },
+    {
+      "names": [
+        "AUDITED_PNS_POSTGRES_OBSERVATION_CUE_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "7190f6514bf01739a064f5b133d94e71c750ff27be0426d5f1288a040ec026ad"
+    },
+    {
+      "names": [
+        "AUDITED_PNS_POSTGRES_MUTATING_SQL_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "46d7207928e33346cfdd8db138a1cd1478de32554b7b979cd1d9ea14205b6a17"
+    },
+    {
+      "names": [
+        "AUDITED_PNS_POSTGRES_UNVALIDATED_SQL_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "bcd1f76583694f329a130ab86f77a4fcc822501afd90365d0c4020e74b51521f"
+    },
+    {
+      "names": [
+        "AUDITED_PNS_POSTGRES_EXTRA_CAPABILITY_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "48152aefc4c0c78c3c017419d7cb318b8320e416e69b4b6dfcd750d01a2c4c1b"
+    },
+    {
+      "names": [
+        "AUDITED_PNS_POSTGRES_WRAPPER_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "58f70d2927dca989fe5930649a3845af700f47619b64fc02f7f1bef7f142dc71"
+    },
+    {
+      "names": [
+        "MUTATION_SCOPE_BOUNDARY_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "78cda0740d83adde38ff9f83d75be7dd71f1e2684fd2a4688489b63cdbd8940a"
+    },
+    {
+      "names": [
+        "INTRINSIC_SENSITIVE_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "52aa0d5c3f02ccd04c68a3a686f98be088cd1d4837653b6eef3fc0e990fda5ce"
+    },
+    {
+      "names": [
+        "MUTATION_TARGET_PRONOUN_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "b2dcff395452fc0c4920537b3fbdbd251972f58fe7e09e5a9ce659378599260c"
+    },
+    {
+      "names": [
+        "MUTATION_TARGET_PREVERBAL_PRONOUN_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "87b6d72a0825668012b21103292aa258745fd52023a967f2a597477bbbce5ab6"
+    },
+    {
+      "names": [
+        "DOCUMENT_TARGET_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "8e9fd5d669898be43fd2e69b2d37bcfb0f9e0888066c784522f8c2b33e0ce574"
+    },
+    {
+      "names": [
+        "LINGUISTIC_EDIT_TARGET_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "36419876c30a979ba473e6978675d217073e80aeb47aa87b9767c4de0bc4e566"
+    },
+    {
+      "names": [
+        "DOCUMENT_SUMMARY_TARGET_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "8970cef86a11e1cffe7b1b4b9355a3c70b2d45c2d37f7e8cfc65ebbdc2f7bc5d"
+    },
+    {
+      "names": [
+        "DOCUMENTED_CREDENTIAL_POLICY_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "bc547e5e3a87f781698222720eb4c1a560d90f07d0aa6cb99853ca82bf1c68aa"
+    },
+    {
+      "names": [
+        "DOCUMENT_EDIT_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "52ec9565ec508c386243f8735d148428373d52c19b23af4c485bbb8368ce1d37"
+    },
+    {
+      "names": [
+        "LOCAL_NON_OPERATIONAL_SENSITIVE_ARTIFACT_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "9d8380c561e42fa262a8fa8b60426e46578f61b4c064c4a8d0523c22956043f2"
+    },
+    {
+      "names": [
+        "LOCAL_ARTIFACT_EDIT_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "45d78ef93a6e6a9368b6f159e1c3b4537bba8c2b73c7fa76e4dfd9d5cc58c776"
+    },
+    {
+      "names": [
+        "OPERATIONAL_SENSITIVE_EFFECT_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "821c95005c7f1b7c748f472e1e779259fea4e020421a746cd819eac8ad68b6c1"
+    },
+    {
+      "names": [
+        "STRUCTURED_SENSITIVE_TARGET_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "258b4344bee423c642319e8fa76aa3cf49e69179038be13dde7747a6d065396c"
+    },
+    {
+      "names": [
+        "READ_ONLY_OPERATION_START_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "4191eeaffb8a46359c12bfef40b366bee77280a5cd3566d32a4316ef07b1a9f8"
+    },
+    {
+      "names": [
+        "READ_ONLY_NOMINAL_OPERATION_START_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "8433da8785976068ddfca56a1d557bf425ed5e42171746af102894e6e40bf84b"
+    },
+    {
+      "names": [
+        "DECLARATIVE_CLAUSE_START_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "5fa9ecf99c38faa3bbb051bace2b2a1a136f39ab2d827c9b4a070826734e1d94"
+    },
+    {
+      "names": [
+        "MUTATION_MODIFIER_ONLY_START_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "c1449101dfa3281dda9f4720eb97b699aad8a7bd963cf9ae618edf758914360d"
+    },
+    {
+      "names": [
+        "STRUCTURED_FIELD_DELIMITER_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "111b1053d4ea0d89b45e6456e80ce472d92aaea087edbcb31ac61960560e020d"
+    },
+    {
+      "names": [
+        "ACTION_ONLY_PREFIX_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "088b4741efbd9e5a93d7d7a01155244bf8f5469acc3825f063acea104141b84d"
+    },
+    {
+      "names": [
+        "STRUCTURED_TARGET_FIELD_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "a44fa6c38fd82054152dc43fc85e4593236a646a98ae709266118e7bf550ad88"
+    },
+    {
+      "names": [
+        "ObjectiveMutationRiskClassification"
+      ],
+      "group": "observation-text",
+      "bodySha256": "e92cd895a298c154812612d96fe8cf34e268336df1b918d70f0f248e2d1a4faa"
+    },
+    {
+      "names": [
+        "isAuditedPnsPostgresReadOnlyCommand"
+      ],
+      "group": "observation-text",
+      "bodySha256": "2541ae319ff38bf93f2eee99fadfd2347a9450d9c336720c4a68adeea3af8615"
+    },
+    {
+      "names": [
+        "maskRoutingTextMatch"
+      ],
+      "group": "observation-text",
+      "bodySha256": "88f9f5c4d0ff774c8d7ff54e9020f283282b371060b44da10c27cb7380ef7621"
+    },
+    {
+      "names": [
+        "neutralizeNonCredentialObservationIdentifiers"
+      ],
+      "group": "observation-text",
+      "bodySha256": "159fd7337d36e9c7f2fabae434ddb1818f779e650751de19c0b2c3d3ea714ec9"
+    },
+    {
+      "names": [
+        "neutralizeAuditedPnsPostgresReadOnlyProse"
+      ],
+      "group": "observation-text",
+      "bodySha256": "1056a2807b134d61efb4c238dca47a96968d51fc2649e563de75e3d2af16c7d7"
+    },
+    {
+      "names": [
+        "isNonAuthoritativeMutation"
+      ],
+      "group": "authoritative-actions",
+      "bodySha256": "67863d0f7b69ff72177bac09f271cc77a539a24c6314ddba00fc2a358cc2e63a"
+    },
+    {
+      "names": [
+        "isAuthoritativeModalPassive"
+      ],
+      "group": "authoritative-actions",
+      "bodySha256": "ed2a88dcad6d81f8ad2c63516cc8fcf11e2588f4d017f40496eab3353c2554ca"
+    },
+    {
+      "names": [
+        "isAuthoritativeFrenchReactivation"
+      ],
+      "group": "authoritative-actions",
+      "bodySha256": "d31559b0aeae10c482871cc9c54a64178771876ceffa8e303e2ac2d71c0d8ab6"
+    },
+    {
+      "names": [
+        "authoritativeMutationMatches"
+      ],
+      "group": "authoritative-actions",
+      "bodySha256": "d7995895bec3e7987f06b8449a58db6dedf5d3105a2a7d69e5c566b721e39124"
+    },
+    {
+      "names": [
+        "normalizeClauseLead"
+      ],
+      "group": "scope-boundaries",
+      "bodySha256": "e6f122406f33818404ad45c67d9c473b0b0072205ec80a8fc9549f693c13d698"
+    },
+    {
+      "names": [
+        "operationStartsNearClauseBoundary"
+      ],
+      "group": "scope-boundaries",
+      "bodySha256": "705bb42b9cd19bac82deb3bcb83e791437a42d1830d408e2d63ec6f480f29c66"
+    },
+    {
+      "names": [
+        "structuralDelimiterIndices"
+      ],
+      "group": "scope-boundaries",
+      "bodySha256": "3a2aca6e791833093a9d644758df14888aa620004a2f0c540c3f72acffb75abd"
+    },
+    {
+      "names": [
+        "matchingParenthesisIndex"
+      ],
+      "group": "scope-boundaries",
+      "bodySha256": "d9aa1388dfa8b52a71ceaa47fac65a0f49a2a14feeb4257bddf3a5ffa1e430a2"
+    },
+    {
+      "names": [
+        "closedIntercalaryTails"
+      ],
+      "group": "scope-boundaries",
+      "bodySha256": "8f29323c87b610bfd60939da17e3da4815e833c47b4b548613843647c478a185"
+    },
+    {
+      "names": [
+        "plainConjunctionStartsAnotherOperation"
+      ],
+      "group": "scope-boundaries",
+      "bodySha256": "3292ac89e8142ba5214815c8d231ec8cfd600a773be273ddd60dfb3c6a71d723"
+    },
+    {
+      "names": [
+        "mutationHasLocalTarget"
+      ],
+      "group": "scope-boundaries",
+      "bodySha256": "f184c3137ce134963fe7ebee4c6322a65fe4414d7c7cdd2c9e4d87b636572e8c"
+    },
+    {
+      "names": [
+        "implicitPreverbalSensitiveTarget"
+      ],
+      "group": "scope-boundaries",
+      "bodySha256": "74cba95817fd713323364dc1ca4cba8fade426792eb31c38fd9c91effab0a889"
+    },
+    {
+      "names": [
+        "boundedReferentContext"
+      ],
+      "group": "scope-boundaries",
+      "bodySha256": "1809e084c809c672373247fadbd1dbb6a20b3dd623e1daf9be10c2311ecd55c5"
+    },
+    {
+      "names": [
+        "scopedMutationRisk"
+      ],
+      "group": "scoped-risk",
+      "bodySha256": "43f3f70214fa47ab21bc1ce4a777ef898497e755f3e13209ab886d12f6a9553e"
+    },
+    {
+      "names": [
+        "ObjectiveMutationRiskContext"
+      ],
+      "group": "classification",
+      "bodySha256": "56da6cbaabe599de8537a6bb70957fa05941295e0a9c005d47bcfed376a76d7c"
+    },
+    {
+      "names": [
+        "classifyObjectiveMutationRisk"
+      ],
+      "group": "classification",
+      "bodySha256": "e80c72e67f77ff7835bae58a0a33a5f0763616a022eac58aece701688959de32"
+    }
+  ],
+  "modules": [
+    {
+      "name": "patterns",
+      "lines": 216
+    },
+    {
+      "name": "observation-text",
+      "lines": 84
+    },
+    {
+      "name": "authoritative-actions",
+      "lines": 300
+    },
+    {
+      "name": "scope-boundaries",
+      "lines": 192
+    },
+    {
+      "name": "scoped-risk",
+      "lines": 134
+    },
+    {
+      "name": "classification",
+      "lines": 75
+    }
+  ],
+  "dependencies": {
+    "patterns": [],
+    "observation-text": [
+      "patterns"
+    ],
+    "authoritative-actions": [
+      "patterns"
+    ],
+    "scope-boundaries": [
+      "patterns",
+      "authoritative-actions",
+      "observation-text"
+    ],
+    "scoped-risk": [
+      "patterns",
+      "scope-boundaries",
+      "observation-text"
+    ],
+    "classification": [
+      "observation-text",
+      "patterns",
+      "authoritative-actions",
+      "scoped-risk"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

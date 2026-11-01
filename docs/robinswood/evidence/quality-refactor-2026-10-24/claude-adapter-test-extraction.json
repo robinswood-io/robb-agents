@@ -1,0 +1,21 @@
+{
+  "scenarios": 37,
+  "unchangedScenarioBodies": true,
+  "modules": [
+    {
+      "file": "packages/shared/src/agent/__tests__/claude-event-adapter.test.ts",
+      "lines": 271,
+      "group": "stream"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/claude-event-adapter.tools.test.ts",
+      "lines": 340,
+      "group": "tools"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/claude-event-adapter.lifecycle.test.ts",
+      "lines": 286,
+      "group": "lifecycle"
+    }
+  ]
+}

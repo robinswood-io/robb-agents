@@ -1,0 +1,186 @@
+{
+  "valid": true,
+  "source": "apps/electron/src/renderer/event-processor/types.ts",
+  "canonicalType": "@craft-agent/shared/protocol:SessionEvent",
+  "exactAliases": [
+    {
+      "name": "TextDeltaEvent",
+      "tag": "text_delta"
+    },
+    {
+      "name": "TextDiscardEvent",
+      "tag": "text_discard"
+    },
+    {
+      "name": "TextCompleteEvent",
+      "tag": "text_complete"
+    },
+    {
+      "name": "CompleteEvent",
+      "tag": "complete"
+    },
+    {
+      "name": "PermissionRequestEvent",
+      "tag": "permission_request"
+    },
+    {
+      "name": "SourcesChangedEvent",
+      "tag": "sources_changed"
+    },
+    {
+      "name": "LabelsChangedEvent",
+      "tag": "labels_changed"
+    },
+    {
+      "name": "ProjectIdChangedEvent",
+      "tag": "project_id_changed"
+    },
+    {
+      "name": "ObjectiveChangedEvent",
+      "tag": "objective_changed"
+    },
+    {
+      "name": "SessionMetadataChangedEvent",
+      "tag": "session_metadata_changed"
+    },
+    {
+      "name": "SessionFlaggedEvent",
+      "tag": "session_flagged"
+    },
+    {
+      "name": "SessionUnflaggedEvent",
+      "tag": "session_unflagged"
+    },
+    {
+      "name": "SessionArchivedEvent",
+      "tag": "session_archived"
+    },
+    {
+      "name": "SessionUnarchivedEvent",
+      "tag": "session_unarchived"
+    },
+    {
+      "name": "NameChangedEvent",
+      "tag": "name_changed"
+    },
+    {
+      "name": "PlanSubmittedEvent",
+      "tag": "plan_submitted"
+    },
+    {
+      "name": "TypedErrorEvent",
+      "tag": "typed_error"
+    },
+    {
+      "name": "InfoEvent",
+      "tag": "info"
+    },
+    {
+      "name": "InterruptedEvent",
+      "tag": "interrupted"
+    },
+    {
+      "name": "TitleRegeneratingEvent",
+      "tag": "title_regenerating"
+    },
+    {
+      "name": "AsyncOperationEvent",
+      "tag": "async_operation"
+    },
+    {
+      "name": "WorkingDirectoryChangedEvent",
+      "tag": "working_directory_changed"
+    },
+    {
+      "name": "WorkingDirectoryErrorEvent",
+      "tag": "working_directory_error"
+    },
+    {
+      "name": "PermissionModeChangedEvent",
+      "tag": "permission_mode_changed"
+    },
+    {
+      "name": "SessionModelChangedEvent",
+      "tag": "session_model_changed"
+    },
+    {
+      "name": "LLMConnectionChangedEvent",
+      "tag": "connection_changed"
+    },
+    {
+      "name": "CredentialRequestEvent",
+      "tag": "credential_request"
+    },
+    {
+      "name": "TaskBackgroundedEvent",
+      "tag": "task_backgrounded"
+    },
+    {
+      "name": "WorkflowAgentCompletedEvent",
+      "tag": "workflow_agent_completed"
+    },
+    {
+      "name": "TaskProgressEvent",
+      "tag": "task_progress"
+    },
+    {
+      "name": "TaskCompletedEvent",
+      "tag": "task_completed"
+    },
+    {
+      "name": "UserMessageEvent",
+      "tag": "user_message"
+    },
+    {
+      "name": "MessageAnnotationsUpdatedEvent",
+      "tag": "message_annotations_updated"
+    },
+    {
+      "name": "SessionSharedEvent",
+      "tag": "session_shared"
+    },
+    {
+      "name": "SessionUnsharedEvent",
+      "tag": "session_unshared"
+    },
+    {
+      "name": "UserInputChangedEvent",
+      "tag": "user_input_changed"
+    },
+    {
+      "name": "AuthRequestEvent",
+      "tag": "auth_request"
+    },
+    {
+      "name": "AuthCompletedEvent",
+      "tag": "auth_completed"
+    },
+    {
+      "name": "SourceActivatedEvent",
+      "tag": "source_activated"
+    },
+    {
+      "name": "AutonomyEventUpdate",
+      "tag": "autonomy_event"
+    },
+    {
+      "name": "UsageUpdateEvent",
+      "tag": "usage_update"
+    }
+  ],
+  "preservedProjections": [
+    "ToolStartEvent",
+    "ToolResultEvent",
+    "ErrorEvent",
+    "SessionStatusChangedEvent",
+    "StatusEvent",
+    "TitleGeneratedEvent",
+    "ShellBackgroundedEvent"
+  ],
+  "runtimeOutputUnchanged": true,
+  "beforeLines": 624,
+  "afterLines": 398,
+  "beforeHash": "5e9ea7de6e8c049412a5c40eadd706ed37061c4c99342422fde6afd542752719",
+  "afterHash": "f78aa9527f769d71c8ddd1c4d80af4a7e2547b1e363dd0b49104d802d4ca35b7",
+  "equivalence": "Bidirectional assignability, identical properties and optionality; no direct property any."
+}

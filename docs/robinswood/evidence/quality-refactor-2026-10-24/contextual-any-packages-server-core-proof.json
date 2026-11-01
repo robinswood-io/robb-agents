@@ -1,0 +1,26 @@
+[
+  {
+    "file": "packages/shared/src/agent/session-scoped-tools.ts",
+    "removedAnnotations": 1,
+    "javascriptHash": "86a7d0923f75989b42107fafb5a3359804a08deb2ed8c7f4a91c414fff91d289",
+    "beforeHash": "f45d46053c64df4ab003b578730e15f6c5f5143bd53031c4ddf082b726235d2c",
+    "afterHash": "9211a97e6ff59d0d044b5c113ffc6a0e7d2dedb25c468a4579da5586be30b5f1",
+    "backup": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/contextual-any-packages-server-core-b31f8270f8d2-before.ts",
+    "expectedTypes": [
+      "{ [x: string]: unknown; }"
+    ]
+  },
+  {
+    "file": "packages/server-core/src/sessions/restart-recovery.test.ts",
+    "removedAnnotations": 59,
+    "javascriptHash": "86aa07f99ac1094087f4523b59a96043c3493a5d29875d0f40dcf8f5b8f157f3",
+    "beforeHash": "027f0a3544b1d889662aea20e0e630b578107fdd422700238b3e1c0a37db2ac2",
+    "afterHash": "3d32294bb080d630bda618dce633d6667ea95589e71ea111a7df99c41698f15f",
+    "backup": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/contextual-any-packages-server-core-f3a3e90fabdf-before.ts",
+    "expectedTypes": [
+      "Message",
+      "{ message: string; attachments?: FileAttachment[] | undefined; storedAttachments?: StoredAttachment[] | undefined; options?: SendMessageOpti",
+      "UserInputRequest"
+    ]
+  }
+]

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * ProjectInfoPage
  *
@@ -149,13 +150,13 @@ export default function ProjectInfoPage({ projectSlug }: ProjectInfoPageProps) {
     if (!workspaceId || !project) return
     setSaving(true)
     try {
-      await window.electronAPI.updateProject(workspaceId, project.config.slug, {
+      await window.electronAPI.updateProject(workspaceId, project.config.slug, omitUndefined({
         name: editName.trim() || project.config.name,
         description: editDescription.trim() || undefined,
         workingDirectory: editWorkingDir.trim() || undefined,
         details: editDetails.trim() || undefined,
         color: editColor.trim() || undefined,
-      })
+      }))
       toast.success(t('projectInfo.saved'))
     } catch (err) {
       console.error('[ProjectInfoPage] Save failed:', err)

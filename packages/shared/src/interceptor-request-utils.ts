@@ -1,3 +1,4 @@
+import { isUnknownArray } from './utils/json.ts';
 /**
  * Resolve method/body/headers from fetch(input, init), including Request inputs.
  */
@@ -25,7 +26,7 @@ export async function resolveRequestContext(
     }
   }
 
-  return { bodyStr: undefined, normalizedInit: init ?? {} };
+  return {  normalizedInit: init ?? {} };
 }
 
 /**
@@ -40,7 +41,7 @@ export async function resolveRequestContext(
 export function normalizeOpenAiResponsesRequest(
   body: Record<string, unknown>,
 ): Record<string, unknown> {
-  const model = typeof body.model === 'string' ? body.model.replace(/^pi\//, '') : '';
+  const model = typeof body["model"] === 'string' ? body["model"].replace(/^pi\//, '') : '';
   const isAstra = model === 'gpt-6-astra';
   const usesCurrentPromptCache = isAstra || [
     'gpt-5.6', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna',
@@ -48,28 +49,28 @@ export function normalizeOpenAiResponsesRequest(
   if (!usesCurrentPromptCache) return body;
 
   if (isAstra) {
-    delete body.temperature;
-    delete body.top_p;
-    delete body.top_logprobs;
-    delete body.logprobs;
+    delete body["temperature"];
+    delete body["top_p"];
+    delete body["top_logprobs"];
+    delete body["logprobs"];
 
-    if (Array.isArray(body.include)) {
-      const include = body.include.filter(item => item !== 'message.output_text.logprobs');
-      if (include.length > 0) body.include = include;
-      else delete body.include;
+    if (isUnknownArray(body["include"])) {
+      const include = body["include"].filter((item: unknown) => item !== 'message.output_text.logprobs');
+      if (include.length > 0) body["include"] = include;
+      else delete body["include"];
     }
   }
 
-  if (typeof body.prompt_cache_retention === 'string') {
-    const existingOptions = body.prompt_cache_options;
-    body.prompt_cache_options = {
-      ...(existingOptions && typeof existingOptions === 'object' && !Array.isArray(existingOptions)
+  if (typeof body["prompt_cache_retention"] === 'string') {
+    const existingOptions = body["prompt_cache_options"];
+    body["prompt_cache_options"] = {
+      ...(existingOptions && typeof existingOptions === 'object' && !isUnknownArray(existingOptions)
         ? existingOptions as Record<string, unknown>
         : {}),
       ttl: '30m',
     };
   }
-  delete body.prompt_cache_retention;
+  delete body["prompt_cache_retention"];
 
   return body;
 }
@@ -92,10 +93,10 @@ export function normalizeMistralChatRequest(
     return body;
   }
   if (endpoint.hostname !== 'api.mistral.ai' || endpoint.pathname !== '/v1/chat/completions') return body;
-  if (body.model !== 'mistral-medium-3-5' && body.model !== 'mistral-medium-2604') return body;
-  if (body.prompt_mode !== 'reasoning') return body;
+  if (body["model"] !== 'mistral-medium-3-5' && body["model"] !== 'mistral-medium-2604') return body;
+  if (body["prompt_mode"] !== 'reasoning') return body;
 
-  if (body.reasoning_effort === undefined) body.reasoning_effort = 'high';
-  delete body.prompt_mode;
+  if (body["reasoning_effort"] === undefined) body["reasoning_effort"] = 'high';
+  delete body["prompt_mode"];
   return body;
 }

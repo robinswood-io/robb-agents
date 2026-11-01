@@ -6,10 +6,22 @@ import { appendAutomationHistoryEntry } from '@craft-agent/shared/automations/hi
 import { AUTOMATION_HISTORY_MAX_RUNS_PER_MATCHER } from '@craft-agent/shared/automations/constants'
 import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
+import { z } from 'zod'
+import { WebhookActionSchema } from '@craft-agent/shared/automations'
+import type { WebhookAction } from '@craft-agent/shared/automations'
+import { omitUndefined, parseJsonObject, isJsonObject } from '@craft-agent/shared/utils/json'
 
 // History file name — matches AUTOMATIONS_HISTORY_FILE from @craft-agent/shared/automations/constants
 const HISTORY_FILE = 'automations-history.jsonl'
-interface HistoryEntry { id: string; ts: number; ok: boolean; sessionId?: string; prompt?: string; error?: string; webhook?: { method: string; url: string; statusCode: number; durationMs: number; attempts?: number; error?: string; responseBody?: string } }
+const HistoryEntrySchema = z.object({
+  id: z.string(), ts: z.number(), ok: z.boolean(),
+  sessionId: z.string().optional(), prompt: z.string().optional(), error: z.string().optional(),
+  webhook: z.object({
+    method: z.string(), url: z.string(), statusCode: z.number(), durationMs: z.number(),
+    attempts: z.number().optional(), error: z.string().optional(), responseBody: z.string().optional(),
+  }).optional(),
+}).passthrough()
+type HistoryEntry = z.output<typeof HistoryEntrySchema>
 
 // Per-workspace config mutex: serializes read-modify-write cycles on automations.json
 // to prevent concurrent IPC calls from clobbering each other's changes.
@@ -22,7 +34,10 @@ function withConfigMutex<T>(workspaceRoot: string, fn: () => Promise<T>): Promis
 }
 
 // Shared helper: resolve workspace, read automations.json, validate matcher, mutate, write back
-interface AutomationsConfigJson { automations?: Record<string, Record<string, unknown>[]>; [key: string]: unknown }
+const AutomationsConfigJsonSchema = z.object({
+  automations: z.record(z.string(), z.array(z.record(z.string(), z.unknown()))).optional(),
+}).passthrough()
+type AutomationsConfigJson = z.output<typeof AutomationsConfigJsonSchema>
 async function withAutomationMatcher(workspaceId: string, eventName: string, matcherIndex: number, mutate: (matchers: Record<string, unknown>[], index: number, config: AutomationsConfigJson, genId: () => string) => void) {
   const workspace = getWorkspaceByNameOrId(workspaceId)
   if (!workspace) throw new Error('Workspace not found')
@@ -32,11 +47,11 @@ async function withAutomationMatcher(workspaceId: string, eventName: string, mat
     const configPath = resolveAutomationsConfigPath(workspace.rootPath)
 
     const raw = await readFile(configPath, 'utf-8')
-    const config = JSON.parse(raw)
+    const config = AutomationsConfigJsonSchema.parse(JSON.parse(raw))
 
     const eventMap = config.automations ?? {}
     const matchers = eventMap[eventName]
-    if (!Array.isArray(matchers) || matcherIndex < 0 || matcherIndex >= matchers.length) {
+    if (!Array.isArray(matchers) || !Number.isInteger(matcherIndex) || matcherIndex < 0 || matcherIndex >= matchers.length) {
       throw new Error(`Invalid automation reference: ${eventName}[${matcherIndex}]`)
     }
 
@@ -46,7 +61,7 @@ async function withAutomationMatcher(workspaceId: string, eventName: string, mat
     for (const eventMatchers of Object.values(eventMap)) {
       if (!Array.isArray(eventMatchers)) continue
       for (const m of eventMatchers as Record<string, unknown>[]) {
-        if (!m.id) m.id = generateShortId()
+        if (!m["id"]) m["id"] = generateShortId()
       }
     }
 
@@ -81,8 +96,9 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
       const configPath = resolveAutomationsConfigPath(workspace.rootPath)
       log.info(`AUTOMATIONS_GET: Reading config from: ${configPath}`)
       const content = await readFile(configPath, 'utf-8')
-      const parsed = JSON.parse(content)
-      const eventCount = parsed?.automations ? Object.keys(parsed.automations).length : 0
+      const parsed = parseJsonObject(content)
+      const eventMap = parsed['automations']
+      const eventCount = isJsonObject(eventMap) ? Object.keys(eventMap).length : 0
       log.info(`AUTOMATIONS_GET: Loaded ${eventCount} event type(s) from ${configPath}`)
       return parsed
     } catch (error) {
@@ -125,8 +141,8 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
             url: action.url as string,
             statusCode: result.statusCode,
             durationMs: result.durationMs ?? 0,
-            error: result.error,
-            responseBody: result.responseBody,
+            ...(result.error !== undefined ? { error: result.error } : {}),
+            ...(result.responseBody !== undefined ? { responseBody: result.responseBody } : {}),
           })
           try {
             await appendAutomationHistoryEntry(workspace.rootPath, entry)
@@ -146,14 +162,14 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
           workspaceId: payload.workspaceId,
           workspaceRootPath: workspace.rootPath,
           prompt: action.prompt,
-          labels: payload.labels,
-          permissionMode: payload.permissionMode,
+          ...(payload.labels !== undefined ? { labels: payload.labels } : {}),
+          ...(payload.permissionMode !== undefined ? { permissionMode: payload.permissionMode } : {}),
           mentions: references.mentions,
-          llmConnection: action.llmConnection,
-          model: action.model,
-          thinkingLevel: action.thinkingLevel,
-          automationName: payload.automationName,
-          telegramTopic: payload.telegramTopic,
+          ...(action.llmConnection !== undefined ? { llmConnection: action.llmConnection } : {}),
+          ...(action.model !== undefined ? { model: action.model } : {}),
+          ...(action.thinkingLevel !== undefined ? { thinkingLevel: action.thinkingLevel } : {}),
+          ...(payload.automationName !== undefined ? { automationName: payload.automationName } : {}),
+          ...(payload.telegramTopic !== undefined ? { telegramTopic: payload.telegramTopic } : {}),
           // Test = "did it launch + start producing output", not "did the whole
           // turn finish". Return once the session is created so a long run doesn't
           // trip the 30s RPC timeout (craft-agents-oss#943).
@@ -201,10 +217,12 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
   // Automation enabled state management (toggle enabled/disabled in automations.json)
   server.handle(RPC_CHANNELS.automations.SET_ENABLED, async (_ctx, workspaceId: string, eventName: string, matcherIndex: number, enabled: boolean) => {
     await withAutomationMatcher(workspaceId, eventName, matcherIndex, (matchers, idx) => {
+      const matcher = matchers[idx]
+      if (!matcher) throw new Error(`Automation matcher ${idx} does not exist`)
       if (enabled) {
-        delete matchers[idx].enabled
+        delete matcher["enabled"]
       } else {
-        matchers[idx].enabled = false
+        matcher["enabled"] = false
       }
     })
   })
@@ -212,9 +230,11 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
   // Duplicate an automation matcher
   server.handle(RPC_CHANNELS.automations.DUPLICATE, async (_ctx, workspaceId: string, eventName: string, matcherIndex: number) => {
     await withAutomationMatcher(workspaceId, eventName, matcherIndex, (matchers, idx, _config, genId) => {
-      const clone = JSON.parse(JSON.stringify(matchers[idx]))
-      clone.id = genId()
-      clone.name = clone.name ? `${clone.name} Copy` : 'Untitled Copy'
+      const selected = matchers[idx]
+      if (!selected) throw new Error('Automation matcher no longer exists')
+      const clone = structuredClone(selected)
+      clone['id'] = genId()
+      clone['name'] = clone['name'] ? `${String(clone['name'])} Copy` : 'Untitled Copy'
       matchers.splice(idx + 1, 0, clone)
     })
   })
@@ -231,7 +251,7 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
   })
 
   // Read execution history for a specific automation
-  server.handle(RPC_CHANNELS.automations.GET_HISTORY, async (_ctx, workspaceId: string, automationId: string, limit = AUTOMATION_HISTORY_MAX_RUNS_PER_MATCHER) => {
+  server.handle(RPC_CHANNELS.automations.GET_HISTORY, async (_ctx, workspaceId: string, automationId: string, limit: number = AUTOMATION_HISTORY_MAX_RUNS_PER_MATCHER) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) throw new Error('Workspace not found')
 
@@ -242,7 +262,7 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
       const lines = content.trim().split('\n').filter(Boolean)
 
       return lines
-        .map(line => { try { return JSON.parse(line) } catch { return null } })
+        .map(line => { try { return HistoryEntrySchema.parse(JSON.parse(line)) } catch { return null } })
         .filter((e): e is HistoryEntry => e?.id === automationId)
         .slice(-clampedLimit)
         .reverse()
@@ -266,11 +286,12 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
     if (!matcher) throw new Error('Automation not found')
 
     const webhookActions = (matcher.actions ?? []).filter(a => a.type === 'webhook')
+      .map(action => omitUndefined<WebhookAction>(WebhookActionSchema.parse(action)))
     if (webhookActions.length === 0) throw new Error('No webhook actions to replay')
 
     const { executeWebhookRequest, createWebhookHistoryEntry } = await import('@craft-agent/shared/automations/webhook-utils')
     const results = await Promise.all(
-      webhookActions.map(a => executeWebhookRequest(a as unknown as import('@craft-agent/shared/automations').WebhookAction))
+      webhookActions.map(a => executeWebhookRequest(a))
     )
 
     // Write history entries for replay — use index to correctly attribute method per action
@@ -284,7 +305,7 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
         url: result.url,
         statusCode: result.statusCode,
         durationMs: result.durationMs ?? 0,
-        error: result.error,
+        ...(result.error !== undefined ? { error: result.error } : {}),
       })
       try {
         await appendAutomationHistoryEntry(workspace.rootPath, entry)
@@ -307,8 +328,9 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
       const result: Record<string, number> = {}
       for (const line of content.trim().split('\n')) {
         try {
-          const entry = JSON.parse(line)
-          if (entry.id && entry.ts) result[entry.id] = entry.ts
+          const entry = parseJsonObject(line)
+          const id = entry['id'], ts = entry['ts']
+          if (typeof id === 'string' && id && typeof ts === 'number' && Number.isFinite(ts) && ts) result[id] = ts
         } catch { /* skip malformed lines */ }
       }
       return result

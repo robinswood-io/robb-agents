@@ -1,0 +1,56 @@
+[
+  {
+    "command": "printf",
+    "reason": "printf -v is not read-only because it assigns a shell variable.",
+    "context": "Plain stdout-only printf is allowed; redirects, substitutions and expansions remain blocked by the shell validator.",
+    "whenNotMatching": "^printf\\b(?!\\s+-v(?:[A-Za-z_][A-Za-z0-9_]*)?(?:\\s|$))(?![^\\r\\n]*%(?:[0-9]+\\$)?[-+ #0']*(?:\\*|[0-9]+)?(?:\\.(?:\\*|[0-9]+))?(?:hh|h|ll|l|j|z|t|L)?n)",
+    "tryInstead": [
+      "Use plain `printf` without `-v` for separators and labels.",
+      "Use `echo` for simple output."
+    ],
+    "example": "echo '--- files ---'"
+  },
+  {
+    "command": "sed",
+    "reason": "sed is not allowlisted in Explore mode because its program can write files or execute commands even with -n.",
+    "context": "sed commands such as `w`, `e`, and their variants have side effects that shell redirection checks cannot see.",
+    "tryInstead": [
+      "Use `head`, `tail`, or `grep` for bounded read-only inspection.",
+      "Switch to Ask mode when sed is necessary."
+    ],
+    "example": "head -n 80 file.txt"
+  },
+  {
+    "command": "awk",
+    "reason": "awk is not allowlisted in Explore mode because its program can write files or execute external commands.",
+    "context": "awk side effects include output redirection inside the program, `system(...)`, command-pipe `getline`, and `print | \"cmd\"`.",
+    "tryInstead": [
+      "Use `grep`, `cut`, or `jq` for bounded read-only extraction.",
+      "Switch to Ask mode when awk is necessary."
+    ],
+    "example": "cut -d: -f1 file.txt"
+  },
+  {
+    "command": "gawk",
+    "reason": "gawk is not allowlisted in Explore mode because its program can write files or execute external commands.",
+    "context": "Use `grep`, `cut`, or `jq` for bounded inspection, or switch to Ask mode when gawk is necessary."
+  },
+  {
+    "command": "mawk",
+    "reason": "mawk is not allowlisted in Explore mode because its program can write files or execute external commands.",
+    "context": "Use `grep`, `cut`, or `jq` for bounded inspection, or switch to Ask mode when mawk is necessary."
+  },
+  {
+    "command": "nawk",
+    "reason": "nawk is not allowlisted in Explore mode because its program can write files or execute external commands.",
+    "context": "Use `grep`, `cut`, or `jq` for bounded inspection, or switch to Ask mode when nawk is necessary."
+  },
+  {
+    "command": "xargs",
+    "reason": "xargs is not allowlisted in Explore mode because it can execute arbitrary commands from input.",
+    "tryInstead": [
+      "Use dedicated read-only commands directly.",
+      "Switch to Ask mode when command execution from piped input is necessary."
+    ]
+  }
+]

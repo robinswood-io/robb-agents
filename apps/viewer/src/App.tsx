@@ -12,6 +12,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FileText } from 'lucide-react'
+import { parseViewerSession } from './session-schema'
 import type { StoredSession } from '@craft-agent/core'
 import {
   SessionViewer,
@@ -40,7 +41,7 @@ const DEV_SESSION_ID = 'tz5-13I84pwK_he'
 function getSessionIdFromUrl(): string | null {
   const path = window.location.pathname
   const match = path.match(/^\/s\/([a-zA-Z0-9_-]+)$/)
-  if (match) return match[1]
+  if (match?.[1]) return match[1]
 
   // In development, redirect root to default session
   if (import.meta.env.DEV && path === '/') {
@@ -81,8 +82,8 @@ export function App() {
           return
         }
 
-        const data = await response.json()
-        setSession(data)
+        const data: unknown = await response.json()
+        setSession(parseViewerSession(data))
       } catch (err) {
         console.error('Failed to fetch session:', err)
         setError(t('errors.failedToLoadSession'))
@@ -146,20 +147,24 @@ export function App() {
   // Handle activity click - Edit/Write opens multi-diff, others use extractOverlayData
   const handleActivityClick = useCallback((activity: ActivityItem) => {
     if (activity.toolName === 'Edit' || activity.toolName === 'Write') {
-      const input = activity.toolInput as Record<string, unknown> | undefined
+      const input = activity.toolInput
+      const readString = (key: string): string => {
+        const value = input?.[key]
+        return typeof value === 'string' ? value : ''
+      }
       // Claude fields are primary; PI fields are additive fallbacks.
-      const filePath = (input?.file_path as string) || (input?.path as string) || 'unknown'
+      const filePath = readString('file_path') || readString('path') || 'unknown'
       const change: FileChange = {
         id: activity.id,
         filePath,
         toolType: activity.toolName,
         original: activity.toolName === 'Edit'
-          ? ((input?.old_string as string) || (input?.oldText as string) || '')
+          ? (readString('old_string') || readString('oldText') || '')
           : '',
         modified: activity.toolName === 'Edit'
-          ? ((input?.new_string as string) || (input?.newText as string) || '')
-          : ((input?.content as string) || ''),
-        error: activity.error || undefined,
+          ? (readString('new_string') || readString('newText') || '')
+          : (readString('content') || ''),
+        ...(activity.error ? { error: activity.error } : {}),
       }
       setMultiDiffState({ changes: [change] })
     } else {

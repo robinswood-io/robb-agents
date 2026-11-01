@@ -1,0 +1,206 @@
+{
+  "source": "packages/shared/src/interop/agent-interop.ts",
+  "units": [
+    {
+      "names": [
+        "AgentInteropProtocol"
+      ],
+      "group": "contracts",
+      "bodySha256": "6c24f47450c62e9512331a3e202af2cd320da450b8bb1c7a4f567572489aa764"
+    },
+    {
+      "names": [
+        "AgentInteropPermission"
+      ],
+      "group": "contracts",
+      "bodySha256": "a8913db9feef4530695e8b1cf9ddaff47acdbec9aee686ede96495f659e88036"
+    },
+    {
+      "names": [
+        "AgentTaskStatus"
+      ],
+      "group": "contracts",
+      "bodySha256": "3ad9b8e695d24005e5b39107c4225adc8fbae4ad56856d2919915d5514cd1aec"
+    },
+    {
+      "names": [
+        "AgentInteropIdentity"
+      ],
+      "group": "contracts",
+      "bodySha256": "d2a9003f97dd52d65913d3eee8cc0189b227bab84d45418a9bd4d4a5a436b1f3"
+    },
+    {
+      "names": [
+        "AgentTaskCreateInput"
+      ],
+      "group": "contracts",
+      "bodySha256": "9893a5372bea943e2e65163adcf39dd7e79e1e4c796c34cfda4e44bed1e9847b"
+    },
+    {
+      "names": [
+        "AgentTaskSnapshot"
+      ],
+      "group": "contracts",
+      "bodySha256": "381e151ba1e7c17f0a988a87e12be054f3dc1e77af03b5b027e06ff0e08852a6"
+    },
+    {
+      "names": [
+        "AgentTaskEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "a7b5669fbb9e4bf92f89caeec2c51a8dfb65768020e9368c1e51b8b3c1a3fe02"
+    },
+    {
+      "names": [
+        "AgentTaskService"
+      ],
+      "group": "contracts",
+      "bodySha256": "774edb0c27d4cd093a071f69e2bb969120956938687667b7f43c76d6afa361bb"
+    },
+    {
+      "names": [
+        "AgentInteropAdapterConfig"
+      ],
+      "group": "contracts",
+      "bodySha256": "8b1058e86f4fb43f365e4d6469e9d9915703c55c02011157df3d6b9713ba4f25"
+    },
+    {
+      "names": [
+        "AgentInteropAuditEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "749ef818014c2e820afe25234a3629c2be0f5cb6f506e8381edcbef04e9c8118"
+    },
+    {
+      "names": [
+        "AgentInteropError"
+      ],
+      "group": "contracts",
+      "bodySha256": "6bc7e67c18c68a0ddcbfcf869aca568b2c0daaab7643d73698eccef876ae1887"
+    },
+    {
+      "names": [
+        "McpTaskRequest"
+      ],
+      "group": "contracts",
+      "bodySha256": "2a1d814d6a9bf4b8c1d955cc39363796ea9fc5504dbefab00aff9961ab516301"
+    },
+    {
+      "names": [
+        "A2AAgentCard"
+      ],
+      "group": "contracts",
+      "bodySha256": "1f4e0f608f51d142b176af6ffa317bbf9d8bc1000644ca0c8e91a58672fd7985"
+    },
+    {
+      "names": [
+        "AgUiEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "c39f892582f21ca6cbebc1a6857ba9942bee30bf5365fe040a7e1e03e78f8302"
+    },
+    {
+      "names": [
+        "AgentInteropConfiguration"
+      ],
+      "group": "contracts",
+      "bodySha256": "3309bd1a091d884290ffd93efc48e04590a31f70775091aa5ce04931eb44c4c1"
+    },
+    {
+      "names": [
+        "auditHash"
+      ],
+      "group": "adapter-base",
+      "bodySha256": "8de840055d442ee1a009e39aeb5e7a6ce84fa317a25e7b8fd905dfc79716c8cc"
+    },
+    {
+      "names": [
+        "AgentInteropAuditLog"
+      ],
+      "group": "adapter-base",
+      "bodySha256": "29935de92f9d42db590b5191516784ddd20c822b7f9b6344ed7993d16bf46cf4"
+    },
+    {
+      "names": [
+        "requirePermissions"
+      ],
+      "group": "adapter-base",
+      "bodySha256": "0000ed41ae08cb3690da635d304de7acc2ffd741bca8b862450e4f7b419becc2"
+    },
+    {
+      "names": [
+        "withTimeout"
+      ],
+      "group": "adapter-base",
+      "bodySha256": "5c8889eb7bfbd189f4daed013e76e46b785b376f7b18060b65d5969b09cfb5d4"
+    },
+    {
+      "names": [
+        "AgentInteropAdapter"
+      ],
+      "group": "adapter-base",
+      "bodySha256": "40501bc2cabfe4de655bfd4c346fe410e9d5dea3eab7328c07616604a6ba54a6"
+    },
+    {
+      "names": [
+        "McpTasksAdapter"
+      ],
+      "group": "protocol-adapters",
+      "bodySha256": "85f5d81ebdfe3e5971a4b8c340955a43a689a79aa5fb4a6b0841f41d885da068"
+    },
+    {
+      "names": [
+        "A2AAdapter"
+      ],
+      "group": "protocol-adapters",
+      "bodySha256": "fad2fd08e5d3646a1c92d34895e5c48477f9b45152591c8f5c60632847f2c8c2"
+    },
+    {
+      "names": [
+        "toAgUiEvent"
+      ],
+      "group": "protocol-adapters",
+      "bodySha256": "845575be0818c4cf13d573ddb61590deb58fc2f5b419750be4d4a792a1cfa5b8"
+    },
+    {
+      "names": [
+        "AgUiAdapter"
+      ],
+      "group": "protocol-adapters",
+      "bodySha256": "40d5d05a9850aa48e10d0bf46157b3defcd330c5015095f118508953e0eb652f"
+    },
+    {
+      "names": [
+        "createAgentInteropAdapters"
+      ],
+      "group": "protocol-adapters",
+      "bodySha256": "fd21a997fb13db0efaf852ce3eacaaf384c234b8baca0ac826fe142280d3eb71"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 172
+    },
+    {
+      "name": "adapter-base",
+      "lines": 123
+    },
+    {
+      "name": "protocol-adapters",
+      "lines": 241
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "adapter-base": [
+      "contracts"
+    ],
+    "protocol-adapters": [
+      "adapter-base",
+      "contracts"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

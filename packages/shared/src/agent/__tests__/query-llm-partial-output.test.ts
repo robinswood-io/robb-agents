@@ -12,7 +12,7 @@
  * takes a `getQueryFn` stub, both of which are trivial to fake here.
  */
 import { describe, it, expect } from 'bun:test';
-import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+import type { SDKMessage, SDKResultError } from '@anthropic-ai/claude-agent-sdk';
 import { consumeLlmQueryMessages, summarizeSdkError } from '../claude-llm-query.ts';
 import { createLLMTool, type LLMQueryRequest, type LLMQueryResult } from '../llm-tool.ts';
 
@@ -24,7 +24,7 @@ import { createLLMTool, type LLMQueryRequest, type LLMQueryResult } from '../llm
  * Builds an async iterator from a pre-scripted message list.
  * If `throwAt` is provided, the iterator throws on that index instead of yielding.
  */
-async function* scriptIterator(messages: SDKMessage[], throwAt?: { index: number; error: Error }): AsyncGenerator<SDKMessage> {
+async function* scriptIterator(messages: SDKMessage[], throwAt?: { index: number; error: Error }): AsyncGenerator<SDKMessage, void, unknown> {
   for (let i = 0; i < messages.length; i++) {
     if (throwAt && i === throwAt.index) {
       throw throwAt.error;
@@ -40,7 +40,7 @@ function assistantMsg(text: string): SDKMessage {
   return {
     type: 'assistant',
     message: { content: [{ type: 'text', text }] },
-  } as unknown as SDKMessage;
+  } as SDKMessage;
 }
 
 function successResult(structuredOutput?: unknown): SDKMessage {
@@ -50,19 +50,29 @@ function successResult(structuredOutput?: unknown): SDKMessage {
     structured_output: structuredOutput,
     num_turns: 1,
     stop_reason: 'end_turn',
-  } as unknown as SDKMessage;
+  } as SDKMessage;
 }
 
-function errorResult(subtype: 'error_max_turns' | 'error_during_execution' | 'error_max_budget_usd' | 'error_max_structured_output_retries', overrides: Partial<Record<string, unknown>> = {}): SDKMessage {
+function errorResult(subtype: 'error_max_turns' | 'error_during_execution' | 'error_max_budget_usd' | 'error_max_structured_output_retries', overrides: Partial<SDKResultError> = {}): SDKMessage {
   return {
     type: 'result',
     subtype,
     is_error: true,
     num_turns: 3,
     stop_reason: null,
-    errors: [],
+    duration_ms: 0, duration_api_ms: 0, total_cost_usd: 0,
+    uuid: '00000000-0000-4000-8000-000000000001', session_id: 'qa-error-result',
+    usage: {
+      input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0,
+      cache_creation: { ephemeral_1h_input_tokens: 0, ephemeral_5m_input_tokens: 0 },
+      fallback_credit: null, inference_geo: 'qa', iterations: [],
+      output_tokens_details: { thinking_tokens: 0 },
+      server_tool_use: { web_fetch_requests: 0, web_search_requests: 0 },
+      service_tier: 'standard', speed: 'standard',
+    },
+    modelUsage: {}, permission_denials: [], errors: [],
     ...overrides,
-  } as unknown as SDKMessage;
+  } satisfies SDKResultError;
 }
 
 function collectDebug() {
@@ -160,7 +170,7 @@ describe('summarizeSdkError', () => {
       subtype: 'error_max_budget_usd',
       num_turns: 4,
       errors: ['budget $5 exceeded'],
-    } as unknown as Parameters<typeof summarizeSdkError>[0];
+    } as Parameters<typeof summarizeSdkError>[0];
 
     const s = summarizeSdkError(r);
     expect(s).toContain('budget cap');
@@ -173,7 +183,7 @@ describe('summarizeSdkError', () => {
       subtype: 'error_unknown_new_thing',
       num_turns: 2,
       errors: [],
-    } as unknown as Parameters<typeof summarizeSdkError>[0];
+    } satisfies Parameters<typeof summarizeSdkError>[0];
 
     expect(summarizeSdkError(r)).toContain('error_unknown_new_thing');
   });

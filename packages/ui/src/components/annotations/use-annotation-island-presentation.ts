@@ -65,7 +65,7 @@ export function useAnnotationIslandPresentation({
       setRenderAnchor(anchor)
       setRenderSourceKey(sourceKey)
       setIsVisible(true)
-      return
+      return undefined;
     }
 
     if (decision.kind === 'defer-close') {
@@ -76,6 +76,8 @@ export function useAnnotationIslandPresentation({
     }
 
     setIsVisible(false)
+  
+    return undefined;
   }, [anchor, sourceKey, closeGraceMs, renderAnchor])
 
   const handleExitComplete = React.useCallback(() => {

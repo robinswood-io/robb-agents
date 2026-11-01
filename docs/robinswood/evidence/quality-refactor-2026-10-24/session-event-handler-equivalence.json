@@ -1,0 +1,127 @@
+{
+  "events": [
+    {
+      "type": "text_delta",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "text_discard",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "text_complete",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "pi_turn_anchor",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "tool_start",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "tool_result",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "status",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "info",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "error",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "runtime_interrupted",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "typed_error",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "task_backgrounded",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "workflow_agent_completed",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "task_progress",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "task_completed",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "shell_backgrounded",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "source_activated",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "complete",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "usage_update",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    },
+    {
+      "type": "steer_undelivered",
+      "bodyPreserved": true,
+      "argumentsPreserved": true,
+      "exit": "return is equivalent to leaving the original final switch"
+    }
+  ],
+  "sharedAdmissionGuardsPreserved": true,
+  "eventOrderPreserved": true,
+  "allFilesWithin500Lines": true
+}

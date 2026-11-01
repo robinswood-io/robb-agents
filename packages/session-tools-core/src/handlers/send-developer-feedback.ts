@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+import type { SendDeveloperFeedbackSchema } from '../tool-defs/schemas.ts';
 /**
  * Send Developer Feedback Handler
  *
@@ -9,9 +11,7 @@ import type { SessionToolContext } from '../context.ts';
 import type { ToolResult, DeveloperFeedback } from '../types.ts';
 import { successResponse, errorResponse } from '../response.ts';
 
-export interface SendDeveloperFeedbackArgs {
-  message: string;
-}
+export type SendDeveloperFeedbackArgs = z.infer<typeof SendDeveloperFeedbackSchema>;
 
 /**
  * Handle the send_developer_feedback tool call.

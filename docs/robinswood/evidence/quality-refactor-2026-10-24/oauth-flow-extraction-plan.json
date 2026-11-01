@@ -1,0 +1,242 @@
+{
+  "source": "packages/shared/src/auth/oauth.ts",
+  "units": [
+    {
+      "names": [
+        "OAuthConfig"
+      ],
+      "group": "contracts",
+      "bodySha256": "9241415237aa95d6e11cb4adf5a5d4579c76a798a2cc9302de748b410b5dc7e9"
+    },
+    {
+      "names": [
+        "OAuthTokens"
+      ],
+      "group": "contracts",
+      "bodySha256": "e7d82103c97f064d01b14d1b70245ab0bf8bc8abeafcf3e3efdcfc140e0610f9"
+    },
+    {
+      "names": [
+        "OAuthCallbacks"
+      ],
+      "group": "contracts",
+      "bodySha256": "8f081562694d9344948c39216ef0007bfba4dc5615955ca3b81278e78f80cc35"
+    },
+    {
+      "names": [
+        "CALLBACK_PORT_START"
+      ],
+      "group": "contracts",
+      "bodySha256": "349569a5b1172fac9dfd11a67b575fa3a720e85a69c2722c2682a8253f42c3e9"
+    },
+    {
+      "names": [
+        "CALLBACK_PORT_END"
+      ],
+      "group": "contracts",
+      "bodySha256": "93d0b14cab4d3f03efc10413e5e568cce823b067f851ff5e9d936b2a9c0be6ce"
+    },
+    {
+      "names": [
+        "CALLBACK_PATH"
+      ],
+      "group": "contracts",
+      "bodySha256": "5b3b74d972ca4d7a4b01df03e7c067991158b2ec65950afc4c8e1ae61fe3bc88"
+    },
+    {
+      "names": [
+        "CLIENT_NAME"
+      ],
+      "group": "contracts",
+      "bodySha256": "01600adc17036e0d8a23a7a8e34102d289e28910d9df13d006e090b98bc8aa76"
+    },
+    {
+      "names": [
+        "generatePKCE"
+      ],
+      "group": "contracts",
+      "bodySha256": "f6e241959eea666c081ffdff2773640d310f1b76c982a5f4409637517ae2a7b1"
+    },
+    {
+      "names": [
+        "generateState"
+      ],
+      "group": "contracts",
+      "bodySha256": "dabb22ed5bd4571e39ca383f4802efb988cf4dfef4096df773b2f33f3665843e"
+    },
+    {
+      "names": [
+        "OAuthMetadata"
+      ],
+      "group": "contracts",
+      "bodySha256": "729c438d8d9fe7c4913893549767594fc7e7f4f30ac86e183bfee859cd79a6af"
+    },
+    {
+      "names": [
+        "ProtectedResourceMetadata"
+      ],
+      "group": "contracts",
+      "bodySha256": "b61411e0d919a62330060d392698520ee0493479b37aa1e3aef8a0536aba47ac"
+    },
+    {
+      "names": [
+        "CraftOAuth"
+      ],
+      "group": "oauth-client",
+      "bodySha256": "3dcf673561d3d111dbfc01d6970b25474bf54fad191a9f839c86ef56d6143573"
+    },
+    {
+      "names": [
+        "McpClientRegistrationError"
+      ],
+      "group": "mcp-client",
+      "bodySha256": "57f938e2552aa24e4d467fefc5f8088471f602a8f7b84d33a16f3a81bffdd6e3"
+    },
+    {
+      "names": [
+        "shouldFallbackToDefaultMcpClient"
+      ],
+      "group": "mcp-client",
+      "bodySha256": "1765f3bf96531f557c7af0b354a61be9c5db600f1d8c70f541b441f9423b55da"
+    },
+    {
+      "names": [
+        "registerMcpOAuthClient"
+      ],
+      "group": "mcp-client",
+      "bodySha256": "2fcd8165cc1dfc90b02e21f0c5b5556f46d3f369551726e04f343c6243c0389a"
+    },
+    {
+      "names": [
+        "exchangeMcpCodeForTokens"
+      ],
+      "group": "mcp-client",
+      "bodySha256": "a82f22bc357d1da293bacb2be79533ac88d9814f9cc9a31c15964e64d0a0a536"
+    },
+    {
+      "names": [
+        "prepareMcpOAuth"
+      ],
+      "group": "mcp-client",
+      "bodySha256": "a614bdd7c08e56333802c85f92f0876ec82091f9a6a60db5c0b61aff4c70d3f4"
+    },
+    {
+      "names": [
+        "exchangeMcpOAuth"
+      ],
+      "group": "mcp-client",
+      "bodySha256": "5765c4626e83b7b6ccbef3073e644e8a012cc27589fb03d7fee22e32d47ba15c"
+    },
+    {
+      "names": [
+        "getMcpBaseUrl"
+      ],
+      "group": "mcp-client",
+      "bodySha256": "1e10755de06f8a1341264a90f59d1fef6c0b64f0dcc92a5a0c0dc0dae9c462ba"
+    },
+    {
+      "names": [
+        "tryFetchAuthServerMetadata"
+      ],
+      "group": "discovery",
+      "bodySha256": "7ca665e0550d24ac71af0d5ada881e178b2cb04f655dee618e44fcc6150ae12c"
+    },
+    {
+      "names": [
+        "DISCOVERY_TIMEOUT_MS"
+      ],
+      "group": "discovery",
+      "bodySha256": "b05e98dae5e38cc9ebcef7c6d3f2b3febf0105786fd154b62448d8beabc572fd"
+    },
+    {
+      "names": [
+        "isUrlSafeToFetch"
+      ],
+      "group": "discovery",
+      "bodySha256": "8b13d671fa8ec5be2e83b04f2579cef3a28713888f4334271a3811c5636c007a"
+    },
+    {
+      "names": [
+        "isProtectedResourceMetadata"
+      ],
+      "group": "discovery",
+      "bodySha256": "513efe75fb01e244db9863b09061917fe4936077af99901088cfcd3e3ecbd141"
+    },
+    {
+      "names": [
+        "fetchWithTimeout"
+      ],
+      "group": "discovery",
+      "bodySha256": "d476be943dd7d32f71b00a98f3a05837574f9e5994dcb4ca2bb767add0d12235"
+    },
+    {
+      "names": [
+        "normalizeUrl"
+      ],
+      "group": "discovery",
+      "bodySha256": "3dc81eb2a29f14fe6c52bf41c3d3a3ab5a8cbb0dc182946341e1659a1224a2ba"
+    },
+    {
+      "names": [
+        "parseResourceMetadataFromHeader"
+      ],
+      "group": "discovery",
+      "bodySha256": "7fb956e379d10f6c2ac65912e032db46eed58ce75128b5b9d6dc1f4e3b42052c"
+    },
+    {
+      "names": [
+        "fetchProtectedResourceMetadata"
+      ],
+      "group": "discovery",
+      "bodySha256": "9d982708df4b298735156168d974c48b1134aeb237331faae404687bef9fa264"
+    },
+    {
+      "names": [
+        "discoverViaProtectedResource"
+      ],
+      "group": "discovery",
+      "bodySha256": "af34f89931c5efbca28e94f7db569e0aa3b8afd0154cbc9d25a438e43d8cc080"
+    },
+    {
+      "names": [
+        "discoverOAuthMetadata"
+      ],
+      "group": "discovery",
+      "bodySha256": "587ddb76bec49b7b41b5446d60d6911846a90f220c1ea3ab263f61389958b6bc"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 53
+    },
+    {
+      "name": "oauth-client",
+      "lines": 413
+    },
+    {
+      "name": "mcp-client",
+      "lines": 203
+    },
+    {
+      "name": "discovery",
+      "lines": 333
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "oauth-client": [
+      "contracts",
+      "discovery"
+    ],
+    "mcp-client": [
+      "contracts",
+      "discovery"
+    ],
+    "discovery": [
+      "contracts"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

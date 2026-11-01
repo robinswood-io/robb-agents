@@ -116,10 +116,10 @@ function specification(index: number): MissionSpec {
     supervisorProfileId: 'supervisor',
     projectId: `project-${index % 8}`,
     agentProfiles: [
-      { id: 'planner', role: 'planner', specialty: 'planning', systemPrompt: 'Plan.' },
-      { id: 'worker', role: 'worker', specialty: 'execution', systemPrompt: 'Execute.' },
-      { id: 'reviewer', role: 'reviewer', specialty: 'quality', systemPrompt: 'Review.' },
-      { id: 'supervisor', role: 'supervisor', specialty: 'supervision', systemPrompt: 'Supervise.' },
+      { id: 'planner', role: 'planner', specialty: 'planning', systemPrompt: 'Plan.', skills: [], tools: [], sources: [], permissionMode: 'safe' },
+      { id: 'worker', role: 'worker', specialty: 'execution', systemPrompt: 'Execute.', skills: [], tools: [], sources: [], permissionMode: 'safe' },
+      { id: 'reviewer', role: 'reviewer', specialty: 'quality', systemPrompt: 'Review.', skills: [], tools: [], sources: [], permissionMode: 'safe' },
+      { id: 'supervisor', role: 'supervisor', specialty: 'supervision', systemPrompt: 'Supervise.', skills: [], tools: [], sources: [], permissionMode: 'safe' },
     ],
     policy: {
       maxConcurrentAgents: 4,

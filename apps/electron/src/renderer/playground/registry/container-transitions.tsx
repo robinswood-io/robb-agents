@@ -176,7 +176,7 @@ function IslandOptions({
 }
 
 interface ToolbarToConfirmTransitionDemoProps {
-  initialView?: IslandViewId
+  initialView?: IslandViewId | undefined
 }
 
 function ToolbarToConfirmTransitionDemo({ initialView = 'compact' }: ToolbarToConfirmTransitionDemoProps) {

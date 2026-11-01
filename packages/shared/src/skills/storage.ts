@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 /**
  * Skills Storage
  *
@@ -23,7 +24,6 @@ import {
   findIconFile,
   downloadIcon,
   needsIconDownload,
-  isIconUrl,
 } from '../utils/icon.ts';
 
 // ============================================================
@@ -43,7 +43,7 @@ export const PROJECT_AGENT_SKILLS_DIR = '.agents/skills';
 function normalizeRequiredSources(value: unknown): string[] | undefined {
   const asArray = typeof value === 'string'
     ? [value]
-    : Array.isArray(value)
+    : isUnknownArray(value)
       ? value
       : undefined;
 
@@ -51,8 +51,8 @@ function normalizeRequiredSources(value: unknown): string[] | undefined {
 
   const normalized = Array.from(new Set(
     asArray
-      .filter((entry): entry is string => typeof entry === 'string')
-      .map(entry => entry.trim())
+      .filter((entry: unknown): entry is string => typeof entry === 'string')
+      .map((entry) => entry.trim())
       .filter(Boolean)
   ));
 
@@ -71,22 +71,25 @@ function parseSkillFile(content: string): { metadata: SkillMetadata; body: strin
     const parsed = matter(content);
 
     // Validate required fields
-    if (!parsed.data.name || !parsed.data.description) {
+    if (!parsed.data["name"] || !parsed.data["description"]) {
       return null;
     }
 
     // Validate and extract optional icon field
     // Only accepts emoji or URL - rejects inline SVG and relative paths
-    const icon = validateIconValue(parsed.data.icon, 'Skills');
+    const icon = validateIconValue(parsed.data["icon"], 'Skills');
 
+    const globs: unknown = parsed.data["globs"];
+    const alwaysAllow: unknown = parsed.data["alwaysAllow"];
+    const requiredSources = normalizeRequiredSources(parsed.data["requiredSources"]);
     return {
       metadata: {
-        name: parsed.data.name as string,
-        description: parsed.data.description as string,
-        globs: parsed.data.globs as string[] | undefined,
-        alwaysAllow: parsed.data.alwaysAllow as string[] | undefined,
-        icon,
-        requiredSources: normalizeRequiredSources(parsed.data.requiredSources),
+        name: parsed.data["name"] as string,
+        description: parsed.data["description"] as string,
+        ...(isUnknownArray(globs) && globs.every((value: unknown) => typeof value === "string") ? { globs: globs as string[] } : {}),
+        ...(isUnknownArray(alwaysAllow) && alwaysAllow.every((value: unknown) => typeof value === "string") ? { alwaysAllow: alwaysAllow as string[] } : {}),
+        ...(icon !== undefined ? { icon } : {}),
+        ...(requiredSources !== undefined ? { requiredSources } : {}),
       },
       body: parsed.content,
     };
@@ -182,11 +185,12 @@ function loadSkillFromDir(skillsDir: string, slug: string, source: SkillSource):
     return null;
   }
 
+  const iconPath = findIconFile(skillDir);
   return {
     slug,
     metadata: parsed.metadata,
     content: parsed.body,
-    iconPath: findIconFile(skillDir),
+    ...(iconPath !== undefined ? { iconPath } : {}),
     path: skillDir,
     source,
   };

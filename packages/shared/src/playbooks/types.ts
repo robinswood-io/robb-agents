@@ -1,4 +1,5 @@
-import type { ObjectiveProcedureId } from '@craft-agent/core/types'
+import type { z } from 'zod'
+import type { PlaybookManifestSchema } from './validation.ts'
 
 export type PlaybookHumanGate =
   | 'oauth_or_mfa'
@@ -12,18 +13,8 @@ export interface PlaybookProof {
   required: boolean
 }
 
-export interface PlaybookManifest {
-  version: 1
-  procedure?: ObjectiveProcedureId
-  slug: string
-  name: string
-  description: string
-  requiredSources?: string[]
-  allowedTools: string[]
-  humanGates?: PlaybookHumanGate[]
-  proofs: PlaybookProof[]
-  outputSchema?: Record<string, unknown>
-}
+export type PlaybookManifest = z.infer<typeof PlaybookManifestSchema>
+
 
 export interface LoadedPlaybook {
   manifest: PlaybookManifest

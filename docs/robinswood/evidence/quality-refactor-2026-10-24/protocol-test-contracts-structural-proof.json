@@ -1,0 +1,59 @@
+{
+  "status": "passed",
+  "runtimeJavaScriptPreservedOutsideNativeFixtureCompletions": true,
+  "nativeFixtureCompletions": [
+    "SDK-required assistant metadata, partial message snapshots and compaction flags in offline fixtures; helper only merges these defaults with existing fixture properties",
+    "Renderer fixture maps usage_update to tokenUsage with the native host projection"
+  ],
+  "nativeLiteralPropertyAccessEquivalent": true,
+  "removedExplicitAny": 21,
+  "newExplicitAny": 0,
+  "newRuntimeStateOrWorkflow": false,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/event-processor/handlers/__tests__/pi-runtime-activity.test.ts",
+      "lines": 99,
+      "sha256": "315cb7fb396ba140830dd21f301923973e998d27ad44069b0724f9075cd014d4"
+    },
+    {
+      "file": "apps/electron/src/renderer/event-processor/handlers/__tests__/text-discard.test.ts",
+      "lines": 29,
+      "sha256": "fc145d02199ffad391e1c00ddd90151f94295be5fcb837658c0aa76bda08bb5c"
+    },
+    {
+      "file": "apps/electron/src/renderer/lib/__tests__/mentions.test.ts",
+      "lines": 320,
+      "sha256": "43052b0d13aace2cb5925eb4e727820914a628e8b5201bfcbfa173b1d79e2410"
+    },
+    {
+      "file": "apps/electron/src/transport/__tests__/codec.test.ts",
+      "lines": 115,
+      "sha256": "6c5075b4b155485a10ea1767324806b2f18fa0dff238c79e0b041f378addbfb7"
+    },
+    {
+      "file": "packages/pi-agent-server/src/intra-turn-context-guard.test.ts",
+      "lines": 66,
+      "sha256": "8e68d3e2518dabe18476ff30553383bad86b9f749ae92a8e4be952eb975c87b1"
+    },
+    {
+      "file": "packages/pi-agent-server/src/session-tool-registration.test.ts",
+      "lines": 134,
+      "sha256": "a534510b8f3621a7b44a51c3145414826afb6a8510727c2a84d0036606fa130d"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tool-loop-feedback.test.ts",
+      "lines": 92,
+      "sha256": "d1f3dbb53c9b4ed98ba659f2ef7712c076166119b8678029e19cb966c9d5395d"
+    },
+    {
+      "file": "packages/session-tools-core/src/handlers/mermaid-validate.test.ts",
+      "lines": 48,
+      "sha256": "bbf78b52fb1cd7422a072187953cf7bd57ec4731e68082f12f215cf1663a4660"
+    },
+    {
+      "file": "scripts/tests/provider-canaries.test.ts",
+      "lines": 194,
+      "sha256": "5433187ea72144d2ae1226eec75f27bcc6b7307ff0ed3946b01b53d86e153c15"
+    }
+  ]
+}

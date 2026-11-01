@@ -1,0 +1,420 @@
+[
+  {
+    "legacy_id": "temporal-rtk-token-optimization-report",
+    "name": "Temporal RTK Token Optimization Report",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/temporal_rtk_token_optimization_report.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "note": "Rapport RTK réel; gouverne les recommandations stdout/payload.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/temporal_rtk_token_optimization_report.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/temporal-rtk-token-optimization-report-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/temporal-rtk-token-optimization-report-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-contact-review-pipeline",
+    "name": "Robinswood PME HDF — contact review pipeline prepare-only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_pme_hdf_contact_review_pipeline.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "riskClass": "prepare_only",
+    "sideEffects": [
+      "hunter_api_lookup",
+      "write_campaign_ops_reports",
+      "no_send_queue",
+      "no_outbound_message"
+    ],
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-contact-review-pipeline-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Dedicated prepare-only HDF PME dirigeants contact enrichment/review pipeline: Hunter email finder/verifier, contact_quality_gate, suppression check; creates no send queue and requires human approval before outbound.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_pme_hdf_contact_review_pipeline.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-contact-review-pipeline-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-contact-review-pipeline-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-contact-review-pipeline-last.md",
+    "businessContractVersion": "robinswood-pme-hdf-contact-review-pipeline-v1"
+  },
+  {
+    "legacy_id": "podcast-audio-benchmark-scorecard",
+    "name": "Scorecard benchmark audio podcast Robinswood",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/podcast_audio_benchmark_scorecard.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "Generates human evaluation scorecard and provider setup checklist for podcast voice benchmark samples.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/podcast_audio_benchmark_scorecard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/podcast-audio-benchmark-scorecard-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/podcast-audio-benchmark-scorecard-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-hunter-batch-discovery",
+    "name": "Robinswood PME HDF — Hunter batch discovery prepare-only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_pme_hdf_hunter_batch_discovery.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "riskClass": "prepare_only",
+    "sideEffects": [
+      "hunter_api_lookup",
+      "write_campaign_ops_reports",
+      "no_send_queue",
+      "no_outbound_message"
+    ],
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-hunter-batch-discovery-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Prepare-only Hunter company/name lookup for HDF pilot batch; gates contact quality and suppression; candidates without verified company/domain context remain not-send.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_pme_hdf_hunter_batch_discovery.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-hunter-batch-discovery-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-hunter-batch-discovery-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-hunter-batch-discovery-last.md",
+    "businessContractVersion": "robinswood-pme-hdf-hunter-batch-v1"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-full-pilot-enrichment-loop",
+    "name": "Robinswood PME HDF — full pilot enrichment loop prepare-only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_pme_hdf_full_pilot_enrichment_loop.py",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "riskClass": "prepare_only",
+    "sideEffects": [
+      "hunter_api_lookup",
+      "write_campaign_ops_reports",
+      "no_send_queue",
+      "no_outbound_message"
+    ],
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-full-pilot-enrichment-loop-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Durable prepare-only loop over the HDF pilot: derives batches from OSS context report, ignores polluted website candidates, runs Hunter batch discovery, and advances state. No send queue/outbound.",
+    "metadata": {},
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_pme_hdf_full_pilot_enrichment_loop.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-full-pilot-enrichment-loop-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-full-pilot-enrichment-loop-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-full-pilot-enrichment-loop-last.md",
+    "businessContractVersion": "robinswood-pme-hdf-full-loop-v8-timeout-900-hunter-budget-24"
+  },
+  {
+    "legacy_id": "robinswood-pme-hdf-domain-context-verifier",
+    "name": "Robinswood PME HDF — domain/context verifier prepare-only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/robinswood_pme_hdf_domain_context_verifier.py",
+    "timeout_seconds": 420,
+    "cutover_ready": true,
+    "riskClass": "prepare_only",
+    "sideEffects": [
+      "fetch_public_company_web_pages",
+      "write_campaign_ops_reports",
+      "no_send_queue",
+      "no_outbound_message"
+    ],
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-domain-context-verifier-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Strict context gate after Hunter: applies prior false-positive evidence, verified company-domain context, suppression, public domain/page checks. Creates review artifacts only; no outbound.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/robinswood_pme_hdf_domain_context_verifier.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 420
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-domain-context-verifier-last.json",
+    "expectsReport": true,
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-domain-context-verifier-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/robinswood-pme-hdf-domain-context-verifier-last.md",
+    "businessContractVersion": "robinswood-pme-hdf-domain-context-verifier-v1"
+  },
+  {
+    "legacy_id": "inqom-accountant-response-intake",
+    "name": "Inqom — intake réponses expert-comptable/fiscaliste",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_accountant_response_intake.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "note": "Lit le pack expert consolidé et une inbox de réponses; produit uniquement un plan de doctrine/queues read-only. Mutations Inqom, lettrage natif, déclarations TVA/IS bloqués.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_accountant_response_intake.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accountant-response-intake-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accountant-response-intake-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-accountant-response-intake-tests",
+    "name": "Inqom — tests intake réponses expert anti-mutation",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_accountant_response_intake_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "note": "Tests anti-régression: effets bloqués, IDs inconnus, statuts invalides, doctrine read-only uniquement.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_accountant_response_intake_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accountant-response-intake-tests-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accountant-response-intake-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "rubypayeur-recouvrement-auth-check",
+    "name": "Rubypayeur Recouvrement — contrôle auth API",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/rubypayeur_recouvrement_queue.py --mode auth",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "triggerType": "Manual",
+    "task_queue": "sync",
+    "riskClass": "observability",
+    "sideEffects": [
+      "reads_secret",
+      "rubypayeur_auth_check",
+      "writes_reports"
+    ],
+    "category": "finance-recouvrement",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/rubypayeur-recouvrement-auth-check-last.json",
+    "note": "OSS Rubypayeur Recouvrement smoke check: validates API Recouvrement token/customer without creating debt dossiers. Added 2026-06-11.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/rubypayeur_recouvrement_queue.py",
+        "--mode",
+        "auth"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/rubypayeur-recouvrement-auth-check-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/rubypayeur-recouvrement-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/rubypayeur-recouvrement-last.md",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "rubypayeur-recouvrement-queue",
+    "name": "Rubypayeur Recouvrement — dépôt dossiers approuvés",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/rubypayeur_recouvrement_queue.py --mode queue --apply --max 5",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "triggerType": "ManualOrAgentQueue",
+    "task_queue": "sync",
+    "riskClass": "bounded_financial_legal_action",
+    "sideEffects": [
+      "reads_secret",
+      "reads_agent_queue",
+      "reads_sellsy_invoices",
+      "reads_sellsy_estimates",
+      "creates_rubypayeur_debt",
+      "creates_sellsy_followup_task",
+      "writes_ledger",
+      "writes_reports"
+    ],
+    "category": "finance-recouvrement",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/rubypayeur-recouvrement-queue-last.json",
+    "contractPath": "/srv/rbw-agents-oss/config/rubypayeur-recouvrement-contract.json",
+    "note": "Preferred flow: Sellsy invoice_ids/estimate_ids are re-read live, debtor overrides required when legal/contact data is incomplete, approved requests create Rubypayeur dossier and Sellsy follow-up task, with ledger dedupe. Strengthened v3 2026-06-11. HARD GATE: processes only queue items with approvedForRubypayeur=true; no autonomous debt creation from scan results.",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/rubypayeur_recouvrement_queue.py",
+        "--mode",
+        "queue",
+        "--apply",
+        "--max",
+        "5"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/rubypayeur-recouvrement-queue-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/rubypayeur-recouvrement-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/rubypayeur-recouvrement-last.md",
+    "businessContractVersion": "rubypayeur-recouvrement-oss-v3-sellsy-autonomy"
+  },
+  {
+    "legacy_id": "rubypayeur-recouvrement-candidate-scan",
+    "name": "Rubypayeur Recouvrement — scan candidats Sellsy",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/rubypayeur_recouvrement_queue.py --mode candidates --max 50 --min-overdue-days 30 --min-amount 100",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "triggerType": "ManualOrAgentQueue",
+    "task_queue": "sync",
+    "riskClass": "observability",
+    "sideEffects": [
+      "reads_sellsy_invoices",
+      "writes_candidate_report",
+      "writes_draft_queue"
+    ],
+    "category": "finance-recouvrement",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/rubypayeur-recouvrement-candidate-scan-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "contractPath": "/srv/rbw-agents-oss/config/rubypayeur-recouvrement-contract.json",
+    "note": "Scans Sellsy late/unpaid invoices, filters collectible candidates, writes non-approved draft queue items only. No Rubypayeur deposit.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/rubypayeur_recouvrement_queue.py",
+        "--mode",
+        "candidates",
+        "--max",
+        "50",
+        "--min-overdue-days",
+        "30",
+        "--min-amount",
+        "100"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/rubypayeur-recouvrement-candidate-scan-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/rubypayeur-recouvrement-candidates.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/rubypayeur-recouvrement-candidates.md",
+    "businessContractVersion": "rubypayeur-recouvrement-oss-v3-sellsy-autonomy"
+  },
+  {
+    "legacy_id": "sellsy-cash-collection-board",
+    "name": "Sellsy — cash collection board prepare-only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/sellsy_cash_collection_board.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "triggerType": "Schedule",
+    "task_queue": "sync",
+    "riskClass": "observability_prepare_only",
+    "sideEffects": [
+      "reads_sellsy_invoices",
+      "writes_reports",
+      "writes_action_queue"
+    ],
+    "category": "finance-recouvrement",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-cash-collection-board-last.json",
+    "note": "Prepare-only board: no Sellsy mutation, no email dispatch, no Rubypayeur deposit. Human validation required.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/sellsy_cash_collection_board.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-cash-collection-board-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-cash-collection-board.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-cash-collection-board.md",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "sellsy-cash-collection-board-tests",
+    "name": "Sellsy — cash collection board guardrail tests",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/sellsy_cash_collection_board_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "triggerType": "ScheduleStep",
+    "task_queue": "sync",
+    "riskClass": "guardrail_tests",
+    "sideEffects": [
+      "reads_reports",
+      "writes_test_report"
+    ],
+    "category": "finance-recouvrement",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-cash-collection-board-tests-last.json",
+    "note": "Verifies prepare-only flags and blocked effects.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/sellsy_cash_collection_board_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/sellsy-cash-collection-board-tests-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/sellsy-cash-collection-board-tests.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  }
+]

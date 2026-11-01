@@ -1,0 +1,20 @@
+[
+  {
+    "file": "apps/electron/src/renderer/index.css",
+    "sameRulesAndOrder": true,
+    "beforeRules": 102,
+    "afterRules": 102
+  },
+  {
+    "file": "packages/ui/src/components/markdown/tiptap-editor.css",
+    "sameRulesAndOrder": true,
+    "beforeRules": 80,
+    "afterRules": 80
+  },
+  {
+    "file": "packages/ui/src/styles/index.css",
+    "sameRulesAndOrder": true,
+    "beforeRules": 21,
+    "afterRules": 21
+  }
+]

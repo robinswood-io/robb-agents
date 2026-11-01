@@ -26,9 +26,9 @@ interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   /** Bot username (without @) — enables the "Open bot" deep link. */
-  botUsername?: string
+  botUsername?: string | undefined
   /** Fired once the supergroup has been paired (parent re-fetches state). */
-  onPaired?: () => void
+  onPaired?: (() => void) | undefined
 }
 
 export function TelegramSupergroupPairingDialog({ open, onOpenChange, botUsername, onPaired }: Props) {

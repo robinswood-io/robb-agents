@@ -2,13 +2,16 @@ import { describe, expect, it } from 'bun:test'
 import { handleMessageAnnotationsUpdated } from '../session'
 import type { SessionState, MessageAnnotationsUpdatedEvent } from '../../types'
 
-function makeState(messages: any[]): SessionState {
+function makeState(messages: SessionState['session']['messages']): SessionState {
   return {
     session: {
+      workspaceId: 'qa-workspace',
+      workspaceName: 'QA workspace',
+      isProcessing: false,
       id: 'session-1',
       messages,
       lastMessageAt: Date.now(),
-    } as any,
+    },
     streaming: null,
   }
 }
@@ -16,8 +19,8 @@ function makeState(messages: any[]): SessionState {
 describe('handleMessageAnnotationsUpdated', () => {
   it('updates annotations only on the targeted message', () => {
     const state = makeState([
-      { id: 'msg-a', role: 'assistant', content: 'alpha', annotations: [] },
-      { id: 'msg-b', role: 'assistant', content: 'beta' },
+      { timestamp: 0, id: 'msg-a', role: 'assistant', content: 'alpha', annotations: [] },
+      { timestamp: 0, id: 'msg-b', role: 'assistant', content: 'beta' },
     ])
 
     const annotations = [
@@ -45,7 +48,7 @@ describe('handleMessageAnnotationsUpdated', () => {
     }
 
     const next = handleMessageAnnotationsUpdated(state, event)
-    expect((next.state.session.messages[0] as any).annotations).toEqual([])
-    expect((next.state.session.messages[1] as any).annotations).toEqual(annotations)
+    expect((next.state.session.messages[0]!).annotations).toEqual([])
+    expect((next.state.session.messages[1]!).annotations).toEqual(annotations)
   })
 })

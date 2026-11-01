@@ -7,10 +7,14 @@ import os
 import shutil
 import subprocess
 import tempfile
-from contextlib import contextmanager
-from datetime import datetime, timezone
+from collections.abc import Generator
+from contextlib import AbstractContextManager, contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from types import TracebackType
+from typing import Self
+
+from pydantic import JsonValue, TypeAdapter
 
 ROOT = Path('/srv/rbw-agents-oss')
 CONFIG = ROOT / 'config'
@@ -34,7 +38,7 @@ PROTECTED_CONFIG_FILES = [
 
 
 def now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def now_iso() -> str:
@@ -46,9 +50,9 @@ def month_dir(dt: datetime | None = None) -> str:
     return f'{dt.year:04d}-{dt.month:02d}'
 
 
-def load_json(path: Path, default: Any = None) -> Any:
+def load_json(path: Path, default: JsonValue = None) -> JsonValue:
     try:
-        return json.loads(path.read_text(encoding='utf-8'))
+        return TypeAdapter(JsonValue).validate_json(path.read_bytes())
     except FileNotFoundError:
         if default is not None:
             return default
@@ -64,7 +68,7 @@ def atomic_write_text(path: Path, content: str, mode: int | None = None) -> None
     tmp = Path(tmp_name)
     try:
         with os.fdopen(fd, 'w', encoding='utf-8') as f:
-            f.write(content)
+            _ = f.write(content)
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp, path)
@@ -74,7 +78,7 @@ def atomic_write_text(path: Path, content: str, mode: int | None = None) -> None
             tmp.unlink()
 
 
-def atomic_write_json(path: Path, data: Any, mode: int | None = None) -> None:
+def atomic_write_json(path: Path, data: JsonValue, mode: int | None = None) -> None:
     atomic_write_text(path, json.dumps(data, indent=2, ensure_ascii=False) + '\n', mode=mode)
 
 
@@ -86,18 +90,18 @@ def archive_backup(path: Path, batch_id: str, *, move: bool = False) -> Path | N
     dest = dest.with_name(dest.name + f'.{now_utc().strftime("%Y%m%dT%H%M%SZ")}.bak')
     dest.parent.mkdir(parents=True, exist_ok=True)
     if move:
-        shutil.move(str(path), str(dest))
+        _ = shutil.move(str(path), str(dest))
     else:
-        shutil.copy2(path, dest)
+        _ = shutil.copy2(path, dest)
     return dest
 
 
 @contextmanager
-def config_lock(reason: str = 'config-mutation'):
+def config_lock(reason: str = 'config-mutation') -> Generator[Path]:
     LOCK_DIR.mkdir(parents=True, exist_ok=True)
     lock_path = LOCK_DIR / 'config-mutation.lock'
     with lock_path.open('w', encoding='utf-8') as lock:
-        lock.write(f'{now_iso()} {reason}\n')
+        _ = lock.write(f'{now_iso()} {reason}\n')
         lock.flush()
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
         try:
@@ -122,44 +126,62 @@ class ConfigMutation:
     - atomic writes; no active-tree .bak files
     """
 
-    def __init__(self, batch_id: str, *, root: Path = ROOT):
+    batch_id: str
+    root: Path
+    backups: dict[str, str | None]
+    _ctx: AbstractContextManager[Path]
+
+    def __init__(self, batch_id: str, *, root: Path = ROOT) -> None:
         self.batch_id = batch_id
         self.root = root
-        self.backups: dict[str, str | None] = {}
-        self._locked = None
-
-    def __enter__(self) -> 'ConfigMutation':
+        self.backups = {}
         self._ctx = config_lock(self.batch_id)
-        self._locked = self._ctx.__enter__()
+
+    def __enter__(self) -> Self:
+        self._ctx = config_lock(self.batch_id)
+        _ = self._ctx.__enter__()
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> None:
-        self._ctx.__exit__(exc_type, exc, tb)
+    def __exit__(self, exc_type: type[BaseException] | None, exc: BaseException | None, tb: TracebackType | None) -> None:
+        _ = self._ctx.__exit__(exc_type, exc, tb)
 
     def backup(self, path: Path) -> Path | None:
         path = Path(path)
         if str(path) not in self.backups:
             dest = archive_backup(path, self.batch_id, move=False)
             self.backups[str(path)] = str(dest) if dest else None
-        return Path(self.backups[str(path)]) if self.backups[str(path)] else None
+        backup_path = self.backups[str(path)]
+        return Path(backup_path) if backup_path else None
 
-    def load_json(self, path: Path, default: Any = None) -> Any:
+    def load_json(self, path: Path, default: JsonValue = None) -> JsonValue:
         return load_json(path, default)
 
-    def write_json(self, path: Path, data: Any) -> None:
-        self.backup(Path(path))
+    def write_json(self, path: Path, data: JsonValue) -> None:
+        _ = self.backup(Path(path))
         atomic_write_json(Path(path), data)
 
     def write_text(self, path: Path, content: str, mode: int | None = None) -> None:
-        self.backup(Path(path))
+        _ = self.backup(Path(path))
         atomic_write_text(Path(path), content, mode=mode)
 
-    def validate(self, command: list[str], *, cwd: Path | None = ROOT, timeout: int = 300) -> dict[str, Any]:
-        proc = subprocess.run(command, cwd=str(cwd) if cwd else None, text=True, capture_output=True, timeout=timeout)
+    def validate(self, command: list[str], *, cwd: Path | None = ROOT, timeout: int = 300) -> dict[str, JsonValue]:
+        proc = subprocess.run(command, cwd=str(cwd) if cwd else None, text=True, capture_output=True, timeout=timeout, check=False)
         return {
-            'cmd': command,
+            'cmd': list(command),
             'returncode': proc.returncode,
             'ok': proc.returncode == 0,
             'stdout': proc.stdout[-4000:],
             'stderr': proc.stderr[-4000:],
         }
+
+
+def expected_manifest_count(root: Path) -> int:
+    """Read the approved project baseline; never infer it from the current manifest."""
+    baseline = TypeAdapter(dict[str, JsonValue]).validate_json(
+        (root / 'config/agents-v2/baseline.json').read_bytes())
+    count = baseline.get('manifestCount')
+    if isinstance(count, bool) or not isinstance(count, int):
+        raise TypeError('approved_manifest_count_must_be_an_integer')
+    if count <= 0:
+        raise ValueError('approved_manifest_count_must_be_positive')
+    return count

@@ -1,0 +1,166 @@
+[
+  {
+    "path": "scripts/server_maintenance_real.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.289552Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_unmapped_script",
+    "riskClass": "medium_unclassified_manual",
+    "allowedInvocation": [
+      "manual_direct_after_review"
+    ],
+    "rationale": "Active Python script outside command-manifest; classified to prevent silent drift but requires review before automation."
+  },
+  {
+    "path": "scripts/sitecustomize.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.289571Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_unmapped_script",
+    "riskClass": "medium_unclassified_manual",
+    "allowedInvocation": [
+      "manual_direct_after_review"
+    ],
+    "rationale": "Active Python script outside command-manifest; classified to prevent silent drift but requires review before automation."
+  },
+  {
+    "path": "scripts/speaker_voice_profile_tool.py",
+    "accepted": true,
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "policyClass": "manual_editorial_audio_helper",
+    "riskClass": "medium_human_approval_required",
+    "allowedInvocation": [
+      "manual_direct_after_explicit_review",
+      "approved_content_pipeline"
+    ],
+    "updatedAt": "2026-07-12T17:46:20.481703Z",
+    "updatedBy": "oss-architecture-v2-orphan-classification",
+    "rationale": "Classified conservatively during runtime-v2 migration; LinkedIn/browser/dispatch helpers remain manual, unscheduled and review-gated."
+  },
+  {
+    "path": "scripts/temporal_durable_workflow_shadow_planner.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.289596Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_observability_or_builder_tool",
+    "riskClass": "low_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_observability_pipeline"
+    ],
+    "rationale": "Observability/reporting/builder helper not intended as a standalone manifest command."
+  },
+  {
+    "path": "scripts/temporal_performance_slo_core.py",
+    "accepted": true,
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "policyClass": "shared_observability_component",
+    "riskClass": "low_observability",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_observability_pipeline"
+    ],
+    "updatedAt": "2026-07-12T17:38:30.036154Z",
+    "updatedBy": "oss-architecture-v2-install",
+    "rationale": "Runtime-v2 package helper; invoked by the release gate, installer or controlled canary, never directly scheduled."
+  },
+  {
+    "path": "scripts/temporal_rtk_regression_guard.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.289619Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_observability_or_builder_tool",
+    "riskClass": "low_prepare_only",
+    "allowedInvocation": [
+      "manual_direct",
+      "parent_observability_pipeline"
+    ],
+    "rationale": "Observability/reporting/builder helper not intended as a standalone manifest command."
+  },
+  {
+    "path": "scripts/test_google_tasks_bridge_e2e.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.289647Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "test_wrapper_or_regression_tool",
+    "riskClass": "low_manual_test",
+    "allowedInvocation": [
+      "manual_direct",
+      "ci_or_guard_harness"
+    ],
+    "rationale": "Regression/test helper; intentionally outside recurring manifest commands unless explicitly promoted."
+  },
+  {
+    "path": "scripts/traid_failclosed_regression_guard.py",
+    "accepted": true,
+    "coverageClass": "scheduled_manifest_entrypoint_parser_gap",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": true,
+    "requiresManifestBeforeScheduling": false,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-28T12:23:51.512584Z",
+    "updatedBy": "oss-p9-p13-followup-traid-hygiene",
+    "policyClass": "scheduled_manifest_entrypoint_parser_gap",
+    "riskClass": "low_observability_or_guardrail",
+    "allowedInvocation": [
+      "temporal_schedule",
+      "manual_direct"
+    ],
+    "rationale": "TRAID fail-closed regression guard is a manifest/scheduled entrypoint; classified here to avoid parser-gap orphan drift while preserving scheduling."
+  },
+  {
+    "path": "scripts/wrapper_failure_alert.py",
+    "accepted": true,
+    "coverageClass": "orphan_active_python_script",
+    "manifestCommandExpected": false,
+    "scheduleAllowed": false,
+    "requiresManifestBeforeScheduling": true,
+    "requiresExplicitReviewBeforeAutomation": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T10:19:18.289668Z",
+    "updatedBy": "oss-p7-script-coverage-policy",
+    "policyClass": "manual_unmapped_script",
+    "riskClass": "medium_unclassified_manual",
+    "allowedInvocation": [
+      "manual_direct_after_review"
+    ],
+    "rationale": "Active Python script outside command-manifest; classified to prevent silent drift but requires review before automation."
+  }
+]

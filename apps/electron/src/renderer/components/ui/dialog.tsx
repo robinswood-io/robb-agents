@@ -51,7 +51,7 @@ function DialogContent({
   showCloseButton = true,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
-  showCloseButton?: boolean
+  showCloseButton?: boolean | undefined
 }) {
   const { t } = useTranslation()
   return (

@@ -195,7 +195,7 @@ Robb Agents is designed as a public open-source project. GitHub artifact attesta
 Before changing repository visibility, run the explicit preflight against the candidate public ref:
 
 ```bash
-python3 scripts/robinswood-public-preflight.py --ref robinswood/main
+python3 scripts/robinswood_public_preflight.py --ref robinswood/main
 ```
 
 It checks current tracked content and all history reachable from that ref for known legacy private-distribution markers and common secret patterns. It complements, but does not replace, a dedicated history-aware secret scanner. If it fails, remediate or replace the reachable history before publishing.

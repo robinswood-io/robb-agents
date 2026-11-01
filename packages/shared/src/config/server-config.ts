@@ -159,11 +159,14 @@ export function normalizeServerConfigPublicUrls(config: ServerConfig): ServerCon
     }
   }
 
+  const configWithoutOverrides = { ...config };
+  delete configWithoutOverrides.publicWebuiUrl;
+  delete configWithoutOverrides.publicWsUrl;
   return {
-    ...config,
+    ...configWithoutOverrides,
     tunnelProvider: normalizeTunnelProvider(config.tunnelProvider),
     remoteAuthMode: normalizeRemoteAuthMode(config.remoteAuthMode),
-    publicWebuiUrl,
-    publicWsUrl,
+    ...(publicWebuiUrl !== undefined ? { publicWebuiUrl } : {}),
+    ...(publicWsUrl !== undefined ? { publicWsUrl } : {}),
   }
 }

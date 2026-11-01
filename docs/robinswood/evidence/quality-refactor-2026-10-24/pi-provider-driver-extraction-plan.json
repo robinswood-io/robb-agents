@@ -1,0 +1,106 @@
+{
+  "source": "packages/shared/src/agent/backend/internal/drivers/pi.ts",
+  "units": [
+    {
+      "names": [
+        "RawCopilotModel"
+      ],
+      "group": "copilot-models",
+      "bodySha256": "584f5a3e9392a0e8b1f11e5c205d583293cba7dc28fc4da18fc05c36249d0e1b"
+    },
+    {
+      "names": [
+        "COPILOT_PROVIDER_CONTRACT"
+      ],
+      "group": "copilot-models",
+      "bodySha256": "0d84b1926ed59883803bf5d479614dcc8791d35c07d08f7e7621f923a768de23"
+    },
+    {
+      "names": [
+        "COPILOT_HEADERS"
+      ],
+      "group": "copilot-models",
+      "bodySha256": "d13a85ada353cb95c5565df4a4719935b76a4afdef7798aa88c7e8713a837629"
+    },
+    {
+      "names": [
+        "listModelsViaHttp"
+      ],
+      "group": "copilot-models",
+      "bodySha256": "10a91f35e2021d40c84e953f79616b40ce3dbac9b43110e92d7265e4e82bd073"
+    },
+    {
+      "names": [
+        "EXCLUDED_MODEL_PREFIXES"
+      ],
+      "group": "copilot-models",
+      "bodySha256": "aa52f4041ce8b3699ac1099da97f3f4847401cc69f8ebb68b98106803cf56242"
+    },
+    {
+      "names": [
+        "filterEnabledModels"
+      ],
+      "group": "copilot-models",
+      "bodySha256": "c3ba0ad4738595c4b81d70f9ec3ff0c376e720f1e0946add2dbed5eb35608e75"
+    },
+    {
+      "names": [
+        "toModelDefinitions"
+      ],
+      "group": "copilot-models",
+      "bodySha256": "6e479c3c42f7fe0d08e8ac6cd4a7777f5c6a26e8a4ccead4830e7e89285e34ea"
+    },
+    {
+      "names": [
+        "logModelBreakdown"
+      ],
+      "group": "copilot-models",
+      "bodySha256": "5d0afdbfb5c55720dec93301d1a6b12121031141dd4d8e1a306ba4360c686679"
+    },
+    {
+      "names": [
+        "fetchCopilotModels"
+      ],
+      "group": "copilot-models",
+      "bodySha256": "d09d5ad2e7c4a122f09e475a2bc9ad41841fa2fe57e5ca5c73c32d27e40070e1"
+    },
+    {
+      "names": [
+        "testAnthropicCompatible"
+      ],
+      "group": "anthropic-connection",
+      "bodySha256": "db7c5cc9d6fcda911b63f95f16b7d22fe132de0545e9d4f09213f24f2aaaeee8"
+    },
+    {
+      "names": [
+        "piDriver"
+      ],
+      "group": "provider-driver",
+      "bodySha256": "18ff0a83ccdc68b3d4a1eb208b82491b8002174e0d89ccd63ceadea99c8f4555"
+    }
+  ],
+  "modules": [
+    {
+      "name": "copilot-models",
+      "lines": 188
+    },
+    {
+      "name": "anthropic-connection",
+      "lines": 46
+    },
+    {
+      "name": "provider-driver",
+      "lines": 278
+    }
+  ],
+  "dependencies": {
+    "copilot-models": [],
+    "anthropic-connection": [],
+    "provider-driver": [
+      "copilot-models",
+      "anthropic-connection"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

@@ -1,0 +1,21 @@
+{
+  "valid": true,
+  "source": "packages/shared/src/skills/__tests__/storage.test.ts",
+  "testDeclarationsPreserved": 36,
+  "sharedDeclarationsPreserved": 5,
+  "setupPreservedInEverySuite": true,
+  "documentedPersistenceDrainFix": false,
+  "ownedLocalDeclarationsPreservedPerFile": true,
+  "importsPreserved": true,
+  "maximumLines": 263,
+  "currentSourceHashes": {
+    "packages/shared/src/skills/__tests__/storage.test.ts": "73810d038b8ce55cb26e1af4b50e3bc1ea88dc27a0ea0ca9a8ce06387ebdc96c",
+    "packages/shared/src/skills/__tests__/storage-should-load-multiple-skills-from-workspace.test.ts": "2f6cedf8267e539a4c406ba94cb336828e4ac196d6f5df6db2ac7f68d8874147",
+    "packages/shared/src/skills/__tests__/storage-should-load-workspace-and-project-skills-alongside-any-existing-g.test.ts": "ae9ea8af523b1f9878a88326ab229fd96b32f4f354aa2b6a799e7a6e4cee3370",
+    "packages/shared/src/skills/__tests__/storage-should-return-true-for-existing-skill-with-skill-md.test.ts": "aefde2e4b30a1c5e72d05e45180dded6b287f77abf388457fe3d95d1d108affb",
+    "packages/shared/src/skills/__tests__/storage-should-list-all-valid-skill-slugs.test.ts": "e531a4b09ffcf89cd577cc0f6f35b7bc9a779776b6a4e00e9936d5b128e7c627",
+    "packages/shared/src/skills/__tests__/storage-should-delete-an-existing-skill.test.ts": "0f7c0d95916b1c52245d64f55cfa00ed753b149728deba346b6874172afecff5",
+    "packages/shared/src/skills/__tests__/testing/storage-fixture.ts": "dd24952fda9036646f568fe5ae571a806294f4d7b368ba34a5c4c46ebe6357fc"
+  },
+  "issues": []
+}

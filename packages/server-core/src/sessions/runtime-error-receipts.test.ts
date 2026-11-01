@@ -1,3 +1,12 @@
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { requiredTestValue } from '@craft-agent/shared/testing/fixture-values';
+import { parseRecoveryJournalObservation } from './testing/recovery-journal-observation.ts';
+import type { AgentBackend } from '@craft-agent/shared/agent/backend/types.ts';
+import type { SessionEvent } from '@craft-agent/shared/protocol';
+
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it, spyOn } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -24,13 +33,13 @@ function harness() {
   const rootPath = mkdtempSync(join(tmpdir(), 'runtime-error-receipts-'))
   directories.push(rootPath)
   const workspace = { id: 'isolated-watchdog', slug: 'isolated-watchdog', rootPath, name: 'Watchdog fixture', createdAt: 1 }
-  const manager = new SessionManager()
+  const manager = withSessionOperationsForTest(new SessionManager())
   managers.push(manager)
-  const runtime = manager as any
+  const runtime = sessionManagerForTest(manager)
   const started = deferred()
   const stall = deferred()
   releases.push(stall.resolve)
-  runtime.sendEvent = (event: any) => {
+  runtime.sendEvent = (event: SessionEvent) => {
     if (event.type === 'tool_start' && event.toolUseId === 'uncertain-call') started.resolve()
   }
   runtime.startGenerationTelemetry = () => {}
@@ -58,10 +67,10 @@ function harness() {
     ...recovery.createPendingTurnRecovery('root-user', 10), attempts: 0,
     budgetHistoryUnavailable: true, exhaustedAt: 11,
   }
-  runtime.sessions.set(session.id, session)
+  sessionRuntimeStateForTest(manager).sessions.set(session.id, session)
   let chats = 0
   let dispatch: Promise<void> | undefined
-  const agent = {
+  const agent = completeSessionAgentFixture(session.workspace, ({
     getModel: () => 'fixture-model', getSessionId: () => null, setAllSources: () => {},
     isProcessing: () => false, forceAbort: () => {}, dispose: () => {},
     async *chat() {
@@ -69,7 +78,7 @@ function harness() {
       yield { type: 'tool_start', toolName: 'Bash', toolUseId: 'uncertain-call', input: { command: 'fixture-observation-only' } }
       await stall.promise
     },
-  }
+  } satisfies Partial<AgentBackend> & { dispose?: () => void }))
   runtime.getOrCreateAgent = async () => { session.agent = agent as never; return agent }
   const send = manager.sendMessage.bind(manager)
   manager.sendMessage = (...args) => { dispatch = send(...args); return dispatch }
@@ -113,11 +122,11 @@ describe('durable runtime errors and unknown tool receipts', () => {
     expect(h.chatCount()).toBe(1)
     await h.manager.flushSession(h.session.id)
     const persisted = readFileSync(getSessionFilePath(h.rootPath, h.session.id), 'utf8')
-      .trim().split('\n').map(line => JSON.parse(line))
+      .trim().split('\n').map(line => parseRecoveryJournalObservation(line))
     expect(persisted.slice(1).filter(message => (message.role ?? message.type) === 'error')).toHaveLength(1)
     const stored = persisted.slice(1).find(message => message.toolUseId === 'uncertain-call')
-    expect(stored.toolExecuted).toBeUndefined()
-    expect(stored.toolResult).toBeUndefined()
+    expect(requiredTestValue(stored).toolExecuted).toBeUndefined()
+    expect(requiredTestValue(stored).toolResult).toBeUndefined()
     expect(h.session.messages.filter(message => message.role === 'assistant').map(message => message.id)).toEqual(['old-final'])
     expect(h.session.messages.filter(message => message.role === 'user').map(message => message.id)).toEqual(['root-user'])
   })

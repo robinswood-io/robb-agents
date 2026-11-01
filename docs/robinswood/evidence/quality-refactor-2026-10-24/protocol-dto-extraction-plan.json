@@ -1,0 +1,740 @@
+{
+  "source": "packages/shared/src/protocol/dto.ts",
+  "units": [
+    {
+      "names": [
+        "SessionStatus"
+      ],
+      "group": "sessions",
+      "bodySha256": "c59701b6cde9aa92519972542426f9c56e5766ea4656e342808671f5081c7def"
+    },
+    {
+      "names": [
+        "BuiltInStatusId"
+      ],
+      "group": "sessions",
+      "bodySha256": "5b84aba2194a9792a808c6b0837d358c4fe8585e5a26064da9ed8a10a4b447fb"
+    },
+    {
+      "names": [
+        "Session"
+      ],
+      "group": "sessions",
+      "bodySha256": "d6670e89e948713644e89a8a1caf580215e8083815a6259ff4311c4c8a761755"
+    },
+    {
+      "names": [
+        "CreateSessionOptions"
+      ],
+      "group": "sessions",
+      "bodySha256": "a8c0128934c4878ca694edb04c18ac4dce38995764588c3c65ccfb1a0a2e81a1"
+    },
+    {
+      "names": [
+        "RemoteSessionTransferPayload"
+      ],
+      "group": "sessions",
+      "bodySha256": "1810ff52d523224780c9f69e10af5a2e08d124cc863ddba8354a782d4e7b2fc6"
+    },
+    {
+      "names": [
+        "ImportRemoteSessionTransferResult"
+      ],
+      "group": "sessions",
+      "bodySha256": "2ec59c8e179644dd2aca4e1fa30ec1d1dbb822d70a185611c077b511abde6da6"
+    },
+    {
+      "names": [
+        "TaskValidationIssueDto"
+      ],
+      "group": "tasks",
+      "bodySha256": "69aeefa62fd8218566463ca9149e40a565892af294f6b23a1c704b823c2f04f4"
+    },
+    {
+      "names": [
+        "TaskValidationResultDto"
+      ],
+      "group": "tasks",
+      "bodySha256": "69de1d17d5247aef93e0e2e75d72db3feb3d1006d2ae0ecf9c80017fba0fd9dc"
+    },
+    {
+      "names": [
+        "TaskCreateRequest"
+      ],
+      "group": "tasks",
+      "bodySha256": "24e79d9c7029ae2d1446a4d2baaac1fe5cee9634bae2887094664f03803d4da4"
+    },
+    {
+      "names": [
+        "TaskCreateResult"
+      ],
+      "group": "tasks",
+      "bodySha256": "5fe7b69628becf38026615f7529b39c789a64f1b9b219ab2c48b2de2c01cafe2"
+    },
+    {
+      "names": [
+        "TaskGenerateRequest"
+      ],
+      "group": "tasks",
+      "bodySha256": "a25df8291bf7afa92b0df3256f173c56f8d82d1bcb630184142a522b8586e164"
+    },
+    {
+      "names": [
+        "TaskGenerateAck"
+      ],
+      "group": "tasks",
+      "bodySha256": "f5137c54eadc078d973396374be56f9e10f462cad3bc8e673355c99ccac7eea4"
+    },
+    {
+      "names": [
+        "TaskGenerateResult"
+      ],
+      "group": "tasks",
+      "bodySha256": "88c65ffbf5a93fd2a199e87e543ad202a61a5df61c3736c1a7bf9ab09eaac6aa"
+    },
+    {
+      "names": [
+        "TaskRunRequest"
+      ],
+      "group": "tasks",
+      "bodySha256": "c8aa1e6e5257b85e49ce32cd27ea7cd40a6e291063c9f1c3a2c424fe1d2d404d"
+    },
+    {
+      "names": [
+        "TaskRepairRequest"
+      ],
+      "group": "tasks",
+      "bodySha256": "dd27b2f3d95807d91f024672fac7845ef2f2bd127f961387031b5bc3234681a6"
+    },
+    {
+      "names": [
+        "TaskNodeRunStateDto"
+      ],
+      "group": "tasks",
+      "bodySha256": "4fd6e2e622480ee519a434a2e6d6361287dd744f89ddcb88413585486025cd11"
+    },
+    {
+      "names": [
+        "TaskRunSnapshotDto"
+      ],
+      "group": "tasks",
+      "bodySha256": "256c14aff87ecfd651dc16a5477a54a74d9692699f16c3b5d8dc487d0dc01def"
+    },
+    {
+      "names": [
+        "TaskApprovalRequestDto"
+      ],
+      "group": "tasks",
+      "bodySha256": "710ab1df652f8cc9dd91b03ee3219b4f7c86d9599832d1740ae1be2e16d89bd5"
+    },
+    {
+      "names": [
+        "TaskApprovalDecisionRequest"
+      ],
+      "group": "tasks",
+      "bodySha256": "ca491ddacb0f92d553bead297ff116c0a7792e8b6bfd04fb164a8a02ab4b2741"
+    },
+    {
+      "names": [
+        "TaskKillSwitchSnapshotDto"
+      ],
+      "group": "tasks",
+      "bodySha256": "32d8a1e5c1340feb94789a6c035ae90db3e33526c3ec100fd9d11ba4d4539e42"
+    },
+    {
+      "names": [
+        "TaskKillSwitchUpdateRequest"
+      ],
+      "group": "tasks",
+      "bodySha256": "f613ab936aeac1566d02d8b3010c6b56fc4cd3c848aff6251f4988391e3bc25a"
+    },
+    {
+      "names": [
+        "TaskGetResult"
+      ],
+      "group": "tasks",
+      "bodySha256": "0d44d5dd30b1dc4b2ee6ab5107d8947143e0a6375554e58b42569858eae26371"
+    },
+    {
+      "names": [
+        "MissionSnapshotDto"
+      ],
+      "group": "missions",
+      "bodySha256": "255ee7179f00bff673d107a6c75ca20c38347ece0eb2769bc03b34798eff9b28"
+    },
+    {
+      "names": [
+        "MissionProofPassportDto"
+      ],
+      "group": "missions",
+      "bodySha256": "935849afcfddcdcc36bb5788940ce5ccf49719a07e01a181ed42e763d58fe9dd"
+    },
+    {
+      "names": [
+        "MissionProofPassportTrustAnchorDto"
+      ],
+      "group": "missions",
+      "bodySha256": "b94c45e4271ae9664170b71c25762fabc0b663a38d7cd2c9028d92bba5dd8223"
+    },
+    {
+      "names": [
+        "MissionProofPassportVerificationDto"
+      ],
+      "group": "missions",
+      "bodySha256": "1ae9a6d95a02a7e218eb25b711acdaeb7a52ab3a7147848a92c76ae27ae2b241"
+    },
+    {
+      "names": [
+        "MissionPlanRequest"
+      ],
+      "group": "missions",
+      "bodySha256": "1850f65fbc1e91591f76a037e201eee5b8aefe7c29b8188c1e5b8c6c2181430e"
+    },
+    {
+      "names": [
+        "MissionPlanAck"
+      ],
+      "group": "missions",
+      "bodySha256": "98238989bc6f6e4bf7b97ff935ad7111d5325ac6a90f7ef5016b6581ddbfe558"
+    },
+    {
+      "names": [
+        "MissionPlanIssueDto"
+      ],
+      "group": "missions",
+      "bodySha256": "849261a7182039eb2a1889af6263d8f8c6d7227c8a372bd5f35ef44fb61ef21e"
+    },
+    {
+      "names": [
+        "MissionPlanResult"
+      ],
+      "group": "missions",
+      "bodySha256": "6a9dab1ae2867e511df086ed421d4292f8c2f03980f55be5e2e3e7168f24d2bb"
+    },
+    {
+      "names": [
+        "MissionCreateAndStartRequest"
+      ],
+      "group": "missions",
+      "bodySha256": "fb90190b6187678c763d8c4bc3107e13969fe77478a702084dd51864a4239612"
+    },
+    {
+      "names": [
+        "MissionPreflightRequest"
+      ],
+      "group": "missions",
+      "bodySha256": "8bd7c75349447e18975310b74512bb1670fefe29c9ca7b3e66699bac9bfe7721"
+    },
+    {
+      "names": [
+        "MissionPreflightResult"
+      ],
+      "group": "missions",
+      "bodySha256": "5685d9fd44a41e7c3bcdaeb08b55c3892d7c6b2511fc310d30fbf7e5d77951af"
+    },
+    {
+      "names": [
+        "MissionReplanPreviewRequest"
+      ],
+      "group": "missions",
+      "bodySha256": "816a55b58f5fcebd0b17064bd1dacca368d84b584b8d4b6e405ffb92798b537f"
+    },
+    {
+      "names": [
+        "MissionReplanRequest"
+      ],
+      "group": "missions",
+      "bodySha256": "f343782d0a97d56c563d2e2fbf55df56bab9a2c8e2715686d0e870ed58ae3cb6"
+    },
+    {
+      "names": [
+        "MissionReplanPreviewDto"
+      ],
+      "group": "missions",
+      "bodySha256": "0b11c58a81e9667d6785b72813f05835462c0186fbd9ad079ca890b082567077"
+    },
+    {
+      "names": [
+        "MissionControlRequest"
+      ],
+      "group": "missions",
+      "bodySha256": "fc8d150f083c5d7c44a98b0e5acb3de5df25f3cd767223fa29a36557ae09f7d5"
+    },
+    {
+      "names": [
+        "MissionResumeRequest"
+      ],
+      "group": "missions",
+      "bodySha256": "1c7b3b04ffa48f419bb5218974b50220294188bf1ac815db58b9e204519bc67a"
+    },
+    {
+      "names": [
+        "MissionConnectorApprovalRequestDto"
+      ],
+      "group": "missions",
+      "bodySha256": "1718071bc4226cc03667e505659adf7a34fa932ae786a8836f21f61991dd4c4d"
+    },
+    {
+      "names": [
+        "MissionConnectorApprovalDecisionRequest"
+      ],
+      "group": "missions",
+      "bodySha256": "21751924555bb45f8c1e21e768d2340c9d2313cd951c4e01aca8948a90f73e2c"
+    },
+    {
+      "names": [
+        "MissionConnectorApprovalRefreshRequest"
+      ],
+      "group": "missions",
+      "bodySha256": "20c70dfeb01112709c4f153def27910f9443d478d0ec09651d9e67df381cfd64"
+    },
+    {
+      "names": [
+        "DurableTaskSnapshotDto"
+      ],
+      "group": "missions",
+      "bodySha256": "1c899fb9068625ef2c1635e619bfc64016d162c6dfaf74b9b421751621d58482"
+    },
+    {
+      "names": [
+        "DurableTaskCockpitProjectionsDto"
+      ],
+      "group": "missions",
+      "bodySha256": "fdb7a9b32c532767f8a9715b9a259c28fcc00f86b24949167cacbf35c26c271d"
+    },
+    {
+      "names": [
+        "DurableTaskMetadataUpdateRequest"
+      ],
+      "group": "missions",
+      "bodySha256": "fb7eaa047535bb4a6e1e15a0a8545568f196f54fe52ba39c5b0a93a8b6c13f7c"
+    },
+    {
+      "names": [
+        "TaskResultNodeDto"
+      ],
+      "group": "missions",
+      "bodySha256": "756387cd5610a1e27a2b1debd6c0f9aa306d0605efe636da7c3ad909c837e6a9"
+    },
+    {
+      "names": [
+        "MissionBlockerDto"
+      ],
+      "group": "missions",
+      "bodySha256": "c1329d0230e576fa9f5f4b2b14f6f1dc31753ab6e9752690c53f30b8fc612c50"
+    },
+    {
+      "names": [
+        "MissionApprovalDto"
+      ],
+      "group": "missions",
+      "bodySha256": "0d9b10f060274b09b43a8579aa90f589a28f3965dfb1e61d59751be01497b892"
+    },
+    {
+      "names": [
+        "MissionControlSnapshotDto"
+      ],
+      "group": "missions",
+      "bodySha256": "4f63c713bce22a7191759c248b27943639ba5ea9eb031001d6728d6b19247121"
+    },
+    {
+      "names": [
+        "MissionReplayPlanDto"
+      ],
+      "group": "missions",
+      "bodySha256": "d3e5132328507d49b3a516bed6e56d4ad8ab9e99e2451acb3ff03aec020f14aa"
+    },
+    {
+      "names": [
+        "TaskResultsDto"
+      ],
+      "group": "missions",
+      "bodySha256": "77e8ba67e043dd5617466d0696a09dc6d230bd1f2942bd6128893d614101b6e5"
+    },
+    {
+      "names": [
+        "PermissionModeState"
+      ],
+      "group": "session-events",
+      "bodySha256": "953ade23d1b2adf92f57569f220858df4e483ecbeeaff25607a78af518e25b45"
+    },
+    {
+      "names": [
+        "SessionEvent"
+      ],
+      "group": "session-events",
+      "bodySha256": "3159312af3232290b0359e36be0f5f91ca9877cdd049e736b856eb663cdfc331"
+    },
+    {
+      "names": [
+        "SendMessageOptions"
+      ],
+      "group": "session-events",
+      "bodySha256": "1e4fb13c205467ed8927a386d0f80c2664c68f78510a610937e65200d08f817d"
+    },
+    {
+      "names": [
+        "RetryTurnResult"
+      ],
+      "group": "session-events",
+      "bodySha256": "cf4cb1e65bfff263287c44378994180d28a23eecf3e683ebbd747cde7b076abc"
+    },
+    {
+      "names": [
+        "SessionCommand"
+      ],
+      "group": "session-events",
+      "bodySha256": "43fbe3e8b8f3bbef50411b6c05ff6c62d47a3ef5a3f603d862034f6df27dbadc"
+    },
+    {
+      "names": [
+        "NewChatActionParams"
+      ],
+      "group": "session-events",
+      "bodySha256": "0a5dd9f7d8eae3b530da6798c8fdab704567fd343bc3fadf56ab138c42dd1e1d"
+    },
+    {
+      "names": [
+        "PermissionRequest"
+      ],
+      "group": "files-and-permissions",
+      "bodySha256": "5ebb90442cf5425546966b2dec8ae901bf01d47cd664c8103884d82367f06165"
+    },
+    {
+      "names": [
+        "PermissionResponseOptions"
+      ],
+      "group": "files-and-permissions",
+      "bodySha256": "266e7db3acebc1177ee2f35598df72998aa9d56cf45174f3328f6a9cd54f3415"
+    },
+    {
+      "names": [
+        "CredentialRequest"
+      ],
+      "group": "files-and-permissions",
+      "bodySha256": "0a7e225ed8e6ae9e7796ad4c39d838a44bbcf44464172218dd120a348f1b96c5"
+    },
+    {
+      "names": [
+        "CredentialResponse"
+      ],
+      "group": "files-and-permissions",
+      "bodySha256": "83bc4c086c0e596c557301a59ea0a755bb439f4da80f516dcd357a1905153082"
+    },
+    {
+      "names": [
+        "DirectoryListingResult"
+      ],
+      "group": "files-and-permissions",
+      "bodySha256": "74869d89c2213f425925ccbd74137010806bc10b55a0d24fe3f3951fb1269015"
+    },
+    {
+      "names": [
+        "FileAttachment"
+      ],
+      "group": "files-and-permissions",
+      "bodySha256": "96d7ae8c3997043bdb8e4e95ce441a1b1602e6f30dde0965445c464a6754015c"
+    },
+    {
+      "names": [
+        "SessionFile"
+      ],
+      "group": "files-and-permissions",
+      "bodySha256": "c63a9f38c80a6d75f2357d33428a781f990b8480436a7c74d64fdb566b0a500a"
+    },
+    {
+      "names": [
+        "FileSearchResult"
+      ],
+      "group": "files-and-permissions",
+      "bodySha256": "51b5b846670c74119985803f4056d5d3541ec1f71bb30d70549f187484c80a58"
+    },
+    {
+      "names": [
+        "ClaudeOAuthIdentityDto"
+      ],
+      "group": "connections",
+      "bodySha256": "88d9cebd0626dc7f505ac67b9c8d79fb75c4cdaeb2157f7b111aa51ae1dfc73f"
+    },
+    {
+      "names": [
+        "LlmConnectionSetup"
+      ],
+      "group": "connections",
+      "bodySha256": "11938fe158a1d3c39e972e24b44e14e4023dd8b6035b5177914a6078a5d41936"
+    },
+    {
+      "names": [
+        "TestLlmConnectionParams"
+      ],
+      "group": "connections",
+      "bodySha256": "84ff152b0af036a3e458f033a2062431ec9e92341ba3ba70c41a8644a3393e5d"
+    },
+    {
+      "names": [
+        "TestLlmConnectionResult"
+      ],
+      "group": "connections",
+      "bodySha256": "dda287cabe7808138fa4a16d4c391c465a54d123579ff7aed27fefc77d2d0f4a"
+    },
+    {
+      "names": [
+        "SkillFile"
+      ],
+      "group": "connections",
+      "bodySha256": "cb356261618f65d08019c141ad212c3fd9bb3a0ed53348daf5ad40fd2c30b702"
+    },
+    {
+      "names": [
+        "OAuthResult"
+      ],
+      "group": "connections",
+      "bodySha256": "85d7282f4c7d0b9253ca67c5592387b7c7e8d887a1dfb17d7bb99a63855b0f48"
+    },
+    {
+      "names": [
+        "McpValidationResult"
+      ],
+      "group": "connections",
+      "bodySha256": "ff78ae86b5cd9a1b153bc4fe21ea856c06a4f130fe1d4f05e4e8d43b60597eea"
+    },
+    {
+      "names": [
+        "McpToolWithPermission"
+      ],
+      "group": "connections",
+      "bodySha256": "703b3e2701171e8636b04f6d06d14cd249c4bead37261e823df90bb1d3d682a1"
+    },
+    {
+      "names": [
+        "McpToolsResult"
+      ],
+      "group": "connections",
+      "bodySha256": "ca33679d41afc30ffbbce6620dcc1a3c7aa7a81c5f6f0e58d22275ea25f9de3f"
+    },
+    {
+      "names": [
+        "SessionSearchMatch"
+      ],
+      "group": "session-results",
+      "bodySha256": "c47f2502def3612ffcf8a5dd9c2f341df7c65742a1515fac200d7e01a45a4463"
+    },
+    {
+      "names": [
+        "SessionSearchResult"
+      ],
+      "group": "session-results",
+      "bodySha256": "60fd476712560f7b0cafbb3da6fff9f0c4389f204c32550272f8e2183aa76dcd"
+    },
+    {
+      "names": [
+        "UnreadSummary"
+      ],
+      "group": "session-results",
+      "bodySha256": "15656d0ce86e86a3fdbb5c8e077c2264082f9e41334a213b5c6e3cbe8d16af78"
+    },
+    {
+      "names": [
+        "ShareResult"
+      ],
+      "group": "session-results",
+      "bodySha256": "6a6154cc990e09e84759ca058481982f7e27941edf658c971a93fae3be34724a"
+    },
+    {
+      "names": [
+        "RefreshTitleResult"
+      ],
+      "group": "session-results",
+      "bodySha256": "713f364134ac17c7233483fac633e858fc769e0987414002644ab2de00c96ebb"
+    },
+    {
+      "names": [
+        "PlanStep"
+      ],
+      "group": "session-results",
+      "bodySha256": "194bd6b227b13896d605b4c2a1497ff5c01f04965b52094a5ee51765c0a98c86"
+    },
+    {
+      "names": [
+        "Plan"
+      ],
+      "group": "session-results",
+      "bodySha256": "cdf4b87c8037b93b0f85001fd18f395aca9b36e21ac8db95a236ea9f1008ab79"
+    },
+    {
+      "names": [
+        "GitBashStatus"
+      ],
+      "group": "workspace-and-updates",
+      "bodySha256": "9903ae00e903645f8bfac0a6e57d65c26a09fa5d99de785427cce7ab7f2b2b8a"
+    },
+    {
+      "names": [
+        "UpdateInfo"
+      ],
+      "group": "workspace-and-updates",
+      "bodySha256": "c1bf0256a702790af72ffb07c55e4964d2ef3f482f41b043a2927c7672f3c651"
+    },
+    {
+      "names": [
+        "WorkspaceSettings"
+      ],
+      "group": "workspace-and-updates",
+      "bodySha256": "bffd023ec3eb1e8a76f4a18af09d82abba687b8a43615b82e6f7e332d8c137d1"
+    },
+    {
+      "names": [
+        "WorkspaceGovernanceUpdateRequest"
+      ],
+      "group": "workspace-and-updates",
+      "bodySha256": "75222222593013817becaf4c70bab8a1a3b0dedda20e9c85384a748722de2ef1"
+    },
+    {
+      "names": [
+        "WorkspaceGovernanceUpdateResult"
+      ],
+      "group": "workspace-and-updates",
+      "bodySha256": "72dc0b1d6c3b2f49ec94a4a8ebc2a599124e081ad7d1d4263db5f5d91541f052"
+    },
+    {
+      "names": [
+        "RemoteSupervisionGrantRequest"
+      ],
+      "group": "workspace-and-updates",
+      "bodySha256": "3320d36f7515315565060838ae4a1086e9f2cc765dcc13396544eba7b4a84fb1"
+    },
+    {
+      "names": [
+        "RemoteSupervisionRevokeRequest"
+      ],
+      "group": "workspace-and-updates",
+      "bodySha256": "687796bda367a4b86d5207c7895999b3c2c1a8089928bb5911da51c0de6cf807"
+    },
+    {
+      "names": [
+        "ClaudeOAuthResult"
+      ],
+      "group": "workspace-and-updates",
+      "bodySha256": "9cf01dde771fd1b1794ea5a6d1a117a83d9ce50026afc13fa1f156f030c9edcd"
+    },
+    {
+      "names": [
+        "TestAutomationAction"
+      ],
+      "group": "automations-and-windows",
+      "bodySha256": "2c87f4f0d933c191b7b48ba1938a428d92810de5a7c5baa8eb9c6f9935ea413c"
+    },
+    {
+      "names": [
+        "TestAutomationPayload"
+      ],
+      "group": "automations-and-windows",
+      "bodySha256": "56b38d4d7f1ff789a933042d98d1961722775527694f86d6ed6121f07b9d1980"
+    },
+    {
+      "names": [
+        "TestAutomationActionResult"
+      ],
+      "group": "automations-and-windows",
+      "bodySha256": "f5fb8fbd664d2e15eb8270eae78066c51c9e2c67f1bbe0dcfbea8cace540cc73"
+    },
+    {
+      "names": [
+        "TestAutomationResult"
+      ],
+      "group": "automations-and-windows",
+      "bodySha256": "a958dc5be2f2f75a0b692ac41561fa4ed98a6dfe03b95fa4b00e4ad9f7734963"
+    },
+    {
+      "names": [
+        "WindowCloseRequestSource"
+      ],
+      "group": "automations-and-windows",
+      "bodySha256": "53cca2e8c60ded763774aaf257c84dff797875ad0b380f2538832e2820a46c3a"
+    },
+    {
+      "names": [
+        "WindowCloseRequest"
+      ],
+      "group": "automations-and-windows",
+      "bodySha256": "24d84c3ec4057646e14a6f4537b288803aa5d032e44a256b15ebd19f23702bc7"
+    },
+    {
+      "names": [
+        "BrowserInstanceInfo"
+      ],
+      "group": "browser-navigation",
+      "bodySha256": "d69ad3a4094577131e0d3c8d62d20afbacd9558c6ae86cbbe25ba58351537290"
+    },
+    {
+      "names": [
+        "DeepLinkNavigation"
+      ],
+      "group": "browser-navigation",
+      "bodySha256": "baee0fd3125da3d4a0f6e5e98635aacfa33d685fb5f97e059893a7c03d549699"
+    }
+  ],
+  "modules": [
+    {
+      "name": "sessions",
+      "lines": 231
+    },
+    {
+      "name": "tasks",
+      "lines": 193
+    },
+    {
+      "name": "missions",
+      "lines": 259
+    },
+    {
+      "name": "session-events",
+      "lines": 196
+    },
+    {
+      "name": "files-and-permissions",
+      "lines": 84
+    },
+    {
+      "name": "connections",
+      "lines": 97
+    },
+    {
+      "name": "session-results",
+      "lines": 61
+    },
+    {
+      "name": "workspace-and-updates",
+      "lines": 90
+    },
+    {
+      "name": "automations-and-windows",
+      "lines": 40
+    },
+    {
+      "name": "browser-navigation",
+      "lines": 37
+    }
+  ],
+  "dependencies": {
+    "sessions": [],
+    "tasks": [
+      "missions"
+    ],
+    "missions": [],
+    "session-events": [
+      "sessions",
+      "files-and-permissions"
+    ],
+    "files-and-permissions": [],
+    "connections": [],
+    "session-results": [],
+    "workspace-and-updates": [
+      "connections"
+    ],
+    "automations-and-windows": [],
+    "browser-navigation": []
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

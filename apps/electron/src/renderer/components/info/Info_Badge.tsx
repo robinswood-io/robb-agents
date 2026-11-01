@@ -12,9 +12,9 @@ export type BadgeColor = 'success' | 'warning' | 'destructive' | 'default' | 'mu
 
 export interface Info_BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   /** Badge color variant */
-  color?: BadgeColor
+  color?: BadgeColor | undefined
   /** Optional icon (renders before text) */
-  icon?: React.ReactNode
+  icon?: React.ReactNode | undefined
   /** Badge text */
   children: React.ReactNode
 }

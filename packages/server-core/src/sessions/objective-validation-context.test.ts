@@ -1,3 +1,4 @@
+import { scopeReviewFixture } from './testing/scope-review-fixture.ts';
 import { describe, expect, it } from 'bun:test';
 import type { Message } from '@craft-agent/core/types';
 import type { ObjectiveOutcomeDeclaration } from '@craft-agent/core/types';
@@ -16,12 +17,12 @@ const tool = (id: string, extra: Partial<Message> = {}): Message => ({
 });
 
 describe('objective validation evidence context', () => {
-  it('repairs the observed native YOLO receipt using existing parent observations, without accepting reviewer IDs as target proof', () => {
+  it('repairs historical observation references while requiring a current full-request review', () => {
     const fixture = JSON.parse(readFileSync(new URL('./__fixtures__/yolo-local-evidence-20260930.json', import.meta.url), 'utf8')) as {
       sessionId: string; objective: ActiveSessionObjective; messages: Message[];
       originalOutcome: ObjectiveOutcomeDeclaration; finalMessageId: string;
     };
-    const options = { ...fixture, finalAssistantMessageId: fixture.finalMessageId };
+    const options = { objective: fixture.objective, messages: fixture.messages, sessionId: fixture.sessionId };
     const before = structuredClone(fixture);
     const rejected = validateObjectiveOutcome(fixture.originalOutcome, options);
     expect(rejected.valid).toBe(false);
@@ -38,7 +39,12 @@ describe('objective validation evidence context', () => {
     corrected.criteria.find(criterion => criterion.id === 'relevant-checks-passed')!.evidence = [
       observations.find(observation => observation.criterionId === 'csv-content')!.message.id,
     ];
-    expect(validateObjectiveOutcome(corrected, options)).toMatchObject({ state: 'complete_verified', valid: true, gaps: [] });
+    expect(validateObjectiveOutcome(corrected, options)).toMatchObject({ valid: false, state: 'continue' });
+    const currentReview = scopeReviewFixture(fixture.objective, fixture.messages, 'current-scope-review');
+    const currentFinal: Message = { ...fixture.messages.find(message => message.id === fixture.finalMessageId)!,
+      id: 'current-final', timestamp: currentReview.timestamp + 1, objectiveOutcome: corrected };
+    expect(validateObjectiveOutcome(corrected, { ...options, messages: [...fixture.messages, currentReview, currentFinal] }))
+      .toMatchObject({ state: 'complete_verified', valid: true, gaps: [] });
     expect(fixture).toEqual(before);
   });
 

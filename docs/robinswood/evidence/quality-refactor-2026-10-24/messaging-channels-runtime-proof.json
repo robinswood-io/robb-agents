@@ -1,0 +1,11 @@
+{
+  "valid": true,
+  "method": "Import both actual modules with Bun, then compare serialized complete channel trees and flattened value arrays byte for byte.",
+  "completeTreeAndKeyOrderPreserved": true,
+  "flattenedValuesAndOrderPreserved": true,
+  "channelCount": 382,
+  "treeSha256": "dfdd3c2d5fb4e4c127e863170997d16488337afc16fed57f0d327cb3daf4c907",
+  "valuesSha256": "fd72d1d1adfec28b31df5ceff77de2d2dd75a5831b90cca9bc1495a66479b9c1",
+  "beforeSourceSha256": "8adbabec10e89dde5b06a489e3c99d227d3e9fff34cc4c0ac143c5787bf9607b",
+  "afterSourceSha256": "46f543eb35cce3e0b2c52ce17166aaa491a24a7ef36872d5e4efaafbad7ea3ec"
+}

@@ -1,0 +1,42 @@
+{
+  "status": "passed",
+  "fixtureRuntimeImports": [
+    "fs",
+    "path"
+  ],
+  "packing": "Contiguous native cases with each original nested lexical scope retained once per file",
+  "source": "packages/shared/src/resources/__tests__/resource-bundle.test.ts",
+  "typing": {
+    "status": "passed",
+    "file": "packages/shared/src/resources/__tests__/resource-bundle.test.ts",
+    "sourceHash": "18e8f4066c406d358f59584ee95d41350d994a5b79b4128947d14364a6015ff8",
+    "typedSourceHash": "dd8a25d4ea4655b1e296defccc65e26d9d0d8d37a6f69af1d69b5c06462603ee",
+    "runtimeJavaScriptIdentical": true,
+    "removedExplicitAny": 4,
+    "negativeFixture": "Intentionally invalid wire bundle asserted only at the validation boundary; value unchanged"
+  },
+  "testDeclarations": 70,
+  "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+  "nestedSuiteIdentityPreserved": true,
+  "nativeSetupAndBeforeEachRetainedPerFile": true,
+  "sharedDeclarations": [
+    "createTestWorkspace",
+    "createTestSource",
+    "createTestSkill",
+    "makeBundleFile",
+    "createTestAutomations",
+    "makeAutomationEntry",
+    "noopDeps"
+  ],
+  "sharedMutableStateAdded": false,
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 434,
+  "currentSourceHashes": {
+    "packages/shared/src/resources/__tests__/resource-bundle.test.ts": "d4635f32453f0b4995674b92ce7b1c572d8f8f3436f0d2d9aa54119180b0ff94",
+    "packages/shared/src/resources/__tests__/resource-bundle-accepts-a-valid-bundle.test.ts": "3f78eed1dedfeb445230042b34bcb153d8a76fcbdaa35537a050b7747bdbc57f",
+    "packages/shared/src/resources/__tests__/resource-bundle-imports-skills-with-auxiliary-files.test.ts": "256ae16e2229750761bbcee9bde366b720f92bdf0a24fde80444763dc904fec5",
+    "packages/shared/src/resources/__tests__/resource-bundle-replaces-a-source-only-after-validatestagedsource-authorizes-it.test.ts": "1406ba7ce6bfe7fb9be5d07cf2db16859d42603db6235daef2477cb1d1aa360b",
+    "packages/shared/src/resources/__tests__/resource-bundle-preserves-source-and-skill-content-through-round-trip.test.ts": "e14ac95066bf5318b8d0262254b79ab9f607a516ec98b8ae032ce359dbc55650",
+    "packages/shared/src/resources/__tests__/testing/resource-bundle-fixture.ts": "8dff4d5fea3c93afa345917bf2ac7977daaf9412f4d86cc8bc3fe40a51be2598"
+  }
+}

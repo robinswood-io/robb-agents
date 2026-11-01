@@ -23,11 +23,19 @@ interchangeables.
   réelles dans `~/.craft-agent` afin de valider chats, connexions, état
   navigateur et MCP dans les conditions utilisateur.
 - Construire ce candidat uniquement depuis un commit propre avec :
-  `bash apps/electron/scripts/build-dmg.sh arm64 --local-production`.
+  `CSC_NAME="<Developer ID Application du trousseau>" bash apps/electron/scripts/build-dmg.sh arm64 --local-production`.
+- Après saturation du Mac, le mode CI `stage-signed` est aussi autorisé : il
+  utilise `--release`, le même canal production et la même identité Developer ID,
+  avec notarisation, sans publier de GitHub Release. Vérifier le commit exact
+  et la qualification canonique CI avant le prévol local. Le module commercial
+  reste exclusivement local ; sa réinjection exige une nouvelle signature stable.
 - Avant remplacement, conserver une sauvegarde restaurable du bundle installé.
   Après lancement, vérifier le commit embarqué, `~/.craft-agent/robb-electron`,
   la présence des sessions/connexions et le démarrage des MCP pertinents.
-- Le paquet ad hoc de staging reste local et ne doit jamais être distribué.
+- Le paquet de staging signé reste local, sans notarisation ni publication.
+  Ne pas utiliser une signature ad hoc avec le profil réel : elle invalide les
+  autorisations macOS à chaque reconstruction. Le mode développement isolé peut
+  conserver sa signature ad hoc.
 
 ### 3. GitHub Release
 

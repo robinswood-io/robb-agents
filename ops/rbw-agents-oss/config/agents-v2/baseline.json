@@ -1,7 +1,7 @@
 {
   "schemaVersion": "oss-architecture-v2-baseline-v1",
   "generatedAt": "2026-07-12T20:48:13Z",
-  "manifestCount": 193,
+  "manifestCount": 192,
   "scheduleCount": 139,
   "scheduleFingerprint": "af4879a4875146eb675686ec96a401be6f21ae7a0f2329afcfc22b36335bf647",
   "sourceManifestUpdatedAt": "2026-07-12T12:06:00.000000Z",

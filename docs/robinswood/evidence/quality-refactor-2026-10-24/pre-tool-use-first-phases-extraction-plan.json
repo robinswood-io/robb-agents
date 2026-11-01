@@ -1,0 +1,62 @@
+{
+  "source": "packages/shared/src/agent/core/pre-tool-use.ts",
+  "units": [
+    {
+      "names": [
+        "runPreToolUseChecks"
+      ],
+      "group": "pipeline",
+      "bodySha256": "61ceda0c5148f9de233b7e2097f2d6a0884dacb7ae5c933506f7647f3d79bf2b"
+    },
+    {
+      "names": [
+        "checkExecutionPrerequisites"
+      ],
+      "group": "execution-prerequisites",
+      "bodySha256": "7c5de3bdf153545716767709ee2440dbebe9af08ed654ebb73ec08f3d59f88df"
+    },
+    {
+      "names": [
+        "prepareToolInput"
+      ],
+      "group": "tool-input-preparation",
+      "bodySha256": "d31e5871d9aeea94f753a7d4241890960e8f74828d7a2f097c47b3e2a78a93ea"
+    }
+  ],
+  "modules": [
+    {
+      "name": "pipeline",
+      "lines": 1006,
+      "file": "packages/shared/src/agent/core/pre-tool-use.ts",
+      "retained": true
+    },
+    {
+      "name": "execution-prerequisites",
+      "lines": 105,
+      "file": "packages/shared/src/agent/core/pre-tool-use/execution-prerequisites.ts",
+      "retained": false
+    },
+    {
+      "name": "tool-input-preparation",
+      "lines": 132,
+      "file": "packages/shared/src/agent/core/pre-tool-use/tool-input-preparation.ts",
+      "retained": false
+    }
+  ],
+  "dependencies": {
+    "pipeline": [
+      "execution-prerequisites",
+      "tool-input-preparation"
+    ],
+    "execution-prerequisites": [],
+    "tool-input-preparation": []
+  },
+  "unitCycles": [],
+  "moduleCycles": [],
+  "retainedTransformProofs": [
+    "pretool-authorization-body-proof.json",
+    "pretool-tool-authority-body-proof.json",
+    "pretool-gmail-authority-body-proof.json",
+    "pretool-admission-body-proof.json"
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "status": "tested; local integration pending remaining quality work",
+  "scope": "webui-app-native",
+  "files": [
+    {
+      "file": "apps/webui/src/App.tsx",
+      "lines": 426,
+      "sha256": "49d55a9811a49cc506a54ba6320c83ebe52604bc2aec7a89e6c7a9cd51b4ce72"
+    },
+    {
+      "file": "apps/webui/src/components/webui-shell-screens.tsx",
+      "lines": 113,
+      "sha256": "fecb7f6431c892311e93deba85b65c0b872921567dc06d8e163ba89d63956116"
+    },
+    {
+      "file": "apps/webui/src/use-webui-initialization.ts",
+      "lines": 331,
+      "sha256": "7c7b5aac58880f118d37c7f820d58b7d196704f4a767f093fe2b83b972701b97"
+    },
+    {
+      "file": "apps/webui/src/use-webui-offline-views.ts",
+      "lines": 84,
+      "sha256": "d726cf7ccf5e181cbe5b2c1ccaecb990014682f7652832e0143ba08b39e656aa"
+    },
+    {
+      "file": "apps/webui/src/use-webui-offline-actions.ts",
+      "lines": 194,
+      "sha256": "9eb742c5342ea37f50e2c10705fb5f4f9247688f2dee9ac2a093b75ba809bfbf"
+    },
+    {
+      "file": "apps/webui/src/use-webui-session-actions.tsx",
+      "lines": 234,
+      "sha256": "ce9335836ef0ab50a66ae7dfa83134c02de879543d017c35a846e4d1fa998c3a"
+    }
+  ],
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/webui/src/App.tsx",
+        "apps/webui/src/components/webui-shell-screens.tsx",
+        "apps/webui/src/use-webui-initialization.ts",
+        "apps/webui/src/use-webui-offline-views.ts",
+        "apps/webui/src/use-webui-offline-actions.ts",
+        "apps/webui/src/use-webui-session-actions.tsx",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 2.73,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/webui-app-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/webui/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 2.58,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/webui-app-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/webui/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 18.23,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/webui-app-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/webui/src/offline-coordinator.test.ts",
+        "apps/webui/src/offline-vault.test.ts",
+        "apps/webui/src/private-storage.test.ts",
+        "apps/webui/src/remote-auth-state.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.21,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/webui-app-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 15.6,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/webui-app-native-build.log"
+    }
+  },
+  "targetedTests": {
+    "pass": 21,
+    "fail": 0
+  },
+  "browser": {
+    "before": 2,
+    "after": 2,
+    "comparedFields": [
+      "cases",
+      "configRequests",
+      "detail",
+      "controls",
+      "errors"
+    ],
+    "nativeBehaviorEqual": true,
+    "errors": 0
+  },
+  "sourceGate": {
+    "max-lines": 6
+  },
+  "globalLint": {
+    "files": 3700,
+    "errors": 6,
+    "warnings": 59,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 6,
+      "react-hooks/exhaustive-deps": 59
+    }
+  },
+  "limits": [
+    "Other historical files and lint findings remain",
+    "No installation or final real-model mission claim",
+    "Global suite rerun prohibited by PreToolUse; last full suite f521166: 10759 passed"
+  ]
+}

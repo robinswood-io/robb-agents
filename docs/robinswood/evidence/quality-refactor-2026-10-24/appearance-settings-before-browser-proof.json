@@ -1,0 +1,67 @@
+{
+  "status": "passed",
+  "cases": [
+    {
+      "name": "native appearance page loads and applies light and dark modes",
+      "status": "passed"
+    },
+    {
+      "name": "native theme selection broadcasts the selected QA preset",
+      "status": "passed"
+    },
+    {
+      "name": "native font control broadcasts the system font",
+      "status": "passed"
+    },
+    {
+      "name": "rich tool descriptions persist through the existing native API",
+      "status": "passed"
+    },
+    {
+      "name": "native display and Kanban atom controls retain their toggles",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "calls": [
+    {
+      "method": "themePreferences",
+      "value": {
+        "mode": "dark",
+        "colorTheme": "robinswood",
+        "font": "system"
+      }
+    },
+    {
+      "method": "themePreferences",
+      "value": {
+        "mode": "light",
+        "colorTheme": "robinswood",
+        "font": "system"
+      }
+    },
+    {
+      "method": "themePreferences",
+      "value": {
+        "mode": "light",
+        "colorTheme": "qa-other",
+        "font": "system"
+      }
+    },
+    {
+      "method": "themePreferences",
+      "value": {
+        "mode": "light",
+        "colorTheme": "qa-other",
+        "font": "system"
+      }
+    },
+    {
+      "method": "richDescriptions",
+      "value": false
+    }
+  ],
+  "browser": "145.0.7632.6",
+  "target": "native local settings; QA API and browser origin only"
+}

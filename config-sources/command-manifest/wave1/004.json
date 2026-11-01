@@ -1,0 +1,436 @@
+[
+  {
+    "legacy_id": "inqom-confidence-lettering-executor",
+    "name": "Exécuteur Inqom lettrage certitude >=90%",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_human_replicated_lettering_executor.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "manual_direct_only": true,
+    "riskClass": "guarded_accounting_mutation",
+    "note": "Exécute uniquement les candidats high-confidence/human-replica autorisés sous env explicite et endpoint natif configuré; sinon rapport bloqué.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_human_replicated_lettering_executor.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-confidence-lettering-executor-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-confidence-lettering-executor-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "operator-escalation-watcher",
+    "name": "Traitement des réponses opérateur OSS",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/operator_escalation_watcher.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "Reads Gmail replies to structured operator questions, resolves decisions, and resumes the mapped OSS wrappers automatically.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/operator_escalation_watcher.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/operator-escalation-watcher-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/operator-escalation-watcher-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "contact-enrichment-autopilot",
+    "name": "Enrichissement autonome des contacts",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/contact_enrichment_autopilot.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "Wrapper OSS natif pour enrichir automatiquement la base de contacts campagne via Hunter (ESN + backlog speaker), reconstruire les seed queues ESN/PR/Speaker depuis des catalogues de domaines et réinjecter la mémoire/registry partagés. Le tout est piloté par une politique de quota Hunter par campagne. Auth Hunter disponible côté serveur ; schedule live actif.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/contact_enrichment_autopilot.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/contact-enrichment-autopilot-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/contact-enrichment-autopilot-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "campaigns-autonomy-loop",
+    "name": "Boucle d’autonomie des campagnes OSS",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/campaign_autonomy_loop.py",
+    "timeout_seconds": 1200,
+    "cutover_ready": true,
+    "note": "Boucle OSS auto-healing : resynchronise conférences/formulaires, relance l’enrichissement Hunter, exécute les wrappers de rattrapage/top-up selon la gouvernance et reverifie l’état sans intervention manuelle.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/campaign_autonomy_loop.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 1200
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/campaigns-autonomy-loop-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/campaigns-autonomy-loop-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "auto-ads-bmw-i4-night-watch",
+    "name": "BMW i4 Watch annonces+enchères (email Listmonk)",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/auto_ads_i4_night_watch_real.py",
+    "timeout_seconds": 420,
+    "cutover_ready": true,
+    "note": "OSS wrapper BMW i4: scan annonces + enchères (Autoscout FR/DE/BE + VPauto), apply strict/relaxed filters, and send email digest via Listmonk with photos/prices/descriptions.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/auto_ads_i4_night_watch_real.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 420
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/auto-ads-bmw-i4-night-watch-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/auto-ads-bmw-i4-night-watch-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "monthly-podcast-generation",
+    "name": "Podcast Robinswood mensuel — script, audio backend et draft LinkedIn",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/monthly_podcast_generation.py",
+    "timeout_seconds": 1800,
+    "cutover_ready": true,
+    "note": "Monthly podcast wrapper: generates podcast script, show notes and LinkedIn draft; audio generation is backend-gated and human-approved until voice benchmark passes.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/monthly_podcast_generation.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 1800
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/monthly-podcast-generation-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/monthly-podcast-generation-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "finance-inqom-close-readiness",
+    "name": "Readiness clôture finance Inqom",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/finance_inqom_close_readiness.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "note": "Finance/Inqom close readiness wrapper; read-only analytics plus live smoke test.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/finance_inqom_close_readiness.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/finance-inqom-close-readiness-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/finance-inqom-close-readiness-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "temporal-stuck-workflow-watchdog",
+    "name": "Temporal Stuck Workflow Watchdog",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/stuck_workflow_watchdog.py --max-age-hours 1.5 --terminate --first-task-stale-minutes 20 --terminate-starved-after-minutes 45",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "note": "Watchdog stale workflow: may terminate genuinely stale workflows, but must not restart worker services because that kills long-running campaign workflows.",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/stuck_workflow_watchdog.py",
+        "--max-age-hours",
+        "1.5",
+        "--terminate",
+        "--first-task-stale-minutes",
+        "20",
+        "--terminate-starved-after-minutes",
+        "45"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/temporal-stuck-workflow-watchdog-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/temporal-stuck-workflow-watchdog-last.json"
+  },
+  {
+    "legacy_id": "autonomy-queue-owner-governor",
+    "name": "Autonomy Queue Owner Governor",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/autonomy_queue_owner_governor.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "note": "Gouverneur réel des owners de queues; stdout compact RTK, rapports détaillés en fichiers.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/autonomy_queue_owner_governor.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/autonomy-queue-owner-governor-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/autonomy-queue-owner-governor-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "temporal-rtk-regression-guard",
+    "name": "Temporal RTK Regression Guard",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /home/craft/.craft-agent/workspaces/my-workspace-2/scripts/temporal_rtk_regression_guard_v2.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "note": "Guard RTK v2 réel; venv explicite, stdout compact.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/home/craft/.craft-agent/workspaces/my-workspace-2/scripts/temporal_rtk_regression_guard_v2.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/temporal-rtk-regression-guard-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/temporal-rtk-regression-guard-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-agent-autonomy-governor",
+    "name": "OSS Agent Autonomy Governor",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_agent_autonomy_governor.py",
+    "timeout_seconds": 240,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "note": "Gouvernance réelle de couverture agent/autonomie; stdout compact RTK.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_agent_autonomy_governor.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 240
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-agent-autonomy-governor-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-agent-autonomy-governor-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "temporal-performance-slo-guard",
+    "name": "Temporal Performance SLO Guard",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/temporal_performance_slo_guard.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "note": "Guard SLO Temporal réel; stdout compact RTK.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/temporal_performance_slo_guard.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/temporal-performance-slo-guard-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/temporal-performance-slo-guard-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "report-envelope-standardizer",
+    "name": "Report Envelope Standardizer",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/report_envelope_standardizer.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "note": "Standardisation réelle des enveloppes de rapports; stdout compact RTK.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/report_envelope_standardizer.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/report-envelope-standardizer-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/report-envelope-standardizer-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "oss-autonomy-quality-board",
+    "name": "OSS — board qualité autonomie transversal",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_autonomy_quality_board.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "triggerType": "ManualOrScheduleStep",
+    "task_queue": "watchdog",
+    "riskClass": "observability_quality_board",
+    "sideEffects": [
+      "reads_reports",
+      "reads_manifest",
+      "writes_quality_board_report",
+      "no_external_effects"
+    ],
+    "category": "oss-governance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-autonomy-quality-board-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Read-only transversal board over critical OSS reports: AO, revenue/cash, finance and campaigns. No mutations, no outbound.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_autonomy_quality_board.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-autonomy-quality-board-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-autonomy-quality-board-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-autonomy-quality-board-last.md",
+    "businessContractVersion": "oss-autonomy-quality-board-v1"
+  },
+  {
+    "legacy_id": "oss-autonomy-quality-guard-tests",
+    "name": "OSS — tests garde-fous board qualité autonomie",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/oss_autonomy_quality_guard_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "triggerType": "ManualOrScheduleStep",
+    "task_queue": "watchdog",
+    "riskClass": "guardrail_tests",
+    "sideEffects": [
+      "reads_quality_board_report",
+      "reads_manifest",
+      "writes_test_report"
+    ],
+    "category": "oss-governance",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-autonomy-quality-guard-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Guardrail tests for the OSS autonomy quality board: report contract, wrapper contract, manifest registration, false-healthy prevention and no external effects.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/oss_autonomy_quality_guard_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-autonomy-quality-guard-tests-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-autonomy-quality-guard-tests-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/oss-autonomy-quality-guard-tests-last.md",
+    "businessContractVersion": "oss-autonomy-quality-guard-tests-v1"
+  },
+  {
+    "legacy_id": "drive-audio-transcription-autopilot",
+    "name": "Drive Audio Transcription Autopilot",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/drive_audio_transcription_service_trigger.py",
+    "timeout_seconds": 60,
+    "cutover_ready": true,
+    "task_queue": "watchdog",
+    "note": "Triggers durable systemd service rbw-drive-audio-transcription.service; long faster-whisper processing runs outside Temporal worker cgroup.",
+    "riskClass": "durable_service_trigger",
+    "scheduleNote": "Triggers durable systemd service rbw-drive-audio-transcription.service; long faster-whisper processing runs outside Temporal worker cgroup.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/drive_audio_transcription_service_trigger.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 60
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/drive-audio-transcription-autopilot-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/drive-audio-transcription-autopilot-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "podcast-audio-market-benchmark",
+    "name": "Benchmark marché audio podcast Robinswood",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/podcast_audio_market_benchmark.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "note": "On-demand market benchmark for podcast TTS/voice-clone providers; live samples require provider API keys and voice IDs.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/podcast_audio_market_benchmark.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/podcast-audio-market-benchmark-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/podcast-audio-market-benchmark-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  }
+]

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { AgentProvider, LlmAuthType } from '@craft-agent/shared/agent/backend'
 import { isCompatProvider, modelSupportsImages, type LlmConnection } from '@craft-agent/shared/config'
 import type { FileAttachment } from '@craft-agent/shared/protocol'
@@ -5,7 +6,7 @@ import type { FileAttachment } from '@craft-agent/shared/protocol'
 export interface BackendRuntimeSignatureInput {
   connection: LlmConnection | null
   provider: AgentProvider
-  authType?: LlmAuthType
+  authType?: LlmAuthType | undefined
   resolvedModel: string
 }
 
@@ -30,7 +31,7 @@ function normalizeCustomModels(connection: LlmConnection): Array<Record<string, 
         supportsImages: typeof model.supportsImages === 'boolean' ? model.supportsImages : undefined,
       })
     })
-    .sort((a, b) => String(a.id).localeCompare(String(b.id)))
+    .sort((a, b) => String(a["id"]).localeCompare(String(b["id"])))
 }
 
 /**
@@ -113,7 +114,7 @@ export function filterAttachmentsForModelInput(
   connection: LlmConnection | null,
   modelId: string,
 ): ModelAttachmentFilterResult {
-  if (!attachments?.length) return { attachments, omittedImages: [] }
+  if (!attachments?.length) return { ...(attachments !== undefined ? { attachments: attachments } : {}), omittedImages: [] }
   if (!connection || !isCompatProvider(connection.providerType)) return { attachments, omittedImages: [] }
   if (modelSupportsImages(connection, modelId)) return { attachments, omittedImages: [] }
 
@@ -128,8 +129,8 @@ export function filterAttachmentsForModelInput(
     }
   }
 
-  return {
+  return omitUndefined<ModelAttachmentFilterResult>({
     attachments: modelAttachments.length > 0 ? modelAttachments : undefined,
     omittedImages,
-  }
+  })
 }

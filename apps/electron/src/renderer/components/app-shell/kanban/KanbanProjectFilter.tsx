@@ -23,7 +23,7 @@ interface KanbanProjectFilterProps {
   /** Selected project ids; empty = all projects. */
   value: string[]
   onChange: (next: string[]) => void
-  className?: string
+  className?: string | undefined
 }
 
 /**

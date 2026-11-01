@@ -1,0 +1,20 @@
+[
+  {
+    "legacy_id": "sellsy-revenue-operator-dispatcher-tests",
+    "accepted": true,
+    "mappingExpectation": "manifest_only_manual_or_test",
+    "temporalMappingRequired": false,
+    "scheduleAllowed": false,
+    "requiresExplicitReviewBeforeScheduling": true,
+    "reviewAfter": "2026-09-30",
+    "updatedAt": "2026-06-27T09:48:44.243334Z",
+    "updatedBy": "oss-p6-manifest-only-policy",
+    "policyClass": "test_wrapper",
+    "riskClass": "low_manual_test",
+    "allowedInvocation": [
+      "manual_direct",
+      "ci_or_guard_harness"
+    ],
+    "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+  }
+]

@@ -54,13 +54,13 @@ interface AutomationItemProps {
   isMultiSelectActive: boolean
   isFirst: boolean
   onClick: () => void
-  onToggleSelect?: () => void
-  onRangeSelect?: () => void
+  onToggleSelect?: (() => void) | undefined
+  onRangeSelect?: (() => void) | undefined
   onDelete: () => void
   onToggleEnabled: () => void
   onTest: () => void
   onDuplicate: () => void
-  onSendToWorkspace?: () => void
+  onSendToWorkspace?: (() => void) | undefined
 }
 
 function AutomationItem({
@@ -162,15 +162,15 @@ function AutomationItem({
 
 export interface AutomationsListPanelProps {
   automations: AutomationListItem[]
-  automationFilter?: AutomationListFilter | null
+  automationFilter?: AutomationListFilter | null | undefined
   onAutomationClick: (automationId: string) => void
-  onDeleteAutomation?: (automationId: string) => void
-  onToggleAutomation?: (automationId: string) => void
-  onTestAutomation?: (automationId: string) => void
-  onDuplicateAutomation?: (automationId: string) => void
-  selectedAutomationId?: string | null
-  workspaceRootPath?: string
-  className?: string
+  onDeleteAutomation?: ((automationId: string) => void) | undefined
+  onToggleAutomation?: ((automationId: string) => void) | undefined
+  onTestAutomation?: ((automationId: string) => void) | undefined
+  onDuplicateAutomation?: ((automationId: string) => void) | undefined
+  selectedAutomationId?: string | null | undefined
+  workspaceRootPath?: string | undefined
+  className?: string | undefined
 }
 
 export function AutomationsListPanel({

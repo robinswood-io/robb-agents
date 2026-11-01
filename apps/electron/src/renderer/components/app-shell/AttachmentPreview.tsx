@@ -1,4 +1,4 @@
-import * as React from "react"
+
 import { X, Image as ImageIcon } from "lucide-react"
 import { Spinner, FileTypeIcon, getFileTypeLabel } from "@craft-agent/ui"
 import { cn } from "@/lib/utils"
@@ -10,8 +10,8 @@ export { FileTypeIcon, getFileTypeLabel }
 interface AttachmentPreviewProps {
   attachments: FileAttachment[]
   onRemove: (index: number) => void
-  disabled?: boolean
-  loadingCount?: number
+  disabled?: boolean | undefined
+  loadingCount?: number | undefined
 }
 
 /**
@@ -56,7 +56,7 @@ function LoadingBubble() {
 interface AttachmentBubbleProps {
   attachment: FileAttachment
   onRemove: () => void
-  disabled?: boolean
+  disabled?: boolean | undefined
 }
 
 function AttachmentBubble({ attachment, onRemove, disabled }: AttachmentBubbleProps) {

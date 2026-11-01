@@ -5,19 +5,19 @@
  * Tests cover input validation, attachment processing, schema injection,
  * and the validateModel callback hook.
  */
-import { describe, it, expect } from 'bun:test';
+import { afterAll, describe, it, expect } from 'bun:test';
 import { buildCallLlmRequest } from '../llm-tool.ts';
 import { join } from 'path';
-import { writeFileSync, mkdirSync, rmSync } from 'fs';
+import { writeFileSync, mkdtempSync, rmSync } from 'fs';
+import { tmpdir } from 'os';
 
 // ============================================================
 // Test fixtures
 // ============================================================
 
-const TMP_DIR = join(import.meta.dir, '__tmp_build_call_llm__');
+const TMP_DIR = mkdtempSync(join(tmpdir(), 'robb-build-call-llm-'));
 
 function setupFixtures() {
-  mkdirSync(TMP_DIR, { recursive: true });
   writeFileSync(join(TMP_DIR, 'test.ts'), 'const x = 1;\nconst y = 2;\n');
   writeFileSync(join(TMP_DIR, 'empty.ts'), '');
   writeFileSync(join(TMP_DIR, 'image.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47])); // PNG header
@@ -156,7 +156,7 @@ describe('buildCallLlmRequest()', () => {
       { backendName: 'Test' }
     );
     expect(result.outputSchema).toBeDefined();
-    expect((result.outputSchema as Record<string, unknown>).type).toBe('object');
+    expect((result.outputSchema as Record<string, unknown>)["type"]).toBe('object');
   });
 
   it('includes custom outputSchema in returned request', async () => {
@@ -216,7 +216,4 @@ describe('buildCallLlmRequest()', () => {
   });
 });
 
-// Cleanup
-process.on('exit', () => {
-  try { cleanupFixtures(); } catch {}
-});
+afterAll(cleanupFixtures);

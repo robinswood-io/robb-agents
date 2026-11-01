@@ -1,0 +1,23 @@
+[
+  {
+    "workspace": "electron",
+    "files": 6,
+    "exitCode": 0,
+    "errors": 0,
+    "warnings": 0
+  },
+  {
+    "workspace": "server-core",
+    "files": 20,
+    "exitCode": 0,
+    "errors": 0,
+    "warnings": 122
+  },
+  {
+    "workspace": "shared",
+    "files": 8,
+    "exitCode": 0,
+    "errors": 0,
+    "warnings": 0
+  }
+]

@@ -184,7 +184,7 @@ function evaluateRegexRule(
         // Single-pass $N substitution: prevents injection where captured text
         // contains $N patterns that would be double-substituted
         value = rule.valueTemplate
-          ? rule.valueTemplate.replace(/\$(\d+)/g, (_, n) => match![parseInt(n)] ?? '')
+          ? rule.valueTemplate.replace(/\$(\d+)/g, (_, n: string) => match![parseInt(n)] ?? '')
           : match[1] ?? match[0]
 
         // Normalize based on the label's declared valueType

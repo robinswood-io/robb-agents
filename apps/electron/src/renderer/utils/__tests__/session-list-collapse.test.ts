@@ -1,8 +1,16 @@
 import { describe, it, expect } from 'bun:test'
 import {
   buildCollapsedGroupsScopeSuffix,
+  parseCollapsedGroups,
   serializeSessionFilterForScope,
 } from '../session-list-collapse'
+
+it('preserves string group identifiers and rejects malformed scoped or legacy caches', () => {
+  expect(parseCollapsedGroups(['date-qa', 'status-done', 'date-qa'])).toEqual(new Set(['date-qa', 'status-done']));
+  for (const value of [null, 'date-qa', { group: 'date-qa' }, ['date-qa', 1]]) {
+    expect(parseCollapsedGroups(value)).toEqual(new Set());
+  }
+});
 
 describe('serializeSessionFilterForScope', () => {
   it('serializes simple filter kinds', () => {

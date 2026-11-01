@@ -1,0 +1,11 @@
+{
+  "status": "passed",
+  "nativeExistingMessageBody": true,
+  "nativeNewMessageBody": true,
+  "nativeCleanRetryBody": true,
+  "propagatedNativeEarlyReturns": 5,
+  "syncReuseBranchPreserved": true,
+  "sharedMessageStateRetained": true,
+  "extraOwnershipFenceOnlyAfterAsyncCreation": true,
+  "unchangedRootSequence": true
+}

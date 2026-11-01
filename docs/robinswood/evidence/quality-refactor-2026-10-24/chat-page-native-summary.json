@@ -1,0 +1,128 @@
+{
+  "status": "tested; local integration pending remaining quality work",
+  "scope": "chat-page-native",
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/pages/ChatPage.tsx",
+      "lines": 392,
+      "sha256": "e7235c3ab43f326edd7194b7bfff7e8869013a9b200151f4f546b43e34afa703"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/chat-page-content.tsx",
+      "lines": 191,
+      "sha256": "fc0402756b410b0889295cc9ede58f6f31ccd7024e50f51ec1254a1975d7ba37"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/use-chat-session-state.ts",
+      "lines": 323,
+      "sha256": "cf6735d0cbb46ec26f0898ab20f1647ec33817fd4225e4bd01a88ac4d506e55f"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/use-chat-session-header.tsx",
+      "lines": 352,
+      "sha256": "dbbb8af284eea1549eefca86734e6de3a51d07bb2859aaefc267c63e53db8a81"
+    }
+  ],
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/pages/ChatPage.tsx",
+        "apps/electron/src/renderer/pages/chat-page-content.tsx",
+        "apps/electron/src/renderer/pages/use-chat-session-state.ts",
+        "apps/electron/src/renderer/pages/use-chat-session-header.tsx",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.14,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/chat-page-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 5.1,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/chat-page-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 26.13,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/chat-page-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/renderer/lib/__tests__/drafts.test.ts",
+        "apps/electron/src/renderer/lib/__tests__/session-load.test.ts",
+        "apps/electron/src/renderer/lib/__tests__/resolve-session-file-path.test.ts",
+        "apps/electron/src/renderer/lib/__tests__/input-text.test.ts",
+        "apps/electron/src/renderer/components/app-shell/__tests__/ChatDisplay.follow-ups.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.13,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/chat-page-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 13.38,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/chat-page-native-build.log"
+    }
+  },
+  "targetedTests": {
+    "pass": 47,
+    "fail": 0
+  },
+  "browser": {
+    "before": 6,
+    "after": 7,
+    "nativeCallbackPayloadsEqual": true,
+    "errors": 0
+  },
+  "sourceGate": {
+    "max-lines": 11
+  },
+  "globalLint": {
+    "files": 3677,
+    "errors": 11,
+    "warnings": 61,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 11,
+      "react-hooks/exhaustive-deps": 61
+    }
+  },
+  "limits": [
+    "Other historical files and lint findings remain",
+    "No installation or final real-model mission claim",
+    "Global suite rerun prohibited by PreToolUse; last full suite f521166: 10759 passed"
+  ]
+}

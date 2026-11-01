@@ -1,0 +1,28 @@
+diff --git a/dist/esm/filtrex.d.ts b/dist/esm/filtrex.d.ts
+index f8c26765c646c528f6267091b25b32b6ba87cbd2..dd63c94d5ac988abc547ab535da29f0f02274eba 100644
+--- a/dist/esm/filtrex.d.ts
++++ b/dist/esm/filtrex.d.ts
+@@ -164,7 +164,7 @@ export function useOptionalChaining(
+   get: (name: string) => any,
+   object: any,
+   type: "unescaped" | "single-quoted",
+-);
++): unknown;
+ 
+ /**
+  * A custom prop function which treats dots inside a symbol
+@@ -192,7 +192,7 @@ export function useDotAccessOperator(
+   get: (name: string) => any,
+   object: any,
+   type: "unescaped" | "single-quoted",
+-);
++): unknown;
+ 
+ /**
+  * A custom prop function which combines `useOptionalChaining` and `useDotAccessOperator`.
+@@ -218,4 +218,4 @@ export function useDotAccessOperatorAndOptionalChaining(
+   get: (name: string) => any,
+   object: any,
+   type: "unescaped" | "single-quoted",
+-);
++): unknown;

@@ -12,7 +12,7 @@ interface CredentialRequestProps {
   request: CredentialRequestType
   onResponse: (response: StructuredCredentialResponse) => void | Promise<void>
   /** When true, removes container styling (shadow, rounded) - used when wrapped by InputContainer */
-  unstyled?: boolean
+  unstyled?: boolean | undefined
 }
 
 /**
@@ -50,7 +50,7 @@ export function CredentialRequest({ request, onResponse, unstyled = false }: Cre
   const isValid = isBasicAuth
     ? validateBasicAuthCredentials(username, password, passwordRequired)
     : isMultiHeader
-    ? request.headerNames?.every(name => headerValues[name]?.trim().length > 0) ?? false
+    ? request.headerNames?.every(name => (headerValues[name]?.trim().length ?? 0) > 0) ?? false
     : value.trim().length > 0
 
   const respond = useCallback(async (response: CredentialResponse) => {

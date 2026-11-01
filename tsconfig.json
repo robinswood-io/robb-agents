@@ -1,12 +1,16 @@
 {
   "compilerOptions": {
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "target": "ESNext",
     "module": "ESNext",
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "jsxImportSource": "react",
-    "allowJs": true,
+    "allowJs": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "moduleResolution": "bundler",
@@ -14,26 +18,76 @@
     "verbatimModuleSyntax": true,
     "noEmit": true,
     "strict": true,
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noPropertyAccessFromIndexSignature": true,
     "types": [],
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false
   },
   "files": [],
   "references": [
-    { "path": "./packages/core" },
-    { "path": "./packages/shared" },
-    { "path": "./packages/server-core" },
-    { "path": "./packages/server" },
-    { "path": "./packages/session-tools-core" },
-    { "path": "./packages/pi-agent-server" },
-    { "path": "./packages/ui" },
-    { "path": "./apps/electron" }
+    {
+      "path": "./packages/core"
+    },
+    {
+      "path": "./packages/shared"
+    },
+    {
+      "path": "./packages/server-core"
+    },
+    {
+      "path": "./packages/server"
+    },
+    {
+      "path": "./packages/session-tools-core"
+    },
+    {
+      "path": "./packages/session-mcp-server"
+    },
+    {
+      "path": "./packages/messaging-gateway"
+    },
+    {
+      "path": "./packages/messaging-whatsapp-worker"
+    },
+    {
+      "path": "./packages/pi-agent-server"
+    },
+    {
+      "path": "./packages/ui"
+    },
+    {
+      "path": "./apps/cli"
+    },
+    {
+      "path": "./apps/electron"
+    },
+    {
+      "path": "./apps/viewer"
+    },
+    {
+      "path": "./apps/viewer/tsconfig.node.json"
+    },
+    {
+      "path": "./apps/webui"
+    },
+    {
+      "path": "./scripts"
+    },
+    {
+      "path": "./examples"
+    }
   ]
 }

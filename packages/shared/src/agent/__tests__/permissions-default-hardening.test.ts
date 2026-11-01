@@ -14,7 +14,7 @@ const config: MergedPermissionsConfig = {
   readOnlyBashPatterns: bundled.allowedBashPatterns.map(entry => ({
     regex: new RegExp(entry.pattern),
     source: entry.pattern,
-    comment: entry.comment,
+    ...(entry.comment !== undefined ? { comment: entry.comment } : {}),
   })),
   blockedCommandHints: [],
   readOnlyMcpPatterns: [],

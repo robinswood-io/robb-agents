@@ -1,0 +1,386 @@
+{
+  "status": "passed",
+  "scope": "Final shipped Claude modules; intermediate sources remain analysis-only",
+  "phaseReconstruction": {
+    "status": "passed",
+    "nativeSourceHash": "e0b603f37a944f764466262adfc9e8f16c08f0410352726717ce8e3498a86598",
+    "preparedSourceHash": "99656ff04e73a754fcc6d33599dbd3ea6ef777d128c4864e16ce396df29ad816",
+    "reconstructedNativeRuntimeIdentical": true,
+    "verifiedPhases": [
+      "createClaudeBackendConfig",
+      "clearClaudeHistoryState",
+      "destroyClaudeRuntime",
+      "createClaudeTurnMessageSource",
+      "recoverClaudeQueryError",
+      "prepareClaudeQueryRuntime",
+      "buildClaudeQueryOptions",
+      "buildClaudeHooks",
+      "createPreToolUseHook"
+    ],
+    "originalOwnerFieldsAndPublicMethodsRetained": true,
+    "noNewSchedulerOrPersistentState": true,
+    "preparationEarlyReturnsPropagate": true,
+    "errorRecoveryRemainsInsideTheNativeFinallyBoundary": true,
+    "constructorAndSuperLifecycleOrderPreserved": true
+  },
+  "schemaTypes": {
+    "status": "passed",
+    "nativeSourceHash": "99656ff04e73a754fcc6d33599dbd3ea6ef777d128c4864e16ce396df29ad816",
+    "typedSourceHash": "97cc42dc29432ce1cb7c302b5f08806a7892eaa682eaaf9b624f1c79db6cf9c1",
+    "removedExplicitAny": 4,
+    "nativeObjectGuardPreserved": true,
+    "nativeRuntimePreservedWithOneTypedAlias": true,
+    "aliasRestoresTheSameInputObject": true
+  },
+  "schemaDeclarationExtraction": {
+    "status": "passed",
+    "source": "packages/shared/src/agent/claude-agent.ts",
+    "nativeSourceHash": "97cc42dc29432ce1cb7c302b5f08806a7892eaa682eaaf9b624f1c79db6cf9c1",
+    "nativeDeclarations": 31,
+    "extractedDeclarations": 4,
+    "nativeBodiesStateAndEffectOrderPreserved": true,
+    "nativePublicExportsAndImportedBindingsPreserved": true,
+    "nativeExternalImportOrder": [
+      "node:crypto",
+      "./claude-process.ts",
+      "@anthropic-ai/claude-agent-sdk",
+      "./options.ts",
+      "zod",
+      "../prompts/system.ts",
+      "./base-agent.ts",
+      "./backend/types.ts",
+      "./errors.ts",
+      "./claude-sdk-error-mapper.ts",
+      "./diagnostics.ts",
+      "../config/storage.ts",
+      "../auth/state.ts",
+      "../config/llm-connections.ts",
+      "../projects/storage.ts",
+      "../config/models.ts",
+      "../credentials/index.ts",
+      "../config/preferences.ts",
+      "../utils/paths.ts",
+      "./claude-llm-query.ts",
+      "../utils/debug.ts",
+      "../utils/large-response.ts",
+      "./source-activation-drain.ts",
+      "./backend/claude/persistent-input.ts",
+      "./session-scoped-tools.ts",
+      "./mode-manager.ts",
+      "../sessions/storage.ts",
+      "../interceptor-common.ts",
+      "../utils/workspace.ts",
+      "./core/pre-tool-use.ts",
+      "./core/rtk-detector.ts",
+      "../config/storage.ts",
+      "./thinking-levels.ts",
+      "./conversation-summary.ts",
+      "./compact-command.ts",
+      "node:fs",
+      "node:fs/promises",
+      "./spawn-helpers.ts",
+      "../utils/files.ts",
+      "./mode-manager.ts",
+      "./tool-matching.ts",
+      "./backend/claude/event-adapter.ts",
+      "./core/index.ts"
+    ],
+    "runtimeImportCycles": 0,
+    "newStateOrWorkflowAdded": false,
+    "maximumFileLines": 3604,
+    "files": [
+      {
+        "file": "packages/shared/src/agent/claude-agent.ts",
+        "lines": 3604,
+        "sha256": "c55b66352e2bd6571f43eb2ea59975a1f0375b50da5295ced1764bf0a96a7120"
+      },
+      {
+        "file": "packages/shared/src/agent/claude-agent/schema.ts",
+        "lines": 172,
+        "sha256": "c6bdda6e165db758f2d28355ccb40f4f009baa39351ea4dbbf1d79268f609cdf"
+      }
+    ],
+    "scope": "Intermediate declaration inventory, never executed or installed"
+  },
+  "ownerExtraction": {
+    "status": "passed",
+    "classes": [
+      {
+        "source": "packages/shared/src/agent/claude-agent.ts",
+        "nativeMethodBodies": 54,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 4,
+        "nativeModuleBindings": 0,
+        "relocatedNativeDynamicImports": 2,
+        "protocolAliasesExpandedToNativeShapes": 6,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      }
+    ],
+    "runtimeImportCycles": 0,
+    "maximumFileLines": 488
+  },
+  "nativeExternalRuntimeOrder": [
+    {
+      "kind": "ImportDeclaration",
+      "module": "node:crypto"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./claude-process.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "@anthropic-ai/claude-agent-sdk"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./options.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "zod"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../prompts/system.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./base-agent.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./backend/types.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./errors.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./claude-sdk-error-mapper.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./diagnostics.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../config/storage.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../auth/state.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../config/llm-connections.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../projects/storage.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../config/models.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../credentials/index.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../config/preferences.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../utils/paths.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./claude-llm-query.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../utils/debug.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../utils/large-response.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./source-activation-drain.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./backend/claude/persistent-input.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./session-scoped-tools.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./mode-manager.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../sessions/storage.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../interceptor-common.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../utils/workspace.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./core/pre-tool-use.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./core/rtk-detector.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../config/storage.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./thinking-levels.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./conversation-summary.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./compact-command.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "node:fs"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "node:fs/promises"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./spawn-helpers.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "../utils/files.ts"
+    },
+    {
+      "kind": "ExportDeclaration",
+      "module": "./mode-manager.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./tool-matching.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./backend/claude/event-adapter.ts"
+    },
+    {
+      "kind": "ImportDeclaration",
+      "module": "./core/index.ts"
+    }
+  ],
+  "nativeExternalRuntimeOrderPreserved": true,
+  "removedExplicitAny": 4,
+  "newSchedulerOrPersistentState": false,
+  "finalFiles": [
+    {
+      "file": "packages/shared/src/agent/claude-agent/protocol.ts",
+      "lines": 50,
+      "sha256": "b55c2157e5934f2400c7d66378c94f8f739572ced63f150d6c65fd3d1db46a28"
+    },
+    {
+      "file": "packages/shared/src/agent/claude-agent/shared.ts",
+      "lines": 410,
+      "sha256": "6db882d2968f9213b03b8a6fdc97afe55926f2590073e100ea78424cb91db229"
+    },
+    {
+      "file": "packages/shared/src/agent/claude-agent/persistent-runtime.ts",
+      "lines": 340,
+      "sha256": "7ce461014f3e7815c5466b552ac500d897ae4b495e66bf66bfcd80301a015ad3"
+    },
+    {
+      "file": "packages/shared/src/agent/claude-agent/initialization.ts",
+      "lines": 95,
+      "sha256": "13543077efa388cb40880c8b0a4869b8f09c5cb7b2187773b679ae959553bc8c"
+    },
+    {
+      "file": "packages/shared/src/agent/claude-agent/permissions.ts",
+      "lines": 142,
+      "sha256": "d8aa2ac4146e787ad24a639f2cd3caa6fd162ecf1d9b895450045096a7bb1ecf"
+    },
+    {
+      "file": "packages/shared/src/agent/claude-agent/pre-tool-use.ts",
+      "lines": 356,
+      "sha256": "65d35d513f226aae3c0cc5e9406737155dcf39d47d60b81bfec6d4b398c028a3"
+    },
+    {
+      "file": "packages/shared/src/agent/claude-agent/sdk-options.ts",
+      "lines": 248,
+      "sha256": "944b1811f698c5987ae1356d9a426be89130a20d52f1ba5023ff33203bfd2225"
+    },
+    {
+      "file": "packages/shared/src/agent/claude-agent/preparation.ts",
+      "lines": 244,
+      "sha256": "79d9fd29fd084f15ca6af26bc932f6dc3286ea8cd8391119866c2bdd1d6444b8"
+    },
+    {
+      "file": "packages/shared/src/agent/claude-agent/response.ts",
+      "lines": 400,
+      "sha256": "c23d9e51e1e67b7f6d78a0afc6f6ad091d96a0d24846a5797784d549e8f7a860"
+    },
+    {
+      "file": "packages/shared/src/agent/claude-agent/recovery.ts",
+      "lines": 394,
+      "sha256": "eaff8c63b372fffafad4ade6d945449c45229cd4e127a74c66b60b2b1434641c"
+    },
+    {
+      "file": "packages/shared/src/agent/claude-agent/messages.ts",
+      "lines": 269,
+      "sha256": "b12144704ddcf5d00629e9ae274bde13381e318bdfbc5b572aad43eb2eaca6bf"
+    },
+    {
+      "file": "packages/shared/src/agent/claude-agent/interrupt.ts",
+      "lines": 125,
+      "sha256": "ab45440d030c7aa20457e59ab815657fcf6519bd89403239df2ff95af4e572ef"
+    },
+    {
+      "file": "packages/shared/src/agent/claude-agent/workspace.ts",
+      "lines": 32,
+      "sha256": "3b3bd2a7627a29e48e647cbb6020f36f8f42801635aaa7d860deb05db058f207"
+    },
+    {
+      "file": "packages/shared/src/agent/claude-agent/branches.ts",
+      "lines": 174,
+      "sha256": "4a5e3078eba7f48ee89d7bccdd301a505e680172b6a295631a8670de2d608b1e"
+    },
+    {
+      "file": "packages/shared/src/agent/claude-agent.ts",
+      "lines": 487,
+      "sha256": "962e0878052c008853a34691ff0710dcd920b2049b5c14fe98951085dbd66d5f"
+    },
+    {
+      "file": "packages/shared/src/agent/claude-agent/schema.ts",
+      "lines": 171,
+      "sha256": "c6bdda6e165db758f2d28355ccb40f4f009baa39351ea4dbbf1d79268f609cdf"
+    }
+  ],
+  "maximumFinalFileLines": 487
+}

@@ -68,7 +68,7 @@ describe('PairingCodeManager.canConsume', () => {
 
     // Rewind the bucket's windowStart past the 60s cutoff.
     // Internal access is ugly but cheaper than a fake-clock scaffold.
-    const buckets = (mgr as unknown as { consumeBuckets: Map<string, { windowStart: number; count: number }> }).consumeBuckets
+    const buckets = mgr['consumeBuckets']
     const bucket = buckets.get('ws-1:telegram:s')
     expect(bucket).toBeDefined()
     if (bucket) bucket.windowStart = Date.now() - 61_000

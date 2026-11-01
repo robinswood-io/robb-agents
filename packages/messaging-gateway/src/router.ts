@@ -1,3 +1,5 @@
+import type { SendOptions } from './types/platform.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Router — routes inbound messages from platform adapters to sessions.
  *
@@ -48,9 +50,9 @@ export class Router {
   private readonly recentRejectReplies = new Map<string, number>()
 
   constructor(
-    private readonly sessionManager: ISessionManager,
+    private readonly sessionManager: Pick<ISessionManager, 'sendMessage'>,
     private readonly bindingStore: BindingStore,
-    private readonly commands: Commands,
+    private readonly commands: Pick<Commands, 'handle'>,
     private readonly log: MessagingLogger = NOOP_LOGGER,
     deps: RouterDeps = { getWorkspaceConfig: () => ({ enabled: false, platforms: {} }) },
   ) {
@@ -109,7 +111,7 @@ export class Router {
         await adapter.sendText(
           msg.channelId,
           `Failed to send message to session: ${errorMsg}`,
-          { threadId: msg.threadId },
+          omitUndefined<SendOptions>({ threadId: msg.threadId }),
         )
       }
       return

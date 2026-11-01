@@ -1,8 +1,4 @@
-// IMPORTANT: keep `mock-utils` as the FIRST local import. It installs the
-// mock `window.electronAPI` as a top-level side effect on import, so that
-// any renderer module that reads `window.electronAPI.*` at module-load time
-// (e.g. `SessionFilesSection.tsx`'s top-level `getRuntimeEnvironment()`
-// call) finds the mock in place before its own module is evaluated.
+// Install the playground host API before mounting components that consume it.
 import './playground/mock-utils'
 
 import React from 'react'

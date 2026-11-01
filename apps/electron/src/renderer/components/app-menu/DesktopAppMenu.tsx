@@ -160,8 +160,8 @@ export function DesktopAppMenu({
   }, [])
 
   const actionHandlers: MenuActionHandlers = {
-    toggleFocusMode: onToggleFocusMode,
-    toggleSidebar: onToggleSidebar,
+    ...(onToggleFocusMode !== undefined ? { toggleFocusMode: onToggleFocusMode } : {}),
+    ...(onToggleSidebar !== undefined ? { toggleSidebar: onToggleSidebar } : {}),
   }
 
   return (

@@ -49,7 +49,7 @@ export function useDynamicStack(options?: { gap?: number; minVisible?: number; r
     if (!el) return
 
     const compute = () => {
-      const children = el.children
+      const children = Array.from(el.children).filter((child): child is HTMLElement => child instanceof HTMLElement)
       const childCount = children.length
       if (childCount === 0) return
 
@@ -62,10 +62,9 @@ export function useDynamicStack(options?: { gap?: number; minVisible?: number; r
       }
 
       // Measure each child's natural width (offsetWidth excludes margins)
-      const widths: number[] = []
-      for (let i = 0; i < childCount; i++) {
-        widths.push((children[i] as HTMLElement).offsetWidth)
-      }
+      const widths = children.map(child => child.offsetWidth)
+      const lastWidth = widths.at(-1)
+      if (lastWidth === undefined) return
 
       const totalWidth = widths.reduce((sum, w) => sum + w, 0)
       const availableWidth = el.clientWidth
@@ -90,7 +89,7 @@ export function useDynamicStack(options?: { gap?: number; minVisible?: number; r
       const stackingWidth = Math.max(0, availableWidth - Math.min(reservedStart, gap))
 
       // Target visible strip V (for the equal-strip formula)
-      const V = Math.max(minVisible, (stackingWidth - widths[childCount - 1]) / (childCount - 1))
+      const V = Math.max(minVisible, (stackingWidth - lastWidth) / (childCount - 1))
 
       // Narrowest non-last badge — the crossover threshold.
       // When V < this, all per-badge margins are ≤ 0 (no uneven positive gaps).
@@ -121,7 +120,9 @@ export function useDynamicStack(options?: { gap?: number; minVisible?: number; r
             ;(children[i] as HTMLElement).style.marginLeft = '0px'
           } else {
             // Lerp: uniform (even gaps) → per-badge (equal visible strips)
-            const perBadge = V - widths[i - 1]
+            const previousWidth = widths[i - 1]
+            if (previousWidth === undefined) continue
+            const perBadge = V - previousWidth
             const blended = uniformMargin * (1 - t) + perBadge * t
             ;(children[i] as HTMLElement).style.marginLeft = `${blended}px`
           }
@@ -156,7 +157,7 @@ export function useDynamicStack(options?: { gap?: number; minVisible?: number; r
             // gradientEnd = right edge of the fade; gradientStart = left edge (clamped to 12px from badge left).
             const actualOverlap = Math.max(0, -nextMargin)
             const gradientEnd = Math.max(0, actualOverlap - 24) // shifted 24px right
-            const gradientStart = Math.min(widths[i] - 12, gradientEnd + fadeZone) // left edge never past 12px from left
+            const gradientStart = Math.min(child.offsetWidth - 12, gradientEnd + fadeZone) // left edge never past 12px from left
             const mask = `linear-gradient(to right, black calc(100% - ${gradientStart}px), rgba(0,0,0,${endAlpha}) calc(100% - ${gradientEnd}px), rgba(0,0,0,${endAlpha}) 100%)`
             child.style.maskImage = mask
             child.style.webkitMaskImage = mask

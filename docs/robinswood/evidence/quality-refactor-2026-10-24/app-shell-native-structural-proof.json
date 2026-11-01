@@ -1,0 +1,234 @@
+{
+  "status": "passed",
+  "nativeDeclarationBodiesPreserved": true,
+  "reviewedStableDependencyAdditions": {
+    "setChatGroupingMode": [
+      "setViewFiltersMap"
+    ],
+    "handleToggleSidebar": [
+      "setIsSidebarAndNavigatorHidden",
+      "setIsSidebarVisible"
+    ],
+    "filteredSessionMetas": [
+      "evaluateViews"
+    ],
+    "handleStatusReorder": [
+      "setOptimisticStatusOrder"
+    ],
+    "handleWhatsNewClick": [
+      "setHasUnseenReleaseNotes",
+      "setReleaseNotesContent",
+      "setShowWhatsNew"
+    ],
+    "handleNewChat": [
+      "setSearchActive",
+      "setSearchQuery"
+    ],
+    "handleNewBrowserWindow": [
+      "t"
+    ],
+    "handleDeleteSource": [
+      "t"
+    ],
+    "handleDeleteSkill": [
+      "t"
+    ],
+    "handleToggleFolder": [
+      "setExpandedFolders"
+    ],
+    "getSidebarItemProps": [
+      "sidebarItemRefs"
+    ],
+    "handleSidebarKeyDown": [
+      "setFocusedSidebarItemId",
+      "sidebarItemRefs"
+    ],
+    "buildLabelSidebarItems": [
+      "t"
+    ],
+    "appShellContextValue": [
+      "chatDisplayRef"
+    ]
+  },
+  "reviewedStableEffectDependencyAdditions": {
+    "b98628c62e8fae98d760fe72b8e872872a0efd4974711bed4052ba44617b127e": [
+      "setCollapsedItems",
+      "setExpandedFolders",
+      "setFilterDropdownQuery",
+      "setFocusedSidebarItemId",
+      "setSearchActive",
+      "setSearchQuery",
+      "setViewFiltersMap"
+    ],
+    "e87398e48a48e0862d976914ea881e9a195b44ac2f983781afe90438eb0d07df": [
+      "resizeHandleRef",
+      "sessionListHandleRef",
+      "setIsResizing",
+      "setSessionListHandleY",
+      "setSessionListWidth",
+      "setSidebarHandleY",
+      "setSidebarWidth"
+    ],
+    "d89abaaa63b63ba66781d5a7630ea6cba994f8fc3976205099548a4b01c740ff": [
+      "setSkills"
+    ],
+    "2a70be2f47b3ed343774698a0ea6e3e5ff53e42b0a3748d106578e22058251bf": [
+      "setIsSidebarAndNavigatorHidden"
+    ],
+    "eaf90a2c06ad9e04fc3f3ed01ea2c03b9c5a1239020a43707378872de1c1b57a": [
+      "setFocusedSidebarItemId",
+      "sidebarItemRefs"
+    ]
+  },
+  "reviewedEffectDependencyRemovals": {},
+  "reviewedDependencyRemovals": {
+    "handleSkillSelect": [
+      "navigate"
+    ],
+    "handleAutomationSelect": [
+      "navigate"
+    ],
+    "handleCreateProjectSubmit": [
+      "navigate"
+    ],
+    "handleNewChat": [
+      "navigate"
+    ],
+    "unifiedSidebarItems": [
+      "labelConfigs",
+      "viewConfigs",
+      "handleViewClick"
+    ]
+  },
+  "reviewedDeferredCaptures": {
+    "useShellKeyboard": [
+      "handleNewChat"
+    ]
+  },
+  "nestedPlansVerified": [
+    "shell-panel-header-native"
+  ],
+  "nativeMainJSXAndInlineCallbacksPreserved": true,
+  "nativeRootAndActionHooksReinlinedExactly": true,
+  "viewAddsNoStateOrEffects": true,
+  "nativeValuesPassedDirectly": false,
+  "nativeImportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/AppShell.tsx",
+      "lines": 493,
+      "sha256": "21362a589fa8f73acbd5b806a01e62ce89721acb4d81850a0a68d3f1e929fd69"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/app-shell-filter-controls.tsx",
+      "lines": 129,
+      "sha256": "b392a5b71df838223fdd27ea2270a9955a0aed24c4195c1f79804a6140512712"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/FilterLabelItems.tsx",
+      "lines": 187,
+      "sha256": "570937bf69a0338f9db07262c891ee0712a3b3e251a4850e1aa023466c3b861d"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ShellTopBar.tsx",
+      "lines": 78,
+      "sha256": "17168243003d2d7992f82e44e69102aad2a7a66a0da0edc32634b2ef6ca0870f"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ShellSidebar.tsx",
+      "lines": 422,
+      "sha256": "ecaf854969b87d578b5d100934a297b9ea4454cd02ff97165107f76bbb5942d2"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ShellPanelHeader.tsx",
+      "lines": 122,
+      "sha256": "72f0d3bae90d9867c4232386c7b35d3b205764b3788d9ca6cd6d82579c1ff63e"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ShellSessionList.tsx",
+      "lines": 152,
+      "sha256": "23631adcd3179971f5433b45772641d33ab1f062951ed2027ce8ed278b5486ca"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ShellDialogs.tsx",
+      "lines": 198,
+      "sha256": "81b674225cd148239f1636e1853d38a50f5b47d6954831cb5cd761cb605d57bd"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/app-shell-view.tsx",
+      "lines": 434,
+      "sha256": "500a46c76a4f1a1865b43b95a2ba0c567c11f15f82a2e898400b6d9fc1dca90f"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-shell-layout-state.ts",
+      "lines": 130,
+      "sha256": "a9e1b800b667fe7449f5978c317b82a259096cdacbc930f450a44535d2a305a9"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-shell-navigation-filters.ts",
+      "lines": 175,
+      "sha256": "3dfaf96197d3f4c4b512af3fe543a3b0012850109077b497e80b8b1e4f492c63"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-shell-sidebar-state.ts",
+      "lines": 117,
+      "sha256": "898056f9a696ae89a28784289346e52c4141f3a5789d447c078b605d0fd8eab6"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-shell-resources.ts",
+      "lines": 277,
+      "sha256": "67fae0b190b2914cb5db9571442b42e82091c9cd9a06f4c56343fa9b179c3eae"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-shell-keyboard.ts",
+      "lines": 168,
+      "sha256": "19eb95aba4dea0168481112958c02174ac0153274c9b2a53a42e48e73af18fcb"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-shell-resize.ts",
+      "lines": 79,
+      "sha256": "e02f18964774c593b772b5557d503858a431c1aee35763a6c7446b0ad005de46"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-shell-session-metadata.ts",
+      "lines": 350,
+      "sha256": "c5f236ba48dfc6e142990852426255b009ea4588a4d0714fa35785db082ef4ca"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-shell-session-actions.ts",
+      "lines": 181,
+      "sha256": "a5239d9f4c52671904420dc8c99e0a03578354a3c0f5fe0ebab6ac47519a2dd0"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-shell-configuration.ts",
+      "lines": 214,
+      "sha256": "b56a82348cc3269fa64c4ef2ccb69d0c80fb16586d36546ccc4080bc1e15d822"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-shell-sidebar-interaction.tsx",
+      "lines": 355,
+      "sha256": "435d5b939cedb65a3a1353a5c440699f48ba18010a22a4ae35ad5e9ce652f27d"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ShellFilterSearch.tsx",
+      "lines": 105,
+      "sha256": "314d8fbbc40b5cddc5e134839af2bb09322129f9d1d1ca4352673df764554453"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ShellFilterChoices.tsx",
+      "lines": 413,
+      "sha256": "4319ef3a5ffa33e09a21d722d887d04da3867daf9695ef19c92ccf1be26a2f4f"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ShellFilterGrouping.tsx",
+      "lines": 230,
+      "sha256": "bf68bf15d3542b24657cb50036da9640268060b73774c30ca833a5df1e9511d1"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/shell-panel-header-view.tsx",
+      "lines": 257,
+      "sha256": "2c18fa80f0d3e03754ff4943ada7a8989ecc610398fbd54e78efad683913f7e4"
+    }
+  ]
+}

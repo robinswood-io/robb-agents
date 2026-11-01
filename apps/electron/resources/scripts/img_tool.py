@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["Pillow>=12.1,<13", "click>=8.3,<9"]
+# dependencies = ["Pillow==13.0.0", "click==8.5.0"]
 # ///
 """Image processing tool.
 
@@ -12,16 +12,18 @@ Usage:
 
 import json
 import sys
+from collections.abc import Callable, Iterable
 from pathlib import Path
+from typing import cast
 
 import click
-from PIL import Image, ImageDraw, ImageFont, ExifTags
+from PIL import ExifTags, Image, ImageDraw, ImageFont
 
 
 def write_output(text: str, output_path: str | None) -> None:
     """Write text to file or stdout."""
     if output_path:
-        Path(output_path).write_text(text, encoding="utf-8")
+        _ = Path(output_path).write_text(text, encoding="utf-8")
         click.echo(f"Output written to {output_path}", err=True)
     else:
         click.echo(text)
@@ -47,23 +49,24 @@ def infer_format(path: str) -> str | None:
 def save_image(img: Image.Image, output: str) -> None:
     """Save an image, inferring format from extension."""
     fmt = infer_format(output)
-    save_kwargs: dict[str, object] = {}
     if fmt == "JPEG":
         # JPEG does not support alpha, convert if needed
         if img.mode in ("RGBA", "LA", "P"):
             img = img.convert("RGB")
-        save_kwargs["quality"] = 95
-    if fmt:
-        img.save(output, format=fmt, **save_kwargs)
+        img.save(output, format=fmt, quality=95)
+    elif fmt:
+        img.save(output, format=fmt)
     else:
-        img.save(output, **save_kwargs)
+        img.save(output)
     click.echo(f"Image saved to {output}", err=True)
+
+
+_IMAGE_OPERATION_ERRORS = (OSError, ValueError, TypeError, RuntimeError, OverflowError, Image.DecompressionBombError)
 
 
 @click.group()
 def cli() -> None:
     """Image processing tool."""
-    pass
 
 
 @cli.command()
@@ -79,7 +82,7 @@ def resize(file: str, width: int | None, height: int | None, scale: float | None
     Specify --width and/or --height, or use --scale for proportional resizing.
     """
     try:
-        img = Image.open(file)
+        img: Image.Image = Image.open(file)
         orig_w, orig_h = img.size
 
         if (width is not None and width <= 0) or (height is not None and height <= 0):
@@ -114,9 +117,10 @@ def resize(file: str, width: int | None, height: int | None, scale: float | None
 
         new_w = max(1, new_w)
         new_h = max(1, new_h)
-        resized = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        resize_method = cast(Callable[[tuple[int, int], Image.Resampling], Image.Image], img.resize)
+        resized = resize_method((new_w, new_h), Image.Resampling.LANCZOS)
         save_image(resized, output)
-    except Exception as e:
+    except _IMAGE_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -131,7 +135,7 @@ def resize(file: str, width: int | None, height: int | None, scale: float | None
 def crop(file: str, left: int, top: int, right: int, bottom: int, output: str) -> None:
     """Crop an image to the specified bounding box."""
     try:
-        img = Image.open(file)
+        img: Image.Image = Image.open(file)
         w, h = img.size
 
         # Clamp values
@@ -146,7 +150,7 @@ def crop(file: str, left: int, top: int, right: int, bottom: int, output: str) -
 
         cropped = img.crop((left, top, right, bottom))
         save_image(cropped, output)
-    except Exception as e:
+    except _IMAGE_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -160,10 +164,10 @@ def crop(file: str, left: int, top: int, right: int, bottom: int, output: str) -
 def rotate(file: str, angle: float, expand: bool, fill_color: str, output: str) -> None:
     """Rotate an image by the specified angle (counter-clockwise)."""
     try:
-        img = Image.open(file)
+        img: Image.Image = Image.open(file)
         rotated = img.rotate(angle, expand=expand, fillcolor=fill_color, resample=Image.Resampling.BICUBIC)
         save_image(rotated, output)
-    except Exception as e:
+    except _IMAGE_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -175,7 +179,7 @@ def rotate(file: str, angle: float, expand: bool, fill_color: str, output: str) 
 def convert(file: str, fmt: str, output: str) -> None:
     """Convert an image to a different format."""
     try:
-        img = Image.open(file)
+        img: Image.Image = Image.open(file)
 
         format_map = {
             "png": "PNG",
@@ -197,7 +201,7 @@ def convert(file: str, fmt: str, output: str) -> None:
 
         img.save(output, format=target_fmt, **save_kwargs)
         click.echo(f"Converted to {target_fmt}, saved to {output}", err=True)
-    except Exception as e:
+    except _IMAGE_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -208,7 +212,7 @@ def convert(file: str, fmt: str, output: str) -> None:
 def info(file: str, output: str | None) -> None:
     """Show image metadata and information."""
     try:
-        img = Image.open(file)
+        img: Image.Image = Image.open(file)
         w, h = img.size
 
         info_dict: dict[str, object] = {
@@ -226,29 +230,34 @@ def info(file: str, output: str | None) -> None:
             info_dict["dpi"] = {"x": dpi[0], "y": dpi[1]}
 
         # EXIF data
-        exif_data = {}
+        exif_data: dict[str, str] = {}
         try:
             exif = img.getexif()
             if exif:
-                for tag_id, value in exif.items():
+                exif_items = cast(Iterable[tuple[object, object]], exif.items())
+                for tag_id, value in exif_items:
+                    if not isinstance(tag_id, int):
+                        continue
                     tag_name = ExifTags.TAGS.get(tag_id, str(tag_id))
                     try:
                         exif_data[tag_name] = str(value)
-                    except Exception:
+                    except (AttributeError, TypeError, ValueError):
                         exif_data[tag_name] = repr(value)
-        except Exception:
-            pass
+        except (AttributeError, OSError, TypeError, ValueError):
+            exif_data = {}
 
         if exif_data:
             info_dict["exif"] = exif_data
 
         # Animation info
         if hasattr(img, "n_frames"):
-            info_dict["frames"] = img.n_frames
-            info_dict["animated"] = img.n_frames > 1
+            raw_frame_count: object = cast(object, getattr(img, "n_frames", 1))
+            if isinstance(raw_frame_count, int):
+                info_dict["frames"] = raw_frame_count
+                info_dict["animated"] = raw_frame_count > 1
 
         write_output(json.dumps(info_dict, indent=2, default=str), output)
-    except Exception as e:
+    except _IMAGE_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -264,7 +273,7 @@ def info(file: str, output: str | None) -> None:
 def watermark(file: str, text: str, font_size: int, opacity: int, position: str, color: str, output: str) -> None:
     """Add a text watermark to an image."""
     try:
-        img = Image.open(file).convert("RGBA")
+        img: Image.Image = Image.open(file).convert("RGBA")
         w, h = img.size
 
         # Create watermark layer
@@ -274,13 +283,13 @@ def watermark(file: str, text: str, font_size: int, opacity: int, position: str,
         # Try to use a default font at the specified size
         try:
             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
-        except (IOError, OSError):
+        except OSError:
             try:
                 font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", font_size)
-            except (IOError, OSError):
+            except OSError:
                 try:
                     font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", font_size)
-                except (IOError, OSError):
+                except OSError:
                     font = ImageFont.load_default(size=font_size)
 
         # Get text bounding box
@@ -304,7 +313,7 @@ def watermark(file: str, text: str, font_size: int, opacity: int, position: str,
             from PIL import ImageColor
             rgb = ImageColor.getrgb(color)
             r, g, b = rgb[0], rgb[1], rgb[2]
-        except Exception:
+        except _IMAGE_OPERATION_ERRORS:
             r, g, b = 255, 255, 255
 
         draw.text((x, y), text, fill=(r, g, b, opacity), font=font)
@@ -318,7 +327,7 @@ def watermark(file: str, text: str, font_size: int, opacity: int, position: str,
             result = result.convert("RGB")
 
         save_image(result, output)
-    except Exception as e:
+    except _IMAGE_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -337,19 +346,24 @@ def composite(base_file: str, overlay_file: str, x: int, y: int, opacity: float,
     Places OVERLAY_FILE on top of BASE_FILE at the specified position.
     """
     try:
-        base = Image.open(base_file).convert("RGBA")
-        overlay = Image.open(overlay_file).convert("RGBA")
+        base: Image.Image = Image.open(base_file).convert("RGBA")
+        overlay: Image.Image = Image.open(overlay_file).convert("RGBA")
 
         if blend is not None:
             # Resize overlay to match base if needed
             if overlay.size != base.size:
-                overlay = overlay.resize(base.size, Image.Resampling.LANCZOS)
+                resize_method = cast(Callable[[tuple[int, int], Image.Resampling], Image.Image], overlay.resize)
+                resized_overlay = resize_method(base.size, Image.Resampling.LANCZOS)
+                overlay = resized_overlay
             result = Image.blend(base, overlay, blend)
         else:
             # Apply opacity to overlay
             if opacity < 1.0:
-                alpha = overlay.split()[3]
-                alpha = alpha.point(lambda p: int(p * opacity))
+                alpha: Image.Image = overlay.split()[3]
+                def apply_opacity(pixel: int) -> int:
+                    return int(pixel * opacity)
+                point_method = cast(Callable[[Callable[[int], int]], Image.Image], alpha.point)
+                alpha = point_method(apply_opacity)
                 overlay.putalpha(alpha)
 
             # Paste overlay onto base
@@ -361,7 +375,7 @@ def composite(base_file: str, overlay_file: str, x: int, y: int, opacity: float,
             result = result.convert("RGB")
 
         save_image(result, output)
-    except Exception as e:
+    except _IMAGE_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 

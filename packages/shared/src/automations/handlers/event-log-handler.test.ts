@@ -66,10 +66,10 @@ describe('EventLogHandler', () => {
 
       const loggerInstance = mockLoggerInstances[0]!;
       expect(loggerInstance.log).toHaveBeenCalledTimes(1);
-      expect(loggerInstance.log).toHaveBeenCalledWith(expect.objectContaining({
+      expect<unknown>(loggerInstance.log).toHaveBeenCalledWith((expect.objectContaining({
         type: 'LabelAdd',
         workspaceId: 'test-workspace',
-      }));
+      }) as unknown));
 
       await handler.dispose();
     });
@@ -108,9 +108,9 @@ describe('EventLogHandler', () => {
       });
 
       const loggerInstance = mockLoggerInstances[0]!;
-      expect(loggerInstance.log).toHaveBeenCalledWith(expect.objectContaining({
+      expect<unknown>(loggerInstance.log).toHaveBeenCalledWith((expect.objectContaining({
         sessionId: 'session-123',
-      }));
+      }) as unknown));
 
       await handler.dispose();
     });
@@ -128,13 +128,13 @@ describe('EventLogHandler', () => {
       });
 
       const loggerInstance = mockLoggerInstances[0]!;
-      expect(loggerInstance.log).toHaveBeenCalledWith(expect.objectContaining({
+      expect<unknown>(loggerInstance.log).toHaveBeenCalledWith((expect.objectContaining({
         type: 'PermissionModeChange',
-        data: expect.objectContaining({
+        data: (expect.objectContaining({
           oldMode: 'ask',
           newMode: 'safe',
-        }),
-      }));
+        }) as unknown),
+      }) as unknown));
 
       await handler.dispose();
     });

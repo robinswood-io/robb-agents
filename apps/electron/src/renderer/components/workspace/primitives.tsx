@@ -18,7 +18,7 @@ import { Spinner } from "@craft-agent/ui"
 
 interface AddWorkspaceContainerProps {
   children: React.ReactNode
-  className?: string
+  className?: string | undefined
 }
 
 /**
@@ -50,8 +50,8 @@ interface AddWorkspaceStepHeaderProps {
   /** The main title */
   title: string
   /** Optional description below the title */
-  description?: React.ReactNode
-  className?: string
+  description?: React.ReactNode | undefined
+  className?: string | undefined
 }
 
 /**
@@ -83,9 +83,9 @@ export function AddWorkspaceStepHeader({
 // =============================================================================
 
 interface AddWorkspacePrimaryButtonProps extends Omit<ButtonProps, 'variant' | 'children'> {
-  children?: React.ReactNode
-  loading?: boolean
-  loadingText?: string
+  children?: React.ReactNode | undefined
+  loading?: boolean | undefined
+  loadingText?: string | undefined
 }
 
 /**
@@ -121,7 +121,7 @@ export function AddWorkspacePrimaryButton({
 }
 
 interface AddWorkspaceSecondaryButtonProps extends Omit<ButtonProps, 'variant'> {
-  children?: React.ReactNode
+  children?: React.ReactNode | undefined
 }
 
 /**

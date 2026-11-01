@@ -4,9 +4,9 @@ import { Markdown, type RenderMode } from '@craft-agent/ui'
 interface StreamingMarkdownProps {
   content: string
   isStreaming: boolean
-  mode?: RenderMode
-  onUrlClick?: (url: string) => void
-  onFileClick?: (path: string) => void
+  mode?: RenderMode | undefined
+  onUrlClick?: ((url: string) => void) | undefined
+  onFileClick?: ((path: string) => void) | undefined
 }
 
 interface Block {
@@ -41,8 +41,7 @@ function splitIntoBlocks(content: string): Block[] {
   let currentBlock = ''
   let inCodeBlock = false
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
+  for (const line of lines) {
 
     // Check for code fence (``` at start of line, optionally followed by language)
     if (line.startsWith('```')) {
@@ -106,8 +105,8 @@ const MemoizedBlock = React.memo(function Block({
 }: {
   content: string
   mode: RenderMode
-  onUrlClick?: (url: string) => void
-  onFileClick?: (path: string) => void
+  onUrlClick?: ((url: string) => void) | undefined
+  onFileClick?: ((path: string) => void) | undefined
 }) {
   return (
     <Markdown mode={mode} onUrlClick={onUrlClick} onFileClick={onFileClick}>

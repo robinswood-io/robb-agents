@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 import { THINKING_LEVEL_IDS } from '../agent/thinking-levels.ts';
 /**
  * task.yaml schema — the declarative DAG spec for Tasks.
@@ -302,11 +303,11 @@ const TaskNodeObject = z.object({
  * draft yaml in the architecture doc (`type: orchestrator`) still parses.
  */
 export const TaskNodeSchema = z.preprocess((raw) => {
-  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+  if (raw && typeof raw === 'object' && !isUnknownArray(raw)) {
     const r = raw as Record<string, unknown>;
-    if (r.kind === undefined && typeof r.type === 'string') {
+    if (r["kind"] === undefined && typeof r["type"] === 'string') {
       const { type: _legacyType, ...rest } = r;
-      return { ...rest, kind: r.type };
+      return { ...rest, kind: r["type"] };
     }
   }
   return raw;

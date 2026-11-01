@@ -1,0 +1,265 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Moteur de tâches TaskRunner et opérations de sa classe interne ActiveRun",
+  "changes": [
+    "Classe ActiveRun existante séparée de l’API TaskRunner au chemin public conservé ; 57 déclarations de contrats, constantes et fonctions de revue déplacées sans duplication.",
+    "83 opérations ActiveRun réparties par responsabilité avec les mêmes champs, constructeur, corps et signatures ; quatre contrats de données extraits sans code exécutable.",
+    "Deux preuves structurelles indépendantes reliées par empreintes de source ; ordre des imports exécutables conservé à l’entrée, aucun état ni ordonnanceur ajouté.",
+    "Tous les fichiers de ce lot restent sous 500 lignes et son graphe complet de modules ne contient aucun cycle à l’exécution."
+  ],
+  "files": [
+    {
+      "file": "packages/server-core/src/tasks/TaskRunner.ts",
+      "lines": 325,
+      "sha256": "4b90161570bcd28c75cab7406ade2f83649c89d2570a1ac7104819525a2e331c"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/active-run.ts",
+      "lines": 363,
+      "sha256": "dd215367f8ea4c3752369bbe2c8d5b0369581bc4aa5fb1c8c1c42dd8d20df458"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/active-run/budget.ts",
+      "lines": 155,
+      "sha256": "fe9cb1c1e9ca3ed99163c91a98cedf4678931dd5c714da0482b91a248c2e26f7"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/active-run/dispatch.ts",
+      "lines": 350,
+      "sha256": "250852a20394ae03cbe3dc28122427ebe27f64e141480941955a680c7d733861"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/active-run/drainage.ts",
+      "lines": 266,
+      "sha256": "ed203b841c95068249691021e9899114103914c144b545a7144b1fd33bedec43"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/active-run/hydration.ts",
+      "lines": 356,
+      "sha256": "e765da61d0aac12148cfcd4c34a99152a02242f83b9c81c99a22640d175a9835"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/active-run/lifecycle.ts",
+      "lines": 202,
+      "sha256": "f3ba4d01fd9f7606ce62bf847f59dcc1bb5dc3b4764dd584d46fa6db7dbadadf"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/active-run/protocol.ts",
+      "lines": 20,
+      "sha256": "243568247fe478d7a56d1f287060a0ec5be01bd5a93bd36ff5be1b3dcc1094b3"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/active-run/reviewer-contract.ts",
+      "lines": 157,
+      "sha256": "62866cdc114b1f3cde99ebf901460d7cf9a0ecc7ea33324a5b809c2346cd0074"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/active-run/reviewer-retirement.ts",
+      "lines": 188,
+      "sha256": "634d89dba216e4334a54accbd1a00b53d9ccc1432b1d7146e13da041d116f34f"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/active-run/runtime.ts",
+      "lines": 237,
+      "sha256": "3ad50f5ec74f6ae96f3d967ead99dfdd893bb60e2a0e75d58c69e4928ac77962"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/active-run/scheduling.ts",
+      "lines": 157,
+      "sha256": "694094411e124c5d68f663de1fe2e04ac416d46a5d05b45d090c5a8ff0470ad0"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/active-run/settlement.ts",
+      "lines": 241,
+      "sha256": "7021cfedc4c29b455761c25b832146a77d1e998beb5d076cd90786abf1f98170"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/active-run/verdict.ts",
+      "lines": 170,
+      "sha256": "c1755b7a1fad639b4476527145c09ac2eaf02f1a905d0f1527ff39a985fcc910"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/active-run/verification.ts",
+      "lines": 263,
+      "sha256": "0fe967ab8f688ea6aa2434fee795401f49860577cec3f26ad1bcd789deb50399"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/review.ts",
+      "lines": 201,
+      "sha256": "d011da7c56a22b66ccb3147727de76002e8be5f7ea40ce2965858d042ff6407f"
+    },
+    {
+      "file": "packages/server-core/src/tasks/task-runner/shared.ts",
+      "lines": 378,
+      "sha256": "bc92c77ee1aa1755031e997264af6ba047c3a691ded2a9c95deb1953a8291cec"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 16.82,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/active-run-class-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 11.47,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/active-run-class-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/server-core/src/tasks/TaskRunner.ts",
+        "packages/server-core/src/tasks/task-runner",
+        "--format",
+        "json",
+        "--output-file",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/active-run-class-lint-report.json",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.28,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/active-run-class-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 15.83,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/active-run-class-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/server-core/src/tasks"
+      ],
+      "exitCode": 0,
+      "seconds": 5.93,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/active-run-class-task-tests.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 138.58,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/active-run-class-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "classes": [
+      {
+        "source": "packages/server-core/src/tasks/task-runner/active-run.ts",
+        "nativeMethodBodies": 83,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "nativeModuleBindings": 0,
+        "relocatedNativeDynamicImports": 0,
+        "protocolAliasesExpandedToNativeShapes": 4,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      }
+    ],
+    "runtimeImportCycles": 0,
+    "maximumFileLines": 364
+  },
+  "fullTestSummary": {
+    "pass": 10741,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "active-run-class-task-tests": {
+      "pass": 128,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": null,
+  "sourceGate": {
+    "max-lines": 92,
+    "no-explicit-any": 322
+  },
+  "globalLint": {
+    "files": 3414,
+    "errors": 384,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 303,
+      "max-lines": 81,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "92 fichiers trop longs et 322 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-25T20:25:39.733196+00:00",
+  "additionalProofs": {
+    "task-runner-module-structural-proof.json": {
+      "status": "passed",
+      "sourceHash": "8b5f8374c6462393e6e35c8d8b03819d565f0330557ed816d68bc0f778d14d60",
+      "nativeClasses": [
+        "TaskRunner",
+        "ActiveRun"
+      ],
+      "nativeClassFieldsConstructorsAndMethodBodies": true,
+      "nativeModels": 57,
+      "nativePublicExports": true,
+      "nativeEntryRuntimeImportOrder": true,
+      "noAdditionalState": true,
+      "runtimeImportCycles": 0,
+      "activeRunNativeSnapshotHash": "e0f16182127e168ced4e97ef9007ed5f0d39512a28bf675d21ff797a6a7a7e67",
+      "limit": "Cette preuve porte sur la séparation initiale ; la borne finale est contrôlée par task-runner-module-chain-proof.json."
+    },
+    "task-runner-module-chain-proof.json": {
+      "status": "passed",
+      "originalSourceHash": "8b5f8374c6462393e6e35c8d8b03819d565f0330557ed816d68bc0f778d14d60",
+      "nativeActiveRunSnapshotHash": "e0f16182127e168ced4e97ef9007ed5f0d39512a28bf675d21ff797a6a7a7e67",
+      "independentProofsLinkedBySourceHash": true,
+      "originalEntryAndSharedModulesUnchanged": true,
+      "currentOwnedFilesMatchVerifiedOutputs": true,
+      "ownedFiles": 17,
+      "combinedRuntimeImportCycles": 0,
+      "maximumFileLines": 379
+    }
+  }
+}

@@ -1,3 +1,7 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -123,14 +127,8 @@ describe('ordinary Mission route provider fence', () => {
     });
     controller.confirmWorkItemDispatch(spec.id, 'task', 'dispatch-one');
 
-    const host = new SessionManager();
-    const harness = host as unknown as {
-      sessions: Map<string, unknown>;
-      sendEvent: () => void;
-      emitUnreadSummaryChanged: () => void;
-      notifySessionCreated: () => void;
-      resolveOrdinaryMissionRouteSnapshot: (managed: unknown) => Promise<unknown>;
-    };
+    const host = withSessionOperationsForTest(new SessionManager());
+    const harness = sessionManagerForTest(host);
     harness.sendEvent = () => {};
     harness.emitUnreadSummaryChanged = () => {};
     harness.notifySessionCreated = () => {};
@@ -155,7 +153,7 @@ describe('ordinary Mission route provider fence', () => {
       controller.bindWorkItemSession(spec.id, 'task', 'dispatch-one', created.id);
 
       expect(loadSession(rootPath, created.id)?.missionOrdinaryRouteLock).toEqual(routeLock);
-      const managed = harness.sessions.get(created.id)!;
+      const managed = sessionRuntimeStateForTest(host).sessions.get(created.id)!;
       await expect(harness.resolveOrdinaryMissionRouteSnapshot(managed)).resolves.toMatchObject({
         connection: { slug: connection.slug, baseUrl: 'https://one.example.test' },
       });
@@ -177,7 +175,7 @@ describe('ordinary Mission route provider fence', () => {
       );
     } finally {
       loader.mockRestore();
-      for (const id of harness.sessions.keys()) cleanupModeState(id);
+      for (const id of sessionRuntimeStateForTest(host).sessions.keys()) cleanupModeState(id);
       rmSync(rootPath, { recursive: true, force: true });
     }
   });
@@ -243,19 +241,8 @@ describe('ordinary Mission route provider fence', () => {
       });
       controller.confirmWorkItemDispatch(spec.id, 'task', 'cwd-dispatch');
 
-      const host = new SessionManager();
-      const harness = host as unknown as {
-        sessions: Map<string, unknown>;
-        sendEvent: () => void;
-        emitUnreadSummaryChanged: () => void;
-        notifySessionCreated: () => void;
-        assertMissionProviderExecution: (managed: unknown) => Promise<void>;
-        admitBackendToolExecution: (
-          managed: unknown,
-          runtime: unknown,
-          request: { toolUseId: string; toolName: string; toolInput: Record<string, unknown> },
-        ) => Promise<void>;
-      };
+      const host = withSessionOperationsForTest(new SessionManager());
+      const harness = sessionManagerForTest(host);
       harness.sendEvent = () => {};
       harness.emitUnreadSummaryChanged = () => {};
       harness.notifySessionCreated = () => {};
@@ -278,7 +265,7 @@ describe('ordinary Mission route provider fence', () => {
             : {}),
         });
         controller.bindWorkItemSession(spec.id, 'task', 'cwd-dispatch', created.id);
-        const managed = harness.sessions.get(created.id)!;
+        const managed = sessionRuntimeStateForTest(host).sessions.get(created.id)!;
 
         if (routeKind === 'routing-off') {
           expect(() => host.updateWorkingDirectory(created.id, rootPath)).toThrow(/immutable/);
@@ -295,7 +282,7 @@ describe('ordinary Mission route provider fence', () => {
 
         let toolCalls = 0;
         await expect((async () => {
-          await harness.admitBackendToolExecution(managed, {}, {
+          await harness.admitBackendToolExecution(managed, completeSessionAgentFixture(managed.workspace, {}), {
             toolUseId: 'cwd-tool', toolName: 'Read', toolInput: { file_path: 'result.txt' },
           });
           toolCalls += 1;
@@ -303,7 +290,7 @@ describe('ordinary Mission route provider fence', () => {
         expect(toolCalls).toBe(0);
       } finally {
         loader.mockRestore();
-        for (const id of harness.sessions.keys()) cleanupModeState(id);
+        for (const id of sessionRuntimeStateForTest(host).sessions.keys()) cleanupModeState(id);
         rmSync(rootPath, { recursive: true, force: true });
         rmSync(outside, { recursive: true, force: true });
       }
@@ -335,12 +322,14 @@ describe('ordinary Mission route provider fence', () => {
 
       const probePath = join(configRoot, 'probe.ts');
       const managerPath = join(import.meta.dir, 'SessionManager.ts');
+      const fixtureAccessPath = join(import.meta.dir, 'testing/session-operation-access.ts');
       const identityPath = join(import.meta.dir, '..', 'missions', 'mission-route-identity.ts');
       const capabilityPath = join(import.meta.dir, '..', 'specialized-profiles', 'capability-identity.ts');
       const sourcesPath = join(import.meta.dir, '..', '..', '..', 'shared', 'src', 'sources', 'index.ts');
       writeFileSync(probePath, `
         import { getSourceCredentialManager, loadWorkspaceSources } from ${JSON.stringify(sourcesPath)};
         import { SessionManager } from ${JSON.stringify(managerPath)};
+        import { withSessionOperationsForTest } from ${JSON.stringify(fixtureAccessPath)};
         import {
           ordinaryMissionSourceBindings,
           ordinaryMissionSourceIdentityFromBindings,
@@ -398,7 +387,7 @@ describe('ordinary Mission route provider fence', () => {
           thinkingLevel: lock.thinkingLevel, workingDirectory: lock.cwd,
           enabledSourceSlugs: effectiveSourceSlugs,
         };
-        const manager = new SessionManager();
+        const manager = withSessionOperationsForTest(new SessionManager());
         const fence = manager.assertOrdinaryMissionSourceBindingAtTransport.bind(manager);
         await fence(managed, 'api-bound');
         await fence(managed, 'mcp-bound');

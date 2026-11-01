@@ -1,0 +1,23 @@
+{
+  "valid": true,
+  "source": "apps/electron/src/__tests__/transport.test.ts",
+  "testDeclarationsPreserved": 42,
+  "sharedDeclarationsPreserved": 4,
+  "setupPreservedInEverySuite": true,
+  "documentedPersistenceDrainFix": false,
+  "ownedLocalDeclarationsPreservedPerFile": true,
+  "importsPreserved": true,
+  "maximumLines": 227,
+  "currentSourceHashes": {
+    "apps/electron/src/__tests__/transport.test.ts": "684e99533d88b4132cf958bca926e863aeaa4b98769b693dfe5a59c1f5f45899",
+    "apps/electron/src/__tests__/transport-simple-invoke-returns-result.test.ts": "149bfae09ebc59f42c42be66601f6a3e54b1b6219a546a7c082bff9f9b6a2ac8",
+    "apps/electron/src/__tests__/transport-client-receives-server-pushed-events.test.ts": "ce6bf780378614e813f0246de70fac8df0ef958558e6f148e172b40716ae482f",
+    "apps/electron/src/__tests__/transport-manual-reconnect-preserves-reconnect-identity-and-replays-missed.test.ts": "9c5282ea69cfd1dad5690d8f557ffddc4e432b409176d398311f7ce89f427e9c",
+    "apps/electron/src/__tests__/transport-server-with-requireauth-rejects-clients-without-token.test.ts": "15cb541e7dbd1df9dc04b08ff1280bb345eeb6962f59dc59bca817c87b824ce6",
+    "apps/electron/src/__tests__/transport-becomes-connected-after-successful-handshake.test.ts": "dd23d86ea80c64586f605defb7b2c0c5cb58f1c41310a5a1a7bc31ff805a6cf7",
+    "apps/electron/src/__tests__/transport-invoke-queues-until-handshake-completes.test.ts": "0d168bb204d580407c0c41e24f7c5d4954928268fbffe914e5a3e4b680f33f48",
+    "apps/electron/src/__tests__/transport-server-invokes-client-capability-and-receives-result.test.ts": "8c5de018e1bcc0358d85649fdb8fea230decda186ab02943c709f5673bb78f07",
+    "apps/electron/src/__tests__/testing/transport-fixture.ts": "9b0f73790cf1c2009fe044874cc25b119a64dbc866149b12a529c0e4db40a1d9"
+  },
+  "issues": []
+}

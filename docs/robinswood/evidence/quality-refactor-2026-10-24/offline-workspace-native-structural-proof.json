@@ -1,0 +1,34 @@
+{
+  "status": "passed",
+  "nativeDeclarationBodiesPreserved": true,
+  "reviewedStableDependencyAdditions": {},
+  "reviewedDependencyRemovals": {},
+  "nativeMainJSXAndInlineCallbacksPreserved": true,
+  "nativeRootAndActionHooksReinlinedExactly": true,
+  "viewAddsNoStateOrEffects": true,
+  "nativeValuesPassedDirectly": true,
+  "nativeImportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "apps/webui/src/components/OfflineWorkspace.tsx",
+      "lines": 310,
+      "sha256": "3315360d19922beb138b1324c18f8a1ab45c10b8d3ad5e19b2e6d7343978d5df"
+    },
+    {
+      "file": "apps/webui/src/components/offline-workspace-model.ts",
+      "lines": 163,
+      "sha256": "2541c0b18f723637377214b64e53388660a3e763703fc03ac3ea7adbf2e4068e"
+    },
+    {
+      "file": "apps/webui/src/components/offline-workspace-tools.tsx",
+      "lines": 371,
+      "sha256": "cc5403cf0c40e9ad0792c88673398871a90b3d9a9fc4f9442d331f1d8fec5eaa"
+    },
+    {
+      "file": "apps/webui/src/components/offline-workspace-content.tsx",
+      "lines": 385,
+      "sha256": "ea24252ede7e63f3e0dc1a01acc6d823fdf35c701564d423d523ba48c3e0c842"
+    }
+  ]
+}

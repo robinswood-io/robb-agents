@@ -1,0 +1,444 @@
+[
+  {
+    "legacy_id": "2bfe5f",
+    "accepted": true,
+    "riskClass": "low_observability_or_prepare_only",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314780Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "afnor-book-launch-controller",
+    "accepted": true,
+    "riskClass": "medium_campaign_or_contact_ops",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316656Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "afnor-bookstore-candidate-verifier",
+    "accepted": true,
+    "policyClass": "business_or_observability_wrapper",
+    "riskClass": "prepare_only_no_outbound_bookstore_candidate_verification",
+    "mutationMode": "prepare_only_or_read_only",
+    "scheduleAllowed": true,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "sideEffects": [
+      "read_campaign_ops_artifacts",
+      "write_campaign_ops_reports",
+      "write_prepare_only_verification_queue",
+      "write_preliminary_unverified_shortlist",
+      "no_external_outbound_message",
+      "no_physical_copy_shipment"
+    ],
+    "updatedAt": "2026-07-12T17:38:30.031843Z",
+    "updatedBy": "oss-architecture-v2-install",
+    "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+  },
+  {
+    "legacy_id": "afnor-bookstore-retail-audit",
+    "accepted": true,
+    "policyClass": "business_or_observability_wrapper",
+    "riskClass": "prepare_only_no_outbound_retail_audit",
+    "mutationMode": "prepare_only_or_read_only",
+    "scheduleAllowed": true,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "sideEffects": [
+      "read_campaign_ops_artifacts",
+      "write_campaign_ops_reports",
+      "refresh_prepare_only_action_queue",
+      "no_external_outbound_message",
+      "no_physical_copy_shipment"
+    ],
+    "updatedAt": "2026-07-12T17:38:30.031834Z",
+    "updatedBy": "oss-architecture-v2-install",
+    "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+  },
+  {
+    "legacy_id": "agent-task-campaign-activation-loop",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317510Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "agent-task-campaign-activation-loop-overnight",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317531Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "agent-task-context-enriched-campaign-executor",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316683Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "agent-task-context-enriched-campaign-executor-overnight",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317492Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "agent-task-google-tasks-intake-day",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317356Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "agent-task-google-tasks-intake-evening",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317378Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "agent-task-google-tasks-intake-overnight",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317399Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "agent-task-inbox-router",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316929Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "agent-task-inbox-router-overnight",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317427Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "agent-task-temporal-openrouter-executor",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317445Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "agent-task-temporal-openrouter-executor-overnight",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317468Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "ao-day-ops-master",
+    "accepted": true,
+    "riskClass": "low_observability_or_prepare_only",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314587Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "ao-day-ops-reconciliation-tests",
+    "accepted": true,
+    "riskClass": "low_test_guardrail",
+    "sideEffects": [
+      "filesystem-write:test-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314764Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "ao-response-quality-guard-tests",
+    "accepted": true,
+    "riskClass": "low_test_guardrail",
+    "sideEffects": [
+      "filesystem-write:test-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314739Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "ao-sellsy-review-watch",
+    "accepted": true,
+    "riskClass": "medium_business_data_read_or_prepare",
+    "sideEffects": [
+      "external-api:sellsy-or-crm",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314717Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "auth-watchdog",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314455Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "auto-ads-bmw-i4-night-watch",
+    "accepted": true,
+    "riskClass": "high_external_communication_guarded",
+    "sideEffects": [
+      "external-communication",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "guarded_external_prepare_or_send",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315584Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "autonomy-queue-owner-governor",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315696Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "blog-publish-indexability-guard",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314662Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "blog-rss-generation",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314679Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "blog-seo-matomo-learning",
+    "accepted": true,
+    "riskClass": "low_observability_or_prepare_only",
+    "sideEffects": [
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316788Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "blog-topicality-regression-tests",
+    "accepted": true,
+    "riskClass": "low_test_guardrail",
+    "sideEffects": [
+      "filesystem-write:test-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317334Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "bmb-wordpress-structural-audit",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.316951Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "business-acquisition-enhanced-dashboard",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "business-state:campaign-or-contact",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "prepare_only_or_read_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.317982Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  }
+]

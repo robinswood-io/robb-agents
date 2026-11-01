@@ -1,0 +1,218 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Contrats natifs des tests Electron, CDP et messagerie",
+  "changes": [
+    "Vingt any supprimés dans six fichiers de tests.",
+    "Les fixtures CDP et notifications vérifient leurs méthodes exercées contre les types Electron natifs. Les classes partielles restent confinées aux frontières de test.",
+    "Les handlers RPC utilisent leur signature native ; l’identité client exercée par ces tests est vérifiée contre RequestContext.",
+    "Les tests de messagerie accèdent aux types réels du registre et utilisent le contrat natif du routeur.",
+    "Le JavaScript exécuté est identique avant et après : mêmes 35 tests et 143 assertions, dont deux groupes isolés."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/main/__tests__/browser-canvas-capture.isolated.ts",
+      "lines": 98,
+      "sha256": "07d9b9678b5167933c0748dc9dc2e3388e26c48725e2169d8eb29564a6337c20"
+    },
+    {
+      "file": "apps/electron/src/main/__tests__/browser-cdp-input.test.ts",
+      "lines": 100,
+      "sha256": "94bfad35a9c552f2e5ebf5d31c07ea015db5408057e2b4d3fcec5b9d1a922b29"
+    },
+    {
+      "file": "apps/electron/src/main/__tests__/notifications-routing.isolated.ts",
+      "lines": 112,
+      "sha256": "2f02957d81d171366914fd125b0ce42783895b66d4a78e0af4a6602d616dcf6b"
+    },
+    {
+      "file": "apps/electron/src/main/handlers/__tests__/settings-default-thinking.test.ts",
+      "lines": 94,
+      "sha256": "6b006800648b098983e23e422e867444936fba867b05793989225ee3ae58d674"
+    },
+    {
+      "file": "packages/messaging-gateway/src/__tests__/registry-allow-pending.test.ts",
+      "lines": 173,
+      "sha256": "bf0a666a015ed2ccf70ca0ddeac0865812bf0388e0ca3415943fb4fd238cb97a"
+    },
+    {
+      "file": "packages/messaging-gateway/src/__tests__/router.test.ts",
+      "lines": 233,
+      "sha256": "bc77496788a969939ffd93875f9ec080fdfcf152ac5fc65c59f5094b81d1e2be"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 24.81,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/desktop-gateway-test-contracts-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 36.29,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/desktop-gateway-test-contracts-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/run-owned-files-eslint.py",
+        "desktop-gateway-test-contracts"
+      ],
+      "exitCode": 0,
+      "seconds": 2.9,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/desktop-gateway-test-contracts-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./apps/electron/src/main/__tests__/browser-cdp-input.test.ts",
+        "./apps/electron/src/main/handlers/__tests__/settings-default-thinking.test.ts",
+        "./packages/messaging-gateway/src/__tests__/registry-allow-pending.test.ts",
+        "./packages/messaging-gateway/src/__tests__/router.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.23,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/desktop-gateway-test-contracts-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./apps/electron/src/main/__tests__/browser-canvas-capture.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 4.97,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/desktop-gateway-test-contracts-canvas.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./apps/electron/src/main/__tests__/notifications-routing.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.92,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/desktop-gateway-test-contracts-notifications.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 143.94,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/desktop-gateway-test-contracts-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "runtimeJavaScriptPreservedOutsideNativeFixtureCompletions": true,
+    "nativeFixtureCompletions": [],
+    "nativeLiteralPropertyAccessEquivalent": true,
+    "removedExplicitAny": 20,
+    "newExplicitAny": 0,
+    "newRuntimeStateOrWorkflow": false,
+    "files": [
+      {
+        "file": "apps/electron/src/main/__tests__/browser-canvas-capture.isolated.ts",
+        "lines": 98,
+        "sha256": "07d9b9678b5167933c0748dc9dc2e3388e26c48725e2169d8eb29564a6337c20"
+      },
+      {
+        "file": "apps/electron/src/main/__tests__/browser-cdp-input.test.ts",
+        "lines": 100,
+        "sha256": "94bfad35a9c552f2e5ebf5d31c07ea015db5408057e2b4d3fcec5b9d1a922b29"
+      },
+      {
+        "file": "apps/electron/src/main/__tests__/notifications-routing.isolated.ts",
+        "lines": 112,
+        "sha256": "2f02957d81d171366914fd125b0ce42783895b66d4a78e0af4a6602d616dcf6b"
+      },
+      {
+        "file": "apps/electron/src/main/handlers/__tests__/settings-default-thinking.test.ts",
+        "lines": 94,
+        "sha256": "6b006800648b098983e23e422e867444936fba867b05793989225ee3ae58d674"
+      },
+      {
+        "file": "packages/messaging-gateway/src/__tests__/registry-allow-pending.test.ts",
+        "lines": 173,
+        "sha256": "bf0a666a015ed2ccf70ca0ddeac0865812bf0388e0ca3415943fb4fd238cb97a"
+      },
+      {
+        "file": "packages/messaging-gateway/src/__tests__/router.test.ts",
+        "lines": 233,
+        "sha256": "bc77496788a969939ffd93875f9ec080fdfcf152ac5fc65c59f5094b81d1e2be"
+      }
+    ]
+  },
+  "fullTestSummary": {
+    "pass": 10748,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "desktop-gateway-test-contracts-targeted": {
+      "pass": 26,
+      "fail": 0,
+      "skip": 0
+    },
+    "desktop-gateway-test-contracts-canvas": {
+      "pass": 7,
+      "fail": 0,
+      "skip": 0
+    },
+    "desktop-gateway-test-contracts-notifications": {
+      "pass": 2,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": {
+    "targetedPass": 35,
+    "targetedExpectCalls": 143
+  },
+  "sourceGate": {
+    "max-lines": 36,
+    "no-explicit-any": 17
+  },
+  "globalLint": {
+    "files": 3633,
+    "errors": 42,
+    "warnings": 100,
+    "fatal": 0,
+    "rules": {
+      "max-lines": 25,
+      "react-hooks/exhaustive-deps": 79,
+      "@typescript-eslint/no-explicit-any": 17,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "36 fichiers trop longs et 17 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T08:21:02.251278+00:00"
+}

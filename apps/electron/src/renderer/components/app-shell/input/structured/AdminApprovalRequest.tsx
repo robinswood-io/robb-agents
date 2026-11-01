@@ -17,10 +17,10 @@ export interface AdminApprovalRequestData {
 
 interface AdminApprovalRequestProps {
   request: AdminApprovalRequestData
-  onApprove: (options: { rememberForMinutes?: number }) => void
+  onApprove: (options: { rememberForMinutes?: number | undefined }) => void
   onCancel: () => void
   /** When true, removes container styling (shadow, rounded) - used when wrapped by InputContainer */
-  unstyled?: boolean
+  unstyled?: boolean | undefined
 }
 
 /**

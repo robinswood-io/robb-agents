@@ -1,0 +1,126 @@
+{
+  "status": "passed",
+  "cases": [
+    {
+      "name": "all sessions route",
+      "status": "passed",
+      "state": {
+        "navigator": "sessions",
+        "filter": {
+          "kind": "allSessions"
+        },
+        "details": null
+      },
+      "url": "?mode=navigation&ws=mobile&route=allSessions"
+    },
+    {
+      "name": "flagged sessions route",
+      "status": "passed",
+      "state": {
+        "navigator": "sessions",
+        "filter": {
+          "kind": "flagged"
+        },
+        "details": null
+      },
+      "url": "?mode=navigation&ws=mobile&route=flagged"
+    },
+    {
+      "name": "sources route",
+      "status": "passed",
+      "state": {
+        "navigator": "sources",
+        "details": null
+      },
+      "url": "?mode=navigation&ws=mobile&route=sources"
+    },
+    {
+      "name": "browser history workspace entry",
+      "status": "passed",
+      "state": {
+        "navigator": "sources",
+        "details": null
+      },
+      "url": "?mode=navigation&ws=playground&route=sources"
+    },
+    {
+      "name": "browser history back",
+      "status": "passed",
+      "state": {
+        "navigator": "sessions",
+        "filter": {
+          "kind": "flagged"
+        },
+        "details": {
+          "type": "session",
+          "sessionId": "mobile-s-1"
+        }
+      },
+      "url": "?mode=navigation&ws=playground&route=flagged%2Fsession%2Fmobile-s-1"
+    },
+    {
+      "name": "browser history forward",
+      "status": "passed",
+      "state": {
+        "navigator": "sources",
+        "details": null
+      },
+      "url": "?mode=navigation&ws=playground&route=sources"
+    },
+    {
+      "name": "session detail navigation",
+      "status": "passed",
+      "state": {
+        "navigator": "sessions",
+        "filter": {
+          "kind": "allSessions"
+        },
+        "details": {
+          "type": "session",
+          "sessionId": "mobile-s-1"
+        }
+      },
+      "url": "?mode=navigation&ws=mobile&route=allSessions%2Fsession%2Fmobile-s-1"
+    },
+    {
+      "name": "right sidebar opens",
+      "status": "passed",
+      "state": {
+        "navigator": "sessions",
+        "filter": {
+          "kind": "allSessions"
+        },
+        "details": {
+          "type": "session",
+          "sessionId": "mobile-s-1"
+        },
+        "rightSidebar": {
+          "type": "history"
+        }
+      },
+      "url": "?mode=navigation&ws=mobile&route=allSessions%2Fsession%2Fmobile-s-1&sidebar=history"
+    },
+    {
+      "name": "right sidebar closes",
+      "status": "passed",
+      "state": {
+        "navigator": "sessions",
+        "filter": {
+          "kind": "allSessions"
+        },
+        "details": {
+          "type": "session",
+          "sessionId": "mobile-s-1"
+        },
+        "rightSidebar": {
+          "type": "none"
+        }
+      },
+      "url": "?mode=navigation&ws=mobile&route=allSessions%2Fsession%2Fmobile-s-1"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "browser": "145.0.7632.6",
+  "target": "native NavigationProvider with isolated Jotai state and QA sessions"
+}

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { PermissionRequest as PermissionRequestType, CredentialRequest as CredentialRequestType } from '../../../../shared/types'
 import { PermissionRequest } from './structured/PermissionRequest'
 import { CredentialRequest } from './structured/CredentialRequest'
@@ -8,7 +9,7 @@ interface StructuredInputProps {
   state: StructuredInputState
   onResponse: (response: StructuredResponse) => void | Promise<void>
   /** When true, removes container styling (shadow, bg, rounded) - used when wrapped by InputContainer */
-  unstyled?: boolean
+  unstyled?: boolean | undefined
 }
 
 /**
@@ -41,7 +42,7 @@ export function StructuredInput({ state, onResponse, unstyled = false }: Structu
       return (
         <AdminApprovalRequest
           request={state.data as import('./structured/AdminApprovalRequest').AdminApprovalRequestData}
-          onApprove={({ rememberForMinutes }) => onResponse({ type: 'admin_approval', request: responseRequest, approved: true, rememberForMinutes })}
+          onApprove={({ rememberForMinutes }) => onResponse(omitUndefined<Extract<StructuredResponse, { type: 'admin_approval' }>>({ type: 'admin_approval', request: responseRequest, approved: true, rememberForMinutes }))}
           onCancel={() => onResponse({ type: 'admin_approval', request: responseRequest, approved: false })}
           unstyled={unstyled}
         />

@@ -1,0 +1,379 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Interfaces de simulation du playground, adaptateurs navigateur et corrections des aperçus détectées en Chromium",
+  "changes": [
+    "25 déclarations natives de simulation réparties entre installation, API et messagerie ; état unique et exports publics conservés, maximum 482 lignes.",
+    "14 any supprimés : globals du playground déclarés, type React natif pour les composants dynamiques, propriété CSS explicite et types exacts des adaptateurs navigateur.",
+    "Six réponses de simulation alignées sur ElectronAPI, dont préférences sérialisées et opérations asynchrones ; vérification statique du sous-ensemble réellement simulé.",
+    "NavigationProvider et ModalProvider existants fournis au shell de démonstration ; 64 aperçus rendus sans erreur après cinq erreurs de contexte reproduites.",
+    "Bouton d’expansion et interrupteur d’automatisation séparés ; indentation YAML conservée ; favicon existant référencé.",
+    "Six parcours d’interaction vérifiés, dont ajout de tâche, analyse du YAML, redimensionnement et restauration après rechargement."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/automations/AutomationCard.tsx",
+      "lines": 122,
+      "sha256": "76590a55bdd775103b19837dd08f167334ec6775e9ea6b677beafa878f9d3059"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground.html",
+      "lines": 17,
+      "sha256": "c4a6a20a2ca73b45ef1997e71c771448af6033ba059fca73dc5a5e1344476f21"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/PlaygroundAppShellProvider.tsx",
+      "lines": 96,
+      "sha256": "81ee5467822682012a8d8d9912258b01c00c44b7af3a0a6f3cccac44530d7853"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/mock-utils.ts",
+      "lines": 203,
+      "sha256": "8a569d3b9b45d2488b80f60cbec996ffa9684a90d062005b8107b321e22ac196"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/mock-utils/electron-api.ts",
+      "lines": 481,
+      "sha256": "c293ae40634e089ba84735b1db82d245d957f3cf96d5a437baf9a7b3a5eb142d"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/mock-utils/messaging.ts",
+      "lines": 204,
+      "sha256": "555e19c2ae5f22f6d75226f262388ee4955f0797cdac178b37c39b5db6a78822"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/custom-shadows.tsx",
+      "lines": 298,
+      "sha256": "49b696051680fd5049b7cd6656cd8657a4f5cd27ad5eb3eb7441c02c125ad6a4"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/task-editor/preview.tsx",
+      "lines": 305,
+      "sha256": "a354917c27f0bdb43cbfdadf159fb5cadcbd0ac07ad97fde841019cb0e852a29"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/types.ts",
+      "lines": 46,
+      "sha256": "cf4d7c67592ab09f326132227c16ac9cbfa05ecca1cb0241f1aa695fccf365db"
+    },
+    {
+      "file": "apps/webui/src/shims/node-builtins.ts",
+      "lines": 139,
+      "sha256": "0ab292d1816c4fb88b0a2412a74575f63fd0e613e8b6e2f116da121daf9fe2e3"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 16.25,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-interfaces-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 25.1,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-interfaces-compat-electron.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/webui/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 18.88,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-interfaces-compat-webui.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/playground/mock-utils.ts",
+        "apps/electron/src/renderer/playground/mock-utils",
+        "apps/electron/src/renderer/playground/registry/types.ts",
+        "apps/electron/src/renderer/playground/registry/custom-shadows.tsx",
+        "apps/electron/src/renderer/playground/registry/task-editor/preview.tsx",
+        "apps/electron/src/renderer/playground/PlaygroundAppShellProvider.tsx",
+        "apps/electron/src/renderer/components/automations/AutomationCard.tsx",
+        "apps/webui/src/shims/node-builtins.ts",
+        "--format",
+        "json",
+        "--output-file",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-interfaces-final-lint-report.json",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 0.97,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-interfaces-final-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 12.73,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-interfaces-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 137.3,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-interfaces-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "nativeMockDeclarations": 25,
+    "nativeMockExportsAndSingleStatePreserved": true,
+    "mockInstallationCallsPreserved": true,
+    "api": {
+      "members": 53,
+      "updatedNativeContracts": [
+        "watchSessionFiles",
+        "unwatchSessionFiles",
+        "installUpdate",
+        "checkForUpdates",
+        "readPreferences",
+        "writePreferences"
+      ]
+    },
+    "typeOnlyRuntimeProof": [
+      "Node browser shims",
+      "custom CSS property",
+      "native React dynamic component type"
+    ],
+    "explicitAnyRemoved": 14,
+    "functionalUiCorrections": [
+      "Existing NavigationProvider and ModalProvider supplied by the existing playground shell",
+      "Automation switch separated from the expansion button",
+      "Existing application icon referenced by the playground",
+      "YAML preview preserves significant indentation"
+    ],
+    "noNewWorkflowOrRuntimeState": true,
+    "maximumFileLines": 482,
+    "files": [
+      {
+        "file": "apps/electron/src/renderer/playground/mock-utils.ts",
+        "lines": 204,
+        "sha256": "8a569d3b9b45d2488b80f60cbec996ffa9684a90d062005b8107b321e22ac196"
+      },
+      {
+        "file": "apps/electron/src/renderer/playground/mock-utils/messaging.ts",
+        "lines": 205,
+        "sha256": "555e19c2ae5f22f6d75226f262388ee4955f0797cdac178b37c39b5db6a78822"
+      },
+      {
+        "file": "apps/electron/src/renderer/playground/mock-utils/electron-api.ts",
+        "lines": 482,
+        "sha256": "c293ae40634e089ba84735b1db82d245d957f3cf96d5a437baf9a7b3a5eb142d"
+      },
+      {
+        "file": "apps/webui/src/shims/node-builtins.ts",
+        "lines": 140,
+        "sha256": "0ab292d1816c4fb88b0a2412a74575f63fd0e613e8b6e2f116da121daf9fe2e3"
+      },
+      {
+        "file": "apps/electron/src/renderer/playground/registry/custom-shadows.tsx",
+        "lines": 299,
+        "sha256": "49b696051680fd5049b7cd6656cd8657a4f5cd27ad5eb3eb7441c02c125ad6a4"
+      },
+      {
+        "file": "apps/electron/src/renderer/playground/registry/types.ts",
+        "lines": 47,
+        "sha256": "cf4d7c67592ab09f326132227c16ac9cbfa05ecca1cb0241f1aa695fccf365db"
+      },
+      {
+        "file": "apps/electron/src/renderer/playground/PlaygroundAppShellProvider.tsx",
+        "lines": 97,
+        "sha256": "81ee5467822682012a8d8d9912258b01c00c44b7af3a0a6f3cccac44530d7853"
+      },
+      {
+        "file": "apps/electron/src/renderer/components/automations/AutomationCard.tsx",
+        "lines": 123,
+        "sha256": "76590a55bdd775103b19837dd08f167334ec6775e9ea6b677beafa878f9d3059"
+      },
+      {
+        "file": "apps/electron/src/renderer/playground.html",
+        "lines": 18,
+        "sha256": "c4a6a20a2ca73b45ef1997e71c771448af6033ba059fca73dc5a5e1344476f21"
+      },
+      {
+        "file": "apps/electron/src/renderer/playground/registry/task-editor/preview.tsx",
+        "lines": 306,
+        "sha256": "a354917c27f0bdb43cbfdadf159fb5cadcbd0ac07ad97fde841019cb0e852a29"
+      }
+    ]
+  },
+  "fullTestSummary": {
+    "pass": 10743,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {},
+  "beforeAfter": null,
+  "sourceGate": {
+    "max-lines": 77,
+    "no-explicit-any": 304
+  },
+  "globalLint": {
+    "files": 3523,
+    "errors": 351,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 285,
+      "max-lines": 66,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [
+    "Cinq aperçus perdaient le rendu faute de contexte Navigation/Modal ; fournisseurs existants ajoutés au shell de démonstration.",
+    "Le rendu HTML imbriquait deux boutons dans AutomationCard ; commandes désormais sœurs et clavier vérifié.",
+    "Le rendu YAML effaçait l’indentation dans innerText ; préservation des espaces et analyse du YAML vérifiées.",
+    "Le script QA tient compte des blocs YAML repliés et ferme les overlays avant de changer de composant."
+  ],
+  "limits": [
+    "77 fichiers trop longs et 304 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-25T22:03:52.031492+00:00",
+  "additionalProofs": {
+    "browser-interfaces-browser-proof.json": {
+      "status": "passed",
+      "catalog": {
+        "examples": 64,
+        "failed": 0,
+        "pageErrors": 0,
+        "consoleErrors": 0,
+        "report": "playground-browser-catalog-report.json"
+      },
+      "interactions": [
+        {
+          "action": "automation enable and keyboard expansion",
+          "status": "passed"
+        },
+        {
+          "action": "planner quick add creates visible task and clears input",
+          "status": "passed"
+        },
+        {
+          "action": "task title and goal update YAML; demo save reaches notification",
+          "status": "passed",
+          "writes": "UI demo only; no filesystem API called"
+        },
+        {
+          "action": "theme switch, preview resize and reload restore",
+          "status": "passed",
+          "width": 880
+        },
+        {
+          "action": "edit popover opens and closes with Escape",
+          "status": "passed"
+        },
+        {
+          "action": "mock preferences, async operations and install fallback",
+          "status": "passed",
+          "api": {
+            "preferencesEnvelope": true,
+            "writeSuccess": true,
+            "updateAvailable": false,
+            "fallbackSame": true,
+            "unwritableFallbackThrows": true
+          }
+        }
+      ],
+      "browser": "145.0.7632.6",
+      "headless": false,
+      "url": "http://127.0.0.1:6184/playground.html",
+      "sourceFiles": [
+        {
+          "file": "apps/electron/src/renderer/playground/mock-utils.ts",
+          "lines": 204,
+          "sha256": "8a569d3b9b45d2488b80f60cbec996ffa9684a90d062005b8107b321e22ac196"
+        },
+        {
+          "file": "apps/electron/src/renderer/playground/mock-utils/messaging.ts",
+          "lines": 205,
+          "sha256": "555e19c2ae5f22f6d75226f262388ee4955f0797cdac178b37c39b5db6a78822"
+        },
+        {
+          "file": "apps/electron/src/renderer/playground/mock-utils/electron-api.ts",
+          "lines": 482,
+          "sha256": "c293ae40634e089ba84735b1db82d245d957f3cf96d5a437baf9a7b3a5eb142d"
+        },
+        {
+          "file": "apps/webui/src/shims/node-builtins.ts",
+          "lines": 140,
+          "sha256": "0ab292d1816c4fb88b0a2412a74575f63fd0e613e8b6e2f116da121daf9fe2e3"
+        },
+        {
+          "file": "apps/electron/src/renderer/playground/registry/custom-shadows.tsx",
+          "lines": 299,
+          "sha256": "49b696051680fd5049b7cd6656cd8657a4f5cd27ad5eb3eb7441c02c125ad6a4"
+        },
+        {
+          "file": "apps/electron/src/renderer/playground/registry/types.ts",
+          "lines": 47,
+          "sha256": "cf4d7c67592ab09f326132227c16ac9cbfa05ecca1cb0241f1aa695fccf365db"
+        },
+        {
+          "file": "apps/electron/src/renderer/playground/PlaygroundAppShellProvider.tsx",
+          "lines": 97,
+          "sha256": "81ee5467822682012a8d8d9912258b01c00c44b7af3a0a6f3cccac44530d7853"
+        },
+        {
+          "file": "apps/electron/src/renderer/components/automations/AutomationCard.tsx",
+          "lines": 123,
+          "sha256": "76590a55bdd775103b19837dd08f167334ec6775e9ea6b677beafa878f9d3059"
+        },
+        {
+          "file": "apps/electron/src/renderer/playground.html",
+          "lines": 18,
+          "sha256": "c4a6a20a2ca73b45ef1997e71c771448af6033ba059fca73dc5a5e1344476f21"
+        },
+        {
+          "file": "apps/electron/src/renderer/playground/registry/task-editor/preview.tsx",
+          "lines": 306,
+          "sha256": "a354917c27f0bdb43cbfdadf159fb5cadcbd0ac07ad97fde841019cb0e852a29"
+        }
+      ],
+      "limits": [
+        "Exemples et stockage du navigateur seulement ; aucune mission avec un modèle réel ni installation de l’application Electron effectuée.",
+        "Le correctif d’indentation du YAML a été vérifié par l’interaction de l’éditeur après le catalogue des 64 exemples."
+      ]
+    }
+  }
+}

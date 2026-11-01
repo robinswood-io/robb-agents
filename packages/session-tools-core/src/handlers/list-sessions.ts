@@ -1,15 +1,10 @@
+import type { z } from 'zod';
+import type { ListSessionsSchema } from '../tool-defs/schemas.ts';
 import type { SessionToolContext } from '../context.ts';
 import type { ToolResult } from '../types.ts';
 import { successResponse, errorResponse } from '../response.ts';
 
-export interface ListSessionsArgs {
-  status?: string;
-  label?: string;
-  search?: string;
-  sortBy?: 'recent' | 'name' | 'status';
-  limit?: number;
-  offset?: number;
-}
+export type ListSessionsArgs = z.infer<typeof ListSessionsSchema>;
 
 export async function handleListSessions(
   ctx: SessionToolContext,
@@ -21,12 +16,12 @@ export async function handleListSessions(
 
   try {
     const result = ctx.listSessions({
-      status: args.status,
-      label: args.label,
-      search: args.search,
-      sortBy: args.sortBy,
-      limit: args.limit,
-      offset: args.offset,
+      ...(args.status !== undefined ? { status: args.status } : {}),
+      ...(args.label !== undefined ? { label: args.label } : {}),
+      ...(args.search !== undefined ? { search: args.search } : {}),
+      ...(args.sortBy !== undefined ? { sortBy: args.sortBy } : {}),
+      ...(args.limit !== undefined ? { limit: args.limit } : {}),
+      ...(args.offset !== undefined ? { offset: args.offset } : {}),
     });
     return successResponse(JSON.stringify(result, null, 2));
   } catch (error) {

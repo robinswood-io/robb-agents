@@ -1,0 +1,429 @@
+{
+  "dateUTC": "2026-10-24T12:32:29.110036+00:00",
+  "etat": "Corrigé et testé sur DEV isolé, installé et vérifié sur ce Mac",
+  "cible": {
+    "application": "/Applications/Robb Agents.app",
+    "profil": "/Users/thibault/.craft-agent",
+    "commitInstalle": "f287ca3fd634c8ef5a65cd0850fab3e6451cb0b2",
+    "version": "0.12.10",
+    "signature": "developer-id",
+    "runtime": {
+      "command": "/Applications/Robb Agents.app/Contents/MacOS/Robb Agents",
+      "pid": 35907,
+      "startedAt": 1792844852446
+    }
+  },
+  "corrections": [
+    "Une demande de statut, une reformulation de réponse ou une clôture en lecture seule reconnue par les classificateurs existants ne change plus l’empreinte des travaux acceptés.",
+    "Une véritable modification de destinataire, de contenu, de cible ou une nouvelle action continue à invalider la revue.",
+    "Le bandeau annonce désormais « Réponse terminée », sans promettre une validation indépendante sur la seule base d’un état terminal.",
+    "Le test fetch utilise le type du runtime, sans dépendance aux types DOM."
+  ],
+  "simplicite": {
+    "nouvelleCoucheRuntime": false,
+    "nouveauSuperviseur": false,
+    "nouveauCycleDeRevue": false,
+    "sdkMajeursModifies": false,
+    "routeLegereExistanteConservee": true,
+    "missionV2Activee": false,
+    "decisionSources": "Conserver les verrous de provenance, d’arrêt et de révision des sources. Aucun port large du nouveau protocole Pi de Craft dans ce lot."
+  },
+  "controlesDEV": {
+    "candidateCommit": "f287ca3fd634c8ef5a65cd0850fab3e6451cb0b2",
+    "checks": {
+      "core-tests": {
+        "exitCode": 0,
+        "counts": {
+          "pass": 764,
+          "fail": 0
+        },
+        "logTail": [
+          "(pass) objective outcome receipt > resolves tool:<name> evidence aliases when multiple registered acceptance criteria pass with the same observation tool [0.97ms]",
+          "",
+          " 764 pass",
+          " 0 fail",
+          " 4306 expect() calls",
+          "Ran 764 tests across 11 files. [17.60s]"
+        ]
+      },
+      "shared-typecheck-fixed": {
+        "exitCode": 0,
+        "counts": {},
+        "logTail": [
+          "$ node scripts/run-typescript.mjs native --noEmit -p packages/shared/tsconfig.json"
+        ]
+      },
+      "electron-typecheck": {
+        "exitCode": 0,
+        "counts": {},
+        "logTail": [
+          "$ node scripts/run-typescript.mjs native --noEmit -p apps/electron/tsconfig.json"
+        ]
+      },
+      "release-typecheck": {
+        "exitCode": 0,
+        "counts": {},
+        "logTail": [
+          "$ node scripts/run-typescript.mjs native --noEmit -p scripts/tsconfig.json"
+        ]
+      },
+      "qa-script-typecheck": {
+        "exitCode": 0,
+        "counts": {},
+        "logTail": [
+          "$ node scripts/run-typescript.mjs native --noEmit -p scripts/tsconfig.json"
+        ]
+      },
+      "release-tests": {
+        "exitCode": 0,
+        "counts": {
+          "pass": 55,
+          "skip": 4,
+          "fail": 0
+        },
+        "logTail": [
+          "",
+          " 55 pass",
+          " 4 skip",
+          " 0 fail",
+          " 208 expect() calls",
+          "Ran 59 tests across 7 files. [803.00ms]"
+        ]
+      },
+      "installer-tests": {
+        "exitCode": 0,
+        "counts": {},
+        "logTail": [
+          "$ python3 -m unittest scripts.tests.test_installers scripts.tests.test_installer_transactions scripts.tests.test_staging_retention scripts.tests.test_install_staging_retention scripts.tests.test_robb_local_staging",
+          "...s...........................................s..............s.................................",
+          "----------------------------------------------------------------------",
+          "Ran 96 tests in 11.540s",
+          "",
+          "OK (skipped=3)"
+        ]
+      },
+      "pi-driver-tests": {
+        "exitCode": 0,
+        "counts": {
+          "pass": 5,
+          "fail": 0
+        },
+        "logTail": [
+          "(pass) piDriver local & custom endpoint model discovery > discovers local models via /v1/models or Ollama /api/tags fallback, infers capabilities, and preserves user models [0.45ms]",
+          "",
+          " 5 pass",
+          " 0 fail",
+          " 11 expect() calls",
+          "Ran 5 tests across 1 file. [108.00ms]"
+        ]
+      }
+    },
+    "sharedCheckout": {
+      "head": "78400487e16cc98f536ac4febca0e611426309a5",
+      "dirty": false
+    },
+    "integration": "Candidate branch committed and tested on isolated DEV; shared checkout not integrated."
+  },
+  "controlesMac": {
+    "releaseContract": {
+      "pass": 59,
+      "fail": 0,
+      "files": 7
+    },
+    "installerContract": {
+      "run": 96,
+      "skip": 1,
+      "fail": 0
+    },
+    "buildSigne": "réussi, smoke test du paquet réussi",
+    "preflightOfficiel": "réussi avant installation",
+    "verificationOfficielle": {
+      "artifactCommit": "f287ca3fd634c8ef5a65cd0850fab3e6451cb0b2",
+      "checkoutCommit": "f287ca3fd634c8ef5a65cd0850fab3e6451cb0b2",
+      "identity": {
+        "architecture": "Mach-O 64-bit executable arm64",
+        "asarSha256": "a2706ecaef9fe999e27c970fe6b5d55d74593d29454a4d892bc81c6c2a1bef01",
+        "buildChannel": "production",
+        "buildCommit": "f287ca3fd634c8ef5a65cd0850fab3e6451cb0b2",
+        "buildDirty": "false",
+        "bundleIdentifier": "io.robinswood.robbagents",
+        "bundleTreeSha256": "a76dc382af56f2cf03a3c60dae5f66f6a79b862191f78b3efffc4579f2caafae",
+        "executable": "Robb Agents",
+        "executableSha256": "d48aed8463de08c2f09dbe75ef4649d6806453eace22bdf0f28e9f3d02d7218c",
+        "infoPlistSha256": "2d35c53c0559531e4d1100d5edd6d61c353395c80737213a680a8eda2fcdc77e",
+        "signatureKind": "developer-id",
+        "version": "0.12.10"
+      },
+      "profile": "/Users/thibault/.craft-agent",
+      "runtime": {
+        "command": "/Applications/Robb Agents.app/Contents/MacOS/Robb Agents",
+        "pid": 35907,
+        "startedAt": 1792844852446
+      },
+      "status": "verified",
+      "target": "/Applications/Robb Agents.app"
+    }
+  },
+  "missionsModeleReel": {
+    "generatedAt": "2026-10-24T12:19:03.765Z",
+    "environment": "local-staging-profile",
+    "connection": {
+      "slug": "chatgpt-plus-2",
+      "provider": "pi",
+      "model": "pi/gpt-6.1-sol"
+    },
+    "sourceFiles": {
+      "packages/server-core/src/sessions/SessionManager.ts": "d7b59eace99c8f18a6ef8767543a386b01972d7fcc38f2c667a661acaec3383a",
+      "packages/server-core/src/sessions/turn-completion.ts": "9dbae486a48a0240717eafa84d6c3b757a02ccc505fe48c6d725cff25c126c77",
+      "packages/shared/src/prompts/result-presentation.ts": "5b015522044b23e2ac6db6b704bfbd1fb7308f7a1426113b949dda8923ea9bdd"
+    },
+    "results": [
+      {
+        "name": "two-targets",
+        "passed": true,
+        "sessionId": "261024-bright-torrent",
+        "checks": [
+          "Both named targets read and represented",
+          "True and false states preserved",
+          "Deliverable linked"
+        ],
+        "durationMs": 19628,
+        "toolCalls": 6,
+        "sourceErrors": 0
+      },
+      {
+        "name": "three-deliverables",
+        "passed": true,
+        "sessionId": "261024-keen-elk",
+        "checks": [
+          "Correct count and total",
+          "Three real deliverables inspected independently",
+          "All final files linked"
+        ],
+        "durationMs": 24838,
+        "toolCalls": 6,
+        "sourceErrors": 0
+      },
+      {
+        "name": "missing-input-recovery",
+        "passed": true,
+        "sessionId": "261024-lively-galaxy",
+        "checks": [
+          "Missing initial input did not block completion",
+          "Fallback source identified",
+          "Both outputs checked independently"
+        ],
+        "durationMs": 26427,
+        "toolCalls": 8,
+        "sourceErrors": 0
+      },
+      {
+        "name": "midstream-amendment",
+        "passed": true,
+        "sessionId": "261024-true-vine",
+        "checks": [
+          "A real human correction arrived during tool execution",
+          "Latest requested content retained",
+          "Additional requirement delivered and linked"
+        ],
+        "durationMs": 17985,
+        "toolCalls": 3,
+        "sourceErrors": 0
+      },
+      {
+        "name": "continuation",
+        "passed": true,
+        "sessionId": "261024-slim-amber",
+        "checks": [
+          "Original result preserved without rewrite",
+          "Amendment delivered",
+          "Independent byte hashes match",
+          "Final deliverables linked"
+        ],
+        "durationMs": 31778,
+        "toolCalls": 6,
+        "sourceErrors": 0
+      }
+    ],
+    "diagnosticCounts": {
+      "warnings": 1
+    },
+    "limitations": [
+      "Real provider calls and real file operations; headless session runtime, not an Electron UI journey.",
+      "Five synthetic local missions do not establish a general success rate."
+    ],
+    "candidateCommit": "f287ca3fd634c8ef5a65cd0850fab3e6451cb0b2",
+    "independentFileInventory": {
+      "missing-input-recovery/resultat.json": {
+        "bytes": 32,
+        "sha256": "41cb2d22ed6c4344eef7da59d094bf34b23d5340a04762c989290c99920ad72f"
+      },
+      "missing-input-recovery/rapport.md": {
+        "bytes": 452,
+        "sha256": "ab7695cc29350a8d492977293c9dd617c13d1231d1601045618e1ac1088025d5"
+      },
+      "two-targets/archive.json": {
+        "bytes": 35,
+        "sha256": "997ba5db06dcc303576a561a2b0d0a0ad402be46ecef6bde9904578cbdc1be70"
+      },
+      "two-targets/cleanup.json": {
+        "bytes": 34,
+        "sha256": "174b3089e82a540cd3cc785335f534d7cfbf9f4f0cb2f9f3f187cf76be3ef479"
+      },
+      "two-targets/observations.json": {
+        "bytes": 86,
+        "sha256": "26db342dbf67f548ed1117e610648d258f81f421d027e428ad98140feb4f8553"
+      },
+      "three-deliverables/delivery.txt": {
+        "bytes": 23,
+        "sha256": "99ef26ae9a9cf96fa51c197d151688821c151153f41f1558d3d210698a1d9e22"
+      },
+      "three-deliverables/source.csv": {
+        "bytes": 24,
+        "sha256": "1fb3c77a79e059084b70accc552be00f52bf08de4827c83005c6788bee825c49"
+      },
+      "three-deliverables/rapport.md": {
+        "bytes": 297,
+        "sha256": "11a7b4bdf18d5b541d6f9c91fca84db5e7a3308beadf3ae60ec866d10ce702d3"
+      },
+      "three-deliverables/totals.json": {
+        "bytes": 32,
+        "sha256": "483648557a2f191f517343173c64f156cefb918c184c21229bee31c0a9f6f114"
+      },
+      "midstream-amendment/resultat.txt": {
+        "bytes": 12,
+        "sha256": "c0461c447116f96d64ce7de602979c4a5ae88501e5828574ed4d8dc81a2763b1"
+      },
+      "midstream-amendment/pret.txt": {
+        "bytes": 4,
+        "sha256": "1cf77e7418ff2acc35882f3a8b031ca99cca56684cf85efdf5b69cbaa45c0db9"
+      },
+      "midstream-amendment/controle.json": {
+        "bytes": 34,
+        "sha256": "b8bfbdac8a367f6da7f4510e2bf4349dbe35316a789ee66dbea3aeea71b5cab5"
+      },
+      "continuation/brouillon.md": {
+        "bytes": 26,
+        "sha256": "3825dc7d19eaec5d5cc07c133f5454202a2186e0e1e864f812115bc8dd257b4a"
+      },
+      "continuation/manifest.json": {
+        "bytes": 173,
+        "sha256": "82b1a7f5337f81c7ef90c5daf102c466586582146974763ab9fe0a91e73262d9"
+      },
+      "continuation/final.md": {
+        "bytes": 51,
+        "sha256": "b4d3898642af8273486f44a4ad503c20caa17514a4996ac5e0345e189c3bb80f"
+      },
+      "missing-input-recovery/secours/entree.csv": {
+        "bytes": 21,
+        "sha256": "8a7d24c38b080b5d3d114c9d169a8b0adfabfbbc469d28ada2957823b27bdd22"
+      }
+    }
+  },
+  "parcoursElectron": {
+    "missionInitiale": {
+      "sessionId": "261024-aware-moss",
+      "candidateCommit": "f287ca3fd634c8ef5a65cd0850fab3e6451cb0b2",
+      "passed": true,
+      "checks": [
+        "Two exact duplicate groups, all four expected identifiers",
+        "Source CSV byte-identical to seeded fixture",
+        "Real byte sizes and SHA-256 match manifest",
+        "Three absolute final links observed in Electron",
+        "Nonempty rendered report preview observed in Electron",
+        "Neutral response completion banner observed"
+      ],
+      "files": {
+        "fournisseurs-qa.csv": {
+          "sha256": "72125cffaff64d61daf31e0982b86ec968d37272ee108c90ed1d44697a25cf4a",
+          "bytes": 187,
+          "mtimeNs": 1792844135592683109
+        },
+        "duplicates.json": {
+          "sha256": "49f340e303306c50f6fe158fac389e61b44d1591596350e0e59cc13b75e3fa4a",
+          "bytes": 218,
+          "mtimeNs": 1792844685117983717
+        },
+        "manifest.json": {
+          "sha256": "ab6f543bfc269227e338925763db06efaff19b07977b31d6b0a3a954d65f33d4",
+          "bytes": 321,
+          "mtimeNs": 1792844685118365593
+        },
+        "rapport.md": {
+          "sha256": "35f76ac7fd76868c84cee48aaab4503961495d4f176acea444ae92753a7b5080",
+          "bytes": 761,
+          "mtimeNs": 1792844685118134467
+        }
+      },
+      "coldRestart": "pending"
+    },
+    "reprisePendantFermeture": {
+      "passed": true,
+      "sessionId": "261024-aware-moss",
+      "candidateCommit": "f287ca3fd634c8ef5a65cd0850fab3e6451cb0b2",
+      "checks": [
+        "Application closed with active objective, durable pending recovery and no final output",
+        "No Robb process remained before relaunch",
+        "New output produced after relaunch without a new human message",
+        "All four acquired files kept identical bytes and modification timestamps",
+        "Control manifest sizes and hashes independently verified",
+        "Terminal state complete_verified, no pending recovery"
+      ],
+      "controlSha256": "7325405ba875d4feea9ed464d54b9042aa016c26ae51a14ad47daf980358453c",
+      "toolRecords": 6,
+      "humanRequests": 2,
+      "observedAtMs": 1792844914747
+    },
+    "interfaceObservee": [
+      "Bandeau Réponse terminée",
+      "Trois liens absolus en réponse finale",
+      "Aperçu Markdown non vide ouvert depuis le lien",
+      "Mission interrompue par fermeture avec reprise durable en attente et sans livrable final",
+      "Reprise automatique après relance sans message humain supplémentaire",
+      "Lien final et aperçu JSON non vide du contrôle de reprise"
+    ]
+  },
+  "preservation": {
+    "passed": true,
+    "connectionsRetained": 6,
+    "defaultConnectionUnchanged": true,
+    "newQASessions": 6,
+    "workspaces": [
+      {
+        "workspaceId": "1ab8129d-767e-eb30-e594-57f833285ed0",
+        "existingSessionsRetained": 2320,
+        "sourceConfigsUnchanged": 35
+      }
+    ],
+    "QAToolNames": [
+      "Bash",
+      "Find",
+      "Ls",
+      "Read",
+      "Write"
+    ],
+    "hiddenQARetryRows": 1,
+    "limits": [
+      "Configuration hashes and observed QA tool names establish this scoped preservation check; no accounting dataset was mutated or used."
+    ]
+  },
+  "retourArriere": {
+    "sauvegarde": "/Users/thibault/Library/Application Support/Robb Agents/Staging Backups/20261024-122251-129564",
+    "confirmee": true,
+    "commitPrecedent": "25d89e5047459709e82833cc32b93ea847544d2f"
+  },
+  "limites": [
+    "Ces missions synthétiques démontrent les parcours testés ; elles ne constituent pas un taux de réussite général ni une garantie de fin de toute mission métier.",
+    "Fermeture normale en cours de mission testée ; panne électrique et arrêt brutal du système non simulés.",
+    "Le lot ne migre pas les versions majeures de SDK et ne remplace pas toute la personnalisation Robb par Craft.",
+    "Aucune mutation comptable, aucun autre connecteur utilisé ou reconfiguré dans ces tests.",
+    "Rattachement Work non résolu : trace technique versionnée sur la branche de la tâche, preuves locales conservées."
+  ],
+  "preuvesLocales": {
+    "patch": "/Users/thibault/Documents/Codex/2026-10-23/r-a/outputs/corrections-autonomie-robb-2026-10-24.patch",
+    "journalBuild": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/autonomy-signed-build.log",
+    "journalMissions": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/autonomy-live-campaign.log",
+    "installation": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/autonomy-staging-install.log",
+    "verificationFinale": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/autonomy-final-official-verification.json"
+  }
+}

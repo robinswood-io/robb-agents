@@ -1,3 +1,4 @@
+import { isUnknownArray } from './json.ts';
 /**
  * CLI Tool Icon Resolver
  *
@@ -282,7 +283,7 @@ export function loadToolIconConfig(toolIconsDir: string): ToolIconConfig | null 
     const config = readJsonFileSync<ToolIconConfig>(configPath);
 
     // Basic validation
-    if (!config.tools || !Array.isArray(config.tools)) {
+    if (!config.tools || !isUnknownArray(config.tools)) {
       return null;
     }
 

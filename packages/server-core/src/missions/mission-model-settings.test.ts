@@ -15,8 +15,8 @@ describe('public Mission selection inheritance', () => {
     });
   });
   it('drops an origin model on a provider change while preserving reasoning', () => {
-    expect(inheritMissionModelSettings({ llmConnection: 'other' }, origin)).toEqual({
-      llmConnection: 'other', model: undefined, thinkingLevel: 'high',
+    expect(inheritMissionModelSettings({ llmConnection: 'other' }, origin)).toEqual({model: undefined, 
+      llmConnection: 'other', thinkingLevel: 'high',
       connectionRoutePinned: true, modelRoutePinned: false, thinkingLevelPinned: true,
     });
   });
@@ -25,7 +25,7 @@ describe('public Mission selection inheritance', () => {
     expect(inheritMissionModelSettings({ model: 'chosen' }, undefined, 'workspace')).toMatchObject({ llmConnection: 'workspace', model: 'chosen' });
   });
   it('does not invent a connection, model or reasoning without a selection', () => {
-    expect(inheritMissionModelSettings({})).toEqual({ llmConnection: undefined, model: undefined, thinkingLevel: undefined,
+    expect(inheritMissionModelSettings({})).toEqual({llmConnection: undefined, model: undefined, thinkingLevel: undefined, 
       connectionRoutePinned: false, modelRoutePinned: false, thinkingLevelPinned: false });
   });
 });

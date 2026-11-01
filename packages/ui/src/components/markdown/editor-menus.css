@@ -1,0 +1,114 @@
+/* ── Bubble menu toolbar ── */
+.tiptap-bubble-menu {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 6px;
+  background: var(--background);
+  border: none;
+  box-shadow: var(--shadow-modal-small);
+  z-index: var(--tiptap-bubble-z);
+}
+
+.tiptap-bubble-menu--editing {
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 320px;
+  max-width: 480px;
+  padding: 6px;
+  border-radius: 10px;
+}
+
+.tiptap-bubble-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: color-mix(in oklch, var(--foreground) 70%, transparent);
+  transition: background-color 0.1s, color 0.1s;
+}
+
+.tiptap-bubble-btn:hover {
+  background: color-mix(in oklch, var(--foreground) 8%, transparent);
+  color: var(--foreground);
+}
+
+.tiptap-bubble-btn.is-active {
+  background: color-mix(in oklch, var(--foreground) 10%, transparent);
+  color: var(--foreground);
+}
+
+.tiptap-bubble-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: color-mix(in oklch, var(--foreground) 55%, transparent);
+  padding: 0 6px;
+  user-select: none;
+}
+
+.tiptap-bubble-edit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 2px 6px 2px;
+}
+
+/* Match Session Details info panel title style */
+.tiptap-bubble-panel-title {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in oklch, var(--muted-foreground) 60%, transparent);
+}
+
+.tiptap-bubble-done-btn {
+  font-size: 12px;
+  font-weight: 500;
+  color: color-mix(in oklch, var(--foreground) 70%, transparent);
+  background: var(--background);
+  border: none;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+  box-shadow: var(--shadow-minimal);
+  transition: background-color 0.1s, color 0.1s;
+}
+
+.tiptap-bubble-done-btn:hover {
+  background: color-mix(in oklch, var(--foreground) 3%, transparent);
+  color: var(--foreground);
+}
+
+.tiptap-bubble-textarea-shell {
+  border-radius: 6px;
+  background: var(--foreground-2);
+  box-shadow: var(--shadow-minimal);
+  transition: background-color 0.1s;
+}
+
+.tiptap-bubble-textarea-shell:focus-within {
+  background: var(--background);
+}
+
+.tiptap-bubble-textarea {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--foreground);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  padding: 8px;
+  resize: vertical;
+  min-height: 80px;
+  max-height: 320px;
+  outline: none;
+  width: 100%;
+}

@@ -17,7 +17,7 @@ const springTransition = {
 interface AnimatedCollapsibleContentProps {
   isOpen: boolean
   children: React.ReactNode
-  className?: string
+  className?: string | undefined
 }
 
 /**

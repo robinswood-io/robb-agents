@@ -1,0 +1,61 @@
+{
+  "scope": "Bundled documentation only; user documentation paths and content unchanged",
+  "documents": [
+    {
+      "previousPath": "apps/electron/resources/docs/sources.md",
+      "beforeSha256": "a7d68ae5922b29c288b424a17a6f7c6f5303213b3046ff9738f22448d20d8eff",
+      "assembledSha256": "a7d68ae5922b29c288b424a17a6f7c6f5303213b3046ff9738f22448d20d8eff",
+      "parts": [
+        {
+          "path": "apps/electron/resources/docs/sources/01-overview.md",
+          "lines": 441,
+          "sha256": "e88f1262f0a453f3a7dc2034df49b9264743008549f5fcbba18db0e044872bf7"
+        },
+        {
+          "path": "apps/electron/resources/docs/sources/02-source-types.md",
+          "lines": 487,
+          "sha256": "d2b7e5852279353e17bf1a24fcab9301f3128c006d49732da4757e13d9b9a28d"
+        },
+        {
+          "path": "apps/electron/resources/docs/sources/03-icon-handling.md",
+          "lines": 145,
+          "sha256": "376668137580a81457eda09cd2814827e1f968339f9443cec0a2ec1296ae5c4f"
+        }
+      ]
+    },
+    {
+      "previousPath": "apps/electron/resources/docs/automations.md",
+      "beforeSha256": "2a7da50e7a45f1f3250bdf5ceae0caa2a8857f0bf8cb6b0d4e37be271287a867",
+      "assembledSha256": "2a7da50e7a45f1f3250bdf5ceae0caa2a8857f0bf8cb6b0d4e37be271287a867",
+      "parts": [
+        {
+          "path": "apps/electron/resources/docs/automations/01-overview.md",
+          "lines": 482,
+          "sha256": "3257146f0fc15658d05476e55f59f57dd61081fef65520edc2353bc1ec0c2dc5"
+        },
+        {
+          "path": "apps/electron/resources/docs/automations/02-telegram-topic-routing.md",
+          "lines": 414,
+          "sha256": "725cf2554cbe0a7d67804dfeb24d96d0a69359e093f6a70a7e9fd610afc5e7af"
+        }
+      ]
+    },
+    {
+      "previousPath": "apps/electron/resources/docs/mermaid.md",
+      "beforeSha256": "741c1e91eb4c3aa350225737e11f1b8212f3acfbfc47355b6158e7ea5899f996",
+      "assembledSha256": "741c1e91eb4c3aa350225737e11f1b8212f3acfbfc47355b6158e7ea5899f996",
+      "parts": [
+        {
+          "path": "apps/electron/resources/docs/mermaid/01-overview.md",
+          "lines": 481,
+          "sha256": "46efe3e9e9c6a45303a46ebf9723d8d8198332c87d9a61280134d57688b852e1"
+        },
+        {
+          "path": "apps/electron/resources/docs/mermaid/02-best-practices.md",
+          "lines": 65,
+          "sha256": "808bd6a4e518b7bd2a4c76f61da4d0c9c6360e09a8280cdd1853d0757cbac684"
+        }
+      ]
+    }
+  ]
+}

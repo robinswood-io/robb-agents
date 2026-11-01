@@ -156,7 +156,7 @@ function getProviderLabelFromType(providerType?: LlmProviderType, baseUrl?: stri
     }
   }
   // Fallback: derive from base URL or default
-  const resolvedUrl = baseUrl || process.env.ANTHROPIC_BASE_URL?.trim() || 'https://api.anthropic.com';
+  const resolvedUrl = baseUrl || process.env["ANTHROPIC_BASE_URL"]?.trim() || 'https://api.anthropic.com';
   return getProviderLabel(resolvedUrl);
 }
 
@@ -166,7 +166,7 @@ function getProviderLabelFromType(providerType?: LlmProviderType, baseUrl?: stri
  * Uses explicit baseUrl if provided, otherwise falls back to env var.
  */
 async function checkApiAvailability(explicitBaseUrl?: string): Promise<CheckResult> {
-  const baseUrl = explicitBaseUrl || process.env.ANTHROPIC_BASE_URL?.trim() || 'https://api.anthropic.com';
+  const baseUrl = explicitBaseUrl || process.env["ANTHROPIC_BASE_URL"]?.trim() || 'https://api.anthropic.com';
   const label = getProviderLabel(baseUrl);
 
   try {
@@ -227,12 +227,6 @@ async function checkApiAvailability(explicitBaseUrl?: string): Promise<CheckResu
   }
 }
 
-/** Check workspace token expiry - placeholder, always returns valid */
-async function checkWorkspaceToken(_workspaceId: string): Promise<CheckResult> {
-  // Token expiry checking was removed in a refactoring
-  // For now, just assume tokens are valid - the actual API call will fail if expired
-  return { ok: true, detail: '✓ Workspace token: Present' };
-}
 
 /**
  * Validate an API key by making a minimal query through the Claude Agent SDK.
@@ -243,10 +237,11 @@ async function validateApiKeyWithAnthropic(apiKey: string, baseUrl?: string | nu
     const { getCredentialValidationModel } = await import('../config/models.ts');
     const model = getCredentialValidationModel();
 
+    const optionalBaseUrl = baseUrl || undefined;
     const result = await validateAnthropicConnection({
       model,
       apiKey,
-      baseUrl: baseUrl || undefined,
+      ...(optionalBaseUrl !== undefined ? { baseUrl: optionalBaseUrl } : {}),
     });
 
     if (result.success) {
@@ -350,55 +345,6 @@ async function checkOAuthToken(providerLabel: string = 'Anthropic'): Promise<Che
   }
 }
 
-/** Check MCP server connectivity with a quick HEAD request */
-async function checkMcpConnectivity(mcpUrl: string): Promise<CheckResult> {
-  try {
-    // Parse the URL to get just the base server
-    const url = new URL(mcpUrl);
-    const baseUrl = `${url.protocol}//${url.host}`;
-
-    // Quick HEAD request with short timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-    try {
-      const response = await fetch(baseUrl, {
-        method: 'HEAD',
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      // Any response (even 4xx) means the server is reachable
-      return { ok: true, detail: `✓ MCP server: Reachable (${response.status})` };
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        return {
-          ok: false,
-          detail: '✗ MCP server: Timeout',
-          failCode: 'mcp_unreachable',
-          failTitle: 'MCP Server Unreachable',
-          failMessage: 'Cannot connect to the Craft MCP server (timeout). Check your network connection.',
-        };
-      }
-      const msg = fetchError instanceof Error ? fetchError.message : String(fetchError);
-      // Check for common network errors
-      if (msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('fetch failed')) {
-        return {
-          ok: false,
-          detail: `✗ MCP server: Unreachable (${msg})`,
-          failCode: 'mcp_unreachable',
-          failTitle: 'MCP Server Unreachable',
-          failMessage: 'Cannot connect to the Craft MCP server. Check your network connection.',
-        };
-      }
-      return { ok: true, detail: `✓ MCP server: Unknown (${msg})` };
-    }
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    return { ok: true, detail: `✓ MCP server: Check failed (${msg})` };
-  }
-}
 
 /**
  * Run error diagnostics to identify the specific cause of a failure.
@@ -409,7 +355,7 @@ async function checkMcpConnectivity(mcpUrl: string): Promise<CheckResult> {
  * providers get the captured API error check plus the raw error details.
  */
 export async function runErrorDiagnostics(config: DiagnosticConfig): Promise<DiagnosticResult> {
-  const { authType, workspaceId, rawError, providerType, baseUrl } = config;
+  const { authType, rawError, providerType, baseUrl } = config;
   const providerLabel = getProviderLabelFromType(providerType, baseUrl);
   const details: string[] = [];
   const defaultResult: CheckResult = { ok: true, detail: '? Check: Timeout' };

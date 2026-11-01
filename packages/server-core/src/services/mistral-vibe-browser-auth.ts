@@ -1,8 +1,10 @@
+import type { EventEmitter } from 'node:events'
+import { nodeByteStream } from '../../../shared/src/utils/node-byte-stream.ts';
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { spawn, type ChildProcess } from 'node:child_process'
-import { Readable, Writable } from 'node:stream'
+import { Writable } from 'node:stream'
 import { client, methods, ndJsonStream, PROTOCOL_VERSION } from '@agentclientprotocol/sdk'
 import { APP_VERSION } from '@craft-agent/shared/version'
 
@@ -24,11 +26,13 @@ const SAFE_ENVIRONMENT_KEYS = new Set([
   'CURL_CA_BUNDLE', 'REQUESTS_CA_BUNDLE',
 ])
 
+type BrowserAuthProcess = EventEmitter & Pick<ChildProcess, 'stdin' | 'stdout' | 'stderr' | 'exitCode' | 'killed' | 'kill'>
+
 type SpawnLike = (
   command: string,
   args: readonly string[],
   options: Parameters<typeof spawn>[2],
-) => ChildProcess
+) => BrowserAuthProcess
 
 export interface MistralVibeBrowserAuthFlow {
   authUrl: string
@@ -64,10 +68,10 @@ export function resolveMistralVibeAcpCommand(
   platform: NodeJS.Platform = process.platform,
   pathExists: (path: string) => boolean = existsSync,
 ): string {
-  const override = environment.ROBB_VIBE_ACP_COMMAND?.trim()
+  const override = environment["ROBB_VIBE_ACP_COMMAND"]?.trim()
   if (override) return override
 
-  const userHome = environment.HOME || environment.USERPROFILE || homedir()
+  const userHome = environment["HOME"] || environment["USERPROFILE"] || homedir()
   const executable = platform === 'win32' ? 'vibe-acp.exe' : 'vibe-acp'
   const uvToolPath = join(userHome, '.local', 'bin', executable)
   return pathExists(uvToolPath) ? uvToolPath : executable
@@ -94,7 +98,7 @@ function resolveExpiry(value: unknown, now: number): number {
   return Math.min(parsed, now + MAX_FLOW_TTL_MS)
 }
 
-function waitForSpawn(child: ChildProcess): Promise<void> {
+function waitForSpawn(child: BrowserAuthProcess): Promise<void> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error('Mistral Vibe did not start in time')), START_TIMEOUT_MS)
     child.once('spawn', () => {
@@ -161,7 +165,7 @@ export async function startMistralVibeBrowserAuth(
     const app = client({ name: 'Robb Agents' })
     const stream = ndJsonStream(
       Writable.toWeb(child.stdin) as WritableStream<Uint8Array>,
-      Readable.toWeb(child.stdout) as unknown as ReadableStream<Uint8Array>,
+      nodeByteStream(child.stdout),
     )
     connection = app.connect(stream)
     child.once('exit', () => connection?.close())
@@ -196,13 +200,13 @@ export async function startMistralVibeBrowserAuth(
       START_TIMEOUT_MS,
       'Mistral Vibe browser authentication timed out while starting',
     )
-    const metadata = asRecord(asRecord(startResponse._meta)?.['browser-auth-delegated'])
-    const attemptId = metadata?.attemptId
+    const metadata = asRecord(asRecord(startResponse["_meta"])?.['browser-auth-delegated'])
+    const attemptId = metadata?.["attemptId"]
     if (typeof attemptId !== 'string' || !attemptId) {
       throw new Error('Mistral Vibe did not return a browser authentication attempt')
     }
-    const authUrl = safeMistralSignInUrl(metadata.signInUrl)
-    const expiresAt = resolveExpiry(metadata.expiresAt, now())
+    const authUrl = safeMistralSignInUrl(metadata["signInUrl"])
+    const expiresAt = resolveExpiry(metadata["expiresAt"], now())
 
     return {
       authUrl,
@@ -222,8 +226,8 @@ export async function startMistralVibeBrowserAuth(
           remainingMs,
           'Mistral Vibe browser authentication expired before completion',
         )
-        const completed = asRecord(asRecord(response._meta)?.['browser-auth-delegated'])
-        if (completed?.status !== 'completed') {
+        const completed = asRecord(asRecord(response["_meta"])?.['browser-auth-delegated'])
+        if (completed?.["status"] !== 'completed') {
           throw new Error('Mistral Vibe browser authentication did not complete')
         }
       },

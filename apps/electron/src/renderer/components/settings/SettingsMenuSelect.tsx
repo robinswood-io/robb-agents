@@ -30,19 +30,19 @@ export interface SettingsMenuSelectProps {
   /** Available options */
   options: SettingsMenuSelectOption[]
   /** Placeholder when nothing selected */
-  placeholder?: string
+  placeholder?: string | undefined
   /** Disabled state */
-  disabled?: boolean
+  disabled?: boolean | undefined
   /** Additional className for trigger */
-  className?: string
+  className?: string | undefined
   /** Width of the dropdown menu */
-  menuWidth?: number
+  menuWidth?: number | undefined
   /** Called when hovering over an option (for live preview). Pass null on leave. */
-  onHover?: (value: string | null) => void
+  onHover?: ((value: string | null) => void) | undefined
   /** Enable search filter (auto-enabled when options > 8) */
-  searchable?: boolean
+  searchable?: boolean | undefined
   /** Placeholder for search input */
-  searchPlaceholder?: string
+  searchPlaceholder?: string | undefined
 }
 
 /**
@@ -199,7 +199,7 @@ export interface SettingsMenuSelectRowProps {
   /** Row label */
   label: string
   /** Optional description below label */
-  description?: string
+  description?: string | undefined
   /** Currently selected value */
   value: string
   /** Change handler */
@@ -207,21 +207,21 @@ export interface SettingsMenuSelectRowProps {
   /** Available options */
   options: SettingsMenuSelectOption[]
   /** Placeholder text */
-  placeholder?: string
+  placeholder?: string | undefined
   /** Disabled state */
-  disabled?: boolean
+  disabled?: boolean | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
   /** Whether inside a card */
-  inCard?: boolean
+  inCard?: boolean | undefined
   /** Width of the dropdown menu */
-  menuWidth?: number
+  menuWidth?: number | undefined
   /** Called when hovering over an option (for live preview). Pass null on leave. */
-  onHover?: (value: string | null) => void
+  onHover?: ((value: string | null) => void) | undefined
   /** Enable search filter (auto-enabled when options > 8) */
-  searchable?: boolean
+  searchable?: boolean | undefined
   /** Placeholder for search input */
-  searchPlaceholder?: string
+  searchPlaceholder?: string | undefined
 }
 
 export function SettingsMenuSelectRow({

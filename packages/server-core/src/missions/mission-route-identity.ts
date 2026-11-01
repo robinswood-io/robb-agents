@@ -130,8 +130,8 @@ export async function ordinaryMissionConnectionIdentity(input: {
   connectionSlug: string;
   model: string;
   thinkingLevel: ThinkingLevel;
-  runtimeIdentitySha256?: string;
-  credentialBindingResolver?: OrdinaryMissionCredentialBindingResolver;
+  runtimeIdentitySha256?: string | undefined;
+  credentialBindingResolver?: OrdinaryMissionCredentialBindingResolver | undefined;
 }): Promise<string> {
   const credentialBinding = input.credentialBindingResolver
     ? await input.credentialBindingResolver(input.connection)

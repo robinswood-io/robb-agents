@@ -15,18 +15,18 @@
  * - "Open in New Window" (for newSession only) - uses deep link
  */
 
-import * as React from 'react'
+
 import { useTranslation } from "react-i18next"
 import {
-  AppWindow,
-  CheckCheck,
-  Settings2,
-  Plus,
-  Trash2,
-  ExternalLink,
+AppWindow,
+CheckCheck,
+Settings2,
+Plus,
+Trash2,
+ExternalLink,
 } from 'lucide-react'
 import { useMenuComponents } from '@/components/ui/menu-context'
-import { getDocUrl, type DocFeature } from '@craft-agent/shared/docs/doc-links'
+import { getDocUrl,type DocFeature } from '@craft-agent/shared/docs/doc-links'
 
 export type SidebarMenuType = 'allSessions' | 'flagged' | 'status' | 'sources' | 'skills' | 'automations' | 'projects' | 'labels' | 'views' | 'newSession'
 
@@ -34,35 +34,35 @@ export interface SidebarMenuProps {
   /** Type of sidebar item (determines available menu items) */
   type: SidebarMenuType
   /** Status ID for status items (e.g., 'todo', 'done') - not currently used but kept for future */
-  statusId?: string
+  statusId?: string | undefined
   /** Label ID — when set, this is an individual label item (enables Delete Label) */
-  labelId?: string
+  labelId?: string | undefined
   /** Handler for "Configure Statuses" action - only for allSessions/status/flagged types */
-  onConfigureStatuses?: () => void
+  onConfigureStatuses?: (() => void) | undefined
   /** Handler for "Mark All Read" action - only for allSessions type */
-  onMarkAllRead?: () => void
+  onMarkAllRead?: (() => void) | undefined
   /** Handler for "Configure Labels" action - receives labelId when triggered from a specific label */
-  onConfigureLabels?: (labelId?: string) => void
+  onConfigureLabels?: ((labelId?: string) => void) | undefined
   /** Handler for "Add New Label" action - creates a label (parentId = labelId if set) */
-  onAddLabel?: (parentId?: string) => void
+  onAddLabel?: ((parentId?: string) => void) | undefined
   /** Handler for "Delete Label" action - deletes the label identified by labelId */
-  onDeleteLabel?: (labelId: string) => void
+  onDeleteLabel?: ((labelId: string) => void) | undefined
   /** Handler for "Add Source" action - only for sources type */
-  onAddSource?: () => void
+  onAddSource?: (() => void) | undefined
   /** Handler for "Add Skill" action - only for skills type */
-  onAddSkill?: () => void
+  onAddSkill?: (() => void) | undefined
   /** Handler for "Add Automation" action - only for automations type */
-  onAddAutomation?: () => void
+  onAddAutomation?: (() => void) | undefined
   /** Handler for "Add Project" action - only for projects type */
-  onAddProject?: () => void
+  onAddProject?: (() => void) | undefined
   /** Source type filter for "Learn More" link - determines which docs page to open */
-  sourceType?: 'api' | 'mcp' | 'local'
+  sourceType?: 'api' | 'mcp' | 'local' | undefined
   /** Handler for "Edit Views" action - for views type */
-  onConfigureViews?: () => void
+  onConfigureViews?: (() => void) | undefined
   /** View ID — when set, this is an individual view (enables Delete) */
-  viewId?: string
+  viewId?: string | undefined
   /** Handler for "Delete View" action */
-  onDeleteView?: (id: string) => void
+  onDeleteView?: ((id: string) => void) | undefined
 }
 
 /**
@@ -71,7 +71,6 @@ export interface SidebarMenuProps {
  */
 export function SidebarMenu({
   type,
-  statusId,
   labelId,
   onConfigureStatuses,
   onMarkAllRead,

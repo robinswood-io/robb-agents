@@ -1,0 +1,490 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Création des fenêtres, coffre hors ligne, connecteurs de mission et profils spécialisés",
+  "changes": [
+    "80 opérations réparties par responsabilité ; classes auxiliaires de persistance conservées comme classes natives dans leurs modules propres.",
+    "Champs, constructeurs, corps exécutables et exports publics vérifiés ; aucun état ni cycle entre les modules possédés ajouté.",
+    "Répertoire natif du module transmis à la création des fenêtres ; mêmes chemins de ressources, de preload et de renderer.",
+    "Quatre any retirés du transport des fenêtres en réutilisant le contrat EventSink existant.",
+    "Même assertion de chargement de l’icône conservée sur le module propriétaire de la création des fenêtres."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/main/__tests__/robinswood-branding.test.ts",
+      "lines": 227,
+      "sha256": "9589700daf23c0c3fe56a95d4bda6fddab8f23a46d80be215e11d1e8ddb150e1"
+    },
+    {
+      "file": "apps/electron/src/main/window-manager.ts",
+      "lines": 361,
+      "sha256": "812084801d24390fd3d4fd8f3fcdfb6a67e304545e8c8ee6e2755d0215e6b28c"
+    },
+    {
+      "file": "apps/electron/src/main/window-manager/creation.ts",
+      "lines": 310,
+      "sha256": "5a6c066cdd0bd3380426bd17a4735fff373cf155bd2627813e24323cbd8d6671"
+    },
+    {
+      "file": "apps/electron/src/main/window-manager/shared.ts",
+      "lines": 45,
+      "sha256": "18037bb70150aad66b9a683c5d20ef5e964c8cdfbbe87ec226b0754d3756de86"
+    },
+    {
+      "file": "apps/webui/src/offline-vault.ts",
+      "lines": 130,
+      "sha256": "2cffe8c29ff22aa2f3642e0fb6825529ccd30f2125af9fc71d990a149a12436c"
+    },
+    {
+      "file": "apps/webui/src/offline-vault/consent.ts",
+      "lines": 153,
+      "sha256": "d2d82195fc26cd1eb8126b84c0bcf5db25b47d4a21ad9213cfe7c2d399e6df35"
+    },
+    {
+      "file": "apps/webui/src/offline-vault/drafts.ts",
+      "lines": 54,
+      "sha256": "40c613fba4c260f2799b3e4950acca5047b598ebbe21874f165801458aa2dd95"
+    },
+    {
+      "file": "apps/webui/src/offline-vault/loading.ts",
+      "lines": 107,
+      "sha256": "21806d951278b97227292c8048514bce446cf338a79820ed012083a14dcf0688"
+    },
+    {
+      "file": "apps/webui/src/offline-vault/mutation.ts",
+      "lines": 86,
+      "sha256": "f650a0f5d9f8dfe4c09cccd1ba93024c4e533d3db2f74d64e50ba2a5bd20aaac"
+    },
+    {
+      "file": "apps/webui/src/offline-vault/outbox.ts",
+      "lines": 83,
+      "sha256": "a77d6591598fba3240a63061a42170747abdc817d6d21abaa296cefacf909c98"
+    },
+    {
+      "file": "apps/webui/src/offline-vault/persistence.ts",
+      "lines": 211,
+      "sha256": "78bfa8b4051b9c60a0953012c574e36c7296a83b37a7903cedcdf9a677195f9b"
+    },
+    {
+      "file": "apps/webui/src/offline-vault/scope.ts",
+      "lines": 58,
+      "sha256": "b5e04492f4db16371782c60166587084c3a34ea77e2534d0a892aaf40fffdb3d"
+    },
+    {
+      "file": "apps/webui/src/offline-vault/shared.ts",
+      "lines": 402,
+      "sha256": "f80cb3f893c27b267f26520949267d1895b216151ef7f6cb8cf07c2e225906ec"
+    },
+    {
+      "file": "apps/webui/src/offline-vault/snapshots.ts",
+      "lines": 53,
+      "sha256": "70c4c1335e25cf1bbe9c7750b32b733ae65e6db9faaf8e0762c45a6f32740a27"
+    },
+    {
+      "file": "packages/server-core/src/missions/BrokeredMissionConnectorExecutor.ts",
+      "lines": 104,
+      "sha256": "add3803d3335fa0e677e98c11e9e3f88f5e70e4a7fa0ecf550f26f6546717be2"
+    },
+    {
+      "file": "packages/server-core/src/missions/brokered-connector/approval.ts",
+      "lines": 136,
+      "sha256": "7bbbf3db5b6fbe4433dc352a44d72d71ec716745d5b5aa481ac25fc310684f0a"
+    },
+    {
+      "file": "packages/server-core/src/missions/brokered-connector/completion.ts",
+      "lines": 90,
+      "sha256": "e4c8ee198760dc086ddfb42095191903a53dd4156072265de5101ad3a23abb9a"
+    },
+    {
+      "file": "packages/server-core/src/missions/brokered-connector/execution.ts",
+      "lines": 173,
+      "sha256": "835d221c6ed325ac206005bfafa70c568ddac210c341d0987a923d0167d677be"
+    },
+    {
+      "file": "packages/server-core/src/missions/brokered-connector/recovery.ts",
+      "lines": 87,
+      "sha256": "b7ecf0adef8364ef2b2cefe45087b8a30fe37e4b034e698eeb5636b1659b82b4"
+    },
+    {
+      "file": "packages/server-core/src/missions/brokered-connector/shared.ts",
+      "lines": 374,
+      "sha256": "fce7358a0b9d83bfd4079e978b62ca5524d503c816951f7e0cef58d75673fb3a"
+    },
+    {
+      "file": "packages/server-core/src/missions/brokered-connector/state-store.ts",
+      "lines": 199,
+      "sha256": "ac3b0d18e465cbec26663411d7e2ad59cf6d3cfd5a316d2b77f814efbd3d06f9"
+    },
+    {
+      "file": "packages/server-core/src/specialized-profiles/SpecializedProfileService.ts",
+      "lines": 99,
+      "sha256": "487b59098590087ac5902c0319f27f4e6eaa51d7b413e6816939cf1b2f136d9f"
+    },
+    {
+      "file": "packages/server-core/src/specialized-profiles/specialized-profile-service/analysis.ts",
+      "lines": 65,
+      "sha256": "9fc838067dde7cd511c1a516108700e4a877cf71558234d733dcb4db10e70e18"
+    },
+    {
+      "file": "packages/server-core/src/specialized-profiles/specialized-profile-service/authority.ts",
+      "lines": 210,
+      "sha256": "19d8711d380468542e75c2f84518631a468589c6dcda2e5fd8ab92b69a7da5c9"
+    },
+    {
+      "file": "packages/server-core/src/specialized-profiles/specialized-profile-service/campaign.ts",
+      "lines": 57,
+      "sha256": "a8f4cd0716f9dfa85b2ad2a0b515e4f06d7de34362acfc5ee34ecd5fba4548e2"
+    },
+    {
+      "file": "packages/server-core/src/specialized-profiles/specialized-profile-service/definition.ts",
+      "lines": 228,
+      "sha256": "5622411e6b489b9e09eaa84b9c85d35eceb254c4638d3ae73c14adb5aee9a185"
+    },
+    {
+      "file": "packages/server-core/src/specialized-profiles/specialized-profile-service/draft.ts",
+      "lines": 28,
+      "sha256": "719c5549a29fcca31a61855a087c3a0e6230ad9358454e1ba9d193164b8895ec"
+    },
+    {
+      "file": "packages/server-core/src/specialized-profiles/specialized-profile-service/evaluation.ts",
+      "lines": 349,
+      "sha256": "a73d2943886d5c68f7d308b9a57e3b4b1121ea8679451baac30da022c06555e3"
+    },
+    {
+      "file": "packages/server-core/src/specialized-profiles/specialized-profile-service/metrics.ts",
+      "lines": 115,
+      "sha256": "e111c3443ccd4eee19b33cb8e71e5cb8a6d2ff4f7a45d559c11104310033265a"
+    },
+    {
+      "file": "packages/server-core/src/specialized-profiles/specialized-profile-service/serialization.ts",
+      "lines": 17,
+      "sha256": "318b244703b096a5ac5f85c186830f6e2b56c685f664885c6e4e1ea5a93e04bb"
+    },
+    {
+      "file": "packages/server-core/src/specialized-profiles/specialized-profile-service/shared.ts",
+      "lines": 127,
+      "sha256": "d5585c1b67a7e02e63bb5b89e4ae29e10d60519cdb522e1a3ae5f2d84a09df57"
+    },
+    {
+      "file": "packages/server-core/src/specialized-profiles/specialized-profile-service/transition.ts",
+      "lines": 126,
+      "sha256": "16f4c01f7c44618d940cb2904e3b33d65e751bc61da462b3969f0c4e1efbcf00"
+    },
+    {
+      "file": "packages/shared/src/specialized-profiles/registry-store.ts",
+      "lines": 159,
+      "sha256": "3304f558ee23c6ae886fb5cd290b89e56df90df975176c868fa41d303fd9c108"
+    },
+    {
+      "file": "packages/shared/src/specialized-profiles/registry-store/document.ts",
+      "lines": 171,
+      "sha256": "badbef278e5c673618f9391443d1a573e7983fda8d346c9bf9114ba0c222255b"
+    },
+    {
+      "file": "packages/shared/src/specialized-profiles/registry-store/draft.ts",
+      "lines": 140,
+      "sha256": "08389b9f50d80dd18b01c79e15ec7c753c594bc23882af2f0bb41244ae43ea71"
+    },
+    {
+      "file": "packages/shared/src/specialized-profiles/registry-store/evaluation.ts",
+      "lines": 252,
+      "sha256": "780e3d562396b31072abe567a96a65489a14cb67bbcf7f4322be33a07de742ca"
+    },
+    {
+      "file": "packages/shared/src/specialized-profiles/registry-store/locking.ts",
+      "lines": 88,
+      "sha256": "1671cc14fa08471fadc7af9b901b6ecda80002ad03046488372d7748690c8c76"
+    },
+    {
+      "file": "packages/shared/src/specialized-profiles/registry-store/shared.ts",
+      "lines": 259,
+      "sha256": "c16c1f723aa4262d21e9c88239b1bb659c7a3ce9068f3e381fbab0c4e0a805c8"
+    },
+    {
+      "file": "packages/shared/src/specialized-profiles/registry-store/transition.ts",
+      "lines": 137,
+      "sha256": "431a93d7b0657dc687deaf4a750a5a353fa54c3ca9e0bee6c45697b91b45109c"
+    },
+    {
+      "file": "packages/shared/src/specialized-profiles/registry-store/writing.ts",
+      "lines": 172,
+      "sha256": "e7fc6599d9bcecc0bcd1e71007d03b0dd1cdc418048ac216111994cdaecaf767"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 17.46,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-services-class-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 24.4,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-services-class-compat-electron.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/webui/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 18.15,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-services-class-compat-webui.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/main/window-manager.ts",
+        "apps/electron/src/main/window-manager",
+        "apps/webui/src/offline-vault.ts",
+        "apps/webui/src/offline-vault",
+        "packages/server-core/src/missions/BrokeredMissionConnectorExecutor.ts",
+        "packages/server-core/src/missions/brokered-connector",
+        "packages/server-core/src/specialized-profiles/SpecializedProfileService.ts",
+        "packages/server-core/src/specialized-profiles/specialized-profile-service",
+        "packages/shared/src/specialized-profiles/registry-store.ts",
+        "packages/shared/src/specialized-profiles/registry-store",
+        "--format",
+        "json",
+        "--output-file",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-services-class-lint-report.json",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.45,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-services-class-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 16.31,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-services-class-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/server-core/src/missions",
+        "./packages/server-core/src/specialized-profiles"
+      ],
+      "exitCode": 0,
+      "seconds": 6.92,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-services-class-mission-tests.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./apps/webui"
+      ],
+      "exitCode": 0,
+      "seconds": 0.16,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-services-class-webui-tests.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./apps/electron/src/main/__tests__/robinswood-branding.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.03,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-services-class-branding-tests.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/main/__tests__/robinswood-branding.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 0.52,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-services-class-branding-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 138.61,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-services-class-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "classes": [
+      {
+        "source": "apps/electron/src/main/window-manager.ts",
+        "nativeMethodBodies": 1,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "nativeModuleBindings": 1,
+        "relocatedNativeDynamicImports": 1,
+        "protocolAliasesExpandedToNativeShapes": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [
+          "eventSink",
+          "setRpcEventSink",
+          "getRpcEventSink",
+          "pushToWindow"
+        ],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "apps/webui/src/offline-vault.ts",
+        "nativeMethodBodies": 26,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "nativeModuleBindings": 0,
+        "relocatedNativeDynamicImports": 0,
+        "protocolAliasesExpandedToNativeShapes": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/server-core/src/missions/BrokeredMissionConnectorExecutor.ts",
+        "nativeMethodBodies": 18,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "nativeModuleBindings": 0,
+        "relocatedNativeDynamicImports": 0,
+        "protocolAliasesExpandedToNativeShapes": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/server-core/src/specialized-profiles/SpecializedProfileService.ts",
+        "nativeMethodBodies": 10,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "nativeModuleBindings": 0,
+        "relocatedNativeDynamicImports": 0,
+        "protocolAliasesExpandedToNativeShapes": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/shared/src/specialized-profiles/registry-store.ts",
+        "nativeMethodBodies": 25,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "nativeModuleBindings": 0,
+        "relocatedNativeDynamicImports": 0,
+        "protocolAliasesExpandedToNativeShapes": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      }
+    ],
+    "runtimeImportCycles": 0,
+    "maximumFileLines": 403
+  },
+  "fullTestSummary": {
+    "pass": 10741,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "remaining-services-class-mission-tests": {
+      "pass": 138,
+      "fail": 0,
+      "skip": 0
+    },
+    "remaining-services-class-webui-tests": {
+      "pass": 60,
+      "fail": 0,
+      "skip": 0
+    },
+    "remaining-services-class-branding-tests": {
+      "pass": 16,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": null,
+  "sourceGate": {
+    "max-lines": 94,
+    "no-explicit-any": 322
+  },
+  "globalLint": {
+    "files": 3387,
+    "errors": 386,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 303,
+      "max-lines": 83,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [
+    {
+      "cause": "Contrôle statique d’icône attaché à l’ancien fichier des fenêtres.",
+      "fix": "Même assertion conservée sur window-manager/creation.ts.",
+      "originalResult": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-services-class-before-icon-probe-fix-result.json",
+      "originalRawLog": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remaining-services-class-before-icon-probe-fix.log"
+    }
+  ],
+  "limits": [
+    "94 fichiers trop longs et 322 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-25T19:40:20.218763+00:00"
+}

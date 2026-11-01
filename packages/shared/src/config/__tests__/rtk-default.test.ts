@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 import { describe, expect, it } from 'bun:test'
 import { mkdtempSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
@@ -58,6 +59,6 @@ describe('RTK default storage', () => {
     const configDir = setupConfigDir()
     runEval(configDir, 'setRtkEnabled(false)')
     expect(runEval(configDir, 'console.log(String(getRtkEnabled()))')).toBe('false')
-    expect(JSON.parse(readFileSync(join(configDir, 'config.json'), 'utf8')).rtkEnabled).toBe(false)
+    expect(parseJsonObject(readFileSync(join(configDir, 'config.json'), 'utf8'))["rtkEnabled"]).toBe(false)
   })
 })

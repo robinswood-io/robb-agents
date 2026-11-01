@@ -39,7 +39,7 @@ export type ConnectionGroup = [groupName: string, connections: LlmConnection[]]
 export function groupConnectionsByProvider<T extends LlmConnection>(
   connections: readonly T[],
 ): Array<[string, T[]]> {
-  const groups: Record<string, T[]> = {
+  const groups: Record<'Anthropic' | 'Local' | typeof ROBINSWOOD_BACKEND_NAME, T[]> = {
     'Anthropic': [],
     'Local': [],
     [ROBINSWOOD_BACKEND_NAME]: [],

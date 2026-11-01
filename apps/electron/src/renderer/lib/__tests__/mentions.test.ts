@@ -11,6 +11,9 @@
 import { describe, it, expect } from 'bun:test'
 import { parseMentions, findMentionMatches, removeMention, stripAllMentions, resolveSkillMentions, resolveSourceMentions, extractBadges } from '../mentions'
 
+type BadgeSkill = Parameters<typeof extractBadges>[1][number]
+type BadgeSource = Parameters<typeof extractBadges>[2][number]
+
 // ============================================================================
 // parseMentions - Skill Pattern Tests
 // ============================================================================
@@ -278,11 +281,11 @@ describe('resolveSourceMentions', () => {
 // ============================================================================
 
 describe('extractBadges - skill qualification with workspace slug', () => {
-  const mockSkills = [
+  const mockSkills = ([
     { slug: 'commit', metadata: { name: 'Commit' }, source: 'workspace' },
     { slug: 'review-pr', metadata: { name: 'Review PR' }, source: 'workspace' },
-  ] as any[]
-  const mockSources = [] as any[]
+  ] satisfies Array<Pick<BadgeSkill, 'slug' | 'source'> & { metadata: Pick<BadgeSkill['metadata'], 'name'> }>) as BadgeSkill[]
+  const mockSources = [] as BadgeSource[]
 
   it('qualifies skill rawText with workspace slug (not UUID)', () => {
     const badges = extractBadges('[skill:commit]', mockSkills, mockSources, 'my-project')
@@ -308,7 +311,7 @@ describe('extractBadges - skill qualification with workspace slug', () => {
   })
 
   it('does not modify source rawText', () => {
-    const sources = [{ config: { slug: 'linear', name: 'Linear' } }] as any[]
+    const sources = ([{ config: { slug: 'linear', name: 'Linear' } }] satisfies Array<{ config: Pick<BadgeSource['config'], 'slug' | 'name'> }>) as BadgeSource[]
     const badges = extractBadges('[source:linear]', [], sources, 'my-project')
     expect(badges).toHaveLength(1)
     expect(badges[0]!.rawText).toBe('[source:linear]')

@@ -65,10 +65,10 @@ function uniquePaths(paths: Array<string | undefined>): string[] {
 
 export function resolveMarkitdownScript(options: DocumentConversionOptions): string {
   const environment = options.environment ?? process.env
-  const resourcesBase = environment.CRAFT_RESOURCES_BASE
+  const resourcesBase = environment["CRAFT_RESOURCES_BASE"]
   const candidates = uniquePaths([
-    environment.CRAFT_SCRIPTS
-      ? join(environment.CRAFT_SCRIPTS, MARKITDOWN_SCRIPT)
+    environment["CRAFT_SCRIPTS"]
+      ? join(environment["CRAFT_SCRIPTS"], MARKITDOWN_SCRIPT)
       : undefined,
     resourcesBase
       ? join(resourcesBase, 'resources', 'scripts', MARKITDOWN_SCRIPT)
@@ -92,7 +92,7 @@ export async function convertDocumentToMarkdown(
   options: DocumentConversionOptions,
 ): Promise<string> {
   const environment = options.environment ?? process.env
-  const executable = environment.CRAFT_UV?.trim() || 'uv'
+  const executable = environment["CRAFT_UV"]?.trim() || 'uv'
   const scriptPath = resolveMarkitdownScript(options)
   const execute = options.execute ?? defaultExecutor
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS

@@ -1,0 +1,26 @@
+[
+  {
+    "file": "persistence-barriers.ts",
+    "unusedContextParameters": 2
+  },
+  {
+    "file": "session-catalog.ts",
+    "unusedContextParameters": 2
+  },
+  {
+    "file": "try-refresh-agent-runtime.ts",
+    "unusedContextParameters": 3
+  },
+  {
+    "file": "authentication.ts",
+    "change": "Retained the awaited source build; removed its unused result binding"
+  },
+  {
+    "file": "session-sources.ts",
+    "change": "Removed duplicate unused filter immediately after the identical filter that computes intendedSlugs"
+  },
+  {
+    "file": "is-managed-session-yolo.ts",
+    "change": "Removed unused inferred return type import"
+  }
+]

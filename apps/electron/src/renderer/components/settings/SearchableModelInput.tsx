@@ -25,19 +25,19 @@ export interface SearchableModelInputProps {
   /** Change handler */
   onChange: (value: string) => void
   /** Blur handler (for saving) */
-  onBlur?: () => void
+  onBlur?: (() => void) | undefined
   /** Placeholder text */
-  placeholder?: string
+  placeholder?: string | undefined
   /** Available models to choose from */
   models: ModelOption[]
   /** Whether models are currently being fetched */
-  isLoading?: boolean
+  isLoading?: boolean | undefined
   /** Handler to fetch models (called when dropdown button is clicked) */
-  onFetchModels?: () => void
+  onFetchModels?: (() => void) | undefined
   /** Whether fetch button should be disabled */
-  fetchDisabled?: boolean
+  fetchDisabled?: boolean | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
 }
 
 export function SearchableModelInput({

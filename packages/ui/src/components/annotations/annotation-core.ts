@@ -265,8 +265,8 @@ export function consolidateRectsByLine(rects: AnnotationOverlayRect[]): Annotati
       top,
       width: (last.left + last.width) - first.left,
       height,
-      pendingFollowUp: first.pendingFollowUp,
-      sentFollowUp: first.sentFollowUp,
+      ...(first.pendingFollowUp !== undefined ? { pendingFollowUp: first.pendingFollowUp } : {}),
+      ...(first.sentFollowUp !== undefined ? { sentFollowUp: first.sentFollowUp } : {}),
     })
   }
 

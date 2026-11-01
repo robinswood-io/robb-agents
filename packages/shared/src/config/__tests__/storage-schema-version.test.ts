@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 import { describe, expect, it } from 'bun:test';
 import { mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -44,7 +45,7 @@ describe('stored config schema envelope', () => {
     `);
     expect(result.exitCode, result.stderr.toString()).toBe(0);
     expect(JSON.parse(result.stdout.toString().trim())).toEqual({ version: 1, workspaces: 1 });
-    expect(JSON.parse(readFileSync(configPath, 'utf8')).schemaVersion).toBe(1);
+    expect(parseJsonObject(readFileSync(configPath, 'utf8'))["schemaVersion"]).toBe(1);
     const backups = readdirSync(configDir).filter((name) => /^config\.json\.bak-\d{4}-\d{2}-\d{2}$/.test(name));
     expect(backups).toHaveLength(1);
     expect(readFileSync(join(configDir, backups[0]!), 'utf8')).toBe(before);
@@ -88,6 +89,6 @@ describe('stored config schema envelope', () => {
       saveConfig(config);
     `);
     expect(result.exitCode, result.stderr.toString()).toBe(0);
-    expect(JSON.parse(readFileSync(configPath, 'utf8')).schemaVersion).toBe(1);
+    expect(parseJsonObject(readFileSync(configPath, 'utf8'))["schemaVersion"]).toBe(1);
   });
 });

@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import type { PlatformServices } from '../runtime/platform'
 import type {
   DispatchMode,
@@ -47,10 +48,10 @@ export function resolveImportedSessionAppProvenance(
   sourceHeader: Pick<SessionHeader, 'createdByApp' | 'lastUsedByApp'>,
   currentApp: SessionAppProvenance | undefined,
 ): Pick<SessionHeader, 'createdByApp' | 'lastUsedByApp'> {
-  return {
+  return omitUndefined({
     createdByApp: mode === 'fork'
       ? (currentApp ?? sourceHeader.createdByApp)
       : sourceHeader.createdByApp,
     lastUsedByApp: currentApp ?? sourceHeader.lastUsedByApp,
-  }
+  })
 }

@@ -1,3 +1,6 @@
+import { parseJsonObject } from '../../utils/json.ts';
+import type { StoredConfig } from '../storage/config-types.ts'
+import type { LlmConnection } from '../llm-connections.ts'
 import { describe, expect, it } from 'bun:test'
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
@@ -40,7 +43,7 @@ function setupWorkspaceConfigDir() {
   return { configDir, workspaceRoot, configPath: join(configDir, 'config.json') }
 }
 
-function writeRootConfig(configPath: string, workspaceRoot: string, llmConnections: any[]) {
+function writeRootConfig(configPath: string, workspaceRoot: string, llmConnections: readonly unknown[]) {
   writeFileSync(
     configPath,
     JSON.stringify(
@@ -86,13 +89,13 @@ function runMigration(configDir: string) {
   }
 }
 
-function readPiApiKeyConnection(configPath: string): any {
-  const migrated = JSON.parse(readFileSync(configPath, 'utf-8'))
-  return migrated.llmConnections.find((c: any) => c.slug === 'pi-api-key')
+function readPiApiKeyConnection(configPath: string): LlmConnection | undefined {
+  const migrated = JSON.parse(readFileSync(configPath, 'utf-8')) as StoredConfig
+  return migrated.llmConnections!.find((c) => c.slug === 'pi-api-key')
 }
 
-function getModelIds(connection: any): string[] {
-  return (connection.models ?? []).map((m: any) => typeof m === 'string' ? m : m.id)
+function getModelIds(connection: LlmConnection): string[] {
+  return (connection.models ?? []).map((m) => typeof m === 'string' ? m : m.id)
 }
 
 describe('startup migration (integration)', () => {
@@ -114,7 +117,7 @@ describe('startup migration (integration)', () => {
 
     runMigration(configDir)
 
-    const connection = readPiApiKeyConnection(configPath)
+    const connection = readPiApiKeyConnection(configPath)!
     expect(connection).toBeDefined()
     expect(connection.piAuthProvider).toBe('openai')
     expect(connection.authType).toBe('api_key')
@@ -141,7 +144,7 @@ describe('startup migration (integration)', () => {
 
     runMigration(configDir)
 
-    const connection = readPiApiKeyConnection(configPath)
+    const connection = readPiApiKeyConnection(configPath)!
     expect(connection).toBeDefined()
     expect(connection.modelSelectionMode).toBe('userDefined3Tier')
     expect(connection.models).toEqual(migratedModels)
@@ -167,13 +170,13 @@ describe('startup migration (integration)', () => {
 
     runMigration(configDir)
 
-    const connection = readPiApiKeyConnection(configPath)
+    const connection = readPiApiKeyConnection(configPath)!
     expect(connection).toBeDefined()
     expect(connection.modelSelectionMode).toBe('automaticallySyncedFromProvider')
     const modelIds = getModelIds(connection)
     expect(modelIds.length).toBeGreaterThan(1)
     expect(modelIds).toContain(PI_ANTHROPIC_OPUS_DEFAULT)
-    expect(modelIds).toContain(connection.defaultModel)
+    expect(modelIds).toContain(connection.defaultModel!)
   })
 
   it('preserves unavailable explicit model IDs for runtime validation instead of replacing them', () => {
@@ -195,7 +198,7 @@ describe('startup migration (integration)', () => {
 
     runMigration(configDir)
 
-    const connection = readPiApiKeyConnection(configPath)
+    const connection = readPiApiKeyConnection(configPath)!
     expect(connection).toBeDefined()
     expect(connection.modelSelectionMode).toBe('userDefined3Tier')
     expect(connection.models).toEqual(['pi/claude-opus-4-6', 'pi/not-real', 'pi/claude-haiku-4-5'])
@@ -221,7 +224,7 @@ describe('startup migration (integration)', () => {
 
     runMigration(configDir)
 
-    const connection = readPiApiKeyConnection(configPath)
+    const connection = readPiApiKeyConnection(configPath)!
     expect(connection).toBeDefined()
     expect(connection.modelSelectionMode).toBe('userDefined3Tier')
     const modelIds = getModelIds(connection)
@@ -256,7 +259,7 @@ describe('startup migration (integration)', () => {
 
     runMigration(configDir)
 
-    const connection = readPiApiKeyConnection(configPath)
+    const connection = readPiApiKeyConnection(configPath)!
     expect(connection).toBeDefined()
     expect(connection.modelSelectionMode).toBe('userDefined3Tier')
     const modelIds = getModelIds(connection)
@@ -265,17 +268,11 @@ describe('startup migration (integration)', () => {
   })
 })
 
-function readConfigJson(configPath: string): any {
-  return JSON.parse(readFileSync(configPath, 'utf-8'))
+function readConfigJson(configPath: string): StoredConfig {
+  return JSON.parse(readFileSync(configPath, 'utf-8')) as StoredConfig
 }
 
-function findConnection(configPath: string, slug: string): any {
-  return readConfigJson(configPath).llmConnections.find((c: any) => c.slug === slug)
-}
 
-function modelIdsOf(connection: any): string[] {
-  return (connection?.models ?? []).map((m: any) => typeof m === 'string' ? m : m.id)
-}
 
 describe('preserving existing explicit selections at startup', () => {
   it('preserves an orphaned selected connection and rejects backend creation instead of using another one', () => {
@@ -304,8 +301,8 @@ describe('preserving existing explicit selections at startup', () => {
     it(`preserves connection and workspace model ${selected}`, () => {
       const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
       const workspacePath = join(workspaceRoot, 'config.json')
-      const workspace = JSON.parse(readFileSync(workspacePath, 'utf-8'))
-      workspace.defaults = { model: selected, defaultLlmConnection: 'retired-explicit-connection' }
+      const workspace = parseJsonObject(readFileSync(workspacePath, 'utf-8'))
+      workspace["defaults"] = { model: selected, defaultLlmConnection: 'retired-explicit-connection' }
       writeFileSync(workspacePath, JSON.stringify(workspace))
       writeRootConfig(configPath, workspaceRoot, [{
         slug: 'pi-api-key', name: 'Explicit selection', providerType: 'anthropic',
@@ -313,9 +310,9 @@ describe('preserving existing explicit selections at startup', () => {
       }])
       runMigration(configDir)
       runMigration(configDir)
-      expect(readPiApiKeyConnection(configPath).defaultModel).toBe(selected)
-      expect(getModelIds(readPiApiKeyConnection(configPath))).toEqual([selected])
-      expect(JSON.parse(readFileSync(workspacePath, 'utf-8')).defaults)
+      expect(readPiApiKeyConnection(configPath)!.defaultModel).toBe(selected)
+      expect(getModelIds(readPiApiKeyConnection(configPath)!)).toEqual([selected])
+      expect(parseJsonObject(readFileSync(workspacePath, 'utf-8'))["defaults"])
         .toEqual({ model: selected, defaultLlmConnection: 'retired-explicit-connection' })
     })
   }
@@ -327,8 +324,8 @@ describe('preserving existing explicit selections at startup', () => {
       authType: 'api_key', createdAt: Date.now(),
     }])
     runMigration(configDir)
-    const connection = readPiApiKeyConnection(configPath)
+    const connection = readPiApiKeyConnection(configPath)!
     expect(connection.defaultModel).toBeTruthy()
-    expect(getModelIds(connection)).toContain(connection.defaultModel)
+    expect(getModelIds(connection)).toContain(connection.defaultModel!)
   })
 })

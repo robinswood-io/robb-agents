@@ -1,0 +1,1350 @@
+{
+  "status": "politiques extraites et testées ; gestionnaire encore trop long ; non installé",
+  "changes": [
+    "47 politiques sans dépendance à this extraites en sept modules de 344 lignes au plus",
+    "Appels directs et typés ; aucun wrapper de compatibilité ni coordinateur ajouté",
+    "106 méthodes publiques conservées ; 518 membres restants comparés indépendamment ; champs et implémentations conservés",
+    "Quatre suites adaptées aux fonctions pures ; fixture de routage construite avec createManagedSession complet",
+    "Trois éléments inutilisés retirés des tests modifiés"
+  ],
+  "move": {
+    "methods": [
+      {
+        "name": "startCompactionTelemetry",
+        "exported": "startCompactionTelemetry",
+        "lines": 16
+      },
+      {
+        "name": "getAdminRememberKey",
+        "exported": "getAdminRememberKey",
+        "lines": 3
+      },
+      {
+        "name": "refreshInheritedWorkspaceSources",
+        "exported": "refreshInheritedWorkspaceSources",
+        "lines": 9
+      },
+      {
+        "name": "hasUnscheduledQueuedUserInput",
+        "exported": "hasUnscheduledQueuedUserInput",
+        "lines": 7
+      },
+      {
+        "name": "hasPendingLocalUserInput",
+        "exported": "hasPendingLocalUserInput",
+        "lines": 4
+      },
+      {
+        "name": "getQueuedPendingUserInputResponse",
+        "exported": "getQueuedPendingUserInputResponse",
+        "lines": 28
+      },
+      {
+        "name": "queuedCostLimitContinuationForAgentDelivery",
+        "exported": "queuedCostLimitContinuationForAgentDelivery",
+        "lines": 32
+      },
+      {
+        "name": "providerDispatchesAwaitingColdReconciliation",
+        "exported": "providerDispatchesAwaitingColdReconciliation",
+        "lines": 7
+      },
+      {
+        "name": "exactProviderDispatchAcceptanceUnknown",
+        "exported": "exactProviderDispatchAcceptanceUnknown",
+        "lines": 20
+      },
+      {
+        "name": "assertRetryTurnAnchor",
+        "exported": "assertRetryTurnAnchor",
+        "lines": 37
+      },
+      {
+        "name": "boundObjectiveForCleanHandoff",
+        "exported": "boundObjectiveForCleanHandoff",
+        "lines": 35
+      },
+      {
+        "name": "queuedDirectHumanContinuationIndex",
+        "exported": "queuedDirectHumanContinuationIndex",
+        "lines": 13
+      },
+      {
+        "name": "queuedDirectHumanContinuationIndexForId",
+        "exported": "queuedDirectHumanContinuationIndexForId",
+        "lines": 12
+      },
+      {
+        "name": "nextRecoveryDispatch",
+        "exported": "nextRecoveryDispatch",
+        "lines": 32
+      },
+      {
+        "name": "validAllocatedRecoveryDispatch",
+        "exported": "validAllocatedRecoveryDispatch",
+        "lines": 55
+      },
+      {
+        "name": "classifyAutomaticRecoveryWorkForSession",
+        "exported": "classifyAutomaticRecoveryWorkForSession",
+        "lines": 10
+      },
+      {
+        "name": "cleanSetupRetryDelayMs",
+        "exported": "cleanSetupRetryDelayMs",
+        "lines": 7
+      },
+      {
+        "name": "cleanRetrySetupFailureSignal",
+        "exported": "cleanRetrySetupFailureSignal",
+        "lines": 83
+      },
+      {
+        "name": "isImmutableAutomaticRecoveryBlock",
+        "exported": "isImmutableAutomaticRecoveryBlock",
+        "lines": 6
+      },
+      {
+        "name": "delegatedTerminalResultDeliveryId",
+        "exported": "delegatedTerminalResultDeliveryId",
+        "lines": 13
+      },
+      {
+        "name": "delegatedTerminalResultContent",
+        "exported": "delegatedTerminalResultContent",
+        "lines": 28
+      },
+      {
+        "name": "isDurableProviderActivityOrHumanSupersession",
+        "exported": "isDurableProviderActivityOrHumanSupersession",
+        "lines": 18
+      },
+      {
+        "name": "enqueueRecoveredMessageInTranscriptOrder",
+        "exported": "enqueueRecoveredMessageInTranscriptOrder",
+        "lines": 20
+      },
+      {
+        "name": "persistenceRootFor",
+        "exported": "persistenceRootFor",
+        "lines": 3
+      },
+      {
+        "name": "isExactQueuedSourceActivation",
+        "exported": "isExactQueuedSourceActivation",
+        "lines": 18
+      },
+      {
+        "name": "cancelSourceActivationPending",
+        "exported": "cancelSourceActivationPending",
+        "lines": 15
+      },
+      {
+        "name": "commitSourceActivationPending",
+        "exported": "commitSourceActivationPending",
+        "lines": 14
+      },
+      {
+        "name": "releaseSourceActivationClaim",
+        "exported": "releaseSourceActivationClaim",
+        "lines": 10
+      },
+      {
+        "name": "hasAuthenticatedObjectiveRoot",
+        "exported": "hasAuthenticatedObjectiveRoot",
+        "lines": 23
+      },
+      {
+        "name": "projectLegacyObjectiveForUserTransition",
+        "exported": "projectLegacyObjectiveForUserTransition",
+        "lines": 10
+      },
+      {
+        "name": "repairLegacyContextualObjectiveAuthority",
+        "exported": "repairLegacyContextualObjectiveAuthority",
+        "lines": 232
+      },
+      {
+        "name": "isClosedColdResumeStatus",
+        "exported": "isClosedColdResumeStatus",
+        "lines": 10
+      },
+      {
+        "name": "isDirectHumanContinuation",
+        "exported": "isDirectHumanContinuation",
+        "lines": 14
+      },
+      {
+        "name": "getAuthRequestDescription",
+        "exported": "getAuthRequestDescription",
+        "lines": 14
+      },
+      {
+        "name": "formatAuthResultMessage",
+        "exported": "formatAuthResultMessage",
+        "lines": 12
+      },
+      {
+        "name": "discoverMissionToolCatalog",
+        "exported": "discoverMissionToolCatalog",
+        "lines": 54
+      },
+      {
+        "name": "loadSpecializedMissionSkillPackages",
+        "exported": "loadSpecializedMissionSkillPackages",
+        "lines": 16
+      },
+      {
+        "name": "assertSpecializedMissionSourceSelection",
+        "exported": "assertSpecializedMissionSourceSelection",
+        "lines": 15
+      },
+      {
+        "name": "captureSpecializedMissionSourceSnapshot",
+        "exported": "captureSpecializedMissionSourceSnapshot",
+        "lines": 22
+      },
+      {
+        "name": "assertMissionDispatchWorkingDirectory",
+        "exported": "assertMissionDispatchWorkingDirectory",
+        "lines": 33
+      },
+      {
+        "name": "assertOrdinaryMissionRouteProjection",
+        "exported": "assertOrdinaryMissionRouteProjection",
+        "lines": 20
+      },
+      {
+        "name": "ordinaryMissionSourceBuildOptions",
+        "exported": "ordinaryMissionSourceBuildOptions",
+        "lines": 6
+      },
+      {
+        "name": "authenticatedTaskFor",
+        "exported": "authenticatedTaskFor",
+        "lines": 18
+      },
+      {
+        "name": "reconcileCompletedChatRetention",
+        "exported": "reconcileCompletedChatRetention",
+        "lines": 12
+      },
+      {
+        "name": "isLegacyHostObjectiveContractEnabled",
+        "exported": "isLegacyHostObjectiveContractEnabled",
+        "lines": 3
+      },
+      {
+        "name": "rehydrateObjectiveEvidence",
+        "exported": "rehydrateObjectiveEvidence",
+        "lines": 71
+      },
+      {
+        "name": "resolveAutomationMentions",
+        "exported": "resolveAutomationMentions",
+        "lines": 18
+      }
+    ],
+    "excluded": [
+      "setMetadataWriteGuard",
+      "assertSpecializedMissionCapabilities",
+      "loadAgentContextWindowPreference",
+      "applyExternalActionPolicyToRuntime",
+      "hasConsumedCleanRecoveryDispatch",
+      "hasTerminalObjectiveState",
+      "hasQueuedUserInput",
+      "hasValidationExhaustionMarker",
+      "isCleanSetupRetryBlocked",
+      "providerDispatchAcceptanceUnknown",
+      "boundCleanUserInputRequest",
+      "hasRunningBackgroundTasks",
+      "getLastFinalAssistantMessageId",
+      "isAutonomousMessage"
+    ],
+    "tests": [
+      {
+        "file": "packages/server-core/src/sessions/mission-planner-routing-provenance.test.ts",
+        "methods": [
+          "authenticatedTaskFor"
+        ]
+      },
+      {
+        "file": "packages/server-core/src/sessions/restart-recovery.test.ts",
+        "methods": [
+          "assertRetryTurnAnchor",
+          "getQueuedPendingUserInputResponse",
+          "rehydrateObjectiveEvidence",
+          "delegatedTerminalResultContent",
+          "delegatedTerminalResultDeliveryId"
+        ]
+      },
+      {
+        "file": "packages/server-core/src/sessions/session-objective-outcome-integration.test.ts",
+        "methods": [
+          "rehydrateObjectiveEvidence",
+          "classifyAutomaticRecoveryWorkForSession"
+        ]
+      },
+      {
+        "file": "packages/server-core/src/sessions/synthetic-objective-authority.test.ts",
+        "methods": [
+          "projectLegacyObjectiveForUserTransition"
+        ]
+      }
+    ]
+  },
+  "implementationProof": {
+    "valid": true,
+    "movedPolicies": 47,
+    "remainingMembers": 518,
+    "publicMethodsBefore": 106,
+    "publicMethodsAfter": 106,
+    "beforeClassHash": "c8690b0d4b697472cf273809a81aabebf1374d21491d93ecde25c060dde636c6",
+    "afterClassHash": "7e9fb222fa62437aaadd3349edfb4b2e51be210f3d91f209998e817913c527ae",
+    "requiredClassImports": [
+      "AGENT_FLAGS",
+      "AGENT_RUNTIME_ACTIVITY",
+      "AUTHENTICATED_USER_AUTHORIZATION_MARKER",
+      "AUTONOMOUS_SESSION_LIMITS",
+      "AbortReason",
+      "ActiveDelegationDeduplicator",
+      "ActiveSessionInfo",
+      "ActiveSessionObjective",
+      "AgentEvent",
+      "AgentEventUsage",
+      "AgentInstance",
+      "AgentMessageType",
+      "AuthRequest",
+      "AuthResult",
+      "AutomaticRecoverySupersededError",
+      "AutomaticTurnRecoveryCause",
+      "AutomationSystem",
+      "AutonomousAdmissionDeferredError",
+      "AutonomyEvent",
+      "AutonomyFallbackIntent",
+      "BrowserMutationUrlPolicy",
+      "BrowserPaneFns",
+      "CLEAN_RETRY_CONDITIONAL_SETUP_FAILURE_CLASSES",
+      "CLEAN_RETRY_NEVER_SETUP_FAILURE_CLASSES",
+      "CLEAN_RETRY_SETUP_FAILURE_CLASSES",
+      "CLIENT_BROWSER_INVOKE",
+      "CONTEXT_LIMIT_NEXT_STEP_QUESTIONS",
+      "COST_CONTROL_COMPACTION_INSTRUCTIONS",
+      "COST_LIMIT_NEXT_STEP_QUESTIONS",
+      "CleanRecoveryDispatchAuthenticationError",
+      "CodedError",
+      "CollectionCacheScope",
+      "CompletedChatArchiveError",
+      "ConfigWatcher",
+      "ConfigWatcherCallbacks",
+      "CostControlledTurnContext",
+      "CostControlledTurnKind",
+      "CreateSessionOptions",
+      "CredentialAuthRequest",
+      "DEFAULT_AUTOMATIC_TURN_RECOVERY_LEASE_MS",
+      "DEFAULT_TOKEN_USAGE",
+      "DELEGATED_TERMINAL_RESULT_PROTOCOL",
+      "DELEGATION_LIMITS",
+      "DELTA_BATCH_INTERVAL_MS",
+      "DelegatedDispatchSupersededError",
+      "DelegationBudget",
+      "DispatchMode",
+      "EventSink",
+      "ExecutePromptAutomationInput",
+      "ExecutionProofCollector",
+      "ExecutionTelemetrySink",
+      "ExternalActionAuthorizationCategory",
+      "ExternalActionPolicy",
+      "FileAttachment",
+      "GenerationTelemetryLifecycle",
+      "GenerationTerminalName",
+      "HOST_PARENT_REVIEW_INSTRUCTION",
+      "IBrowserPaneManager",
+      "ImportRemoteSessionTransferResult",
+      "InitGate",
+      "InternalContinuationSupersededError",
+      "JsonSchemaType",
+      "LEGACY_ALLOCATED_CONTEXT_LIMIT_PROMPT_WINDOW_MS",
+      "LEGACY_AUTOMATIC_RECOVERY_NEXT_STEP_QUESTION",
+      "LlmConnection",
+      "LlmCredentialBinding",
+      "LoadedSource",
+      "LocalJsonlTelemetrySink",
+      "MAX_ADMIN_REMEMBER_MINUTES",
+      "MAX_ANNOTATIONS_PER_MESSAGE",
+      "MAX_ANNOTATION_JSON_BYTES",
+      "MAX_AUTOMATIC_TURN_RECOVERY_ATTEMPTS",
+      "MAX_CLEAN_RETRY_CONDITIONAL_SETUP_FAILURES",
+      "MAX_CLEAN_RETRY_SAFE_SETUP_FAILURES",
+      "MAX_CLEAN_RETRY_SETUP_BACKOFF_MS",
+      "MAX_OBJECTIVE_CONTINUATION_ATTEMPTS",
+      "METADATA_WRITE_GUARD_MS",
+      "MIN_SESSION_RUNTIME_IDLE_TIMEOUT_MS",
+      "MODEL_REGISTRY",
+      "ManagedSession",
+      "McpClientPool",
+      "McpPoolServer",
+      "Message",
+      "MissionCapabilityLock",
+      "MissionOrdinaryRouteLock",
+      "MissionPendingTurnRecoveryClaim",
+      "MissionPendingTurnRecoveryClaimDecision",
+      "MissionPendingTurnRecoveryClaimRecord",
+      "MissionSourceToolCatalogCache",
+      "MissionSourceToolCatalogDecision",
+      "MissionToolPreflightDecision",
+      "MissionToolPreflightInput",
+      "OtlpHttpTelemetrySink",
+      "PI_SDK_MESSAGE_ID_CACHE_LIMIT",
+      "PLAN_APPROVAL_MESSAGE",
+      "PendingDelta",
+      "PendingTurnRecovery",
+      "PermissionMode",
+      "PermissionRequest",
+      "PrivilegedExecutionBroker",
+      "ProviderDispatchRejectedError",
+      "RECOVERY_BUDGET_UNAVAILABLE_MESSAGE",
+      "RPC_CHANNELS",
+      "RemoteBrowserPaneManager",
+      "RemoteSessionTransferPayload",
+      "RetryTurnAlreadyRunningError",
+      "RobbExecutionTelemetryEvent",
+      "RpcServer",
+      "RunningBackgroundTask",
+      "SESSION_RUNTIME_DISPOSE_TIMEOUT_MS",
+      "SESSION_RUNTIME_EVICTION_CONCURRENCY",
+      "SESSION_RUNTIME_SWEEP_INTERVAL_MS",
+      "SESSION_TOOL_REGISTRY",
+      "SOURCE_ACTIVATION_DEDUP_WINDOW_MS",
+      "SOURCE_ACTIVATION_MAX_DISPATCH_ATTEMPTS",
+      "SOURCE_ACTIVATION_PROTOCOL_SUFFIX",
+      "SOURCE_ACTIVATION_TOMBSTONE_LIMIT",
+      "SOURCE_ACTIVATION_TOMBSTONE_TTL_MS",
+      "SendMessageOptions",
+      "Session",
+      "SessionBundle",
+      "SessionCompletionEvent",
+      "SessionDelegation",
+      "SessionEvent",
+      "SessionHeader",
+      "SessionLifecycleStopReason",
+      "SessionPersistenceRootIdentity",
+      "SessionPersistenceRootIdentityError",
+      "SessionProcessingStatus",
+      "SessionStatus",
+      "SourceActivationOrigin",
+      "SourceActivationSupersededError",
+      "SpawnSessionResult",
+      "StoredAttachment",
+      "StoredMessage",
+      "StoredSession",
+      "SummarizeCallback",
+      "TERMINAL_RECONCILIATION_CAPABILITY_FIELD",
+      "TerminalReconciliationPolicy",
+      "ThinkingLevel",
+      "TokenUsage",
+      "ToolAdmissionRecoveryError",
+      "ToolDisplayMeta",
+      "UnreadSummary",
+      "UserInputQuestion",
+      "UserInputRequest",
+      "UserInputResponse",
+      "UserInputResponseResult",
+      "Workspace",
+      "WorkspaceInfo",
+      "YOLO_AUTONOMY_GUIDANCE",
+      "_platform",
+      "abandonCompletedChatArchive",
+      "acknowledgeDurableDelivery",
+      "agentDeliveryId",
+      "appendAutomationHistoryEntry",
+      "appendCoalescedInternalMessage",
+      "applyRoutingCostMetaToLatestAssistantMessage",
+      "archiveCompletedChatDirectory",
+      "assertContextualGmailBrowserMutationTargetAllowed",
+      "assertCurrentDelegationObjective",
+      "assertMissionDispatchWorkingDirectory",
+      "assertOrdinaryMissionRouteProjection",
+      "assertRetryTurnAnchor",
+      "assertSessionPersistenceRootIdentity",
+      "assertSpecializedMissionSourceSelection",
+      "assertValidOrdinaryMissionRouteLock",
+      "assessContextCompactionResult",
+      "authenticatedTaskFor",
+      "authenticatedUserInputAnswerAuthoritySegments",
+      "basename",
+      "bindBusinessProcedure",
+      "boundObjectiveForCleanHandoff",
+      "buildAutomaticTurnRecoveryPrompt",
+      "buildAutonomyFallbackPrompt",
+      "buildBackendHostRuntimeContext",
+      "buildBackendRuntimeSignature",
+      "buildCleanRecoveryContinuationPrompt",
+      "buildDelegatedReviewPrompt",
+      "buildExtractiveTransferSummary",
+      "buildObjectiveContractPrompt",
+      "buildObjectiveScopePrompt",
+      "buildObjectiveValidationEvidenceContext",
+      "buildRestartRequiredSignature",
+      "buildRoutingCostMeta",
+      "buildServersFromSources",
+      "buildSessionWaitDiagnostic",
+      "businessProcedureCoverage",
+      "canInjectCompletedChatContext",
+      "canSteerTextPayload",
+      "cancelSourceActivationPending",
+      "canonicalMissionSourceSlugs",
+      "canonicalTerminalReconciliationToolInput",
+      "canonicalUserInputAnswerContents",
+      "captureCompletedChatMemory",
+      "captureProjectTerminalLearning",
+      "captureProjectUserCorrection",
+      "captureProviderContextBaseline",
+      "captureSessionPersistenceRootIdentity",
+      "captureSessionPersistenceRootPath",
+      "captureSpecializedMissionSourceSnapshot",
+      "claimAutoRetryPending",
+      "classifyAgentFailure",
+      "classifyAutomaticRecoveryWorkForSession",
+      "classifyContextCompactionFailure",
+      "classifyLatestTurnTerminalState",
+      "classifyObjectiveTerminalState",
+      "classifyToolEffect",
+      "cleanRetrySetupFailureSignal",
+      "cleanSetupRetryDelayMs",
+      "cleanupSourceRuntimeArtifacts",
+      "clearObjectiveEvidenceGate",
+      "clearStoredPendingPlanExecution",
+      "collectObjectiveAcceptanceObservations",
+      "collectionSummaryCache",
+      "commitRevocableSourceActivationRuntime",
+      "commitSourceActivationPending",
+      "completedChatContext",
+      "consumeContextProviderBaselineAdmission",
+      "consumeSourceActivationRestart",
+      "copyPiTurnAnchorsForBranch",
+      "createAutomaticRecoveryToolDeadline",
+      "createAutonomyFallbackIntent",
+      "createBackendFromConnection",
+      "createBackendFromResolvedContext",
+      "createCleanRecoveryContinuationHandoff",
+      "createHash",
+      "createImportedSessionIsolation",
+      "createManagedSession",
+      "createPendingTurnRecovery",
+      "createPromptHistoryEntry",
+      "createStoredSession",
+      "decideAutonomyRecovery",
+      "decideContextProviderAdmission",
+      "decideCostProviderAdmission",
+      "delegatedObjectiveRoleForSession",
+      "delegatedTerminalResultContent",
+      "delegatedTerminalResultDeliveryId",
+      "deleteStoredSession",
+      "deleteStoredSessionAtomically",
+      "demoteLatestCheckpointAssistant",
+      "deriveHostDelegatedReviewSingleTarget",
+      "deriveTerminalReconciliationInvocationCapability",
+      "destroyContextualGmailSessionState",
+      "discoverMissionToolCatalog",
+      "effectiveOrdinaryMissionSourceSlugs",
+      "enqueueRecoveredMessageInTranscriptOrder",
+      "ensureLabelsExist",
+      "ensureSessionDir",
+      "ensureTaskItemLabel",
+      "evaluateAutoLabels",
+      "evaluateReviewDelegation",
+      "exactProviderDispatchAcceptanceUnknown",
+      "exhaustPendingTurnRecovery",
+      "existsSync",
+      "explicitRetryProgressFingerprint",
+      "extractAuthenticatedTaskText",
+      "extractLabelId",
+      "extractObjectiveOutcome",
+      "filterAttachmentsForModelInput",
+      "finalizeCompletedChatArchive",
+      "findLabelById",
+      "findObjectiveText",
+      "findTaskItemLabelId",
+      "formatAuthResultMessage",
+      "formatLabelEntry",
+      "formatLegacyAcceptanceScalarDiagnostic",
+      "formatLegacyGscSiteIdentity",
+      "formatPlaybookPrompt",
+      "freezeRuntimeSnapshot",
+      "generateConversationSummary",
+      "generateMessageId",
+      "generateSessionId",
+      "getAdminRememberKey",
+      "getAppPermissionsDir",
+      "getAuthRequestDescription",
+      "getBrowserToolEnabled",
+      "getBuiltinPlaybook",
+      "getClaudeTurnAnchor",
+      "getCredentialManager",
+      "getDefaultLlmConnection",
+      "getDefaultThinkingLevel",
+      "getDelegatedReviewRequest",
+      "getGitBashPath",
+      "getHeaderMetadataSignature",
+      "getLastApiError",
+      "getLlmConnection",
+      "getMiniModel",
+      "getObjectiveEvidenceCompletionGap",
+      "getPermissionModeDiagnostics",
+      "getPersistedUiLanguage",
+      "getPiTurnAnchor",
+      "getPlatformSessionAppProvenance",
+      "getProjectLearningPolicy",
+      "getQueuedPendingUserInputResponse",
+      "getSessionFilePath",
+      "getSessionStoragePath",
+      "getSourcePermissionsPath",
+      "getSourcesBySlugs",
+      "getStoredPendingPlanExecution",
+      "getValidClaudeOAuthToken",
+      "getWorkspaceAllowedDirs",
+      "getWorkspaceByNameOrId",
+      "getWorkspacePermissionsPath",
+      "getWorkspaces",
+      "grantExplicitRetryAllowance",
+      "handleProjectLearning",
+      "hasAuthenticatedObjectiveRoot",
+      "hasAvailableExplicitRetryAllowance",
+      "hasCurrentObjectiveIndependentReviewPass",
+      "hasImmutableMissionRoute",
+      "hasMatchingExternalActionAuthorization",
+      "hasMissionDispatchTriplet",
+      "hasObjectiveContinuationProvenance",
+      "hasObjectiveExecutionEvidence",
+      "hasPendingLocalUserInput",
+      "hasProtectedChatWorktree",
+      "hasUnscheduledQueuedUserInput",
+      "hydratePreviousPermissionMode",
+      "i18n",
+      "incompletePlanSteps",
+      "inspectAutonomousLineage",
+      "invalidateContextFileCache",
+      "invalidateSkillsCache",
+      "isAutonomyBrowserFallbackPrompt",
+      "isAutonomyStructuredFallbackPrompt",
+      "isBrowserFallbackEligibleTool",
+      "isClaudeMessageUuid",
+      "isClosedColdResumeStatus",
+      "isClosedSessionStatus",
+      "isCompletedChatDue",
+      "isContextualGmailBrowserMutationGuardEnabled",
+      "isCostLimitContinuationAnswer",
+      "isDeepStrictEqual",
+      "isDirectHumanContinuation",
+      "isDurableProviderActivityOrHumanSupersession",
+      "isExactContextLimitNextStepQuestion",
+      "isExactQueuedSourceActivation",
+      "isExplicitReadOnlyClosureRequest",
+      "isExplicitReadOnlyReview",
+      "isHardLimitFollowUpContextCompaction",
+      "isHardLimitRecoveryContextCompaction",
+      "isHostSyntheticObjectiveMessage",
+      "isHostSyntheticObjectiveText",
+      "isImmutableAutomaticRecoveryBlock",
+      "isLegacyHostObjectiveContractEnabled",
+      "isMissionRuntimeOwnedRecovery",
+      "isObjectiveShellEvidenceCommand",
+      "isParentTaskTool",
+      "isProvablyReadOnlyShellCommand",
+      "isSessionDescendant",
+      "isSourceActivationOriginCurrent",
+      "isSourceUsable",
+      "isTerminalReviewSession",
+      "isToolResultError",
+      "isValidWorkingDirectory",
+      "isWorkspaceAutomaticToolFallbackEnabled",
+      "isYoloMode",
+      "join",
+      "latestFinalAssistantId",
+      "legacyUserInputAnswerMessageContent",
+      "listLabels",
+      "listStoredSessions",
+      "loadAllSources",
+      "loadCollectionCacheSources",
+      "loadConfigDefaults",
+      "loadLabelConfig",
+      "loadProjectById",
+      "loadProjectMemoryV2Context",
+      "loadSkillBySlug",
+      "loadSpecializedMissionSkillPackages",
+      "loadStatusConfig",
+      "loadStoredSession",
+      "loadWorkspaceConfig",
+      "loadWorkspacePlaybook",
+      "loadWorkspaceSources",
+      "makeActiveDelegationKey",
+      "managedToSession",
+      "markStoredCompactionComplete",
+      "markStoredPendingPlanExecutionDispatched",
+      "mergeSessionScopedToolCallbacks",
+      "messageToStored",
+      "messagesForPendingRecovery",
+      "migrateLegacyCredentials",
+      "migrateLegacyLlmConnectionsConfig",
+      "migrateOrphanedDefaultConnections",
+      "missionMcpInputValidator",
+      "mkdir",
+      "monetaryBudgetCostUsd",
+      "nextRecoveryDispatch",
+      "normalizePath",
+      "normalizeRecoveryValidationGapsForProgress",
+      "normalizeThinkingLevel",
+      "normalizeUserInputQuestions",
+      "normalizeUserInputResponse",
+      "objectiveCostUsd",
+      "objectiveEvidenceContractSegments",
+      "objectiveRequiresExecutionEvidence",
+      "objectiveReviewBinding",
+      "orderAutonomousRestartFrontier",
+      "ordinaryMissionConnectionIdentity",
+      "ordinaryMissionRouteConfigIdentity",
+      "ordinaryMissionSourceBindings",
+      "ordinaryMissionSourceBuildOptions",
+      "ordinaryMissionSourceIdentityFromBindings",
+      "parseAutonomyFallbackIntent",
+      "parseCompactCommand",
+      "parseCompactionInputTokens",
+      "parseSpawnSessionInput",
+      "pendingPermissionCanReplay",
+      "pendingPermissionWatchdogRemainingMs",
+      "pendingRecoveryRequiresContinuation",
+      "perf",
+      "permissionModeAfterPlanApproval",
+      "persistAgentDeliveryAttachments",
+      "persistenceRootFor",
+      "pickSessionFields",
+      "planAutomaticTurnRecovery",
+      "prepareCompletedChatArchive",
+      "prependHostDelegatedReviewerScope",
+      "projectLegacyObjectiveCompletionRequirements",
+      "projectLegacyObjectiveForUserTransition",
+      "projectObjectiveAcceptanceCriteria",
+      "providerAlwaysAllowForExternalAction",
+      "providerDispatchesAwaitingColdReconciliation",
+      "pruneAutoRetryTombstones",
+      "pruneExternalActionAuthorizations",
+      "queuedCostLimitContinuationForAgentDelivery",
+      "queuedDirectHumanContinuationIndex",
+      "queuedDirectHumanContinuationIndexForId",
+      "randomUUID",
+      "readCompletedChatMemory",
+      "readFile",
+      "readFileAttachment",
+      "readFileSync",
+      "reconcileCompletedChatRetention",
+      "reconstructLegacyTurnRecoveryBudget",
+      "reconstructObjectiveForBranch",
+      "recordObjectiveEvidence",
+      "recoveredInternalMessageOptions",
+      "redactSecretLikeMaterial",
+      "refreshExpiredCredentials",
+      "refreshInheritedWorkspaceSources",
+      "registerObjectiveAcceptanceCriteria",
+      "rehydrateObjectiveEvidence",
+      "releaseBrowserOwnershipOnForcedStop",
+      "releaseSourceActivationClaim",
+      "rememberAutoRetryTombstone",
+      "rememberExternalActionAuthorization",
+      "reopenCompletedChat",
+      "repairLegacyContextualObjectiveAuthority",
+      "repairPersistedFalseCompletion",
+      "requirePermissionMode",
+      "requiresStructuredObjectiveOutcome",
+      "resetManagedAnthropicAuthEnvVars",
+      "resetSummarizationClient",
+      "resizeImageForAPI",
+      "resolveAgentCostBudgetState",
+      "resolveAgentCostControlPolicy",
+      "resolveAuthEnvVars",
+      "resolveAutomaticRecoveryInactivityTimeoutMs",
+      "resolveAutomationMentions",
+      "resolveBackendContext",
+      "resolveBranchedSessionSourceSelection",
+      "resolveBrowserChannelDirective",
+      "resolveContextTokenEstimate",
+      "resolveCreateSessionRouteProvenance",
+      "resolveDelegatedPermissionMode",
+      "resolveEffectiveAgentContextLimits",
+      "resolveEffectiveSessionSourceSelection",
+      "resolveExplicitSpawnedSessionRoute",
+      "resolveImportedSessionAppProvenance",
+      "resolveKeepBackgroundTasksAlive",
+      "resolveLifecycleStartStatus",
+      "resolveLifecycleTerminalStatus",
+      "resolveManagedSessionContextWindow",
+      "resolveMidStreamBehavior",
+      "resolveOtlpTelemetryConfig",
+      "resolvePermissionRequestTtlMs",
+      "resolveRoutingCostOptions",
+      "resolveSessionConnection",
+      "resolveSessionLabels",
+      "resolveSessionRuntimeIdleTimeoutMs",
+      "resolveSpecializedSkillCapabilityIdentity",
+      "resolveSpecializedSourceCapabilityIdentity",
+      "resolveSupportsBranching",
+      "resolveTitleLanguageName",
+      "resolveToolDisplayMeta",
+      "restoreAgentDeliveryAttachments",
+      "restoreFiles",
+      "rollbackFailedBranchCreation",
+      "sanitizeForTitle",
+      "sanitizeParentSessionLabels",
+      "saveClaudeTurnAnchor",
+      "savePiTurnAnchor",
+      "saveStoredSession",
+      "selectInternalMessageCoalesceTarget",
+      "selectSpreadMessages",
+      "selectTransferSummaryMessages",
+      "serializeSession",
+      "sessionLog",
+      "sessionPersistenceQueue",
+      "sessionRuntimeHooks",
+      "sessionSourceSlugsForPersistence",
+      "setPermissionMode",
+      "setStoredPendingPlanExecution",
+      "shouldActivateBrowserOverlay",
+      "shouldAttemptContextCompaction",
+      "shouldManageSessionStatusLifecycle",
+      "sourceActivationObjectiveBinding",
+      "specializedProfileCapabilityEnvelopeIdentity",
+      "specializedProfileExecutionRouteIdentity",
+      "specializedRuntimeIdentitySha256",
+      "startCompactionTelemetry",
+      "storedToMessage",
+      "terminalReviewExecutionIsolation",
+      "toRoutingMetaAppProvenance",
+      "toolMetadataStore",
+      "transitionObjectiveContract",
+      "turnProgressFingerprint",
+      "turnRecoveryValidationFingerprint",
+      "turnStillNeedsRecovery",
+      "unregisterSessionScopedToolCallbacks",
+      "updateSessionMetadata",
+      "userInputAnswerMessageContent",
+      "validAllocatedRecoveryDispatch",
+      "validateBundle",
+      "validateDelegatedReviewCompletion",
+      "validateFilePath",
+      "validateObjectiveOutcome",
+      "validateSessionExecutionIsolation",
+      "waitForSessionChange",
+      "withAutomaticRecoveryInactivityTimeout",
+      "withRuntimeDisposeTimeout",
+      "writeFile",
+      "writeSessionJsonl",
+      "yoloHumanHandoffBlock"
+    ],
+    "issues": []
+  },
+  "retainedProofChain": [
+    "session-manager-policy-body-proof.json"
+  ],
+  "extraction": {
+    "source": "packages/server-core/src/sessions/SessionManager/policy.ts",
+    "units": [
+      {
+        "names": [
+          "startCompactionTelemetry"
+        ],
+        "group": "runtime-policy",
+        "bodySha256": "651a256db3c67ba815ca507560b0fba15c27cd00bd369d226df9af7643398394"
+      },
+      {
+        "names": [
+          "getAdminRememberKey"
+        ],
+        "group": "runtime-policy",
+        "bodySha256": "6571159187cc1c837090402bcf5c2eba258d012f12a1beaa85b3d5ba324acccd"
+      },
+      {
+        "names": [
+          "persistenceRootFor"
+        ],
+        "group": "runtime-policy",
+        "bodySha256": "562fa8584b81bf9c4daca602c59a50f8e55dc3ab88dc85c7ad847d445f41c476"
+      },
+      {
+        "names": [
+          "isClosedColdResumeStatus"
+        ],
+        "group": "runtime-policy",
+        "bodySha256": "7e46c87ad91f3c5797cfe90cf197f571db988fb4b52f18a9d618b15b5570c9e5"
+      },
+      {
+        "names": [
+          "getAuthRequestDescription"
+        ],
+        "group": "runtime-policy",
+        "bodySha256": "cd4d4155bef17167fe45ce0fb838e3cdc36e52d6503be5ffa25669e7a886c957"
+      },
+      {
+        "names": [
+          "formatAuthResultMessage"
+        ],
+        "group": "runtime-policy",
+        "bodySha256": "a63727b09a3405436069f671a6c329ec8facd61362d348df3b044cb3001a1696"
+      },
+      {
+        "names": [
+          "reconcileCompletedChatRetention"
+        ],
+        "group": "runtime-policy",
+        "bodySha256": "06a91424d31a3d232d39eef2626c1b03151cf01a9a7d05654540a4aeb9fccc14"
+      },
+      {
+        "names": [
+          "refreshInheritedWorkspaceSources"
+        ],
+        "group": "source-policy",
+        "bodySha256": "beb5682b2dfe8aba61c296385322df5e018187f3339764b40c8bb731bfb1c039"
+      },
+      {
+        "names": [
+          "isExactQueuedSourceActivation"
+        ],
+        "group": "source-policy",
+        "bodySha256": "ddaa141e2d4dbd72f2612deb392419ba3a4c013a00dad0a1062124b7ad77ca8d"
+      },
+      {
+        "names": [
+          "cancelSourceActivationPending"
+        ],
+        "group": "source-policy",
+        "bodySha256": "33819f0e97528f355def326c8ffbf8d3e603f41acf3c96316255b6ab10fb731b"
+      },
+      {
+        "names": [
+          "commitSourceActivationPending"
+        ],
+        "group": "source-policy",
+        "bodySha256": "4de0268b6a5f8b230a4dbd8e2f18ea9703b8527536e29fcf233da2c6f4ad656f"
+      },
+      {
+        "names": [
+          "releaseSourceActivationClaim"
+        ],
+        "group": "source-policy",
+        "bodySha256": "e9e9d0358452138e6bba7b7b739b6acedf6444bf40243eeb24443250b9986c0f"
+      },
+      {
+        "names": [
+          "hasUnscheduledQueuedUserInput"
+        ],
+        "group": "user-input-policy",
+        "bodySha256": "cec24411447897d0abce0a48670a448c1b11ba567a69fd819931f9e2f88c781d"
+      },
+      {
+        "names": [
+          "hasPendingLocalUserInput"
+        ],
+        "group": "user-input-policy",
+        "bodySha256": "6bba58c805910e861110576258156840f72d511f8d35b5db4de34bbb9aa54ccd"
+      },
+      {
+        "names": [
+          "getQueuedPendingUserInputResponse"
+        ],
+        "group": "user-input-policy",
+        "bodySha256": "b1dd81986ac69f8ea3124c29377c95ff1790f40f15528aa3d27c5cc881ef0c2a"
+      },
+      {
+        "names": [
+          "queuedCostLimitContinuationForAgentDelivery"
+        ],
+        "group": "user-input-policy",
+        "bodySha256": "848ee2f3505395cfa84c1e93d9460fc9f4782a8841abdb5b5cf240b0761ae997"
+      },
+      {
+        "names": [
+          "queuedDirectHumanContinuationIndex"
+        ],
+        "group": "user-input-policy",
+        "bodySha256": "908a1ace6d9f1bf0b7b385b9ddd7ddacc0511c0de9c1448f191e6af8cdfd5593"
+      },
+      {
+        "names": [
+          "queuedDirectHumanContinuationIndexForId"
+        ],
+        "group": "user-input-policy",
+        "bodySha256": "88439baf8056226f59b26587b90e13603c272668cfdcfca7608fde147dce306f"
+      },
+      {
+        "names": [
+          "isDirectHumanContinuation"
+        ],
+        "group": "user-input-policy",
+        "bodySha256": "94e431309014de31854dfad127b52c388eee2443f26bb29e0bda78584a636731"
+      },
+      {
+        "names": [
+          "providerDispatchesAwaitingColdReconciliation"
+        ],
+        "group": "recovery-policy",
+        "bodySha256": "7d84faef9a27cd56264b8e6dc5e7eff8272a6b43abcb1d276f9ee6875132ff41"
+      },
+      {
+        "names": [
+          "exactProviderDispatchAcceptanceUnknown"
+        ],
+        "group": "recovery-policy",
+        "bodySha256": "ecf393cccb0aa09979f996b2b56dc17fa13f3210d527cf3f7a03b4c829c977be"
+      },
+      {
+        "names": [
+          "assertRetryTurnAnchor"
+        ],
+        "group": "recovery-policy",
+        "bodySha256": "5ab74bfdf7b5bbb85af077f099103b7614992bd4ba5736c0636ab93928c3ff12"
+      },
+      {
+        "names": [
+          "nextRecoveryDispatch"
+        ],
+        "group": "recovery-policy",
+        "bodySha256": "b967d6c2377268eb87039f5becc972f90b6d454e5b5a2d054023f875058304c9"
+      },
+      {
+        "names": [
+          "validAllocatedRecoveryDispatch"
+        ],
+        "group": "recovery-policy",
+        "bodySha256": "0693d37722d0be25075e9360da8078bd4fd56d4ed47089028a3886e71ace079c"
+      },
+      {
+        "names": [
+          "classifyAutomaticRecoveryWorkForSession"
+        ],
+        "group": "recovery-policy",
+        "bodySha256": "3488b9e54c3ba320674db5763c386037fc6f9f41cc2c99042c6eb53187536c38"
+      },
+      {
+        "names": [
+          "cleanSetupRetryDelayMs"
+        ],
+        "group": "recovery-policy",
+        "bodySha256": "0ca25aadd93bb6057fafe48f65a146b9022af51aa24263b104e8bfb39a122ce8"
+      },
+      {
+        "names": [
+          "cleanRetrySetupFailureSignal"
+        ],
+        "group": "recovery-policy",
+        "bodySha256": "d722194527c5543b6ec1292062b237b4b13c8a176da4418da9890228ed3a8f6b"
+      },
+      {
+        "names": [
+          "isImmutableAutomaticRecoveryBlock"
+        ],
+        "group": "recovery-policy",
+        "bodySha256": "dd4d95d09a572c5e593ad7fbe54e78878d66c118dc1df1d0f9936e94a3795b92"
+      },
+      {
+        "names": [
+          "isDurableProviderActivityOrHumanSupersession"
+        ],
+        "group": "recovery-policy",
+        "bodySha256": "d9a03e43717b8d1e87918df9db0001e710d7ec31675b3b4031f63466581ff343"
+      },
+      {
+        "names": [
+          "enqueueRecoveredMessageInTranscriptOrder"
+        ],
+        "group": "recovery-policy",
+        "bodySha256": "a0d196da9e743c57c4aad140f1424dc50308d1b31f2d0717f1d78201f93cd00a"
+      },
+      {
+        "names": [
+          "boundObjectiveForCleanHandoff"
+        ],
+        "group": "objective-policy",
+        "bodySha256": "63dd92454869ae4a92ebfcb4372bd3ad7dc70b13b1d14f506a3505f708d2866a"
+      },
+      {
+        "names": [
+          "hasAuthenticatedObjectiveRoot"
+        ],
+        "group": "objective-policy",
+        "bodySha256": "f6330d68b96462e66398fa7257a7049caf330c0fe64757309a7899732da4d1a6"
+      },
+      {
+        "names": [
+          "projectLegacyObjectiveForUserTransition"
+        ],
+        "group": "objective-policy",
+        "bodySha256": "d9df3be8c5d25d5e2d3e674151d851d8bf4e2981df4238846aef95e2babbe8df"
+      },
+      {
+        "names": [
+          "repairLegacyContextualObjectiveAuthority"
+        ],
+        "group": "objective-policy",
+        "bodySha256": "2ac35d8018cc7d087d63ab5518f640ae2514fe141e67dc3dc84fec035cd22176"
+      },
+      {
+        "names": [
+          "isLegacyHostObjectiveContractEnabled"
+        ],
+        "group": "objective-policy",
+        "bodySha256": "3255091aea87d47f47d3edca452105a78fde5baaed125dde132213a90afed05c"
+      },
+      {
+        "names": [
+          "delegatedTerminalResultDeliveryId"
+        ],
+        "group": "mission-policy",
+        "bodySha256": "f2f98d3b373ccce22fa060946d939115955d602d139894fd2052208fac579b8f"
+      },
+      {
+        "names": [
+          "delegatedTerminalResultContent"
+        ],
+        "group": "mission-policy",
+        "bodySha256": "1948bc0eed12925b4e4a81c392eea510141cb986df287430408d11a1220d8529"
+      },
+      {
+        "names": [
+          "discoverMissionToolCatalog"
+        ],
+        "group": "mission-policy",
+        "bodySha256": "e49170aa8cb208e3c750ed8242abf3ebaee11f0cb38993c90c0c2755d0ea7c0d"
+      },
+      {
+        "names": [
+          "loadSpecializedMissionSkillPackages"
+        ],
+        "group": "mission-policy",
+        "bodySha256": "ad59d7ba039fc7828bd4239c1b1b4a05366c0bdbd846c773548fb18c0a2c96a6"
+      },
+      {
+        "names": [
+          "assertSpecializedMissionSourceSelection"
+        ],
+        "group": "mission-policy",
+        "bodySha256": "60e5711ad2badee7b6e718380a88beaa29a301303c3f8d47295a5c53425a5068"
+      },
+      {
+        "names": [
+          "captureSpecializedMissionSourceSnapshot"
+        ],
+        "group": "mission-policy",
+        "bodySha256": "5d946f6e175bc2754dcf1dac72f4d4b3f5e397e26f8f213facfd4e32faabdea4"
+      },
+      {
+        "names": [
+          "assertMissionDispatchWorkingDirectory"
+        ],
+        "group": "mission-policy",
+        "bodySha256": "657ae746ab8469618187cc341e1d822fa01647f1a21a46813d03ce882653272e"
+      },
+      {
+        "names": [
+          "assertOrdinaryMissionRouteProjection"
+        ],
+        "group": "mission-policy",
+        "bodySha256": "57c8a696adfdded67651b1428e0ca2a7e4b018e5685d7f5216b7d5cdfbf87089"
+      },
+      {
+        "names": [
+          "ordinaryMissionSourceBuildOptions"
+        ],
+        "group": "mission-policy",
+        "bodySha256": "bc5a4442b8935268dac6617ceee1db71b84e92b42f3983ef3ad3d170f0e757f3"
+      },
+      {
+        "names": [
+          "authenticatedTaskFor"
+        ],
+        "group": "mission-policy",
+        "bodySha256": "72c6eb15a16d08969e41e1f6de6e9e7c3dcfb942773535529e39ba40d0572f86"
+      },
+      {
+        "names": [
+          "resolveAutomationMentions"
+        ],
+        "group": "mission-policy",
+        "bodySha256": "69900d1b7adc60d133f7442ae63fcc2d1111a37acd3f4c04bbac27ef6d52b925"
+      },
+      {
+        "names": [
+          "rehydrateObjectiveEvidence"
+        ],
+        "group": "objective-policy-rehydrate-objective-evidence",
+        "bodySha256": "6029d9af198b98f270a43c2248bfc33c3b825c861b86cd79b8351f97bab2d95d"
+      }
+    ],
+    "modules": [
+      {
+        "name": "runtime-policy",
+        "lines": 97
+      },
+      {
+        "name": "source-policy",
+        "lines": 84
+      },
+      {
+        "name": "user-input-policy",
+        "lines": 135
+      },
+      {
+        "name": "recovery-policy",
+        "lines": 324
+      },
+      {
+        "name": "objective-policy",
+        "lines": 332
+      },
+      {
+        "name": "mission-policy",
+        "lines": 286
+      },
+      {
+        "name": "objective-policy-rehydrate-objective-evidence",
+        "lines": 77
+      }
+    ],
+    "dependencies": {
+      "runtime-policy": [],
+      "source-policy": [],
+      "user-input-policy": [],
+      "recovery-policy": [],
+      "objective-policy": [],
+      "mission-policy": [],
+      "objective-policy-rehydrate-objective-evidence": []
+    },
+    "unitCycles": [],
+    "moduleCycles": []
+  },
+  "actualModuleLines": {
+    "runtime-policy": 96,
+    "source-policy": 83,
+    "user-input-policy": 134,
+    "recovery-policy": 333,
+    "objective-policy": 344,
+    "mission-policy": 292,
+    "objective-policy-rehydrate-objective-evidence": 89
+  },
+  "checks": {
+    "session-policy-all-types-3": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 20.0,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-policy-all-types-3.log"
+    },
+    "session-policy-targeted-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/server-core/src/sessions/mission-planner-routing-provenance.test.ts",
+        "packages/server-core/src/sessions/restart-recovery.test.ts",
+        "packages/server-core/src/sessions/session-objective-outcome-integration.test.ts",
+        "packages/server-core/src/sessions/synthetic-objective-authority.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 7.37,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-policy-targeted-tests.log"
+    },
+    "session-policy-final-bodies": {
+      "command": [
+        "rtk",
+        "node",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/check-module-bodies.cjs",
+        "--all"
+      ],
+      "exitCode": 0,
+      "seconds": 1.21,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-policy-final-bodies.log"
+    },
+    "session-policy-final-imports": {
+      "command": [
+        "rtk",
+        "node",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/check-extraction-imports.cjs",
+        "--all"
+      ],
+      "exitCode": 0,
+      "seconds": 7.01,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-policy-final-imports.log"
+    },
+    "session-policy-final-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/server-core/src/sessions/SessionManager/policy",
+        "packages/server-core/src/sessions/SessionManager/policy.ts",
+        "packages/server-core/src/sessions/mission-planner-routing-provenance.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.24,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-policy-final-lint.log"
+    },
+    "session-policy-name-checks": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "lint:tool-name-checks"
+      ],
+      "exitCode": 0,
+      "seconds": 0.22,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-policy-name-checks.log"
+    },
+    "session-policy-ipc-checks": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "lint:ipc-sends"
+      ],
+      "exitCode": 0,
+      "seconds": 0.19,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-policy-ipc-checks.log"
+    },
+    "session-policy-all-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 146.65,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-policy-all-tests.log"
+    },
+    "session-policy-electron-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 14.33,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-policy-electron-build.log"
+    }
+  },
+  "remaining": {
+    "max-lines": 217,
+    "no-explicit-any": 775
+  },
+  "limits": [
+    "Le gestionnaire principal reste très supérieur à 500 lignes",
+    "Tests historiques modifiés : 127 any explicites restent à traiter dans ces suites ; le lint global reste non conforme",
+    "Aucun parcours réel au modèle ou dans l’UI et aucune installation de ce candidat"
+  ]
+}

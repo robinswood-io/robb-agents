@@ -40,8 +40,8 @@ function formatDuration(ms: number): string {
 
 export interface AutomationEventTimelineProps {
   entries: ExecutionEntry[]
-  className?: string
-  onReplay?: (automationId: string, event: string) => void
+  className?: string | undefined
+  onReplay?: ((automationId: string, event: string) => void) | undefined
 }
 
 function CopyButton({ details }: { details: import('./types').WebhookDetails }) {
@@ -56,8 +56,8 @@ function CopyButton({ details }: { details: import('./types').WebhookDetails }) 
       statusCode: details.statusCode,
       durationMs: details.durationMs,
     }
-    if (details.attempts && details.attempts > 1) meta.attempts = details.attempts
-    if (details.error) meta.error = details.error
+    if (details.attempts && details.attempts > 1) meta["attempts"] = details.attempts
+    if (details.error) meta["error"] = details.error
 
     // Build copy text: structured metadata + raw response body (which may be truncated / not valid JSON)
     let text = JSON.stringify(meta, null, 2)

@@ -1,0 +1,17 @@
+{
+  "format": 1,
+  "arrays": {
+    "acceptedOrphanScripts": [
+      "acceptedOrphanScripts/001.json",
+      "acceptedOrphanScripts/002.json",
+      "acceptedOrphanScripts/003.json",
+      "acceptedOrphanScripts/004.json",
+      "acceptedOrphanScripts/005.json",
+      "acceptedOrphanScripts/006.json",
+      "acceptedOrphanScripts/007.json",
+      "acceptedOrphanScripts/008.json",
+      "acceptedOrphanScripts/009.json",
+      "acceptedOrphanScripts/010.json"
+    ]
+  }
+}

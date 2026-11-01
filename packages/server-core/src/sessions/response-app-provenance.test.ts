@@ -1,6 +1,9 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { beforeEach, describe, expect, it } from 'bun:test'
 import { messageToStored } from '@craft-agent/core/types'
-import type { AgentEvent } from '@craft-agent/shared/agent'
+
 import type { PlatformServices } from '../runtime/platform'
 import {
   SessionManager,
@@ -29,10 +32,10 @@ describe('assistant response app provenance', () => {
     }
     setSessionPlatform(platform)
 
-    sessionManager = new SessionManager()
-    ;(sessionManager as unknown as { persistSession: () => void }).persistSession = () => {}
-    ;(sessionManager as unknown as { sendEvent: () => void }).sendEvent = () => {}
-    ;(sessionManager as unknown as { emitExecutionTelemetry: () => void }).emitExecutionTelemetry = () => {}
+    sessionManager = withSessionOperationsForTest(new SessionManager())
+    ;(sessionManagerForTest(sessionManager)).persistSession = () => true
+    ;(sessionManagerForTest(sessionManager)).sendEvent = () => {}
+    ;(sessionManagerForTest(sessionManager)).emitExecutionTelemetry = () => {}
   })
 
   it('persists the producing build on each completed assistant message', async () => {
@@ -46,12 +49,9 @@ describe('assistant response app provenance', () => {
       createdAt: Date.now(),
     } as never, { messagesLoaded: true })
     managed.agent = { getModel: () => 'effective-model' } as never
-    ;(sessionManager as unknown as { sessions: Map<string, typeof managed> })
-      .sessions.set(managed.id, managed)
+    ;sessionRuntimeStateForTest(sessionManager).sessions.set(managed.id, managed)
 
-    await (sessionManager as unknown as {
-      processEvent: (session: unknown, event: AgentEvent) => Promise<void>
-    }).processEvent(managed, {
+    await (sessionManagerForTest(sessionManager)).processEvent(managed, {
       type: 'text_complete',
       text: 'Attributed response',
     })

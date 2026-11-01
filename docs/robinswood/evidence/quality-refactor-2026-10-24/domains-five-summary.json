@@ -1,0 +1,71 @@
+{
+  "status": "testé dans le candidat local, non intégré",
+  "scope": "Isolation d’exécution, suivi de mission, opportunités de spécialisation, résultats d’outils et événements de session",
+  "declarationsPreserved": 159,
+  "modules": 22,
+  "maximumModuleLines": 327,
+  "proof": "Corps, ordre des surcharges, imports requis et absence de cycle vérifiés sur les cinq domaines ; pas de registre ni de nouveau mécanisme applicatif",
+  "checks": {
+    "domains-five-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 21.18,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/domains-five-types.log"
+    },
+    "domains-five-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 140.65,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/domains-five-tests.log"
+    },
+    "domains-five-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 19.87,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/domains-five-build.log"
+    },
+    "domains-five-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/shared/src/tasks/durable-execution.ts",
+        "packages/shared/src/tasks/durable-execution",
+        "packages/shared/src/tasks/mission-control.ts",
+        "packages/shared/src/tasks/mission-control",
+        "packages/shared/src/specialized-profiles/opportunity-engine.ts",
+        "packages/shared/src/specialized-profiles/opportunity-engine",
+        "packages/ui/src/lib/tool-parsers.ts",
+        "packages/ui/src/lib/tool-parsers",
+        "apps/electron/src/renderer/event-processor/handlers/session.ts",
+        "apps/electron/src/renderer/event-processor/handlers/session",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 2.3,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/domains-five-lint.log"
+    }
+  },
+  "remaining": {
+    "oversizedCodeFiles": 199,
+    "explicitAny": 586
+  },
+  "installedApplication": "Inchangée"
+}

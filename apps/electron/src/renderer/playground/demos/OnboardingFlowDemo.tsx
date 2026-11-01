@@ -6,10 +6,10 @@
  *
  * Flow: WelcomeStep → ProviderSelectStep → CredentialsStep / LocalModelStep → CompletionStep
  */
-import { useState, useCallback, useEffect } from 'react'
+import { useState,useCallback,useEffect } from 'react'
 import { ensureMockElectronAPI } from '../mock-utils'
 import { WelcomeStep } from '@/components/onboarding/WelcomeStep'
-import { ProviderSelectStep, type ProviderChoice } from '@/components/onboarding/ProviderSelectStep'
+import { ProviderSelectStep,type ProviderChoice } from '@/components/onboarding/ProviderSelectStep'
 import { CredentialsStep } from '@/components/onboarding/CredentialsStep'
 import { LocalModelStep } from '@/components/onboarding/LocalModelStep'
 import { CompletionStep } from '@/components/onboarding/CompletionStep'
@@ -38,7 +38,7 @@ export function OnboardingFlowDemo() {
   const [errorMessage, setErrorMessage] = useState<string | undefined>()
 
   // Track history for the step indicator
-  const [providerChoice, setProviderChoice] = useState<ProviderChoice | null>(null)
+  const [, setProviderChoice] = useState<ProviderChoice | null>(null)
 
   const handleProviderSelect = useCallback((choice: ProviderChoice) => {
     setProviderChoice(choice)

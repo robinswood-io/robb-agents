@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'
@@ -6,11 +7,10 @@ import {
   createImportedSessionIsolation,
   serializeSession,
   validateBundle,
-  MAX_BUNDLE_SIZE_BYTES,
 } from '../bundle'
 import { readSessionJsonl, writeSessionJsonl } from '../jsonl'
 import { restoreFiles } from '../../utils/bundle-files'
-import type { StoredSession, SessionHeader } from '../types'
+import type { StoredSession } from '../types'
 
 // ============================================================
 // Helpers
@@ -94,7 +94,7 @@ describe('serializeSession', () => {
     expect(bundle!.session.messages).toHaveLength(2)
     expect(bundle!.session.messages[0]!.content).toBe('Hello world')
     expect(bundle!.session.messages[1]!.content).toBe('Hi there!')
-    expect(Array.isArray(bundle!.files)).toBe(true)
+    expect(isUnknownArray(bundle!.files)).toBe(true)
   })
 
   it('includes attachment files in bundle', () => {
@@ -247,10 +247,12 @@ describe('serializeSession', () => {
         },
       })
 
+      const sessionWithoutOverrides = { ...session };
+      delete sessionWithoutOverrides.executionIsolation;
       writeSessionJsonl(join(restoredDir, 'session.jsonl'), {
-        ...session,
+        ...sessionWithoutOverrides,
         workspaceRootPath: restoredWorkspace,
-        executionIsolation: quarantinedIsolation,
+        ...(quarantinedIsolation !== undefined ? { executionIsolation: quarantinedIsolation } : {}),
         messages: bundle!.session.messages,
       })
       restoreFiles(restoredDir, bundle!.files)

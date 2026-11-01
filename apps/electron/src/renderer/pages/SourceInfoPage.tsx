@@ -5,168 +5,32 @@
  * documentation (guide.md), and metadata. View-only.
  */
 
-import * as React from 'react'
-import { useTranslation } from 'react-i18next'
-import { useEffect, useState, useMemo, useCallback } from 'react'
-import { AlertCircle } from 'lucide-react'
-import { EditPopover, EditButton, getEditConfig } from '@/components/ui/EditPopover'
-import { SourceAvatar } from '@/components/ui/source-avatar'
-import { SourceMenu } from '@/components/app-shell/SourceMenu'
-import { cn } from '@/lib/utils'
-import { routes, navigate } from '@/lib/navigate'
-import { useNavigation } from '@/contexts/NavigationContext'
-import { toast } from 'sonner'
-import {
-  Info_Page,
-  Info_Section,
-  Info_Table,
-  Info_Alert,
-  Info_Markdown,
-  PermissionsDataTable,
-  ToolsDataTable,
-  type PermissionRow,
-  type ToolRow,
-} from '@/components/info'
-import type { LoadedSource, McpToolWithPermission } from '../../shared/types'
-import type { PermissionsConfigFile } from '@craft-agent/shared/agent/modes'
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import "react";
+import { AlertCircle } from 'lucide-react';
+import { EditPopover, EditButton, getEditConfig } from '@/components/ui/EditPopover';
+import { SourceAvatar } from '@/components/ui/source-avatar';
+import { SourceMenu } from '@/components/app-shell/SourceMenu';
+import { useNavigation } from '@/contexts/NavigationContext';
+import { toast } from 'sonner';
+import { Info_Page, Info_Section, Info_Table, Info_Alert, Info_Markdown, PermissionsDataTable, ToolsDataTable } from '@/components/info';
 
-interface SourceInfoPageProps {
-  sourceSlug: string
-  workspaceId: string
-  /** Optional callback when source is deleted */
-  onDelete?: () => void
-}
+import { type SourceInfoPageProps, formatRelativeTime, getSourceUrl, buildApiPermissionsData, buildMcpPermissionsData, buildToolsData, getConnectionDescription, getPermissionsDescription } from "./source-info-details";
 
-/**
- * Format timestamp to relative time
- */
-function formatRelativeTime(timestamp: number | undefined, t: (key: string, options?: Record<string, unknown>) => string): string {
-  if (!timestamp) return t('common.never')
 
-  const now = Date.now()
-  const diff = now - timestamp
-  const minutes = Math.floor(diff / 60000)
-  const hours = Math.floor(diff / 3600000)
-  const days = Math.floor(diff / 86400000)
 
-  if (minutes < 1) return t('common.justNow')
-  if (minutes < 60) return t('time.minutesAgo', { count: minutes })
-  if (hours < 24) return t('time.hoursAgo', { count: hours })
-  return t('time.daysAgo', { count: days })
-}
 
-/**
- * Get source URL for display
- */
-function getSourceUrl(source: LoadedSource): string | null {
-  const { type, mcp, api, local } = source.config
 
-  if (type === 'mcp' && mcp?.url) return mcp.url
-  if (type === 'api' && api?.baseUrl) return api.baseUrl
-  if (type === 'local' && local?.path) return local.path
 
-  return null
-}
 
-/**
- * Convert permissions config to PermissionRow[] for API/local sources
- */
-function buildApiPermissionsData(config: PermissionsConfigFile): PermissionRow[] {
-  const rows: PermissionRow[] = []
 
-  // Blocked Tools
-  config.blockedTools?.forEach((item) => {
-    const pattern = typeof item === 'string' ? item : item.pattern
-    const comment = typeof item === 'string' ? null : item.comment
-    rows.push({ access: 'blocked', type: 'tool', pattern, comment })
-  })
 
-  // Allowed Bash Patterns
-  config.allowedBashPatterns?.forEach((item) => {
-    const pattern = typeof item === 'string' ? item : item.pattern
-    const comment = typeof item === 'string' ? null : item.comment
-    rows.push({ access: 'allowed', type: 'bash', pattern, comment })
-  })
 
-  // Allowed API Endpoints
-  config.allowedApiEndpoints?.forEach((item) => {
-    const pattern = `${item.method} ${item.path}`
-    const comment = typeof item === 'object' && 'comment' in item ? item.comment : null
-    rows.push({ access: 'allowed', type: 'api', pattern, comment })
-  })
 
-  return rows
-}
 
-/**
- * Convert permissions config to PermissionRow[] for MCP sources
- */
-function buildMcpPermissionsData(config: PermissionsConfigFile): PermissionRow[] {
-  const rows: PermissionRow[] = []
-
-  // Blocked Tools
-  config.blockedTools?.forEach((item) => {
-    const pattern = typeof item === 'string' ? item : item.pattern
-    const comment = typeof item === 'string' ? null : item.comment
-    rows.push({ access: 'blocked', type: 'mcp', pattern, comment })
-  })
-
-  // Allowed MCP Patterns
-  config.allowedMcpPatterns?.forEach((item) => {
-    const pattern = typeof item === 'string' ? item : item.pattern
-    const comment = typeof item === 'string' ? null : item.comment
-    rows.push({ access: 'allowed', type: 'mcp', pattern, comment })
-  })
-
-  return rows
-}
-
-/**
- * Convert MCP tools to ToolRow[]
- */
-function buildToolsData(tools: McpToolWithPermission[]): ToolRow[] {
-  return tools.map((tool) => ({
-    name: tool.name,
-    description: tool.description || '',
-    permission: tool.allowed ? 'allowed' : 'requires-permission',
-  }))
-}
-
-/**
- * Get contextual description for Connection section based on source type
- */
-function getConnectionDescription(source: LoadedSource, t: (key: string) => string): string {
-  const { type, mcp } = source.config
-
-  if (type === 'mcp') {
-    if (mcp?.transport === 'stdio') {
-      return t('sourceInfo.localCommand')
-    }
-    return t('sourceInfo.serverUrl')
-  }
-  if (type === 'api') {
-    return t('sourceInfo.baseUrl')
-  }
-  if (type === 'local') {
-    return t('sourceInfo.filesystemPath')
-  }
-  return t('sourceInfo.connectionDetails')
-}
-
-/**
- * Get contextual description for Permissions section based on source type
- */
-function getPermissionsDescription(source: LoadedSource, t: (key: string) => string): string {
-  const { type } = source.config
-
-  if (type === 'mcp') {
-    return t('sourceInfo.toolPatternsAllowed')
-  }
-  if (type === 'api') {
-    return t('sourceInfo.apiEndpointsAllowed')
-  }
-  return t('sourceInfo.accessRules')
-}
+import type { LoadedSource, McpToolWithPermission } from '../../shared/types';
+import type { PermissionsConfigFile } from '@craft-agent/shared/agent/modes';
 
 export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: SourceInfoPageProps) {
   const { t } = useTranslation()
@@ -217,7 +81,7 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
     return () => {
       isMounted = false
     }
-  }, [workspaceId, sourceSlug])
+  }, [workspaceId, sourceSlug, t])
 
   // Load MCP tools when source is loaded and is MCP type
   useEffect(() => {
@@ -254,7 +118,7 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
     return () => {
       isMounted = false
     }
-  }, [source, workspaceId, sourceSlug])
+  }, [source, workspaceId, sourceSlug, t])
 
   // Load workspace settings (for localMcpEnabled)
   useEffect(() => {
@@ -263,7 +127,7 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
       if (settings) {
         setLocalMcpEnabled(settings.localMcpEnabled ?? true)
       }
-    }).catch((err) => {
+    }).catch((err: unknown) => {
       console.error('[SourceInfoPage] Failed to load workspace settings:', err)
     })
   }, [workspaceId])
@@ -347,7 +211,7 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
         description: err instanceof Error ? err.message : undefined,
       })
     }
-  }, [source, workspaceId, sourceSlug, onDelete, navigateToSource])
+  }, [source, workspaceId, sourceSlug, onDelete, navigateToSource, t])
 
   // Handle opening in new window
   const handleOpenInNewWindow = useCallback(() => {

@@ -5,12 +5,11 @@
  * instantiated in the browser. This shim satisfies the bundler.
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
 export class WebSocketServer {
-  constructor(_opts?: any) {
+  constructor(_opts?: unknown) {
     throw new Error('WebSocketServer is not available in the browser')
   }
-  on(_event: string, _fn: Function) { return this }
+  on<Arguments extends unknown[]>(_event: string, _fn: (...args: Arguments) => unknown) { return this }
   close() {}
   address() { return null }
 }

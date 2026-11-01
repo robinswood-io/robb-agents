@@ -13,14 +13,14 @@ function OAuthCallbackPreview({
   appType,
 }: {
   isSuccess: boolean
-  errorDetail?: string
+  errorDetail?: string | undefined
   appType: AppType
 }) {
   const html = React.useMemo(() => {
     return generateCallbackPage({
       title: isSuccess ? 'Authorization Complete' : 'Authorization Failed',
       isSuccess,
-      errorDetail,
+      ...(errorDetail !== undefined ? { errorDetail: errorDetail } : {}),
       appType,
     })
   }, [isSuccess, errorDetail, appType])

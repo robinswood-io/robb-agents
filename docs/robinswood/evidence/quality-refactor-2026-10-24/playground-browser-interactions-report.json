@@ -1,0 +1,46 @@
+{
+  "status": "passed",
+  "url": "http://127.0.0.1:6184/playground.html",
+  "browser": "145.0.7632.6",
+  "headless": false,
+  "steps": [
+    {
+      "action": "automation enable and keyboard expansion",
+      "status": "passed"
+    },
+    {
+      "action": "planner quick add creates visible task and clears input",
+      "status": "passed"
+    },
+    {
+      "action": "task title and goal update YAML; demo save reaches notification",
+      "status": "passed",
+      "writes": "UI demo only; no filesystem API called"
+    },
+    {
+      "action": "theme switch, preview resize and reload restore",
+      "status": "passed",
+      "width": 880
+    },
+    {
+      "action": "edit popover opens and closes with Escape",
+      "status": "passed"
+    },
+    {
+      "action": "mock preferences, async operations and install fallback",
+      "status": "passed",
+      "api": {
+        "preferencesEnvelope": true,
+        "writeSuccess": true,
+        "updateAvailable": false,
+        "fallbackSame": true,
+        "unwritableFallbackThrows": true
+      }
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "limits": [
+    "Playground data and browser storage only; this is not a real model mission."
+  ]
+}

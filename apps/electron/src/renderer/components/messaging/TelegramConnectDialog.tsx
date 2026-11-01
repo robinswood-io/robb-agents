@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * TelegramConnectDialog — token-input pairing flow in a modal.
  *
@@ -30,8 +31,8 @@ interface TelegramConnectDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   /** When true, treat the flow as "replace existing token" (used from Reconfigure menu item). */
-  reconfigure?: boolean
-  onSaved?: () => void
+  reconfigure?: boolean | undefined
+  onSaved?: (() => void) | undefined
 }
 
 type TestResult =
@@ -68,7 +69,7 @@ export function TelegramConnectDialog({
     try {
       const result = await window.electronAPI.testTelegramToken(trimmed)
       if (result.success) {
-        setTest({ state: 'success', botName: result.botName, botUsername: result.botUsername })
+        setTest(omitUndefined({ state: 'success' as const, botName: result.botName, botUsername: result.botUsername }))
       } else {
         setTest({ state: 'error', error: result.error ?? t('common.error') })
       }

@@ -1,0 +1,8 @@
+{
+  "controller_commit": "109991b8a6b3967bab6c7860af4f5c0cafdff404",
+  "qualification_url": "https://github.com/Aoleon/rulebook-ai/actions/runs/40778242059",
+  "state": "PASS",
+  "tests": 30,
+  "scope": "Private controller only; Robb run/verify and native acceptance still required",
+  "report_sha256": "0e417d8e6c47f29d45be2bc16bd3afbcdafd6a618e6ebcd117f9b3629ad0aa4e"
+}

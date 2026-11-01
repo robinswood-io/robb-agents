@@ -1,0 +1,278 @@
+{
+  "source": "packages/shared/src/sources/types.ts",
+  "units": [
+    {
+      "names": [
+        "SourceType"
+      ],
+      "group": "provider-inference",
+      "bodySha256": "fd4cf4e4d025b843654c534fcad416ef9a5744e2e97ec16f26b79143761d79d1"
+    },
+    {
+      "names": [
+        "SourceMcpAuthType"
+      ],
+      "group": "provider-inference",
+      "bodySha256": "6e55ae54f4930767d45e9030829c8555534db306af0734fa1d2b11bc1ab2fad1"
+    },
+    {
+      "names": [
+        "ApiAuthType"
+      ],
+      "group": "provider-inference",
+      "bodySha256": "386dd2a73e6fff34a595ed8d696dd0b1de3aed2ef0e9ef2f65798c7002e68cc9"
+    },
+    {
+      "names": [
+        "GoogleService"
+      ],
+      "group": "provider-inference",
+      "bodySha256": "436f88842aa43976ff742785d4ebbc78e0507211e5e59c6552e92fb8bea13874"
+    },
+    {
+      "names": [
+        "SlackService"
+      ],
+      "group": "provider-inference",
+      "bodySha256": "ba88bb47a3658116e8a213c6b758145869fa153f122b7cf0f1dd6569f958d99e"
+    },
+    {
+      "names": [
+        "MicrosoftService"
+      ],
+      "group": "provider-inference",
+      "bodySha256": "b40832e79bf49a23dff516bb42ee0b963ae6303b8876ae77fb71a37bdf59b179"
+    },
+    {
+      "names": [
+        "inferGoogleServiceFromUrl"
+      ],
+      "group": "provider-inference",
+      "bodySha256": "340b9f4dbed44913fb5e72e149bef2a75aff01c9ffad6f4bc207a2c67cf9729d"
+    },
+    {
+      "names": [
+        "inferSlackServiceFromUrl"
+      ],
+      "group": "provider-inference",
+      "bodySha256": "5169a89ba276d6855218297190e96c3f107d651bb435028c10b00d407c45f456"
+    },
+    {
+      "names": [
+        "inferMicrosoftServiceFromUrl"
+      ],
+      "group": "provider-inference",
+      "bodySha256": "ba5b5118a588852e345dbae468fa32a1dabf140387f7c88615280b6e3be7a157"
+    },
+    {
+      "names": [
+        "KnownProvider"
+      ],
+      "group": "provider-inference",
+      "bodySha256": "6c1a0b60f09b592c975e052b0d2f22499a215745ab2f8e3802d49142601ef7fe"
+    },
+    {
+      "names": [
+        "API_OAUTH_PROVIDERS"
+      ],
+      "group": "provider-inference",
+      "bodySha256": "e9619ebaf14c8270f5517c16cefc9ebb5f7a4047ed1163f5bb21962d0dacb292"
+    },
+    {
+      "names": [
+        "ApiOAuthProvider"
+      ],
+      "group": "provider-inference",
+      "bodySha256": "94b3e6370ddf6b73bb6e6999851a820c1f8c753030df9ccef239b67fac5d7772"
+    },
+    {
+      "names": [
+        "isApiOAuthProvider"
+      ],
+      "group": "provider-inference",
+      "bodySha256": "53a5270aecb4161ba7c4e0a545e14ac7bae682099e1c9dfee28d69dab42ee1ef"
+    },
+    {
+      "names": [
+        "isOAuthSource"
+      ],
+      "group": "provider-inference-is-oauth-source",
+      "bodySha256": "683a1e23f15921ce3ecd13b4384bc9a1b685339572f26845b1059e0f374aa4a6"
+    },
+    {
+      "names": [
+        "isGenericOAuthSource"
+      ],
+      "group": "provider-inference-is-oauth-source",
+      "bodySha256": "4775e6223c73f3ec96462b9efd6328b392b92708cea048d07d3fffb4da6a5018"
+    },
+    {
+      "names": [
+        "hasRenewEndpoint"
+      ],
+      "group": "provider-inference-is-oauth-source",
+      "bodySha256": "0a3a5a7e2ca09c4bf9d9695cb9b7b8fb281d9c3d530046a6f2ff21727dbbc495"
+    },
+    {
+      "names": [
+        "isRefreshableSource"
+      ],
+      "group": "provider-inference-is-oauth-source",
+      "bodySha256": "eff2679036f58b04d730fbb0dac7d546e98c663457174b270030dc9629118c76"
+    },
+    {
+      "names": [
+        "McpTransport"
+      ],
+      "group": "mcp-config",
+      "bodySha256": "720c3159749bc5e070236bad430f3f2374a853b31cd4c75162ebc7ce7be8cbe3"
+    },
+    {
+      "names": [
+        "McpPlatform"
+      ],
+      "group": "mcp-config",
+      "bodySha256": "197363d3068b3f52347f3c7b9092842031085ea3305ec4bd362db6872ffc42d4"
+    },
+    {
+      "names": [
+        "McpPlatformOverride"
+      ],
+      "group": "mcp-config",
+      "bodySha256": "75d407c4b3ff4dc3730fcf63bc993161366c4a55378013ee4f04408e4b170c25"
+    },
+    {
+      "names": [
+        "McpSourceConfig"
+      ],
+      "group": "mcp-config",
+      "bodySha256": "62f593655c366ea198dc2ecc53430419cf5ba269488d70d18488512232db296b"
+    },
+    {
+      "names": [
+        "ApiTestEndpoint"
+      ],
+      "group": "api-config",
+      "bodySha256": "a0dd6317335ecbded8317b21a1912280f8bfd06447b586766c7fdc725ad59fc0"
+    },
+    {
+      "names": [
+        "ApiOAuthConfig"
+      ],
+      "group": "api-config",
+      "bodySha256": "26c7f990086ff8dc74c586ef5ba4371ff6f6347e2c4a7425666ea939209d9078"
+    },
+    {
+      "names": [
+        "ApiRenewEndpoint"
+      ],
+      "group": "api-config",
+      "bodySha256": "9e8457e066c262c02981a321cae91198a87c77bb28b6c59c9aeacf163c153d75"
+    },
+    {
+      "names": [
+        "ApiSourceConfig"
+      ],
+      "group": "api-config",
+      "bodySha256": "5ef25269a14b714f6367b9f0b24b7fc3e34c559834616aad395d4f7022f67fbc"
+    },
+    {
+      "names": [
+        "LocalSourceConfig"
+      ],
+      "group": "source-resources",
+      "bodySha256": "6aa2a31bc73f9d8c0330dc47951c21cfb6b9aa43ba2d41d79ce1979675a52456"
+    },
+    {
+      "names": [
+        "SourceConnectionStatus"
+      ],
+      "group": "source-resources",
+      "bodySha256": "a4410494a199c417e28c0b9245f1e9d44abddb0c730d648b51064e300373ca40"
+    },
+    {
+      "names": [
+        "SourceBrand"
+      ],
+      "group": "source-resources",
+      "bodySha256": "74b88fa636d6b2c37868024c8bbf2c34927d91fd6b8c318f6698fdce1524b391"
+    },
+    {
+      "names": [
+        "FolderSourceConfig"
+      ],
+      "group": "source-resources",
+      "bodySha256": "6e3ad807b7c765d8eaf1fbce7200db4e482fc00f7e95f0b0fc86f60c60d0f98d"
+    },
+    {
+      "names": [
+        "SourceGuide"
+      ],
+      "group": "source-resources",
+      "bodySha256": "4dce24370438aa0f17b58f90e9c2b0d1597036aa5ca5f0b0c2fc1d9c40bdd6f3"
+    },
+    {
+      "names": [
+        "LoadedSource"
+      ],
+      "group": "source-resources",
+      "bodySha256": "29e3ad496cd90851fde5a19f45b1eaf0c7490e0d54f574918c614c51d4606f14"
+    },
+    {
+      "names": [
+        "CreateSourceInput"
+      ],
+      "group": "source-resources",
+      "bodySha256": "c487f8ba95f5d0fe9aa7a2c3fc30d9bb5ee0c0fa6272a58dab2ff6b2da4df7f1"
+    },
+    {
+      "names": [
+        "ApiConfig"
+      ],
+      "group": "source-resources",
+      "bodySha256": "6894656f44ecc1d73fa2488c1320411fc0a2632428ac1094f73f5955ff554764"
+    }
+  ],
+  "modules": [
+    {
+      "name": "provider-inference",
+      "lines": 189
+    },
+    {
+      "name": "provider-inference-is-oauth-source",
+      "lines": 57
+    },
+    {
+      "name": "mcp-config",
+      "lines": 119
+    },
+    {
+      "name": "api-config",
+      "lines": 98
+    },
+    {
+      "name": "source-resources",
+      "lines": 180
+    }
+  ],
+  "dependencies": {
+    "provider-inference": [],
+    "provider-inference-is-oauth-source": [
+      "source-resources",
+      "provider-inference"
+    ],
+    "mcp-config": [
+      "provider-inference"
+    ],
+    "api-config": [
+      "provider-inference"
+    ],
+    "source-resources": [
+      "provider-inference",
+      "mcp-config",
+      "api-config"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

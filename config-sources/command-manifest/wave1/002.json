@@ -1,0 +1,442 @@
+[
+  {
+    "legacy_id": "ao-day-ops-reconciliation-tests",
+    "name": "AO Day Ops — tests réconciliation watcher-state",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/ao_day_ops_reconciliation_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "triggerType": "ScheduleStep",
+    "task_queue": "ao",
+    "riskClass": "guardrail_tests",
+    "sideEffects": [
+      "reads_reports",
+      "reads_state",
+      "writes_test_report"
+    ],
+    "category": "ao-autonomy-quality",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/ao-day-ops-reconciliation-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1",
+    "note": "Read-only anti-regression tests ensuring Day Ops cannot silently return scanned=0 when watcher state has AO opportunities, and that watcher quality tasks are de-duplicated.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/ao_day_ops_reconciliation_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/ao-day-ops-reconciliation-tests-last.json",
+    "businessReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/ao-day-ops-reconciliation-tests-last.json",
+    "businessReportMdPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/ao-day-ops-reconciliation-tests-last.md",
+    "businessContractVersion": "ao-day-ops-reconciliation-tests-v1"
+  },
+  {
+    "legacy_id": "2bfe5f",
+    "name": "Pilotage speaker & CFP Europe",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/speaker_cfp_real.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "Real OSS wrapper: Gmail inbox-first loop for speaker/CFP/podcast, safe replies, opportunity discovery, state/report persistence.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/speaker_cfp_real.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/2bfe5f-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/2bfe5f-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "officer-weekend-optimizer",
+    "mode": "script",
+    "name": "Optimisation Officer du week-end",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/officer_planning_real.py --mode weekend",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "Deterministic planning-only OSS wrapper generating offhours optimization report and next-run plan.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/officer_planning_real.py",
+        "--mode",
+        "weekend"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/officer-weekend-optimizer-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/officer-weekend-optimizer-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "officer-friday-adjustments",
+    "mode": "script",
+    "name": "Ajustements Officer du vendredi",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/officer_planning_real.py --mode friday",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "Deterministic planning-only OSS wrapper refreshing weekly improvement priorities and Monday plan.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/officer_planning_real.py",
+        "--mode",
+        "friday"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/officer-friday-adjustments-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/officer-friday-adjustments-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "officer-monday-launch-planner",
+    "mode": "script",
+    "name": "Plan de lancement Officer du lundi",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/officer_planning_real.py --mode monday",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "Deterministic planning-only OSS wrapper applying readiness/planning blocks to campaign state files.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/officer_planning_real.py",
+        "--mode",
+        "monday"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/officer-monday-launch-planner-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/officer-monday-launch-planner-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "campaign-governance-master",
+    "name": "Gouvernance transversale des campagnes",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/campaign_governance_real.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "Deterministic governance wrapper: validates campaign state files, refreshes control-tower centralizers, appends insights, and logs governance runs.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/campaign_governance_real.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/campaign-governance-master-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/campaign-governance-master-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "night-agent-daily-report",
+    "name": "Rapport quotidien Night Agent",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/night_agent_monitor_real.py --mode daily-report",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "OSS-native Night Agent daily report wrapper: reads Night Agent API directly, summarizes per-project activity, and writes daily report artifacts.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/night_agent_monitor_real.py",
+        "--mode",
+        "daily-report"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/night-agent-daily-report-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/night-agent-daily-report-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "night-agent-alerts",
+    "name": "Alertes Night Agent",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/night_agent_monitor_real.py --mode alerts",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "OSS-native Night Agent watchdog: detects blocked/exhausted stories, deduplicates alerts, and emails internal alert notifications when needed.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/night_agent_monitor_real.py",
+        "--mode",
+        "alerts"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/night-agent-alerts-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/night-agent-alerts-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "server-daily-digest",
+    "name": "Digest quotidien du serveur OSS",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/server_digest_real.py --mode daily",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "OSS-native daily digest: summarizes OSS workflow logs, campaign-control events, Night Agent state, and Gmail inbox signals; keeps CRAFT-SERVER-DIGEST subject marker for continuity.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/server_digest_real.py",
+        "--mode",
+        "daily"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/server-daily-digest-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/server-daily-digest-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "server-weekly-digest",
+    "name": "Digest hebdomadaire du serveur OSS",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/server_digest_real.py --mode weekly",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "OSS-native weekly digest: aggregates 7-day OSS runs, campaign movements, Night Agent status, and mailbox signals into a compact pilotage email.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/server_digest_real.py",
+        "--mode",
+        "weekly"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/server-weekly-digest-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/server-weekly-digest-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "pr-campaign-avant-le-flow",
+    "name": "Suivi de la campagne PR Avant le Flow",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/pr_campaign_control_real.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "OSS control-plane wrapper reconciles press-monitor-real outputs, PR inbox delta, and pending form submissions into canonical PR state without duplicating outbound logic.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/pr_campaign_control_real.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/pr-campaign-avant-le-flow-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/pr-campaign-avant-le-flow-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "conference-prospection-daily",
+    "name": "Suivi quotidien des prises de parole & conférences",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/conference_campaign_control_real.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "OSS control-plane wrapper reconciles speaker/CFP state, conference inbox delta, pending CFP forms, and internal manual-step alerts.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/conference_campaign_control_real.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/conference-prospection-daily-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/conference-prospection-daily-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "triage-emails-multi-sources-master",
+    "name": "Triage multi-sources des emails",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/triage_emails_real.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "OSS inbox triage wrapper classifies recent Gmail delta, marks low-signal mail as read, and maintains triage state/report artifacts.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/triage_emails_real.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/triage-emails-multi-sources-master-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/triage-emails-multi-sources-master-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "gc-inqom-sync-weekly",
+    "name": "Synchronisation hebdomadaire GoCardless → Inqom",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/gc_inqom_sync_real.py",
+    "timeout_seconds": 600,
+    "cutover_ready": true,
+    "note": "OSS real weekly finance wrapper synchronizes paid GoCardless payouts to Inqom with duplicate detection, mapping updates, and treasury snapshot reporting.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/gc_inqom_sync_real.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 600
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/gc-inqom-sync-weekly-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/gc-inqom-sync-weekly-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "web-form-submitter",
+    "name": "Pilotage des formulaires web des campagnes",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/web_form_submitter_real.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "OSS controlled queue wrapper manages pending form submissions, manual blockers, lock state, and internal escalation without Craft runtime dependency.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/web_form_submitter_real.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/web-form-submitter-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/web-form-submitter-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "cb77bc",
+    "name": "Auto-étiquetage des sessions",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/session_auto_label_real.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "note": "OSS SessionEnd wrapper recommends up to three labels for a finished session and persists an operational report.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/session_auto_label_real.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/cb77bc-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/cb77bc-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "post-flag-auto-review",
+    "name": "Revue automatique après signalement",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/post_flag_auto_review_real.py",
+    "timeout_seconds": 240,
+    "cutover_ready": true,
+    "note": "OSS FlagChange wrapper analyzes a flagged session, recommends category labels, and persists concrete improvement suggestions.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/post_flag_auto_review_real.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 240
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/post-flag-auto-review-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/post-flag-auto-review-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "schedule-drift-watchdog",
+    "name": "Surveillance de dérive des schedules Temporal",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/schedule_drift_report.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "Compare le manifeste des schedules avec l’état live Temporal et produit un rapport JSON/Markdown de dérive et de fraîcheur.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/schedule_drift_report.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/schedule-drift-watchdog-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/schedule-drift-watchdog-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  }
+]

@@ -1,0 +1,433 @@
+{
+  "source": "packages/shared/src/agent/powershell-validator.ts",
+  "units": [
+    {
+      "names": [
+        "_validatorRoot"
+      ],
+      "group": "parser-location",
+      "bodySha256": "16418daefa8e1b562d89de6ed8e4f26ad596ae40eb586cb1e61548062e911a19"
+    },
+    {
+      "names": [
+        "setPowerShellValidatorRoot"
+      ],
+      "group": "parser-location",
+      "bodySha256": "a86eb8de902393577f887d340aaffa5ae64730ad4b4656f32179c9c93a39ac12"
+    },
+    {
+      "names": [
+        "PowerShellValidationResult"
+      ],
+      "group": "ast-types",
+      "bodySha256": "97703da9144cea251d0a5d032cd7b7fee7108cc56dc2aaede1000123c438423b"
+    },
+    {
+      "names": [
+        "SubcommandResult"
+      ],
+      "group": "ast-types",
+      "bodySha256": "be59d90331fffe7e5143025d12c335341e7fa3e74b2070f928ef24d8adce67ac"
+    },
+    {
+      "names": [
+        "PowerShellValidationReason"
+      ],
+      "group": "ast-types",
+      "bodySha256": "6a833f19a230f7f9b9def30a27aa43425951b17bdf472855f7630fab5860d414"
+    },
+    {
+      "names": [
+        "ASTNode"
+      ],
+      "group": "ast-types",
+      "bodySha256": "adde3167a1ed4c46ddab5fdbcebdaaa6c211fc510dbb8b555a554473d63be838"
+    },
+    {
+      "names": [
+        "ScriptBlockAst"
+      ],
+      "group": "ast-types",
+      "bodySha256": "7ca0e9e5f5432b8793aa11906c0491814bf81fb5e3d809705ec242b1b59f9cc3"
+    },
+    {
+      "names": [
+        "NamedBlockAst"
+      ],
+      "group": "ast-types",
+      "bodySha256": "5217103aadbed2c222133c9da3a9f13695d9d76b67a134992b30e11e0c78a2c1"
+    },
+    {
+      "names": [
+        "PipelineAst"
+      ],
+      "group": "ast-types",
+      "bodySha256": "b3dcef070f31bf1651ed0ecc107e4f2780c57cbbed419e1af2f771aaa494d05e"
+    },
+    {
+      "names": [
+        "CommandAst"
+      ],
+      "group": "ast-types",
+      "bodySha256": "4b8626bb90675383f42843cf2200d19a2b56b93a689069eecba2253f79e2c608"
+    },
+    {
+      "names": [
+        "CommandExpressionAst"
+      ],
+      "group": "ast-types",
+      "bodySha256": "71d1607cc9d9ed6376b52a2272783e3eb66afa790d0afc5d45d6568b12423e6b"
+    },
+    {
+      "names": [
+        "StringConstantExpressionAst"
+      ],
+      "group": "ast-types",
+      "bodySha256": "a776fef949a4e138cf422ce29bc3d3630529be0c8af8c787283559100d239eb2"
+    },
+    {
+      "names": [
+        "VariableExpressionAst"
+      ],
+      "group": "ast-types",
+      "bodySha256": "aa89ed6866babfaf6814b44664c9afa5290d48197682e17c28ce669b1e64d310"
+    },
+    {
+      "names": [
+        "SubExpressionAst"
+      ],
+      "group": "ast-types",
+      "bodySha256": "64a9597a7f11409842e42cd7be80629bc4cb0c2fe200e1f76d7c500f841f0c0d"
+    },
+    {
+      "names": [
+        "ScriptBlockExpressionAst"
+      ],
+      "group": "ast-types",
+      "bodySha256": "52485ce3fddd6091bd5e2dcbb292071d26668075191e8da0c702703d6140ab0a"
+    },
+    {
+      "names": [
+        "FileRedirectionAst"
+      ],
+      "group": "ast-types",
+      "bodySha256": "1cb2913cc5f4ed875b58760d474438ef7ecaf5899ebbf501c4039b1cfebf7e57"
+    },
+    {
+      "names": [
+        "AssignmentStatementAst"
+      ],
+      "group": "ast-types",
+      "bodySha256": "4f4e35122a8ae43a54a3279cc255f6dc9fc8d9ff5de31bf82a4ed0c0144a36ca"
+    },
+    {
+      "names": [
+        "ExpandableStringExpressionAst"
+      ],
+      "group": "ast-types",
+      "bodySha256": "db7556004ee2df4708ccd5792977289bd45ac9ebdc960bd27a195e13c0a89622"
+    },
+    {
+      "names": [
+        "CommandParameterAst"
+      ],
+      "group": "ast-types",
+      "bodySha256": "18e21f0ac247ad22ea9e27c449bab6f3b88427e0869ffc178eb27a6c4e5e1320"
+    },
+    {
+      "names": [
+        "InvokeMemberExpressionAst"
+      ],
+      "group": "ast-types",
+      "bodySha256": "5de0e61e757c091069ea2e80e1d2b788fb6c3cb405c872984234eacb998eb781"
+    },
+    {
+      "names": [
+        "ParseResult"
+      ],
+      "group": "ast-types",
+      "bodySha256": "01bdc9059beef38c1191b3ca7389a15e3c91d153f95b32d4a0b4fd5c02dfc1eb"
+    },
+    {
+      "names": [
+        "DANGEROUS_CMDLETS"
+      ],
+      "group": "dangerous-commands",
+      "bodySha256": "37c34a9869a6e92eacaeaa9776809f656dcfb783c249143ae8d92aa157f62707"
+    },
+    {
+      "names": [
+        "isDangerousCmdlet"
+      ],
+      "group": "dangerous-commands",
+      "bodySha256": "1ad028c92bfaef3d1b775777eb574eb6b7b5ddfb2e4093be263bb376468df9e8"
+    },
+    {
+      "names": [
+        "powershellAvailable"
+      ],
+      "group": "parser-process",
+      "bodySha256": "bef3dd94e08cb3a0210c113810e56a9d961900ead38b52fd8705ee22c628a4a1"
+    },
+    {
+      "names": [
+        "powershellPath"
+      ],
+      "group": "parser-process",
+      "bodySha256": "5cff8a2be1e86a1145a8995d8f3364b96bbb04931bf00aee67b84351fa419be2"
+    },
+    {
+      "names": [
+        "isPowerShellAvailable"
+      ],
+      "group": "parser-process",
+      "bodySha256": "6d189119b81e4ff54d5bde22e4a3325b4f8a6457d9cb3082ebdb6fb98ec5aef3"
+    },
+    {
+      "names": [
+        "getParserScriptPath"
+      ],
+      "group": "parser-process",
+      "bodySha256": "b5624220ad67f4dcb9c91a7c4dc2f06b0afd9a6363c8114f3605eb39f8a778c9"
+    },
+    {
+      "names": [
+        "parseCommand"
+      ],
+      "group": "parser-process",
+      "bodySha256": "d9f533db4ad5ce4ea32994eb34453a0691dd490fff1d1aad4119aa8172b8f260"
+    },
+    {
+      "names": [
+        "validatePowerShellCommand"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "e567e0778a539fb7cf6ea0e70ac016abd1fec2c822b3204655d006b95fff1d31"
+    },
+    {
+      "names": [
+        "validateNode"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "5d9baee05279d168a74d076161b93f63b140e92cd4964a96252110a33fefaec3"
+    },
+    {
+      "names": [
+        "validateScriptBlock"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "96033df3f6d9e6008811ec954d46551e16eadbb4004bd1dcce6cbef145e47086"
+    },
+    {
+      "names": [
+        "validateNamedBlock"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "2aef4282abd48de45e8416fc91c43289f97200000a9300a11bbb199e01f2effb"
+    },
+    {
+      "names": [
+        "validatePipeline"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "98f354374a19cf1f31ce8051d583b8969d829dd1e70bd98177398a83e76abd42"
+    },
+    {
+      "names": [
+        "validateCommand"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "ea899883df60293cbaa5b7d3ed033eb0e6656d3262e29cc291b84290d177cc4f"
+    },
+    {
+      "names": [
+        "validateCommandExpression"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "0e13ed34dc6b4a75e733cb6ebcd2c8296de547be6efc8e78a1534c157ce1cb9a"
+    },
+    {
+      "names": [
+        "validateGenericNode"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "ec6406ad156728a1631741992f83692262bda60cfc720f573484a304f719a001"
+    },
+    {
+      "names": [
+        "checkForDangerousConstructs"
+      ],
+      "group": "ast-policy-check-for-dangerous-constructs",
+      "bodySha256": "9c40301b8b4dd66ae34a869cb202112f18aea20e8744240943c1e62f6dc270bf"
+    },
+    {
+      "names": [
+        "getElementText"
+      ],
+      "group": "command-syntax",
+      "bodySha256": "f929641685ea2eec9156de13493ff8771305213ae7ccd7a49397fa36b3f636c2"
+    },
+    {
+      "names": [
+        "looksLikePowerShell"
+      ],
+      "group": "command-syntax",
+      "bodySha256": "14de249d67d8a97281fd0c68984b1e7050f95cf6c3ccbec53777c2bb5e768fcf"
+    },
+    {
+      "names": [
+        "unwrapPowerShellCommand"
+      ],
+      "group": "command-syntax",
+      "bodySha256": "2528e2d6e585e154b14cdf280a483c5194b4120dc24bfccefc242bddd4f947af"
+    },
+    {
+      "names": [
+        "READ_CMDLETS"
+      ],
+      "group": "path-extraction",
+      "bodySha256": "f72407dc3aad7bd62c4a7e3ff4f61e0c7057f8846709b6e690d7f3e10abf94aa"
+    },
+    {
+      "names": [
+        "WRITE_CMDLETS"
+      ],
+      "group": "path-extraction",
+      "bodySha256": "017f939aa668107770ef235dbb3f819a96390c8e5f9eba7a754f0efe4e0055bd"
+    },
+    {
+      "names": [
+        "extractPowerShellWriteTarget"
+      ],
+      "group": "path-extraction",
+      "bodySha256": "e8e75db94aa5cc454df5a3e53b10611c8dd686970a4669de1323e3aaf4797115"
+    },
+    {
+      "names": [
+        "extractPowerShellReadTarget"
+      ],
+      "group": "path-extraction",
+      "bodySha256": "de4895ab052dbe4b97288c43a182eaeb355f87599d75d64b7937d53616720395"
+    },
+    {
+      "names": [
+        "findFirstPipelineCommand"
+      ],
+      "group": "path-extraction",
+      "bodySha256": "7a081032ab138a3c1ce78fe96849d61676ed5fdf954562ee7fb0d528e0ecca71"
+    },
+    {
+      "names": [
+        "findLastPipelineCommand"
+      ],
+      "group": "path-extraction",
+      "bodySha256": "5e830c520ce6367b5028bea3dd1221053c8ba95db3d4bd1478896ed5f9c3604a"
+    },
+    {
+      "names": [
+        "findFirstPipeline"
+      ],
+      "group": "path-extraction",
+      "bodySha256": "941b98857d55be5596a9538d53ab83d043989720329b83c8c639d0109f8341da"
+    },
+    {
+      "names": [
+        "getCommandName"
+      ],
+      "group": "path-extraction",
+      "bodySha256": "074444c1d56478aced13c1ff036aba09354081bd537c69462fe45395e96fc12b"
+    },
+    {
+      "names": [
+        "extractParameterValue"
+      ],
+      "group": "path-extraction",
+      "bodySha256": "4c0b3785a924da40e0daef8293ee8a9d58d97010b8b9db3e4a4fc60c5c1f4ca3"
+    },
+    {
+      "names": [
+        "extractFirstPositionalArg"
+      ],
+      "group": "path-extraction",
+      "bodySha256": "f591fc421e23b1dff47d195e5a96ece63234d315611b58aa22d27589a7ddff5b"
+    },
+    {
+      "names": [
+        "extractStringValue"
+      ],
+      "group": "path-extraction",
+      "bodySha256": "1bd440cd20e3b216f09584118215a332be1d1d126c4b66f7d8e13ad9d4ec0547"
+    }
+  ],
+  "modules": [
+    {
+      "name": "parser-location",
+      "lines": 23
+    },
+    {
+      "name": "ast-types",
+      "lines": 138
+    },
+    {
+      "name": "dangerous-commands",
+      "lines": 71
+    },
+    {
+      "name": "parser-process",
+      "lines": 143
+    },
+    {
+      "name": "ast-policy",
+      "lines": 353
+    },
+    {
+      "name": "ast-policy-check-for-dangerous-constructs",
+      "lines": 57
+    },
+    {
+      "name": "command-syntax",
+      "lines": 81
+    },
+    {
+      "name": "path-extraction",
+      "lines": 251
+    }
+  ],
+  "dependencies": {
+    "parser-location": [],
+    "ast-types": [],
+    "dangerous-commands": [],
+    "parser-process": [
+      "parser-location",
+      "ast-types"
+    ],
+    "ast-policy": [
+      "ast-types",
+      "parser-process",
+      "ast-policy-check-for-dangerous-constructs",
+      "command-syntax",
+      "dangerous-commands"
+    ],
+    "ast-policy-check-for-dangerous-constructs": [
+      "ast-types"
+    ],
+    "command-syntax": [
+      "ast-types"
+    ],
+    "path-extraction": [
+      "parser-process",
+      "command-syntax",
+      "ast-types"
+    ]
+  },
+  "unitCycles": [
+    [
+      "validateCommandExpression",
+      "validatePipeline",
+      "validateNamedBlock",
+      "validateScriptBlock",
+      "validateNode"
+    ]
+  ],
+  "moduleCycles": []
+}

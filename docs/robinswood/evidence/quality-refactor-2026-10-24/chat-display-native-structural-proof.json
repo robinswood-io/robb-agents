@@ -1,0 +1,173 @@
+{
+  "status": "passed",
+  "nativeDeclarationBodiesPreserved": true,
+  "reviewedStableDependencyAdditions": {
+    "matchingOccurrences": [
+      "session?.messages"
+    ],
+    "goToNextMatch": [
+      "setCurrentMatchIndex",
+      "shouldScrollToMatchRef"
+    ],
+    "goToPrevMatch": [
+      "setCurrentMatchIndex",
+      "shouldScrollToMatchRef"
+    ],
+    "handleScroll": [
+      "TURNS_PER_PAGE",
+      "isStickToBottomRef",
+      "scrollViewportRef",
+      "setShowScrollToLatest",
+      "setVisibleTurnCount",
+      "totalTurnCountRef"
+    ],
+    "handleReturnToLatestMessage": [
+      "isStickToBottomRef",
+      "scrollViewportRef",
+      "setShowScrollToLatest"
+    ],
+    "handleSaveAndSendFollowUp": [
+      "t"
+    ],
+    "handleAnimatedHeightChange": [
+      "isStickToBottomRef",
+      "scrollViewportRef"
+    ],
+    "scrollToFollowUpTurn": [
+      "setVisibleTurnCount",
+      "turnRefs"
+    ],
+    "handleFollowUpChipClick": [
+      "followUpOpenNonceRef",
+      "setOpenAnnotationRequest",
+      "setVisibleTurnCount"
+    ]
+  },
+  "reviewedStableEffectDependencyAdditions": {
+    "3b9dcba72228472a1959a574b25954918c48f534c4cca52501abd31491509c1c": [
+      "session",
+      "textareaRef"
+    ],
+    "d6f066f831cd3c49ac23c0292ffe56c77d279cabc14e21130f2fd2e9ed5a5331": [
+      "setSendMessageKey"
+    ],
+    "88e0e32116ba693ff66a925339df5acf65c51374413f0947b63a1c19ac9fcfb2": [
+      "setVisibleTurnCount"
+    ],
+    "670b98e811969c1189c26a88cdbdaca76499ef53548ca389145c05d54fbcdd63": [
+      "setVisibleTurnCount",
+      "shouldScrollToMatchRef",
+      "turnRefs"
+    ],
+    "678551eab3d295b77375d86811c53accb08fa52217ba85dd33f1de57b5fec9ac": [
+      "turnRefs"
+    ],
+    "a3b67a4cbe39dd0edfa002967575fcec990ac24daae7d176b27be1f99563edcd": [
+      "isHighlighting"
+    ],
+    "693b992e587178f406e4aada95cf5c5b0ed2ff9db28ae68a09c31a4016984358": [
+      "scrollViewportRef"
+    ],
+    "143efaa757697cb02f6d0191f1a62378ca0d4487d3cf16ba1d360601cd565a4e": [
+      "TURNS_PER_PAGE",
+      "isFocusedPanelRef",
+      "isStickToBottomRef",
+      "messagesEndRef",
+      "prevSessionIdRef",
+      "scrollViewportRef",
+      "setShowScrollToLatest",
+      "setVisibleTurnCount",
+      "skipSmoothScrollUntilRef"
+    ],
+    "7c70741c120d6db08971f199fe9e458ffa393fb7c85f1689f4846a54c26e6131": [
+      "isFocusedPanelRef",
+      "isStickToBottomRef",
+      "messagesEndRef",
+      "prevLastMessageIdRef",
+      "prevMessageCountRef",
+      "prevSessionIdForCommitScrollRef",
+      "setShowScrollToLatest"
+    ]
+  },
+  "reviewedEffectDependencyRemovals": {},
+  "reviewedDependencyRemovals": {},
+  "reviewedDeferredCaptures": {},
+  "nativeMainJSXAndInlineCallbacksPreserved": true,
+  "nativeRootAndActionHooksReinlinedExactly": true,
+  "viewAddsNoStateOrEffects": true,
+  "nativeValuesPassedDirectly": true,
+  "nativeImportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ChatDisplay.tsx",
+      "lines": 454,
+      "sha256": "7c5bdc6121270cf3ab44aa660deccfff66804b4ccf90456bbbcdf63826255865"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/chat-display-contracts.tsx",
+      "lines": 201,
+      "sha256": "14f3b504595c901db1c1763fd508e1b1f0205efe8e36de4cd736b109cdcda5e4"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/chat-message-bubbles.tsx",
+      "lines": 280,
+      "sha256": "c90f189217b9c03cde002c9ffab36b08a43d23f2781427a0280fff0aef6feb9c"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ChatTranscriptViewport.tsx",
+      "lines": 468,
+      "sha256": "f67e8a1964d6eba40d1cec2e1139d087ab7d8ecfe61fd8deaa7809e7a1589e4c"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ChatInputZoneView.tsx",
+      "lines": 142,
+      "sha256": "09c94bd728112059bb8398c9eab2b85656725273e4fd2faedda39a3349ad7f65"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/chat-display-view.tsx",
+      "lines": 345,
+      "sha256": "75e20da89fed4846864b24787ff50b081256dad6d9a78483dfd50929b71c69de"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-chat-scroll-state.ts",
+      "lines": 69,
+      "sha256": "3e3adf8d1f04b0718d8520eb744c7b16882cbaf91ed560e2e9aa223e62df7355"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-chat-search-matches.ts",
+      "lines": 201,
+      "sha256": "f8a6ad45fd3c49096b84ac149449b6e0a156c6178775aa8c31cd1e4b18e4c9f2"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-chat-search-highlights.ts",
+      "lines": 213,
+      "sha256": "7ddc50f541d521072efadb151140c929c67cd9f2f00089b11b19ce64f28dd178"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-chat-overlays.ts",
+      "lines": 79,
+      "sha256": "3580392acdd00b829748fe2959f0c407a3f33615783a6ea3838019b0f6ed45e4"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-chat-follow-ups.ts",
+      "lines": 69,
+      "sha256": "a5086361abb3d6069854fc769eb0c0a601e2e4d403b778e158dc59dbb257732c"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-chat-scroll-events.ts",
+      "lines": 188,
+      "sha256": "29c2eaba09a84325e3ea8a17887a9c4ce7bec2aa8521d3750baee08f64abdf9d"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-chat-actions.ts",
+      "lines": 221,
+      "sha256": "665193bba0027d17cbb43a77bb8d88dd7cad3fd12bf62ef60da670c916e2c077"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/use-chat-timeline.ts",
+      "lines": 132,
+      "sha256": "3670c5ed0b34ecb424d717cdd3da38d09b0f92a9c52779abc6504298b8bb0daa"
+    }
+  ]
+}

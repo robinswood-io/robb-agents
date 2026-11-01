@@ -1,0 +1,210 @@
+{
+  "status": "testé localement, travail global en cours",
+  "changes": [
+    "Apparence : état et effets conservés, vue séparée sans état ; 415 et 472 lignes",
+    "Lanceur développement : 37 déclarations natives conservées ; 442 et 355 lignes",
+    "25 déclarations de dépendances des huit outils documentaires épinglées aux versions stables vérifiées de 12 paquets",
+    "Suppression des métadonnées de script du module PDF partagé"
+  ],
+  "sourceGate": {
+    "max-lines": 28,
+    "no-explicit-any": 0
+  },
+  "globalLint": {
+    "errorCount": 21,
+    "warningCount": 99,
+    "fatalErrorCount": 0
+  },
+  "fullTests": {
+    "pass": 10759,
+    "fail": 0,
+    "skip": 12
+  },
+  "browserCases": 5,
+  "documentScenarios": 21,
+  "developmentIsolationScenarios": 5,
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 17.46,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/appearance-document-dev-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test:doc-tools"
+      ],
+      "exitCode": 0,
+      "seconds": 31.92,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/latest-document-tool-scenarios.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/check-native-electron-dev-runtime.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.08,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/electron-dev-native-isolation.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "scripts/tests/build-provenance.test.ts",
+        "apps/electron/src/main/__tests__/robinswood-branding.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.11,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/electron-dev-source-guards.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/pages/settings/AppearanceSettingsPage.tsx",
+        "apps/electron/src/renderer/pages/settings/appearance-settings-content.tsx",
+        "scripts/electron-dev.ts",
+        "scripts/electron-dev-support.ts",
+        "scripts/tests/build-provenance.test.ts",
+        "apps/electron/src/main/__tests__/robinswood-branding.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 2.39,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/appearance-document-dev-eslint-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 144.72,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/appearance-document-dev-full.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 26.66,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/appearance-document-dev-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 12.31,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/appearance-document-dev-build.log"
+    }
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/pages/settings/AppearanceSettingsPage.tsx",
+      "lines": 415,
+      "sha256": "d3f0f90300b0198643761bf52f14d5a173adb9d0cc066eddd96d0bd05fcc4a61"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/appearance-settings-content.tsx",
+      "lines": 472,
+      "sha256": "28a575e3347295df9443af4bcbee87a63fafcca7a2c70dfad63a8a487f866196"
+    },
+    {
+      "file": "scripts/electron-dev.ts",
+      "lines": 442,
+      "sha256": "4965ebcac990540a4a3bd699dc1842c02dc40593a26c55a20359145740bcf558"
+    },
+    {
+      "file": "scripts/electron-dev-support.ts",
+      "lines": 355,
+      "sha256": "aa04cc98bd8109fc94fda693c863bdf755d5c66ec2def5998ec978740c8497d5"
+    },
+    {
+      "file": "apps/electron/resources/scripts/pdf_common.py",
+      "lines": 410,
+      "sha256": "42a972d33ffc1e22f3b0b7d4126e3f99ad540ac9d8034b9c525c712730225dff"
+    },
+    {
+      "file": "apps/electron/resources/scripts/xlsx_tool.py",
+      "lines": 375,
+      "sha256": "0669c3ec53239a41cb3f7614516f724b22b656a2f5d48392d3cef0ba2d65a461"
+    },
+    {
+      "file": "apps/electron/resources/scripts/docx_tool.py",
+      "lines": 390,
+      "sha256": "04b0be99a6ddc59eb9cfda9f0b29082f8019481435d423578af8e28f5081b1d0"
+    },
+    {
+      "file": "apps/electron/resources/scripts/markitdown_cli.py",
+      "lines": 137,
+      "sha256": "37f7c466ab30197dda2ef43f6fb75bd9c64ef933fa3d46069baba31f1b869e6c"
+    },
+    {
+      "file": "apps/electron/resources/scripts/pdf_tool.py",
+      "lines": 49,
+      "sha256": "00972d108bd0cf651d4608c2df1ac6864e2a511627677e1b97ae5697290c44d9"
+    },
+    {
+      "file": "apps/electron/resources/scripts/doc_diff.py",
+      "lines": 251,
+      "sha256": "fd376d7ec4fb0374512249f8f7b95928607fecb6ed0f9a6df583ed2db6a6ef89"
+    },
+    {
+      "file": "apps/electron/resources/scripts/ical_tool.py",
+      "lines": 372,
+      "sha256": "7c0194798f61b77dedec10fd0563a6ffbaec7f7d7662387255c8e4ca09a9022b"
+    },
+    {
+      "file": "apps/electron/resources/scripts/img_tool.py",
+      "lines": 370,
+      "sha256": "e2ea6a5be042a262edba5de181af10e9842bfd40051f27c4d3981d9a6240d9fe"
+    },
+    {
+      "file": "apps/electron/resources/scripts/pptx_tool.py",
+      "lines": 364,
+      "sha256": "f893f4963e1bd16013aabdfb7acb950cbb78bb8a9ca2d0ef9d1b19cdcd06d9a5"
+    },
+    {
+      "file": "scripts/tests/build-provenance.test.ts",
+      "lines": 94,
+      "sha256": "ec4f9b80ef8414c79207c5364a663429048304f025bac2f8ad849d2201354b1f"
+    },
+    {
+      "file": "apps/electron/src/main/__tests__/robinswood-branding.test.ts",
+      "lines": 229,
+      "sha256": "8c84e03e31c8970711b5951a04ee1d6f6cbd7b4e8ff8306142c2e84b6e9995a6"
+    }
+  ],
+  "limits": [
+    "28 fichiers à découper et 99 avertissements lint à corriger",
+    "Missions réelles du candidat final et installation locale encore à réaliser ; application actuelle inchangée"
+  ]
+}

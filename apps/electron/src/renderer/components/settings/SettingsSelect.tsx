@@ -26,9 +26,9 @@ export interface SettingsSelectOption {
 
 export interface SettingsSelectProps {
   /** Select label */
-  label?: string
+  label?: string | undefined
   /** Optional description below label */
-  description?: string
+  description?: string | undefined
   /** Currently selected value */
   value: string
   /** Change handler */
@@ -36,13 +36,13 @@ export interface SettingsSelectProps {
   /** Available options */
   options: SettingsSelectOption[]
   /** Placeholder text when nothing selected */
-  placeholder?: string
+  placeholder?: string | undefined
   /** Disabled state */
-  disabled?: boolean
+  disabled?: boolean | undefined
   /** Additional className for wrapper */
-  className?: string
+  className?: string | undefined
   /** Whether the select is inside a card (affects padding) */
-  inCard?: boolean
+  inCard?: boolean | undefined
 }
 
 /**
@@ -113,7 +113,7 @@ export interface SettingsSelectRowProps {
   /** Row label */
   label: string
   /** Optional description below label */
-  description?: string
+  description?: string | undefined
   /** Currently selected value */
   value: string
   /** Change handler */
@@ -121,13 +121,13 @@ export interface SettingsSelectRowProps {
   /** Available options */
   options: SettingsSelectOption[]
   /** Placeholder text */
-  placeholder?: string
+  placeholder?: string | undefined
   /** Disabled state */
-  disabled?: boolean
+  disabled?: boolean | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
   /** Whether inside a card */
-  inCard?: boolean
+  inCard?: boolean | undefined
 }
 
 export function SettingsSelectRow({

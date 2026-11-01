@@ -72,7 +72,7 @@ function ContextMenuSubTrigger({
   children,
   ...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.SubTrigger> & {
-  inset?: boolean
+  inset?: boolean | undefined
 }) {
   return (
     <ContextMenuPrimitive.SubTrigger
@@ -174,9 +174,9 @@ function ContextMenuItem({
   onClick,
   ...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.Item> & {
-  inset?: boolean
-  variant?: "default" | "destructive"
-  shortcut?: string
+  inset?: boolean | undefined
+  variant?: "default" | "destructive" | undefined
+  shortcut?: string | undefined
 }) {
   const shortcutContext = React.useContext(ContextMenuShortcutContext)
 
@@ -268,7 +268,7 @@ function ContextMenuLabel({
   inset,
   ...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.Label> & {
-  inset?: boolean
+  inset?: boolean | undefined
 }) {
   return (
     <ContextMenuPrimitive.Label

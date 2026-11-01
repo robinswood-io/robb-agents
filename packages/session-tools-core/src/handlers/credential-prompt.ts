@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+import type { CredentialPromptSchema } from '../tool-defs/schemas.ts';
 /**
  * Credential Prompt Handler
  *
@@ -5,24 +7,11 @@
  */
 
 import type { SessionToolContext } from '../context.ts';
-import type { ToolResult, CredentialAuthRequest, CredentialInputMode } from '../types.ts';
+import type { ToolResult, CredentialAuthRequest } from '../types.ts';
 import { successResponse, errorResponse } from '../response.ts';
 import { generateRequestId, detectCredentialMode, getEffectiveHeaderNames } from '../source-helpers.ts';
 
-export interface CredentialPromptArgs {
-  sourceSlug: string;
-  mode: CredentialInputMode;
-  labels?: {
-    credential?: string;
-    username?: string;
-    password?: string;
-  };
-  description?: string;
-  hint?: string;
-  /** Header names for multi-header auth (e.g., ["DD-API-KEY", "DD-APPLICATION-KEY"]) */
-  headerNames?: string[];
-  passwordRequired?: boolean;
-}
+export type CredentialPromptArgs = z.infer<typeof CredentialPromptSchema>;
 
 /**
  * Handle the source_credential_prompt tool call.
@@ -56,6 +45,7 @@ export async function handleCredentialPrompt(
   }
 
   // Build auth request
+  const optionalSourceUrl = source.api?.baseUrl || source.mcp?.url;
   const authRequest: CredentialAuthRequest = {
     type: 'credential',
     requestId: generateRequestId('cred'),
@@ -63,14 +53,18 @@ export async function handleCredentialPrompt(
     sourceSlug,
     sourceName: source.name,
     mode: effectiveMode,
-    labels,
-    description,
-    hint,
-    headerName: source.api?.headerName,
-    headerNames: effectiveHeaderNames,
+    ...(labels !== undefined ? { labels: {
+      ...(labels.credential !== undefined ? { credential: labels.credential } : {}),
+      ...(labels.username !== undefined ? { username: labels.username } : {}),
+      ...(labels.password !== undefined ? { password: labels.password } : {}),
+    } } : {}),
+    ...(description !== undefined ? { description } : {}),
+    ...(hint !== undefined ? { hint } : {}),
+    ...(source.api?.headerName !== undefined ? { headerName: source.api?.headerName } : {}),
+    ...(effectiveHeaderNames !== undefined ? { headerNames: effectiveHeaderNames } : {}),
     // Pass source URL so password managers can match stored credentials
-    sourceUrl: source.api?.baseUrl || source.mcp?.url,
-    passwordRequired,
+    ...(optionalSourceUrl !== undefined ? { sourceUrl: optionalSourceUrl } : {}),
+    ...(passwordRequired !== undefined ? { passwordRequired } : {}),
   };
 
   // Trigger auth request (will cause forceAbort)

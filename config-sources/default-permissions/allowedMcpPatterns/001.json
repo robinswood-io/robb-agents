@@ -1,0 +1,66 @@
+[
+  {
+    "pattern": "^mcp__google-contacts__.*_preflight$",
+    "comment": "Google Workspace preflights are bounded, non-executing validations"
+  },
+  {
+    "pattern": "search",
+    "comment": "Search operations across MCP sources"
+  },
+  {
+    "pattern": "list",
+    "comment": "Generic list operations"
+  },
+  {
+    "pattern": "get",
+    "comment": "Generic get/read operations"
+  },
+  {
+    "pattern": "read",
+    "comment": "Generic read operations"
+  },
+  {
+    "pattern": "info",
+    "comment": "Information/metadata retrieval"
+  },
+  {
+    "pattern": "describe",
+    "comment": "Describe resources"
+  },
+  {
+    "pattern": "show",
+    "comment": "Show resource details"
+  },
+  {
+    "pattern": "view",
+    "comment": "View resource contents"
+  },
+  {
+    "pattern": "find",
+    "comment": "Find/locate resources"
+  },
+  {
+    "pattern": "query",
+    "comment": "Query operations"
+  },
+  {
+    "pattern": "count",
+    "comment": "Count resources"
+  },
+  {
+    "pattern": "exists",
+    "comment": "Check existence"
+  },
+  {
+    "pattern": "status",
+    "comment": "Status checks"
+  },
+  {
+    "pattern": "inspect",
+    "comment": "Inspect resource details"
+  },
+  {
+    "pattern": "fetch",
+    "comment": "Fetch/retrieve data"
+  }
+]

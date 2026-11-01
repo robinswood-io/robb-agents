@@ -1,0 +1,29 @@
+{
+  "status": "passed",
+  "cases": [
+    {
+      "name": "native date groups show all four QA sessions",
+      "status": "passed"
+    },
+    {
+      "name": "native unread header collapses and restores its own rows",
+      "status": "passed"
+    },
+    {
+      "name": "collapsed groups remain isolated between grouping modes",
+      "status": "passed"
+    },
+    {
+      "name": "native row selection reaches the existing session callback",
+      "status": "passed"
+    },
+    {
+      "name": "native empty-state view replaces the list and can return to it",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "browser": "145.0.7632.6",
+  "target": "production SessionList and native mock providers; browser QA state only"
+}

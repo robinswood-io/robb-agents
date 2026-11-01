@@ -1,0 +1,17 @@
+{
+  "valid": true,
+  "preservedOriginalDeclarations": 50,
+  "typedHandlersValidated": 25,
+  "selfValidatingHandlersPreserved": [
+    "handleUpdatePlan",
+    "handleRequestUserInput",
+    "handleSetCompletionCriteria"
+  ],
+  "unchangedRegistryMetadataAndOrder": true,
+  "intentionalTypeChange": "SessionToolHandler args: any -> unknown; schema-specific handlers statically paired with their Zod output",
+  "snapshots": {
+    "session-tool-handler-types-before.ts": "c9074368016708610c4e1fb18d9c1948885658ae76560578af8a02d3f85c5a1d",
+    "session-tool-defs-source-before.ts": "1d98294818708746c39d862681d8c2767f0f17da39392c0af8b365d0f99467ce"
+  },
+  "issues": []
+}

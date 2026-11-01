@@ -1,448 +1,386 @@
-#!/usr/bin/env python3
 """Offline safety/integration tests. No live credentials, networks, or contacts."""
-import base64, copy, json, sqlite3, tempfile, unittest
-from datetime import datetime,timedelta,timezone
+import base64
+import copy
+import json
+import sqlite3
+import tempfile
+import unittest
+from collections.abc import Callable
+from contextlib import closing
+from datetime import UTC, datetime, timedelta
 from email.message import EmailMessage
 from pathlib import Path
+from typing import final, override
 from unittest.mock import patch
+
+import evergreen_campaign_prospecting as prospecting
+import evergreen_offline_test_guard as _offline_test_guard
 import outbound_sender_guard as guard
 import robinswood_evergreen_france as engine
-T=datetime(2026,10,5,8,0,tzinfo=timezone.utc)
-def raw(op='test-op',lane='pme',email='alice@fixture.invalid',subject='Fixture'):
- m=EmailMessage();m['From']=guard.SENDER;m['To']=email;m['Subject']=subject
- m['Message-ID']='<'+op+'@robinswood.io>';m['X-RBW-Operation']=op;m['X-RBW-Campaign']=engine.IDS[lane]
- m.set_content('Bonjour Alice,\n\nTexte approuvé.\n\nSignature réelle\n')
- return base64.urlsafe_b64encode(m.as_bytes()).decode()
-def message(data,mid='sent-1',thread='thread-1',t=T):
- m=guard.parse_raw(data);body=m.get_body(preferencelist=('plain',)).get_content()
- return {'id':mid,'threadId':thread,'labelIds':['SENT'],'internalDate':str(int(t.timestamp()*1000)),
- 'payload':{'mimeType':'text/plain','headers':[{'name':k,'value':str(v)} for k,v in m.items()],
- 'body':{'data':base64.urlsafe_b64encode(body.encode()).decode()}}}
-class FakeGateway:
- def __init__(self):self.messages={};self.posts=0;self.fail_after_post=False;self.fail_before_post=False
- def get(self,mid):return self.messages[mid]
- def search(self,query):
-  return [{'id':m['id']} for m in self.messages.values() if guard.header(m,'Message-ID').strip('<>')==query.split('rfc822msgid:')[-1]]
- def call(self,path):
-  if path.startswith('/messages/'):return self.messages[path.split('/')[2].split('?')[0]]
-  return {'messages':[{'id':k} for k in self.messages]}
- def post(self,data,thread=None):
-  self.posts+=1
-  if self.fail_before_post:raise TimeoutError('network ambiguity')
-  m=message(data,'sent-'+str(self.posts),thread or 'thread-'+str(self.posts),t=getattr(self,'time',T));self.messages[m['id']]=m
-  if self.fail_after_post:raise TimeoutError('response lost')
-  return {'id':m['id'],'threadId':m['threadId']}
+from evergreen_campaign_data_types import (
+ CampaignRunResult,
+ JsonObject,
+ data_coerce_json_object,
+ data_json_array,
+ data_json_value,
+ data_sqlite_integer,
+ data_sqlite_value,
+)
+from evergreen_campaign_test_fixtures import (
+ EndGateway,
+ FakeGateway,
+ T,
+ add_test_attachment,
+ add_test_cc,
+ body_of,
+ change_test_campaign,
+ change_test_sender,
+ headers_of,
+ message,
+ object_path,
+ patch_engine,
+ payload_of,
+ raw,
+ sent_now,
+)
+from robinswood_evergreen_france_ramp_cases import PostScotlandRampTests
+from robinswood_media_contact_enrichment_types import EnrichedCandidate
+from scotland_executive_conference_state import state_first
+
+__all__ = ['AudienceReportingTests', 'EndGateway', 'EndToEndTests', 'EngineTests', 'FakeGateway', 'GuardTests', 'PostScotlandRampTests', 'PrimaryIdentityRegressionTests', 'ProfessionalMandateTests', 'PublishedMailboxTests', 'T', 'message', 'raw']
+
+def no_reserves(_db: sqlite3.Connection) -> None:
+ return None
+
+@final
+class FetchRecorder:
+ url: str = ''
+ def __call__(self, url: str) -> tuple[str, str]:
+  self.url = url
+  return '{"results":[],"total_pages":1}', 'https://registry.invalid'
+
+
+
+
+
+@final
 class GuardTests(unittest.TestCase):
- def setUp(self):self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);self.g=FakeGateway()
- def tearDown(self):self.tmp.cleanup()
- def send(self,data=None,thread=None,t=T):
+ @override
+ def __init__(self, methodName: str = 'runTest') -> None:
+  super().__init__(methodName)
+  self.tmp: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
+  self.root: Path = Path(self.tmp.name)
+  self.g: FakeGateway = FakeGateway()
+ @override
+ def tearDown(self) -> None:self.tmp.cleanup()
+ def send(self,data: str | None=None,thread: str | None=None,t: datetime=T) -> JsonObject:
   data=data or raw();self.g.time=t;return guard.shared_send(self.g,data,thread,lambda:self.g.post(data,thread),ops=self.root,t=t)
- def test_exact_effect_and_idempotence(self):
+ def test_exact_effect_and_idempotence(self) -> None:
   a=self.send();b=self.send();self.assertEqual(a['id'],b['id']);self.assertEqual(self.g.posts,1)
-  db=guard.database(self.root/'outbound-sender-guard.sqlite3');self.assertEqual(db.execute("SELECT state FROM effects").fetchone()['state'],'verified');db.close()
- def test_payload_change_is_rejected(self):
-  self.send()
-  with self.assertRaisesRegex(guard.SenderGuardBlocked,'payload_changed'):self.send(raw(subject='Mutated'))
+  with closing(guard.database(self.root/'outbound-sender-guard.sqlite3')) as db:
+   self.assertEqual(db.execute("SELECT state FROM effects").fetchone()['state'],'verified')
+ def test_payload_change_is_rejected(self) -> None:
+  _ = self.send()
+  with self.assertRaisesRegex(guard.SenderGuardBlocked,'payload_changed'):_ = self.send(raw(subject='Mutated'))
   self.assertEqual(self.g.posts,1)
- def test_ambiguous_success_reconciles_without_second_post(self):
+ def test_ambiguous_success_reconciles_without_second_post(self) -> None:
   self.g.fail_after_post=True
-  with self.assertRaises(TimeoutError):self.send()
+  with self.assertRaises(TimeoutError):_ = self.send()
   self.g.fail_after_post=False
   result=self.send();self.assertTrue(result['deduplicated']);self.assertEqual(self.g.posts,1)
- def test_unknown_never_blindly_retries(self):
+ def test_unknown_never_blindly_retries(self) -> None:
   self.g.fail_before_post=True
-  with self.assertRaises(TimeoutError):self.send()
+  with self.assertRaises(TimeoutError):_ = self.send()
   self.g.fail_before_post=False
-  with self.assertRaisesRegex(guard.SenderGuardBlocked,'unresolved'):self.send()
+  with self.assertRaisesRegex(guard.SenderGuardBlocked,'unresolved'):_ = self.send()
   self.assertEqual(self.g.posts,1)
- def test_lunch_weekend_and_end_exclusive(self):
+ def test_lunch_weekend_and_end_exclusive(self) -> None:
   for t in [T.replace(hour=10),T.replace(hour=16),T+timedelta(days=5)]:
-   with self.subTest(t=t):
-    with self.assertRaisesRegex(guard.SenderGuardBlocked,'window'):self.send(t=t)
+   with self.subTest(t=t), self.assertRaisesRegex(guard.SenderGuardBlocked,'window'):
+    _ = self.send(t=t)
   self.assertEqual(self.g.posts,0)
- def test_scotland_timezone_is_preserved(self):
+ def test_scotland_timezone_is_preserved(self) -> None:
   data=raw();m=guard.parse_raw(data);m.replace_header('X-RBW-Campaign','scotland-executive-conference-october-2026');data=base64.urlsafe_b64encode(m.as_bytes()).decode()
-  with self.assertRaisesRegex(guard.SenderGuardBlocked,'window'):guard.shared_send(self.g,data,None,lambda:self.g.post(data),ops=self.root,t=T.replace(hour=7))
-  guard.shared_send(self.g,data,None,lambda:self.g.post(data),ops=self.root,t=T)
- def test_global_daily_cap_counts_all_sent_campaigns(self):
+  with self.assertRaisesRegex(guard.SenderGuardBlocked,'window'):_ = guard.shared_send(self.g,data,None,lambda:self.g.post(data),ops=self.root,t=T.replace(hour=7))
+  _ = guard.shared_send(self.g,data,None,lambda:self.g.post(data),ops=self.root,t=T)
+ def test_global_daily_cap_counts_all_sent_campaigns(self) -> None:
   for i in range(40):self.g.messages[str(i)]=message(raw('old-'+str(i)),str(i),t=T-timedelta(hours=1,seconds=i))
-  with self.assertRaisesRegex(guard.SenderGuardBlocked,'daily'):self.send()
+  with self.assertRaisesRegex(guard.SenderGuardBlocked,'daily'):_ = self.send()
   self.assertEqual(self.g.posts,0)
- def test_interval_and_rolling_hour(self):
-  self.send()
-  with self.assertRaisesRegex(guard.SenderGuardBlocked,'interval'):self.send(raw('second'),t=T+timedelta(seconds=599))
-  self.send(raw('second'),t=T+timedelta(seconds=600));self.assertEqual(self.g.posts,2)
+ def test_interval_and_rolling_hour(self) -> None:
+  _ = self.send()
+  with self.assertRaisesRegex(guard.SenderGuardBlocked,'interval'):_ = self.send(raw('second'),t=T+timedelta(seconds=599))
+  _ = self.send(raw('second'),t=T+timedelta(seconds=600));self.assertEqual(self.g.posts,2)
   self.assertEqual(guard.counts(list(self.g.messages.values()),T+timedelta(seconds=3600))['hourly'],1)
- def test_weekly_and_hourly_caps(self):
+ def test_weekly_and_hourly_caps(self) -> None:
   messages=[message(raw('old-'+str(i)),str(i),t=T+timedelta(seconds=601+i)) for i in range(6)]
-  with self.assertRaisesRegex(guard.SenderGuardBlocked,'hourly'):guard.capacity(messages,T+timedelta(seconds=2000))
+  with self.assertRaisesRegex(guard.SenderGuardBlocked,'hourly'):_ = guard.capacity(messages,T+timedelta(seconds=2000))
   messages=[message(raw('old-'+str(i)),str(i),t=T+timedelta(days=1,seconds=i)) for i in range(200)]
-  with self.assertRaisesRegex(guard.SenderGuardBlocked,'weekly'):guard.capacity(messages,T+timedelta(days=3))
- def test_cc_sender_campaign_and_attachment_guard(self):
-  for mutate in [lambda m:m.__setitem__('Cc','other@fixture.invalid'),lambda m:m.replace_header('From','other@fixture.invalid'),lambda m:m.replace_header('X-RBW-Campaign','unapproved'),lambda m:m.add_attachment(b'x',maintype='application',subtype='octet-stream',filename='x.bin')]:
+  with self.assertRaisesRegex(guard.SenderGuardBlocked,'weekly'):_ = guard.capacity(messages,T+timedelta(days=3))
+ def test_cc_sender_campaign_and_attachment_guard(self) -> None:
+  mutations: tuple[Callable[[EmailMessage[str, str]], None], ...] = (add_test_cc, change_test_sender, change_test_campaign, add_test_attachment)
+  for mutate in mutations:
    m=guard.parse_raw(raw());mutate(m);data=base64.urlsafe_b64encode(m.as_bytes()).decode()
-   with self.assertRaises(guard.SenderGuardBlocked):guard.expected(data)
- def test_exact_body_signature_subject_recipient_thread(self):
+   with self.assertRaises(guard.SenderGuardBlocked):_ = guard.expected(data)
+ def test_exact_body_signature_subject_recipient_thread(self) -> None:
   data=raw();m=message(data);self.assertTrue(guard.verify(m,data,'thread-1')[0])
   for h,value in [('Subject','Changed'),('To','other@fixture.invalid'),('X-RBW-Campaign',engine.IDS['eti'])]:
-   changed=copy.deepcopy(m);next(x for x in changed['payload']['headers'] if x['name']==h)['value']=value
+   changed=copy.deepcopy(m);next(x for x in headers_of(changed) if x['name']==h)['value']=value
    self.assertFalse(guard.verify(changed,data,'thread-1')[0])
-  changed=copy.deepcopy(m);changed['payload']['body']['data']=base64.urlsafe_b64encode(b'No signature\n').decode()
+  changed=copy.deepcopy(m);body_of(changed)['data']=base64.urlsafe_b64encode(b'No signature\n').decode()
   self.assertFalse(guard.verify(changed,data)[0]);self.assertFalse(guard.verify(m,data,'other')[0])
+@final
 class EngineTests(unittest.TestCase):
- def setUp(self):
-  self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);self.db=engine.db_open(self.root)
-  self.c=engine.contract(Path(__file__).parent.parent/'config/robinswood-evergreen-france.json')
- def tearDown(self):self.db.close();self.tmp.cleanup()
- def test_contract_tamper_rejected(self):
-  altered=copy.deepcopy(self.c);altered['lanes']['pme']['dailyMax']=40;p=self.root/'contract.json';p.write_text(json.dumps(altered))
-  with self.assertRaises(AssertionError):engine.contract(p)
- def test_business_windows_DST_and_weekend(self):
+ @override
+ def __init__(self, methodName: str = 'runTest') -> None:
+  super().__init__(methodName)
+  self.tmp: tempfile.TemporaryDirectory[str] = tempfile.TemporaryDirectory()
+  self.root: Path = Path(self.tmp.name)
+  self.db: sqlite3.Connection = engine.db_open(self.root)
+  self.c: JsonObject = engine.contract(Path(__file__).parent.parent/'config/robinswood-evergreen-france.json')
+ @override
+ def tearDown(self) -> None:self.db.close();self.tmp.cleanup()
+ def test_contract_tamper_rejected(self) -> None:
+  altered=copy.deepcopy(self.c);object_path(altered, 'lanes', 'pme')['dailyMax'] = 40;p=self.root/'contract.json';_ = p.write_text(json.dumps(altered))
+  with self.assertRaises(AssertionError):_ = engine.contract(p)
+ def test_business_windows_DST_and_weekend(self) -> None:
   self.assertTrue(engine.in_window(T,self.c))
   for t in [T.replace(hour=10),T.replace(hour=16),T+timedelta(days=5)]:self.assertFalse(engine.in_window(t,self.c))
-  self.assertTrue(engine.in_window(datetime(2026,11,2,8,tzinfo=timezone.utc),self.c))
- def test_exact_email_required_never_nominal_inference(self):
-  c={'email':'alice@fixture.invalid','name':'Alice Martin','company':'Fixture','lane':'pme','siren':'111111111','domain':'fixture.invalid','sourceUrls':['https://fixture.invalid/']}
-  page={'url':c['sourceUrls'][0],'text':'Fixture 111111111 Alice Martin Directrice','sha256':'x','emails':set()}
-  proof=engine.refresh_proof(c,T,fetch_page=lambda _:page,ops=self.root)
+  self.assertTrue(engine.in_window(datetime(2026,11,2,8,tzinfo=UTC),self.c))
+ def test_exact_email_required_never_nominal_inference(self) -> None:
+  c=data_coerce_json_object({'email': 'alice@fixture.invalid', 'name': 'Alice Martin', 'company': 'Fixture', 'lane': 'pme', 'siren': '111111111', 'domain': 'fixture.invalid', 'sourceUrls': ['https://fixture.invalid/']})
+  sources=data_json_array(data_json_value(c.get('sourceUrls')))
+  source_url=sources[0] if sources else None
+  if not isinstance(source_url,str):self.fail('source URL fixture must be a string')
+  page=data_coerce_json_object({'url':source_url,'text':'Fixture page confirms exact email'})
+  proof=engine.refresh_proof(data_coerce_json_object(c),T,fetch_page=lambda _:page,ops=self.root)
   self.assertFalse(proof['ok']);self.assertIn('exact_email',proof['reason'])
- def test_publication_or_send_is_not_learning_reward(self):
-  self.assertEqual(engine.learning(self.db,'pme',T,self.c)['variants']['A']['qualified'],0)
-  self.db.execute('INSERT INTO replies VALUES(?,?,?,?,?,?)',('r','a@fixture.invalid','pme','interest',T.isoformat(),'{}'));self.db.commit()
-  learn=engine.learning(self.db,'pme',T,self.c);self.assertIsNone(learn['winner']);self.assertEqual(learn['variants']['A']['qualified'],0)
- def test_quotes_automatic_replies_and_yes_do_not_become_need(self):
-  m=message(raw());m['labelIds']=[];m['payload']['body']['data']=base64.urlsafe_b64encode('Oui, merci.\n\nLe 1 octobre, Thibault a écrit :\n5000 euros pour le flux'.encode()).decode()
+ def test_publication_or_send_is_not_learning_reward(self) -> None:
+  self.assertEqual(object_path(engine.learning(self.db,'pme',T,self.c), 'variants', 'A').get('qualified'),0)
+  _ = self.db.execute('INSERT INTO replies VALUES(?,?,?,?,?,?)',('r','a@fixture.invalid','pme','interest',T.isoformat(),'{}'));self.db.commit()
+  learn=engine.learning(self.db,'pme',T,self.c);self.assertIsNone(learn['winner']);self.assertEqual(object_path(learn, 'variants', 'A').get('qualified'),0)
+ def test_quotes_automatic_replies_and_yes_do_not_become_need(self) -> None:
+  m=message(raw());m['labelIds']=[];body_of(m)['data']=base64.urlsafe_b64encode('Oui, merci.\n\nLe 1 octobre, Thibault a écrit :\n5000 euros pour le flux'.encode()).decode()
   trimmed=engine.new_reply_text(m);self.assertEqual(engine.classify_reply(trimmed,'pme'),'interest')
-  m['payload']['headers'].append({'name':'Auto-Submitted','value':'auto-replied'})
+  headers=headers_of(m);headers.append({'name':'Auto-Submitted','value':'auto-replied'});payload_of(m)['headers']=data_json_value(headers)
+  trimmed=engine.new_reply_text(m)
   self.assertEqual(engine.classify_reply(trimmed,'pme'),'automatic_reply')
- def test_quantified_need_editorial_interest_and_opposition(self):
+ def test_quantified_need_editorial_interest_and_opposition(self) -> None:
   m=message(raw())
   for text,lane,kind in [('Le flux de devis mobilise 30 heures par semaine.','pme','qualified_need'),('Merci, pouvez-vous envoyer une note d’angle pour notre article ?','presse','editorial_request'),('STOP, ne plus me contacter','eti','opposition'),('Je vais signaler votre message comme spam','pme','complaint')]:
-   m['payload']['body']['data']=base64.urlsafe_b64encode(text.encode()).decode();self.assertEqual(engine.classify_reply(m,lane),kind)
- def test_new_cohort_bounce_stops_lane(self):
-  self.db.execute('INSERT INTO replies VALUES(?,?,?,?,?,?)',('b','a@fixture.invalid','pme','bounce',T.isoformat(),'{}'));self.db.commit()
+   body_of(m)['data']=base64.urlsafe_b64encode(text.encode()).decode();self.assertEqual(engine.classify_reply(m,lane),kind)
+ def test_new_cohort_bounce_stops_lane(self) -> None:
+  _ = self.db.execute('INSERT INTO replies VALUES(?,?,?,?,?,?)',('b','a@fixture.invalid','pme','bounce',T.isoformat(),'{}'));self.db.commit()
   self.assertEqual(engine.lane_capacity(self.db,'pme',T,self.c),(False,'new_cohort_bounce_pause_awaiting_independent_smtp_proofs'))
- def test_canary_and_all_effects_share_one_daily_budget(self):
-  data=raw();self.db.execute('INSERT INTO touches VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',('op','a@fixture.invalid','pme','reply','A',self.c['copyVersion'],T.isoformat(),'verified',data,'body','s','id','thread','{}'));self.db.commit()
-  ok,info=engine.lane_capacity(self.db,'pme',T,self.c);self.assertFalse(ok);self.assertEqual(info['dailyCap'],1)
- def test_sender_signature_and_original_thread_subject_copy(self):
+ def test_canary_and_all_effects_share_one_daily_budget(self) -> None:
+  data=raw();_ = self.db.execute('INSERT INTO touches VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',('op','a@fixture.invalid','pme','reply','A',self.c['copyVersion'],T.isoformat(),'verified',data,'body','s','id','thread','{}'));self.db.commit()
+  ok,info=engine.lane_capacity(self.db,'pme',T,self.c);self.assertFalse(ok)
+  if isinstance(info,str):self.fail('expected capacity details')
+  self.assertEqual(info['dailyCap'],1)
+ def test_sender_signature_and_original_thread_subject_copy(self) -> None:
   item={'email':'alice@fixture.invalid','name':'Alice Martin','company':'Fixture','lane':'pme','sourceUrls':['https://fixture.invalid/'],'topic':'les devis'}
-  d=engine.draft(item,'A','followup',subject='Ancien objet réellement envoyé')
+  d=engine.draft(data_coerce_json_object(item),'A','followup',subject='Ancien objet réellement envoyé')
   self.assertEqual(d['subject'],'Ancien objet réellement envoyé');self.assertIn('STOP',d['body'])
-  self.assertNotIn('5000 heures',engine.draft(item,'A')['body'])
- def test_legacy_contact_can_never_be_new_prospect(self):
-  engine.put_candidate(self.db,{'email':'a@fixture.invalid','lane':'pme','company':'Fixture','domain':'fixture.invalid','sourceUrls':['https://fixture.invalid/']})
-  self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'checkedAt':T.isoformat()}),))
-  engine.append_legacy(self.db,{'recipientEmail':'a@fixture.invalid','status':'sent','campaignId':'old'});self.db.commit()
-  with patch.object(engine,'suppressed',return_value=set()):row,step,_=engine.next_item(self.db,'pme',T,self.c)
-  self.assertIsNone(row)
+  self.assertNotIn('5000 heures',engine.draft(data_coerce_json_object(item),'A')['body'])
+ def test_legacy_contact_can_never_be_new_prospect(self) -> None:
+  engine.put_candidate(self.db,data_coerce_json_object({'email':'a@fixture.invalid','lane':'pme','company':'Fixture','domain':'fixture.invalid','sourceUrls':['https://fixture.invalid/']}))
+  _ = self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'checkedAt':T.isoformat()}),))
+  engine.append_legacy(self.db,data_coerce_json_object({'recipientEmail':'a@fixture.invalid','status':'sent','campaignId':'old'}));self.db.commit()
+  with patch_engine('suppressed',return_value=set[str]()):self.assertIsNone(engine.next_item(self.db,'pme',T,self.c))
 
- def test_recovery_requires_three_fresh_independent_smtp_proofs(self):
-  self.db.execute('INSERT INTO replies VALUES(?,?,?,?,?,?)',('b','old@fixture.invalid','pme','bounce',(T-timedelta(days=8)).isoformat(),'{}'))
+ def test_recovery_requires_three_fresh_independent_smtp_proofs(self) -> None:
+  _ = self.db.execute('INSERT INTO replies VALUES(?,?,?,?,?,?)',('b','old@fixture.invalid','pme','bounce',(T-timedelta(days=8)).isoformat(),'{}'))
   for i in range(3):
-   engine.put_candidate(self.db,{'email':str(i)+'@fixture.invalid','lane':'pme','name':'Fixture Person','company':'Fixture '+str(i),'domain':'fixture.invalid','sourceUrls':['https://fixture.invalid/']})
-  self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'smtpVerified':False,'checkedAt':T.isoformat()}),));self.db.commit()
-  with patch.object(engine,'suppressed',return_value=set()):
+   engine.put_candidate(self.db,data_coerce_json_object({'email':str(i)+'@fixture.invalid','lane':'pme','name':'Fixture Person','company':'Fixture '+str(i),'domain':'fixture.invalid','sourceUrls':['https://fixture.invalid/']}))
+  _ = self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'smtpVerified':False,'checkedAt':T.isoformat()}),));self.db.commit()
+  with patch_engine('suppressed',return_value=set[str]()):
    self.assertFalse(engine.lane_capacity(self.db,'pme',T,self.c)[0])
-   self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'smtpVerified':True,'checkedAt':T.isoformat()}),));self.db.commit()
+   _ = self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'smtpVerified':True,'checkedAt':T.isoformat()}),));self.db.commit()
    allowed,info=engine.lane_capacity(self.db,'pme',T,self.c)
-  self.assertTrue(allowed);self.assertEqual(info['dailyCap'],1)
+  self.assertTrue(allowed)
+  if isinstance(info,str):self.fail('expected capacity details')
+  self.assertEqual(info['dailyCap'],1)
   self.assertEqual(self.db.execute("SELECT count(*) FROM replies WHERE kind='bounce'").fetchone()[0],1)
- def test_complaints_are_never_auto_recovered(self):
-  self.db.execute('INSERT INTO replies VALUES(?,?,?,?,?,?)',('c','old@fixture.invalid','pme','complaint',(T-timedelta(days=30)).isoformat(),'{}'));self.db.commit()
+ def test_complaints_are_never_auto_recovered(self) -> None:
+  _ = self.db.execute('INSERT INTO replies VALUES(?,?,?,?,?,?)',('c','old@fixture.invalid','pme','complaint',(T-timedelta(days=30)).isoformat(),'{}'));self.db.commit()
   self.assertEqual(engine.lane_capacity(self.db,'pme',T,self.c),(False,'complaint_pause'))
- def test_recent_risky_provider_evidence_blocks_public_mailbox(self):
+ def test_recent_risky_provider_evidence_blocks_public_mailbox(self) -> None:
   c={'email':'a@fixture.invalid','emailVerification':{'checkedAt':T.isoformat(),'result':'risky'}}
-  self.assertEqual(engine.delivery_blocker(c,T,self.root),'recent_adverse_delivery_evidence')
+  self.assertEqual(engine.delivery_blocker(data_coerce_json_object(c),T,self.root),'recent_adverse_delivery_evidence')
 
- def test_provider_proof_requires_fresh_smtp_no_catchall(self):
+ def test_provider_proof_requires_fresh_smtp_no_catchall(self) -> None:
   c={'emailVerification':{'provider':'hunter','statusCode':200,'result':'deliverable','score':100,'checkedAt':T.isoformat(),'smtpCheck':True,'acceptAll':False,'block':False}}
-  self.assertTrue(engine.provider_delivery(c,T))
-  c['emailVerification']['acceptAll']=True;self.assertFalse(engine.provider_delivery(c,T))
-  c['emailVerification']['acceptAll']=False;c['emailVerification']['checkedAt']=(T-timedelta(days=8)).isoformat();self.assertFalse(engine.provider_delivery(c,T))
- def test_media_enrichment_preserves_budget_and_holds(self):
-  import robinswood_media_contact_enrichment_2026 as helper
-  row={'id':'fixture','recordType':'email_contact','email':'a@fixture.invalid','contactName':'Alice Martin'}
+  self.assertTrue(engine.provider_delivery(data_coerce_json_object(c),T))
+  c['emailVerification']['acceptAll']=True;self.assertFalse(engine.provider_delivery(data_coerce_json_object(c),T))
+  c['emailVerification']['acceptAll']=False;c['emailVerification']['checkedAt']=(T-timedelta(days=8)).isoformat();self.assertFalse(engine.provider_delivery(data_coerce_json_object(c),T))
+ def test_media_enrichment_preserves_budget_and_holds(self) -> None:
+  import robinswood_media_contact_enrichment_service as helper
+  row: EnrichedCandidate={'id':'fixture','recordType':'email_contact','email':'a@fixture.invalid','contactName':'Alice Martin'}
   data={'result':'deliverable','score':100,'smtp_check':True,'accept_all':False,'block':False,'mx_records':True}
   with patch.object(helper,'verify_email',return_value={'statusCode':200,'body':{'data':data}}) as call:
    updated,left,event=helper.row_outcome(row,'fixture-key',1)
   self.assertEqual(call.call_count,1);self.assertEqual(left,0);self.assertEqual(event['hunterCalls'],1)
-  self.assertTrue(updated['emailVerification']['smtpCheck']);self.assertFalse(updated['outreachEligible'])
+  self.assertTrue(object_path(data_coerce_json_object(updated), 'emailVerification').get('smtpCheck'));self.assertIs(updated.get('outreachEligible'),False)
   self.assertEqual(updated['email'],row['email'])
   updated['outreachStatus']='not_eligible_legacy_pr_hold';self.assertFalse(helper.eligible_for_processing(updated))
- def test_media_high_score_risky_is_not_verified(self):
-  import robinswood_media_contact_enrichment_2026 as helper
-  row={'id':'fixture','recordType':'email_contact','email':'a@fixture.invalid'}
+ def test_media_high_score_risky_is_not_verified(self) -> None:
+  import robinswood_media_contact_enrichment_service as helper
+  row: EnrichedCandidate={'id':'fixture','recordType':'email_contact','email':'a@fixture.invalid'}
   with patch.object(helper,'verify_email',return_value={'statusCode':200,'body':{'data':{'result':'risky','score':100,'smtp_check':True,'accept_all':True,'block':False}}}):
-   updated,left,event=helper.row_outcome(row,'fixture-key',1)
-  self.assertEqual(updated['enrichmentStatus'],'email_not_verified_review_or_replace');self.assertFalse(updated['outreachEligible'])
+   updated,_left,_event=helper.row_outcome(row,'fixture-key',1)
+  self.assertEqual(updated.get('enrichmentStatus'),'email_not_verified_review_or_replace');self.assertIs(updated.get('outreachEligible'),False)
 
-class EndGateway(engine.Gateway,FakeGateway):
- def __init__(self,root,t=T):
-  FakeGateway.__init__(self);self.root=root;self.time=t;self.identity={'signature':'<div>Thibault Fritsch<br>Robinswood</div>','verificationStatus':'accepted'}
- def call(self,path,data=None):
-  if path=='/settings/sendAs':
-   return {'sendAs':[{'sendAsEmail':guard.ROBB,'verificationStatus':'accepted','replyToAddress':guard.ROBB,'signature':'<div>Robb — assistant IA<br>Robinswood</div>'}]}
-  if path.startswith('/threads/'):
-   tid=path.split('/')[2].split('?')[0];return {'messages':[m for m in self.messages.values() if m['threadId']==tid]}
-  return FakeGateway.call(self,path)
- def send(self,data,thread_id=None):
-  return guard.shared_send(self,data,thread_id,lambda:self.post(data,thread_id),ops=self.root/'sender',t=self.time)
+@final
 class EndToEndTests(unittest.TestCase):
- def setUp(self):
+ @override
+ def __init__(self, methodName: str = 'runTest') -> None:
+  super().__init__(methodName)
   self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);self.db=engine.db_open(self.root)
   self.c=engine.contract(Path(__file__).parent.parent/'config/robinswood-evergreen-france.json')
-  item={'email':'alice@fixture.invalid','name':'Alice Martin','company':'Fixture Services','domain':'fixture.invalid','lane':'pme','sourceUrls':['https://fixture.invalid/'],'topic':'les devis'}
-  engine.put_candidate(self.db,item)
-  self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'checkedAt':T.isoformat()}),));self.db.commit()
   self.g=EndGateway(self.root)
-  self.patches=[patch.object(engine,'OPS',self.root/'reports'),patch.object(engine,'import_reserves',lambda db:None),patch.object(engine,'suppressed',lambda:set()),patch.object(engine,'now',lambda:T)]
-  for p in self.patches:p.start()
- def tearDown(self):
-  for p in reversed(self.patches):p.stop()
+  self.patches=[patch_engine('OPS',self.root/'reports'),patch_engine('import_reserves',no_reserves)]
+ @override
+ def setUp(self) -> None:
+  item={'email':'alice@fixture.invalid','name':'Alice Martin','company':'Fixture Services','domain':'fixture.invalid','lane':'pme','sourceUrls':['https://fixture.invalid/'],'topic':'les devis'}
+  engine.put_candidate(self.db,data_coerce_json_object(item))
+  _ = self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'checkedAt':T.isoformat()}),));self.db.commit()
+  for p in self.patches:_ = p.__enter__()
+ @override
+ def tearDown(self) -> None:
+  for patcher in reversed(self.patches):_ = patcher.__exit__(None,None,None)
   self.db.close();self.tmp.cleanup()
- def execute(self):return engine.run('pme',apply=True,root=self.root,c=self.c,gateway=self.g,t=T,research_batch=0)
- def test_dispatch_exact_effect_then_idempotence(self):
-  r=self.execute();self.assertEqual(r['status'],'sent_verified');self.assertEqual(r['counts']['sentNow'],1)
-  row=self.db.execute('SELECT * FROM touches').fetchone();self.assertEqual(row['state'],'verified')
+ def execute(self) -> CampaignRunResult:return engine.run('pme',apply=True,root=self.root,c=self.c,gateway=self.g,t=T,research_batch=0)
+ def test_dispatch_exact_effect_then_idempotence(self) -> None:
+  r=self.execute();self.assertEqual(r['status'],'sent_verified');self.assertEqual(sent_now(r),1)
+  row=state_first(self.db.execute('SELECT * FROM touches'));
+  if row is None:self.fail('expected a persisted touch')
+  self.assertEqual(row['state'],'verified')
   self.assertIn('Robinswood',row['expected']);self.assertEqual(guard.header(self.g.get(row['gmail_id']),'X-RBW-Campaign'),engine.IDS['pme'])
-  r=self.execute();self.assertEqual(r['counts']['sentNow'],0);self.assertEqual(self.g.posts,1)
- def test_lost_post_response_recovered_without_resend(self):
+  r=self.execute();self.assertEqual(sent_now(r),0);self.assertEqual(self.g.posts,1)
+ def test_lost_post_response_recovered_without_resend(self) -> None:
   self.g.fail_after_post=True
-  with self.assertRaises(TimeoutError):self.execute()
+  with self.assertRaises(TimeoutError):_ = self.execute()
   self.g.fail_after_post=False;r=self.execute()
-  self.assertEqual(self.g.posts,1);self.assertEqual(r['counts']['sentNow'],0)
+  self.assertEqual(self.g.posts,1);self.assertEqual(sent_now(r),0)
   self.assertEqual(self.db.execute('SELECT state FROM touches').fetchone()['state'],'verified')
- def test_proven_presend_refusal_is_not_an_unknown_effect(self):
+ def test_proven_presend_refusal_is_not_an_unknown_effect(self) -> None:
   with patch.object(self.g,'send',side_effect=guard.SenderGuardBlocked('shared_sender_daily_cap')):
-   r=self.execute();self.assertEqual(r['counts']['sentNow'],0)
+   r=self.execute();self.assertEqual(sent_now(r),0)
   self.assertEqual(self.db.execute('SELECT count(*) n FROM touches').fetchone()['n'],0)
-  r=self.execute();self.assertEqual(r['counts']['sentNow'],1)
- def test_scotland_presend_refusal_does_not_poison_reservations(self):
+  r=self.execute();self.assertEqual(sent_now(r),1)
+ def test_scotland_presend_refusal_does_not_poison_reservations(self) -> None:
   import scotland_executive_conference_october_tests as prior
+  from scotland_conference_test_fixtures import Fake as ConferenceFake
   case=prior.CampaignTests();case.setUp()
   try:
-   g=prior.Fake()
+   g=ConferenceFake()
    with patch.object(g,'send',side_effect=guard.SenderGuardBlocked('shared_sender_daily_cap')):
     r=case.runit(g);self.assertEqual(r['externalSendsThisRun'],0)
-   db=engine.transport.database(case.root)
-   self.assertEqual(db.execute('SELECT count(*) FROM touches').fetchone()[0],0);db.close()
+   import scotland_executive_conference_october as scotland
+   with closing(scotland.database(case.root)) as db:
+    self.assertEqual(db.execute('SELECT count(*) FROM touches').fetchone()[0],0)
    self.assertNotIn('unknown_gmail_effect',r['blockingReasons'])
    self.assertEqual(case.runit(g)['externalSendsThisRun'],1)
   finally:case.tearDown()
 
-
+@final
 class PrimaryIdentityRegressionTests(unittest.TestCase):
- def test_siren_and_siret_spacing_and_publisher_identity(self):
+ def test_siren_and_siret_spacing_and_publisher_identity(self) -> None:
   pages=[{'text':'Éditeur Fixture Services. RCS Paris 424 281 392. Hébergeur OVH SIRET 424 761 419 00045.'}]
-  self.assertEqual(engine.primary_sirens(pages),['424281392','424761419'])
+  self.assertEqual(engine.primary_sirens([data_coerce_json_object(page) for page in pages]),['424281392','424761419'])
   self.assertEqual(engine.primary_sirens([{'text':'Téléphone 012345678. Aucun identifiant légal.'}]),[])
- def test_owned_subdomain_and_foreign_redirect(self):
+ def test_owned_subdomain_and_foreign_redirect(self) -> None:
   self.assertTrue(engine.owned_domain('https://fr.fixture.invalid/contact','fixture.invalid'))
   self.assertFalse(engine.owned_domain('https://fixture.invalid.attacker.invalid/','fixture.invalid'))
   self.assertFalse(engine.owned_domain('https://other.invalid/','fixture.invalid'))
- def test_contact_links_exclude_assets_and_equipment(self):
+ def test_contact_links_exclude_assets_and_equipment(self) -> None:
   html='<html lang="fr"><a href="/wp-content/contact-form.css">CSS</a><a href="/les-equipements">Équipement</a><a href="/mentions-legales">Mentions</a><a href="/decouvrir-les-equipes#dirigeants">Équipe</a></html>'
-  with patch.object(engine,'fetch',return_value=(html,'https://fixture.invalid/')):
+  with patch_engine('fetch',return_value=(html,'https://fixture.invalid/'),target_module=prospecting):
    page=engine.public_page('https://fixture.invalid/')
   self.assertEqual(page['contactLinks'],['https://fixture.invalid/mentions-legales','https://fixture.invalid/decouvrir-les-equipes'])
- def test_missing_siren_is_bound_to_official_publisher_not_host(self):
-  c={'email':'alice.martin@fixture.invalid','name':'Alice Martin','company':'Fixture Services','domain':'fixture.invalid','lane':'pme','sourceUrls':['https://fixture.invalid/']}
-  page={'url':c['sourceUrls'][0],'text':'Fixture Services, présidente Alice Martin. RCS Paris 424 281 392. Hébergeur OVH SIREN 424761419.','emails':{c['email']},'sha256':'fixture','contactLinks':[]}
-  row={'siren':'424281392','nom_complet':'FIXTURE SERVICES','categorie_entreprise':'PME','tranche_effectif_salarie':'21','annee_tranche_effectif_salarie':'2024','statut_diffusion':'O','etat_administratif':'A','siege':{},'dirigeants':[{'nom':'MARTIN','prenoms':'ALICE','qualite':'Présidente de SAS'}]}
-  def registry(url):
-   return {'results':[row if url.endswith('424281392') else {**row,'siren':'424761419','nom_complet':'OVH'}]}
-  with tempfile.TemporaryDirectory() as tmp,patch.object(engine,'fetch',return_value=('{"Answer":[{"type":15,"data":"10 mail.fixture.invalid."}]}','https://dns.google/')):
-   result=engine.refresh_proof(c,T,lambda u:page,registry,Path(tmp))
-  self.assertTrue(result['ok']);self.assertEqual(c['siren'],'424281392')
- def test_redirect_does_not_prove_company_identity(self):
-  c={'email':'a@fixture.invalid','name':'Alice Martin','company':'Fixture Services','domain':'fixture.invalid','lane':'presse','sourceUrls':['https://fixture.invalid/']}
+ def test_missing_siren_is_bound_to_official_publisher_not_host(self) -> None:
+  c: JsonObject={'email':'alice.martin@fixture.invalid','name':'Alice Martin','company':'Fixture Services','domain':'fixture.invalid','lane':'pme','sourceUrls':['https://fixture.invalid/notre-equipe']}
+  sources=data_json_array(data_json_value(c.get('sourceUrls')))
+  source_url=sources[0] if sources else None
+  if not isinstance(source_url,str):self.fail('source URL fixture must be a string')
+  page={'url':source_url,'roleBlocks':['Présidente Alice Martin'],'text':'Fixture Services, présidente Alice Martin, SIREN 424281392','emails':['alice.martin@fixture.invalid']}
+  row={'siren':'424281392','nom_complet':'FIXTURE SERVICES','categorie_entreprise':'PME','tranche_effectif_salarie':'21','annee_tranche_effectif_salarie':'2024','statut_diffusion':'O','etat_administratif':'A','siege':{'etat_administratif':'A'},'dirigeants':[{'nom':'MARTIN','prenoms':'ALICE','qualite':'Présidente de SAS'}]}
+  def registry(url: str) -> JsonObject:
+   return data_coerce_json_object({'results':[row if url.endswith('424281392') else {**row,'siren':'424761419','nom_complet':'OVH'}]})
+  with tempfile.TemporaryDirectory() as tmp,patch_engine('fetch',return_value=('{"Answer":[{"type":15,"data":"10 mail.fixture.invalid."}]}','https://dns.google/'),target_module=prospecting):
+   result=engine.refresh_proof(c,T,lambda _u:data_coerce_json_object(page),registry,Path(tmp))
+  self.assertTrue(result['ok'],f'proof result: {result}');self.assertEqual(c['siren'],'424281392')
+ def test_redirect_does_not_prove_company_identity(self) -> None:
+  c: JsonObject={'email':'a@fixture.invalid','name':'Alice Martin','company':'Fixture Services','domain':'fixture.invalid','lane':'presse','sourceUrls':['https://fixture.invalid/']}
   with tempfile.TemporaryDirectory() as tmp:
-   result=engine.refresh_proof(c,T,lambda u:{'url':'https://unrelated.invalid/','text':'','emails':set()},ops=Path(tmp))
+   result=engine.refresh_proof(c,T,lambda u:{'url':'https://unrelated.invalid/','text':'','emails':[]},ops=Path(tmp))
   self.assertFalse(result['ok']);self.assertEqual(result['reason'],'primary_sources_unavailable')
- def test_french_copy_does_not_include_imported_english_claim(self):
-  c={'email':'alice@fixture.invalid','name':'Alice Martin','company':'Fixture','lane':'pme','sourceUrls':['https://fixture.invalid/'],'topic':'Industrial maintenance group has already achieved 99% gains'}
+ def test_french_copy_does_not_include_imported_english_claim(self) -> None:
+  c: JsonObject={'email':'alice@fixture.invalid','name':'Alice Martin','company':'Fixture','lane':'pme','sourceUrls':['https://fixture.invalid/'],'topic':'Industrial maintenance group has already achieved 99% gains'}
   for v in ['A','B']:
-   d=engine.draft(c,v);self.assertNotIn('Industrial',d['body']);self.assertNotIn('99%',d['body']);self.assertIn('les validations',d['body'])
+   d=engine.draft(data_coerce_json_object(c),v);self.assertNotIn('Industrial',d['body']);self.assertNotIn('99%',d['body']);self.assertIn('les validations',d['body'])
 
-
+@final
 class ProfessionalMandateTests(unittest.TestCase):
- def page(self,path,block):return {'url':'https://fixture.invalid/'+path,'sha256':'fixture','roleBlocks':[block]}
- def test_current_company_professional_role_is_valid_without_legal_signatory_match(self):
+ def page(self,path: str,block: str) -> JsonObject:return {'url':'https://fixture.invalid/'+path,'sha256':'fixture','roleBlocks':[block]}
+ def test_current_company_professional_role_is_valid_without_legal_signatory_match(self) -> None:
   p=self.page('notre-equipe','Alice Martin, Directrice générale')
   role=engine.primary_mandate([p],'Alice Martin')
+  if role is None:self.fail('expected the published professional mandate')
   self.assertEqual(role['qualite'],'directrice generale');self.assertEqual(role['basis'],'primary_company_professional_mandate')
- def test_old_articles_past_roles_and_unrelated_names_are_rejected(self):
+ def test_old_articles_past_roles_and_unrelated_names_are_rejected(self) -> None:
   for p in [self.page('actualites/notre-equipe','Alice Martin, directrice générale'),self.page('notre-equipe','Ancienne directrice générale Alice Martin'),self.page('notre-equipe','Alice Martin, assistante. Bob Durand, directeur général')]:
    self.assertIsNone(engine.primary_mandate([p],'Alice Martin'))
- def test_legal_host_company_cannot_be_candidate_identity(self):
+ def test_legal_host_company_cannot_be_candidate_identity(self) -> None:
   pages=[{'text':'Fixture Services RCS Paris 424 281 392. OVH SIREN 424761419.'}]
-  self.assertIn('424281392',engine.primary_sirens(pages))
+  self.assertIn('424281392',engine.primary_sirens([data_coerce_json_object(page) for page in pages]))
   self.assertIsNone(engine.primary_mandate([self.page('mentions-legales','OVH, directeur Pierre Dupont')],'Alice Martin'))
- def test_national_reserve_query_filters_size_and_keeps_registry_separate(self):
-  with tempfile.TemporaryDirectory() as tmp:
-   db=engine.db_open(Path(tmp))
-   with patch.object(engine,'fetch',return_value=('{"results":[],"total_pages":1}','https://registry.invalid')) as request:
+ def test_national_reserve_query_filters_size_and_keeps_registry_separate(self) -> None:
+  with (
+   tempfile.TemporaryDirectory() as tmp,
+   closing(engine.db_open(Path(tmp))) as db,
+  ):
+   recorder=FetchRecorder()
+   with patch_engine('fetch',side_effect=recorder,target_module=prospecting):
     self.assertEqual(engine.reserve_national(db,T,'pme'),0)
-   self.assertIn('tranche_effectif_salarie=21%2C22%2C31',request.call_args[0][0]);self.assertEqual(db.execute('select count(*) from candidates').fetchone()[0],0);db.close()
+   self.assertIn('tranche_effectif_salarie=21%2C22%2C31',recorder.url)
+   self.assertEqual(data_sqlite_integer(data_sqlite_value(db,'select count(*) from candidates')),0)
 
-
+@final
 class AudienceReportingTests(unittest.TestCase):
- def test_qualified_historical_hold_is_not_reported_ready(self):
-  with tempfile.TemporaryDirectory() as tmp:
-   db=engine.db_open(Path(tmp));c=engine.contract(Path(__file__).parent.parent/'config/robinswood-evergreen-france.json')
+ def test_qualified_historical_hold_is_not_reported_ready(self) -> None:
+  with (
+   tempfile.TemporaryDirectory() as tmp,
+   closing(engine.db_open(Path(tmp))) as db,
+  ):
+   c=engine.contract(Path(__file__).parent.parent/'config/robinswood-evergreen-france.json')
    item={'email':'alice@fixture.invalid','name':'Alice Martin','company':'Fixture','domain':'fixture.invalid','lane':'presse','sourceUrls':['https://fixture.invalid/']}
-   engine.put_candidate(db,item);db.execute('update candidates set proof=?',(json.dumps({'ok':True,'checkedAt':T.isoformat()}),));db.commit()
-   with patch.object(engine,'suppressed',lambda:set()):
+   engine.put_candidate(db,data_coerce_json_object(item));_ = db.execute('update candidates set proof=?',(json.dumps({'ok':True,'checkedAt':T.isoformat()}),));db.commit()
+   with patch_engine('suppressed',lambda:set[str]()):
     self.assertEqual(engine.audience_counts(db,'presse',T,c)['readyForInitial'],1)
-    engine.append_legacy(db,{'email':item['email'],'status':'operator_legacy_hold'});db.commit()
+    engine.append_legacy(db,data_coerce_json_object({'email':item['email'],'status':'operator_legacy_hold'}));db.commit()
     report=engine.audience_counts(db,'presse',T,c)
    self.assertEqual(report['qualified'],0);self.assertEqual(report['readyForInitial'],0);self.assertEqual(report['laneHistoricalReserveExcluded'],1);db.close()
 
-
+@final
 class PublishedMailboxTests(unittest.TestCase):
- def test_public_html_mailbox_encoding_is_exactly_decoded(self):
+ def test_public_html_mailbox_encoding_is_exactly_decoded(self) -> None:
   key=0x47;email='redaction@fixture.invalid';token=bytes([key]+[x^key for x in email.encode()]).hex()
   self.assertEqual(engine.published_emails('<a data-cfemail="'+token+'">email</a>'),{email})
   self.assertEqual(engine.published_emails('alice&#64;fixture.invalid'),{'alice@fixture.invalid'})
- def test_malformed_encoding_never_constructs_an_address(self):
+ def test_malformed_encoding_never_constructs_an_address(self) -> None:
   self.assertEqual(engine.published_emails('<a data-cfemail="0">broken</a><a data-cfemail="00ff">broken</a>'),set())
- def test_primary_editorial_seed_keeps_legacy_hold(self):
+ def test_primary_editorial_seed_keeps_legacy_hold(self) -> None:
   with tempfile.TemporaryDirectory() as tmp:
-   root=Path(tmp);cfg=root/'config';cfg.mkdir();ops=root/'campaigns/ops';ops.mkdir(parents=True);db=engine.db_open(root/'state')
-   contact={'email':'redaction@fixture.invalid','name':'Rédaction','company':'Fixture','domain':'fixture.invalid','lane':'presse','sourceUrls':['https://fixture.invalid/contact'],'fitScore':90}
-   (cfg/'robinswood-evergreen-france-primary-seeds.json').write_text(json.dumps({'contacts':[contact]}))
-   engine.append_legacy(db,{'email':contact['email'],'status':'operator_legacy_hold'});db.commit();engine.import_reserves(db,ops,cfg)
-   self.assertEqual(db.execute('select count(*) from candidates').fetchone()[0],1)
-   self.assertEqual(db.execute('select count(*) from legacy').fetchone()[0],1);db.close()
+   root=Path(tmp);cfg=root/'config';cfg.mkdir();ops=root/'campaigns/ops';ops.mkdir(parents=True)
+   with closing(engine.db_open(root/'state')) as db:
+    contact={'email':'redaction@fixture.invalid','name':'Rédaction','company':'Fixture','domain':'fixture.invalid','lane':'presse','sourceUrls':['https://fixture.invalid/contact'],'fitScore':90}
+    _ = (cfg/'robinswood-evergreen-france-primary-seeds.json').write_text(json.dumps({'contacts':[contact]}))
+    engine.append_legacy(db,data_coerce_json_object({'email':contact['email'],'status':'operator_legacy_hold'}));db.commit();engine.import_reserves(db,ops,cfg)
+    self.assertEqual(db.execute('select count(*) from candidates').fetchone()[0],1)
+    self.assertEqual(db.execute('select count(*) from legacy').fetchone()[0],1)
 
+if __name__=='__main__':_ = unittest.main()
 
-class PostScotlandRampTests(unittest.TestCase):
- def setUp(self):
-  import scotland_executive_conference_october_tests as prior
-  self.prior=prior.CampaignTests();self.prior.setUp()
-  self.prior.c['limits']['timezone']='Europe/London';self.prior.write()
-  db=engine.transport.database(self.prior.root);db.close()
-  self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);self.db=engine.db_open(self.root)
-  self.c=engine.contract(Path(__file__).parent.parent/'config/robinswood-evergreen-france.json')
-  self.t=datetime(2026,10,14,7,tzinfo=timezone.utc)
-  self.old_ramp=engine.portfolio_ramp
-  self.ramp_patch=patch.object(engine,'portfolio_ramp',lambda db,t,c:self.old_ramp(db,t,c,self.prior.root));self.ramp_patch.start()
- def tearDown(self):
-  self.ramp_patch.stop();self.db.close();self.tmp.cleanup();self.prior.tearDown()
- def effect(self,op,lane='pme',t=None,state='verified',step='initial'):
-  self.db.execute('INSERT INTO touches VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-   (op,op+'@fixture.invalid',lane,step,'A',self.c['copyVersion'],engine.stamp(t or self.t),state,'raw','body','subject',op,'thread-'+op,'{}'));self.db.commit()
- def healthy_days(self):
-  for day in [14,15,16,19,20]:
-   for i in range(10):self.effect('healthy-'+str(day)+'-'+str(i),t=datetime(2026,10,day,7,tzinfo=timezone.utc))
- def test_before_end_pause_and_last_authorized_date_do_not_trigger_ramp(self):
-  for activation in ['active','paused','complete']:
-   self.prior.c['activation']=activation;self.prior.write()
-   t=datetime(2026,10,13,22,tzinfo=timezone.utc)
-   info=engine.portfolio_ramp(self.db,t,self.c)
-   self.assertEqual(info['phase'],'predecessor_active')
-   self.assertEqual(engine.lane_capacity(self.db,'pme',t,self.c)[1]['dailyCap'],1)
- def test_first_french_window_after_end_has_twenty_total(self):
-  info=engine.portfolio_ramp(self.db,self.t,self.c)
-  self.assertEqual((info['phase'],info['dailyCap'],info['weeklyCap']),('initial_20',20,100))
-  self.assertEqual(sum(engine.lane_capacity(self.db,l,self.t,self.c)[1]['dailyCap'] for l in engine.LANES),20)
- def test_unknown_scotland_effect_and_adverse_signal_do_not_release_ramp(self):
-  db=engine.transport.database(self.prior.root)
-  db.execute("INSERT INTO touches(item,step,created,state,operation) VALUES('fixture','initial',?,'pending','pending')",(engine.stamp(self.t),));db.commit()
-  self.assertEqual(engine.portfolio_ramp(self.db,self.t,self.c)['reason'],'predecessor_unknown_effect')
-  db.execute("UPDATE touches SET state='sent_verified'");db.execute("INSERT INTO replies VALUES('b','fixture','delivery_failure',?,'{}')",(engine.stamp(self.t),));db.commit();db.close()
-  self.assertEqual(engine.portfolio_ramp(self.db,self.t,self.c)['reason'],'predecessor_adverse_signal_requires_review')
- def test_missing_ledger_or_tampered_current_contract_never_uses_cached_completion(self):
-  (self.prior.root/'campaign-state.sqlite3').unlink()
-  self.assertTrue(engine.portfolio_ramp(self.db,self.t,self.c)['reason'].startswith('predecessor_completion_unproven'))
-  self.prior.c['limits']['lastOutboundDate']='2026-10-20'
-  engine.save(self.prior.root/'campaign-contract.json',self.prior.c)
-  self.assertTrue(engine.portfolio_ramp(self.db,self.t,self.c)['reason'].startswith('predecessor_completion_unproven'))
- def test_current_authorized_deadline_is_read_each_time(self):
-  self.prior.c['limits']['lastOutboundDate']='2026-10-12';self.prior.write()
-  t=datetime(2026,10,13,7,tzinfo=timezone.utc)
-  self.assertEqual(engine.portfolio_ramp(self.db,t,self.c)['phase'],'initial_20')
-  self.prior.c['limits']['lastOutboundDate']='2026-10-13';self.prior.write()
-  self.assertEqual(engine.portfolio_ramp(self.db,t,self.c)['phase'],'predecessor_active')
- def test_replies_followups_and_all_lanes_share_daily_twenty(self):
-  for lane,cap in self.c['postScotlandRamp']['laneDailyMax'].items():
-   for i in range(cap):self.effect(lane+str(i),lane=lane,step=['initial','reply','followup'][i%3])
-  for lane in engine.LANES:
-   allowed,info=engine.lane_capacity(self.db,lane,self.t,self.c)
-   self.assertFalse(allowed);self.assertEqual(info['portfolioRamp']['dailyUsed'],20)
- def test_five_completed_healthy_business_days_release_thirty(self):
-  self.healthy_days()
-  t=datetime(2026,10,21,7,tzinfo=timezone.utc)
-  info=engine.portfolio_ramp(self.db,t,self.c)
-  self.assertEqual((info['phase'],info['dailyCap'],info['weeklyCap']),('steady_30',30,150))
-  self.assertEqual(sum(engine.lane_capacity(self.db,l,t,self.c)[1]['dailyCap'] for l in engine.LANES),30)
- def test_time_elapsed_or_current_incomplete_day_does_not_release_thirty(self):
-  self.assertEqual(engine.portfolio_ramp(self.db,self.t+timedelta(days=40),self.c)['phase'],'initial_20')
-  self.healthy_days()
-  self.assertEqual(engine.portfolio_ramp(self.db,datetime(2026,10,20,17,tzinfo=timezone.utc),self.c)['phase'],'initial_20')
- def test_french_unknown_effect_blocks_portfolio_and_complaint_remains_paused(self):
-  self.effect('pending',state='reserved')
-  self.assertEqual(engine.lane_capacity(self.db,'pme',self.t,self.c),(False,'portfolio_unknown_gmail_effect'))
-  self.db.execute("UPDATE touches SET state='verified'")
-  self.db.execute("INSERT INTO replies VALUES('complaint','old@fixture.invalid','pme','complaint',?,'{}')",(engine.stamp(self.t),));self.db.commit()
-  self.assertEqual(engine.lane_capacity(self.db,'pme',self.t,self.c),(False,'complaint_pause'))
- def test_daily_reset_uses_paris_and_weekly_history_is_not_reset(self):
-  self.effect('yesterday',lane='presse',t=self.t-timedelta(days=1))
-  info=engine.portfolio_ramp(self.db,self.t,self.c)
-  self.assertEqual((info['dailyUsed'],info['weeklyUsed']),(0,1))
-  later=datetime(2026,10,26,8,tzinfo=timezone.utc)
-  self.assertTrue(engine.in_window(later,self.c))
-  self.assertEqual(engine.portfolio_ramp(self.db,later,self.c)['weeklyUsed'],0)
- def test_ramp_cannot_increase_above_authorized_thirty_even_with_new_digest(self):
-  altered=copy.deepcopy(self.c);altered['postScotlandRamp']['steadyDailyMax']=31
-  altered['authorization']['scopeSha256']=engine.digest({k:v for k,v in altered.items() if k!='authorization'})
-  p=self.root/'altered.json';engine.save(p,altered)
-  with self.assertRaises(AssertionError):engine.contract(p)
- def test_recovered_bounce_keeps_one_daily_and_historical_signal(self):
-  bounce=self.t-timedelta(days=8)
-  self.db.execute("INSERT INTO replies VALUES('bounce','old@fixture.invalid','pme','bounce',?,'{}')",(engine.stamp(bounce),))
-  self.db.execute("INSERT INTO metadata VALUES('recovery_epoch_pme',?)",(json.dumps({'afterBounce':engine.stamp(bounce)}),));self.db.commit()
-  allowed,info=engine.lane_capacity(self.db,'pme',self.t,self.c)
-  self.assertTrue(allowed);self.assertEqual(info['dailyCap'],1)
-  self.assertEqual(self.db.execute("SELECT count(*) FROM replies WHERE kind='bounce'").fetchone()[0],1)
- def test_new_press_allocation_requires_exact_human_authorization(self):
-  altered=copy.deepcopy(self.c);altered['postScotlandRamp'].pop('allocationChange')
-  altered['authorization']['scopeSha256']=engine.digest({k:v for k,v in altered.items() if k!='authorization'})
-  p=self.root/'unauthorized.json';engine.save(p,altered)
-  with self.assertRaises(AssertionError):engine.contract(p)
- def test_new_press_allocation_preserves_previous_authorized_scope(self):
-  altered=copy.deepcopy(self.c);altered['postScotlandRamp']['allocationChange']['previousScopeSha256']='not_the_previous_contract'
-  altered['authorization']['scopeSha256']=engine.digest({k:v for k,v in altered.items() if k!='authorization'})
-  p=self.root/'bad-previous.json';engine.save(p,altered)
-  with self.assertRaisesRegex(AssertionError,'allocation_prior_scope_changed'):engine.contract(p)
- def test_future_dispatch_simulation_stops_exactly_at_twenty_and_thirty(self):
-  for steady,expected in [(False,20),(True,30)]:
-   with self.subTest(steady=steady):
-    self.db.execute('DELETE FROM touches');self.db.execute('DELETE FROM candidates');self.db.commit()
-    if steady:self.healthy_days()
-    base=datetime(2026,10,21 if steady else 14,7,tzinfo=timezone.utc)
-    g=EndGateway(self.root/('gateway-'+str(steady)))
-    g.search=lambda q:[{'id':m['id']} for m in g.messages.values() if guard.header(m,'To')==q.split('to:')[-1]] if q.startswith('in:sent to:') else FakeGateway.search(g,q)
-    caps=self.c['postScotlandRamp']['steadyLaneDailyMax' if steady else 'laneDailyMax']
-    order=[l for l in engine.LANES for _ in range(caps[l])]
-    for lane in engine.LANES:
-     for i in range(caps[lane]+1):
-      item={'email':lane+str(i)+'@fixture.invalid','name':'Fixture Person','company':lane+str(i),'domain':lane+str(i)+'.invalid','lane':lane,'sourceUrls':['https://fixture.invalid/']}
-      engine.put_candidate(self.db,item)
-    self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'checkedAt':engine.stamp(base)}),));self.db.commit()
-    for i,lane in enumerate(order):
-     # Eighteen morning slots, then afternoon; every effect is ten minutes apart.
-     t=base+timedelta(minutes=10*i) if i<18 else base+timedelta(hours=5,minutes=10*(i-18))
-     g.time=t
-     with patch.object(engine,'OPS',self.root/'reports'),patch.object(engine,'now',lambda:t),patch.object(engine,'import_reserves',lambda db:None),patch.object(engine,'suppressed',return_value=set()):
-      report=engine.run(lane,apply=True,root=self.root,c=self.c,gateway=g,t=t,research_batch=0)
-     self.assertEqual(report['status'],'sent_verified')
-    self.assertEqual(g.posts,expected)
-    if steady:
-     press=sum(guard.header(m,'X-RBW-Campaign')==engine.IDS['presse'] for m in g.messages.values())
-     prospecting=sum(guard.header(m,'X-RBW-Campaign') in [engine.IDS['pme'],engine.IDS['eti']] for m in g.messages.values())
-     self.assertEqual((press,prospecting),(10,20))
-    for lane in engine.LANES:self.assertFalse(engine.lane_capacity(self.db,lane,t,self.c)[0])
-
-if __name__=='__main__':unittest.main()
+def tearDownModule() -> None:
+    _offline_test_guard.assert_no_external_attempts()

@@ -10,7 +10,7 @@ function activity(overrides: Partial<ActivityItem>): ActivityItem {
     toolInput: overrides.toolInput ?? {},
     status: overrides.status ?? 'completed',
     timestamp: overrides.timestamp ?? Date.now(),
-    error: overrides.error,
+    ...(overrides.error !== undefined ? { error: overrides.error } : {}),
   }
 }
 

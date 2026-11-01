@@ -34,3 +34,27 @@ regexes = [
   '''eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9\.test''',
   '''abc123def456ghi789jkl012mno345pqr678stu901vwx234yz''',
 ]
+
+[[allowlists]]
+targetRules = ["generic-api-key"]
+description = "Exact reviewed SHA-256 source digests in historical qualification evidence"
+condition = "AND"
+regexTarget = "line"
+paths = [
+  '''^docs/robinswood/evidence/quality\-refactor\-2026\-10\-24/auth\-automation\-scenarios\-structural\-proof\.json$''',
+  '''^docs/robinswood/evidence/quality\-refactor\-2026\-10\-24/auth\-automation\-scenarios\-summary\.json$''',
+  '''^docs/robinswood/evidence/quality\-refactor\-2026\-10\-24/electron\-api\-partition\-verification\.json$''',
+  '''^docs/robinswood/evidence/quality\-refactor\-2026\-10\-24/sensitive\-suite\-structural\-proof\.json$''',
+  '''^docs/robinswood/evidence/quality\-refactor\-2026\-10\-24/sensitive\-suite\-summary\.json$''',
+  '''^docs/robinswood/evidence/quality\-refactor\-2026\-10\-24/transport\-owned\-suites\-split\-proof\.json$''',
+]
+regexes = [
+  '''^\s*"apps/electron/src/__tests__/transport\-server\-with\-requireauth\-rejects\-clients\-without\-token\.test\.ts":\s*"15cb541e7dbd1df9dc04b08ff1280bb345eeb6962f59dc59bca817c87b824ce6",?\s*$''',
+  '''^\s*"apps/electron/src/shared/types/connection\-api\.ts":\s*"014b6db5ee94b70ef9a28efc64c202978142770d906f9be56f6d45fa8a43b382",?\s*$''',
+  '''^\s*"apps/electron/src/shared/types/desktop\-api\.ts":\s*"6e18bbe97a539963bce72a542a79fd783568f0287803361dce14bf157a3c36a1",?\s*$''',
+  '''^\s*"apps/electron/src/shared/types/session\-task\-api\.ts":\s*"0dc12342920d44f91bd0fb628b9f6727294b9621f80eaf6ff308d782ee9f3871",?\s*$''',
+  '''^\s*"apps/electron/src/shared/types/workspace\-files\-api\.ts":\s*"c45cba1158fb3ae349544f31c3967a538443cabc16be6e2908a9b58c3b0bf45a",?\s*$''',
+  '''^\s*"apps/electron/src/shared/types/workspace\-resources\-api\.ts":\s*"c2ea95fcdfd0b9946bc98d774bea95fff4f140b45d86fb58da87feadf34535a0",?\s*$''',
+  '''^\s*"packages/shared/src/agent/core/__tests__/sensitive\-external\-action\-classifies\-high\-confidence\-mcp\-and\-api\-sends\-publications\-secrets\.test\.ts":\s*"281a1f1e1ab6e6c636aa33ada1904d06933aaba0ca77e3f15a03c932ae74b671",?\s*$''',
+  '''^\s*"packages/shared/src/auth/__tests__/oauth\.test\.ts":\s*"d06f1f17a3bbdd62584744e4f452f98b885f0517cb2cdaa95df2a42f4056ac5a",?\s*$''',
+]

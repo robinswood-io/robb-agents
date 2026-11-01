@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { mkdirSync, openSync, writeFileSync, fsyncSync, closeSync, readFileSync, existsSync, renameSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { getSessionAttachmentsPath } from '@craft-agent/shared/sessions/storage';
@@ -13,7 +14,7 @@ export function agentDeliveryId(sender: string, objective: string, target: strin
 
 export function recoveredInternalMessageOptions(message: Message): SendMessageOptions | undefined {
   if (!message.internalOrigin && !message.hidden) return undefined;
-  return { hidden: message.hidden, internalOrigin: message.internalOrigin };
+  return omitUndefined<SendMessageOptions>({ hidden: message.hidden, internalOrigin: message.internalOrigin });
 }
 
 /** Resolve only on fsynced acceptance, without awaiting the recipient's model turn. */
@@ -27,7 +28,7 @@ export function acknowledgeDurableDelivery(
     try {
       void dispatch(ack).then(() => {
         if (!accepted) reject(new Error('Recipient did not acknowledge durable acceptance'));
-      }, error => { if (accepted) onProcessingError(error); else reject(error); });
+      }, (error: unknown) => { if (accepted) onProcessingError(error); else reject(error); });
     } catch (error) { reject(error); }
   });
 }

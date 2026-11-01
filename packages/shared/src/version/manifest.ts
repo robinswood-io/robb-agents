@@ -3,13 +3,13 @@ import { debug } from "../utils/debug";
 const VERSIONS_URL = 'https://agents.craft.do/electron';
 
 export async function getLatestVersion(): Promise<string | null> {
-    if (process.env.ROBB_ALLOW_CRAFT_VERSION_MANIFEST !== '1') {
+    if (process.env["ROBB_ALLOW_CRAFT_VERSION_MANIFEST"] !== '1') {
       debug('[manifest] External Craft version manifest fetch is disabled by local privacy policy');
       return null;
     }
     try {
       const response = await fetch(`${VERSIONS_URL}/latest`);
-      const data = await response.json();
+      const data: unknown = await response.json();
       const version = (data as { version?: string }).version;
       if (typeof version !== 'string') {
         debug('[manifest] Latest version is not a valid string');
@@ -23,7 +23,7 @@ export async function getLatestVersion(): Promise<string | null> {
 }
 
 export async function getManifest(version: string): Promise<VersionManifest | null> {
-    if (process.env.ROBB_ALLOW_CRAFT_VERSION_MANIFEST !== '1') {
+    if (process.env["ROBB_ALLOW_CRAFT_VERSION_MANIFEST"] !== '1') {
       debug('[manifest] External Craft version manifest fetch is disabled by local privacy policy');
       return null;
     }
@@ -31,7 +31,7 @@ export async function getManifest(version: string): Promise<VersionManifest | nu
         const url = `${VERSIONS_URL}/${version}/manifest.json`;
         debug(`[manifest] Getting manifest for version: ${url}`);
         const response = await fetch(url);
-        const data = await response.json();
+        const data: unknown = await response.json();
         return data as VersionManifest;
     } catch (error) {
         debug(`[manifest] Failed to get manifest: ${error}`);

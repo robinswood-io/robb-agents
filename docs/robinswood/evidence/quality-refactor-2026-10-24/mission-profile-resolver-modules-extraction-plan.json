@@ -1,0 +1,157 @@
+{
+  "source": "packages/server-core/src/specialized-profiles/MissionSpecializedProfileResolver.ts",
+  "units": [
+    {
+      "names": [
+        "SpecializedProfileRegistryLoader"
+      ],
+      "group": "contracts",
+      "bodySha256": "07412a1a548aeffa2a1f7b81a4d28b39a6d7ae0237a7b05c76ce313bca8296a0"
+    },
+    {
+      "names": [
+        "MissionSpecializedProfileResolverOptions"
+      ],
+      "group": "contracts",
+      "bodySha256": "e218bed64bcd3d32295a05693d81dd2623ea89c7554fc4320b0e85d6bcf6a999"
+    },
+    {
+      "names": [
+        "SpecializedProfileCapabilityResolutionInput"
+      ],
+      "group": "contracts",
+      "bodySha256": "70cb93f8ba4b0cd6168a7939e327188514554fb618a5c6698649bb7f410ac953"
+    },
+    {
+      "names": [
+        "SpecializedProfileCapabilityResolver"
+      ],
+      "group": "contracts",
+      "bodySha256": "aa28d498eab9e6bea1b364102ea453cd8e908efad8049ddf30d70e2da2ba5b7e"
+    },
+    {
+      "names": [
+        "SpecializedProfileExecutionRouteIdentityResolver"
+      ],
+      "group": "contracts",
+      "bodySha256": "39825f71f158a33c1d85c799d4d4f5f931d118c70ef0e0b7ddcf48fbc150eeb0"
+    },
+    {
+      "names": [
+        "SpecializedProfileTaskFamilyClassifier"
+      ],
+      "group": "contracts",
+      "bodySha256": "f9af7032ceb524b15c2493af6cd5d5ec88c5c4cb8f6af376722b1d4121bebf77"
+    },
+    {
+      "names": [
+        "MissionSpecializedProfileResolver"
+      ],
+      "group": "resolver",
+      "bodySha256": "ce963c701ffd25c3b9312f503942e98a2716166fbe93354489f6ec9dc300fcfa"
+    },
+    {
+      "names": [
+        "selectionFields"
+      ],
+      "group": "resolver",
+      "bodySha256": "4a349aeb1ea62f2f56ead8afe6029703267c407286effa9f0fa8fb63e42a3429"
+    },
+    {
+      "names": [
+        "SpecializedProfileMissionExecutor"
+      ],
+      "group": "profile-bindings",
+      "bodySha256": "45e99bcbc87283b7762dd132742ba640334cf1ffb4ef05831f2880b9a60e19ee"
+    },
+    {
+      "names": [
+        "specializedBindingFingerprint"
+      ],
+      "group": "profile-bindings",
+      "bodySha256": "a886180267aace5b47b622fde8b2352075485addd0af4e0c8a260ffaa4a234bf"
+    },
+    {
+      "names": [
+        "sameSpecializedBindingFingerprint"
+      ],
+      "group": "profile-bindings",
+      "bodySha256": "56016d101e2ebf7596678446f8a213d9ed8068a3975111dca3145ba604139c19"
+    },
+    {
+      "names": [
+        "resolveConfiguredMissionCapabilities"
+      ],
+      "group": "mission-capabilities",
+      "bodySha256": "dd894a5fd7ac3b12fbee5a93184f5db774aee04b6819c1fa34729dbc4b58f6a3"
+    },
+    {
+      "names": [
+        "profileForItem"
+      ],
+      "group": "mission-capabilities",
+      "bodySha256": "71586d11aaa312272d0adf5b7eed984718beaffd7bf79cf259d107d5134c2753"
+    },
+    {
+      "names": [
+        "deduplicateCapabilities"
+      ],
+      "group": "mission-capabilities",
+      "bodySha256": "c041d36c54ea3038f413373c1aaad96d60d87c8fa9a527bd0c9b14f3231cefd4"
+    },
+    {
+      "names": [
+        "capabilityIdentity"
+      ],
+      "group": "mission-capabilities",
+      "bodySha256": "e81d2ac8266763b1a20638326b59abb2c4b43247c9993cff88b4378d9f85bd9a"
+    },
+    {
+      "names": [
+        "uniqueCanonical"
+      ],
+      "group": "mission-capabilities",
+      "bodySha256": "0419502db31f8ceb8f542d8b7f0e7c4d4ee636201107c45c5783d75c93eadf66"
+    },
+    {
+      "names": [
+        "specializedProfileExecutionRouteIdentity"
+      ],
+      "group": "mission-capabilities",
+      "bodySha256": "d3916c409504c985543c9dc92bb160dd7e0c50030d58891e6bc81138fcd6da6f"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 39
+    },
+    {
+      "name": "resolver",
+      "lines": 203
+    },
+    {
+      "name": "profile-bindings",
+      "lines": 78
+    },
+    {
+      "name": "mission-capabilities",
+      "lines": 179
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "resolver": [
+      "contracts",
+      "mission-capabilities"
+    ],
+    "profile-bindings": [
+      "resolver"
+    ],
+    "mission-capabilities": [
+      "contracts"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

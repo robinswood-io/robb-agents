@@ -1,0 +1,247 @@
+{
+  "source": "apps/electron/src/renderer/lib/icon-cache.ts",
+  "units": [
+    {
+      "names": [
+        "SourceConfig"
+      ],
+      "group": "contracts",
+      "bodySha256": "e43d1c14671068c041e8e97a879f98c56daaae152fb6398c3d5bae9e403d9c36"
+    },
+    {
+      "names": [
+        "SkillConfig"
+      ],
+      "group": "contracts",
+      "bodySha256": "92aaec024c5ab1eac65943991e01c51089dd6a7eb5f83349a3ca43abef647d5c"
+    },
+    {
+      "names": [
+        "UseEntityIconOptions"
+      ],
+      "group": "contracts",
+      "bodySha256": "c1439489aa7afcf9478ee60302043b90451637408561a07b3b79442b13c6d478"
+    },
+    {
+      "names": [
+        "iconCache"
+      ],
+      "group": "cache",
+      "bodySha256": "ea35517f1065ac31b29f78ec541bc5e4a32e603412f1696c8774fe6dc1f6d9f0"
+    },
+    {
+      "names": [
+        "logoUrlCache"
+      ],
+      "group": "cache",
+      "bodySha256": "74ca4957344e54060e449a0d9fe54a937277dfb8caef14d84c928dc395b22bc1"
+    },
+    {
+      "names": [
+        "pendingWorkspaceImages"
+      ],
+      "group": "cache",
+      "bodySha256": "29be1d2f3565e07aa6c268daa3cefed08cd18a33a337b3ea6bf66c88bd3d3085"
+    },
+    {
+      "names": [
+        "readWorkspaceImage"
+      ],
+      "group": "cache",
+      "bodySha256": "cd5cc6aa57002b0a647a9582b8a57cbf0ec5f8c5d3cc9d8d3f12ec3138ba42e6"
+    },
+    {
+      "names": [
+        "sourceIconCache"
+      ],
+      "group": "cache",
+      "bodySha256": "4d315ede999fa06da0f4a1f3c9544efb62e7e7275acb79995e7b6d818673fb4c"
+    },
+    {
+      "names": [
+        "skillIconCache"
+      ],
+      "group": "cache",
+      "bodySha256": "738f8708abca561547b5606e643e9cc9dc676cf143a83bfca96bcf85c7a6ef76"
+    },
+    {
+      "names": [
+        "clearIconCaches"
+      ],
+      "group": "cache",
+      "bodySha256": "edddeb51d10fe5f033183e7a4d5ab6d70cce507b4042d211d6242569ef9e6519"
+    },
+    {
+      "names": [
+        "clearSourceIconCaches"
+      ],
+      "group": "cache",
+      "bodySha256": "c1ac48fbb2faff45e2236cdc161132d8dbfeb9aac481457b7ff6394b5cc4e169"
+    },
+    {
+      "names": [
+        "clearSkillIconCaches"
+      ],
+      "group": "cache",
+      "bodySha256": "517d47b2f3e8471ea5948ebe618372bdd2123ec2dbddfb67a403f10bdac4062c"
+    },
+    {
+      "names": [
+        "ICON_FILE_EXTENSIONS"
+      ],
+      "group": "cache",
+      "bodySha256": "1ab4539e78244f5a01ff3185cdaee47066ba04bbb73a048b0a39d4e09555b6ce"
+    },
+    {
+      "names": [
+        "ICON_PATH_PATTERN"
+      ],
+      "group": "cache",
+      "bodySha256": "6981c365ea03dffe7fe5f7fe2a34de58a0fc442f968fc0c1091979155514e934"
+    },
+    {
+      "names": [
+        "colorableCache"
+      ],
+      "group": "cache",
+      "bodySha256": "f06aabf3e45930c60d95d1418ab5734f41e0a7d7e978fa0d4a322c42b84ccd64"
+    },
+    {
+      "names": [
+        "rawSvgCache"
+      ],
+      "group": "cache",
+      "bodySha256": "d0dfb444b8219fb6a5c26d29ee6418970c382ab9689dafb2d3af22841f0c1b58"
+    },
+    {
+      "names": [
+        "EMOJI_ICON_PREFIX"
+      ],
+      "group": "entity-icons",
+      "bodySha256": "888a0e902345537174b027014d398b4dd199a970148c2fa1729b8429236bbdcb"
+    },
+    {
+      "names": [
+        "loadSourceIcon"
+      ],
+      "group": "entity-icons",
+      "bodySha256": "20f110faa51014c5f9aeff012113cf928d716f80b17d1cb9d4d3bbd8f9fe22a5"
+    },
+    {
+      "names": [
+        "loadWorkspaceIcon"
+      ],
+      "group": "entity-icons",
+      "bodySha256": "1d5c4ee218133b84b2f614139da20f493e8cb59c9b6a6062b05710d491b38889"
+    },
+    {
+      "names": [
+        "getSourceIconSync"
+      ],
+      "group": "entity-icons",
+      "bodySha256": "453f9e72321446ca42dfc6f3ed141b7775746a79f9e9e9124ad7c10673511e34"
+    },
+    {
+      "names": [
+        "loadSkillIcon"
+      ],
+      "group": "entity-icons",
+      "bodySha256": "8694e490c21ab384ced275a1274157da3bd79bf00c20e84948345c6f209a4ae0"
+    },
+    {
+      "names": [
+        "getSkillIconSync"
+      ],
+      "group": "entity-icons",
+      "bodySha256": "0539178adabd619d284c8b9d843dd0100d87c7324e586d315e55ee71c6a7ca91"
+    },
+    {
+      "names": [
+        "deriveServiceUrl"
+      ],
+      "group": "entity-icons",
+      "bodySha256": "692a05895ad546db6c3da0222127f0b7febae5c9608103f9c6b7128595a1ff98"
+    },
+    {
+      "names": [
+        "useEntityIcon"
+      ],
+      "group": "entity-icons",
+      "bodySha256": "14b6a12ba9d06389c7185221105d4d58d5f371a75c560fa2fc114b8c96539069"
+    },
+    {
+      "names": [
+        "discoverIconFile"
+      ],
+      "group": "entity-icons",
+      "bodySha256": "e73609c11ef55939441dd5cc6ccd73386af9dc467b05cfd732e613b1484d1520"
+    },
+    {
+      "names": [
+        "getForegroundColor"
+      ],
+      "group": "svg",
+      "bodySha256": "b7bf4c87666f09b2493acfc302862b1991b56a532afdf32b4e4c5c911956ae83"
+    },
+    {
+      "names": [
+        "themeSvgContent"
+      ],
+      "group": "svg",
+      "bodySha256": "58cf5165b2615ff1b6590c33a427cedfa2d2d35a70a29099de4c6e5ebfcf7558"
+    },
+    {
+      "names": [
+        "svgToThemedDataUrl"
+      ],
+      "group": "svg",
+      "bodySha256": "c66201017ea8aa17624f60408b4527c0cb5a7364df620dedb415da7a0db88987"
+    },
+    {
+      "names": [
+        "loadIconFile"
+      ],
+      "group": "svg",
+      "bodySha256": "bdba06a441b71d5ebb2c79055c2168223e777bfae19b5c80ea4907c6a8553691"
+    },
+    {
+      "names": [
+        "sanitizeSvgForInline"
+      ],
+      "group": "svg",
+      "bodySha256": "427929ac9c57ebcfc5cda7e22f49063cfea78c933ab575da31c9ebd53d25ae4c"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 62
+    },
+    {
+      "name": "cache",
+      "lines": 146
+    },
+    {
+      "name": "entity-icons",
+      "lines": 422
+    },
+    {
+      "name": "svg",
+      "lines": 161
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "cache": [],
+    "entity-icons": [
+      "contracts",
+      "cache",
+      "svg"
+    ],
+    "svg": [
+      "cache"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

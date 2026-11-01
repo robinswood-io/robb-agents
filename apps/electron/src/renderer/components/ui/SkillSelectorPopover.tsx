@@ -14,7 +14,7 @@ export interface SkillSelectorPopoverProps {
   selectedSlugs: string[]
   onToggleSlug: (slug: string) => void
   /** Workspace id — resolves local skill icons via SkillAvatar. */
-  workspaceId?: string
+  workspaceId?: string | undefined
 }
 
 /**

@@ -24,7 +24,7 @@ describe('annotation interaction policy', () => {
   it('treats sent annotations as tooltip-only and non-clickable', () => {
     const annotation = createAnnotation('Already sent')
     const meta = (annotation.meta ?? {}) as Record<string, unknown>
-    meta.followUp = {
+    meta["followUp"] = {
       text: 'Already sent',
       sentAt: Date.now(),
       sentText: 'Already sent',

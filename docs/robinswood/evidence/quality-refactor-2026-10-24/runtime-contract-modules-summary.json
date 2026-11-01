@@ -1,0 +1,68 @@
+{
+  "status": "testé dans le candidat local ; chantier global en cours",
+  "scope": "Contrats de l’API Electron, messagerie, bootstrap headless et fournisseur Pi",
+  "declarationsPreserved": 106,
+  "electronApiMembersPreserved": 348,
+  "maximumLines": 301,
+  "structure": "Corps, imports et exports conservés ; cinq interfaces de domaine composent l’API Electron existante, sans modification du JavaScript lors de ce regroupement. Aucun cycle entre les modules.",
+  "checks": {
+    "runtime-contract-modules-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 20.15,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/runtime-contract-modules-types.log"
+    },
+    "runtime-contract-modules-lint": {
+      "command": [
+        "rtk",
+        "bunx",
+        "eslint",
+        "--max-warnings",
+        "0",
+        "apps/electron/src/shared/types.ts",
+        "apps/electron/src/shared/types",
+        "packages/messaging-gateway/src/types.ts",
+        "packages/messaging-gateway/src/types",
+        "packages/server-core/src/bootstrap/headless-start.ts",
+        "packages/server-core/src/bootstrap/headless-start",
+        "packages/shared/src/agent/backend/internal/drivers/pi.ts",
+        "packages/shared/src/agent/backend/internal/drivers/pi"
+      ],
+      "exitCode": 0,
+      "seconds": 1.28,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/runtime-contract-modules-lint.log"
+    },
+    "runtime-contract-modules-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 19.45,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/runtime-contract-modules-build.log"
+    },
+    "runtime-contract-modules-all-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 140.91,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/runtime-contract-modules-all-tests.log"
+    }
+  },
+  "remaining": {
+    "max-lines": 181,
+    "no-explicit-any": 555
+  },
+  "installedApplication": "inchangée ; vérification UI et missions réelles finales sous nouvelles dépendances restantes"
+}

@@ -7,15 +7,13 @@
  * - Handle malformed JSON gracefully
  */
 
-import { describe, test, expect, beforeEach, mock, spyOn } from 'bun:test';
+import { describe, test, expect, beforeEach, spyOn } from 'bun:test';
 import {
   SourceCredentialManager,
   isMultiHeaderCredential,
   type MultiHeaderCredential,
-  type ApiCredential,
 } from '../credential-manager.ts';
 import type { LoadedSource, FolderSourceConfig } from '../types.ts';
-import * as credentialsModule from '../../credentials/index.ts';
 
 // Create a minimal mock LoadedSource for testing
 function createMockSource(overrides: Partial<FolderSourceConfig> = {}): LoadedSource {
@@ -41,12 +39,9 @@ function createMockSource(overrides: Partial<FolderSourceConfig> = {}): LoadedSo
 
 describe('getApiCredential with multi-header sources', () => {
   let credManager: SourceCredentialManager;
-  let mockGet: ReturnType<typeof mock>;
 
   beforeEach(() => {
     credManager = new SourceCredentialManager();
-    // Reset mocks
-    mockGet = mock(() => null);
   });
 
   test("authType:'none' does not resolve the shared source_apikey credential slot", async () => {

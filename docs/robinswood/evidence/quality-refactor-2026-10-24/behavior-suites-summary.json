@@ -1,0 +1,775 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "17 suites de tests, fixtures et commande de lint globale",
+  "sourceGate": {
+    "max-lines": 145,
+    "no-explicit-any": 409
+  },
+  "maximumExtractedFileLines": 440,
+  "explicitAnyRemoved": 8,
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 14.83,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/behavior-suites-clean-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/main/__tests__/testing/session-event-message-parity-fixture.ts",
+        "apps/electron/src/main/__tests__/session-event-message-parity.test.ts",
+        "apps/electron/src/main/__tests__/session-event-message-parity-both-sides-populate-the-same-tool-fields.test.ts",
+        "apps/electron/src/main/__tests__/session-event-message-parity-both-sides-set-the-same-completion-fields.test.ts",
+        "apps/electron/src/main/__tests__/session-event-message-parity-both-sides-populate-the-same-error-diagnostic-fields.test.ts",
+        "apps/electron/src/main/__tests__/session-event-message-parity-task-backgrounded-sets-same-fields-on-both-sides.test.ts",
+        "apps/electron/src/main/__tests__/session-event-message-parity-auth-request-message-carries-all-auth-fields.test.ts",
+        "apps/electron/src/renderer/atoms/__tests__/testing/sessions-fixture.ts",
+        "apps/electron/src/renderer/atoms/__tests__/sessions.test.ts",
+        "apps/electron/src/renderer/atoms/__tests__/sessions-reconciles-an-unchanged-local-processing-s-from-the-fresh-server.test.ts",
+        "apps/electron/src/renderer/atoms/__tests__/sessions-preserves-messages-for-already-loaded-sessions.test.ts",
+        "packages/messaging-gateway/src/__tests__/testing/renderer-fixture.ts",
+        "packages/messaging-gateway/src/__tests__/renderer.test.ts",
+        "packages/messaging-gateway/src/__tests__/renderer-happy-path-silent-until-complete-one-send-with-concatenated-final.test.ts",
+        "packages/messaging-gateway/src/__tests__/renderer-each-text-complete-finalises-its-own-message-legacy-behaviour.test.ts",
+        "packages/messaging-gateway/src/__tests__/renderer-streamresponses-true-with-no-responsemode-streaming-behaviour.test.ts",
+        "packages/messaging-gateway/src/__tests__/renderer-permission-request-sends-buttons-in-chat-channel.test.ts",
+        "packages/messaging-gateway/src/__tests__/renderer-permission-request-on-whatsapp-sends-an-informational-desktop-onl.test.ts",
+        "packages/server-core/src/missions/testing/MissionDigitalTwinIntegration-fixture.ts",
+        "packages/server-core/src/missions/MissionDigitalTwinIntegration.test.ts",
+        "packages/server-core/src/missions/MissionDigitalTwinIntegration-makes-preview-and-apply-require-explicit-compensation-before-chan.test.ts",
+        "packages/server-core/src/missions/MissionDigitalTwinIntegration-blocks-route-config-endpoint-credential-generation-and-source-dri.test.ts",
+        "packages/server-core/src/sessions/agent-delivery.test.ts",
+        "packages/server-core/src/sessions/agent-delivery-does-not-delete-a-machine-receipt-already-claimed-while-its-origi.test.ts",
+        "packages/server-core/src/sessions/context-compaction.test.ts",
+        "packages/server-core/src/sessions/context-compaction-requires-compaction-before-the-first-provider-call-at-the-hard-li.test.ts",
+        "packages/server-core/src/sessions/testing/objective-acceptance-criteria-fixture.ts",
+        "packages/server-core/src/sessions/objective-acceptance-criteria.test.ts",
+        "packages/server-core/src/sessions/objective-acceptance-criteria-preserves-an-exact-gmail-preflight-only-across-its-canonical-veri.test.ts",
+        "packages/server-core/src/sessions/objective-acceptance-criteria-requires-re-observation-after-an-ambiguous-tool-or-unproven-shell.test.ts",
+        "packages/server-core/src/sessions/objective-acceptance-criteria-keeps-tool-observation-semantics-when-crediting-an-exact-short-re.test.ts",
+        "packages/server-core/src/sessions/objective-acceptance-criteria-reads-only-own-data-properties-and-supports-explicit-scalar-json.test.ts",
+        "packages/server-core/src/sessions/objective-acceptance-criteria-re-registers-one-fully-observed-amended-contract-during-terminal.test.ts",
+        "packages/server-core/src/sessions/objective-acceptance-criteria-still-invalidates-old-evidence-after-a-mutation-when-extending-th.test.ts",
+        "packages/server-core/src/sessions/testing/source-activated-auto-retry-fixture.ts",
+        "packages/server-core/src/sessions/source-activated-auto-retry.test.ts",
+        "packages/server-core/src/sessions/source-activated-auto-retry-consumes-only-the-matching-generation-marker.test.ts",
+        "packages/server-core/src/sessions/source-activated-auto-retry-does-not-apply-source-servers-after-the-activation-was-already-re.test.ts",
+        "packages/server-core/src/sessions/source-activated-auto-retry-basic-re-send-fires-sendmessage-with-slug-activated-suffix.test.ts",
+        "packages/server-core/src/sessions/source-activated-auto-retry-restores-a-queued-source-activation-continuation-with-durable-pro.test.ts",
+        "packages/server-core/src/sessions/source-activated-auto-retry-releases-an-uncommitted-claim-after-the-first-flush-fails-and-ret.test.ts",
+        "packages/session-tools-core/src/handlers/testing/source-test-fixture.ts",
+        "packages/session-tools-core/src/handlers/source-test.test.ts",
+        "packages/session-tools-core/src/handlers/source-test-200-connected-source-auto-enabled-activation-called.test.ts",
+        "packages/session-tools-core/src/handlers/source-test-oauth-mcp-with-cached-token-forwards-accesstoken-to-the-probe-no.test.ts",
+        "packages/session-tools-core/src/handlers/source-test-json-username-password-token-base64-encoded-header.test.ts",
+        "packages/shared/src/agent/__tests__/claude-agent-branching.test.ts",
+        "packages/shared/src/agent/__tests__/claude-agent-branching-retires-in-memory-branch-fields-when-child-session-id-arrives.test.ts",
+        "packages/shared/src/agent/__tests__/claude-agent-branching-empty-response-recovery-clears-all-branch-fields.test.ts",
+        "packages/shared/src/agent/__tests__/claude-agent-branching-calls-onbranchforkinvalidated-atomic-not-onsdksessionidcleared.test.ts",
+        "packages/shared/src/agent/__tests__/claude-agent-branching-first-turn-with-branch-metadata-uses-parent-cwd-injects-hint-send.test.ts",
+        "packages/shared/src/agent/__tests__/claude-agent-branching-suppresses-missing-uuid-errors-only-for-first-turn-branch-cutoff.test.ts",
+        "packages/shared/src/agent/__tests__/claude-agent-branching-uses-resumesessionat-when-anchor-lineage-matches-parent-session.test.ts",
+        "packages/shared/src/agent/__tests__/claude-agent-branching-retired-session-does-not-persist-stale-branch-fields.test.ts",
+        "packages/shared/src/agent/__tests__/testing/tool-matching-fixture.ts",
+        "packages/shared/src/agent/__tests__/tool-matching.test.ts",
+        "packages/shared/src/agent/__tests__/tool-matching-extracts-a-single-tool-start-from-one-tool-use-block.test.ts",
+        "packages/shared/src/agent/__tests__/tool-matching-matches-tool-result-by-explicit-tool-use-id-in-content-block.test.ts",
+        "packages/shared/src/agent/__tests__/tool-matching-detects-killshell-events.test.ts",
+        "packages/shared/src/agent/__tests__/tool-matching-same-tool-starts-in-different-order-produce-same-events-modulo-em.test.ts",
+        "packages/shared/src/agent/__tests__/tool-matching-passes-through-strings.test.ts",
+        "packages/shared/src/agent/__tests__/tool-matching-detects-error-prefix.test.ts",
+        "packages/shared/src/agent/core/__tests__/testing/objective-evidence-gate-fixture.ts",
+        "packages/shared/src/agent/core/__tests__/objective-evidence-gate.test.ts",
+        "packages/shared/src/agent/core/__tests__/objective-evidence-gate-does-not-infer-a-medical-domain-from-generic-operational-treatmen.test.ts",
+        "packages/shared/src/agent/core/__tests__/objective-evidence-gate-accepts-label-as-first-party-security-evidence.test.ts",
+        "packages/shared/src/agent/core/__tests__/testing/registered-observation-fixture.ts",
+        "packages/shared/src/agent/core/__tests__/registered-observation.test.ts",
+        "packages/shared/src/agent/core/__tests__/registered-observation-recognizes-a-native-or-namespaced-executor-suffix-s.test.ts",
+        "packages/shared/src/agent/core/__tests__/registered-observation-requires-curl-http-failure-semantics-while-retaining-non-http-val.test.ts",
+        "packages/shared/src/agent/core/__tests__/registered-observation-shares-the-exact-hardened-git-grammar-with-objective-observations.test.ts",
+        "packages/shared/src/agent/core/__tests__/registered-observation-accepts-a-literal-stdout-only-format-s.test.ts",
+        "packages/shared/src/agent/core/__tests__/registered-observation-recognizes-a-single-http-read-or-validation-script-invocation.test.ts",
+        "packages/shared/src/agent/core/__tests__/registered-observation-admits-one-literal-test-file-without-treating-its-code-as-read-on.test.ts",
+        "packages/shared/src/agent/core/__tests__/registered-observation-preserves-bounded-inspections-predicates-with-a-success-marker-va.test.ts",
+        "packages/shared/src/agent/core/__tests__/registered-observation-parses-target-bound-operational-reads-and-keeps-redirects-outside.test.ts",
+        "packages/shared/src/specialized-profiles/testing/mission-selection-fixture.ts",
+        "packages/shared/src/specialized-profiles/mission-selection.test.ts",
+        "packages/shared/src/tasks/testing/schema-fixture.ts",
+        "packages/shared/src/tasks/schema.test.ts",
+        "packages/shared/src/tasks/schema-extracts-node-field-and-param-references.test.ts",
+        "packages/shared/src/tasks/schema-accepts-a-valid-chain-with-no-errors-or-warnings.test.ts",
+        "packages/shared/src/tasks/schema-round-trips-a-spec-through-task-yaml.test.ts",
+        "packages/shared/src/tasks/schema-instructs-the-model-that-every-reference-must-resolve-to-a-declar.test.ts",
+        "packages/shared/tests/testing/persistence-queue-fixture.ts",
+        "packages/shared/tests/persistence-queue.test.ts",
+        "packages/shared/tests/persistence-queue-uses-one-fence-for-lexical-and-symlink-aliases-of-the-same-worksp.test.ts",
+        "packages/ui/src/components/chat/__tests__/testing/conversation-presentation-fixture.ts",
+        "packages/ui/src/components/chat/__tests__/conversation-presentation.test.ts",
+        "packages/ui/src/components/chat/__tests__/conversation-presentation-extracts-only-the-latest-successful-parent-todowrite-or-update-pl.test.ts",
+        "packages/ui/src/components/chat/__tests__/conversation-presentation-removes-completed-connection-details-from-the-ordinary-conversati.test.ts",
+        "packages/ui/src/components/chat/__tests__/conversation-presentation-keeps-the-live-mcp-checklist-through-composing-failed-updates-and.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.73,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/behavior-suites-root-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 139.61,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/behavior-suites-full-suite.log"
+    }
+  ],
+  "regressionParity": {
+    "suites": 17,
+    "cases": 1355,
+    "assertions": 4042,
+    "rows": [
+      {
+        "file": "apps/electron/src/main/__tests__/session-event-message-parity.test.ts",
+        "cases": 15,
+        "assertions": 64,
+        "identical": true
+      },
+      {
+        "file": "apps/electron/src/renderer/atoms/__tests__/sessions.test.ts",
+        "cases": 36,
+        "assertions": 102,
+        "identical": true
+      },
+      {
+        "file": "packages/messaging-gateway/src/__tests__/renderer.test.ts",
+        "cases": 20,
+        "assertions": 50,
+        "identical": true
+      },
+      {
+        "file": "packages/server-core/src/missions/MissionDigitalTwinIntegration.test.ts",
+        "cases": 22,
+        "assertions": 130,
+        "identical": true
+      },
+      {
+        "file": "packages/server-core/src/sessions/agent-delivery.test.ts",
+        "cases": 15,
+        "assertions": 110,
+        "identical": true
+      },
+      {
+        "file": "packages/server-core/src/sessions/context-compaction.test.ts",
+        "cases": 29,
+        "assertions": 113,
+        "identical": true
+      },
+      {
+        "file": "packages/server-core/src/sessions/objective-acceptance-criteria.test.ts",
+        "cases": 60,
+        "assertions": 588,
+        "identical": true
+      },
+      {
+        "file": "packages/server-core/src/sessions/source-activated-auto-retry.test.ts",
+        "cases": 36,
+        "assertions": 129,
+        "identical": true
+      },
+      {
+        "file": "packages/session-tools-core/src/handlers/source-test.test.ts",
+        "cases": 19,
+        "assertions": 64,
+        "identical": true
+      },
+      {
+        "file": "packages/shared/src/agent/__tests__/claude-agent-branching.test.ts",
+        "cases": 27,
+        "assertions": 83,
+        "identical": true
+      },
+      {
+        "file": "packages/shared/src/agent/__tests__/tool-matching.test.ts",
+        "cases": 62,
+        "assertions": 135,
+        "identical": true
+      },
+      {
+        "file": "packages/shared/src/agent/core/__tests__/objective-evidence-gate.test.ts",
+        "cases": 729,
+        "assertions": 1143,
+        "identical": true
+      },
+      {
+        "file": "packages/shared/src/agent/core/__tests__/registered-observation.test.ts",
+        "cases": 148,
+        "assertions": 844,
+        "identical": true
+      },
+      {
+        "file": "packages/shared/src/specialized-profiles/mission-selection.test.ts",
+        "cases": 15,
+        "assertions": 32,
+        "identical": true
+      },
+      {
+        "file": "packages/shared/src/tasks/schema.test.ts",
+        "cases": 41,
+        "assertions": 94,
+        "identical": true
+      },
+      {
+        "file": "packages/shared/tests/persistence-queue.test.ts",
+        "cases": 25,
+        "assertions": 104,
+        "identical": true
+      },
+      {
+        "file": "packages/ui/src/components/chat/__tests__/conversation-presentation.test.ts",
+        "cases": 56,
+        "assertions": 257,
+        "identical": true
+      }
+    ]
+  },
+  "decompositions": [
+    {
+      "source": "apps/electron/src/main/__tests__/session-event-message-parity.test.ts",
+      "declarations": 15,
+      "files": [
+        {
+          "file": "apps/electron/src/main/__tests__/testing/session-event-message-parity-fixture.ts",
+          "lines": 103
+        },
+        {
+          "file": "apps/electron/src/main/__tests__/session-event-message-parity.test.ts",
+          "lines": 106
+        },
+        {
+          "file": "apps/electron/src/main/__tests__/session-event-message-parity-both-sides-populate-the-same-tool-fields.test.ts",
+          "lines": 74
+        },
+        {
+          "file": "apps/electron/src/main/__tests__/session-event-message-parity-both-sides-set-the-same-completion-fields.test.ts",
+          "lines": 121
+        },
+        {
+          "file": "apps/electron/src/main/__tests__/session-event-message-parity-both-sides-populate-the-same-error-diagnostic-fields.test.ts",
+          "lines": 57
+        },
+        {
+          "file": "apps/electron/src/main/__tests__/session-event-message-parity-task-backgrounded-sets-same-fields-on-both-sides.test.ts",
+          "lines": 142
+        },
+        {
+          "file": "apps/electron/src/main/__tests__/session-event-message-parity-auth-request-message-carries-all-auth-fields.test.ts",
+          "lines": 50
+        }
+      ],
+      "sourceHash": "1b0b54abfb4e3844c7925c0b6efd3148ef9e7957dece9bfce686d33c2b43de7c",
+      "prunedUnusedFixtureBindings": []
+    },
+    {
+      "source": "apps/electron/src/renderer/atoms/__tests__/sessions.test.ts",
+      "declarations": 33,
+      "files": [
+        {
+          "file": "apps/electron/src/renderer/atoms/__tests__/testing/sessions-fixture.ts",
+          "lines": 25
+        },
+        {
+          "file": "apps/electron/src/renderer/atoms/__tests__/sessions.test.ts",
+          "lines": 35
+        },
+        {
+          "file": "apps/electron/src/renderer/atoms/__tests__/sessions-reconciles-an-unchanged-local-processing-s-from-the-fresh-server.test.ts",
+          "lines": 395
+        },
+        {
+          "file": "apps/electron/src/renderer/atoms/__tests__/sessions-preserves-messages-for-already-loaded-sessions.test.ts",
+          "lines": 143
+        }
+      ],
+      "sourceHash": "d75f1eca73b56d684c54c119a57f3e222820f350a265983ba0a2d6aa958fc7e1",
+      "prunedUnusedFixtureBindings": []
+    },
+    {
+      "source": "packages/messaging-gateway/src/__tests__/renderer.test.ts",
+      "declarations": 20,
+      "files": [
+        {
+          "file": "packages/messaging-gateway/src/__tests__/testing/renderer-fixture.ts",
+          "lines": 140
+        },
+        {
+          "file": "packages/messaging-gateway/src/__tests__/renderer.test.ts",
+          "lines": 148
+        },
+        {
+          "file": "packages/messaging-gateway/src/__tests__/renderer-happy-path-silent-until-complete-one-send-with-concatenated-final.test.ts",
+          "lines": 89
+        },
+        {
+          "file": "packages/messaging-gateway/src/__tests__/renderer-each-text-complete-finalises-its-own-message-legacy-behaviour.test.ts",
+          "lines": 43
+        },
+        {
+          "file": "packages/messaging-gateway/src/__tests__/renderer-streamresponses-true-with-no-responsemode-streaming-behaviour.test.ts",
+          "lines": 55
+        },
+        {
+          "file": "packages/messaging-gateway/src/__tests__/renderer-permission-request-sends-buttons-in-chat-channel.test.ts",
+          "lines": 90
+        },
+        {
+          "file": "packages/messaging-gateway/src/__tests__/renderer-permission-request-on-whatsapp-sends-an-informational-desktop-onl.test.ts",
+          "lines": 72
+        }
+      ],
+      "sourceHash": "5d30e3421f58d23bbb0ca2f1200c4c614727f5f106040b19325eb10495b9d326",
+      "prunedUnusedFixtureBindings": []
+    },
+    {
+      "source": "packages/server-core/src/missions/MissionDigitalTwinIntegration.test.ts",
+      "declarations": 22,
+      "files": [
+        {
+          "file": "packages/server-core/src/missions/testing/MissionDigitalTwinIntegration-fixture.ts",
+          "lines": 125
+        },
+        {
+          "file": "packages/server-core/src/missions/MissionDigitalTwinIntegration.test.ts",
+          "lines": 440
+        },
+        {
+          "file": "packages/server-core/src/missions/MissionDigitalTwinIntegration-makes-preview-and-apply-require-explicit-compensation-before-chan.test.ts",
+          "lines": 436
+        },
+        {
+          "file": "packages/server-core/src/missions/MissionDigitalTwinIntegration-blocks-route-config-endpoint-credential-generation-and-source-dri.test.ts",
+          "lines": 200
+        }
+      ],
+      "sourceHash": "3ed13775a8cda25185312d14ff551ef15fc3bdc6bda521070577c207c2b91ee8",
+      "prunedUnusedFixtureBindings": []
+    },
+    {
+      "source": "packages/server-core/src/sessions/agent-delivery.test.ts",
+      "declarations": 15,
+      "files": [
+        {
+          "file": "packages/server-core/src/sessions/agent-delivery.test.ts",
+          "lines": 436
+        },
+        {
+          "file": "packages/server-core/src/sessions/agent-delivery-does-not-delete-a-machine-receipt-already-claimed-while-its-origi.test.ts",
+          "lines": 136
+        }
+      ],
+      "sourceHash": "ff864731c1893cf00f1d17245355eff7820a351547e0ec855bd308e2c3b45ea9",
+      "prunedUnusedFixtureBindings": []
+    },
+    {
+      "source": "packages/server-core/src/sessions/context-compaction.test.ts",
+      "declarations": 27,
+      "files": [
+        {
+          "file": "packages/server-core/src/sessions/context-compaction.test.ts",
+          "lines": 431
+        },
+        {
+          "file": "packages/server-core/src/sessions/context-compaction-requires-compaction-before-the-first-provider-call-at-the-hard-li.test.ts",
+          "lines": 348
+        }
+      ],
+      "sourceHash": "306d69ebd07b66ff5a75e1acf7aed5886f20ed15fa9392421b6b083bb538b1a7",
+      "prunedUnusedFixtureBindings": [
+        {
+          "file": "packages/server-core/src/sessions/context-compaction-requires-compaction-before-the-first-provider-call-at-the-hard-li.test.ts",
+          "names": [
+            "validSummary"
+          ]
+        }
+      ]
+    },
+    {
+      "source": "packages/server-core/src/sessions/objective-acceptance-criteria.test.ts",
+      "declarations": 60,
+      "files": [
+        {
+          "file": "packages/server-core/src/sessions/testing/objective-acceptance-criteria-fixture.ts",
+          "lines": 30
+        },
+        {
+          "file": "packages/server-core/src/sessions/objective-acceptance-criteria.test.ts",
+          "lines": 131
+        },
+        {
+          "file": "packages/server-core/src/sessions/objective-acceptance-criteria-preserves-an-exact-gmail-preflight-only-across-its-canonical-veri.test.ts",
+          "lines": 413
+        },
+        {
+          "file": "packages/server-core/src/sessions/objective-acceptance-criteria-requires-re-observation-after-an-ambiguous-tool-or-unproven-shell.test.ts",
+          "lines": 439
+        },
+        {
+          "file": "packages/server-core/src/sessions/objective-acceptance-criteria-keeps-tool-observation-semantics-when-crediting-an-exact-short-re.test.ts",
+          "lines": 431
+        },
+        {
+          "file": "packages/server-core/src/sessions/objective-acceptance-criteria-reads-only-own-data-properties-and-supports-explicit-scalar-json.test.ts",
+          "lines": 382
+        },
+        {
+          "file": "packages/server-core/src/sessions/objective-acceptance-criteria-re-registers-one-fully-observed-amended-contract-during-terminal.test.ts",
+          "lines": 434
+        },
+        {
+          "file": "packages/server-core/src/sessions/objective-acceptance-criteria-still-invalidates-old-evidence-after-a-mutation-when-extending-th.test.ts",
+          "lines": 144
+        }
+      ],
+      "sourceHash": "5d03c1a087c3b0b450a812f09260c2964ece4db17a751ac53af380af6891eee6",
+      "prunedUnusedFixtureBindings": []
+    },
+    {
+      "source": "packages/server-core/src/sessions/source-activated-auto-retry.test.ts",
+      "declarations": 36,
+      "files": [
+        {
+          "file": "packages/server-core/src/sessions/testing/source-activated-auto-retry-fixture.ts",
+          "lines": 46
+        },
+        {
+          "file": "packages/server-core/src/sessions/source-activated-auto-retry.test.ts",
+          "lines": 74
+        },
+        {
+          "file": "packages/server-core/src/sessions/source-activated-auto-retry-consumes-only-the-matching-generation-marker.test.ts",
+          "lines": 15
+        },
+        {
+          "file": "packages/server-core/src/sessions/source-activated-auto-retry-does-not-apply-source-servers-after-the-activation-was-already-re.test.ts",
+          "lines": 74
+        },
+        {
+          "file": "packages/server-core/src/sessions/source-activated-auto-retry-basic-re-send-fires-sendmessage-with-slug-activated-suffix.test.ts",
+          "lines": 385
+        },
+        {
+          "file": "packages/server-core/src/sessions/source-activated-auto-retry-restores-a-queued-source-activation-continuation-with-durable-pro.test.ts",
+          "lines": 431
+        },
+        {
+          "file": "packages/server-core/src/sessions/source-activated-auto-retry-releases-an-uncommitted-claim-after-the-first-flush-fails-and-ret.test.ts",
+          "lines": 389
+        }
+      ],
+      "sourceHash": "18239d41b05ff7abdf6cc107f2094ae94b1eb7ee4134cd652ecef47ee1356405",
+      "prunedUnusedFixtureBindings": []
+    },
+    {
+      "source": "packages/session-tools-core/src/handlers/source-test.test.ts",
+      "declarations": 19,
+      "files": [
+        {
+          "file": "packages/session-tools-core/src/handlers/testing/source-test-fixture.ts",
+          "lines": 271
+        },
+        {
+          "file": "packages/session-tools-core/src/handlers/source-test.test.ts",
+          "lines": 170
+        },
+        {
+          "file": "packages/session-tools-core/src/handlers/source-test-200-connected-source-auto-enabled-activation-called.test.ts",
+          "lines": 152
+        },
+        {
+          "file": "packages/session-tools-core/src/handlers/source-test-oauth-mcp-with-cached-token-forwards-accesstoken-to-the-probe-no.test.ts",
+          "lines": 135
+        },
+        {
+          "file": "packages/session-tools-core/src/handlers/source-test-json-username-password-token-base64-encoded-header.test.ts",
+          "lines": 94
+        }
+      ],
+      "sourceHash": "35872e7b2855d11fd9a3fdbc6ed2ba796bd21873d4ce49078cc83edae78d4175",
+      "prunedUnusedFixtureBindings": []
+    },
+    {
+      "source": "packages/shared/src/agent/__tests__/claude-agent-branching.test.ts",
+      "declarations": 27,
+      "files": [
+        {
+          "file": "packages/shared/src/agent/__tests__/claude-agent-branching.test.ts",
+          "lines": 115
+        },
+        {
+          "file": "packages/shared/src/agent/__tests__/claude-agent-branching-retires-in-memory-branch-fields-when-child-session-id-arrives.test.ts",
+          "lines": 109
+        },
+        {
+          "file": "packages/shared/src/agent/__tests__/claude-agent-branching-empty-response-recovery-clears-all-branch-fields.test.ts",
+          "lines": 104
+        },
+        {
+          "file": "packages/shared/src/agent/__tests__/claude-agent-branching-calls-onbranchforkinvalidated-atomic-not-onsdksessionidcleared.test.ts",
+          "lines": 87
+        },
+        {
+          "file": "packages/shared/src/agent/__tests__/claude-agent-branching-first-turn-with-branch-metadata-uses-parent-cwd-injects-hint-send.test.ts",
+          "lines": 117
+        },
+        {
+          "file": "packages/shared/src/agent/__tests__/claude-agent-branching-suppresses-missing-uuid-errors-only-for-first-turn-branch-cutoff.test.ts",
+          "lines": 95
+        },
+        {
+          "file": "packages/shared/src/agent/__tests__/claude-agent-branching-uses-resumesessionat-when-anchor-lineage-matches-parent-session.test.ts",
+          "lines": 56
+        },
+        {
+          "file": "packages/shared/src/agent/__tests__/claude-agent-branching-retired-session-does-not-persist-stale-branch-fields.test.ts",
+          "lines": 78
+        }
+      ],
+      "sourceHash": "23110e168b1106b63c89f7f77f12fe044c8a274a6e433a24430e44d1644bd7c2",
+      "prunedUnusedFixtureBindings": []
+    },
+    {
+      "source": "packages/shared/src/agent/__tests__/tool-matching.test.ts",
+      "declarations": 62,
+      "files": [
+        {
+          "file": "packages/shared/src/agent/__tests__/testing/tool-matching-fixture.ts",
+          "lines": 43
+        },
+        {
+          "file": "packages/shared/src/agent/__tests__/tool-matching.test.ts",
+          "lines": 78
+        },
+        {
+          "file": "packages/shared/src/agent/__tests__/tool-matching-extracts-a-single-tool-start-from-one-tool-use-block.test.ts",
+          "lines": 302
+        },
+        {
+          "file": "packages/shared/src/agent/__tests__/tool-matching-matches-tool-result-by-explicit-tool-use-id-in-content-block.test.ts",
+          "lines": 426
+        },
+        {
+          "file": "packages/shared/src/agent/__tests__/tool-matching-detects-killshell-events.test.ts",
+          "lines": 38
+        },
+        {
+          "file": "packages/shared/src/agent/__tests__/tool-matching-same-tool-starts-in-different-order-produce-same-events-modulo-em.test.ts",
+          "lines": 138
+        },
+        {
+          "file": "packages/shared/src/agent/__tests__/tool-matching-passes-through-strings.test.ts",
+          "lines": 27
+        },
+        {
+          "file": "packages/shared/src/agent/__tests__/tool-matching-detects-error-prefix.test.ts",
+          "lines": 45
+        }
+      ],
+      "sourceHash": "2fc1490760a9d7020aefb066446fb1a937989a6b9356f546d83ecd3f7cbfaf9b",
+      "prunedUnusedFixtureBindings": []
+    },
+    {
+      "source": "packages/shared/src/agent/core/__tests__/objective-evidence-gate.test.ts",
+      "declarations": 67,
+      "files": [
+        {
+          "file": "packages/shared/src/agent/core/__tests__/testing/objective-evidence-gate-fixture.ts",
+          "lines": 8
+        },
+        {
+          "file": "packages/shared/src/agent/core/__tests__/objective-evidence-gate.test.ts",
+          "lines": 405
+        },
+        {
+          "file": "packages/shared/src/agent/core/__tests__/objective-evidence-gate-does-not-infer-a-medical-domain-from-generic-operational-treatmen.test.ts",
+          "lines": 433
+        },
+        {
+          "file": "packages/shared/src/agent/core/__tests__/objective-evidence-gate-accepts-label-as-first-party-security-evidence.test.ts",
+          "lines": 414
+        }
+      ],
+      "sourceHash": "931a579a6ecaf9bc4a389b2a82dea00eb74fc685e65bcada9e92575d6fa81600",
+      "prunedUnusedFixtureBindings": []
+    },
+    {
+      "source": "packages/shared/src/agent/core/__tests__/registered-observation.test.ts",
+      "declarations": 34,
+      "files": [
+        {
+          "file": "packages/shared/src/agent/core/__tests__/testing/registered-observation-fixture.ts",
+          "lines": 8
+        },
+        {
+          "file": "packages/shared/src/agent/core/__tests__/registered-observation.test.ts",
+          "lines": 45
+        },
+        {
+          "file": "packages/shared/src/agent/core/__tests__/registered-observation-recognizes-a-native-or-namespaced-executor-suffix-s.test.ts",
+          "lines": 20
+        },
+        {
+          "file": "packages/shared/src/agent/core/__tests__/registered-observation-requires-curl-http-failure-semantics-while-retaining-non-http-val.test.ts",
+          "lines": 12
+        },
+        {
+          "file": "packages/shared/src/agent/core/__tests__/registered-observation-shares-the-exact-hardened-git-grammar-with-objective-observations.test.ts",
+          "lines": 110
+        },
+        {
+          "file": "packages/shared/src/agent/core/__tests__/registered-observation-accepts-a-literal-stdout-only-format-s.test.ts",
+          "lines": 25
+        },
+        {
+          "file": "packages/shared/src/agent/core/__tests__/registered-observation-recognizes-a-single-http-read-or-validation-script-invocation.test.ts",
+          "lines": 303
+        },
+        {
+          "file": "packages/shared/src/agent/core/__tests__/registered-observation-admits-one-literal-test-file-without-treating-its-code-as-read-on.test.ts",
+          "lines": 47
+        },
+        {
+          "file": "packages/shared/src/agent/core/__tests__/registered-observation-preserves-bounded-inspections-predicates-with-a-success-marker-va.test.ts",
+          "lines": 70
+        },
+        {
+          "file": "packages/shared/src/agent/core/__tests__/registered-observation-parses-target-bound-operational-reads-and-keeps-redirects-outside.test.ts",
+          "lines": 146
+        }
+      ],
+      "sourceHash": "0539edc3b2e2de2db6cd2aa7224982e1149323b9e548f53222741cea373009fe",
+      "prunedUnusedFixtureBindings": []
+    },
+    {
+      "source": "packages/shared/src/specialized-profiles/mission-selection.test.ts",
+      "declarations": 9,
+      "files": [
+        {
+          "file": "packages/shared/src/specialized-profiles/testing/mission-selection-fixture.ts",
+          "lines": 303
+        },
+        {
+          "file": "packages/shared/src/specialized-profiles/mission-selection.test.ts",
+          "lines": 219
+        }
+      ],
+      "sourceHash": "f077a471d609f87b97a50194b3671b3ea33c2ed26283521b7121ad5e9c046d67",
+      "prunedUnusedFixtureBindings": []
+    },
+    {
+      "source": "packages/shared/src/tasks/schema.test.ts",
+      "declarations": 40,
+      "files": [
+        {
+          "file": "packages/shared/src/tasks/testing/schema-fixture.ts",
+          "lines": 24
+        },
+        {
+          "file": "packages/shared/src/tasks/schema.test.ts",
+          "lines": 142
+        },
+        {
+          "file": "packages/shared/src/tasks/schema-extracts-node-field-and-param-references.test.ts",
+          "lines": 26
+        },
+        {
+          "file": "packages/shared/src/tasks/schema-accepts-a-valid-chain-with-no-errors-or-warnings.test.ts",
+          "lines": 111
+        },
+        {
+          "file": "packages/shared/src/tasks/schema-round-trips-a-spec-through-task-yaml.test.ts",
+          "lines": 162
+        },
+        {
+          "file": "packages/shared/src/tasks/schema-instructs-the-model-that-every-reference-must-resolve-to-a-declar.test.ts",
+          "lines": 24
+        }
+      ],
+      "sourceHash": "16326ea5bcb1cd2b6e7aa7ef6cbb5b2712926c80eb03573ab2af297e269798d7",
+      "prunedUnusedFixtureBindings": []
+    },
+    {
+      "source": "packages/shared/tests/persistence-queue.test.ts",
+      "declarations": 25,
+      "files": [
+        {
+          "file": "packages/shared/tests/testing/persistence-queue-fixture.ts",
+          "lines": 28
+        },
+        {
+          "file": "packages/shared/tests/persistence-queue.test.ts",
+          "lines": 421
+        },
+        {
+          "file": "packages/shared/tests/persistence-queue-uses-one-fence-for-lexical-and-symlink-aliases-of-the-same-worksp.test.ts",
+          "lines": 335
+        }
+      ],
+      "sourceHash": "8105adb41384a6c34d0888084dd15ef08ac25133b972436b8c28b69da7800f5e",
+      "prunedUnusedFixtureBindings": []
+    },
+    {
+      "source": "packages/ui/src/components/chat/__tests__/conversation-presentation.test.ts",
+      "declarations": 56,
+      "files": [
+        {
+          "file": "packages/ui/src/components/chat/__tests__/testing/conversation-presentation-fixture.ts",
+          "lines": 41
+        },
+        {
+          "file": "packages/ui/src/components/chat/__tests__/conversation-presentation.test.ts",
+          "lines": 429
+        },
+        {
+          "file": "packages/ui/src/components/chat/__tests__/conversation-presentation-extracts-only-the-latest-successful-parent-todowrite-or-update-pl.test.ts",
+          "lines": 323
+        },
+        {
+          "file": "packages/ui/src/components/chat/__tests__/conversation-presentation-removes-completed-connection-details-from-the-ordinary-conversati.test.ts",
+          "lines": 23
+        },
+        {
+          "file": "packages/ui/src/components/chat/__tests__/conversation-presentation-keeps-the-live-mcp-checklist-through-composing-failed-updates-and.test.ts",
+          "lines": 22
+        }
+      ],
+      "sourceHash": "e7fcd7f153633e5dc38c0dbd88221416ecbd9dde3e107a0a8400f623e2f98530",
+      "prunedUnusedFixtureBindings": []
+    }
+  ],
+  "additionalChanges": [
+    "Fixtures WhatsApp paramétrées avec leur plateforme native, horodatage du message de test renseigné",
+    "Tri des événements limité explicitement aux tool_start natifs ; attentes conservées",
+    "Retrait d’un résumé littéral inutilisé d’un seul groupe de tests ; absence de référence et pureté de l’initialisation vérifiées",
+    "ESLint 10 : la commande canonique désigne la configuration racine pour couvrir les tests partagés"
+  ],
+  "applicationCodeChanged": false,
+  "installedApplication": "inchangée",
+  "pending": [
+    "145 fichiers encore au-delà de 500 lignes",
+    "409 any explicites restants",
+    "Lint global et missions réelles finales"
+  ]
+}

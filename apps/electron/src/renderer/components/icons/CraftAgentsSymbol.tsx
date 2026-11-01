@@ -1,5 +1,5 @@
 interface CraftAgentsSymbolProps {
-  className?: string
+  className?: string | undefined
 }
 
 /**

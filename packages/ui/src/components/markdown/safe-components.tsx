@@ -78,7 +78,10 @@ export function wrapWithSafeProxy(components: Partial<Components>): Partial<Comp
 
   return new Proxy(components, {
     get(target, prop) {
-      if (typeof prop === 'symbol') return Reflect.get(target, prop)
+      if (typeof prop === 'symbol') {
+        const value: unknown = Reflect.get(target, prop)
+        return value
+      }
       if (prop in target) return target[prop as keyof typeof target]
       if (!shouldUseFallback(prop, target)) return undefined
 

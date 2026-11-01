@@ -125,10 +125,12 @@ export function useEntityListInteractions<T>({
   selectedIdOverride,
 }: UseEntityListInteractionsOptions<T>): EntityListInteractions<T> {
   // ---- Search filtering ----
+  const searchQuery = search?.query ?? ''
+  const searchFilter = search?.fn
   const items = useMemo(() => {
-    if (!search || !search.query.trim()) return rawItems
-    return rawItems.filter(item => search.fn(item, search.query))
-  }, [rawItems, search?.query, search?.fn]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (!searchFilter || !searchQuery.trim()) return rawItems
+    return rawItems.filter(item => searchFilter(item, searchQuery))
+  }, [rawItems, searchQuery, searchFilter])
 
   // ---- Multi-select state ----
   // Use external store (e.g. Jotai atom) when provided, otherwise local useState
@@ -142,23 +144,25 @@ export function useEntityListInteractions<T>({
 
   const toggle = useCallback((id: string, index: number) => {
     setSelectionState(prev => MultiSelect.toggleSelect(prev, id, index))
-  }, [])
+  }, [setSelectionState])
 
   const range = useCallback((toIndex: number) => {
     setSelectionState(prev => MultiSelect.rangeSelect(prev, toIndex, allIds))
-  }, [allIds])
+  }, [allIds, setSelectionState])
 
   const selectAllItems = useCallback(() => {
     setSelectionState(MultiSelect.selectAll(allIds))
-  }, [allIds])
+  }, [allIds, setSelectionState])
 
   const clearSelection = useCallback(() => {
     setSelectionState(prev => MultiSelect.clearMultiSelect(prev))
-  }, [])
+  }, [setSelectionState])
 
   const isMultiSelectActive = MultiSelect.isMultiSelectActive(selectionState)
 
   // ---- Keyboard navigation ----
+  const keyboardNavigate = keyboardOpts?.onNavigate
+  const keyboardActivate = keyboardOpts?.onActivate
   const handleNavigate = useCallback((item: T, index: number) => {
     // Scroll into view
     const id = getId(item)
@@ -175,16 +179,16 @@ export function useEntityListInteractions<T>({
     // Update selection to follow the keyboard cursor
     setSelectionState(MultiSelect.singleSelect(id, index))
 
-    keyboardOpts?.onNavigate?.(item, index)
-  }, [getId, multiSelectEnabled, isMultiSelectActive, clearSelection, keyboardOpts?.onNavigate]) // eslint-disable-line react-hooks/exhaustive-deps
+    keyboardNavigate?.(item, index)
+  }, [getId, multiSelectEnabled, isMultiSelectActive, clearSelection, keyboardNavigate, setSelectionState])
 
   const handleActivate = useCallback((item: T, index: number) => {
     if (multiSelectEnabled && !isMultiSelectActive) {
       // Single-select on Enter
       setSelectionState(MultiSelect.singleSelect(getId(item), index))
     }
-    keyboardOpts?.onActivate?.(item, index)
-  }, [multiSelectEnabled, isMultiSelectActive, getId, keyboardOpts?.onActivate]) // eslint-disable-line react-hooks/exhaustive-deps
+    keyboardActivate?.(item, index)
+  }, [multiSelectEnabled, isMultiSelectActive, getId, keyboardActivate, setSelectionState])
 
   const handleExtendSelection = useCallback((toIndex: number) => {
     if (multiSelectEnabled) {
@@ -250,7 +254,7 @@ export function useEntityListInteractions<T>({
       lastClickIndexRef.current = index
       setActiveIndex(index)
     }
-  }, [getId, multiSelectEnabled, isMultiSelectActive, selectionState.selectedIds, toggle, range, setActiveIndex])
+  }, [getId, multiSelectEnabled, isMultiSelectActive, selectionState.selectedIds, toggle, range, setActiveIndex, setSelectionState])
 
   // ---- Search input keyboard forwarding ----
   // Forwards ArrowDown/ArrowUp from a search input to the roving tabindex handler.
@@ -259,7 +263,7 @@ export function useEntityListInteractions<T>({
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault()
       // Forward to the roving tabindex container handler
-      getContainerProps().onKeyDown(e as unknown as React.KeyboardEvent)
+      getContainerProps().onKeyDown((e) as React.KeyboardEvent)
       return
     }
     if (e.key === 'Escape') {
@@ -270,21 +274,20 @@ export function useEntityListInteractions<T>({
     if (e.key === 'Enter') {
       // Forward Enter to activate the focused item
       e.preventDefault()
-      getContainerProps().onKeyDown(e as unknown as React.KeyboardEvent)
+      getContainerProps().onKeyDown((e) as React.KeyboardEvent)
       return
     }
   }, [getContainerProps])
 
   // ---- Build return values ----
-  const containerProps = getContainerProps()
+  const { role: containerRole, 'aria-activedescendant': activeDescendant } = getContainerProps()
 
   const listProps = useMemo(() => ({
-    containerRef: undefined as React.Ref<HTMLDivElement> | undefined,
     containerProps: {
-      role: containerProps.role,
-      'aria-activedescendant': containerProps['aria-activedescendant'] ?? '',
+      role: containerRole,
+      'aria-activedescendant': activeDescendant ?? '',
     },
-  }), [containerProps.role, containerProps['aria-activedescendant']])
+  }), [containerRole, activeDescendant])
 
   const getRowProps = useCallback((item: T, index: number) => {
     const id = getId(item)

@@ -1,7 +1,8 @@
+import { z } from 'zod'
 // run-workspace-tests.sh gives .isolated.ts suites a fresh process: the manager
 // suite mocks both BrowserCDP and electron, while this suite needs their real exports.
 import { afterEach, describe, expect, it, mock } from 'bun:test'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createRequire } from 'node:module'
@@ -17,15 +18,18 @@ function receipt(): CanvasBitmapReceipt {
     sourceRect: { x: 0, y: 0, width: 1, height: 1 }, region: { x: 0, y: 0, width: 1, height: 1 }, canvasBox: { x: 0, y: 0, width: 1, height: 1 },
     viewport: { width: 100, height: 100, dpr: 2, scrollX: 0, scrollY: 0 }, capturedAt: 123 }
 }
-function transport(hook: (method: string, call: number) => any = () => undefined) {
-  const calls: Array<{ method: string; args: any }> = []
+
+type BrowserTarget = ConstructorParameters<typeof BrowserCDP>[0]
+
+function transport(hook: (method: string, call: number) => unknown = () => undefined) {
+  const calls: Array<{ method: string; args: Record<string, unknown> }> = []
   let url = 'https://fixture.invalid/'
-  const cdp = new BrowserCDP({ getURL: () => url, debugger: { isAttached: () => true, attach() {}, detach() {}, on() {}, async sendCommand(method: string, args: any) {
+  const cdp = new BrowserCDP({ getURL: () => url, getTitle: () => 'Fixture', sendInputEvent: () => { throw new Error('Unexpected native input'); }, debugger: { attach() {}, detach() {}, on() {}, async sendCommand(method: string, args: Record<string, unknown>) {
     calls.push({ method, args }); const result = hook(method, calls.length); if (result !== undefined) return result
     if (method === 'Page.getFrameTree') return { frameTree: { frame: { id: 'frame', loaderId: 'document' } } }
     if (method === 'Page.createIsolatedWorld') return { executionContextId: 42 }
     return { result: { value: receipt() } }
-  } } } as any)
+  } } } satisfies BrowserTarget)
   cleanups.push(() => cdp.detach())
   return { cdp, calls, navigate: () => { url += 'new' } }
 }
@@ -34,8 +38,8 @@ describe('canvas bitmap receipt and document boundaries', () => {
     const { cdp, calls } = transport()
     const result = await cdp.captureCanvasBitmap('#screen')
     expect(result.receipt.width).toBe(1)
-    expect(calls.find(c => c.method === 'Page.createIsolatedWorld')?.args.grantUniveralAccess).toBe(false)
-    expect(calls.find(c => c.method === 'Runtime.evaluate')?.args.contextId).toBe(42)
+    expect(calls.find(c => c.method === 'Page.createIsolatedWorld')?.args["grantUniveralAccess"]).toBe(false)
+    expect(calls.find(c => c.method === 'Runtime.evaluate')?.args["contextId"]).toBe(42)
     expect(calls.some(c => /Input\.|captureScreenshot|capturePage/.test(c.method))).toBe(false)
   })
   it('rejects invalid selector transport before any CDP call', async () => {
@@ -87,7 +91,11 @@ it('captures real hidden Electron canvases without capturePage, page mutation or
   const timeout = setTimeout(() => child.kill(), 35_000)
   const [exit, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()])
   clearTimeout(timeout)
-  const result = JSON.parse(readFileSync(join(dir, 'result.json'), 'utf8'))
+  const resultPath = join(dir, 'result.json')
+  const hasResult = existsSync(resultPath)
+  expect({ exit, hasResult, stderr: exit === 0 && hasResult ? '' : stderr.slice(-4000) })
+    .toEqual({ exit: 0, hasResult: true, stderr: '' })
+  const result = z.object({ checks: z.array(z.string()) }).passthrough().parse(JSON.parse(readFileSync(resultPath, 'utf8')))
   expect({ exit, result, stderr: exit === 0 ? '' : stderr.slice(-1500) }).toMatchObject({ exit: 0, result: { ok: true, realProfileUsed: false } })
   expect(result.checks.length).toBeGreaterThanOrEqual(18)
   process.stdout.write(`Canvas Electron fixture receipt: ${JSON.stringify(result)}\n`)

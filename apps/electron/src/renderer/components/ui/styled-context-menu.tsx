@@ -7,9 +7,8 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
   ContextMenuSub,
-  ContextMenuSubTrigger,
-  ContextMenuSubContent,
-  ContextMenuPortal,
+  ContextMenuSubTrigger
+  ,ContextMenuPortal,
 } from "./context-menu"
 import { cn } from "@/lib/utils"
 
@@ -27,7 +26,7 @@ export { ContextMenu, ContextMenuTrigger }
 interface StyledContextMenuContentProps
   extends React.ComponentPropsWithoutRef<typeof ContextMenuContent> {
   /** Minimum width - defaults to min-w-40 */
-  minWidth?: string
+  minWidth?: string | undefined
 }
 
 export const StyledContextMenuContent = React.forwardRef<
@@ -50,7 +49,7 @@ StyledContextMenuContent.displayName = "StyledContextMenuContent"
 interface StyledContextMenuItemProps
   extends React.ComponentPropsWithoutRef<typeof ContextMenuItem> {
   /** Destructive variant - red text */
-  variant?: "default" | "destructive"
+  variant?: "default" | "destructive" | undefined
 }
 
 export const StyledContextMenuItem = React.forwardRef<
@@ -107,7 +106,7 @@ StyledContextMenuSubTrigger.displayName = "StyledContextMenuSubTrigger"
 interface StyledContextMenuSubContentProps
   extends React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.SubContent> {
   /** Minimum width - defaults to min-w-36 */
-  minWidth?: string
+  minWidth?: string | undefined
 }
 
 export const StyledContextMenuSubContent = React.forwardRef<

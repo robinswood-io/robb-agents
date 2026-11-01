@@ -1,0 +1,38 @@
+{
+  "status": "passed",
+  "removedExplicitAny": 8,
+  "runtimeJavaScriptPreservedOutsideReviewedCorrections": true,
+  "controlledChanges": [
+    "SDK MCP handler forwards its native args and extra parameters",
+    "Provider lookup excludes inherited properties and preserves the native supported combinations",
+    "Diff header cleanup closes over its exact element and no longer writes an ad hoc DOM property"
+  ],
+  "newRuntimeWorkflow": false,
+  "files": [
+    {
+      "file": "packages/shared/src/agent/session-scoped-tools.ts",
+      "lines": 347,
+      "sha256": "64064bcf2e1415ed7793e05056cb757dce3554a764ec7663f5df71b78ad15e32"
+    },
+    {
+      "file": "packages/shared/src/config/llm-connections/auth-policy.ts",
+      "lines": 115,
+      "sha256": "709af25d14bd237a1add461f4f611c632a07d6c89c1e0169ca6313e7d0761b27"
+    },
+    {
+      "file": "packages/shared/src/config/validators/app-config.ts",
+      "lines": 236,
+      "sha256": "f5d8fa6d78fd4e39b99c364876ac27596de76a47044f6535e84c5cc029c85a7e"
+    },
+    {
+      "file": "packages/ui/src/components/code-viewer/ShikiDiffViewer.tsx",
+      "lines": 217,
+      "sha256": "310b5ea7f50297a7911419f8f99f44324dd52881b2b75f986112551a0408ff05"
+    },
+    {
+      "file": "packages/shared/src/config/__tests__/auth-policy.test.ts",
+      "lines": 11,
+      "sha256": "78d3eaa191021de042467e03e7e9d435276978625eb0484f7db3c4e33707c2a1"
+    }
+  ]
+}

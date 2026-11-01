@@ -1,0 +1,1741 @@
+{
+  "status": "testé dans le candidat isolé ; non installé",
+  "plans": {
+    "core-message": {
+      "source": "packages/core/src/types/message.ts",
+      "units": [
+        {
+          "names": [
+            "MessageRole"
+          ],
+          "group": "message-types",
+          "bodySha256": "cfa5e1c0295f32e163d34f44d91f5ff4f6c57de9e4c18f646a50e35aa514c663"
+        },
+        {
+          "names": [
+            "CredentialInputMode"
+          ],
+          "group": "message-types",
+          "bodySha256": "041991924abe3a5be470cedd4599bab055ac691779eef35fbea27207eacb7a78"
+        },
+        {
+          "names": [
+            "AuthRequestType"
+          ],
+          "group": "message-types",
+          "bodySha256": "28dca2dc57144f3b88b8642147caec0c771dab3f5ff0538ae84c924955e8e55f"
+        },
+        {
+          "names": [
+            "AuthStatus"
+          ],
+          "group": "message-types",
+          "bodySha256": "eb7c97776d3ea01e7a9cf335010f70f1a836164c3c3d487296d447e4fb7a759f"
+        },
+        {
+          "names": [
+            "ToolStatus"
+          ],
+          "group": "message-types",
+          "bodySha256": "d7d381fb4d25f96198c99f66b3444217ccf7f23f930ec0491debb9120ee42b49"
+        },
+        {
+          "names": [
+            "ToolExecutionCheckpoint"
+          ],
+          "group": "message-types",
+          "bodySha256": "318ad7bdc4dbc149988f0f5e47c686872397c172e22369be5f71c063e277d81e"
+        },
+        {
+          "names": [
+            "ObjectiveOutcomeState"
+          ],
+          "group": "message-types",
+          "bodySha256": "be7bba80ac0eab1ed4a552e3f388e9e3e611816f018054f1103b65b463f33f4b"
+        },
+        {
+          "names": [
+            "ObjectiveOutcomeBlockerKind"
+          ],
+          "group": "message-types",
+          "bodySha256": "e7116228eeba2619a3bca87ef890eec9e214ca1c4647614d913c748e6e615bbb"
+        },
+        {
+          "names": [
+            "ObjectiveOutcomeDeclaration"
+          ],
+          "group": "message-types",
+          "bodySha256": "868f5345e8f51461548c7075a9e204fe5a53caefdeb69969f41c3db9a842f8a1"
+        },
+        {
+          "names": [
+            "ToolDisplayMeta"
+          ],
+          "group": "message-types",
+          "bodySha256": "9c6b7e7da8000fc332356dc0517c81ef96f17d96bdb3081881f185d854eb66d8"
+        },
+        {
+          "names": [
+            "TokenUsage"
+          ],
+          "group": "message-types",
+          "bodySha256": "da90a7772a87fe660057c0baacaf3f7109b75b93c529e66d74cf5213b6da01ed"
+        },
+        {
+          "names": [
+            "RecoveryAction"
+          ],
+          "group": "message-types",
+          "bodySha256": "c322e59ec6ed7c67059eaa368d9f2f1cf34b4207d086774443d4f61afc5414e8"
+        },
+        {
+          "names": [
+            "ErrorCode"
+          ],
+          "group": "message-types",
+          "bodySha256": "abddcf0a98ba011502c8bb7e129b215dc8ea3d69c4ab3b6f4224b8510088da16"
+        },
+        {
+          "names": [
+            "TypedError"
+          ],
+          "group": "message-types",
+          "bodySha256": "d5be34d563ec3eb76922d6d668cd4c8557ea693ce639619377da9befe3892012"
+        },
+        {
+          "names": [
+            "PermissionRequestType"
+          ],
+          "group": "message-types",
+          "bodySha256": "cd1e43b16f88529ab178c51f5a56875ceca7c4bf1e25a005ec91f6e9cf6480a9"
+        },
+        {
+          "names": [
+            "PermissionRequest"
+          ],
+          "group": "message-types",
+          "bodySha256": "9d4b59c57825d79b33aaf8be337a4bd55a90391e4aa5fea6d969d269554a5fda"
+        },
+        {
+          "names": [
+            "generateMessageId"
+          ],
+          "group": "message-types",
+          "bodySha256": "6953f961e5eed49b11f1c46f45a27237844c5e13d8e6f838dc5afb9bb8649a5b"
+        },
+        {
+          "names": [
+            "InternalMessageOrigin"
+          ],
+          "group": "message-types",
+          "bodySha256": "1c602dde9d4c0425b604691211da437dc2eed64b3a748c7c14f61502a0167a3a"
+        },
+        {
+          "names": [
+            "AttachmentType"
+          ],
+          "group": "content-types",
+          "bodySha256": "9b28d5b26f32b564231e6fc68499ce7898ce204f9385996100218ea7cb6dd15d"
+        },
+        {
+          "names": [
+            "MessageAttachment"
+          ],
+          "group": "content-types",
+          "bodySha256": "425260614ce79072f12889bcd68d2929a5c1a26d4ea1bff2ac6985426d5632a2"
+        },
+        {
+          "names": [
+            "ContentBadge"
+          ],
+          "group": "content-types",
+          "bodySha256": "a955273242f846dbc38142850c2785b25fe3b56c52953a33fd5cb21dd7ebeedf"
+        },
+        {
+          "names": [
+            "AnnotationAuthor"
+          ],
+          "group": "content-types",
+          "bodySha256": "d476de27da25f4bba6e35f5bc2ab15fa8e0596a7305f1fad55a4e497d91f22b7"
+        },
+        {
+          "names": [
+            "AnnotationBody"
+          ],
+          "group": "content-types",
+          "bodySha256": "b23e3829a53c6dc74787360a4d981cfc9d777e39d697e916bfb5d0b1f91f9b9b"
+        },
+        {
+          "names": [
+            "AnnotationIntent"
+          ],
+          "group": "content-types",
+          "bodySha256": "79528505b89beea4ea531af5e16cc04543883af084ef203c635375f81d5860b6"
+        },
+        {
+          "names": [
+            "AnnotationStatus"
+          ],
+          "group": "content-types",
+          "bodySha256": "55ebdfe99e9e88aae427a3145179672e4935a5a6f0a1964a243415ca1eb25656"
+        },
+        {
+          "names": [
+            "AnnotationBlockType"
+          ],
+          "group": "content-types",
+          "bodySha256": "1179f43fea9953b2ccc206a2e2d8a256dd9c20d84d2e0d547df6a6b41ac349bd"
+        },
+        {
+          "names": [
+            "AnnotationSelector"
+          ],
+          "group": "content-types",
+          "bodySha256": "661dc7cbfbb9064aed90a94042e00978b7506a60d6c50c148307d08e395a5e1f"
+        },
+        {
+          "names": [
+            "AnnotationTarget"
+          ],
+          "group": "content-types",
+          "bodySha256": "e9ec445157a3f8bf97eb8289611d54fc465e6c655b48da6b1c10fc54132deb43"
+        },
+        {
+          "names": [
+            "AnnotationV1"
+          ],
+          "group": "content-types",
+          "bodySha256": "0107c7bb627e2bd7b580c073a61acf86cf9a631688c8e8887e9f03aeff33318c"
+        },
+        {
+          "names": [
+            "StoredAttachment"
+          ],
+          "group": "content-types",
+          "bodySha256": "e10af16aa2312b1a9cb6a98ef83985d6aaba340f7a1cb98c87c87b5484b618b4"
+        },
+        {
+          "names": [
+            "RoutingCostSource"
+          ],
+          "group": "routing",
+          "bodySha256": "1e8193176699e7148f97253b26776611084bce031e02dbe5796d13e4edced35f"
+        },
+        {
+          "names": [
+            "RoutingCostProvenance"
+          ],
+          "group": "routing",
+          "bodySha256": "7acd22358c278e65057bc0933510dc687c2c2555908c5ed37a1a8dabd09dae53"
+        },
+        {
+          "names": [
+            "RoutingMeta"
+          ],
+          "group": "routing",
+          "bodySha256": "ab4109775feb2252e1e700a9b28eb4673e97a96f53d5f1c08c5791d2fcbe26dc"
+        },
+        {
+          "names": [
+            "Message"
+          ],
+          "group": "message-store",
+          "bodySha256": "29a7f0f9c50bfcc900b90e43f0a7439a7c6d1dc307a1aed42defad9f0dbdecf1"
+        },
+        {
+          "names": [
+            "StoredMessage"
+          ],
+          "group": "message-store",
+          "bodySha256": "0d305085b26f5a153bdb0c2b8ab845295f2c93d893749342036171ac2ae61e86"
+        },
+        {
+          "names": [
+            "ProviderDispatchWriteAhead"
+          ],
+          "group": "message-store",
+          "bodySha256": "5a42c56a6d90d724a5e36910646fa193a1a306d83a870f77a5d2a3375ef54f94"
+        },
+        {
+          "names": [
+            "AgentEventUsage"
+          ],
+          "group": "agent-events",
+          "bodySha256": "7182094393e871f48df16809a2e348ecc696805c5099dec2e9996459e5917f03"
+        },
+        {
+          "names": [
+            "AgentModelProvenance"
+          ],
+          "group": "agent-events",
+          "bodySha256": "b26ebd6ae22dc19343b3d5e76c90e12c60f68ab62c06bcfee56b83db9d7964c0"
+        },
+        {
+          "names": [
+            "AGENT_RUNTIME_ACTIVITY"
+          ],
+          "group": "agent-events",
+          "bodySha256": "b6834452e04957cd945ab8cea65fc1466658a8f639a102a86baba0ecc4e3cd49"
+        },
+        {
+          "names": [
+            "isAgentRuntimeActivity"
+          ],
+          "group": "agent-events",
+          "bodySha256": "61c4e383d9fc67d1b94a3bd013621c66b7c185f9141f2600ec835306f9aab777"
+        },
+        {
+          "names": [
+            "AgentEvent"
+          ],
+          "group": "agent-events",
+          "bodySha256": "c831c45c3bd775bd08de2c908abde18d883be687013c33350d02c94e17b6f64d"
+        }
+      ],
+      "modules": [
+        {
+          "name": "message-types",
+          "lines": 264
+        },
+        {
+          "name": "content-types",
+          "lines": 185
+        },
+        {
+          "name": "routing",
+          "lines": 115
+        },
+        {
+          "name": "message-store",
+          "lines": 261
+        },
+        {
+          "name": "agent-events",
+          "lines": 100
+        }
+      ],
+      "dependencies": {
+        "message-types": [],
+        "content-types": [],
+        "routing": [],
+        "message-store": [
+          "message-types",
+          "content-types",
+          "routing"
+        ],
+        "agent-events": [
+          "message-types"
+        ]
+      },
+      "unitCycles": [],
+      "moduleCycles": []
+    },
+    "session-tool-context": {
+      "source": "packages/session-tools-core/src/context.ts",
+      "units": [
+        {
+          "names": [
+            "LoadedSource"
+          ],
+          "group": "ports",
+          "bodySha256": "8ab4b06e4468b1700af7258aec00fe34a0f41c189075ec86648b25eabd410508"
+        },
+        {
+          "names": [
+            "SessionToolCallbacks"
+          ],
+          "group": "ports",
+          "bodySha256": "765428d1a80e549e91b1ff9578c73bd1ff9177eee7cb37dc55c3babd61dfc3df"
+        },
+        {
+          "names": [
+            "FileSystemInterface"
+          ],
+          "group": "ports",
+          "bodySha256": "bd5a55124ab7702f4b16ad89be1f4e0f6262d8fefe12c448e5cc8bc5db7c521c"
+        },
+        {
+          "names": [
+            "CredentialManagerInterface"
+          ],
+          "group": "ports",
+          "bodySha256": "02d77ae6d89aedd40b8503c457c912d62eb19526367e4843da180f841fdbf8cb"
+        },
+        {
+          "names": [
+            "ValidatorInterface"
+          ],
+          "group": "ports",
+          "bodySha256": "daa3337a1e3949c4f0ea2facbe5606003a439b199bb1a47d4a840f379c483dca"
+        },
+        {
+          "names": [
+            "SessionToolContext"
+          ],
+          "group": "execution-context",
+          "bodySha256": "04679a4ccd39587b4e6949d92d985cbc39a8355c1a98b8564cd6c8d4662ebe22"
+        },
+        {
+          "names": [
+            "AgentMessageType"
+          ],
+          "group": "session-results",
+          "bodySha256": "c1eb9c503fe4b3fe967a72f357f474f5b62ed52236a2887f7532faa0b82a504a"
+        },
+        {
+          "names": [
+            "ResolvedLabelsResult"
+          ],
+          "group": "session-results",
+          "bodySha256": "72f59da461e8d5b2123b47cba4dffd3408d313aa2752ca3a3fd51c4f677c0196"
+        },
+        {
+          "names": [
+            "ResolvedStatusResult"
+          ],
+          "group": "session-results",
+          "bodySha256": "de01a07cd1004a25145a1f47739802f5c45d550a0644730bcf37359888dbda41"
+        },
+        {
+          "names": [
+            "SessionInfo"
+          ],
+          "group": "session-results",
+          "bodySha256": "80ad8087ad95b572eaf5b8e494bd2c80383ea19d0403d0160ce3b65aca37c6f6"
+        },
+        {
+          "names": [
+            "SessionListItem"
+          ],
+          "group": "session-results",
+          "bodySha256": "ec6408f0e4930afd6c168f7406f010857559f941ae531db34156b9bf350cbc33"
+        },
+        {
+          "names": [
+            "ListSessionsOptions"
+          ],
+          "group": "session-results",
+          "bodySha256": "f1fe5a58beccc0e06aafa0d736daa0010526bb60355c0d30c5a9b85505a39c68"
+        },
+        {
+          "names": [
+            "ListSessionsResult"
+          ],
+          "group": "session-results",
+          "bodySha256": "22edea82ef382b25660c01698184ca521572215eee4e4c7f975e1aac91975317"
+        },
+        {
+          "names": [
+            "WaitSessionDiagnostic"
+          ],
+          "group": "session-results",
+          "bodySha256": "79bcb422ca5ac607e8187ad148ddad455b91994fd409a4753c13456018e7ded8"
+        },
+        {
+          "names": [
+            "WaitSessionSnapshot"
+          ],
+          "group": "session-results",
+          "bodySha256": "9657d00a63e554803bae639e45deb5052845042365475e2af203f4e8233f0d67"
+        },
+        {
+          "names": [
+            "WaitSessionsResult"
+          ],
+          "group": "session-results",
+          "bodySha256": "99fcf5a64bbf9890aa5597767a38c9edf3db5e267db008024a3113b68bfa8549"
+        },
+        {
+          "names": [
+            "WaitSessionsMode"
+          ],
+          "group": "session-results",
+          "bodySha256": "1b19eaf9d66a31ef9820d568baa5a125662831724bb860bed32c10d22d3b2927"
+        },
+        {
+          "names": [
+            "SendAgentMessageResult"
+          ],
+          "group": "session-results",
+          "bodySha256": "bd9ace56850987c4144f39ad4d8dc13943ca09e03bd6412a6808dc169855ac22"
+        },
+        {
+          "names": [
+            "BackgroundTaskInfo"
+          ],
+          "group": "session-results",
+          "bodySha256": "7e86a0f34b7785db81b352410d645cb2bc97ec14f4d2a497445feea9eca01ddc"
+        },
+        {
+          "names": [
+            "StdioMcpConfig"
+          ],
+          "group": "source-diagnostics",
+          "bodySha256": "7e8f107fa093e8f8939697a0419ac59124a45be4933b7bf783b32f438fbe7c6f"
+        },
+        {
+          "names": [
+            "HttpMcpConfig"
+          ],
+          "group": "source-diagnostics",
+          "bodySha256": "65c487cfb949ed1f441087788f44f72c7350fb7dbc47fe198a9b3ccc47dd36d6"
+        },
+        {
+          "names": [
+            "StdioValidationResult"
+          ],
+          "group": "source-diagnostics",
+          "bodySha256": "b9072c894ac35bc651e9168b5174aec0daf425662baff9beef6e0212b15eea2b"
+        },
+        {
+          "names": [
+            "McpValidationResult"
+          ],
+          "group": "source-diagnostics",
+          "bodySha256": "a2853ca063be1bb20b183ef8a523cee493b30cc35d52a0a2b28b1a2276aad117"
+        },
+        {
+          "names": [
+            "ApiTestResult"
+          ],
+          "group": "source-diagnostics",
+          "bodySha256": "720d9e797b803a48df40e055889ebfe0418a24ea39abc8951c9e2611142e04aa"
+        },
+        {
+          "names": [
+            "createNodeFileSystem"
+          ],
+          "group": "node-filesystem",
+          "bodySha256": "edd434c1606168da291f7249bae60edfbeec8337b9c126b9b49687d515c822c2"
+        }
+      ],
+      "modules": [
+        {
+          "name": "ports",
+          "lines": 130
+        },
+        {
+          "name": "execution-context",
+          "lines": 298
+        },
+        {
+          "name": "session-results",
+          "lines": 164
+        },
+        {
+          "name": "source-diagnostics",
+          "lines": 72
+        },
+        {
+          "name": "node-filesystem",
+          "lines": 34
+        }
+      ],
+      "dependencies": {
+        "ports": [],
+        "execution-context": [
+          "ports",
+          "source-diagnostics",
+          "session-results"
+        ],
+        "session-results": [],
+        "source-diagnostics": [],
+        "node-filesystem": [
+          "ports"
+        ]
+      },
+      "unitCycles": [],
+      "moduleCycles": []
+    },
+    "project-storage": {
+      "source": "packages/shared/src/projects/storage.ts",
+      "units": [
+        {
+          "names": [
+            "getWorkspaceProjectsPath"
+          ],
+          "group": "paths",
+          "bodySha256": "03af2e3d8f45cfed32b80f6c3f11cd0df7b114af562287910cf991d745c8aab2"
+        },
+        {
+          "names": [
+            "getProjectPath"
+          ],
+          "group": "paths",
+          "bodySha256": "b0cda9751c51e33d2989d354a96870d3b1b88f605ed2dc1857709ef787939b0a"
+        },
+        {
+          "names": [
+            "getProjectAssetsPath"
+          ],
+          "group": "paths",
+          "bodySha256": "128e035f7474ed2438ae3f2f9fd2b31e3017fcd89599172b3aac56b191aae08d"
+        },
+        {
+          "names": [
+            "MEMORY_FILENAME"
+          ],
+          "group": "paths",
+          "bodySha256": "10ebc5cc8ee1946942d27400431947d0b38cac8cbcb123af2837d86952ada888"
+        },
+        {
+          "names": [
+            "getProjectMemoryPath"
+          ],
+          "group": "paths",
+          "bodySha256": "7cd5c3062e149615568e965b4ebcb9a1e7c90bb430d6e9c44557563108c992be"
+        },
+        {
+          "names": [
+            "ensureProjectsDir"
+          ],
+          "group": "paths",
+          "bodySha256": "d0a8bc622eb0a241cd89dc87232c25da767532550510e84cb00a0de8e2f5283c"
+        },
+        {
+          "names": [
+            "ensureProjectAssetsDir"
+          ],
+          "group": "paths",
+          "bodySha256": "957d8be148b1b2731258b33f9c1a6f9442266756019bce4b0fc39162f598a34b"
+        },
+        {
+          "names": [
+            "loadProjectConfig"
+          ],
+          "group": "project-config",
+          "bodySha256": "a45a4887289d3048175bda5367becd51afa871c7500dc883275fd576fd9b6e3c"
+        },
+        {
+          "names": [
+            "saveProjectConfig"
+          ],
+          "group": "project-config",
+          "bodySha256": "6bb10e13589a69de6e142f370c0d648fdebd64a7b9fbfddfe807163360a02cea"
+        },
+        {
+          "names": [
+            "loadProjectMemory"
+          ],
+          "group": "project-memory",
+          "bodySha256": "56f16c7ebd1d80b05ae9e590341e62c0fbc48d216846a814e5d89c0cdc5cb2f6"
+        },
+        {
+          "names": [
+            "loadLegacyProjectMemory"
+          ],
+          "group": "project-memory",
+          "bodySha256": "68a1834b201a22dfc45a6846b6a5b2e2004162bff16bfdb933e74e1bb43d655b"
+        },
+        {
+          "names": [
+            "capProjectMemoryText"
+          ],
+          "group": "project-memory",
+          "bodySha256": "7ee580e66523b2f904d1a11e7b38b6ad515dd6e674aa6aac365078b9f7b3500e"
+        },
+        {
+          "names": [
+            "truncateTextToTokenBudget"
+          ],
+          "group": "project-memory",
+          "bodySha256": "c06e3aca51cf8797e0e0d83ae10034f28af7fa33f6fb6b756946fb7a268a6597"
+        },
+        {
+          "names": [
+            "loadProject"
+          ],
+          "group": "inventory",
+          "bodySha256": "2c38419b82da559b62fe52e6d2c233fb17976ccd16154952fdf9ead138e5d134"
+        },
+        {
+          "names": [
+            "loadProjectById"
+          ],
+          "group": "inventory",
+          "bodySha256": "a36186c1b0c1d380383aec35700b620d6e67949051dd221a15d5b5734d04709f"
+        },
+        {
+          "names": [
+            "loadWorkspaceProjects"
+          ],
+          "group": "inventory",
+          "bodySha256": "970dfac55352b303b661d58ac00503d02f51156be638fb231a6e2a92de0b7170"
+        },
+        {
+          "names": [
+            "generateProjectSlug"
+          ],
+          "group": "lifecycle",
+          "bodySha256": "f1f45b5fc88be00c6c2c91bc8c66014b4b1184fc64ae8cd9ae11c09034ff33d6"
+        },
+        {
+          "names": [
+            "createProject"
+          ],
+          "group": "lifecycle",
+          "bodySha256": "3af14bba314e1af41a6fed8c255fc99df3861a5a54217acc73e034ffd87fbe52"
+        },
+        {
+          "names": [
+            "updateProject"
+          ],
+          "group": "lifecycle",
+          "bodySha256": "afd1331dd1a8005e35ee1a898da194dbd6feb40ec62a036fc15b932dfa1a832c"
+        },
+        {
+          "names": [
+            "deleteProject"
+          ],
+          "group": "lifecycle",
+          "bodySha256": "535908e27b5f6d52965ea9a642b85ae43ad3b01ae4c606ee7c9465b9c8a89ae2"
+        },
+        {
+          "names": [
+            "projectExists"
+          ],
+          "group": "lifecycle",
+          "bodySha256": "0fce81594025fd64ae334eacdf87f48ab7b0ace31d1b40ea11e711ffbe541b68"
+        },
+        {
+          "names": [
+            "sanitizeAssetFilename"
+          ],
+          "group": "assets",
+          "bodySha256": "7107d7f4186cabf1865a33ee133c6e483a2e80b068f04e05051299b5c0859011"
+        },
+        {
+          "names": [
+            "listProjectAssets"
+          ],
+          "group": "assets",
+          "bodySha256": "a29c9ba10ad77edbcd31207c4a0a33eec44db086a211747eb90fbbce239f2cca"
+        },
+        {
+          "names": [
+            "UploadProjectAssetInput"
+          ],
+          "group": "assets",
+          "bodySha256": "2bfe08698aa282932fc8c5511ad6adc6a30e55016753dfec498991f3b88d687b"
+        },
+        {
+          "names": [
+            "uploadProjectAsset"
+          ],
+          "group": "assets",
+          "bodySha256": "fc2ca9d4224e22c1074009a4f7453b3c29da190aa680302719129b9fd2243001"
+        },
+        {
+          "names": [
+            "deleteProjectAsset"
+          ],
+          "group": "assets",
+          "bodySha256": "934bb76f1bc043d7256e276811493f42989452321cd4bfaaeaca35ddfefaab6e"
+        },
+        {
+          "names": [
+            "resolveUniqueAssetPath"
+          ],
+          "group": "assets",
+          "bodySha256": "4e120e5e2e9cfd8ca166a678b455499382c5be9be1a685f5ad9de877e3071314"
+        }
+      ],
+      "modules": [
+        {
+          "name": "paths",
+          "lines": 86
+        },
+        {
+          "name": "project-config",
+          "lines": 68
+        },
+        {
+          "name": "project-memory",
+          "lines": 125
+        },
+        {
+          "name": "inventory",
+          "lines": 76
+        },
+        {
+          "name": "lifecycle",
+          "lines": 120
+        },
+        {
+          "name": "assets",
+          "lines": 163
+        }
+      ],
+      "dependencies": {
+        "paths": [],
+        "project-config": [
+          "paths"
+        ],
+        "project-memory": [
+          "paths"
+        ],
+        "inventory": [
+          "project-config",
+          "paths"
+        ],
+        "lifecycle": [
+          "paths",
+          "project-config"
+        ],
+        "assets": [
+          "paths",
+          "lifecycle"
+        ]
+      },
+      "unitCycles": [],
+      "moduleCycles": []
+    },
+    "agent-errors": {
+      "source": "packages/shared/src/agent/errors.ts",
+      "units": [
+        {
+          "names": [
+            "ProviderInfo"
+          ],
+          "group": "definitions",
+          "bodySha256": "e30f2354255ef983dce3738a4b14398f0b63466e91b3789a84c13b22a50886fc"
+        },
+        {
+          "names": [
+            "RecoveryAction"
+          ],
+          "group": "definitions",
+          "bodySha256": "5c1c82ef5f9989339c0fcfcd7baf20b928c74e92ce62e6c92d4755834c792133"
+        },
+        {
+          "names": [
+            "AgentError"
+          ],
+          "group": "definitions",
+          "bodySha256": "a99c3e55a96df402d011d2ba61a11f1de8c81c4379ce86b4b26009a5bedaec6a"
+        },
+        {
+          "names": [
+            "ERROR_DEFINITIONS"
+          ],
+          "group": "definitions",
+          "bodySha256": "aaf10b32de0bae4e4eb0425654089c92c0ed40b8706033428a5991c3575ce123"
+        },
+        {
+          "names": [
+            "extractErrorMessages"
+          ],
+          "group": "proxy-diagnostics",
+          "bodySha256": "80d8058f17acbc927d92c4326d813cc7321aa969d9a73e7b2258571ee8497413"
+        },
+        {
+          "names": [
+            "HTML_DOC_HINTS"
+          ],
+          "group": "proxy-diagnostics",
+          "bodySha256": "8f825181aeeaf8ea124c672bf920ae7250414c4673f3f0c630d77161b541d5ef"
+        },
+        {
+          "names": [
+            "HTML_PROXY_HINTS"
+          ],
+          "group": "proxy-diagnostics",
+          "bodySha256": "5242859f5c84b7d306fc379e62276bf88b70a9c118eed9b37767d4afe5b9d466"
+        },
+        {
+          "names": [
+            "HTML_STATUS_PATTERN"
+          ],
+          "group": "proxy-diagnostics",
+          "bodySha256": "bc58787f5e77cb161c4236e1e3591b8ae231f16519d7f53f774c76c40ae474e3"
+        },
+        {
+          "names": [
+            "looksLikeHtmlPayload"
+          ],
+          "group": "proxy-diagnostics",
+          "bodySha256": "cccd7bdbdd8b9e5716502bf0d1e5dc0f9389d17c694a30c5cd92357153804ca8"
+        },
+        {
+          "names": [
+            "hasHtmlErrorPageSignals"
+          ],
+          "group": "proxy-diagnostics",
+          "bodySha256": "34c376f24d380df7fc08d1043ffb0a8453dbfdd97d2e3295cff0d3c8041e6b0e"
+        },
+        {
+          "names": [
+            "isLikelyProxyInterception"
+          ],
+          "group": "proxy-diagnostics",
+          "bodySha256": "dda77cf1b72440ba9dc1da607360139408599e5ddf454c5b5f1a64d556c9043b"
+        },
+        {
+          "names": [
+            "buildProxyErrorMessage"
+          ],
+          "group": "proxy-diagnostics",
+          "bodySha256": "de9f48a96b123b0116759e4ef6ce3b00b849d250944cf7c8aabf37b438ec4c16"
+        },
+        {
+          "names": [
+            "hasRuntimeBridgeErrorContext"
+          ],
+          "group": "proxy-diagnostics",
+          "bodySha256": "d5e6bddb0100a328c7d9edc8a0f8346b1bf01454223e99f84e9b97e9d30fe60d"
+        },
+        {
+          "names": [
+            "parseError"
+          ],
+          "group": "classification",
+          "bodySha256": "898d968ca92ef042b9897edcd587bf63fa624d24789e7a0f6516647549ac480d"
+        },
+        {
+          "names": [
+            "isBillingError"
+          ],
+          "group": "classification",
+          "bodySha256": "27565c656b2cdc4fd4c49d665cb82ed716c164d5aade4abb3c369feb1d6a0bfa"
+        },
+        {
+          "names": [
+            "canAutoRetry"
+          ],
+          "group": "classification",
+          "bodySha256": "704025d1a7d3a9e954d845db9ab7292d98080697da3e173457b19ba35e56fe37"
+        },
+        {
+          "names": [
+            "parseSDKErrorText"
+          ],
+          "group": "classification",
+          "bodySha256": "b26d63b5c2c164a42f3b0e0ace631156953f1016305b7a1de20ff6368b85b73b"
+        },
+        {
+          "names": [
+            "isSDKErrorText"
+          ],
+          "group": "classification",
+          "bodySha256": "c929c9c8672f85e0a8c8e0fbdc53261387841af9b82140fc51f718a90c4e210f"
+        }
+      ],
+      "modules": [
+        {
+          "name": "definitions",
+          "lines": 278
+        },
+        {
+          "name": "proxy-diagnostics",
+          "lines": 136
+        },
+        {
+          "name": "classification",
+          "lines": 234
+        }
+      ],
+      "dependencies": {
+        "definitions": [],
+        "proxy-diagnostics": [],
+        "classification": [
+          "definitions",
+          "proxy-diagnostics"
+        ]
+      },
+      "unitCycles": [],
+      "moduleCycles": []
+    },
+    "mission-events": {
+      "source": "packages/shared/src/missions/events.ts",
+      "units": [
+        {
+          "names": [
+            "EventBaseSchema"
+          ],
+          "group": "event-types",
+          "bodySha256": "f39a2921b0b6867f738fcb33e39ec734c951247dcbd01925dd78bdc3304aa7d1"
+        },
+        {
+          "names": [
+            "MissionReplanPreviewSchema"
+          ],
+          "group": "event-types",
+          "bodySha256": "1596f0513747ec1f566b43647bb40c93ca843f75b2eef76c1b5691fb523a6d11"
+        },
+        {
+          "names": [
+            "MissionEventSchema"
+          ],
+          "group": "event-types",
+          "bodySha256": "fdb5b512e5346e5ec75fae6272a218bcdc21c91fbb7e6ac48b6eb27ff8202b1e"
+        },
+        {
+          "names": [
+            "MissionEvent"
+          ],
+          "group": "event-types",
+          "bodySha256": "15fc5621e80a1db79461e11de54b6bf32fd4044a0c777aaea5c975184cbe2751"
+        },
+        {
+          "names": [
+            "MissionReplanJournalRecord"
+          ],
+          "group": "event-types",
+          "bodySha256": "8a0a08e40997afcb4c6469f18f11fbfa224cc776e06b58ac3fc602f784e16595"
+        },
+        {
+          "names": [
+            "MissionWorkItemRuntime"
+          ],
+          "group": "event-types",
+          "bodySha256": "ccfcc7ccf113012bee75b9c6c025af649319748f1dace496ce3f0884bdac4958"
+        },
+        {
+          "names": [
+            "MissionSnapshot"
+          ],
+          "group": "event-types",
+          "bodySha256": "d0f0ef4a704b6f9f272d8e3f8d8f8f6b409ae703dcef5dac081cc59d3f1de9ea"
+        },
+        {
+          "names": [
+            "requireItem"
+          ],
+          "group": "reducer",
+          "bodySha256": "f1b0eec743e785b82a7cb0cdaa047cff73e557158dd3bf8473b1a4e90a133426"
+        },
+        {
+          "names": [
+            "reduceMissionEvents"
+          ],
+          "group": "reducer",
+          "bodySha256": "32eb8eaf3c8a172f0c65a1d18ff26390b37c4ab26fe20c3207cebd094f67696e"
+        },
+        {
+          "names": [
+            "resetRuntimeForReplan"
+          ],
+          "group": "reducer",
+          "bodySha256": "daf1ca8d7ee6d61cf275479ec67125075024e8fc80353d64896d0ac8d280f62a"
+        },
+        {
+          "names": [
+            "assertExactReplanPreview"
+          ],
+          "group": "replan-validation",
+          "bodySha256": "2ac61afa6e5f8344befe3a25895fe55805aa9a81d595e00f9567d1cae17c394a"
+        }
+      ],
+      "modules": [
+        {
+          "name": "event-types",
+          "lines": 180
+        },
+        {
+          "name": "reducer",
+          "lines": 286
+        },
+        {
+          "name": "replan-validation",
+          "lines": 35
+        }
+      ],
+      "dependencies": {
+        "event-types": [],
+        "reducer": [
+          "event-types",
+          "replan-validation"
+        ],
+        "replan-validation": []
+      },
+      "unitCycles": [],
+      "moduleCycles": []
+    },
+    "protocol-routing": {
+      "source": "packages/shared/src/protocol/routing.ts",
+      "units": [
+        {
+          "names": [
+            "LOCAL_ONLY_CHANNELS"
+          ],
+          "group": "local-channels",
+          "bodySha256": "46230c46817f6af13d3b8a64270fb4ed48e8984b26a942091470cf3185be01a7"
+        },
+        {
+          "names": [
+            "isLocalOnly"
+          ],
+          "group": "local-channels",
+          "bodySha256": "0a2c80d830e9549a6df465e952c1e8737267749cebd32711d3e3c2d7d6de76d6"
+        },
+        {
+          "names": [
+            "REMOTE_ELIGIBLE_CHANNELS"
+          ],
+          "group": "remote-channels",
+          "bodySha256": "e6b7454c647131386b30e49dbb971681ee650183f743b62d3468fbe55f528bfd"
+        },
+        {
+          "names": [
+            "isRemoteEligible"
+          ],
+          "group": "remote-channels",
+          "bodySha256": "04c3eaf11d0114a3d3e5ecefb2bb55d0fe68b6f5705fcbcaef19e84ab243dca3"
+        }
+      ],
+      "modules": [
+        {
+          "name": "local-channels",
+          "lines": 239
+        },
+        {
+          "name": "remote-channels",
+          "lines": 314
+        }
+      ],
+      "dependencies": {
+        "local-channels": [],
+        "remote-channels": []
+      },
+      "unitCycles": [],
+      "moduleCycles": []
+    },
+    "delegated-review": {
+      "source": "packages/server-core/src/sessions/delegated-review-outcome.ts",
+      "units": [
+        {
+          "names": [
+            "DelegatedReviewRequest"
+          ],
+          "group": "host-scope",
+          "bodySha256": "2434e82846ebfa874843bc1c552023c5bdf8c5388d521d4bd0e22776ed3e4eeb"
+        },
+        {
+          "names": [
+            "DelegatedReviewValidation"
+          ],
+          "group": "host-scope",
+          "bodySha256": "0649776396eda465d3a7766e2aa78e7daeb46f722a46e0654d7fac720d7d9740"
+        },
+        {
+          "names": [
+            "COORDINATION"
+          ],
+          "group": "host-scope",
+          "bodySha256": "b40d7eecaed5dd641e3aad5bc351988446b85123f601a8262c7d93db0c3b28d3"
+        },
+        {
+          "names": [
+            "HOST_REVIEW_OPEN"
+          ],
+          "group": "host-scope",
+          "bodySha256": "47b36e192d545bb8af1eeb21d178ec52af2f01de6b84779e9d8c75be43a1943c"
+        },
+        {
+          "names": [
+            "HOST_REVIEW_CLOSE"
+          ],
+          "group": "host-scope",
+          "bodySha256": "36a602b92269f8c5761f2cc5adc0d4d9608c3c326c060dbacfd8ff07c8b92c98"
+        },
+        {
+          "names": [
+            "HOST_DELEGATED_REVIEWER_PREFIX"
+          ],
+          "group": "host-scope",
+          "bodySha256": "75dd7e0ca0390182582e2687a71154b5f85ca834429c6674813bb48cd5ee622f"
+        },
+        {
+          "names": [
+            "HOST_PARENT_REVIEW_INSTRUCTION"
+          ],
+          "group": "host-scope",
+          "bodySha256": "1d3c20538ee9beb85a206bf660f583b3ddf8fa3a4c264b5958480084f435b13e"
+        },
+        {
+          "names": [
+            "HOST_REVIEW_CONTEXT_OPEN"
+          ],
+          "group": "host-scope",
+          "bodySha256": "35091dc06234ae5e7dc18ec776d90a0775ce27f75e37f4f4d278dd80934d58a5"
+        },
+        {
+          "names": [
+            "HOST_REVIEW_CONTEXT_CLOSE"
+          ],
+          "group": "host-scope",
+          "bodySha256": "826235d98e005233207900c2a2aa30c1ac5afb85d441e29fc50b5f4282a99a19"
+        },
+        {
+          "names": [
+            "LOCAL_REVIEW_SHELL_TOOLS"
+          ],
+          "group": "host-scope",
+          "bodySha256": "fa1071c8a673b58fc6989b39d4f54c547d54e29079bd1f4bbefd0ea1a5ac0f77"
+        },
+        {
+          "names": [
+            "LOCAL_REVIEW_READ_TOOLS"
+          ],
+          "group": "host-scope",
+          "bodySha256": "2fcc8c41bdc3672b766cbf37ee6884d6a9d7dc719ffee9f14c442209ac4d901d"
+        },
+        {
+          "names": [
+            "HOST_BOUND_REVIEW_CONNECTOR_TOOLS"
+          ],
+          "group": "host-scope",
+          "bodySha256": "92145f6deabc6156d73c6192c03fbf6a71ef2b23e3bf441e3385e8dc5b73c99d"
+        },
+        {
+          "names": [
+            "isHostReviewTargetCheckTool"
+          ],
+          "group": "host-scope",
+          "bodySha256": "3df1ac4ae48e5c606cc23f48a32ca9886a25abdc15d0f3ea583d4f792e816187"
+        },
+        {
+          "names": [
+            "HostParentReviewContract"
+          ],
+          "group": "host-scope",
+          "bodySha256": "5984428915906057ce33aee193f30d349981ec10915cbe94ef7a2198f49c4cd0"
+        },
+        {
+          "names": [
+            "isRecord"
+          ],
+          "group": "host-scope",
+          "bodySha256": "e969ee8515a59708f61195b4b28401ed103f93d1bdf4f2daa462d2f6f3a94b84"
+        },
+        {
+          "names": [
+            "scalar"
+          ],
+          "group": "host-scope",
+          "bodySha256": "f68d8bba67ef6fcac56dc3861f06be519dd4dee747a803bc1ff68754d8bc5a8a"
+        },
+        {
+          "names": [
+            "selectorIdentity"
+          ],
+          "group": "host-scope",
+          "bodySha256": "49867dba59076472016b58a1943b3959a63dc49e132b536594e5cd638e6b1a30"
+        },
+        {
+          "names": [
+            "validHostTargetCheck"
+          ],
+          "group": "host-scope",
+          "bodySha256": "6161ac62f90d15e6664e26fabc339735a957f175b649a97f7d0da6133287360d"
+        },
+        {
+          "names": [
+            "validHostSingleTarget"
+          ],
+          "group": "host-scope",
+          "bodySha256": "c63db8b6b37c84b1d96ce5f66bd9d2c1b6fbfc0f118def00e78be1b7b74fd45b"
+        },
+        {
+          "names": [
+            "hostParentReviewContract"
+          ],
+          "group": "host-scope",
+          "bodySha256": "b8aa8da7bdfd9dca1b44a9f95e8ce9235c6a990b98d5658957ea868861c2c387"
+        },
+        {
+          "names": [
+            "requestObjects"
+          ],
+          "group": "review-target",
+          "bodySha256": "4f180d7547ad0ec27850642513c00b59ffafa349d35c8bba4900c5cddd74f047"
+        },
+        {
+          "names": [
+            "ExplicitTargetMention"
+          ],
+          "group": "review-target",
+          "bodySha256": "8e9f59258d68c8f26520d1ce0bdd78c58081914573b7d7bf8efa4e71b5dc73af"
+        },
+        {
+          "names": [
+            "explicitTargetMentions"
+          ],
+          "group": "review-target",
+          "bodySha256": "bb4196608a545e66d48f589adfda362d42686802590a319d212a266749d2cdef"
+        },
+        {
+          "names": [
+            "reviewTarget"
+          ],
+          "group": "review-target",
+          "bodySha256": "cb19ac9ac6e620d0b4b42f37474a3739b246407f11d1f32897d110ae371ae4ae"
+        },
+        {
+          "names": [
+            "deriveHostDelegatedReviewSingleTarget"
+          ],
+          "group": "review-target",
+          "bodySha256": "e19b2f77a73a43bd917c90bdf0076d62667fe904ae7d71101951a3dd9ea6521a"
+        },
+        {
+          "names": [
+            "isBoundReadOnlyReviewScope"
+          ],
+          "group": "review-target",
+          "bodySha256": "414679617a53029ddc42219353f9fc3571da4e100fdc5334fb37aeab011a1bdd"
+        },
+        {
+          "names": [
+            "canonicalHostReviewerBrief"
+          ],
+          "group": "review-request",
+          "bodySha256": "e707dc032c940cb4b918e1f1241e546fd6d233ab3f802c52fd590c5cd7ee17e2"
+        },
+        {
+          "names": [
+            "hostAuthenticatedReviewerScope"
+          ],
+          "group": "review-request",
+          "bodySha256": "182ee094276ef00304f6eac8bfcfa825fb885939444c45c4b45cb4f953fa39d8"
+        },
+        {
+          "names": [
+            "containsReservedHostReviewerArtifact"
+          ],
+          "group": "review-request",
+          "bodySha256": "5ada1e2469c4bc3539ae425e734f0555b105d066239dd4ed4601b236986ce27c"
+        },
+        {
+          "names": [
+            "prependHostDelegatedReviewerScope"
+          ],
+          "group": "review-request",
+          "bodySha256": "f2301457208359aafb4b8a5c7f517ba13c818e3dedd0e71d6ff0a9371e79f410"
+        },
+        {
+          "names": [
+            "getDelegatedReviewRequest"
+          ],
+          "group": "review-request",
+          "bodySha256": "4e93b742b1d06cc17fe2ee970e60250d2d6dbc2c2ab4b199c6adec320da45cff"
+        },
+        {
+          "names": [
+            "buildDelegatedReviewPrompt"
+          ],
+          "group": "review-request",
+          "bodySha256": "0ad888d375fa6186a8f196933a32fbdddf7d5475c2153ca3cb2ec1a1758470e2"
+        },
+        {
+          "names": [
+            "shellCommand"
+          ],
+          "group": "review-observations",
+          "bodySha256": "212f8b855d41b8e999fbc17c854522ea9071a128c14c4f24c5f974adbcc23c40"
+        },
+        {
+          "names": [
+            "isShellTool"
+          ],
+          "group": "review-observations",
+          "bodySha256": "f6874ae5295e2e102cddbc19a66ece9d6e212d0ecad6dc3cddad75d8fde9c70b"
+        },
+        {
+          "names": [
+            "reviewCommand"
+          ],
+          "group": "review-observations",
+          "bodySha256": "0e2b8a8d43b6bb65cc1343000f6a86b03f7f6a238ecf1fed3e01da270aba05e0"
+        },
+        {
+          "names": [
+            "observationalTool"
+          ],
+          "group": "review-observations",
+          "bodySha256": "c57e1b9dc5aa2d0373d0fbcdc56cedaccaf28bde814f2b4b3c5be9346c592c23"
+        },
+        {
+          "names": [
+            "observedRevision"
+          ],
+          "group": "review-observations",
+          "bodySha256": "c8b2cf697a217da9df10991cc36ced6fd1770e2f975ca1bd10a0f0859862128a"
+        },
+        {
+          "names": [
+            "BUILTIN_TOOL_NAMES"
+          ],
+          "group": "review-observations",
+          "bodySha256": "f7c4117d17c557f54432a8756da6bc278a09c527912ba8c456fd720fc2e8ed8a"
+        },
+        {
+          "names": [
+            "canonicalToolName"
+          ],
+          "group": "review-observations",
+          "bodySha256": "31846f63460760290e494cef0636c6d994adf9c1631c80d7c392d5f7c54d710c"
+        },
+        {
+          "names": [
+            "atPath"
+          ],
+          "group": "review-observations",
+          "bodySha256": "aca4c6ea095d33a7e0c4a9337feaa154f18c7cc48c834713c548230e971a8bea"
+        },
+        {
+          "names": [
+            "criterionInvocationMatches"
+          ],
+          "group": "review-observations",
+          "bodySha256": "05bf038091ee30bb686970b9929549fd14af7b22290c02387bd009752e4d4545"
+        },
+        {
+          "names": [
+            "isBoundReadOnlyHostTargetCheck"
+          ],
+          "group": "review-observations",
+          "bodySha256": "c345eabb5448761a19ae60e24b386dc397e45e15f862833a94278716d3880d97"
+        },
+        {
+          "names": [
+            "isExplicitHostPolicyRefusal"
+          ],
+          "group": "review-observations",
+          "bodySha256": "b3f8fc2852081173630a45bf815f69996cd8cddfc73eb3c6f273016b6ba14f58"
+        },
+        {
+          "names": [
+            "validateDelegatedReviewCompletion"
+          ],
+          "group": "review-validation",
+          "bodySha256": "dac792435908eb765139e836b41f78ec6c1af8c203e86c5d9e96c5c4fd59085d"
+        }
+      ],
+      "modules": [
+        {
+          "name": "host-scope",
+          "lines": 197
+        },
+        {
+          "name": "review-target",
+          "lines": 157
+        },
+        {
+          "name": "review-request",
+          "lines": 160
+        },
+        {
+          "name": "review-observations",
+          "lines": 142
+        },
+        {
+          "name": "review-validation",
+          "lines": 162
+        }
+      ],
+      "dependencies": {
+        "host-scope": [],
+        "review-target": [
+          "host-scope"
+        ],
+        "review-request": [
+          "host-scope",
+          "review-target"
+        ],
+        "review-observations": [
+          "host-scope"
+        ],
+        "review-validation": [
+          "host-scope",
+          "review-request",
+          "review-observations"
+        ]
+      },
+      "unitCycles": [],
+      "moduleCycles": []
+    },
+    "google-oauth": {
+      "source": "packages/shared/src/auth/google-oauth.ts",
+      "units": [
+        {
+          "names": [
+            "GOOGLE_CLIENT_ID_ENV"
+          ],
+          "group": "oauth-contracts",
+          "bodySha256": "9eda0bfaa0fcdd465b0be4794467f779e18505a0f6d5c52bb7bdcbfb9f0cbc0a"
+        },
+        {
+          "names": [
+            "GOOGLE_CLIENT_SECRET_ENV"
+          ],
+          "group": "oauth-contracts",
+          "bodySha256": "d3e1bd774f8d8f6b316580a674af0c0bbadf0b807ee62ee9296f972a2e57450e"
+        },
+        {
+          "names": [
+            "resolveGoogleOAuthClient"
+          ],
+          "group": "oauth-contracts",
+          "bodySha256": "e292257def8fa180783cd5ce9dec055707418f278129e9a2650e6a0e017a43cd"
+        },
+        {
+          "names": [
+            "GOOGLE_AUTH_URL"
+          ],
+          "group": "oauth-contracts",
+          "bodySha256": "09f4273c4198468ce6d3852485af604d3442b791c4be2275aba49f7db19bac52"
+        },
+        {
+          "names": [
+            "GOOGLE_TOKEN_URL"
+          ],
+          "group": "oauth-contracts",
+          "bodySha256": "c09f07556b9487471c66f9154edc9048df39635749ccb99d6d2ad9002a17aa35"
+        },
+        {
+          "names": [
+            "GOOGLE_USERINFO_URL"
+          ],
+          "group": "oauth-contracts",
+          "bodySha256": "6bec2aee070a091545eb057351fe391624b5fe26e42065188cda46559271af15"
+        },
+        {
+          "names": [
+            "GOOGLE_SERVICE_SCOPES"
+          ],
+          "group": "oauth-contracts",
+          "bodySha256": "a5217dddf1afea907e3ad9fd0fdfdd2169aacb4c0ed4d82db83a0cb3fde1967f"
+        },
+        {
+          "names": [
+            "GoogleOAuthOptions"
+          ],
+          "group": "oauth-contracts",
+          "bodySha256": "d17c2d8c155c9d3010e67526ac643fa7a9315facdadacad2bed6f666fb75b9a7"
+        },
+        {
+          "names": [
+            "GoogleOAuthResult"
+          ],
+          "group": "oauth-contracts",
+          "bodySha256": "01227d3d06142db70535e241afe07b57b3650480c9c9eec0fe61d5e704f01f7e"
+        },
+        {
+          "names": [
+            "generatePKCE"
+          ],
+          "group": "token-exchange",
+          "bodySha256": "f6e241959eea666c081ffdff2773640d310f1b76c982a5f4409637517ae2a7b1"
+        },
+        {
+          "names": [
+            "generateState"
+          ],
+          "group": "token-exchange",
+          "bodySha256": "dabb22ed5bd4571e39ca383f4802efb988cf4dfef4096df773b2f33f3665843e"
+        },
+        {
+          "names": [
+            "exchangeCodeForTokens"
+          ],
+          "group": "token-exchange",
+          "bodySha256": "d0c7165ab89bf8103cfba6f71591cfe5327e4ee106c46c9c7ba4d282566b55a5"
+        },
+        {
+          "names": [
+            "GoogleAuthorizationCodeTokenInput"
+          ],
+          "group": "token-exchange",
+          "bodySha256": "eaf6856befe2e708c9de213c451c903bcd00851b9228c82871c679225ca0f235"
+        },
+        {
+          "names": [
+            "GoogleRefreshTokenInput"
+          ],
+          "group": "token-exchange",
+          "bodySha256": "d0a793d3508a4ae3b41156cdfca3015ede2baa1f9cad3147a66c2bc7d7c0531e"
+        },
+        {
+          "names": [
+            "buildGoogleAuthorizationCodeTokenParams"
+          ],
+          "group": "token-exchange",
+          "bodySha256": "021bda9ae5319bfa445ae79aee6de92261369e0cb8b30b13552ff98a8e614612"
+        },
+        {
+          "names": [
+            "buildGoogleRefreshTokenParams"
+          ],
+          "group": "token-exchange",
+          "bodySha256": "548834329e5017b8dc31c803b0ad054d9268a87a7128d3df396e644f6898fd28"
+        },
+        {
+          "names": [
+            "getUserEmail"
+          ],
+          "group": "token-exchange",
+          "bodySha256": "e78df4e2be3273bac6ba75d6b0899e91f728ae201fb618075aacd4fadeee6a6b"
+        },
+        {
+          "names": [
+            "refreshGoogleToken"
+          ],
+          "group": "token-refresh",
+          "bodySha256": "1b1c1881fc4482cf3bacbdc04982ea170bd469565f9a47ae3c320ab99943a726"
+        },
+        {
+          "names": [
+            "isGoogleOAuthConfigured"
+          ],
+          "group": "token-refresh",
+          "bodySha256": "ad3e01c68601c6ae5920f9579e766cb0d5c115f68d0c8b719a5058d15a310830"
+        },
+        {
+          "names": [
+            "getGoogleScopes"
+          ],
+          "group": "token-refresh",
+          "bodySha256": "14b9d7ad270a219ba7d982f81e32403d60c779365f25f50ea6bc87d3c0c0b0bd"
+        },
+        {
+          "names": [
+            "PrepareGoogleOAuthOptions"
+          ],
+          "group": "prepared-oauth",
+          "bodySha256": "a073395b6ec61dd9f162f17e8d86f4eba2a0f0d2a06e76be41d2d997bbd75153"
+        },
+        {
+          "names": [
+            "prepareGoogleOAuth"
+          ],
+          "group": "prepared-oauth",
+          "bodySha256": "0b4f8fab60fdbf21764cd75417e442536833dc9d08c2fe6e656a5f8ed4430d48"
+        },
+        {
+          "names": [
+            "exchangeGoogleOAuth"
+          ],
+          "group": "prepared-oauth",
+          "bodySha256": "98a0adfc722611c4642326e9aa431526de4e28ec35260172825597ab0c1b8add"
+        },
+        {
+          "names": [
+            "startGoogleOAuth"
+          ],
+          "group": "interactive-oauth",
+          "bodySha256": "c931706b15f9dbe71ea947277874cda5943ab78478ee0971f544a4b83098ccf5"
+        }
+      ],
+      "modules": [
+        {
+          "name": "oauth-contracts",
+          "lines": 101
+        },
+        {
+          "name": "token-exchange",
+          "lines": 118
+        },
+        {
+          "name": "token-refresh",
+          "lines": 92
+        },
+        {
+          "name": "prepared-oauth",
+          "lines": 111
+        },
+        {
+          "name": "interactive-oauth",
+          "lines": 147
+        }
+      ],
+      "dependencies": {
+        "oauth-contracts": [],
+        "token-exchange": [
+          "oauth-contracts"
+        ],
+        "token-refresh": [
+          "oauth-contracts",
+          "token-exchange"
+        ],
+        "prepared-oauth": [
+          "oauth-contracts",
+          "token-refresh",
+          "token-exchange"
+        ],
+        "interactive-oauth": [
+          "oauth-contracts",
+          "token-refresh",
+          "token-exchange"
+        ]
+      },
+      "unitCycles": [],
+      "moduleCycles": []
+    }
+  },
+  "checks": {
+    "more-contracts-all-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 19.22,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/more-contracts-all-types.log"
+    },
+    "more-contracts-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/core/src/types/message",
+        "packages/session-tools-core/src/context",
+        "packages/shared/src/projects/storage",
+        "packages/shared/src/agent/errors",
+        "packages/shared/src/missions/events",
+        "packages/shared/src/protocol/routing",
+        "packages/server-core/src/sessions/delegated-review-outcome",
+        "packages/shared/src/auth/google-oauth",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 2.51,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/more-contracts-lint.log"
+    },
+    "more-contracts-all-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 148.19,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/more-contracts-all-tests.log"
+    }
+  },
+  "declarations": 194,
+  "bodyAndImportChecks": {
+    "commands": [
+      "rtk node ../quality-20261024/check-module-bodies.cjs --all",
+      "rtk node ../quality-20261024/check-extraction-imports.cjs --all"
+    ],
+    "exitCodes": [
+      0,
+      0
+    ],
+    "domains": 36
+  },
+  "remaining": {
+    "max-lines": 219,
+    "no-explicit-any": 1073
+  },
+  "limits": [
+    "Lint global et seuil de 500 lignes toujours en cours",
+    "Parcours réel et installation signée restent à exécuter"
+  ]
+}

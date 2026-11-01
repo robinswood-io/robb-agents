@@ -7,7 +7,7 @@ function parseResult(result: Awaited<ReturnType<typeof handleMermaidValidate>>) 
 
 describe('handleMermaidValidate', () => {
   it('accepts xychart-beta diagrams supported by the renderer', async () => {
-    const result = await handleMermaidValidate({} as any, {
+    const result = await handleMermaidValidate(({} satisfies Partial<Parameters<typeof handleMermaidValidate>[0]>) as Parameters<typeof handleMermaidValidate>[0], {
       code: [
         'xychart-beta',
         '  title "Monthly Revenue"',
@@ -23,7 +23,7 @@ describe('handleMermaidValidate', () => {
   });
 
   it('accepts YAML frontmatter before the diagram', async () => {
-    const result = await handleMermaidValidate({} as any, {
+    const result = await handleMermaidValidate(({} satisfies Partial<Parameters<typeof handleMermaidValidate>[0]>) as Parameters<typeof handleMermaidValidate>[0], {
       code: [
         '---',
         'title: Frontmatter Example',
@@ -38,7 +38,7 @@ describe('handleMermaidValidate', () => {
   });
 
   it('returns an error for invalid diagrams', async () => {
-    const result = await handleMermaidValidate({} as any, {
+    const result = await handleMermaidValidate(({} satisfies Partial<Parameters<typeof handleMermaidValidate>[0]>) as Parameters<typeof handleMermaidValidate>[0], {
       code: 'notADiagram\n  A --> B',
     });
 

@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+import type { TransformDataSchema } from '../tool-defs/schemas.ts';
 /**
  * Transform Data Handler
  *
@@ -18,15 +20,9 @@ import { createScriptRuntimeEnv } from '../runtime/sandbox-env.ts';
 import { isPathWithinDirectory, isPathWithinDirectoryForCreation } from '../runtime/path-security.ts';
 import { resolveScriptRuntime } from '../runtime/resolve-script-runtime.ts';
 import { protectApplicationCommand, isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from '../runtime/application-protection.ts';
-import { runDeterministicRecipe, type DeterministicRecipe } from './deterministic-recipes.ts';
+import { runDeterministicRecipe } from './deterministic-recipes.ts';
 
-export interface TransformDataArgs {
-  language?: 'python3' | 'node' | 'bun';
-  script?: string;
-  recipe?: DeterministicRecipe;
-  inputFiles: string[];
-  outputFile: string;
-}
+export type TransformDataArgs = z.infer<typeof TransformDataSchema>;
 
 const TRANSFORM_DATA_TIMEOUT_MS = 30_000;
 

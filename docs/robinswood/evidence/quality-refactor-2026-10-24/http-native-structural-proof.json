@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "runtimeImportCycles": 0,
+  "nativeRequestPrimitivesPreserved": 19,
+  "nativeRequestContextIdentityPreserved": true,
+  "nativeHandlerClosuresTimersAndRoutesReinlinedExactly": true,
+  "nativeImportsAndPublicExportsPreserved": true,
+  "nativeRouteBranchOrderCookieSecurityAndStaticFilesPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "packages/server-core/src/webui/http-server.ts",
+      "lines": 332,
+      "sha256": "55f22c8e7c87507e79ff1f3382388b5d502c07028b8ca95cc86d9d13f31aa30a"
+    },
+    {
+      "file": "packages/server-core/src/webui/http-request-context.ts",
+      "lines": 309,
+      "sha256": "9ba1ca2f56c262f989888b35c349ff3b7801eda96c4c7154077e5bcc85239b94"
+    },
+    {
+      "file": "packages/server-core/src/webui/http-request-router.ts",
+      "lines": 474,
+      "sha256": "14639729598da4f1c44b2441748d2e4cb70359617a077523d0ac6189c7e1715c"
+    }
+  ]
+}

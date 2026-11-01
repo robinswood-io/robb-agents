@@ -1,0 +1,15 @@
+{
+  "valid": true,
+  "source": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+  "testDeclarationsPreserved": 17,
+  "sharedDeclarationsPreserved": 9,
+  "setupPreservedInEverySuite": true,
+  "importsPreserved": true,
+  "maximumLines": 438,
+  "currentSourceHashes": {
+    "packages/server-core/src/missions/SessionMissionExecutor.test.ts": "2c0d0bd99b4dc56d1959c87489d1af1e10e3c555848e8d47c3464c85611e0fe0",
+    "packages/server-core/src/missions/SessionMissionExecutor-executes-a-review-when-its-exact-literal-ssh-read-is-admitted-in.test.ts": "432e97b87d2ddecc506bae5da12b7d87b6018de5624ddad2aa5a2fe0e4a1d36d",
+    "packages/server-core/src/missions/testing/SessionMissionExecutor-fixture.ts": "3d821c96881abfc27852f65a916e9efcc6aa12d2231aa84e720577f2de25684e"
+  },
+  "issues": []
+}

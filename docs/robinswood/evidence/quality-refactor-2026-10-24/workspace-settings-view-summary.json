@@ -1,0 +1,269 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Séparation de l’affichage des réglages de l’espace de travail",
+  "changes": [
+    "Le fichier de 654 lignes devient une page de 457 lignes et son composant d’affichage de 361 lignes.",
+    "Les états, effets, hooks, callbacks et exports publics restent dans la page native. Le composant d’affichage ne possède aucun état ni effet.",
+    "Huit parcours en navigateur vérifient chargement, renommage, permissions, modes, sources, budget, dossier de travail et MCP local avant et après. Les appels utilisent uniquement des données QA en mémoire."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/pages/settings/WorkspaceSettingsPage.tsx",
+      "lines": 457,
+      "sha256": "19fdf254b35b9b9847d56e0973e1ae779a646cabc15e897f5e374d200019edab"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/settings/workspace-settings-content.tsx",
+      "lines": 361,
+      "sha256": "c0a40cabc5d8f7b7e311e285d78913655a0b651430f70a11bd14b5c88868e779"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 24.81,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/workspace-settings-view-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 36.08,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/workspace-settings-view-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/run-owned-files-eslint.py",
+        "workspace-settings-view"
+      ],
+      "exitCode": 0,
+      "seconds": 4.27,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/workspace-settings-view-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 24.33,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/workspace-settings-view-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 148.16,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/workspace-settings-view-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "nativeJSXAndInlineCallbacksPreserved": true,
+    "nativeStateHooksEffectsAndPublicExportsPreserved": true,
+    "nativeValuesPassedDirectly": [
+      "t",
+      "wsName",
+      "setWsNameEditing",
+      "setRenameDialogOpen",
+      "handleIconUpload",
+      "isUploadingIcon",
+      "wsIconUrl",
+      "renameDialogOpen",
+      "wsNameEditing",
+      "setWsName",
+      "updateWorkspaceSetting",
+      "onRefreshWorkspaces",
+      "permissionMode",
+      "handlePermissionModeChange",
+      "externalActionPolicy",
+      "handleTotalAutonomyChange",
+      "enabledModes",
+      "handleModeToggle",
+      "modeCyclingError",
+      "availableSources",
+      "enabledSourceSlugs",
+      "handleSourceToggle",
+      "handleSaveCostControl",
+      "isSavingCostControl",
+      "costControlText",
+      "setCostControlText",
+      "setCostControlError",
+      "costControlError",
+      "workingDirectory",
+      "handleClearWorkingDirectory",
+      "handleChangeWorkingDirectory",
+      "localMcpEnabled",
+      "handleLocalMcpEnabledChange",
+      "showWdBrowser",
+      "wdBrowserMode",
+      "confirmWdBrowser",
+      "cancelWdBrowser"
+    ],
+    "viewOwnsNoStateOrEffects": true,
+    "nativeImportBindingsAndPageEvaluationOrderPreserved": true,
+    "newWorkflowOrStateEngine": false,
+    "files": [
+      {
+        "file": "apps/electron/src/renderer/pages/settings/WorkspaceSettingsPage.tsx",
+        "lines": 457,
+        "sha256": "19fdf254b35b9b9847d56e0973e1ae779a646cabc15e897f5e374d200019edab"
+      },
+      {
+        "file": "apps/electron/src/renderer/pages/settings/workspace-settings-content.tsx",
+        "lines": 361,
+        "sha256": "c0a40cabc5d8f7b7e311e285d78913655a0b651430f70a11bd14b5c88868e779"
+      }
+    ]
+  },
+  "fullTestSummary": {
+    "pass": 10748,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {},
+  "beforeAfter": {
+    "browserCases": 8,
+    "browserFailuresBefore": 0,
+    "browserFailuresAfter": 0
+  },
+  "sourceGate": {
+    "max-lines": 36,
+    "no-explicit-any": 37
+  },
+  "globalLint": {
+    "files": 3633,
+    "errors": 57,
+    "warnings": 100,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 32,
+      "max-lines": 25,
+      "react-hooks/exhaustive-deps": 79,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "36 fichiers trop longs et 37 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T08:10:02.874898+00:00",
+  "additionalProofs": {
+    "workspace-settings-view-regression-proof.json": {
+      "status": "passed",
+      "browser": {
+        "before": {
+          "status": "passed",
+          "cases": [
+            {
+              "name": "native workspace settings load their name sources directory and policy",
+              "status": "passed"
+            },
+            {
+              "name": "rename keeps the native dialog and saves the trimmed workspace name",
+              "status": "passed"
+            },
+            {
+              "name": "permission mode and Execute autonomy save through the original callbacks",
+              "status": "passed"
+            },
+            {
+              "name": "mode cycling persists valid selections and refuses fewer than two modes",
+              "status": "passed"
+            },
+            {
+              "name": "default sources update and live source removal heals the saved selection",
+              "status": "passed"
+            },
+            {
+              "name": "invalid cost JSON stays visible without saving and a valid policy saves",
+              "status": "passed"
+            },
+            {
+              "name": "the native folder picker selects a directory and Clear persists the empty value",
+              "status": "passed"
+            },
+            {
+              "name": "the local MCP toggle saves through the native workspace setting",
+              "status": "passed"
+            }
+          ],
+          "errors": [],
+          "consoleErrors": [],
+          "browserVersion": "145.0.7632.6",
+          "headless": false,
+          "limits": [
+            "Workspace settings and sources are QA objects in memory; no real files, credentials or accounting data are changed."
+          ]
+        },
+        "after": {
+          "status": "passed",
+          "cases": [
+            {
+              "name": "native workspace settings load their name sources directory and policy",
+              "status": "passed"
+            },
+            {
+              "name": "rename keeps the native dialog and saves the trimmed workspace name",
+              "status": "passed"
+            },
+            {
+              "name": "permission mode and Execute autonomy save through the original callbacks",
+              "status": "passed"
+            },
+            {
+              "name": "mode cycling persists valid selections and refuses fewer than two modes",
+              "status": "passed"
+            },
+            {
+              "name": "default sources update and live source removal heals the saved selection",
+              "status": "passed"
+            },
+            {
+              "name": "invalid cost JSON stays visible without saving and a valid policy saves",
+              "status": "passed"
+            },
+            {
+              "name": "the native folder picker selects a directory and Clear persists the empty value",
+              "status": "passed"
+            },
+            {
+              "name": "the local MCP toggle saves through the native workspace setting",
+              "status": "passed"
+            }
+          ],
+          "errors": [],
+          "consoleErrors": [],
+          "browserVersion": "145.0.7632.6",
+          "headless": false,
+          "limits": [
+            "Workspace settings and sources are QA objects in memory; no real files, credentials or accounting data are changed."
+          ]
+        }
+      }
+    }
+  }
+}

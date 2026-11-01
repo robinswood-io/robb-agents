@@ -17,7 +17,12 @@ export async function handleSetCompletionCriteria(ctx: SessionToolContext, args:
   }
   const parsed = SetCompletionCriteriaSchema.safeParse(contractArgs);
   if (!parsed.success) return errorResponse(`Invalid set_completion_criteria arguments: ${completionCriteriaSchemaError(parsed.error)}. ${SET_COMPLETION_CRITERIA_FORMAT_HELP}`);
-  try { return successResponse(JSON.stringify(await ctx.setCompletionCriteria(parsed.data.criteria, parsed.data.procedure, terminalCapability))); }
+  const criteria = parsed.data.criteria.map(({ supersedes, requirementId, ...criterion }) => ({
+    ...criterion,
+    ...(supersedes !== undefined ? { supersedes } : {}),
+    ...(requirementId !== undefined ? { requirementId } : {}),
+  }));
+  try { return successResponse(JSON.stringify(await ctx.setCompletionCriteria(criteria, parsed.data.procedure, terminalCapability))); }
   catch (error) {
     const reason = (error instanceof Error ? error.message : String(error)).slice(0, 512);
     return errorResponse(`The host rejected these criteria: ${reason}. ${SET_COMPLETION_CRITERIA_FORMAT_HELP}`);

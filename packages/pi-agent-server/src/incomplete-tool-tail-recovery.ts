@@ -32,15 +32,10 @@ export type IncompleteToolTailRecoveryResult =
   | 'exhausted';
 
 /**
- * Pi occasionally emits agent_end before the model has produced a final answer:
- * either immediately after a successful tool result, or with an unexpectedly
- * aborted assistant message containing only partial commentary. The SDK
- * considers both runs complete, so the caller otherwise receives `complete`
- * without a usable final answer.
- *
- * This state machine holds that premature agent_end and asks the caller to
- * resume from the recoverable persisted tail. Recovery is deliberately bounded
- * so a broken provider cannot create an infinite continuation loop.
+ * Inspect the authoritative transcript only after SDK prompt and idle settle.
+ * A tool-result tail or an unexpectedly aborted assistant can still require a
+ * final response. Resume that persisted tail before reporting completion, with
+ * bounded attempts so a broken provider cannot create an infinite loop.
  */
 export class IncompleteToolTailRecovery {
   private activePromptCalls = 0;
@@ -50,21 +45,26 @@ export class IncompleteToolTailRecovery {
 
   constructor(private readonly maxRecoveryAttempts = DEFAULT_MAX_RECOVERY_ATTEMPTS) {}
 
-  beginPrompt(): void {
+  beginPrompt(): boolean {
+    const first = this.activePromptCalls === 0;
     if (this.activePromptCalls === 0) {
       this.abortRequested = false;
       this.pendingIncompleteTail = false;
     }
     this.activePromptCalls += 1;
+    return first;
   }
 
-  endPrompt(): void {
+  endPrompt(): boolean {
     this.activePromptCalls = Math.max(0, this.activePromptCalls - 1);
     if (this.activePromptCalls === 0) {
       this.abortRequested = false;
       this.pendingIncompleteTail = false;
     }
+    return this.activePromptCalls === 0;
   }
+
+  get isAbortRequested(): boolean { return this.abortRequested; }
 
   requestAbort(): void {
     if (this.activePromptCalls > 0) {
@@ -72,8 +72,8 @@ export class IncompleteToolTailRecovery {
     }
   }
 
-  /** Return true when the caller must withhold this agent_end event. */
-  shouldSuppressAgentEnd(messages: AgentEndMessage[] | undefined): boolean {
+  /** Inspect the authoritative tail after the SDK has settled its run. */
+  observeSettledTail(messages: AgentEndMessage[] | undefined): boolean {
     if (this.activePromptCalls === 0 || !messages?.length) {
       return false;
     }
@@ -91,6 +91,7 @@ export class IncompleteToolTailRecovery {
       lastMessage?.role === 'assistant' && lastMessage.stopReason === 'aborted';
 
     if (!endedAfterToolResult && !endedWithUnexpectedAssistantAbort) {
+      this.pendingIncompleteTail = false;
       return false;
     }
 

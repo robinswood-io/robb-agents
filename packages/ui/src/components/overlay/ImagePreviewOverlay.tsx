@@ -22,11 +22,11 @@ export interface ImagePreviewOverlayProps {
   isOpen: boolean
   onClose: () => void
   filePath: string
-  items?: PreviewItem[]
-  initialIndex?: number
-  title?: string
+  items?: PreviewItem[] | undefined
+  initialIndex?: number | undefined
+  title?: string | undefined
   loadDataUrl: (path: string) => Promise<string>
-  theme?: 'light' | 'dark'
+  theme?: 'light' | 'dark' | undefined
 }
 
 export function ImagePreviewOverlay({
@@ -115,7 +115,7 @@ export function ImagePreviewOverlay({
           setIsLoading(false)
         }
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'Failed to load image')
           setIsLoading(false)

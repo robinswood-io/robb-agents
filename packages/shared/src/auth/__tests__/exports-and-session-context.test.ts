@@ -1,3 +1,4 @@
+import type { LoadedSource } from '../../sources/types.ts';
 /**
  * Tests verifying:
  * 1. auth/index.ts barrel correctly exports OAuthSessionContext and buildOAuthDeeplinkUrl
@@ -83,11 +84,15 @@ describe('SourceCredentialManager sessionContext threading', () => {
 
     // Create a minimal source that doesn't match any provider path
     // This should return a "does not use OAuth" error cleanly
-    const source = {
+    const source: LoadedSource = {
       workspaceId: 'test-ws',
       workspaceRootPath: '/tmp/test',
+      folderPath: '/tmp/test/test-source',
+      guide: null,
       config: {
         slug: 'test-source',
+        id: 'qa-source',
+        provider: 'qa',
         name: 'Test',
         type: 'local' as const,
         enabled: true,
@@ -95,7 +100,7 @@ describe('SourceCredentialManager sessionContext threading', () => {
     };
 
     const result = await manager.authenticate(
-      source as any,
+      source,
       {
         onStatus: () => {},
         onError: () => {},
@@ -111,11 +116,15 @@ describe('SourceCredentialManager sessionContext threading', () => {
     const { SourceCredentialManager } = await import('../../sources/credential-manager.ts');
     const manager = new SourceCredentialManager();
 
-    const source = {
+    const source: LoadedSource = {
       workspaceId: 'test-ws',
       workspaceRootPath: '/tmp/test',
+      folderPath: '/tmp/test/test-source',
+      guide: null,
       config: {
         slug: 'test-source',
+        id: 'qa-source',
+        provider: 'qa',
         name: 'Test',
         type: 'local' as const,
         enabled: true,
@@ -124,7 +133,7 @@ describe('SourceCredentialManager sessionContext threading', () => {
 
     // Partial context (only sessionId, missing deeplinkScheme)
     const result = await manager.authenticate(
-      source as any,
+      source,
       {
         onStatus: () => {},
         onError: () => {},

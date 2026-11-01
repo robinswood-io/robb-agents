@@ -45,12 +45,12 @@ class MarkdownDocBlockErrorBoundary extends React.Component<
   { children: React.ReactNode; fallback: React.ReactNode },
   { hasError: boolean }
 > {
-  state = { hasError: false }
+  override state = { hasError: false }
   static getDerivedStateFromError() { return { hasError: true } }
-  componentDidCatch(error: Error) {
+  override componentDidCatch(error: Error) {
     console.warn('[MarkdownDocBlock] Render failed, falling back to CodeBlock:', error)
   }
-  render() {
+  override render() {
     if (this.state.hasError) return this.props.fallback
     return this.props.children
   }
@@ -60,9 +60,9 @@ const DISABLE_INNER_MARKDOWN_PREVIEW: ReadonlySet<'markdown-preview'> = new Set(
 
 export interface MarkdownDocBlockProps {
   code: string
-  className?: string
-  onUrlClick?: (url: string) => void
-  onFileClick?: (path: string) => void
+  className?: string | undefined
+  onUrlClick?: ((url: string) => void) | undefined
+  onFileClick?: ((path: string) => void) | undefined
 }
 
 export function MarkdownDocBlock({ code, className, onUrlClick, onFileClick }: MarkdownDocBlockProps) {
@@ -106,7 +106,7 @@ export function MarkdownDocBlock({ code, className, onUrlClick, onFileClick }: M
         if (cancelled) return
         setContentCache((prev) => ({ ...prev, [activeItem.src]: content }))
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (cancelled) return
         setError(err instanceof Error ? err.message : 'Failed to read markdown file')
       })

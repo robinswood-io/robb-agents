@@ -35,7 +35,7 @@ interface ServerDirectoryBrowserProps {
   mode: 'browse' | 'manual'
   onSelect: (path: string) => void
   onCancel: () => void
-  initialPath?: string
+  initialPath?: string | undefined
 }
 
 export function ServerDirectoryBrowser({

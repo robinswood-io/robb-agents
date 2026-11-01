@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../../utils/json.ts';
 /**
  * Unit tests for multi-header authentication support
  *
@@ -10,7 +11,6 @@ import { describe, test, expect } from 'bun:test';
 
 // Import actual implementations
 import {
-  type ApiCredential,
   type BasicAuthCredential,
   type MultiHeaderCredential,
   isMultiHeaderCredential,
@@ -64,7 +64,7 @@ describe('Multi-Header Credential Storage', () => {
     const storedValue = JSON.stringify(headers);
 
     expect(storedValue).toBeDefined();
-    const parsed = JSON.parse(storedValue);
+    const parsed = parseJsonObject(storedValue);
     expect(parsed['DD-API-KEY']).toBe('api-key-123');
     expect(parsed['DD-APPLICATION-KEY']).toBe('app-key-456');
   });

@@ -41,9 +41,9 @@ function RunStateIcon({ runState }: { runState: SubtaskRunState }) {
 
 interface SubtaskRowProps {
   subtask: KanbanSubtask
-  className?: string
+  className?: string | undefined
   /** When set, the row becomes a button that opens the subtask's session window. */
-  onClick?: () => void
+  onClick?: (() => void) | undefined
 }
 
 /** One spawned-subtask row: run-state icon + title + the model it was routed to. */

@@ -40,3 +40,21 @@ python3 -m unittest apps.electron.resources.scripts.tests.test_xlsx_tool_smoke
 ## Contributor expectation
 
 If you modify any script in `apps/electron/resources/scripts/` or wrapper in `apps/electron/resources/bin/`, update/add relevant smoke tests in this folder.
+
+## Python 3.15 document conversion
+
+`markitdown` remains the existing CLI name; the Microsoft MarkItDown dependency
+has been replaced by the bundled `document_text.py` extractor. Conversion and
+`doc-diff` use the same extraction. Word, Excel, PowerPoint and PDF reuse the
+existing libraries; comparisons use Python's standard `difflib`.
+
+Run `bun run test:doc-tools` with Python 3.15 and uv 0.13.6 on PATH. The suite
+creates synthetic documents, converts them through the shipped wrappers,
+compares them and reads back saved reports. It also rejects damaged documents,
+unsupported formats and textless PDFs without writing a misleading report.
+Archive members are read in memory; paths are never extracted to disk.
+
+Supported: DOCX, XLSX, PPTX, text PDFs, UTF-8 text/markup, notebooks, EML, ZIP
+with supported members, and image metadata. Legacy DOC/XLS/PPT, Outlook MSG,
+RTF, OCR and audio transcription require a separate conversion step. These
+formats are not advertised as working through an unavailable optional backend.

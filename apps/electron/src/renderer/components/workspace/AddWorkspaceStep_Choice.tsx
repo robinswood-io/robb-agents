@@ -14,7 +14,7 @@ interface ChoiceCardProps {
   title: string
   description: string
   onClick: () => void
-  variant?: 'primary' | 'secondary'
+  variant?: 'primary' | 'secondary' | undefined
 }
 
 function ChoiceCard({ icon, title, description, onClick, variant = 'secondary' }: ChoiceCardProps) {

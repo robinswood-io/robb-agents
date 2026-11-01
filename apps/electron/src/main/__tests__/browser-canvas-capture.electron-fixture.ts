@@ -1,3 +1,4 @@
+import { z } from 'zod'
 /** Runs only in a temporary Electron profile, with fixture pages and a loopback PNG server. */
 import { app, BrowserWindow, nativeImage } from 'electron'
 import { createServer } from 'node:http'
@@ -37,7 +38,7 @@ async function run() {
     checks.push(label)
   }
   await load()
-  const before = await window.webContents.executeJavaScript('document.documentElement.outerHTML')
+  const before = z.string().parse(await window.webContents.executeJavaScript('document.documentElement.outerHTML'))
   const result = await capture()
   assert.deepEqual(result.receipt.sourceRect, { x: 0, y: 0, width: 80, height: 60 })
   assert.deepEqual(result.receipt.region, { x: 10, y: 20, width: 80, height: 60 })
@@ -58,7 +59,9 @@ async function run() {
   // propagated to the viewport because HTML overflow remains visible.
   const loadDesktop = async (extraStyle = '') => window!.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(`<!doctype html><style>html,body{margin:0}body{overflow:hidden}#desktop{position:absolute;inset:0;overflow:hidden}#layer{width:100%;height:100%;overflow:hidden;transform:matrix(1,0,0,1,0,0)}canvas{display:block}${extraStyle}</style><div><guac-viewport><div id="desktop"><div id="layer"><canvas id="screen" width="1216" height="896"></canvas></div></div></guac-viewport></div><script>let c=document.querySelector('canvas'),x=c.getContext('2d');x.fillStyle='#c02040';x.fillRect(0,0,c.width,c.height)</script>`))
   await loadDesktop()
-  const desktopGeometry = await window.webContents.executeJavaScript('({bodyHeight:document.body.offsetHeight,htmlOverflow:getComputedStyle(document.documentElement).overflow,bodyOverflow:getComputedStyle(document.body).overflow,width:innerWidth,height:innerHeight})')
+  const desktopGeometry = z.object({
+    bodyHeight: z.number(), htmlOverflow: z.string(), bodyOverflow: z.string(), width: z.number(), height: z.number(),
+  }).parse(await window.webContents.executeJavaScript('({bodyHeight:document.body.offsetHeight,htmlOverflow:getComputedStyle(document.documentElement).overflow,bodyOverflow:getComputedStyle(document.body).overflow,width:innerWidth,height:innerHeight})'))
   assert.equal(desktopGeometry.bodyHeight, 0)
   assert.equal(desktopGeometry.htmlOverflow, 'visible')
   assert.equal(desktopGeometry.bodyOverflow, 'hidden')

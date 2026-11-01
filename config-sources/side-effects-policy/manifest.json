@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "arrays": {
+    "capabilities": [
+      "capabilities/001.json",
+      "capabilities/002.json",
+      "capabilities/003.json",
+      "capabilities/004.json",
+      "capabilities/005.json",
+      "capabilities/006.json",
+      "capabilities/007.json",
+      "capabilities/008.json"
+    ]
+  }
+}

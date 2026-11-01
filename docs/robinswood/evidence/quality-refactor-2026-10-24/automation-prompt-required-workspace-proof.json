@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "source": "packages/shared/src/automations/handlers/prompt-handler.test.ts",
+  "nativeSourceHash": "922d3d232f4b08e82ad96c896d26409041fa04d41c9905cf8016a1d114bdd28f",
+  "typedSourceHash": "46b82a53f48aebb28df62ccbbf21f41bc572b7ff46f2c51a9195b96bf1fe142c",
+  "typingChanges": 1,
+  "requiredFixtureDefaultAdded": {
+    "workspaceRootPath": "/mock/workspace"
+  },
+  "allOtherSourceBytesPreserved": true,
+  "testBodiesAndAssertionsChanged": false
+}

@@ -64,7 +64,7 @@ function getPlatformRuntimeDir(): string {
 
 function inferPackagedMode(ctx?: ResolveScriptRuntimeContext): boolean {
   if (typeof ctx?.isPackaged === 'boolean') return ctx.isPackaged;
-  return process.env.CRAFT_IS_PACKAGED === '1';
+  return process.env["CRAFT_IS_PACKAGED"] === '1';
 }
 
 function getProcessResourcesPath(): string | undefined {
@@ -72,7 +72,7 @@ function getProcessResourcesPath(): string | undefined {
 }
 
 function resolveResourcesBase(ctx?: ResolveScriptRuntimeContext): string | null {
-  const explicit = ctx?.resourcesBasePath || process.env.CRAFT_RESOURCES_BASE;
+  const explicit = ctx?.resourcesBasePath || process.env["CRAFT_RESOURCES_BASE"];
   if (explicit) return resolve(explicit);
 
   const resourcesPath = getProcessResourcesPath();
@@ -85,7 +85,7 @@ function resolveResourcesBase(ctx?: ResolveScriptRuntimeContext): string | null 
 }
 
 function resolveAppRoot(ctx?: ResolveScriptRuntimeContext): string | null {
-  const explicit = ctx?.appRootPath || process.env.CRAFT_APP_ROOT;
+  const explicit = ctx?.appRootPath || process.env["CRAFT_APP_ROOT"];
   return explicit ? resolve(explicit) : null;
 }
 
@@ -162,10 +162,10 @@ export function resolveScriptRuntime(
   const isPackaged = inferPackagedMode(ctx);
 
   if (language === 'python3') {
-    if (process.env.CRAFT_UV) {
+    if (process.env["CRAFT_UV"]) {
       const cmd = isPackaged
-        ? validatePackagedEnvRuntime(process.env.CRAFT_UV, 'Python/uv')
-        : process.env.CRAFT_UV;
+        ? validatePackagedEnvRuntime(process.env["CRAFT_UV"], 'Python/uv')
+        : process.env["CRAFT_UV"];
 
       return {
         command: cmd,
@@ -202,10 +202,10 @@ export function resolveScriptRuntime(
   }
 
   if (language === 'node') {
-    if (process.env.CRAFT_NODE) {
+    if (process.env["CRAFT_NODE"]) {
       const cmd = isPackaged
-        ? validatePackagedEnvRuntime(process.env.CRAFT_NODE, 'Node')
-        : process.env.CRAFT_NODE;
+        ? validatePackagedEnvRuntime(process.env["CRAFT_NODE"], 'Node')
+        : process.env["CRAFT_NODE"];
       return { command: cmd, argsPrefix: [], source: 'env' };
     }
 
@@ -228,10 +228,10 @@ export function resolveScriptRuntime(
     );
   }
 
-  if (process.env.CRAFT_BUN) {
+  if (process.env["CRAFT_BUN"]) {
     const cmd = isPackaged
-      ? validatePackagedEnvRuntime(process.env.CRAFT_BUN, 'Bun')
-      : process.env.CRAFT_BUN;
+      ? validatePackagedEnvRuntime(process.env["CRAFT_BUN"], 'Bun')
+      : process.env["CRAFT_BUN"];
     return { command: cmd, argsPrefix: [], source: 'env' };
   }
 

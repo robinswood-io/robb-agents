@@ -17,7 +17,8 @@ export function useContainerWidth(ref: RefObject<HTMLElement | null>): number {
     if (!el) return
 
     const ro = new ResizeObserver(([entry]) => {
-      setWidth(entry.contentBoxSize[0].inlineSize)
+      const size = entry?.contentBoxSize[0]
+      if (size) setWidth(size.inlineSize)
     })
     ro.observe(el)
     return () => ro.disconnect()

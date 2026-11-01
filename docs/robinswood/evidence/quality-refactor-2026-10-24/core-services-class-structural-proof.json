@@ -1,0 +1,115 @@
+{
+  "status": "passed",
+  "classes": [
+    {
+      "source": "packages/server-core/src/missions/MissionController.ts",
+      "nativeMethodBodies": 31,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/server-core/src/missions/MissionRuntimeService.ts",
+      "nativeMethodBodies": 44,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/server-core/src/missions/SessionMissionExecutor.ts",
+      "nativeMethodBodies": 3,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/shared/src/automations/automation-system.ts",
+      "nativeMethodBodies": 18,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/shared/src/config/watcher.ts",
+      "nativeMethodBodies": 30,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/shared/src/credentials/manager.ts",
+      "nativeMethodBodies": 41,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 1,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/shared/src/mcp/mcp-pool.ts",
+      "nativeMethodBodies": 12,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/shared/src/sessions/persistence-queue.ts",
+      "nativeMethodBodies": 21,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/shared/src/sources/credential-manager.ts",
+      "nativeMethodBodies": 33,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    }
+  ],
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 490
+}

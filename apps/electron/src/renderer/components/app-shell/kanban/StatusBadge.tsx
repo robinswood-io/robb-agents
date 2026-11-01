@@ -4,8 +4,8 @@ import type { SessionStatus } from '@/config/session-status-config'
 interface StatusBadgeProps {
   status: SessionStatus
   /** Pulse the dot to signal live/active work (gated by the board's live-pulse pref). */
-  live?: boolean
-  className?: string
+  live?: boolean | undefined
+  className?: string | undefined
 }
 
 /**

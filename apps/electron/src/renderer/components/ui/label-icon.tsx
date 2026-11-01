@@ -21,11 +21,11 @@ interface LabelIconProps {
     color?: EntityColor
   }
   /** Size variant (default: 'sm' - labels are typically small inline elements) */
-  size?: IconSize
+  size?: IconSize | undefined
   /** When true, renders an inner circle (radio-button style) to indicate nested children */
-  hasChildren?: boolean
+  hasChildren?: boolean | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
 }
 
 /** Circle diameter in pixels for each icon size */
@@ -102,9 +102,9 @@ interface LabelValueTypeIconProps {
   /** The label's valueType ('number' | 'date' | 'string' | undefined) */
   valueType: LabelConfig['valueType']
   /** Icon size in pixels (default: 11) */
-  size?: number
+  size?: number | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
 }
 
 export function LabelValueTypeIcon({ valueType, size = 11, className }: LabelValueTypeIconProps) {

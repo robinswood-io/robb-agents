@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 export type CostControlledTurnKind =
   | 'direct'
   | 'agent-message'
@@ -13,6 +14,7 @@ export type CostBudgetState = 'normal' | 'soft-limit' | 'hard-limit';
 
 export interface AgentCostControlPolicy {
   enabled?: boolean;
+  automaticRoutingEnabled?: boolean;
   context?: {
     compactAtTokens?: number;
     hardLimitTokens?: number;
@@ -34,6 +36,7 @@ export interface AgentCostControlPolicy {
 
 export interface ResolvedAgentCostControlPolicy {
   enabled: boolean;
+  automaticRoutingEnabled: boolean;
   context: {
     compactAtTokens: number;
     hardLimitTokens: number;
@@ -55,6 +58,7 @@ export interface ResolvedAgentCostControlPolicy {
 
 export const DEFAULT_AGENT_COST_CONTROL_POLICY: ResolvedAgentCostControlPolicy = {
   enabled: true,
+  automaticRoutingEnabled: true,
   context: {
     compactAtTokens: 80_000,
     hardLimitTokens: 100_000,
@@ -144,7 +148,7 @@ function booleanOr(value: unknown, fallback: boolean): boolean {
 }
 
 function stringArrayOr(value: unknown, fallback: string[]): string[] {
-  return Array.isArray(value) && value.every(item => typeof item === 'string')
+  return isUnknownArray(value) && value.every((item: unknown) => typeof item === 'string')
     ? value
     : fallback;
 }
@@ -193,6 +197,7 @@ export function resolveAgentCostControlPolicy(
 
   return {
     enabled: booleanOr(policy?.enabled, defaults.enabled),
+    automaticRoutingEnabled: booleanOr(policy?.automaticRoutingEnabled, defaults.automaticRoutingEnabled),
     context: { compactAtTokens, hardLimitTokens },
     budgets: {
       softSessionUsd,

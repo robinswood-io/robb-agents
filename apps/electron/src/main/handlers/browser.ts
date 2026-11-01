@@ -1,3 +1,5 @@
+import type { CreateBrowserInstanceOptions } from '../browser-pane-manager/shared.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { RPC_CHANNELS, type BrowserPaneCreateOptions, type BrowserEmptyStateLaunchPayload } from '../../shared/types'
 import type { BrowserScreenshotOptions } from '../browser-pane-manager'
 import { pushTyped, type RpcServer } from '@craft-agent/server-core/transport'
@@ -45,7 +47,7 @@ export function registerBrowserHandlers(server: RpcServer, deps: HandlerDeps): v
       })
     }
 
-    return browserPaneManager.createInstance(input?.id, { show: input?.show, workspaceId })
+    return browserPaneManager.createInstance(input?.id, omitUndefined<CreateBrowserInstanceOptions>({ show: input?.show, workspaceId }))
   })
 
   server.handle(RPC_CHANNELS.browserPane.DESTROY, (_ctx, id: string) => {

@@ -1,0 +1,198 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Répartition des tests OAuth et AutomationSystem par scénarios natifs",
+  "changes": [
+    "Les suites OAuth de 1 227 lignes et AutomationSystem de 783 lignes sont réparties en cinq fichiers sous 440 lignes.",
+    "Corps des 94 tests, contexte lexical des describe, préparations et hooks conservés ; imports runtime externes conservés dans leur ordre natif.",
+    "Aucune bibliothèque ou abstraction de test ajoutée ; aucun état mutable partagé ajouté. Les 143 assertions natives sont conservées."
+  ],
+  "files": [
+    {
+      "file": "packages/shared/src/auth/__tests__/oauth-discovers-metadata-at-origin-root.test.ts",
+      "lines": 404,
+      "sha256": "f598fe2e841f8e8948cac5805f0f83014761eb97d526c79c0cd964aef410756a"
+    },
+    {
+      "file": "packages/shared/src/auth/__tests__/oauth-falls-back-when-resource-metadata-is-null.test.ts",
+      "lines": 397,
+      "sha256": "454f3dd3f468d8a9e658f8c4f814f8646355e22117bad1f67f82f57c9ccef7fe"
+    },
+    {
+      "file": "packages/shared/src/auth/__tests__/oauth.test.ts",
+      "lines": 438,
+      "sha256": "d06f1f17a3bbdd62584744e4f452f98b885f0517cb2cdaa95df2a42f4056ac5a"
+    },
+    {
+      "file": "packages/shared/src/automations/automation-system-orders-transitions-per-session-without-serializing-unrelated-sess.test.ts",
+      "lines": 406,
+      "sha256": "183a68b10930a8cb56cce0c3a94d26cfd7680a7d2e44f01971f3ecfa95ebe4b5"
+    },
+    {
+      "file": "packages/shared/src/automations/automation-system.test.ts",
+      "lines": 399,
+      "sha256": "2b5f893efe92c5671514def9a738c5b4b35ba8e2902336ba009068b374e4cfd6"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/shared/src/auth/__tests__/oauth.test.ts",
+        "packages/shared/src/auth/__tests__/oauth-discovers-metadata-at-origin-root.test.ts",
+        "packages/shared/src/auth/__tests__/oauth-falls-back-when-resource-metadata-is-null.test.ts",
+        "packages/shared/src/automations/automation-system.test.ts",
+        "packages/shared/src/automations/automation-system-orders-transitions-per-session-without-serializing-unrelated-sess.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.18,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auth-automation-scenarios-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 17.77,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auth-automation-scenarios-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 11.88,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auth-automation-scenarios-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/run-owned-files-eslint.py",
+        "auth-automation-scenarios"
+      ],
+      "exitCode": 0,
+      "seconds": 1.08,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auth-automation-scenarios-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 137.89,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auth-automation-scenarios-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "nativeScenarioSplits": [
+      {
+        "status": "passed",
+        "fixtureRuntimeImports": [],
+        "packing": "Contiguous native cases with each original nested lexical scope retained once per file",
+        "source": "packages/shared/src/auth/__tests__/oauth.test.ts",
+        "typing": {
+          "status": "passed",
+          "typedSourceHash": "38d0e927434484871985e922d86a86835320c8075d9f5ade43b41e5540d7aba8",
+          "nativeSourceUnchanged": true,
+          "typeEdits": 0
+        },
+        "testDeclarations": 63,
+        "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+        "nestedSuiteIdentityPreserved": true,
+        "nativeSetupAndBeforeEachRetainedPerFile": true,
+        "sharedDeclarations": [],
+        "sharedMutableStateAdded": false,
+        "runtimeImportCycles": 0,
+        "maximumFileLines": 439,
+        "currentSourceHashes": {
+          "packages/shared/src/auth/__tests__/oauth.test.ts": "d06f1f17a3bbdd62584744e4f452f98b885f0517cb2cdaa95df2a42f4056ac5a",
+          "packages/shared/src/auth/__tests__/oauth-discovers-metadata-at-origin-root.test.ts": "f598fe2e841f8e8948cac5805f0f83014761eb97d526c79c0cd964aef410756a",
+          "packages/shared/src/auth/__tests__/oauth-falls-back-when-resource-metadata-is-null.test.ts": "454f3dd3f468d8a9e658f8c4f814f8646355e22117bad1f67f82f57c9ccef7fe"
+        }
+      },
+      {
+        "status": "passed",
+        "fixtureRuntimeImports": [],
+        "packing": "Contiguous native cases with each original nested lexical scope retained once per file",
+        "source": "packages/shared/src/automations/automation-system.test.ts",
+        "typing": {
+          "status": "passed",
+          "typedSourceHash": "930f81184795496c1ebe673057a6959b4ef52325abc5b3f8e44ab2b005db5110",
+          "nativeSourceUnchanged": true,
+          "typeEdits": 0
+        },
+        "testDeclarations": 31,
+        "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+        "nestedSuiteIdentityPreserved": true,
+        "nativeSetupAndBeforeEachRetainedPerFile": true,
+        "sharedDeclarations": [],
+        "sharedMutableStateAdded": false,
+        "runtimeImportCycles": 0,
+        "maximumFileLines": 407,
+        "currentSourceHashes": {
+          "packages/shared/src/automations/automation-system.test.ts": "2b5f893efe92c5671514def9a738c5b4b35ba8e2902336ba009068b374e4cfd6",
+          "packages/shared/src/automations/automation-system-orders-transitions-per-session-without-serializing-unrelated-sess.test.ts": "183a68b10930a8cb56cce0c3a94d26cfd7680a7d2e44f01971f3ecfa95ebe4b5"
+        }
+      }
+    ],
+    "beforeAfter": {
+      "pass": 94,
+      "expectCalls": 143
+    },
+    "newSharedMutableState": false
+  },
+  "fullTestSummary": {
+    "pass": 10746,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "auth-automation-scenarios-targeted": {
+      "pass": 94,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": {
+    "targetedPass": 94,
+    "targetedExpectCalls": 143
+  },
+  "sourceGate": {
+    "max-lines": 44,
+    "no-explicit-any": 170
+  },
+  "globalLint": {
+    "files": 3598,
+    "errors": 197,
+    "warnings": 102,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 164,
+      "max-lines": 33,
+      "react-hooks/exhaustive-deps": 81,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "44 fichiers trop longs et 170 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T04:09:50.822510+00:00"
+}

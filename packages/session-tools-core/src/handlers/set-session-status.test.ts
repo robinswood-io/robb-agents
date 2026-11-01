@@ -16,7 +16,7 @@ function createCtx(): { ctx: SessionToolContext; sets: Array<{ sessionId?: strin
   const sets: Array<{ sessionId?: string; status: string }> = [];
   const ctx = {
     setSessionStatus: (sessionId: string | undefined, status: string) => {
-      sets.push({ sessionId, status });
+      sets.push({ ...(sessionId !== undefined ? { sessionId } : {}), status });
     },
     resolveStatus: (input: string) => {
       const available = STATUSES.map((s) => s.id);
@@ -25,7 +25,7 @@ function createCtx(): { ctx: SessionToolContext; sets: Array<{ sessionId?: strin
         STATUSES.find((s) => s.label.toLowerCase() === input.toLowerCase());
       return hit ? { resolved: hit.id, available, category: hit.category } : { resolved: null, available };
     },
-  } as unknown as SessionToolContext;
+  } as SessionToolContext;
   return { ctx, sets };
 }
 
@@ -34,14 +34,14 @@ describe('handleSetSessionStatus — closed-status guard', () => {
     const { ctx, sets } = createCtx();
     const result = await handleSetSessionStatus(ctx, { status: 'needs-review' });
     expect(result.isError).toBeFalsy();
-    expect(sets).toEqual([{ sessionId: undefined, status: 'needs-review' }]);
+    expect<unknown>(sets).toEqual([{sessionId: undefined,   status: 'needs-review' }]);
   });
 
   it('normalizes the legacy in_progress spelling before dynamic validation', async () => {
     const { ctx, sets } = createCtx();
     const result = await handleSetSessionStatus(ctx, { status: 'in_progress' });
     expect(result.isError).toBeFalsy();
-    expect(sets).toEqual([{ sessionId: undefined, status: 'in-progress' }]);
+    expect<unknown>(sets).toEqual([{sessionId: undefined,   status: 'in-progress' }]);
   });
 
   it('rejects a closed status (done) and does not write it', async () => {

@@ -1,3 +1,6 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { beforeEach, describe, expect, it } from 'bun:test'
 import { messageToStored } from '@craft-agent/core/types'
 import type { AgentEvent } from '@craft-agent/shared/agent'
@@ -7,11 +10,11 @@ describe('assistant model provenance persistence', () => {
   let sessionManager: SessionManager
 
   beforeEach(() => {
-    sessionManager = new SessionManager()
+    sessionManager = withSessionOperationsForTest(new SessionManager())
     // Keep this unit test focused on the message assembled by processEvent.
-    ;(sessionManager as unknown as { persistSession: () => void }).persistSession = () => {}
-    ;(sessionManager as unknown as { sendEvent: () => void }).sendEvent = () => {}
-    ;(sessionManager as unknown as { emitExecutionTelemetry: () => void }).emitExecutionTelemetry = () => {}
+    ;(sessionManagerForTest(sessionManager)).persistSession = () => true
+    ;(sessionManagerForTest(sessionManager)).sendEvent = () => {}
+    ;(sessionManagerForTest(sessionManager)).emitExecutionTelemetry = () => {}
   })
 
   function createSession(configuredModel: string) {
@@ -29,8 +32,7 @@ describe('assistant model provenance persistence', () => {
     managed.agent = {
       getModel: () => configuredModel,
     } as never
-    ;(sessionManager as unknown as { sessions: Map<string, typeof managed> })
-      .sessions.set(managed.id, managed)
+    ;sessionRuntimeStateForTest(sessionManager).sessions.set(managed.id, managed)
     return managed
   }
 
@@ -38,9 +40,7 @@ describe('assistant model provenance persistence', () => {
     managed: ReturnType<typeof createSession>,
     event: Extract<AgentEvent, { type: 'text_complete' }>,
   ): Promise<void> {
-    await (sessionManager as unknown as {
-      processEvent: (session: unknown, agentEvent: AgentEvent) => Promise<void>
-    }).processEvent(managed, event)
+    await (sessionManagerForTest(sessionManager)).processEvent(managed, event)
   }
 
   it('stores the effective Pi model and keeps the requested identity for audit', async () => {

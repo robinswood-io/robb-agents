@@ -164,15 +164,15 @@ describe('transform_data path containment', () => {
   it('rejects skills path when skillsPath is not available in context', async () => {
     // skillsPath is a required getter on SessionToolContext, but at runtime
     // it could theoretically be empty. Verify the handler falls back safely.
-    const ctxNoSkills = { ...ctx(), skillsPath: undefined } as unknown as SessionToolContext;
-    const result = await handleTransformData(ctxNoSkills, {
+    const ctxNoSkills: unknown = { ...ctx(), skillsPath: undefined };
+    const result: unknown = await Reflect.apply(handleTransformData, undefined, [ctxNoSkills, {
       language: 'node',
       script: "require('node:fs').writeFileSync(process.argv.at(-1), 'ok')",
       inputFiles: [join(skillsDir, 'branding', 'assets', 'template.pptx')],
       outputFile: 'out.json',
-    });
-
-    expect(result.isError).toBe(true);
-    expect(result.content[0]?.text).toContain('inputFile must be within the session or skills directory');
+    }]);
+    expect(result).toMatchObject({ isError: true, content: [{
+      text: expect.stringContaining('inputFile must be within the session or skills directory') as unknown,
+    }] });
   });
 });

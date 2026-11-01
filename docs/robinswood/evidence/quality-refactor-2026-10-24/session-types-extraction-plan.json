@@ -1,0 +1,235 @@
+{
+  "source": "packages/shared/src/sessions/types.ts",
+  "units": [
+    {
+      "names": [
+        "SESSION_PERSISTENT_FIELDS"
+      ],
+      "group": "capability-locks",
+      "bodySha256": "4c944bc0d7a3702b91febada72dda2a8d2478809ece7cb4a0b00ed0a29f61c8c"
+    },
+    {
+      "names": [
+        "MissionCapabilityLock"
+      ],
+      "group": "capability-locks",
+      "bodySha256": "3948ebd89a41a045d79dd4251accbe66ecf0b50b59b257beb392a7d18c67582e"
+    },
+    {
+      "names": [
+        "MissionOrdinarySourceBinding"
+      ],
+      "group": "capability-locks",
+      "bodySha256": "0d2df3cde6a19e5d54813ce09dfa43a41f92bca52338503bdaaa6e715e7a1002"
+    },
+    {
+      "names": [
+        "MissionOrdinaryRouteLock"
+      ],
+      "group": "capability-locks",
+      "bodySha256": "ce0c99d8befe022e17da411ec15411cca15e9b79396fd9d5d3c46f7d2d191915"
+    },
+    {
+      "names": [
+        "SessionPersistentField"
+      ],
+      "group": "capability-locks",
+      "bodySha256": "352f73a95d54d3eb872f8cdcf1fa73d1d9657d54474b839127a3b5b394cd4c97"
+    },
+    {
+      "names": [
+        "ContextCompactionOutcome"
+      ],
+      "group": "capability-locks",
+      "bodySha256": "3c35b6ed22d2b9277c35c605fc6d469ddaab0a17c797d726af5ea45250872332"
+    },
+    {
+      "names": [
+        "ContextCompactionIssueCode"
+      ],
+      "group": "turn-recovery",
+      "bodySha256": "bed105e3a28c7767c910d7409981ce6424bae91505ccbe768cce7216fc25c72a"
+    },
+    {
+      "names": [
+        "ContextCompactionAttemptState"
+      ],
+      "group": "turn-recovery",
+      "bodySha256": "f8a42c2eb14c64a7d9903ece8975bd2bd977351ba4f46912f42078582c65d2a4"
+    },
+    {
+      "names": [
+        "PendingTurnRecovery"
+      ],
+      "group": "turn-recovery",
+      "bodySha256": "e416039280e33f69fe318168ac27801f360d05e293f095c6331389eb66590bc8"
+    },
+    {
+      "names": [
+        "SessionObjectiveTerminalState"
+      ],
+      "group": "objectives",
+      "bodySha256": "2f80571ef1a6e05c9433509fae24da2d2ad2f2dfa6f642615f44a330c1796947"
+    },
+    {
+      "names": [
+        "SessionObjectiveDeclaredState"
+      ],
+      "group": "objectives",
+      "bodySha256": "4d4f5ba582e72a27012c80ab2cc58acf165ad232ca40c39c296f0660bcc49692"
+    },
+    {
+      "names": [
+        "SessionObjectiveOutcomeDeclaration"
+      ],
+      "group": "objectives",
+      "bodySha256": "6b9d814f683cd413003c56854a7bb98366870c998657e3c71041bcbd0aa0b45b"
+    },
+    {
+      "names": [
+        "ActiveSessionObjective"
+      ],
+      "group": "objectives",
+      "bodySha256": "931887728503d425e78b879ab08c2def97aaafff7fc9d1aab94a8b987ac0c11f"
+    },
+    {
+      "names": [
+        "ExternalActionAuthorizationCategory"
+      ],
+      "group": "objectives",
+      "bodySha256": "f44beef2b89f86b4db08e092f3e2d25b8a2d640c978d677bc702b955b06ac628"
+    },
+    {
+      "names": [
+        "ExternalActionAuthorization"
+      ],
+      "group": "objectives",
+      "bodySha256": "fb4c2b3e98c37c1fff2532925fc89ac5acb8dfdb9deb187f51431dbcf5354650"
+    },
+    {
+      "names": [
+        "SessionStatus"
+      ],
+      "group": "session-provenance",
+      "bodySha256": "6dd160c09dda1f8924a68d89d085b752e6e5486ccdecd60d082ea19501cada5c"
+    },
+    {
+      "names": [
+        "BuiltInStatusId"
+      ],
+      "group": "session-provenance",
+      "bodySha256": "a011dde7c4138f1bf049fbf0e6c557c2c60a9fd6d54a54e129e2c081e1cf2b93"
+    },
+    {
+      "names": [
+        "SessionTokenUsage"
+      ],
+      "group": "session-provenance",
+      "bodySha256": "211eef6c1ff20ecc6fdcfb5a33e47d40b1362ca4444310fd43d4ea8f0b9fca3f"
+    },
+    {
+      "names": [
+        "SessionAppProvenance"
+      ],
+      "group": "session-provenance",
+      "bodySha256": "5ac613f8954fc77586be74b991163edbf8ae23ab3184d03cda2b83a6a9467ea3"
+    },
+    {
+      "names": [
+        "SessionConfig"
+      ],
+      "group": "session-config",
+      "bodySha256": "bdef1e7597e29b0baeccd9f4aa49de5d768e6c6cb7811b8869a1ebca0006ac31"
+    },
+    {
+      "names": [
+        "StoredSession"
+      ],
+      "group": "session-config",
+      "bodySha256": "9c651dadd1d20d262303104c5f04118f7a5f25f8d6239ceecb7b9cd62e675eb0"
+    },
+    {
+      "names": [
+        "SessionHeader"
+      ],
+      "group": "session-header",
+      "bodySha256": "61c275507ec9d0ae1c5ff8458c00b726ac6b60bd141327c9e6ecfef3d9dffdf3"
+    },
+    {
+      "names": [
+        "SessionMetadata"
+      ],
+      "group": "session-metadata",
+      "bodySha256": "891fc19fdb91cbfba15abd5be060ec6fbb8b2f3fe88d5c644b3f28a37946b74c"
+    },
+    {
+      "names": [
+        "SessionDelegation"
+      ],
+      "group": "session-metadata",
+      "bodySha256": "50fe5bf0ade3a1be0b0ade02202c052fddda1cc3f04b44ca55b8b818aac14b84"
+    }
+  ],
+  "modules": [
+    {
+      "name": "capability-locks",
+      "lines": 138
+    },
+    {
+      "name": "turn-recovery",
+      "lines": 206
+    },
+    {
+      "name": "objectives",
+      "lines": 125
+    },
+    {
+      "name": "session-provenance",
+      "lines": 44
+    },
+    {
+      "name": "session-config",
+      "lines": 198
+    },
+    {
+      "name": "session-header",
+      "lines": 175
+    },
+    {
+      "name": "session-metadata",
+      "lines": 164
+    }
+  ],
+  "dependencies": {
+    "capability-locks": [],
+    "turn-recovery": [
+      "capability-locks"
+    ],
+    "objectives": [
+      "turn-recovery"
+    ],
+    "session-provenance": [],
+    "session-config": [
+      "session-provenance",
+      "objectives",
+      "turn-recovery",
+      "session-metadata",
+      "capability-locks"
+    ],
+    "session-header": [
+      "session-provenance",
+      "session-metadata",
+      "capability-locks",
+      "turn-recovery",
+      "objectives"
+    ],
+    "session-metadata": [
+      "session-provenance",
+      "capability-locks",
+      "turn-recovery",
+      "objectives"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

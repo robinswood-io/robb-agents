@@ -48,17 +48,17 @@ export async function validateAnthropicConnection(
   const envOverrides: Record<string, string> = {};
 
   if (config.apiKey) {
-    envOverrides.ANTHROPIC_API_KEY = config.apiKey;
+    envOverrides["ANTHROPIC_API_KEY"] = config.apiKey;
     // Clear OAuth to avoid conflicts
-    envOverrides.CLAUDE_CODE_OAUTH_TOKEN = '';
+    envOverrides["CLAUDE_CODE_OAUTH_TOKEN"] = '';
   } else if (config.oauthToken) {
-    envOverrides.CLAUDE_CODE_OAUTH_TOKEN = config.oauthToken;
+    envOverrides["CLAUDE_CODE_OAUTH_TOKEN"] = config.oauthToken;
     // Clear API key to avoid conflicts
-    envOverrides.ANTHROPIC_API_KEY = '';
+    envOverrides["ANTHROPIC_API_KEY"] = '';
   }
 
   if (config.baseUrl) {
-    envOverrides.ANTHROPIC_BASE_URL = config.baseUrl;
+    envOverrides["ANTHROPIC_BASE_URL"] = config.baseUrl;
   }
 
   const abortController = new AbortController();

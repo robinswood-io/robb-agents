@@ -23,8 +23,8 @@ interface StepIconProps {
   /** The icon to display (should be a lucide-react icon or SVG) */
   children: React.ReactNode
   /** Visual variant - affects icon color */
-  variant?: StepIconVariant
-  className?: string
+  variant?: StepIconVariant | undefined
+  className?: string | undefined
 }
 
 const iconVariantStyles: Record<StepIconVariant, { container: string; icon: string }> = {
@@ -82,10 +82,10 @@ interface StepHeaderProps {
   /** The main title */
   title: string
   /** Optional description below the title */
-  description?: React.ReactNode
+  description?: React.ReactNode | undefined
   /** Whether to center the text (default: true) */
-  centered?: boolean
-  className?: string
+  centered?: boolean | undefined
+  className?: string | undefined
 }
 
 /**
@@ -119,24 +119,24 @@ export function StepHeader({
 
 interface StepFormLayoutProps {
   /** Icon to display at the top, wrapped in StepIcon (optional) */
-  icon?: React.ReactNode
+  icon?: React.ReactNode | undefined
   /** Icon variant */
-  iconVariant?: StepIconVariant
+  iconVariant?: StepIconVariant | undefined
   /** Raw icon element to display without StepIcon wrapper (optional) */
-  iconElement?: React.ReactNode
+  iconElement?: React.ReactNode | undefined
   /** Step title */
   title: string
   /** Step description */
-  description?: React.ReactNode
+  description?: React.ReactNode | undefined
   /** Action buttons at the bottom */
-  actions?: React.ReactNode
+  actions?: React.ReactNode | undefined
   /** Form content */
-  children?: React.ReactNode
+  children?: React.ReactNode | undefined
   /** Whether children should grow to fill available space (for scrollable content) */
-  grow?: boolean
+  grow?: boolean | undefined
   /** Whether to fill parent height without max-height limit */
-  fillHeight?: boolean
-  className?: string
+  fillHeight?: boolean | undefined
+  className?: string | undefined
 }
 
 /**
@@ -207,8 +207,8 @@ export function StepFormLayout({
 interface StepActionsProps {
   children: React.ReactNode
   /** Layout variant: 'stack' for vertical, 'flex' for horizontal with flex-1 buttons */
-  variant?: 'stack' | 'flex'
-  className?: string
+  variant?: 'stack' | 'flex' | undefined
+  className?: string | undefined
 }
 
 /**
@@ -237,7 +237,7 @@ export function StepActions({ children, variant = 'stack', className }: StepActi
 // =============================================================================
 
 interface BackButtonProps extends Omit<ButtonProps, 'variant' | 'children'> {
-  children?: React.ReactNode
+  children?: React.ReactNode | undefined
 }
 
 /**
@@ -254,9 +254,9 @@ export function BackButton({ children, className, ...props }: BackButtonProps) {
 }
 
 interface ContinueButtonProps extends Omit<ButtonProps, 'children'> {
-  children?: React.ReactNode
-  loading?: boolean
-  loadingText?: string
+  children?: React.ReactNode | undefined
+  loading?: boolean | undefined
+  loadingText?: string | undefined
 }
 
 /**

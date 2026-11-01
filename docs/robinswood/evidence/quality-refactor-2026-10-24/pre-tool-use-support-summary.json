@@ -1,0 +1,62 @@
+{
+  "status": "testé dans le candidat local, non intégré",
+  "declarationsPreserved": 199,
+  "newModules": 34,
+  "maxNewModuleLines": 294,
+  "mainPipeline": "Conservé au chemin public avec son corps inchangé ; fichier encore au-delà du seuil à 1181 lignes",
+  "validation": "Corps et imports des déclarations comparés ; trois fonctions mutuellement récursives regroupées ; aucun cycle entre modules",
+  "checks": {
+    "pretool-production-support-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 19.94,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-production-support-types.log"
+    },
+    "pretool-production-support-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/shared/src/agent/core/pre-tool-use",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.24,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-production-support-lint.log"
+    },
+    "pretool-production-support-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 142.96,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-production-support-tests.log"
+    },
+    "pretool-production-support-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 17.81,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-production-support-build.log"
+    }
+  },
+  "remaining": {
+    "oversizedCodeFiles": 209,
+    "explicitAny": 708
+  },
+  "installedApplication": "Inchangée"
+}

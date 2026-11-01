@@ -1,0 +1,231 @@
+{
+  "status": "testé localement ; intégration finale restante",
+  "scope": "Domaines RPC : pièces jointes, système de fichiers, préférences, images des espaces",
+  "changes": [
+    "Quatre fonctions directes de déclaration des gestionnaires, sans registre ni contexte supplémentaire",
+    "79 instructions de corps et leur ordre conservés, captures existantes passées directement",
+    "Déclarations de canaux et autres déclarations conservées ; imports relatifs déplacés vérifiés",
+    "Format ASCII du descriptif package.json rétabli sans changer sa valeur JSON"
+  ],
+  "decompositions": [
+    {
+      "source": "packages/server-core/src/handlers/rpc/files.ts",
+      "function": "registerFilesHandlers",
+      "sourceHash": "ec48d3dfaa0f4f44181439d5cc567230e5046ce66eeef1957475eb2f3a7967ad",
+      "groups": [
+        {
+          "start": 5,
+          "end": 9,
+          "name": "registerAttachmentHandlers",
+          "file": "packages/server-core/src/handlers/rpc/files/attachments.ts",
+          "sourceStatements": [
+            "2667e3f3c16034add458456f60eb56b8ff4a8eb818040004b79c2dc2bf2101ce",
+            "7d9e4a4477a8a927bd0635536cfc4dcd10a1c05d2cacd139123f55848d211e13",
+            "10d6f7f90444ae2952c082f01d064bd31799f37bc5f0ad63cf7c7fd69def2394",
+            "b3b74e40269776ed386c555246cd9ebc91286a5d2c3b0f33e4fd446946603834",
+            "926a88f864049d8c2bba4c9666d9d39be917e27e6ab60a19ebac9bb7328b3da9"
+          ]
+        },
+        {
+          "start": 10,
+          "end": 11,
+          "name": "registerFileSystemHandlers",
+          "file": "packages/server-core/src/handlers/rpc/files/filesystem.ts",
+          "sourceStatements": [
+            "184cbe2e33aa3fc97034668a672c80c9af4f4f073a0852340ad89d60cfe540e1",
+            "f38fab95b0c40006e6be4e4c89047fa36e882efb272b2f1f170d83c29007c57c"
+          ]
+        }
+      ],
+      "files": [
+        {
+          "file": "packages/server-core/src/handlers/rpc/files/attachments.ts",
+          "lines": 331,
+          "hash": "6b5029e04830cae6bd3019aee520de9c51c1dc483fb007ea884e7230ae9a8c4c"
+        },
+        {
+          "file": "packages/server-core/src/handlers/rpc/files/filesystem.ts",
+          "lines": 187,
+          "hash": "9c3fdfdcf22f45ee4bb1f846d5b9c9e94cdf38241ff978954c28569de98332c0"
+        },
+        {
+          "file": "packages/server-core/src/handlers/rpc/files.ts",
+          "lines": 137,
+          "hash": "0112cc707dbf6375f9a291e9bdeab2934aeea7555e6b12bad034fb18fc0fea62"
+        }
+      ]
+    },
+    {
+      "source": "packages/server-core/src/handlers/rpc/settings.ts",
+      "function": "registerSettingsHandlers",
+      "sourceHash": "69890fb38382429c09f988646790bb392dd5c985288d8a900abdfb59b80d6396",
+      "groups": [
+        {
+          "start": 14,
+          "end": 39,
+          "name": "registerPreferenceHandlers",
+          "file": "packages/server-core/src/handlers/rpc/settings/preferences.ts",
+          "captures": [
+            {
+              "name": "assertSessionAccess",
+              "type": "(context: RequestContext, sessionId: string) => void"
+            }
+          ],
+          "sourceStatements": [
+            "c889480a6a1af8b34aa6f249943ec0871ff36af19c8512633e27281ba53f5198",
+            "fc565a887a629fe1de3ce7c258cb8cf1eaf1447c1642703ca62b496726d1c71f",
+            "ea426d98fc71a9ffff6881d09d8fbd8ee6c0881db1f66a1ceda0c0ffacfb9e78",
+            "126deb432e394fd06eab33110f7e5a50a3f4e37bdd14c6ff5610f8fb9968f041",
+            "99bd990da0db880823e849d16997b2e22a921d5e0aeb71b3337dde0405fbb60b",
+            "2734c92b1c81da25449e0574bab924f6b70b963c0ec84d22fc9cba5fbbac902a",
+            "0d4ec2d9b73668472a518e1557c12e849227b61cf3fcfa2d5253889f64a936b5",
+            "8b4428ef57bc6f111ddaab7d0833e5afac5ec2ff188cf1f228408d95b0472f78",
+            "822fb4965bfc78ec87a846d4d8da9c07cd2962b2e60a9a94bf24455bd5e28e74",
+            "81e62d5a13fbb300e06d3a660e546a9a1af4a5f5d05fc5d056d732f5f3974448",
+            "e027b69705af465ee36e28be0cc0bbc1563fb84fe6e5e0877480d257d3efb3d9",
+            "f89a09e47b28f0bd8f2a96e294a356d71d43ed77950a87dd72924ed710dc2135",
+            "232ce6e451a3e25be379acfe4ad557270febfca5eedb5c8deb6f90f27461307d",
+            "f7a71965a9e81410396dcf7fcecba6042278682700f5b7e1e1487e68349f9ad8",
+            "3a47b651c08e1da04f112f2c1053a500b45a9a2359d7f8ed3361e692ef75995b",
+            "dd4cec58b5a6b6d4327320ae94613c41a23f6f4c675c1f928623baa69cc15783",
+            "b5771a5fbe3dd02fe39bd24c40ac2492b35837cfa631edb25078d29ef99e740b",
+            "9ea42222bc1071c1a1368d762cb4611f27e6b44d67085ccbecc2be8633bb3356",
+            "74f390eec83205651dcd2e2b7f5f8c14c17aae7bfed9add19f896379fc7e3d1f",
+            "09eb3345ab818fb3be447e51f71fb77a0f7f0ccf805f6d326c83e9fcb6713563",
+            "bfda2131cd254a2ea69da7bb6bcf7ba215bfdeabdd000efa0e16b0a1f1a97418",
+            "f4486fba77ff8895dda0c54ff379b5bb6362200bb4b0357275f8e7707ed3189d",
+            "c1252dc3715e1afc80c9d0783e85dcba68f874c2540b7db775c17c953b1e2dfc",
+            "5df5b10ec754269b57810b3a2bc0ecc45b464a7f187ace134bfa62201ee1421b",
+            "ce22f2f128b8f311957a388f4036ae895ca5e5d912fe915b53e8da781c2782ce",
+            "f683947f465afeb85fdb1af61bf1e17cd48ff1a6a120118dca6ed2543213daa5"
+          ]
+        }
+      ],
+      "files": [
+        {
+          "file": "packages/server-core/src/handlers/rpc/settings/preferences.ts",
+          "lines": 226,
+          "hash": "579ad76c667a7d477f7e1d90f09e1773143ce4d8f2b5a219f7d0ba20428da601"
+        },
+        {
+          "file": "packages/server-core/src/handlers/rpc/settings.ts",
+          "lines": 400,
+          "hash": "29b0fc05d2c699ac1903bdefbe388fa59ad4a26a4c305df186c9b7ebeadfd599"
+        }
+      ]
+    },
+    {
+      "source": "packages/server-core/src/handlers/rpc/workspace.ts",
+      "function": "registerWorkspaceCoreHandlers",
+      "sourceHash": "6fafe50a0a40be562ca8d524964948d278ceaba854766c5604474454c88455c0",
+      "groups": [
+        {
+          "start": 9,
+          "end": 10,
+          "name": "registerWorkspaceImageHandlers",
+          "file": "packages/server-core/src/handlers/rpc/workspace/images.ts",
+          "sourceStatements": [
+            "c1386c484351b279c6eee4968cf0eab74655f6a65cc8c15a735e549a2eff9cef",
+            "daf8a7ec44a3a89dcadd307d6dc743dfa4d5837a6a66d5b7aaf7214eb16c9644"
+          ]
+        }
+      ],
+      "files": [
+        {
+          "file": "packages/server-core/src/handlers/rpc/workspace/images.ts",
+          "lines": 178,
+          "hash": "90a41daf9fd1820027fc2343a595f50440a3cb5f419335d8c13e0cc46bea30a2"
+        },
+        {
+          "file": "packages/server-core/src/handlers/rpc/workspace.ts",
+          "lines": 344,
+          "hash": "09cf8f788761d094ff4606691cc80becb016f1f2082fa37c8fb0b4644c0beafc"
+        }
+      ]
+    }
+  ],
+  "sourceGate": {
+    "max-lines": 142,
+    "no-explicit-any": 409
+  },
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 17.83,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-domains-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/server-core/src/handlers/rpc/files/attachments.ts",
+        "packages/server-core/src/handlers/rpc/files/filesystem.ts",
+        "packages/server-core/src/handlers/rpc/files.ts",
+        "packages/server-core/src/handlers/rpc/settings/preferences.ts",
+        "packages/server-core/src/handlers/rpc/settings.ts",
+        "packages/server-core/src/handlers/rpc/workspace/images.ts",
+        "packages/server-core/src/handlers/rpc/workspace.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.89,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-domains-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 16.42,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-domains-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/server-core/src/handlers/rpc",
+        "--reporter=junit",
+        "--reporter-outfile=/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-domains-after.xml"
+      ],
+      "exitCode": 0,
+      "seconds": 1.52,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-domains-after.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 138.99,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/rpc-domains-full-suite.log"
+    }
+  ],
+  "regressionParity": {
+    "cases": 46,
+    "assertions": 132,
+    "identical": true
+  },
+  "maximumOutputLines": 400,
+  "installedApplication": "inchangée",
+  "limits": [
+    "Seuils globaux et lint global encore en cours",
+    "Interface et missions réelles du candidat non encore vérifiées"
+  ]
+}

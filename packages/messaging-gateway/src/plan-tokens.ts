@@ -51,7 +51,7 @@ export class PlanTokenRegistry {
       bindingId,
       sessionId,
       planPath,
-      messageId,
+      ...(messageId !== undefined ? { messageId: messageId } : {}),
       createdAt: Date.now(),
     })
     return token

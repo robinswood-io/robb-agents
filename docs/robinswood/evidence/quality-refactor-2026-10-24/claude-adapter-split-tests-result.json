@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rtk",
+    "bun",
+    "test",
+    "packages/shared/src/agent/__tests__/claude-event-adapter"
+  ],
+  "exitCode": 0,
+  "seconds": 0.31,
+  "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/claude-adapter-split-tests.log"
+}

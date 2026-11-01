@@ -1,0 +1,223 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Contrats natifs des tests Pi, du rendu et des canaris fournisseurs",
+  "changes": [
+    "Vingt et un any supprimés dans neuf fichiers avec les contrats réels du SDK et du protocole.",
+    "Les faux messages Pi incluent les métadonnées obligatoires du SDK actuel. Le parcours de rendu QA projette maintenant la mesure de consommation comme le véritable hôte.",
+    "Les contrats de Mermaid, des mentions et des outils utilisent les paramètres natifs ; les méthodes partielles des fixtures vérifient les signatures présentes.",
+    "Les mêmes 95 tests et 291 assertions passent avant et après."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/event-processor/handlers/__tests__/pi-runtime-activity.test.ts",
+      "lines": 99,
+      "sha256": "315cb7fb396ba140830dd21f301923973e998d27ad44069b0724f9075cd014d4"
+    },
+    {
+      "file": "apps/electron/src/renderer/event-processor/handlers/__tests__/text-discard.test.ts",
+      "lines": 29,
+      "sha256": "fc145d02199ffad391e1c00ddd90151f94295be5fcb837658c0aa76bda08bb5c"
+    },
+    {
+      "file": "apps/electron/src/renderer/lib/__tests__/mentions.test.ts",
+      "lines": 320,
+      "sha256": "43052b0d13aace2cb5925eb4e727820914a628e8b5201bfcbfa173b1d79e2410"
+    },
+    {
+      "file": "apps/electron/src/transport/__tests__/codec.test.ts",
+      "lines": 115,
+      "sha256": "6c5075b4b155485a10ea1767324806b2f18fa0dff238c79e0b041f378addbfb7"
+    },
+    {
+      "file": "packages/pi-agent-server/src/intra-turn-context-guard.test.ts",
+      "lines": 66,
+      "sha256": "8e68d3e2518dabe18476ff30553383bad86b9f749ae92a8e4be952eb975c87b1"
+    },
+    {
+      "file": "packages/pi-agent-server/src/session-tool-registration.test.ts",
+      "lines": 134,
+      "sha256": "a534510b8f3621a7b44a51c3145414826afb6a8510727c2a84d0036606fa130d"
+    },
+    {
+      "file": "packages/pi-agent-server/src/tool-loop-feedback.test.ts",
+      "lines": 92,
+      "sha256": "d1f3dbb53c9b4ed98ba659f2ef7712c076166119b8678029e19cb966c9d5395d"
+    },
+    {
+      "file": "packages/session-tools-core/src/handlers/mermaid-validate.test.ts",
+      "lines": 48,
+      "sha256": "bbf78b52fb1cd7422a072187953cf7bd57ec4731e68082f12f215cf1663a4660"
+    },
+    {
+      "file": "scripts/tests/provider-canaries.test.ts",
+      "lines": 194,
+      "sha256": "5433187ea72144d2ae1226eec75f27bcc6b7307ff0ed3946b01b53d86e153c15"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 24.62,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/protocol-test-contracts-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 30.59,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/protocol-test-contracts-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "python3",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/run-owned-files-eslint.py",
+        "protocol-test-contracts"
+      ],
+      "exitCode": 0,
+      "seconds": 2.45,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/protocol-test-contracts-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/renderer/event-processor/handlers/__tests__/pi-runtime-activity.test.ts",
+        "apps/electron/src/renderer/event-processor/handlers/__tests__/text-discard.test.ts",
+        "apps/electron/src/renderer/lib/__tests__/mentions.test.ts",
+        "apps/electron/src/transport/__tests__/codec.test.ts",
+        "packages/pi-agent-server/src/intra-turn-context-guard.test.ts",
+        "packages/pi-agent-server/src/session-tool-registration.test.ts",
+        "packages/pi-agent-server/src/tool-loop-feedback.test.ts",
+        "packages/session-tools-core/src/handlers/mermaid-validate.test.ts",
+        "scripts/tests/provider-canaries.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.81,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/protocol-test-contracts-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 162.96,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/protocol-test-contracts-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "runtimeJavaScriptPreservedOutsideNativeFixtureCompletions": true,
+    "nativeFixtureCompletions": [
+      "SDK-required assistant metadata, partial message snapshots and compaction flags in offline fixtures; helper only merges these defaults with existing fixture properties",
+      "Renderer fixture maps usage_update to tokenUsage with the native host projection"
+    ],
+    "nativeLiteralPropertyAccessEquivalent": true,
+    "removedExplicitAny": 21,
+    "newExplicitAny": 0,
+    "newRuntimeStateOrWorkflow": false,
+    "files": [
+      {
+        "file": "apps/electron/src/renderer/event-processor/handlers/__tests__/pi-runtime-activity.test.ts",
+        "lines": 99,
+        "sha256": "315cb7fb396ba140830dd21f301923973e998d27ad44069b0724f9075cd014d4"
+      },
+      {
+        "file": "apps/electron/src/renderer/event-processor/handlers/__tests__/text-discard.test.ts",
+        "lines": 29,
+        "sha256": "fc145d02199ffad391e1c00ddd90151f94295be5fcb837658c0aa76bda08bb5c"
+      },
+      {
+        "file": "apps/electron/src/renderer/lib/__tests__/mentions.test.ts",
+        "lines": 320,
+        "sha256": "43052b0d13aace2cb5925eb4e727820914a628e8b5201bfcbfa173b1d79e2410"
+      },
+      {
+        "file": "apps/electron/src/transport/__tests__/codec.test.ts",
+        "lines": 115,
+        "sha256": "6c5075b4b155485a10ea1767324806b2f18fa0dff238c79e0b041f378addbfb7"
+      },
+      {
+        "file": "packages/pi-agent-server/src/intra-turn-context-guard.test.ts",
+        "lines": 66,
+        "sha256": "8e68d3e2518dabe18476ff30553383bad86b9f749ae92a8e4be952eb975c87b1"
+      },
+      {
+        "file": "packages/pi-agent-server/src/session-tool-registration.test.ts",
+        "lines": 134,
+        "sha256": "a534510b8f3621a7b44a51c3145414826afb6a8510727c2a84d0036606fa130d"
+      },
+      {
+        "file": "packages/pi-agent-server/src/tool-loop-feedback.test.ts",
+        "lines": 92,
+        "sha256": "d1f3dbb53c9b4ed98ba659f2ef7712c076166119b8678029e19cb966c9d5395d"
+      },
+      {
+        "file": "packages/session-tools-core/src/handlers/mermaid-validate.test.ts",
+        "lines": 48,
+        "sha256": "bbf78b52fb1cd7422a072187953cf7bd57ec4731e68082f12f215cf1663a4660"
+      },
+      {
+        "file": "scripts/tests/provider-canaries.test.ts",
+        "lines": 194,
+        "sha256": "5433187ea72144d2ae1226eec75f27bcc6b7307ff0ed3946b01b53d86e153c15"
+      }
+    ]
+  },
+  "fullTestSummary": {
+    "pass": 10748,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "protocol-test-contracts-targeted": {
+      "pass": 95,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": {
+    "targetedPass": 95,
+    "targetedExpectCalls": 291
+  },
+  "sourceGate": {
+    "max-lines": 37,
+    "no-explicit-any": 37
+  },
+  "globalLint": {
+    "files": 3632,
+    "errors": 58,
+    "warnings": 100,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 32,
+      "max-lines": 26,
+      "react-hooks/exhaustive-deps": 79,
+      "craft-agent/no-localstorage": 21
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "37 fichiers trop longs et 37 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-26T07:56:21.022982+00:00"
+}

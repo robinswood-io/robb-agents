@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 
 interface TableProps extends React.ComponentProps<'table'> {
   /** Skip the wrapper div with overflow-x-auto (required for sticky headers) */
-  noWrapper?: boolean
+  noWrapper?: boolean | undefined
 }
 
 function Table({ className, noWrapper, ...props }: TableProps) {

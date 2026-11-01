@@ -1,0 +1,6 @@
+[
+  {
+    "file": "packages/server-core/src/sessions/restart-recovery.test.ts",
+    "references": 1
+  }
+]

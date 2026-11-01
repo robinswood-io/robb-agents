@@ -210,7 +210,7 @@ export function evaluateHumanBenchmark(value: unknown, options: {
   });
   return { protocolId: protocol.id, eligible: gaps.length === 0, qualityAndSpeedQualified: gaps.length === 0,
     maxTimeRatio: protocol.speedQualification ? threshold : null, provenance: protocol.provenance,
-    cases: cases.map(c => ({ scenarioId: c.id, run: c.run, domain: c.domain, agentScore: c.agent.quality,
+    cases: cases.map(c => ({ scenarioId: c.id, ...(c.run !== undefined ? { run: c.run } : {}), domain: c.domain, agentScore: c.agent.quality,
       humanTopQuartileScore: quartile(c.humans.map(h => h.quality)), objectiveComplete: c.objectiveComplete,
       falseCompletion: c.falseCompletion, manualContinuations: c.manualContinuations, unauthorizedActions: c.unauthorizedActions })),
     gaps: [...new Set(gaps)], domains };

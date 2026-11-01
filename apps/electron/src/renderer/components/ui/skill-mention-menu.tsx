@@ -17,10 +17,10 @@ export interface InlineSkillMentionProps {
   onOpenChange: (open: boolean) => void
   skills: LoadedSkill[]
   onSelect: (slug: string) => void
-  filter?: string
+  filter?: string | undefined
   position: { x: number; y: number }
-  workspaceId?: string
-  className?: string
+  workspaceId?: string | undefined
+  className?: string | undefined
 }
 
 // ============================================================================

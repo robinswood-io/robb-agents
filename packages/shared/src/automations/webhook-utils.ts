@@ -6,77 +6,11 @@
  * env var expansion, and retry logic so the two code paths can't diverge.
  */
 
-import type { WebhookAction, WebhookActionResult } from './types.ts';
-import { expandEnvVars } from './utils.ts';
-import { DEFAULT_WEBHOOK_METHOD, HISTORY_FIELD_MAX_LENGTH } from './constants.ts';
-import { lookup } from 'node:dns/promises';
-import { BlockList, isIP } from 'node:net';
-
-/**
- * Redact a URL for safe logging. Webhook URLs may contain secrets
- * (e.g., Slack webhook paths). Keep scheme + host, truncate long paths.
- */
-export function redactUrl(url: string): string {
-  try {
-    const parsed = new URL(url);
-    if (parsed.pathname.length > 20) {
-      return `${parsed.origin}${parsed.pathname.slice(0, 15)}...`;
-    }
-    return `${parsed.origin}${parsed.pathname}`;
-  } catch {
-    return url.slice(0, 30) + '...';
-  }
-}
-
-/**
- * Create a webhook history entry for appending to the history JSONL file.
- */
-export function createWebhookHistoryEntry(opts: {
-  matcherId: string;
-  ok: boolean;
-  method?: string;
-  url: string;
-  statusCode: number;
-  durationMs: number;
-  attempts?: number;
-  error?: string;
-  responseBody?: string;
-}): Record<string, unknown> {
-  return {
-    id: opts.matcherId,
-    ts: Date.now(),
-    ok: opts.ok,
-    webhook: {
-      method: opts.method ?? DEFAULT_WEBHOOK_METHOD,
-      url: redactUrl(opts.url),
-      statusCode: opts.statusCode,
-      durationMs: opts.durationMs,
-      ...(opts.attempts && opts.attempts > 1 ? { attempts: opts.attempts } : {}),
-      ...(opts.error ? { error: opts.error.slice(0, HISTORY_FIELD_MAX_LENGTH) } : {}),
-      ...(opts.responseBody ? { responseBody: opts.responseBody.slice(0, HISTORY_FIELD_MAX_LENGTH) } : {}),
-    },
-  };
-}
-
-/**
- * Create a prompt-action history entry for appending to the history JSONL file.
- */
-export function createPromptHistoryEntry(opts: {
-  matcherId: string;
-  ok: boolean;
-  sessionId?: string;
-  prompt?: string;
-  error?: string;
-}): Record<string, unknown> {
-  return {
-    id: opts.matcherId,
-    ts: Date.now(),
-    ok: opts.ok,
-    ...(opts.sessionId ? { sessionId: opts.sessionId } : {}),
-    ...(opts.prompt ? { prompt: opts.prompt.slice(0, HISTORY_FIELD_MAX_LENGTH) } : {}),
-    ...(opts.error ? { error: opts.error.slice(0, HISTORY_FIELD_MAX_LENGTH) } : {}),
-  };
-}
+import type { WebhookAction, WebhookActionResult } from "./types.ts";
+import { expandEnvVars } from "./utils.ts";
+import { DEFAULT_WEBHOOK_METHOD } from "./constants.ts";
+import { lookup } from "node:dns/promises";
+import { BlockList, isIP } from "node:net";
 
 /**
  * Return a copy of a WebhookAction with all env-expandable string fields resolved.
@@ -121,6 +55,7 @@ export function expandWebhookAction(action: WebhookAction, env: Record<string, s
 }
 
 const WEBHOOK_SECRET_REF_RE = /\$(?:\{)?CRAFT_WH_[A-Z0-9_]+(?:\})?/i;
+
 const SENSITIVE_HEADER_RE = /^(authorization|proxy-authorization|cookie|set-cookie|x-api-key|api-key)$/i;
 
 function requiresSecretReference(value: string, label: string): void {
@@ -168,9 +103,11 @@ export function prepareWebhookActionForDeferredRetry(
 
 /** Default fetch timeout in milliseconds (30 seconds, matching Claude Code's HTTP hook default) */
 const DEFAULT_TIMEOUT_MS = 30_000;
+
 // Keep the address families in separate lists. Besides making the policy
 // explicit, this avoids cross-family matching differences between Node and Bun.
 const WEBHOOK_IPV4_BLOCKLIST = new BlockList();
+
 const WEBHOOK_IPV6_BLOCKLIST = new BlockList();
 
 for (const [network, prefix] of [
@@ -394,7 +331,7 @@ export async function executeWebhookRequest(
     const response = await executeFetch(parsedUrl, {
       method,
       headers,
-      body: requestBody,
+      ...(requestBody !== undefined ? { body: requestBody } : {}),
       signal: controller.signal,
       redirect: 'error',
     });
@@ -421,7 +358,7 @@ export async function executeWebhookRequest(
       url,
       statusCode: response.status,
       success,
-      error: success ? undefined : `HTTP ${response.status} ${response.statusText}`,
+      ...(!success ? { error: `HTTP ${response.status} ${response.statusText}` } : {}),
       durationMs: Date.now() - start,
       ...(responseBody !== undefined ? { responseBody } : {}),
     };
@@ -514,3 +451,5 @@ export async function executeWithRetry(
     durationMs: Date.now() - totalStart,
   };
 }
+
+export { redactUrl, createWebhookHistoryEntry, createPromptHistoryEntry } from './webhook-utils/history.ts';

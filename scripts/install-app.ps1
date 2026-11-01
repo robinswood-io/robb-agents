@@ -20,8 +20,8 @@ if (-not $ReleaseBaseUrl) {
 }
 $DownloadDir = if ($env:ROBB_DOWNLOAD_DIR) { $env:ROBB_DOWNLOAD_DIR } else { Join-Path $env:TEMP 'robb-agents-downloads' }
 
-function Write-Info([string]$Message) { Write-Host "> $Message" -ForegroundColor Blue }
-function Write-Success([string]$Message) { Write-Host "> $Message" -ForegroundColor Green }
+function Write-Info([string]$Message) { Write-Information -InformationAction Continue "> $Message" }
+function Write-Success([string]$Message) { Write-Information -InformationAction Continue "> $Message" }
 
 if ($env:OS -ne 'Windows_NT') { throw 'This installer supports Windows only.' }
 if (-not [Environment]::Is64BitOperatingSystem) { throw 'Robb Agents supports Windows x64 only.' }
@@ -40,7 +40,7 @@ if ($Version -and $ManifestVersion -ne $Version) {
     throw "Manifest version $ManifestVersion does not match requested $Version."
 }
 
-function Get-ManifestFiles([string]$Yaml) {
+function Get-ManifestFile([string]$Yaml) {
     $Entries = [System.Collections.Generic.List[object]]::new()
     $Current = $null
     foreach ($Line in ($Yaml -split "`r?`n")) {
@@ -57,7 +57,7 @@ function Get-ManifestFiles([string]$Yaml) {
     return $Entries
 }
 
-$MatchesForPlatform = @(Get-ManifestFiles $Manifest | Where-Object {
+$MatchesForPlatform = @(Get-ManifestFile $Manifest | Where-Object {
     $_.Url -match '^Robb-Agents-x64[^/\\]*\.exe$' -and $_.Sha512 -and $_.Size
 })
 if ($MatchesForPlatform.Count -ne 1) {

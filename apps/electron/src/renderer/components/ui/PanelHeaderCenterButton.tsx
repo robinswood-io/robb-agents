@@ -7,7 +7,7 @@ interface PanelHeaderCenterButtonProps extends React.ButtonHTMLAttributes<HTMLBu
   /** Icon as React element - caller controls size/styling */
   icon: React.ReactNode
   /** Optional tooltip text */
-  tooltip?: string
+  tooltip?: string | undefined
 }
 
 export const PanelHeaderCenterButton = forwardRef<HTMLButtonElement, PanelHeaderCenterButtonProps>(

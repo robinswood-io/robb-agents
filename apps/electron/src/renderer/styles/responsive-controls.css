@@ -1,0 +1,381 @@
+/* =============================================================================
+   SONNER TOAST OVERRIDES
+
+   Override sonner's inline box-shadow with our design system shadow.
+============================================================================= */
+
+[data-sonner-toast] {
+  box-shadow: var(--shadow-modal-small) !important;
+  background-color: oklch(from var(--popover) l c h / 0.8) !important;
+  -webkit-app-region: no-drag !important;
+  /* Fixed width to ensure text truncation works */
+  width: 356px !important;
+}
+
+/* Hide icon container to remove leftover padding */
+[data-sonner-toast] [data-icon] {
+  display: none !important;
+}
+
+/* Single line title with ellipsis overflow */
+[data-sonner-toast] [data-title] {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  min-width: 0 !important;
+}
+
+/* Description wraps up to 2 lines, then truncates */
+[data-sonner-toast] [data-description] {
+  color: inherit !important;
+  opacity: 0.7 !important;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+
+/* Ensure content area doesn't overflow toast bounds */
+[data-sonner-toast] [data-content] {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+[data-sonner-toast] [data-button],
+[data-sonner-toast] [data-cancel] {
+  background-color: var(--background) !important;
+  box-shadow: var(--shadow-minimal) !important;
+  color: oklch(from var(--foreground) l c h / 0.7) !important;
+  transition: color 0.15s ease !important;
+}
+
+[data-sonner-toast] [data-button]:hover,
+[data-sonner-toast] [data-cancel]:hover {
+  color: var(--foreground) !important;
+}
+
+/* Close button styling - move to top right, show only on hover */
+[data-sonner-toast] [data-close-button] {
+  left: unset !important;
+  right: -14px !important;
+  opacity: 0 !important;
+  transition: opacity 0.15s ease, color 0.15s ease !important;
+  background-color: var(--background) !important;
+  color: oklch(from var(--foreground) l c h / 0.7) !important;
+  border: none !important;
+  box-shadow:
+    rgba(var(--foreground-rgb), 0.06) 0px 0px 0px 1px,
+    var(--shadow-minimal) !important;
+}
+
+[data-sonner-toast]:hover [data-close-button] {
+  opacity: 1 !important;
+}
+
+[data-sonner-toast] [data-close-button]:hover {
+  color: var(--foreground) !important;
+}
+
+[data-sonner-toast]:focus-visible {
+  box-shadow:
+    var(--shadow-modal-small),
+    0 0 0 2px rgba(var(--foreground-rgb), 0.18) !important;
+}
+
+[data-sonner-toast] [data-close-button]:focus-visible {
+  box-shadow:
+    var(--shadow-minimal),
+    0 0 0 2px rgba(var(--foreground-rgb), 0.18) !important;
+}
+
+/* Tinted backgrounds for toast states - use linear-gradient to layer
+   the tint color on top of the base popover background in one property.
+   Title and description get subtle color tinting via [data-title] and [data-description]. */
+[data-sonner-toast][data-type="error"] {
+  background: linear-gradient(rgba(var(--destructive-rgb), 0.07), rgba(var(--destructive-rgb), 0.07)),
+    oklch(from var(--popover) l c h / 0.8) !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-title],
+[data-sonner-toast][data-type="error"] [data-description] {
+  color: color-mix(in srgb, rgb(var(--foreground-rgb)) 70%, rgb(var(--destructive-rgb))) !important;
+}
+
+[data-sonner-toast][data-type="warning"] {
+  background: linear-gradient(rgba(var(--info-rgb), 0.07), rgba(var(--info-rgb), 0.07)),
+    oklch(from var(--popover) l c h / 0.8) !important;
+}
+
+[data-sonner-toast][data-type="warning"] [data-title],
+[data-sonner-toast][data-type="warning"] [data-description] {
+  color: color-mix(in srgb, rgb(var(--foreground-rgb)) 70%, rgb(var(--info-rgb))) !important;
+}
+
+[data-sonner-toast][data-type="success"] {
+  background: linear-gradient(rgba(var(--success-rgb), 0.07), rgba(var(--success-rgb), 0.07)),
+    oklch(from var(--popover) l c h / 0.8) !important;
+}
+
+[data-sonner-toast][data-type="success"] [data-title],
+[data-sonner-toast][data-type="success"] [data-description] {
+  color: color-mix(in srgb, rgb(var(--foreground-rgb)) 70%, rgb(var(--success-rgb))) !important;
+}
+
+/* Dark mode: stronger tints since dark backgrounds absorb color more */
+.dark [data-sonner-toast][data-type="error"] {
+  background: linear-gradient(rgba(var(--destructive-rgb), 0.15), rgba(var(--destructive-rgb), 0.15)),
+    oklch(from var(--popover) l c h / 0.8) !important;
+}
+
+.dark [data-sonner-toast][data-type="warning"] {
+  background: linear-gradient(rgba(var(--info-rgb), 0.15), rgba(var(--info-rgb), 0.15)),
+    oklch(from var(--popover) l c h / 0.8) !important;
+}
+
+.dark [data-sonner-toast][data-type="success"] {
+  background: linear-gradient(rgba(var(--success-rgb), 0.15), rgba(var(--success-rgb), 0.15)),
+    oklch(from var(--popover) l c h / 0.8) !important;
+}
+
+/* ============================================================================
+   PDF Viewer (react-pdf)
+   ============================================================================ */
+
+/* PDF document container */
+.react-pdf__Document {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Individual PDF page */
+.react-pdf__Page {
+  max-width: 100%;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+}
+
+/* PDF canvas rendering */
+.react-pdf__Page__canvas {
+  max-width: 100%;
+  height: auto !important;
+}
+
+/* PDF text layer (for text selection) */
+.react-pdf__Page__textContent {
+  border: none !important;
+}
+
+/* PDF annotation layer (for links and form fields) */
+.react-pdf__Page__annotations {
+  border: none !important;
+}
+
+/* ============================================================================
+ * CONTAINER QUERY RESPONSIVE RULES
+ *
+ * These rules adapt component layout based on container width, replacing
+ * the fragile !important overrides previously in webui/src/index.css.
+ * Works in both webui (narrow viewport) and desktop (narrow panels).
+ * ============================================================================ */
+
+/* Constrain floating elements (dropdowns, selects) in narrow panel containers */
+@container panel (max-width: 448px) {
+  [data-slot="dropdown-menu-content"],
+  [data-slot="dropdown-menu-sub-content"],
+  [data-slot="select-content"] {
+    max-width: calc(100cqw - 24px);
+  }
+
+  [data-slot="dropdown-menu-item"],
+  [data-slot="dropdown-menu-sub-trigger"],
+  [data-slot="select-item"] {
+    min-width: 0;
+  }
+
+  [data-slot="dropdown-menu-item"] > span,
+  [data-slot="dropdown-menu-sub-trigger"] > span,
+  [data-slot="dropdown-menu-shortcut"],
+  [data-slot="select-item"] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Settings rows: stack vertically in narrow panels.
+   Toggle rows (anything containing a Switch) stay horizontal — iOS-style:
+   label on the left, switch on the right. Stretching the switch to 100% width
+   produced a long black pill bar that looked broken. */
+@container panel (max-width: 448px) {
+  [data-layout="settings-row"]:not(:has([data-slot="switch"])) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  [data-layout="settings-row"]:not(:has([data-slot="switch"])) > [data-layout="settings-control"] {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  /* Full-width form controls (selects, inputs) in stacked layout */
+  [data-layout="settings-row"]:not(:has([data-slot="switch"])) [data-slot="select-trigger"],
+  [data-layout="settings-row"]:not(:has([data-slot="switch"])) [data-layout="settings-control"] > .w-\[180px\],
+  [data-layout="settings-row"]:not(:has([data-slot="switch"])) [data-layout="settings-control"] > .w-\[200px\] {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+
+/* ==========================================================================
+   1.3× touch target scaling on mobile (shell ≤ 768px)
+   Formula: round(desktop_value × 1.3)
+   ========================================================================== */
+@container shell (max-width: 768px) {
+  /* Panel header buttons: X, share, back chevron.
+     Apple HIG minimum tap target is 44pt; min-width/height enforces the floor
+     even if internal padding alone wouldn't reach it. */
+  .panel-header-btn {
+    padding: 10px;
+    border-radius: 10px;
+    min-width: 44px;
+    min-height: 44px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  /* Compact panel header icons: keep desktop icons at their caller-provided
+     size, but make compact-mode icons read clearly inside the 44px target. */
+  [data-compact] .panel-header-btn > svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Session/source/skill list rows (desktop: py-3 = 12px → 16px) */
+  .entity-row-btn {
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  /* TopBar icon buttons: +, ?, nav arrows (desktop: 28×28 → 36×36) */
+  .header-icon-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Input toolbar items: attach, task, workspace pill, model picker (desktop: h-7 = 28px → 36px) */
+  .input-toolbar-btn {
+    height: 36px;
+    min-width: 36px;
+  }
+
+  /* Send button (desktop: 28×28 → 36×36) */
+  .send-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Settings form controls: 44px minimum height + 16px font.
+     The 16px font-size prevents iOS Safari from auto-zooming into the field
+     on focus (it triggers below 16px). Compact-only override so desktop stays
+     at the original tighter sizing. */
+  [data-layout="settings-row"] [data-slot="select-trigger"],
+  [data-layout="settings-row"] [data-slot="input"],
+  [data-layout="settings-row"] [data-slot="textarea"] {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  /* Hover-reveal opt-in for touch.
+     Components that use `opacity-0 group-hover:opacity-100` (more menus,
+     row deletes, etc.) become invisible on touch — hover never fires.
+     Adding `data-touch-reveal="true"` opts the element into always-visible
+     in compact. Desktop keeps the hover-reveal behavior unchanged.
+     `!important` is necessary to beat Tailwind's `opacity-0` utility. */
+  [data-touch-reveal="true"] {
+    opacity: 1 !important;
+  }
+
+  /* Bottom safe area for iOS home indicator + FAB clearance.
+     Sessions list keeps a 72px buffer (FAB is ~56px + bottom inset 16px)
+     so the last row never sits underneath the floating action button.
+     Other list roles (sources/skills/automations) only need the iOS
+     safe-area inset since they don't have a FAB. */
+  [data-list-role] {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  [data-list-role="sessions"] {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Workspace pill chevron: 12px is hard to read at narrow widths,
+     bump to 16px so the dropdown affordance is clearly tappable. */
+  [data-workspace-switcher="topbar"] [data-slot="chevron"] {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* TopBar lives outside the shell container, so the workspace pill chevron
+   needs a viewport-media equivalent for the topbar variant specifically. */
+@media (max-width: 768px) {
+  /* TopBar lives outside the shell container, so mirror the compact 36px
+     button target here instead of relying only on @container shell rules. */
+  .header-icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+  }
+
+  [data-workspace-switcher="topbar"] [data-slot="chevron"] {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* ==========================================================================
+   TopBar height — bumps to 56px on narrow viewports so it matches the larger
+   touch targets and feels less cramped on mobile. The TopBar uses position:
+   fixed so the App content area reads the same variable for its padding-top.
+   ========================================================================== */
+:root {
+  --topbar-height: 48px;
+}
+@media (max-width: 768px) {
+  :root {
+    --topbar-height: 56px;
+  }
+
+  /* Bump TopBar icons from 18px → 20px in compact mode. Kept tight inside the
+     36×36 button so it doesn't dominate the bar. */
+  .header-icon-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* TurnCard action buttons (Copy, Markdown) — outside @container/shell,
+   scaled via data-compact attribute passed from the renderer */
+[data-compact] .turn-action-btn {
+  min-height: 31px;
+  padding: 6px 8px;
+}
+
+/* Robinswood: denser midnight surfaces with a restrained coral focus cue.
+   Scoped to the brand preset; custom/user themes are unaffected. */
+:root[data-theme="robinswood"] {
+  --radius: 0.625rem;
+  --background-elevated: color-mix(in srgb, var(--accent) 4%, var(--background));
+  --user-message-bubble: color-mix(in srgb, var(--accent) 12%, var(--paper));
+  --user-message-bubble-dimmed: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --border: color-mix(in srgb, var(--foreground) 16%, var(--background));
+  --ring: color-mix(in srgb, var(--accent) 70%, var(--background));
+  --shadow-border-opacity: 0.16;
+  --shadow-blur-opacity: 0.18;
+}

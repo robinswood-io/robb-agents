@@ -51,7 +51,7 @@ function decide(
     workspaceRootPath: root,
     workingDirectory: join(root, 'src'),
     isolation: isolation(effect),
-    missionCapabilityLock,
+    ...(missionCapabilityLock !== undefined ? { missionCapabilityLock } : {}),
   });
 }
 

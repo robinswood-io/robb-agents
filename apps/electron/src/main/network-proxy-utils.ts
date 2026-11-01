@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Network proxy utility functions (pure — no Electron deps).
  *
@@ -40,14 +41,14 @@ export function parseWindowsProxyServer(
   }
 
   if (Object.keys(mapped).length > 0) {
-    return {
-      httpProxy: normalizeProxyUrl(mapped.http ?? mapped.https),
-      httpsProxy: normalizeProxyUrl(mapped.https ?? mapped.http),
-    };
+    return omitUndefined({
+      httpProxy: normalizeProxyUrl(mapped["http"] ?? mapped["https"]),
+      httpsProxy: normalizeProxyUrl(mapped["https"] ?? mapped["http"]),
+    });
   }
 
   const proxy = normalizeProxyUrl(proxyServer);
-  return { httpProxy: proxy, httpsProxy: proxy };
+  return { ...(proxy !== undefined ? { httpProxy: proxy } : {}), ...(proxy !== undefined ? { httpsProxy: proxy } : {}) };
 }
 
 /** Convert Windows' semicolon-separated ProxyOverride value to NO_PROXY form. */
@@ -67,19 +68,21 @@ export function parseWindowsInternetSettings(output: string): NetworkProxySettin
   const values: Record<string, string> = {};
   for (const line of output.split(/\r?\n/)) {
     const match = line.match(/^\s*(ProxyEnable|ProxyServer|ProxyOverride)\s+REG_\w+\s+(.+)$/i);
-    if (match) values[match[1].toLowerCase()] = match[2].trim();
+    const key = match?.[1];
+    const value = match?.[2];
+    if (key !== undefined && value !== undefined) values[key.toLowerCase()] = value.trim();
   }
 
-  if (Number.parseInt(values.proxyenable ?? '', 0) !== 1) return undefined;
+  if (Number.parseInt(values["proxyenable"] ?? '', 0) !== 1) return undefined;
 
-  const proxies = parseWindowsProxyServer(values.proxyserver);
+  const proxies = parseWindowsProxyServer(values["proxyserver"]);
   if (!proxies.httpProxy && !proxies.httpsProxy) return undefined;
 
-  return {
+  return omitUndefined<NetworkProxySettings>({
     enabled: true,
     ...proxies,
-    noProxy: parseWindowsProxyOverride(values.proxyoverride),
-  };
+    noProxy: parseWindowsProxyOverride(values["proxyoverride"]),
+  });
 }
 
 export interface NoProxyRule {

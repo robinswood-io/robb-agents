@@ -1,0 +1,434 @@
+[
+  {
+    "legacy_id": "inqom-line-transfer-engine",
+    "name": "Reclassements comptables Inqom par transfert de lignes",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_line_transfer_engine.py",
+    "timeout_seconds": 300,
+    "cutover_ready": true,
+    "note": "Wrapper OSS natif pour les reclassements déterministes Inqom via entry-lines/transfer-to-account ; GOC live, Chaintrust live confirmé.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_line_transfer_engine.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 300
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-line-transfer-engine-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-line-transfer-engine-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-accounting-autonomy-pipeline",
+    "name": "Pipeline autonomie comptable INqom",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_accounting_autonomy_pipeline.py --mode scheduled",
+    "timeout_seconds": 900,
+    "cutover_ready": true,
+    "note": "Pipeline OSS comptable Inqom: règles, qualité, rapprochement bancaire, intercompany, packs manuels, lettrage confidence >=90%, board groupe et tests.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_accounting_autonomy_pipeline.py",
+        "--mode",
+        "scheduled"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 900
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accounting-autonomy-pipeline-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accounting-autonomy-pipeline-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-bank-reconciliation-autonomy",
+    "name": "Rapprochement bancaire Inqom autonome read-only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_bank_reconciliation_autonomy.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "riskClass": "prepare_only_reconciliation",
+    "note": "Produit des candidats de rapprochement banque/PSP/tiers avec scoring; aucune mutation.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_bank_reconciliation_autonomy.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-bank-reconciliation-autonomy-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-bank-reconciliation-autonomy-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-bank-reconciliation-guard-tests",
+    "name": "Tests garde-fous rapprochement bancaire Inqom",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_bank_reconciliation_guard_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "riskClass": "guardrail_tests",
+    "note": "Vérifie read-only strict, scores, résidu nul, non-concurrence des fingerprints et queue non mutante.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_bank_reconciliation_guard_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-bank-reconciliation-guard-tests-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-bank-reconciliation-guard-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-intercompany-reconciliation-board",
+    "name": "Board rapprochement intercompany Inqom groupe",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_intercompany_reconciliation_board.py",
+    "timeout_seconds": 240,
+    "cutover_ready": true,
+    "riskClass": "prepare_only_intercompany_reconciliation",
+    "note": "Rapproche YOUCOM, NAMOURLAND et Aolénia par montants miroirs/date/contrepartie; aucune mutation.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_intercompany_reconciliation_board.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 240
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-intercompany-reconciliation-board-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-intercompany-reconciliation-board-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-intercompany-reconciliation-guard-tests",
+    "name": "Tests rapprochement intercompany Inqom groupe",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_intercompany_reconciliation_guard_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "riskClass": "guardrail_tests",
+    "note": "Vérifie couverture 3 dossiers, score >=90 pour paires high-confidence et queue non mutante.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_intercompany_reconciliation_guard_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-intercompany-reconciliation-guard-tests-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-intercompany-reconciliation-guard-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-manual-reconciliation-packs",
+    "name": "Packs manuels rapprochement banque/intercompany",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_manual_reconciliation_packs.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "riskClass": "manual_workpaper_prepare_only",
+    "note": "Matérialise les packs manuels high-confidence et ambigus pour banque/intercompany; aucune mutation.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_manual_reconciliation_packs.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-manual-reconciliation-packs-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-manual-reconciliation-packs-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-manual-reconciliation-packs-tests",
+    "name": "Tests packs manuels rapprochement",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_manual_reconciliation_packs_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "riskClass": "guardrail_tests",
+    "note": "Vérifie les packs générés, les fichiers et le blocage de tout effet mutant.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_manual_reconciliation_packs_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-manual-reconciliation-packs-tests-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-manual-reconciliation-packs-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-lettering-evidence-research-queue",
+    "name": "Queue recherche preuves lettrage Inqom",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_lettering_evidence_research_queue.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "riskClass": "prepare_only_research_queue",
+    "note": "Prépare une queue de recherche publique/règle pour candidats proches du seuil de confiance; aucune mutation.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_lettering_evidence_research_queue.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-lettering-evidence-research-queue-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-lettering-evidence-research-queue-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-lettering-execution-guard-filter",
+    "name": "Filtre garde-fous exécution lettrage Inqom",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_lettering_execution_guard_filter.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "riskClass": "guarded_accounting_mutation_filter",
+    "note": "Retire de la queue exécutable tout candidat denylisté, même si confidenceScore >= 0.90.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_lettering_execution_guard_filter.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-lettering-execution-guard-filter-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-lettering-execution-guard-filter-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-lettering-confidence-guard-tests",
+    "name": "Tests garde-fous lettrage Inqom confidence >=90%",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_lettering_confidence_guard_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "riskClass": "guardrail_tests",
+    "note": "Vérifie score >=90, IDs mutation, denylist FORMADHOME, queue filtrée et exécuteur bloqué sans env/endpoint.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_lettering_confidence_guard_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-lettering-confidence-guard-tests-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-lettering-confidence-guard-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-group-accounting-order-board",
+    "name": "Board groupe mise en ordre comptable Inqom",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_group_accounting_order_board.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "riskClass": "prepare_only_group_accounting_board",
+    "note": "Consolide Robinswood, NAMOURLAND et Aolénia en chantiers priorisés et queue groupe; aucune mutation.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_group_accounting_order_board.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-group-accounting-order-board-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-group-accounting-order-board-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-group-accounting-order-guard-tests",
+    "name": "Tests board groupe mise en ordre comptable",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_group_accounting_order_guard_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "riskClass": "guardrail_tests",
+    "note": "Vérifie couverture 3 dossiers, chantiers clés, queue valide et effets mutants bloqués.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_group_accounting_order_guard_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-group-accounting-order-guard-tests-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-group-accounting-order-guard-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-accounting-action-dispatcher-tests",
+    "name": "Tests dispatcher actions comptables Inqom",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_accounting_action_dispatcher_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "riskClass": "guardrail_tests",
+    "note": "Vérifie workpapers, ledger et absence de mutation.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_accounting_action_dispatcher_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accounting-action-dispatcher-tests-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accounting-action-dispatcher-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-accounting-decision-closure",
+    "name": "Closure décisions comptables Inqom",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_accounting_decision_closure.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "riskClass": "prepare_only_decision_closure",
+    "note": "Consolide ledger/workpapers, produit packs de décision et patterns read-only; aucune mutation.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_accounting_decision_closure.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accounting-decision-closure-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accounting-decision-closure-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-accounting-decision-closure-tests",
+    "name": "Tests closure décisions comptables Inqom",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_accounting_decision_closure_tests.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "riskClass": "guardrail_tests",
+    "note": "Vérifie absence de blocage, patterns, packs de décision et aucun effet mutant.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_accounting_decision_closure_tests.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accounting-decision-closure-tests-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accounting-decision-closure-tests-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-accounting-agent-copilot-audit",
+    "name": "Audit copilotage agents comptables Inqom",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_accounting_agent_copilot_audit.py",
+    "timeout_seconds": 120,
+    "cutover_ready": true,
+    "riskClass": "observability_guardrail",
+    "note": "Vérifie que les agents produisent pipeline, workpapers, packs, patterns et zéro mutation; rapport compact.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_accounting_agent_copilot_audit.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 120
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accounting-agent-copilot-audit-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accounting-agent-copilot-audit-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  },
+  {
+    "legacy_id": "inqom-accounting-action-dispatcher",
+    "name": "Dispatcher actions comptables Inqom prepare-only",
+    "mode": "script",
+    "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/inqom_accounting_action_dispatcher.py",
+    "timeout_seconds": 180,
+    "cutover_ready": true,
+    "riskClass": "prepare_only_action_dispatcher",
+    "note": "Consomme les queues comptables, produit workpapers et packs de questions; aucune mutation Inqom/native/externe.",
+    "execution": {
+      "backend": "argv",
+      "argv": [
+        "/srv/rbw-agents-oss/.venv/bin/python",
+        "/srv/rbw-agents-oss/scripts/inqom_accounting_action_dispatcher.py"
+      ],
+      "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+      "timeout_seconds": 180
+    },
+    "runtimeVersion": "v2",
+    "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accounting-action-dispatcher-last.json",
+    "expectsReport": true,
+    "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/inqom-accounting-action-dispatcher-last.json",
+    "contractVersion": "runtime-v2-execution-report-v1"
+  }
+]

@@ -5,9 +5,9 @@ import { TiptapHoverActionsHost, TiptapHoverActions, TiptapHoverActionButton } f
 
 interface RichBlockShellProps {
   children: React.ReactNode
-  onEdit?: () => void
-  editTitle?: string
-  className?: string
+  onEdit?: (() => void) | undefined
+  editTitle?: string | undefined
+  className?: string | undefined
 }
 
 export function RichBlockShell({ children, onEdit, editTitle = 'Edit block', className }: RichBlockShellProps) {

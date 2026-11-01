@@ -1,2 +1,2 @@
 #!/bin/sh
-exec "$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)/_python-tool" pdf_tool.py "$@"
+exec "$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)/_python-tool" pdf_tool.py "$@"

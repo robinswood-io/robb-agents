@@ -1,0 +1,9 @@
+{
+  "statements": 266,
+  "sharedDeclarations": 15,
+  "cleanupPreserved": true,
+  "originalScopes": 6,
+  "files": 48,
+  "maximumLines": 446,
+  "verification": "Each syntax node kind, identifier, literal, template token and child order compared independently; export modifiers alone are ignored for shared declarations."
+}

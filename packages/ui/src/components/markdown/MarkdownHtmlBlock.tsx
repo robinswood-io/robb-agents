@@ -1,3 +1,4 @@
+import { parseMarkdownPreviewSpec, type MarkdownPreviewItem as PreviewItem } from './markdown-preview-helpers'
 /**
  * MarkdownHtmlBlock - Renders ```html-preview code blocks as sandboxed HTML previews.
  *
@@ -39,16 +40,7 @@ import { useTranslation } from 'react-i18next'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-interface PreviewItem {
-  src: string
-  label?: string
-}
 
-interface HtmlPreviewSpec {
-  src?: string
-  title?: string
-  items?: PreviewItem[]
-}
 
 // ── Error boundary ───────────────────────────────────────────────────────────
 
@@ -56,12 +48,12 @@ class HtmlBlockErrorBoundary extends React.Component<
   { children: React.ReactNode; fallback: React.ReactNode },
   { hasError: boolean }
 > {
-  state = { hasError: false }
+  override state = { hasError: false }
   static getDerivedStateFromError() { return { hasError: true } }
-  componentDidCatch(error: Error) {
+  override componentDidCatch(error: Error) {
     console.warn('[MarkdownHtmlBlock] Render failed, falling back to CodeBlock:', error)
   }
-  render() {
+  override render() {
     if (this.state.hasError) return this.props.fallback
     return this.props.children
   }
@@ -90,7 +82,7 @@ function injectBaseTarget(html: string): string {
 
 export interface MarkdownHtmlBlockProps {
   code: string
-  className?: string
+  className?: string | undefined
 }
 
 export function MarkdownHtmlBlock({ code, className }: MarkdownHtmlBlockProps) {
@@ -98,20 +90,7 @@ export function MarkdownHtmlBlock({ code, className }: MarkdownHtmlBlockProps) {
   const { onReadFile } = usePlatform()
 
   // Parse the JSON spec — supports single src or items array
-  const spec = React.useMemo<HtmlPreviewSpec | null>(() => {
-    try {
-      const raw = JSON.parse(code)
-      if (raw.items && Array.isArray(raw.items) && raw.items.length > 0) {
-        return raw as HtmlPreviewSpec
-      }
-      if (raw.src && typeof raw.src === 'string') {
-        return raw as HtmlPreviewSpec
-      }
-      return null
-    } catch {
-      return null
-    }
-  }, [code])
+  const spec = React.useMemo(() => parseMarkdownPreviewSpec(code), [code])
 
   // Normalize to items array (backward compat)
   const items = React.useMemo<PreviewItem[]>(() => {
@@ -145,7 +124,7 @@ export function MarkdownHtmlBlock({ code, className }: MarkdownHtmlBlockProps) {
       .then((content) => {
         setContentCache((prev) => ({ ...prev, [activeItem.src]: content }))
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : 'Failed to read HTML file')
       })
       .finally(() => setLoading(false))

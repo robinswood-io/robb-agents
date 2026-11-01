@@ -1,0 +1,31 @@
+{
+  "status": "passed",
+  "source": "packages/ui/src/components/markdown/TiptapSlashMenu.ts",
+  "nativeSourceHash": "0cf903430e8ccadd91425bcce08c930bd5e274726bf286614ca0ba61a58bfe06",
+  "nativeDeclarations": 19,
+  "extractedDeclarations": 3,
+  "nativeBodiesStateAndEffectOrderPreserved": true,
+  "nativePublicExportsAndImportedBindingsPreserved": true,
+  "nativeExternalImportOrder": [
+    "@tiptap/core",
+    "@tiptap/suggestion",
+    "@tiptap/pm/state",
+    "../ui/InlineMenuSurface",
+    "./rich-block-events"
+  ],
+  "runtimeImportCycles": 0,
+  "newStateOrWorkflowAdded": false,
+  "maximumFileLines": 433,
+  "files": [
+    {
+      "file": "packages/ui/src/components/markdown/TiptapSlashMenu.ts",
+      "lines": 433,
+      "sha256": "286fc4ac59163dc37005c1515b926bc139a647253c3b03a7b58a94e3afa3af03"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/tiptap-slash-icons.ts",
+      "lines": 122,
+      "sha256": "e01ab2eec38010a91328d8c5f9597d66b9f564ca50a1cc72af9f34aef02a44a7"
+    }
+  ]
+}

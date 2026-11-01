@@ -1,4 +1,6 @@
-import type { ProviderDriver } from '../driver-types.ts';
+import type { ProviderDriver, StoredConnectionValidationResult } from '../driver-types.ts';
+import type { ModelDefinition } from '../../../../config/models.ts';
+import type { ModelFetchResult } from '../../../../config/model-fetcher.ts';
 import { applyAnthropicRuntimeBootstrap } from '../runtime-resolver.ts';
 import { validateAnthropicConnection } from '../../../../config/llm-validation.ts';
 import { DEFAULT_MODEL, getModelById, getModelContextWindow, normalizeDeprecatedModelId } from '../../../../config/models.ts';
@@ -14,7 +16,7 @@ export const anthropicDriver: ProviderDriver = {
     applyAnthropicRuntimeBootstrap(hostRuntime, resolvedPaths);
   },
   buildRuntime: () => ({}),
-  fetchModels: async ({ connection, credentials }) => {
+  fetchModels: async ({ connection, credentials }): Promise<ModelFetchResult> => {
     // After legacy migration, only direct 'anthropic' connections reach this driver.
     // iam_credentials and service_account_file are no longer valid auth types for anthropic.
 
@@ -32,7 +34,7 @@ export const anthropicDriver: ProviderDriver = {
     if (apiKey) {
       headers['x-api-key'] = apiKey;
     } else {
-      headers.authorization = `Bearer ${oauthAccessToken}`;
+      headers["authorization"] = `Bearer ${oauthAccessToken}`;
     }
 
     const allRawModels: Array<{
@@ -82,7 +84,7 @@ export const anthropicDriver: ProviderDriver = {
         seen.add(m.id);
         return true;
       })
-      .map(m => {
+      .map((m): ModelDefinition => {
         const registryModel = getModelById(m.id);
         return {
           id: m.id,
@@ -99,20 +101,21 @@ export const anthropicDriver: ProviderDriver = {
             return variant ? variant.charAt(0).toUpperCase() + variant.slice(1) : stripped;
           })(),
           description: registryModel?.description ?? '',
-          descriptionKey: registryModel?.descriptionKey,
+          ...(registryModel?.descriptionKey !== undefined ? { descriptionKey: registryModel?.descriptionKey } : {}),
           provider: 'anthropic' as const,
           contextWindow: getModelContextWindow(m.id) ?? 200_000,
-          supportsThinking: registryModel?.supportsThinking,
-          supportsImages: registryModel?.supportsImages,
+          ...(registryModel?.supportsThinking !== undefined ? { supportsThinking: registryModel?.supportsThinking } : {}),
+          ...(registryModel?.supportsImages !== undefined ? { supportsImages: registryModel?.supportsImages } : {}),
         };
       });
 
+    const serverDefault = models.some(m => m.id === DEFAULT_MODEL) ? DEFAULT_MODEL : models[0]?.id;
     return {
       models,
-      serverDefault: models.some(m => m.id === DEFAULT_MODEL) ? DEFAULT_MODEL : models[0]?.id,
+      ...(serverDefault !== undefined ? { serverDefault } : {}),
     };
   },
-  validateStoredConnection: async ({ slug, connection, credentialManager }) => {
+  validateStoredConnection: async ({ slug, connection, credentialManager }): Promise<StoredConnectionValidationResult> => {
     // After legacy migration, only direct 'anthropic' connections reach this driver.
 
     if (connection.providerType === 'anthropic' && connection.authType === 'oauth') {
@@ -133,7 +136,7 @@ export const anthropicDriver: ProviderDriver = {
     } else if (connection.authType === 'bearer_token') {
       oauthToken = await credentialManager.getLlmApiKey(slug);
     } else if (connection.authType === 'environment') {
-      apiKey = process.env.ANTHROPIC_API_KEY || null;
+      apiKey = process.env["ANTHROPIC_API_KEY"] || null;
       if (!apiKey) {
         return { success: false, error: 'ANTHROPIC_API_KEY environment variable not set' };
       }
@@ -146,15 +149,18 @@ export const anthropicDriver: ProviderDriver = {
     }
 
     const testModel = connection.defaultModel!;
+    const optionalApiKey = apiKey || undefined;
+    const optionalOauthToken = oauthToken || undefined;
+    const optionalBaseUrl = connection.baseUrl || undefined;
     const validationResult = await validateAnthropicConnection({
       model: testModel,
-      apiKey: apiKey || undefined,
-      oauthToken: oauthToken || undefined,
-      baseUrl: connection.baseUrl || undefined,
+      ...(optionalApiKey !== undefined ? { apiKey: optionalApiKey } : {}),
+      ...(optionalOauthToken !== undefined ? { oauthToken: optionalOauthToken } : {}),
+      ...(optionalBaseUrl !== undefined ? { baseUrl: optionalBaseUrl } : {}),
     });
 
     if (!validationResult.success) {
-      return { success: false, error: validationResult.error };
+      return { success: false, ...(validationResult.error !== undefined ? { error: validationResult.error } : {}) };
     }
 
     return { success: true };

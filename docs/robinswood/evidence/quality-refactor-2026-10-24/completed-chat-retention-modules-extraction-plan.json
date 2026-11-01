@@ -1,0 +1,356 @@
+{
+  "source": "packages/server-core/src/sessions/completed-chat-retention.ts",
+  "units": [
+    {
+      "names": [
+        "COMPLETED_CHAT_RETENTION_MS"
+      ],
+      "group": "contracts",
+      "bodySha256": "d969813962c5da9bad836c01d2966b331224e4205d22590d20d9c462cbda1ce6"
+    },
+    {
+      "names": [
+        "CompletedChatArchiveError"
+      ],
+      "group": "contracts",
+      "bodySha256": "71326b79016f067ba8b31fa8e0e335e4149837a80a1170cec76b7a2ebbb38897"
+    },
+    {
+      "names": [
+        "CompletedChatMemory"
+      ],
+      "group": "contracts",
+      "bodySha256": "e251d1bae15cf7f1977fde7863003ec8f778c991ae40fd0f375ab9ed55f96c4e"
+    },
+    {
+      "names": [
+        "CompletedChatArchiveIntent"
+      ],
+      "group": "contracts",
+      "bodySha256": "898c78aba08113b55149b4e87281ab0f77c812f85f6aa802c7efd57f675057bc"
+    },
+    {
+      "names": [
+        "CompletedChatArchiveReconciliation"
+      ],
+      "group": "contracts",
+      "bodySha256": "333b15c8a58388eae210d01893420650a31e70b5e0541250f6e90a59dec0b578"
+    },
+    {
+      "names": [
+        "canonicalRoot"
+      ],
+      "group": "paths",
+      "bodySha256": "03feaebb2a7ff47f3231091d0be7ed44ea1c337381dab7087e8a668f127251ae"
+    },
+    {
+      "names": [
+        "directory"
+      ],
+      "group": "paths",
+      "bodySha256": "2ddfbf433ea00d3ab97f1f62804d462bcb4e1bd2e143186c083e2743a799173a"
+    },
+    {
+      "names": [
+        "filename"
+      ],
+      "group": "paths",
+      "bodySha256": "b94a478625ecc6ba4f19055430c37c6a63f695b41f5932834d831bc7c16f4cca"
+    },
+    {
+      "names": [
+        "sessionsDirectory"
+      ],
+      "group": "paths",
+      "bodySha256": "9f2e6b0cbbe6a84a99f47d2eb225ebf44eb00d36f70a85c389b7a6044c088b86"
+    },
+    {
+      "names": [
+        "archivesDirectory"
+      ],
+      "group": "paths",
+      "bodySha256": "c8c69b1eb27d4064dc87df07f8ea09f91bae3506aeb02051e5dc56e7283d359d"
+    },
+    {
+      "names": [
+        "completedChatArchivesDirectory"
+      ],
+      "group": "paths",
+      "bodySha256": "cd15aa133a39bbb57387995aef60d972fc31495ca2b7b3b1fe11500f91f2b07e"
+    },
+    {
+      "names": [
+        "MAX_MEMORY_RECEIPT_BYTES"
+      ],
+      "group": "paths",
+      "bodySha256": "68fc2d898f51c704801c1ba353531c7f93cc340ab078c00396343dfe4f7bb9fa"
+    },
+    {
+      "names": [
+        "MAX_DIRECT_USER_MEMORY_CHARS"
+      ],
+      "group": "paths",
+      "bodySha256": "4fdfff2a19cb03d94371dff55b59f50e5ed873c0e4290a9e01dc07c649073157"
+    },
+    {
+      "names": [
+        "MAX_CONTEXT_EXCERPT_CHARS"
+      ],
+      "group": "paths",
+      "bodySha256": "a80b2aad64e2a3d15d4fbf65a1ffee7c15f8dd2a84d2a0dd3182f778e9fed1b7"
+    },
+    {
+      "names": [
+        "expectedArchiveTargetPrefix"
+      ],
+      "group": "paths",
+      "bodySha256": "56699f91843297b04672b88c12f4789da094cd857eeac09b0758e9c246fe8986"
+    },
+    {
+      "names": [
+        "validatedArchiveTarget"
+      ],
+      "group": "paths",
+      "bodySha256": "3489ca4763a48085e90cc5dde5299ed4f9f479976006c573fe3b3ca3558b221d"
+    },
+    {
+      "names": [
+        "validatedSessionPath"
+      ],
+      "group": "paths",
+      "bodySha256": "a0eed328cb1aa3b49f00f82248ce472e7081f39b7aa204769bd69c84b6db4de3"
+    },
+    {
+      "names": [
+        "fsyncDirectories"
+      ],
+      "group": "paths",
+      "bodySha256": "cc8df6e58780576730db6343a5ce5ebf03e0fd3671c39c723b693d445a041825"
+    },
+    {
+      "names": [
+        "assertRealArchiveDirectories"
+      ],
+      "group": "paths",
+      "bodySha256": "9a513b444876017d0932dac10afff2ee7a817df7d49ca9d7eb56116350b87b39"
+    },
+    {
+      "names": [
+        "ensureArchiveDirectories"
+      ],
+      "group": "paths",
+      "bodySha256": "8e06b8010c7e18dc56f065a1a2bb5cb8df2aa48fd953f55900e8274d48afe31d"
+    },
+    {
+      "names": [
+        "GENERIC_RETRIEVAL_TERMS"
+      ],
+      "group": "context-retrieval",
+      "bodySha256": "1175ae1d45b28161530e11e6402c033eb67a01a3defd1206b38d840591928d0f"
+    },
+    {
+      "names": [
+        "INTERNAL_MEMORY_ENVELOPE"
+      ],
+      "group": "context-retrieval",
+      "bodySha256": "88146c02f95fe9d4041221702b59d7a05f503deb0f55e496399a2d252f1545c2"
+    },
+    {
+      "names": [
+        "isDirectVisibleUserMessage"
+      ],
+      "group": "context-retrieval",
+      "bodySha256": "ed715204959e897d198a1a5ae8823649e736502cd8b90e2616575d895348762a"
+    },
+    {
+      "names": [
+        "buildDirectUserExcerpt"
+      ],
+      "group": "context-retrieval",
+      "bodySha256": "0dc647b44cbedcc8fd663cb40b16b74736ed48440b9a21182614ffc5b1711cf9"
+    },
+    {
+      "names": [
+        "normalizeSearchText"
+      ],
+      "group": "context-retrieval",
+      "bodySha256": "e6e81cb380903058d06e3db6a888f1cedb0a808aa9f6a11ca99a6490c7691a89"
+    },
+    {
+      "names": [
+        "searchTokens"
+      ],
+      "group": "context-retrieval",
+      "bodySha256": "2c85d62ec193f5e8b5f3d464f520fc5f0a58609422ec3c660169d15e5382ceb0"
+    },
+    {
+      "names": [
+        "distinctiveTerms"
+      ],
+      "group": "context-retrieval",
+      "bodySha256": "6585e6ba19ad267b32c17d0632001bdf03481bb0243836aca8661592e00d17c8"
+    },
+    {
+      "names": [
+        "isStrongExactPhrase"
+      ],
+      "group": "context-retrieval",
+      "bodySha256": "53821a73ea796b00df1e75386d9db9550592c2461889094f6b22baf2d4db3270"
+    },
+    {
+      "names": [
+        "canInjectCompletedChatContext"
+      ],
+      "group": "context-retrieval",
+      "bodySha256": "6d3afb253a29d01d030441876e4e0078565c75a393e08d60ee79785d1949d17c"
+    },
+    {
+      "names": [
+        "completedChatContext"
+      ],
+      "group": "context-retrieval",
+      "bodySha256": "68134b8f0490ce81418b3e58629c440480829acd803dfd98fef297647f933c6d"
+    },
+    {
+      "names": [
+        "validatedMemory"
+      ],
+      "group": "memory",
+      "bodySha256": "295e68c5e14d9a774f9f081ee0f32365602f8b8bc3e52f2116a468f7fd945c68"
+    },
+    {
+      "names": [
+        "readCompletedChatMemory"
+      ],
+      "group": "memory",
+      "bodySha256": "1422595c8d396c0266b50b76bd3082f8fd1c6512ec646ae5b945bedaee19cc76"
+    },
+    {
+      "names": [
+        "writeCompletedChatMemory"
+      ],
+      "group": "memory",
+      "bodySha256": "0bda134284c5b7094abcde096283949fb80f2456594716c9dd402c703a825b14"
+    },
+    {
+      "names": [
+        "withoutArchiveIntent"
+      ],
+      "group": "archive",
+      "bodySha256": "792859ac4b15a76a9b44b3d35af06654bc12581fbc236fe9fd498f601fb1f8b7"
+    },
+    {
+      "names": [
+        "prepareCompletedChatArchive"
+      ],
+      "group": "archive",
+      "bodySha256": "6a650cdd94708a9351b2701983612c555f8014e492a6a427d718eb101e64e68f"
+    },
+    {
+      "names": [
+        "abandonCompletedChatArchive"
+      ],
+      "group": "archive",
+      "bodySha256": "e09ab9a5b1205ddcb8f8973bb34ac78f212a9ddc4efc66d450362042e762204b"
+    },
+    {
+      "names": [
+        "finalizeCompletedChatArchive"
+      ],
+      "group": "archive",
+      "bodySha256": "96f4a37b55f33b7e48794c4534041e92990a4d903a17f4b3901212dc1525d9c3"
+    },
+    {
+      "names": [
+        "readCompletedChatReceiptPath"
+      ],
+      "group": "archive",
+      "bodySha256": "14c1d319c0475ae240cb480356a2a783d6a16a200dbd2a018cf7d18c81ad6114"
+    },
+    {
+      "names": [
+        "reconcileCompletedChatArchives"
+      ],
+      "group": "archive",
+      "bodySha256": "25db08ee92ceb677d64b345d21eea8189e38d0cfb0dcbd1db638a1d4f30ee7ba"
+    },
+    {
+      "names": [
+        "captureCompletedChatMemory"
+      ],
+      "group": "archive",
+      "bodySha256": "d892f20e96be0a746c0b6a736490fc6eba034085e7c08bce560278476ecbd165"
+    },
+    {
+      "names": [
+        "reopenCompletedChat"
+      ],
+      "group": "archive",
+      "bodySha256": "b153c35bb00f98dfe92dd7e28b446096159d3493357353ab4c2e5e4044abcfe7"
+    },
+    {
+      "names": [
+        "isCompletedChatDue"
+      ],
+      "group": "archive",
+      "bodySha256": "1129a78d087272bf543ba2be59c79d74beda50862377be10650159ab31ce0c53"
+    },
+    {
+      "names": [
+        "archiveCompletedChatDirectory"
+      ],
+      "group": "archive",
+      "bodySha256": "010baca1947ca56cea3950d0e7575c73e36663388f208f49fa0b04311a533151"
+    },
+    {
+      "names": [
+        "hasProtectedChatWorktree"
+      ],
+      "group": "archive",
+      "bodySha256": "c5b54aff4fcb4d3e76aba9f705e344526b3e02b0c6c5887bfda8bdb3250a0841"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 51
+    },
+    {
+      "name": "paths",
+      "lines": 81
+    },
+    {
+      "name": "context-retrieval",
+      "lines": 122
+    },
+    {
+      "name": "memory",
+      "lines": 57
+    },
+    {
+      "name": "archive",
+      "lines": 294
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "paths": [],
+    "context-retrieval": [
+      "paths",
+      "contracts",
+      "memory"
+    ],
+    "memory": [
+      "contracts",
+      "paths"
+    ],
+    "archive": [
+      "contracts",
+      "memory",
+      "paths",
+      "context-retrieval"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

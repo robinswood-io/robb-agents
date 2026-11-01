@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-26",
+  "scope": "Local Robb Agents Pi OAuth bundle; no accounting data writes",
+  "cause": "The bundled Pi server left a relative OAuth module import unresolved, so the usual ChatGPT connection failed before the first tool call.",
+  "change": "Register the upstream static Bun OAuth loaders at Pi server startup.",
+  "validation": {
+    "piServerBuild": "passed",
+    "typecheckAll": "passed",
+    "lint": "passed: 3986 maintained files, 0 over 500 lines, 0 explicit any, 0 ESLint warnings or errors",
+    "realProvider": "usual local profile, Pi / GPT-6.1 Sol",
+    "completeMissions": [
+      "two-targets",
+      "three-deliverables",
+      "missing-input-recovery",
+      "midstream-amendment",
+      "source-activation-amendment",
+      "compaction-continuation",
+      "continuation"
+    ],
+    "completeMissionsPassed": 7,
+    "completeMissionsFailed": 0,
+    "toolCalls": 26,
+    "sourceErrors": 0
+  },
+  "limitations": [
+    "The seven missions used real provider calls and local QA files in a headless session runtime, not the installed Electron interface.",
+    "These synthetic local missions do not establish a general success rate; the QA connector was local and read-only."
+  ],
+  "localReport": "work/quality-20261024/live-missions-oauth-fix/report.json"
+}

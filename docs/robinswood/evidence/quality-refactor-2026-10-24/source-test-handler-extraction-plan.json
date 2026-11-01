@@ -1,0 +1,152 @@
+{
+  "source": "packages/session-tools-core/src/handlers/source-test.ts",
+  "units": [
+    {
+      "names": [
+        "SourceTestArgs"
+      ],
+      "group": "test-types",
+      "bodySha256": "1df51cf062e0ac4964f7e1ccc7e1d48075998529546ad895cf47d96a5be27d5a"
+    },
+    {
+      "names": [
+        "ConnectionTestResult"
+      ],
+      "group": "test-types",
+      "bodySha256": "5ae1db895ca9287a0a25762a014213c4293e8ca22bbdc605fe444344ba97d786"
+    },
+    {
+      "names": [
+        "handleSourceTest"
+      ],
+      "group": "handler",
+      "bodySha256": "6e9f99569d5c5b80253dc5d27457d37dab7d9143c8ace58bb4c7d856223db7de"
+    },
+    {
+      "names": [
+        "handleIconCheck"
+      ],
+      "group": "source-diagnostics",
+      "bodySha256": "3b766f0a87dcee7be59cce8c9d6a3c84bbdf5b5be3b982fc70d51ba38f7ff388"
+    },
+    {
+      "names": [
+        "isEmoji"
+      ],
+      "group": "source-diagnostics",
+      "bodySha256": "1fe33e3b6362b521460b5ebe648f772efafeaecf9f34a1393b2217108f07fbd1"
+    },
+    {
+      "names": [
+        "checkCompleteness"
+      ],
+      "group": "source-diagnostics",
+      "bodySha256": "4386be6f67a0593ee008b6a1fd2414b33fde31bde21060cc8ca654a20ff8a62b"
+    },
+    {
+      "names": [
+        "formatBytes"
+      ],
+      "group": "source-diagnostics",
+      "bodySha256": "0c9e8c4f72abb1df9e15d23c42fda0ba4f5bb185bd27b973e7c0af818a836c4b"
+    },
+    {
+      "names": [
+        "testConnection"
+      ],
+      "group": "connection-test",
+      "bodySha256": "7d6fce1210c6dd49768d316d557a9b84ef02fb31d6c06fae2f6876a64bbebfe7"
+    },
+    {
+      "names": [
+        "testApiConnection"
+      ],
+      "group": "connection-test",
+      "bodySha256": "30eb4c6dd7a398c9242fa3629cedff3ba701544aebaec1bd021dde6b6e66a25b"
+    },
+    {
+      "names": [
+        "testApiConnectionWithAuth"
+      ],
+      "group": "api-test",
+      "bodySha256": "96d4941f528aee2ef8a3e2524afdcc65f86d3aaa506f95b18ecc59b705fb349c"
+    },
+    {
+      "names": [
+        "testApiConnectionBasic"
+      ],
+      "group": "api-test",
+      "bodySha256": "09d1748b582d724499f1c4e913cc8f77e9cc5b56b0f37904fd6a773eceae2ded"
+    },
+    {
+      "names": [
+        "testMcpConnection"
+      ],
+      "group": "mcp-and-local-test",
+      "bodySha256": "82504aaab46d4009fbc1f50e72e54628fdc2f00ec1b496f1ea78fe12cc534535"
+    },
+    {
+      "names": [
+        "testLocalConnection"
+      ],
+      "group": "mcp-and-local-test",
+      "bodySha256": "cd44c717614bb7ff3c8d0f30f009a5d5285360a6b2ce1d11449b7772452e93d7"
+    },
+    {
+      "names": [
+        "checkAuthStatus"
+      ],
+      "group": "auth-status",
+      "bodySha256": "5e86919de1e6e358d30974b6b2523cc4917eca24b669535deee4561299febec8"
+    }
+  ],
+  "modules": [
+    {
+      "name": "test-types",
+      "lines": 26
+    },
+    {
+      "name": "handler",
+      "lines": 179
+    },
+    {
+      "name": "source-diagnostics",
+      "lines": 175
+    },
+    {
+      "name": "connection-test",
+      "lines": 104
+    },
+    {
+      "name": "api-test",
+      "lines": 257
+    },
+    {
+      "name": "mcp-and-local-test",
+      "lines": 207
+    },
+    {
+      "name": "auth-status",
+      "lines": 97
+    }
+  ],
+  "dependencies": {
+    "test-types": [],
+    "handler": [
+      "test-types",
+      "source-diagnostics",
+      "connection-test",
+      "auth-status"
+    ],
+    "source-diagnostics": [],
+    "connection-test": [
+      "mcp-and-local-test",
+      "api-test"
+    ],
+    "api-test": [],
+    "mcp-and-local-test": [],
+    "auth-status": []
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

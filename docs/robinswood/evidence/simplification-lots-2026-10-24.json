@@ -1,0 +1,139 @@
+{
+  "status": "Local source integration completed, preserving all 39 pre-existing changes; signed application installed and verified.",
+  "baselineAcceptedCommit": "4d7b32694e5fca84cfe0ce75d9292c937bdd2805",
+  "lot1": {
+    "state": "Integrated into the primary local repository after combining and testing pre-existing changes",
+    "targetCommit": "ed245ccc12a303f89ece6671b70f185a9ea7f87d",
+    "officialPreflight": "Passed on the exact combined source and signed candidate",
+    "method": "Exact prior snapshot commit reused, then serialized fast-forward; backup ref retained"
+  },
+  "lot2": {
+    "state": "Installed and verified locally: native cold recovery completes; strict legacy quarantine retained after explicit human scope authorization",
+    "changes": [
+      "Keep bounded context-limit recovery independent of legacy mode",
+      "Restore the global uncertain-effect quarantine to the explicit legacy contract after the native cold-restart regression",
+      "Include earlier admissions in the same strict legacy recovered turn"
+    ],
+    "baseline": {
+      "pass": 494,
+      "fail": 26,
+      "cases": 520
+    },
+    "acceptance": {
+      "pass": 1260,
+      "fail": 0,
+      "files": 11,
+      "sharedTypecheck": "pass",
+      "electronTypecheck": "pass"
+    },
+    "fixtureCorrection": "The native generic allocation fixture now uses the existing lightweight prompt, while retaining dispatch identity and no-replay assertions.",
+    "limit": "No wholesale deletion of still-referenced legacy modules. Existing bounded recovery, persistence and permission machinery is reused.",
+    "approvedScopeCorrection": {
+      "authorization": "Human replied Oui to the precise request to restore the prior legacy-only quarantine scope",
+      "sourceLocation": "Local checkout on the target Mac, following explicit clarification that Robb is local",
+      "newChecks": {
+        "pass": 1138,
+        "fail": 0,
+        "files": 11,
+        "sharedTypes": "pass",
+        "electronTypes": "pass",
+        "releaseContractTypes": "pass"
+      },
+      "beforeRegression": "Native recovery case failed with exactly-once global fence before the correction",
+      "afterRegression": "Native continuation admitted; strict legacy uncertainty quarantine still enforced",
+      "tradeoff": "Native mode no longer globally prohibits every later mutation after an unresolved operation; durable receipts and existing SDK recovery/read-first instructions remain"
+    }
+  },
+  "remainingLots": [
+    "Integrate the accepted commit into the primary local repository when concurrent edits can be serialized; do not overwrite those edits"
+  ],
+  "workAttachment": "Robb Work project unresolved; keep technical evidence versioned without writing into an unrelated project",
+  "lot3": {
+    "state": "Included in installed candidate: Mission v2 remains dormant at empty startup and retains explicit creation/recovery",
+    "changes": [
+      "Skip executor and proof-passport context initialization when no persisted Mission exists",
+      "Reuse the initial mission ID list during startup recovery",
+      "Import Mission runtime classes directly and remove unused evaluation re-export from production barrel"
+    ],
+    "acceptance": {
+      "pass": 128,
+      "fail": 0,
+      "files": 15,
+      "electronTypecheck": "pass"
+    },
+    "fixturePrerequisite": "Mission route checks require an explicit connection, even with a fake executor. Two non-network fictitious connections are seeded only in CRAFT_CONFIG_DIR test profile.",
+    "fixtureFile": "mission-v2-unit-profile-fixture.json",
+    "freezeDecision": "No new Mission v2 features or ordinary-chat dependency. Whole engine is retained because UI/RPC and recovery references are active. No persisted mission data removed."
+  },
+  "lot4": {
+    "state": "Included in installed candidate; targeted retry/renderer checks passed; no new retry engine or SDK upgrade",
+    "upstreamReference": "Craft 8df01c5d0ac73c35add5954e6f190ce038d35845",
+    "changes": [
+      "Forward one transient text_discard event for the exact failed SDK stream identity",
+      "Discard its pending batch and timer without touching acquired messages or newer streams",
+      "Separate batched deltas from different stream identities",
+      "Remove only the matching unfinished renderer draft"
+    ],
+    "sdkUpgrade": false,
+    "newRetryEngine": false,
+    "sourceDecision": "Keep Robb source provenance/revision/cancellation fences. Do not replace them with the broader Craft retry implementation. Exercise activation with amendment in lot 5.",
+    "regressionBefore": "New adapter case failed before the port",
+    "acceptance": {
+      "retryAndRendererTests": {
+        "pass": 175,
+        "fail": 0,
+        "files": 16
+      },
+      "sharedTypecheck": "pass",
+      "electronTypecheck": "pass",
+      "releaseTypecheck": "pass"
+    }
+  },
+  "lot5": {
+    "state": "Seven real synthetic missions passed; native outputs, populated previews, actual cold restart, no marker rewrite and all output hashes verified",
+    "changes": [
+      "Extend existing report with unique tool IDs, failed-tool counts, first-tool latency and SDK usage",
+      "Add one local read-only arithmetic MCP fixture; its source is retired after testing",
+      "Exercise a correction during source testing and a real SDK compaction continuation",
+      "Include QA script in the actual Electron typecheck and use valid medium thinking level"
+    ],
+    "fixtureHealth": {
+      "tools": 1,
+      "sum": 42,
+      "readOnly": true
+    },
+    "metricsLimit": "Instrumented baseline only: no performance percentage claimed from different prompts or reasoning settings.",
+    "preDelivery": "All final DEV test/typecheck jobs exited zero; platform-specific installer/signature cases will also run on Mac.",
+    "compactionFixtureCorrection": {
+      "observedFailure": "SDK: Nothing to compact (session too small)",
+      "correction": "Bounded synthetic history above the existing 20k recent-token threshold; production compaction unchanged",
+      "status": "Real SDK compaction passed in targeted and full seven-mission campaigns"
+    },
+    "nativeAcceptance": {
+      "sessionId": "261024-lively-coyote",
+      "passed": true,
+      "humanRequests": 2,
+      "automaticRecoveries": 1,
+      "controlPreviewOpened": true,
+      "acquiredFilesAndMarkerMtimesRetained": true
+    },
+    "currentProfilePreservation": {
+      "originalSessions": 2321,
+      "connections": 6,
+      "unchangedSourceConfigurations": 35
+    },
+    "limitations": [
+      "Seven synthetic missions do not establish a generalized autonomy rate or numerical speedup",
+      "Failed stream cleanup verified in unit/renderer tests; no forced provider-stream failure in this real campaign",
+      "QA sessions added after the verified 2321-session baseline were later absent from the normal profile; all 2321 original session IDs remained present"
+    ]
+  },
+  "target": {
+    "application": "/Applications/Robb Agents.app",
+    "profile": "~/.craft-agent",
+    "delivery": "Local signed staging on this Mac",
+    "publicRelease": false
+  },
+  "runtimeCommit": "ed245ccc12a303f89ece6671b70f185a9ea7f87d",
+  "localIntegrationEvidence": "integration-locale-2026-10-24.json"
+}

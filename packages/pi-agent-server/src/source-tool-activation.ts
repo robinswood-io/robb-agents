@@ -95,7 +95,7 @@ function contentToText(content: unknown): string {
   if (typeof content === 'string') return content;
   if (!Array.isArray(content)) return '';
   return content
-    .map(part => {
+    .map((part: unknown) => {
       if (!part || typeof part !== 'object') return '';
       const candidate = part as { type?: unknown; text?: unknown };
       return candidate.type === 'text' && typeof candidate.text === 'string' ? candidate.text : '';

@@ -1,0 +1,212 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Socle commun BaseAgent, admission des outils et flux de conversation hérité",
+  "changes": [
+    "73 implémentations déplacées par responsabilité ; mêmes champs, constructeur, méthodes abstraites, signatures et exports publics.",
+    "Six contrats de données extraits des signatures sans code exécutable ; formes natives vérifiées après expansion des alias.",
+    "Flux de conversation délégué par yield* ; propagation des valeurs et valeurs par défaut conservées.",
+    "getModel, getSessionId et getPermissionMode gardent leurs accès directs. Documentation des opérations déplacée avec leurs implémentations.",
+    "Aucune nouvelle gestion d’état, dépendance ou couche d’orchestration."
+  ],
+  "files": [
+    {
+      "file": "packages/shared/src/agent/base-agent.ts",
+      "lines": 484,
+      "sha256": "88a6d251a1bda6abbd7ed1f5119c73e878d0a5ce5105eaef4020fbee7cf8b891"
+    },
+    {
+      "file": "packages/shared/src/agent/base-agent/admission.ts",
+      "lines": 174,
+      "sha256": "4e82d6526532dd391e4b85a84385794b3123fd79accc2a4b8cad96982b712fe8"
+    },
+    {
+      "file": "packages/shared/src/agent/base-agent/configuration.ts",
+      "lines": 190,
+      "sha256": "ec97861f54af913872a31fe267a33903a2d27d6381dc7dc5e6c5ac1aeeee2755"
+    },
+    {
+      "file": "packages/shared/src/agent/base-agent/context.ts",
+      "lines": 150,
+      "sha256": "52d58b2c0a10d828d87030b7aff3360edc61a189054d4a3efd2ea33741e39add"
+    },
+    {
+      "file": "packages/shared/src/agent/base-agent/conversation.ts",
+      "lines": 56,
+      "sha256": "8c0f81cb9a846d43ffe175c96e0c22e255449ff2c4245a37fcdfd27b4b8bbcd4"
+    },
+    {
+      "file": "packages/shared/src/agent/base-agent/lifecycle.ts",
+      "lines": 80,
+      "sha256": "16157b68bd4e691d37e13b0facb5aa9d9f239e237b8f3b373ad17a75ef8fc881"
+    },
+    {
+      "file": "packages/shared/src/agent/base-agent/protocol.ts",
+      "lines": 43,
+      "sha256": "22f0dd7e806dd9cd9a62f40df176663d9ec9833be55b789ed71ed85eec4ba13d"
+    },
+    {
+      "file": "packages/shared/src/agent/base-agent/session-tools.ts",
+      "lines": 155,
+      "sha256": "230f5cd53c089f94af51fe981be5ed3f816b3300ebf55ea83887a27b1213b303"
+    },
+    {
+      "file": "packages/shared/src/agent/base-agent/shared.ts",
+      "lines": 70,
+      "sha256": "8ca84c6a4b048b2eb683190cdcaa1bef69a8208169bc8ebc12858aa0f18645b4"
+    },
+    {
+      "file": "packages/shared/src/agent/base-agent/skills.ts",
+      "lines": 114,
+      "sha256": "e1b7ac56ce73a2eb931ea9db04a149ba4eaaa18a71feef24b4bfebf1dbb587b7"
+    },
+    {
+      "file": "packages/shared/src/agent/base-agent/sources.ts",
+      "lines": 116,
+      "sha256": "63c5eb4c8b49b726d80d8db7e2bb86574e7c59c2c55c688bcb2272e31ac3c0f2"
+    },
+    {
+      "file": "packages/shared/src/agent/base-agent/workspace.ts",
+      "lines": 70,
+      "sha256": "63e70bd76ae96654265eccd6991d2e31cd2361afc7085913751ce028ba10aa73"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 17.38,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/base-agent-class-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 8.38,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/base-agent-class-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/shared/src/agent/base-agent.ts",
+        "packages/shared/src/agent/base-agent",
+        "--format",
+        "json",
+        "--output-file",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/base-agent-class-lint-report.json",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.0,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/base-agent-class-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 16.29,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/base-agent-class-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/agent"
+      ],
+      "exitCode": 0,
+      "seconds": 9.8,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/base-agent-class-agent-tests.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 137.56,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/base-agent-class-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "classes": [
+      {
+        "source": "packages/shared/src/agent/base-agent.ts",
+        "nativeMethodBodies": 73,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 1,
+        "nativeModuleBindings": 0,
+        "relocatedNativeDynamicImports": 0,
+        "protocolAliasesExpandedToNativeShapes": 6,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      }
+    ],
+    "runtimeImportCycles": 0,
+    "maximumFileLines": 485
+  },
+  "fullTestSummary": {
+    "pass": 10741,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "base-agent-class-agent-tests": {
+      "pass": 2465,
+      "fail": 0,
+      "skip": 1
+    }
+  },
+  "beforeAfter": null,
+  "sourceGate": {
+    "max-lines": 93,
+    "no-explicit-any": 322
+  },
+  "globalLint": {
+    "files": 3398,
+    "errors": 385,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 303,
+      "max-lines": 82,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "93 fichiers trop longs et 322 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-25T19:55:12.402097+00:00"
+}

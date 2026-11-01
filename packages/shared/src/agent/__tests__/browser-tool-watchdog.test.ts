@@ -1,3 +1,5 @@
+import type { BrowserPaneFns } from '../browser-tools.ts';
+import { createMockFns } from './testing/browser-tools-fixture.ts';
 import { describe, expect, it } from 'bun:test';
 import {
   BROWSER_TOOL_TIMEOUT_GRACE_MS,
@@ -47,10 +49,11 @@ describe('browser_tool execution watchdog', () => {
   it('clamps finite command timeouts before invoking browser callbacks and rejects non-finite values', async () => {
     const observed: Array<{ command: string; timeoutMs: number | undefined }> = [];
     const fns = {
+      ...createMockFns(),
       evaluate: async () => null,
       detectChallenge: async () => ({ detected: false, provider: '', signals: [] }),
-      click: async (_ref: string, args: { timeoutMs?: number }) => {
-        observed.push({ command: 'click', timeoutMs: args.timeoutMs });
+      click: async (_ref: string, args?: Parameters<BrowserPaneFns['click']>[1]) => {
+        observed.push({ command: 'click', timeoutMs: args?.timeoutMs });
       },
       waitFor: async (args: { timeoutMs?: number }) => {
         observed.push({ command: 'wait', timeoutMs: args.timeoutMs });
@@ -62,11 +65,11 @@ describe('browser_tool execution watchdog', () => {
         title: 'Fixture',
         nodes: [{ ref: '@e1', role: 'combobox', name: 'late', value: 'late' }],
       }),
-      getDownloads: async (args: { timeoutMs?: number }) => {
-        observed.push({ command: 'downloads wait', timeoutMs: args.timeoutMs });
+      getDownloads: async (args?: Parameters<BrowserPaneFns['getDownloads']>[0]) => {
+        observed.push({ command: 'downloads wait', timeoutMs: args?.timeoutMs });
         return [];
       },
-    } as any;
+    } satisfies BrowserPaneFns;
 
     await executeBrowserToolCommand({
       command: 'click @e1 navigation 999999999',
@@ -119,11 +122,12 @@ describe('browser_tool execution watchdog', () => {
   });
 
   it('never continues a batch after the outer watchdog times out', async () => {
-    let releaseWait: ((value: { ok: true; kind: string; elapsedMs: number; detail: string }) => void) | undefined;
+    let releaseWait: ((value: Awaited<ReturnType<BrowserPaneFns['waitFor']>>) => void) | undefined;
     let fillCalls = 0;
     let evaluationCalls = 0;
     const fns = {
-      waitFor: async () => new Promise<{ ok: true; kind: string; elapsedMs: number; detail: string }>(resolve => {
+      ...createMockFns(),
+      waitFor: async () => new Promise<Awaited<ReturnType<BrowserPaneFns['waitFor']>>>(resolve => {
         releaseWait = resolve;
       }),
       evaluate: async () => {
@@ -131,9 +135,9 @@ describe('browser_tool execution watchdog', () => {
         return null;
       },
       fill: async () => { fillCalls += 1; },
-    } as any;
+    } satisfies BrowserPaneFns;
     const originalSetTimeout = globalThis.setTimeout;
-    (globalThis as any).setTimeout = ((callback: (...args: any[]) => void) => (
+    (globalThis).setTimeout = ((callback: Parameters<typeof setTimeout>[0]) => (
       originalSetTimeout(callback, 1)
     )) as typeof setTimeout;
 
@@ -150,7 +154,7 @@ describe('browser_tool execution watchdog', () => {
       expect(evaluationCalls).toBe(0);
       expect(fillCalls).toBe(0);
     } finally {
-      (globalThis as any).setTimeout = originalSetTimeout;
+      (globalThis).setTimeout = originalSetTimeout;
     }
   });
 

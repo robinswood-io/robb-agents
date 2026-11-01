@@ -18,10 +18,13 @@ def run(argv: list[str], timeout: int) -> subprocess.CompletedProcess[str]:
     return subprocess.run(argv, text=True, capture_output=True, timeout=timeout, shell=False, check=False)
 
 
+class Arguments(argparse.Namespace):
+    selftest: bool = False
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Start and inspect the durable Drive audio transcription service without a shell.")
-    parser.add_argument("--selftest", action="store_true")
-    args = parser.parse_args()
+    _ = parser.add_argument("--selftest", action="store_true")
+    args = parser.parse_args(namespace=Arguments())
     if args.selftest:
         missing = [path for path in (SUDO, SYSTEMCTL) if not Path(path).is_file()]
         payload = {"ok": not missing, "status": "passed" if not missing else "failed", "unit": UNIT, "startArgv": START_ARGV, "showArgv": SHOW_ARGV, "missingExecutables": missing, "shell": False}

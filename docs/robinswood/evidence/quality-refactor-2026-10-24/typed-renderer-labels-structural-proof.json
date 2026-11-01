@@ -1,0 +1,49 @@
+{
+  "status": "passed",
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/event-processor/handlers/__tests__/text-message-id-sync.test.ts",
+      "lines": 186,
+      "sha256": "3d83effd0790913efccdd7c1710767fb92b73e366d37de8d22a0f71333b2d471",
+      "nativeSourceHash": "8a84b9335b6026e5da37d09ab727e0b1617cbf5092a382456861c023f82001c9",
+      "runtime": "native statements and assertions preserved; only required fixture fields and existing browser defaults added"
+    },
+    {
+      "file": "apps/electron/src/renderer/event-processor/handlers/__tests__/handle-interrupted.test.ts",
+      "lines": 127,
+      "sha256": "ae15f1eda155aa39fd8d9d279f991112a00fe97aad9ee90b1fbf46ea825831d1",
+      "nativeSourceHash": "4b59e922bc71489936d524c9cbb67dfff77172cae08155bb1ab518afb2bef75e",
+      "runtime": "native statements and assertions preserved; only required fixture fields and existing browser defaults added"
+    },
+    {
+      "file": "apps/electron/src/renderer/event-processor/handlers/__tests__/message-annotations-updated.test.ts",
+      "lines": 55,
+      "sha256": "2e94ed9f11f9beb98d8ca6ad760efac42ac0050b093e141c8793c18273a054f3",
+      "nativeSourceHash": "46f0437a45a87559baa199093c2ebc62d0119177dbecc6eb296000e652c6feca",
+      "runtime": "native statements and assertions preserved; only required fixture fields and existing browser defaults added"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/browser-tool-watchdog.test.ts",
+      "lines": 211,
+      "sha256": "fa5fc7f468f375ffdab013ae954f406f8c5cd2df68b21bf3a989eb7f1a9d781a",
+      "nativeSourceHash": "00209e281c347013e5617a73ece59f831888fbd2be303e536c97346c09d328e5",
+      "runtime": "native statements and assertions preserved; only required fixture fields and existing browser defaults added"
+    },
+    {
+      "file": "packages/shared/src/config/validators/labels.ts",
+      "lines": 249,
+      "sha256": "4525fe9b31ed5ffeab68effe6e9624e6f1eaff7e1e451c2c7fb78da071ed4a28",
+      "nativeSourceHash": "fdd6c965734c96eb6818e8edef74f4c138d10971f398dd2345d75d3b3f7a5420",
+      "runtime": "byte-identical JavaScript"
+    }
+  ],
+  "maximumFileLines": 249,
+  "explicitAnyRemaining": 0,
+  "labelValidatorRuntimeByteIdentical": true,
+  "nativeTestStatementsAndAssertionsPreserved": true,
+  "requiredFixtureFieldsAdded": 20,
+  "browserFixturesCompletedWithExistingDefaults": 2,
+  "nativeExpectCalls": 71,
+  "optionalBrowserOptionsHandled": 2,
+  "newApplicationStateOrWorkflow": 0
+}

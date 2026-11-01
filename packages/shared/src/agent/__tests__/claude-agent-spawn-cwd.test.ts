@@ -65,14 +65,12 @@ describe('resolveSpawnCwd (simulated)', () => {
   let tempDir: string;
   let workspaceRoot: string;
   let parentCwd: string;
-  let sessionPath: string;
   let sdkCwd: string;
 
   beforeEach(() => {
     tempDir = mkdtempSync(join(tmpdir(), 'craft-resolve-cwd-'));
     workspaceRoot = join(tempDir, 'ws');
     parentCwd = join(tempDir, 'parent');
-    sessionPath = join(tempDir, 'session');
     sdkCwd = join(tempDir, 'sdk-cwd');
   });
   afterEach(() => {
@@ -201,6 +199,16 @@ describe('extractSdkReportedBinaryPath', () => {
     expect(extractSdkReportedBinaryPath(msg)).toBe('/opt/0.9.1/claude');
   });
 
+  it('preserves leading delimiter whitespace and spaces within the reported path', () => {
+    const msg = 'Claude Code native binary not found at \t /Applications/Craft Agents.app/claude  ';
+    expect(extractSdkReportedBinaryPath(msg)).toBe('/Applications/Craft Agents.app/claude  ');
+  });
+
+  it('accepts whitespace before a path on the next line and strips its final period', () => {
+    const msg = 'Claude Code executable not found at \n  /opt/Claude Agent/claude.  \n';
+    expect(extractSdkReportedBinaryPath(msg)).toBe('/opt/Claude Agent/claude');
+  });
+
   it('returns undefined when the message does not match', () => {
     expect(extractSdkReportedBinaryPath('some unrelated error')).toBeUndefined();
     expect(extractSdkReportedBinaryPath('')).toBeUndefined();
@@ -327,15 +335,15 @@ describe('onBranchForkInvalidated callback', () => {
     const flush = mock((_id: string) => {});
     const sessionLog = { info: mock((_msg: string) => {}) };
     const onBranchForkInvalidated = () => {
-      managed.sdkSessionId = undefined;
-      managed.branchFromSdkSessionId = undefined;
-      managed.branchFromSdkCwd = undefined;
-      managed.branchFromSdkTurnId = undefined;
+      managed["sdkSessionId"] = undefined;
+      managed["branchFromSdkSessionId"] = undefined;
+      managed["branchFromSdkCwd"] = undefined;
+      managed["branchFromSdkTurnId"] = undefined;
       sessionLog.info(
-        `Branch fork invalidated for ${managed.id}: cleared all fork metadata`,
+        `Branch fork invalidated for ${managed["id"]}: cleared all fork metadata`,
       );
       persistSession(managed);
-      flush(managed.id as string);
+      flush(managed["id"] as string);
     };
     return { onBranchForkInvalidated, persistSession, flush, sessionLog };
   }
@@ -352,10 +360,10 @@ describe('onBranchForkInvalidated callback', () => {
 
     onBranchForkInvalidated();
 
-    expect(managed.sdkSessionId).toBeUndefined();
-    expect(managed.branchFromSdkSessionId).toBeUndefined();
-    expect(managed.branchFromSdkCwd).toBeUndefined();
-    expect(managed.branchFromSdkTurnId).toBeUndefined();
+    expect(managed["sdkSessionId"]).toBeUndefined();
+    expect(managed["branchFromSdkSessionId"]).toBeUndefined();
+    expect(managed["branchFromSdkCwd"]).toBeUndefined();
+    expect(managed["branchFromSdkTurnId"]).toBeUndefined();
     expect(persistSession).toHaveBeenCalledTimes(1);
     expect(flush).toHaveBeenCalledTimes(1);
   });
@@ -372,7 +380,7 @@ describe('onBranchForkInvalidated callback', () => {
 
     onBranchForkInvalidated();
 
-    const firstLog = sessionLog.info.mock.calls[0] as unknown as string[];
+    const firstLog = sessionLog.info.mock.calls[0] as string[];
     expect(firstLog[0]).toContain('Branch fork invalidated');
     expect(firstLog[0]).toContain('session-456');
   });

@@ -44,11 +44,11 @@ export interface WorkingDirectoryTriggerState {
 }
 
 export interface WorkingDirectorySelectorProps {
-  workingDirectory?: string
+  workingDirectory?: string | undefined
   onWorkingDirectoryChange: (path: string) => void
   /** Session root, offered as the "Reset" target. Undefined disables reset. */
-  sessionFolderPath?: string
-  workspaceId?: string
+  sessionFolderPath?: string | undefined
+  workspaceId?: string | undefined
   /**
    * Renders the popover trigger. The returned element is wrapped in
    * `<PopoverTrigger asChild>`, so it must forward a ref (a DOM element or a
@@ -56,9 +56,9 @@ export interface WorkingDirectorySelectorProps {
    */
   renderTrigger: (state: WorkingDirectoryTriggerState) => React.ReactElement
   /** Popover side/align — defaults match the chat input badge. */
-  side?: 'top' | 'bottom' | 'left' | 'right'
-  align?: 'start' | 'center' | 'end'
-  sideOffset?: number
+  side?: 'top' | 'bottom' | 'left' | 'right' | undefined
+  align?: 'start' | 'center' | 'end' | undefined
+  sideOffset?: number | undefined
 }
 
 /**
@@ -122,6 +122,8 @@ export function WorkingDirectorySelector({
       }, 0)
       return () => clearTimeout(timer)
     }
+  
+    return undefined;
   }, [popoverOpen, showFilter])
 
   // Styles matching todo-filter-menu.tsx for consistency

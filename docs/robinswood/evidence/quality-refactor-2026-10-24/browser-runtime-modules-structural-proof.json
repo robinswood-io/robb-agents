@@ -1,0 +1,73 @@
+{
+  "status": "passed",
+  "source": "packages/shared/src/agent/browser-tool-runtime.ts",
+  "nativeSourceHash": "763e710961b318d80330a38b868ca0d17fb7a3998b03edfebfd46653bea6fea6",
+  "nativeDeclarations": 83,
+  "nativeBodiesModelsAndSingleStatePreserved": true,
+  "nativePublicExports": true,
+  "nativeCommandEntryAndSafetyFencesPreserved": true,
+  "nativeExternalImportOrder": [
+    "./browser-tool-execution-watchdog.ts",
+    "./browser-tool-execution-watchdog.ts"
+  ],
+  "singleSessionGuardStateColocatedWithAccessors": true,
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 373,
+  "files": [
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/contracts.ts",
+      "lines": 22,
+      "sha256": "6ba6060a1d44c6c1d3bd652d344da600c419df306e71c91a0e8a3ff2e28e5bcd"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/mutation-guard.ts",
+      "lines": 74,
+      "sha256": "b2b2f980e2466e277a80a449d6b6c320b025c65470c9109bd4d02af8189e382f"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/page-summary.ts",
+      "lines": 248,
+      "sha256": "7d8c60d308b0bc72c581b452c067361da13eaa2815f322dde4c7afc11048b141"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime.ts",
+      "lines": 373,
+      "sha256": "261c8dfe397bfb36f4bc9cbfe2574f6aba6e2569f74e4b5a6f81d0f6d168867d"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/command-syntax.ts",
+      "lines": 236,
+      "sha256": "1dbe381aee80eabaacd807a4cefe8baa3b7aaf19048655fac6e7a161ece9a758"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/execution-timeout.ts",
+      "lines": 94,
+      "sha256": "5cca4d2f505eca231eff4a57782105a765386572efad8fa63732e39c370d01be"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/interaction.ts",
+      "lines": 373,
+      "sha256": "4b2c89d2188cc485b45523a7cacfd7c7a631009157ecbd75e8755db65d756118"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/window-lifecycle.ts",
+      "lines": 277,
+      "sha256": "d1eeee9ce0b4cd935ed3fa0947661609a4db50872e51552b274eb210f3c5d680"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/inspection.ts",
+      "lines": 303,
+      "sha256": "26af25b5ea90293e28f33731a1281744c94a7d06b380a5d115de806274ed985f"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/capture-clipboard.ts",
+      "lines": 208,
+      "sha256": "8bf82710b8dba32e6d52028851a3298acf9ef83a95378cc406c2442b8acdaa89"
+    },
+    {
+      "file": "packages/shared/src/agent/browser-tool-runtime/interaction-execute-key-browser-command.ts",
+      "lines": 68,
+      "sha256": "10d7880f9bb14bc47970cd05c03344fc65721b8b43558530bc3ec4870a1c7257"
+    }
+  ]
+}

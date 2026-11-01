@@ -10,27 +10,27 @@ export interface FreeFormInputContextBadgeProps {
   /** Label text - shown in expanded state or collapsed with selection */
   label: string
   /** Whether to show expanded state (icon + label + chevron) vs collapsed */
-  isExpanded?: boolean
+  isExpanded?: boolean | undefined
   /** Whether there's an active selection (affects collapsed state styling and shows label) */
-  hasSelection?: boolean
+  hasSelection?: boolean | undefined
   /** Show chevron indicator (for dropdowns) - only visible in expanded state */
-  showChevron?: boolean
+  showChevron?: boolean | undefined
   /** Keep the trigger icon-only even when a value is selected (mobile toolbars). */
-  iconOnly?: boolean
+  iconOnly?: boolean | undefined
   /** Click handler */
-  onClick?: () => void
+  onClick?: (() => void) | undefined
   /** Tooltip content - can be string or ReactNode for rich content */
-  tooltip?: React.ReactNode
+  tooltip?: React.ReactNode | undefined
   /** Whether the badge is currently "open" (e.g., dropdown is shown) */
-  isOpen?: boolean
+  isOpen?: boolean | undefined
   /** Whether the badge is disabled */
-  disabled?: boolean
+  disabled?: boolean | undefined
   /** Additional className for the button */
-  className?: string
+  className?: string | undefined
   /** Ref forwarding for positioning dropdowns */
-  buttonRef?: React.RefObject<HTMLButtonElement>
+  buttonRef?: React.RefObject<HTMLButtonElement | null> | undefined
   /** Data attribute for tutorials */
-  'data-tutorial'?: string
+  'data-tutorial'?: string | undefined
 }
 
 /**

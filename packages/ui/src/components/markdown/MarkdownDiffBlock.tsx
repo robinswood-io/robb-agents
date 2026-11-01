@@ -64,17 +64,17 @@ class DiffErrorBoundary extends React.Component<
   { children: React.ReactNode; fallback: React.ReactNode },
   ErrorBoundaryState
 > {
-  state: ErrorBoundaryState = { hasError: false }
+  override state: ErrorBoundaryState = { hasError: false }
 
   static getDerivedStateFromError(): ErrorBoundaryState {
     return { hasError: true }
   }
 
-  componentDidCatch(error: Error) {
+  override componentDidCatch(error: Error) {
     console.warn('[MarkdownDiffBlock] PatchDiff render failed, falling back to CodeBlock:', error)
   }
 
-  render() {
+  override render() {
     if (this.state.hasError) return this.props.fallback
     return this.props.children
   }
@@ -85,7 +85,7 @@ class DiffErrorBoundary extends React.Component<
 export interface MarkdownDiffBlockProps {
   /** Raw diff text from the markdown code block */
   code: string
-  className?: string
+  className?: string | undefined
 }
 
 export function MarkdownDiffBlock({ code, className }: MarkdownDiffBlockProps) {
@@ -93,7 +93,7 @@ export function MarkdownDiffBlock({ code, className }: MarkdownDiffBlockProps) {
   const themeName = dark ? 'craft-dark' : 'craft-light'
 
   // Build the same options used in ShikiDiffViewer for visual consistency
-  const options: PatchDiffProps<undefined>['options'] = React.useMemo(() => ({
+  const options: PatchDiffProps<undefined, undefined>['options'] = React.useMemo(() => ({
     theme: themeName,
     diffStyle: 'unified' as const,
     diffIndicators: 'bars' as const,

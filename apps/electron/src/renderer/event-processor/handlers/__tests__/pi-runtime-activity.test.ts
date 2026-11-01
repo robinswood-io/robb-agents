@@ -1,3 +1,5 @@
+import type { AssistantMessage } from '@earendil-works/pi-ai';
+import type { AgentEvent } from '@craft-agent/core/types';
 import { describe, expect, it } from 'bun:test'
 import { PiEventAdapter } from '../../../../../../../packages/shared/src/agent/backend/pi/event-adapter.ts'
 import { describeJourneyActivity } from '../../../../../../../packages/ui/src/components/chat/journey-activity.ts'
@@ -6,27 +8,36 @@ import type { SessionState } from '../../types'
 
 const preparing = 'Préparation du contexte'
 const composing = 'Le modèle élabore la réponse'
+function assistantMessage(overrides: Partial<AssistantMessage> = {}): AssistantMessage {
+  return { role: 'assistant', content: [], api: 'openai-responses', provider: 'qa', model: 'qa',
+    usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0,
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+    stopReason: 'stop', timestamp: 1, ...overrides }
+}
 function fixture() {
   const adapter = new PiEventAdapter(); adapter.startTurn()
   let state: SessionState = { session: { id: 's', messages: [], isProcessing: true, lastMessageAt: 1 } as never, streaming: null }
-  const emitted: any[] = []
-  const dispatch = (event: any) => {
+  const emitted: AgentEvent[] = []
+  const dispatch = (event: AgentEvent | { type: 'interrupted'; message: string; timestamp: number }) => {
     // Same field projection as SessionManager's existing renderer events.
-    state = processEvent(state, { ...event, sessionId: 's', delta: event.text, error: event.message,
+    state = processEvent(state, { ...event, sessionId: 's', delta: (event as { text?: string }).text, error: (event as { message?: string }).message,
+      tokenUsage: event.type === 'usage_update' && event.usage
+        ? { inputTokens: event.usage.inputTokens, contextWindow: event.usage.contextWindow }
+        : undefined,
       statusType: event.type === 'status' && event.message.includes('Compacting') ? 'compacting' : undefined } as never).state
   }
   return { adapter, emitted, dispatch,
-    pi(event: any) { const events = [...adapter.adaptEvent(event)]; emitted.push(...events); events.forEach(dispatch); return events },
+    pi(event: Parameters<PiEventAdapter['adaptEvent']>[0]) { const events = [...adapter.adaptEvent(event)]; emitted.push(...events); events.forEach(dispatch); return events },
     state: () => state, activity: () => describeJourneyActivity(state.session.messages, []) }
 }
 
 describe('Pi runtime activity through adapter, renderer and journey projection', () => {
   it('shows one generic model phase, hides thinking payloads, clears for tools/text/end and allows the next model phase', () => {
     const f = fixture()
-    f.pi({ type: 'message_start', message: { role: 'assistant' } })
+    f.pi({ type: 'message_start', message: assistantMessage({ role: 'assistant' }) })
     expect(f.activity().title).toBe(composing)
-    for (let i = 0; i < 100; i++) f.pi({ type: 'message_update', assistantMessageEvent: {
-      type: i === 0 ? 'thinking_start' : 'thinking_delta', delta: 'PRIVATE_REASONING_SENTINEL', contentIndex: 0,
+    for (let i = 0; i < 100; i++) f.pi({ type: 'message_update', message: assistantMessage(), assistantMessageEvent: {
+      type: i === 0 ? 'thinking_start' : 'thinking_delta', delta: 'PRIVATE_REASONING_SENTINEL', contentIndex: 0, partial: assistantMessage(),
     } })
     expect(f.emitted.filter(e => e.type === 'status')).toHaveLength(1)
     expect(JSON.stringify(f.state())).not.toContain('PRIVATE_REASONING_SENTINEL')
@@ -34,12 +45,12 @@ describe('Pi runtime activity through adapter, renderer and journey projection',
     expect(f.state().session.currentStatus).toBeUndefined()
     expect(f.activity().title).not.toBe(composing)
     f.pi({ type: 'tool_execution_end', toolCallId: 'tool', toolName: 'read', result: { content: [{ type: 'text', text: 'ok' }] }, isError: false })
-    f.pi({ type: 'message_start', message: { role: 'assistant' } })
+    f.pi({ type: 'message_start', message: assistantMessage({ role: 'assistant' }) })
     expect(f.activity().title).toBe(composing)
-    f.pi({ type: 'message_update', assistantMessageEvent: { type: 'text_delta', delta: 'Le bleu', contentIndex: 0 } })
+    f.pi({ type: 'message_update', message: assistantMessage(), assistantMessageEvent: { type: 'text_delta', delta: 'Le bleu', contentIndex: 0, partial: assistantMessage() } })
     expect(f.state().session.currentStatus).toBeUndefined()
     expect(f.activity().title).not.toBe(composing)
-    f.pi({ type: 'message_end', message: { role: 'assistant', stopReason: 'stop', content: [{ type: 'text', text: 'Le bleu' }] } })
+    f.pi({ type: 'message_end', message: assistantMessage({ role: 'assistant', stopReason: 'stop', content: [{ type: 'text', text: 'Le bleu' }] }) })
     f.pi({ type: 'agent_end', messages: [] })
     expect(f.state().session.messages.some(m => m.role === 'status')).toBe(false)
   })
@@ -65,8 +76,8 @@ describe('Pi runtime activity through adapter, renderer and journey projection',
     const f = fixture()
     f.pi({ type: 'compaction_start', reason: 'threshold' })
     expect(f.activity().title).toBe(preparing)
-    f.pi({ type: 'compaction_end', reason: 'threshold', result: { summary: 'PRIVATE_SUMMARY', firstKeptEntryId: 'x', tokensBefore: 100 } })
-    f.pi({ type: 'message_start', message: { role: 'assistant' } })
+    f.pi({ type: 'compaction_end', aborted: false, willRetry: false, reason: 'threshold', result: { summary: 'PRIVATE_SUMMARY', firstKeptEntryId: 'x', tokensBefore: 100 } })
+    f.pi({ type: 'message_start', message: assistantMessage({ role: 'assistant' }) })
     expect(f.activity().title).toBe(composing)
     expect(JSON.stringify(f.state())).not.toContain('PRIVATE_SUMMARY')
     f.dispatch({ type: 'interrupted', message: 'Stopped', timestamp: Date.now() })
@@ -75,12 +86,12 @@ describe('Pi runtime activity through adapter, renderer and journey projection',
   })
   it('resets activity across an interrupted turn and never clears unrelated provider status on text', () => {
     const f = fixture()
-    f.pi({ type: 'message_start', message: { role: 'assistant' } })
+    f.pi({ type: 'message_start', message: assistantMessage({ role: 'assistant' }) })
     f.dispatch({ type: 'interrupted', message: 'Stopped', timestamp: Date.now() })
     f.adapter.startTurn()
-    expect(f.pi({ type: 'message_start', message: { role: 'assistant' } })).toEqual([{ type: 'status', message: composing }])
+    expect(f.pi({ type: 'message_start', message: assistantMessage({ role: 'assistant' }) })).toEqual([{ type: 'status', message: composing }])
     f.dispatch({ type: 'status', message: 'Unrelated provider status' })
-    f.pi({ type: 'message_update', assistantMessageEvent: { type: 'text_delta', delta: 'Answer', contentIndex: 0 } })
+    f.pi({ type: 'message_update', message: assistantMessage(), assistantMessageEvent: { type: 'text_delta', delta: 'Answer', contentIndex: 0, partial: assistantMessage() } })
     expect(f.state().session.currentStatus?.message).toBe('Unrelated provider status')
     expect(f.activity().title).not.toBe(composing)
   })

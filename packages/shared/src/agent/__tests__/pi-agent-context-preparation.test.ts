@@ -10,12 +10,12 @@ function harness() {
     session: { id: 'context-test', workingDirectory: '/nonexistent/robb-context-test' } as never,
   };
   const agent = new PiAgent(config);
-  const runtime = agent as any;
+  const runtime = agent;
   const sent: Array<{ type: string }> = [];
   runtime.ensureSubprocess = async () => {};
-  runtime.emitAutomationEvent = () => {};
+  runtime["emitAutomationEvent"] = async () => {};
   runtime.resolveProjectContext = () => null;
-  runtime.send = (message: { type: string }) => { sent.push(message); runtime.eventQueue.complete(); };
+  runtime["send"] = (message: { type: string }) => { sent.push(message); runtime["eventQueue"].complete(); return true; };
   return { agent, runtime, sent };
 }
 
@@ -33,7 +33,7 @@ describe('Pi prompt preparation cancellation', () => {
         return { files: [], complete: false };
       });
       try {
-        const generator = h.runtime.chatImpl('Inspect only.');
+        const generator = h.runtime["chatImpl"]('Inspect only.');
         const pending = generator.next();
         await started;
         if (stop === 'forceAbort') h.agent.forceAbort(AbortReason.UserStop);
@@ -54,15 +54,15 @@ describe('Pi prompt preparation cancellation', () => {
     const h = harness();
     let handoffs = 0;
     h.agent.onProviderHandoff = () => { handoffs += 1; };
-    h.runtime.send = (message: { type: string; id?: string }) => {
+    h.runtime["send"] = (message: { type: string; id?: string }) => {
       h.sent.push(message);
       if (message.type === 'prompt') {
         h.runtime.handleLine(JSON.stringify({ type: 'provider_handoff', id: message.id }));
-        h.runtime.eventQueue.complete();
+        h.runtime["eventQueue"].complete();
       }
-    };
+    return true; };
 
-    const result = await h.runtime.chatImpl('Inspect only.').next();
+    const result = await h.runtime["chatImpl"]('Inspect only.').next();
 
     expect(result.done).toBe(true);
     expect(h.sent.map(message => message.type)).toContain('prompt');
@@ -80,17 +80,17 @@ describe('Pi prompt preparation cancellation', () => {
       await gate;
       order.push('write-ahead-durable');
     };
-    h.runtime.send = (message: { type: string; id?: string }) => {
+    h.runtime["send"] = (message: { type: string; id?: string }) => {
       order.push(`send:${message.type}`);
       h.sent.push(message);
       if (message.type === 'prompt') {
         h.runtime.handleLine(JSON.stringify({ type: 'provider_handoff', id: message.id }));
-        h.runtime.eventQueue.complete();
+        h.runtime["eventQueue"].complete();
       }
       return true;
     };
 
-    const pending = h.runtime.chatImpl('Inspect only.').next();
+    const pending = h.runtime["chatImpl"]('Inspect only.').next();
     await new Promise(resolve => setTimeout(resolve, 0));
     expect(order).toEqual(['write-ahead']);
     expect(h.sent.some(message => message.type === 'prompt')).toBe(false);
@@ -107,13 +107,13 @@ describe('Pi prompt preparation cancellation', () => {
     let promptId: string | undefined;
     h.agent.onProviderDispatchUncertain = () => { uncertainDispatches += 1; };
     h.agent.onProviderHandoff = () => { handoffs += 1; };
-    h.runtime.send = (message: { type: string; id?: string }) => {
+    h.runtime["send"] = (message: { type: string; id?: string }) => {
       h.sent.push(message);
       if (message.type === 'prompt') promptId = message.id;
       return true;
     };
 
-    const pending = h.runtime.chatImpl('Inspect only.').next();
+    const pending = h.runtime["chatImpl"]('Inspect only.').next();
     for (let index = 0; index < 20 && !promptId; index++) {
       await new Promise(resolve => setTimeout(resolve, 0));
     }
@@ -122,7 +122,7 @@ describe('Pi prompt preparation cancellation', () => {
     expect(uncertainDispatches).toBe(1);
     expect(handoffs).toBe(0);
     h.runtime.handleLine(JSON.stringify({ type: 'provider_handoff', id: promptId }));
-    h.runtime.eventQueue.complete();
+    h.runtime["eventQueue"].complete();
     await pending;
     expect(handoffs).toBe(1);
     h.agent.destroy();
@@ -132,13 +132,13 @@ describe('Pi prompt preparation cancellation', () => {
     const h = harness();
     let handoffs = 0;
     h.agent.onProviderHandoff = () => { handoffs += 1; };
-    h.runtime.send = (message: { type: string }) => {
+    h.runtime["send"] = (message: { type: string }) => {
       if (message.type === 'prompt') throw new Error('ETIMEDOUT');
       h.sent.push(message);
-    };
+    return true; };
 
     const events = [];
-    for await (const event of h.runtime.chatImpl('Inspect only.')) events.push(event);
+    for await (const event of h.runtime["chatImpl"]('Inspect only.')) events.push(event);
 
     expect(events).toContainEqual({ type: 'error', message: 'ETIMEDOUT' });
     expect(handoffs).toBe(0);
@@ -151,7 +151,7 @@ describe('Pi prompt preparation cancellation', () => {
     let correlatedRejections = 0;
     h.agent.onProviderHandoff = () => { handoffs += 1; };
     h.agent.onProviderDispatchRejected = () => { correlatedRejections += 1; };
-    h.runtime.send = (message: { type: string; id?: string }) => {
+    h.runtime["send"] = (message: { type: string; id?: string }) => {
       h.sent.push(message);
       if (message.type === 'prompt') {
         h.runtime.handleLine(JSON.stringify({
@@ -160,12 +160,12 @@ describe('Pi prompt preparation cancellation', () => {
           code: 'prompt_error',
           message: 'Previous compaction did not settle before the prompt safety deadline',
         }));
-        h.runtime.eventQueue.complete();
+        h.runtime["eventQueue"].complete();
       }
-    };
+    return true; };
 
     const events = [];
-    for await (const event of h.runtime.chatImpl('Inspect only.')) events.push(event);
+    for await (const event of h.runtime["chatImpl"]('Inspect only.')) events.push(event);
 
     expect(events).toContainEqual({
       type: 'error',
@@ -181,7 +181,7 @@ describe('Pi prompt preparation cancellation', () => {
     const h = harness();
     let correlatedRejections = 0;
     h.agent.onProviderDispatchRejected = () => { correlatedRejections += 1; };
-    h.runtime.send = (message: { type: string; id?: string }) => {
+    h.runtime["send"] = (message: { type: string; id?: string }) => {
       h.sent.push(message);
       if (message.type === 'prompt') {
         h.runtime.handleLine(JSON.stringify({
@@ -190,12 +190,12 @@ describe('Pi prompt preparation cancellation', () => {
         h.runtime.handleLine(JSON.stringify({
           type: 'error', id: message.id, code: 'model_error', message: 'post-write failure',
         }));
-        h.runtime.eventQueue.complete();
+        h.runtime["eventQueue"].complete();
       }
       return true;
     };
 
-    for await (const _event of h.runtime.chatImpl('Inspect only.')) { /* drain */ }
+    for await (const _event of h.runtime["chatImpl"]('Inspect only.')) { /* drain */ }
     expect(correlatedRejections).toBe(0);
     h.agent.destroy();
   });
@@ -204,17 +204,17 @@ describe('Pi prompt preparation cancellation', () => {
     const h = harness();
     let handoffs = 0;
     h.agent.onProviderHandoff = () => { handoffs += 1; };
-    h.runtime.send = (message: { type: string; id?: string }) => {
+    h.runtime["send"] = (message: { type: string; id?: string }) => {
       h.sent.push(message);
       if (message.type === 'prompt') {
         h.runtime.handleLine(JSON.stringify({ type: 'provider_handoff', id: 'wrong-turn' }));
         h.runtime.handleLine(JSON.stringify({ type: 'provider_handoff', id: message.id }));
         h.runtime.handleLine(JSON.stringify({ type: 'provider_handoff', id: message.id }));
-        h.runtime.eventQueue.complete();
+        h.runtime["eventQueue"].complete();
       }
-    };
+    return true; };
 
-    await h.runtime.chatImpl('Inspect only.').next();
+    await h.runtime["chatImpl"]('Inspect only.').next();
 
     expect(handoffs).toBe(1);
     h.agent.destroy();
@@ -224,10 +224,10 @@ describe('Pi prompt preparation cancellation', () => {
     const h = harness();
     let handoffs = 0;
     h.agent.onProviderHandoff = () => { handoffs += 1; };
-    h.runtime.send = () => false;
+    h.runtime["send"] = () => false;
 
     const events = [];
-    for await (const event of h.runtime.chatImpl('Inspect only.')) events.push(event);
+    for await (const event of h.runtime["chatImpl"]('Inspect only.')) events.push(event);
 
     expect(events).toContainEqual({ type: 'error', message: 'Pi subprocess stdin is not writable' });
     expect(handoffs).toBe(0);

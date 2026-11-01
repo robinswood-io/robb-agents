@@ -17,6 +17,7 @@ import {
   getLlmConnection,
   updateLlmConnection,
   isCompatProvider,
+  isLocalConnection,
   getModelsForProviderType,
 } from '@craft-agent/shared/config'
 import { MODEL_FETCHERS } from './registry'
@@ -73,12 +74,16 @@ class ModelRefreshService {
       return
     }
 
-    // Skip compat providers — users configure models manually
-    if (isCompatProvider(connection.providerType)) {
+    // Skip remote compat providers — users configure models manually.
+    // Local loopback endpoints (Ollama, LM Studio, vLLM, llama.cpp) are refreshed
+    // via the Pi fetcher so installed local models are discovered automatically.
+    if (isCompatProvider(connection.providerType) && !isLocalConnection(connection)) {
       return
     }
 
-    const providerType = connection.providerType as FetchableProvider
+    const providerType: FetchableProvider = isCompatProvider(connection.providerType)
+      ? 'pi'
+      : connection.providerType
     const fetcher = this.fetchers[providerType]
     if (!fetcher) {
       handlerLog.warn(`Model refresh: no fetcher for provider type: ${providerType}`)
@@ -105,6 +110,11 @@ class ModelRefreshService {
     if (!newModels && connection.models && connection.models.length > 0) {
       handlerLog.warn(`Model refresh [${slug}]: keeping ${connection.models.length} stale persisted models (live fetch failed)`)
       return // Nothing to update
+    }
+
+    // Never fall back to cloud MODEL_REGISTRY for local/compat endpoints
+    if (!newModels && isCompatProvider(connection.providerType)) {
+      return
     }
 
     // Layer 3: MODEL_REGISTRY hardcoded fallback
@@ -158,14 +168,16 @@ class ModelRefreshService {
     const connections = getLlmConnections()
 
     for (const conn of connections) {
-      if (isCompatProvider(conn.providerType)) continue
+      if (isCompatProvider(conn.providerType) && !isLocalConnection(conn)) continue
 
-      const providerType = conn.providerType as FetchableProvider
+      const providerType: FetchableProvider = isCompatProvider(conn.providerType)
+        ? 'pi'
+        : conn.providerType
       const fetcher = this.fetchers[providerType]
       if (!fetcher) continue
 
       // Immediate non-blocking fetch
-      this.refreshConnection(conn.slug).catch(err => {
+      this.refreshConnection(conn.slug).catch((err: unknown) => {
         handlerLog.warn(`Initial model refresh failed for ${conn.slug}: ${err instanceof Error ? err.message : err}`)
       })
 

@@ -64,13 +64,13 @@ export function parseAnsi(input: string): AnsiSpan[] {
   let currentBg: string | undefined
   let currentBold = false
 
-  let match
+  let match: RegExpExecArray | null
   while ((match = regex.exec(input)) !== null) {
     // Add text before this escape sequence
     if (match.index > lastIndex) {
       const text = input.slice(lastIndex, match.index)
       if (text) {
-        result.push({ text, fg: currentFg, bg: currentBg, bold: currentBold })
+        result.push({ text, ...(currentFg !== undefined ? { fg: currentFg } : {}), ...(currentBg !== undefined ? { bg: currentBg } : {}), bold: currentBold })
       }
     }
 
@@ -107,7 +107,7 @@ export function parseAnsi(input: string): AnsiSpan[] {
   if (lastIndex < input.length) {
     const text = input.slice(lastIndex)
     if (text) {
-      result.push({ text, fg: currentFg, bg: currentBg, bold: currentBold })
+      result.push({ text, ...(currentFg !== undefined ? { fg: currentFg } : {}), ...(currentBg !== undefined ? { bg: currentBg } : {}), bold: currentBold })
     }
   }
 

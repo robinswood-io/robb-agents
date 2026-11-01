@@ -1,0 +1,85 @@
+{
+  "status": "passed",
+  "sources": 2,
+  "testDeclarations": 74,
+  "nativeTestBodiesSuiteIdentitySetupAndWithinGroupOrderPreserved": true,
+  "sharedMutableStateAdded": false,
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 438,
+  "files": [
+    "packages/shared/src/automations/conditions.test.ts",
+    "packages/shared/src/automations/conditions-should-work-with-time-conditions.test.ts",
+    "packages/shared/src/automations/testing/conditions-fixture.ts",
+    "packages/shared/src/automations/handlers/prompt-handler.test.ts",
+    "packages/shared/src/automations/handlers/prompt-handler-should-leave-llmconnection-undefined-when-not-specified.test.ts",
+    "packages/shared/src/automations/handlers/testing/prompt-handler-fixture.ts"
+  ],
+  "proofs": [
+    {
+      "status": "passed",
+      "fixtureRuntimeImports": [],
+      "packing": "Contiguous native cases with each original nested lexical scope retained once per file",
+      "source": "packages/shared/src/automations/conditions.test.ts",
+      "typing": {
+        "status": "passed",
+        "source": "packages/shared/src/automations/conditions.test.ts",
+        "nativeSourceHash": "9639e9e4fde0e2eef7e6cb14fde0d3525118061496581b1286de9fefa7f2b53b",
+        "typedSourceHash": "9639e9e4fde0e2eef7e6cb14fde0d3525118061496581b1286de9fefa7f2b53b",
+        "typingChanges": 0,
+        "nativeInputBytesUnchanged": true
+      },
+      "testDeclarations": 50,
+      "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+      "nestedSuiteIdentityPreserved": true,
+      "nativeSetupAndBeforeEachRetainedPerFile": true,
+      "sharedDeclarations": [
+        "ctx",
+        "friday",
+        "monday"
+      ],
+      "sharedMutableStateAdded": false,
+      "runtimeImportCycles": 0,
+      "maximumFileLines": 430,
+      "currentSourceHashes": {
+        "packages/shared/src/automations/conditions.test.ts": "a64fc76504f43db39c508be0035d72dd55210d0075e37e0175369ee9141b4130",
+        "packages/shared/src/automations/conditions-should-work-with-time-conditions.test.ts": "746dd92ad5d9ecada29494ee8224fb83e9328290d7ae6ac92fb6f48ad046d31a",
+        "packages/shared/src/automations/testing/conditions-fixture.ts": "f5869f04bd38117b0ef6520fa097e0ba2c73dfece2951e39c94c9f76ba716345"
+      }
+    },
+    {
+      "status": "passed",
+      "fixtureRuntimeImports": [],
+      "packing": "Contiguous native cases with each original nested lexical scope retained once per file",
+      "source": "packages/shared/src/automations/handlers/prompt-handler.test.ts",
+      "typing": {
+        "status": "passed",
+        "source": "packages/shared/src/automations/handlers/prompt-handler.test.ts",
+        "nativeSourceHash": "922d3d232f4b08e82ad96c896d26409041fa04d41c9905cf8016a1d114bdd28f",
+        "typedSourceHash": "46b82a53f48aebb28df62ccbbf21f41bc572b7ff46f2c51a9195b96bf1fe142c",
+        "typingChanges": 1,
+        "requiredFixtureDefaultAdded": {
+          "workspaceRootPath": "/mock/workspace"
+        },
+        "allOtherSourceBytesPreserved": true,
+        "testBodiesAndAssertionsChanged": false
+      },
+      "testDeclarations": 24,
+      "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+      "nestedSuiteIdentityPreserved": true,
+      "nativeSetupAndBeforeEachRetainedPerFile": true,
+      "sharedDeclarations": [
+        "createMockConfigProvider",
+        "createOptions"
+      ],
+      "sharedMutableStateAdded": false,
+      "runtimeImportCycles": 0,
+      "maximumFileLines": 438,
+      "currentSourceHashes": {
+        "packages/shared/src/automations/handlers/prompt-handler.test.ts": "c5e393cfae42d338674375ac8ace2d18071adc0f821c8d8f2370701856a854f5",
+        "packages/shared/src/automations/handlers/prompt-handler-should-leave-llmconnection-undefined-when-not-specified.test.ts": "69db2db68c2c1d3eda4d88db38d76cf35bf6e1f83dcc8d67cfc88f25981ed3ea",
+        "packages/shared/src/automations/handlers/testing/prompt-handler-fixture.ts": "59ccba0e48b61b02da8574e87665076db5803cc4cad2e1fa643c7b19cfcaf9a0"
+      }
+    }
+  ],
+  "requiredFixtureWorkspaceDefaultAdded": true
+}

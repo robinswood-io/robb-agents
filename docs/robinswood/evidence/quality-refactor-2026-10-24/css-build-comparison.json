@@ -1,0 +1,30 @@
+[
+  {
+    "asset": "apps/electron/dist/renderer/assets/renderer-DoHuSWBi.css",
+    "candidate": "apps/electron/dist/renderer/assets/renderer-DoHuSWBi.css",
+    "sameBytes": true,
+    "beforeBytes": 258528,
+    "afterBytes": 258528
+  },
+  {
+    "asset": "apps/electron/dist/renderer/assets/playground-CFxkQwqu.css",
+    "candidate": "apps/electron/dist/renderer/assets/playground-CFxkQwqu.css",
+    "sameBytes": true,
+    "beforeBytes": 434,
+    "afterBytes": 434
+  },
+  {
+    "asset": "apps/webui/dist/assets/main-Zf6JX4NY.css",
+    "candidate": "apps/webui/dist/assets/main-Zf6JX4NY.css",
+    "sameBytes": true,
+    "beforeBytes": 278206,
+    "afterBytes": 278206
+  },
+  {
+    "asset": "apps/viewer/dist/assets/index-CahOCybo.css",
+    "candidate": "apps/viewer/dist/assets/index-CahOCybo.css",
+    "sameBytes": true,
+    "beforeBytes": 148114,
+    "afterBytes": 148114
+  }
+]

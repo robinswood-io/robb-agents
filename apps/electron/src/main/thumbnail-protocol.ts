@@ -154,7 +154,7 @@ function isAllowedThumbnailOrigin(origin: string | null): boolean {
   if (!origin || origin === 'null' || origin.startsWith('file://') || origin.startsWith('thumbnail://')) {
     return true
   }
-  const devUrl = process.env.VITE_DEV_SERVER_URL
+  const devUrl = process.env["VITE_DEV_SERVER_URL"]
   if (devUrl) {
     try {
       return new URL(origin).origin === new URL(devUrl).origin

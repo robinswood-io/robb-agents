@@ -26,6 +26,9 @@ if (existsSync(srcDir)) {
   console.log("⚠️ No resources directory found");
 }
 
+// Drop a stale copy left by builds that still shipped the retired API bridge.
+rmSync(join(destDir, "bridge-mcp-server"), { recursive: true, force: true });
+
 // The main CJS bundle intentionally externalizes the ESM-only Claude SDK.
 // With ASAR enabled, Node resolves that import relative to dist/main.cjs, so
 // stage the thin JS SDK under dist/node_modules inside app.asar. The native
@@ -115,10 +118,6 @@ const runtimeSources: RuntimeIntegritySource[] = [
     path: "messaging-whatsapp-worker/worker.cjs",
     sourcePath: messagingWorker,
   },
-  ...collectRuntimeSources(
-    join(destDir, "bridge-mcp-server"),
-    "app/resources/bridge-mcp-server",
-  ),
   ...collectRuntimeSources(
     join(destDir, "session-mcp-server"),
     "app/resources/session-mcp-server",

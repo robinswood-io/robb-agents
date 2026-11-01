@@ -7,28 +7,34 @@
  * - Clicking notification navigates to the relevant session
  */
 
-import { Notification, app, BrowserWindow, nativeImage } from 'electron'
-import { join } from 'path'
+import { Notification,app,BrowserWindow,nativeImage } from 'electron'
 import { readFileSync } from 'fs'
 import { mainLog } from './logger'
 import { RPC_CHANNELS } from '../shared/types'
 import type { WindowManager } from './window-manager'
+type NotificationWindow = Pick<BrowserWindow, 'isDestroyed' | 'isMinimized' | 'restore' | 'focus'> & {
+  webContents: Pick<BrowserWindow['webContents'], 'id' | 'isDestroyed'>;
+};
+type NotificationWindows = {
+  getWindowByWorkspace(...args: Parameters<WindowManager['getWindowByWorkspace']>): NotificationWindow | null;
+  createWindow(...args: Parameters<WindowManager['createWindow']>): unknown;
+};
+
 import type { EventSink } from '@craft-agent/server-core/transport'
 
 type ClientResolver = (webContentsId: number) => string | undefined
 
-let windowManager: WindowManager | null = null
+let windowManager: NotificationWindows | null = null
 let eventSink: EventSink | null = null
 let clientResolver: ClientResolver | null = null
 let baseIconPath: string | null = null
 let baseIconDataUrl: string | null = null
 let currentBadgeCount: number = 0
-let instanceNumber: number | null = null  // Multi-instance dev: instance number for dock badge
 
 /**
  * Initialize the notification service with window manager reference
  */
-export function initNotificationService(wm: WindowManager): void {
+export function initNotificationService(wm: NotificationWindows): void {
   windowManager = wm
 }
 
@@ -67,8 +73,6 @@ export function showNotification(
     body,
     // macOS-specific options
     silent: false,
-    // Use the app icon
-    icon: undefined,  // Will use app icon by default on macOS
   })
 
   notification.on('click', () => {
@@ -282,7 +286,6 @@ export function initInstanceBadge(number: number): void {
     return
   }
 
-  instanceNumber = number
 
   try {
     // Use dock.setBadge() for simple text badge

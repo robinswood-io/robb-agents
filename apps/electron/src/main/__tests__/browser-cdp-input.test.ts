@@ -3,11 +3,14 @@ mock.module('../logger', () => ({ mainLog: { info() {}, warn() {}, error() {}, d
 const { BrowserCDP } = await import('../browser-cdp')
 const instances: InstanceType<typeof BrowserCDP>[] = []
 afterEach(() => { for (const cdp of instances.splice(0)) cdp.detach() })
-function fixture(handler?: (method: string, args: any) => unknown) {
-  const calls: Array<{ method: string; args: any }> = []
+
+type BrowserTarget = ConstructorParameters<typeof BrowserCDP>[0]
+
+function fixture(handler?: (method: string, args: Record<string, unknown>) => unknown) {
+  const calls: Array<{ method: string; args: Record<string, unknown> }> = []
   let url = 'https://rdp.example.test/'
-  const wc = { getURL: () => url, debugger: { attach() {}, detach() {}, on() {},
-    async sendCommand(method: string, args: any) {
+  const wc = { getURL: () => url, getTitle: () => 'Fixture', sendInputEvent: () => { throw new Error('Unexpected native input'); }, debugger: { attach() {}, detach() {}, on() {},
+    async sendCommand(method: string, args: Record<string, unknown>) {
       calls.push({ method, args })
       const response = handler?.(method, args)
       if (response !== undefined) return response
@@ -16,7 +19,7 @@ function fixture(handler?: (method: string, args: any) => unknown) {
       return {}
     },
   } }
-  const cdp = new BrowserCDP(wc as any); instances.push(cdp)
+  const cdp = new BrowserCDP(wc satisfies BrowserTarget); instances.push(cdp)
   return { cdp, calls, navigate: () => { url = 'https://other.example.test/' } }
 }
 const denied = { result: { type: 'object', subtype: 'error' }, exceptionDetails: { text: 'Uncaught', exception: { description: 'NotAllowedError: PRIVATE_VALUE' } } }
@@ -46,9 +49,9 @@ describe('browser input receipts', () => {
     const { cdp, calls } = fixture()
     await cdp.typeKeys('Az é€\\[]')
     const events = calls.filter(x => x.method === 'Input.dispatchKeyEvent').map(x => x.args)
-    expect(events.filter(x => x.type === 'keyDown').map(x => x.key).join('')).toBe('Az é€\\[]')
-    expect(events.filter(x => x.type === 'keyUp').map(x => x.key).join('')).toBe('Az é€\\[]')
-    expect(events.every(x => x.key !== 'Enter' && !x.modifiers)).toBe(true)
+    expect(events.filter(x => x["type"] === 'keyDown').map(x => x["key"]).join('')).toBe('Az é€\\[]')
+    expect(events.filter(x => x["type"] === 'keyUp').map(x => x["key"]).join('')).toBe('Az é€\\[]')
+    expect(events.every(x => x["key"] !== 'Enter' && !x["modifiers"])).toBe(true)
     expect(calls.some(x => JSON.stringify(x.args).includes('clipboard'))).toBe(false)
   })
   it('rejects controls, newlines, surrogate characters and overlong text before any event', async () => {
@@ -61,36 +64,40 @@ describe('browser input receipts', () => {
   it('rejects non-string transport payloads before any CDP command (including an Enter array)', async () => {
     for (const value of [['Enter'], ['a', 'b'], 42, true, {}, null, undefined]) {
       const { cdp, calls } = fixture()
-      await expect(cdp.typeKeys(value as unknown as string)).rejects.toThrow('printable')
+      await expect(cdp.typeKeys(value as string)).rejects.toThrow('printable')
       expect(calls).toHaveLength(0)
     }
   })
   it('releases a key on transport failure and does not replay the remaining text', async () => {
     const { cdp, calls } = fixture((method, args) => {
-      if (method === 'Input.dispatchKeyEvent' && args.type === 'keyDown') throw new Error('transport failed')
+      if (method === 'Input.dispatchKeyEvent' && args["type"] === 'keyDown') throw new Error('transport failed')
     })
     await expect(cdp.typeKeys('ab')).rejects.toThrow('partial')
-    expect(calls.filter(x => x.method === 'Input.dispatchKeyEvent').map(x => [x.args.type, x.args.key])).toEqual([['keyDown', 'a'], ['keyUp', 'a']])
+    expect(calls.filter(x => x.method === 'Input.dispatchKeyEvent').map(x => [x.args["type"], x.args["key"]])).toEqual([['keyDown', 'a'], ['keyUp', 'a']])
   })
   it('stops after navigation without replaying the prefix', async () => {
     let navigate = () => {}
-    const f = fixture((method, args) => { if (method === 'Input.dispatchKeyEvent' && args.type === 'keyDown') navigate() })
+    const f = fixture((method, args) => { if (method === 'Input.dispatchKeyEvent' && args["type"] === 'keyDown') navigate() })
     navigate = f.navigate
     await expect(f.cdp.typeKeys('ab')).rejects.toThrow('partial')
-    expect(f.calls.filter(x => x.method === 'Input.dispatchKeyEvent').map(x => x.args.key)).toEqual(['a', 'a'])
+    expect(f.calls.filter(x => x.method === 'Input.dispatchKeyEvent').map(x => x.args["key"])).toEqual(['a', 'a'])
   })
   it('rechecks ownership after focus observation before pressing a key', async () => {
     let current = true
     const { cdp, calls } = fixture(method => {
       if (method === 'Runtime.callFunctionOn') { current = false; return { result: { value: true } } }
-    })
+    
+    return undefined;
+  })
     await expect(cdp.typeKeys('abc', () => current)).rejects.toThrow('partial')
     expect(calls.some(x => x.method === 'Input.dispatchKeyEvent')).toBe(false)
   })
   it('stops when the original focused element is replaced', async () => {
     let checks = 0
-    const { cdp, calls } = fixture((method) => { if (method === 'Runtime.callFunctionOn') return { result: { value: ++checks === 1 } } })
+    const { cdp, calls } = fixture((method) => { if (method === 'Runtime.callFunctionOn') return { result: { value: ++checks === 1 } } 
+    return undefined;
+  })
     await expect(cdp.typeKeys('ab')).rejects.toThrow('partial')
-    expect(calls.filter(x => x.method === 'Input.dispatchKeyEvent').map(x => x.args.key)).toEqual(['a', 'a'])
+    expect(calls.filter(x => x.method === 'Input.dispatchKeyEvent').map(x => x.args["key"])).toEqual(['a', 'a'])
   })
 })

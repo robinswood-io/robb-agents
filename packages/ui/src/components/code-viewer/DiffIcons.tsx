@@ -4,10 +4,10 @@
  * Icons sourced from diffs.com for visual consistency with @pierre/diffs
  */
 
-import * as React from 'react'
+
 
 interface IconProps {
-  className?: string
+  className?: string | undefined
 }
 
 /**

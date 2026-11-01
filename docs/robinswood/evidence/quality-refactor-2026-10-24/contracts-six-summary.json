@@ -1,0 +1,74 @@
+{
+  "status": "testé dans le candidat local, non intégré",
+  "domains": [
+    "turn-recovery",
+    "permissions-config",
+    "backend-types",
+    "tool-matching",
+    "objective-mutation-risk",
+    "oauth-flow"
+  ],
+  "declarationsPreserved": 244,
+  "modules": 32,
+  "maximumFileLines": 413,
+  "checks": {
+    "contracts-six-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/server-core/src/sessions/turn-recovery",
+        "packages/shared/src/agent/permissions-config",
+        "packages/shared/src/agent/backend/types",
+        "packages/shared/src/agent/tool-matching",
+        "packages/shared/src/config/objective-mutation-risk",
+        "packages/shared/src/auth/oauth",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.28,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/contracts-six-lint.log"
+    },
+    "contracts-six-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 21.58,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/contracts-six-types.log"
+    },
+    "contracts-six-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 142.66,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/contracts-six-tests.log"
+    },
+    "contracts-six-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 20.26,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/contracts-six-build.log"
+    }
+  },
+  "bodyValidation": "Tous les corps de déclarations et imports extraits comparés ; aucun cycle entre modules ; ordre et liaison des variables mutables préservés",
+  "remaining": {
+    "oversizedCodeFiles": 211,
+    "explicitAny": 748
+  },
+  "installedApplication": "Inchangée"
+}

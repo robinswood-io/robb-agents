@@ -17,7 +17,7 @@ function setNavigator(value: unknown): void {
 
 afterEach(() => {
   if (originalNavigator) Object.defineProperty(globalThis, 'navigator', originalNavigator)
-  else delete (globalThis as Record<string, unknown>).navigator
+  else delete (globalThis as Record<string, unknown>)["navigator"]
 })
 
 describe('PWA app badging', () => {
@@ -40,7 +40,7 @@ describe('PWA app badging', () => {
   })
 
   it('applies badge numbers, flags, and clearing through the navigator API', async () => {
-    const calls: Array<[string, number?]> = []
+    const calls: Array<[string, (number | undefined)?]> = []
     setNavigator({
       setAppBadge: async (value?: number) => {
         calls.push(['set', value])

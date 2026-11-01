@@ -1,0 +1,114 @@
+{
+  "status": "testé dans le candidat local, non intégré",
+  "scope": "Point d’entrée et état du processus Pi ; modules directs par responsabilité",
+  "files": {
+    "packages/pi-agent-server/src/index.ts": 181,
+    "packages/pi-agent-server/src/index/endpoints.ts": 160,
+    "packages/pi-agent-server/src/index/runtime-state.ts": 50,
+    "packages/pi-agent-server/src/index/stdio.ts": 36,
+    "packages/pi-agent-server/src/index/queries.ts": 180,
+    "packages/pi-agent-server/src/index/contracts.ts": 195,
+    "packages/pi-agent-server/src/index/prompts.ts": 184,
+    "packages/pi-agent-server/src/index/tool-execution.ts": 245,
+    "packages/pi-agent-server/src/index/session.ts": 253,
+    "packages/pi-agent-server/src/index/events.ts": 122,
+    "packages/pi-agent-server/src/index/controls.ts": 214,
+    "packages/pi-agent-server/src/index/callback-server.ts": 53
+  },
+  "maximumLines": 253,
+  "stateFields": 22,
+  "functionsPreserved": 43,
+  "statefulFunctions": 35,
+  "proof": "Types, initialisateurs, ordre et mutabilité des données conservés ; chaque fonction et chaque appel comparés après inversion de la qualification de l’état ; imports et effets du point d’entrée conservés ; graphe acyclique",
+  "earlierInertAllocations": [
+    "customEndpointModelIds",
+    "customModelOverrides",
+    "lastNativeSettlement",
+    "overflowRecoveryAttempted",
+    "sdkMessageCorrelations"
+  ],
+  "checks": {
+    "pi-watchers-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 15.28,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-watchers-types.log"
+    },
+    "pi-modules-all-tests-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 141.76,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-modules-all-tests-2.log"
+    },
+    "pi-modules-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 19.93,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-modules-build.log"
+    },
+    "pi-watchers-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/pi-agent-server/src/index.ts",
+        "packages/pi-agent-server/src/index",
+        "packages/pi-agent-server/src/proxy-tool-precheck-contract.test.ts",
+        "apps/electron/src/main/handlers/__tests__/session-watcher.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.93,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-watchers-lint.log"
+    },
+    "pi-modules-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/pi-agent-server"
+      ],
+      "exitCode": 0,
+      "seconds": 5.46,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-modules-tests.log"
+    },
+    "watchers-isolated-fixtures": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./apps/electron/src/main/handlers/__tests__/session-watcher.test.ts",
+        "./apps/electron/src/main/handlers/__tests__/sessions-watchers.test.ts",
+        "--rerun-each",
+        "5"
+      ],
+      "exitCode": 0,
+      "seconds": 10.86,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/watchers-isolated-fixtures.log"
+    }
+  },
+  "watcherFixtures": "Identifiants de clients distincts et fermeture des observateurs garantie même après échec ; cinq répétitions des suites réussies",
+  "validationConstraint": "La suite globale a réussi après le build. Les surveillances natives ont montré une sensibilité à leur contexte ; aucun changement du watcher applicatif dans ce lot.",
+  "remaining": {
+    "oversizedCodeFiles": 198,
+    "explicitAny": 565
+  },
+  "installedApplication": "Inchangée"
+}

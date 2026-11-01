@@ -1,3 +1,4 @@
+import type { LoadedSource } from '../../../../shared/src/sources/types.ts';
 import { afterEach, describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -12,7 +13,7 @@ const logger = {
   warn: () => {},
   error: () => {},
   debug: () => {},
-} as any;
+};
 
 function createTestWebuiDir(): string {
   const dir = mkdtempSync(join(tmpdir(), 'craft-webui-oauth-test-'));
@@ -36,11 +37,11 @@ describe('WebUI /api/oauth/callback', () => {
       state: 'inner-state-123',
       codeVerifier: 'verifier',
       redirectUri: 'https://agents.craft.do/auth/callback',
-      source: {} as any,
+      source: ({} satisfies Partial<LoadedSource>) as LoadedSource,
       clientId: 'test-client-id',
       clientSecret: 'test-client-secret',
       tokenEndpoint: 'https://oauth2.googleapis.com/token',
-      provider: 'google',
+      provider: 'google' as const,
       ownerClientId: 'client-1',
       workspaceId: 'workspace-1',
       sourceSlug: 'gmail',

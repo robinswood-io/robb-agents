@@ -1,0 +1,83 @@
+{
+  "status": "passed",
+  "cases": [
+    {
+      "name": "native board loads both QA task tiles",
+      "status": "passed"
+    },
+    {
+      "name": "native inline composer creates a named QA task",
+      "status": "passed"
+    },
+    {
+      "name": "native single-project filter hides unrelated tasks",
+      "status": "passed"
+    },
+    {
+      "name": "native add-column action persists the focused project columns",
+      "status": "passed"
+    },
+    {
+      "name": "native status picker persists the selected QA task status",
+      "status": "passed"
+    },
+    {
+      "name": "native project filter can restore the complete board",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "calls": [
+    {
+      "method": "create",
+      "args": [
+        "playground-mobile",
+        {
+          "name": "QA Complete Task",
+          "sessionStatus": "todo",
+          "applyTaskLabel": true
+        }
+      ]
+    },
+    {
+      "method": "project",
+      "args": [
+        "playground-mobile",
+        "qa-project",
+        {
+          "kanbanColumns": [
+            {
+              "id": "todo",
+              "name": "ToDo"
+            },
+            {
+              "id": "in-progress",
+              "name": "In Progress"
+            },
+            {
+              "id": "done",
+              "name": "Done"
+            },
+            {
+              "id": "col-00000000",
+              "name": "New column"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "method": "sessionCommand",
+      "args": [
+        "qa-board-0",
+        {
+          "type": "setSessionStatus",
+          "state": "done"
+        }
+      ]
+    }
+  ],
+  "browser": "145.0.7632.6",
+  "scope": "native Kanban with isolated atoms, mocked IPC, QA-only tasks and project"
+}

@@ -1,5 +1,5 @@
 interface RobbAgentsLogoProps {
-  className?: string
+  className?: string | undefined
 }
 
 /** Full Robb Agents wordmark for design-system and marketing surfaces. */

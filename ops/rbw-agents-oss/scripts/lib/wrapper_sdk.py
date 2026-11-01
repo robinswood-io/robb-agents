@@ -1,42 +1,45 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import json
+import logging
 import traceback
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
 
+from pydantic import JsonValue, TypeAdapter
+
+logger = logging.getLogger(__name__)
 OPS = Path('/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops')
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+    return datetime.now(UTC).isoformat().replace('+00:00', 'Z')
 
 
-def atomic_write_json(path: Path, payload: Any) -> None:
+def atomic_write_json(path: Path, payload: JsonValue) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + '.tmp')
-    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    json.loads(tmp.read_text(encoding='utf-8'))
-    tmp.replace(path)
+    _ = tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    _ = TypeAdapter(JsonValue).validate_json(tmp.read_bytes())
+    _ = tmp.replace(path)
 
 
 def write_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + '.tmp')
-    tmp.write_text(content, encoding='utf-8')
-    tmp.replace(path)
+    _ = tmp.write_text(content, encoding='utf-8')
+    _ = tmp.replace(path)
 
 
 def report_paths(slug: str) -> tuple[Path, Path]:
     return OPS / f'{slug}-last.json', OPS / f'{slug}-last.md'
 
 
-def write_report(slug: str, payload: dict[str, Any], title: str | None = None) -> dict[str, str]:
-    payload.setdefault('generatedAt', now_iso())
-    payload.setdefault('ok', True)
-    payload.setdefault('status', 'passed' if payload.get('ok') else 'failed')
+def write_report(slug: str, payload: dict[str, JsonValue], title: str | None = None) -> dict[str, str]:
+    _ = payload.setdefault('generatedAt', now_iso())
+    _ = payload.setdefault('ok', True)
+    _ = payload.setdefault('status', 'passed' if payload.get('ok') else 'failed')
     json_path, md_path = report_paths(slug)
     atomic_write_json(json_path, payload)
     lines = [f'# {title or slug}', '', f'- Generated at: {payload.get("generatedAt")}', f'- Status: **{payload.get("status")}**', f'- OK: **{payload.get("ok")}**']
@@ -48,21 +51,23 @@ def write_report(slug: str, payload: dict[str, Any], title: str | None = None) -
     errors = payload.get('errors')
     warnings = payload.get('warnings')
     if errors:
-        lines += ['', '## Errors'] + [f'- `{json.dumps(e, ensure_ascii=False)}`' for e in errors[:50]]
+        lines += ['', '## Errors'] + [f'- `{json.dumps(e, ensure_ascii=False)}`' for e in TypeAdapter(list[JsonValue]).validate_python(errors)[:50]]
     if warnings:
-        lines += ['', '## Warnings'] + [f'- `{json.dumps(w, ensure_ascii=False)}`' for w in warnings[:50]]
+        lines += ['', '## Warnings'] + [f'- `{json.dumps(w, ensure_ascii=False)}`' for w in TypeAdapter(list[JsonValue]).validate_python(warnings)[:50]]
     write_text(md_path, '\n'.join(lines) + '\n')
     return {'reportJson': str(json_path), 'reportMd': str(md_path)}
 
 
-def safe_main(slug: str, fn: Callable[[], dict[str, Any]], title: str | None = None, fail_exit: bool = False) -> int:
+def safe_main(slug: str, fn: Callable[[], dict[str, JsonValue]], title: str | None = None, fail_exit: bool = False) -> int:
+    payload: dict[str, JsonValue]
     try:
         payload = fn()
-        payload.setdefault('ok', True)
-        write_report(slug, payload, title=title)
+        _ = payload.setdefault('ok', True)
+        _ = write_report(slug, payload, title=title)
         print(json.dumps({'ok': payload.get('ok'), 'status': payload.get('status'), 'artifacts': payload.get('artifacts')}, ensure_ascii=False))
         return 1 if fail_exit and not payload.get('ok') else 0
     except Exception as exc:
+        logger.exception("Wrapper execution failed")
         payload = {
             'ok': False,
             'status': 'failed',

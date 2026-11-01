@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "arrays": {
+    "schedules": [
+      "schedules/001.json",
+      "schedules/002.json",
+      "schedules/003.json",
+      "schedules/004.json",
+      "schedules/005.json"
+    ]
+  }
+}

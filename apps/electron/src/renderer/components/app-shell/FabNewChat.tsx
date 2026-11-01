@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 
 interface FabNewChatProps {
   onClick: () => void
-  className?: string
+  className?: string | undefined
 }
 
 /**

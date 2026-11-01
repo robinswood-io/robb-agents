@@ -1,11 +1,10 @@
+import type { z } from 'zod';
+import type { SetSessionLabelsSchema } from '../tool-defs/schemas.ts';
 import type { SessionToolContext } from '../context.ts';
 import type { ToolResult } from '../types.ts';
 import { successResponse, errorResponse } from '../response.ts';
 
-export interface SetSessionLabelsArgs {
-  sessionId?: string;
-  labels: string[];
-}
+export type SetSessionLabelsArgs = z.infer<typeof SetSessionLabelsSchema>;
 
 export async function handleSetSessionLabels(
   ctx: SessionToolContext,

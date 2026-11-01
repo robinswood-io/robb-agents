@@ -1,3 +1,4 @@
+import { isUnknownArray } from "../../../shared/src/utils/json.ts";
 import type { Message } from '@craft-agent/core/types';
 
 export type LatestTurnTerminalState =
@@ -12,6 +13,40 @@ export type ObjectiveTerminalState =
   | 'blocked_human'
   | 'blocked_policy'
   | 'continue';
+
+/** Fold existing plan events; dropping a pending step is not completing it. */
+export function incompletePlanSteps(messages: readonly Message[], objectiveUserMessageId?: string): string[] {
+  const start = objectiveUserMessageId
+    ? messages.findIndex(message => message.role === 'user' && message.id === objectiveUserMessageId)
+    : messages.findLastIndex(message => message.role === 'user' && !message.hidden && !message.internalOrigin);
+  if (start < 0) return [];
+  const pending = new Map<string, string>();
+  for (let index = start + 1; index < messages.length; index += 1) {
+    const message = messages[index];
+    if (message?.role !== 'tool' || message.toolStatus !== 'completed' || message.toolExecuted === false) continue;
+    const name = message.toolName;
+    const nativeTodo = name === 'TodoWrite';
+    if (!nativeTodo && name !== 'update_plan' && name !== 'mcp__session__update_plan' && name !== 'session__update_plan') continue;
+    const items: unknown = message.toolInput?.[nativeTodo ? 'todos' : 'plan'];
+    if (!isUnknownArray(items)) continue;
+    const steps: Array<{ text: string; status: string }> = [];
+    for (const item of items) {
+      if (!item || typeof item !== 'object') break;
+      const value = item as Record<string, unknown>;
+      const text = value[nativeTodo ? 'content' : 'step'];
+      if (typeof text !== 'string' || !text.trim()
+        || !['pending', 'in_progress', 'completed'].includes(String(value["status"]))) break;
+      steps.push({ text: text.trim(), status: String(value["status"]) });
+    }
+    if (steps.length !== items.length) continue;
+    for (const step of steps) {
+      const key = step.text.replace(/\s+/g, ' ');
+      if (step.status === 'completed') pending.delete(key);
+      else pending.set(key, step.text);
+    }
+  }
+  return [...pending.values()];
+}
 
 const UNFINISHED_ACTION_PATTERNS = [
   /\b(?:je\s+(?:vais\s+)?(?:(?:maintenant|donc|d['’]abord|ensuite|aussi|[àa]\s+pr[ée]sent)\s+)?(?:v[ée]rifier|lancer|relancer|ex[ée]cuter|impl[ée]menter|corriger|modifier|cr[ée]er|g[ée]n[ée]rer|tester|analyser|auditer|chercher|contr[oô]ler|ouvrir|fermer|d[ée]ployer|remplacer|copier|soumettre|pousser|charger|lire|relire|poursuivre|continuer|commencer|poursuis|continue|commence)|j['’](?:ouvre|[ée]cris|analyse|ex[ée]cute|impl[ée]mente)|i\s+(?:will|am\s+going\s+to)\s+(?:now\s+)?(?:check|verify|run|rerun|implement|fix|change|create|generate|test|analyze|audit|search|open|close|deploy|continue|resume)|i['’]ll\s+(?:now\s+)?(?:check|verify|run|rerun|implement|fix|change|create|generate|test|analyze|audit|search|open|close|deploy|continue|resume))\b/i,
@@ -30,9 +65,10 @@ const RECOVERABLE_TECHNICAL_CHECKPOINT_PATTERNS = [
   /\b(?:la\s+suite|l['’][ée]tape\s+suivante)\s+(?:concerne|consiste|sera|doit|devra)\b/i,
 ];
 
-const HUMAN_HANDOFF_PATTERN = /(?:connecte(?:-toi|z-vous)?|authentifie(?:-toi|z-vous)?|clique(?:z)?|valide(?:z)?|saisis(?:sez)?|renseigne(?:r|z)?|r[ée]ponds|dites?-moi|dis-moi|quand\s+(?:tu|vous)|merci\s+de|peux-tu|pouvez-vous|il\s+me\s+manque\s+(?:seulement\s+|ton|ta|votre|un\s+choix|une\s+d[ée]cision|une\s+autorisation|un\s+identifiant|un\s+secret)|j['’]ai\s+besoin\s+(?:de\s+ton|de\s+ta|de\s+votre|d['’]un\s+choix|d['’]une\s+d[ée]cision|d['’]une\s+autorisation|d['’]un\s+identifiant|d['’]un\s+secret)|(?:action|intervention|validation|confirmation|d[ée]cision|autorisation)\s+humaine|j['’]attends\s+(?:ta|votre)\s+(?:r[ée]ponse|validation|confirmation|d[ée]cision|autorisation)|please\s+(?:sign\s+in|log\s+in|click|confirm|enter|reply)|tell\s+me|once\s+you|waiting\s+for\s+you)/i;
-const PROVEN_HUMAN_BLOCKER_PATTERN = /(?:oauth|mfa|2fa|authentification\s+[àa]\s+deux\s+facteurs|(?:code\s+(?:de\s+)?(?:validation|s[ée]curit[ée])|mot\s+de\s+passe|password|api[-_ ]?key|cl[ée]\s+api|secret|credentials?|identifiant)\s+(?:manquant|requis|n[ée]cessaire|absent|invalide|expir[ée]|missing|required|needed|invalid|expired)|(?:manque|besoin|exige|requiert|requires?|needs?)\s+(?:d['’])?(?:un\s+|une\s+|le\s+|la\s+|des?\s+)?(?:code\s+(?:de\s+)?(?:validation|s[ée]curit[ée])|mot\s+de\s+passe|password|api[-_ ]?key|cl[ée]\s+api|secret|credentials?|identifiant)|connecte(?:-toi|z-vous)?|authentifie(?:-toi|z-vous)?|sign\s+in|log\s+in|d[ée]cision\s+m[ée]tier|business\s+decision|choix\s+m[ée]tier|autorisation\s+(?:externe|humaine|irr[ée]versible)|external\s+authorization)/i;
-const POLICY_BLOCKER_PATTERN = /\b(?:(?:politique|policy|r[èe]gle|permission|mode\s+lecture\s+seule|read[- ]only|sandbox)\b.{0,120}\b(?:interdit|bloqu[ée]|refus[ée]|n['’]autorise\s+pas|forbids?|blocked|denied)|(?:interdit|bloqu[ée]|refus[ée]|forbidden|blocked|denied)\b.{0,120}\b(?:politique|policy|permission|sandbox))\b/i;
+const HUMAN_HANDOFF_PATTERN = /\b(?:connecte(?:-toi|z-vous)?|authentifie(?:-toi|z-vous)?|clique(?:z)?|valide(?:z)?|saisis(?:sez)?|renseigne(?:r|z)?|r[ée]ponds|dites?-moi|dis-moi|quand\s+(?:tu|vous)|merci\s+de|peux-tu|pouvez-vous|il\s+me\s+manque\s+(?:seulement\s+|ton|ta|votre|un\s+choix|une\s+d[ée]cision|une\s+autorisation|un\s+identifiant|un\s+secret)|j['’]ai\s+besoin\s+(?:de\s+ton|de\s+ta|de\s+votre|d['’]un\s+choix|d['’]une\s+d[ée]cision|d['’]une\s+autorisation|d['’]un\s+identifiant|d['’]un\s+secret)|(?:action|intervention|validation|confirmation|d[ée]cision|autorisation)\s+humaine|j['’]attends\s+(?:ta|votre)\s+(?:r[ée]ponse|validation|confirmation|d[ée]cision|autorisation)|please\s+(?:sign\s+in|log\s+in|click|confirm|enter|reply)|tell\s+me|once\s+you|waiting\s+for\s+you)\b/i;
+const PROVEN_HUMAN_BLOCKER_PATTERN = /\b(?:oauth|mfa|2fa|authentification\s+[àa]\s+deux\s+facteurs|(?:code\s+(?:de\s+)?(?:validation|s[ée]curit[ée])|mot\s+de\s+passe|password|api[-_ ]?key|cl[ée]\s+api|secret|credentials?|identifiant)\s+(?:manquant|requis|n[ée]cessaire|absent|invalide|expir[ée]|missing|required|needed|invalid|expired)|(?:manque|besoin|exige|requiert|requires?|needs?)\s+(?:d['’])?(?:un\s+|une\s+|le\s+|la\s+|des?\s+)?(?:code\s+(?:de\s+)?(?:validation|s[ée]curit[ée])|mot\s+de\s+passe|password|api[-_ ]?key|cl[ée]\s+api|secret|credentials?|identifiant)|connecte(?:-toi|z-vous)?|authentifie(?:-toi|z-vous)?|sign\s+in|log\s+in|d[ée]cision\s+m[ée]tier|business\s+decision|choix\s+m[ée]tier|autorisation\s+(?:externe|humaine|irr[ée]versible)|external\s+authorization)\b/i;
+const DECLARED_OBJECTIVE_BLOCKER_PATTERN = /^\s*(?:[*_#`~>+-]\s*)*(?:(?:mission|objectif|t[âa]che)\s+(?:(?:est|is)\s+)?bloqu[ée]e?|(?:mission|task)\s+(?:is\s+)?blocked)(?=$|[\s\p{P}\p{S}])/iu;
+const POLICY_BLOCKER_PATTERN = /\b(?:(?:politique|policy|r[èe]gle|permission|mode\s+lecture\s+seule|read[- ]only|sandbox)\b.{0,120}\b(?:interdit|bloqu[ée]|refus[ée]|n['’]autorise\s+pas|forbids?|blocked|denied)|(?:interdit|bloqu[ée]|refus[ée]|forbidden|blocked|denied)\b.{0,120}\b(?:politique|policy|permission|sandbox)|(?:l['’]application|l['’]h[ôo]te|le\s+connecteur|le\s+relais)\s+(?:actuel\s+)?(?:bloque|refuse|interdit|impose\s+la\s+lecture\s+seule)|(?:r[ée]ponse|message|mail|courriel|envoi)\s+pr[ée]par[ée]e?,?\s+mais\s+non\s+envoy[ée]e?|(?:le\s+nettoyage|l['’]op[ée]ration|l['’]envoi|la\s+suppression|la\s+modification)\s+reste\s+bloqu[ée]e?)\b/i;
 
 const CONDITIONAL_POLITE_OFFER_PATTERN = /\b(?:si\s+(?:vous|tu)\s+(?:le\s+)?(?:souhait(?:ez|es?)|voulez|veux|avez\s+besoin|as\s+besoin)|au\s+besoin|n['’]h[ée]site(?:z)?\s+pas|le\s+cas\s+[ée]ch[ée]ant|sur\s+demande|je\s+reste\s+(?:[àa]\s+disposition|disponible)|if\s+you\s+(?:want|need|wish)|let\s+me\s+know\s+if|feel\s+free\s+to)\b/i;
 
@@ -78,6 +114,7 @@ export function classifyObjectiveTerminalState(
     structuredOutcomeRequired?: boolean;
     structuredOutcomeValid?: boolean;
     declaredState?: ObjectiveTerminalState;
+    remainingPlanSteps?: readonly string[];
   } = {},
 ): ObjectiveTerminalState {
   const normalized = content.replace(/\s+/g, ' ').trim();
@@ -86,16 +123,17 @@ export function classifyObjectiveTerminalState(
     if (options.structuredOutcomeValid !== true) return 'continue';
     if (options.declaredState === 'continue') return 'continue';
     if (options.declaredState === 'complete_verified'
-      && (options.evidenceGap || options.executionEvidenceMissing)) return 'continue';
+      && (options.evidenceGap || options.executionEvidenceMissing || options.remainingPlanSteps?.length
+        || DECLARED_OBJECTIVE_BLOCKER_PATTERN.test(normalized) || looksLikePrematureFinalAssistant(normalized))) return 'continue';
     return options.declaredState;
   }
   if (looksLikePrematureFinalAssistant(normalized)) return 'continue';
-  if (options.structuredOutcomeRequired) return 'continue';
   if (PROVEN_HUMAN_BLOCKER_PATTERN.test(normalized) && HUMAN_HANDOFF_PATTERN.test(normalized)) {
     return 'blocked_human';
   }
-  if (POLICY_BLOCKER_PATTERN.test(normalized)) return 'blocked_policy';
-  if (options.evidenceGap || options.executionEvidenceMissing) return 'continue';
+  if (POLICY_BLOCKER_PATTERN.test(normalized) || DECLARED_OBJECTIVE_BLOCKER_PATTERN.test(normalized)) return 'blocked_policy';
+  if (options.structuredOutcomeRequired) return 'continue';
+  if (options.evidenceGap || options.executionEvidenceMissing || options.remainingPlanSteps?.length) return 'continue';
   return 'complete_verified';
 }
 
@@ -103,7 +141,11 @@ export function classifyObjectiveTerminalState(
  * Classify whether the latest user turn has a user-visible terminal outcome.
  * Intermediate commentary and tool results are progress, not a final answer.
  */
-export function classifyLatestTurnTerminalState(messages: Message[], userMessageId?: string): LatestTurnTerminalState {
+export function classifyLatestTurnTerminalState(
+  messages: Message[],
+  userMessageId?: string,
+  remainingPlanSteps: readonly string[] = incompletePlanSteps(messages, userMessageId),
+): LatestTurnTerminalState {
   let latestUserIndex = -1;
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     if (messages[index]?.role === 'user' && (!userMessageId || messages[index]?.id === userMessageId)) {
@@ -121,7 +163,9 @@ export function classifyLatestTurnTerminalState(messages: Message[], userMessage
       // Structured declarations are evaluated by the objective validator;
       // prose heuristics must not bypass that host-side decision.
       if (message.objectiveOutcome || message.objectiveOutcomeError) return 'final-assistant';
+      const stop = classifyObjectiveTerminalState(message.content);
       return looksLikePrematureFinalAssistant(message.content)
+        || (remainingPlanSteps.length > 0 && stop !== 'blocked_human' && stop !== 'blocked_policy')
         ? 'premature-final-assistant'
         : 'final-assistant';
     }

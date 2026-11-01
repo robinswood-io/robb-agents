@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Helpers for persisting and hydrating session-input attachments.
  *
@@ -72,7 +73,7 @@ export function toDraftRef(a: FileAttachment): DraftAttachmentRef | null {
  */
 export function attachmentFromContentRef(ref: DraftAttachmentRef): FileAttachment | null {
   if (!ref.content) return null
-  return {
+  return omitUndefined<FileAttachment>({
     type: ref.content.type,
     path: ref.path,
     name: ref.name,
@@ -81,5 +82,5 @@ export function attachmentFromContentRef(ref: DraftAttachmentRef): FileAttachmen
     base64: ref.content.base64,
     text: ref.content.text,
     thumbnailBase64: ref.content.thumbnailBase64,
-  }
+  })
 }

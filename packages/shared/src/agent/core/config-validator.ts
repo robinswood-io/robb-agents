@@ -67,10 +67,8 @@ const CRAFT_AGENT_CONFIG_PATTERNS = [
  * ```
  */
 export class ConfigValidator {
-  private config: ConfigValidatorConfig;
 
-  constructor(config: ConfigValidatorConfig = {}) {
-    this.config = config;
+  constructor(_config: ConfigValidatorConfig = {}) {
   }
 
   // ============================================================
@@ -153,7 +151,6 @@ export class ConfigValidator {
 
       // Try to extract line/column info from error message
       const lineMatch = error.match(/line (\d+)/i);
-      const colMatch = error.match(/column (\d+)/i);
       const posMatch = error.match(/position (\d+)/i);
 
       let detailedError = error;
@@ -204,7 +201,7 @@ export class ConfigValidator {
 
     return {
       valid: warnings.length === 0,
-      warnings: warnings.length > 0 ? warnings : undefined,
+      ...(warnings.length > 0 ? { warnings: warnings } : {}),
     };
   }
 
@@ -220,7 +217,6 @@ export class ConfigValidator {
 
     // Basic checks for common YAML issues
     const lines = content.split('\n');
-    let indentStack: number[] = [0];
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]!;
@@ -245,7 +241,7 @@ export class ConfigValidator {
 
     return {
       valid: true, // YAML warnings are advisory, not errors
-      warnings: warnings.length > 0 ? warnings : undefined,
+      ...(warnings.length > 0 ? { warnings: warnings } : {}),
     };
   }
 

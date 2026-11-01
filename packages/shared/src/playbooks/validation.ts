@@ -4,7 +4,7 @@ import type { PlaybookManifest } from './types.ts'
 const slug = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/)
 const gate = z.enum(['oauth_or_mfa', 'credential_required', 'business_decision_required', 'external_authorization_required'])
 
-const schema = z.object({
+export const PlaybookManifestSchema = z.object({
   version: z.literal(1),
   procedure: z.enum(['document-package', 'document-delivery', 'campaign-preparation', 'software-change', 'software-deployment']).optional(),
   slug,
@@ -18,5 +18,5 @@ const schema = z.object({
 }).strict()
 
 export function validatePlaybookManifest(value: unknown): PlaybookManifest {
-  return schema.parse(value)
+  return PlaybookManifestSchema.parse(value)
 }

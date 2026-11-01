@@ -1,3 +1,4 @@
+import { requiredTestValue } from '@craft-agent/shared/testing/fixture-values';
 import { describe, it, expect } from 'bun:test'
 import { createStore } from 'jotai'
 import {
@@ -23,9 +24,9 @@ describe('panel stack single-lane behavior', () => {
 
     const stack = getStack(store)
     expect(stack).toHaveLength(3)
-    expect(stack[0].route).toBe('allSessions/session/s1')
-    expect(stack[1].route).toBe('sources/source/github')
-    expect(stack[2].route).toBe('settings')
+    expect(requiredTestValue(stack[0]).route).toBe('allSessions/session/s1')
+    expect(requiredTestValue(stack[1]).route).toBe('sources/source/github')
+    expect(requiredTestValue(stack[2]).route).toBe('settings')
     expect(stack.every((p) => p.laneId === 'main')).toBe(true)
   })
 
@@ -57,9 +58,9 @@ describe('panel stack single-lane behavior', () => {
 
     const stack = getStack(store)
     expect(stack).toHaveLength(3)
-    expect(stack[0].route).toBe('allSessions/session/s1')
-    expect(stack[1].route).toBe('sources/source/linear')
-    expect(stack[2].route).toBe('allSessions/session/s2')
+    expect(requiredTestValue(stack[0]).route).toBe('allSessions/session/s1')
+    expect(requiredTestValue(stack[1]).route).toBe('sources/source/linear')
+    expect(requiredTestValue(stack[2]).route).toBe('allSessions/session/s2')
   })
 
   it('reconcile focuses by focusedIndex first when duplicate routes exist', () => {
@@ -78,7 +79,7 @@ describe('panel stack single-lane behavior', () => {
     const stack = getStack(store)
     expect(stack).toHaveLength(2)
     const focusedId = store.get(focusedPanelIdAtom)
-    expect(focusedId).toBe(stack[1].id)
+    expect(focusedId).toBe(requiredTestValue(stack[1]).id)
   })
 
   it('reconcile no-op keeps focused index target with duplicate routes', () => {
@@ -93,8 +94,8 @@ describe('panel stack single-lane behavior', () => {
     })
 
     const stack = getStack(store)
-    const firstId = stack[0].id
-    const secondId = stack[1].id
+    const firstId = requiredTestValue(stack[0]).id
+    const secondId = requiredTestValue(stack[1]).id
     expect(firstId).not.toBe(secondId)
 
     const changed = store.set(reconcilePanelStackAtom, {

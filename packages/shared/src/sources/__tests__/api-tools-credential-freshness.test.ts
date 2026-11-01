@@ -19,9 +19,6 @@ import { describe, test, expect } from 'bun:test';
 import { createApiTool } from '../api-tools.ts';
 import type { ApiConfig } from '../types.ts';
 
-interface MinimalTool {
-  handler: (args: Record<string, unknown>) => Promise<unknown>;
-}
 
 function makeBearerConfig(): ApiConfig {
   return {
@@ -64,16 +61,15 @@ describe('createApiTool: credential freshness', () => {
     const tool = createApiTool(makeBearerConfig(), async () => {
       getterCalls += 1;
       throw new Error('ordinary Mission source credential binding drifted');
-    }) as unknown as MinimalTool;
+    });
 
     const f = captureFetch();
     try {
-      const result = await tool.handler({ path: '/ping', method: 'GET' }) as {
-        isError?: boolean;
-        content?: Array<{ text?: string }>;
-      };
+      const result = await tool.handler({ path: '/ping', method: 'GET', params: undefined, _intent: undefined }, undefined);
       expect(result.isError).toBe(true);
-      expect(result.content?.[0]?.text).toContain('credential binding drifted');
+      const first = result.content[0];
+      if (first?.type !== 'text') throw new Error('Expected a text error from the credential fence');
+      expect(first.text).toContain('credential binding drifted');
       expect(getterCalls).toBe(1);
       expect(f.callCount()).toBe(0);
     } finally {
@@ -84,17 +80,17 @@ describe('createApiTool: credential freshness', () => {
   test('bearer auth — getter is called on every request, latest value wins', async () => {
     let currentToken = 'token-A';
     const getter = async () => currentToken;
-    const tool = createApiTool(makeBearerConfig(), getter) as unknown as MinimalTool;
+    const tool = createApiTool(makeBearerConfig(), getter);
 
     const f = captureFetch();
     try {
-      await tool.handler({ path: '/ping', method: 'GET' });
+      await tool.handler({ path: '/ping', method: 'GET', params: undefined, _intent: undefined }, undefined);
       expect(f.lastHeaders()?.['Authorization']).toBe('Bearer token-A');
 
       // Simulate a credential update in the vault (e.g. source_credential_prompt)
       currentToken = 'token-B';
 
-      await tool.handler({ path: '/ping', method: 'GET' });
+      await tool.handler({ path: '/ping', method: 'GET', params: undefined, _intent: undefined }, undefined);
       expect(f.lastHeaders()?.['Authorization']).toBe('Bearer token-B');
 
       // Sanity: the getter resolves on every call, not once at creation
@@ -109,14 +105,14 @@ describe('createApiTool: credential freshness', () => {
     // (not a getter) freezes the credential. Callers that route through
     // SessionManager now provide a getter, but the static path is still
     // supported as a fallback for tests / direct invocations.
-    const tool = createApiTool(makeBearerConfig(), 'static-token') as unknown as MinimalTool;
+    const tool = createApiTool(makeBearerConfig(), 'static-token');
 
     const f = captureFetch();
     try {
-      await tool.handler({ path: '/ping', method: 'GET' });
+      await tool.handler({ path: '/ping', method: 'GET', params: undefined, _intent: undefined }, undefined);
       expect(f.lastHeaders()?.['Authorization']).toBe('Bearer static-token');
 
-      await tool.handler({ path: '/ping', method: 'GET' });
+      await tool.handler({ path: '/ping', method: 'GET', params: undefined, _intent: undefined }, undefined);
       // Same value — confirms the captured-string contract for the fallback path
       expect(f.lastHeaders()?.['Authorization']).toBe('Bearer static-token');
     } finally {
@@ -132,16 +128,16 @@ describe('createApiTool: credential freshness', () => {
       baseUrl: 'https://example.test/',
       auth: { type: 'header', headerName: 'X-API-Key' },
     };
-    const tool = createApiTool(config, getter) as unknown as MinimalTool;
+    const tool = createApiTool(config, getter);
 
     const f = captureFetch();
     try {
-      await tool.handler({ path: '/ping', method: 'GET' });
+      await tool.handler({ path: '/ping', method: 'GET', params: undefined, _intent: undefined }, undefined);
       expect(f.lastHeaders()?.['X-API-Key']).toBe('key-A');
 
       currentKey = 'key-B';
 
-      await tool.handler({ path: '/ping', method: 'GET' });
+      await tool.handler({ path: '/ping', method: 'GET', params: undefined, _intent: undefined }, undefined);
       expect(f.lastHeaders()?.['X-API-Key']).toBe('key-B');
     } finally {
       f.restore();

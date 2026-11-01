@@ -1,0 +1,262 @@
+{
+  "source": "packages/shared/src/specialized-profiles/mission-selection.ts",
+  "units": [
+    {
+      "names": [
+        "SPECIALIZED_MISSION_PROFILE_ID_PREFIX"
+      ],
+      "group": "contracts",
+      "bodySha256": "64af1b685e4b87dc6250bbbedf4f889381cf7a24f4692f21c7a677250c720d77"
+    },
+    {
+      "names": [
+        "SPECIALIZED_MISSION_PROFILE_STATES"
+      ],
+      "group": "contracts",
+      "bodySha256": "d5bbbe44d187426a930208728920cbe961d73f0c52d276cec19217bb86fb3b03"
+    },
+    {
+      "names": [
+        "SPECIALIZED_MISSION_PROFILE_BINDING_STATES"
+      ],
+      "group": "contracts",
+      "bodySha256": "22ef0824b1acd0d9118c2f17c16253c8b5ddd091087fd18e409655d25ece3483"
+    },
+    {
+      "names": [
+        "ACTIVE_STATE_SET"
+      ],
+      "group": "contracts",
+      "bodySha256": "92cfe1f4c8fbf2373564d98b838544d36df6ec5cfced4b16418fc83b002df3d4"
+    },
+    {
+      "names": [
+        "ACTIVE_STATE_RANK"
+      ],
+      "group": "contracts",
+      "bodySha256": "bfe0d0be702a0f95bc6cf297ea0e14e02b3ce04bce676201a3346c2a916dfc70"
+    },
+    {
+      "names": [
+        "BINDING_START"
+      ],
+      "group": "contracts",
+      "bodySha256": "3185f79047027465583e2b1eae9b99f3a413526ab428e2a65221e6bfb68d9f98"
+    },
+    {
+      "names": [
+        "BINDING_END"
+      ],
+      "group": "contracts",
+      "bodySha256": "96d84df27483316eb4d15fd2e21000ae9ef18501ad3017baf7b73cd99c487c33"
+    },
+    {
+      "names": [
+        "SpecializedMissionProfileReferenceSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "ba16a7e692c4d758241fa57c90a74938df97e9b38d1662a94b9534246cb2ef1f"
+    },
+    {
+      "names": [
+        "SpecializedMissionProfileState"
+      ],
+      "group": "contracts",
+      "bodySha256": "45e6b8bf4584a674e415ffc94083916d7b23d043e94a562d552b78ada7812fbc"
+    },
+    {
+      "names": [
+        "SpecializedMissionProfileReference"
+      ],
+      "group": "contracts",
+      "bodySha256": "b30087533c94f4917edb80c94dcd6f12fe771e22331d82db885ab56e138b9817"
+    },
+    {
+      "names": [
+        "SpecializedMissionProfileBinding"
+      ],
+      "group": "contracts",
+      "bodySha256": "b6b758cf4bdf050aceae91d9fe6bcc1c93ffc3699b5e79c1a311efd1e94c4a07"
+    },
+    {
+      "names": [
+        "SpecializedMissionCapability"
+      ],
+      "group": "contracts",
+      "bodySha256": "9a09607ded635397a37984ddc1883b15bf507546488d4af7ff2e8428d7ac19f9"
+    },
+    {
+      "names": [
+        "SpecializedMissionSelectionContext"
+      ],
+      "group": "contracts",
+      "bodySha256": "e296e5d623116a5697bec060f3faddd236e8399c6f536f2fd62e13ad39fb19ad"
+    },
+    {
+      "names": [
+        "SpecializedMissionProfileSelection"
+      ],
+      "group": "contracts",
+      "bodySha256": "277ed6345a6b8b3bbb0846beb2824d66b896414af88964b1e622ba84365619c2"
+    },
+    {
+      "names": [
+        "SpecializedMissionProfileSelectionError"
+      ],
+      "group": "contracts",
+      "bodySha256": "9cacfdab3fe4e162236f6aec96dc1c0feae9a098da1ad321dd6771228e206964"
+    },
+    {
+      "names": [
+        "selectionError"
+      ],
+      "group": "contracts",
+      "bodySha256": "956e14fa07ed216fd88c5edbb77b2616de9a66f73ec7b687bd2cfa012292381f"
+    },
+    {
+      "names": [
+        "REQUIRED_QUALIFICATION_STAGES"
+      ],
+      "group": "selection",
+      "bodySha256": "8bb4eaf824e97cd266738356c7d95fbb7a625145ca9699511a362c2e746bbc34"
+    },
+    {
+      "names": [
+        "specializedProfileHasCurrentMissionQualification"
+      ],
+      "group": "selection",
+      "bodySha256": "8df13c3b8738cfe0af4fee4e7371cdeb96a66aab2e40df79bb637478b74144d3"
+    },
+    {
+      "names": [
+        "selectSpecializedMissionProfile"
+      ],
+      "group": "selection",
+      "bodySha256": "56ad6f7e90262781b3b3b173e024f46ee083c16fb19706cfd340e5c6c662f92e"
+    },
+    {
+      "names": [
+        "parseSpecializedMissionProfileReference"
+      ],
+      "group": "bindings",
+      "bodySha256": "843e39bcf4d2b64758e335cf017c0d87523277b0b3803229635dc7fa1851678c"
+    },
+    {
+      "names": [
+        "isSpecializedMissionProfileState"
+      ],
+      "group": "bindings",
+      "bodySha256": "c64eb52ecd733926058739157017655860380f777c129e5594901fcb2e13b4b9"
+    },
+    {
+      "names": [
+        "isSpecializedMissionProfileBindingState"
+      ],
+      "group": "bindings",
+      "bodySha256": "cd4d5d3dcb555e61c4664dd37ee3240842ae83505bf72c4323e5fe54071a6deb"
+    },
+    {
+      "names": [
+        "latestPromotionTransitionForStage"
+      ],
+      "group": "bindings",
+      "bodySha256": "2795161d2d625dfad48284179dc627aca39fdb126986d983c121fd90cbbd4a06"
+    },
+    {
+      "names": [
+        "conditionMatches"
+      ],
+      "group": "bindings",
+      "bodySha256": "12603732b8fa83ca1ed7552ed0f07b96ec3066f1afe3eb5a95b810a63cebc57f"
+    },
+    {
+      "names": [
+        "qualifiedSystemPrompt"
+      ],
+      "group": "bindings",
+      "bodySha256": "7af1476416bced276f0b27087cb2f9b0add2f640f4522339d44fe68b252cd245"
+    },
+    {
+      "names": [
+        "serializeBinding"
+      ],
+      "group": "bindings",
+      "bodySha256": "7abef3e25c1614fae31b03c422c0c6a25aa61347b9fe9f6343a64c6c611f811b"
+    },
+    {
+      "names": [
+        "capabilityKey"
+      ],
+      "group": "bindings",
+      "bodySha256": "7f20690557019880d8ddf73e9e3588e8bf05347627cfdf80ce452cd55c4dca8d"
+    },
+    {
+      "names": [
+        "specializedProfileCapabilityEnvelopeIdentity"
+      ],
+      "group": "bindings",
+      "bodySha256": "26dc150f151081d6ee222d18b25183cbb5a415c8a98323a60628e5430f823df8"
+    },
+    {
+      "names": [
+        "specializedProfileExecutionRouteIdentity"
+      ],
+      "group": "execution-route",
+      "bodySha256": "f9895def274c4289470e9d29a8438ddb7d9a115ec6c381948bb72ad8865e924a"
+    },
+    {
+      "names": [
+        "canonicalExecutionConnection"
+      ],
+      "group": "execution-route",
+      "bodySha256": "dfddf494c8f185587737fac70034b9aa4c8d5ead36ae59c8d5789f1a0b776645"
+    },
+    {
+      "names": [
+        "canonicalRouteValue"
+      ],
+      "group": "execution-route",
+      "bodySha256": "db323654dafa1911d2a92c6ecfc67ba6851a80a83e404db75216d2c1c912f6c8"
+    },
+    {
+      "names": [
+        "routeStableJson"
+      ],
+      "group": "execution-route",
+      "bodySha256": "0c766181f9a1389627836c32763b8f68da10f2af6d75ada8e3b73b4b7cb14c4c"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 110
+    },
+    {
+      "name": "selection",
+      "lines": 275
+    },
+    {
+      "name": "bindings",
+      "lines": 95
+    },
+    {
+      "name": "execution-route",
+      "lines": 70
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "selection": [
+      "contracts",
+      "bindings"
+    ],
+    "bindings": [
+      "contracts"
+    ],
+    "execution-route": [
+      "contracts"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

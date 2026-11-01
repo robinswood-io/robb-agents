@@ -1,0 +1,75 @@
+{
+  "status": "passed",
+  "source": "apps/electron/src/renderer/context/ThemeContext.tsx",
+  "destination": "apps/electron/src/renderer/context/theme-context-values.ts",
+  "patterns": [
+    "../../../resources/themes/*.json"
+  ],
+  "sameDirectoryAndResolvedResources": true,
+  "files": [
+    {
+      "file": "apps/electron/resources/themes/catppuccin.json",
+      "sha256": "a3c8cc47ba1fcdf284ff7a3c23b108ecd39640b2a43edd6545b6095a6c43cf02"
+    },
+    {
+      "file": "apps/electron/resources/themes/default.json",
+      "sha256": "4284b50508f9830b36b33fa1165699c48eb20c5690f2c75474a8bf762b49891f"
+    },
+    {
+      "file": "apps/electron/resources/themes/dracula.json",
+      "sha256": "4fc4e2595264ebff139440f7fb18678e7283915b8ec0c6f879d798c885deaf6f"
+    },
+    {
+      "file": "apps/electron/resources/themes/ghostty.json",
+      "sha256": "4e4fc16e94f775506423960eddd188b50f9b49eba80c036f094531fe9294a5b0"
+    },
+    {
+      "file": "apps/electron/resources/themes/github.json",
+      "sha256": "8f9b2e2cea2354318872d23b42c7173a325daae2bdcffe9a0d7625467c77158f"
+    },
+    {
+      "file": "apps/electron/resources/themes/gruvbox.json",
+      "sha256": "ca9148cded3b3650a25a30c0e339246b7ca8f6e095159ab4de25b51e886d0aae"
+    },
+    {
+      "file": "apps/electron/resources/themes/haze.json",
+      "sha256": "0bd21718d83bde05ca346facbe88b0ce745f6c6b33bd7f196d5b6f27e39f28c8"
+    },
+    {
+      "file": "apps/electron/resources/themes/night-owl.json",
+      "sha256": "6593e7a8b06d7fc928ea900c53d489e4d74defe5a630094f8929d641993df0dc"
+    },
+    {
+      "file": "apps/electron/resources/themes/nord.json",
+      "sha256": "17cc36bf3e452b20de611dd7319cc92cbf9c61065b091a8c2f23576d2ab88df3"
+    },
+    {
+      "file": "apps/electron/resources/themes/one-dark-pro.json",
+      "sha256": "3b55b9953193669d46a74730c59da7c0fdf1ae4820627185dc8ec3c0043061f3"
+    },
+    {
+      "file": "apps/electron/resources/themes/pierre.json",
+      "sha256": "1436c6b9507f7a94ba41cb9b7398d7b75f4af1cd11efde7a022cab1ed774ba59"
+    },
+    {
+      "file": "apps/electron/resources/themes/robinswood.json",
+      "sha256": "398346cbd78bdcab8cb922da2e79ae8ba136cdfaa9e169082cbc8acc7a579946"
+    },
+    {
+      "file": "apps/electron/resources/themes/rose-pine.json",
+      "sha256": "4fc7bb844e439e61eff10380c7b890714bd222ef8a1f41ee6e1d2d04d9e0a758"
+    },
+    {
+      "file": "apps/electron/resources/themes/solarized.json",
+      "sha256": "ce21497fbb79f4b1dd9b954aa5d5246be99c2dbe837299dee16b84acfbbc222e"
+    },
+    {
+      "file": "apps/electron/resources/themes/tokyo-night.json",
+      "sha256": "d3d80a8320fe8a625ca85cfc9c0a7380100a91e7730c8a317812a1c3381023ae"
+    },
+    {
+      "file": "apps/electron/resources/themes/vitesse.json",
+      "sha256": "fb46aa74800bbe47d7c0b71372887fdcbbd9b55ef538750d905af49ad6c89b39"
+    }
+  ]
+}

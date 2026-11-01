@@ -16,15 +16,15 @@ export interface EntityListBadgeProps {
   /** Badge content (text or icon) */
   children: React.ReactNode
   /** "text" (default) = text pill, "icon" = 18×18 centered icon box */
-  variant?: 'text' | 'icon'
+  variant?: 'text' | 'icon' | undefined
   /** Color classes, e.g. "bg-accent/10 text-accent" */
-  colorClass?: string
+  colorClass?: string | undefined
   /** Inline styles — for runtime-computed colors (e.g. label color-mix) */
-  style?: React.CSSProperties
+  style?: React.CSSProperties | undefined
   /** Optional tooltip text (shown on hover) */
-  tooltip?: string
+  tooltip?: string | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
 }
 
 export function EntityListBadge({ children, variant = 'text', colorClass, style, tooltip, className }: EntityListBadgeProps) {

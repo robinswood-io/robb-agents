@@ -1,3 +1,4 @@
+import { scopeReviewFixture } from './testing/scope-review-fixture.ts';
 import { describe, expect, it } from 'bun:test';
 import type { Message, ObjectiveOutcomeDeclaration } from '@craft-agent/core/types';
 import { transitionObjectiveContract } from './objective-contract.ts';
@@ -23,7 +24,10 @@ describe('registered verification evidence for delivered decks and remote status
         evidence: [id === 'relevant-checks-passed' ? result.id : 'assistant-final'] })),
       { id: 'verified-result', satisfied: true, evidence: [result.id] }],
     };
-    const validate = (messages: Message[], obj = objective) => validateObjectiveOutcome(receipt, { objective: obj, messages });
+    const validate = (messages: Message[], obj = objective) => validateObjectiveOutcome(receipt, {
+      objective: obj, messages: [...messages, scopeReviewFixture(obj, messages)],
+    });
+    expect(validateObjectiveOutcome(receipt, { objective, messages: [root, result] }).valid).toBe(false);
     expect(validate([root, result]).valid).toBe(true);
     for (const changes of [
       { toolExecuted: false }, { isError: true }, { toolResult: '{"passed":false}' }, { timestamp: 0 },

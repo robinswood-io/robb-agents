@@ -45,7 +45,7 @@ describe('parseMarkdownPreviewSpec', () => {
       items: [{ src: '/tmp/a.md' }],
     })
     const spec = parseMarkdownPreviewSpec(code)
-    expect(spec?.items?.[0].src).toBe('/tmp/a.md')
+    expect(spec?.items?.[0]!.src).toBe('/tmp/a.md')
   })
 
   it('returns null for invalid JSON', () => {
@@ -124,4 +124,16 @@ describe('normalizePreviewItems', () => {
   it('returns empty array for empty items + no src', () => {
     expect(normalizePreviewItems({ items: [] })).toEqual([])
   })
+})
+
+it('validates image metadata while preserving valid previews in a mixed item list', () => {
+  const parsed = parseMarkdownPreviewSpec(JSON.stringify({ items: [
+    { src: '/qa/report.png', label: 'Report', ratio: 1.5 },
+    { src: '/qa/fallback.png', label: 42, ratio: -1 },
+    { src: 42, label: 'Invalid' },
+  ] }))
+  expect(parsed?.items).toEqual([
+    { src: '/qa/report.png', label: 'Report', ratio: 1.5 },
+    { src: '/qa/fallback.png' },
+  ])
 })

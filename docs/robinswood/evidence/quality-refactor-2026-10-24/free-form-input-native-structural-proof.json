@@ -1,0 +1,187 @@
+{
+  "status": "passed",
+  "nativeDeclarationBodiesPreserved": true,
+  "reviewedStableDependencyAdditions": {
+    "clearInputDraft": [
+      "prevInputValueRef",
+      "setInput",
+      "syncTimeoutRef"
+    ],
+    "handleAddLabel": [
+      "setInput"
+    ],
+    "handleLongTextPaste": [
+      "attachmentsRef",
+      "getNextPastedNumber",
+      "richInputRef",
+      "setAttachments"
+    ],
+    "submitMessage": [
+      "prevInputValueRef",
+      "richInputRef",
+      "setAttachments",
+      "setInput",
+      "syncTimeoutRef"
+    ],
+    "handleInputChange": [
+      "inputRef",
+      "setInput"
+    ],
+    "handleRichInput": [
+      "richInputRef",
+      "setInput"
+    ],
+    "handleInlineSlashCommandSelect": [
+      "richInputRef",
+      "setInput"
+    ],
+    "handleInlineSlashFolderSelect": [
+      "richInputRef",
+      "setInput"
+    ],
+    "handleInlineMentionSelect": [
+      "richInputRef",
+      "setInput"
+    ],
+    "handleInlineLabelSelect": [
+      "richInputRef",
+      "setInput"
+    ],
+    "handleInlineStateSelect": [
+      "richInputRef",
+      "setInput"
+    ]
+  },
+  "reviewedStableEffectDependencyAdditions": {
+    "87157b02c3491749662feccddf75e1049d377c2877842571c6665b235129608f": [
+      "setAttachments"
+    ],
+    "d17c336507de26d63b1095dc684143611879a2b8ab20b9e8ccc003192836b4cb": [
+      "setInput"
+    ],
+    "0b2556948912594d9400c685495f2e07fd49c43aef66e7e1ebeccfa5fec36f10": [
+      "prevInputValueRef",
+      "syncTimeoutRef"
+    ],
+    "ba9ce2bc651ee920e0c51f0c5af8f5fa1c7e861f1674739f889aa0c1a3ae9f45": [
+      "setInput"
+    ],
+    "6702ce692725a26d50e6deabdac7f43c4180b22108885e1e5de93efe0f4a3afd": [
+      "lastCaretPositionRef"
+    ],
+    "14e4776cd1fccb1a3876bd1e8740e164b8b32d1469cb53e0d64c6d2068354481": [
+      "attachmentsRef",
+      "readFileAsAttachment",
+      "setAttachments",
+      "setLoadingCount"
+    ],
+    "8a3df9815a6ada73dcfdcd55db869b71aa03b068241765bd11bcd71f594ffecb": [
+      "containerRef"
+    ]
+  },
+  "reviewedEffectDependencyRemovals": {},
+  "reviewedDependencyRemovals": {
+    "submitMessage": [
+      "onWorkingDirectoryChange",
+      "homeDir"
+    ]
+  },
+  "reviewedDeferredCaptures": {
+    "useInputEditorMenus": [
+      "readFileAsAttachment"
+    ]
+  },
+  "nativeMainJSXAndInlineCallbacksPreserved": true,
+  "nativeRootAndActionHooksReinlinedExactly": true,
+  "viewAddsNoStateOrEffects": true,
+  "nativeValuesPassedDirectly": false,
+  "nativeImportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/FreeFormInput.tsx",
+      "lines": 441,
+      "sha256": "649b6df624ca2655a1435410f062eeda6b2a5e07b4847d92ec76383ae22fe661"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/free-form-input-contracts.ts",
+      "lines": 135,
+      "sha256": "80935e6cd2dec782d97bfc34302f7e1c3c02b1c6062b3e5ddd27b77f6826e7b0"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/free-form-input-helpers.tsx",
+      "lines": 75,
+      "sha256": "ff3c26f91af886f2ded7f27bae066c37b03b61f8796c66c9b80a434cafe284ff"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/FreeFormFollowUpChips.tsx",
+      "lines": 109,
+      "sha256": "47e620d766a3a06cb86d007f6b5d6d5cf83c610db608369007144b325e204d7b"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/FreeFormCompactToolbar.tsx",
+      "lines": 110,
+      "sha256": "6d4e03e1989e7610a8c1d68953cf849aa9cdd09767f0845bdd5b59975e1e1f85"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/FreeFormDesktopAttachmentBadge.tsx",
+      "lines": 63,
+      "sha256": "1e72d1ff6eb34112aa927c5a0ae55c1c0321032fc00119bd41e085cffde669ac"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/FreeFormModelMenu.tsx",
+      "lines": 435,
+      "sha256": "3aa2f8ac556fb9018cce583c89dec4b09fd8870eb2053373c893c0feadb44ca8"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/free-form-input-view.tsx",
+      "lines": 434,
+      "sha256": "7b870870cb1f42abeaefecde801dab60f8837840bc1a9f9350813113379f6506"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/use-input-model-options.ts",
+      "lines": 126,
+      "sha256": "a0d36341add219dfec8b92d593706c8da6f547a58a82371d8102627ddcec849e"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/use-input-placeholder.ts",
+      "lines": 61,
+      "sha256": "809f714677d624fd23abd5cdd877af1698e86bf6c27b811e28c911a6f8fb1fea"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/use-input-attachment-sync.ts",
+      "lines": 83,
+      "sha256": "019409ca00a48938778e8de67e6b291ba3eca28e4b7467b7c32aed47f04456b7"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/use-input-ui-state.ts",
+      "lines": 142,
+      "sha256": "cb2cce98b1dc2f8e91ce7eee5d187d983c11a5a1b9cd8d7e0ab00687814f0d20"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/use-input-editor-menus.ts",
+      "lines": 377,
+      "sha256": "edbd63e3b1dd0d112756e90d767360fd6451097691f07b0c3c363d21c3810637"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/use-input-inline-labels.ts",
+      "lines": 70,
+      "sha256": "75730a343fe0adfea313ada738ce8c2f7190e161480420993ec6e10a6a61b834"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/use-input-attachment-events.ts",
+      "lines": 210,
+      "sha256": "9091b9975e26ecb7e157af76fc4c9c37840555247f1082f1b199b5d787443f78"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/use-input-submission.ts",
+      "lines": 305,
+      "sha256": "32e13ae98465e10d8a6111e169955de37f890400173c7126ee23ae1e653a9c8c"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/use-input-layout.ts",
+      "lines": 63,
+      "sha256": "17f5cf061c6df153a83723b080b71bfc8633aedacba13795b7bc0209c06cb543"
+    }
+  ]
+}

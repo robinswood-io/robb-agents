@@ -1,3 +1,4 @@
+import { z } from 'zod';
 /**
  * Tests for history-store: append + compaction with two-tier retention.
  */
@@ -16,7 +17,7 @@ function readHistory(dir: string): Array<{ id: string; ts: number; [k: string]: 
       .trim()
       .split('\n')
       .filter(Boolean)
-      .map(line => JSON.parse(line));
+      .map(line => z.object({ id: z.string(), ts: z.number() }).catchall(z.unknown()).parse(JSON.parse(line)));
   } catch {
     return [];
   }

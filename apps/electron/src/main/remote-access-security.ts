@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1'])
 
 export function isLoopbackHost(host: string): boolean {
@@ -48,12 +49,12 @@ export function resolveRemoteServerUrls(
 ): { url: string; webUrl?: string } {
   const wsProtocol = running.tls ? 'wss' : 'ws'
   const webProtocol = running.tls ? 'https' : 'http'
-  return {
+  return omitUndefined({
     url: running.publicWsUrl ?? `${wsProtocol}://${displayHost}:${running.port}`,
     webUrl: webuiAvailable
       ? (running.publicWebuiUrl ?? `${webProtocol}://${displayHost}:${running.port}`)
       : undefined,
-  }
+  })
 }
 
 /** Compare saved settings against the exact configuration captured at startup. */

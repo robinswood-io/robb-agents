@@ -8,8 +8,8 @@
  * - Line-level diff highlighting
  */
 
-import * as React from 'react'
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { FileDiff, type FileDiffMetadata, type FileDiffProps } from '@pierre/diffs/react'
 import { parseDiffFromFile, DIFFS_TAG_NAME, type FileContents } from '@pierre/diffs'
 import { cn } from '../../lib/utils'
@@ -38,27 +38,27 @@ export interface ShikiDiffViewerProps {
   /** Modified (after) content */
   modified: string
   /** File path - used for language detection and display */
-  filePath?: string
+  filePath?: string | undefined
   /** Language for syntax highlighting (auto-detected from filePath if not provided) */
-  language?: string
+  language?: string | undefined
   /** Diff style: 'unified' (stacked) or 'split' (side-by-side) */
-  diffStyle?: 'unified' | 'split'
+  diffStyle?: 'unified' | 'split' | undefined
   /** Theme mode */
-  theme?: 'light' | 'dark'
+  theme?: 'light' | 'dark' | undefined
   /** Shiki theme name (e.g., 'dracula', 'github-dark'). When provided, uses the matching
    *  Shiki theme natively. Falls back to craft-dark/craft-light (transparent bg) if not set. */
-  shikiTheme?: string
+  shikiTheme?: string | undefined
   /** Disable background highlighting on changed lines */
-  disableBackground?: boolean
+  disableBackground?: boolean | undefined
   /** Whether to hide pierre's native file header (filename + stats). Default: true */
-  disableFileHeader?: boolean
+  disableFileHeader?: boolean | undefined
   /** Callback when the file header is clicked (e.g. to open the file in an editor).
    *  When provided, the header becomes clickable with cursor: pointer. */
-  onFileHeaderClick?: (filePath: string) => void
+  onFileHeaderClick?: ((filePath: string) => void) | undefined
   /** Callback when ready */
-  onReady?: () => void
+  onReady?: (() => void) | undefined
   /** Additional class names */
-  className?: string
+  className?: string | undefined
 }
 
 /**
@@ -99,7 +99,7 @@ export function ShikiDiffViewer({
   className,
 }: ShikiDiffViewerProps) {
   const hasCalledReady = useRef(false)
-  const [isReady, setIsReady] = useState(false)
+  const [, setIsReady] = useState(false)
 
   // Resolve language
   const resolvedLang = useMemo(() => {
@@ -110,13 +110,13 @@ export function ShikiDiffViewer({
   const oldFile: FileContents = useMemo(() => ({
     name: filePath,
     contents: original,
-    lang: resolvedLang as any,
+    lang: resolvedLang,
   }), [filePath, original, resolvedLang])
 
   const newFile: FileContents = useMemo(() => ({
     name: filePath,
     contents: modified,
-    lang: resolvedLang as any,
+    lang: resolvedLang,
   }), [filePath, modified, resolvedLang])
 
   // Parse the diff
@@ -132,7 +132,7 @@ export function ShikiDiffViewer({
     ? '[data-diffs-header] { cursor: pointer; } [data-diffs-header]:hover [data-title] { text-decoration: underline; }'
     : undefined
 
-  const options: FileDiffProps<undefined>['options'] = useMemo(() => ({
+  const options: NonNullable<FileDiffProps<undefined, undefined>['options']> = useMemo(() => ({
     theme: resolvedThemeName,
     diffStyle,
     diffIndicators: 'bars',
@@ -141,7 +141,7 @@ export function ShikiDiffViewer({
     overflow: 'scroll',
     disableFileHeader,
     themeType: theme === 'dark' ? 'dark' : 'light',
-    unsafeCSS,
+    ...(unsafeCSS === undefined ? {} : { unsafeCSS }),
   }), [resolvedThemeName, theme, diffStyle, disableBackground, disableFileHeader, unsafeCSS])
 
   // Call onReady after first render
@@ -158,6 +158,8 @@ export function ShikiDiffViewer({
         hasCalledReady.current = false // Reset so re-mounts (including StrictMode) re-arm the timer
       }
     }
+  
+    return undefined;
   }, [onReady, original, modified, fileDiff])
 
   // Attach a click listener to the file header inside pierre's shadow DOM.
@@ -169,6 +171,7 @@ export function ShikiDiffViewer({
 
   useEffect(() => {
     if (!onFileHeaderClick || disableFileHeader) return
+    let removeHeaderClickListener: (() => void) | undefined
 
     // Wait briefly for pierre to render the header into the shadow DOM
     const timer = setTimeout(() => {
@@ -180,17 +183,12 @@ export function ShikiDiffViewer({
         onFileHeaderClickRef.current?.(filePath)
       }
       header.addEventListener('click', handleClick)
-      // Store cleanup ref so we can remove listener
-      ;(header as any).__craftClickCleanup = () => header.removeEventListener('click', handleClick)
+      removeHeaderClickListener = () => header.removeEventListener('click', handleClick)
     }, 150)
 
     return () => {
       clearTimeout(timer)
-      const diffsContainer = containerRef.current?.querySelector(DIFFS_TAG_NAME)
-      const header = diffsContainer?.shadowRoot?.querySelector('[data-diffs-header]')
-      if (header) {
-        ;(header as any).__craftClickCleanup?.()
-      }
+      removeHeaderClickListener?.()
     }
   }, [filePath, disableFileHeader, onFileHeaderClick])
 

@@ -178,7 +178,7 @@ describe('buildSessionRoutingAuditSummary', () => {
 
     expect(summary.totalEstimatedCostEur).toBe(0.2)
     expect(summary.totalActualCostEur).toBe(0.15)
-    expect(summary.byConnectionSlug.provider!.estimatedCostEur).toBe(0.2)
-    expect(summary.byConnectionSlug.provider!.actualCostEur).toBe(0.15)
+    expect(summary.byConnectionSlug["provider"]!.estimatedCostEur).toBe(0.2)
+    expect(summary.byConnectionSlug["provider"]!.actualCostEur).toBe(0.15)
   })
 })

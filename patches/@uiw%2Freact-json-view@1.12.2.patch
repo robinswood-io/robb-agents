@@ -1,0 +1,160 @@
+diff --git a/cjs/comps/ellipsis.d.ts b/cjs/comps/ellipsis.d.ts
+index 6350e5e3193413d0eb5f1f5334363e1c26a0fee9..2cc3671a7ff41bc3a5c5a549d4dffc04432a4181 100644
+--- a/cjs/comps/ellipsis.d.ts
++++ b/cjs/comps/ellipsis.d.ts
+@@ -2,6 +2,6 @@ import { FC, PropsWithChildren } from 'react';
+ export interface EllipsisProps extends React.HTMLAttributes<HTMLSpanElement> {
+     count: number;
+     level: number;
+-    render?: (props: EllipsisProps) => JSX.Element;
++    render?: (props: EllipsisProps) => React.JSX.Element;
+ }
+ export declare const Ellipsis: FC<PropsWithChildren<EllipsisProps>>;
+diff --git a/cjs/comps/meta.d.ts b/cjs/comps/meta.d.ts
+index ef9182c232cc04180ba6252611e2261264c544de..edb278e0a89af39aca461bdbbe2b34b3379537d3 100644
+--- a/cjs/comps/meta.d.ts
++++ b/cjs/comps/meta.d.ts
+@@ -4,9 +4,9 @@ export interface MetaProps extends LabelProps {
+     isArray?: boolean;
+     start?: boolean;
+     level?: number;
+-    render?: (props: Pick<MetaProps, 'start' | 'level' | 'isArray' | 'className' | 'children'>) => JSX.Element;
++    render?: (props: Pick<MetaProps, 'start' | 'level' | 'isArray' | 'className' | 'children'>) => React.JSX.Element;
+ }
+-export declare function Meta(props: MetaProps): JSX.Element;
++export declare function Meta(props: MetaProps): React.JSX.Element;
+ export declare namespace Meta {
+     var displayName: string;
+ }
+diff --git a/cjs/copied.d.ts b/cjs/copied.d.ts
+index 800091ffe3bc7c3b31ad7467c76041aca6f61845..f50f3c685b367d8b4146974217bd1eff844e8dc3 100644
+--- a/cjs/copied.d.ts
++++ b/cjs/copied.d.ts
+@@ -3,9 +3,9 @@ export interface CopiedProps<T = object> extends React.SVGProps<SVGSVGElement> {
+     show?: boolean;
+     text?: T;
+     onCopied?: (text: string, obj: T | '') => void;
+-    render?: (props: Omit<CopiedProps<T>, 'render'>) => JSX.Element;
++    render?: (props: Omit<CopiedProps<T>, 'render'>) => React.JSX.Element;
+ }
+-export declare function Copied<T>(props: CopiedProps<T>): JSX.Element | null;
++export declare function Copied<T>(props: CopiedProps<T>): React.JSX.Element | null;
+ export declare namespace Copied {
+     var displayName: string;
+ }
+diff --git a/cjs/index.d.ts b/cjs/index.d.ts
+index d34ee50b76f185e8756abc08cf6fd172bf9e3ecd..0f8b00d808b051a1d9438dd15c43b839c33b7bdf 100644
+--- a/cjs/index.d.ts
++++ b/cjs/index.d.ts
+@@ -60,12 +60,12 @@ export interface JsonViewProps<T extends object> extends React.DetailedHTMLProps
+     components?: {
+         braces?: MetaProps['render'];
+         ellipsis?: EllipsisProps['render'];
+-        arrow?: JSX.Element;
++        arrow?: React.JSX.Element;
+         objectKey?: SemicolonProps['render'];
+-        value?: (props: RenderValueProps<T>) => JSX.Element;
++        value?: (props: RenderValueProps<T>) => React.JSX.Element;
+         copied?: CopiedProps<T>['render'];
+-        countInfo?: (props: CountInfoProps) => JSX.Element;
+-        countInfoExtra?: (props: Omit<CountInfoExtraProps<T>, 'editable'>) => JSX.Element;
++        countInfo?: (props: CountInfoProps) => React.JSX.Element;
++        countInfoExtra?: (props: Omit<CountInfoExtraProps<T>, 'editable'>) => React.JSX.Element;
+     };
+ }
+ declare const JsonView: React.ForwardRefExoticComponent<Omit<JsonViewProps<object>, "ref"> & React.RefAttributes<HTMLDivElement>>;
+diff --git a/cjs/value.d.ts b/cjs/value.d.ts
+index 4e867d240783801ba598ccbfd57f8f4ff24e07a7..4989c8386f59330f695b3e91cd9b281c08a96dbb 100644
+--- a/cjs/value.d.ts
++++ b/cjs/value.d.ts
+@@ -68,8 +68,8 @@ export interface ValueViewProps<T extends object> extends React.DetailedHTMLProp
+     namespace?: Array<string | number>;
+     quotes?: JsonViewProps<T>['quotes'];
+     components?: JsonViewProps<T>['components'];
+-    renderKey?: JSX.Element;
+-    countInfo?: JSX.Element;
++    renderKey?: React.JSX.Element;
++    countInfo?: React.JSX.Element;
+     setValue?: React.Dispatch<React.SetStateAction<T>>;
+ }
+ export declare function getValueString<T>(value: T): {
+diff --git a/esm/comps/ellipsis.d.ts b/esm/comps/ellipsis.d.ts
+index 6350e5e3193413d0eb5f1f5334363e1c26a0fee9..2cc3671a7ff41bc3a5c5a549d4dffc04432a4181 100644
+--- a/esm/comps/ellipsis.d.ts
++++ b/esm/comps/ellipsis.d.ts
+@@ -2,6 +2,6 @@ import { FC, PropsWithChildren } from 'react';
+ export interface EllipsisProps extends React.HTMLAttributes<HTMLSpanElement> {
+     count: number;
+     level: number;
+-    render?: (props: EllipsisProps) => JSX.Element;
++    render?: (props: EllipsisProps) => React.JSX.Element;
+ }
+ export declare const Ellipsis: FC<PropsWithChildren<EllipsisProps>>;
+diff --git a/esm/comps/meta.d.ts b/esm/comps/meta.d.ts
+index ef9182c232cc04180ba6252611e2261264c544de..edb278e0a89af39aca461bdbbe2b34b3379537d3 100644
+--- a/esm/comps/meta.d.ts
++++ b/esm/comps/meta.d.ts
+@@ -4,9 +4,9 @@ export interface MetaProps extends LabelProps {
+     isArray?: boolean;
+     start?: boolean;
+     level?: number;
+-    render?: (props: Pick<MetaProps, 'start' | 'level' | 'isArray' | 'className' | 'children'>) => JSX.Element;
++    render?: (props: Pick<MetaProps, 'start' | 'level' | 'isArray' | 'className' | 'children'>) => React.JSX.Element;
+ }
+-export declare function Meta(props: MetaProps): JSX.Element;
++export declare function Meta(props: MetaProps): React.JSX.Element;
+ export declare namespace Meta {
+     var displayName: string;
+ }
+diff --git a/esm/copied.d.ts b/esm/copied.d.ts
+index 800091ffe3bc7c3b31ad7467c76041aca6f61845..f50f3c685b367d8b4146974217bd1eff844e8dc3 100644
+--- a/esm/copied.d.ts
++++ b/esm/copied.d.ts
+@@ -3,9 +3,9 @@ export interface CopiedProps<T = object> extends React.SVGProps<SVGSVGElement> {
+     show?: boolean;
+     text?: T;
+     onCopied?: (text: string, obj: T | '') => void;
+-    render?: (props: Omit<CopiedProps<T>, 'render'>) => JSX.Element;
++    render?: (props: Omit<CopiedProps<T>, 'render'>) => React.JSX.Element;
+ }
+-export declare function Copied<T>(props: CopiedProps<T>): JSX.Element | null;
++export declare function Copied<T>(props: CopiedProps<T>): React.JSX.Element | null;
+ export declare namespace Copied {
+     var displayName: string;
+ }
+diff --git a/esm/index.d.ts b/esm/index.d.ts
+index d34ee50b76f185e8756abc08cf6fd172bf9e3ecd..0f8b00d808b051a1d9438dd15c43b839c33b7bdf 100644
+--- a/esm/index.d.ts
++++ b/esm/index.d.ts
+@@ -60,12 +60,12 @@ export interface JsonViewProps<T extends object> extends React.DetailedHTMLProps
+     components?: {
+         braces?: MetaProps['render'];
+         ellipsis?: EllipsisProps['render'];
+-        arrow?: JSX.Element;
++        arrow?: React.JSX.Element;
+         objectKey?: SemicolonProps['render'];
+-        value?: (props: RenderValueProps<T>) => JSX.Element;
++        value?: (props: RenderValueProps<T>) => React.JSX.Element;
+         copied?: CopiedProps<T>['render'];
+-        countInfo?: (props: CountInfoProps) => JSX.Element;
+-        countInfoExtra?: (props: Omit<CountInfoExtraProps<T>, 'editable'>) => JSX.Element;
++        countInfo?: (props: CountInfoProps) => React.JSX.Element;
++        countInfoExtra?: (props: Omit<CountInfoExtraProps<T>, 'editable'>) => React.JSX.Element;
+     };
+ }
+ declare const JsonView: React.ForwardRefExoticComponent<Omit<JsonViewProps<object>, "ref"> & React.RefAttributes<HTMLDivElement>>;
+diff --git a/esm/value.d.ts b/esm/value.d.ts
+index 4e867d240783801ba598ccbfd57f8f4ff24e07a7..4989c8386f59330f695b3e91cd9b281c08a96dbb 100644
+--- a/esm/value.d.ts
++++ b/esm/value.d.ts
+@@ -68,8 +68,8 @@ export interface ValueViewProps<T extends object> extends React.DetailedHTMLProp
+     namespace?: Array<string | number>;
+     quotes?: JsonViewProps<T>['quotes'];
+     components?: JsonViewProps<T>['components'];
+-    renderKey?: JSX.Element;
+-    countInfo?: JSX.Element;
++    renderKey?: React.JSX.Element;
++    countInfo?: React.JSX.Element;
+     setValue?: React.Dispatch<React.SetStateAction<T>>;
+ }
+ export declare function getValueString<T>(value: T): {

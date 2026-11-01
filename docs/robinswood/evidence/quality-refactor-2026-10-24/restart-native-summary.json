@@ -1,0 +1,79 @@
+{
+  "status": "testé dans le candidat local, non intégré",
+  "scope": "Contrats natifs des scénarios de reprise et attente des notifications macOS dans les tests",
+  "explicitAnyRemoved": 60,
+  "testCasesExecuted": 353,
+  "proof": "Identités des 263 déclarations conservées ; signatures privées liées directement aux signatures de production ; présence des capacités optionnelles préservée",
+  "checks": {
+    "restart-native-tests-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 140.75,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/restart-native-tests-2.log"
+    },
+    "restart-native-types-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 15.73,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/restart-native-types-2.log"
+    },
+    "restart-native-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 20.62,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/restart-native-build.log"
+    },
+    "restart-native-touched-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/server-core/src/sessions/restart-recovery.test.ts",
+        "packages/server-core/src/sessions/testing/private-runtime-access.ts",
+        "packages/server-core/src/sessions/testing/scripted-session-agent.ts",
+        "apps/electron/src/main/handlers/__tests__/sessions-watchers.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.89,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/restart-native-touched-lint.log"
+    },
+    "restart-before-split": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/server-core/src/sessions/restart-recovery.test.ts",
+        "--reporter=junit",
+        "--reporter-outfile",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/restart-before-split.xml"
+      ],
+      "exitCode": 0,
+      "seconds": 4.94,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/restart-before-split.log"
+    }
+  },
+  "remaining": {
+    "oversizedCodeFiles": 205,
+    "explicitAny": 586
+  },
+  "installedApplication": "Inchangée",
+  "watcherTestRepair": "Attente bornée de la notification réellement reçue au lieu de supposer une livraison en 300 ms ; comportement applicatif inchangé"
+}

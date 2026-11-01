@@ -7,22 +7,15 @@
  * error: new product strings may intentionally ship with a safe fallback while
  * a native translation is pending.
  */
-import { readdirSync, readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { LOCALE_REGISTRY } from '../packages/shared/src/i18n/registry.ts'
 
-const localesDir = resolve(import.meta.dir, '..', 'packages', 'shared', 'src', 'i18n', 'locales')
 type Locale = Record<string, string>
-
-function loadLocale(name: string): Locale {
-  return JSON.parse(readFileSync(resolve(localesDir, name), 'utf8')) as Locale
-}
-
-const english = loadLocale('en.json')
+const english: Locale = LOCALE_REGISTRY.en.messages
 const keys = Object.keys(english)
 const errors: string[] = []
 
-for (const file of readdirSync(localesDir).filter((name) => name.endsWith('.json') && name !== 'en.json').sort()) {
-  const locale = loadLocale(file)
+for (const [file, entry] of Object.entries(LOCALE_REGISTRY).filter(([lang]) => lang !== 'en')) {
+  const locale: Locale = entry.messages
   let translated = 0
   let fallback = 0
 

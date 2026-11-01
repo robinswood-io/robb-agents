@@ -1,0 +1,409 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Dix suites de persistance, reprise, accès et autorité des objectifs",
+  "sourceGate": {
+    "max-lines": 132,
+    "no-explicit-any": 403
+  },
+  "explicitAnyRemoved": 6,
+  "maximumOutputLines": 439,
+  "changes": [
+    "Hooks de niveau module reproduits dans chaque groupe, corps et ordre vérifiés",
+    "Le découpage refuse toute affectation à une variable qui serait importée depuis une fixture partagée",
+    "Accès aux méthodes privées de test via leurs signatures natives existantes",
+    "Trois agents hors ligne complets sans ajout des quatre capacités optionnelles de dispatch absentes des fixtures originales",
+    "Six alias runtime inutilisés retirés ; initialisation limitée à une référence manager et des assertions de type, absence de référence vérifiée"
+  ],
+  "decompositions": [
+    {
+      "source": "apps/webui/src/offline-vault.test.ts",
+      "sourceHash": "1d8c86cb601385d7e068ba972c47dae5a45550d180064b1cf5e0abe9912ef60c",
+      "testDeclarations": 22,
+      "rootHooks": [
+        "e45724f9b74991dad109f22e8bc85fece450a1ac42cca611fedec37d9234b128",
+        "ab2049268668c576249ad6d61e518b462a167741faf29ee95baaa2d8bc205d81"
+      ],
+      "files": [
+        {
+          "file": "apps/webui/src/testing/offline-vault-fixture.ts",
+          "lines": 93
+        },
+        {
+          "file": "apps/webui/src/offline-vault.test.ts",
+          "lines": 75
+        },
+        {
+          "file": "apps/webui/src/offline-vault-persists-only-ciphertext-with-a-non-extractable-aes-key.test.ts",
+          "lines": 417
+        },
+        {
+          "file": "apps/webui/src/offline-vault-rejects-an-enable-commit-when-another-tab-purges-its-key-generati.test.ts",
+          "lines": 46
+        }
+      ]
+    },
+    {
+      "source": "packages/server-core/src/missions/BrokeredMissionConnectorExecutor.test.ts",
+      "sourceHash": "49c0e7860f89217886235daa85a63a3597985e401713325fb1361870d3304571",
+      "testDeclarations": 19,
+      "rootHooks": [
+        "34529e08a9a415bc88cb57dc4042a4cd9dc7e0f001fb81f1b2ec08a4450cb434"
+      ],
+      "files": [
+        {
+          "file": "packages/server-core/src/missions/testing/BrokeredMissionConnectorExecutor-fixture.ts",
+          "lines": 272
+        },
+        {
+          "file": "packages/server-core/src/missions/BrokeredMissionConnectorExecutor.test.ts",
+          "lines": 439
+        }
+      ]
+    },
+    {
+      "source": "packages/server-core/src/sessions/credential-response-concurrency.test.ts",
+      "sourceHash": "73650658de0c654034027e2b30f05923b40ee1e0fea9147b55799f108164a44f",
+      "testDeclarations": 12,
+      "rootHooks": [
+        "ed6a278ac8a2e95a4a41f2f30c652677fb295e317a80ff2b4e5c55f8a419bd8e"
+      ],
+      "files": [
+        {
+          "file": "packages/server-core/src/sessions/testing/credential-response-concurrency-fixture.ts",
+          "lines": 85
+        },
+        {
+          "file": "packages/server-core/src/sessions/credential-response-concurrency.test.ts",
+          "lines": 426
+        }
+      ]
+    },
+    {
+      "source": "packages/server-core/src/sessions/retry-turn.test.ts",
+      "sourceHash": "df04023f886413c7b3a1ea3c6de21705f54ebc5d3bd466b5fad469f1ffa34d4f",
+      "testDeclarations": 26,
+      "rootHooks": [
+        "7385edc1b4030f80fd672ebfc5c6abea4c9becdb5a51a74013c9952223fc2660"
+      ],
+      "files": [
+        {
+          "file": "packages/server-core/src/sessions/testing/retry-turn-fixture.ts",
+          "lines": 90
+        },
+        {
+          "file": "packages/server-core/src/sessions/retry-turn.test.ts",
+          "lines": 423
+        },
+        {
+          "file": "packages/server-core/src/sessions/retry-turn-serializes-duplicate-clicks-through-durable-acceptance-and-starts.test.ts",
+          "lines": 406
+        }
+      ]
+    },
+    {
+      "source": "packages/server-core/src/sessions/session-delete-persistence.test.ts",
+      "sourceHash": "7791e15896995798622e5f103a1b14dbd31798a4e25d17b7e1379fc1ee9af628",
+      "testDeclarations": 15,
+      "rootHooks": [
+        "1d39f3b2c78a7cfc773660b7e13cfbbf3969f8d3004d1404e1832f735404ee8c"
+      ],
+      "files": [
+        {
+          "file": "packages/server-core/src/sessions/testing/session-delete-persistence-fixture.ts",
+          "lines": 8
+        },
+        {
+          "file": "packages/server-core/src/sessions/session-delete-persistence.test.ts",
+          "lines": 399
+        },
+        {
+          "file": "packages/server-core/src/sessions/session-delete-persistence-preserves-every-source-byte-when-the-atomic-move-cannot-start.test.ts",
+          "lines": 384
+        }
+      ]
+    },
+    {
+      "source": "packages/server-core/src/sessions/session-objective-outcome-integration.test.ts",
+      "sourceHash": "5dbf5686e690fb804d1afce521124ccd85a151727a83ebd801c66db369855ff1",
+      "testDeclarations": 74,
+      "rootHooks": [
+        "e92df62c0081eb97ea0f2b0cc315bb8009b76c6f29ab78de7f0dc880bed4fafe",
+        "d40bd1f1dcfbb01082dd90869b4460cf7c476e8bb85ee9859baacd761c1b70f9"
+      ],
+      "files": [
+        {
+          "file": "packages/server-core/src/sessions/testing/session-objective-outcome-integration-fixture.ts",
+          "lines": 207
+        },
+        {
+          "file": "packages/server-core/src/sessions/session-objective-outcome-integration.test.ts",
+          "lines": 432
+        },
+        {
+          "file": "packages/server-core/src/sessions/session-objective-outcome-integration-recovers-instead-of-inventing-an-authority-blocker-for-a-purely-r.test.ts",
+          "lines": 398
+        },
+        {
+          "file": "packages/server-core/src/sessions/session-objective-outcome-integration-uses-the-dedicated-continuation-budget-without-extending-runtime.test.ts",
+          "lines": 411
+        },
+        {
+          "file": "packages/server-core/src/sessions/session-objective-outcome-integration-does-not-mint-another-continuation-attempt-while-waiting-on-a-rev.test.ts",
+          "lines": 428
+        },
+        {
+          "file": "packages/server-core/src/sessions/session-objective-outcome-integration-validates-an-explicitly-read-only-review-with-a-legacy-mutation-f.test.ts",
+          "lines": 436
+        },
+        {
+          "file": "packages/server-core/src/sessions/session-objective-outcome-integration-rehydrates-only-non-empty-actually-executed-evidence-after-a-rest.test.ts",
+          "lines": 423
+        },
+        {
+          "file": "packages/server-core/src/sessions/session-objective-outcome-integration-grants-one-escalated-bounded-recovery-before-maxnoprogress-1-exha.test.ts",
+          "lines": 401
+        },
+        {
+          "file": "packages/server-core/src/sessions/session-objective-outcome-integration-does-not-credit-a-late-pre-steer-tool-result-to-the-new-objective.test.ts",
+          "lines": 323
+        }
+      ]
+    },
+    {
+      "source": "packages/server-core/src/sessions/session-persistence-root-identity.test.ts",
+      "sourceHash": "3dfa0a93e9a1afca05d4135ab84e958593d72055337c9bd15dd71abe19b3d862",
+      "testDeclarations": 11,
+      "rootHooks": [
+        "ad1270fbf143d3915322b5907f6928487e50b13aea2f303cc7caae8f6e9b2dfe"
+      ],
+      "files": [
+        {
+          "file": "packages/server-core/src/sessions/testing/session-persistence-root-identity-fixture.ts",
+          "lines": 127
+        },
+        {
+          "file": "packages/server-core/src/sessions/session-persistence-root-identity.test.ts",
+          "lines": 416
+        },
+        {
+          "file": "packages/server-core/src/sessions/session-persistence-root-identity-loads-a-session-bound-playbook-only-from-the-captured-root-after.test.ts",
+          "lines": 42
+        }
+      ]
+    },
+    {
+      "source": "packages/server-core/src/sessions/synthetic-objective-authority.test.ts",
+      "sourceHash": "e02ec28ed6f6a1916efcf9b759a19e7bce455886c7904e5c568edd11d65a3067",
+      "testDeclarations": 28,
+      "rootHooks": [
+        "bcbebad761ec4b52cd95cd0970b895fdac525be5a08182466549e16a8955dd21"
+      ],
+      "files": [
+        {
+          "file": "packages/server-core/src/sessions/testing/synthetic-objective-authority-fixture.ts",
+          "lines": 44
+        },
+        {
+          "file": "packages/server-core/src/sessions/synthetic-objective-authority.test.ts",
+          "lines": 403
+        },
+        {
+          "file": "packages/server-core/src/sessions/synthetic-objective-authority-repairs-the-live-gmail-channel-only-root-without-losing-its-exact.test.ts",
+          "lines": 431
+        },
+        {
+          "file": "packages/server-core/src/sessions/synthetic-objective-authority-grants-sensitive-authority-only-to-active-objectives-and-exact-pu.test.ts",
+          "lines": 360
+        }
+      ]
+    },
+    {
+      "source": "packages/server-core/src/specialized-profiles/SpecializedProfileService.test.ts",
+      "sourceHash": "2de15ea1a11e4309cf93b9465e658ce1fd050c7f3d3782b7e4dbb7a2533bba19",
+      "testDeclarations": 5,
+      "rootHooks": [
+        "4eec0c8b1d236226db97ca7bfe39563d87c18c76f2c0aaa91f46f16c934fe66c"
+      ],
+      "files": [
+        {
+          "file": "packages/server-core/src/specialized-profiles/testing/SpecializedProfileService-fixture.ts",
+          "lines": 298
+        },
+        {
+          "file": "packages/server-core/src/specialized-profiles/SpecializedProfileService.test.ts",
+          "lines": 274
+        }
+      ]
+    },
+    {
+      "source": "packages/server-core/src/webui/__tests__/http-server.test.ts",
+      "sourceHash": "b7f61e804b1c229bf65d24ceb01f3634fdf6195308d4bd0a5b06f592ccaa98df",
+      "testDeclarations": 19,
+      "rootHooks": [
+        "897b3bf2363de57f12ef61289f3dbb735e14f329519cffe9139eb36b476b58aa"
+      ],
+      "files": [
+        {
+          "file": "packages/server-core/src/webui/__tests__/testing/http-server-fixture.ts",
+          "lines": 92
+        },
+        {
+          "file": "packages/server-core/src/webui/__tests__/http-server.test.ts",
+          "lines": 418
+        },
+        {
+          "file": "packages/server-core/src/webui/__tests__/http-server-fails-closed-for-session-apis-and-pairing-links-without-https.test.ts",
+          "lines": 115
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 15.58,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/lifecycle-suites-final-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/server-core/src/sessions/testing/private-runtime-access.ts",
+        "apps/webui/src/testing/offline-vault-fixture.ts",
+        "apps/webui/src/offline-vault.test.ts",
+        "apps/webui/src/offline-vault-persists-only-ciphertext-with-a-non-extractable-aes-key.test.ts",
+        "apps/webui/src/offline-vault-rejects-an-enable-commit-when-another-tab-purges-its-key-generati.test.ts",
+        "packages/server-core/src/missions/testing/BrokeredMissionConnectorExecutor-fixture.ts",
+        "packages/server-core/src/missions/BrokeredMissionConnectorExecutor.test.ts",
+        "packages/server-core/src/sessions/testing/credential-response-concurrency-fixture.ts",
+        "packages/server-core/src/sessions/credential-response-concurrency.test.ts",
+        "packages/server-core/src/sessions/testing/retry-turn-fixture.ts",
+        "packages/server-core/src/sessions/retry-turn.test.ts",
+        "packages/server-core/src/sessions/retry-turn-serializes-duplicate-clicks-through-durable-acceptance-and-starts.test.ts",
+        "packages/server-core/src/sessions/testing/session-delete-persistence-fixture.ts",
+        "packages/server-core/src/sessions/session-delete-persistence.test.ts",
+        "packages/server-core/src/sessions/session-delete-persistence-preserves-every-source-byte-when-the-atomic-move-cannot-start.test.ts",
+        "packages/server-core/src/sessions/testing/session-objective-outcome-integration-fixture.ts",
+        "packages/server-core/src/sessions/session-objective-outcome-integration.test.ts",
+        "packages/server-core/src/sessions/session-objective-outcome-integration-recovers-instead-of-inventing-an-authority-blocker-for-a-purely-r.test.ts",
+        "packages/server-core/src/sessions/session-objective-outcome-integration-uses-the-dedicated-continuation-budget-without-extending-runtime.test.ts",
+        "packages/server-core/src/sessions/session-objective-outcome-integration-does-not-mint-another-continuation-attempt-while-waiting-on-a-rev.test.ts",
+        "packages/server-core/src/sessions/session-objective-outcome-integration-validates-an-explicitly-read-only-review-with-a-legacy-mutation-f.test.ts",
+        "packages/server-core/src/sessions/session-objective-outcome-integration-rehydrates-only-non-empty-actually-executed-evidence-after-a-rest.test.ts",
+        "packages/server-core/src/sessions/session-objective-outcome-integration-grants-one-escalated-bounded-recovery-before-maxnoprogress-1-exha.test.ts",
+        "packages/server-core/src/sessions/session-objective-outcome-integration-does-not-credit-a-late-pre-steer-tool-result-to-the-new-objective.test.ts",
+        "packages/server-core/src/sessions/testing/session-persistence-root-identity-fixture.ts",
+        "packages/server-core/src/sessions/session-persistence-root-identity.test.ts",
+        "packages/server-core/src/sessions/session-persistence-root-identity-loads-a-session-bound-playbook-only-from-the-captured-root-after.test.ts",
+        "packages/server-core/src/sessions/testing/synthetic-objective-authority-fixture.ts",
+        "packages/server-core/src/sessions/synthetic-objective-authority.test.ts",
+        "packages/server-core/src/sessions/synthetic-objective-authority-repairs-the-live-gmail-channel-only-root-without-losing-its-exact.test.ts",
+        "packages/server-core/src/sessions/synthetic-objective-authority-grants-sensitive-authority-only-to-active-objectives-and-exact-pu.test.ts",
+        "packages/server-core/src/specialized-profiles/testing/SpecializedProfileService-fixture.ts",
+        "packages/server-core/src/specialized-profiles/SpecializedProfileService.test.ts",
+        "packages/server-core/src/webui/__tests__/testing/http-server-fixture.ts",
+        "packages/server-core/src/webui/__tests__/http-server.test.ts",
+        "packages/server-core/src/webui/__tests__/http-server-fails-closed-for-session-apis-and-pairing-links-without-https.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.83,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/lifecycle-suites-final-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 139.72,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/lifecycle-suites-full-suite.log"
+    }
+  ],
+  "regressionParity": {
+    "suites": 10,
+    "cases": 282,
+    "assertions": 1543,
+    "rows": [
+      {
+        "file": "apps/webui/src/offline-vault.test.ts",
+        "cases": 22,
+        "assertions": 80,
+        "identical": true
+      },
+      {
+        "file": "packages/server-core/src/missions/BrokeredMissionConnectorExecutor.test.ts",
+        "cases": 19,
+        "assertions": 86,
+        "identical": true
+      },
+      {
+        "file": "packages/server-core/src/sessions/credential-response-concurrency.test.ts",
+        "cases": 12,
+        "assertions": 66,
+        "identical": true
+      },
+      {
+        "file": "packages/server-core/src/sessions/retry-turn.test.ts",
+        "cases": 36,
+        "assertions": 292,
+        "identical": true
+      },
+      {
+        "file": "packages/server-core/src/sessions/session-delete-persistence.test.ts",
+        "cases": 15,
+        "assertions": 118,
+        "identical": true
+      },
+      {
+        "file": "packages/server-core/src/sessions/session-objective-outcome-integration.test.ts",
+        "cases": 91,
+        "assertions": 515,
+        "identical": true
+      },
+      {
+        "file": "packages/server-core/src/sessions/session-persistence-root-identity.test.ts",
+        "cases": 11,
+        "assertions": 40,
+        "identical": true
+      },
+      {
+        "file": "packages/server-core/src/sessions/synthetic-objective-authority.test.ts",
+        "cases": 51,
+        "assertions": 194,
+        "identical": true
+      },
+      {
+        "file": "packages/server-core/src/specialized-profiles/SpecializedProfileService.test.ts",
+        "cases": 5,
+        "assertions": 30,
+        "identical": true
+      },
+      {
+        "file": "packages/server-core/src/webui/__tests__/http-server.test.ts",
+        "cases": 20,
+        "assertions": 122,
+        "identical": true
+      }
+    ]
+  },
+  "applicationCodeChanged": false,
+  "installedApplication": "inchangée",
+  "pending": [
+    "132 fichiers encore au-delà de 500 lignes",
+    "403 any explicites restants",
+    "Lint global, interface et missions réelles finales"
+  ]
+}

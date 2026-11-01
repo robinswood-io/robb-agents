@@ -1,0 +1,10 @@
+{
+  "source": "packages/shared/src/protocol/channels.ts",
+  "domain": "packages/shared/src/protocol/channels/messaging.ts",
+  "members": 40,
+  "beforeHash": "8adbabec10e89dde5b06a489e3c99d227d3e9fff34cc4c0ac143c5787bf9607b",
+  "afterHash": "46f543eb35cce3e0b2c52ce17166aaa491a24a7ef36872d5e4efaafbad7ea3ec",
+  "domainHash": "33fb4b98a21687e894f59b0a47a3a7aec14109e0ee9226b201d540473bf0da8d",
+  "entryLines": 483,
+  "domainLines": 53
+}

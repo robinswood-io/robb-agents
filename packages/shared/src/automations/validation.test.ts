@@ -393,11 +393,11 @@ describe('validation', () => {
       });
       const result = validateAutomationsContent(config);
       expect(result.valid).toBe(true);
-      expect(result.warnings).toContainEqual(
+      expect<unknown>(result.warnings).toContainEqual(
         expect.objectContaining({
           path: 'automations.TodoStateChange',
           severity: 'warning',
-          suggestion: expect.stringContaining('SessionStatusChange'),
+          suggestion: (expect.stringContaining('SessionStatusChange') as unknown),
         })
       );
     });

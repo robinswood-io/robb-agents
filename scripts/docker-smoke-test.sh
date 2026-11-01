@@ -104,7 +104,12 @@ else
     # Even simpler fallback: just check the port is open
     echo "  Checking port connectivity..."
     if command -v nc &>/dev/null; then
-      nc -z 127.0.0.1 "$PORT" && echo "  Port $PORT is open" || { echo "ERROR: Port $PORT not reachable"; exit 1; }
+      if nc -z 127.0.0.1 "$PORT"; then
+        echo "  Port $PORT is open"
+      else
+        echo "ERROR: Port $PORT not reachable"
+        exit 1
+      fi
     else
       echo "  WARN: No connectivity tool available, relying on container-running check only"
     fi

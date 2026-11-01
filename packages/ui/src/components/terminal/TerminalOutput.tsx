@@ -8,7 +8,7 @@
  * - Copy functionality
  */
 
-import * as React from 'react'
+
 import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Terminal, Copy, Check } from 'lucide-react'
@@ -23,15 +23,15 @@ export interface TerminalOutputProps {
   /** The output from the command */
   output: string
   /** Exit code (0 = success) */
-  exitCode?: number
+  exitCode?: number | undefined
   /** Tool type for display styling */
-  toolType?: ToolType
+  toolType?: ToolType | undefined
   /** Optional description of what the command does */
-  description?: string
+  description?: string | undefined
   /** Theme mode */
-  theme?: 'light' | 'dark'
+  theme?: 'light' | 'dark' | undefined
   /** Additional class names */
-  className?: string
+  className?: string | undefined
 }
 
 /**
@@ -41,8 +41,8 @@ export function TerminalOutput({
   command,
   output,
   exitCode,
-  toolType = 'bash',
-  description,
+  toolType: _toolType = 'bash',
+  description: _description,
   theme = 'light',
   className,
 }: TerminalOutputProps) {
@@ -54,10 +54,7 @@ export function TerminalOutput({
   // Theme-aware colors for inner elements (outer bg inherits from overlay's bg-background)
   const textColor = isDark ? '#e4e4e4' : '#1a1a1a'
   const mutedColor = isDark ? '#888888' : '#666666'
-  const matchColor = '#22c55e' // Green for grep matches
-  const cmdColor = isDark ? '#60a5fa' : '#2563eb' // Blue for command
-  const codeBg = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'
-  const outputBg = isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.03)'
+  const matchColor = '#22c55e'
 
   // Copy to clipboard (strip ANSI codes for clean text)
   const copyToClipboard = useCallback(async (text: string, type: 'command' | 'output') => {

@@ -9,11 +9,11 @@ import {
 } from './transfer'
 
 function createHarness() {
-  const handlers = new Map<string, HandlerFn>()
+  const handlers = new Map<string, HandlerFn<unknown[]>>()
 
   const server: RpcServer = {
     handle(channel, handler) {
-      handlers.set(channel, handler)
+      handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args]))
     },
     push() {},
     async invokeClient() {
@@ -66,7 +66,7 @@ function encodeParts(value: unknown, splitAt?: number) {
 }
 
 afterEach(() => {
-  delete process.env.CRAFT_TRANSFER_TTL_MS
+  delete process.env["CRAFT_TRANSFER_TTL_MS"]
   __resetTransferStateForTests()
 })
 
@@ -166,7 +166,7 @@ describe('chunked transfer handlers', () => {
 
   it('refreshes TTL as chunks arrive so slow healthy uploads survive', async () => {
     jest.useFakeTimers()
-    process.env.CRAFT_TRANSFER_TTL_MS = '40'
+    process.env["CRAFT_TRANSFER_TTL_MS"] = '40'
 
     try {
       const { start, chunk, commit } = createHarness()

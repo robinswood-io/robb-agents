@@ -47,7 +47,8 @@ describe('automatic delegation lineage', () => {
 
   it.each([undefined, null])('does not classify a legacy %s objective state as terminal', terminalState => {
     const f = fixture(); const root = f.make('root')
-    ;(root.activeObjective as { terminalState?: string | null }).terminalState = terminalState
+    if (!root.activeObjective) throw new Error('Expected the legacy objective fixture')
+    expect(Reflect.set(root.activeObjective, 'terminalState', terminalState)).toBe(true)
     expect(inspectAutonomousLineage(root, f.get)).toMatchObject({ allowed: true })
   })
 

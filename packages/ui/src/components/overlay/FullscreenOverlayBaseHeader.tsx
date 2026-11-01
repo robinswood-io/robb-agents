@@ -35,19 +35,19 @@ export interface FullscreenOverlayBaseHeaderProps {
   /** Close handler — shows X button in header */
   onClose: () => void
   /** Type badge — tool/format indicator */
-  typeBadge?: OverlayTypeBadge
+  typeBadge?: OverlayTypeBadge | undefined
   /** File path — shows dual-trigger menu badge with "Open" + "Reveal in {file manager}" */
-  filePath?: string
+  filePath?: string | undefined
   /** Title — displayed as a badge. Fallback when no file path. */
-  title?: string
+  title?: string | undefined
   /** Click handler for the title badge */
-  onTitleClick?: () => void
+  onTitleClick?: (() => void) | undefined
   /** Subtitle — extra info badge (e.g. "Lines 1-50 of 200") */
-  subtitle?: string
+  subtitle?: string | undefined
   /** Right-side actions (e.g. diff controls) */
-  headerActions?: ReactNode
+  headerActions?: ReactNode | undefined
   /** When provided, renders a built-in copy button (matching close button style) */
-  copyContent?: string
+  copyContent?: string | undefined
 }
 
 /**

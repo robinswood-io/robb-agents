@@ -92,16 +92,18 @@ export async function createCallbackServer(options?: CreateCallbackServerOptions
       };
 
       // Check if this looks like a successful auth callback
-      const hasCode = !!query.code;
-      const hasError = !!query.error;
+      const hasCode = !!query["code"];
+      const hasError = !!query["error"];
 
       // Send a styled success/error page
+      const optionalErrorDetail = query["error_description"] || query["error"];
+      const optionalDeeplinkUrl = (hasCode && !hasError) ? deeplinkUrl : undefined;
       const html = generateCallbackPage({
         title: hasError ? 'Authorization Failed' : 'Authorization Complete',
         isSuccess: hasCode && !hasError,
-        errorDetail: query.error_description || query.error,
+        ...(optionalErrorDetail !== undefined ? { errorDetail: optionalErrorDetail } : {}),
         appType,
-        deeplinkUrl: (hasCode && !hasError) ? deeplinkUrl : undefined,
+        ...(optionalDeeplinkUrl !== undefined ? { deeplinkUrl: optionalDeeplinkUrl } : {}),
       });
 
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });

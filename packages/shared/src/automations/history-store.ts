@@ -1,3 +1,4 @@
+import { parseJsonObject } from '../utils/json.ts';
 /**
  * History Store — single source of truth for automations-history.jsonl writes
  * and compaction.
@@ -161,8 +162,8 @@ function compactEntries(
   const entries: Array<{ raw: string; id: string }> = [];
   for (const line of lines) {
     try {
-      const parsed = JSON.parse(line);
-      entries.push({ raw: line, id: parsed.id ?? '' });
+      const parsed = parseJsonObject(line);
+      entries.push({ raw: line, id: typeof parsed["id"] === "string" ? parsed["id"] : '' });
     } catch {
       // Drop malformed lines
     }

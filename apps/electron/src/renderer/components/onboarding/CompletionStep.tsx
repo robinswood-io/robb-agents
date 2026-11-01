@@ -6,7 +6,7 @@ import { StepFormLayout } from "./primitives"
 
 interface CompletionStepProps {
   status: 'saving' | 'complete'
-  spaceName?: string
+  spaceName?: string | undefined
   onFinish: () => void
 }
 
@@ -19,7 +19,6 @@ interface CompletionStepProps {
  */
 export function CompletionStep({
   status,
-  spaceName,
   onFinish
 }: CompletionStepProps) {
   const { t } = useTranslation()

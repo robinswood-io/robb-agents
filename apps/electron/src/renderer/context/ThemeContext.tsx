@@ -1,116 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from 'react'
-import * as storage from '@/lib/local-storage'
-import {
-  resolveTheme,
-  themeToCSS,
-  DEFAULT_THEME,
-  DEFAULT_SHIKI_THEME,
-  getShikiTheme,
-  type ThemeOverrides,
-  type ThemeFile,
-  type ShikiThemeConfig,
-} from '@config/theme'
+import { useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import "@/lib/local-storage";
+import { resolveTheme, themeToCSS, DEFAULT_SHIKI_THEME, getShikiTheme, type ThemeFile } from '@config/theme';
 
-export type ThemeMode = 'light' | 'dark' | 'system'
-export type FontFamily = 'inter' | 'system'
+import { type ThemeMode, type FontFamily, type ThemeContextType, ThemeContext, BUNDLED_THEMES, type ThemeProviderProps, getSystemPreference, loadStoredTheme, saveTheme } from "./theme-context-values";
+export { type ThemeMode, type FontFamily } from "./theme-context-values";
 
-interface ThemeContextType {
-  // Preferences (persisted at app level)
-  mode: ThemeMode
-  /** App-level default color theme (used when workspace has no override) */
-  colorTheme: string
-  font: FontFamily
-  setMode: (mode: ThemeMode) => void
-  /** Set app-level default color theme */
-  setColorTheme: (theme: string) => void
-  setFont: (font: FontFamily) => void
 
-  // Workspace-level theme override
-  /** Active workspace ID (null if no workspace context) */
-  activeWorkspaceId: string | null
-  /** Workspace-specific color theme override (null = inherit from app default) */
-  workspaceColorTheme: string | null
-  /** Set workspace-specific color theme override (null = inherit) */
-  setWorkspaceColorTheme: (theme: string | null) => void
 
-  // Derived/computed
-  resolvedMode: 'light' | 'dark'
-  systemPreference: 'light' | 'dark'
-  /** Effective color theme for rendering (previewColorTheme ?? workspaceColorTheme ?? colorTheme) */
-  effectiveColorTheme: string
-  /** Temporary preview theme (hover state) - not persisted */
-  previewColorTheme: string | null
-  /** Set temporary preview theme for hover preview. Pass null to clear. */
-  setPreviewColorTheme: (theme: string | null) => void
-  /** Where effectiveColorTheme came from for current render cycle */
-  effectiveColorThemeSource: 'preview' | 'workspace' | 'app'
-  /** How the preset theme was resolved */
-  themeResolvedFrom: 'none' | 'ipc' | 'fallback'
-  /** Non-fatal theme loading error. Null when theme loaded normally. */
-  themeLoadError: string | null
-
-  // Theme resolution (singleton - loaded once)
-  /** Loaded preset theme file, null if default or loading */
-  presetTheme: ThemeFile | null
-  /** Fully resolved theme (preset merged with any overrides) */
-  resolvedTheme: ThemeOverrides
-  /** Whether dark mode is active (scenic themes force dark) */
-  isDark: boolean
-  /** Whether theme is scenic mode (background image with glass panels) */
-  isScenic: boolean
-  /** Shiki syntax highlighting theme name for current mode */
-  shikiTheme: string
-  /** Shiki theme configuration (light/dark variants) */
-  shikiConfig: ShikiThemeConfig
-}
-
-interface StoredTheme {
-  mode: ThemeMode
-  colorTheme: string
-  font?: FontFamily
-  /** True when user explicitly changed theme in UI (not auto-saved on startup) */
-  isUserOverride?: boolean
-}
-
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
-
-const bundledThemeModules = import.meta.glob('../../../resources/themes/*.json', {
-  eager: true,
-  import: 'default',
-}) as Record<string, ThemeFile>
-
-const BUNDLED_THEMES = new Map<string, ThemeFile>(
-  Object.entries(bundledThemeModules).map(([path, theme]) => {
-    const fileName = path.split('/').pop() ?? ''
-    const id = fileName.replace('.json', '')
-    return [id, theme]
-  })
-)
-
-interface ThemeProviderProps {
-  children: ReactNode
-  defaultMode?: ThemeMode
-  defaultColorTheme?: string
-  defaultFont?: FontFamily
-  /** Active workspace ID for workspace-level theme overrides */
-  activeWorkspaceId?: string | null
-}
-
-function getSystemPreference(): 'light' | 'dark' {
-  if (typeof window !== 'undefined' && window.matchMedia) {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-  }
-  return 'light'
-}
-
-function loadStoredTheme(): StoredTheme | null {
-  if (typeof window === 'undefined') return null
-  return storage.get<StoredTheme | null>(storage.KEYS.theme, null)
-}
-
-function saveTheme(theme: StoredTheme): void {
-  storage.set(storage.KEYS.theme, theme)
-}
 
 export function ThemeProvider({
   children,
@@ -152,8 +48,7 @@ export function ThemeProvider({
     }).catch(() => {
       // Keep default on error
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Only run on mount
+  }, [stored?.isUserOverride]) // Only run on mount
 
   // === Preset theme state (singleton) ===
   const [presetTheme, setPresetTheme] = useState<ThemeFile | null>(null)
@@ -236,7 +131,7 @@ export function ThemeProvider({
       }
 
       applyFallback(`Preset theme was not returned by IPC for "${effectiveColorTheme}".`)
-    }).catch((error) => {
+    }).catch((error: unknown) => {
       applyFallback(`Failed to load preset theme via IPC for "${effectiveColorTheme}": ${error instanceof Error ? error.message : String(error)}.`)
     })
 
@@ -289,20 +184,20 @@ export function ThemeProvider({
 
     // Apply font
     if (font === 'inter') {
-      root.dataset.font = 'inter'
+      root.dataset["font"] = 'inter'
     } else {
-      delete root.dataset.font
+      delete root.dataset["font"]
     }
 
     // Apply color theme data attribute
     if (effectiveColorTheme && effectiveColorTheme !== 'default') {
-      root.dataset.theme = effectiveColorTheme
+      root.dataset["theme"] = effectiveColorTheme
     } else {
-      delete root.dataset.theme
+      delete root.dataset["theme"]
     }
 
     // Always set theme override for semi-transparent background (vibrancy effect)
-    root.dataset.themeOverride = 'true'
+    root.dataset["themeOverride"] = 'true'
   }, [effectiveColorTheme, font])
 
   // Apply dark/light class and theme-specific DOM attributes
@@ -328,19 +223,19 @@ export function ThemeProvider({
     const vibrancyMismatch = resolvedMode !== systemPreference
 
     if (themeModeUnsupported || vibrancyMismatch) {
-      root.dataset.themeMismatch = 'true'
+      root.dataset["themeMismatch"] = 'true'
     } else {
-      delete root.dataset.themeMismatch
+      delete root.dataset["themeMismatch"]
     }
 
     // Set scenic mode data attribute for CSS targeting
     if (isScenic) {
-      root.dataset.scenic = 'true'
+      root.dataset["scenic"] = 'true'
       if (resolvedTheme.backgroundImage) {
         root.style.setProperty('--background-image', `url("${resolvedTheme.backgroundImage}")`)
       }
     } else {
-      delete root.dataset.scenic
+      delete root.dataset["scenic"]
       root.style.removeProperty('--background-image')
     }
 
@@ -438,7 +333,7 @@ export function ThemeProvider({
     setModeState(newMode)
     // Preserve existing isUserOverride flag
     const existing = loadStoredTheme()
-    saveTheme({ mode: newMode, colorTheme, font, isUserOverride: existing?.isUserOverride })
+    saveTheme({ mode: newMode, colorTheme, font, ...(existing?.isUserOverride !== undefined ? { isUserOverride: existing?.isUserOverride } : {}) })
     if (!isExternalUpdate.current && window.electronAPI?.broadcastThemePreferences) {
       window.electronAPI.broadcastThemePreferences({ mode: newMode, colorTheme, font })
     }
@@ -457,7 +352,7 @@ export function ThemeProvider({
     setFontState(newFont)
     // Preserve existing isUserOverride flag
     const existing = loadStoredTheme()
-    saveTheme({ mode, colorTheme, font: newFont, isUserOverride: existing?.isUserOverride })
+    saveTheme({ mode, colorTheme, font: newFont, ...(existing?.isUserOverride !== undefined ? { isUserOverride: existing?.isUserOverride } : {}) })
     if (!isExternalUpdate.current && window.electronAPI?.broadcastThemePreferences) {
       window.electronAPI.broadcastThemePreferences({ mode, colorTheme, font: newFont })
     }

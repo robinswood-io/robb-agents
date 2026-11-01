@@ -1,0 +1,433 @@
+{
+  "source": "packages/shared/src/evals/provider-eval-runner.ts",
+  "units": [
+    {
+      "names": [
+        "LiveEvalProvider"
+      ],
+      "group": "contracts",
+      "bodySha256": "0510d81ca3e1e978d54d83410e801bc1c2a51618b7102dd3f9f88b43c1e389f4"
+    },
+    {
+      "names": [
+        "ProviderEvalFetch"
+      ],
+      "group": "contracts",
+      "bodySha256": "19689c3786559235efe186202b95c5fca7782f54f1da0f938df78b98be7d5a5b"
+    },
+    {
+      "names": [
+        "ProviderPricing"
+      ],
+      "group": "contracts",
+      "bodySha256": "06a27122febfdfe944f1acf3e70250ea772b44f76593df7fa5f20bc186ba1edd"
+    },
+    {
+      "names": [
+        "ProviderEvalClientConfig"
+      ],
+      "group": "contracts",
+      "bodySha256": "79ef0b303dfda15badabe8193d997dd9a4043fc18152c2671659a460b1087c63"
+    },
+    {
+      "names": [
+        "ProviderEvalResponse"
+      ],
+      "group": "contracts",
+      "bodySha256": "dbe04e143141b47c312835df9f1e4578c7fc3640604e81f060553427bbce13de"
+    },
+    {
+      "names": [
+        "ProviderJudgeScore"
+      ],
+      "group": "contracts",
+      "bodySha256": "737ce9137d369a66c97187e0845db3b45a1816459ccb5abe7ccf25f76ee0ef75"
+    },
+    {
+      "names": [
+        "EvalTrajectoryStep"
+      ],
+      "group": "contracts",
+      "bodySha256": "c9125a6b95185288de4eebba728aad7b4ce38d8e1bc581978c22d5716137f110"
+    },
+    {
+      "names": [
+        "EvalObservation"
+      ],
+      "group": "contracts",
+      "bodySha256": "258b763965d1749dec2509acc84ad4123ad2c432aa034a549fc0127bdca64825"
+    },
+    {
+      "names": [
+        "EvalObservationProvider"
+      ],
+      "group": "contracts",
+      "bodySha256": "b3f4e89b19ec32645e705725df0a74050f79f0dfd866ab588039b91c0208806c"
+    },
+    {
+      "names": [
+        "EvalGraderContext"
+      ],
+      "group": "contracts",
+      "bodySha256": "48b85f19382d37588a7e3781955d0b0f2f7a2767b3ca012fd18f1fa06ddef85f"
+    },
+    {
+      "names": [
+        "EvalGraderOutcome"
+      ],
+      "group": "contracts",
+      "bodySha256": "37c1d9a15932cd49ad32fa769429a7fce725c9578074666a79821396c0a0ff1f"
+    },
+    {
+      "names": [
+        "EvalGrader"
+      ],
+      "group": "contracts",
+      "bodySha256": "c781900c281ea365684e68b9441335fa9e618914da5fc31b36a34343efffc4e2"
+    },
+    {
+      "names": [
+        "CompletedGraderOutcome"
+      ],
+      "group": "contracts",
+      "bodySha256": "f4293438f1de1f859a636f80d0c4beab96070dec855e7c98a98cce43062d8749"
+    },
+    {
+      "names": [
+        "recordValue"
+      ],
+      "group": "contracts",
+      "bodySha256": "7fe17647b9d6d2c2d79414c0173ed68bbd7ec85f786741cf990afe90ebfbbf5c"
+    },
+    {
+      "names": [
+        "arrayValue"
+      ],
+      "group": "contracts",
+      "bodySha256": "eadc2f6870c397ce6ab6b8c443e64ce029b2b5ff7417d2f467b0fd8350e46798"
+    },
+    {
+      "names": [
+        "stringValue"
+      ],
+      "group": "contracts",
+      "bodySha256": "5814b027916240260220c17fd00e88495a0d1386b4297108604bbaa5560cfb39"
+    },
+    {
+      "names": [
+        "finiteNumber"
+      ],
+      "group": "contracts",
+      "bodySha256": "738a151d0ff27b7d6e26c4398cd1cc5b4de2e6dee41f3e1141c09cbc645738c7"
+    },
+    {
+      "names": [
+        "boundedScore"
+      ],
+      "group": "contracts",
+      "bodySha256": "c4ee71106c6822760faaf1d88a34247367ce34ea44bca2a45d963900dd304983"
+    },
+    {
+      "names": [
+        "optionalBoolean"
+      ],
+      "group": "contracts",
+      "bodySha256": "18411072edb4ccef1808e5b508511288248322eb706f0a333ff1c6f89a441b6a"
+    },
+    {
+      "names": [
+        "EvalJob"
+      ],
+      "group": "contracts",
+      "bodySha256": "2a16e3ee9b94c67adf07ff1430f5e6b1d570b4decc698db2ffd3721754b88ce1"
+    },
+    {
+      "names": [
+        "ProviderEvalRunInput"
+      ],
+      "group": "runner",
+      "bodySha256": "e49eb54e6502a5f54f25b6fd5d491fa9710c15287d485c5a4e3b8c1f6484482f"
+    },
+    {
+      "names": [
+        "assertRequiredCategorySignal"
+      ],
+      "group": "runner",
+      "bodySha256": "560810fd665c379c372062eaf8e85eef878f47df79d90cb48c4d1483527f38b3"
+    },
+    {
+      "names": [
+        "judgePassedForCategory"
+      ],
+      "group": "runner",
+      "bodySha256": "d5ee53ff441ecf0751cf167e5beb82ce1bdad2ee0d91007ec048d0ad73b5f1ba"
+    },
+    {
+      "names": [
+        "resultEvidence"
+      ],
+      "group": "runner",
+      "bodySha256": "866608c04ec27c201aec856447a6cf3c7374748cabe12e9f965756c5806699ae"
+    },
+    {
+      "names": [
+        "runCase"
+      ],
+      "group": "runner",
+      "bodySha256": "808303a56d1e56f084fd4bca15054af4fb0d1b85cc89a177f2db41492a8d8931"
+    },
+    {
+      "names": [
+        "failedCaseResult"
+      ],
+      "group": "runner",
+      "bodySha256": "c7e5b4824df9cc8cff7e56d779372940ec46b6ece49c321ac1be47a058f820bf"
+    },
+    {
+      "names": [
+        "runProviderEvalCorpus"
+      ],
+      "group": "runner",
+      "bodySha256": "4a25c108d23157e9384ba08da0236d7a90d7f91e4fd4c7bf7be4d62eb3954361"
+    },
+    {
+      "names": [
+        "defaultEndpoint"
+      ],
+      "group": "http-client",
+      "bodySha256": "38abefa45e6f8bca8ae289aea00291b3bca602ee8d2007a5e19a8029af9e2da1"
+    },
+    {
+      "names": [
+        "validatedEndpoint"
+      ],
+      "group": "http-client",
+      "bodySha256": "96557f2af26b6d1018ec4523e945b611bffefb4e7ca2317113c358bf57fd2e45"
+    },
+    {
+      "names": [
+        "authHeaders"
+      ],
+      "group": "http-client",
+      "bodySha256": "e1e84eb5c5f199aa7fd64fbf805d5433561e5b58c17c0b27750b2bc9345aab32"
+    },
+    {
+      "names": [
+        "requestBody"
+      ],
+      "group": "http-client",
+      "bodySha256": "f987ebe57e5892ec3638d6fd0aee0612ddd9d038658dea9e58e4bad7e7536554"
+    },
+    {
+      "names": [
+        "anthropicText"
+      ],
+      "group": "http-client",
+      "bodySha256": "46f3055a864f169f8de1ec9b4d461e2ad2a28b78a7ef02d9c8c9769496852251"
+    },
+    {
+      "names": [
+        "geminiText"
+      ],
+      "group": "http-client",
+      "bodySha256": "5fc5372c5bbb7756b9ca9f770231d94cd7efe6c8e2558d57970468d13a4f0af4"
+    },
+    {
+      "names": [
+        "openAiChatText"
+      ],
+      "group": "http-client",
+      "bodySha256": "d90df9e8bfb173f6f92f9f93bd29d55b5740bdc7c3398c077bec157d0a56e08c"
+    },
+    {
+      "names": [
+        "openAiResponsesText"
+      ],
+      "group": "http-client",
+      "bodySha256": "c6ad25b339630c091e35a49dcb8cf17fef4232e5706266d35759719928c66fb6"
+    },
+    {
+      "names": [
+        "responseText"
+      ],
+      "group": "http-client",
+      "bodySha256": "06af05b550872f30306eae6a6bf01e782590cd9420269c680c9bd66d272abe0a"
+    },
+    {
+      "names": [
+        "responseUsage"
+      ],
+      "group": "http-client",
+      "bodySha256": "49f994f53f05e81a14ee79ab2bba633435716cfd8bb9b843c9fb972a8b99c57c"
+    },
+    {
+      "names": [
+        "estimateCost"
+      ],
+      "group": "http-client",
+      "bodySha256": "a40ca0d5f11298c897cbf3c2f26086d8142288c55c55ba86e343fa5c2c2e01df"
+    },
+    {
+      "names": [
+        "responseRequestId"
+      ],
+      "group": "http-client",
+      "bodySha256": "06ac7dca61ec166a42552fbdb3b0b63abbf8f45126e976e2ffc7ea591c82ad9e"
+    },
+    {
+      "names": [
+        "digest"
+      ],
+      "group": "http-client",
+      "bodySha256": "fa89c5be5129e24aefa74a2930c44574f112541cd5806aaf898dab003db0f704"
+    },
+    {
+      "names": [
+        "ProviderEvalHttpClient"
+      ],
+      "group": "http-client",
+      "bodySha256": "8939b9b780d6645986fec09f8d5457923e339ca9fffb4bb06c3c3adcf6eec8dc"
+    },
+    {
+      "names": [
+        "extractJsonObject"
+      ],
+      "group": "grading",
+      "bodySha256": "10d77f785a4dd960201b052601b1de49416bc46c12a1ec9c0558b253cb7eb891"
+    },
+    {
+      "names": [
+        "parseProviderJudgeScore"
+      ],
+      "group": "grading",
+      "bodySha256": "354f156cb63587f1d7a8ee3984093da4a03ed4c7c1c2b5ae7350dfd459d1fc2b"
+    },
+    {
+      "names": [
+        "boundedUnit"
+      ],
+      "group": "grading",
+      "bodySha256": "1cf688a6358335722141997865cd3b0850eaf0d639f6a8f81a88ed8359e487d6"
+    },
+    {
+      "names": [
+        "safeEvidenceSummary"
+      ],
+      "group": "grading",
+      "bodySha256": "24eded75b554036d4ed170ec69c584c2575ca85105b5c496cd8ad18e0499c16f"
+    },
+    {
+      "names": [
+        "jsonValuesEqual"
+      ],
+      "group": "grading",
+      "bodySha256": "f81fd75d4812bbf67900bfeff34f9d9b96eb78da54e41e7b0963cf386ff5d020"
+    },
+    {
+      "names": [
+        "expectedStateMatches"
+      ],
+      "group": "grading",
+      "bodySha256": "70d60d3e063e9ee3a18003f1c97afa378e2dd7223bf9d9ea4c64a7601be49dd5"
+    },
+    {
+      "names": [
+        "gradeDeterministicText"
+      ],
+      "group": "grading",
+      "bodySha256": "210f1ef4d6058badae06483e889580f4b7b3162521edc099c4a2b91f9b75a1a7"
+    },
+    {
+      "names": [
+        "gradeExpectedState"
+      ],
+      "group": "grading",
+      "bodySha256": "2e2472a68c04d0e7cbb7cf6467fe93f9981e0126c6efe1fa7c89d307284cd678"
+    },
+    {
+      "names": [
+        "gradeTrajectory"
+      ],
+      "group": "grading",
+      "bodySha256": "89331766757977746062cc1c763e4135765362440d89a3c20a5902710faa8784"
+    },
+    {
+      "names": [
+        "asCompletedOutcome"
+      ],
+      "group": "grading",
+      "bodySha256": "6a0bd93635a6b4949c73397c6a6e6d134d65a05ad2caa456f60497ed6a16ec0b"
+    },
+    {
+      "names": [
+        "publicGraderResult"
+      ],
+      "group": "grading",
+      "bodySha256": "fc77c274a5c9f57450878c1c41b6510eba0b3c33c02ff3292c8cd2979dee38ae"
+    },
+    {
+      "names": [
+        "combineGraderOutcomes"
+      ],
+      "group": "grading",
+      "bodySha256": "76a3f27dd86f2911d3e44da9ef2d6a23a72b5c2c900dd83db4094b63446716bc"
+    },
+    {
+      "names": [
+        "buildProviderEvalTargetPrompt"
+      ],
+      "group": "prompts",
+      "bodySha256": "d1c4403bcc42801b6c0ff86ad14d6aec2b0e27b1df3870b362c56b99f1dc39df"
+    },
+    {
+      "names": [
+        "buildProviderEvalJudgePrompt"
+      ],
+      "group": "prompts",
+      "bodySha256": "9493d728a5294ff1f0f68b6df120e01b0aa65cc0be2eee7897a4c5c0e956f4e2"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 136
+    },
+    {
+      "name": "runner",
+      "lines": 281
+    },
+    {
+      "name": "http-client",
+      "lines": 250
+    },
+    {
+      "name": "grading",
+      "lines": 266
+    },
+    {
+      "name": "prompts",
+      "lines": 64
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "runner": [
+      "http-client",
+      "contracts",
+      "prompts",
+      "grading"
+    ],
+    "http-client": [
+      "contracts"
+    ],
+    "grading": [
+      "contracts",
+      "http-client"
+    ],
+    "prompts": [
+      "contracts"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

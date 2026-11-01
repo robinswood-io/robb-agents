@@ -209,7 +209,7 @@ describe('ConnectorExecutionRuntime', () => {
       redirect: 'manual',
       security: { blockPrivateAddresses: true },
     })
-    expect(harness.requests[0]?.headers.Authorization).toBe('Bearer raw-secret-never-exported')
+    expect(harness.requests[0]?.headers["Authorization"]).toBe('Bearer raw-secret-never-exported')
     expect(harness.proofs).toHaveLength(1)
     expect(harness.proofs[0]?.sessionId).toBe('session-1')
     expect(JSON.stringify(result)).not.toContain('raw-secret-never-exported')
@@ -301,9 +301,9 @@ describe('ConnectorExecutionRuntime', () => {
     harness.runtime.resolveApproval(pending.approval.approvalId, 'approved', 'validator-1')
     expect((await harness.runtime.execute(prepared.preparationId, pending.approval.approvalId)).status)
       .toBe('executed')
-    expect(harness.requests[0]?.body).toEqual({
+    expect<unknown>(harness.requests[0]?.body).toEqual({
       name: 'corrected-report.xlsx',
-      owner: { email: expect.stringMatching(/^psn_/) },
+      owner: { email: (expect.stringMatching(/^psn_/) as unknown) },
     })
     expect(harness.privacyReceipts).toHaveLength(1)
     expect(harness.privacyReceipts[0]?.sessionId).toBe('session-egress')

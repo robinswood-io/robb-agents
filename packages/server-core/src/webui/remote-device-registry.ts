@@ -44,7 +44,7 @@ export interface RemoteDeviceRegistryOptions {
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value)
     && value.length > 0
-    && value.every((item) => typeof item === 'string' && item.trim() !== '')
+    && value.every((item: unknown) => typeof item === 'string' && item.trim() !== '')
 }
 
 function isIsoDate(value: unknown): value is string {
@@ -55,43 +55,43 @@ function parseRecord(value: unknown): RemoteDeviceRecord | null {
   if (value == null || typeof value !== 'object' || Array.isArray(value)) return null
   const input = value as Record<string, unknown>
   if (
-    typeof input.id !== 'string'
-    || input.id.trim() === ''
-    || typeof input.name !== 'string'
-    || input.name.trim() === ''
-    || !isStringArray(input.allowedWorkspaceIds)
-    || !isIsoDate(input.pairedAt)
-    || !isIsoDate(input.expiresAt)
-    || typeof input.authorizationGeneration !== 'number'
-    || !Number.isSafeInteger(input.authorizationGeneration)
-    || input.authorizationGeneration < 0
-    || (input.revokedAt !== undefined && !isIsoDate(input.revokedAt))
+    typeof input["id"] !== 'string'
+    || input["id"].trim() === ''
+    || typeof input["name"] !== 'string'
+    || input["name"].trim() === ''
+    || !isStringArray(input["allowedWorkspaceIds"])
+    || !isIsoDate(input["pairedAt"])
+    || !isIsoDate(input["expiresAt"])
+    || typeof input["authorizationGeneration"] !== 'number'
+    || !Number.isSafeInteger(input["authorizationGeneration"])
+    || input["authorizationGeneration"] < 0
+    || (input["revokedAt"] !== undefined && !isIsoDate(input["revokedAt"]))
   ) {
     return null
   }
   return {
-    id: input.id,
-    name: input.name,
-    allowedWorkspaceIds: [...input.allowedWorkspaceIds],
-    pairedAt: input.pairedAt,
-    expiresAt: input.expiresAt,
-    authorizationGeneration: input.authorizationGeneration,
-    ...(input.revokedAt ? { revokedAt: input.revokedAt } : {}),
+    id: input["id"],
+    name: input["name"],
+    allowedWorkspaceIds: [...input["allowedWorkspaceIds"]],
+    pairedAt: input["pairedAt"],
+    expiresAt: input["expiresAt"],
+    authorizationGeneration: input["authorizationGeneration"],
+    ...(input["revokedAt"] ? { revokedAt: input["revokedAt"] } : {}),
   }
 }
 
 function parseDocument(value: unknown): RemoteDeviceRegistryDocument | null {
   if (value == null || typeof value !== 'object' || Array.isArray(value)) return null
   const input = value as Record<string, unknown>
-  if (input.version !== 1 || !Array.isArray(input.devices)) return null
-  const devices = input.devices.map(parseRecord)
+  if (input["version"] !== 1 || !Array.isArray(input["devices"])) return null
+  const devices = input["devices"].map(parseRecord)
   if (devices.some((device) => device === null)) return null
   return { version: 1, devices: devices.filter((device): device is RemoteDeviceRecord => device !== null) }
 }
 
 /** Durable, fail-closed registry used to revoke Remote browser sessions immediately. */
 export class RemoteDeviceRegistry {
-  private readonly filePath?: string
+  private readonly filePath?: string | undefined
   private readonly now: () => Date
   private document: RemoteDeviceRegistryDocument
   private readable = true

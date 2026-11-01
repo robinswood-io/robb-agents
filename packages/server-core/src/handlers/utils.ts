@@ -117,8 +117,8 @@ async function resolveRealOrAncestorPath(targetPath: string): Promise<string> {
  * (e.g. workspace root, workspace working directory).
  */
 export async function validateFilePath(
-  filePath: string,
-  additionalAllowedDirs?: string[],
+  filePath: unknown,
+  additionalAllowedDirs?: readonly unknown[],
 ): Promise<string> {
   if (typeof filePath !== 'string' || filePath.includes('\0')) {
     throw new Error('Invalid file path')
@@ -145,7 +145,7 @@ export async function validateFilePath(
     homedir(),
     tmpdir(),
     ...(additionalAllowedDirs ?? []),
-  ].filter(Boolean)
+  ].filter((dir): dir is string => typeof dir === 'string' && dir.length > 0)
 
   const resolvedAllowedDirs = await Promise.all(
     rawAllowedDirs.map(async dir => normalize(await resolveRealOrAncestorPath(normalize(dir))))

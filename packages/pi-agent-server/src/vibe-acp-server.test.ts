@@ -1,3 +1,5 @@
+import { z } from 'zod';
+const outboundMessageSchema = z.looseObject({ type: z.string().optional(), event: z.looseObject({ type: z.string().optional() }).optional(), requestId: z.string().optional() });
 import { describe, expect, it } from 'bun:test';
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -11,9 +13,9 @@ describe('Mistral Vibe ACP bridge host instructions', () => {
       cwd: join(import.meta.dir, '..'),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
-    const output: Array<Record<string, any>> = [];
+    const output: Array<z.infer<typeof outboundMessageSchema>> = [];
     const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });
-    lines.on('line', line => output.push(JSON.parse(line)));
+    lines.on('line', line => output.push(outboundMessageSchema.parse(JSON.parse(line))));
     const exit = new Promise<void>(resolve => child.once('exit', () => resolve()));
     const waitFor = async (predicate: () => boolean) => {
       const deadline = Date.now() + 5_000;
@@ -66,11 +68,11 @@ input.on('line', (line) => {
     const child = spawn(process.execPath, ['src/vibe-acp-server.ts'], {
       cwd: join(import.meta.dir, '..'),
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { HOME: directory, PATH: process.env.PATH, ROBB_VIBE_ACP_COMMAND: executable },
+      env: { HOME: directory, PATH: process.env["PATH"], ROBB_VIBE_ACP_COMMAND: executable },
     });
-    const output: Array<Record<string, any>> = [];
+    const output: Array<z.infer<typeof outboundMessageSchema>> = [];
     const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });
-    lines.on('line', line => output.push(JSON.parse(line)));
+    lines.on('line', line => output.push(outboundMessageSchema.parse(JSON.parse(line))));
     const exit = new Promise<void>(resolve => child.once('exit', () => resolve()));
     const waitFor = async (predicate: () => boolean) => {
       const deadline = Date.now() + 5_000;
@@ -88,8 +90,8 @@ input.on('line', (line) => {
       await waitFor(() => output.some(message => message.event?.type === 'agent_end'));
 
       expect(output).toContainEqual({ type: 'provider_handoff', id: 'bound-turn' });
-      expect(output.some(message => message.type === 'error' && message.code === 'prompt_error')).toBe(false);
-      expect(output.some(message => message.type === 'error' && message.id === 'bound-turn')).toBe(false);
+      expect(output.some(message => message.type === 'error' && message["code"] === 'prompt_error')).toBe(false);
+      expect(output.some(message => message.type === 'error' && message["id"] === 'bound-turn')).toBe(false);
     } finally {
       if (child.exitCode === null) send({ type: 'shutdown' });
       const timer = setTimeout(() => child.kill('SIGKILL'), 1_000);
@@ -147,14 +149,14 @@ input.on('line', (line) => {
     const child = spawn(process.execPath, ['src/vibe-acp-server.ts'], {
       cwd: join(import.meta.dir, '..'),
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { HOME: directory, PATH: process.env.PATH, ROBB_VIBE_ACP_COMMAND: executable },
+      env: { HOME: directory, PATH: process.env["PATH"], ROBB_VIBE_ACP_COMMAND: executable },
     });
-    const output: Array<Record<string, any>> = [];
+    const output: Array<z.infer<typeof outboundMessageSchema>> = [];
     let stderr = '';
-    child.stderr!.on('data', chunk => { stderr += chunk; });
+    child.stderr!.on('data', (chunk: unknown) => { stderr += chunk; });
     const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });
     lines.on('line', line => {
-      const message = JSON.parse(line);
+      const message = outboundMessageSchema.parse(JSON.parse(line));
       output.push(message);
       if (message.type === 'pre_tool_use_request') {
         send({ type: 'pre_tool_use_response', requestId: message.requestId, action, input: { path: 'rewritten-safe.txt' } });
@@ -192,7 +194,7 @@ input.on('line', (line) => {
       expect(prompts[1]).toBe('User input 1');
       expect(prompts[2]).toContain('Inspect only; do not modify files.');
       expect(prompts[2]).toContain('User input 2');
-      const permissions = readFileSync(permissionLog, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+      const permissions = readFileSync(permissionLog, 'utf8').trim().split('\n').map((line): unknown => JSON.parse(line));
       expect(permissions).toHaveLength(3);
       for (const permission of permissions) {
         expect(permission).toEqual({ outcome: { outcome: 'selected', optionId: expectedOption } });

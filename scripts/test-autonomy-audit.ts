@@ -17,7 +17,7 @@ const groups = [
 const results: Array<{ id: string; scenarios: string[]; command: string[]; exitCode: number; pass: number; fail: number; logSha256: string; log: string }> = [];
 async function run(id: string, scenarios: string[], command: string[]) {
   const env: NodeJS.ProcessEnv = { ...process.env, CRAFT_CONFIG_DIR: join(scratch, id, 'profile') };
-  if (command[0] !== 'python3') { delete env.UV_CACHE_DIR; delete env.UV_OFFLINE; }
+  if (command[0] !== 'python3') { delete env["UV_CACHE_DIR"]; delete env["UV_OFFLINE"]; }
   const child = Bun.spawn(command, { cwd: root, env, stdout: 'pipe', stderr: 'pipe' });
   const [stdout, stderr, exitCode] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
   const output = stdout + stderr;

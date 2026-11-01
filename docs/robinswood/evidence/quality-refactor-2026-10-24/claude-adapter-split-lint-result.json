@@ -1,0 +1,18 @@
+{
+  "command": [
+    "rtk",
+    "node",
+    "node_modules/eslint/bin/eslint.js",
+    "packages/shared/src/agent/backend/claude/event-adapter.ts",
+    "packages/shared/src/agent/backend/claude/event-contracts.ts",
+    "packages/shared/src/agent/__tests__/claude-event-adapter.lifecycle.test.ts",
+    "packages/shared/src/agent/__tests__/claude-event-adapter.test.ts",
+    "packages/shared/src/agent/__tests__/claude-event-adapter.tools.test.ts",
+    "packages/shared/src/agent/__tests__/fixtures/claude-event-fixtures.ts",
+    "--max-warnings",
+    "0"
+  ],
+  "exitCode": 0,
+  "seconds": 1.03,
+  "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/claude-adapter-split-lint.log"
+}

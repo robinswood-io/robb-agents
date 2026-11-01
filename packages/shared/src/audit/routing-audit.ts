@@ -66,10 +66,10 @@ function isValidExchangeRate(rate: RoutingExchangeRate | undefined): rate is Rou
 export function resolveRoutingCostOptions(
   environment: Readonly<Record<string, string | undefined>>,
 ): RoutingCostOptions {
-  const rawRate = environment.ROBB_COST_USD_TO_EUR_RATE?.trim()
-  const asOf = environment.ROBB_COST_USD_TO_EUR_DATE?.trim()
-  const source = environment.ROBB_COST_USD_TO_EUR_SOURCE?.trim()
-  const pricingCatalogVersion = environment.ROBB_PRICING_CATALOG_VERSION?.trim()
+  const rawRate = environment["ROBB_COST_USD_TO_EUR_RATE"]?.trim()
+  const asOf = environment["ROBB_COST_USD_TO_EUR_DATE"]?.trim()
+  const source = environment["ROBB_COST_USD_TO_EUR_SOURCE"]?.trim()
+  const pricingCatalogVersion = environment["ROBB_PRICING_CATALOG_VERSION"]?.trim()
   const rate = rawRate ? Number(rawRate) : Number.NaN
 
   const exchangeRate: RoutingExchangeRate | undefined =

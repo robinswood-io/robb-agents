@@ -1,0 +1,90 @@
+{
+  "status": "passed",
+  "registries": [
+    {
+      "source": "apps/electron/src/renderer/playground/registry/automations.tsx",
+      "declarations": 14,
+      "nativePublicExports": true,
+      "unchangedBodiesAndClosures": true,
+      "nativeExternalImportOrder": true,
+      "nativeEagerCalls": 11,
+      "runtimeImportCycles": 0,
+      "moduleCount": 3
+    },
+    {
+      "source": "apps/electron/src/renderer/playground/registry/browser-ui.tsx",
+      "declarations": 26,
+      "nativePublicExports": true,
+      "unchangedBodiesAndClosures": true,
+      "nativeExternalImportOrder": true,
+      "nativeEagerCalls": 2,
+      "runtimeImportCycles": 0,
+      "moduleCount": 5
+    },
+    {
+      "source": "apps/electron/src/renderer/playground/registry/entity-lists.tsx",
+      "declarations": 30,
+      "nativePublicExports": true,
+      "unchangedBodiesAndClosures": true,
+      "nativeExternalImportOrder": true,
+      "nativeEagerCalls": 7,
+      "runtimeImportCycles": 0,
+      "moduleCount": 6
+    },
+    {
+      "source": "apps/electron/src/renderer/playground/registry/kanban.tsx",
+      "declarations": 19,
+      "nativePublicExports": true,
+      "unchangedBodiesAndClosures": true,
+      "nativeExternalImportOrder": true,
+      "nativeEagerCalls": 0,
+      "runtimeImportCycles": 0,
+      "moduleCount": 4
+    },
+    {
+      "source": "apps/electron/src/renderer/playground/registry/markdown.tsx",
+      "declarations": 11,
+      "nativePublicExports": true,
+      "unchangedBodiesAndClosures": true,
+      "nativeExternalImportOrder": true,
+      "nativeEagerCalls": 14,
+      "runtimeImportCycles": 0,
+      "moduleCount": 3
+    },
+    {
+      "source": "apps/electron/src/renderer/playground/registry/messages.tsx",
+      "declarations": 9,
+      "nativePublicExports": true,
+      "unchangedBodiesAndClosures": true,
+      "nativeExternalImportOrder": true,
+      "nativeEagerCalls": 0,
+      "runtimeImportCycles": 0,
+      "moduleCount": 3
+    },
+    {
+      "source": "apps/electron/src/renderer/playground/registry/session-list.tsx",
+      "declarations": 9,
+      "nativePublicExports": true,
+      "unchangedBodiesAndClosures": true,
+      "nativeExternalImportOrder": true,
+      "nativeEagerCalls": 4,
+      "runtimeImportCycles": 0,
+      "moduleCount": 3
+    },
+    {
+      "source": "apps/electron/src/renderer/playground/registry/task-editor.tsx",
+      "declarations": 25,
+      "nativePublicExports": true,
+      "unchangedBodiesAndClosures": true,
+      "nativeExternalImportOrder": true,
+      "nativeEagerCalls": 0,
+      "runtimeImportCycles": 0,
+      "moduleCount": 4
+    }
+  ],
+  "nativeDeclarations": 143,
+  "maximumFileLines": 448,
+  "runtimeImportCycles": 0,
+  "originalRegistryMechanismPreserved": true,
+  "addedStateOrIndirection": false
+}

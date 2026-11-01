@@ -46,7 +46,7 @@ export function createLabel(
   const label: LabelConfig = {
     id,
     name: input.name,
-    color: input.color,
+    ...(input.color !== undefined ? { color: input.color } : {}),
     ...(input.valueType && { valueType: input.valueType }),
   };
 
@@ -82,7 +82,7 @@ export function ensureTaskLabel(workspaceRootPath: string): string {
   const existing = findTaskLabel(config.labels);
   if (existing) {
     if (existing.valueType === 'number') {
-      existing.valueType = undefined;
+      delete existing.valueType
       saveLabelConfig(workspaceRootPath, config);
     }
     return existing.id;
@@ -336,7 +336,7 @@ function stripLabelFromSessions(
   deletedLabelId: string
 ): number {
   // Dynamic import to avoid circular dependency with sessions module
-  const { listSessions, updateSessionMetadata } = require('../sessions/storage.ts');
+  const { listSessions, updateSessionMetadata } = require('../sessions/storage.ts') as typeof import('../sessions/storage.ts');
 
   const sessions = listSessions(workspaceRootPath);
   let strippedCount = 0;

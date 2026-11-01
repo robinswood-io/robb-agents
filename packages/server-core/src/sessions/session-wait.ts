@@ -12,10 +12,10 @@ export function sessionWaitCursor(snapshot: WaitSessionSnapshot): string {
 /** Event-driven wait. Previously delivered targets cannot starve unfinished siblings. */
 export async function waitForSessionChange(input: {
   snapshot: () => WaitSessionSnapshot[];
-  previous?: Readonly<Record<string, string>>;
+  previous?: Readonly<Record<string, string>> | undefined;
   timeoutMs: number;
   subscribe: (wake: () => void) => () => void;
-  signal?: AbortSignal;
+  signal?: AbortSignal | undefined;
 }): Promise<WaitSessionsResult> {
   const snapshot = () => input.snapshot().map(item => {
     const cursor = sessionWaitCursor(item);
@@ -24,7 +24,7 @@ export async function waitForSessionChange(input: {
     // remains available, without replaying large reports on every wait.
     const { finalText, diagnostic, ...rest } = item;
     // Keep diagnostic identity, but deliver the bounded report and gaps once.
-    const { text, errorText, validationGaps, ...diagnosticIdentity } = diagnostic ?? {};
+    const { text: _text, errorText: _errorText, validationGaps: _validationGaps, ...diagnosticIdentity } = diagnostic ?? {};
     return { ...rest, cursor, changed, ...(changed && finalText !== undefined ? { finalText } : {}),
       ...(diagnostic ? { diagnostic: changed ? diagnostic : diagnosticIdentity as typeof diagnostic } : {}) };
   });

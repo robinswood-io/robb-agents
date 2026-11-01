@@ -1,0 +1,32 @@
+{
+  "status": "passed",
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/hooks/useEntityListInteractions.ts",
+      "lines": 340,
+      "sha256": "3d765a62c46ff987e7e8a1ca4f376555aecd5508518d99484560b64fcd1e8f50",
+      "nativeSourceHash": "b67abadeb0aac5f57b8a9a279e354cc3d5863124b20732cdea4ca1413d9133a4"
+    },
+    {
+      "file": "apps/electron/src/renderer/hooks/useAutomations.ts",
+      "lines": 219,
+      "sha256": "54edcc1dcf41b8fa0dc7ca8888358398b6fa95df3a951568d3839bc0f6a683bb",
+      "nativeSourceHash": "ca202e6965e10384437559c3dc365c85a3cb9ef6de87062550797cce3af037c5"
+    },
+    {
+      "file": "apps/electron/vite.config.ts",
+      "lines": 81,
+      "sha256": "a9827e7057a96d25a4f310047756078c7e3a6567f13229456d649b08d05c74aa",
+      "nativeSourceHash": "dd52970b420dd6e77a1910f749bcfe43a464bf5e898663621dd850eb79aa2e18"
+    }
+  ],
+  "correctedCallbackDependencies": 9,
+  "unchangedHookAndStateCounts": true,
+  "remainingRuntimeBodiesPreserved": true,
+  "controlledProjections": [
+    "Search query and predicate",
+    "Container role and active descendant"
+  ],
+  "workerImportResolvesToSameSource": true,
+  "newWorkflowOrLayer": false
+}

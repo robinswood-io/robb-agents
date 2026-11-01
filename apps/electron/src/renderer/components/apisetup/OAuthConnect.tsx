@@ -24,17 +24,17 @@ export interface OAuthConnectProps {
   /** Current connection status */
   status: OAuthStatus
   /** Error message when status is 'error' */
-  errorMessage?: string
+  errorMessage?: string | undefined
   /** Whether we're waiting for user to paste an auth code */
-  isWaitingForCode?: boolean
+  isWaitingForCode?: boolean | undefined
   /** Start the OAuth browser flow */
   onStartOAuth: () => void
   /** Submit the authorization code from the browser */
-  onSubmitAuthCode?: (code: string) => void
+  onSubmitAuthCode?: ((code: string) => void) | undefined
   /** Cancel the OAuth flow (while waiting for code) */
-  onCancelOAuth?: () => void
+  onCancelOAuth?: (() => void) | undefined
   /** Form ID for auth code form (default: "auth-code-form") */
-  formId?: string
+  formId?: string | undefined
 }
 
 export function OAuthConnect({

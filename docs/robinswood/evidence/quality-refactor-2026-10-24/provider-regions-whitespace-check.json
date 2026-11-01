@@ -1,0 +1,6 @@
+{
+  "file": "packages/server-core/src/sessions/SessionManager/operations/perform-send-message.ts",
+  "line": 243,
+  "emittedJavaScriptUnchanged": true,
+  "emittedJavaScriptHash": "cca5d726b31f15ad75f79aaa33539d62f6d9d2255324d13b004130358b13ad61"
+}

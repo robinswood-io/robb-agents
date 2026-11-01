@@ -1,16 +1,22 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import argparse
 import asyncio
 import datetime as dt
 import json
+import logging
 from collections import defaultdict
 from pathlib import Path
 
-from temporalio.client import Client
-
 from action_queue_contract import normalize_action_item
+from pydantic import JsonValue, TypeAdapter
+from schedule_drift_markdown import render_markdown as _render_markdown
+from schedule_drift_types import AdminPolicy, BurstSample, BurstWarning, DriftRow
+from temporalio.client import Client, ScheduleActionStartWorkflow, ScheduleDescription
+
+logger = logging.getLogger(__name__)
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
+JSON_ARRAY = TypeAdapter(list[JsonValue])
 
 DEFAULT_MANIFEST = Path('/srv/rbw-agents-oss/config/temporal/schedules.json')
 DEFAULT_RUNS_LOG = Path('/srv/rbw-agents-oss/logs/workflow-runs.jsonl')
@@ -35,39 +41,31 @@ BURST_WARN_THRESHOLD_WATCHDOG = 5
 
 
 def _as_iso_now() -> str:
-    return dt.datetime.now(dt.timezone.utc).isoformat().replace('+00:00', 'Z')
+    return dt.datetime.now(dt.UTC).isoformat().replace('+00:00', 'Z')
 
 
-def _read_json(path: Path, default):
+def _read_json(path: Path, default: JsonValue) -> JsonValue:
     try:
-        return json.loads(path.read_text(encoding='utf-8'))
-    except Exception:
+        return TypeAdapter(JsonValue).validate_json(path.read_bytes())
+    except (OSError, ValueError):
         return default
 
 
-def _extract_live_cron(desc) -> list[str]:
-    try:
-        crons = getattr(desc.schedule.spec, 'cron_expressions', None)
-        if crons is None:
-            return []
-        return list(crons)
-    except Exception:
-        return []
+def _extract_live_cron(desc: ScheduleDescription) -> list[str]:
+    return list(desc.schedule.spec.cron_expressions)
 
 
-def _extract_live_task_queue(desc) -> str | None:
-    try:
-        return getattr(desc.schedule.action, 'task_queue', None)
-    except Exception:
-        return None
+def _extract_live_task_queue(desc: ScheduleDescription) -> str | None:
+    action = desc.schedule.action
+    return action.task_queue if isinstance(action, ScheduleActionStartWorkflow) else None
 
 
-def _parse_dt(raw: str | None) -> dt.datetime | None:
-    if not raw:
+def _parse_dt(raw: JsonValue) -> dt.datetime | None:
+    if not isinstance(raw, str) or not raw:
         return None
     try:
-        return dt.datetime.fromisoformat(raw.replace('Z', '+00:00')).astimezone(dt.timezone.utc)
-    except Exception:
+        return dt.datetime.fromisoformat(raw).astimezone(dt.UTC)
+    except ValueError:
         return None
 
 
@@ -80,15 +78,16 @@ def _load_last_runs(path: Path) -> dict[str, dt.datetime]:
         if not line.startswith('{'):
             continue
         try:
-            row = json.loads(line)
-        except Exception:
+            row = JSON_OBJECT.validate_json(line)
+        except ValueError:
             continue
         ts = _parse_dt(row.get('ts'))
         if ts is None:
             continue
-        payload = row.get('payload') or {}
+        payload_value = row.get('payload')
+        payload = payload_value if isinstance(payload_value, dict) else {}
         legacy_id = payload.get('legacy_id')
-        if not legacy_id:
+        if not isinstance(legacy_id, str) or not legacy_id:
             continue
         prev = out.get(legacy_id)
         if prev is None or ts > prev:
@@ -100,26 +99,28 @@ def _load_migration_statuses(path: Path) -> dict[str, str]:
     if not path.exists():
         return {}
     try:
-        rows = json.loads(path.read_text(encoding='utf-8')).get('rows', [])
-    except Exception:
+        data = JSON_OBJECT.validate_json(path.read_bytes())
+        rows = JSON_ARRAY.validate_python(data.get('rows', []))
+    except (OSError, ValueError):
         return {}
-    out = {}
+    out: dict[str, str] = {}
     for row in rows:
         if isinstance(row, dict) and row.get('legacy_id'):
             out[str(row['legacy_id'])] = str(row.get('status') or '')
     return out
 
 
-def _load_admin_policy(path: Path) -> dict:
+def _load_admin_policy(path: Path) -> AdminPolicy:
     data = _read_json(path, {})
     if not isinstance(data, dict):
         data = {}
-    defaults = data.get('defaults') if isinstance(data.get('defaults'), dict) else {}
+    defaults_value = data.get('defaults')
+    defaults = defaults_value if isinstance(defaults_value, dict) else {}
     return {
         'path': str(path),
         'adminTaskQueue': str(defaults.get('adminTaskQueue') or 'watchdog'),
-        'watchdogQueueWrappers': set(str(x) for x in data.get('watchdogQueueWrappers', []) if x),
-        'duplicateProtectedWrappers': set(str(x) for x in data.get('duplicateProtectedWrappers', []) if x),
+        'watchdogQueueWrappers': {str(x) for x in JSON_ARRAY.validate_python(data.get('watchdogQueueWrappers', [])) if x},
+        'duplicateProtectedWrappers': {str(x) for x in JSON_ARRAY.validate_python(data.get('duplicateProtectedWrappers', [])) if x},
         'loaded': path.exists(),
     }
 
@@ -135,14 +136,14 @@ def _max_expected_age_hours(cron: str | None) -> float:
             try:
                 n = int(minute.split('/', 1)[1])
                 return max(1.0, n / 60.0 * 3.0)
-            except Exception:
+            except ValueError:
                 return 3.0
         return 3.0
     if hour.startswith('*/'):
         try:
             n = int(hour.split('/', 1)[1])
             return float(max(4, n * 2 + 2))
-        except Exception:
+        except ValueError:
             return 12.0
     if dow not in ('*', '?') and dow not in ('1-5', '2-6', '0,2-6'):
         return 8 * 24.0
@@ -159,8 +160,8 @@ def _max_expected_age_hours(cron: str | None) -> float:
 
 def _manifest_first_run_grace_active(manifest_path: Path, now: dt.datetime) -> tuple[bool, float | None]:
     try:
-        mtime = dt.datetime.fromtimestamp(manifest_path.stat().st_mtime, tz=dt.timezone.utc)
-    except Exception:
+        mtime = dt.datetime.fromtimestamp(manifest_path.stat().st_mtime, tz=dt.UTC)
+    except OSError:
         return False, None
     age_hours = (now - mtime).total_seconds() / 3600.0
     return age_hours <= FIRST_RUN_GRACE_HOURS_AFTER_MANIFEST_UPDATE, round(age_hours, 2)
@@ -173,20 +174,21 @@ def _cron_slot(cron: str | None) -> str:
     return f"{parts[1]}:{parts[0]} dow={parts[4]}"
 
 
-def _compute_bursts(schedules: list[dict], admin_policy: dict) -> list[dict]:
-    by_slot: dict[str, list[dict]] = defaultdict(list)
+def _compute_bursts(schedules: list[dict[str, JsonValue]], admin_policy: AdminPolicy) -> list[BurstWarning]:
+    by_slot: dict[str, list[BurstSample]] = defaultdict(list)
     for item in schedules:
-        payload = item.get('payload') if isinstance(item.get('payload'), dict) else {}
+        payload_value = item.get('payload')
+        payload = payload_value if isinstance(payload_value, dict) else {}
         legacy_id = payload.get('legacy_id') or item.get('legacy_id')
         queue = item.get('task_queue') or 'default'
-        if legacy_id in admin_policy['watchdogQueueWrappers']:
+        if isinstance(legacy_id, str) and legacy_id in admin_policy['watchdogQueueWrappers']:
             queue = admin_policy['adminTaskQueue']
-        by_slot[_cron_slot(item.get('cron'))].append({
+        by_slot[_cron_slot(TypeAdapter(str | None).validate_python(item.get('cron')))].append({
             'schedule_id': item.get('schedule_id'),
             'legacy_id': legacy_id,
             'task_queue': queue,
         })
-    warnings = []
+    warnings: list[BurstWarning] = []
     for slot, rows in sorted(by_slot.items()):
         watchdog_count = sum(1 for r in rows if r.get('task_queue') == 'watchdog')
         if len(rows) >= BURST_WARN_THRESHOLD_TOTAL or watchdog_count >= BURST_WARN_THRESHOLD_WATCHDOG:
@@ -200,87 +202,35 @@ def _compute_bursts(schedules: list[dict], admin_policy: dict) -> list[dict]:
     return warnings
 
 
-def _render_markdown(report: dict) -> str:
-    lines = [
-        '# Surveillance de dérive des schedules Temporal',
-        '',
-        f"- Generated at (UTC): **{report['generatedAt']}**",
-        f"- Status: **{report['status']}**",
-        f"- Summary: **{report['summary']}**",
-        f"- Total schedules: **{report['counts']['totalSchedules']}**",
-        f"- Drift count: **{report['counts']['driftCount']}**",
-        f"- Freshness stale count: **{report['counts']['freshnessStaleCount']}**",
-        f"- Admin queue drift count: **{report['counts']['adminQueueDriftCount']}**",
-        f"- Critical mail missing count: **{report['counts']['criticalMailMissingCount']}**",
-        f"- Burst warning count: **{report['counts']['burstWarningCount']}**",
-        f"- Ignored by migration status: **{report['counts']['ignoredByMigrationStatus']}**",
-        '',
-    ]
-    if report['status'] == 'processed':
-        lines.append('✅ Aucun drift bloquant détecté sur le périmètre actif.')
-        lines.append('')
-    else:
-        lines.append('⚠️ Drift ou dette opérationnelle détectée.')
-        lines.append('')
-
-    active_issues = [
-        row for row in report['rows']
-        if row.get('includedInChecks') and (row.get('driftReasons') or (row.get('freshness') or {}).get('stale') or row.get('queuePolicyReasons'))
-    ]
-    if active_issues:
-        lines += ['## Écarts actifs', '', '| Schedule ID | Détail |', '|---|---|']
-        for row in active_issues:
-            reasons = list(row.get('driftReasons', []))
-            reasons.extend(row.get('queuePolicyReasons', []))
-            freshness = row.get('freshness', {})
-            reasons.extend(freshness.get('reasons', []))
-            detail = '; '.join(reasons).replace('|', '\\|')
-            lines.append(f"| {row['schedule_id']} | {detail} |")
-        lines.append('')
-
-    if report.get('burstWarnings'):
-        lines += ['## Warnings de congestion potentielle', '', '| Slot cron | Count | Watchdog | Sample |', '|---|---:|---:|---|']
-        for row in report['burstWarnings'][:20]:
-            sample = ', '.join(x.get('legacy_id') or x.get('schedule_id') for x in row.get('sample', [])[:8]).replace('|', '\\|')
-            lines.append(f"| {row['slot']} | {row['count']} | {row['watchdogCount']} | {sample} |")
-        lines.append('')
-
-    ignored = [row for row in report['rows'] if not row.get('includedInChecks')]
-    if ignored:
-        lines += ['## Schedules ignorés volontairement', '', '| Legacy ID | Statut migration |', '|---|---|']
-        for row in ignored:
-            lines.append(f"| {row['freshness'].get('legacyId') or row['schedule_id']} | {row.get('migrationStatus')} |")
-        lines.append('')
-
-    return '\n'.join(lines)
 
 
-async def run(manifest_path: Path, runs_log_path: Path, control_path: Path, admin_policy_path: Path, out_json: Path, out_md: Path) -> dict:
-    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-    schedules = manifest.get('schedules', [])
+async def run(manifest_path: Path, runs_log_path: Path, control_path: Path, admin_policy_path: Path, out_json: Path, out_md: Path) -> dict[str, JsonValue]:
+    manifest = JSON_OBJECT.validate_json(manifest_path.read_bytes())
+    schedules = TypeAdapter(list[dict[str, JsonValue]]).validate_python(manifest.get('schedules', []))
     last_runs = _load_last_runs(runs_log_path)
     migration_status = _load_migration_statuses(control_path)
     admin_policy = _load_admin_policy(admin_policy_path)
-    now = dt.datetime.now(dt.timezone.utc)
+    now = dt.datetime.now(dt.UTC)
     first_run_grace_active, manifest_age_hours = _manifest_first_run_grace_active(manifest_path, now)
     client = await Client.connect('127.0.0.1:57233')
 
     configured_legacy_ids = {
-        str((item.get('payload') or {}).get('legacy_id') or item.get('legacy_id'))
+        str(JSON_OBJECT.validate_python(item.get('payload') or {}).get('legacy_id') or item.get('legacy_id'))
         for item in schedules
-        if ((item.get('payload') or {}).get('legacy_id') or item.get('legacy_id'))
+        if (JSON_OBJECT.validate_python(item.get('payload') or {}).get('legacy_id') or item.get('legacy_id'))
     }
     missing_critical_mail = sorted(CRITICAL_MAIL_LEGACY_IDS - configured_legacy_ids)
     burst_warnings = _compute_bursts(schedules, admin_policy)
 
-    rows = []
+    rows: list[DriftRow] = []
     drift_count = 0
     freshness_stale_count = 0
     ignored_count = 0
     admin_queue_drift_count = 0
 
     for item in schedules:
-        payload = item.get('payload') if isinstance(item.get('payload'), dict) else {}
+        payload_value = item.get('payload')
+        payload = payload_value if isinstance(payload_value, dict) else {}
         legacy_id = item.get('legacy_id') or payload.get('legacy_id')
         legacy_id_str = str(legacy_id) if legacy_id else ''
         status = migration_status.get(legacy_id_str, '')
@@ -295,15 +245,15 @@ async def run(manifest_path: Path, runs_log_path: Path, control_path: Path, admi
             policy_expected_task_queue = admin_policy['adminTaskQueue']
             queue_source = 'admin-wrapper-queue-policy'
 
-        row = {
-            'schedule_id': item['schedule_id'],
+        row: DriftRow = {
+            'schedule_id': TypeAdapter(str).validate_python(item['schedule_id']),
             'workflow_id': item.get('workflow_id'),
             'migrationStatus': status or None,
             'includedInChecks': included,
             'expected': {
                 'enabled': bool(item.get('enabled', True)),
                 'paused': not bool(item.get('enabled', True)),
-                'cron': item.get('cron'),
+                'cron': TypeAdapter(str | None).validate_python(item.get('cron')),
                 'timezone': item.get('timezone', 'Europe/Paris'),
                 'taskQueue': expected_task_queue,
                 'policyTaskQueue': policy_expected_task_queue,
@@ -330,7 +280,7 @@ async def run(manifest_path: Path, runs_log_path: Path, control_path: Path, admi
         }
 
         try:
-            handle = client.get_schedule_handle(item['schedule_id'])
+            handle = client.get_schedule_handle(row['schedule_id'])
             desc = await handle.describe()
             row['live']['exists'] = True
             row['live']['paused'] = bool(desc.schedule.state.paused)
@@ -349,6 +299,7 @@ async def run(manifest_path: Path, runs_log_path: Path, control_path: Path, admi
                     f"task_queue mismatch expected={policy_expected_task_queue} source={queue_source} actual={row['live']['taskQueue']}"
                 )
         except Exception as exc:
+            logger.exception("Could not read live Temporal schedule")
             if included:
                 row['driftReasons'].append(f"missing or unreadable live schedule: {exc}")
 
@@ -359,7 +310,8 @@ async def run(manifest_path: Path, runs_log_path: Path, control_path: Path, admi
 
         if included and row['expected']['enabled'] and legacy_id and legacy_id_str not in FRESHNESS_EXEMPT_LEGACY_IDS:
             last_run = last_runs.get(legacy_id_str)
-            row['freshness']['maxExpectedAgeHours'] = _max_expected_age_hours(row['expected']['cron'])
+            max_expected_age = _max_expected_age_hours(row['expected']['cron'])
+            row['freshness']['maxExpectedAgeHours'] = max_expected_age
             if last_run is None:
                 if first_run_grace_active:
                     row['freshness']['firstRunGraceActive'] = True
@@ -373,7 +325,7 @@ async def run(manifest_path: Path, runs_log_path: Path, control_path: Path, admi
                 age_hours = (now - last_run).total_seconds() / 3600.0
                 row['freshness']['lastRunAt'] = last_run.isoformat()
                 row['freshness']['ageHours'] = round(age_hours, 2)
-                if age_hours > float(row['freshness']['maxExpectedAgeHours']):
+                if age_hours > max_expected_age:
                     if first_run_grace_active:
                         row['freshness']['firstRunGraceActive'] = True
                         row['freshness']['reasons'].append(
@@ -389,7 +341,7 @@ async def run(manifest_path: Path, runs_log_path: Path, control_path: Path, admi
 
         rows.append(row)
 
-    blocking_reasons = []
+    blocking_reasons: list[str] = []
     if drift_count:
         blocking_reasons.append('schedule_drift_detected')
     if admin_queue_drift_count:
@@ -399,7 +351,7 @@ async def run(manifest_path: Path, runs_log_path: Path, control_path: Path, admi
     if freshness_stale_count:
         blocking_reasons.append('schedule_freshness_stale')
 
-    action_queue = []
+    action_queue: list[dict[str, JsonValue]] = []
     for row in rows:
         if not row.get('includedInChecks'):
             continue
@@ -417,7 +369,7 @@ async def run(manifest_path: Path, runs_log_path: Path, control_path: Path, admi
             'doneCondition': 'Le schedule live correspond au manifeste actif, à la policy admin-wrapper, ou est explicitement reclassé hors périmètre.',
         }, origin_automation='schedule-drift-watchdog'))
 
-    report = {
+    report = JSON_OBJECT.validate_python({
         'generatedAt': _as_iso_now(),
         'contractVersion': 'standard-v2',
         'capabilityId': 'schedule-drift-watchdog',
@@ -456,29 +408,38 @@ async def run(manifest_path: Path, runs_log_path: Path, control_path: Path, admi
         },
         'rows': rows,
         'updatedBy': 'schedule-drift-watchdog',
-    }
+    })
 
     out_json.parent.mkdir(parents=True, exist_ok=True)
-    out_json.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-    out_md.write_text(_render_markdown(report), encoding='utf-8')
+    _ = out_json.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    _ = out_md.write_text(_render_markdown(report), encoding='utf-8')
     return report
 
 
-def compact_summary(report: dict) -> dict:
+def compact_summary(report: dict[str, JsonValue]) -> dict[str, JsonValue]:
     """Detailed rows remain in the report artifact, never in workflow history."""
     return {key: report.get(key) for key in
             ('ok', 'status', 'summary', 'counts', 'blockingReasons', 'artifacts')}
 
 
+class Arguments(argparse.Namespace):
+    manifest: str = str(DEFAULT_MANIFEST)
+    runs_log: str = str(DEFAULT_RUNS_LOG)
+    migration_control: str = str(DEFAULT_CONTROL)
+    admin_policy: str = str(DEFAULT_ADMIN_POLICY)
+    out_json: str = str(DEFAULT_OUT_JSON)
+    out_md: str = str(DEFAULT_OUT_MD)
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--manifest', default=str(DEFAULT_MANIFEST))
-    parser.add_argument('--runs-log', default=str(DEFAULT_RUNS_LOG))
-    parser.add_argument('--migration-control', default=str(DEFAULT_CONTROL))
-    parser.add_argument('--admin-policy', default=str(DEFAULT_ADMIN_POLICY))
-    parser.add_argument('--out-json', default=str(DEFAULT_OUT_JSON))
-    parser.add_argument('--out-md', default=str(DEFAULT_OUT_MD))
-    args = parser.parse_args()
+    _ = parser.add_argument('--manifest', default=str(DEFAULT_MANIFEST))
+    _ = parser.add_argument('--runs-log', default=str(DEFAULT_RUNS_LOG))
+    _ = parser.add_argument('--migration-control', default=str(DEFAULT_CONTROL))
+    _ = parser.add_argument('--admin-policy', default=str(DEFAULT_ADMIN_POLICY))
+    _ = parser.add_argument('--out-json', default=str(DEFAULT_OUT_JSON))
+    _ = parser.add_argument('--out-md', default=str(DEFAULT_OUT_MD))
+    args = parser.parse_args(namespace=Arguments())
 
     report = await run(
         Path(args.manifest),

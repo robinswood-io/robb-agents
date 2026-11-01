@@ -1,0 +1,41 @@
+{
+  "status": "passed",
+  "runtimeJavaScriptPreservedOutsideNativeFixtureCompletions": true,
+  "nativeFixtureCompletions": [],
+  "nativeLiteralPropertyAccessEquivalent": true,
+  "removedExplicitAny": 20,
+  "newExplicitAny": 0,
+  "newRuntimeStateOrWorkflow": false,
+  "files": [
+    {
+      "file": "apps/electron/src/main/__tests__/browser-canvas-capture.isolated.ts",
+      "lines": 98,
+      "sha256": "07d9b9678b5167933c0748dc9dc2e3388e26c48725e2169d8eb29564a6337c20"
+    },
+    {
+      "file": "apps/electron/src/main/__tests__/browser-cdp-input.test.ts",
+      "lines": 100,
+      "sha256": "94bfad35a9c552f2e5ebf5d31c07ea015db5408057e2b4d3fcec5b9d1a922b29"
+    },
+    {
+      "file": "apps/electron/src/main/__tests__/notifications-routing.isolated.ts",
+      "lines": 112,
+      "sha256": "2f02957d81d171366914fd125b0ce42783895b66d4a78e0af4a6602d616dcf6b"
+    },
+    {
+      "file": "apps/electron/src/main/handlers/__tests__/settings-default-thinking.test.ts",
+      "lines": 94,
+      "sha256": "6b006800648b098983e23e422e867444936fba867b05793989225ee3ae58d674"
+    },
+    {
+      "file": "packages/messaging-gateway/src/__tests__/registry-allow-pending.test.ts",
+      "lines": 173,
+      "sha256": "bf0a666a015ed2ccf70ca0ddeac0865812bf0388e0ca3415943fb4fd238cb97a"
+    },
+    {
+      "file": "packages/messaging-gateway/src/__tests__/router.test.ts",
+      "lines": 233,
+      "sha256": "bc77496788a969939ffd93875f9ec080fdfcf152ac5fc65c59f5094b81d1e2be"
+    }
+  ]
+}

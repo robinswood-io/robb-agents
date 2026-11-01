@@ -75,7 +75,7 @@ describe('interceptor-request-utils', () => {
     const body: Record<string, unknown> = { model: 'gpt-6-astra', prompt_cache_options: options };
 
     expect(normalizeOpenAiResponsesRequest(body)).toBe(body);
-    expect(body.prompt_cache_options).toBe(options);
+    expect(body["prompt_cache_options"]).toBe(options);
   });
 
   it('leaves earlier Responses API model options unchanged', () => {

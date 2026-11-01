@@ -1,0 +1,181 @@
+{
+  "source": "apps/electron/src/shared/route-parser.ts",
+  "units": [
+    {
+      "names": [
+        "RouteType"
+      ],
+      "group": "route-types",
+      "bodySha256": "3f7c813082f547305e3a44143519201d66430110fc1021a48b1e77ba288b028f"
+    },
+    {
+      "names": [
+        "ParsedRoute"
+      ],
+      "group": "route-types",
+      "bodySha256": "8aa5e4b53bf472ec9f0308004fad8aa929f20e7bcf125924f954500a020e5e51"
+    },
+    {
+      "names": [
+        "NavigatorType"
+      ],
+      "group": "route-types",
+      "bodySha256": "21811fb854e0e018ab076581871917de0242ab9c6a2c4171ad790208405b71d0"
+    },
+    {
+      "names": [
+        "ParsedCompoundRoute"
+      ],
+      "group": "route-types",
+      "bodySha256": "2fe908f7d1e58e8c8f06d94523b8ef7c64509ab672719dab4100e0b01ff8ba45"
+    },
+    {
+      "names": [
+        "COMPOUND_ROUTE_PREFIXES"
+      ],
+      "group": "route-types",
+      "bodySha256": "8558328f93d5a1f388eafdd716f49b13284a7a0ab44c2c8658cf1b0bd97fb7f0"
+    },
+    {
+      "names": [
+        "isCompoundRoute"
+      ],
+      "group": "route-types",
+      "bodySha256": "f99f1d991e0bb80af10ab11d027fa2bf8a8718239f9a58850641c46129eded72"
+    },
+    {
+      "names": [
+        "parseCompoundRoute"
+      ],
+      "group": "compound-routes",
+      "bodySha256": "d6579000b95fda85d2246bccaaa261fa5d458369d51d26ebd862b03e604e727b"
+    },
+    {
+      "names": [
+        "buildCompoundRoute"
+      ],
+      "group": "compound-routes",
+      "bodySha256": "027bac26955b19bfb1373893b7b42fa23a07c31f34b03612bf1c33f6dccd0a2c"
+    },
+    {
+      "names": [
+        "parseRoute"
+      ],
+      "group": "view-routes",
+      "bodySha256": "f0ef9526732b6bcea9a0975242b7e6ea20738f0ca779425d44abbe9404544df9"
+    },
+    {
+      "names": [
+        "convertCompoundToViewRoute"
+      ],
+      "group": "view-routes",
+      "bodySha256": "45f55dd669abc69ffff6ce6e91fc73dfd365d22ae2b94cb39daa5bd8b2e84b2a"
+    },
+    {
+      "names": [
+        "parseRouteToNavigationState"
+      ],
+      "group": "compound-navigation",
+      "bodySha256": "ebe778768b9d874e2c643a6dd702d89261a96b2c4918993d40ae232e1924e3ce"
+    },
+    {
+      "names": [
+        "convertCompoundToNavigationState"
+      ],
+      "group": "compound-navigation",
+      "bodySha256": "78f7eff75a0e10fc0fb349a8d93e31098a3a15e073255e95ac221d5421cc1b6d"
+    },
+    {
+      "names": [
+        "convertParsedRouteToNavigationState"
+      ],
+      "group": "legacy-navigation",
+      "bodySha256": "f1c8263802d4dbb31ed7140bea8793a27a58c1197ccf114a8005868aae02b2d9"
+    },
+    {
+      "names": [
+        "navigationStateToCompoundRoute"
+      ],
+      "group": "navigation-routes",
+      "bodySha256": "92afddd3208bbdfdb1a836123ea53113835086fb12034016d14139427c5daddb"
+    },
+    {
+      "names": [
+        "buildRouteFromNavigationState"
+      ],
+      "group": "navigation-routes",
+      "bodySha256": "7b8e7f5de1abe14d9c8f22bfa06e248803b74eda6a1ec76162c348f1b4f5ebda"
+    },
+    {
+      "names": [
+        "parseRightSidebarParam"
+      ],
+      "group": "sidebar-routes",
+      "bodySha256": "1bae35d4985ca521b88f5fe3180cccd49a025739d597686e8656eb0bb5e159bb"
+    },
+    {
+      "names": [
+        "buildRightSidebarParam"
+      ],
+      "group": "sidebar-routes",
+      "bodySha256": "708e11768857629f7f75e2b3114b00ad3daafbe5b9ef43e6b53cbba7240e95a7"
+    }
+  ],
+  "modules": [
+    {
+      "name": "route-types",
+      "lines": 68
+    },
+    {
+      "name": "compound-routes",
+      "lines": 319
+    },
+    {
+      "name": "view-routes",
+      "lines": 138
+    },
+    {
+      "name": "compound-navigation",
+      "lines": 166
+    },
+    {
+      "name": "legacy-navigation",
+      "lines": 165
+    },
+    {
+      "name": "navigation-routes",
+      "lines": 81
+    },
+    {
+      "name": "sidebar-routes",
+      "lines": 60
+    }
+  ],
+  "dependencies": {
+    "route-types": [],
+    "compound-routes": [
+      "route-types"
+    ],
+    "view-routes": [
+      "route-types",
+      "compound-routes"
+    ],
+    "compound-navigation": [
+      "route-types",
+      "compound-routes",
+      "sidebar-routes",
+      "view-routes",
+      "legacy-navigation"
+    ],
+    "legacy-navigation": [
+      "route-types"
+    ],
+    "navigation-routes": [
+      "route-types",
+      "compound-routes"
+    ],
+    "sidebar-routes": []
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

@@ -1,0 +1,128 @@
+{
+  "status": "passed",
+  "cases": [
+    "loaded conversation displays native message history",
+    "rename opens dialog and persists trimmed name",
+    "flag action targets the same session",
+    "archive action targets the same session",
+    "share command and clipboard payload remain intact",
+    "new message traverses native editor and send callback",
+    "share menu refreshes after language changes"
+  ],
+  "errors": [],
+  "rawCalls": [
+    {
+      "method": "view",
+      "args": [
+        "qa-chat-page"
+      ]
+    },
+    {
+      "method": "view",
+      "args": [
+        "qa-chat-page"
+      ]
+    },
+    {
+      "method": "view",
+      "args": [
+        "qa-chat-page"
+      ]
+    },
+    {
+      "method": "rename",
+      "args": [
+        "qa-chat-page",
+        "QA Renamed Conversation"
+      ]
+    },
+    {
+      "method": "flag",
+      "args": [
+        "qa-chat-page"
+      ]
+    },
+    {
+      "method": "archive",
+      "args": [
+        "qa-chat-page"
+      ]
+    },
+    {
+      "method": "command",
+      "args": [
+        "qa-chat-page",
+        {
+          "type": "shareToViewer"
+        }
+      ]
+    },
+    {
+      "method": "send",
+      "args": [
+        "qa-chat-page",
+        "QA complete follow-up",
+        null,
+        null
+      ]
+    },
+    {
+      "method": "input",
+      "args": [
+        "qa-chat-page",
+        ""
+      ]
+    },
+    {
+      "method": "view",
+      "args": [
+        "qa-chat-page"
+      ]
+    },
+    {
+      "method": "view",
+      "args": [
+        "qa-chat-page"
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "method": "rename",
+      "args": [
+        "qa-chat-page",
+        "QA Renamed Conversation"
+      ]
+    },
+    {
+      "method": "flag",
+      "args": [
+        "qa-chat-page"
+      ]
+    },
+    {
+      "method": "archive",
+      "args": [
+        "qa-chat-page"
+      ]
+    },
+    {
+      "method": "command",
+      "args": [
+        "qa-chat-page",
+        {
+          "type": "shareToViewer"
+        }
+      ]
+    },
+    {
+      "method": "send",
+      "args": [
+        "qa-chat-page",
+        "QA complete follow-up",
+        null,
+        null
+      ]
+    }
+  ]
+}

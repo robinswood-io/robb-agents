@@ -7,8 +7,9 @@
  * - LLM connection type mapping
  * - Available providers list
  */
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect } from 'bun:test';
 import { join } from 'node:path';
+import { applyAnthropicRuntimeBootstrap } from '../internal/runtime-resolver.ts';
 import {
   detectProvider,
   createBackend,
@@ -22,7 +23,6 @@ import {
   providerTypeToAgentProvider,
   resolveModelForProvider,
   resolveSetupTestConnectionHint,
-  createBackendFromConnection,
   testBackendConnection,
   validateStoredBackendConnection,
 } from '../factory.ts';
@@ -105,7 +105,8 @@ describe('createBackend / createAgent', () => {
 
   describe('Unknown provider', () => {
     it('should throw for unknown provider', () => {
-      const config = createTestConfig({ provider: 'unknown' as any });
+      const config = createTestConfig();
+      Reflect.set(config, 'provider', 'unknown');
 
       expect(() => createBackend(config)).toThrow('Unknown provider: unknown');
     });
@@ -138,7 +139,7 @@ describe('isProviderAvailable', () => {
   });
 
   it('should return false for unknown provider', () => {
-    expect(isProviderAvailable('unknown' as any)).toBe(false);
+    expect(isProviderAvailable('unknown')).toBe(false);
   });
 });
 
@@ -156,7 +157,7 @@ describe('connectionTypeToProvider', () => {
   });
 
   it('should default to anthropic for unknown types', () => {
-    expect(connectionTypeToProvider('unknown' as any)).toBe('anthropic');
+    expect(connectionTypeToProvider('unknown')).toBe('anthropic');
   });
 });
 
@@ -251,15 +252,19 @@ describe('phase4 backend abstraction APIs', () => {
     })).not.toThrow();
   });
 
-  // Skip: resolveClaudeCliPath finds the CLI via node_modules traversal even from dist/, so this
-  // only fails in a truly isolated packaged environment, not in the dev monorepo.
-  it.skip('initializeBackendHostRuntime throws for dist-style host root in dev', () => {
+  it('initializes a dist-style development host before provider session preparation', () => {
     expect(() => initializeBackendHostRuntime({
       hostRuntime: {
         appRootPath: join(process.cwd(), 'apps', 'electron', 'dist'),
         isPackaged: false,
       },
-    })).toThrow('Claude Code SDK not found');
+    })).not.toThrow();
+  });
+  it('rejects missing Claude executables during strict session runtime preparation', () => {
+    expect(() => applyAnthropicRuntimeBootstrap({
+      appRootPath: '/qa/missing-provider-runtime',
+      isPackaged: true,
+    }, {})).toThrow('Claude Agent SDK native binary not found');
   });
 
   it('resolveSetupTestConnectionHint maps provider/baseUrl/piAuthProvider correctly', () => {
@@ -383,7 +388,7 @@ describe('resolveModelForProvider', () => {
       providerType: 'pi',
       defaultModel: 'pi/claude-opus-4-7',
       models: ['pi/claude-opus-4-7', 'pi/claude-sonnet-4-6'],
-    } as unknown as LlmConnection;
+    } as LlmConnection;
 
     expect(() => resolveModelForProvider('pi', 'pi/claude-opus-4-6', connection)).toThrow('unavailable');
     expect(resolveModelForProvider('pi', undefined, connection)).toBe('pi/claude-opus-4-7');

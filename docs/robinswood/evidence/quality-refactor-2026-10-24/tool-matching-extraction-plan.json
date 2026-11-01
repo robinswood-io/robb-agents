@@ -1,0 +1,152 @@
+{
+  "source": "packages/shared/src/agent/tool-matching.ts",
+  "units": [
+    {
+      "names": [
+        "log"
+      ],
+      "group": "transcript",
+      "bodySha256": "5fcfd75996983823176f16b8e026d45b36ae42265ff124c658abd5ecc0a63662"
+    },
+    {
+      "names": [
+        "parseWorkflowIdFromTranscriptPath"
+      ],
+      "group": "transcript",
+      "bodySha256": "34a19c543825fa3e3539f04f9b36f85f8137b32990f881ba40c8aab3ba7c1ee7"
+    },
+    {
+      "names": [
+        "ToolEntry"
+      ],
+      "group": "transcript",
+      "bodySha256": "45c9a2dccb2cfdc599d898edbbe18408756195588b1472f62582fd4fd6c659ff"
+    },
+    {
+      "names": [
+        "ToolIndex"
+      ],
+      "group": "transcript",
+      "bodySha256": "097d376cede3ef0ea5388558b681d837cbf61fef8f3b4d7c872f8534a5ae21c4"
+    },
+    {
+      "names": [
+        "ToolUseBlock"
+      ],
+      "group": "transcript",
+      "bodySha256": "8c07c14eca0a28ff168c1e27bf045c400016a182d7957ce16759a554f9bed935"
+    },
+    {
+      "names": [
+        "ToolResultBlock"
+      ],
+      "group": "transcript",
+      "bodySha256": "7c956bd844998f8759ef89378b51b8d9a1918679eefd6bd3d9428731508befe0"
+    },
+    {
+      "names": [
+        "TextBlock"
+      ],
+      "group": "transcript",
+      "bodySha256": "9999f3231f6201e148374feea1b6e4b3069f277808ac171c6684bd4c14c0d7cd"
+    },
+    {
+      "names": [
+        "ContentBlock"
+      ],
+      "group": "transcript",
+      "bodySha256": "c5e6a6dc8af054e52a3c278aa2423d0deba68cb2e4ace3edf49865629af912a2"
+    },
+    {
+      "names": [
+        "stripInternalFields"
+      ],
+      "group": "transcript",
+      "bodySha256": "900a1bcf8e67ba2934fa821439966601745326fe7f56eca7115d58ec314608fe"
+    },
+    {
+      "names": [
+        "extractToolStarts"
+      ],
+      "group": "tool-starts",
+      "bodySha256": "114b64c115d2eb0b91652b4fc321af1ff117ab6439bb7e592753be0006289ae5"
+    },
+    {
+      "names": [
+        "extractToolResults"
+      ],
+      "group": "tool-results",
+      "bodySha256": "136d0f5c54cbd6b5939edee6448f6bc73ac81ed630b229b988a718088c9e756b"
+    },
+    {
+      "names": [
+        "extractToolMetadata"
+      ],
+      "group": "tool-metadata",
+      "bodySha256": "9efa7c06032d1f48e323d059889b55cf5ec1f45d4e221eac83176cca35a31202"
+    },
+    {
+      "names": [
+        "serializeResult"
+      ],
+      "group": "tool-metadata",
+      "bodySha256": "7d272587e4539972d577fd6b4d372f185ee37aed60bdbaac9d77aaefe552bff1"
+    },
+    {
+      "names": [
+        "isToolResultError"
+      ],
+      "group": "tool-metadata",
+      "bodySha256": "baddfbd384d5566b4aa8da0b0462d3e555be4576aa5916844b59fe2a75e791a7"
+    },
+    {
+      "names": [
+        "detectBackgroundEvents"
+      ],
+      "group": "background-events",
+      "bodySha256": "d828406c149cbd1aebc098ba0938e2e0530efc9516d09509e91145174690e706"
+    }
+  ],
+  "modules": [
+    {
+      "name": "transcript",
+      "lines": 110
+    },
+    {
+      "name": "tool-starts",
+      "lines": 118
+    },
+    {
+      "name": "tool-results",
+      "lines": 117
+    },
+    {
+      "name": "tool-metadata",
+      "lines": 85
+    },
+    {
+      "name": "background-events",
+      "lines": 137
+    }
+  ],
+  "dependencies": {
+    "transcript": [],
+    "tool-starts": [
+      "transcript",
+      "tool-metadata"
+    ],
+    "tool-results": [
+      "transcript",
+      "tool-metadata",
+      "background-events"
+    ],
+    "tool-metadata": [
+      "transcript"
+    ],
+    "background-events": [
+      "transcript"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

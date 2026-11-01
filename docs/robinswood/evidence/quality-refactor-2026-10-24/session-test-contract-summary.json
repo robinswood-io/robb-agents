@@ -1,0 +1,232 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Contrats des tests de restauration, de rollback et d’attente des sessions",
+  "changes": [
+    "40 any explicites retirés ; accès aux opérations par leurs signatures natives, données de stockage typées et événements transmis selon le contrat réel.",
+    "Faux agents intentionnellement partiels contrôlés sur les méthodes qu’ils implémentent, sans leur ajouter de capacités.",
+    "Deux arrêts de serveurs MCP de test désormais asynchrones selon leur API réelle ; un slug explicite complète l’espace de travail de test.",
+    "Même code exécutable des tests hormis ces corrections documentées de fixtures ; aucun changement de code de production ni d’assertion."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/main/__tests__/session-branch-rollback.isolated.ts",
+      "lines": 384,
+      "sha256": "0cb2d4dc41d601fa6217ed43b3e2fc2907b37a32cafe9671c7acd5d267424736"
+    },
+    {
+      "file": "packages/server-core/src/sessions/create-managed-session.test.ts",
+      "lines": 287,
+      "sha256": "34a8076025c4d243408d58718d8592a0db6f6ebb5651cfbc94753cf5c615a03d"
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-wait-diagnostic.test.ts",
+      "lines": 260,
+      "sha256": "680a1a18b6bef8a26059a079e6620c6cbd9c4e8ef9164dda1d8ba622ed3812d0"
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-wait-integration.test.ts",
+      "lines": 310,
+      "sha256": "3919806f5895684d381501284c37bd27e8438862edf00f05ade17beacecceffc"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 14.2,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-test-contract-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 22.09,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-test-contract-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/main/__tests__/session-branch-rollback.isolated.ts",
+        "packages/server-core/src/sessions/session-wait-integration.test.ts",
+        "packages/server-core/src/sessions/session-wait-diagnostic.test.ts",
+        "packages/server-core/src/sessions/create-managed-session.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 0.64,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-test-contract-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/server-core/src/sessions/session-wait-integration.test.ts",
+        "./packages/server-core/src/sessions/session-wait-diagnostic.test.ts",
+        "./packages/server-core/src/sessions/create-managed-session.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.96,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-test-contract-before-wait.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./apps/electron/src/main/__tests__/session-branch-rollback.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.54,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-test-contract-before-branch.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/server-core/src/sessions/session-wait-integration.test.ts",
+        "./packages/server-core/src/sessions/session-wait-diagnostic.test.ts",
+        "./packages/server-core/src/sessions/create-managed-session.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.94,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-test-contract-after-wait.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./apps/electron/src/main/__tests__/session-branch-rollback.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.74,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-test-contract-after-branch.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 141.16,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-test-contract-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "files": [
+      {
+        "file": "apps/electron/src/main/__tests__/session-branch-rollback.isolated.ts",
+        "explicitAnyRemoved": 15,
+        "runtimeAstIdenticalExceptDocumentedFixtureCorrections": true,
+        "workspaceSlugAdded": false,
+        "asyncPoolStopFixtures": 2,
+        "lines": 385
+      },
+      {
+        "file": "packages/server-core/src/sessions/session-wait-integration.test.ts",
+        "explicitAnyRemoved": 11,
+        "runtimeAstIdenticalExceptDocumentedFixtureCorrections": true,
+        "workspaceSlugAdded": false,
+        "asyncPoolStopFixtures": 0,
+        "lines": 311
+      },
+      {
+        "file": "packages/server-core/src/sessions/session-wait-diagnostic.test.ts",
+        "explicitAnyRemoved": 7,
+        "runtimeAstIdenticalExceptDocumentedFixtureCorrections": true,
+        "workspaceSlugAdded": false,
+        "asyncPoolStopFixtures": 0,
+        "lines": 261
+      },
+      {
+        "file": "packages/server-core/src/sessions/create-managed-session.test.ts",
+        "explicitAnyRemoved": 7,
+        "runtimeAstIdenticalExceptDocumentedFixtureCorrections": true,
+        "workspaceSlugAdded": true,
+        "asyncPoolStopFixtures": 0,
+        "lines": 288
+      }
+    ],
+    "explicitAnyRemoved": 40,
+    "productionRuntimeChanged": false,
+    "additionalRuntimeFunctions": false
+  },
+  "fullTestSummary": {
+    "pass": 10741,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "session-test-contract-after-wait": {
+      "pass": 49,
+      "fail": 0,
+      "skip": 0
+    },
+    "session-test-contract-after-branch": {
+      "pass": 3,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": {
+    "waitRestore": {
+      "before": 49,
+      "after": 49,
+      "expectCallsBefore": 145,
+      "expectCallsAfter": 145
+    },
+    "isolatedBranchRollback": {
+      "before": 3,
+      "after": 3,
+      "expectCallsBefore": 13,
+      "expectCallsAfter": 13
+    }
+  },
+  "sourceGate": {
+    "max-lines": 99,
+    "no-explicit-any": 326
+  },
+  "globalLint": {
+    "files": 3353,
+    "errors": 395,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 307,
+      "max-lines": 88,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "99 fichiers trop longs et 326 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-25T19:24:37.529040+00:00"
+}

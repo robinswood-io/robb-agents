@@ -1,0 +1,16 @@
+{
+  "command": [
+    "rtk",
+    "bun",
+    "test",
+    "packages/ui/src/components/chat/__tests__/turn-utils",
+    "packages/shared/src/utils/__tests__/files.test.ts",
+    "packages/shared/src/utils/__tests__/large-response.test.ts",
+    "packages/shared/src/interop",
+    "packages/shared/src/specialized-profiles",
+    "apps/electron/src/shared/__tests__/route-parser"
+  ],
+  "exitCode": 0,
+  "seconds": 2.15,
+  "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/utility-domains-tests-2.log"
+}

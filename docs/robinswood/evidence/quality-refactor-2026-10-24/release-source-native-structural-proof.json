@@ -1,0 +1,30 @@
+{
+  "status": "passed",
+  "workflowExpandedByteIdentical": true,
+  "nativeBashBodyPreserved": true,
+  "jobsPermissionsEnvironmentAndSecretsUnchanged": true,
+  "actualReleasePublished": false,
+  "existingSourceAssertionsPreserved": true,
+  "files": [
+    {
+      "file": ".github/workflows/release.yml",
+      "lines": 492,
+      "sha256": "1a29681ec7ace1266d0e7e850205fcb647a23849c4f3d8e10a24e2dde39224c6"
+    },
+    {
+      "file": "scripts/robinswood-prepare-release-source.sh",
+      "lines": 59,
+      "sha256": "820e7f4f36f2e26435a3429c48c61b81a7572849fe9640f89bc5d2de9d2840fd"
+    },
+    {
+      "file": "scripts/tests/prepare-release-source.test.ts",
+      "lines": 145,
+      "sha256": "2d14bf2edf0b43f6bdd398222a420f702f51e66458b860f915850fc17a7b49cc"
+    },
+    {
+      "file": "scripts/tests/release-integrity.test.ts",
+      "lines": 499,
+      "sha256": "8ff9f5d339fd46b862148e39fbf334c302c47293abae845f13c8b8ed8e46e935"
+    }
+  ]
+}

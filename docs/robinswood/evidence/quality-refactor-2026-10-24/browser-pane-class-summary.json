@@ -1,0 +1,318 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Gestionnaire de fenêtres de navigateur Electron et opérations de capture, navigation et permissions",
+  "changes": [
+    "142 corps natifs répartis par responsabilité ; API publique, champs, valeurs par défaut et ancrages de ressources préservés.",
+    "31 relais privés sans dépendance ni usage externe remplacés par des appels directs aux fonctions existantes ; aucun état ni mécanisme de routage ajouté.",
+    "Compteur natif unique conservé auprès de son unique écrivain ; deux conversions any supprimées en utilisant les modificateurs clavier déjà typés."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/main/browser-pane-manager.ts",
+      "lines": 429,
+      "sha256": "3e68400f8403023ed23cb0d9ba9efcc3aab1ec68eddb31981e0e2200e60aeaff"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/capabilities.ts",
+      "lines": 388,
+      "sha256": "aa5b0dfa0135e30207b9cc30d252678172794db9da77a12c3cff7f301d8114ec"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/capability-values.ts",
+      "lines": 59,
+      "sha256": "e8524eac1af9c2b912b318c8f66c857cfe750077afcf4f8ebf27bb2efc9591b5"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/capture-page.ts",
+      "lines": 49,
+      "sha256": "45e898c4af3e8dbf747bfef7a5227bd5d7860dc2279fac1a0c9f2b8973dd461a"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/capture-recovery.ts",
+      "lines": 101,
+      "sha256": "36d8e8959a18cef9ea88e26b01bb1551d5022102f3c7b5df87ef3a361d263b18"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/capture.ts",
+      "lines": 285,
+      "sha256": "a0a7dc6012fa013765cc960de9c00b4ccad06029a7007c7d75d704cc164b4dd9"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/destruction.ts",
+      "lines": 32,
+      "sha256": "96f1cdd3b6f40298953191421cdfd4b72d0cbb8e958a9417227c731ba799bc89"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/inspection.ts",
+      "lines": 221,
+      "sha256": "d6793d1a3109498063cfd3a0cc34b8e7c395989855a072fd848da1118e0c642d"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/instances.ts",
+      "lines": 271,
+      "sha256": "c8ae0222b646164a99ce339b56a3a8877ea015ef0901d67f97eb1ecdca9f1f92"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/ipc.ts",
+      "lines": 89,
+      "sha256": "8ec94faa9abd18c7163abe77ae18e114d0e7c173073f86a0d5449c334cd293ba"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/launch.ts",
+      "lines": 84,
+      "sha256": "8a4f69ab79b43ee8461b2d2c0337623784b7dbbe4d353a93be056af11058ca65"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/layout.ts",
+      "lines": 48,
+      "sha256": "ff59d96eabecd1206137b11eff42f0e7220d1349e0363665130f030f2c97624e"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/navigation-rules.ts",
+      "lines": 103,
+      "sha256": "5db47f8066713830db70af185f33ea7824306998b8057bc70e71d9f8aeff584e"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/navigation.ts",
+      "lines": 144,
+      "sha256": "73120bed40ac39f393e5080b2611815574aed52013c375ac313daea9677c5057"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/observations.ts",
+      "lines": 129,
+      "sha256": "1abf528d06678fd774d981fef9da64f0548643a51009723020893cc922baec2c"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/operation-guard.ts",
+      "lines": 39,
+      "sha256": "cd39739ea11fbcc5e618f86db10dc3ce3d982aab722cc55e904ca64196ec5247"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/overlay.ts",
+      "lines": 238,
+      "sha256": "cd5c828ca2e214d8717b6bc8420b06e2d30afa852f2cbc2e35c7dd1071d0f520"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/permissions.ts",
+      "lines": 71,
+      "sha256": "2444cfb0e8d62574038738654f073d7e2386e47dcfa2f22a234a862617cbccaf"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/pointer-input.ts",
+      "lines": 132,
+      "sha256": "e5e6b79488831dcecbbcde42b55258b994585f2bc73242ffa9dd5142927fc7f7"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/popups.ts",
+      "lines": 66,
+      "sha256": "811043a0e3a220abcf2f780bc45dfc762ed3f825132066aced861c32f08eed36"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/protocol.ts",
+      "lines": 100,
+      "sha256": "a282e7d76fe61494b57d2d841bc40a1cdcba9ecd45ce03f4c9c805519e7b7315"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/session-binding.ts",
+      "lines": 138,
+      "sha256": "a8415a2da20fa4d7b27d109f41f13c7228e213bf77e35da56e305adc2e69a676"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/session-records.ts",
+      "lines": 115,
+      "sha256": "eb2d8b1e049e585a234717c88d08cff98562ed1cb16e5c22c1881418356e5f9d"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/shared.ts",
+      "lines": 373,
+      "sha256": "6942c958161f1d115f1ac47fd73521abf94acddebb16f14d08b2657779df92cc"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/state-events.ts",
+      "lines": 29,
+      "sha256": "161de52b75e5b23039d74b9b0c1b529aefb91dfd9ff8e6573e2acb1bad58ac93"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/text-input.ts",
+      "lines": 169,
+      "sha256": "19ddb85ce4d4791bbeb41940984e7a0138e16c2456f56b2560c632c1317932aa"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/theme.ts",
+      "lines": 173,
+      "sha256": "da18c56bc1476af462c08ff184eab5f9c192eb436e31186246291823a4a689ab"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/toolbar-state.ts",
+      "lines": 54,
+      "sha256": "e2194e3630227bc1aa985c36de24e465c99e3798b1688187d84d4bfd6c27cd6c"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/toolbar.ts",
+      "lines": 91,
+      "sha256": "1cbb93393e1fd1913508e11864e879e434e67b3390d71d73f6ca8353180c5f84"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/window-control.ts",
+      "lines": 85,
+      "sha256": "542c0ed6c5d8c947ced10034c71355f2ca0879291121f82824a7a648a0a8d279"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/window-events.ts",
+      "lines": 282,
+      "sha256": "de075eede152851f6a70b0b1447c84504a7b0b19bca116e854b09670ed983f75"
+    },
+    {
+      "file": "apps/electron/src/main/browser-pane-manager/window-state.ts",
+      "lines": 94,
+      "sha256": "ba7c692345e01deeb14f739ea74dbb6077e9b2984888149dcb6cfc8141126ead"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 16.2,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-pane-class-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 22.95,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-pane-class-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/main/browser-pane-manager.ts",
+        "apps/electron/src/main/browser-pane-manager",
+        "--format",
+        "json",
+        "--output-file",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-pane-class-lint-report.json",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.06,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-pane-class-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 15.44,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-pane-class-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/main/__tests__/browser-pane-manager.agent-control.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.capture.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.input-workspace.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.interaction-security.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.navigation-local.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.navigation-remote.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.permissions.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-manager.toolbar.test.ts",
+        "apps/electron/src/main/__tests__/browser-pane-permissions.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 13.1,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-pane-class-browser-tests.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 137.05,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-pane-class-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "nativeMethodBodies": 142,
+    "publicMethodsPreserved": 62,
+    "privateLeafFacadesRemoved": 31,
+    "privateMethodsWithDefaultsPreserved": 0,
+    "nativeModuleBindings": 3,
+    "restoredPrivateCallExpressions": 91,
+    "nativeFieldsConstructorsAndSharedState": true,
+    "nativeCounterColocatedWithSingleWriter": true,
+    "keyboardRuntimeUnchanged": true,
+    "explicitAnyRemoved": 2,
+    "nativeSignaturesAndSingleDefaultEvaluation": true,
+    "nativePublicExports": true,
+    "protocolAliasesExpandedToNativeShapes": 16,
+    "runtimeImportCycles": 0,
+    "maximumFileLines": 430
+  },
+  "fullTestSummary": {
+    "pass": 10741,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "browser-pane-class-browser-tests": {
+      "pass": 150,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": null,
+  "sourceGate": {
+    "max-lines": 91,
+    "no-explicit-any": 320
+  },
+  "globalLint": {
+    "files": 3445,
+    "errors": 381,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 301,
+      "max-lines": 80,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [
+    "Compteur mutable initialement déplacé dans un import : replacé dans le module de création qui en est l’unique écrivain ; double état exclu par preuve structurelle."
+  ],
+  "limits": [
+    "91 fichiers trop longs et 320 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-25T21:12:17.927694+00:00"
+}

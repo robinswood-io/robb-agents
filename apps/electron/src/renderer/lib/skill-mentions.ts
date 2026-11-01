@@ -26,10 +26,10 @@ export function parseSkillMentions(text: string, availableSlugs: string[]): stri
   const mentionPattern = /(?:^|\s)@([\w-]+)/g
   const mentions = new Set<string>()
 
-  let match
+  let match: RegExpExecArray | null
   while ((match = mentionPattern.exec(text)) !== null) {
     const slug = match[1]
-    if (availableSlugs.includes(slug)) {
+    if (slug && availableSlugs.includes(slug)) {
       mentions.add(slug)
     }
   }

@@ -1,13 +1,35 @@
-import { afterEach, describe, expect, it } from 'bun:test';
+import type { BackendHostRuntimeContext, CoreBackendConfig } from '../../types.ts';
+import type { ModelDefinition } from '../../../../config/models.ts';
+import { afterEach, describe, expect, it, mock } from 'bun:test';
 import { piDriver } from './pi.ts';
 
-const originalCopilotKillSwitch = process.env.ROBB_DISABLE_GITHUB_COPILOT_PROXY;
+
+const hostRuntime: BackendHostRuntimeContext = {
+  appRootPath: '/tmp/robb-driver-fixture', isPackaged: false,
+};
+const coreConfig: CoreBackendConfig = {
+  workspace: {
+    id: 'driver-workspace', slug: 'driver-workspace', name: 'Driver fixture',
+    rootPath: '/tmp/robb-driver-fixture', createdAt: 1,
+  },
+};
+
+function modelFixture(id: string, overrides: Partial<Omit<ModelDefinition, 'id'>> = {}): ModelDefinition {
+  return {
+    id, name: id, shortName: id, description: 'Driver fixture', provider: 'pi',
+    // The driver treats zero as an absent context-window override.
+    contextWindow: 0,
+    ...overrides,
+  };
+}
+
+const originalCopilotKillSwitch = process.env["ROBB_DISABLE_GITHUB_COPILOT_PROXY"];
 
 afterEach(() => {
   if (originalCopilotKillSwitch === undefined) {
-    delete process.env.ROBB_DISABLE_GITHUB_COPILOT_PROXY;
+    delete process.env["ROBB_DISABLE_GITHUB_COPILOT_PROXY"];
   } else {
-    process.env.ROBB_DISABLE_GITHUB_COPILOT_PROXY = originalCopilotKillSwitch;
+    process.env["ROBB_DISABLE_GITHUB_COPILOT_PROXY"] = originalCopilotKillSwitch;
   }
 });
 
@@ -27,15 +49,15 @@ describe('piDriver.buildRuntime custom endpoint models', () => {
           baseUrl: 'http://127.0.0.1:11111/v1',
           customEndpoint: { api: 'anthropic-messages', supportsImages: true },
           models: [
-            { id: 'vision-model', contextWindow: 262_144, supportsImages: true },
-            { id: 'text-only-model', supportsImages: false },
-            { id: 'plain-model' },
+            modelFixture('vision-model', { contextWindow: 262_144, supportsImages: true }),
+            modelFixture('text-only-model', { supportsImages: false }),
+            modelFixture('plain-model'),
           ],
           createdAt: Date.now(),
-        } as any,
+        },
       },
-      coreConfig: {} as any,
-      hostRuntime: {} as any,
+      coreConfig,
+      hostRuntime,
       resolvedPaths: {
         piServerPath: '/tmp/pi-agent-server.js',
         interceptorBundlePath: '/tmp/interceptor.cjs',
@@ -65,13 +87,15 @@ describe('piDriver.buildRuntime custom endpoint models', () => {
           baseUrl: 'http://127.0.0.1:11434/v1',
           customEndpoint: { api: 'openai-completions' },
           models: [
-            { id: 'deepseek-r1-local', contextWindow: 131_072, supportsThinking: true, maxOutputTokens: 32_768 },
+            modelFixture('deepseek-r1-local', {
+              contextWindow: 131_072, supportsThinking: true, maxOutputTokens: 32_768,
+            }),
           ],
           createdAt: Date.now(),
-        } as any,
+        },
       },
-      coreConfig: {} as any,
-      hostRuntime: {} as any,
+      coreConfig,
+      hostRuntime,
       resolvedPaths: {
         piServerPath: '/tmp/pi-agent-server.js',
         interceptorBundlePath: '/tmp/interceptor.cjs',
@@ -93,10 +117,14 @@ describe('piDriver external subscription bridges', () => {
         authType: 'none',
         resolvedModel: 'pi/gemini-3.7-flash-high',
         capabilities: { needsHttpPoolServer: false },
-        connection: { piAuthProvider: 'google-antigravity' } as any,
+        connection: {
+          slug: 'antigravity-fixture', name: 'Antigravity fixture',
+          providerType: 'pi', authType: 'none', createdAt: 1,
+          piAuthProvider: 'google-antigravity',
+        },
       },
-      coreConfig: {} as any,
-      hostRuntime: {} as any,
+      coreConfig,
+      hostRuntime,
       resolvedPaths: {
         piServerPath: '/tmp/pi-agent-server.js',
         antigravityServerPath: '/tmp/antigravity-server.js',
@@ -111,7 +139,7 @@ describe('piDriver external subscription bridges', () => {
 
 describe('piDriver GitHub Copilot contract', () => {
   it('uses the exact SDK static catalog without network when the proxy is disabled', async () => {
-    process.env.ROBB_DISABLE_GITHUB_COPILOT_PROXY = '1';
+    process.env["ROBB_DISABLE_GITHUB_COPILOT_PROXY"] = '1';
     const result = await piDriver.fetchModels!({
       connection: {
         slug: 'github-copilot',
@@ -120,10 +148,10 @@ describe('piDriver GitHub Copilot contract', () => {
         authType: 'oauth',
         piAuthProvider: 'github-copilot',
         createdAt: Date.now(),
-      } as any,
+      },
       credentials: { oauthRefreshToken: 'must-not-be-exchanged' },
       timeoutMs: 100,
-      hostRuntime: {} as any,
+      hostRuntime,
       resolvedPaths: {
         piServerPath: '/tmp/pi-agent-server.js',
         vibeAcpServerPath: '/tmp/vibe-acp-server.js',
@@ -134,5 +162,64 @@ describe('piDriver GitHub Copilot contract', () => {
 
     expect(result.models.length).toBeGreaterThan(0);
     expect(result.models.every(model => model.provider === 'pi')).toBe(true);
+  });
+});
+
+describe('piDriver local & custom endpoint model discovery', () => {
+  it('discovers local models via /v1/models or Ollama /api/tags fallback, infers capabilities, and preserves user models', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = Object.assign(mock(async (input: Parameters<typeof originalFetch>[0]) => {
+      const url = String(input);
+      if (url === 'http://localhost:11434/v1/models') {
+        return new Response('Not Found', { status: 404 });
+      }
+      if (url === 'http://localhost:11434/api/tags') {
+        return new Response(JSON.stringify({
+          models: [
+            { name: 'qwen3:32b' },
+            { name: 'gemma4:27b' },
+            { name: 'qwen3-coder:30b' },
+          ],
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    }), { preconnect() {} });
+
+    try {
+      const result = await piDriver.fetchModels!({
+        connection: {
+          slug: 'ollama-local',
+          name: 'Local Model',
+          providerType: 'pi_compat',
+          authType: 'none',
+          baseUrl: 'http://localhost:11434',
+          customEndpoint: { api: 'openai-completions' },
+          defaultModel: 'qwen3-coder:30b',
+          models: ['custom-local-alias'],
+          createdAt: Date.now(),
+        },
+        credentials: {},
+        timeoutMs: 2_000,
+        hostRuntime,
+        resolvedPaths: {
+          piServerPath: '/tmp/pi-agent-server.js',
+          interceptorBundlePath: '/tmp/interceptor.cjs',
+          nodeRuntimePath: '/usr/bin/node',
+        },
+      });
+
+      expect(result.serverDefault).toBe('qwen3-coder:30b');
+      expect(result.models.map(m => m.id)).toEqual([
+        'qwen3:32b',
+        'gemma4:27b',
+        'qwen3-coder:30b',
+        'custom-local-alias',
+      ]);
+      expect(result.models.find(m => m.id === 'qwen3:32b')?.supportsThinking).toBe(true);
+      expect(result.models.find(m => m.id === 'gemma4:27b')?.supportsImages).toBe(true);
+      expect(result.models.find(m => m.id === 'qwen3-coder:30b')?.supportsThinking).toBe(false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });

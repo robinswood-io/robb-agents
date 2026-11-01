@@ -1,0 +1,56 @@
+[
+  {
+    "name": "i18next-browser-languagedetector",
+    "expectedLatest": "8.2.3",
+    "installedOnMac": "8.2.3",
+    "platformException": false
+  },
+  {
+    "name": "react-i18next",
+    "expectedLatest": "17.1.9",
+    "installedOnMac": "17.1.9",
+    "platformException": false
+  },
+  {
+    "name": "i18next",
+    "expectedLatest": "26.5.11",
+    "installedOnMac": "26.5.11",
+    "platformException": false
+  },
+  {
+    "name": "react-resizable-panels",
+    "expectedLatest": "4.15.0",
+    "installedOnMac": "4.15.0",
+    "platformException": false
+  },
+  {
+    "name": "@rollup/rollup-win32-arm64-msvc",
+    "expectedLatest": "4.65.1",
+    "installedOnMac": null,
+    "platformException": true
+  },
+  {
+    "name": "follow-redirects",
+    "expectedLatest": "1.16.2",
+    "installedOnMac": "1.16.2",
+    "platformException": false
+  },
+  {
+    "name": "hono",
+    "expectedLatest": "4.13.14",
+    "installedOnMac": "4.13.14",
+    "platformException": false
+  },
+  {
+    "name": "ip-address",
+    "expectedLatest": "10.7.5",
+    "installedOnMac": "10.7.5",
+    "platformException": false
+  },
+  {
+    "name": "music-metadata",
+    "expectedLatest": "12.3.2",
+    "installedOnMac": "12.3.2",
+    "platformException": false
+  }
+]

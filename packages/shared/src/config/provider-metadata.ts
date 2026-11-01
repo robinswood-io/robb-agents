@@ -91,7 +91,7 @@ export function getProviderMetadata(
   piAuthProvider?: string,
 ): ProviderMetadata | undefined {
   if (providerType === 'anthropic') {
-    return PROVIDER_METADATA.anthropic
+    return PROVIDER_METADATA["anthropic"]
   }
   if (piAuthProvider) {
     return PROVIDER_METADATA[piAuthProvider]

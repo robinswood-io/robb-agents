@@ -1,3 +1,4 @@
+import { omitUndefined, type SnapshotInput } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from 'bun:test'
 import type { FileAttachment } from '@craft-agent/shared/protocol'
 import {
@@ -7,8 +8,8 @@ import {
   toDraftRef,
 } from '../drafts'
 
-function makeAttachment(overrides: Partial<FileAttachment> = {}): FileAttachment {
-  return {
+function makeAttachment(overrides: Partial<SnapshotInput<FileAttachment>> = {}): FileAttachment {
+  return omitUndefined<FileAttachment>({
     type: 'image',
     path: '/tmp/foo.png',
     name: 'foo.png',
@@ -17,7 +18,7 @@ function makeAttachment(overrides: Partial<FileAttachment> = {}): FileAttachment
     base64: 'AAAA',
     thumbnailBase64: 'TTTT',
     ...overrides,
-  }
+  })
 }
 
 describe('isAbsolutePath', () => {
@@ -113,7 +114,7 @@ describe('attachmentFromContentRef', () => {
       name: 'pasted.png',
       content: { type: 'image', mimeType: 'image/png', size: 4, base64: 'AAAA', thumbnailBase64: 'TTTT' },
     })
-    expect(restored).toEqual({
+    expect<unknown>(restored).toEqual({
       type: 'image',
       path: 'pasted.png',
       name: 'pasted.png',

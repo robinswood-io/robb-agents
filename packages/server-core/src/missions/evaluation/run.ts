@@ -1,3 +1,4 @@
+import { setOptional } from '@craft-agent/shared/utils/json';
 import { writeFileSync } from 'fs';
 import {
   evaluateMissionWorkspace,
@@ -19,8 +20,8 @@ function parseArgs(argv: string[]): CliOptions {
   const options: CliOptions = { format: 'markdown' };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
-    if (argument === '--workspace') options.workspace = argv[++index];
-    else if (argument === '--output') options.output = argv[++index];
+    if (argument === '--workspace') setOptional(options, "workspace", argv[++index]);
+    else if (argument === '--output') setOptional(options, "output", argv[++index]);
     else if (argument === '--format') {
       const value = argv[++index];
       if (value !== 'json' && value !== 'markdown') throw new Error('--format must be json or markdown');

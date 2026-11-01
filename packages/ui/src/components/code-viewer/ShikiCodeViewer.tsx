@@ -8,7 +8,7 @@
  * - Scrollable with custom scrollbar styling
  */
 
-import * as React from 'react'
+
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { codeToHtml, bundledLanguages, type BundledLanguage } from 'shiki'
 import { cn } from '../../lib/utils'
@@ -18,19 +18,19 @@ export interface ShikiCodeViewerProps {
   /** The code content to display */
   code: string
   /** Language for syntax highlighting (auto-detected from filePath if not provided) */
-  language?: string
+  language?: string | undefined
   /** File path - used for language detection if language not specified */
-  filePath?: string
+  filePath?: string | undefined
   /** Starting line number (default: 1) */
-  startLine?: number
+  startLine?: number | undefined
   /** Theme mode */
-  theme?: 'light' | 'dark'
+  theme?: 'light' | 'dark' | undefined
   /** Shiki theme name (e.g., 'github-dark', 'dracula'). Defaults to github-dark/github-light based on theme mode */
-  shikiTheme?: string
+  shikiTheme?: string | undefined
   /** Callback when ready */
-  onReady?: () => void
+  onReady?: (() => void) | undefined
   /** Additional class names */
-  className?: string
+  className?: string | undefined
 }
 
 // Map common extensions to Shiki language names

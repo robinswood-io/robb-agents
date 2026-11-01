@@ -12,20 +12,20 @@ import { cn } from '@/lib/utils'
 export interface Info_TableProps {
   children: React.ReactNode
   /** Optional footer content (e.g., error alert) */
-  footer?: React.ReactNode
+  footer?: React.ReactNode | undefined
   /** Label column width in pixels (default: 120) */
-  labelWidth?: number
-  className?: string
+  labelWidth?: number | undefined
+  className?: string | undefined
 }
 
 export interface Info_TableRowProps {
   /** Left column label */
   label: string
   /** Right column value (shorthand) */
-  value?: React.ReactNode
+  value?: React.ReactNode | undefined
   /** Right column content (for complex content, use instead of value) */
-  children?: React.ReactNode
-  className?: string
+  children?: React.ReactNode | undefined
+  className?: string | undefined
 }
 
 function Info_TableRoot({

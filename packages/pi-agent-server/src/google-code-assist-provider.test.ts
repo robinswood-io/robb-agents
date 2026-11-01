@@ -1,5 +1,6 @@
 import { describe, expect, it, mock } from 'bun:test';
-import { AuthStorage, ModelRegistry } from '@earendil-works/pi-coding-agent';
+import { InMemoryCredentialStore } from '@earendil-works/pi-ai';
+import { createAuthenticatedModelRuntime } from './authenticated-model-runtime.ts';
 import type { AssistantMessageEvent, Context } from '@earendil-works/pi-ai';
 import { registerGoogleCodeAssistProvider, streamGoogleCodeAssist } from './google-code-assist-provider.ts';
 
@@ -15,11 +16,10 @@ function sseResponse(payloads: unknown[]): Response {
 }
 
 describe('Google Code Assist provider', () => {
-  it('registers Gemini models under the subscription OAuth provider', () => {
-    const auth = AuthStorage.inMemory({
-      'google-gemini-code-assist': { type: 'api_key', key: 'test-access-token' },
+  it('registers Gemini models under the subscription OAuth provider', async () => {
+    const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'test-access-token' },
     });
-    const registry = ModelRegistry.inMemory(auth);
 
     registerGoogleCodeAssistProvider(registry);
 
@@ -30,7 +30,10 @@ describe('Google Code Assist provider', () => {
     expect(registry.getAvailable().filter(m => m.provider === 'google-gemini-code-assist').map(m => m.id)).toEqual([
       'gemini-2.5-flash',
       'gemini-2.5-pro',
+      'gemini-3.5-flash',
+      'gemini-3.1-pro-preview',
       'gemini-3-flash-preview',
+      'gemini-3.1-flash-lite',
     ]);
   });
 
@@ -63,13 +66,12 @@ describe('Google Code Assist provider', () => {
       }
       throw new Error(`Unexpected fetch URL: ${url}`);
     });
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    globalThis.fetch = Object.assign(fetchMock, { preconnect() {} });
 
     try {
-      const auth = AuthStorage.inMemory({
-        'google-gemini-code-assist': { type: 'api_key', key: 'test-access-token' },
-      });
-      const registry = ModelRegistry.inMemory(auth);
+      const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'test-access-token' },
+    });
       registerGoogleCodeAssistProvider(registry);
       const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
       expect(model).toBeDefined();
@@ -96,8 +98,8 @@ describe('Google Code Assist provider', () => {
 
   it('onboards an allowed organization tier when the personal tier is ineligible', async () => {
     const originalFetch = globalThis.fetch;
-    const originalProject = process.env.GOOGLE_CLOUD_PROJECT;
-    const originalProjectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+    const originalProject = process.env["GOOGLE_CLOUD_PROJECT"];
+    const originalProjectId = process.env["GOOGLE_CLOUD_PROJECT_ID"];
     const fetchMock = mock(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.includes(':loadCodeAssist')) {
@@ -132,15 +134,14 @@ describe('Google Code Assist provider', () => {
       }
       throw new Error(`Unexpected fetch URL: ${url}`);
     });
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    process.env.GOOGLE_CLOUD_PROJECT = 'organization-project';
-    delete process.env.GOOGLE_CLOUD_PROJECT_ID;
+    globalThis.fetch = Object.assign(fetchMock, { preconnect() {} });
+    process.env["GOOGLE_CLOUD_PROJECT"] = 'organization-project';
+    delete process.env["GOOGLE_CLOUD_PROJECT_ID"];
 
     try {
-      const auth = AuthStorage.inMemory({
-        'google-gemini-code-assist': { type: 'api_key', key: 'organization-onboard-access-token' },
-      });
-      const registry = ModelRegistry.inMemory(auth);
+      const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'organization-onboard-access-token' },
+    });
       registerGoogleCodeAssistProvider(registry);
       const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
       const stream = streamGoogleCodeAssist(
@@ -158,17 +159,17 @@ describe('Google Code Assist provider', () => {
       expect(fetchMock).toHaveBeenCalledTimes(3);
     } finally {
       globalThis.fetch = originalFetch;
-      if (originalProject === undefined) delete process.env.GOOGLE_CLOUD_PROJECT;
-      else process.env.GOOGLE_CLOUD_PROJECT = originalProject;
-      if (originalProjectId === undefined) delete process.env.GOOGLE_CLOUD_PROJECT_ID;
-      else process.env.GOOGLE_CLOUD_PROJECT_ID = originalProjectId;
+      if (originalProject === undefined) delete process.env["GOOGLE_CLOUD_PROJECT"];
+      else process.env["GOOGLE_CLOUD_PROJECT"] = originalProject;
+      if (originalProjectId === undefined) delete process.env["GOOGLE_CLOUD_PROJECT_ID"];
+      else process.env["GOOGLE_CLOUD_PROJECT_ID"] = originalProjectId;
     }
   });
 
   it('requires a Google Cloud project before onboarding an organization tier', async () => {
     const originalFetch = globalThis.fetch;
-    const originalProject = process.env.GOOGLE_CLOUD_PROJECT;
-    const originalProjectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+    const originalProject = process.env["GOOGLE_CLOUD_PROJECT"];
+    const originalProjectId = process.env["GOOGLE_CLOUD_PROJECT_ID"];
     const fetchMock = mock(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes(':loadCodeAssist')) {
@@ -185,15 +186,14 @@ describe('Google Code Assist provider', () => {
       }
       throw new Error(`Unexpected fetch URL: ${url}`);
     });
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    delete process.env.GOOGLE_CLOUD_PROJECT;
-    delete process.env.GOOGLE_CLOUD_PROJECT_ID;
+    globalThis.fetch = Object.assign(fetchMock, { preconnect() {} });
+    delete process.env["GOOGLE_CLOUD_PROJECT"];
+    delete process.env["GOOGLE_CLOUD_PROJECT_ID"];
 
     try {
-      const auth = AuthStorage.inMemory({
-        'google-gemini-code-assist': { type: 'api_key', key: 'organization-missing-project-access-token' },
-      });
-      const registry = ModelRegistry.inMemory(auth);
+      const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'organization-missing-project-access-token' },
+    });
       registerGoogleCodeAssistProvider(registry);
       const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
       const stream = streamGoogleCodeAssist(
@@ -212,17 +212,17 @@ describe('Google Code Assist provider', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     } finally {
       globalThis.fetch = originalFetch;
-      if (originalProject === undefined) delete process.env.GOOGLE_CLOUD_PROJECT;
-      else process.env.GOOGLE_CLOUD_PROJECT = originalProject;
-      if (originalProjectId === undefined) delete process.env.GOOGLE_CLOUD_PROJECT_ID;
-      else process.env.GOOGLE_CLOUD_PROJECT_ID = originalProjectId;
+      if (originalProject === undefined) delete process.env["GOOGLE_CLOUD_PROJECT"];
+      else process.env["GOOGLE_CLOUD_PROJECT"] = originalProject;
+      if (originalProjectId === undefined) delete process.env["GOOGLE_CLOUD_PROJECT_ID"];
+      else process.env["GOOGLE_CLOUD_PROJECT_ID"] = originalProjectId;
     }
   });
 
   it('fails closed with AI Studio guidance when no organization tier is available', async () => {
     const originalFetch = globalThis.fetch;
-    const originalProject = process.env.GOOGLE_CLOUD_PROJECT;
-    const originalProjectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+    const originalProject = process.env["GOOGLE_CLOUD_PROJECT"];
+    const originalProjectId = process.env["GOOGLE_CLOUD_PROJECT_ID"];
     const fetchMock = mock(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes(':loadCodeAssist')) {
@@ -234,15 +234,14 @@ describe('Google Code Assist provider', () => {
       }
       throw new Error(`Unexpected fetch URL: ${url}`);
     });
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    delete process.env.GOOGLE_CLOUD_PROJECT;
-    delete process.env.GOOGLE_CLOUD_PROJECT_ID;
+    globalThis.fetch = Object.assign(fetchMock, { preconnect() {} });
+    delete process.env["GOOGLE_CLOUD_PROJECT"];
+    delete process.env["GOOGLE_CLOUD_PROJECT_ID"];
 
     try {
-      const auth = AuthStorage.inMemory({
-        'google-gemini-code-assist': { type: 'api_key', key: 'individual-access-token' },
-      });
-      const registry = ModelRegistry.inMemory(auth);
+      const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'individual-access-token' },
+    });
       registerGoogleCodeAssistProvider(registry);
       const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
       const stream = streamGoogleCodeAssist(
@@ -261,10 +260,10 @@ describe('Google Code Assist provider', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     } finally {
       globalThis.fetch = originalFetch;
-      if (originalProject === undefined) delete process.env.GOOGLE_CLOUD_PROJECT;
-      else process.env.GOOGLE_CLOUD_PROJECT = originalProject;
-      if (originalProjectId === undefined) delete process.env.GOOGLE_CLOUD_PROJECT_ID;
-      else process.env.GOOGLE_CLOUD_PROJECT_ID = originalProjectId;
+      if (originalProject === undefined) delete process.env["GOOGLE_CLOUD_PROJECT"];
+      else process.env["GOOGLE_CLOUD_PROJECT"] = originalProject;
+      if (originalProjectId === undefined) delete process.env["GOOGLE_CLOUD_PROJECT_ID"];
+      else process.env["GOOGLE_CLOUD_PROJECT_ID"] = originalProjectId;
     }
   });
 
@@ -289,13 +288,12 @@ describe('Google Code Assist provider', () => {
       }
       throw new Error(`Unexpected fetch URL: ${url}`);
     });
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    globalThis.fetch = Object.assign(fetchMock, { preconnect() {} });
 
     try {
-      const auth = AuthStorage.inMemory({
-        'google-gemini-code-assist': { type: 'api_key', key: 'expired-license-token' },
-      });
-      const registry = ModelRegistry.inMemory(auth);
+      const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'expired-license-token' },
+    });
       registerGoogleCodeAssistProvider(registry);
       const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
       const stream = streamGoogleCodeAssist(
@@ -320,16 +318,15 @@ describe('Google Code Assist provider', () => {
 
   it('fails closed before fetch when the v1internal kill switch is active', async () => {
     const originalFetch = globalThis.fetch;
-    const originalKillSwitch = process.env.ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL;
+    const originalKillSwitch = process.env["ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL"];
     const fetchMock = mock(async () => new Response('{}'));
-    globalThis.fetch = fetchMock as unknown as typeof fetch;
-    process.env.ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL = '1';
+    globalThis.fetch = Object.assign(fetchMock, { preconnect() {} });
+    process.env["ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL"] = '1';
 
     try {
-      const auth = AuthStorage.inMemory({
-        'google-gemini-code-assist': { type: 'api_key', key: 'must-not-leak' },
-      });
-      const registry = ModelRegistry.inMemory(auth);
+      const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'must-not-leak' },
+    });
       registerGoogleCodeAssistProvider(registry);
       const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
       const stream = streamGoogleCodeAssist(
@@ -349,10 +346,80 @@ describe('Google Code Assist provider', () => {
     } finally {
       globalThis.fetch = originalFetch;
       if (originalKillSwitch === undefined) {
-        delete process.env.ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL;
+        delete process.env["ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL"];
       } else {
-        process.env.ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL = originalKillSwitch;
+        process.env["ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL"] = originalKillSwitch;
       }
+    }
+  });
+
+  it('streams thought parts as separate thinking blocks before visible text', async () => {
+    const originalFetch = globalThis.fetch;
+    const fetchMock = mock(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes(':loadCodeAssist')) {
+        return new Response(JSON.stringify({
+          currentTier: { id: 'STANDARD', name: 'Gemini Code Assist' },
+          cloudaicompanionProject: 'test-project',
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (url.includes(':streamGenerateContent')) {
+        return sseResponse([
+          {
+            traceId: 'trace-thought',
+            response: {
+              candidates: [{
+                content: {
+                  parts: [
+                    { thought: true, text: 'Analyse du probleme...', thoughtSignature: 'sig-1' },
+                  ],
+                },
+              }],
+            },
+          },
+          {
+            response: {
+              candidates: [{
+                content: {
+                  parts: [
+                    { text: 'Reponse finale.' },
+                  ],
+                },
+                finishReason: 'STOP',
+              }],
+              usageMetadata: { promptTokenCount: 4, candidatesTokenCount: 5, thoughtsTokenCount: 6, totalTokenCount: 15 },
+            },
+          },
+        ]);
+      }
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+    globalThis.fetch = Object.assign(fetchMock, { preconnect() {} });
+
+    try {
+      const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'test-access-token' },
+    });
+      registerGoogleCodeAssistProvider(registry);
+      const model = registry.find('google-gemini-code-assist', 'gemini-3.5-flash');
+      expect(model).toBeDefined();
+
+      const stream = streamGoogleCodeAssist(
+        model!,
+        { messages: [{ role: 'user', content: 'Explique', timestamp: Date.now() }] },
+        { apiKey: 'test-access-token', reasoning: 'high' },
+      );
+      const events: AssistantMessageEvent[] = [];
+      for await (const event of stream) events.push(event);
+
+      const done = events.find((event): event is Extract<AssistantMessageEvent, { type: 'done' }> => event.type === 'done');
+      expect(done?.message.content).toEqual([
+        { type: 'thinking', thinking: 'Analyse du probleme...', thinkingSignature: 'sig-1' },
+        { type: 'text', text: 'Reponse finale.' },
+      ]);
+      expect(events.some(e => e.type === 'thinking_delta')).toBe(true);
+    } finally {
+      globalThis.fetch = originalFetch;
     }
   });
 });

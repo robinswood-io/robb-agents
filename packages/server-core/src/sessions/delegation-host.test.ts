@@ -1,120 +1,28 @@
-import { afterEach, describe, expect, it } from 'bun:test';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import {
-  cleanupModeState,
-  deriveTerminalReconciliationInvocationCapability,
-  TERMINAL_RECONCILIATION_CAPABILITY_FIELD,
-  type PermissionMode,
-} from '@craft-agent/shared/agent';
-import { pickSessionFields, type SessionDelegation } from '@craft-agent/shared/sessions';
-import { createSession as createStoredSession, loadSession, listSessions } from '@craft-agent/shared/sessions/storage';
-import { createManagedSession, SessionManager } from './SessionManager.ts';
-import { objectiveReviewBinding, transitionObjectiveContract } from './objective-contract.ts';
-import { HOST_DELEGATED_REVIEWER_PREFIX } from './delegated-review-outcome.ts';
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import type { ActiveSessionObjective } from '../../../shared/src/sessions/types/objectives.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { deriveTerminalReconciliationInvocationCapability, TERMINAL_RECONCILIATION_CAPABILITY_FIELD } from "@craft-agent/shared/agent";
+import { type SessionDelegation } from "@craft-agent/shared/sessions";
+import { createSession as createStoredSession, loadSession, listSessions } from "@craft-agent/shared/sessions/storage";
+import { createManagedSession, SessionManager } from "./SessionManager.ts";
+import { objectiveReviewBinding, transitionObjectiveContract } from "./objective-contract.ts";
+import { HOST_DELEGATED_REVIEWER_PREFIX } from "./delegated-review-outcome.ts";
+import { cleanup, harness, makeInitialTerminalReviewReady } from "./testing/delegation-host-fixture.ts";
 
-type Managed = ReturnType<typeof createManagedSession>;
-type CreateOptions = NonNullable<Parameters<SessionManager['createSession']>[1]>;
-const cleanup: Array<() => void> = [];
+// These fixtures exercise the opt-in historical host contract.
+let previousLegacyContract: string | undefined;
+
 afterEach(() => { for (const dispose of cleanup.splice(0)) dispose(); });
-
-function harness(permissionMode: PermissionMode = 'allow-all') {
-  const rootPath = mkdtempSync(join(tmpdir(), 'robb-delegation-host-'));
-  const workspace = { id: 'workspace', name: 'Test', slug: 'test', rootPath, createdAt: 1 };
-  const parent = createManagedSession({ id: 'root', permissionMode, projectId: 'project-1',
-    llmConnection: 'test-connection', model: 'test-model', enabledSourceSlugs: ['documents'] }, workspace);
-  parent.isProcessing = true;
-  parent.activeObjective = transitionObjectiveContract({ messageId: 'root-request', text: 'Vérifie les documents fournis.', nowMs: 1 });
-  const manager = new SessionManager();
-  const internals = manager as unknown as {
-    sessions: Map<string, Managed>;
-    spawnDelegatedSession: (parent: Managed, input: unknown) => Promise<{ sessionId: string; status: string }>;
-    createSession: (workspaceId: string, options: CreateOptions, internal: { delegation: SessionDelegation }) => Promise<unknown>;
-    flushSession: (sessionId: string) => Promise<void>;
-    persistSession: (session: Managed) => void;
-    sendMessage: (sessionId: string, prompt: string, ...args: unknown[]) => Promise<void>;
-    sendEvent: () => void;
-    resolveObjectiveMutationAuthority: (managed: Managed, objective: Managed['activeObjective']) => {
-      terminalReconciliationPolicy?: {
-        invocationCapabilityKey?: string;
-        waitReviewerSessionIds: string[];
-      };
-    };
-    consumeTerminalInvocationCapability: (
-      managed: Managed,
-      toolName: string,
-      input: Record<string, unknown>,
-      presented?: string,
-    ) => boolean;
-  };
-  internals.sessions.set(parent.id, parent);
-  const creations: Array<{ options: CreateOptions; delegation: SessionDelegation }> = [];
-  const sent: Array<{ sessionId: string; prompt: string; permissionMode?: PermissionMode }> = [];
-  const persisted: Array<Pick<Managed, 'id' | 'permissionMode' | 'delegation'>> = [];
-  internals.persistSession = session => { persisted.push(JSON.parse(JSON.stringify(pickSessionFields(session)))); };
-  internals.flushSession = async () => {};
-  internals.sendEvent = () => {};
-  internals.sendMessage = async (sessionId, prompt, ...args) => {
-    sent.push({ sessionId, prompt, permissionMode: internals.sessions.get(sessionId)?.permissionMode });
-    const acknowledge = args[5] as ((messageId: string) => void) | undefined;
-    acknowledge?.(`${sessionId}-durable-dispatch`);
-  };
-  // Only external boundaries are replaced: exercise the real host admission, budget,
-  // request parsing, route inheritance, review binding, and dispatch method.
-  internals.createSession = async (_workspaceId, options, internal) => {
-    creations.push({ options, delegation: internal.delegation });
-    const child = createManagedSession({ id: `child-${creations.length}`, ...options,
-      delegation: internal.delegation } as never, workspace);
-    internals.sessions.set(child.id, child);
-    internals.persistSession(child);
-    return child;
-  };
-  cleanup.push(() => {
-    for (const id of internals.sessions.keys()) cleanupModeState(id);
-    rmSync(rootPath, { recursive: true, force: true });
-  });
-  const spawn = (input: Record<string, unknown> = { prompt: 'Inspecte la cible précise.' }) => {
-    const policy = parent.activeObjective
-      ? internals.resolveObjectiveMutationAuthority(parent, parent.activeObjective)
-        .terminalReconciliationPolicy
-      : undefined;
-    const capability = deriveTerminalReconciliationInvocationCapability(
-      policy?.invocationCapabilityKey,
-      'mcp__session__spawn_session',
-      input,
-    );
-    return internals.spawnDelegatedSession(parent, capability ? {
-      ...input,
-      [TERMINAL_RECONCILIATION_CAPABILITY_FIELD]: capability,
-    } : input);
-  };
-  return { parent, manager, internals, creations, sent, persisted, spawn };
-}
-
-function makeInitialTerminalReviewReady(parent: Managed): void {
-  const objective = parent.activeObjective!;
-  parent.activeObjective = {
-    ...objective,
-    risk: 'high-stakes',
-    requiresAcceptanceCriteria: true,
-    completionCriteria: [...objective.completionCriteria, 'independent-review-passed'],
-    acceptanceCriteria: [{
-      id: 'target-observed',
-      description: 'The exact target state is observed.',
-      toolName: 'mcp__documents__inspect',
-      input: { target: 'document-1' },
-      checks: [{ path: '$.ok', equals: true }],
-    }],
-    acceptanceRegisteredRevision: objective.acceptanceRevision ?? objective.userMessageId,
-    acceptanceRegisteredAt: 3,
-    terminalReconciliation: {
-      messageId: 'terminal-close',
-      timestamp: 2,
-      initialAcceptanceRegistrationRequired: true,
-    },
-  };
-}
+beforeEach(() => {
+  previousLegacyContract = process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"];
+  process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = '1';
+});
+afterEach(() => {
+  if (previousLegacyContract === undefined) delete process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"];
+  else process.env["ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT"] = previousLegacyContract;
+});
 
 describe('real host delegated-session dispatch', () => {
   it('rejects invalid aliases and model-supplied lineage before any child exists', async () => {
@@ -152,7 +60,7 @@ describe('real host delegated-session dispatch', () => {
     expect(h.sent[0]!.prompt).toContain('"protocol":"host-review-v2"');
     expect(h.sent[0]!.prompt).toContain('"singleTarget":{"target":"/srv/review"}');
     // The origin record remains current; a reviewer cannot delegate again.
-    restored.isProcessing = true; h.internals.sessions.set(restored.id, restored);
+    restored.isProcessing = true; sessionRuntimeStateForTest(h.internals).sessions.set(restored.id, restored);
     await expect(h.internals.spawnDelegatedSession(restored, { prompt: 'Sous-revue.' })).rejects.toThrow('reviewer');
   });
 
@@ -182,7 +90,7 @@ describe('real host delegated-session dispatch', () => {
     expect(h.sent[0]!.prompt).toContain('<host_parent_review_contract>');
     expect(h.sent[0]!.prompt).toContain('"protocol":"host-review-v2"');
     expect(h.sent[0]!.prompt).toContain('root-request');
-    const dispatched = h.internals.sessions.get('child-1');
+    const dispatched = sessionRuntimeStateForTest(h.internals).sessions.get('child-1');
     dispatched!.activeObjective = transitionObjectiveContract({
       messageId: 'review-root',
       text: 'Review the exact host-bound target in read-only mode.',
@@ -214,11 +122,7 @@ describe('real host delegated-session dispatch', () => {
     let markHydrationEntered!: () => void;
     const hydrationEntered = new Promise<void>(resolve => { markHydrationEntered = resolve; });
     const hydrationGate = new Promise<void>(resolve => { releaseHydration = resolve; });
-    const host = h.manager as unknown as {
-      ensureMessagesLoaded: (managed: Managed) => Promise<void>;
-      getOrCreateAgent: () => Promise<never>;
-      sendMessage: SessionManager['sendMessage'];
-    };
+    const host = sessionManagerForTest(h.manager);
     host.sendMessage = SessionManager.prototype.sendMessage.bind(h.manager);
     host.ensureMessagesLoaded = async managed => {
       if (managed.id === 'child-1') {
@@ -250,7 +154,7 @@ describe('real host delegated-session dispatch', () => {
     releaseHydration();
     await expect(spawning).rejects.toThrow('superseded');
 
-    const child = h.internals.sessions.get('child-1')!;
+    const child = sessionRuntimeStateForTest(h.internals).sessions.get('child-1')!;
     for (let attempt = 0; attempt < 50
       && (!child.delegation?.finishedAt || childFlushes < 2); attempt++) {
       await Bun.sleep(2);
@@ -260,7 +164,7 @@ describe('real host delegated-session dispatch', () => {
     expect(child.isProcessing).toBe(false);
     expect(child.delegation?.finishedAt).toBeNumber();
     expect(childFlushes).toBeGreaterThanOrEqual(2);
-    expect(h.persisted.at(-1)?.delegation?.finishedAt).toBeNumber();
+    expect<unknown>(h.persisted.at(-1)?.delegation).toMatchObject({ finishedAt: (expect.any(Number) as unknown) });
   });
 
   it('rejects one-shot terminal coordination capabilities after an objective amendment', async () => {
@@ -292,7 +196,7 @@ describe('real host delegated-session dispatch', () => {
 
     const registration = harness();
     const registrationObjective = registration.parent.activeObjective!;
-    registration.parent.activeObjective = {
+    registration.parent.activeObjective = omitUndefined<ActiveSessionObjective>({
       ...registrationObjective,
       requiresAcceptanceCriteria: true,
       acceptanceCriteria: undefined,
@@ -301,7 +205,7 @@ describe('real host delegated-session dispatch', () => {
         timestamp: 2,
         initialAcceptanceRegistrationRequired: true,
       },
-    };
+    });
     const criteriaPolicy = registration.internals.resolveObjectiveMutationAuthority(
       registration.parent,
       registration.parent.activeObjective,
@@ -352,7 +256,7 @@ describe('real host delegated-session dispatch', () => {
     reviewer.activeObjective = transitionObjectiveContract({
       messageId: 'reviewer-objective', text: 'Inspect the bound target.', nowMs: 4,
     });
-    h.internals.sessions.set(reviewer.id, reviewer);
+    sessionRuntimeStateForTest(h.internals).sessions.set(reviewer.id, reviewer);
 
     const consume = (mode: 'first' | 'all', presentedInput?: Record<string, unknown>) => {
       const policy = h.internals.resolveObjectiveMutationAuthority(
@@ -409,7 +313,7 @@ describe('real host delegated-session dispatch', () => {
     const orphan = createManagedSession({
       id: 'cold-orphan', parentSessionId: orphaned.parent.id, createdAt: 4, delegation: lineage,
     } as never, orphaned.parent.workspace, { messagesLoaded: false });
-    orphaned.internals.sessions.set(orphan.id, orphan);
+    sessionRuntimeStateForTest(orphaned.internals).sessions.set(orphan.id, orphan);
     await expect(orphaned.spawn({ prompt: 'Dispatch the recoverable review.', role: 'reviewer' }))
       .resolves.toMatchObject({ status: 'started' });
     expect(orphan.delegation?.finishedAt).toBeNumber();
@@ -434,7 +338,7 @@ describe('real host delegated-session dispatch', () => {
         delegatedRole: 'reviewer',
       }),
     } as never, durable.parent.workspace, { messagesLoaded: false });
-    durable.internals.sessions.set(persisted.id, persisted);
+    sessionRuntimeStateForTest(durable.internals).sessions.set(persisted.id, persisted);
     await expect(durable.spawn({ prompt: 'Do not duplicate the durable review.', role: 'reviewer' }))
       .rejects.toThrow('already dispatched the reviewer');
     expect(durable.creations).toHaveLength(0);
@@ -443,13 +347,16 @@ describe('real host delegated-session dispatch', () => {
   it('writes lineage in the first real storage record before dispatch or a later metadata save', async () => {
     const h = harness();
     h.internals.createSession = async (_workspaceId, options, internal) => {
+      if (!internal?.delegation) throw new Error('Storage fixture requires the host lineage');
       const stored = await createStoredSession(h.parent.workspace.rootPath, { ...options, delegation: internal.delegation } as never);
       // Read the real JSONL immediately after creation: no host persist/flush has occurred.
       expect(loadSession(h.parent.workspace.rootPath, stored.id)?.delegation).toEqual(internal.delegation);
       expect(listSessions(h.parent.workspace.rootPath).find(item => item.id === stored.id)?.delegation).toEqual(internal.delegation);
       const child = createManagedSession(stored, h.parent.workspace);
-      h.internals.sessions.set(child.id, child);
-      return child;
+      sessionRuntimeStateForTest(h.internals).sessions.set(child.id, child);
+      const session = await h.manager.getSession(child.id);
+      if (!session) throw new Error('Created fixture session is unavailable');
+      return session;
     };
     const result = await h.spawn({ prompt: 'Examine le document cible /srv/document.', role: 'reviewer' });
     expect(h.persisted).toHaveLength(0);
@@ -498,7 +405,7 @@ describe('real host delegated-session dispatch', () => {
     h.internals.flushSession = async () => { throw new Error('Persistence unavailable'); };
     await expect(h.spawn()).rejects.toThrow('Persistence unavailable');
     expect(h.sent).toHaveLength(0);
-    expect(h.persisted.at(-1)?.delegation?.finishedAt).toBeNumber();
+    expect<unknown>(h.persisted.at(-1)?.delegation).toMatchObject({ finishedAt: (expect.any(Number) as unknown) });
     h.internals.flushSession = async () => {};
     await expect(h.spawn()).resolves.toMatchObject({ status: 'started' });
   });
@@ -510,15 +417,15 @@ describe('real host delegated-session dispatch', () => {
     };
     await expect(h.spawn()).rejects.toThrow('no longer current');
     expect(h.sent).toHaveLength(0);
-    expect(h.persisted.at(-1)?.delegation?.finishedAt).toBeNumber();
+    expect<unknown>(h.persisted.at(-1)?.delegation).toMatchObject({ finishedAt: (expect.any(Number) as unknown) });
   });
 
   it('never acknowledges started when dispatch fails and persists a consumable child failure', async () => {
     const h = harness();
     h.internals.sendMessage = async () => { throw new Error('Transport unavailable'); };
     await expect(h.spawn()).rejects.toThrow('Transport unavailable');
-    expect(h.persisted.at(-1)?.delegation?.finishedAt).toBeNumber();
-    expect(h.internals.sessions.get('child-1')?.messages.find(message => (
+    expect<unknown>(h.persisted.at(-1)?.delegation).toMatchObject({ finishedAt: (expect.any(Number) as unknown) });
+    expect(sessionRuntimeStateForTest(h.internals).sessions.get('child-1')?.messages.find(message => (
       message.role === 'error'
       && message.errorCode === 'delegated_dispatch_failed'
     ))).toMatchObject({ errorCanRetry: true });

@@ -20,11 +20,11 @@ interface WorkspaceCreationScreenProps {
   onWorkspaceCreated: (workspace: Workspace) => void
   /** Callback when the screen is dismissed */
   onClose: () => void
-  className?: string
+  className?: string | undefined
   /** When set, skip choice step and open ConnectRemote in reconnect mode */
-  reconnectWorkspace?: Workspace
+  reconnectWorkspace?: Workspace | undefined
   /** Reconnect an existing remote workspace and resolve only on real success. */
-  onReconnectWorkspace?: (workspaceId: string, remoteServer: { url: string; token: string; remoteWorkspaceId: string }) => Promise<void>
+  onReconnectWorkspace?: ((workspaceId: string, remoteServer: { url: string; token: string; remoteWorkspaceId: string }) => Promise<void>) | undefined
 }
 
 /**
@@ -79,7 +79,7 @@ export function WorkspaceCreationScreen({
     } finally {
       setIsCreating(false)
     }
-  }, [onWorkspaceCreated])
+  }, [onWorkspaceCreated, t])
 
   const handleReconnectWorkspace = useCallback(async (workspaceId: string, remoteServer: { url: string; token: string; remoteWorkspaceId: string }) => {
     if (!onReconnectWorkspace) {

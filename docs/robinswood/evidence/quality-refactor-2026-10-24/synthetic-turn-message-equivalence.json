@@ -1,0 +1,11 @@
+{
+  "nativeBodyPreservedAfterReversingSharedReferences": true,
+  "nativeSyntheticMessageLifetimePreserved": true,
+  "removalCallbackAndReadersShareTheSameValue": true,
+  "replacedNativeReferences": 7,
+  "nativeSharedFields": [
+    "message",
+    "options",
+    "syntheticAutomaticMessage"
+  ]
+}

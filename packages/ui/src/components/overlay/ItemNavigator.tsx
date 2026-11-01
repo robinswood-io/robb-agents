@@ -28,7 +28,7 @@ export interface ItemNavigatorProps {
   activeIndex: number
   onSelect: (index: number) => void
   /** Size variant — 'sm' for inline blocks, 'md' for fullscreen overlays */
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | undefined
 }
 
 export function ItemNavigator({ items, activeIndex, onSelect, size = 'sm' }: ItemNavigatorProps) {

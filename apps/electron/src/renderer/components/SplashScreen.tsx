@@ -3,7 +3,7 @@ import { RobbAgentsSymbol } from './icons/RobbAgentsSymbol'
 
 interface SplashScreenProps {
   isExiting: boolean
-  onExitComplete?: () => void
+  onExitComplete?: (() => void) | undefined
 }
 
 /**

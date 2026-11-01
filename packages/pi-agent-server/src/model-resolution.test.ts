@@ -1,8 +1,10 @@
+import { InMemoryCredentialStore } from '@earendil-works/pi-ai';
+import { createAuthenticatedModelRuntime } from './authenticated-model-runtime.ts';
 import { describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { AuthStorage, ModelRegistry, SessionManager, SettingsManager, DefaultResourceLoader, createAgentSession } from '@earendil-works/pi-coding-agent';
+import { SessionManager, SettingsManager, DefaultResourceLoader, createAgentSession } from '@earendil-works/pi-coding-agent';
 import {
   resolveInitialPiModel,
   resolvePiModelWithCustomFallback,
@@ -32,7 +34,7 @@ function createMockRegistry(
     getAll() {
       return allModels;
     },
-  } as any;
+  };
 }
 
 describe('initial Pi session model', () => {
@@ -73,9 +75,7 @@ describe('initial Pi session model', () => {
     const directory = mkdtempSync(join(tmpdir(), 'robb-pi-model-policy-'));
     try {
       for (const withHistory of [false, true]) {
-        const authStorage = AuthStorage.inMemory();
-        authStorage.set('openai-codex', { type: 'api_key', key: 'fixture-no-network' });
-        const modelRegistry = ModelRegistry.inMemory(authStorage);
+        const { modelRuntime, modelRegistry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), { provider: 'openai-codex', credential: { type: 'api_key', key: 'fixture-no-network' } });
         const settingsManager = SettingsManager.inMemory({ defaultProvider: 'openai-codex', defaultModel: 'gpt-5.4' });
         const sessionManager = SessionManager.inMemory(directory);
         if (withHistory) {
@@ -88,8 +88,9 @@ describe('initial Pi session model', () => {
         });
         await resourceLoader.reload();
         const model = resolveInitialPiModel(modelRegistry, undefined, 'openai-codex');
+        if (!model) throw new Error('The isolated registry must provide the initial Codex model');
         const { session } = await createAgentSession({
-          cwd: directory, agentDir: directory, authStorage, modelRegistry,
+          cwd: directory, agentDir: directory, modelRuntime,
           settingsManager, sessionManager, resourceLoader, model, tools: [],
         });
         try {
@@ -114,7 +115,7 @@ describe('dynamic custom-endpoint model fallback', () => {
       const registry = {
         find: (candidateProvider: string, id: string) => candidateProvider === 'custom-endpoint' && registered?.id === id ? registered : undefined,
         getAll: () => registered ? [registered] : [],
-      } as any;
+      };
       const result = resolvePiModelWithCustomFallback(registry, 'pi/gpt-5.4', provider, true, id => {
         registrationCalls += 1;
         registered = { id, name: id, provider: 'custom-endpoint' };
@@ -130,7 +131,7 @@ describe('dynamic custom-endpoint model fallback', () => {
     const registry = {
       find: () => registered ? { id: 'gpt-5.4', name: 'Alias', provider: 'custom-endpoint' } : undefined,
       getAll: () => [],
-    } as any;
+    };
     expect(resolvePiModelWithCustomFallback(registry, 'Alias', 'openai-codex', true, () => { registered = true; })).toBeUndefined();
   });
 });
@@ -275,7 +276,7 @@ describe('resolvePiModel', () => {
         getAll() {
           return [];
         },
-      } as any;
+      };
 
       const result = resolvePiModel(registry, 'my-model');
       expect(result).toBeUndefined();
@@ -320,7 +321,7 @@ describe('resolvePiModel', () => {
         getAll() {
           return [{ id: 'gpt-5.4', name: 'GPT-5.4', provider: 'github-copilot' }];
         },
-      } as any;
+      };
 
       const result = resolvePiModel(registry, 'gpt-5.4', 'github-copilot');
       expect(result).toBeDefined();
@@ -357,7 +358,7 @@ describe('resolvePiModel', () => {
           return undefined;
         },
         getAll() { return []; },
-      } as any;
+      };
 
       const result = resolvePiModel(registry, 'gpt-5.4', 'github-copilot');
       expect(result).toBeUndefined();
@@ -396,7 +397,7 @@ describe('requireExplicitPiModel', () => {
         return undefined;
       },
       getAll() { return []; },
-    } as any;
+    };
 
     expect(() => requireExplicitPiModel(registry, 'gpt-5.6-sol', 'openai')).toThrow(
       'resolved to incompatible provider "anthropic"',

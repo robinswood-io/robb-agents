@@ -1,0 +1,460 @@
+{
+  "source": "packages/server-core/src/sessions/turn-recovery.ts",
+  "units": [
+    {
+      "names": [
+        "AutomaticTurnRecoveryCause"
+      ],
+      "group": "contracts",
+      "bodySha256": "9e16fee20620312ed9c19c8ba89f9d40f6d830ec8762ad88a95ada40b3794c82"
+    },
+    {
+      "names": [
+        "MAX_AUTOMATIC_TURN_RECOVERY_ATTEMPTS"
+      ],
+      "group": "contracts",
+      "bodySha256": "cdde85ca832472316c0d0b906ce57af51f9679d511b793683ddab995b53a18ee"
+    },
+    {
+      "names": [
+        "DEFAULT_AUTOMATIC_TURN_RECOVERY_ATTEMPTS"
+      ],
+      "group": "contracts",
+      "bodySha256": "72de699ecc6501fc8d2f41a11c7bf329bdad3e61d9f3f18c3acea78d7538ebae"
+    },
+    {
+      "names": [
+        "MAX_OBJECTIVE_CONTINUATION_ATTEMPTS"
+      ],
+      "group": "contracts",
+      "bodySha256": "23e3c74e3e4cb80710525b993cd93f364eecfcb846289b74ae561c234556cbc2"
+    },
+    {
+      "names": [
+        "MAX_AUTOMATIC_TURN_RECOVERY_STAGNANT_ATTEMPTS"
+      ],
+      "group": "contracts",
+      "bodySha256": "9c6376c63cb108617bd98e101027f059f47cc7f49e5dd5075ad270d41c2e4324"
+    },
+    {
+      "names": [
+        "DEFAULT_AUTOMATIC_TURN_RECOVERY_LEASE_MS"
+      ],
+      "group": "contracts",
+      "bodySha256": "5fef8c70ff7c9dcfe9e7b5a55d21e6beafc5776bc3b191c3145bf45dbccf550c"
+    },
+    {
+      "names": [
+        "DEFAULT_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS"
+      ],
+      "group": "contracts",
+      "bodySha256": "eb9789e2c7c8e6fc96f6565a24d10d55ca0fd0dd1cb4d5c17b027d4da8ec3de5"
+    },
+    {
+      "names": [
+        "MIN_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS"
+      ],
+      "group": "contracts",
+      "bodySha256": "cad1e2b6a0ce1e831072204fda3bab68eb61c55b7135e2fc460e67afbbec5e3e"
+    },
+    {
+      "names": [
+        "MAX_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS"
+      ],
+      "group": "contracts",
+      "bodySha256": "71eedc36a99e3ed1f7c957d4f8d421295a7dd35e9ef1dc108602ca862e1cf6fb"
+    },
+    {
+      "names": [
+        "TOOL_RESULT_GRACE_MS"
+      ],
+      "group": "contracts",
+      "bodySha256": "265ffb493057c42424b4c4387f1026537fab536948445632c4fa3e2281606a93"
+    },
+    {
+      "names": [
+        "STRUCTURED_OUTCOME_FINAL_REMINDER"
+      ],
+      "group": "contracts",
+      "bodySha256": "02c1bf7196369f8ae790703d9fe544b7f9dcdf28aa8d1e26b171354921525e4e"
+    },
+    {
+      "names": [
+        "AutomaticTurnRecoveryLimitReason"
+      ],
+      "group": "contracts",
+      "bodySha256": "c588bf185c90036ab9d5b2e6de6865d43480762be808bc9e97c6c81b524fcc51"
+    },
+    {
+      "names": [
+        "AutomaticTurnRecoveryPlan"
+      ],
+      "group": "contracts",
+      "bodySha256": "733fdd0d1c269dcdbe38d379a0d9d1c29b5cb4e0704311f19c8fe886b86ad7cd"
+    },
+    {
+      "names": [
+        "AutomaticTurnRecoveryPlanInput"
+      ],
+      "group": "contracts",
+      "bodySha256": "49f860d06fd0fa945e0c16d86aefbe4173fbd9513964468a753b83047e35f83d"
+    },
+    {
+      "names": [
+        "CleanRecoveryContinuationEvidence"
+      ],
+      "group": "contracts",
+      "bodySha256": "6afe6c0f596188168a82105b1edbce046d4e2d307bd4cf596d9fbe1f0b7fc8b0"
+    },
+    {
+      "names": [
+        "CleanRecoveryContinuationHandoff"
+      ],
+      "group": "contracts",
+      "bodySha256": "461b7ca750830946b717ca5b22e79ffc66cf50c07d3774988b3ec138ff3081fc"
+    },
+    {
+      "names": [
+        "CleanRecoveryContinuationHandoffInput"
+      ],
+      "group": "contracts",
+      "bodySha256": "aa5cf1fda38fbc910f02d5025bef52211bdf6e6979349dab05c70c79f3f8eee3"
+    },
+    {
+      "names": [
+        "MAX_CLEAN_CONTINUATION_SERIALIZED_CHARS"
+      ],
+      "group": "contracts",
+      "bodySha256": "47d7208c89ea4faf6c81db3cc224219cf246a4982d17cc8b0b67cdbeaf22fd54"
+    },
+    {
+      "names": [
+        "MAX_CLEAN_CONTINUATION_OBJECTIVE_CHARS"
+      ],
+      "group": "contracts",
+      "bodySha256": "9fc22b72839b9ef0c8daf074c4e97f5b810bd6deec9ba508e13c7a99370ff35a"
+    },
+    {
+      "names": [
+        "MAX_CLEAN_CONTINUATION_AMENDMENTS"
+      ],
+      "group": "contracts",
+      "bodySha256": "0653c9b2479e4ceed83683e7c50497f91c1d6566c40330eb799a0acbe893dd53"
+    },
+    {
+      "names": [
+        "MAX_CLEAN_CONTINUATION_AMENDMENT_CHARS"
+      ],
+      "group": "contracts",
+      "bodySha256": "9e94d81938a68d421109fa5f063345f28e82796839125519462dbe549ed0bd1b"
+    },
+    {
+      "names": [
+        "MAX_CLEAN_CONTINUATION_CRITERIA"
+      ],
+      "group": "contracts",
+      "bodySha256": "203a1aa16d3bdc25fb67830a54d1cc2d6eeb6b830da79781e84169ffa07eff2c"
+    },
+    {
+      "names": [
+        "MAX_CLEAN_CONTINUATION_EVIDENCE"
+      ],
+      "group": "contracts",
+      "bodySha256": "6b5335ed4f7a36a8aa73327d99f226f098c6fbe4cec2f0a2f7075105b89606d2"
+    },
+    {
+      "names": [
+        "MAX_CLEAN_CONTINUATION_REMAINING_WORK"
+      ],
+      "group": "contracts",
+      "bodySha256": "cedfd9beeeb7d336775a70eb7993200870aab84d7d52a0fd08cea9dafcc8dff1"
+    },
+    {
+      "names": [
+        "MAX_CLEAN_CONTINUATION_FACT_CHARS"
+      ],
+      "group": "contracts",
+      "bodySha256": "9b3df7b16d514d3526eb15283d2fb74371eb57cc34a2b5fcf6dc95de6b99a2af"
+    },
+    {
+      "names": [
+        "MAX_CLEAN_CONTINUATION_ID_CHARS"
+      ],
+      "group": "contracts",
+      "bodySha256": "4d83fabebd13a8867da8acb74298c5177b2f31f845717df51bd4413a0bbec635"
+    },
+    {
+      "names": [
+        "boundedHandoffText"
+      ],
+      "group": "clean-continuation",
+      "bodySha256": "9b03e088d4ca64a3c32162223e3aa3f11c2a4e82abb326e5d14a6411de5c1bac"
+    },
+    {
+      "names": [
+        "stableHandoffJson"
+      ],
+      "group": "clean-continuation",
+      "bodySha256": "728c37a2b2349759b86135f81663274aafcd0b3ea3d5c7992805e53382934621"
+    },
+    {
+      "names": [
+        "sameBoundedStringList"
+      ],
+      "group": "clean-continuation",
+      "bodySha256": "3a4b3e7af225a7e5b5a311ff62d28871eb5bd2338c3c2f6e305b38242269fa02"
+    },
+    {
+      "names": [
+        "validRecoveryStrategy"
+      ],
+      "group": "clean-continuation",
+      "bodySha256": "eb3d91b415762a24ed4e5279a7f13251f8eee84a89e74c8980f11a3f84e9c4d0"
+    },
+    {
+      "names": [
+        "cleanRecoveryContinuationId"
+      ],
+      "group": "clean-continuation",
+      "bodySha256": "0f2a137c536006285bf25a3ee9e15e779ec7c2fb11aa266a5a66290d62d93db9"
+    },
+    {
+      "names": [
+        "createCleanRecoveryContinuationHandoff"
+      ],
+      "group": "clean-continuation",
+      "bodySha256": "f96dd579d20a369f1c6082ed2b8937bc952d99efd6d2aac980715aef54d090b0"
+    },
+    {
+      "names": [
+        "buildCleanRecoveryContinuationPrompt"
+      ],
+      "group": "clean-continuation",
+      "bodySha256": "2c06efc029a2655e9253d8b1da9d7735869ffa90fe9a39e203a6bfcd8fa18170"
+    },
+    {
+      "names": [
+        "recoveryStrategyAttemptBaseline"
+      ],
+      "group": "budget",
+      "bodySha256": "7065bb6b013e00a21b5166ab402f1b41e02d9e00805d598dbed0a1e2974bcc23"
+    },
+    {
+      "names": [
+        "automaticRecoveryProgressState"
+      ],
+      "group": "budget",
+      "bodySha256": "2876235c3adc4354646ff65c4a40bed05c3f43bc0f830fee37d4620d143b0009"
+    },
+    {
+      "names": [
+        "automaticRecoveryLimitReason"
+      ],
+      "group": "budget",
+      "bodySha256": "5cb9cbad1c763999004c2ca78e54cd71840afc7db4064b38f7737b017a37a154"
+    },
+    {
+      "names": [
+        "createPendingTurnRecovery"
+      ],
+      "group": "budget",
+      "bodySha256": "1a827816ba5930b23a8ca0e8e770cd8ae5a1c7eff3530cf9767900bb413712db"
+    },
+    {
+      "names": [
+        "LEGACY_RECOVERY_OPEN"
+      ],
+      "group": "budget",
+      "bodySha256": "d880e9aeafcbfff109a4a90e33cd0bd4cf01e920c1e5f8192da87611439492ff"
+    },
+    {
+      "names": [
+        "LEGACY_RECOVERY_ROW"
+      ],
+      "group": "budget",
+      "bodySha256": "5be05e4f67ffc7ea125bb2ddc8c10db07c8663a3c1bb1874faeea74e31c978e7"
+    },
+    {
+      "names": [
+        "reconstructLegacyTurnRecoveryBudget"
+      ],
+      "group": "budget",
+      "bodySha256": "d6b2c9209567cc587c4680796344e8464ca618d42070926548dab33ba17154a0"
+    },
+    {
+      "names": [
+        "turnRecoveryValidationFingerprint"
+      ],
+      "group": "budget",
+      "bodySha256": "e52aa0877c1cd9afdc62b569bc704c37f934c1fdf2d4a6deaf07b0f8cb301c11"
+    },
+    {
+      "names": [
+        "ExplicitRetryAllowance"
+      ],
+      "group": "budget",
+      "bodySha256": "5ba7257f4c1927f062b9ef6dd7852868167c02ea4aac77600e30ff918b039a1b"
+    },
+    {
+      "names": [
+        "latestExplicitRetryAllowance"
+      ],
+      "group": "budget",
+      "bodySha256": "c3660bf46ebc7c14cffa119b3855744cd2606930934b0e5dabcf98e33af3a0c4"
+    },
+    {
+      "names": [
+        "hasAvailableExplicitRetryAllowance"
+      ],
+      "group": "budget",
+      "bodySha256": "c3c180c7820f6cdaf6a179d511dee502188b548b9ddff9a13a2ae74aa5039035"
+    },
+    {
+      "names": [
+        "grantExplicitRetryAllowance"
+      ],
+      "group": "budget",
+      "bodySha256": "dc4cc8c79c0cdcb41128131e9211c7f09e577f6f0cbe40ca3de6576679f80ab5"
+    },
+    {
+      "names": [
+        "exhaustPendingTurnRecovery"
+      ],
+      "group": "budget",
+      "bodySha256": "58349f8638d68350b5ef88df96d2320c36f27917b11d0931b1e556a13910548a"
+    },
+    {
+      "names": [
+        "hasObjectiveContinuationProvenance"
+      ],
+      "group": "budget",
+      "bodySha256": "cc277066f7cc62b7608fafd071f9b89bd892a86f84d21511d84486f06d561d83"
+    },
+    {
+      "names": [
+        "pendingRecoveryRequiresContinuation"
+      ],
+      "group": "budget",
+      "bodySha256": "9791eb968710d5c2eda6a16cd6e674e2420b5b31d0a44a59c8fb93f012a69953"
+    },
+    {
+      "names": [
+        "createAutomaticRecoveryToolDeadline"
+      ],
+      "group": "deadlines",
+      "bodySha256": "81fa39c641aa5de5bfaf2f56f3b4c512f970d959e9e982fa99f90996daa29b5c"
+    },
+    {
+      "names": [
+        "AutomaticRecoveryStalledError"
+      ],
+      "group": "deadlines",
+      "bodySha256": "5434659232920bf4dc8bb412160858f84b415f00e24be889d9f2e251a9b9f21d"
+    },
+    {
+      "names": [
+        "resolveAutomaticRecoveryInactivityTimeoutMs"
+      ],
+      "group": "deadlines",
+      "bodySha256": "f8a608c2698e3e937d6ddaf72ae4ec661e04c3f8b90b19a7835105100acb2d9b"
+    },
+    {
+      "names": [
+        "withAutomaticRecoveryInactivityTimeout"
+      ],
+      "group": "deadlines",
+      "bodySha256": "9e05f6ae28bed3d22d5a400b7d176e3fcb6dcabe453ecc4c5154483f5f101146"
+    },
+    {
+      "names": [
+        "advancePendingTurnRecovery"
+      ],
+      "group": "admission",
+      "bodySha256": "802474eaba2392d1e14b268310a55dbad3111802c76f91a5e2cb879f726fa8bb"
+    },
+    {
+      "names": [
+        "planAutomaticTurnRecovery"
+      ],
+      "group": "admission",
+      "bodySha256": "675d20c5b405d2fe2647cf600a31cbfa007bd53ea131663a8595828cd01d154f"
+    },
+    {
+      "names": [
+        "turnStillNeedsRecovery"
+      ],
+      "group": "pending-turn",
+      "bodySha256": "68a6ef69ccb5486553a8f3b2c827276216cd5fc778f94b194e12b46c00fc4f37"
+    },
+    {
+      "names": [
+        "messagesForPendingRecovery"
+      ],
+      "group": "pending-turn",
+      "bodySha256": "8e025f731a04a7d629a5b628b459dbe78f40be2697cabed71091b6facfd54d4e"
+    },
+    {
+      "names": [
+        "buildAutomaticTurnRecoveryPrompt"
+      ],
+      "group": "continuation-prompt",
+      "bodySha256": "e5dabb2e9d94c54f21ef89fa786aff2a1440081181bcc275292882c40600d889"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 141
+    },
+    {
+      "name": "clean-continuation",
+      "lines": 245
+    },
+    {
+      "name": "budget",
+      "lines": 236
+    },
+    {
+      "name": "deadlines",
+      "lines": 134
+    },
+    {
+      "name": "admission",
+      "lines": 203
+    },
+    {
+      "name": "pending-turn",
+      "lines": 42
+    },
+    {
+      "name": "continuation-prompt",
+      "lines": 142
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "clean-continuation": [
+      "contracts"
+    ],
+    "budget": [
+      "clean-continuation",
+      "contracts"
+    ],
+    "deadlines": [
+      "contracts"
+    ],
+    "admission": [
+      "contracts",
+      "budget",
+      "clean-continuation"
+    ],
+    "pending-turn": [],
+    "continuation-prompt": [
+      "contracts",
+      "budget",
+      "clean-continuation"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

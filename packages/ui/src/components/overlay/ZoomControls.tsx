@@ -14,7 +14,7 @@ export interface ZoomControlsProps {
   onZoomToFit: () => void
   onReset: () => void
   resetDisabled: boolean
-  className?: string
+  className?: string | undefined
 }
 
 function ZoomDropdown({

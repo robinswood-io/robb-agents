@@ -1,10 +1,11 @@
-import * as React from 'react'
+import { isUnknownArray } from "../../../../shared/src/utils/json.ts";
+
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import JsonView from '@uiw/react-json-view'
 import { vscodeTheme } from '@uiw/react-json-view/vscode'
 import { githubLightTheme } from '@uiw/react-json-view/githubLight'
-import { Layers, Check, Copy } from 'lucide-react'
+import { Layers } from 'lucide-react'
 import { PreviewOverlay } from './PreviewOverlay'
 import { ContentFrame } from './ContentFrame'
 import { ShikiCodeViewer } from '../code-viewer/ShikiCodeViewer'
@@ -19,9 +20,9 @@ export interface ActivityCardsOverlayProps {
   onClose: () => void
   cards: OverlayCard[]
   title: string
-  theme?: 'light' | 'dark'
-  onOpenUrl?: (url: string) => void
-  onOpenFile?: (path: string) => void
+  theme?: 'light' | 'dark' | undefined
+  onOpenUrl?: ((url: string) => void) | undefined
+  onOpenFile?: ((path: string) => void) | undefined
 }
 
 const craftAgentDarkTheme = {
@@ -49,10 +50,10 @@ function deepParseJson(value: unknown): unknown {
     }
     return value
   }
-  if (Array.isArray(value)) return value.map(deepParseJson)
+  if (isUnknownArray(value)) return value.map(deepParseJson)
   if (typeof value === 'object') {
     const result: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(value)) result[k] = deepParseJson(v)
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) result[k] = deepParseJson(v)
     return result
   }
   return value
@@ -114,18 +115,7 @@ export function ActivityCardsOverlay({
                 <div className="text-xs font-semibold text-muted-foreground/70 mb-2 px-1">{t('activity.inputParams')}</div>
               )}
               <div className="p-4">
-                <JsonView value={processedData} style={jsonTheme} collapsed={false} enableClipboard displayDataTypes={false} shortenTextAfterLength={100}>
-                  <JsonView.Copied
-                    render={(props) => {
-                      const isCopied = (props as Record<string, unknown>)['data-copied']
-                      return isCopied ? (
-                        <Check className="ml-1.5 inline-flex cursor-pointer text-green-500" size={10} onClick={props.onClick} />
-                      ) : (
-                        <Copy className="ml-1.5 inline-flex cursor-pointer text-muted-foreground hover:text-foreground" size={10} onClick={props.onClick} />
-                      )
-                    }}
-                  />
-                </JsonView>
+                <JsonView value={processedData} style={jsonTheme} collapsed={false} enableClipboard displayDataTypes={false} shortenTextAfterLength={100} />
               </div>
             </div>
           </div>

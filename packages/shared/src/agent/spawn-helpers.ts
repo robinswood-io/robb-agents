@@ -48,19 +48,71 @@ export function isExistingDirectory(p: string | null | undefined): boolean {
 }
 
 /**
- * Match the SDK's `ReferenceError("Claude Code native binary not found at <path>")`
- * (and the older `executable not found at <path>` variant) and return the
- * captured path. Greedy capture to end-of-line to preserve macOS bundle paths
- * like `/Applications/Craft Agents.app/...`. A single trailing sentence period
- * is stripped only when present (the SDK historically appends one).
+ * Extract the SDK's reported binary path with a single forward scan. Keep
+ * paths with spaces intact and remove only the SDK's optional final period.
  */
-const SDK_BINARY_NOT_FOUND_RE = /Claude Code (?:native binary|executable) not found at\s+(.+)$/m;
+const SDK_BINARY_NOT_FOUND_PREFIX = 'Claude Code ';
+const SDK_BINARY_NOT_FOUND_SUFFIX = ' not found at';
+const SDK_BINARY_VARIANTS = ['native binary', 'executable'] as const;
+
+function isWhitespace(character: string | undefined): boolean {
+  return character !== undefined && /\s/u.test(character);
+}
+
+function stripSdkSentencePeriod(path: string): string {
+  let lastNonWhitespace = path.length - 1;
+  while (lastNonWhitespace >= 0 && isWhitespace(path[lastNonWhitespace])) {
+    lastNonWhitespace -= 1;
+  }
+  return lastNonWhitespace >= 0 && path[lastNonWhitespace] === '.'
+    ? path.slice(0, lastNonWhitespace)
+    : path;
+}
+
+function findLineEnd(message: string, start: number): number {
+  let end = start;
+  while (end < message.length && !/[\n\r\u2028\u2029]/u.test(message[end] ?? '')) {
+    end += 1;
+  }
+  return end;
+}
 
 export function extractSdkReportedBinaryPath(rawErrorMsg: string | null | undefined): string | undefined {
   if (!rawErrorMsg) return undefined;
-  const match = SDK_BINARY_NOT_FOUND_RE.exec(rawErrorMsg);
-  if (!match || !match[1]) return undefined;
-  return match[1].replace(/\.\s*$/, '');
+
+  let searchFrom = 0;
+  while (searchFrom < rawErrorMsg.length) {
+    const markerStart = rawErrorMsg.indexOf(SDK_BINARY_NOT_FOUND_PREFIX, searchFrom);
+    if (markerStart < 0) return undefined;
+
+    let suffixStart: number | undefined;
+    for (const variant of SDK_BINARY_VARIANTS) {
+      const variantStart = markerStart + SDK_BINARY_NOT_FOUND_PREFIX.length;
+      const candidateSuffixStart = variantStart + variant.length;
+      if (
+        rawErrorMsg.startsWith(variant, variantStart) &&
+        rawErrorMsg.startsWith(SDK_BINARY_NOT_FOUND_SUFFIX, candidateSuffixStart)
+      ) {
+        suffixStart = candidateSuffixStart + SDK_BINARY_NOT_FOUND_SUFFIX.length;
+        break;
+      }
+    }
+
+    if (suffixStart === undefined || !isWhitespace(rawErrorMsg[suffixStart])) {
+      searchFrom = markerStart + SDK_BINARY_NOT_FOUND_PREFIX.length;
+      continue;
+    }
+
+    let pathStart = suffixStart;
+    while (isWhitespace(rawErrorMsg[pathStart])) pathStart += 1;
+    const pathEnd = findLineEnd(rawErrorMsg, pathStart);
+    if (pathEnd > pathStart) {
+      return stripSdkSentencePeriod(rawErrorMsg.slice(pathStart, pathEnd));
+    }
+    searchFrom = markerStart + SDK_BINARY_NOT_FOUND_PREFIX.length;
+  }
+
+  return undefined;
 }
 
 /**
@@ -79,6 +131,6 @@ export function isSpawnEnoent(input: {
   if (errorCode === 'ENOENT' && errorSyscall && errorSyscall.startsWith('spawn')) return true;
   if (rawErrorMsg && /\bspawn\b[\s\S]*\bENOENT\b/.test(rawErrorMsg)) return true;
   if (stderr && /\bspawn\b[\s\S]*\bENOENT\b/.test(stderr)) return true;
-  if (rawErrorMsg && SDK_BINARY_NOT_FOUND_RE.test(rawErrorMsg)) return true;
+  if (extractSdkReportedBinaryPath(rawErrorMsg) !== undefined) return true;
   return false;
 }

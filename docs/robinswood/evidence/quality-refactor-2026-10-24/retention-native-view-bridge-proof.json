@@ -1,0 +1,10 @@
+{
+  "nativeBoundManagerViews": 7,
+  "files": [
+    "packages/server-core/src/sessions/completed-chat-retention.test.ts",
+    "packages/server-core/src/sessions/completed-chat-retention-reuses-an-intent-whose-move-never-started-and-completes-it-on-the.test.ts"
+  ],
+  "identicalEmittedJavaScriptAst": true,
+  "usesNativeOperationSignatures": true,
+  "onlyAlreadyBoundFixtures": true
+}

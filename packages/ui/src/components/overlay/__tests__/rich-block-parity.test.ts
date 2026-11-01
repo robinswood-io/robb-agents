@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'bun:test'
 import { RICH_BLOCK_DEFAULTS } from '../rich-block-interaction-spec'
 import { zoomStepScale } from '../useRichBlockInteractions'
 

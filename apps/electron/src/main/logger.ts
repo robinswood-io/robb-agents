@@ -13,13 +13,15 @@ import {
   safeSerializeLogValue,
   sanitizeLogValue,
 } from './log-sanitizer'
-import { redactSecretLikeMaterial } from '@craft-agent/shared/utils'
+import { redactSecretLikeMaterial, setDebugSink } from '@craft-agent/shared/utils'
 import {
   ensurePrivateLogDirectory,
   ensurePrivateLogFilePath,
   sanitizeExistingLogFile,
 } from './log-file-security'
 
+// Explicit host wiring keeps Electron dependencies out of the shared renderer utilities.
+setDebugSink(log)
 /**
  * Resolve debug mode deterministically across runtimes.
  *
@@ -32,9 +34,9 @@ import {
  */
 function resolveDebugMode(): boolean {
   if (process.argv.includes('--debug')) return true
-  if (process.env.ROBB_BUILD_CHANNEL === 'development') return true
+  if (process.env["ROBB_BUILD_CHANNEL"] === 'development') return true
 
-  const packagedEnv = process.env.CRAFT_IS_PACKAGED
+  const packagedEnv = process.env["CRAFT_IS_PACKAGED"]
   if (packagedEnv === 'true') return false
   if (packagedEnv === 'false') return true
 

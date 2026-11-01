@@ -6,7 +6,7 @@ export type MobileMenuItemAffordance = 'chevron' | 'external' | 'none'
 
 export interface MobileMenuItemProps {
   /** Lucide icon component or null for a custom node. */
-  icon?: React.ReactNode
+  icon?: React.ReactNode | undefined
   label: string
   /**
    * Right-side trailing affordance.
@@ -14,12 +14,12 @@ export interface MobileMenuItemProps {
    * - `external` → opens an external URL
    * - `none`     → fires a callback in place
    */
-  affordance?: MobileMenuItemAffordance
+  affordance?: MobileMenuItemAffordance | undefined
   /** Sub-text rendered below the label. Optional. */
-  description?: string
+  description?: string | undefined
   onClick: () => void
-  destructive?: boolean
-  className?: string
+  destructive?: boolean | undefined
+  className?: string | undefined
 }
 
 /**

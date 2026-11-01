@@ -1,0 +1,19 @@
+{
+  "scope": "Local Robb Agents dependency and Electron package refresh",
+  "registryCheck": "bun outdated with Bun 1.4.4 on 2026-10-26",
+  "updated": {
+    "electronPackageRuntime": "43.4.0 -> 45.0.0 (matches root dependency)",
+    "marked": "18.1.1 -> 18.1.2",
+    "@aws-sdk/client-s3": "3.1156.0 -> 3.1157.0",
+    "@typescript-eslint/eslint-plugin": "8.72.0 -> 8.72.1",
+    "@typescript-eslint/parser": "8.72.0 -> 8.72.1",
+    "openai": "7.43.0 -> 7.45.0",
+    "postcss": "8.5.31 -> 8.5.32"
+  },
+  "typescriptCompatibility": "Typechecking already uses @typescript/native 7.0.2. Keep typescript 6.0.3 for the compiler AST API used by source-quality and Pi contract checks; installing typescript 7.0.2 made createSourceFile and ScriptTarget unavailable and failed those checks.",
+  "checks": {
+    "lint": "passed: 3986 maintained files, 0 over 500 lines, 0 explicit any, 0 ESLint warnings or errors",
+    "typecheckAll": "passed",
+    "targetedTests": "41 passed, 0 failed"
+  }
+}

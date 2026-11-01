@@ -284,7 +284,7 @@ function ColoredRowWrapper({
 // ============================================================================
 
 interface ProjectColorsPreviewProps {
-  variant?: ColorVariant
+  variant?: ColorVariant | undefined
 }
 
 function ProjectColorsPreview({ variant = 'stripe' }: ProjectColorsPreviewProps) {

@@ -1,3 +1,6 @@
+import { z } from 'zod';
+import { parseJsonObject } from '@craft-agent/shared/utils/json';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, expect, it } from 'bun:test';
 import { createHash, generateKeyPairSync, sign } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -41,7 +44,7 @@ function evaluate(data = fixture(), artifacts = true) {
   return evaluateHumanBenchmark(data, { reviewerPublicKey: publicKey, verifyArtifact: () => artifacts });
 }
 function observations(data: HumanBenchmark): AutonomyAcceptanceObservation[] {
-  return data.cases.map(c => ({ scenarioId: c.id, eligible: true, objectiveRetained: true,
+  return data.cases.map(c => omitUndefined<AutonomyAcceptanceObservation>({ scenarioId: c.id, eligible: true, objectiveRetained: true,
     manualContinuations: c.manualContinuations, declaredComplete: c.objectiveComplete, groundTruthComplete: c.objectiveComplete,
     mutations: [], humanBenchmark: { domain: c.domain, agentScore: c.agent.quality, humanTopQuartileScore: 90 }, benchmarkRun: c.run,
   }));
@@ -197,12 +200,13 @@ describe('independent human benchmark — joint quality and execution speed', ()
       signFixture(data); writeFileSync(input, JSON.stringify(data));
       const passing = Bun.spawnSync([process.execPath, cli, input, key]);
       expect(passing.exitCode).toBe(0);
-      expect(JSON.parse(passing.stdout.toString()).domains[0].timeRatio.median).toBe(0.5);
-      expect(JSON.parse(passing.stdout.toString()).qualityAndSpeedQualified).toBe(true);
+      const report = z.object({ domains: z.array(z.object({ timeRatio: z.object({ median: z.number() }) })) }).passthrough().parse(JSON.parse(passing.stdout.toString()));
+      expect(report.domains[0]?.timeRatio.median).toBe(0.5);
+      expect(report['qualityAndSpeedQualified']).toBe(true);
       writeFileSync(join(root, data.protocol.provenance!.configuration.path), 'tampered');
       const failing = Bun.spawnSync([process.execPath, cli, input, key]);
       expect(failing.exitCode).toBe(1);
-      expect(JSON.parse(failing.stdout.toString()).eligible).toBe(false);
+      expect(parseJsonObject(failing.stdout.toString())['eligible']).toBe(false);
       writeFileSync(input, '{}');
       expect(Bun.spawnSync([process.execPath, cli, input, key]).exitCode).toBe(2);
     } finally { rmSync(root, { recursive: true, force: true }); }

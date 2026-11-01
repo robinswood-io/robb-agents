@@ -17,14 +17,14 @@
 
 import type { PushTarget } from '@craft-agent/shared/protocol'
 
-export type EventSinkFn = (channel: string, target: PushTarget, ...args: any[]) => void
+export type EventSinkFn = (channel: string, target: PushTarget, ...args: unknown[]) => void
 
 /**
  * Create a fan-out EventSink that forwards events to multiple sinks.
  * Errors in one sink do not block others.
  */
 export function createFanOutSink(...sinks: EventSinkFn[]): EventSinkFn {
-  return (channel: string, target: PushTarget, ...args: any[]) => {
+  return (channel, target, ...args) => {
     for (const sink of sinks) {
       try {
         sink(channel, target, ...args)

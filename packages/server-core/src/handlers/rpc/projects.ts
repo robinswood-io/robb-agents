@@ -50,10 +50,10 @@ export function registerProjectsHandlers(server: RpcServer, deps: HandlerDeps): 
     const { createProject } = await import('@craft-agent/shared/projects')
     const project = createProject(workspace.rootPath, {
       name: input.name?.trim() || 'New Project',
-      description: input.description,
-      workingDirectory: input.workingDirectory,
-      details: input.details,
-      colorTheme: input.colorTheme,
+      ...(input.description !== undefined ? { description: input.description } : {}),
+      ...(input.workingDirectory !== undefined ? { workingDirectory: input.workingDirectory } : {}),
+      ...(input.details !== undefined ? { details: input.details } : {}),
+      ...(input.colorTheme !== undefined ? { colorTheme: input.colorTheme } : {}),
     })
     await broadcastChanged(workspaceId, workspace.rootPath)
     log.info(`Created project: ${project.slug}`)

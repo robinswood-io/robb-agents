@@ -5,26 +5,26 @@
  * Used for sessions (with status/label/archive actions), sources, and skills.
  */
 
-import * as React from 'react'
-import { Archive, Tag, CheckCircle2, Send } from 'lucide-react'
-import { useTranslation, Trans } from 'react-i18next'
+
+import { Archive,Tag,CheckCircle2,Send } from 'lucide-react'
+import { useTranslation,Trans } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { Kbd, KbdGroup } from '@/components/ui/kbd'
+import { Kbd,KbdGroup } from '@/components/ui/kbd'
 import { cn } from '@/lib/utils'
 import { isMac } from '@/lib/platform'
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  StyledDropdownMenuContent,
-  StyledDropdownMenuItem,
-  StyledDropdownMenuSeparator,
-  StyledDropdownMenuSubContent,
-  StyledDropdownMenuSubTrigger,
-  DropdownMenuSub,
+DropdownMenu,
+DropdownMenuTrigger,
+StyledDropdownMenuContent,
+StyledDropdownMenuItem,
+StyledDropdownMenuSeparator,
+StyledDropdownMenuSubContent,
+StyledDropdownMenuSubTrigger,
+DropdownMenuSub,
 } from '@/components/ui/styled-dropdown'
-import type { SessionStatusId, SessionStatus } from '@/config/session-status-config'
+import type { SessionStatusId,SessionStatus } from '@/config/session-status-config'
 import type { LabelConfig } from '@craft-agent/shared/labels'
-import { LabelMenuItems, StatusMenuItems } from './SessionMenuParts'
+import { LabelMenuItems,StatusMenuItems } from './SessionMenuParts'
 
 type MultiSelectEntityType = 'automation' | 'session' | 'skill' | 'source'
 
@@ -32,27 +32,27 @@ export interface MultiSelectPanelProps {
   /** Number of selected items */
   count: number
   /** Entity type used to resolve localized selection copy (default: "session") */
-  entityType?: MultiSelectEntityType
+  entityType?: MultiSelectEntityType | undefined
   /** Available todo states */
-  sessionStatuses?: SessionStatus[]
+  sessionStatuses?: SessionStatus[] | undefined
   /** Active status if all selected share the same state */
-  activeStatusId?: SessionStatusId | null
+  activeStatusId?: SessionStatusId | null | undefined
   /** Callback when setting status for all selected */
-  onSetStatus?: (status: SessionStatusId) => void
+  onSetStatus?: ((status: SessionStatusId) => void) | undefined
   /** Available label configs (tree) */
-  labels?: LabelConfig[]
+  labels?: LabelConfig[] | undefined
   /** Labels applied to all selected sessions */
-  appliedLabelIds?: Set<string>
+  appliedLabelIds?: Set<string> | undefined
   /** Callback when toggling a label for all selected */
-  onToggleLabel?: (labelId: string) => void
+  onToggleLabel?: ((labelId: string) => void) | undefined
   /** Callback when archiving all selected */
-  onArchive?: () => void
+  onArchive?: (() => void) | undefined
   /** Callback when sending selected to another workspace */
-  onSendToWorkspace?: () => void
+  onSendToWorkspace?: (() => void) | undefined
   /** Callback when clearing the selection */
-  onClearSelection?: () => void
+  onClearSelection?: (() => void) | undefined
   /** Optional className for the container */
-  className?: string
+  className?: string | undefined
 }
 
 export function MultiSelectPanel({
@@ -66,7 +66,6 @@ export function MultiSelectPanel({
   onToggleLabel,
   onArchive,
   onSendToWorkspace,
-  onClearSelection,
   className,
 }: MultiSelectPanelProps) {
   const { t } = useTranslation()

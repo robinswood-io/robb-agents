@@ -54,11 +54,14 @@ describe('September 8 competence regressions — business outcome', () => {
   it('keeps the user correction and original acceptance target through persistence and continuation', () => {
     const objective = registerObjectiveAcceptanceCriteria(base(), [check('delivery-receipt')], 2, 'document-delivery');
     const amended = transitionObjectiveContract({ existing: objective, messageId: 'correction', text: 'Il manque les annexes et le PDF est illisible.', nowMs: 10 });
-    const persisted = JSON.parse(JSON.stringify(pickSessionFields({ id: 'session', activeObjective: amended }))).activeObjective;
+    const snapshot = pickSessionFields({ id: 'session', activeObjective: amended });
+    const roundTripped: typeof snapshot = JSON.parse(JSON.stringify(snapshot)) as typeof snapshot;
+    expect(roundTripped.activeObjective).toEqual(amended);
+    const persisted = roundTripped.activeObjective as typeof amended;
     expect(persisted.objectiveId).toBe(root.id);
     expect(persisted.acceptanceCriteria).toEqual(objective.acceptanceCriteria);
     expect(buildObjectiveContractPrompt(persisted)).toContain('Il manque les annexes');
-    expect(persisted.procedure.id).toBe('document-delivery');
+    expect(persisted.procedure?.id).toBe('document-delivery');
   });
   it('makes an independent security review terminal without granting mutation authority or demanding another review', () => {
     const objective = transitionObjectiveContract({ messageId: root.id, text: 'Audit sécurité : vérifie les correctifs et le déploiement.', delegatedRole: 'reviewer', nowMs: 1 });
@@ -66,7 +69,8 @@ describe('September 8 competence regressions — business outcome', () => {
     expect(objective.completionCriteria).not.toContain('independent-review-passed');
     expect(buildObjectiveContractPrompt(objective)).not.toContain('High-stakes evidence gate:');
     expect(buildObjectiveContractPrompt(objective)).toContain('A correct FAIL is a successful review');
-    const ownCheck = { ...check('source-inventory'), requirementId: undefined };
+    const ownCheck = { ...check('source-inventory') };
+    delete ownCheck.requirementId;
     const registered = registerObjectiveAcceptanceCriteria(objective, [ownCheck], 2);
     // A real observation can complete the review task even when its substantive finding is FAIL.
     const report: Message = { id: 'review-report', role: 'assistant', content: 'FAIL: the requested patch is absent from the deployed revision.', timestamp: 5 };

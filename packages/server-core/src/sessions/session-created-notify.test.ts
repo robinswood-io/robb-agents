@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { describe, expect, it } from 'bun:test'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import { SessionManager } from './SessionManager.ts'
@@ -7,7 +8,7 @@ import { SessionManager } from './SessionManager.ts'
 // one-line guard delegating to notifySessionCreated, which is what we verify here.)
 describe('notifySessionCreated', () => {
   it('emits a session_created session-event scoped to the workspace', () => {
-    const sm = new SessionManager()
+    const sm = withSessionOperationsForTest(new SessionManager())
     const calls: Array<{ channel: string; target: unknown; payload: unknown[] }> = []
     sm.setEventSink((channel: string, target: unknown, ...payload: unknown[]) => {
       calls.push({ channel, target, payload })

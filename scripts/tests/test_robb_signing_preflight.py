@@ -1,25 +1,18 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import base64
-import importlib.util
 import os
-from pathlib import Path
 import sys
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
-
 SCRIPTS_DIR = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    "robb_signing_preflight",
-    SCRIPTS_DIR / "robinswood-signing-preflight.py",
-)
-if SPEC is None or SPEC.loader is None:
-    raise RuntimeError("Unable to load robinswood-signing-preflight.py")
-MODULE = importlib.util.module_from_spec(SPEC)
-sys.modules[SPEC.name] = MODULE
-SPEC.loader.exec_module(MODULE)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+try:
+    import robinswood_signing_preflight as MODULE
+finally:
+    _ = sys.path.pop(0)
 
 
 class SigningPreflightTests(unittest.TestCase):
@@ -132,4 +125,4 @@ class SigningPreflightTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    _ = unittest.main()

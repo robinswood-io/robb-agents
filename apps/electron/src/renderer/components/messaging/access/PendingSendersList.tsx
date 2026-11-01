@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 /**
  * "Pending requests" — recent senders the gateway rejected. Renders nothing
  * when the list is empty.
@@ -10,7 +11,7 @@
  * "Ignore" drops the row from the pending list without granting access.
  */
 
-import * as React from 'react'
+
 import { useTranslation } from 'react-i18next'
 import { Check, Clock, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -104,7 +105,7 @@ function PendingRow({
 
 function formatRelativeTime(
   epochMs: number,
-  t: (key: string, opts?: Record<string, unknown>) => string,
+  t: TFunction,
 ): string {
   const diff = Date.now() - epochMs
   if (diff < 60_000) return t('settings.messaging.telegram.access.pending.justNow')

@@ -23,7 +23,7 @@ import {
 } from './samples/customer-support'
 
 // Import icons for simple samples
-import { nativeToolIcons, sourceIcons, createCircleIcon } from './sample-icons'
+import { nativeToolIcons, sourceIcons } from './sample-icons'
 
 /** Wrapper with padding for playground preview */
 function PaddedWrapper({ children }: { children: ReactNode }) {
@@ -147,9 +147,9 @@ function TurnCardModesDemo({
   initialMode = 'detailed',
 }: {
   activities: ActivityItem[]
-  response?: ResponseContent
-  userMessage?: string
-  initialMode?: DisplayMode
+  response?: ResponseContent | undefined
+  userMessage?: string | undefined
+  initialMode?: DisplayMode | undefined
 }) {
   const [mode, setMode] = useState<DisplayMode>(initialMode)
 
@@ -181,10 +181,8 @@ function TurnCardModesDemo({
     setShowResponse(false)
 
     // Process each activity
-    for (let i = 0; i < activities.length; i++) {
+    for (const activity of activities) {
       if (playbackRef.current.cancel) return
-
-      const activity = activities[i]
 
       // Add activity as "running"
       setPlaybackActivities(prev => [

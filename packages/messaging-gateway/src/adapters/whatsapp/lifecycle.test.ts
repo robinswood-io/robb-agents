@@ -14,6 +14,7 @@
  *
  * `sendTimeoutMs` is injected via config so we don't wait 30s per test.
  */
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, it, expect, afterEach } from 'bun:test'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -101,14 +102,14 @@ async function makeAdapter(opts: {
 }): Promise<WhatsAppAdapter> {
   const adapter = new WhatsAppAdapter()
   const authDir = makeTmpDir()
-  const cfg: WhatsAppConfig = {
+  const cfg = omitUndefined<WhatsAppConfig>({
     workerEntry: opts.workerScript,
     authStateDir: authDir,
     nodeBin: process.execPath,
     sendTimeoutMs: opts.sendTimeoutMs,
     workerIdleTimeoutMs: opts.workerIdleTimeoutMs,
     logger: opts.logger,
-  }
+  })
   await adapter.initialize(cfg)
   return adapter
 }
@@ -140,9 +141,9 @@ describe('WhatsAppAdapter send lifecycle', () => {
   it('keeps bounded worker diagnostics at info while preserving real stderr warnings', async () => {
     const entries: Array<{ level: 'info' | 'warn' | 'error'; message: string; meta?: MessagingLogMeta }> = []
     const logger: MessagingLogger = {
-      info: (message, meta) => entries.push({ level: 'info', message, meta }),
-      warn: (message, meta) => entries.push({ level: 'warn', message, meta }),
-      error: (message, meta) => entries.push({ level: 'error', message, meta }),
+      info: (message, meta) => entries.push(omitUndefined<(typeof entries)[number]>({ level: 'info', message, meta })),
+      warn: (message, meta) => entries.push(omitUndefined<(typeof entries)[number]>({ level: 'warn', message, meta })),
+      error: (message, meta) => entries.push(omitUndefined<(typeof entries)[number]>({ level: 'error', message, meta })),
       child: () => logger,
     }
     const adapter = await makeAdapter({
@@ -151,9 +152,9 @@ describe('WhatsAppAdapter send lifecycle', () => {
     })
 
     try {
-      await waitFor(() => entries.filter((entry) => entry.meta?.event === 'whatsapp_worker_stderr').length === 15)
-      const workerEntries = entries.filter((entry) => entry.meta?.event === 'whatsapp_worker_stderr')
-      expect(workerEntries.filter((entry) => entry.level === 'info').map((entry) => entry.meta?.line)).toEqual([
+      await waitFor(() => entries.filter((entry) => entry.meta?.["event"] === 'whatsapp_worker_stderr').length === 15)
+      const workerEntries = entries.filter((entry) => entry.meta?.["event"] === 'whatsapp_worker_stderr')
+      expect(workerEntries.filter((entry) => entry.level === 'info').map((entry) => entry.meta?.["line"])).toEqual([
         '[wa-worker] starting — build=2026-09-11T21:54:10.381Z sha=f35d5299a1b4 provenance=robb-wa-worker-git:f35d5299a1b4 selfChatMode=true pairingMode=qr',
         '[wa-worker] upsert type=append count=86',
         '[wa-worker] upsert skip: history (ts=100 cutoff=200)',
@@ -163,7 +164,7 @@ describe('WhatsAppAdapter send lifecycle', () => {
         '[wa-worker] upsert skip: own_outbound',
         '[wa-worker] upsert emit: channelId=111@lid textLen=4 attachments=1',
       ])
-      expect(workerEntries.filter((entry) => entry.level === 'warn').map((entry) => entry.meta?.line)).toEqual([
+      expect(workerEntries.filter((entry) => entry.level === 'warn').map((entry) => entry.meta?.["line"])).toEqual([
         'Session error:Error: Bad MAC Error: Bad MAC',
         'failed to decrypt message',
         'at SessionCipher.decrypt (/app/node_modules/libsignal/index.js:42:7)',

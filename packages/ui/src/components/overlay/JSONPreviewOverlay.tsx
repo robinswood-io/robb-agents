@@ -1,3 +1,4 @@
+import { isUnknownArray } from "../../../../shared/src/utils/json.ts";
 /**
  * JSONPreviewOverlay - Interactive JSON tree viewer overlay
  *
@@ -5,7 +6,7 @@
  * Wraps PreviewOverlay for consistent presentation with other overlays.
  */
 
-import * as React from 'react'
+
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import JsonView from '@uiw/react-json-view'
@@ -39,14 +40,14 @@ function deepParseJson(value: unknown): unknown {
   }
 
   // If it's an array, recursively process each element
-  if (Array.isArray(value)) {
+  if (isUnknownArray(value)) {
     return value.map(deepParseJson)
   }
 
   // If it's an object, recursively process each property
   if (typeof value === 'object') {
     const result: Record<string, unknown> = {}
-    for (const [key, val] of Object.entries(value)) {
+    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
       result[key] = deepParseJson(val)
     }
     return result
@@ -57,7 +58,7 @@ function deepParseJson(value: unknown): unknown {
 }
 import { vscodeTheme } from '@uiw/react-json-view/vscode'
 import { githubLightTheme } from '@uiw/react-json-view/githubLight'
-import { Braces, Copy, Check } from 'lucide-react'
+import { Braces } from 'lucide-react'
 import { PreviewOverlay } from './PreviewOverlay'
 
 export interface JSONPreviewOverlayProps {
@@ -68,15 +69,15 @@ export interface JSONPreviewOverlayProps {
   /** Parsed JSON data to display */
   data: unknown
   /** File path — shows dual-trigger menu badge with "Open" + "Reveal in {file manager}" */
-  filePath?: string
+  filePath?: string | undefined
   /** Title to display in header (fallback when no filePath) */
-  title?: string
+  title?: string | undefined
   /** Theme mode */
-  theme?: 'light' | 'dark'
+  theme?: 'light' | 'dark' | undefined
   /** Optional error message */
-  error?: string
+  error?: string | undefined
   /** Render inline without dialog (for playground) */
-  embedded?: boolean
+  embedded?: boolean | undefined
 }
 
 /**
@@ -146,29 +147,7 @@ export function JSONPreviewOverlay({
               collapsed={false}
               enableClipboard={true}
               displayDataTypes={false}
-              shortenTextAfterLength={100}
-            >
-              {/* Custom copy icon using lucide-react */}
-              <JsonView.Copied
-                render={(props) => {
-                  // Type assertion needed - @uiw/react-json-view types don't include data-copied
-                  const isCopied = (props as Record<string, unknown>)['data-copied']
-                  return isCopied ? (
-                    <Check
-                      className="ml-1.5 inline-flex cursor-pointer text-green-500"
-                      size={10}
-                      onClick={props.onClick}
-                    />
-                  ) : (
-                    <Copy
-                      className="ml-1.5 inline-flex cursor-pointer text-muted-foreground hover:text-foreground"
-                      size={10}
-                      onClick={props.onClick}
-                    />
-                  )
-                }}
-              />
-            </JsonView>
+              shortenTextAfterLength={100} />
           </div>
         </div>
       </ContentFrame>

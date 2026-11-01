@@ -1,8 +1,8 @@
 interface RobbAgentsSymbolProps {
-  className?: string
-  title?: string
+  className?: string | undefined
+  title?: string | undefined
   /** Use one UI color when the surrounding surface requires a template mark. */
-  monochrome?: boolean
+  monochrome?: boolean | undefined
 }
 
 /**

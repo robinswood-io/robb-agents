@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach } from 'bun:test';
 import {
   UsageTracker,
+  type UsageUpdate,
   createUsageTracker,
 } from '../usage-tracker.ts';
 
@@ -191,7 +192,7 @@ describe('UsageTracker', () => {
     });
 
     it('should call onUsageUpdate callback', () => {
-      const updates: any[] = [];
+      const updates: UsageUpdate[] = [];
       const callbackTracker = new UsageTracker({
         contextWindow: 100000,
         onUsageUpdate: (update) => updates.push(update),
@@ -199,7 +200,7 @@ describe('UsageTracker', () => {
 
       callbackTracker.recordMessageUsage({ inputTokens: 1000 });
       expect(updates.length).toBe(1);
-      expect(updates[0].inputTokens).toBe(1000);
+      expect(updates[0]!.inputTokens).toBe(1000);
     });
   });
 

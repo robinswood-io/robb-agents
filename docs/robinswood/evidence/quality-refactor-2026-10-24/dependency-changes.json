@@ -1,0 +1,1302 @@
+{
+  "declarationsUpdated": 184,
+  "changes": [
+    {
+      "manifest": "apps/cli/package.json",
+      "group": "devDependencies",
+      "package": "@types/node",
+      "before": "^26.2.0",
+      "after": "^26.6.5"
+    },
+    {
+      "manifest": "apps/cli/package.json",
+      "group": "devDependencies",
+      "package": "@types/bun",
+      "before": "1.4.0",
+      "after": "1.4.4"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "@paper-design/shaders-react",
+      "before": "^0.0.80",
+      "after": "^0.0.82"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "@pierre/diffs",
+      "before": "^1.0.4",
+      "after": "^1.6.1"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "@radix-ui/react-context-menu",
+      "before": "^2.2.16",
+      "after": "^2.4.1"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "@radix-ui/react-dialog",
+      "before": "^1.1.15",
+      "after": "^1.3.1"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "@radix-ui/react-dropdown-menu",
+      "before": "^2.1.16",
+      "after": "^2.2.1"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "@radix-ui/react-label",
+      "before": "^2.1.8",
+      "after": "^2.1.17"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "@radix-ui/react-popover",
+      "before": "^1.1.15",
+      "after": "^1.3.1"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "@radix-ui/react-switch",
+      "before": "^1.2.6",
+      "after": "^1.4.1"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "@tanstack/react-table",
+      "before": "^8.21.3",
+      "after": "^9.3.1"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "chrono-node",
+      "before": "^2.9.0",
+      "after": "^2.10.3"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "electron-log",
+      "before": "^5.4.3",
+      "after": "^5.4.4"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "electron-updater",
+      "before": "^6.8.0",
+      "after": "^6.8.11"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "i18next-browser-languagedetector",
+      "before": "^8.2.1",
+      "after": "^8.2.2"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "jotai-family",
+      "before": "^1.0.1",
+      "after": "^1.1.0"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "motion",
+      "before": "^13.1.1",
+      "after": "^14.6.0"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "react",
+      "before": "^18.3.1",
+      "after": "^19.3.1"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "react-colorful",
+      "before": "^5.7.0",
+      "after": "^5.8.1"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "react-day-picker",
+      "before": "^9.13.0",
+      "after": "^10.0.2"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "react-dom",
+      "before": "^18.3.1",
+      "after": "^19.3.1"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "react-i18next",
+      "before": "^17.0.2",
+      "after": "^17.1.8"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "react-pdf",
+      "before": "^10.3.0",
+      "after": "^11.0.0"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "sonner",
+      "before": "^2.0.7",
+      "after": "^2.0.8"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "unist-util-visit",
+      "before": "^5.0.0",
+      "after": "^5.2.0"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "dependencies",
+      "package": "ws",
+      "before": "^8.19.0",
+      "after": "^8.22.0"
+    },
+    {
+      "manifest": "apps/electron/package.json",
+      "group": "devDependencies",
+      "package": "@types/ws",
+      "before": "^8.18.1",
+      "after": "^8.18.2"
+    },
+    {
+      "manifest": "apps/viewer/package.json",
+      "group": "dependencies",
+      "package": "react",
+      "before": "^18.3.1",
+      "after": "^19.3.1"
+    },
+    {
+      "manifest": "apps/viewer/package.json",
+      "group": "dependencies",
+      "package": "react-dom",
+      "before": "^18.3.1",
+      "after": "^19.3.1"
+    },
+    {
+      "manifest": "apps/viewer/package.json",
+      "group": "dependencies",
+      "package": "react-i18next",
+      "before": "^17.0.2",
+      "after": "^17.1.8"
+    },
+    {
+      "manifest": "apps/viewer/package.json",
+      "group": "devDependencies",
+      "package": "@tailwindcss/typography",
+      "before": "^0.5.16",
+      "after": "^0.5.20"
+    },
+    {
+      "manifest": "apps/viewer/package.json",
+      "group": "devDependencies",
+      "package": "@tailwindcss/vite",
+      "before": "^4.0.0",
+      "after": "^4.3.3"
+    },
+    {
+      "manifest": "apps/viewer/package.json",
+      "group": "devDependencies",
+      "package": "@vitejs/plugin-react",
+      "before": "^6.1.0",
+      "after": "^6.1.2"
+    },
+    {
+      "manifest": "apps/viewer/package.json",
+      "group": "devDependencies",
+      "package": "lucide-react",
+      "before": "^1.33.0",
+      "after": "^1.61.0"
+    },
+    {
+      "manifest": "apps/viewer/package.json",
+      "group": "devDependencies",
+      "package": "motion",
+      "before": "^13.1.1",
+      "after": "^14.6.0"
+    },
+    {
+      "manifest": "apps/viewer/package.json",
+      "group": "devDependencies",
+      "package": "react-markdown",
+      "before": "^9.0.3",
+      "after": "^10.1.0"
+    },
+    {
+      "manifest": "apps/viewer/package.json",
+      "group": "devDependencies",
+      "package": "shiki",
+      "before": "^4.4.3",
+      "after": "^4.5.0"
+    },
+    {
+      "manifest": "apps/viewer/package.json",
+      "group": "devDependencies",
+      "package": "tailwind-merge",
+      "before": "^3.6.0",
+      "after": "^3.7.0"
+    },
+    {
+      "manifest": "apps/viewer/package.json",
+      "group": "devDependencies",
+      "package": "tailwindcss",
+      "before": "^4.0.0",
+      "after": "^4.3.3"
+    },
+    {
+      "manifest": "apps/webui/package.json",
+      "group": "dependencies",
+      "package": "i18next",
+      "before": "^26.0.3",
+      "after": "^26.5.10"
+    },
+    {
+      "manifest": "apps/webui/package.json",
+      "group": "dependencies",
+      "package": "i18next-browser-languagedetector",
+      "before": "^8.2.1",
+      "after": "^8.2.2"
+    },
+    {
+      "manifest": "apps/webui/package.json",
+      "group": "dependencies",
+      "package": "jotai",
+      "before": "^2.16.0",
+      "after": "^3.0.1"
+    },
+    {
+      "manifest": "apps/webui/package.json",
+      "group": "dependencies",
+      "package": "react",
+      "before": "^18.3.1",
+      "after": "^19.3.1"
+    },
+    {
+      "manifest": "apps/webui/package.json",
+      "group": "dependencies",
+      "package": "react-dom",
+      "before": "^18.3.1",
+      "after": "^19.3.1"
+    },
+    {
+      "manifest": "apps/webui/package.json",
+      "group": "dependencies",
+      "package": "react-i18next",
+      "before": "^17.0.2",
+      "after": "^17.1.8"
+    },
+    {
+      "manifest": "apps/webui/package.json",
+      "group": "dependencies",
+      "package": "sonner",
+      "before": "^2.0.7",
+      "after": "^2.0.8"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@anthropic-ai/claude-agent-sdk",
+      "before": "0.3.250",
+      "after": "0.3.310"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@anthropic-ai/sdk",
+      "before": "^0.122.0",
+      "after": "^1.3.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@dnd-kit/dom",
+      "before": "^0.5.0",
+      "after": "^0.5.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@dnd-kit/helpers",
+      "before": "^0.5.0",
+      "after": "^0.5.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@earendil-works/pi-ai",
+      "before": "0.80.3",
+      "after": "1.4.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@earendil-works/pi-coding-agent",
+      "before": "0.80.3",
+      "after": "1.4.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@github/copilot-sdk",
+      "before": "^1.0.11",
+      "after": "^1.0.26"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@modelcontextprotocol/sdk",
+      "before": "^1.32.1",
+      "after": "^1.32.2"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@radix-ui/react-avatar",
+      "before": "^1.1.11",
+      "after": "^1.3.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@radix-ui/react-collapsible",
+      "before": "^1.1.12",
+      "after": "^1.2.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@radix-ui/react-dropdown-menu",
+      "before": "^2.1.16",
+      "after": "^2.2.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@radix-ui/react-scroll-area",
+      "before": "^1.2.10",
+      "after": "^1.4.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@radix-ui/react-select",
+      "before": "^2.2.6",
+      "after": "^2.4.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@radix-ui/react-separator",
+      "before": "^1.1.8",
+      "after": "^1.2.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@radix-ui/react-slot",
+      "before": "^1.2.4",
+      "after": "^1.5.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@radix-ui/react-tabs",
+      "before": "^1.1.13",
+      "after": "^1.2.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@radix-ui/react-tooltip",
+      "before": "^1.2.8",
+      "after": "^1.4.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@sentry/electron",
+      "before": "^7.7.0",
+      "after": "^8.3.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@sentry/react",
+      "before": "^10.36.0",
+      "after": "^11.9.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@shikijs/cli",
+      "before": "^4.4.3",
+      "after": "^4.5.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@tailwindcss/typography",
+      "before": "^0.5.19",
+      "after": "^0.5.20"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@tiptap/extension-bubble-menu",
+      "before": "3.31.3",
+      "after": "3.32.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@tiptap/extension-file-handler",
+      "before": "3.31.3",
+      "after": "3.32.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@tiptap/extension-image",
+      "before": "3.31.3",
+      "after": "3.32.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@tiptap/extension-mathematics",
+      "before": "3.31.3",
+      "after": "3.32.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@tiptap/extension-placeholder",
+      "before": "3.31.3",
+      "after": "3.32.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@tiptap/extension-task-item",
+      "before": "3.31.3",
+      "after": "3.32.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@tiptap/extension-task-list",
+      "before": "3.31.3",
+      "after": "3.32.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@tiptap/extension-text-style",
+      "before": "3.31.3",
+      "after": "3.32.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@tiptap/markdown",
+      "before": "3.31.3",
+      "after": "3.32.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@tiptap/react",
+      "before": "3.31.3",
+      "after": "3.32.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@tiptap/starter-kit",
+      "before": "3.31.3",
+      "after": "3.32.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@tiptap/suggestion",
+      "before": "3.31.3",
+      "after": "3.32.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "@vscode/ripgrep",
+      "before": "1.17.1",
+      "after": "1.18.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "date-fns",
+      "before": "^4.1.0",
+      "after": "^4.4.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "jotai",
+      "before": "^2.16.0",
+      "after": "^3.0.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "js-yaml",
+      "before": "^5.4.1",
+      "after": "^5.5.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "katex",
+      "before": "^0.18.11",
+      "after": "^0.19.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "lucide-react",
+      "before": "^1.33.0",
+      "after": "^1.61.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "marked",
+      "before": "^18.0.10",
+      "after": "^18.1.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "open",
+      "before": "^11.0.0",
+      "after": "^11.0.4"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "react",
+      "before": "^18.3.1",
+      "after": "^19.3.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "react-dom",
+      "before": "^18.3.1",
+      "after": "^19.3.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "react-resizable-panels",
+      "before": "^3.0.6",
+      "after": "^4.14.8"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "semver",
+      "before": "^7.7.3",
+      "after": "^7.8.5"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "shiki",
+      "before": "^4.4.3",
+      "after": "^4.5.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "tailwind-merge",
+      "before": "^3.4.0",
+      "after": "^3.7.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "dependencies",
+      "package": "tiptap-extension-code-block-shiki",
+      "before": "^1.0.0",
+      "after": "^1.2.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "@babel/core",
+      "before": "^8.0.1",
+      "after": "^8.0.9"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "@aws-sdk/client-s3",
+      "before": "^3.947.0",
+      "after": "^3.1156.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "@electron/asar",
+      "before": "^4.2.0",
+      "after": "^4.3.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "@rolldown/plugin-babel",
+      "before": "^0.2.3",
+      "after": "^0.2.4"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "@rollup/rollup-win32-arm64-msvc",
+      "before": "^4.55.1",
+      "after": "^4.65.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "@sentry/vite-plugin",
+      "before": "^5.4.0",
+      "after": "^11.9.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "@tailwindcss/vite",
+      "before": "^4.1.18",
+      "after": "^4.3.3"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "@types/bun",
+      "before": "1.4.0",
+      "after": "1.4.4"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "@types/node",
+      "before": "^26.2.0",
+      "after": "^26.6.5"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "@types/react",
+      "before": "^18.3.31",
+      "after": "^19.3.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "@types/react-dom",
+      "before": "^18.3.7",
+      "after": "^19.3.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "@types/semver",
+      "before": "^7.7.1",
+      "after": "^7.8.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "@typescript-eslint/eslint-plugin",
+      "before": "^8.67.0",
+      "after": "^8.72.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "@typescript-eslint/parser",
+      "before": "^8.67.0",
+      "after": "^8.72.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "@vitejs/plugin-react",
+      "before": "^6.1.0",
+      "after": "^6.1.2"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "autoprefixer",
+      "before": "^10.4.23",
+      "after": "^10.6.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "concurrently",
+      "before": "^10.0.5",
+      "after": "^10.0.6"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "electron",
+      "before": "^43.8.3",
+      "after": "^45.0.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "electron-builder",
+      "before": "^26.0.12",
+      "after": "^26.18.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "eslint",
+      "before": "^10.8.1",
+      "after": "^10.13.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "eslint-plugin-react-hooks",
+      "before": "^7.0.1",
+      "after": "^7.1.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "openai",
+      "before": "^7.5.0",
+      "after": "^7.43.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "postcss",
+      "before": "8.5.26",
+      "after": "8.5.31"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "react-devtools-core",
+      "before": "^7.0.1",
+      "after": "^8.0.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "devDependencies",
+      "package": "tailwindcss",
+      "before": "^4.1.18",
+      "after": "^4.3.3"
+    },
+    {
+      "manifest": "package.json",
+      "group": "optionalDependencies",
+      "package": "@img/sharp-libvips-darwin-arm64",
+      "before": "1.3.3",
+      "after": "1.3.4"
+    },
+    {
+      "manifest": "package.json",
+      "group": "optionalDependencies",
+      "package": "@img/sharp-libvips-darwin-x64",
+      "before": "1.3.3",
+      "after": "1.3.4"
+    },
+    {
+      "manifest": "package.json",
+      "group": "optionalDependencies",
+      "package": "@img/sharp-libvips-linux-arm64",
+      "before": "1.3.3",
+      "after": "1.3.4"
+    },
+    {
+      "manifest": "package.json",
+      "group": "optionalDependencies",
+      "package": "@img/sharp-libvips-linux-x64",
+      "before": "1.3.3",
+      "after": "1.3.4"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "@hono/node-server",
+      "before": "2.0.11",
+      "after": "2.1.5"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "@modelcontextprotocol/client",
+      "before": "2.3.1",
+      "after": "2.4.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "@modelcontextprotocol/node",
+      "before": "2.1.1",
+      "after": "2.1.2"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "@modelcontextprotocol/sdk",
+      "before": "1.32.1",
+      "after": "1.32.2"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "@modelcontextprotocol/server",
+      "before": "2.3.1",
+      "after": "2.4.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "fast-uri",
+      "before": "3.1.9",
+      "after": "4.2.3"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "katex",
+      "before": "0.18.11",
+      "after": "0.19.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "markdown-it",
+      "before": "14.3.3",
+      "after": "15.0.3"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "music-metadata",
+      "before": "11.16.1",
+      "after": "12.3.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "postcss",
+      "before": "8.5.26",
+      "after": "8.5.31"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "uuid",
+      "before": "11.1.1",
+      "after": "14.0.3"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "qs",
+      "before": "6.16.0",
+      "after": "6.16.1"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "@tiptap/core",
+      "before": "3.31.3",
+      "after": "3.32.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "@tiptap/extension-text-style",
+      "before": "3.31.3",
+      "after": "3.32.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "@tiptap/pm",
+      "before": "3.31.3",
+      "after": "3.32.0"
+    },
+    {
+      "manifest": "package.json",
+      "group": "overrides",
+      "package": "prosemirror-view",
+      "before": "1.42.3",
+      "after": "1.42.8"
+    },
+    {
+      "manifest": "packages/messaging-gateway/package.json",
+      "group": "dependencies",
+      "package": "@larksuiteoapi/node-sdk",
+      "before": "^1.71.1",
+      "after": "^1.76.0"
+    },
+    {
+      "manifest": "packages/messaging-gateway/package.json",
+      "group": "dependencies",
+      "package": "grammy",
+      "before": "^1.35.0",
+      "after": "^1.46.0"
+    },
+    {
+      "manifest": "packages/messaging-gateway/package.json",
+      "group": "devDependencies",
+      "package": "@types/node",
+      "before": "^26.2.0",
+      "after": "^26.6.5"
+    },
+    {
+      "manifest": "packages/messaging-whatsapp-worker/package.json",
+      "group": "dependencies",
+      "package": "@whiskeysockets/baileys",
+      "before": "6.7.24",
+      "after": "7.0.0-rc14"
+    },
+    {
+      "manifest": "packages/messaging-whatsapp-worker/package.json",
+      "group": "devDependencies",
+      "package": "@types/node",
+      "before": "^26.2.0",
+      "after": "^26.6.5"
+    },
+    {
+      "manifest": "packages/pi-agent-server/package.json",
+      "group": "dependencies",
+      "package": "@agentclientprotocol/sdk",
+      "before": "1.4.0",
+      "after": "2.0.2"
+    },
+    {
+      "manifest": "packages/pi-agent-server/package.json",
+      "group": "dependencies",
+      "package": "@earendil-works/pi-agent-core",
+      "before": "0.80.3",
+      "after": "1.4.0"
+    },
+    {
+      "manifest": "packages/pi-agent-server/package.json",
+      "group": "dependencies",
+      "package": "@earendil-works/pi-ai",
+      "before": "0.80.3",
+      "after": "1.4.0"
+    },
+    {
+      "manifest": "packages/pi-agent-server/package.json",
+      "group": "dependencies",
+      "package": "@earendil-works/pi-coding-agent",
+      "before": "0.80.3",
+      "after": "1.4.0"
+    },
+    {
+      "manifest": "packages/pi-agent-server/package.json",
+      "group": "dependencies",
+      "package": "@sinclair/typebox",
+      "before": "^0.34.0",
+      "after": "^0.34.52"
+    },
+    {
+      "manifest": "packages/pi-agent-server/package.json",
+      "group": "dependencies",
+      "package": "node-html-parser",
+      "before": "^9.0.1",
+      "after": "^9.0.5"
+    },
+    {
+      "manifest": "packages/pi-agent-server/package.json",
+      "group": "dependencies",
+      "package": "pdfjs-dist",
+      "before": "^6.2.108",
+      "after": "^6.4.299"
+    },
+    {
+      "manifest": "packages/pi-agent-server/package.json",
+      "group": "dependencies",
+      "package": "turndown",
+      "before": "^7.2.0",
+      "after": "^7.2.4"
+    },
+    {
+      "manifest": "packages/pi-agent-server/package.json",
+      "group": "devDependencies",
+      "package": "@types/node",
+      "before": "^26.2.0",
+      "after": "^26.6.5"
+    },
+    {
+      "manifest": "packages/server-core/package.json",
+      "group": "dependencies",
+      "package": "@agentclientprotocol/sdk",
+      "before": "1.4.0",
+      "after": "2.0.2"
+    },
+    {
+      "manifest": "packages/server-core/package.json",
+      "group": "dependencies",
+      "package": "@modelcontextprotocol/sdk",
+      "before": "^1.32.1",
+      "after": "^1.32.2"
+    },
+    {
+      "manifest": "packages/server-core/package.json",
+      "group": "dependencies",
+      "package": "jose",
+      "before": "^6.0.0",
+      "after": "^6.2.13"
+    },
+    {
+      "manifest": "packages/server-core/package.json",
+      "group": "dependencies",
+      "package": "ws",
+      "before": "^8.19.0",
+      "after": "^8.22.0"
+    },
+    {
+      "manifest": "packages/server-core/package.json",
+      "group": "dependencies",
+      "package": "@earendil-works/pi-ai",
+      "before": "0.80.3",
+      "after": "1.4.0"
+    },
+    {
+      "manifest": "packages/server-core/package.json",
+      "group": "devDependencies",
+      "package": "@types/node",
+      "before": "^26.2.0",
+      "after": "^26.6.5"
+    },
+    {
+      "manifest": "packages/server/package.json",
+      "group": "devDependencies",
+      "package": "@types/node",
+      "before": "^26.2.0",
+      "after": "^26.6.5"
+    },
+    {
+      "manifest": "packages/server/package.json",
+      "group": "devDependencies",
+      "package": "ws",
+      "before": "^8.16.0",
+      "after": "^8.22.0"
+    },
+    {
+      "manifest": "packages/session-mcp-server/package.json",
+      "group": "dependencies",
+      "package": "@modelcontextprotocol/client",
+      "before": "2.3.1",
+      "after": "2.4.0"
+    },
+    {
+      "manifest": "packages/session-mcp-server/package.json",
+      "group": "dependencies",
+      "package": "@modelcontextprotocol/server",
+      "before": "2.3.1",
+      "after": "2.4.0"
+    },
+    {
+      "manifest": "packages/session-mcp-server/package.json",
+      "group": "devDependencies",
+      "package": "@types/node",
+      "before": "^26.2.0",
+      "after": "^26.6.5"
+    },
+    {
+      "manifest": "packages/session-tools-core/package.json",
+      "group": "dependencies",
+      "package": "beautiful-mermaid",
+      "before": "*",
+      "after": "1.1.3"
+    },
+    {
+      "manifest": "packages/session-tools-core/package.json",
+      "group": "dependencies",
+      "package": "zod-to-json-schema",
+      "before": "^3.25.0",
+      "after": "^3.25.2"
+    },
+    {
+      "manifest": "packages/shared/package.json",
+      "group": "dependencies",
+      "package": "@earendil-works/pi-agent-core",
+      "before": "0.80.3",
+      "after": "1.4.0"
+    },
+    {
+      "manifest": "packages/shared/package.json",
+      "group": "dependencies",
+      "package": "@earendil-works/pi-ai",
+      "before": "0.80.3",
+      "after": "1.4.0"
+    },
+    {
+      "manifest": "packages/shared/package.json",
+      "group": "dependencies",
+      "package": "@earendil-works/pi-coding-agent",
+      "before": "0.80.3",
+      "after": "1.4.0"
+    },
+    {
+      "manifest": "packages/shared/package.json",
+      "group": "dependencies",
+      "package": "@isaacs/ttlcache",
+      "before": "^2.1.4",
+      "after": "^2.1.5"
+    },
+    {
+      "manifest": "packages/shared/package.json",
+      "group": "dependencies",
+      "package": "@modelcontextprotocol/client",
+      "before": "2.3.1",
+      "after": "2.4.0"
+    },
+    {
+      "manifest": "packages/shared/package.json",
+      "group": "dependencies",
+      "package": "@modelcontextprotocol/node",
+      "before": "2.1.1",
+      "after": "2.1.2"
+    },
+    {
+      "manifest": "packages/shared/package.json",
+      "group": "dependencies",
+      "package": "@modelcontextprotocol/server",
+      "before": "2.3.1",
+      "after": "2.4.0"
+    },
+    {
+      "manifest": "packages/shared/package.json",
+      "group": "dependencies",
+      "package": "date-fns",
+      "before": "^4.1.0",
+      "after": "^4.4.0"
+    },
+    {
+      "manifest": "packages/shared/package.json",
+      "group": "dependencies",
+      "package": "glob",
+      "before": "^13.0.0",
+      "after": "^13.0.6"
+    },
+    {
+      "manifest": "packages/shared/package.json",
+      "group": "dependencies",
+      "package": "i18next",
+      "before": "^26.0.3",
+      "after": "^26.5.10"
+    },
+    {
+      "manifest": "packages/shared/package.json",
+      "group": "dependencies",
+      "package": "yaml",
+      "before": "^2.8.2",
+      "after": "^2.9.1"
+    },
+    {
+      "manifest": "packages/ui/package.json",
+      "group": "dependencies",
+      "package": "@paper-design/shaders-react",
+      "before": "^0.0.80",
+      "after": "^0.0.82"
+    },
+    {
+      "manifest": "packages/ui/package.json",
+      "group": "dependencies",
+      "package": "beautiful-mermaid",
+      "before": "*",
+      "after": "1.1.3"
+    },
+    {
+      "manifest": "packages/ui/package.json",
+      "group": "dependencies",
+      "package": "@types/mdast",
+      "before": "^4.0.0",
+      "after": "^4.0.4"
+    },
+    {
+      "manifest": "packages/ui/package.json",
+      "group": "dependencies",
+      "package": "@uiw/react-json-view",
+      "before": "^2.0.0-alpha.40",
+      "after": "^2.0.0-alpha.44"
+    },
+    {
+      "manifest": "packages/ui/package.json",
+      "group": "dependencies",
+      "package": "fflate",
+      "before": "^0.8.2",
+      "after": "^0.8.3"
+    },
+    {
+      "manifest": "packages/ui/package.json",
+      "group": "dependencies",
+      "package": "unified",
+      "before": "^11.0.0",
+      "after": "^11.0.5"
+    },
+    {
+      "manifest": "packages/ui/package.json",
+      "group": "dependencies",
+      "package": "unist-util-visit",
+      "before": "^5.0.0",
+      "after": "^5.2.0"
+    }
+  ],
+  "compatibilityExceptions": [
+    {
+      "manifest": "package.json",
+      "package": "typescript",
+      "retained": "~6.0.3",
+      "reason": "typescript-eslint 8.72 requires TypeScript <6.1 JS API; native compiler remains latest 7.0.2 via @typescript/native."
+    }
+  ],
+  "bunRuntime": "1.4.4"
+}

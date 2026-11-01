@@ -1,3 +1,4 @@
+import { parseDatatableSpec, parseTabularFile } from './datatable-values'
 /**
  * MarkdownDatatableBlock - Interactive data table for markdown ```datatable code blocks
  *
@@ -26,272 +27,31 @@
  * Falls back to CodeBlock if JSON parsing fails.
  */
 
-import * as React from 'react'
-import niceTicks from 'nice-ticks'
-import { ArrowUpDown, Check, ChevronRight, Group, ListFilter, Maximize2 } from 'lucide-react'
-import { cn } from '../../lib/utils'
-import { CodeBlock } from './CodeBlock'
-import { DataTableOverlay } from '../overlay/DataTableOverlay'
-import { useScrollFade } from './useScrollFade'
-import { TableExportDropdown } from './TableExportDropdown'
-import { usePlatform } from '../../context/PlatformContext'
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuSub,
-  StyledDropdownMenuContent,
-  StyledDropdownMenuItem,
-  StyledDropdownMenuSeparator,
-  StyledDropdownMenuSubTrigger,
-  StyledDropdownMenuSubContent,
-} from '../ui/StyledDropdown'
-import { useTranslation } from 'react-i18next'
+import * as React from 'react';
+import "nice-ticks";
+import { ArrowUpDown, Check, ChevronRight, Group, ListFilter, Maximize2 } from 'lucide-react';
+import { cn } from '../../lib/utils';
+import { CodeBlock } from './CodeBlock';
+import { DataTableOverlay } from '../overlay/DataTableOverlay';
+import { useScrollFade } from './useScrollFade';
+import { TableExportDropdown } from './TableExportDropdown';
+import { usePlatform } from '../../context/PlatformContext';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuSub, StyledDropdownMenuContent, StyledDropdownMenuItem, StyledDropdownMenuSeparator, StyledDropdownMenuSubTrigger, StyledDropdownMenuSubContent } from '../ui/StyledDropdown';
+import { useTranslation } from 'react-i18next';
 
-// ── Types ────────────────────────────────────────────────────────────────────
+import { type DatatableData, type DatatableSpec, type SortDir, formatCell, colAlign, SortIcon, type GranularityOption, computeGranularityOptions, bucketValue, DatatableErrorBoundary, type MarkdownDatatableBlockProps } from "./datatable-values";
+export { type MarkdownDatatableBlockProps } from "./datatable-values";
 
-interface ColumnDef {
-  key: string
-  label: string
-  type?: 'text' | 'number' | 'currency' | 'percent' | 'boolean' | 'date' | 'badge'
-  align?: 'left' | 'center' | 'right'
-}
 
-interface DatatableData {
-  title?: string
-  columns: ColumnDef[]
-  rows: Record<string, unknown>[]
-}
 
-interface DatatableSpec {
-  src?: string
-  title?: string
-  columns?: ColumnDef[]
-  rows?: Record<string, unknown>[]
-}
 
-type SortDir = 'asc' | 'desc' | null
 
-// ── Cell formatting ──────────────────────────────────────────────────────────
 
-function formatCell(value: unknown, type?: ColumnDef['type']): React.ReactNode {
-  if (value === null || value === undefined) return <span className="text-muted-foreground/40">—</span>
-  switch (type) {
-    case 'currency': {
-      const num = typeof value === 'number' ? value : Number(value)
-      if (isNaN(num)) return String(value)
-      return <span className="tabular-nums">{num.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
-    }
-    case 'percent': {
-      const pct = typeof value === 'number' ? value : Number(value)
-      if (isNaN(pct)) return String(value)
-      const formatted = (pct * 100).toFixed(1) + '%'
-      const positive = pct > 0
-      return <span className={cn('tabular-nums', positive && 'text-success', pct < 0 && 'text-destructive')}>{positive ? '+' : ''}{formatted}</span>
-    }
-    case 'number': {
-      const n = typeof value === 'number' ? value : Number(value)
-      if (isNaN(n)) return String(value)
-      return <span className="tabular-nums">{n.toLocaleString()}</span>
-    }
-    case 'boolean':
-      return value ? <span className="text-success">Yes</span> : <span className="text-muted-foreground">No</span>
-    case 'badge': {
-      const s = String(value).toLowerCase()
-      const color = s === 'active' || s === 'passing' || s === 'success' || s === 'done'
-        ? 'bg-success/10 text-success'
-        : s === 'revoked' || s === 'failed' || s === 'error'
-        ? 'bg-destructive/10 text-destructive'
-        : 'bg-muted text-muted-foreground'
-      return <span className={cn('inline-block px-1.5 py-0.5 rounded text-[11px] font-medium', color)}>{String(value)}</span>
-    }
-    default:
-      return String(value)
-  }
-}
 
-function colAlign(type?: ColumnDef['type'], explicit?: string): string {
-  if (explicit) return `text-${explicit}`
-  if (type === 'number' || type === 'currency' || type === 'percent') return 'text-right'
-  return 'text-left'
-}
 
-// ── Sort icon ────────────────────────────────────────────────────────────────
 
-function SortIcon({ dir }: { dir: SortDir }) {
-  return (
-    <svg className={cn('w-3 h-3 shrink-0', dir ? 'opacity-60' : 'opacity-20')} viewBox="0 0 16 16" fill="currentColor">
-      {dir === 'asc' ? (
-        <path d="M8 3l4 5H4l4-5z" />
-      ) : dir === 'desc' ? (
-        <path d="M8 13l4-5H4l4 5z" />
-      ) : (
-        <>
-          <path d="M8 3l3 4H5l3-4z" />
-          <path d="M8 13l3-4H5l3 4z" />
-        </>
-      )}
-    </svg>
-  )
-}
 
-// ── Grouping granularity ─────────────────────────────────────────────────
 
-interface GranularityOption {
-  label: string
-  value: string
-}
-
-const DATE_GRANULARITIES: GranularityOption[] = [
-  { label: 'Hour', value: 'hour' },
-  { label: 'Day', value: 'day' },
-  { label: 'Month', value: 'month' },
-  { label: 'Year', value: 'year' },
-]
-
-function formatCompact(n: number): string {
-  const abs = Math.abs(n)
-  if (abs >= 1e9) return (n / 1e9).toFixed(abs >= 1e10 ? 0 : 1).replace(/\.0$/, '') + 'B'
-  if (abs >= 1e6) return (n / 1e6).toFixed(abs >= 1e7 ? 0 : 1).replace(/\.0$/, '') + 'M'
-  if (abs >= 1e3) return (n / 1e3).toFixed(abs >= 1e4 ? 0 : 1).replace(/\.0$/, '') + 'K'
-  if (abs >= 1) return String(Math.round(n))
-  if (abs >= 0.01) return n.toFixed(2)
-  return String(n)
-}
-
-function computeNumericGranularities(values: number[], type: 'number' | 'currency' | 'percent'): GranularityOption[] {
-  if (values.length < 2) return []
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  if (min === max) return []
-
-  const tickCounts = [3, 5, 8, 15]
-  const seen = new Set<number>()
-  const options: GranularityOption[] = [{ label: 'Exact', value: 'exact' }]
-
-  for (const count of tickCounts) {
-    const ticks = niceTicks(min, max, count)
-    if (ticks.length < 2) continue
-    const step = Math.abs(ticks[1]! - ticks[0]!)
-    if (step <= 0 || seen.has(step)) continue
-    seen.add(step)
-
-    let label: string
-    if (type === 'percent') {
-      label = formatCompact(step * 100) + '%'
-    } else if (type === 'currency') {
-      label = '$' + formatCompact(step)
-    } else {
-      label = formatCompact(step)
-    }
-    options.push({ label, value: String(step) })
-  }
-
-  return options.length > 1 ? options : []
-}
-
-function computeDateGranularities(values: number[]): GranularityOption[] {
-  if (values.length < 2) return DATE_GRANULARITIES
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const spanMs = max - min
-
-  const HOUR = 3600_000
-  const DAY = 86400_000
-  const MONTH = 30 * DAY
-  const YEAR = 365 * DAY
-
-  const opts: GranularityOption[] = []
-  if (spanMs < 2 * YEAR) opts.push({ label: 'Hour', value: 'hour' })
-  if (spanMs >= 2 * DAY || spanMs < 2 * YEAR) opts.push({ label: 'Day', value: 'day' })
-  if (spanMs >= 2 * MONTH) opts.push({ label: 'Month', value: 'month' })
-  if (spanMs >= 2 * YEAR) opts.push({ label: 'Year', value: 'year' })
-  return opts.length ? opts : DATE_GRANULARITIES
-}
-
-function computeGranularityOptions(data: DatatableData): Map<string, GranularityOption[]> {
-  const result = new Map<string, GranularityOption[]>()
-  for (const col of data.columns) {
-    if (col.type === 'date') {
-      const timestamps = data.rows
-        .map((r) => new Date(r[col.key] as string | number).getTime())
-        .filter((t) => !isNaN(t))
-      result.set(col.key, computeDateGranularities(timestamps))
-    } else if (col.type === 'number' || col.type === 'currency' || col.type === 'percent') {
-      const nums = data.rows
-        .map((r) => typeof r[col.key] === 'number' ? r[col.key] as number : Number(r[col.key]))
-        .filter((n) => !isNaN(n))
-      const opts = computeNumericGranularities(nums, col.type)
-      if (opts.length > 0) result.set(col.key, opts)
-    }
-    // text, badge, boolean → no entry → no sub-menu
-  }
-  return result
-}
-
-function bucketValue(value: unknown, type: ColumnDef['type'], granularity: string): string {
-  if (value === null || value === undefined) return '—'
-
-  if (type === 'date') {
-    const d = new Date(value as string | number)
-    if (isNaN(d.getTime())) return String(value)
-    switch (granularity) {
-      case 'hour': return d.toLocaleDateString() + ' ' + d.getHours() + ':00'
-      case 'day': return d.toLocaleDateString()
-      case 'month': return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long' })
-      case 'year': return String(d.getFullYear())
-    }
-  }
-
-  if (type === 'number' || type === 'currency' || type === 'percent') {
-    const n = typeof value === 'number' ? value : Number(value)
-    if (isNaN(n)) return String(value)
-    if (granularity === 'exact') {
-      if (type === 'currency') return '$' + n.toLocaleString()
-      if (type === 'percent') return (n * 100).toFixed(1) + '%'
-      return n.toLocaleString()
-    }
-    const size = parseFloat(granularity)
-    if (!size) return String(n)
-    const lo = Math.floor(n / size) * size
-    const hi = lo + size
-    if (type === 'percent') return `${(lo * 100).toFixed(0)}%–${(hi * 100).toFixed(0)}%`
-    if (type === 'currency') return `$${formatCompact(lo)}–$${formatCompact(hi)}`
-    return `${formatCompact(lo)}–${formatCompact(hi)}`
-  }
-
-  return String(value)
-}
-
-function defaultGranularity(type: ColumnDef['type'], options: GranularityOption[]): string {
-  if (!options.length) return 'exact'
-  if (type === 'date') return options.find((o) => o.value === 'day')?.value ?? options[0]!.value
-  // For numeric: pick the second option (first non-Exact) if available
-  return options.length > 1 ? options[1]!.value : options[0]!.value
-}
-
-// ── Error boundary ───────────────────────────────────────────────────────────
-
-class DatatableErrorBoundary extends React.Component<
-  { children: React.ReactNode; fallback: React.ReactNode },
-  { hasError: boolean }
-> {
-  state = { hasError: false }
-  static getDerivedStateFromError() { return { hasError: true } }
-  componentDidCatch(error: Error) {
-    console.warn('[MarkdownDatatableBlock] Render failed, falling back to CodeBlock:', error)
-  }
-  render() {
-    if (this.state.hasError) return this.props.fallback
-    return this.props.children
-  }
-}
-
-// ── Main component ───────────────────────────────────────────────────────────
-
-export interface MarkdownDatatableBlockProps {
-  code: string
-  className?: string
-}
 
 export function MarkdownDatatableBlock({ code, className }: MarkdownDatatableBlockProps) {
   const { t } = useTranslation()
@@ -299,16 +59,7 @@ export function MarkdownDatatableBlock({ code, className }: MarkdownDatatableBlo
 
   // Parse the inline JSON spec (may have src field for file-backed data)
   const spec = React.useMemo<DatatableSpec | null>(() => {
-    try {
-      const raw = JSON.parse(code)
-      // Valid if it has inline data OR a src reference
-      if (raw.src || (Array.isArray(raw.columns) && Array.isArray(raw.rows))) {
-        return raw as DatatableSpec
-      }
-      return null
-    } catch {
-      return null
-    }
+    try { return parseDatatableSpec(code) } catch { return null }
   }, [code])
 
   // Load file data when src is present
@@ -323,24 +74,14 @@ export function MarkdownDatatableBlock({ code, className }: MarkdownDatatableBlo
     onReadFile(spec.src)
       .then((content) => {
         try {
-          const raw = JSON.parse(content)
-          // File can be full {title, columns, rows} or just a rows array
-          if (Array.isArray(raw)) {
-            setFileData({ rows: raw, columns: [], title: undefined })
-          } else if (raw && typeof raw === 'object') {
-            setFileData({
-              title: raw.title,
-              columns: Array.isArray(raw.columns) ? raw.columns : [],
-              rows: Array.isArray(raw.rows) ? raw.rows : [],
-            })
-          } else {
-            setFileError('File does not contain valid datatable data')
-          }
+          const parsed = parseTabularFile(content)
+          if (parsed) setFileData(parsed)
+          else setFileError('File does not contain valid datatable data')
         } catch {
           setFileError('Failed to parse data file as JSON')
         }
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         setFileError(err instanceof Error ? err.message : 'Failed to read data file')
       })
       .finally(() => setFileLoading(false))
@@ -362,8 +103,10 @@ export function MarkdownDatatableBlock({ code, className }: MarkdownDatatableBlo
     return { title: spec.title, columns: spec.columns, rows: spec.rows }
   }, [spec, fileData])
 
-  const [sortKey, setSortKey] = React.useState<string | null>(null)
-  const [sortDir, setSortDir] = React.useState<SortDir>(null)
+  const [{ key: sortKey, direction: sortDir }, setSort] = React.useState<{
+    key: string | null
+    direction: SortDir
+  }>({ key: null, direction: null })
   const [isFullscreen, setIsFullscreen] = React.useState(false)
   const [groupKey, setGroupKey] = React.useState<string | null>(null)
   const [groupGranularity, setGroupGranularity] = React.useState<string>('exact')
@@ -371,11 +114,11 @@ export function MarkdownDatatableBlock({ code, className }: MarkdownDatatableBlo
   const { scrollRef, maskImage } = useScrollFade()
 
   const handleSort = React.useCallback((key: string) => {
-    setSortKey((prev) => {
-      if (prev !== key) { setSortDir('asc'); return key }
-      setSortDir((d) => d === 'asc' ? 'desc' : d === 'desc' ? null : 'asc')
-      return key
-    })
+    setSort((prev) => ({
+      key,
+      direction: prev.key !== key ? 'asc'
+        : prev.direction === 'asc' ? 'desc' : prev.direction === 'desc' ? null : 'asc',
+    }))
   }, [])
 
   const processedRows = React.useMemo(() => {
@@ -431,8 +174,7 @@ export function MarkdownDatatableBlock({ code, className }: MarkdownDatatableBlo
   const hasActiveControls = (sortKey !== null && sortDir !== null) || groupKey !== null
 
   const clearControls = React.useCallback(() => {
-    setSortKey(null)
-    setSortDir(null)
+    setSort({ key: null, direction: null })
     setGroupKey(null)
     setGroupGranularity('exact')
     setCollapsedGroups(new Set())

@@ -1,3 +1,4 @@
+import { parseOAuthError } from './oauth-error.ts';
 /**
  * ChatGPT OAuth with PKCE
  *
@@ -119,11 +120,11 @@ export async function exchangeChatGptTokens(
     const errorText = await response.text();
     let errorMessage: string;
     try {
-      const errorJson = JSON.parse(errorText);
-      if (errorJson.error && errorJson.error_description) {
-        errorMessage = `${errorJson.error} - ${errorJson.error_description}`;
+      const errorJson = parseOAuthError(errorText);
+      if (errorJson["error"] && errorJson["error_description"]) {
+        errorMessage = `${errorJson["error"]} - ${errorJson["error_description"]}`;
       } else {
-        errorMessage = errorJson.error_description || errorJson.error || errorText;
+        errorMessage = errorJson["error_description"] || errorJson["error"] || errorText;
       }
     } catch {
       errorMessage = errorText;
@@ -145,8 +146,8 @@ export async function exchangeChatGptTokens(
   return {
     idToken: data.id_token,
     accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-    expiresAt: data.expires_in ? Date.now() + data.expires_in * 1000 : undefined,
+    ...(data.refresh_token !== undefined ? { refreshToken: data.refresh_token } : {}),
+    ...(data.expires_in ? { expiresAt: Date.now() + data.expires_in * 1000 } : {}),
   };
 }
 
@@ -183,11 +184,11 @@ export async function refreshChatGptTokens(
       const errorText = await response.text();
       let errorMessage: string;
       try {
-        const errorJson = JSON.parse(errorText);
-        if (errorJson.error && errorJson.error_description) {
-          errorMessage = `${errorJson.error} - ${errorJson.error_description}`;
+        const errorJson = parseOAuthError(errorText);
+        if (errorJson["error"] && errorJson["error_description"]) {
+          errorMessage = `${errorJson["error"]} - ${errorJson["error_description"]}`;
         } else {
-          errorMessage = errorJson.error_description || errorJson.error || errorText;
+          errorMessage = errorJson["error_description"] || errorJson["error"] || errorText;
         }
       } catch {
         errorMessage = errorText;
@@ -213,7 +214,7 @@ export async function refreshChatGptTokens(
       accessToken: data.access_token,
       // Use new refresh token if provided, otherwise keep the old one
       refreshToken: data.refresh_token || refreshToken,
-      expiresAt: data.expires_in ? Date.now() + data.expires_in * 1000 : undefined,
+      ...(data.expires_in ? { expiresAt: Date.now() + data.expires_in * 1000 } : {}),
     };
   } catch (error) {
     if (error instanceof Error) {
@@ -254,10 +255,10 @@ export async function exchangeIdTokenForApiKey(idToken: string): Promise<string>
     const errorText = await response.text();
     let errorMessage: string;
     try {
-      const errorJson = JSON.parse(errorText);
+      const errorJson = parseOAuthError(errorText);
       // Handle both string and object error formats
-      const errorDesc = errorJson.error_description;
-      const errorCode = typeof errorJson.error === 'string' ? errorJson.error : JSON.stringify(errorJson.error);
+      const errorDesc = errorJson["error_description"];
+      const errorCode = typeof errorJson["error"] === 'string' ? errorJson["error"] : JSON.stringify(errorJson["error"]);
       errorMessage = errorDesc || errorCode || errorText;
     } catch {
       errorMessage = errorText;

@@ -1,6 +1,6 @@
 {
   "name": "@craft-agent/messaging-whatsapp-worker",
-  "version": "0.12.10",
+  "version": "0.12.11",
   "license": "MIT",
   "description": "WhatsApp worker subprocess for Craft Agent (Baileys-based, unofficial API)",
   "type": "module",
@@ -10,14 +10,14 @@
     "./worker": "./src/worker.ts"
   },
   "scripts": {
-    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit"
+    "typecheck": "node ../../scripts/run-typescript.ts native --noEmit"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "6.7.24",
+    "@whiskeysockets/baileys": "7.0.0-rc14",
     "sharp": "0.35.5"
   },
   "devDependencies": {
     "typescript": "~7.0.2",
-    "@types/node": "^26.2.0"
+    "@types/node": "^26.6.6"
   }
 }

@@ -33,13 +33,15 @@ export const LatexBlock = Node.create({
 
   markdownTokenName: 'code',
 
-  parseMarkdown: (token: any, helpers: any) => {
-    if (!LATEX_LANGUAGES.has((token.lang ?? '').toLowerCase())) return []
+  parseMarkdown: (token, helpers) => {
+    const language: unknown = token["lang"]
+    if (!LATEX_LANGUAGES.has((typeof language === 'string' ? language : '').toLowerCase())) return []
     return helpers.createNode('latexBlock', { code: token.text ?? '' })
   },
 
-  renderMarkdown: (node: any) => {
-    const code = (node.attrs?.code ?? '').replace(/\n$/, '')
+  renderMarkdown: (node) => {
+    const rawCode: unknown = node.attrs?.["code"]
+    const code = (typeof rawCode === 'string' ? rawCode : '').replace(/\n$/, '')
     return `\`\`\`latex\n${code}\n\`\`\``
   },
 
@@ -53,7 +55,7 @@ export const LatexBlock = Node.create({
 
       const handleEditClick = () => {
         selectNode()
-        queueMicrotask(() => (editor as any).emit(RICH_BLOCK_EDIT_EVENT))
+        queueMicrotask(() => editor.emit(RICH_BLOCK_EDIT_EVENT))
       }
 
       return (
@@ -71,7 +73,7 @@ export const LatexBlock = Node.create({
           }}
         >
           <RichBlockShell onEdit={handleEditClick} editTitle="Edit LaTeX">
-            <MarkdownLatexBlock code={(node.attrs.code as string) ?? ''} />
+            <MarkdownLatexBlock code={(node.attrs["code"] as string) ?? ''} />
           </RichBlockShell>
         </NodeViewWrapper>
       )

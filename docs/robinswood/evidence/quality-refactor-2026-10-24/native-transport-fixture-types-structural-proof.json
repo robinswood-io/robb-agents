@@ -1,0 +1,38 @@
+{
+  "status": "passed",
+  "files": [
+    {
+      "file": "apps/electron/src/transport/routed-client.ts",
+      "lines": 260,
+      "sha256": "c40ab1827f623095345fcd10f7218f47c7d3f74508f2b756d0839143ab9f9768",
+      "nativeSourceHash": "ab27b1a6cf1b37bf0226004b2915a0ad059f36e662288120e85872097f90a47c"
+    },
+    {
+      "file": "apps/electron/src/transport/__tests__/routed-client.test.ts",
+      "lines": 268,
+      "sha256": "73908076188f9045df739386eded8635ddd376e3752fc83c8b59b14ca93350bf",
+      "nativeSourceHash": "63ae1a681ba2d6b91bd2e7e30271c63253b813c5a8a48a04268fd925b9c38475"
+    },
+    {
+      "file": "apps/electron/src/main/__tests__/connection-setup-updateOnly.test.ts",
+      "lines": 126,
+      "sha256": "ab1e515f19b918caf7d4002a68f9a8ff14b747da70c6bc4ade7e585a15c37b7f",
+      "nativeSourceHash": "8ab8cfe2b508c70af2a52a762aeb7b164546ca4ca83986495ac82a713f197a11"
+    },
+    {
+      "file": "packages/pi-agent-server/src/antigravity-server.test.ts",
+      "lines": 342,
+      "sha256": "3e09ba633bedadd7ff7d84aae023b2caf1274ab693f820e552e86e0cec42e86c",
+      "nativeSourceHash": "0b0f8a3ab31240928a3e3b5ee46450ec3cd42f30136c0e899a848fa56761864d"
+    }
+  ],
+  "removedExplicitAny": 17,
+  "productionJavaScriptUnchanged": true,
+  "removedUnusedFixtureState": [
+    "Unobserved capability map",
+    "Unobserved exposed fixture fields"
+  ],
+  "remainingTestJavaScriptUnchanged": true,
+  "nativePublicTransportMethodsChecked": true,
+  "newRuntimeLayer": false
+}

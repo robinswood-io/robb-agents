@@ -1,0 +1,14 @@
+{
+  "command": [
+    "rtk",
+    "bun",
+    "test",
+    "packages/shared/tests/models-pi.test.ts",
+    "packages/server-core/src/handlers/rpc/llm-connections.models.test.ts",
+    "packages/pi-agent-server/src/catalog-model-registration.test.ts",
+    "packages/pi-agent-server/src/authenticated-model-runtime.test.ts"
+  ],
+  "exitCode": 0,
+  "seconds": 0.59,
+  "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-model-catalogue-tests-2.log"
+}

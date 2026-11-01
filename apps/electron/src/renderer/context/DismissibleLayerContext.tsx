@@ -41,8 +41,8 @@ export function createDismissibleLayerRegistry(): DismissibleLayerRegistry {
       priority: layer.priority ?? 0,
       isOpen: layer.isOpen ?? true,
       close: layer.close,
-      canBack: layer.canBack,
-      back: layer.back,
+      ...(layer.canBack !== undefined ? { canBack: layer.canBack } : {}),
+      ...(layer.back !== undefined ? { back: layer.back } : {}),
       order,
     })
 

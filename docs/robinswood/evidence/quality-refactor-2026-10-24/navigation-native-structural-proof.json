@@ -1,0 +1,133 @@
+{
+  "status": "passed",
+  "nativeDeclarationBodiesPreserved": true,
+  "reviewedStableDependencyAdditions": {
+    "handleActionNavigation": [
+      "autoDeleteEligibleSessionIdsRef"
+    ],
+    "navigate": [
+      "pendingNavigationRef",
+      "suppressAutoSelectRef"
+    ],
+    "updateCanGoBackForward": [
+      "setCanGoBack",
+      "setCanGoForward"
+    ],
+    "getSemanticHistoryKey": [
+      "rightSidebarRef"
+    ],
+    "syncUrl": [
+      "rightSidebarRef"
+    ],
+    "updateRightSidebar": [
+      "setRightSidebar"
+    ],
+    "toggleRightSidebar": [
+      "rightSidebarRef"
+    ]
+  },
+  "reviewedStableEffectDependencyAdditions": {
+    "bc5a2b6e69666cb0b49632f7c3e1552913328e8c8724afedcf835c2585b34e6d": [
+      "initialRouteRestoredRef",
+      "prevSidebarTypeRef",
+      "suppressPushRef"
+    ],
+    "afa6be90f8351c3133c9efc7d38aea3479a55b5224c27c8dc2c60521f9f64160": [
+      "resolveAutoSelectionRef"
+    ],
+    "1e6248efabe69e84a2b676f5863b876f430170cdbb4dcc03bc474551c5327c49": [
+      "historySeqRef",
+      "isPopstateSwitchRef",
+      "lastSemanticHistoryKeyRef",
+      "suppressPushRef"
+    ],
+    "f5d752c75f3f6125e5d50b390a85dd84866d68c77cd2bdddb274af35356067b8": [
+      "store",
+      "suppressAutoSelectRef"
+    ],
+    "333a17962818f5aa324784dc821e618d47cb2da2031ffce7f52a0e78eb77f8f3": [
+      "historyMaxSeqRef",
+      "historySeqRef",
+      "initialRouteRestoredRef",
+      "isPopstateSwitchRef",
+      "lastSemanticHistoryKeyRef",
+      "nextHistorySeqRef",
+      "reconcileFromUrlParamsRef",
+      "suppressPushRef"
+    ],
+    "33720590b62c4e493c4d6e34fd7f372bc6c8602d8febadab45c7b6a3a91f31db": [
+      "historyMaxSeqRef",
+      "historySeqRef",
+      "initialRouteRestoredRef",
+      "lastSemanticHistoryKeyRef",
+      "reconcileFromUrlParamsRef",
+      "suppressPushRef"
+    ],
+    "9127d253701f9f29fc7b9b60ffe013b3add611fd6c5df43f29cd12b0fcbd2a4b": [
+      "pendingNavigationRef"
+    ],
+    "62ca36712633ae575c3ee1b4a7c933ef3f4a308f938dc9ff66b9513c0d2808b9": [
+      "t"
+    ]
+  },
+  "reviewedEffectDependencyRemovals": {
+    "99ae57059570f067f23f8ca080f9ef8b401bc0977f5220c7ef6f8144fdaf1922": [
+      "reconcileFromUrlParams"
+    ]
+  },
+  "reviewedDependencyRemovals": {},
+  "reviewedUnmemoizedCallback": {
+    "name": "reconcileFromUrlParams",
+    "nativeDependencies": [
+      "store"
+    ]
+  },
+  "nativeMainJSXAndInlineCallbacksPreserved": true,
+  "nativeRootAndActionHooksReinlinedExactly": true,
+  "viewAddsNoStateOrEffects": true,
+  "nativeValuesPassedDirectly": true,
+  "nativeImportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/contexts/NavigationContext.tsx",
+      "lines": 490,
+      "sha256": "01adf40c416423296431274d27bcfc6f2d9c1077909fcabf5930fb80dcad9e5e"
+    },
+    {
+      "file": "apps/electron/src/renderer/contexts/navigation-context-state.ts",
+      "lines": 71,
+      "sha256": "975dcf53ed8fbdad319a3199002a2f474e5559bb9c31dc9247aa99336824eab8"
+    },
+    {
+      "file": "apps/electron/src/renderer/contexts/navigation-provider-content.tsx",
+      "lines": 60,
+      "sha256": "0b1e9c2808f2dbdcb6411d8d03f3fc0cbc81a67874f8e2804dffe4e3e18188bb"
+    },
+    {
+      "file": "apps/electron/src/renderer/contexts/use-navigation-history.ts",
+      "lines": 179,
+      "sha256": "d97e58da191ab368467936f761652926cc872e4a15acded0c9fcff4c94b787b3"
+    },
+    {
+      "file": "apps/electron/src/renderer/contexts/use-navigation-session-selection.ts",
+      "lines": 142,
+      "sha256": "e081d9735362446631d18b4d89c17495d2fd773f9fb5ec7f330bdab8b9f5364c"
+    },
+    {
+      "file": "apps/electron/src/renderer/contexts/use-navigation-auto-selection.ts",
+      "lines": 102,
+      "sha256": "bb2c53693a116d530ae22a6ea3d599c5c5f26fdd19fba17554e4b5a84ad6f1a0"
+    },
+    {
+      "file": "apps/electron/src/renderer/contexts/use-navigation-actions.ts",
+      "lines": 305,
+      "sha256": "b90026ffcfa0f6bc0eeea3b4ce3f5945ab636bb946bc54456d3ceed65de8e858"
+    },
+    {
+      "file": "apps/electron/src/renderer/contexts/use-navigation-synchronization.ts",
+      "lines": 293,
+      "sha256": "1ee630cd991bbb1a0f9060e9a53f866ec70271f973555805bdb39cb970b94edb"
+    }
+  ]
+}

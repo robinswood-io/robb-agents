@@ -54,6 +54,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
     // Sort by priority descending, close the highest priority modal
     modals.sort((a, b) => b.priority - a.priority)
     const topModal = modals[0]
+    if (!topModal) return false
     topModal.close()
     return true
   }, [])
@@ -107,5 +108,7 @@ export function useRegisterModal(isOpen: boolean, onClose: () => void, priority 
       const unregister = registerModal(idRef.current, onClose, priority)
       return unregister
     }
+  
+    return undefined;
   }, [isOpen, onClose, priority, registerModal])
 }

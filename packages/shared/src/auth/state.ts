@@ -13,7 +13,6 @@
 
 import { getCredentialManager } from '../credentials/index.ts';
 import {
-  loadStoredConfig,
   getActiveWorkspace,
   getDefaultLlmConnection,
   getLlmConnection,
@@ -120,8 +119,8 @@ export async function performTokenRefresh(
     // (successful refresh proves compatibility with our OAuth system)
     await manager.setClaudeOAuthCredentials({
       accessToken: refreshed.accessToken,
-      refreshToken: refreshed.refreshToken,
-      expiresAt: refreshed.expiresAt,
+      ...(refreshed.refreshToken !== undefined ? { refreshToken: refreshed.refreshToken } : {}),
+      ...(refreshed.expiresAt !== undefined ? { expiresAt: refreshed.expiresAt } : {}),
       source: 'native',
     });
 
@@ -130,8 +129,8 @@ export async function performTokenRefresh(
     if (connectionSlug) {
       await manager.refreshLlmOAuth(connectionSlug, {
         accessToken: refreshed.accessToken,
-        refreshToken: refreshed.refreshToken,
-        expiresAt: refreshed.expiresAt,
+        ...(refreshed.refreshToken !== undefined ? { refreshToken: refreshed.refreshToken } : {}),
+        ...(refreshed.expiresAt !== undefined ? { expiresAt: refreshed.expiresAt } : {}),
       });
     }
 
@@ -169,8 +168,8 @@ export async function performTokenRefresh(
       // Clear from both legacy and LLM connection locations
       await manager.setClaudeOAuthCredentials({
         accessToken: '',
-        refreshToken: undefined,
-        expiresAt: undefined,
+        
+        
       });
 
       // Also clear from LLM connection (dual-clear for consistency)
@@ -180,7 +179,7 @@ export async function performTokenRefresh(
     }
 
     // Token refresh failed - return null token with optional migration info
-    return { accessToken: null, migrationRequired };
+    return { accessToken: null, ...(migrationRequired !== undefined ? { migrationRequired } : {}) };
   }
 }
 
@@ -221,8 +220,8 @@ export async function getValidClaudeOAuthToken(connectionSlug: string): Promise<
       if (llmCreds?.accessToken) {
         creds = {
           accessToken: llmCreds.accessToken,
-          refreshToken: llmCreds.refreshToken,
-          expiresAt: llmCreds.expiresAt,
+          ...(llmCreds.refreshToken !== undefined ? { refreshToken: llmCreds.refreshToken } : {}),
+          ...(llmCreds.expiresAt !== undefined ? { expiresAt: llmCreds.expiresAt } : {}),
           source: 'native',
         };
       }
@@ -312,7 +311,6 @@ export async function getValidClaudeOAuthToken(connectionSlug: string): Promise<
  * Falls back to legacy global credentials for backwards compatibility.
  */
 export async function getAuthState(): Promise<AuthState> {
-  const config = loadStoredConfig();
   const manager = getCredentialManager();
   const activeWorkspace = getActiveWorkspace();
 
@@ -371,7 +369,7 @@ export async function getAuthState(): Promise<AuthState> {
       hasCredentials,
       apiKey,
       claudeOAuthToken,
-      migrationRequired,
+      ...(migrationRequired !== undefined ? { migrationRequired } : {}),
     },
     workspace: {
       hasWorkspace: !!activeWorkspace,
@@ -395,7 +393,7 @@ export function getSetupNeeds(state: AuthState, setupDeferred?: boolean): SetupN
     needsCredentials,
     // Fully configured if setup is complete OR user chose "Setup later"
     isFullyConfigured: (!needsBillingConfig && !needsCredentials) || !!setupDeferred,
-    needsMigration: state.billing.migrationRequired,
+    ...(state.billing.migrationRequired !== undefined ? { needsMigration: state.billing.migrationRequired } : {}),
   };
 }
 

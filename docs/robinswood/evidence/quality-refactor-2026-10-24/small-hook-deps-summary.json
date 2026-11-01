@@ -1,0 +1,29 @@
+{
+  "status": "tested; final browser missions and local staging pending",
+  "scope": "14 small renderer hooks and components with React dependency warnings",
+  "changes": [
+    "Use stable dependencies for callbacks and effects",
+    "Recompute remote workspace health when the workspace objects change",
+    "Keep the random reset challenge tied to dialog opening",
+    "Depend on workspace icon ID and URL rather than the entire workspace object"
+  ],
+  "checks": {
+    "ownedEslint": "0 errors, 0 warnings",
+    "electronNativeTypes": "passed",
+    "electronCompatTypes": "passed",
+    "focusedTests": "30 passed, 0 failed",
+    "electronBuild": "passed",
+    "globalEslint": "6 max-lines errors, 39 React hook warnings, 0 fatal errors"
+  },
+  "logs": [
+    "small-hook-deps-tests.log",
+    "small-hook-deps-compat.log",
+    "small-hook-deps-build.log",
+    "small-hook-deps-global-lint-report.json"
+  ],
+  "limits": [
+    "Six remaining historical files exceed 500 lines",
+    "Final complete browser missions and installation are pending",
+    "Global suite rerun was denied by PreToolUse; last completed suite at f521166 passed 10759 tests"
+  ]
+}

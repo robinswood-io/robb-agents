@@ -43,7 +43,7 @@ interface SettingsNavigatorProps {
 interface SettingsItem {
   id: SettingsSubpage
   label: string
-  icon: React.ComponentType<{ className?: string }>
+  icon: React.ComponentType<{ className?: string | undefined }>
   description: string
 }
 

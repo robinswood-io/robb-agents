@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../../utils/json.ts';
 /**
  * Host-side tool isolation for Conductor child sessions.
  *
@@ -33,11 +34,11 @@ function collectHttpUrls(value: unknown, depth = 0, seen = new Set<object>()): s
   if (typeof value === 'string') return /^https?:\/\//iu.test(value) ? [value] : [];
   if (!value || typeof value !== 'object' || seen.has(value)) return [];
   seen.add(value);
-  if (Array.isArray(value)) {
-    return value.flatMap(item => collectHttpUrls(item, depth + 1, seen));
+  if (isUnknownArray(value)) {
+    return value.flatMap((item: unknown) => collectHttpUrls(item, depth + 1, seen));
   }
   return Object.values(value as Record<string, unknown>)
-    .flatMap(item => collectHttpUrls(item, depth + 1, seen));
+    .flatMap((item: unknown) => collectHttpUrls(item, depth + 1, seen));
 }
 
 function exactSpecializedConnectorDecision(ctx: TaskToolIsolationInput): GuardDecision | undefined {
@@ -101,8 +102,8 @@ function authorizeReadTarget(ctx: TaskToolIsolationInput): GuardDecision {
   const { toolName, input, isolation, workingDirectory } = ctx;
   const candidate = toolName === 'Read'
     ? requiredString(input, 'file_path')
-    : typeof input.path === 'string' && input.path.trim().length > 0
-      ? input.path
+    : typeof input["path"] === 'string' && input["path"].trim().length > 0
+      ? input["path"]
       : workingDirectory ?? isolation.policy.workspaceRoot;
 
   if (!candidate) {

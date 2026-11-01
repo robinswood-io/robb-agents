@@ -1,0 +1,18 @@
+{
+  "status": "passed",
+  "nativeMethodBodies": 142,
+  "publicMethodsPreserved": 62,
+  "privateLeafFacadesRemoved": 31,
+  "privateMethodsWithDefaultsPreserved": 0,
+  "nativeModuleBindings": 3,
+  "restoredPrivateCallExpressions": 91,
+  "nativeFieldsConstructorsAndSharedState": true,
+  "nativeCounterColocatedWithSingleWriter": true,
+  "keyboardRuntimeUnchanged": true,
+  "explicitAnyRemoved": 2,
+  "nativeSignaturesAndSingleDefaultEvaluation": true,
+  "nativePublicExports": true,
+  "protocolAliasesExpandedToNativeShapes": 16,
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 430
+}

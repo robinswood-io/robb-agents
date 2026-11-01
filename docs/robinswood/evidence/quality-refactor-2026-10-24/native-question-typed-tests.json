@@ -1,0 +1,63 @@
+{
+  "status": "tests ciblés réussis ; candidat isolé non installé",
+  "changes": [
+    "62 any supprimés des tests de clôture par questions natives",
+    "45 scénarios conservés ; contrats et parcours runtime séparés en fichiers de 222 et 196 lignes",
+    "Fixtures typées corrigées : workspace slug, événement autonomie et livraison agent conformes aux contrats",
+    "Agent de test hors réseau dérivé de BaseAgent ; accusé de prise en charge et barrière de persistance réels",
+    "Aucune assertion assouplie : clôture vérifiée, arrêt, reprise, blocages, provenance et modifications de critères contrôlés"
+  ],
+  "checks": {
+    "native-question-typed-tests-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/server-core/src/sessions/native-question-completion.test.ts",
+        "packages/server-core/src/sessions/native-question-completion.runtime.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.76,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-question-typed-tests-2.log"
+    },
+    "native-question-typed-types-2": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 2.55,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-question-typed-types-2.log"
+    },
+    "native-question-typed-lint-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/server-core/src/sessions/native-question-completion.test.ts",
+        "packages/server-core/src/sessions/native-question-completion.runtime.test.ts",
+        "packages/server-core/src/sessions/testing/native-question-fixtures.ts",
+        "packages/server-core/src/sessions/testing/scripted-session-agent.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.57,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-question-typed-lint-2.log"
+    }
+  },
+  "remaining": {
+    "max-lines": 219,
+    "no-explicit-any": 1011
+  },
+  "limits": [
+    "Suite globale à relancer après les prochains lots de tests",
+    "Aucun parcours au modèle réel ni installation dans ce lot"
+  ]
+}

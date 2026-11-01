@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["openpyxl>=3.1,<4", "click>=8.3,<9"]
+# dependencies = ["openpyxl==3.1.5", "click==8.5.0"]
 # ///
 """Excel (.xlsx) operations tool.
 
@@ -14,15 +14,72 @@ import csv
 import io
 import json
 import sys
+from collections.abc import Iterator
+from datetime import date, datetime, time
 from pathlib import Path
+from typing import Protocol, cast
 
 import click
 from openpyxl import Workbook, load_workbook
+from openpyxl.utils.exceptions import InvalidFileException
+
+_XLSX_OPERATION_ERRORS = (OSError, ValueError, TypeError, RuntimeError, KeyError, IndexError, AttributeError, InvalidFileException)
+
+
+class _CellLike(Protocol):
+    @property
+    def value(self) -> object: ...
+
+
+class _WorksheetLike(Protocol):
+    title: str
+    dimensions: str
+    min_row: int
+    max_row: int
+    min_column: int
+    max_column: int
+
+    def calculate_dimension(self) -> str: ...
+
+    def iter_rows(self) -> Iterator[tuple[_CellLike, ...]]: ...
+
+    def __getitem__(self, key: str) -> tuple[tuple[_CellLike, ...], ...]: ...
+
+    def append(self, values: list[object]) -> None: ...
+
+    def __setitem__(self, key: str, value: object) -> None: ...
+
+
+class _WorkbookLike(Protocol):
+    @property
+    def sheetnames(self) -> list[str]: ...
+
+    @property
+    def active(self) -> _WorksheetLike | None: ...
+
+    def close(self) -> None: ...
+
+    def save(self, filename: str) -> None: ...
+
+    def create_sheet(self, title: str, index: int | None = None) -> _WorksheetLike: ...
+
+    def __delitem__(self, key: str) -> None: ...
+
+    def __getitem__(self, key: str) -> _WorksheetLike: ...
+
+
+def _as_workbook(value: object) -> _WorkbookLike:
+    """Adapt an openpyxl workbook after checking its runtime entry points."""
+    if not all(callable(getattr(value, name, None)) for name in ("close", "save", "create_sheet")):
+        raise TypeError("Workbook does not implement the openpyxl interface")
+    if not isinstance(getattr(value, "sheetnames", None), list):
+        raise TypeError("Workbook does not expose sheet names")
+    return cast(_WorkbookLike, value)
 
 
 def _json_serial(obj: object) -> str:
-    """JSON serializer that uses ISO 8601 for dates/datetimes."""
-    if hasattr(obj, "isoformat"):
+    """JSON serializer that uses ISO 8601 for Excel date and time values."""
+    if isinstance(obj, (date, datetime, time)):
         return obj.isoformat()
     return str(obj)
 
@@ -30,7 +87,7 @@ def _json_serial(obj: object) -> str:
 def write_output(text: str, output_path: str | None) -> None:
     """Write text to file or stdout."""
     if output_path:
-        Path(output_path).write_text(text, encoding="utf-8")
+        _ = Path(output_path).write_text(text, encoding="utf-8")
         click.echo(f"Output written to {output_path}", err=True)
     else:
         click.echo(text)
@@ -39,10 +96,9 @@ def write_output(text: str, output_path: str | None) -> None:
 @click.group()
 def cli() -> None:
     """Excel (.xlsx) operations tool."""
-    pass
 
 
-def _read_sheet_data(ws, cell_range: str | None = None) -> list[list[object]]:
+def _read_sheet_data(ws: _WorksheetLike, cell_range: str | None = None) -> list[list[object]]:
     """Read data from a worksheet, returning list of rows."""
     if cell_range:
         rows = list(ws[cell_range])
@@ -56,7 +112,7 @@ def _build_records(data: list[list[object]]) -> list[dict[str, object]]:
     if not data or len(data) <= 1:
         return []
     headers = [str(h) if h is not None else f"col_{i}" for i, h in enumerate(data[0])]
-    records = []
+    records: list[dict[str, object]] = []
     for row_data in data[1:]:
         record: dict[str, object] = {}
         for i, val in enumerate(row_data):
@@ -79,7 +135,7 @@ def _format_data(data: list[list[object]], fmt: str) -> str:
     if fmt == "json":
         if len(data) > 1:
             headers = [str(h) if h is not None else f"col_{i}" for i, h in enumerate(data[0])]
-            records = []
+            records: list[dict[str, object]] = []
             for row_data in data[1:]:
                 record: dict[str, object] = {}
                 for i, val in enumerate(row_data):
@@ -106,7 +162,7 @@ def _format_data(data: list[list[object]], fmt: str) -> str:
                 for i, val in enumerate(row):
                     col_widths[i] = max(col_widths[i], len(val))
             for row in str_data:
-                parts = []
+                parts: list[str] = []
                 for i, val in enumerate(row):
                     width = col_widths[i] if i < len(col_widths) else 0
                     parts.append(val.ljust(width))
@@ -124,7 +180,7 @@ def _format_data(data: list[list[object]], fmt: str) -> str:
 def read(file: str, sheet: str | None, all_sheets: bool, cell_range: str | None, fmt: str, output: str | None) -> None:
     """Read cells, ranges, or entire sheets from an Excel file."""
     try:
-        wb = load_workbook(file, read_only=True, data_only=True)
+        wb = _as_workbook(load_workbook(file, read_only=True, data_only=True))
 
         if all_sheets and sheet:
             wb.close()
@@ -174,7 +230,7 @@ def read(file: str, sheet: str | None, all_sheets: bool, cell_range: str | None,
 
         wb.close()
         write_output(result, output)
-    except Exception as e:
+    except _XLSX_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -193,13 +249,13 @@ def write(file: str, sheet: str | None, cell: str, value: str, val_type: str) ->
     try:
         file_path = Path(file)
         if file_path.exists():
-            wb = load_workbook(file)
+            wb = _as_workbook(load_workbook(file))
         else:
-            wb = Workbook()
+            wb = _as_workbook(Workbook())
 
         if sheet:
             if sheet not in wb.sheetnames:
-                wb.create_sheet(sheet)
+                _ = wb.create_sheet(sheet)
             ws = wb[sheet]
         else:
             ws = wb.active
@@ -229,7 +285,7 @@ def write(file: str, sheet: str | None, cell: str, value: str, val_type: str) ->
         wb.save(file)
         wb.close()
         click.echo(f"Wrote '{converted}' to {cell.upper()} in {file_path.name}", err=True)
-    except Exception as e:
+    except _XLSX_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -240,14 +296,14 @@ def write(file: str, sheet: str | None, cell: str, value: str, val_type: str) ->
 def info(file: str, output: str | None) -> None:
     """Show workbook information: sheets, dimensions, cell counts."""
     try:
-        wb = load_workbook(file, read_only=True, data_only=True)
+        wb = _as_workbook(load_workbook(file, read_only=True, data_only=True))
 
-        sheets_info = []
+        sheets_info: list[dict[str, object]] = []
         for name in wb.sheetnames:
             ws = wb[name]
             try:
                 dimensions = ws.dimensions
-            except Exception:
+            except _XLSX_OPERATION_ERRORS:
                 # ReadOnlyWorksheet may not expose .dimensions in some openpyxl versions.
                 dimensions = ws.calculate_dimension() if hasattr(ws, "calculate_dimension") else None
 
@@ -269,7 +325,7 @@ def info(file: str, output: str | None) -> None:
 
         wb.close()
         write_output(json.dumps(info_dict, indent=2, default=_json_serial), output)
-    except Exception as e:
+    except _XLSX_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -286,9 +342,9 @@ def add_sheet(file: str, name: str, position: int | None) -> None:
     try:
         file_path = Path(file)
         if file_path.exists():
-            wb = load_workbook(file)
+            wb = _as_workbook(load_workbook(file))
         else:
-            wb = Workbook()
+            wb = _as_workbook(Workbook())
             # Remove default sheet if creating new file
             if "Sheet" in wb.sheetnames:
                 del wb["Sheet"]
@@ -299,14 +355,14 @@ def add_sheet(file: str, name: str, position: int | None) -> None:
             sys.exit(1)
 
         if position is not None:
-            wb.create_sheet(name, position)
+            _ = wb.create_sheet(name, position)
         else:
-            wb.create_sheet(name)
+            _ = wb.create_sheet(name)
 
         wb.save(file)
         wb.close()
         click.echo(f"Added sheet '{name}' to {file_path.name}", err=True)
-    except Exception as e:
+    except _XLSX_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -320,7 +376,7 @@ def add_sheet(file: str, name: str, position: int | None) -> None:
 def export(file: str, sheet: str | None, all_sheets: bool, fmt: str, output: str | None) -> None:
     """Export a sheet as CSV or JSON."""
     try:
-        wb = load_workbook(file, read_only=True, data_only=True)
+        wb = _as_workbook(load_workbook(file, read_only=True, data_only=True))
 
         if all_sheets and sheet:
             wb.close()
@@ -366,7 +422,7 @@ def export(file: str, sheet: str | None, all_sheets: bool, fmt: str, output: str
 
         wb.close()
         write_output(result, output)
-    except Exception as e:
+    except _XLSX_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 

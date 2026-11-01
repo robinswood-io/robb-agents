@@ -1,0 +1,204 @@
+{
+  "source": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+  "sourceHash": "034fe671eada64a78dd1fc44844c356ee333af6fd989cef8e8ca169cc8d792c9",
+  "files": [
+    {
+      "file": "packages/server-core/src/missions/testing/SessionMissionExecutor-fixture.ts",
+      "lines": 312
+    },
+    {
+      "file": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+      "lines": 438
+    },
+    {
+      "file": "packages/server-core/src/missions/SessionMissionExecutor-executes-a-review-when-its-exact-literal-ssh-read-is-admitted-in.test.ts",
+      "lines": 149
+    }
+  ],
+  "groups": [
+    {
+      "file": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+      "suite": 0,
+      "indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/missions/SessionMissionExecutor-executes-a-review-when-its-exact-literal-ssh-read-is-admitted-in.test.ts",
+      "suite": 0,
+      "indices": [
+        13,
+        14,
+        15,
+        16
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    }
+  ],
+  "statements": [
+    {
+      "suite": 0,
+      "index": 0,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+      "hash": "799ba756b246c3fa2eced1e264e2007d9715ca5ef16f4a86aaa1ad44f9436898"
+    },
+    {
+      "suite": 0,
+      "index": 1,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+      "hash": "e8760b70f05897af88feec765867569c1ba154916c4180e1ac52c27d540a2389"
+    },
+    {
+      "suite": 0,
+      "index": 2,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+      "hash": "dde7a32a4dc51f0b2eff29f8a2d859b2fc82a819f982568564661342f65c328a"
+    },
+    {
+      "suite": 0,
+      "index": 3,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+      "hash": "244cb3ffcc35fddf0a50b0fb2ef4195eede5a4865a23775242e66e6377ee7b60"
+    },
+    {
+      "suite": 0,
+      "index": 4,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+      "hash": "d9ca587f4519bac8b621661bbcef32e60cd1e770630caa2932bcc1302f440ac1"
+    },
+    {
+      "suite": 0,
+      "index": 5,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+      "hash": "964d03f0635bc5b112213beee725fc1f0f2b6eb9a16abb5b96664e739864b3af"
+    },
+    {
+      "suite": 0,
+      "index": 6,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+      "hash": "ae762d28547d5883ae399f658ffa9960898d89216243ee732616e8ee38d1e969"
+    },
+    {
+      "suite": 0,
+      "index": 7,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+      "hash": "ae7f999d8cb90e8104afc1e6086d07bfdb21e4a69a55ae70507cad7c4aa22074"
+    },
+    {
+      "suite": 0,
+      "index": 8,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+      "hash": "183bcb02432e12fe68edc4b3e308852e3ec01443f1e4893d3947d262487ab2e6"
+    },
+    {
+      "suite": 0,
+      "index": 9,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+      "hash": "0ed5175834c8f6d585790b1d88f42daecd46c018b72bc1eece338722f7ccc94a"
+    },
+    {
+      "suite": 0,
+      "index": 10,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+      "hash": "bcc2eaae8d67962b8a1c9992e07f18c9082d8214a6352b030b70ca20a9c2039c"
+    },
+    {
+      "suite": 0,
+      "index": 11,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+      "hash": "5831d47e0af2a95e8481bb53bd9f18c672e71598b42fea558fbe96eb1ef92719"
+    },
+    {
+      "suite": 0,
+      "index": 12,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor.test.ts",
+      "hash": "da0e4d0e94f8a32f7a0f6dd805c94dea7995986c32f43e2cb99b2ce346b3c14c"
+    },
+    {
+      "suite": 0,
+      "index": 13,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor-executes-a-review-when-its-exact-literal-ssh-read-is-admitted-in.test.ts",
+      "hash": "92378a1753a14439d949904629164aa6c4087326eb3cef7de61b234e22e23e7a"
+    },
+    {
+      "suite": 0,
+      "index": 14,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor-executes-a-review-when-its-exact-literal-ssh-read-is-admitted-in.test.ts",
+      "hash": "7a8f7985833849b49ed1a82c915611bbcdb1367fe0af7431d5d04c30d686d160"
+    },
+    {
+      "suite": 0,
+      "index": 15,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor-executes-a-review-when-its-exact-literal-ssh-read-is-admitted-in.test.ts",
+      "hash": "01d08024affc88e33a25132dbf1983be55461ff72321bd2163d5b19bea2f356a"
+    },
+    {
+      "suite": 0,
+      "index": 16,
+      "destination": "packages/server-core/src/missions/SessionMissionExecutor-executes-a-review-when-its-exact-literal-ssh-read-is-admitted-in.test.ts",
+      "hash": "9a0d232d6e756808db267d68bf2564a2af2a1fa9ac24873c907554757e1b0f1c"
+    }
+  ],
+  "setups": [
+    {
+      "suite": 0,
+      "label": "'SessionMissionExecutor'",
+      "hashes": []
+    }
+  ],
+  "sharedDeclarations": [
+    {
+      "name": "fixture",
+      "hash": "2ef523bd2e753e4c705f749b3576ce13d7d7ff35003fac7beca41e435ae6ab6e"
+    },
+    {
+      "name": "input",
+      "hash": "e11f44133480da78658bc61b155aa7f2e7b1ec4c39c8ecafb5246c4f31a1c59e"
+    },
+    {
+      "name": "reviewInput",
+      "hash": "41bce2772e90abd0ab8a654ff07b433e315347252169fb83d15bc259cf7cc62b"
+    },
+    {
+      "name": "specializedInput",
+      "hash": "73bb8f79f9f34abe077bbda205c2df08a41a465065531775ad13c8485f2e9cd9"
+    },
+    {
+      "name": "ordinaryRouteInput",
+      "hash": "d7d59fd382d75ba0a5e12eb226178576d89c9cecdad10e7819eab248b3ad1ba4"
+    },
+    {
+      "name": "VALID_OUTPUT",
+      "hash": "cb05fea82988c845615de7564e50b7d05ff4b81a6cb9e0b8f40fe3816374edd4"
+    },
+    {
+      "name": "VALID_REVIEW_OUTPUT",
+      "hash": "c3e27dd57b3a03f63f8f45265d94f62fe864515aa5936852497e5fac5dd7c268"
+    },
+    {
+      "name": "addOriginAcceptanceContract",
+      "hash": "fae3c36c941b7664320815190efd1ae5347d072426aa8c16d42d8dbf87082c29"
+    },
+    {
+      "name": "FakeHost",
+      "hash": "9bc8a37544f5ff223b335b96eb98e860c2c84f57d2f72b6ade496521a1282e46"
+    }
+  ],
+  "statementCount": 17,
+  "sharedFixture": "packages/server-core/src/missions/testing/SessionMissionExecutor-fixture.ts"
+}

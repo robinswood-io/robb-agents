@@ -118,6 +118,7 @@ export function getSessionPreviewText(session: SessionLike | SessionMeta, maxLen
 export function getLastFinalAssistantMessageId(session: Session): string | undefined {
   for (let i = session.messages.length - 1; i >= 0; i--) {
     const msg = session.messages[i]
+    if (!msg) continue
     // Include plan messages as final responses (they're AI-generated content)
     if ((msg.role === 'assistant' || msg.role === 'plan') && !msg.isIntermediate) {
       return msg.id
@@ -162,7 +163,8 @@ export function countUnreadMessages(session: Session): number {
   // Count final messages after the last read index
   let count = 0
   for (let i = lastReadIndex + 1; i < session.messages.length; i++) {
-    if (isFinalResponse(session.messages[i])) {
+    const message = session.messages[i]
+    if (message && isFinalResponse(message)) {
       count++
     }
   }

@@ -1,0 +1,92 @@
+{
+  "status": "testé dans le candidat local isolé ; non installé",
+  "changes": [
+    "87 any retirés de dix suites Pi ; accès aux membres internes vérifiés par les vraies signatures",
+    "Configuration de test commune complète pour erreurs/RPC ; champs workspace manquants complétés dans les fixtures spécialisées",
+    "Pools MCP de test construits avec la vraie classe vide, seules les méthodes requises sont remplacées ; aucun connecteur réel démarré",
+    "Prérequis conservés dans leur vrai objet ; champs natifs provider/promptType complétés",
+    "Écritures de transport simulées renvoyant un booléen conforme au contrat ; résultats d’erreur testés sans accès non typé"
+  ],
+  "checks": {
+    "pi-error-query-typed-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/shared/src/agent/__tests__/pi-agent-error-handling.test.ts",
+        "packages/shared/src/agent/__tests__/pi-query-llm.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.31,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-error-query-typed-tests.log"
+    },
+    "pi-backend-typed-tests-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/shared/src/agent/__tests__/pi-",
+        "packages/shared/src/agent/__tests__/pi-compaction.test.ts",
+        "packages/shared/src/agent/__tests__/pi-browser-tool-watchdog.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.95,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-backend-typed-tests-2.log"
+    },
+    "pi-fixtures-all-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 20.28,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-fixtures-all-types.log"
+    },
+    "pi-fixtures-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/shared/src/agent/__tests__/pi-agent-error-handling.test.ts",
+        "packages/shared/src/agent/__tests__/pi-query-llm.test.ts",
+        "packages/shared/src/agent/__tests__/pi-agent-bedrock-env.test.ts",
+        "packages/shared/src/agent/__tests__/pi-agent-branching-capability.test.ts",
+        "packages/shared/src/agent/__tests__/pi-agent-pretool-labels.test.ts",
+        "packages/shared/src/agent/__tests__/pi-agent-stderr-buffer.test.ts",
+        "packages/shared/src/agent/__tests__/pi-agent-sensitive-external-action.test.ts",
+        "packages/shared/src/agent/__tests__/pi-browser-tool-watchdog.test.ts",
+        "packages/shared/src/agent/__tests__/pi-compaction.test.ts",
+        "packages/shared/src/agent/__tests__/pi-agent-gmail-host-lifecycle.test.ts",
+        "packages/shared/src/agent/__tests__/fixtures/pi-agent-config.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.5,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-fixtures-lint.log"
+    },
+    "pi-fixtures-all-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 148.84,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-fixtures-all-tests.log"
+    }
+  },
+  "remaining": {
+    "max-lines": 217,
+    "no-explicit-any": 775
+  },
+  "limits": [
+    "775 any explicites et 217 fichiers trop longs restent à traiter",
+    "Lint global encore non conforme",
+    "Aucune installation et aucun parcours au modèle réel dans ce lot"
+  ]
+}

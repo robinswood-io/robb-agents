@@ -8,15 +8,22 @@ Run manually:
 from __future__ import annotations
 
 import base64
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from typing import ClassVar, override
 
-from ._tool_test_harness import REPO_ROOT, build_env, run_tool
+from ._tool_test_harness import build_env, run_tool
 
 
 class PdfToolSmokeTests(unittest.TestCase):
+    env: ClassVar[dict[str, str]]
+    tmpdir_obj: ClassVar[tempfile.TemporaryDirectory[str]]
+    tmpdir: ClassVar[Path]
+    input_pdf: ClassVar[Path]
     @classmethod
+    @override
     def setUpClass(cls) -> None:
         cls.env = build_env()
 
@@ -30,7 +37,7 @@ class PdfToolSmokeTests(unittest.TestCase):
         image_paths: list[Path] = []
         for i in range(3):
             tiny_img = cls.tmpdir / f"tiny_img_{i + 1}.png"
-            tiny_img.write_bytes(png_bytes)
+            _ = tiny_img.write_bytes(png_bytes)
             img_path = cls.tmpdir / f"img_{i + 1}.png"
             resized = run_tool(
                 "img-tool",
@@ -61,10 +68,11 @@ class PdfToolSmokeTests(unittest.TestCase):
             raise RuntimeError(f"Failed to create fixture PDF: {result.stderr}")
 
     @classmethod
+    @override
     def tearDownClass(cls) -> None:
         cls.tmpdir_obj.cleanup()
 
-    def run_tool(self, *args: str):
+    def run_tool(self, *args: str) -> subprocess.CompletedProcess[str]:
         return run_tool("pdf-tool", *args, env=self.env)
 
     def test_delivered_pdf_renders_all_pages_to_nonempty_images(self) -> None:
@@ -139,4 +147,4 @@ class PdfToolSmokeTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    _ = unittest.main()

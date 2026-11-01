@@ -137,7 +137,8 @@ export function useActionRegistry() {
 
 function matchesHotkey(e: KeyboardEvent, hotkey: string): boolean {
   const parts = hotkey.toLowerCase().split('+')
-  const key = parts[parts.length - 1]
+  const key = parts.at(-1)
+  if (!key) return false
   const needsMod = parts.includes('mod')
   const needsShift = parts.includes('shift')
   const needsAlt = parts.includes('alt')

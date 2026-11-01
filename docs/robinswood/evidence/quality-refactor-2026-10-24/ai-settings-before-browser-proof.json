@@ -1,0 +1,90 @@
+{
+  "status": "passed",
+  "cases": [
+    {
+      "name": "native connections and workspace load",
+      "status": "passed"
+    },
+    {
+      "name": "native thinking selection saves its new value",
+      "status": "passed"
+    },
+    {
+      "name": "native performance toggles reach their settings callbacks",
+      "status": "passed"
+    },
+    {
+      "name": "native connection validation completes",
+      "status": "passed"
+    },
+    {
+      "name": "native rename closes dropdown, saves, and closes dialog",
+      "status": "passed"
+    },
+    {
+      "name": "native set-default action refreshes connection state",
+      "status": "passed"
+    },
+    {
+      "name": "native workspace override can expand and show selectors",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "calls": [
+    {
+      "method": "thinking",
+      "args": [
+        "high"
+      ]
+    },
+    {
+      "method": "context",
+      "args": [
+        true
+      ]
+    },
+    {
+      "method": "cache",
+      "args": [
+        true
+      ]
+    },
+    {
+      "method": "rtk",
+      "args": [
+        true
+      ]
+    },
+    {
+      "method": "validate",
+      "args": [
+        "qa-beta"
+      ]
+    },
+    {
+      "method": "save",
+      "args": [
+        {
+          "slug": "qa-beta",
+          "name": "QA Beta renamed",
+          "providerType": "anthropic",
+          "authType": "api_key",
+          "isDefault": false,
+          "isAuthenticated": true,
+          "defaultModel": "claude-sonnet-4-6",
+          "createdAt": 2
+        }
+      ]
+    },
+    {
+      "method": "default",
+      "args": [
+        "qa-beta"
+      ]
+    }
+  ],
+  "browser": "145.0.7632.6",
+  "scope": "native AI settings; mocked IPC and QA-only connection records"
+}

@@ -21,7 +21,7 @@ export interface SessionOptions {
   /** Permission mode ('safe', 'ask', 'allow-all') */
   permissionMode: PermissionMode
   /** Monotonic version from backend permission mode state (used to ignore stale events) */
-  permissionModeVersion?: number
+  permissionModeVersion?: number | undefined
   /** Session-level thinking level — sticky, persisted. See {@link ThinkingLevel}. */
   thinkingLevel: ThinkingLevel
 }

@@ -25,11 +25,9 @@ class MemoryCredentialBackend implements CredentialBackend {
 function managerWithMemoryBackend(): CredentialManager {
   const manager = new CredentialManager();
   const backend = new MemoryCredentialBackend();
-  Object.assign(manager as unknown as Record<string, unknown>, {
-    initialized: true,
-    backends: [backend],
-    writeBackend: backend,
-  });
+  manager['initialized'] = true;
+  manager['backends'] = [backend];
+  manager['writeBackend'] = backend;
   return manager;
 }
 

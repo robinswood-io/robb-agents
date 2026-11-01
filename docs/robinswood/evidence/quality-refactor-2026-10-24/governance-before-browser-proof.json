@@ -1,0 +1,297 @@
+{
+  "status": "passed",
+  "cases": [
+    "native governance sections and revision load",
+    "member addition preserves expected revision and identity",
+    "memory toggle persists next revision",
+    "emergency control rejects empty justification without IPC",
+    "emergency toggle sends reason and generation and can recover",
+    "remote consent includes selected fields purpose and valid expiry",
+    "remote revocation returns local-only display"
+  ],
+  "errors": [],
+  "rawCalls": [
+    {
+      "method": "save",
+      "args": [
+        "qa-workspace",
+        {
+          "expectedRevision": 8,
+          "actorId": "qa-owner",
+          "profile": {
+            "schemaVersion": 1,
+            "space": {
+              "schemaVersion": 1,
+              "id": "qa-workspace",
+              "kind": "personal",
+              "name": "QA Workspace",
+              "members": [
+                {
+                  "actorId": "qa-owner",
+                  "role": "owner",
+                  "assignedBy": "qa-owner",
+                  "assignedAt": "2026-10-24T12:00:00.000Z"
+                },
+                {
+                  "actorId": "qa-member",
+                  "role": "reader",
+                  "assignedBy": "qa-owner",
+                  "assignedAt": "2026-10-26T14:24:20.370Z"
+                }
+              ],
+              "memory": {
+                "enabled": true,
+                "retentionDays": 90
+              },
+              "createdBy": "qa-owner",
+              "createdAt": "2026-10-24T12:00:00.000Z"
+            },
+            "budgets": {
+              "warningPercent": 80
+            },
+            "audit": []
+          }
+        }
+      ]
+    },
+    {
+      "method": "save",
+      "args": [
+        "qa-workspace",
+        {
+          "expectedRevision": 9,
+          "actorId": "qa-owner",
+          "profile": {
+            "schemaVersion": 1,
+            "space": {
+              "schemaVersion": 1,
+              "id": "qa-workspace",
+              "kind": "personal",
+              "name": "QA Workspace",
+              "members": [
+                {
+                  "actorId": "qa-owner",
+                  "role": "owner",
+                  "assignedBy": "qa-owner",
+                  "assignedAt": "2026-10-24T12:00:00.000Z"
+                },
+                {
+                  "actorId": "qa-member",
+                  "role": "reader",
+                  "assignedBy": "qa-owner",
+                  "assignedAt": "2026-10-26T14:24:20.370Z"
+                }
+              ],
+              "memory": {
+                "enabled": false,
+                "retentionDays": 90
+              },
+              "createdBy": "qa-owner",
+              "createdAt": "2026-10-24T12:00:00.000Z"
+            },
+            "budgets": {
+              "warningPercent": 80
+            },
+            "audit": []
+          }
+        }
+      ]
+    },
+    {
+      "method": "kill",
+      "args": [
+        "qa-workspace",
+        {
+          "scope": "global",
+          "active": true,
+          "reason": "QA isolated test",
+          "expectedGeneration": 4
+        }
+      ]
+    },
+    {
+      "method": "kill",
+      "args": [
+        "qa-workspace",
+        {
+          "scope": "global",
+          "active": false,
+          "reason": "QA isolated test",
+          "expectedGeneration": 5
+        }
+      ]
+    },
+    {
+      "method": "grant",
+      "args": [
+        "qa-workspace",
+        {
+          "fields": [
+            "task.status",
+            "task.progress",
+            "task.blockers",
+            "task.approvals"
+          ],
+          "actions": [
+            "task.pause",
+            "task.cancel",
+            "approval.resolve"
+          ],
+          "purpose": "QA metadata only",
+          "expiresAt": "2026-10-27T14:24:20.746Z"
+        }
+      ]
+    },
+    {
+      "method": "revoke",
+      "args": [
+        "qa-workspace",
+        {
+          "reason": "Revoked from governance settings"
+        }
+      ]
+    }
+  ],
+  "calls": [
+    {
+      "method": "save",
+      "args": [
+        "qa-workspace",
+        {
+          "expectedRevision": 8,
+          "actorId": "qa-owner",
+          "profile": {
+            "schemaVersion": 1,
+            "space": {
+              "schemaVersion": 1,
+              "id": "qa-workspace",
+              "kind": "personal",
+              "name": "QA Workspace",
+              "members": [
+                {
+                  "actorId": "qa-owner",
+                  "role": "owner",
+                  "assignedBy": "qa-owner",
+                  "assignedAt": "<generated timestamp>"
+                },
+                {
+                  "actorId": "qa-member",
+                  "role": "reader",
+                  "assignedBy": "qa-owner",
+                  "assignedAt": "<generated timestamp>"
+                }
+              ],
+              "memory": {
+                "enabled": true,
+                "retentionDays": 90
+              },
+              "createdBy": "qa-owner",
+              "createdAt": "2026-10-24T12:00:00.000Z"
+            },
+            "budgets": {
+              "warningPercent": 80
+            },
+            "audit": []
+          }
+        }
+      ]
+    },
+    {
+      "method": "save",
+      "args": [
+        "qa-workspace",
+        {
+          "expectedRevision": 9,
+          "actorId": "qa-owner",
+          "profile": {
+            "schemaVersion": 1,
+            "space": {
+              "schemaVersion": 1,
+              "id": "qa-workspace",
+              "kind": "personal",
+              "name": "QA Workspace",
+              "members": [
+                {
+                  "actorId": "qa-owner",
+                  "role": "owner",
+                  "assignedBy": "qa-owner",
+                  "assignedAt": "<generated timestamp>"
+                },
+                {
+                  "actorId": "qa-member",
+                  "role": "reader",
+                  "assignedBy": "qa-owner",
+                  "assignedAt": "<generated timestamp>"
+                }
+              ],
+              "memory": {
+                "enabled": false,
+                "retentionDays": 90
+              },
+              "createdBy": "qa-owner",
+              "createdAt": "2026-10-24T12:00:00.000Z"
+            },
+            "budgets": {
+              "warningPercent": 80
+            },
+            "audit": []
+          }
+        }
+      ]
+    },
+    {
+      "method": "kill",
+      "args": [
+        "qa-workspace",
+        {
+          "scope": "global",
+          "active": true,
+          "reason": "QA isolated test",
+          "expectedGeneration": 4
+        }
+      ]
+    },
+    {
+      "method": "kill",
+      "args": [
+        "qa-workspace",
+        {
+          "scope": "global",
+          "active": false,
+          "reason": "QA isolated test",
+          "expectedGeneration": 5
+        }
+      ]
+    },
+    {
+      "method": "grant",
+      "args": [
+        "qa-workspace",
+        {
+          "fields": [
+            "task.status",
+            "task.progress",
+            "task.blockers",
+            "task.approvals"
+          ],
+          "actions": [
+            "task.pause",
+            "task.cancel",
+            "approval.resolve"
+          ],
+          "purpose": "QA metadata only",
+          "expiresAt": "<generated timestamp>"
+        }
+      ]
+    },
+    {
+      "method": "revoke",
+      "args": [
+        "qa-workspace",
+        {
+          "reason": "Revoked from governance settings"
+        }
+      ]
+    }
+  ]
+}

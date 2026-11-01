@@ -6,7 +6,7 @@ import { evaluateHumanBenchmark } from '../packages/server-core/src/sessions/hum
 export function evaluateHumanBenchmarkFile(input: string, publicKeyPath?: string) {
   const root = realpathSync(dirname(resolve(input)));
   return evaluateHumanBenchmark(JSON.parse(readFileSync(input, 'utf8')), {
-    reviewerPublicKey: publicKeyPath ? readFileSync(publicKeyPath, 'utf8') : undefined,
+    ...(publicKeyPath ? { reviewerPublicKey: readFileSync(publicKeyPath, 'utf8') } : {}),
     verifyArtifact: artifact => {
       try {
         const path = realpathSync(resolve(root, artifact.path));

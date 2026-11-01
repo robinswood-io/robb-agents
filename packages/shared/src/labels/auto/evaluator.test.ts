@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { evaluateAutoLabels, collectAutoLabelRules } from './evaluator.ts'
+import { evaluateAutoLabels } from './evaluator.ts'
 import type { LabelConfig } from '../types.ts'
 
 const testLabels: LabelConfig[] = [

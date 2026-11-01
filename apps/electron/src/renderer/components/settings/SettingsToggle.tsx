@@ -14,17 +14,17 @@ export interface SettingsToggleProps {
   /** Toggle label (string or JSX for custom rendering) */
   label: React.ReactNode
   /** Optional description below label */
-  description?: string
+  description?: string | undefined
   /** Current checked state */
   checked: boolean
   /** Change handler */
   onCheckedChange: (checked: boolean) => void
   /** Disabled state */
-  disabled?: boolean
+  disabled?: boolean | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
   /** Whether the toggle is inside a card (affects padding) */
-  inCard?: boolean
+  inCard?: boolean | undefined
 }
 
 /**

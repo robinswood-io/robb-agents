@@ -1,0 +1,17 @@
+{
+  "format": 1,
+  "arrays": {
+    "allowedBashPatterns": [
+      "allowedBashPatterns/001.json",
+      "allowedBashPatterns/002.json"
+    ],
+    "blockedCommandHints": [
+      "blockedCommandHints/001.json"
+    ],
+    "allowedMcpPatterns": [
+      "allowedMcpPatterns/001.json"
+    ],
+    "allowedApiEndpoints": [],
+    "allowedWritePaths": []
+  }
+}

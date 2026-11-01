@@ -1,0 +1,34 @@
+{
+  "status": "passed",
+  "files": [
+    {
+      "file": "packages/shared/src/config/__tests__/storage-startup-migration.test.ts",
+      "lines": 337,
+      "nativeHash": "0ea326cfb538f0a213ec2f32cb2a347efc25bc6817ba69e46ee1235b19cd19d8",
+      "sha256": "b306b758dfafd691aee6ed80c7618f174cf40f5f61fdbaaf4e5248708ee9dcac",
+      "emittedJavaScriptUnchanged": true
+    },
+    {
+      "file": "packages/server-core/src/sessions/legacy-gsc-site-identity.test.ts",
+      "lines": 212,
+      "nativeHash": "eaa127fd2dd5ab990c9935f775c9acc85d3be4eda59fbcdc83feceda9efd0ace",
+      "sha256": "c92a0d02c7a1a95fa996714991ba7d4e0db1963eaf3fdde1ecef8fd9f5ca0d63",
+      "emittedJavaScriptUnchanged": true
+    },
+    {
+      "file": "packages/shared/src/agent/backend/pi/event-adapter-call-llm.test.ts",
+      "lines": 83,
+      "nativeHash": "5840bf3468612db8514f965f7d097838880bc25c15e1afa59781f02e437aa8cf",
+      "sha256": "4c7db8083a089c37c29e068aeeac6e62768f8ebfcac53598d2c3ff4502cbc2d9",
+      "emittedJavaScriptUnchanged": true
+    }
+  ],
+  "explicitAnyRemoved": 26,
+  "allNativeRuntimeStatementsAndAssertionsUnchanged": true,
+  "fixtureContracts": [
+    "StoredConfig and LlmConnection for post-migration JSON",
+    "Explicit malformed GSC listing fixture with unknown permission values and nullable rows",
+    "Native AgentEvent tool_start variant and actual Pi SDK input events"
+  ],
+  "unknownBoundary": "Legacy writer only serializes supplied data; it does not inspect or assert a connection schema."
+}

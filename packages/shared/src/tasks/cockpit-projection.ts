@@ -73,19 +73,19 @@ export function projectDurableTaskToCockpits(task: DurableTaskSnapshot): Durable
   return {
     craft: {
       provider: 'craft',
-      externalId: task.externalRefs.craftTaskId,
+      ...(task.externalRefs.craftTaskId !== undefined ? { externalId: task.externalRefs.craftTaskId } : {}),
       title: task.title,
       status: craftStatus,
       descriptionMarkdown: description,
       metadata: {
         robbTaskId: task.id,
         revision: task.revision,
-        latestRunId: task.latestRunId,
+        ...(task.latestRunId !== undefined ? { latestRunId: task.latestRunId } : {}),
       },
     },
     googleTasks: {
       provider: 'google-tasks',
-      externalId: task.externalRefs.googleTaskId,
+      ...(task.externalRefs.googleTaskId !== undefined ? { externalId: task.externalRefs.googleTaskId } : {}),
       title: task.title,
       // Google Tasks has no cancelled/archive state; completed is the only
       // non-actionable projection and prevents archived work resurfacing.
@@ -100,8 +100,8 @@ export function projectDurableTaskToCockpits(task: DurableTaskSnapshot): Durable
       searchAttributes: {
         RobbTaskId: task.id,
         RobbTaskRevision: task.revision,
-        RobbProjectId: task.projectId,
-        RobbRunId: task.latestRunId,
+        ...(task.projectId !== undefined ? { RobbProjectId: task.projectId } : {}),
+        ...(task.latestRunId !== undefined ? { RobbRunId: task.latestRunId } : {}),
       },
       memo: {
         title: task.title,

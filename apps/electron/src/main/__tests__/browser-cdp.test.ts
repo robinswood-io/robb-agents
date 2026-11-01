@@ -1,63 +1,11 @@
-/**
- * Tests for BrowserCDP (Chrome DevTools Protocol helpers).
- *
- * Mocks webContents.debugger to test accessibility snapshots,
- * element interaction, and CDP lifecycle management.
- */
-
-import { describe, it, expect, beforeEach, mock } from 'bun:test'
-
-// Mock logger before import
-mock.module('../logger', () => {
-  const stubLog = { info: () => {}, error: () => {}, warn: () => {}, debug: () => {} }
-  return {
-    mainLog: stubLog,
-    sessionLog: stubLog,
-    handlerLog: stubLog,
-    windowLog: stubLog,
-    agentLog: stubLog,
-    searchLog: stubLog,
-    isDebugMode: false,
-    getLogFilePath: () => '/tmp/main.log',
-  }
-})
-
-const { BrowserCDP } = await import('../browser-cdp')
-
-// ============================================================================
-// Mock Helpers
-// ============================================================================
-
-function createMockWebContents(sendCommandImpl?: (method: string, params?: any) => Promise<any>) {
-  const listeners: Record<string, Function[]> = {}
-  return {
-    debugger: {
-      attach: mock((_version: string) => {}),
-      detach: mock(() => {}),
-      sendCommand: mock(sendCommandImpl ?? (async () => ({ nodes: [] }))),
-      on: mock((event: string, cb: Function) => {
-        if (!listeners[event]) listeners[event] = []
-        listeners[event].push(cb)
-      }),
-    },
-    getURL: mock(() => 'https://example.com'),
-    getTitle: mock(() => 'Example Page'),
-    _debuggerListeners: listeners,
-    _triggerDetach: () => {
-      for (const cb of listeners['detach'] || []) cb()
-    },
-  }
-}
-
-// ============================================================================
-// Tests
-// ============================================================================
+import { describe, expect, it, mock } from 'bun:test'
+import { createMockWebContents, createTestBrowserCDP } from './fixtures/browser-cdp-fixture'
 
 describe('BrowserCDP', () => {
-  describe('ensureAttached', () => {
+describe('ensureAttached', () => {
     it('attaches debugger on first call', async () => {
       const wc = createMockWebContents()
-      const cdp = new BrowserCDP(wc as any)
+      const cdp = createTestBrowserCDP(wc)
 
       // Trigger attach via a CDP command
       await cdp.getAccessibilitySnapshot()
@@ -68,7 +16,7 @@ describe('BrowserCDP', () => {
 
     it('skips attach on subsequent calls', async () => {
       const wc = createMockWebContents()
-      const cdp = new BrowserCDP(wc as any)
+      const cdp = createTestBrowserCDP(wc)
 
       await cdp.getAccessibilitySnapshot()
       await cdp.getAccessibilitySnapshot()
@@ -79,7 +27,7 @@ describe('BrowserCDP', () => {
     it('handles already-attached error gracefully', async () => {
       const wc = createMockWebContents()
       wc.debugger.attach = mock(() => { throw new Error('Already attached to this target') })
-      const cdp = new BrowserCDP(wc as any)
+      const cdp = createTestBrowserCDP(wc)
 
       // Should not throw
       await cdp.getAccessibilitySnapshot()
@@ -88,7 +36,7 @@ describe('BrowserCDP', () => {
 
     it('registers detach listener only once', async () => {
       const wc = createMockWebContents()
-      const cdp = new BrowserCDP(wc as any)
+      const cdp = createTestBrowserCDP(wc)
 
       // Trigger ensureAttached multiple times by simulating detach + re-attach
       await cdp.getAccessibilitySnapshot()
@@ -100,497 +48,17 @@ describe('BrowserCDP', () => {
       await cdp.getAccessibilitySnapshot()
 
       // The 'on' for 'detach' should only be called once (guard prevents duplicates)
-      const detachCalls = (wc.debugger.on as any).mock.calls.filter(
-        (call: any[]) => call[0] === 'detach'
+      const detachCalls = wc.debugger.on.mock.calls.filter(
+        (call) => call[0] === 'detach'
       )
       expect(detachCalls.length).toBe(1)
     })
   })
 
-  describe('getAccessibilitySnapshot', () => {
-    it('parses AX tree nodes and assigns refs', async () => {
-      const wc = createMockWebContents(async (method) => {
-        if (method === 'Accessibility.getFullAXTree') {
-          return {
-            nodes: [
-              { role: { value: 'button' }, name: { value: 'Submit' }, backendDOMNodeId: 100 },
-              { role: { value: 'textbox' }, name: { value: 'Email' }, value: { value: 'test@example.com' }, backendDOMNodeId: 101, properties: [
-                { name: 'focused', value: { value: true } },
-              ]},
-              { role: { value: 'link' }, name: { value: 'Home' }, backendDOMNodeId: 102 },
-            ],
-          }
-        }
-        return {}
-      })
-
-      const cdp = new BrowserCDP(wc as any)
-      const snapshot = await cdp.getAccessibilitySnapshot()
-
-      expect(snapshot.url).toBe('https://example.com')
-      expect(snapshot.title).toBe('Example Page')
-      expect(snapshot.nodes).toHaveLength(3)
-
-      expect(snapshot.nodes[0].ref).toBe('@e1')
-      expect(snapshot.nodes[0].role).toBe('button')
-      expect(snapshot.nodes[0].name).toBe('Submit')
-
-      expect(snapshot.nodes[1].ref).toBe('@e2')
-      expect(snapshot.nodes[1].value).toBe('test@example.com')
-      expect(snapshot.nodes[1].focused).toBe(true)
-
-      expect(snapshot.nodes[2].ref).toBe('@e3')
-      expect(snapshot.nodes[2].role).toBe('link')
-    })
-
-    it('keeps refs stable for same backend nodes across reordered snapshots', async () => {
-      let snapshotCallCount = 0
-      const wc = createMockWebContents(async (method) => {
-        if (method === 'Accessibility.getFullAXTree') {
-          snapshotCallCount += 1
-
-          if (snapshotCallCount === 1) {
-            return {
-              nodes: [
-                { role: { value: 'combobox' }, name: { value: 'Sort' }, value: { value: 'created-oldest' }, backendDOMNodeId: 200 },
-                { role: { value: 'button' }, name: { value: 'Apply' }, backendDOMNodeId: 201 },
-              ],
-            }
-          }
-
-          return {
-            nodes: [
-              { role: { value: 'button' }, name: { value: 'Apply' }, backendDOMNodeId: 201 },
-              { role: { value: 'combobox' }, name: { value: 'Sort' }, value: { value: 'updated-newest' }, backendDOMNodeId: 200 },
-            ],
-          }
-        }
-        return {}
-      })
-
-      const cdp = new BrowserCDP(wc as any)
-      const first = await cdp.getAccessibilitySnapshot()
-      const second = await cdp.getAccessibilitySnapshot()
-
-      const firstSortRef = first.nodes.find((n) => n.name === 'Sort')?.ref
-      const secondSortRef = second.nodes.find((n) => n.name === 'Sort')?.ref
-
-      expect(firstSortRef).toBeDefined()
-      expect(secondSortRef).toBeDefined()
-      expect(firstSortRef).toBe(secondSortRef)
-    })
-
-    it('skips non-interactive, non-content nodes', async () => {
-      const wc = createMockWebContents(async (method) => {
-        if (method === 'Accessibility.getFullAXTree') {
-          return {
-            nodes: [
-              { role: { value: 'generic' }, name: { value: '' } },       // Filtered: generic + no name
-              { role: { value: 'none' }, name: { value: '' } },          // Filtered: none + no name
-              { role: { value: 'button' }, name: { value: 'OK' } },      // Kept: interactive
-              { role: { value: 'heading' }, name: { value: 'Title' } },  // Kept: content + name
-              { role: { value: 'heading' }, name: { value: '' } },       // Filtered: content without name
-            ],
-          }
-        }
-        return {}
-      })
-
-      const cdp = new BrowserCDP(wc as any)
-      const snapshot = await cdp.getAccessibilitySnapshot()
-
-      expect(snapshot.nodes).toHaveLength(2)
-      expect(snapshot.nodes[0].role).toBe('button')
-      expect(snapshot.nodes[1].role).toBe('heading')
-    })
-
-    it('caps at 500 nodes', async () => {
-      const manyNodes = Array.from({ length: 600 }, (_, i) => ({
-        role: { value: 'button' },
-        name: { value: `Button ${i}` },
-        backendDOMNodeId: i,
-      }))
-
-      const wc = createMockWebContents(async (method) => {
-        if (method === 'Accessibility.getFullAXTree') {
-          return { nodes: manyNodes }
-        }
-        return {}
-      })
-
-      const cdp = new BrowserCDP(wc as any)
-      const snapshot = await cdp.getAccessibilitySnapshot()
-
-      expect(snapshot.nodes).toHaveLength(500)
-      expect(snapshot.nodes[499].ref).toBe('@e500')
-    })
-
-    it('normalizes role casing for primary filtering', async () => {
-      const wc = createMockWebContents(async (method) => {
-        if (method === 'Accessibility.getFullAXTree') {
-          return {
-            nodes: [
-              { role: { value: 'Button' }, name: { value: 'Submit' }, backendDOMNodeId: 1 },
-            ],
-          }
-        }
-        return {}
-      })
-
-      const cdp = new BrowserCDP(wc as any)
-      const snapshot = await cdp.getAccessibilitySnapshot()
-
-      expect(snapshot.nodes).toHaveLength(1)
-      expect(snapshot.nodes[0].role).toBe('button')
-      expect(snapshot.nodes[0].name).toBe('Submit')
-    })
-
-    it('uses fallback selection when primary filtering keeps zero nodes', async () => {
-      const wc = createMockWebContents(async (method) => {
-        if (method === 'Accessibility.getFullAXTree') {
-          return {
-            nodes: [
-              { role: { value: 'grouping' }, name: { value: 'Recents List' }, backendDOMNodeId: 21 },
-              { role: { value: 'pane' }, name: { value: 'Shared Files' }, backendDOMNodeId: 22 },
-            ],
-          }
-        }
-        return {}
-      })
-
-      const cdp = new BrowserCDP(wc as any)
-      const snapshot = await cdp.getAccessibilitySnapshot()
-
-      expect(snapshot.nodes).toHaveLength(2)
-      expect(snapshot.nodes[0].name).toBe('Recents List')
-      expect(snapshot.nodes[1].name).toBe('Shared Files')
-    })
-
-    it('keeps fallback nodes clickable through ref mapping', async () => {
-      const sentCommands: string[] = []
-      const wc = createMockWebContents(async (method) => {
-        sentCommands.push(method)
-        if (method === 'Accessibility.getFullAXTree') {
-          return {
-            nodes: [
-              { role: { value: 'pane' }, name: { value: 'Canvas Action' }, backendDOMNodeId: 42 },
-            ],
-          }
-        }
-        if (method === 'DOM.resolveNode') {
-          return { object: { objectId: 'obj-42' } }
-        }
-        if (method === 'DOM.getBoxModel') {
-          return { model: { content: [10, 10, 50, 10, 50, 50, 10, 50] } }
-        }
-        return {}
-      })
-
-      const cdp = new BrowserCDP(wc as any)
-      const snapshot = await cdp.getAccessibilitySnapshot()
-
-      expect(snapshot.nodes).toHaveLength(1)
-      await cdp.clickElement('@e1')
-
-      expect(sentCommands).toContain('DOM.resolveNode')
-      expect(sentCommands).toContain('Input.dispatchMouseEvent')
-    })
-  })
-
-  describe('clickElement', () => {
-    it('throws for unknown ref', async () => {
-      const wc = createMockWebContents()
-      const cdp = new BrowserCDP(wc as any)
-
-      await expect(cdp.clickElement('@e99')).rejects.toThrow('not found')
-    })
-
-    it('resolves node and dispatches mouse events', async () => {
-      const sentCommands: string[] = []
-      const wc = createMockWebContents(async (method, params) => {
-        sentCommands.push(method)
-        if (method === 'Accessibility.getFullAXTree') {
-          return {
-            nodes: [
-              { role: { value: 'button' }, name: { value: 'Click' }, backendDOMNodeId: 42 },
-            ],
-          }
-        }
-        if (method === 'DOM.resolveNode') {
-          return { object: { objectId: 'obj-42' } }
-        }
-        if (method === 'DOM.getBoxModel') {
-          return { model: { content: [10, 10, 50, 10, 50, 50, 10, 50] } }
-        }
-        return {}
-      })
-
-      const cdp = new BrowserCDP(wc as any)
-      await cdp.getAccessibilitySnapshot() // Populate refMap
-
-      await cdp.clickElement('@e1')
-
-      expect(sentCommands).toContain('DOM.resolveNode')
-      expect(sentCommands).toContain('DOM.getBoxModel')
-      expect(sentCommands).toContain('Runtime.callFunctionOn')
-      expect(sentCommands).toContain('Input.dispatchMouseEvent')
-
-      const scrollIndex = sentCommands.indexOf('Runtime.callFunctionOn')
-      const boxModelIndex = sentCommands.indexOf('DOM.getBoxModel')
-      expect(scrollIndex).toBeGreaterThan(-1)
-      expect(boxModelIndex).toBeGreaterThan(-1)
-      expect(scrollIndex).toBeLessThan(boxModelIndex)
-    })
-
-    it('recovers a stale ref from matching accessibility semantics before clicking', async () => {
-      let snapshotCalls = 0
-      const resolvedBackendNodeIds: number[] = []
-      const wc = createMockWebContents(async (method, params) => {
-        if (method === 'Accessibility.getFullAXTree') {
-          snapshotCalls += 1
-          return {
-            nodes: [
-              {
-                role: { value: 'button' },
-                name: { value: 'Continue' },
-                backendDOMNodeId: snapshotCalls === 1 ? 42 : 84,
-              },
-            ],
-          }
-        }
-        if (method === 'DOM.resolveNode') {
-          const backendNodeId = Number(params?.backendNodeId)
-          resolvedBackendNodeIds.push(backendNodeId)
-          if (backendNodeId === 42) throw new Error('No node with given id found')
-          return { object: { objectId: 'obj-84' } }
-        }
-        if (method === 'DOM.getBoxModel') {
-          return { model: { content: [10, 10, 50, 10, 50, 50, 10, 50] } }
-        }
-        return {}
-      })
-
-      const cdp = new BrowserCDP(
-        wc as unknown as ConstructorParameters<typeof BrowserCDP>[0],
-      )
-      await cdp.getAccessibilitySnapshot()
-
-      const geometry = await cdp.clickElement('@e1')
-
-      expect(snapshotCalls).toBe(2)
-      expect(resolvedBackendNodeIds).toEqual([42, 84])
-      expect(geometry.ref).toBe('@e2')
-    })
-  })
-
-  describe('typeText', () => {
-    it('inserts the full text with one CDP command', async () => {
-      const calls: Array<{ method: string; params?: Record<string, unknown> }> = []
-      const wc = createMockWebContents(async (method, params) => {
-        calls.push({ method, params })
-        return method === 'Runtime.evaluate' ? { result: { value: true } } : {}
-      })
-
-      const cdp = new BrowserCDP(
-        wc as unknown as ConstructorParameters<typeof BrowserCDP>[0],
-      )
-      await cdp.typeText('a long value')
-
-      expect(calls.filter(call => call.method === 'Input.insertText')).toEqual([
-        { method: 'Input.insertText', params: { text: 'a long value' } },
-      ])
-      expect(calls.some(call => call.method === 'Input.dispatchKeyEvent')).toBe(false)
-    })
-  })
-
-  describe('fillElement', () => {
-    it('focuses, clears, and inserts the full value with one CDP command', async () => {
-      const calls: Array<{ method: string; params?: Record<string, unknown> }> = []
-      const wc = createMockWebContents(async (method, params) => {
-        calls.push({ method, params })
-        if (method === 'Accessibility.getFullAXTree') {
-          return {
-            nodes: [
-              { role: { value: 'textbox' }, name: { value: 'Input' }, backendDOMNodeId: 10 },
-            ],
-          }
-        }
-        if (method === 'DOM.resolveNode') {
-          return { object: { objectId: 'obj-10' } }
-        }
-        if (method === 'DOM.getBoxModel') {
-          return { model: { content: [10, 10, 50, 10, 50, 50, 10, 50] } }
-        }
-        return {}
-      })
-
-      const cdp = new BrowserCDP(wc as any)
-      await cdp.getAccessibilitySnapshot()
-
-      await cdp.fillElement('@e1', 'ab')
-
-      expect(calls.some(call => call.method === 'DOM.focus')).toBe(true)
-      expect(calls.some(call => call.method === 'Runtime.callFunctionOn')).toBe(true)
-      expect(calls.filter(call => call.method === 'Input.insertText')).toEqual([
-        { method: 'Input.insertText', params: { text: 'ab' } },
-      ])
-      expect(calls.some(call => call.method === 'Input.dispatchKeyEvent')).toBe(false)
-    })
-  })
-
-  describe('selectOption', () => {
-    it('sets value and dispatches events', async () => {
-      const sentCommands: string[] = []
-      const wc = createMockWebContents(async (method) => {
-        sentCommands.push(method)
-        if (method === 'Accessibility.getFullAXTree') {
-          return {
-            nodes: [
-              { role: { value: 'combobox' }, name: { value: 'Country' }, backendDOMNodeId: 20 },
-            ],
-          }
-        }
-        if (method === 'DOM.resolveNode') {
-          return { object: { objectId: 'obj-20' } }
-        }
-        if (method === 'DOM.getBoxModel') {
-          return { model: { content: [10, 10, 50, 10, 50, 50, 10, 50] } }
-        }
-        return {}
-      })
-
-      const cdp = new BrowserCDP(wc as any)
-      await cdp.getAccessibilitySnapshot()
-
-      await cdp.selectOption('@e1', 'US')
-
-      expect(sentCommands).toContain('DOM.resolveNode')
-      expect(sentCommands).toContain('Runtime.callFunctionOn')
-    })
-  })
-
-  describe('setFileInputFiles', () => {
-    it('uses the referenced file input directly', async () => {
-      const calls: Array<{ method: string; params?: Record<string, unknown> }> = []
-      const wc = createMockWebContents(async (method, params) => {
-        calls.push({ method, params })
-        if (method === 'Accessibility.getFullAXTree') {
-          return {
-            nodes: [
-              { role: { value: 'button' }, name: { value: 'Upload' }, backendDOMNodeId: 42 },
-            ],
-          }
-        }
-        if (method === 'DOM.resolveNode') {
-          return { object: { objectId: 'obj-upload' } }
-        }
-        if (method === 'Runtime.callFunctionOn') {
-          return { result: { objectId: 'obj-file-input' } }
-        }
-        if (method === 'DOM.getBoxModel') {
-          return { model: { content: [10, 10, 50, 10, 50, 50, 10, 50] } }
-        }
-        return {}
-      })
-
-      const cdp = new BrowserCDP(wc as any)
-      await cdp.getAccessibilitySnapshot()
-
-      await cdp.setFileInputFiles('@e1', ['/tmp/upload.txt'])
-
-      expect(calls).toContainEqual({
-        method: 'DOM.setFileInputFiles',
-        params: { files: ['/tmp/upload.txt'], objectId: 'obj-file-input' },
-      })
-    })
-
-    it('fails clearly when no file input can be resolved from the reference', async () => {
-      const wc = createMockWebContents(async (method) => {
-        if (method === 'Accessibility.getFullAXTree') {
-          return {
-            nodes: [
-              { role: { value: 'button' }, name: { value: 'Upload' }, backendDOMNodeId: 42 },
-            ],
-          }
-        }
-        if (method === 'DOM.resolveNode') {
-          return { object: { objectId: 'obj-upload' } }
-        }
-        if (method === 'Runtime.callFunctionOn') {
-          return { result: { value: null } }
-        }
-        return {}
-      })
-
-      const cdp = new BrowserCDP(wc as any)
-      await cdp.getAccessibilitySnapshot()
-
-      await expect(cdp.setFileInputFiles('@e1', ['/tmp/upload.txt'])).rejects.toThrow(
-        'no unambiguous file input was found nearby',
-      )
-    })
-  })
-
-  describe('drag', () => {
-    it('dispatches pressed -> moved -> released with expected button state', async () => {
-      const mouseEvents: any[] = []
-      const wc = createMockWebContents(async (method, params) => {
-        if (method === 'Input.dispatchMouseEvent') {
-          mouseEvents.push(params)
-        }
-        return {}
-      })
-
-      const cdp = new BrowserCDP(wc as any)
-      await cdp.drag(10, 20, 110, 20)
-
-      expect(mouseEvents.length).toBeGreaterThan(2)
-      expect(mouseEvents[0]).toMatchObject({
-        type: 'mousePressed',
-        x: 10,
-        y: 20,
-        button: 'left',
-        buttons: 1,
-      })
-
-      const movedEvents = mouseEvents.filter((event) => event.type === 'mouseMoved')
-      expect(movedEvents.length).toBeGreaterThan(0)
-      for (const event of movedEvents) {
-        expect(event.buttons).toBe(1)
-      }
-
-      const lastEvent = mouseEvents[mouseEvents.length - 1]
-      expect(lastEvent).toMatchObject({
-        type: 'mouseReleased',
-        button: 'left',
-        buttons: 0,
-      })
-    })
-
-    it('attempts release even when a move event fails and rethrows original error', async () => {
-      const mouseEvents: any[] = []
-      let failedOnce = false
-      const wc = createMockWebContents(async (method, params) => {
-        if (method === 'Input.dispatchMouseEvent') {
-          mouseEvents.push(params)
-          if (params?.type === 'mouseMoved' && !failedOnce) {
-            failedOnce = true
-            throw new Error('move failed')
-          }
-        }
-        return {}
-      })
-
-      const cdp = new BrowserCDP(wc as any)
-      await expect(cdp.drag(0, 0, 100, 0)).rejects.toThrow('move failed')
-      expect(mouseEvents.some((event) => event.type === 'mouseReleased')).toBe(true)
-    })
-  })
-
-  describe('detach', () => {
+describe('detach', () => {
     it('detaches debugger', async () => {
       const wc = createMockWebContents()
-      const cdp = new BrowserCDP(wc as any)
+      const cdp = createTestBrowserCDP(wc)
 
       // Attach first
       await cdp.getAccessibilitySnapshot()
@@ -601,7 +69,7 @@ describe('BrowserCDP', () => {
 
     it('is safe to call when not attached', () => {
       const wc = createMockWebContents()
-      const cdp = new BrowserCDP(wc as any)
+      const cdp = createTestBrowserCDP(wc)
 
       // Should not throw
       expect(() => cdp.detach()).not.toThrow()

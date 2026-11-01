@@ -1,3 +1,4 @@
+import { parseJsonObject } from './utils/json.ts';
 /**
  * Shared infrastructure for the unified network interceptor.
  *
@@ -24,13 +25,13 @@ export const IS_PACKAGED = process.argv.some(arg => arg.includes('app.asar'));
 export const INTERCEPTOR_LOGGING_ENABLED = !IS_PACKAGED;
 
 export const DEBUG = INTERCEPTOR_LOGGING_ENABLED &&
-  (process.argv.includes('--debug') || process.env.CRAFT_DEBUG === '1');
+  (process.argv.includes('--debug') || process.env["CRAFT_DEBUG"] === '1');
 
 /** Config file path for reading settings in the SDK subprocess */
 export const CONFIG_FILE = join(homedir(), '.craft-agent', 'config.json');
 
 /** Session directory — set by env var (subprocess) or setSessionDir() (main process) */
-let _sessionDir: string | null = process.env.CRAFT_SESSION_DIR || null;
+let _sessionDir: string | null = process.env["CRAFT_SESSION_DIR"] || null;
 
 // ============================================================================
 // LOGGING
@@ -101,7 +102,7 @@ function getInterceptorConfig(): Record<string, unknown> | null {
   if (_cachedConfig && (now - _cacheTimestamp) < CONFIG_CACHE_TTL_MS) return _cachedConfig;
   try {
     const content = readFileSync(CONFIG_FILE, 'utf-8');
-    _cachedConfig = JSON.parse(content);
+    _cachedConfig = parseJsonObject(content);
     _cacheTimestamp = now;
     return _cachedConfig;
   } catch {
@@ -122,8 +123,8 @@ export function _resetConfigCacheForTesting(): void {
  */
 export function isRichToolDescriptionsEnabled(): boolean {
   const config = getInterceptorConfig();
-  if (config?.richToolDescriptions !== undefined) {
-    return config.richToolDescriptions as boolean;
+  if (config?.["richToolDescriptions"] !== undefined) {
+    return config["richToolDescriptions"] as boolean;
   }
   return true;
 }
@@ -135,7 +136,7 @@ export function isRichToolDescriptionsEnabled(): boolean {
  */
 export function isExtendedPromptCacheEnabled(): boolean {
   const config = getInterceptorConfig();
-  return config?.extendedPromptCache === true;
+  return config?.["extendedPromptCache"] === true;
 }
 
 /**
@@ -147,7 +148,7 @@ export function isExtendedPromptCacheEnabled(): boolean {
  */
 export function is1MContextEnabled(): boolean {
   const config = getInterceptorConfig();
-  return config?.enable1MContext === true;
+  return config?.["enable1MContext"] === true;
 }
 
 // ============================================================================

@@ -1,4 +1,4 @@
-import * as React from 'react'
+
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SkillAvatar } from '@/components/ui/skill-avatar'
@@ -14,15 +14,15 @@ export interface MentionBadgeProps {
   type: MentionItemType
   label: string
   /** Skill data for skill mentions */
-  skill?: LoadedSkill
+  skill?: LoadedSkill | undefined
   /** Source data for source mentions */
-  source?: LoadedSource
+  source?: LoadedSource | undefined
   /** Workspace ID for skill avatar */
-  workspaceId?: string
+  workspaceId?: string | undefined
   /** Called when the remove button is clicked */
-  onRemove?: () => void
+  onRemove?: (() => void) | undefined
   /** Additional className */
-  className?: string
+  className?: string | undefined
 }
 
 // ============================================================================
@@ -97,11 +97,11 @@ export interface ActiveMentionBadgesProps {
   /** Parsed mentions to display */
   mentions: ParsedMention[]
   /** Workspace ID for skill avatars */
-  workspaceId?: string
+  workspaceId?: string | undefined
   /** Called when a mention is removed */
-  onRemove?: (id: string, type: MentionItemType) => void
+  onRemove?: ((id: string, type: MentionItemType) => void) | undefined
   /** Additional className for the container */
-  className?: string
+  className?: string | undefined
 }
 
 /**

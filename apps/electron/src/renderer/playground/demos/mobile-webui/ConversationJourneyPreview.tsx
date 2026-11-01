@@ -1,3 +1,4 @@
+import { setOptional, omitUndefined } from '@craft-agent/shared/utils/json';
 import * as React from 'react'
 import { useStore } from 'jotai'
 import type { Message, UserInputRequest, UserInputResponse } from '@craft-agent/core/types'
@@ -157,8 +158,8 @@ export function buildJourneyFixture(scenario: JourneyScenario): { session: Sessi
       terminalState: verified ? 'complete_verified' : 'active',
       ...(verified ? { lastOutcome: receipt, completedAt: TIMESTAMP + 5 } : {}),
     }
-    session.pendingTurnRecovery = verified ? undefined : { userMessageId: USER_ID, startedAt: TIMESTAMP,
-      attempts: 1, lastCause: 'objective_incomplete', lastAttemptAt: TIMESTAMP + 2 }
+    setOptional(session, 'pendingTurnRecovery', verified ? undefined : { userMessageId: USER_ID, startedAt: TIMESTAMP,
+      attempts: 1, lastCause: 'objective_incomplete', lastAttemptAt: TIMESTAMP + 2 })
     if (historical) {
       const nextRequest = { id: 'journey-new-user', role: 'user' as const, timestamp: TIMESTAMP + 6,
         content: 'Nouvelle demande : prépare une courte introduction.' }
@@ -193,7 +194,7 @@ function HydrateDelegatedActivity({ sessions }: { sessions: Session[] }) {
 }
 
 /** Production ChatDisplay, isolated contexts and fabricated data: no server or agent calls. */
-export function ConversationJourneyPreview({ scenario = 'working', viewport = 'desktop' }: { scenario?: JourneyScenario; viewport?: Viewport }) {
+export function ConversationJourneyPreview({ scenario = 'working', viewport = 'desktop' }: { scenario?: JourneyScenario | undefined; viewport?: Viewport | undefined }) {
   const [selected, setSelected] = React.useState(scenario)
   const [size, setSize] = React.useState(viewport)
   const [input, setInput] = React.useState('')
@@ -266,7 +267,7 @@ export function ConversationJourneyPreview({ scenario = 'working', viewport = 'd
                 }
                 setResponseTarget(originSessionId)
                 setResolvedQuestions((fixture.session.userInputRequests ?? []).map(request => request.id === response.requestId
-                  ? { ...request, status: response.cancelled ? 'cancelled' : 'answered', answers: response.answers, answeredAt: Date.now() } : request))
+                  ? omitUndefined<UserInputRequest>({ ...request, status: response.cancelled ? 'cancelled' : 'answered', answers: response.answers, answeredAt: Date.now() }) : request))
                 return { status: response.cancelled ? 'cancelled' : 'accepted', delivery: 'steered' }
               }}
               onSendMessage={() => {}} onOpenFile={() => {}} onOpenUrl={() => {}} onRespondToPermission={() => {}}

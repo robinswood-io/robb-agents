@@ -30,6 +30,6 @@ describe('buildAuthorizationHeader', () => {
 
   it('handles null by defaulting to Bearer (via nullish coalescing)', () => {
     // TypeScript wouldn't allow null, but test runtime behavior
-    expect(buildAuthorizationHeader(null as unknown as undefined, token)).toBe(`Bearer ${token}`);
+    expect(Reflect.apply(buildAuthorizationHeader, undefined, [null, token])).toBe(`Bearer ${token}`);
   });
 });

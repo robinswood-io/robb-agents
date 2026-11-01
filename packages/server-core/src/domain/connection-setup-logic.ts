@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * Connection Setup Logic
  *
@@ -265,7 +266,7 @@ export function createBuiltInConnection(slug: string, baseUrl?: string | null): 
     name = `${name} ${suffixMatch[1]}`
   }
 
-  return {
+  return omitUndefined<LlmConnection>({
     slug,
     name,
     providerType,
@@ -273,10 +274,10 @@ export function createBuiltInConnection(slug: string, baseUrl?: string | null): 
     models: template.models ?? getDefaultModelsForConnection(providerType, template.piAuthProvider),
     defaultModel: template.defaultModel ?? getDefaultModelForConnection(providerType, template.piAuthProvider),
     modelSelectionMode: providerType === 'pi' ? 'automaticallySyncedFromProvider' : undefined,
-    piAuthProvider: template.piAuthProvider,
+    ...(template.piAuthProvider !== undefined ? { piAuthProvider: template.piAuthProvider } : {}),
     midStreamBehavior: template.midStreamBehavior ?? defaultMidStreamBehavior(providerType),
     createdAt: Date.now(),
-  }
+  })
 }
 
 // ============================================================

@@ -1,0 +1,26 @@
+{
+  "status": "passed",
+  "fixtureRuntimeImports": [],
+  "packing": "Contiguous native cases retain their lexical scopes, file-owned state, module initializer order and lifecycle",
+  "source": "packages/shared/src/sources/__tests__/token-refresh-manager.test.ts",
+  "typing": {
+    "status": "passed",
+    "typedSourceHash": "255782844e5f9b29cdcae576651fa767c60cf5c198067ae6c8c19719b370e5a2",
+    "nativeSourceUnchanged": true,
+    "typeEdits": 0
+  },
+  "testDeclarations": 32,
+  "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+  "nestedSuiteIdentityPreserved": true,
+  "nativeSetupAndBeforeEachRetainedPerFile": true,
+  "nativeModuleInitializersAndOwnedStatePreserved": true,
+  "nativeExternalImportOrderPreserved": true,
+  "sharedDeclarations": [],
+  "sharedMutableStateAdded": false,
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 415,
+  "currentSourceHashes": {
+    "packages/shared/src/sources/__tests__/token-refresh-manager.test.ts": "d096e4dd9f0e166f42d71a9e6b85c0a5d1619147cd129cca7fc2770b0f567910",
+    "packages/shared/src/sources/__tests__/token-refresh-manager-restores-isauthenticated-on-successful-refresh.test.ts": "6134de31b17b4ff46e6ec7b862f127f4ff6ecef9ec1ac500e434a66b5d2ddbfd"
+  }
+}

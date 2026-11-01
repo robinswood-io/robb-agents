@@ -1,0 +1,1979 @@
+{
+  "checkedAt": 1793025088.2222872,
+  "seconds": 12.48,
+  "packages": [
+    {
+      "name": "@agentclientprotocol/sdk",
+      "latest": "2.0.2",
+      "engines": {},
+      "peerDependencies": {
+        "zod": "^3.25.76 || ^4.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40agentclientprotocol%2Fsdk/latest"
+    },
+    {
+      "name": "@anthropic-ai/claude-agent-sdk",
+      "latest": "0.3.310",
+      "engines": {
+        "node": ">=18.0.0"
+      },
+      "peerDependencies": {
+        "zod": "^4.0.0",
+        "@anthropic-ai/sdk": ">=0.93.0",
+        "@modelcontextprotocol/sdk": "^1.29.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40anthropic-ai%2Fclaude-agent-sdk/latest"
+    },
+    {
+      "name": "@anthropic-ai/sdk",
+      "latest": "1.3.0",
+      "engines": {},
+      "peerDependencies": {
+        "zod": "^3.25.0 || ^4.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40anthropic-ai%2Fsdk/latest"
+    },
+    {
+      "name": "@aws-sdk/client-s3",
+      "latest": "3.1156.0",
+      "engines": {
+        "node": ">=20.0.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40aws-sdk%2Fclient-s3/latest"
+    },
+    {
+      "name": "@babel/core",
+      "latest": "8.0.9",
+      "engines": {
+        "node": "^22.18.0 || >=24.11.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40babel%2Fcore/latest"
+    },
+    {
+      "name": "@dnd-kit/core",
+      "latest": "6.3.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": ">=16.8.0",
+        "react-dom": ">=16.8.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40dnd-kit%2Fcore/latest"
+    },
+    {
+      "name": "@dnd-kit/dom",
+      "latest": "0.5.1",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40dnd-kit%2Fdom/latest"
+    },
+    {
+      "name": "@dnd-kit/helpers",
+      "latest": "0.5.1",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40dnd-kit%2Fhelpers/latest"
+    },
+    {
+      "name": "@dnd-kit/sortable",
+      "latest": "10.0.0",
+      "engines": {},
+      "peerDependencies": {
+        "react": ">=16.8.0",
+        "@dnd-kit/core": "^6.3.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40dnd-kit%2Fsortable/latest"
+    },
+    {
+      "name": "@dnd-kit/utilities",
+      "latest": "3.2.2",
+      "engines": {},
+      "peerDependencies": {
+        "react": ">=16.8.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40dnd-kit%2Futilities/latest"
+    },
+    {
+      "name": "@earendil-works/pi-agent-core",
+      "latest": "1.4.0",
+      "engines": {
+        "node": ">=22.19.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40earendil-works%2Fpi-agent-core/latest"
+    },
+    {
+      "name": "@earendil-works/pi-ai",
+      "latest": "1.4.0",
+      "engines": {
+        "node": ">=22.19.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40earendil-works%2Fpi-ai/latest"
+    },
+    {
+      "name": "@earendil-works/pi-coding-agent",
+      "latest": "1.4.0",
+      "engines": {
+        "node": ">=22.19.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40earendil-works%2Fpi-coding-agent/latest"
+    },
+    {
+      "name": "@electron/asar",
+      "latest": "4.3.1",
+      "engines": {
+        "node": ">=22.12.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40electron%2Fasar/latest"
+    },
+    {
+      "name": "@electron/packager",
+      "latest": "20.3.0",
+      "engines": {
+        "node": ">= 22.12.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40electron%2Fpackager/latest"
+    },
+    {
+      "name": "@github/copilot-sdk",
+      "latest": "1.0.26",
+      "engines": {
+        "node": "^20.19.0 || >=22.12.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40github%2Fcopilot-sdk/latest"
+    },
+    {
+      "name": "@hono/node-server",
+      "latest": "2.1.5",
+      "engines": {
+        "node": ">=20"
+      },
+      "peerDependencies": {
+        "hono": "^4 || ^5.0.0-0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40hono%2Fnode-server/latest"
+    },
+    {
+      "name": "@img/sharp-darwin-arm64",
+      "latest": "0.35.5",
+      "engines": {
+        "node": ">=20.9.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40img%2Fsharp-darwin-arm64/latest"
+    },
+    {
+      "name": "@img/sharp-darwin-x64",
+      "latest": "0.35.5",
+      "engines": {
+        "node": ">=20.9.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40img%2Fsharp-darwin-x64/latest"
+    },
+    {
+      "name": "@img/sharp-libvips-darwin-arm64",
+      "latest": "1.3.4",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40img%2Fsharp-libvips-darwin-arm64/latest"
+    },
+    {
+      "name": "@img/sharp-libvips-darwin-x64",
+      "latest": "1.3.4",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40img%2Fsharp-libvips-darwin-x64/latest"
+    },
+    {
+      "name": "@img/sharp-libvips-linux-arm64",
+      "latest": "1.3.4",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40img%2Fsharp-libvips-linux-arm64/latest"
+    },
+    {
+      "name": "@img/sharp-libvips-linux-x64",
+      "latest": "1.3.4",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40img%2Fsharp-libvips-linux-x64/latest"
+    },
+    {
+      "name": "@img/sharp-linux-arm64",
+      "latest": "0.35.5",
+      "engines": {
+        "node": ">=20.9.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40img%2Fsharp-linux-arm64/latest"
+    },
+    {
+      "name": "@img/sharp-linux-x64",
+      "latest": "0.35.5",
+      "engines": {
+        "node": ">=20.9.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40img%2Fsharp-linux-x64/latest"
+    },
+    {
+      "name": "@isaacs/ttlcache",
+      "latest": "2.1.5",
+      "engines": {
+        "node": ">=12"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40isaacs%2Fttlcache/latest"
+    },
+    {
+      "name": "@larksuiteoapi/node-sdk",
+      "latest": "1.76.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40larksuiteoapi%2Fnode-sdk/latest"
+    },
+    {
+      "name": "@leeoniya/ufuzzy",
+      "latest": "1.0.19",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40leeoniya%2Fufuzzy/latest"
+    },
+    {
+      "name": "@modelcontextprotocol/client",
+      "latest": "2.4.0",
+      "engines": {
+        "node": ">=20"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40modelcontextprotocol%2Fclient/latest"
+    },
+    {
+      "name": "@modelcontextprotocol/node",
+      "latest": "2.1.2",
+      "engines": {
+        "node": ">=20"
+      },
+      "peerDependencies": {
+        "@modelcontextprotocol/server": "^2.4.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40modelcontextprotocol%2Fnode/latest"
+    },
+    {
+      "name": "@modelcontextprotocol/sdk",
+      "latest": "1.32.2",
+      "engines": {
+        "node": ">=18"
+      },
+      "peerDependencies": {
+        "zod": "^3.25 || ^4.0",
+        "@cfworker/json-schema": "^4.1.1"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40modelcontextprotocol%2Fsdk/latest"
+    },
+    {
+      "name": "@modelcontextprotocol/server",
+      "latest": "2.4.0",
+      "engines": {
+        "node": ">=20"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40modelcontextprotocol%2Fserver/latest"
+    },
+    {
+      "name": "@paper-design/shaders-react",
+      "latest": "0.0.82",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^18 || ^19",
+        "@types/react": "^18 || ^19"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40paper-design%2Fshaders-react/latest"
+    },
+    {
+      "name": "@pierre/diffs",
+      "latest": "1.6.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^18.3.1 || ^19.0.0",
+        "react-dom": "^18.3.1 || ^19.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40pierre%2Fdiffs/latest"
+    },
+    {
+      "name": "@radix-ui/react-avatar",
+      "latest": "1.3.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "@types/react": "*",
+        "@types/react-dom": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40radix-ui%2Freact-avatar/latest"
+    },
+    {
+      "name": "@radix-ui/react-collapsible",
+      "latest": "1.2.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "@types/react": "*",
+        "@types/react-dom": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40radix-ui%2Freact-collapsible/latest"
+    },
+    {
+      "name": "@radix-ui/react-context-menu",
+      "latest": "2.4.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "@types/react": "*",
+        "@types/react-dom": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40radix-ui%2Freact-context-menu/latest"
+    },
+    {
+      "name": "@radix-ui/react-dialog",
+      "latest": "1.3.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "@types/react": "*",
+        "@types/react-dom": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40radix-ui%2Freact-dialog/latest"
+    },
+    {
+      "name": "@radix-ui/react-dropdown-menu",
+      "latest": "2.2.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "@types/react": "*",
+        "@types/react-dom": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40radix-ui%2Freact-dropdown-menu/latest"
+    },
+    {
+      "name": "@radix-ui/react-label",
+      "latest": "2.1.17",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "@types/react": "*",
+        "@types/react-dom": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40radix-ui%2Freact-label/latest"
+    },
+    {
+      "name": "@radix-ui/react-popover",
+      "latest": "1.3.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "@types/react": "*",
+        "@types/react-dom": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40radix-ui%2Freact-popover/latest"
+    },
+    {
+      "name": "@radix-ui/react-scroll-area",
+      "latest": "1.4.0",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "@types/react": "*",
+        "@types/react-dom": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40radix-ui%2Freact-scroll-area/latest"
+    },
+    {
+      "name": "@radix-ui/react-select",
+      "latest": "2.4.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "@types/react": "*",
+        "@types/react-dom": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40radix-ui%2Freact-select/latest"
+    },
+    {
+      "name": "@radix-ui/react-separator",
+      "latest": "1.2.0",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "@types/react": "*",
+        "@types/react-dom": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40radix-ui%2Freact-separator/latest"
+    },
+    {
+      "name": "@radix-ui/react-slot",
+      "latest": "1.5.0",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "@types/react": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40radix-ui%2Freact-slot/latest"
+    },
+    {
+      "name": "@radix-ui/react-switch",
+      "latest": "1.4.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "@types/react": "*",
+        "@types/react-dom": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40radix-ui%2Freact-switch/latest"
+    },
+    {
+      "name": "@radix-ui/react-tabs",
+      "latest": "1.2.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "@types/react": "*",
+        "@types/react-dom": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40radix-ui%2Freact-tabs/latest"
+    },
+    {
+      "name": "@radix-ui/react-tooltip",
+      "latest": "1.4.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+        "@types/react": "*",
+        "@types/react-dom": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40radix-ui%2Freact-tooltip/latest"
+    },
+    {
+      "name": "@rolldown/plugin-babel",
+      "latest": "0.2.4",
+      "engines": {
+        "node": ">=22.12.0 || ^24.0.0"
+      },
+      "peerDependencies": {
+        "vite": "^8.0.0",
+        "rolldown": "^1.0.0-rc.5",
+        "@babel/core": "^7.29.0 || ^8.0.0-rc.1",
+        "@babel/runtime": "^7.27.0 || ^8.0.0-rc.1",
+        "@babel/plugin-transform-runtime": "^7.29.0 || ^8.0.0-rc.1"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40rolldown%2Fplugin-babel/latest"
+    },
+    {
+      "name": "@rollup/rollup-win32-arm64-msvc",
+      "latest": "4.65.1",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40rollup%2Frollup-win32-arm64-msvc/latest"
+    },
+    {
+      "name": "@sentry/electron",
+      "latest": "8.3.0",
+      "engines": {},
+      "peerDependencies": {
+        "@sentry/node-native": "11.8.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40sentry%2Felectron/latest"
+    },
+    {
+      "name": "@sentry/react",
+      "latest": "11.9.0",
+      "engines": {
+        "node": ">=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0"
+      },
+      "peerDependencies": {
+        "react": "17.x || 18.x || 19.x",
+        "react-router": "6.x || 7.x || 8.x"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40sentry%2Freact/latest"
+    },
+    {
+      "name": "@sentry/vite-plugin",
+      "latest": "11.9.0",
+      "engines": {
+        "node": ">=20.19.0 <22.0.0 || >=22.12.0 <23.0.0 || >=23.2.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40sentry%2Fvite-plugin/latest"
+    },
+    {
+      "name": "@shikijs/cli",
+      "latest": "4.5.0",
+      "engines": {
+        "node": ">=20"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40shikijs%2Fcli/latest"
+    },
+    {
+      "name": "@sinclair/typebox",
+      "latest": "0.34.52",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40sinclair%2Ftypebox/latest"
+    },
+    {
+      "name": "@tailwindcss/typography",
+      "latest": "0.5.20",
+      "engines": {},
+      "peerDependencies": {
+        "tailwindcss": ">=3.0.0 || >=4.0.0 || insiders"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tailwindcss%2Ftypography/latest"
+    },
+    {
+      "name": "@tailwindcss/vite",
+      "latest": "4.3.3",
+      "engines": {},
+      "peerDependencies": {
+        "vite": "^5.2.0 || ^6 || ^7 || ^8"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tailwindcss%2Fvite/latest"
+    },
+    {
+      "name": "@tanstack/react-table",
+      "latest": "9.3.1",
+      "engines": {
+        "node": ">=20"
+      },
+      "peerDependencies": {
+        "react": ">=18"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tanstack%2Freact-table/latest"
+    },
+    {
+      "name": "@tiptap/core",
+      "latest": "3.32.0",
+      "engines": {},
+      "peerDependencies": {
+        "@tiptap/pm": "3.32.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tiptap%2Fcore/latest"
+    },
+    {
+      "name": "@tiptap/extension-bubble-menu",
+      "latest": "3.32.0",
+      "engines": {},
+      "peerDependencies": {
+        "@tiptap/pm": "3.32.0",
+        "@tiptap/core": "3.32.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tiptap%2Fextension-bubble-menu/latest"
+    },
+    {
+      "name": "@tiptap/extension-file-handler",
+      "latest": "3.32.0",
+      "engines": {},
+      "peerDependencies": {
+        "@tiptap/pm": "3.32.0",
+        "@tiptap/core": "3.32.0",
+        "@tiptap/extension-text-style": "3.32.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tiptap%2Fextension-file-handler/latest"
+    },
+    {
+      "name": "@tiptap/extension-image",
+      "latest": "3.32.0",
+      "engines": {},
+      "peerDependencies": {
+        "@tiptap/core": "3.32.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tiptap%2Fextension-image/latest"
+    },
+    {
+      "name": "@tiptap/extension-mathematics",
+      "latest": "3.32.0",
+      "engines": {},
+      "peerDependencies": {
+        "katex": "^0.16.4 || ^0.17.0 || ^0.18.0",
+        "@tiptap/pm": "3.32.0",
+        "@tiptap/core": "3.32.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tiptap%2Fextension-mathematics/latest"
+    },
+    {
+      "name": "@tiptap/extension-placeholder",
+      "latest": "3.32.0",
+      "engines": {},
+      "peerDependencies": {
+        "@tiptap/extensions": "3.32.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tiptap%2Fextension-placeholder/latest"
+    },
+    {
+      "name": "@tiptap/extension-task-item",
+      "latest": "3.32.0",
+      "engines": {},
+      "peerDependencies": {
+        "@tiptap/extension-list": "3.32.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tiptap%2Fextension-task-item/latest"
+    },
+    {
+      "name": "@tiptap/extension-task-list",
+      "latest": "3.32.0",
+      "engines": {},
+      "peerDependencies": {
+        "@tiptap/extension-list": "3.32.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tiptap%2Fextension-task-list/latest"
+    },
+    {
+      "name": "@tiptap/extension-text-style",
+      "latest": "3.32.0",
+      "engines": {},
+      "peerDependencies": {
+        "@tiptap/core": "3.32.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tiptap%2Fextension-text-style/latest"
+    },
+    {
+      "name": "@tiptap/markdown",
+      "latest": "3.32.0",
+      "engines": {},
+      "peerDependencies": {
+        "@tiptap/pm": "3.32.0",
+        "@tiptap/core": "3.32.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tiptap%2Fmarkdown/latest"
+    },
+    {
+      "name": "@tiptap/pm",
+      "latest": "3.32.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tiptap%2Fpm/latest"
+    },
+    {
+      "name": "@tiptap/react",
+      "latest": "3.32.0",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^17.0.0 || ^18.0.0 || ^19.0.0",
+        "react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0",
+        "@tiptap/pm": "3.32.0",
+        "@tiptap/core": "3.32.0",
+        "@types/react": "^17.0.0 || ^18.0.0 || ^19.0.0",
+        "@types/react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tiptap%2Freact/latest"
+    },
+    {
+      "name": "@tiptap/starter-kit",
+      "latest": "3.32.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tiptap%2Fstarter-kit/latest"
+    },
+    {
+      "name": "@tiptap/suggestion",
+      "latest": "3.32.0",
+      "engines": {},
+      "peerDependencies": {
+        "@tiptap/pm": "3.32.0",
+        "@tiptap/core": "3.32.0",
+        "@floating-ui/dom": "^1.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40tiptap%2Fsuggestion/latest"
+    },
+    {
+      "name": "@types/babel__core",
+      "latest": "7.20.5",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40types%2Fbabel__core/latest"
+    },
+    {
+      "name": "@types/bun",
+      "latest": "1.4.4",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40types%2Fbun/latest"
+    },
+    {
+      "name": "@types/js-yaml",
+      "latest": "4.0.9",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40types%2Fjs-yaml/latest"
+    },
+    {
+      "name": "@types/katex",
+      "latest": "0.16.8",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40types%2Fkatex/latest"
+    },
+    {
+      "name": "@types/linkify-it",
+      "latest": "5.0.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40types%2Flinkify-it/latest"
+    },
+    {
+      "name": "@types/mdast",
+      "latest": "4.0.4",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40types%2Fmdast/latest"
+    },
+    {
+      "name": "@types/node",
+      "latest": "26.6.5",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40types%2Fnode/latest"
+    },
+    {
+      "name": "@types/qrcode",
+      "latest": "1.5.6",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40types%2Fqrcode/latest"
+    },
+    {
+      "name": "@types/react",
+      "latest": "19.3.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40types%2Freact/latest"
+    },
+    {
+      "name": "@types/react-dom",
+      "latest": "19.3.0",
+      "engines": {},
+      "peerDependencies": {
+        "@types/react": "^19.3.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40types%2Freact-dom/latest"
+    },
+    {
+      "name": "@types/semver",
+      "latest": "7.8.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40types%2Fsemver/latest"
+    },
+    {
+      "name": "@types/shell-quote",
+      "latest": "1.7.5",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40types%2Fshell-quote/latest"
+    },
+    {
+      "name": "@types/ws",
+      "latest": "8.18.2",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40types%2Fws/latest"
+    },
+    {
+      "name": "@typescript-eslint/eslint-plugin",
+      "latest": "8.72.0",
+      "engines": {
+        "node": "^18.18.0 || ^20.9.0 || >=21.1.0"
+      },
+      "peerDependencies": {
+        "eslint": "^8.57.0 || ^9.0.0 || ^10.0.0",
+        "typescript": ">=4.8.4 <6.1.0",
+        "@typescript-eslint/parser": "^8.72.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40typescript-eslint%2Feslint-plugin/latest"
+    },
+    {
+      "name": "@typescript-eslint/parser",
+      "latest": "8.72.0",
+      "engines": {
+        "node": "^18.18.0 || ^20.9.0 || >=21.1.0"
+      },
+      "peerDependencies": {
+        "eslint": "^8.57.0 || ^9.0.0 || ^10.0.0",
+        "typescript": ">=4.8.4 <6.1.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40typescript-eslint%2Fparser/latest"
+    },
+    {
+      "name": "@uiw/react-json-view",
+      "latest": "2.0.0-alpha.44",
+      "engines": {},
+      "peerDependencies": {
+        "react": ">=18.0.0",
+        "react-dom": ">=18.0.0",
+        "@babel/runtime": ">=7.10.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40uiw%2Freact-json-view/latest"
+    },
+    {
+      "name": "@vitejs/plugin-react",
+      "latest": "6.1.2",
+      "engines": {
+        "node": "^20.19.0 || >=22.12.0"
+      },
+      "peerDependencies": {
+        "vite": "^8.0.0",
+        "oxc-transform-react": "^0.152.0",
+        "@rolldown/plugin-babel": "^0.1.7 || ^0.2.0",
+        "babel-plugin-react-compiler": "^1.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40vitejs%2Fplugin-react/latest"
+    },
+    {
+      "name": "@vscode/ripgrep",
+      "latest": "1.18.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40vscode%2Fripgrep/latest"
+    },
+    {
+      "name": "@whiskeysockets/baileys",
+      "latest": "7.0.0-rc14",
+      "engines": {
+        "node": ">=20.0.0"
+      },
+      "peerDependencies": {
+        "jimp": "^1.6.1",
+        "sharp": "*",
+        "audio-decode": "^2.1.3",
+        "link-preview-js": "^3.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/%40whiskeysockets%2Fbaileys/latest"
+    },
+    {
+      "name": "autoprefixer",
+      "latest": "10.6.1",
+      "engines": {
+        "node": "^10 || ^12 || >=14"
+      },
+      "peerDependencies": {
+        "postcss": "^8.1.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/autoprefixer/latest"
+    },
+    {
+      "name": "axios",
+      "latest": "1.20.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/axios/latest"
+    },
+    {
+      "name": "bash-parser",
+      "latest": "0.5.0",
+      "engines": {
+        "node": ">=4"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/bash-parser/latest"
+    },
+    {
+      "name": "beautiful-mermaid",
+      "latest": "1.1.3",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/beautiful-mermaid/latest"
+    },
+    {
+      "name": "body-parser",
+      "latest": "2.4.0",
+      "engines": {
+        "node": ">=18"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/body-parser/latest"
+    },
+    {
+      "name": "brace-expansion",
+      "latest": "5.0.12",
+      "engines": {
+        "node": "20 || >=22"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/brace-expansion/latest"
+    },
+    {
+      "name": "chrono-node",
+      "latest": "2.10.3",
+      "engines": {
+        "node": "^12.20.0 || ^14.13.1 || >=16.0.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/chrono-node/latest"
+    },
+    {
+      "name": "class-variance-authority",
+      "latest": "0.7.1",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/class-variance-authority/latest"
+    },
+    {
+      "name": "clsx",
+      "latest": "2.1.1",
+      "engines": {
+        "node": ">=6"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/clsx/latest"
+    },
+    {
+      "name": "cmdk",
+      "latest": "1.1.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^18 || ^19 || ^19.0.0-rc",
+        "react-dom": "^18 || ^19 || ^19.0.0-rc"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/cmdk/latest"
+    },
+    {
+      "name": "concurrently",
+      "latest": "10.0.6",
+      "engines": {
+        "node": ">=22"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/concurrently/latest"
+    },
+    {
+      "name": "croner",
+      "latest": "10.0.1",
+      "engines": {
+        "node": ">=18.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/croner/latest"
+    },
+    {
+      "name": "date-fns",
+      "latest": "4.4.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/date-fns/latest"
+    },
+    {
+      "name": "duck-duck-scrape",
+      "latest": "2.2.7",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/duck-duck-scrape/latest"
+    },
+    {
+      "name": "electron",
+      "latest": "45.0.0",
+      "engines": {
+        "node": ">= 22.12.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/electron/latest"
+    },
+    {
+      "name": "electron-builder",
+      "latest": "26.18.0",
+      "engines": {
+        "node": ">=14.0.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/electron-builder/latest"
+    },
+    {
+      "name": "electron-log",
+      "latest": "5.4.4",
+      "engines": {
+        "node": ">= 14"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/electron-log/latest"
+    },
+    {
+      "name": "electron-updater",
+      "latest": "6.8.11",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/electron-updater/latest"
+    },
+    {
+      "name": "esbuild",
+      "latest": "0.28.2",
+      "engines": {
+        "node": ">=18"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/esbuild/latest"
+    },
+    {
+      "name": "eslint",
+      "latest": "10.13.0",
+      "engines": {
+        "node": "^20.19.0 || ^22.13.0 || >=24"
+      },
+      "peerDependencies": {
+        "jiti": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/eslint/latest"
+    },
+    {
+      "name": "eslint-plugin-react",
+      "latest": "7.37.5",
+      "engines": {
+        "node": ">=4"
+      },
+      "peerDependencies": {
+        "eslint": "^3 || ^4 || ^5 || ^6 || ^7 || ^8 || ^9.7"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/eslint-plugin-react/latest"
+    },
+    {
+      "name": "eslint-plugin-react-hooks",
+      "latest": "7.1.1",
+      "engines": {
+        "node": ">=18"
+      },
+      "peerDependencies": {
+        "eslint": "^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0-0 || ^9.0.0 || ^10.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/eslint-plugin-react-hooks/latest"
+    },
+    {
+      "name": "fast-uri",
+      "latest": "4.2.3",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/fast-uri/latest"
+    },
+    {
+      "name": "fflate",
+      "latest": "0.8.3",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/fflate/latest"
+    },
+    {
+      "name": "filtrex",
+      "latest": "3.1.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/filtrex/latest"
+    },
+    {
+      "name": "follow-redirects",
+      "latest": "1.16.2",
+      "engines": {
+        "node": ">=4.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/follow-redirects/latest"
+    },
+    {
+      "name": "glob",
+      "latest": "13.0.6",
+      "engines": {
+        "node": "18 || 20 || >=22"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/glob/latest"
+    },
+    {
+      "name": "grammy",
+      "latest": "1.46.0",
+      "engines": {
+        "node": "^12.20.0 || >=14.13.1"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/grammy/latest"
+    },
+    {
+      "name": "gray-matter",
+      "latest": "4.0.3",
+      "engines": {
+        "node": ">=6.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/gray-matter/latest"
+    },
+    {
+      "name": "hono",
+      "latest": "4.13.14",
+      "engines": {
+        "node": ">=16.9.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/hono/latest"
+    },
+    {
+      "name": "http-cache-semantics",
+      "latest": "4.3.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/http-cache-semantics/latest"
+    },
+    {
+      "name": "husky",
+      "latest": "9.1.7",
+      "engines": {
+        "node": ">=18"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/husky/latest"
+    },
+    {
+      "name": "i18next",
+      "latest": "26.5.11",
+      "engines": {},
+      "peerDependencies": {
+        "typescript": "^5 || ^6 || ^7"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/i18next/latest"
+    },
+    {
+      "name": "i18next-browser-languagedetector",
+      "latest": "8.2.3",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/i18next-browser-languagedetector/latest"
+    },
+    {
+      "name": "incr-regex-package",
+      "latest": "1.0.4",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/incr-regex-package/latest"
+    },
+    {
+      "name": "ip-address",
+      "latest": "10.7.5",
+      "engines": {
+        "node": ">= 12"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/ip-address/latest"
+    },
+    {
+      "name": "jose",
+      "latest": "6.2.13",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/jose/latest"
+    },
+    {
+      "name": "jotai",
+      "latest": "3.0.1",
+      "engines": {
+        "node": ">=22.12.0"
+      },
+      "peerDependencies": {
+        "react": ">=18.0.0",
+        "@types/react": ">=18.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/jotai/latest"
+    },
+    {
+      "name": "jotai-babel",
+      "latest": "0.3.0",
+      "engines": {},
+      "peerDependencies": {
+        "jotai": ">=2.0.0",
+        "@babel/core": ">=7.0.0",
+        "@babel/template": ">=7.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/jotai-babel/latest"
+    },
+    {
+      "name": "jotai-family",
+      "latest": "1.1.0",
+      "engines": {
+        "node": ">=12.20.0"
+      },
+      "peerDependencies": {
+        "jotai": ">=2.9.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/jotai-family/latest"
+    },
+    {
+      "name": "js-yaml",
+      "latest": "5.5.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/js-yaml/latest"
+    },
+    {
+      "name": "katex",
+      "latest": "0.19.1",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/katex/latest"
+    },
+    {
+      "name": "linkify-it",
+      "latest": "6.1.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/linkify-it/latest"
+    },
+    {
+      "name": "lucide-react",
+      "latest": "1.61.0",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0",
+        "@types/react": "*"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/lucide-react/latest"
+    },
+    {
+      "name": "markdown-it",
+      "latest": "15.0.3",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/markdown-it/latest"
+    },
+    {
+      "name": "marked",
+      "latest": "18.1.1",
+      "engines": {
+        "node": ">= 20"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/marked/latest"
+    },
+    {
+      "name": "motion",
+      "latest": "14.6.0",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^18.0.0 || ^19.0.0",
+        "react-dom": "^18.0.0 || ^19.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/motion/latest"
+    },
+    {
+      "name": "music-metadata",
+      "latest": "12.3.2",
+      "engines": {
+        "node": ">=22"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/music-metadata/latest"
+    },
+    {
+      "name": "next-themes",
+      "latest": "0.4.6",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17 || ^18 || ^19 || ^19.0.0-rc"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/next-themes/latest"
+    },
+    {
+      "name": "nice-ticks",
+      "latest": "1.0.2",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/nice-ticks/latest"
+    },
+    {
+      "name": "node-html-parser",
+      "latest": "9.0.5",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/node-html-parser/latest"
+    },
+    {
+      "name": "open",
+      "latest": "11.0.4",
+      "engines": {
+        "node": ">=20"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/open/latest"
+    },
+    {
+      "name": "openai",
+      "latest": "7.43.0",
+      "engines": {
+        "node": ">=22.0.0"
+      },
+      "peerDependencies": {
+        "ws": "^8.21.0",
+        "zod": "^3.25 || ^4.0",
+        "undici": ">=5 <9",
+        "@smithy/hash-node": ">=4.3.0 <5",
+        "google-auth-library": ">=9.15.1 <11",
+        "@smithy/signature-v4": ">=5.4.0 <6",
+        "@aws-sdk/credential-provider-node": ">=3.972.0 <4"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/openai/latest"
+    },
+    {
+      "name": "pdfjs-dist",
+      "latest": "6.4.299",
+      "engines": {
+        "node": ">=22.13.0 || >=24"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/pdfjs-dist/latest"
+    },
+    {
+      "name": "postcss",
+      "latest": "8.5.31",
+      "engines": {
+        "node": "^10 || ^12 || >=14"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/postcss/latest"
+    },
+    {
+      "name": "postcss-selector-parser",
+      "latest": "7.1.7",
+      "engines": {
+        "node": ">=4"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/postcss-selector-parser/latest"
+    },
+    {
+      "name": "prosemirror-highlight",
+      "latest": "0.16.0",
+      "engines": {},
+      "peerDependencies": {
+        "lowlight": "^3.1.0",
+        "refractor": "^5.0.0",
+        "sugar-high": "^2.0.0",
+        "@types/hast": "^3.0.0",
+        "highlight.js": "^11.9.0",
+        "@lezer/common": "^1.0.0",
+        "@shikijs/types": "^1.29.2 || ^2.0.0 || ^3.0.0 || ^4.0.0",
+        "@lezer/highlight": "^1.0.0",
+        "prosemirror-view": "^1.32.4",
+        "prosemirror-model": "^1.19.3",
+        "prosemirror-state": "^1.4.3",
+        "prosemirror-transform": "^1.8.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/prosemirror-highlight/latest"
+    },
+    {
+      "name": "prosemirror-view",
+      "latest": "1.42.8",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/prosemirror-view/latest"
+    },
+    {
+      "name": "proxy-addr",
+      "latest": "2.0.8",
+      "engines": {
+        "node": ">= 0.10"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/proxy-addr/latest"
+    },
+    {
+      "name": "qrcode",
+      "latest": "1.5.4",
+      "engines": {
+        "node": ">=10.13.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/qrcode/latest"
+    },
+    {
+      "name": "qrcode.react",
+      "latest": "4.2.0",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/qrcode.react/latest"
+    },
+    {
+      "name": "qs",
+      "latest": "6.16.1",
+      "engines": {
+        "node": ">=0.6"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/qs/latest"
+    },
+    {
+      "name": "react",
+      "latest": "19.3.1",
+      "engines": {
+        "node": ">=0.10.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/react/latest"
+    },
+    {
+      "name": "react-colorful",
+      "latest": "5.8.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": ">=16.8.0",
+        "react-dom": ">=16.8.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/react-colorful/latest"
+    },
+    {
+      "name": "react-day-picker",
+      "latest": "10.0.2",
+      "engines": {
+        "node": ">=18"
+      },
+      "peerDependencies": {
+        "react": ">=16.8.0",
+        "@types/react": ">=16.8.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/react-day-picker/latest"
+    },
+    {
+      "name": "react-devtools-core",
+      "latest": "8.0.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/react-devtools-core/latest"
+    },
+    {
+      "name": "react-dom",
+      "latest": "19.3.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^19.3.1"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/react-dom/latest"
+    },
+    {
+      "name": "react-i18next",
+      "latest": "17.1.9",
+      "engines": {},
+      "peerDependencies": {
+        "react": ">= 16.8.0",
+        "i18next": ">= 26.2.0",
+        "typescript": "^5 || ^6 || ^7"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/react-i18next/latest"
+    },
+    {
+      "name": "react-markdown",
+      "latest": "10.1.0",
+      "engines": {},
+      "peerDependencies": {
+        "react": ">=18",
+        "@types/react": ">=18"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/react-markdown/latest"
+    },
+    {
+      "name": "react-pdf",
+      "latest": "11.0.0",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "@types/react": "^19.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/react-pdf/latest"
+    },
+    {
+      "name": "react-resizable-panels",
+      "latest": "4.15.0",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^18.0.0 || ^19.0.0",
+        "react-dom": "^18.0.0 || ^19.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/react-resizable-panels/latest"
+    },
+    {
+      "name": "react-simple-code-editor",
+      "latest": "0.14.1",
+      "engines": {},
+      "peerDependencies": {
+        "react": ">=16.8.0",
+        "react-dom": ">=16.8.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/react-simple-code-editor/latest"
+    },
+    {
+      "name": "rehype-katex",
+      "latest": "7.0.1",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/rehype-katex/latest"
+    },
+    {
+      "name": "rehype-raw",
+      "latest": "7.0.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/rehype-raw/latest"
+    },
+    {
+      "name": "remark",
+      "latest": "15.0.1",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/remark/latest"
+    },
+    {
+      "name": "remark-gfm",
+      "latest": "4.0.1",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/remark-gfm/latest"
+    },
+    {
+      "name": "remark-math",
+      "latest": "6.0.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/remark-math/latest"
+    },
+    {
+      "name": "semver",
+      "latest": "7.8.5",
+      "engines": {
+        "node": ">=10"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/semver/latest"
+    },
+    {
+      "name": "sharp",
+      "latest": "0.35.5",
+      "engines": {
+        "node": ">=20.9.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/sharp/latest"
+    },
+    {
+      "name": "shell-quote",
+      "latest": "1.12.0",
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/shell-quote/latest"
+    },
+    {
+      "name": "shiki",
+      "latest": "4.5.0",
+      "engines": {
+        "node": ">=20"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/shiki/latest"
+    },
+    {
+      "name": "sonner",
+      "latest": "2.0.8",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^18.0.0 || ^19.0.0 || ^19.0.0-rc",
+        "react-dom": "^18.0.0 || ^19.0.0 || ^19.0.0-rc",
+        "@types/react": "^18.0.0 || ^19.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/sonner/latest"
+    },
+    {
+      "name": "source-map-js",
+      "latest": "1.2.2",
+      "engines": {
+        "node": ">=0.10.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/source-map-js/latest"
+    },
+    {
+      "name": "strip-markdown",
+      "latest": "6.0.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/strip-markdown/latest"
+    },
+    {
+      "name": "tailwind-merge",
+      "latest": "3.7.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/tailwind-merge/latest"
+    },
+    {
+      "name": "tailwindcss",
+      "latest": "4.3.3",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/tailwindcss/latest"
+    },
+    {
+      "name": "tar",
+      "latest": "7.5.22",
+      "engines": {
+        "node": ">=18"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/tar/latest"
+    },
+    {
+      "name": "tiptap-extension-code-block-shiki",
+      "latest": "1.2.0",
+      "engines": {},
+      "peerDependencies": {
+        "shiki": "^3.0.0 || ^4.0.0",
+        "@tiptap/pm": "^2.3.0 || ^3.0.0",
+        "@tiptap/core": "^2.3.0 || ^3.0.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/tiptap-extension-code-block-shiki/latest"
+    },
+    {
+      "name": "tiptap-markdown",
+      "latest": "0.9.0",
+      "engines": {},
+      "peerDependencies": {
+        "@tiptap/core": "^3.0.1"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/tiptap-markdown/latest"
+    },
+    {
+      "name": "turndown",
+      "latest": "7.2.4",
+      "engines": {
+        "npm": ">=9",
+        "node": ">=18"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/turndown/latest"
+    },
+    {
+      "name": "typescript",
+      "latest": "7.0.2",
+      "engines": {
+        "node": ">=16.20.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/typescript/latest"
+    },
+    {
+      "name": "undici",
+      "latest": "8.12.3",
+      "engines": {
+        "node": ">=22.19.0"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/undici/latest"
+    },
+    {
+      "name": "unified",
+      "latest": "11.0.5",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/unified/latest"
+    },
+    {
+      "name": "unist-util-visit",
+      "latest": "5.2.0",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/unist-util-visit/latest"
+    },
+    {
+      "name": "uuid",
+      "latest": "14.0.3",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/uuid/latest"
+    },
+    {
+      "name": "vaul",
+      "latest": "1.1.2",
+      "engines": {},
+      "peerDependencies": {
+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc",
+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0.0 || ^19.0.0-rc"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/vaul/latest"
+    },
+    {
+      "name": "vite",
+      "latest": "8.3.5",
+      "engines": {
+        "node": "^20.19.0 || >=22.12.0"
+      },
+      "peerDependencies": {
+        "tsx": "^4.8.1",
+        "jiti": ">=1.21.0",
+        "less": "^4.0.0",
+        "sass": "^1.70.0",
+        "yaml": "^2.4.2",
+        "stylus": ">=0.54.8",
+        "terser": "^5.16.0",
+        "esbuild": "^0.27.0 || ^0.28.0",
+        "sugarss": "^5.0.0",
+        "@types/node": "^20.19.0 || >=22.12.0",
+        "sass-embedded": "^1.70.0",
+        "@vitejs/devtools": "^0.7.1 || ^0.8.0"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/vite/latest"
+    },
+    {
+      "name": "ws",
+      "latest": "8.22.0",
+      "engines": {
+        "node": ">=10.0.0"
+      },
+      "peerDependencies": {
+        "bufferutil": "^4.0.1",
+        "utf-8-validate": ">=5.0.2"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/ws/latest"
+    },
+    {
+      "name": "yaml",
+      "latest": "2.9.1",
+      "engines": {
+        "node": ">= 14.6"
+      },
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/yaml/latest"
+    },
+    {
+      "name": "zod",
+      "latest": "4.6.7",
+      "engines": {},
+      "peerDependencies": {},
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/zod/latest"
+    },
+    {
+      "name": "zod-to-json-schema",
+      "latest": "3.25.2",
+      "engines": {},
+      "peerDependencies": {
+        "zod": "^3.25.28 || ^4"
+      },
+      "deprecated": null,
+      "url": "https://registry.npmjs.org/zod-to-json-schema/latest"
+    }
+  ]
+}

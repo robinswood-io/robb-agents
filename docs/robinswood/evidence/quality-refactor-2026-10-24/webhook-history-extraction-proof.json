@@ -1,0 +1,19 @@
+{
+  "valid": true,
+  "source": "packages/shared/src/automations/webhook-utils.ts",
+  "historyModule": "packages/shared/src/automations/webhook-utils/history.ts",
+  "movedFunctions": [
+    "redactUrl",
+    "createWebhookHistoryEntry",
+    "createPromptHistoryEntry"
+  ],
+  "retainedStatementOrderPreserved": true,
+  "retainedStatementCount": 20,
+  "networkBlocklistInitializationLoopsPreserved": 2,
+  "historyFunctionBodiesPreserved": true,
+  "beforeHash": "8c36ec15d07a8b94485677c91ad6b3bf0c984a3342346a4dce85da770a4ac151",
+  "afterHash": "e6490bcc79c11f5d35e3a7cebd3681ed8d67a295ece76ef5dbd73cf64d4adb04",
+  "historyHash": "fa4e8648382cdc592282ae7c689c665beb91f0146d7c0515cb9593592933d28f",
+  "entryLines": 456,
+  "historyLines": 69
+}

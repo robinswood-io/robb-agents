@@ -1,0 +1,8 @@
+{
+  "version": "2026-09-16.5",
+  "allowedBashPatterns": [],
+  "blockedCommandHints": [],
+  "allowedMcpPatterns": [],
+  "allowedApiEndpoints": [],
+  "allowedWritePaths": []
+}

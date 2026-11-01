@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { describe, expect, test } from 'bun:test';
 import {
   appendCoalescedInternalMessage,
@@ -5,12 +6,12 @@ import {
   type InternalQueuedMessage,
 } from './internal-message-coalescing.ts';
 
-const queued = (senderSessionId?: string): InternalQueuedMessage => ({
+const queued = (senderSessionId?: string): InternalQueuedMessage => (omitUndefined<InternalQueuedMessage>({
   message: `message-${senderSessionId ?? 'user'}`,
   options: senderSessionId
     ? { internalOrigin: { kind: 'agent-message', senderSessionId } }
     : undefined,
-});
+}));
 
 describe('internal agent message coalescing', () => {
   test('coalesces consecutive updates from the same sender', () => {

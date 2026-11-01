@@ -1,0 +1,76 @@
+{
+  "status": "testé dans le candidat local ; chantier global en cours",
+  "scope": "Gouvernance des capacités, file de missions, apprentissage vérifié, télémétrie, évaluations, interopérabilité, archivage et stockage des espaces",
+  "declarationsPreserved": 353,
+  "maximumLines": 413,
+  "allExtractionProofsRechecked": 84,
+  "structure": "Corps, imports et exports conservés ; aucun cycle entre les nouveaux modules ; classes conservées lorsqu’elles respectent le seuil, sans ajout d’un moteur ou de délégations dynamiques.",
+  "checks": {
+    "policy-storage-modules-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 18.57,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/policy-storage-modules-types.log"
+    },
+    "policy-storage-modules-lint": {
+      "command": [
+        "rtk",
+        "bunx",
+        "eslint",
+        "--max-warnings",
+        "0",
+        "packages/shared/src/governance/capability-broker.ts",
+        "packages/shared/src/governance/capability-broker",
+        "packages/shared/src/governance/sovereign-team-mesh.ts",
+        "packages/shared/src/governance/sovereign-team-mesh",
+        "packages/shared/src/governance/verified-learning.ts",
+        "packages/shared/src/governance/verified-learning",
+        "packages/shared/src/telemetry/execution-telemetry.ts",
+        "packages/shared/src/telemetry/execution-telemetry",
+        "packages/shared/src/evals/provider-eval-runner.ts",
+        "packages/shared/src/evals/provider-eval-runner",
+        "packages/shared/src/interop/agent-interop.ts",
+        "packages/shared/src/interop/agent-interop",
+        "packages/server-core/src/sessions/completed-chat-retention.ts",
+        "packages/server-core/src/sessions/completed-chat-retention",
+        "packages/shared/src/workspaces/storage.ts",
+        "packages/shared/src/workspaces/storage"
+      ],
+      "exitCode": 0,
+      "seconds": 0.9,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/policy-storage-modules-lint.log"
+    },
+    "policy-storage-modules-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 16.85,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/policy-storage-modules-build.log"
+    },
+    "policy-storage-modules-all-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 140.81,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/policy-storage-modules-all-tests.log"
+    }
+  },
+  "remaining": {
+    "max-lines": 165,
+    "no-explicit-any": 525
+  },
+  "installedApplication": "inchangée ; vérification UI et missions réelles finales sous nouvelles dépendances restantes"
+}

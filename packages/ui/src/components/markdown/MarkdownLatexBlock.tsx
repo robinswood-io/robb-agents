@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils'
 
 interface MarkdownLatexBlockProps {
   code: string
-  className?: string
+  className?: string | undefined
 }
 
 /**

@@ -1,0 +1,38 @@
+{
+  "status": "passed",
+  "files": [
+    {
+      "file": "packages/ui/src/components/markdown/Markdown.tsx",
+      "lines": 215,
+      "sha256": "db9300226d1f72343c696428e399492fdaba2816e602fce5caa8d285e29f3d25"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/markdown-context.ts",
+      "lines": 79,
+      "sha256": "e07447f3d3ae0d9839076d15d8a38733aa774c901aeb4be0343e60f8a9ad0d27"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/markdown-renderers.tsx",
+      "lines": 461,
+      "sha256": "b2ce48098507f2a16df8bbf7dc885a82ae9774ef92362c79ffc4aa483c786de2"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/MarkdownDatatableBlock.tsx",
+      "lines": 481,
+      "sha256": "93d697e1e6760d5351af1db8a7136b5c3d11f41c2c188e4296ab48850adc7672"
+    },
+    {
+      "file": "packages/ui/src/components/markdown/datatable-values.tsx",
+      "lines": 275,
+      "sha256": "52e64e970b93e5f108c06ae0d750feaeef162ea705daf46c8fb89515e8718e19"
+    }
+  ],
+  "nativeDeclarations": 26,
+  "nativeBodiesStateAndEffectOrderPreservedAfterControlledSortFix": true,
+  "nativePublicExportsAndImportedBindingsPreserved": true,
+  "runtimeImportCycles": 0,
+  "newStateOrWorkflowAdded": false,
+  "maximumFileLines": 481,
+  "sortStateHooksBefore": 2,
+  "sortStateHooksAfter": 1
+}

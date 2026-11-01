@@ -1,0 +1,82 @@
+{
+  "status": "passed",
+  "classes": [
+    {
+      "source": "packages/messaging-gateway/src/adapters/lark/index.ts",
+      "nativeMethodBodies": 11,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/messaging-gateway/src/adapters/telegram/index.ts",
+      "nativeMethodBodies": 16,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/messaging-gateway/src/commands.ts",
+      "nativeMethodBodies": 13,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/messaging-gateway/src/gateway.ts",
+      "nativeMethodBodies": 13,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [
+        "onSessionEvent: forwarded payload matches native EventSink unknown[]"
+      ],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/messaging-gateway/src/registry.ts",
+      "nativeMethodBodies": 45,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/messaging-gateway/src/renderer.ts",
+      "nativeMethodBodies": 17,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "relocatedNativeDynamicImports": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    }
+  ],
+  "runtimeImportCycles": 0,
+  "fanOutRuntimeByteIdentical": true,
+  "maximumFileLines": 338
+}

@@ -1,0 +1,1094 @@
+{
+  "source": "packages/shared/src/agent/core/objective-evidence-gate.ts",
+  "units": [
+    {
+      "names": [
+        "HighStakesEvidenceDomain"
+      ],
+      "group": "contracts",
+      "bodySha256": "b25f0082c93415f40f7bc45d96c91cf3ea28d453af37aca9ea101b0cf362ec8b"
+    },
+    {
+      "names": [
+        "SecurityDocumentationProvider"
+      ],
+      "group": "contracts",
+      "bodySha256": "025d897b712ac45e0ebe87906555e1b684bad9bae1d0d3d204f6156840d25fe7"
+    },
+    {
+      "names": [
+        "ObjectiveEvidenceGateState"
+      ],
+      "group": "contracts",
+      "bodySha256": "f2634da37f99d0f77ee7a7b6b75a2f85aab2a97473f8f4a12f4c27406a572509"
+    },
+    {
+      "names": [
+        "ObjectiveEvidenceGateAuthority"
+      ],
+      "group": "contracts",
+      "bodySha256": "b5944a3f7805af2e3476b94bbd472e155a433643b6d5992a543fc297d549d536"
+    },
+    {
+      "names": [
+        "ObjectiveEvidenceToolEffectKind"
+      ],
+      "group": "contracts",
+      "bodySha256": "37dc9bf93ab5de8f7ef2b9f60c0ff573c6ea45acfa8f349d212dc756f57335c5"
+    },
+    {
+      "names": [
+        "states"
+      ],
+      "group": "lifecycle",
+      "bodySha256": "2f7e525ad7af41916b17e0ef15a9e11c6c62aa61240297ad401ac44cf08cbe78"
+    },
+    {
+      "names": [
+        "beginObjectiveEvidenceGate"
+      ],
+      "group": "lifecycle",
+      "bodySha256": "f8f09df772ae4a70dfb69c6ad2147e72305439de741e14d2c7b41e4c3244f63a"
+    },
+    {
+      "names": [
+        "beginObjectiveEvidenceGate"
+      ],
+      "group": "lifecycle",
+      "bodySha256": "3848c04ce44f0fe3b1328906fc880c8c9da5bb35ffe6b08f55e98525de11d583"
+    },
+    {
+      "names": [
+        "beginObjectiveEvidenceGate"
+      ],
+      "group": "lifecycle",
+      "bodySha256": "3d3e9a1f00f28916a336cd64ab81371b264b8373cf8be02d0956582f42e7024b"
+    },
+    {
+      "names": [
+        "recordObjectiveEvidence"
+      ],
+      "group": "lifecycle",
+      "bodySha256": "fe0f6f4e00806b36f9dc561d38eb899c2afc6b2598ab5f611568ca9d47a1dd57"
+    },
+    {
+      "names": [
+        "isEvidenceAcquisitionTool"
+      ],
+      "group": "lifecycle",
+      "bodySha256": "0c34230afa9163591a0fc5a7c6239b9ab04c2f355b2c37d5e101cf0ca02d4dd0"
+    },
+    {
+      "names": [
+        "checkObjectiveEvidenceBeforeMutation"
+      ],
+      "group": "lifecycle",
+      "bodySha256": "52b840254115d9a98aa5cedea553f47f28f21669d0c85f9411be067da21dca69"
+    },
+    {
+      "names": [
+        "getObjectiveEvidenceCompletionGap"
+      ],
+      "group": "lifecycle",
+      "bodySha256": "90110e3abe11be8823feff59bd9a8e9cd1a6fa54acf480472eee7f884f321273"
+    },
+    {
+      "names": [
+        "clearObjectiveEvidenceGate"
+      ],
+      "group": "lifecycle",
+      "bodySha256": "d2c29db13733ddba5210a45e19776ebe4c59f780c2009136730c9c0f80231e50"
+    },
+    {
+      "names": [
+        "MUTATING_REQUEST_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "5c6477867c485912360ee11dcb488b3ae923d0fab94f6ff2faba4df7ec3d8ce6"
+    },
+    {
+      "names": [
+        "DIRECT_RBAC_DOMAIN_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "82ce1d7e647f474410fa9cfc7d8fbfcfe6e41323bfca98ec241f4577547c9d70"
+    },
+    {
+      "names": [
+        "DIRECT_RBAC_MUTATION_ACTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "4e52c6adf4a01b0a1895e9dec8a1e5c0c2cec4ddb526cda86195797221cb61fe"
+    },
+    {
+      "names": [
+        "unicodeWordBounded"
+      ],
+      "group": "patterns",
+      "bodySha256": "81326c61513708045ae747e71a2552a102d73b93b53d491ca38454b2c255354e"
+    },
+    {
+      "names": [
+        "DIRECT_MEDICAL_DOMAIN_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "9a4f51a5e90ef584eea716ebc94cf39e107012de9fcbf5cdb8fa568886ab513f"
+    },
+    {
+      "names": [
+        "DOMAINS"
+      ],
+      "group": "patterns",
+      "bodySha256": "0309de9b193d1ad0f5d8d2888be9b47aa1e94fca645edfe0a84caf6cb4cfba7d"
+    },
+    {
+      "names": [
+        "TECHNICAL_CONTRACT_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "74a65568ef00c532f6886d0b7b8936974ad31507f68d8ca4db7164198d3ec483"
+    },
+    {
+      "names": [
+        "OPERATIONAL_CONTRACT_LIFECYCLE_SUBJECT_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "c4c95d3a1250770617d3a7f600becf8e89d21ef63c7d87ba76c062cd99765315"
+    },
+    {
+      "names": [
+        "OPERATIONAL_CONTRACT_LIFECYCLE_ACTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "cd71037eadc67e262918dee46010c65694389d1e3f599d87bced059be9de4b19"
+    },
+    {
+      "names": [
+        "OPERATIONAL_CONTRACT_LIFECYCLE_WORD_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "9ce9db2d2b528640776b946cbe2a912509f27540972a1724e4d4e262084c2a34"
+    },
+    {
+      "names": [
+        "OPERATIONAL_CONTRACT_LIFECYCLE_WORDS_GLOBAL_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "cc81eb65f2558a9b42eb8d6ddb0042b6ea65f43aff7dbddd892abd3a38d37106"
+    },
+    {
+      "names": [
+        "GENUINE_LEGAL_DELIVERABLE_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "27fb0bf6bb3eb21318ff4252899d4fa711ea54d76afffbef78d295da19585c21"
+    },
+    {
+      "names": [
+        "DIRECT_LEGAL_DETERMINER_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "9d1a5f2fc453b29c44acd17c686d798371589aefaee586698b0445172a2dacbf"
+    },
+    {
+      "names": [
+        "DIRECT_CONTRACT_OR_AGREEMENT_TARGET_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "a2a271f4910311516b35f25096bad23589ef5df99b1152fba79210428c6d9338"
+    },
+    {
+      "names": [
+        "DIRECT_QUALIFIED_LEGAL_DOCUMENT_TARGET_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "5b11af4e25010336923891b565fa59281b3b5d6b21d900ff341f49b83e38f64c"
+    },
+    {
+      "names": [
+        "DIRECT_GENERIC_DOCUMENT_TARGET_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "3e175df1413373f683f93b92ee52ea2a8d780e4960105a9575d32c3742fc591e"
+    },
+    {
+      "names": [
+        "DIRECT_CONTRACT_OR_AGREEMENT_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "c595c9b4027963379f07e46916bd8e47205aa2347350b9c753c4d7cf3887b5a3"
+    },
+    {
+      "names": [
+        "DIRECT_QUALIFIED_LEGAL_DOCUMENT_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "8bd201c3aac4bd46ef8d77a52a850d8c123273f615ca57d06a06c408cf045c0a"
+    },
+    {
+      "names": [
+        "DIRECT_COMMITTING_DOCUMENT_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "6a141ac1e0d1ae3ea5df7e91a0167427ef8e8189d210ad2c69d4d8c14bcd1533"
+    },
+    {
+      "names": [
+        "DIRECT_TARGET_FIRST_LEGAL_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "47a30a1994b4212ec53cfc903e9fcd7fc4a066f4778fbbef9dba219166707f8f"
+    },
+    {
+      "names": [
+        "DIRECT_REFERENTIAL_LEGAL_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "9172f9bc54bf8a2b0da986d3bfcbd2ad9ac289489499f790b0098c6940eb2587"
+    },
+    {
+      "names": [
+        "DIRECT_TARGET_FIRST_COMMITTING_DOCUMENT_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "7149e3d227203d5162ec88c23e53ca3535f35b3876ef396116243dc619b85bb7"
+    },
+    {
+      "names": [
+        "ENGLISH_LEGAL_PASSIVE_ACTION_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "cfc14e863f550228ea343aff0480b2829be8442af1442f05fcb38faac626179b"
+    },
+    {
+      "names": [
+        "FRENCH_LEGAL_PASSIVE_ACTION_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "ee72e17d655b666a6d08a98d411e08dee53e6d1e1320d3ec3b8ed96cc667c396"
+    },
+    {
+      "names": [
+        "DIRECT_TARGET_FIRST_LEGAL_PASSIVE_MUTATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "b5fcf45fec956061387b6c4fa269ef45cc93bca444521feb0f08c43ed59f5d6a"
+    },
+    {
+      "names": [
+        "DIRECT_TARGET_FIRST_COMMITTING_DOCUMENT_PASSIVE_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "14658647a48d00e594c87f67565f6b673e58cd35ef65aca05f0fd4b4d739ef4a"
+    },
+    {
+      "names": [
+        "NEGATED_LEGAL_EFFECT_SUBJECT_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "e6f243a93f871b98ee7e70fb036ecc59eb1f2586c871febe73d3a99ad7ce72ca"
+    },
+    {
+      "names": [
+        "NEGATED_LEGAL_EFFECT_LIST_SEPARATOR_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "e7422b723b2355b3e51026129d59c8f66a1838c6ce64b4b4ac53dcc43612739b"
+    },
+    {
+      "names": [
+        "UNIVERSALLY_NEGATED_LEGAL_EFFECT_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "82e6a33ff88f2ed9a94e0b74e939c0fe871c4ae5f6bc19ff136efae36ac0e21e"
+    },
+    {
+      "names": [
+        "TECHNICAL_HEALTH_TARGET"
+      ],
+      "group": "patterns",
+      "bodySha256": "8b7808208be0781de2b793db02a517a8cf2118cecba8ae6b51a10f177cd0f725"
+    },
+    {
+      "names": [
+        "TECHNICAL_HEALTH_TARGET_LINK"
+      ],
+      "group": "patterns",
+      "bodySha256": "d9fc01c53d52a7b7795582b13e0fd316a93104c265be3e929dcb09bb7fd261a3"
+    },
+    {
+      "names": [
+        "UNICODE_WORD_START"
+      ],
+      "group": "patterns",
+      "bodySha256": "748fe281467d81be12bdfa75b35ca69c1ba40fc804ed593a348fbe06c143ee72"
+    },
+    {
+      "names": [
+        "UNICODE_WORD_END"
+      ],
+      "group": "patterns",
+      "bodySha256": "1f0d66cb7040eb65137e4662e865ab79e478e964f300f40ac6a93428563ddab0"
+    },
+    {
+      "names": [
+        "TECHNICAL_HEALTH_QUALIFIER_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "1f2bf5a3eaa49d729812587c8d61ada2927bde2e75d066835c9bacf4a6b2c6df"
+    },
+    {
+      "names": [
+        "TECHNICAL_HEALTH_QUALIFIER"
+      ],
+      "group": "patterns",
+      "bodySha256": "db079676f3e9c8496a7fcff5d0da92ca862a340e66309a796c0c4b9bb263cbe7"
+    },
+    {
+      "names": [
+        "TECHNICAL_HEALTH_OPERATIONAL_CONTINUATION"
+      ],
+      "group": "patterns",
+      "bodySha256": "5bacd42a41e17f4876d119597b844fd36af6ea5862a0c8003bce759ae3620a7b"
+    },
+    {
+      "names": [
+        "TECHNICAL_HEALTH_PHRASE_END"
+      ],
+      "group": "patterns",
+      "bodySha256": "f38b7e4530eac19703a3799ba36726ee8e1d27a4681d461a74dedc24a1b488f0"
+    },
+    {
+      "names": [
+        "TECHNICAL_HEALTH_PHRASE_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "b887fae92517025949b227f74e25f824de9237c2592d60bbc92aa8c4cfcce21e"
+    },
+    {
+      "names": [
+        "TECHNICAL_LIST_HEALTH_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "1b5cf8260e8e668dbcc71d57b15da854e7eea1e139270e8ce92c5af6377e4695"
+    },
+    {
+      "names": [
+        "STANDALONE_OPERATIONAL_HEALTH_QUALIFIER_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "62c0398017b46b38c67bbf741715a4ccf2e43c0540470f75e4139de4199ef037"
+    },
+    {
+      "names": [
+        "FRENCH_OPERATIONAL_TREATMENT_CLARIFICATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "d64d663f5a5d6fb0123df55c059adb97024252d36ccb35e13684270d371f1d80"
+    },
+    {
+      "names": [
+        "ENGLISH_OPERATIONAL_TREATMENT_CLARIFICATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "2a10ff15b85aa11e33ee9a454f63c55fdf08e71a7cc63257d0483d1a69e9a426"
+    },
+    {
+      "names": [
+        "NO_MEDICAL_SOURCE_AFTER_CLARIFICATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "a1f7052e3d83d499436cb950ec726a7a3ac31d7d78409dc4beda7f9c2f188065"
+    },
+    {
+      "names": [
+        "NON_MEDICAL_CLARIFICATION_SUFFIX_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "d8d19eb98ced21f9d5919ab610cb28febb88c8afd3572430710bb47b4cc58c7b"
+    },
+    {
+      "names": [
+        "CLINICAL_SIGNAL_INSIDE_CLARIFICATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "392ae5dc25f440a4644609a7f4044a585bc68c2ef6e5b88caa6e34bd0909bddd"
+    },
+    {
+      "names": [
+        "MEDICAL_TREATMENT_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "4940ebc68ee3fce93f2778e6822d6d33d076804a689ac38530bfa13df1ca818d"
+    },
+    {
+      "names": [
+        "MEDICAL_TREATMENT_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "6c51fea99f6c2512ba10ea2b85d2c96bd5e4706e6e39d76e7671e648346b0ccf"
+    },
+    {
+      "names": [
+        "MEDICAL_TREATMENT_OCCURRENCE_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "c2d4b3e35ce354aca7b176a57d6da6f313218130f9c8788ba33ccd9a653e6118"
+    },
+    {
+      "names": [
+        "CLINICAL_CONDITION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "cff27cd2cde2c60cb93f6b9a566127082fd78e13255c27b82eb8655c5acac82a"
+    },
+    {
+      "names": [
+        "CLINICAL_TREATMENT_QUALIFIER_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "c827b89482daa765e08dada0bf677e3a6b13aabb9a408612ceb0569100ee0c44"
+    },
+    {
+      "names": [
+        "CLINICAL_TREATMENT_MODALITY_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "2dc12abea50a334505ace513501f0a393753a02923934eaeafae42d0e2dae65a"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_MEDICATION_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "31670b9cef8f1a152791d8ad5026d47c7da93be21f8f06f1027209d54fe00578"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_TARGET_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "3d5b41ff0c7e6ef3c4bc45789c3f03774d2cb4589e4009facd093a086b6351c3"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_NAMED_PERSON_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "2e7246d598d4672583d2f37971bb0116e728fa28333540e76327498167e8505d"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_MEDICATION_TRANSITION_TAIL_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "a1db278bffa6cc6696ed04af256ae2ab3f4e7c20db867c2deb853ac82cde6bbe"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_MODIFIER_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "bf1f4de49953c3bd234a67853919cfed73fbb2fb562bb947f038b3c7b70bd468"
+    },
+    {
+      "names": [
+        "ENGLISH_CLINICAL_TREATMENT_ACTION_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "969849157a62e8cf52c2c0ba84cfbc0fc62864c6d910ccb390ec6943448e52b7"
+    },
+    {
+      "names": [
+        "FRENCH_CLINICAL_TREATMENT_ACTION_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "def6bbaf9be6df1fccccb6cf0d28c99c138c8e7a44ae627a00f19afc4680bd90"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_TREATMENT_ACTION_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "54b7a5d448e600cb60b546159855aa19dff28bbc5607bd7905f41696f27a977b"
+    },
+    {
+      "names": [
+        "ENGLISH_CLINICAL_PROCEDURE_ACTION_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "ed6f8698a00c8d4e39ecbb8116abf6c73449393d690203594ff675999bb95a59"
+    },
+    {
+      "names": [
+        "FRENCH_CLINICAL_PROCEDURE_ACTION_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "e96b3d8aeed87a2bf0028a37e45225af3535b7a0cea5f679229f003b9871e4fa"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_PROCEDURE_ACTION_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "12b471cd857b4f8063b308768d819a7e22307209a2408a8747053bb19b1448a8"
+    },
+    {
+      "names": [
+        "ENGLISH_CLINICAL_PATIENT_CARE_ACTION_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "4537b4786fbb00df18ce69125c6988f68dc095b793deeda4f7c39be59a4ca4a4"
+    },
+    {
+      "names": [
+        "FRENCH_CLINICAL_PATIENT_CARE_ACTION_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "7c2b59b9ad8cf609c67d0dd88d655772cb7cb874e6a943896acecbd2f0c7014a"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_PATIENT_CARE_ACTION_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "ef81b16d5170fe2306aee7ce5d5bd38d2923279bf70f082498dc79e61e525ddc"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_TREATMENT_ACTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "f065b82b8c86824407a2f9917bb3220ab85039afc07c578f581704887cf18001"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_PROCEDURE_ACTION_ONLY_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "0ba015fe9c2700bd4a767874f82e0ed5c4166160df644ae6d8ea72c02363cc4b"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_PATIENT_CARE_ACTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "cb24c9ada2c21c28219e863c967acb2fd4ec4f8291ada3f7bb265b87db3e5420"
+    },
+    {
+      "names": [
+        "BARE_ENGLISH_CLINICAL_ACTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "d57a9e1a99b1bce772635ced842c0fd84ce247061245ee885771a067bc013663"
+    },
+    {
+      "names": [
+        "ANY_ENGLISH_CLINICAL_ACTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "a08f90dc199b90b56cdb6a0c1fa256cc1e7338d30542ba842f711d5b91e8b5d6"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_MANAGEMENT_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "277830a8bb0d1ff0a73f026b5c04bb63373d1e7bbf7a010f6268e7f20754be93"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_DOSAGE_MANAGEMENT_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "3b261f789ac03f20a10b9b858868dd374680a51f129d03b127c4db5309ac3d6a"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_PRESCRIPTION_MANAGEMENT_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "7c457408ac5fb3252cfc8ced5a59e26461be21a1c1f6c09d91a66d5ba3d106bc"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_PRESCRIPTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "1dc02f07947694d0c8187e69582ebaaf92f98e69f04d6805dd51dd4ba64a58d3"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_PROCEDURE_TARGET_SOURCE"
+      ],
+      "group": "patterns",
+      "bodySha256": "eecd63e746dff7ee10218f3cf7b4820a56a27627d4e27b12ecd9d75c4e3c1529"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_PROCEDURE_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "025b340caecac7690b8eb55cd2a5b832abd9f0360f611b083ad827d3b89dbdaa"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_MUTATION_ACTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "5abc5d2a7596f8201f65b8f5803d99468c4a36c47903e5fe0605f512f47be6c0"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_PATIENT_MEDICATION_MANAGEMENT_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "d3cd139491506927d36b384122d90cef003c64c1930ab4aac178a3b1f217b4b1"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_PATIENT_CARE_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "d2756d6dcf4c676bced91bf31561961909389db4e10dcd5f9ba731ac369b1480"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_MEDICATION_TRANSITION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "4f9436438fde232683d6287d3499b8b4cd2ac257dc1a09781b493ba01fdabf20"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_NAMED_PERSON_ACTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "1fa6570bae154ac6eaa4c8af20f901b31c6652076b67aca1f9eea8ae06d8b955"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_PATIENT_ADMINISTRATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "a3f408a35dec9da07eb3bf621de84cad4204e78c6690afa761a635243c3a825a"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_LOCAL_MEDICATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "39bf6188ceb4fb7dac32af1e3ee30afa2f752f5d091fe2b27a6c6d2c17e763bf"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_LOCAL_PROCEDURE_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "1ee0536ae975510add1d586832a157887b14188cae7b53ef5d7aa5315ee53216"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_PATIENT_PROCEDURE_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "ca524c63b48ef7b39942907535bdbc4448b51a24814fbeccca59fc4f8ab351f0"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_LOCAL_TRANSITION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "622c59cb920c2e00adec09cf37af4b64e4fdaa6a648c70e98ec9ee81f8156af1"
+    },
+    {
+      "names": [
+        "DIRECT_CLINICAL_LOCAL_NAMED_PERSON_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "346bf5a9d6ab8a18f0b5d5b0aad745088c80574d5d6d0f25b9357d7c7b6d2a2e"
+    },
+    {
+      "names": [
+        "CLINICAL_TREATMENT_MODALITY_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "f2e16ecf90eb1cea09111727067e15abdf35ee9b963f4429b25e433c3644ecad"
+    },
+    {
+      "names": [
+        "CLINICAL_TREATMENT_PRESCRIPTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "d695fd693b3c347cf5b8d9fb6458707948f468b3e2a58f65f52d83ad453d342e"
+    },
+    {
+      "names": [
+        "CLINICAL_TREATMENT_DOSAGE_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "05a5223bd98af3f2438b8014a95bc1039cc27788689c3c8ae0b612f479bf60ed"
+    },
+    {
+      "names": [
+        "EXPLICIT_TREATMENT_SUBJECT_TAIL_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "77efe88fb8e7f4b19b7b0fd350827d7dc9b25e169d7002fed5d9bfc5950f6eb3"
+    },
+    {
+      "names": [
+        "CONCRETE_OPERATIONAL_SOFTWARE_TARGET_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "d201578a0c7109f44fa8795f264374e247d477635e8217488f93eb1e9549242b"
+    },
+    {
+      "names": [
+        "CONCRETE_OPERATIONAL_SOFTWARE_ACTION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "9abcec86f429e6d56baec979972a9f2e2526dc046909385ed8f248b1887e05c3"
+    },
+    {
+      "names": [
+        "CONCRETE_OPERATIONAL_SOFTWARE_VERIFICATION_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "6326c3f214c11dd4f1fd60858a5e8ce9f9d63bb277563e2ddec1a3abd4618578"
+    },
+    {
+      "names": [
+        "CONCRETE_OPERATIONAL_SOFTWARE_LOCATOR_PATTERN"
+      ],
+      "group": "patterns",
+      "bodySha256": "31fd94c6551cfde1ee10555330f64048f932ec7d563cf3cc0f9819f6c1956e50"
+    },
+    {
+      "names": [
+        "isDirectLegalDocumentMutation"
+      ],
+      "group": "mutation-classification",
+      "bodySha256": "328020eae3dc3414df4ac710e9fef6b710d9925d9fdda9ac71121040c57d63c4"
+    },
+    {
+      "names": [
+        "hasContextualMedicalTreatment"
+      ],
+      "group": "mutation-classification",
+      "bodySha256": "5b87f0ce1ed70551a4dfe7b25d9b58abb46fb40a0ad419cd7fe2eed9a5e0c1c0"
+    },
+    {
+      "names": [
+        "hasAuthoritativeDirectClinicalMutation"
+      ],
+      "group": "mutation-classification",
+      "bodySha256": "3803d8ffe637fda2ba0b282113d8fa906958fd7015093c5ed387779ab9fed0f3"
+    },
+    {
+      "names": [
+        "isOperationalTechnicalContractLifecycleObjective"
+      ],
+      "group": "operational-context",
+      "bodySha256": "04fceb366617e8c6ad80451bb602aa1a0b38c88d888f2b25adf75fac397f11a3"
+    },
+    {
+      "names": [
+        "neutralizeExplicitOperationalTreatmentClarification"
+      ],
+      "group": "operational-context",
+      "bodySha256": "50669c255da98830cb05a9722710adc9d1c08d799eec710311bfcf428fa7310f"
+    },
+    {
+      "names": [
+        "stripExplicitNonMedicalOperationalTreatmentClarification"
+      ],
+      "group": "operational-context",
+      "bodySha256": "ed80c6af97824e2dabee9facf28db2ed62731cd5b43a4ed103963221e9476f9d"
+    },
+    {
+      "names": [
+        "normalizedMedicalEvidenceText"
+      ],
+      "group": "operational-context",
+      "bodySha256": "7bb7342595af5a38af92c680cf06022e55a985318e5fa37ee9e502e37c4752f0"
+    },
+    {
+      "names": [
+        "neutralizeOperationalVerificationHealth"
+      ],
+      "group": "operational-context",
+      "bodySha256": "2bb9239d357f2beb782997a040f578c9e9f8f5d4efbf27f4d742e156acea97e5"
+    },
+    {
+      "names": [
+        "isExplicitNonMedicalOperationalTreatmentClarification"
+      ],
+      "group": "operational-context",
+      "bodySha256": "7c420209ce902b95aed9cdcb16aedf8f2ff9488bc7948d8ffe87c22cf7f5784a"
+    },
+    {
+      "names": [
+        "EVIDENCE_TOOL_PATTERN"
+      ],
+      "group": "sources",
+      "bodySha256": "47f9aecb16a5108197e4ff0b8167acf43696217e0594b8ab97c84e31d97a50c9"
+    },
+    {
+      "names": [
+        "REVIEW_TOOL_PATTERN"
+      ],
+      "group": "sources",
+      "bodySha256": "fea2b73942bc265966c7050f6bb07a8040cdd0bb02106e4b4c97641a5b0c5235"
+    },
+    {
+      "names": [
+        "OFFICIAL_SOURCE_HOSTS"
+      ],
+      "group": "sources",
+      "bodySha256": "a1beaa27b330985056e79068f666ed5f9c3fcea726acd05c33dddb0cf2cb9a2f"
+    },
+    {
+      "names": [
+        "SECURITY_PROVIDER_DOCUMENTATION_HOSTS"
+      ],
+      "group": "sources",
+      "bodySha256": "8057b5ae2fbcd2266450f63eb5c2e2c8937f6b27510945c619d6642471c4a3e5"
+    },
+    {
+      "names": [
+        "BUSINESS_DOCUMENTATION_SOURCES"
+      ],
+      "group": "sources",
+      "bodySha256": "e164d9ec166a3b9515dae9243d1e4d2db3fdd2032ab0b3d12d80db469768ae4d"
+    },
+    {
+      "names": [
+        "SOURCE_INSPECTION_TOOL_PATTERN"
+      ],
+      "group": "sources",
+      "bodySha256": "06df591515ae76f2b869a636fb6578340c744f7b1d753f7e5f893a83905404f2"
+    },
+    {
+      "names": [
+        "FIRST_PARTY_SOURCE_TOOLS"
+      ],
+      "group": "sources",
+      "bodySha256": "f207b93a431ed5bb705cc9071259fb6efce9bc0571e16425fb621f9436926f54"
+    },
+    {
+      "names": [
+        "providerDocumentationForUrl"
+      ],
+      "group": "sources",
+      "bodySha256": "b2348f259897f57ad0b4f8542fa50c4c1d1786f8b9df32cc644dc6b7f3a8bf70"
+    },
+    {
+      "names": [
+        "objectiveSecurityDocumentationProviders"
+      ],
+      "group": "sources",
+      "bodySha256": "0806b1cbacc59461413bcb74f07ec0acec74e6e82e3078176c9eb1f149baff7f"
+    },
+    {
+      "names": [
+        "objectiveBusinessSourceVendors"
+      ],
+      "group": "sources",
+      "bodySha256": "a694fefb553862cfaecb0580243e411398d5436f60268a2fb7af58a908e3e465"
+    },
+    {
+      "names": [
+        "isRelevantProviderDocumentationUrl"
+      ],
+      "group": "sources",
+      "bodySha256": "2777c5344351d382b0270d923f324f82c296c3df116c35de4f113fdf926f7665"
+    },
+    {
+      "names": [
+        "sourceObservationSucceeded"
+      ],
+      "group": "sources",
+      "bodySha256": "95d0c13e01c1189661414ae65395b0bf5d8b08fecf0fc94907831f8264a00518"
+    },
+    {
+      "names": [
+        "isOfficialSourceUrl"
+      ],
+      "group": "sources",
+      "bodySha256": "0e041848989ed4c6959af0f9597a33430ca1a59d94af0194090c52f5449a26d6"
+    },
+    {
+      "names": [
+        "hasOfficialSourceUrl"
+      ],
+      "group": "sources",
+      "bodySha256": "15768c270f5bfacd436d998eb7705705934df9e24e872a511fc20badf3511caf"
+    },
+    {
+      "names": [
+        "targetsOfficialSource"
+      ],
+      "group": "sources",
+      "bodySha256": "724ede1133cc33cc8c8697dc7b50e29eb020a43a987bce20f7c15b9ac27be8e2"
+    },
+    {
+      "names": [
+        "hasAuthoritativeMutationPattern"
+      ],
+      "group": "mutation-negations",
+      "bodySha256": "be18d9ebe8fe2d403282ed428b0303f40a57231df1a6cb5161ee5f805d127a98"
+    },
+    {
+      "names": [
+        "hasAuthoritativeDirectRbacMutation"
+      ],
+      "group": "classification",
+      "bodySha256": "8b2354fa2341383ad7a5f86591aef48ce0643cf55c8ba3a3156730f1cfaa58d8"
+    },
+    {
+      "names": [
+        "detectHighStakesEvidenceDomain"
+      ],
+      "group": "classification",
+      "bodySha256": "0e8f053230e27e54951057b1097a3c4f628809ed266d9e433dcd02310d8633ac"
+    },
+    {
+      "names": [
+        "concreteOperationalSoftwareShape"
+      ],
+      "group": "classification",
+      "bodySha256": "1fe29b2aa10d0d5e451ec4595632f9ef2cc0f988c182548dc9ab0f00848e3470"
+    },
+    {
+      "names": [
+        "isConcreteOperationalSoftwareRestatement"
+      ],
+      "group": "classification",
+      "bodySha256": "2f1c1e07f63d65d9f8eef5670a5fb1f97f9733f127d52713c8dc22563205aa3b"
+    },
+    {
+      "names": [
+        "classifyHighStakesEvidenceDomain"
+      ],
+      "group": "classification",
+      "bodySha256": "7c86b1863f13d9968196ba3eec0600fd95217f5a7ab7dbd14c764493d155e28f"
+    },
+    {
+      "names": [
+        "IndependentReviewReceipt"
+      ],
+      "group": "review-receipts",
+      "bodySha256": "8239f7bca3dbc5cde590d9ae15a5375c3107dcee436ec6ef6d383f507b02b196"
+    },
+    {
+      "names": [
+        "IndependentReviewContext"
+      ],
+      "group": "review-receipts",
+      "bodySha256": "e4196a27eaaaf71425e18ba5fb531c454fca49014125dc00b56c8f445ab1c6a2"
+    },
+    {
+      "names": [
+        "WAIT_SESSIONS_TOOL_PATTERN"
+      ],
+      "group": "review-receipts",
+      "bodySha256": "3012564203fa0e7ea24196f786718b59ab1fe71443afec844f2c6188c3d59d5c"
+    },
+    {
+      "names": [
+        "jsonCandidates"
+      ],
+      "group": "review-receipts",
+      "bodySha256": "49e32842a0c99738e4dd93016aa9cffab7b04b3e6436acd85fc78185bfe24451"
+    },
+    {
+      "names": [
+        "parseDirectReviewReceipt"
+      ],
+      "group": "review-receipts",
+      "bodySha256": "2f0d00b06951a0ea76fbd3992998a180c5aa54da17c85fb39ff5d1b450f590e4"
+    },
+    {
+      "names": [
+        "parseIndependentReviewReceipt"
+      ],
+      "group": "review-receipts",
+      "bodySha256": "84f4c25664ace6a27099dbf22ad0319924049300575fef3180a9fb53066821e2"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 42
+    },
+    {
+      "name": "lifecycle",
+      "lines": 174
+    },
+    {
+      "name": "patterns",
+      "lines": 391
+    },
+    {
+      "name": "mutation-classification",
+      "lines": 94
+    },
+    {
+      "name": "operational-context",
+      "lines": 119
+    },
+    {
+      "name": "sources",
+      "lines": 218
+    },
+    {
+      "name": "mutation-negations",
+      "lines": 108
+    },
+    {
+      "name": "classification",
+      "lines": 62
+    },
+    {
+      "name": "review-receipts",
+      "lines": 104
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "lifecycle": [
+      "contracts",
+      "classification",
+      "sources",
+      "review-receipts"
+    ],
+    "patterns": [
+      "contracts"
+    ],
+    "mutation-classification": [
+      "patterns",
+      "mutation-negations"
+    ],
+    "operational-context": [
+      "patterns",
+      "mutation-classification"
+    ],
+    "sources": [
+      "contracts"
+    ],
+    "mutation-negations": [
+      "patterns"
+    ],
+    "classification": [
+      "mutation-negations",
+      "patterns",
+      "contracts",
+      "mutation-classification",
+      "operational-context"
+    ],
+    "review-receipts": []
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

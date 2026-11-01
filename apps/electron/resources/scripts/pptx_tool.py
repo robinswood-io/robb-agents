@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["python-pptx>=1.0,<2", "click>=8.3,<9"]
+# dependencies = ["python-pptx==1.0.2", "click==8.5.0"]
 # ///
 """PowerPoint (.pptx) operations tool.
 
@@ -13,16 +13,153 @@ Usage:
 import json
 import re
 import sys
+from collections.abc import Iterator, Sequence
+from importlib import import_module
 from pathlib import Path
+from typing import Protocol, cast
 
 import click
-from pptx import Presentation
+
+_PPTX_OPERATION_ERRORS = (OSError, ValueError, TypeError, RuntimeError, KeyError, IndexError)
+
+
+class _ParagraphLike(Protocol):
+    text: str
+    level: int
+
+
+class _TextFrameLike(Protocol):
+    text: str
+    word_wrap: bool
+    paragraphs: Sequence[_ParagraphLike]
+
+    def clear(self) -> None: ...
+
+    def add_paragraph(self) -> _ParagraphLike: ...
+
+
+class _CellLike(Protocol):
+    text: str
+
+
+class _RowLike(Protocol):
+    cells: Sequence[_CellLike]
+
+
+class _TableLike(Protocol):
+    rows: Sequence[_RowLike]
+
+
+class _ShapeLike(Protocol):
+    text: str
+    text_frame: _TextFrameLike
+    has_text_frame: bool
+    has_table: bool
+    table: _TableLike
+
+
+class _ShapeCollectionLike(Protocol):
+    title: _ShapeLike | None
+
+    def __iter__(self) -> Iterator[_ShapeLike]: ...
+
+    def __len__(self) -> int: ...
+
+    def add_textbox(self, left: object, top: object, width: object, height: object) -> _ShapeLike: ...
+
+
+class _PlaceholderCollectionLike(Protocol):
+    def __bool__(self) -> bool: ...
+
+    def __contains__(self, index: int) -> bool: ...
+
+    def __getitem__(self, index: int) -> _ShapeLike: ...
+
+
+class _SlideLayoutLike(Protocol):
+    name: str
+
+
+class _LayoutCollectionLike(Protocol):
+    def __iter__(self) -> Iterator[_SlideLayoutLike]: ...
+
+    def __len__(self) -> int: ...
+
+    def __getitem__(self, index: int) -> _SlideLayoutLike: ...
+
+
+class _NotesSlideLike(Protocol):
+    notes_text_frame: _TextFrameLike
+
+
+class _SlideLike(Protocol):
+    placeholders: _PlaceholderCollectionLike
+    shapes: _ShapeCollectionLike
+    slide_layout: _SlideLayoutLike
+    notes_slide: _NotesSlideLike
+    has_notes_slide: bool
+
+
+class _SlideCollectionLike(Protocol):
+    def __iter__(self) -> Iterator[_SlideLike]: ...
+
+    def __len__(self) -> int: ...
+
+    def __getitem__(self, index: int) -> _SlideLike: ...
+
+    def add_slide(self, layout: _SlideLayoutLike) -> _SlideLike: ...
+
+
+class _PresentationLike(Protocol):
+    slide_layouts: _LayoutCollectionLike
+    slides: _SlideCollectionLike
+    slide_width: int
+    slide_height: int
+
+    def save(self, path: str) -> None: ...
+
+
+def _new_presentation(template: str | None = None) -> _PresentationLike:
+    module = import_module("pptx")
+    factory = getattr(module, "Presentation", None)
+    if not callable(factory):
+        raise TypeError("python-pptx has no Presentation factory")
+    value: object = factory(template) if template else factory()
+    layouts = getattr(value, "slide_layouts", None)
+    slides = getattr(value, "slides", None)
+    if not (hasattr(layouts, "__getitem__") and hasattr(layouts, "__len__")) or not callable(getattr(value, "save", None)):
+        raise TypeError("python-pptx returned an invalid presentation")
+    if not callable(getattr(slides, "add_slide", None)) or not hasattr(value, "slide_width"):
+        raise TypeError("python-pptx returned an invalid slide collection")
+    return cast(_PresentationLike, value)
+
+
+def _parse_json(text: str) -> object:
+    return cast(object, json.loads(text))
+
+
+def _parse_slide_data(value: object) -> list[dict[str, str]]:
+    if not isinstance(value, list):
+        raise TypeError("JSON must be an array of slide objects.")
+    raw_items = cast(list[object], value)
+    slides: list[dict[str, str]] = []
+    for item in raw_items:
+        if not isinstance(item, dict):
+            raise TypeError("Each slide must be an object.")
+        slide: dict[str, str] = {}
+        for key, entry in cast(dict[object, object], item).items():
+            if isinstance(key, str) and isinstance(entry, str):
+                slide[key] = entry
+            elif isinstance(key, str):
+                raise TypeError(f"Slide field {key!r} must be text.")
+        slides.append(slide)
+    return slides
 
 
 def write_output(text: str, output_path: str | None) -> None:
     """Write text to file or stdout."""
     if output_path:
-        Path(output_path).write_text(text, encoding="utf-8")
+        _ = Path(output_path).write_text(text, encoding="utf-8")
         click.echo(f"Output written to {output_path}", err=True)
     else:
         click.echo(text)
@@ -31,7 +168,6 @@ def write_output(text: str, output_path: str | None) -> None:
 @click.group()
 def cli() -> None:
     """PowerPoint (.pptx) operations tool."""
-    pass
 
 
 @cli.command()
@@ -58,22 +194,23 @@ def create(from_file: str | None, text: str | None, json_data: str | None, title
 
     try:
         if template:
-            prs = Presentation(template)
+            prs = _new_presentation(template)
         else:
-            prs = Presentation()
+            prs = _new_presentation()
 
         slides_data: list[dict[str, str]] = []
+        parsed: object
 
         if json_data:
             # Parse JSON
             data_path = Path(json_data)
             if data_path.exists() and data_path.is_file():
-                parsed = json.loads(data_path.read_text(encoding="utf-8"))
+                parsed = _parse_json(data_path.read_text(encoding="utf-8"))
             else:
-                parsed = json.loads(json_data)
+                parsed = _parse_json(json_data)
 
             if isinstance(parsed, list):
-                slides_data = parsed
+                slides_data = _parse_slide_data(cast(object, parsed))
             else:
                 click.echo("Error: JSON must be an array of slide objects.", err=True)
                 sys.exit(1)
@@ -81,12 +218,8 @@ def create(from_file: str | None, text: str | None, json_data: str | None, title
         elif from_file:
             content = Path(from_file).read_text(encoding="utf-8")
             if from_file.endswith(".json"):
-                parsed = json.loads(content)
-                if isinstance(parsed, list):
-                    slides_data = parsed
-                else:
-                    click.echo("Error: JSON must be an array of slide objects.", err=True)
-                    sys.exit(1)
+                parsed = _parse_json(content)
+                slides_data = _parse_slide_data(parsed)
             else:
                 slides_data = _parse_markdown_slides(content)
 
@@ -106,7 +239,7 @@ def create(from_file: str | None, text: str | None, json_data: str | None, title
     except json.JSONDecodeError as e:
         click.echo(f"Error parsing JSON: {e}", err=True)
         sys.exit(1)
-    except Exception as e:
+    except _PPTX_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -144,7 +277,7 @@ def _parse_markdown_slides(md_text: str) -> list[dict[str, str]]:
     return slides
 
 
-def _add_title_slide(prs: Presentation, title: str, subtitle: str = "") -> None:
+def _add_title_slide(prs: _PresentationLike, title: str, subtitle: str = "") -> None:
     """Add a title slide."""
     try:
         layout = prs.slide_layouts[0]  # Title Slide layout
@@ -162,7 +295,7 @@ def _add_title_slide(prs: Presentation, title: str, subtitle: str = "") -> None:
             slide.placeholders[1].text = subtitle
 
 
-def _add_content_slide(prs: Presentation, slide_info: dict[str, str]) -> None:
+def _add_content_slide(prs: _PresentationLike, slide_info: dict[str, str]) -> None:
     """Add a content slide from slide info dict."""
     title = slide_info.get("title", "")
     body = slide_info.get("body", "")
@@ -251,9 +384,9 @@ def _add_content_slide(prs: Presentation, slide_info: dict[str, str]) -> None:
 def info(file: str, output: str | None) -> None:
     """Show presentation metadata and slide information."""
     try:
-        prs = Presentation(file)
+        prs = _new_presentation(file)
 
-        slides_info = []
+        slides_info: list[dict[str, object]] = []
         for i, slide in enumerate(prs.slides):
             slide_data: dict[str, object] = {
                 "number": i + 1,
@@ -292,7 +425,7 @@ def info(file: str, output: str | None) -> None:
         info_dict["available_layouts"] = layouts
 
         write_output(json.dumps(info_dict, indent=2, default=str), output)
-    except Exception as e:
+    except _PPTX_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 
@@ -305,7 +438,7 @@ def info(file: str, output: str | None) -> None:
 def extract(file: str, slide: int | None, include_notes: bool, output: str | None) -> None:
     """Extract text content from a PowerPoint presentation."""
     try:
-        prs = Presentation(file)
+        prs = _new_presentation(file)
         parts: list[str] = []
 
         slides_to_process = []
@@ -355,7 +488,7 @@ def extract(file: str, slide: int | None, include_notes: bool, output: str | Non
             parts.append("")
 
         write_output("\n".join(parts), output)
-    except Exception as e:
+    except _PPTX_OPERATION_ERRORS as e:
         click.echo(f"Error: {e}", err=True)
         sys.exit(1)
 

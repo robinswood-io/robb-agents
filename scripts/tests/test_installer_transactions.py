@@ -1,17 +1,16 @@
-#!/usr/bin/env python3
 """Exercise the real shell installer with temporary bundles and native doubles."""
 from __future__ import annotations
 
 import base64
 import hashlib
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 import zipfile
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -27,19 +26,19 @@ class MacInstallerTransactionTests(unittest.TestCase):
             remote.mkdir()
             target = base / "applications" / "Robb Agents.app"
             target.mkdir(parents=True)
-            (target / "old.txt").write_text("previous complete bundle")
+            _ = (target / "old.txt").write_text("previous complete bundle")
             artifact = remote / "Robb-Agents-arm64.zip"
             with zipfile.ZipFile(artifact, "w") as archive:
                 archive.writestr("Robb Agents.app/new.txt", "new complete bundle")
             data = artifact.read_bytes()
             digest = base64.b64encode(hashlib.sha512(data).digest()).decode()
-            (remote / "latest-mac.yml").write_text(
+            _ = (remote / "latest-mac.yml").write_text(
                 f"version: 1.2.3\nfiles:\n  - url: Robb-Agents-arm64.zip\n    sha512: {digest}\n    size: {len(data)}\n"
             )
 
             def executable(name: str, source: str) -> None:
                 path = bins / name
-                path.write_text(source)
+                _ = path.write_text(source)
                 path.chmod(0o700)
 
             executable("uname", '#!/bin/sh\ncase "$1" in -s) echo Darwin;; -m) echo arm64;; *) exit 1;; esac\n')
@@ -79,7 +78,7 @@ sys.exit(result)
                 ROBB_RELEASE_BASE_URL="https://fixture.invalid", ROBB_DOWNLOAD_DIR=str(base / "downloads"),
                 ROBB_INSTALL_DIR=str(target.parent), TMPDIR=str(base))
             result = subprocess.run(["bash", str(ROOT / "scripts/install-app.sh"), "--version", "1.2.3"],
-                env=environment, text=True, capture_output=True, timeout=20)
+                env=environment, text=True, capture_output=True, timeout=20, check=False)
             state = {"old": (target / "old.txt").exists(), "new": (target / "new.txt").exists(),
                 "partial": (target / "partial.txt").exists(), "leftovers": any(path != target for path in target.parent.iterdir())}
             return result, state
@@ -118,4 +117,4 @@ sys.exit(result)
 
 
 if __name__ == "__main__":
-    unittest.main()
+    _ = unittest.main()

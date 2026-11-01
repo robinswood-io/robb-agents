@@ -5,9 +5,9 @@ import { USER_INPUT_LIMITS, normalizeUserInputResponse } from '@craft-agent/core
 
 export interface UserInputCardProps {
   request: UserInputRequest
-  readOnly?: boolean
-  onRespond?: (sessionId: string, response: UserInputResponse) => Promise<UserInputResponseResult>
-  onRecordedRetryChange?: (requestId: string, available: boolean) => void
+  readOnly?: boolean | undefined
+  onRespond?: ((sessionId: string, response: UserInputResponse) => Promise<UserInputResponseResult>) | undefined
+  onRecordedRetryChange?: ((requestId: string, available: boolean) => void) | undefined
 }
 
 export function userInputAnswersComplete(request: UserInputRequest, answers: UserInputAnswer[]): boolean {

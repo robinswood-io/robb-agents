@@ -1,0 +1,424 @@
+{
+  "source": "apps/electron/src/shared/types.ts",
+  "units": [
+    {
+      "names": [
+        "BROWSER_TOOLBAR_CHANNELS"
+      ],
+      "group": "browser",
+      "bodySha256": "2ed5a27b6d76738eb3d1f7f4bf2d2a14c542f2e3591a282782ffb1e4fbd3de8d"
+    },
+    {
+      "names": [
+        "ToolIconMapping"
+      ],
+      "group": "browser",
+      "bodySha256": "57fce1fac7ae80c079c87bc9759d13807a4c06c01f3406a3b66884d854de6c6b"
+    },
+    {
+      "names": [
+        "BrowserPaneCreateOptions"
+      ],
+      "group": "browser",
+      "bodySha256": "f12a674c8d187e6437b5a8d44cf3ba576b43f60dff83e2691c503a683c3822a1"
+    },
+    {
+      "names": [
+        "BrowserEmptyStateLaunchPayload"
+      ],
+      "group": "browser",
+      "bodySha256": "fd84ecdbd4dac3fafd502a16cfc25bfecd4df87d49d5170c35bf33a47310f584"
+    },
+    {
+      "names": [
+        "BrowserEmptyStateLaunchResult"
+      ],
+      "group": "browser",
+      "bodySha256": "d7136f38bf7faa386f689f8217470caa6d803396150b423bf89249c101b81671"
+    },
+    {
+      "names": [
+        "TransportMode"
+      ],
+      "group": "transport",
+      "bodySha256": "7075d47d22391151a03f0f77843b05987d5ab5e540b0f3236e0cc4f5897351c9"
+    },
+    {
+      "names": [
+        "TransportConnectionStatus"
+      ],
+      "group": "transport",
+      "bodySha256": "020638a5b8aacae530123deea199ee94bfc34310df018bbedb8a2ae68c6c5cf7"
+    },
+    {
+      "names": [
+        "TransportConnectionErrorKind"
+      ],
+      "group": "transport",
+      "bodySha256": "c2a5b898cd459e9b59fcce54a43c773eb7bf38434ea25b2ce33b1a880886893c"
+    },
+    {
+      "names": [
+        "TransportConnectionError"
+      ],
+      "group": "transport",
+      "bodySha256": "9b5f5ff38d65ff70c711292c9d976de085dd1c6cb80c64086df69043d48acd0a"
+    },
+    {
+      "names": [
+        "TransportCloseInfo"
+      ],
+      "group": "transport",
+      "bodySha256": "b76af93f4c5981df8b3508cf1511233623c91ad19ecb52278079d80082f446f2"
+    },
+    {
+      "names": [
+        "TransportConnectionState"
+      ],
+      "group": "transport",
+      "bodySha256": "ed6efd2eff9ef73e7a8354ef605c715bf8181eb7daaa9b019b9e5bfd5de84000"
+    },
+    {
+      "names": [
+        "SessionTaskApi"
+      ],
+      "group": "session-task-api",
+      "bodySha256": "1afca2e2b716efc0738270c936565edd0d6551e50c150e717a1addcdc2521e0a"
+    },
+    {
+      "names": [
+        "WorkspaceFilesApi"
+      ],
+      "group": "workspace-files-api",
+      "bodySha256": "e65a3a5cf8220873d7dbf37c4289ac5f07f9eac1b51554a2ed10457777721c41"
+    },
+    {
+      "names": [
+        "DesktopApi"
+      ],
+      "group": "desktop-api",
+      "bodySha256": "acc051abd2278ebcce761b6ba356bf805d3e4ac60a3b8d38b95abd5af3ae8157"
+    },
+    {
+      "names": [
+        "ConnectionApi"
+      ],
+      "group": "connection-api",
+      "bodySha256": "509bf0dbded37c73f4a7dc512db7991f4f77c0b1ec36c62fd5bc825bfbb66d72"
+    },
+    {
+      "names": [
+        "WorkspaceResourcesApi"
+      ],
+      "group": "workspace-resources-api",
+      "bodySha256": "8146f3a8ba95584a8c930a8d832487478808380ff97d6591d8effad9bc559eef"
+    },
+    {
+      "names": [
+        "ElectronAPI"
+      ],
+      "group": "public-api",
+      "bodySha256": "b367affd02bb81cdc7c2386de74be7359053e1f0210ee2570ff7b89ab2fe904b"
+    },
+    {
+      "names": [
+        "global"
+      ],
+      "group": "public-api",
+      "bodySha256": "b06e1d9df34df6ffe8e277b0909b8df6a4c6bd58e632be2cd4dd8c347a19d8a4"
+    },
+    {
+      "names": [
+        "MessagingPlatformRuntimeInfo"
+      ],
+      "group": "messaging",
+      "bodySha256": "54997d199959e0e2c9f9f68e4cadd7f2baf81c3067f68c919498b62566856c29"
+    },
+    {
+      "names": [
+        "MessagingPlatformAccessMode"
+      ],
+      "group": "messaging",
+      "bodySha256": "2c24de8890fdbe31c98b99b0620dae1c7e0bb955cc8269bf29ea565cac4b8183"
+    },
+    {
+      "names": [
+        "MessagingBindingAccessMode"
+      ],
+      "group": "messaging",
+      "bodySha256": "63aa5dd961e82ba3af217cf493190ee9cfe0039ad6e201406ff031a29c1aa799"
+    },
+    {
+      "names": [
+        "MessagingPlatformOwnerInfo"
+      ],
+      "group": "messaging",
+      "bodySha256": "b79969a5f78348f496784337610ad1d2efb11fdff3f6c222f4ae7b3afcbc5ffd"
+    },
+    {
+      "names": [
+        "MessagingPendingRejectReason"
+      ],
+      "group": "messaging",
+      "bodySha256": "d330b5b1d977528581dcf72de14a2e2a2bc1e342656e0f32111de277798a0b4a"
+    },
+    {
+      "names": [
+        "MessagingPendingSenderInfo"
+      ],
+      "group": "messaging",
+      "bodySha256": "98b967be3268590a33c62db96979545b2d37a7fe92855eae2e9b4818888c29c6"
+    },
+    {
+      "names": [
+        "WhatsAppUiEvent"
+      ],
+      "group": "messaging",
+      "bodySha256": "466f0f9f15b9164473828540c2883782c6a9d17cb3ad79770a87fd4551d03893"
+    },
+    {
+      "names": [
+        "RightSidebarPanel"
+      ],
+      "group": "messaging",
+      "bodySha256": "f3d684833f3ac63969f8517017109469497ebca0f83f8d02a1c9d4778f2c76b5"
+    },
+    {
+      "names": [
+        "SessionFilter"
+      ],
+      "group": "navigation",
+      "bodySha256": "49d9c540a4182811ae118cf920cfcaad52aa691dd0bf5dabde262fc7d79452e9"
+    },
+    {
+      "names": [
+        "SessionsNavigationState"
+      ],
+      "group": "navigation",
+      "bodySha256": "2f28b786e72855fe9f418a58ed0e6bbe7ca918cd44a6da33c318a97b6581b90c"
+    },
+    {
+      "names": [
+        "SourceFilter"
+      ],
+      "group": "navigation",
+      "bodySha256": "1c9ec2fb5452e0f23a9bb7a23ac68bc9fc31d405ffbe749466a2869b14e81904"
+    },
+    {
+      "names": [
+        "AutomationFilter"
+      ],
+      "group": "navigation",
+      "bodySha256": "28dc907835890cd7e8289785fe3ffb02fcd3fb43ef32533aad7c5968cf6be986"
+    },
+    {
+      "names": [
+        "SourcesNavigationState"
+      ],
+      "group": "navigation",
+      "bodySha256": "7b1ff2514f3b379d1268bf0ffa3f2e37f4563ce8333e13e7cc2f43b8c7b19daf"
+    },
+    {
+      "names": [
+        "SettingsNavigationState"
+      ],
+      "group": "navigation",
+      "bodySha256": "5ede9743f4f02b0b0fe2999afb41b706b699d3155780a52508315ffc9e3d6016"
+    },
+    {
+      "names": [
+        "SkillsNavigationState"
+      ],
+      "group": "navigation",
+      "bodySha256": "9fc9b255d9b11438f2954c49a875d7a2d48cba6d28e6279f08f32250e8e8a27b"
+    },
+    {
+      "names": [
+        "AutomationsNavigationState"
+      ],
+      "group": "navigation",
+      "bodySha256": "0ab1239b74f24d21443836328b6c3dd4ee01ee168fa53d3512cceaa96cd03483"
+    },
+    {
+      "names": [
+        "ProjectsNavigationState"
+      ],
+      "group": "navigation",
+      "bodySha256": "3ca74f37de1330aa02127a372dfd47beb1b963d2ce9ec9361482eeb7b5445e73"
+    },
+    {
+      "names": [
+        "MissionsNavigationState"
+      ],
+      "group": "navigation",
+      "bodySha256": "4620b5d77d7ed9c143c5858ef8ac5a37127a1b8add7748a0e83667c6b157bae9"
+    },
+    {
+      "names": [
+        "NavigationState"
+      ],
+      "group": "navigation",
+      "bodySha256": "4aa93848eb1f748b76dc0d8116c53cdfc55722207ac87d1ee92d2cbc1823cbe5"
+    },
+    {
+      "names": [
+        "isSessionsNavigation"
+      ],
+      "group": "navigation",
+      "bodySha256": "311851adf8e5f7c6f88d1fd5191b1bef31125ee6eef24b4887a3cf97664870a0"
+    },
+    {
+      "names": [
+        "isSourcesNavigation"
+      ],
+      "group": "navigation",
+      "bodySha256": "fdb7decc43581e54da33eab0425851be0844e05bd796f0f01a0eda17c0839eab"
+    },
+    {
+      "names": [
+        "isSettingsNavigation"
+      ],
+      "group": "navigation",
+      "bodySha256": "5b6dfcff2b862bb263ab30c5361508b02c9fd6fea01d0dacdc9f07adf523533f"
+    },
+    {
+      "names": [
+        "isSkillsNavigation"
+      ],
+      "group": "navigation",
+      "bodySha256": "5606117934682d149a09eebd8f3ac2ed7e783af86278fdc27a1b4106fda8c0f7"
+    },
+    {
+      "names": [
+        "isAutomationsNavigation"
+      ],
+      "group": "navigation",
+      "bodySha256": "85ce82f5a39d0a45c994fd526804fbb56fa0a8be4a21024a035a0997e6de186e"
+    },
+    {
+      "names": [
+        "isProjectsNavigation"
+      ],
+      "group": "navigation",
+      "bodySha256": "3ab3ba23b5db699f9a47d7071e523baa96eedbbce3cf1398042decda7a3ce17b"
+    },
+    {
+      "names": [
+        "isMissionsNavigation"
+      ],
+      "group": "navigation",
+      "bodySha256": "6cd1218432e484f572f2e6fa31b5ceacb09d062f639d99e2ed427a35f284dfc5"
+    },
+    {
+      "names": [
+        "DEFAULT_NAVIGATION_STATE"
+      ],
+      "group": "navigation",
+      "bodySha256": "963980e8c93399d747c0e4a52e651a6883265c43976f875778531a3efe5ea834"
+    },
+    {
+      "names": [
+        "getNavigationStateKey"
+      ],
+      "group": "navigation",
+      "bodySha256": "2686cd6eeac1f0265441fbad448d4057bb8367e5ace1d826b4ebc63b96d61905"
+    },
+    {
+      "names": [
+        "parseNavigationStateKey"
+      ],
+      "group": "navigation",
+      "bodySha256": "6e62a1f7a5ec22d39f62526392614b4adf450706e87997a2ffde517c1ea542f5"
+    }
+  ],
+  "modules": [
+    {
+      "name": "browser",
+      "lines": 57,
+      "file": "apps/electron/src/shared/types/browser.ts",
+      "retained": false
+    },
+    {
+      "name": "transport",
+      "lines": 42,
+      "file": "apps/electron/src/shared/types/transport.ts",
+      "retained": false
+    },
+    {
+      "name": "session-task-api",
+      "lines": 89,
+      "file": "apps/electron/src/shared/types/session-task-api.ts",
+      "retained": false
+    },
+    {
+      "name": "workspace-files-api",
+      "lines": 112,
+      "file": "apps/electron/src/shared/types/workspace-files-api.ts",
+      "retained": false
+    },
+    {
+      "name": "desktop-api",
+      "lines": 173,
+      "file": "apps/electron/src/shared/types/desktop-api.ts",
+      "retained": false
+    },
+    {
+      "name": "connection-api",
+      "lines": 113,
+      "file": "apps/electron/src/shared/types/connection-api.ts",
+      "retained": false
+    },
+    {
+      "name": "workspace-resources-api",
+      "lines": 178,
+      "file": "apps/electron/src/shared/types/workspace-resources-api.ts",
+      "retained": false
+    },
+    {
+      "name": "public-api",
+      "lines": 14,
+      "file": "apps/electron/src/shared/types.ts",
+      "retained": true
+    },
+    {
+      "name": "messaging",
+      "lines": 64,
+      "file": "apps/electron/src/shared/types/messaging.ts",
+      "retained": false
+    },
+    {
+      "name": "navigation",
+      "lines": 301,
+      "file": "apps/electron/src/shared/types/navigation.ts",
+      "retained": false
+    }
+  ],
+  "dependencies": {
+    "browser": [],
+    "transport": [],
+    "session-task-api": [],
+    "workspace-files-api": [],
+    "desktop-api": [
+      "transport",
+      "browser"
+    ],
+    "connection-api": [],
+    "workspace-resources-api": [
+      "browser",
+      "messaging"
+    ],
+    "public-api": [
+      "session-task-api",
+      "workspace-files-api",
+      "desktop-api",
+      "connection-api",
+      "workspace-resources-api"
+    ],
+    "messaging": [],
+    "navigation": [
+      "messaging"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

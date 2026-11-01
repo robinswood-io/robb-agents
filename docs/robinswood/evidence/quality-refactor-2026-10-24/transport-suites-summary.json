@@ -1,0 +1,149 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Tests du transport WebSocket et contrat minimal de son envoi",
+  "changes": [
+    "19 any retirés au profit des types des champs natifs, d’erreurs vérifiées et d’un socket conforme aux paramètres natifs.",
+    "Les erreurs RPC sont vérifiées comme des Error portant un code textuel avant leurs assertions existantes.",
+    "Le paramètre privé d’envoi exprime ses trois propriétés utilisées ; le JavaScript du client est strictement inchangé.",
+    "Les 42 scénarios de transport sont répartis par responsabilité, avec leurs listes de sockets et leur nettoyage locaux."
+  ],
+  "sourceGate": {
+    "max-lines": 118,
+    "no-explicit-any": 376
+  },
+  "globalLint": {
+    "files": 3240,
+    "errors": 464,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 357,
+      "max-lines": 107,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./apps/electron/src/__tests__/transport.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 2.46,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/transport-suites-before.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./apps/electron/src/__tests__/transport.test.ts",
+        "./apps/electron/src/__tests__/transport-simple-invoke-returns-result.test.ts",
+        "./apps/electron/src/__tests__/transport-client-receives-server-pushed-events.test.ts",
+        "./apps/electron/src/__tests__/transport-manual-reconnect-preserves-reconnect-identity-and-replays-missed.test.ts",
+        "./apps/electron/src/__tests__/transport-server-with-requireauth-rejects-clients-without-token.test.ts",
+        "./apps/electron/src/__tests__/transport-becomes-connected-after-successful-handshake.test.ts",
+        "./apps/electron/src/__tests__/transport-invoke-queues-until-handshake-completes.test.ts",
+        "./apps/electron/src/__tests__/transport-server-invokes-client-capability-and-receives-result.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 2.55,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/transport-suites-after.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 17.82,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/transport-suites-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 16.75,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/transport-suites-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/__tests__/testing/transport-fixture.ts",
+        "apps/electron/src/__tests__/transport.test.ts",
+        "apps/electron/src/__tests__/transport-simple-invoke-returns-result.test.ts",
+        "apps/electron/src/__tests__/transport-client-receives-server-pushed-events.test.ts",
+        "apps/electron/src/__tests__/transport-manual-reconnect-preserves-reconnect-identity-and-replays-missed.test.ts",
+        "apps/electron/src/__tests__/transport-server-with-requireauth-rejects-clients-without-token.test.ts",
+        "apps/electron/src/__tests__/transport-becomes-connected-after-successful-handshake.test.ts",
+        "apps/electron/src/__tests__/transport-invoke-queues-until-handshake-completes.test.ts",
+        "apps/electron/src/__tests__/transport-server-invokes-client-capability-and-receives-result.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 2.19,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/transport-suites-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 141.2,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/transport-suites-test.log"
+    }
+  ],
+  "targetedBeforeAfter": {
+    "before": {
+      "pass": 42,
+      "fail": 0,
+      "skip": 0,
+      "expectCalls": 65
+    },
+    "after": {
+      "pass": 42,
+      "fail": 0,
+      "skip": 0,
+      "expectCalls": 65
+    }
+  },
+  "fullTestSummary": {
+    "pass": 10741,
+    "fail": 0,
+    "skip": 12
+  },
+  "newSuiteMaximumLines": 227,
+  "proofFiles": [
+    "transport-owned-suites-split-proof.json",
+    "transport-test-types-proof.json"
+  ],
+  "limits": [
+    "118 fichiers trop longs et 376 any subsistent dans le code maintenu.",
+    "Le client et le serveur de transport restent à décomposer.",
+    "Missions réelles, contrôle UI et installation finale restent à effectuer."
+  ],
+  "installedApplication": "Aucune installation de ce lot effectuée.",
+  "updatedAt": "2026-10-25T17:11:30.808633+00:00"
+}

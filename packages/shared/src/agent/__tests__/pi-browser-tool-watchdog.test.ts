@@ -1,3 +1,4 @@
+import { createMockFns } from "./testing/browser-tools-fixture.ts";
 import { describe, expect, it } from 'bun:test';
 import { PiAgent } from '../pi-agent.ts';
 import type { BackendConfig } from '../backend/types.ts';
@@ -10,18 +11,18 @@ import {
 function createConfig(sessionId: string): BackendConfig {
   return {
     provider: 'pi',
-    workspace: {
+    workspace: { slug: 'test-workspace', createdAt: 1,
       id: 'browser-watchdog-workspace',
       name: 'Browser watchdog workspace',
       rootPath: '/tmp/browser-watchdog-workspace',
-    } as never,
+    },
     session: {
       id: sessionId,
       workspaceRootPath: '/tmp/browser-watchdog-workspace',
       workingDirectory: '/tmp/browser-watchdog-workspace',
       createdAt: Date.now(),
       lastUsedAt: Date.now(),
-    } as never,
+    },
     isHeadless: true,
   };
 }
@@ -34,26 +35,22 @@ describe('Pi browser_tool watchdog bridge', () => {
     const sent: Array<Record<string, unknown>> = [];
     let resolveLateEvaluation: ((value: unknown) => void) | undefined;
 
-    (agent as any).send = (message: Record<string, unknown>) => sent.push(message);
-    (agent as any).subprocessRuntimeContext = runtime;
-    (agent as any).prerequisiteManager = {
-      checkPrerequisites: () => ({ allowed: true }),
-    };
+    agent['send'] = (message: Record<string, unknown>) => { sent.push(message); return true; };
+    agent['subprocessRuntimeContext'] = runtime;
+    agent['prerequisiteManager'].checkPrerequisites = () => ({ allowed: true });
     registerSessionScopedToolCallbacks(sessionId, {
-      browserPaneFns: {
-        evaluate: async () => new Promise(resolve => {
+      browserPaneFns: Object.assign(createMockFns(), ({evaluate: async () => new Promise(resolve => {
           resolveLateEvaluation = resolve;
-        }),
-      } as unknown as BrowserPaneFns,
+        })} satisfies Partial<BrowserPaneFns>)),
     });
 
     const originalSetTimeout = globalThis.setTimeout;
-    (globalThis as any).setTimeout = ((callback: (...args: any[]) => void) => (
+    globalThis.setTimeout = ((callback: (...args: unknown[]) => void) => (
       originalSetTimeout(callback, 1)
     )) as typeof setTimeout;
 
     try {
-      expect((agent as any).admitToolExecution({
+      expect(agent['admitToolExecution']({
         toolUseId: 'browser-timeout-tool',
         toolName: 'mcp__session__browser_tool',
         toolInput: {
@@ -63,7 +60,7 @@ describe('Pi browser_tool watchdog bridge', () => {
         runtimeId: runtime.runtimeId,
         authorizationEpoch: 0,
       })).toBe(true);
-      await (agent as any).handleToolExecuteRequest({
+      await agent.handleToolExecuteRequest({
         requestId: 'browser-timeout-request',
         toolName: 'mcp__session__browser_tool',
         toolCallId: 'browser-timeout-tool',
@@ -78,7 +75,7 @@ describe('Pi browser_tool watchdog bridge', () => {
         requestId: 'browser-timeout-request',
         result: { isError: true },
       });
-      const content = String((sent[0]!.result as { content: string }).content);
+      const content = String((sent[0]!["result"] as { content: string }).content);
       expect(content).toContain('Browser operation timed out');
       expect(content).toContain('may have completed');
 
@@ -88,7 +85,7 @@ describe('Pi browser_tool watchdog bridge', () => {
       await Promise.resolve();
       expect(sent).toHaveLength(1);
     } finally {
-      (globalThis as any).setTimeout = originalSetTimeout;
+      globalThis.setTimeout = originalSetTimeout;
       unregisterSessionScopedToolCallbacks(sessionId);
       agent.destroy();
     }

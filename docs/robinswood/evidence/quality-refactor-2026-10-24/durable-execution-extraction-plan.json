@@ -1,0 +1,332 @@
+{
+  "source": "packages/shared/src/tasks/durable-execution.ts",
+  "units": [
+    {
+      "names": [
+        "NetworkAccessMode"
+      ],
+      "group": "contracts",
+      "bodySha256": "715b71288e2c79cbeded7b37515bb344dde5a592474c64d2721e93768f507d1e"
+    },
+    {
+      "names": [
+        "ExecutionIsolationPolicy"
+      ],
+      "group": "contracts",
+      "bodySha256": "deeafd1dcd71a58d2102189710e33c5843de0e4428f1721067a353de35c904ff"
+    },
+    {
+      "names": [
+        "ExactReadToolInvocation"
+      ],
+      "group": "contracts",
+      "bodySha256": "1e81a00cd88bf76aea10b210a96cac2b31d9d4615e74765d6fbe08b578d94140"
+    },
+    {
+      "names": [
+        "ExecutionEffect"
+      ],
+      "group": "contracts",
+      "bodySha256": "6631f8da81cf756c987f2c1e48dab0aa21fec6ec00a4cf66d15856354eb653c1"
+    },
+    {
+      "names": [
+        "SessionExecutionIsolation"
+      ],
+      "group": "contracts",
+      "bodySha256": "699572eae344418d4ec0708ba44b6d665a63339b53beb0edaec81f1f94bd7802"
+    },
+    {
+      "names": [
+        "GuardDecision"
+      ],
+      "group": "contracts",
+      "bodySha256": "c23587fb34cb6b1bdebb723b942e72fe90f7390130342759521becd26414a955"
+    },
+    {
+      "names": [
+        "ResolvedNetworkAddress"
+      ],
+      "group": "contracts",
+      "bodySha256": "606a051334633301601d50f4d6e5db690ad74dc654605d9df4a6d4cbbb88aa67"
+    },
+    {
+      "names": [
+        "NetworkHostResolver"
+      ],
+      "group": "contracts",
+      "bodySha256": "528120c0b58690452db478b1d75d2fe7733253faf5c09db51f712441a6e09204"
+    },
+    {
+      "names": [
+        "SecretLeaseMetadata"
+      ],
+      "group": "contracts",
+      "bodySha256": "5a92ab8cbd9fb7f6568114ff096be3a41f4f1b67c80f8f6e437258ef6720b21a"
+    },
+    {
+      "names": [
+        "SecretLeaseRequest"
+      ],
+      "group": "contracts",
+      "bodySha256": "43d3447e3e9f2c86e4a71dc4af286c62330bee667eefe65db173c4b1acdce5e4"
+    },
+    {
+      "names": [
+        "KillSwitchSnapshot"
+      ],
+      "group": "contracts",
+      "bodySha256": "449bb4310b9e79940a123820a540c484320a36acf14266ad2d6a8ad25ebe1989"
+    },
+    {
+      "names": [
+        "MutationCheckpointStatus"
+      ],
+      "group": "contracts",
+      "bodySha256": "a8f1d163aed5a9c5d6e69470a8c61949a841cfde8e544d52bc6fb2825a1b6397"
+    },
+    {
+      "names": [
+        "MutationCheckpoint"
+      ],
+      "group": "contracts",
+      "bodySha256": "c7355f031dd6161e197a75ef6bcd540abf111fbe7a35cee3b7e5de8aaa29fdf8"
+    },
+    {
+      "names": [
+        "RecoveryAction"
+      ],
+      "group": "contracts",
+      "bodySha256": "d827525687bf0837b4c9ca28249b84dc365e1264f7718d91be524f1a7e8ad9e4"
+    },
+    {
+      "names": [
+        "RecoveryDecision"
+      ],
+      "group": "contracts",
+      "bodySha256": "ac6fd3e5cb7dfa2b58b2780194b8bd8ddf8fcb2d13886279c3173431761624db"
+    },
+    {
+      "names": [
+        "MAX_ISOLATED_TOOL_INPUT_BYTES"
+      ],
+      "group": "canonical-input",
+      "bodySha256": "7e8646e753e184b477908d8aae8cd4982cdbb9ddf3a21b9fd835e0d08ba61eaa"
+    },
+    {
+      "names": [
+        "MAX_ISOLATED_TOOL_INPUT_DEPTH"
+      ],
+      "group": "canonical-input",
+      "bodySha256": "0af8da38c5ec060a6f3b6cf1882e9f857386263bf249c61459430504429222aa"
+    },
+    {
+      "names": [
+        "MAX_ISOLATED_TOOL_INPUT_FIELDS"
+      ],
+      "group": "canonical-input",
+      "bodySha256": "94bc9d13d54c17bdb041231b7ad76606d8804699fd8fd3983d007e2cd561af19"
+    },
+    {
+      "names": [
+        "MAX_ISOLATED_READ_TOOL_INVOCATIONS"
+      ],
+      "group": "canonical-input",
+      "bodySha256": "8222d2e5ee9982a540d4645de233e7363adaea73292d7cf993dfe6f451896e2e"
+    },
+    {
+      "names": [
+        "INERT_TOOL_INPUT_KEYS"
+      ],
+      "group": "canonical-input",
+      "bodySha256": "9b5980a5222d5ff3addac54bc6df3a122b6ef744e0e6c2de639e4032939d571c"
+    },
+    {
+      "names": [
+        "FORBIDDEN_TOOL_INPUT_KEYS"
+      ],
+      "group": "canonical-input",
+      "bodySha256": "a34c582111b0eabd8cd9588611498344042b21079f0b1cd49de93f89dc392aaa"
+    },
+    {
+      "names": [
+        "canonicalToolInputValue"
+      ],
+      "group": "canonical-input",
+      "bodySha256": "d1a55ab304e9ae681df69b9ca8a5f5dd00e65c11f5ebb6a1594c9409190847d9"
+    },
+    {
+      "names": [
+        "canonicalExecutionIsolationToolInput"
+      ],
+      "group": "canonical-input",
+      "bodySha256": "486d2c4fde9879d2c4834c9b1c1fc11a57e260799695b03d53dea19458202c34"
+    },
+    {
+      "names": [
+        "isInside"
+      ],
+      "group": "workspace-paths",
+      "bodySha256": "687396f30958cf0d54c764ce2fb7faba47c3808fb6efc44d842b6bdbf5c64b2c"
+    },
+    {
+      "names": [
+        "nearestExistingAncestor"
+      ],
+      "group": "workspace-paths",
+      "bodySha256": "3f9ed74a12cf2479bfee727d7721cb2f18e066b6b2db99514c0fd721c7dfe9cd"
+    },
+    {
+      "names": [
+        "authorizeWorkspacePath"
+      ],
+      "group": "workspace-paths",
+      "bodySha256": "d22ff80dbfae06539a18286cab6af54e7724872d8a14cc4d3deaf70ae3c18fd7"
+    },
+    {
+      "names": [
+        "isPrivateIpv4"
+      ],
+      "group": "network",
+      "bodySha256": "c2001afed7fe5a2173632d9291ed36da12ba7fd1b3f741588cf1c36ed5695330"
+    },
+    {
+      "names": [
+        "normalizeIpAddress"
+      ],
+      "group": "network",
+      "bodySha256": "344cdb5e57f2d7bb744f8be51a92b9e0caa5922d99cfeef81fb85f18cd33e8a9"
+    },
+    {
+      "names": [
+        "isPrivateIpv6"
+      ],
+      "group": "network",
+      "bodySha256": "a90b96543209fcf3407796dd6d1be4ce610398127b2ed4697a535f4ba162e224"
+    },
+    {
+      "names": [
+        "isPrivateIpAddress"
+      ],
+      "group": "network",
+      "bodySha256": "e900ce81ffa6da08cf1ef3e92424adc3e832f3edeed6786e4415be4dc8555470"
+    },
+    {
+      "names": [
+        "isLocalHostname"
+      ],
+      "group": "network",
+      "bodySha256": "dfb15d41f0f87ac70fa8154197bc4db421a9fe465a7d572b5e892f4dcac16591"
+    },
+    {
+      "names": [
+        "hostMatchesRule"
+      ],
+      "group": "network",
+      "bodySha256": "54c9bed237c8b6229ccdaea946191e28c2cbb9369c056b04347cd69e800a23a0"
+    },
+    {
+      "names": [
+        "authorizeNetworkUrl"
+      ],
+      "group": "network",
+      "bodySha256": "f1a1b4dba6e60bbe51b5ada56d4cd921dcefe26cab4ce313efca4201f949477f"
+    },
+    {
+      "names": [
+        "defaultNetworkHostResolver"
+      ],
+      "group": "network",
+      "bodySha256": "88bf6cdd784ef22aa49ebb9a5f1e36f1f81a517dc1460387f7e2523aaf19ed45"
+    },
+    {
+      "names": [
+        "authorizeResolvedNetworkUrl"
+      ],
+      "group": "network",
+      "bodySha256": "f5fae10268a0ad2a3be36416b1fe2cffe1f309b65480011d29a8b2fb8ac2218e"
+    },
+    {
+      "names": [
+        "validateExecutionIsolationPolicy"
+      ],
+      "group": "policy-validation",
+      "bodySha256": "94d25b0d7270f457ecd4ca49a46e10843f05b77f2b6948d26eb8a7defab6b376"
+    },
+    {
+      "names": [
+        "validateSessionExecutionIsolation"
+      ],
+      "group": "policy-validation",
+      "bodySha256": "31811fa40714a6f4c633572be10fa1a2df9595435dd55812b45ab4581694681f"
+    },
+    {
+      "names": [
+        "authorizeSecretLease"
+      ],
+      "group": "execution-lifecycle",
+      "bodySha256": "d6227910bf5dd7c0545137f15355e1ca658e090e3c44029d57facd67b9e13966"
+    },
+    {
+      "names": [
+        "evaluateKillSwitch"
+      ],
+      "group": "execution-lifecycle",
+      "bodySha256": "924be9b35c97f08a9d9272c882468bd35755aca1bf238c6fc98abc60a2a15c5a"
+    },
+    {
+      "names": [
+        "decideMutationRecovery"
+      ],
+      "group": "execution-lifecycle",
+      "bodySha256": "8415c64a81f458697513082ec5c0475ffe84d4c680c9694eb1cd85c0b182a810"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 98
+    },
+    {
+      "name": "canonical-input",
+      "lines": 62
+    },
+    {
+      "name": "workspace-paths",
+      "lines": 78
+    },
+    {
+      "name": "network",
+      "lines": 133
+    },
+    {
+      "name": "policy-validation",
+      "lines": 101
+    },
+    {
+      "name": "execution-lifecycle",
+      "lines": 73
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "canonical-input": [],
+    "workspace-paths": [
+      "contracts"
+    ],
+    "network": [
+      "contracts"
+    ],
+    "policy-validation": [
+      "contracts",
+      "workspace-paths",
+      "canonical-input",
+      "network"
+    ],
+    "execution-lifecycle": [
+      "contracts"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

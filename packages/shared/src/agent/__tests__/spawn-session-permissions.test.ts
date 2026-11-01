@@ -13,10 +13,7 @@ import { SpawnSessionSchema } from '../../../../session-tools-core/src/tool-defs
 
 // Exercise the actual shared tool boundary without constructing a backend,
 // creating a stored session, or contacting a model/provider.
-const spawn = (BaseAgent.prototype as unknown as {
-  preExecuteSpawnSession(input: Record<string, unknown>): Promise<SpawnSessionResult>;
-}).preExecuteSpawnSession;
-
+const spawn = BaseAgent.prototype['preExecuteSpawnSession'];
 describe('spawn_session permission boundary', () => {
   it.each([
     ['safe', 'safe'],
@@ -39,6 +36,7 @@ describe('spawn_session permission boundary', () => {
         prompt: 'Read the supplied note.',
         permissionMode: input,
       });
+      if (!('sessionId' in result)) throw new Error('Expected a dispatched child, received help');
       expect(result.sessionId).toBe(sessionId);
       expect(requests).toHaveLength(1);
       expect(requests[0]).toMatchObject({

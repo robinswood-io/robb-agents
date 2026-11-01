@@ -53,16 +53,16 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
       return null
     }
 
-    if (payload.kind !== 'owner' && payload.kind !== 'remote-device') return null
-    const kind = payload.kind
-    const deviceId = typeof payload.deviceId === 'string' ? payload.deviceId : undefined
-    const authorizationGeneration = typeof payload.authorizationGeneration === 'number'
-      ? payload.authorizationGeneration
+    if (payload["kind"] !== 'owner' && payload["kind"] !== 'remote-device') return null
+    const kind = payload["kind"]
+    const deviceId = typeof payload["deviceId"] === 'string' ? payload["deviceId"] : undefined
+    const authorizationGeneration = typeof payload["authorizationGeneration"] === 'number'
+      ? payload["authorizationGeneration"]
       : null
-    const rawWorkspaceIds = payload.allowedWorkspaceIds
+    const rawWorkspaceIds = payload["allowedWorkspaceIds"]
     const allowedWorkspaceIds = rawWorkspaceIds === '*'
       ? '*'
-      : Array.isArray(rawWorkspaceIds) && rawWorkspaceIds.every((value) => typeof value === 'string')
+      : Array.isArray(rawWorkspaceIds) && rawWorkspaceIds.every((value: unknown) => typeof value === 'string')
         ? rawWorkspaceIds
         : null
     if (authorizationGeneration === null || allowedWorkspaceIds === null) return null

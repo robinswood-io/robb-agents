@@ -3,9 +3,9 @@ import { cn } from '@/lib/utils'
 
 interface FadingTextProps {
   children: React.ReactNode
-  className?: string
+  className?: string | undefined
   /** Width of the fade gradient in pixels (default: 24) */
-  fadeWidth?: number
+  fadeWidth?: number | undefined
 }
 
 /**

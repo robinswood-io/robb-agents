@@ -32,7 +32,7 @@ export function validResult(): ValidationResult {
 export function invalidResult(path: string, message: string, suggestion?: string): ValidationResult {
   return {
     valid: false,
-    errors: [{ path, message, suggestion }],
+    errors: [{ path, message, ...(suggestion !== undefined ? { suggestion } : {}) }],
     warnings: [],
   };
 }
@@ -107,7 +107,7 @@ export function readJsonFile(filePath: string): { success: true; data: unknown }
 
   try {
     const content = readFileSync(filePath, 'utf-8');
-    const data = JSON.parse(stripBom(content));
+    const data: unknown = JSON.parse(stripBom(content));
     return { success: true, data };
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Unknown error';
@@ -413,16 +413,16 @@ export function validateSourceConfigBasic(config: unknown): ValidationResult {
   }
 
   // Validate type if present
-  if ('type' in data && !SOURCE_TYPES.includes(data.type as typeof SOURCE_TYPES[number])) {
+  if ('type' in data && !SOURCE_TYPES.includes(data["type"] as typeof SOURCE_TYPES[number])) {
     errors.push({
       path: 'type',
-      message: `Invalid type: ${data.type}. Must be one of: ${SOURCE_TYPES.join(', ')}`,
+      message: `Invalid type: ${data["type"]}. Must be one of: ${SOURCE_TYPES.join(', ')}`,
     });
   }
 
   // Validate slug format if present
-  if ('slug' in data && typeof data.slug === 'string') {
-    const slugResult = validateSlug(data.slug);
+  if ('slug' in data && typeof data["slug"] === 'string') {
+    const slugResult = validateSlug(data["slug"]);
     errors.push(...slugResult.errors);
   }
 

@@ -1,0 +1,302 @@
+{
+  "source": "apps/electron/src/renderer/components/automations/types.ts",
+  "units": [
+    {
+      "names": [
+        "AppEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "263912390329bf0e1b57d8b631cb8cdc3343120d338b3b1dc2a6211440f1949a"
+    },
+    {
+      "names": [
+        "AgentEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "6ec4b1cbf6ea778ebd60be6f342de4d29c298c61163808d84f02837ba0261904"
+    },
+    {
+      "names": [
+        "AutomationTrigger"
+      ],
+      "group": "contracts",
+      "bodySha256": "54a09241a1c318640d5759f75617bbb815cb5c14c1599ab6b55615862ca45f78"
+    },
+    {
+      "names": [
+        "APP_EVENTS"
+      ],
+      "group": "contracts",
+      "bodySha256": "25ea2e59db563e2abb97777b9e83e9004464cc796f986062be7540466967124a"
+    },
+    {
+      "names": [
+        "AGENT_EVENTS"
+      ],
+      "group": "contracts",
+      "bodySha256": "b7130c9e5e9f2e95d8262455d9e21eed04c709de3d241eeaf2730ee1b0915d19"
+    },
+    {
+      "names": [
+        "PromptAction"
+      ],
+      "group": "contracts",
+      "bodySha256": "3c82046c3acb54230071b07a2235f682fe10a5c10919e8714ff6368fb72dc1ea"
+    },
+    {
+      "names": [
+        "WebhookAction"
+      ],
+      "group": "contracts",
+      "bodySha256": "bae8b04d7cbeb185b758fb8183d8b5a2a34a52ac7fc4227a864fc0ab20a44212"
+    },
+    {
+      "names": [
+        "AutomationAction"
+      ],
+      "group": "contracts",
+      "bodySha256": "06a3a65660aee0d3689ce37e98b66dab051fdb58cb655d9dd86a10a2ed4ed77e"
+    },
+    {
+      "names": [
+        "TimeConditionUI"
+      ],
+      "group": "contracts",
+      "bodySha256": "445e4a04241bf7f157e656e86244bbdb45982de956480734eb54182e0cd8524e"
+    },
+    {
+      "names": [
+        "StateConditionUI"
+      ],
+      "group": "contracts",
+      "bodySha256": "637ce63fa3f6d3b6c9dbd54d1dda6c6d793a92aa17930ae10f836d685f2320c3"
+    },
+    {
+      "names": [
+        "LogicalConditionUI"
+      ],
+      "group": "contracts",
+      "bodySha256": "76c5e6e124212e73f3868536852fec23393d85f97a5953f7d63a94a09ef51fd1"
+    },
+    {
+      "names": [
+        "AutomationConditionUI"
+      ],
+      "group": "contracts",
+      "bodySha256": "574eeba96e2eb9a5e8604fa32dc8f4efacbfa9603ab5e256b78bbdc9b76d574c"
+    },
+    {
+      "names": [
+        "AutomationListItem"
+      ],
+      "group": "contracts",
+      "bodySha256": "f56cc83ddad10b1512f7b29d3614ad2c7d019b713b1aa2315ab6c7c1db65396d"
+    },
+    {
+      "names": [
+        "AutomationFilterKind"
+      ],
+      "group": "contracts",
+      "bodySha256": "580fc3f08f3a08cdf9de5140f07703ffa7cfe0d07206a931891a84e844fe03a6"
+    },
+    {
+      "names": [
+        "AutomationListFilter"
+      ],
+      "group": "contracts",
+      "bodySha256": "b0d436ee6d99bb13d3f149a893c6e4a5166ba5c94c75cd3b9fc76d4d0f4cd5fe"
+    },
+    {
+      "names": [
+        "AUTOMATION_TYPE_TO_FILTER_KIND"
+      ],
+      "group": "contracts",
+      "bodySha256": "3a755df77166bf61da3c1f547d7fa38f6bba182aad738cd48eb57cd3f763a4f2"
+    },
+    {
+      "names": [
+        "ExecutionStatus"
+      ],
+      "group": "contracts",
+      "bodySha256": "ced719047bdedfc78be0db5e028c6d96f610c40efc968f16951dc2439d112c58"
+    },
+    {
+      "names": [
+        "WebhookDetails"
+      ],
+      "group": "contracts",
+      "bodySha256": "8ecef56d88fdd819207b67ed6fa2723488174afca9db8c04125cc238834cd4d7"
+    },
+    {
+      "names": [
+        "ExecutionEntry"
+      ],
+      "group": "contracts",
+      "bodySha256": "f7da8ed19efc5d7531c2c18f6372f9a0f02c9f40040b8017b9bb4ee7e7d4e8be"
+    },
+    {
+      "names": [
+        "TestState"
+      ],
+      "group": "contracts",
+      "bodySha256": "2abf02c0c067ccebb9945f9c0d3d80d482d30c1e52e20c7745219a22a9287018"
+    },
+    {
+      "names": [
+        "TestResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "b618fbd63c45c5a009aaeb994b4c8572dee100460870a20ee9eeea8f0245ad8e"
+    },
+    {
+      "names": [
+        "AutomationsConfigFile"
+      ],
+      "group": "contracts",
+      "bodySha256": "ff4fd6d291f3806012342093ce4b52f8be767264f01463ed48618a609b83831d"
+    },
+    {
+      "names": [
+        "RawAction"
+      ],
+      "group": "contracts",
+      "bodySha256": "eec54b44fad963daf068c1d1cb76436f15d306353d4afb3c2ad7aece4db98126"
+    },
+    {
+      "names": [
+        "AutomationsConfigMatcher"
+      ],
+      "group": "contracts",
+      "bodySha256": "d4a9a01560cb3509ed46be39b3f1ab8d46516540ab4f826367926f812390b303"
+    },
+    {
+      "names": [
+        "FIELD_LABELS"
+      ],
+      "group": "conditions",
+      "bodySha256": "4217220627a6786ccb4e468c050bf5da1a7c307ad47f30b1f6539431c858ca5a"
+    },
+    {
+      "names": [
+        "fieldLabel"
+      ],
+      "group": "conditions",
+      "bodySha256": "50cacdec45925f41354326a7f69362d1aeb7f36afc0fcd0816dd8647609d3cb2"
+    },
+    {
+      "names": [
+        "describeLeaf"
+      ],
+      "group": "conditions",
+      "bodySha256": "9774c1d408e68d5616e7a541f9268c8f0a2fc5806f6b39dedf2f516dc9c3d88e"
+    },
+    {
+      "names": [
+        "flattenConditions"
+      ],
+      "group": "conditions",
+      "bodySha256": "77c9ae5502fdb3f739e7d6bac458f438068ec1b38e4bdd34ca46da2356b2b8ee"
+    },
+    {
+      "names": [
+        "EVENT_DISPLAY_NAMES"
+      ],
+      "group": "display",
+      "bodySha256": "13e581fd6fc5f52f9e62198bd8f44d325df212f9284b0cb30f0d7f07d5b34a26"
+    },
+    {
+      "names": [
+        "getEventDisplayName"
+      ],
+      "group": "display",
+      "bodySha256": "c12ffe0887220bd89132d54a18ebaa55e6a5fa54b33aeed20578bcc3c5092001"
+    },
+    {
+      "names": [
+        "PERMISSION_DISPLAY_NAMES"
+      ],
+      "group": "display",
+      "bodySha256": "8cd4e4dd41678f1a7fed9b1512bc2ec7c3260c64739ae7c8739f32ca056e3eba"
+    },
+    {
+      "names": [
+        "getPermissionDisplayName"
+      ],
+      "group": "display",
+      "bodySha256": "7957e79fcf54f389a8da62145f4409c11e183137a09aa8a51ea07393dd9dfb8c"
+    },
+    {
+      "names": [
+        "EventCategory"
+      ],
+      "group": "display",
+      "bodySha256": "b859bdfc6ac7a38dc3e59536d6947eeaefdf52ca66b23085303c0f9de30210b7"
+    },
+    {
+      "names": [
+        "getEventCategory"
+      ],
+      "group": "display",
+      "bodySha256": "2685a57b503963b873f935f12bb5fc2b8d531402a4a3ef482220e4760d73e1ae"
+    },
+    {
+      "names": [
+        "deriveAutomationName"
+      ],
+      "group": "config-parser",
+      "bodySha256": "f2051992a6306a8a535741790e1acc07678f2567461dcee94b010be09b796523"
+    },
+    {
+      "names": [
+        "deriveAutomationSummary"
+      ],
+      "group": "config-parser",
+      "bodySha256": "e96799334754cadcd5bb738e25a9be557b7d73e5177a238d8d9a321aed3a353b"
+    },
+    {
+      "names": [
+        "parseAutomationsConfig"
+      ],
+      "group": "config-parser",
+      "bodySha256": "599cc29f38683ed34ed44f478e8c7d90e1e533d54370a4e1277d2c6a33557cb4"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 230
+    },
+    {
+      "name": "conditions",
+      "lines": 84
+    },
+    {
+      "name": "display",
+      "lines": 104
+    },
+    {
+      "name": "config-parser",
+      "lines": 116
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "conditions": [
+      "contracts"
+    ],
+    "display": [
+      "contracts"
+    ],
+    "config-parser": [
+      "contracts",
+      "display"
+    ]
+  },
+  "unitCycles": [
+    [
+      "AutomationConditionUI",
+      "LogicalConditionUI"
+    ]
+  ],
+  "moduleCycles": []
+}

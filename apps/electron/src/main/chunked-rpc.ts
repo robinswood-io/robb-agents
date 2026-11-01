@@ -63,11 +63,11 @@ export function prepareChunkedPayload(value: unknown): PreparedChunkedPayload {
 export async function invokeChunked(
   client: WsRpcClient,
   channel: string,
-  args: any[],
+  args: unknown[],
   largeArgIndex: number,
   onProgress?: (sent: number, total: number) => void,
   prepared?: PreparedChunkedPayload,
-): Promise<any> {
+): Promise<unknown> {
   const payload = prepared ?? prepareChunkedPayload(args[largeArgIndex])
 
   // Build deferred args (replace large arg with null placeholder)

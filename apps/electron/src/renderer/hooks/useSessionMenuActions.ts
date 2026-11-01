@@ -1,3 +1,4 @@
+import { useEffectEvent } from 'react';
 /**
  * useSessionMenuActions
  *
@@ -86,15 +87,15 @@ export function useSessionMenuActions({
   // cannot leak into a new one (e.g. user toggles `bug` on session A, navigates
   // to B before the IPC ACK — without this reset, lastSentKeyRef would block
   // the prop sync and B would briefly render A's labels).
-  React.useEffect(() => {
+  const resetLabelsForSession = useEffectEvent(() => {
     const next = propLabels ?? []
     optimisticLabelsRef.current = next
     lastSentKeyRef.current = null
     setOptimisticLabels(next)
     // Intentionally only depending on sessionId — propLabels changes within
     // the same session are handled by the prop-sync effect below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId])
+  });
+React.useEffect(() => resetLabelsForSession(), [sessionId]);
 
   React.useEffect(() => {
     // Sync from prop only when the server has caught up to (or surpassed)

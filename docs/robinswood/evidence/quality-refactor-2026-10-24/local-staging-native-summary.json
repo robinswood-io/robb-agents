@@ -1,0 +1,56 @@
+{
+  "status": "tested; final installation pending",
+  "scope": "Local staging installer decomposition; temporary files and simulated app operations only",
+  "checks": {
+    "before": {
+      "command": [
+        "rtk",
+        "python3",
+        "-m",
+        "unittest",
+        "scripts.tests.test_robb_local_staging"
+      ],
+      "exitCode": 0,
+      "seconds": 1.21,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/local-staging-native-before.log"
+    },
+    "after": {
+      "command": [
+        "rtk",
+        "python3",
+        "-m",
+        "unittest",
+        "scripts.tests.test_robb_local_staging",
+        "scripts.tests.test_staging_retention",
+        "scripts.tests.test_install_staging_retention"
+      ],
+      "exitCode": 0,
+      "seconds": 22.1,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/local-staging-native-after.log"
+    },
+    "cli": {
+      "command": [
+        "rtk",
+        "python3",
+        "scripts/robb-local-staging.py",
+        "--help"
+      ],
+      "exitCode": 0,
+      "seconds": 0.1,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/local-staging-native-cli.log"
+    }
+  },
+  "targetedTests": {
+    "before": 44,
+    "after": 80
+  },
+  "sourceGate": {
+    "max-lines": 23
+  },
+  "proof": "local-staging-native-structural-proof.json",
+  "limits": [
+    "No installed application changed",
+    "Native guarded preflight/install/verify still required for final delivery",
+    "Other long files, lint and final missions remain"
+  ]
+}

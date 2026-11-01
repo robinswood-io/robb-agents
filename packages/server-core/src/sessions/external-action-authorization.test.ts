@@ -1,3 +1,6 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from 'bun:test';
 import {
   hasMatchingExternalActionAuthorization,
@@ -178,7 +181,7 @@ describe('external action authorization grants', () => {
 
 describe('SessionManager sensitive permission persistence', () => {
   it('persists an exact replay grant only when the human selects Always Allow', () => {
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const managed = createManagedSession({ id: 'sensitive-permission-session' }, {
       id: 'sensitive-permission-workspace',
       name: 'Sensitive permission workspace',
@@ -199,17 +202,12 @@ describe('SessionManager sensitive permission persistence', () => {
       terminalState: 'active',
     } as never;
 
-    const internals = manager as unknown as {
-      sessions: Map<string, typeof managed>;
-      pendingPermissionRequests: Map<string, unknown>;
-      persistSession: (session: typeof managed) => void;
-      flushSession: (sessionId: string) => Promise<void>;
-      emitExecutionTelemetry: () => void;
-    };
-    internals.sessions.set(managed.id, managed);
+    const internals = sessionManagerForTest(manager);
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
     const persistedAuthorizations: Array<typeof managed.externalActionAuthorizations> = [];
     internals.persistSession = session => {
       persistedAuthorizations.push(structuredClone(session.externalActionAuthorizations));
+      return true;
     };
     internals.flushSession = async () => {};
     internals.emitExecutionTelemetry = () => {};
@@ -217,13 +215,13 @@ describe('SessionManager sensitive permission persistence', () => {
     const addRequest = (requestId: string) => {
       const timeout = setTimeout(() => undefined, 60_000);
       timeout.unref?.();
-      internals.pendingPermissionRequests.set(requestId, {
+      sessionRuntimeStateForTest(manager).pendingPermissionRequests.set(requestId, {
         sessionId: managed.id,
         type: 'mcp_mutation',
         toolName: 'mcp__gmail__send_email',
         processingGeneration: 1,
         objectiveId: 'user-a',
-        runtimeAgent: managed.agent,
+        runtimeAgent: managed.agent ?? undefined,
         requestedAt: Date.now(),
         expiresAt: Date.now() + 60_000,
         request: {

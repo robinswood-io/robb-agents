@@ -90,21 +90,18 @@ describe('Web Fetch SSRF & Redirect Protection', () => {
 
   it('blocks HTTP redirects targeting private/loopback IPs', async () => {
     const originalFetch = globalThis.fetch;
-    globalThis.fetch = (async () => {
+    globalThis.fetch = Object.assign(async () => {
       return new Response(null, {
         status: 302,
         headers: { location: 'http://127.0.0.1:9100/internal-secret' },
       });
-    }) as unknown as typeof fetch;
+    }, { preconnect: () => {} });
 
     try {
       const tool = createWebFetchTool(() => null);
       const res = await tool.execute(
         'call-1',
-        { url: 'https://example.com/start' },
-        undefined as any,
-        undefined as any,
-        undefined as any,
+        { url: 'https://93.184.216.34/start' },
       );
       const text = (res.content[0] as { type: 'text'; text: string }).text;
       expect((res.details as { isError?: boolean })?.isError).toBe(true);
@@ -130,6 +127,7 @@ describe('Web Fetch SSRF & Redirect Protection', () => {
     let resolvedFamily = 0;
     lookupFn('example.com', {}, (err, addr, fam) => {
       expect(err).toBeNull();
+      if (typeof addr !== 'string') throw new Error('Expected one pinned address');
       resolvedAddr = addr;
       resolvedFamily = fam ?? 0;
     });
@@ -140,6 +138,7 @@ describe('Web Fetch SSRF & Redirect Protection', () => {
     let allAddrs: Array<{ address: string; family: number }> = [];
     lookupFn('example.com', { all: true }, (err, addrs) => {
       expect(err).toBeNull();
+      if (!Array.isArray(addrs)) throw new Error('Expected all pinned addresses');
       allAddrs = addrs;
     });
     expect(allAddrs).toEqual([

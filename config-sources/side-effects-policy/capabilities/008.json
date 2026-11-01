@@ -1,0 +1,88 @@
+[
+  {
+    "legacy_id": "traid-reliability-training",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report",
+      "remote-dev-filesystem-write:traid-sandbox-reliability-report"
+    ],
+    "mutationMode": "sandbox_fail_closed_governance_prepare_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T22:19:19.886756Z",
+    "updatedBy": "security-hardening-traid-reliability-followup",
+    "policyClass": "investment_lab_governance_fail_closed",
+    "rationale": "TRAID sandbox reliability training writes only OSS/dev-sandbox evidence and preserves prod/live fail-closed invariants; no broker/live/prod mutation allowed.",
+    "guardrails": {
+      "sandboxOnly": true,
+      "noApprovalFabrication": true,
+      "noLiveTrading": true,
+      "noBrokerSecrets": true,
+      "noBrokerConnector": true,
+      "noProdDeployment": true,
+      "validationDoesNotActivateProd": true
+    }
+  },
+  {
+    "legacy_id": "traid-signed-decision-intake",
+    "accepted": true,
+    "riskClass": "low_observability_or_guardrail",
+    "sideEffects": [
+      "filesystem-write:ops-report",
+      "filesystem-write:decision-request-pack",
+      "filesystem-write:decision-inbox-template"
+    ],
+    "mutationMode": "sandbox_fail_closed_governance_prepare_only",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T12:23:51.512584Z",
+    "updatedBy": "oss-p9-p13-followup-traid-hygiene",
+    "policyClass": "investment_lab_governance_fail_closed",
+    "rationale": "TRAID governance wrapper writes only OSS/dev-sandbox evidence and must keep production/live trading/capital fail-closed; no broker/live/prod mutation allowed.",
+    "guardrails": {
+      "noApprovalFabrication": true,
+      "missingKeepsFailClosed": true,
+      "noLiveTrading": true,
+      "noBrokerSecrets": true,
+      "noBrokerConnector": true,
+      "noProdDeployment": true
+    }
+  },
+  {
+    "legacy_id": "triage-emails-multi-sources-master",
+    "accepted": true,
+    "riskClass": "high_external_communication_guarded",
+    "sideEffects": [
+      "external-communication",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "guarded_external_prepare_or_send",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.314981Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  },
+  {
+    "legacy_id": "web-form-submitter",
+    "accepted": true,
+    "riskClass": "high_external_communication_guarded",
+    "sideEffects": [
+      "external-communication",
+      "filesystem-write:ops-report"
+    ],
+    "mutationMode": "guarded_external_prepare_or_send",
+    "requiresHumanApprovalForApply": false,
+    "requiresHumanApprovalForExternalSend": false,
+    "requiresExplicitReviewBeforeRiskIncrease": true,
+    "scheduleAllowed": true,
+    "updatedAt": "2026-06-28T07:37:38.315027Z",
+    "updatedBy": "oss-p9-p13-improvements"
+  }
+]

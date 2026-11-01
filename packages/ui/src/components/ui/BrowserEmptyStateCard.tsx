@@ -1,4 +1,4 @@
-import * as React from 'react'
+
 import { useTranslation } from 'react-i18next'
 
 export interface BrowserEmptyPromptSample {
@@ -9,10 +9,10 @@ export interface BrowserEmptyPromptSample {
 export interface BrowserEmptyStateCardProps {
   title: string
   description: string
-  prompts?: readonly BrowserEmptyPromptSample[]
-  showExamplePrompts?: boolean
-  showSafetyHint?: boolean
-  onPromptSelect?: (prompt: BrowserEmptyPromptSample) => void
+  prompts?: readonly BrowserEmptyPromptSample[] | undefined
+  showExamplePrompts?: boolean | undefined
+  showSafetyHint?: boolean | undefined
+  onPromptSelect?: ((prompt: BrowserEmptyPromptSample) => void) | undefined
 }
 
 export function BrowserEmptyStateCard({

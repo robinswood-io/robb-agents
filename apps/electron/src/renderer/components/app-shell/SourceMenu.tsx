@@ -14,13 +14,13 @@
  * - Delete
  */
 
-import * as React from 'react'
+
 import { useTranslation } from "react-i18next"
 import {
-  Trash2,
-  FolderOpen,
-  AppWindow,
-  Send,
+Trash2,
+FolderOpen,
+AppWindow,
+Send,
 } from 'lucide-react'
 import { useMenuComponents } from '@/components/ui/menu-context'
 import { getFileManagerName } from '@/lib/platform'
@@ -35,7 +35,7 @@ export interface SourceMenuProps {
   onShowInFinder: () => void
   onDelete: () => void
   /** Send to another workspace (omit to hide the option) */
-  onSendToWorkspace?: () => void
+  onSendToWorkspace?: (() => void) | undefined
 }
 
 /**
@@ -43,8 +43,6 @@ export interface SourceMenuProps {
  * This is the content only, not wrapped in a DropdownMenu or ContextMenu
  */
 export function SourceMenu({
-  sourceSlug,
-  sourceName,
   onOpenInNewWindow,
   onShowInFinder,
   onDelete,

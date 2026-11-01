@@ -57,7 +57,7 @@ export function extractRefs(text: string): Ref[] {
   const refs: Ref[] = [];
   for (const m of text.matchAll(refRegex())) {
     const [raw, nodeId, field, paramName] = m;
-    if (nodeId) refs.push({ kind: 'node', nodeId, field, raw });
+    if (nodeId) refs.push({ kind: 'node', nodeId, ...(field !== undefined ? { field } : {}), raw });
     else if (paramName) refs.push({ kind: 'param', name: paramName, raw });
   }
   return refs;
@@ -71,7 +71,7 @@ export interface InterpolationContext {
   /** nodeId → that node's output. */
   nodeOutputs: Record<string, NodeOutput>;
   /** Task param values (resolved at run start). */
-  params?: Record<string, unknown>;
+  params?: Record<string, unknown> | undefined;
 }
 
 export interface InterpolateOptions {
@@ -92,7 +92,7 @@ export function interpolateRefs(
   return template.replace(refRegex(), (raw, nodeId?: string, field?: string, paramName?: string) => {
     if (nodeId) {
       const out = ctx.nodeOutputs[nodeId];
-      if (!out) return onMissing({ kind: 'node', nodeId, field, raw });
+      if (!out) return onMissing({ kind: 'node', nodeId, ...(field !== undefined ? { field } : {}), raw });
       if (field) {
         const value = out.params?.[field];
         return value === undefined ? onMissing({ kind: 'node', nodeId, field, raw }) : stringifyValue(value);

@@ -1,0 +1,575 @@
+{
+  "source": "packages/shared/src/agent/mode-manager.ts",
+  "units": [
+    {
+      "names": [
+        "PermissionModeChangedBy"
+      ],
+      "group": "contracts",
+      "bodySha256": "bf60dff3a6c6306b902ac02164f827ac6cfe868985edc15269a1819366558480"
+    },
+    {
+      "names": [
+        "ModeState"
+      ],
+      "group": "contracts",
+      "bodySha256": "2582afce18386325461cd38a844409b99f6fb9f96b31a237cbeaeeeda93d933c"
+    },
+    {
+      "names": [
+        "ModeCallbacks"
+      ],
+      "group": "contracts",
+      "bodySha256": "2dc3af6ed3a6fce622b7df575970cb8ff426c9d95ef5d4dfa93bcc01d641ae19"
+    },
+    {
+      "names": [
+        "INVALID_PERMISSION_MODE_MESSAGE"
+      ],
+      "group": "contracts",
+      "bodySha256": "9908410ed8ea454626377046e2ae34f4f505ba3a4716500099c610110daf163d"
+    },
+    {
+      "names": [
+        "InvalidPermissionModeError"
+      ],
+      "group": "contracts",
+      "bodySha256": "90f15ced5e542e8192749f147b7f5e7fcf3c1b872485265f1708fa4c94a01a57"
+    },
+    {
+      "names": [
+        "isCanonicalPermissionMode"
+      ],
+      "group": "contracts",
+      "bodySha256": "410f16586b864de35603a61e7c034997c45a508769a2c8886fc7e5de3d5b706f"
+    },
+    {
+      "names": [
+        "assertCanonicalPermissionMode"
+      ],
+      "group": "contracts",
+      "bodySha256": "ac069ebe7b448a80f09677a7aab47953ab4f6131da5084e431071f703b3e9710"
+    },
+    {
+      "names": [
+        "ToolCheckResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "cdf8ac1e45578153df66aec8cd769f952702ef2d93d298ce1805a6a959aa28c1"
+    },
+    {
+      "names": [
+        "expandHome"
+      ],
+      "group": "path-boundaries",
+      "bodySha256": "78bb3c3ac274661a9d73991ba2be211056b1c3241453093e9fbbe09a2d65b08e"
+    },
+    {
+      "names": [
+        "globToRegex"
+      ],
+      "group": "path-boundaries",
+      "bodySha256": "23f41592581fccca079bb0c47016f915c6deca71e713561224c40e96bec727d6"
+    },
+    {
+      "names": [
+        "matchesAllowedWritePath"
+      ],
+      "group": "path-boundaries",
+      "bodySha256": "5ebd327a15702195f5b91ca526ab85706dd3f6b1525c2d6797816cc8696b9f52"
+    },
+    {
+      "names": [
+        "normalizeForComparison"
+      ],
+      "group": "path-boundaries",
+      "bodySha256": "0feb1434edd2ab23a559d5ffac3514d086e02530ff968025b730a4dc46c24599"
+    },
+    {
+      "names": [
+        "isWithin"
+      ],
+      "group": "path-boundaries",
+      "bodySha256": "4c1425573f849deef5806355701a6a4b720d0ea213643bb65a9637c2a41d99d3"
+    },
+    {
+      "names": [
+        "filesystemEntryState"
+      ],
+      "group": "path-boundaries",
+      "bodySha256": "29777d8921b0bf9600cc49a01334f7277525013d3be0fbb01258a3eda9e30c54"
+    },
+    {
+      "names": [
+        "isPathWithinDirectory"
+      ],
+      "group": "path-boundaries",
+      "bodySha256": "1207ff1e1d3227c05478616455bfae3f2df5f8e5d7c542ee16104c895f4572bd"
+    },
+    {
+      "names": [
+        "ModeManager"
+      ],
+      "group": "mode-state",
+      "bodySha256": "d0a2e4129531c0bcb361fa8ff5ec7ddde3a4554a20b3aa81c2a14661f47ae57c"
+    },
+    {
+      "names": [
+        "modeManager"
+      ],
+      "group": "mode-state",
+      "bodySha256": "ed1069edf5112de517d115f6a945245d229ae7408e73320130718254334477cd"
+    },
+    {
+      "names": [
+        "getPermissionMode"
+      ],
+      "group": "state-api",
+      "bodySha256": "927158985ee70b8cc7ecb386d3857ad97359bc22b0354ecabce14506f41e430d"
+    },
+    {
+      "names": [
+        "setPermissionMode"
+      ],
+      "group": "state-api",
+      "bodySha256": "a82746c91c24b007eaa4f5555f6ec7f84139f05f6c77aee55dab7b46d8d356f8"
+    },
+    {
+      "names": [
+        "consumeUserModeSignal"
+      ],
+      "group": "state-api",
+      "bodySha256": "76d9ef7cf6d02d6be5a04d4db029a769ad2c9e30b07d54627ec8eac1d070a5ac"
+    },
+    {
+      "names": [
+        "cyclePermissionMode"
+      ],
+      "group": "state-api",
+      "bodySha256": "1d27cc0f009f5159cf5f4dccec5ad62c30eec3376edb758a58caf78edb759127"
+    },
+    {
+      "names": [
+        "subscribeModeChanges"
+      ],
+      "group": "state-api",
+      "bodySha256": "46cf8dae4c58f3015cfde2ded47d36b12036a22571de7acf2e30c44daa61ed2e"
+    },
+    {
+      "names": [
+        "getModeState"
+      ],
+      "group": "state-api",
+      "bodySha256": "b4cd6d8069683e822f40bd6a256f4d42518f7512381404f1fe26e13acec86cec"
+    },
+    {
+      "names": [
+        "hydratePreviousPermissionMode"
+      ],
+      "group": "state-api",
+      "bodySha256": "1117b138540bf6709c00038946797c9043a21946a9b6b92adccdf8cbc670d3f5"
+    },
+    {
+      "names": [
+        "getPermissionModeDiagnostics"
+      ],
+      "group": "state-api",
+      "bodySha256": "db1ab6715307be1204e678e0127cb33e8aaf1ed2644dbe17a5da93a337b21abf"
+    },
+    {
+      "names": [
+        "initializeModeState"
+      ],
+      "group": "state-api",
+      "bodySha256": "afbfd20991be110db4c5b893e032c32fc8e83493c01d3534fc21c547262ae5ba"
+    },
+    {
+      "names": [
+        "cleanupModeState"
+      ],
+      "group": "state-api",
+      "bodySha256": "52fde3160a9c4366e47d1862910de22e8dd959797b3d82f6e2294837e43d90c3"
+    },
+    {
+      "names": [
+        "ToolCheckConfig"
+      ],
+      "group": "bash-contracts",
+      "bodySha256": "eda9b71370f1473e6fcc9062fd0b48c75dc66998c9d5a373480cb492162de971"
+    },
+    {
+      "names": [
+        "DANGEROUS_CONTROL_CHARS"
+      ],
+      "group": "bash-contracts",
+      "bodySha256": "48722bd2fa03d539703c91b5d8a712b3131165a837d881650dab5e8f9826987f"
+    },
+    {
+      "names": [
+        "hasDangerousControlChars"
+      ],
+      "group": "bash-contracts",
+      "bodySha256": "be608b1b8924d906f46b5861ef284c1adddbff6fe66e28fd08c03d6b826233c0"
+    },
+    {
+      "names": [
+        "hasDangerousSubstitution"
+      ],
+      "group": "bash-contracts",
+      "bodySha256": "5d3fd89e3b65ecedee99b7581f8e1b697a2e49ac669f4ab09cef33e05e6c99d6"
+    },
+    {
+      "names": [
+        "RelevantPatternInfo"
+      ],
+      "group": "bash-contracts",
+      "bodySha256": "61de9ea99c2b7c5eb835e4a66e6df07307e8c2d0f9bfd6275acbdefcdf7d7b5f"
+    },
+    {
+      "names": [
+        "BashRejectionReason"
+      ],
+      "group": "bash-contracts",
+      "bodySha256": "1f19b03c5de0d9981901803980a514c128d7a02ec1f7761060f242736e24c542"
+    },
+    {
+      "names": [
+        "CONTROL_CHAR_EXPLANATIONS"
+      ],
+      "group": "bash-contracts",
+      "bodySha256": "596357f3de98e65c8fe7aa1919acce65150e8bc4aca7fcc5d4a87ac3185c935a"
+    },
+    {
+      "names": [
+        "findDangerousControlChar"
+      ],
+      "group": "shell-hazards",
+      "bodySha256": "55b10301f1dd93939e67832e745e61ab0f67c4a683293db6fcb653e273a3a536"
+    },
+    {
+      "names": [
+        "findDangerousSubstitution"
+      ],
+      "group": "shell-hazards",
+      "bodySha256": "37006b28fa21f91ba87a5a136aace39ec03c3b4cf795cbdf168cd9fafa8ec0b2"
+    },
+    {
+      "names": [
+        "findRelevantPatterns"
+      ],
+      "group": "bash-guidance",
+      "bodySha256": "ff612ca44d194a0e12d609e206ce159e56296cc17747afb5de8191c44e1ed8c4"
+    },
+    {
+      "names": [
+        "findBlockedCommandHint"
+      ],
+      "group": "bash-guidance",
+      "bodySha256": "8ee187ccac07eb46c28fa1a251065d13b35696bf248106cebb1452548f319e53"
+    },
+    {
+      "names": [
+        "analyzePatternMismatch"
+      ],
+      "group": "bash-guidance",
+      "bodySha256": "39cc13b08c2266b2a62f5dc3f22aade165ddd9b807abd685c712dc26204bfab2"
+    },
+    {
+      "names": [
+        "generateMismatchSuggestion"
+      ],
+      "group": "bash-guidance",
+      "bodySha256": "4ddd9f0567b8bd0c2e82a507e0d072f1f3e6c4016736b8aaa32e5078b7924c54"
+    },
+    {
+      "names": [
+        "formatPermissionGuidance"
+      ],
+      "group": "bash-guidance",
+      "bodySha256": "8809219a6cdc0db7622ad4e3dea825b4121f5972c9960d90c12574505435b7d0"
+    },
+    {
+      "names": [
+        "looksLikeCmdBuiltin"
+      ],
+      "group": "bash-parser-compat",
+      "bodySha256": "a7775ee494777713327e0be9297dab8f18148ea6ff9e3b4b68148419fbeae7dd"
+    },
+    {
+      "names": [
+        "normalizeWindowsPathsForBashParser"
+      ],
+      "group": "bash-parser-compat",
+      "bodySha256": "fce5cde3fc22079328db6f0cfcc3f6302684170a9b0e999294c0a30d4dce6b98"
+    },
+    {
+      "names": [
+        "getBashRejectionReason"
+      ],
+      "group": "bash-rejection",
+      "bodySha256": "2cc08619002e2038182b8559dced749460186ae2b7e7e88af74491806d5ec6f0"
+    },
+    {
+      "names": [
+        "getPowerShellRejectionReason"
+      ],
+      "group": "powershell-rejection",
+      "bodySha256": "6ff57e19c53b04ba44a01188a2184c43316c4e3b5c1c722e21b144ac8aff654b"
+    },
+    {
+      "names": [
+        "isKnownBashParserTokenizerBug"
+      ],
+      "group": "rejection-message",
+      "bodySha256": "a40a7089b5ab78d40764f29df5c7acd4c46fefe8fd6e12bae18c197be900b43f"
+    },
+    {
+      "names": [
+        "formatBashRejectionMessage"
+      ],
+      "group": "rejection-message",
+      "bodySha256": "478e8f76d5840715e07135c05bc0a42079d65e845896f63e2a6217788c8d4d7c"
+    },
+    {
+      "names": [
+        "isReadOnlyBashCommandWithConfig"
+      ],
+      "group": "read-only-shell",
+      "bodySha256": "bd8f03281a821d358cd8512d20df9b19e567a0ccd3ef324a9e81e200bc49e57e"
+    },
+    {
+      "names": [
+        "isReadOnlyBashCommand"
+      ],
+      "group": "read-only-shell",
+      "bodySha256": "84a25ff16760cd95db463d81a517e97f617517d8dbb22b511e43035354bf1ab3"
+    },
+    {
+      "names": [
+        "extractBashWriteTarget"
+      ],
+      "group": "write-targets",
+      "bodySha256": "5d87c42a072e89acd005ea3e1ac4061c0ff70fd8a591920c0d81ceba0aa77d43"
+    },
+    {
+      "names": [
+        "looksLikePotentialWrite"
+      ],
+      "group": "write-targets",
+      "bodySha256": "3f0de4b9e83d5fa919a0f547e6def2132d829c076b3568a0f27dc6e9d32f660e"
+    },
+    {
+      "names": [
+        "getPathHint"
+      ],
+      "group": "write-targets",
+      "bodySha256": "d880d8ed67c80d49eee25f48dab3b0ba62111c58d0c0ab5e67136c2db69ece19"
+    },
+    {
+      "names": [
+        "isReadOnlyMcpToolWithConfig"
+      ],
+      "group": "api-mcp-checks",
+      "bodySha256": "b5c39fcf6f9d8f3bf73705ff338f8df066173c806900bffa251abf3ab51ca002"
+    },
+    {
+      "names": [
+        "isApiCallAllowedWithConfig"
+      ],
+      "group": "api-mcp-checks",
+      "bodySha256": "d041efca122dd339310a03bf33801b1d96571df564ee9d1c59b42d1fef5936e9"
+    },
+    {
+      "names": [
+        "isApiEndpointAllowed"
+      ],
+      "group": "api-mcp-checks",
+      "bodySha256": "e3e0b59ab23efc6f78e680a61241c3958608fc2b0b77a2921fd24933a389640a"
+    },
+    {
+      "names": [
+        "ALWAYS_ALLOWED_TOOLS"
+      ],
+      "group": "browser-policy",
+      "bodySha256": "d2fd2573c80e26f4dab3d9022e2823e9b7ebeca2b94c9dd49870d72f1b852d18"
+    },
+    {
+      "names": [
+        "OBSERVATIONAL_LEGACY_BROWSER_OPERATIONS"
+      ],
+      "group": "browser-policy",
+      "bodySha256": "0ec77eb2303ceb72d3d2c5483a084220d40b1c6987b327854d3cdf559088b3ca"
+    },
+    {
+      "names": [
+        "browserSafeModeDecision"
+      ],
+      "group": "browser-policy",
+      "bodySha256": "ff1e424dc65bf98a235fe4bb4349ec236f73634c32c8ff47a0ed72cbdaf46b24"
+    },
+    {
+      "names": [
+        "shouldAllowToolInMode"
+      ],
+      "group": "tool-check",
+      "bodySha256": "c3e471c3e57c283b380482de1287bf6fa027cd2be14435a7497e7b70335aaddf"
+    },
+    {
+      "names": [
+        "getBlockReasonWithConfig"
+      ],
+      "group": "tool-check",
+      "bodySha256": "f49dd8f25c47245c1f61fb0bd4ad0caed5b0c2f5fd1a19ccca409ad36c6138fb"
+    },
+    {
+      "names": [
+        "blockWithReason"
+      ],
+      "group": "tool-check",
+      "bodySha256": "0230082f415f6c8634e4b1aed58a2d9f72e92d5041fb49026135b9b8090e6ba0"
+    },
+    {
+      "names": [
+        "getSessionState"
+      ],
+      "group": "session-prompt",
+      "bodySha256": "5115a72ba78c7e5a19c4129f7d4e2868be101134a539d8fd6d76f42c3dc7d555"
+    },
+    {
+      "names": [
+        "formatSessionState"
+      ],
+      "group": "session-prompt",
+      "bodySha256": "ab5c873b317aef3d864de6937c4dddc170a2230df6a6743fdf52c13f8b499f35"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 58
+    },
+    {
+      "name": "path-boundaries",
+      "lines": 163
+    },
+    {
+      "name": "mode-state",
+      "lines": 168
+    },
+    {
+      "name": "state-api",
+      "lines": 155
+    },
+    {
+      "name": "bash-contracts",
+      "lines": 150
+    },
+    {
+      "name": "shell-hazards",
+      "lines": 80
+    },
+    {
+      "name": "bash-guidance",
+      "lines": 250
+    },
+    {
+      "name": "bash-parser-compat",
+      "lines": 116
+    },
+    {
+      "name": "bash-rejection",
+      "lines": 175
+    },
+    {
+      "name": "powershell-rejection",
+      "lines": 119
+    },
+    {
+      "name": "rejection-message",
+      "lines": 177
+    },
+    {
+      "name": "read-only-shell",
+      "lines": 55
+    },
+    {
+      "name": "write-targets",
+      "lines": 118
+    },
+    {
+      "name": "api-mcp-checks",
+      "lines": 63
+    },
+    {
+      "name": "browser-policy",
+      "lines": 68
+    },
+    {
+      "name": "tool-check",
+      "lines": 337
+    },
+    {
+      "name": "session-prompt",
+      "lines": 63
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "path-boundaries": [],
+    "mode-state": [
+      "contracts"
+    ],
+    "state-api": [
+      "mode-state",
+      "contracts"
+    ],
+    "bash-contracts": [],
+    "shell-hazards": [
+      "bash-contracts"
+    ],
+    "bash-guidance": [
+      "bash-contracts"
+    ],
+    "bash-parser-compat": [],
+    "bash-rejection": [
+      "bash-contracts",
+      "powershell-rejection",
+      "bash-parser-compat",
+      "bash-guidance"
+    ],
+    "powershell-rejection": [
+      "bash-contracts",
+      "bash-guidance"
+    ],
+    "rejection-message": [
+      "bash-contracts",
+      "bash-guidance"
+    ],
+    "read-only-shell": [
+      "bash-contracts",
+      "bash-rejection"
+    ],
+    "write-targets": [],
+    "api-mcp-checks": [
+      "bash-contracts"
+    ],
+    "browser-policy": [
+      "contracts"
+    ],
+    "tool-check": [
+      "contracts",
+      "bash-contracts",
+      "browser-policy",
+      "bash-rejection",
+      "write-targets",
+      "path-boundaries",
+      "rejection-message",
+      "api-mcp-checks"
+    ],
+    "session-prompt": [
+      "state-api"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

@@ -1,0 +1,25 @@
+{
+  "status": "passed",
+  "source": "packages/shared/tests/shellguard-corpus.test.ts",
+  "sourceHash": "39c2b8cd9c3878a098775e5784b60be67c7bc906a5629934320489b6d47063be",
+  "nativeSuites": 27,
+  "preservedSuiteBodies": 27,
+  "mutableFixtureWrites": 0,
+  "files": [
+    {
+      "file": "packages/shared/tests/testing/shellguard-corpus-fixture.ts",
+      "lines": 105,
+      "sha256": "2f8a4c3611d1bc2d2ccff56f03dafd0fb68da7845867bc7f6f92e808c20d6a5a"
+    },
+    {
+      "file": "packages/shared/tests/shellguard-corpus.test.ts",
+      "lines": 428,
+      "sha256": "64761ac895317bb43b6899948812eab8732217be97fd3389367cfdb4f53ccf6c"
+    },
+    {
+      "file": "packages/shared/tests/shellguard-corpus-platforms.test.ts",
+      "lines": 388,
+      "sha256": "99eb3817daa1cf3c81c86d92b5b7ea6f94a17085b8de9bfd25493c375cb1cd77"
+    }
+  ]
+}

@@ -291,7 +291,7 @@ Please continue the conversation naturally from where we left off.
    * Update the session configuration.
    */
   setSession(session: PromptBuilderConfig['session']): void {
-    this.config.session = session;
+    if (session === undefined) { delete this.config.session } else { this.config.session = session }
   }
 
   /**

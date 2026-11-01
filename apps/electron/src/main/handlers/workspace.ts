@@ -1,3 +1,5 @@
+import type { WsRpcClientOptions } from '../../../../../packages/server-core/src/transport/client/shared.ts';
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from './handler-deps'
@@ -20,11 +22,11 @@ export const GUI_HANDLED_CHANNELS = [
  */
 export async function connectToRemote(url: string, token: string, workspaceId?: string) {
   const { WsRpcClient } = await import('../../transport/client')
-  const client = new WsRpcClient(url, {
+  const client = new WsRpcClient(url, omitUndefined<WsRpcClientOptions>({
     token,
     workspaceId,
     autoReconnect: false,
-  })
+  }))
 
   const connected = await new Promise<boolean>((resolve) => {
     const timeout = setTimeout(() => resolve(false), 10_000)
@@ -79,8 +81,8 @@ export function registerWorkspaceGuiHandlers(server: RpcServer, deps: HandlerDep
         serverVersion,
         remoteWorkspaces: workspaces,
         // Convenience: auto-select if exactly one
-        remoteWorkspaceId: workspaces.length === 1 ? workspaces[0].id : undefined,
-        remoteWorkspaceName: workspaces.length === 1 ? workspaces[0].name : undefined,
+        remoteWorkspaceId: workspaces.length === 1 ? workspaces[0]?.id : undefined,
+        remoteWorkspaceName: workspaces.length === 1 ? workspaces[0]?.name : undefined,
       }
       console.log(`[TEST_CONNECTION] → returning ${workspaces.length} workspaces`)
       return result

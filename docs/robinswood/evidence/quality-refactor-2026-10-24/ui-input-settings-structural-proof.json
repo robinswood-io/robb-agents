@@ -1,0 +1,202 @@
+{
+  "status": "passed",
+  "sources": 4,
+  "nativeDeclarations": 47,
+  "preparedNativeBodiesPublicExportsStateAndExternalImportsPreserved": true,
+  "additionalContextOrWorkflow": 0,
+  "runtimeImportCycles": 0,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/CompactModelSelector.tsx",
+      "lines": 441,
+      "sha256": "2186cf8f18628dce65af7dd5671aaa338856ee36deb96ce2e28c06e3a7dbdb9b"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/input/compact-model-controls.tsx",
+      "lines": 104,
+      "sha256": "4ef658867f8706f97562241d8b16dc019cfea193449e2be02f4d6afac7147892"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/SourceInfoPage.tsx",
+      "lines": 397,
+      "sha256": "0486241b990e23e8765db1a926faa02ab52ad01950f4677ef366ed451069df10"
+    },
+    {
+      "file": "apps/electron/src/renderer/pages/source-info-details.tsx",
+      "lines": 150,
+      "sha256": "405f731e6d192e97a1ff705e9a541a10eacb45da9082ca3dd9fd09263459eef8"
+    },
+    {
+      "file": "apps/electron/src/renderer/context/ThemeContext.tsx",
+      "lines": 432,
+      "sha256": "1970c25e7cc0aec014e06cea1857cc55222cb8d4eb8cc6d4ca5c35796e5dfefb"
+    },
+    {
+      "file": "apps/electron/src/renderer/context/theme-context-values.ts",
+      "lines": 116,
+      "sha256": "e6cda55d2be459cdb79b4f8c9ece9af61cbd132c0ba4871593e15bfdccb57b9d"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/ui/rich-text-input.tsx",
+      "lines": 449,
+      "sha256": "8cada34f363318cbfd104d9a0b3e5fefd2efbee472895c066b3dfed6371c6b78"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/ui/rich-text-dom.ts",
+      "lines": 209,
+      "sha256": "5fe77800bf414c82e61bee351022e8c1afbb913b76a10c3e01094ff3402c593f"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/ui/rich-text-html.ts",
+      "lines": 193,
+      "sha256": "3683c78ecad91ef883c0b8ffbe259e2bce4b0d4add8113a03c9eb9f634d5e404"
+    }
+  ],
+  "proofs": [
+    {
+      "status": "passed",
+      "source": "apps/electron/src/renderer/components/app-shell/input/CompactModelSelector.tsx",
+      "nativeSourceHash": "881969360d022ce548cc83a57d92e71ae1a196a1b5f8579178aafe3ae17fa2c8",
+      "nativeDeclarations": 4,
+      "extractedDeclarations": 3,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "react-i18next",
+        "lucide-react",
+        "@craft-agent/ui",
+        "@/components/ui/drawer",
+        "@/lib/utils",
+        "@/lib/local-storage",
+        "@/lib/navigate",
+        "@/context/AppShellContext",
+        "@config/models",
+        "@config/llm-connections",
+        "@craft-agent/shared/agent/thinking-levels",
+        "@/components/icons/ConnectionIcon",
+        "./picker-mode",
+        "./model-picker-helpers",
+        "./useModelVisionToggle"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 441,
+      "files": [
+        {
+          "file": "apps/electron/src/renderer/components/app-shell/input/CompactModelSelector.tsx",
+          "lines": 441,
+          "sha256": "2186cf8f18628dce65af7dd5671aaa338856ee36deb96ce2e28c06e3a7dbdb9b"
+        },
+        {
+          "file": "apps/electron/src/renderer/components/app-shell/input/compact-model-controls.tsx",
+          "lines": 104,
+          "sha256": "4ef658867f8706f97562241d8b16dc019cfea193449e2be02f4d6afac7147892"
+        }
+      ]
+    },
+    {
+      "status": "passed",
+      "source": "apps/electron/src/renderer/pages/SourceInfoPage.tsx",
+      "nativeSourceHash": "e408ced39ea71a2188c38ee4f5ee43a817843912304ce97dc44843693696e209",
+      "nativeDeclarations": 9,
+      "extractedDeclarations": 8,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "react-i18next",
+        "react",
+        "lucide-react",
+        "@/components/ui/EditPopover",
+        "@/components/ui/source-avatar",
+        "@/components/app-shell/SourceMenu",
+        "@/contexts/NavigationContext",
+        "sonner",
+        "@/components/info"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 397,
+      "files": [
+        {
+          "file": "apps/electron/src/renderer/pages/SourceInfoPage.tsx",
+          "lines": 397,
+          "sha256": "0486241b990e23e8765db1a926faa02ab52ad01950f4677ef366ed451069df10"
+        },
+        {
+          "file": "apps/electron/src/renderer/pages/source-info-details.tsx",
+          "lines": 150,
+          "sha256": "405f731e6d192e97a1ff705e9a541a10eacb45da9082ca3dd9fd09263459eef8"
+        }
+      ]
+    },
+    {
+      "status": "passed",
+      "source": "apps/electron/src/renderer/context/ThemeContext.tsx",
+      "nativeSourceHash": "bf6987321cd4d9203fce97bca97da5498916cdb68b2013c8b2b3b55ec5b8fc4f",
+      "nativeDeclarations": 13,
+      "extractedDeclarations": 11,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "@/lib/local-storage",
+        "@config/theme"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 432,
+      "files": [
+        {
+          "file": "apps/electron/src/renderer/context/ThemeContext.tsx",
+          "lines": 432,
+          "sha256": "1970c25e7cc0aec014e06cea1857cc55222cb8d4eb8cc6d4ca5c35796e5dfefb"
+        },
+        {
+          "file": "apps/electron/src/renderer/context/theme-context-values.ts",
+          "lines": 116,
+          "sha256": "e6cda55d2be459cdb79b4f8c9ece9af61cbd132c0ba4871593e15bfdccb57b9d"
+        }
+      ]
+    },
+    {
+      "status": "passed",
+      "source": "apps/electron/src/renderer/components/ui/rich-text-input.tsx",
+      "nativeSourceHash": "4ff381204bbbc41ff41424c3142ee1fd85f83e721f6fb09bf2ffad20cc6988ed",
+      "nativeDeclarations": 21,
+      "extractedDeclarations": 15,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "react-i18next",
+        "@/lib/input-text",
+        "@/lib/utils",
+        "@/lib/mentions",
+        "@/lib/icon-cache"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 449,
+      "files": [
+        {
+          "file": "apps/electron/src/renderer/components/ui/rich-text-input.tsx",
+          "lines": 449,
+          "sha256": "8cada34f363318cbfd104d9a0b3e5fefd2efbee472895c066b3dfed6371c6b78"
+        },
+        {
+          "file": "apps/electron/src/renderer/components/ui/rich-text-dom.ts",
+          "lines": 209,
+          "sha256": "5fe77800bf414c82e61bee351022e8c1afbb913b76a10c3e01094ff3402c593f"
+        },
+        {
+          "file": "apps/electron/src/renderer/components/ui/rich-text-html.ts",
+          "lines": 193,
+          "sha256": "3683c78ecad91ef883c0b8ffbe259e2bce4b0d4add8113a03c9eb9f634d5e404"
+        }
+      ]
+    }
+  ],
+  "maximumFileLines": 449
+}

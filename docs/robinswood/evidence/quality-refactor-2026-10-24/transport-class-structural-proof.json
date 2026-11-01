@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "classes": [
+    {
+      "className": "WsRpcClient",
+      "methodsMoved": 11,
+      "nativeFieldsAndConstructors": true,
+      "nativeMethodBodies": true,
+      "nativeRetainedMethods": true,
+      "nativeSignaturesAndDefaults": true,
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true,
+      "ownerImportsAreTypeOnly": true
+    },
+    {
+      "className": "WsRpcServer",
+      "methodsMoved": 12,
+      "nativeFieldsAndConstructors": true,
+      "nativeMethodBodies": true,
+      "nativeRetainedMethods": true,
+      "nativeSignaturesAndDefaults": true,
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true,
+      "ownerImportsAreTypeOnly": true
+    }
+  ],
+  "moduleGraph": {
+    "files": 15,
+    "runtimeImportCycles": 0
+  },
+  "maximumOutputLines": 392,
+  "allPhysicalFilesBelow500": true
+}

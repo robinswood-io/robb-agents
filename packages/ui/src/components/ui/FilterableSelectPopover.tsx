@@ -17,13 +17,13 @@ export interface FilterableSelectPopoverProps<T> {
   getLabel: (item: T) => string
   isSelected: (item: T) => boolean
   onToggle: (item: T) => void
-  renderItem?: (item: T, state: FilterableSelectRenderState, index: number) => React.ReactNode
-  filterPlaceholder?: string
-  emptyState?: React.ReactNode
-  noResultsState?: React.ReactNode
-  closeOnSelect?: boolean
-  minWidth?: number
-  maxWidth?: number
+  renderItem?: ((item: T, state: FilterableSelectRenderState, index: number) => React.ReactNode) | undefined
+  filterPlaceholder?: string | undefined
+  emptyState?: React.ReactNode | undefined
+  noResultsState?: React.ReactNode | undefined
+  closeOnSelect?: boolean | undefined
+  minWidth?: number | undefined
+  maxWidth?: number | undefined
 }
 
 /**

@@ -1,12 +1,24 @@
+import { Editor } from '@tiptap/core';
+import StarterKit from '@tiptap/starter-kit';
+import { EditorState, TextSelection } from '@tiptap/pm/state';
+import { afterEach } from 'bun:test';
+const editors: Editor[] = [];
+afterEach(() => { for (const editor of editors.splice(0)) editor.destroy(); });
 import { describe, it, expect } from 'bun:test'
-import type { Editor } from '@tiptap/core'
 import { createSlashCommandItems, filterSlashCommandItems } from '../TiptapSlashMenu'
 import { RICH_BLOCK_EDIT_EVENT } from '../rich-block-events'
 
 function createMockEditor() {
   const calls: string[] = []
-
-  const chainApi = {
+  const editor = new Editor({ element: null, extensions: [StarterKit],
+    content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Fixture content for slash commands.' }] }] },
+  })
+  editors.push(editor)
+  const state = EditorState.create({ schema: editor.schema, doc: editor.state.doc,
+    selection: TextSelection.create(editor.state.doc, 5) })
+  Object.defineProperty(editor, 'state', { get: () => state })
+  const chainApi = editor.chain()
+  Object.assign(chainApi, ({
     focus: () => {
       calls.push('focus')
       return chainApi
@@ -39,15 +51,15 @@ function createMockEditor() {
       calls.push('setHorizontalRule')
       return chainApi
     },
-    setCodeBlock: ({ language }: { language: string }) => {
-      calls.push(`setCodeBlock:${language}`)
+    setCodeBlock: (attributes) => {
+      calls.push(`setCodeBlock:${attributes?.language}`)
       return chainApi
     },
     insertContent: (payload: unknown) => {
       calls.push(`insertContent:${JSON.stringify(payload)}`)
       return chainApi
     },
-    insertContentAt: (pos: number, payload: unknown) => {
+    insertContentAt: (pos, payload) => {
       calls.push(`insertContentAt:${pos}:${JSON.stringify(payload)}`)
       return chainApi
     },
@@ -63,32 +75,16 @@ function createMockEditor() {
       calls.push('run')
       return true
     },
-  }
-
-  const editor = {
-    state: {
-      selection: {
-        from: 5,
-      },
-      doc: {
-        nodesBetween: () => {},
-      },
-    },
-    can: () => ({
-      setCodeBlock: () => true,
-    }),
-    isActive: () => false,
-    getAttributes: () => ({}),
-    chain: () => chainApi,
-    emit: (event: string) => {
-      calls.push(`emit:${event}`)
-    },
-  }
-
-  return {
-    editor: editor as unknown as Editor,
-    calls,
-  }
+  } satisfies Partial<ReturnType<Editor['chain']>>))
+  const can = editor.can()
+  can.setCodeBlock = () => true
+  editor.can = () => can
+  editor.isActive = () => false
+  editor.getAttributes = () => ({})
+  editor.chain = () => chainApi
+  const nativeEmit = editor.emit.bind(editor)
+  editor.emit = (event, ...args) => { calls.push('emit:' + event); return nativeEmit(event, ...args) }
+  return { editor, calls }
 }
 
 describe('tiptap slash menu', () => {

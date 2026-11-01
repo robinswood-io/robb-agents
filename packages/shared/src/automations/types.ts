@@ -286,7 +286,7 @@ export type AutomationsValidationResult = {
 /**
  * SDK automation input type - union of all possible SDK event inputs
  */
-export interface SdkAutomationInput {
+export type SdkAutomationInput = {
   hook_event_name: string;
   // Tool events
   tool_name?: string;
@@ -306,7 +306,7 @@ export interface SdkAutomationInput {
   title?: string;
   // Error events
   error?: string;
-}
+};
 
 /**
  * SDK automation callback signature (matches Claude SDK HookCallback type)

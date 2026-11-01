@@ -62,6 +62,6 @@ describe('session persistence: execution ownership', () => {
       missionRole: 'worker',
       missionOrdinaryRouteLock: ordinaryRouteLock,
     });
-    expect((picked as Record<string, unknown>).ignoredRuntimeField).toBeUndefined();
+    expect((picked as Record<string, unknown>)["ignoredRuntimeField"]).toBeUndefined();
   });
 });

@@ -1,9 +1,10 @@
+import { OAuthFlowStore } from '@craft-agent/shared/auth';
 import { beforeEach, describe, expect, it, mock } from 'bun:test'
 import { RPC_CHANNELS } from '../../../shared/types'
 import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
 
-type HandlerFn = (ctx: { clientId: string }, ...args: any[]) => Promise<any> | any
+type HandlerFn = Parameters<RpcServer['handle']>[1]
 
 const getDefaultThinkingLevelMock = mock((): 'medium' => 'medium')
 const setDefaultThinkingLevelMock = mock((_level: string) => true)
@@ -47,14 +48,7 @@ describe('settings default thinking RPC handlers', () => {
           process: async () => Buffer.from(''),
         },
       },
-      oauthFlowStore: {
-        store: () => {},
-        getByState: () => null,
-        remove: () => {},
-        cleanup: () => {},
-        dispose: () => {},
-        get size() { return 0 },
-      } as unknown as HandlerDeps['oauthFlowStore'],
+      oauthFlowStore: new OAuthFlowStore(),
       defaultThinkingLevelStore: {
         get: getDefaultThinkingLevelMock,
         set: setDefaultThinkingLevelMock,
@@ -69,7 +63,7 @@ describe('settings default thinking RPC handlers', () => {
     const getHandler = handlers.get(RPC_CHANNELS.settings.GET_DEFAULT_THINKING_LEVEL)
     expect(getHandler).toBeTruthy()
 
-    const result = await getHandler!({ clientId: 'client-1' })
+    const result = await getHandler!(({ clientId: 'client-1' } satisfies Pick<Parameters<HandlerFn>[0], 'clientId'>) as Parameters<HandlerFn>[0])
     expect(result).toBe('medium')
     expect(getDefaultThinkingLevelMock).toHaveBeenCalledTimes(1)
   })
@@ -78,7 +72,7 @@ describe('settings default thinking RPC handlers', () => {
     const setHandler = handlers.get(RPC_CHANNELS.settings.SET_DEFAULT_THINKING_LEVEL)
     expect(setHandler).toBeTruthy()
 
-    const result = await setHandler!({ clientId: 'client-1' }, 'max')
+    const result = await setHandler!(({ clientId: 'client-1' } satisfies Pick<Parameters<HandlerFn>[0], 'clientId'>) as Parameters<HandlerFn>[0], 'max')
     expect(result).toEqual({ success: true })
     expect(setDefaultThinkingLevelMock).toHaveBeenCalledWith('max')
     expect(setDefaultThinkingLevelMock).toHaveBeenCalledTimes(1)
@@ -88,7 +82,7 @@ describe('settings default thinking RPC handlers', () => {
     const setHandler = handlers.get(RPC_CHANNELS.settings.SET_DEFAULT_THINKING_LEVEL)
     expect(setHandler).toBeTruthy()
 
-    await expect(setHandler!({ clientId: 'client-1' }, 'ultra')).rejects.toThrow('Invalid thinking level')
+    await expect(setHandler!(({ clientId: 'client-1' } satisfies Pick<Parameters<HandlerFn>[0], 'clientId'>) as Parameters<HandlerFn>[0], 'ultra')).rejects.toThrow('Invalid thinking level')
     expect(setDefaultThinkingLevelMock).not.toHaveBeenCalled()
   })
 })

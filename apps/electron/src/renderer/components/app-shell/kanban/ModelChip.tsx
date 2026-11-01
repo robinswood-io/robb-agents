@@ -6,8 +6,8 @@ interface ModelChipProps {
   /** Model id, e.g. 'claude-opus-4-7'. */
   model: string
   /** Show the short name ("Haiku") instead of the full display name ("Haiku 4.5"). */
-  short?: boolean
-  className?: string
+  short?: boolean | undefined
+  className?: string | undefined
 }
 
 /**

@@ -1,10 +1,10 @@
+import type { z } from 'zod';
+import type { GetSessionInfoSchema } from '../tool-defs/schemas.ts';
 import type { SessionToolContext } from '../context.ts';
 import type { ToolResult } from '../types.ts';
 import { successResponse, errorResponse } from '../response.ts';
 
-export interface GetSessionInfoArgs {
-  sessionId?: string;
-}
+export type GetSessionInfoArgs = z.infer<typeof GetSessionInfoSchema>;
 
 export async function handleGetSessionInfo(
   ctx: SessionToolContext,

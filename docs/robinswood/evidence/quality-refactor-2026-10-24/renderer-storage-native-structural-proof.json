@@ -1,0 +1,77 @@
+{
+  "status": "passed",
+  "nativeStorageOperationsPreserved": [
+    "isWebEphemeralStorageKey",
+    "shouldUsePersistentStorage",
+    "get",
+    "set",
+    "remove",
+    "getRaw",
+    "setRaw",
+    "getKeyString"
+  ],
+  "nativeJotaiAdapterPreserved": true,
+  "playgroundChangesLimitedToTypedStorageBoundary": true,
+  "legacyKeysPreserved": true,
+  "bootstrapChangeLimitedToRedundantRawDebugRead": true,
+  "lintCoverageExpandedWithoutSeverityChanges": true,
+  "singleCanonicalRawStorageOwner": "apps/electron/src/renderer/lib/local-storage.ts",
+  "newPersistenceOrMigrationEngine": false,
+  "files": [
+    {
+      "file": "apps/electron/eslint-rules/no-localstorage.cjs",
+      "lines": 55,
+      "sha256": "fef818dc65eced41fc5fbb7848d064117e33eae6337a9d84ea5186d24df19c83"
+    },
+    {
+      "file": "apps/electron/src/renderer/lib/local-storage.ts",
+      "lines": 186,
+      "sha256": "fe3d9ba5d623c0c6ad7eed2b0b48adfe40f11d0079a5ff58828475432a523d20"
+    },
+    {
+      "file": "apps/electron/src/renderer/lib/web-safe-atom-storage.ts",
+      "lines": 2,
+      "sha256": "c4e247484ace9cff8c9622f71f6a43a81bdcbb137b8727bcf75407d43f44e41c"
+    },
+    {
+      "file": "apps/electron/src/renderer/main.tsx",
+      "lines": 104,
+      "sha256": "c40e0745d8e3b54693a597e2c62bf51a32095bdea716e003f84e820fd541bcd8"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/ComponentPreview.tsx",
+      "lines": 185,
+      "sha256": "8d1f3fe5aa5ffcfce23ae4df6b0348a740b1ea19938379937c5d6912b0d0db04"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/PlaygroundApp.tsx",
+      "lines": 265,
+      "sha256": "a42f5ae389ff676061ba217eedf5ff8c4b90a3f5e22524f6264dfc9116a5b8a1"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/Sidebar.tsx",
+      "lines": 100,
+      "sha256": "36416b42709fe6dd2b7b8cb0f7f8c4a89c234effe12621ad77c87323fecbddb1"
+    },
+    {
+      "file": "apps/electron/src/renderer/lib/local-storage.test.ts",
+      "lines": 38,
+      "sha256": "087159ce3fa1204ea0c0c7436b64d1f96eae23f6380b1cc2ed4c84d08555d1e3"
+    },
+    {
+      "file": "apps/electron/src/renderer/lib/web-safe-atom-storage.test.ts",
+      "lines": 56,
+      "sha256": "edc94d471ba262712eb9485fc38e5155037a5183014553d5720eac556e21f348"
+    },
+    {
+      "file": "apps/electron/eslint-rules/no-localstorage.test.cjs",
+      "lines": 54,
+      "sha256": "fa0e0b1fd5b5446bf60ccb061adfbda4fc24e2eee7cdfc498c5d1b891c500242"
+    },
+    {
+      "file": "apps/electron/eslint.config.mjs",
+      "lines": 207,
+      "sha256": "e1cd0114dd424ab860c8bbcd671ac0de8b8a7387bea08e698072d3e2d2348a75"
+    }
+  ]
+}

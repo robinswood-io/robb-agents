@@ -7,11 +7,14 @@ import json
 import re
 import shlex
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
-from lib.config_mutation import atomic_write_json
+from lib.config_mutation import atomic_write_json, expected_manifest_count
+from pydantic import JsonValue, TypeAdapter
+
+JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
+NUMBER = TypeAdapter(str | int | float)
 
 LIVE_ROOT = Path("/srv/rbw-agents-oss")
 LIVE_OPS = Path("/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops")
@@ -33,32 +36,33 @@ SHELL_MARKERS = re.compile(r"(?:&&|\|\||(?<!\\)[|;<>`]|\$\(|\$\{|\$[A-Za-z_]|(?<
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
-def read_json(path: Path) -> Any:
-    return json.loads(path.read_text(encoding="utf-8"))
+def read_json(path: Path) -> dict[str, JsonValue]:
+    return JSON_OBJECT.validate_json(path.read_bytes())
 
 
-def atomic_json(path: Path, payload: Any) -> None:
+def atomic_json(path: Path, payload: JsonValue) -> None:
     atomic_write_json(path, payload)
 
 
-def flatten_manifest(data: dict[str, Any]) -> list[dict[str, Any]]:
+def flatten_manifest(data: dict[str, JsonValue]) -> list[dict[str, JsonValue]]:
     return [row for values in data.values() if isinstance(values, list) for row in values if isinstance(row, dict) and row.get("legacy_id")]
 
 
-def schedule_rows(data: dict[str, Any]) -> list[dict[str, Any]]:
-    return [row for row in data.get("schedules", []) if isinstance(row, dict)]
+def schedule_rows(data: dict[str, JsonValue]) -> list[dict[str, JsonValue]]:
+    return [row for row in TypeAdapter(list[JsonValue]).validate_python(data.get("schedules", [])) if isinstance(row, dict)]
 
 
-def schedule_legacy(row: dict[str, Any]) -> str | None:
-    payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
+def schedule_legacy(row: dict[str, JsonValue]) -> str | None:
+    payload_value = row.get("payload")
+    payload = payload_value if isinstance(payload_value, dict) else {}
     value = row.get("legacy_id") or payload.get("legacy_id") or row.get("capability_id")
     return str(value) if value else None
 
 
-def schedule_fingerprint(rows: list[dict[str, Any]]) -> str:
+def schedule_fingerprint(rows: list[dict[str, JsonValue]]) -> str:
     shaped = [{
         "schedule_id": row.get("schedule_id"),
         "workflow_id": row.get("workflow_id"),
@@ -76,7 +80,7 @@ def runtime_report_path(legacy_id: str) -> str:
     return str(LIVE_OPS / "runtime-v2" / f"{legacy_id}-last.json")
 
 
-def parse_direct_command(row: dict[str, Any]) -> tuple[list[str], dict[str, str], str]:
+def parse_direct_command(row: dict[str, JsonValue]) -> tuple[list[str], dict[str, str], str]:
     legacy_id = str(row["legacy_id"])
     command = str(row.get("command") or "").strip()
     if legacy_id == "drive-audio-transcription-autopilot":
@@ -92,9 +96,8 @@ def parse_direct_command(row: dict[str, Any]) -> tuple[list[str], dict[str, str]
     while tokens and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", tokens[0]):
         key, value = tokens.pop(0).split("=", 1)
         env[key] = value
-    if env != ALLOWED_ENV.get(legacy_id, {}):
-        if env or legacy_id in ALLOWED_ENV:
-            raise ValueError(f"unexpected manifest environment for {legacy_id}: {sorted(env)}")
+    if env != ALLOWED_ENV.get(legacy_id, {}) and (env or legacy_id in ALLOWED_ENV):
+        raise ValueError(f"unexpected manifest environment for {legacy_id}: {sorted(env)}")
     if not tokens:
         raise ValueError(f"empty command for {legacy_id}")
     executable = tokens[0]
@@ -114,11 +117,11 @@ def seed_pending_report(ops: Path, legacy_id: str, live_path: str) -> Path:
     if out.exists():
         return out
     generated = now_iso()
-    report = {
+    report: dict[str, JsonValue] = {
         "generatedAt": generated,
         "contractVersion": "runtime-v2-execution-report-v1",
         "capabilityId": legacy_id,
-        "ok": True,
+        "ok": False,
         "status": "pending_first_scheduled_run",
         "summary": f"runtime_v2_execution: id={legacy_id} pending first post-cutover Temporal invocation",
         "counts": {"runs": 0, "exitCode": 0, "timeouts": 0, "businessFailures": 0, "technicalFailures": 0, "stdoutBytes": 0, "stderrBytes": 0},
@@ -133,7 +136,8 @@ def seed_pending_report(ops: Path, legacy_id: str, live_path: str) -> Path:
     return out
 
 
-def migrate(root: Path, ops: Path) -> dict[str, Any]:
+def migrate(root: Path, ops: Path) -> dict[str, JsonValue]:
+    approved_count = expected_manifest_count(root)
     manifest_path = root / "config" / "command-manifest.json"
     schedules_path = root / "config" / "temporal" / "schedules.json"
     policy_path = root / "config" / "registry" / "report-contract-coverage-policy.json"
@@ -144,8 +148,8 @@ def migrate(root: Path, ops: Path) -> dict[str, Any]:
     script_coverage = read_json(script_coverage_path)
     rows = flatten_manifest(manifest)
     srows = schedule_rows(schedules)
-    if len(rows) != 193:
-        raise ValueError(f"expected 193 manifest rows, got {len(rows)}")
+    if len(rows) != approved_count:
+        raise ValueError(f"expected {approved_count} manifest rows, got {len(rows)}")
     if len(srows) != 139:
         raise ValueError(f"expected 139 schedules, got {len(srows)}")
     ids = [str(row["legacy_id"]) for row in rows]
@@ -155,24 +159,24 @@ def migrate(root: Path, ops: Path) -> dict[str, Any]:
     converted = 0
     env_rows = 0
     report_backfilled = 0
-    parity: list[dict[str, Any]] = []
+    parity: list[dict[str, JsonValue]] = []
     for row in rows:
         legacy_id = str(row["legacy_id"])
         original = str(row.get("command") or "")
         argv, env, display = parse_direct_command(row)
-        execution = {
+        execution: dict[str, JsonValue] = {
             "backend": "argv",
-            "argv": argv,
+            "argv": list(argv),
             "cwd": WORKSPACE_CWD,
-            "timeout_seconds": int(row.get("timeout_seconds") or 600),
+            "timeout_seconds": int(NUMBER.validate_python(row.get("timeout_seconds") or 600)),
         }
         if env:
-            execution["env"] = env
+            execution["env"] = dict(env)
             env_rows += 1
         row["execution"] = execution
         row["runtimeVersion"] = "v2"
         row["command"] = display
-        row.pop("transientRuntimeV2Canary", None)
+        _ = row.pop("transientRuntimeV2Canary", None)
         live_runtime_report = runtime_report_path(legacy_id)
         row["runtimeReportJsonPath"] = live_runtime_report
         row["expectsReport"] = True
@@ -180,29 +184,32 @@ def migrate(root: Path, ops: Path) -> dict[str, Any]:
         previous_md = str(row.get("reportMdPath") or "")
         previous_contract = str(row.get("contractVersion") or "")
         if previous_json and previous_json != live_runtime_report:
-            row.setdefault("businessReportJsonPath", previous_json)
+            _ = row.setdefault("businessReportJsonPath", previous_json)
         if previous_md:
-            row.setdefault("businessReportMdPath", previous_md)
+            _ = row.setdefault("businessReportMdPath", previous_md)
         if previous_contract and previous_contract != "runtime-v2-execution-report-v1":
-            row.setdefault("businessContractVersion", previous_contract)
+            _ = row.setdefault("businessContractVersion", previous_contract)
         if previous_json != live_runtime_report or previous_md:
             report_backfilled += 1
         row["reportJsonPath"] = live_runtime_report
-        row.pop("reportMdPath", None)
+        _ = row.pop("reportMdPath", None)
         row["contractVersion"] = "runtime-v2-execution-report-v1"
-        seed_pending_report(ops, legacy_id, live_runtime_report)
+        _ = seed_pending_report(ops, legacy_id, live_runtime_report)
         parity.append({
             "legacyId": legacy_id,
             "originalCommandSha256": hashlib.sha256(original.encode()).hexdigest(),
-            "argv": argv,
-            "envKeys": sorted(env),
+            "argv": list(argv),
+            "envKeys": TypeAdapter(list[JsonValue]).validate_python(sorted(env)),
             "displayCommand": display,
         })
         converted += 1
     manifest["updatedAt"] = now_iso()
     manifest["updatedBy"] = "oss-architecture-v2-debt-zero-migrate"
     policy["acceptedScheduledWithoutReport"] = []
-    policy.setdefault("counts", {})["acceptedScheduledWithoutReport"] = 0
+    policy_counts = policy.setdefault("counts", {})
+    if not isinstance(policy_counts, dict):
+        raise TypeError("policy counts must be an object")
+    policy_counts["acceptedScheduledWithoutReport"] = 0
     policy["updatedAt"] = now_iso()
     policy["updatedBy"] = "oss-architecture-v2-debt-zero-migrate"
     policy["debtClosure"] = {
@@ -212,8 +219,8 @@ def migrate(root: Path, ops: Path) -> dict[str, Any]:
         "remainingAcceptedScheduleEntries": 0,
     }
     coverage_key = "acceptedOrphanScripts" if isinstance(script_coverage.get("acceptedOrphanScripts"), list) else "rows"
-    coverage_rows = script_coverage.setdefault(coverage_key, [])
-    known_paths = {str(item.get("path")) for item in coverage_rows if isinstance(item, dict) and item.get("path")}
+    coverage_rows = TypeAdapter(list[dict[str, JsonValue]]).validate_python(script_coverage.setdefault(coverage_key, []))
+    known_paths = {str(item.get("path")) for item in coverage_rows if item.get("path")}
     for helper_path, (policy_class, risk_class) in NEW_MANUAL_HELPERS.items():
         if helper_path in known_paths:
             continue
@@ -223,12 +230,16 @@ def migrate(root: Path, ops: Path) -> dict[str, Any]:
             "policyClass": policy_class, "riskClass": risk_class,
             "allowedInvocation": ["manual_direct", "ci_or_guard_harness"], "updatedAt": now_iso(),
             "updatedBy": "oss-architecture-v2-debt-zero-migrate",
-            "rationale": "Debt-zero migration/guard/canary helper; never directly scheduled in the final 193-row manifest.",
+            "rationale": "Debt-zero migration/guard/canary helper; never directly scheduled in the approved final manifest.",
         })
-    script_coverage[coverage_key] = sorted(coverage_rows, key=lambda item: str(item.get("path")))
+    sorted_coverage_rows = sorted(coverage_rows, key=lambda item: str(item.get("path")))
+    script_coverage[coverage_key] = list(sorted_coverage_rows)
     script_coverage["updatedAt"] = now_iso()
     script_coverage["updatedBy"] = "oss-architecture-v2-debt-zero-migrate"
-    script_coverage.setdefault("counts", {})["acceptedOrphanScripts"] = len(script_coverage[coverage_key])
+    coverage_counts = script_coverage.setdefault("counts", {})
+    if not isinstance(coverage_counts, dict):
+        raise TypeError("coverage counts must be an object")
+    coverage_counts["acceptedOrphanScripts"] = len(sorted_coverage_rows)
     atomic_json(manifest_path, manifest)
     atomic_json(policy_path, policy)
     atomic_json(script_coverage_path, script_coverage)
@@ -242,23 +253,24 @@ def migrate(root: Path, ops: Path) -> dict[str, Any]:
     after_fp = schedule_fingerprint(schedule_rows(final_schedules))
     if before_fp != after_fp:
         raise ValueError(f"schedule fingerprint drift: {before_fp} != {after_fp}")
-    expected = {"agents": 193, "cards": 193, "argv": 193, "legacyShell": 0, "policyGaps": 0}
+    expected = {"agents": approved_count, "cards": approved_count, "argv": approved_count, "legacyShell": 0, "policyGaps": 0}
+    catalog_counts = JSON_OBJECT.validate_python(catalog_result.get("counts", {}))
     for key, value in expected.items():
-        if int(catalog_result.get("counts", {}).get(key, -1)) != value:
-            raise ValueError(f"catalog count mismatch {key}: {catalog_result.get('counts', {}).get(key)} != {value}")
+        if int(NUMBER.validate_python(catalog_counts.get(key, -1))) != value:
+            raise ValueError(f"catalog count mismatch {key}: {catalog_counts.get(key)} != {value}")
     if not validation.get("ok"):
         raise ValueError(f"catalog validation failed: {validation.get('errors')}")
-    report = {
+    report: dict[str, JsonValue] = {
         "generatedAt": now_iso(),
         "contractVersion": "oss-agent-report-envelope-v2",
         "capabilityId": "oss-architecture-v2-debt-zero-migration",
         "ok": True,
         "status": "staged",
-        "summary": "debt_zero_migration: manifest=193 argv=193 legacy=0 schedules=139 reportDebt=0 envRows=2 shellWrappers=0",
+        "summary": f"debt_zero_migration: manifest={approved_count} argv={approved_count} legacy=0 schedules=139 reportDebt=0 envRows={env_rows} shellWrappers=0",
         "counts": {
-            "manifest": 193,
+            "manifest": approved_count,
             "convertedToArgv": converted,
-            "argv": 193,
+            "argv": approved_count,
             "legacyShell": 0,
             "typedEnvRows": env_rows,
             "serviceTriggerWrappers": 1,
@@ -284,16 +296,21 @@ def migrate(root: Path, ops: Path) -> dict[str, Any]:
         "data": {},
         "updatedBy": "oss-architecture-v2-debt-zero-migrate",
     }
-    atomic_json(ops / "oss-architecture-v2-debt-zero-command-parity.json", {"generatedAt": now_iso(), "rows": parity, "counts": report["counts"]})
+    atomic_json(ops / "oss-architecture-v2-debt-zero-command-parity.json", {"generatedAt": now_iso(), "rows": list(parity), "counts": report["counts"]})
     atomic_json(ops / "oss-architecture-v2-debt-zero-migration-last.json", report)
     return report
 
 
+class Arguments(argparse.Namespace):
+    root: str = ""
+    ops: str = str(LIVE_OPS)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--root", required=True, help="Staging root; direct live-root migration is forbidden")
-    parser.add_argument("--ops", default=str(LIVE_OPS))
-    args = parser.parse_args()
+    _ = parser.add_argument("--root", required=True, help="Staging root; direct live-root migration is forbidden")
+    _ = parser.add_argument("--ops", default=str(LIVE_OPS))
+    args = parser.parse_args(namespace=Arguments())
     root = Path(args.root).resolve()
     if root == LIVE_ROOT.resolve():
         raise SystemExit("fail-closed: debt-zero migrator is staging-only; use ConfigMutation for live cutover")

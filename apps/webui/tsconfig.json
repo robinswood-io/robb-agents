@@ -6,22 +6,50 @@
     "jsx": "react-jsx",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
     "rootDir": "../..",
-    "types": ["bun", "node", "vite/client"],
+    "types": [
+      "bun",
+      "node"
+    ],
     "allowImportingTsExtensions": true,
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "paths": {
-      "@/*": ["../electron/src/renderer/*"],
-      "@webui/*": ["./src/*"],
-      "@config/*": ["../../packages/shared/src/config/*"],
-      "@craft-agent/shared": ["../../packages/shared/src/index.ts"],
-      "@craft-agent/shared/*": ["../../packages/shared/src/*"]
-    }
+      "@/*": [
+        "../electron/src/renderer/*"
+      ],
+      "@webui/*": [
+        "./src/*"
+      ],
+      "@config/*": [
+        "../../packages/shared/src/config/*"
+      ],
+      "@craft-agent/shared": [
+        "../../packages/shared/src/index.ts"
+      ],
+      "@craft-agent/shared/*": [
+        "../../packages/shared/src/*"
+      ]
+    },
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "allowJs": false,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false
   },
   "include": [
     "src/**/*.ts",
@@ -30,7 +58,11 @@
     "../electron/src/renderer/**/*.tsx",
     "../electron/src/shared/**/*.ts",
     "../electron/src/transport/**/*.ts",
-    "../../packages/shared/src/**/*.d.ts"
+    "../../packages/shared/src/**/*.d.ts",
+    "vite.config.ts"
   ],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

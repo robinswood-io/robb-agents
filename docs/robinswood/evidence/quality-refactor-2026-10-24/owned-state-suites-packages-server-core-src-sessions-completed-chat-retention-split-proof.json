@@ -1,0 +1,17 @@
+{
+  "valid": true,
+  "source": "packages/server-core/src/sessions/completed-chat-retention.test.ts",
+  "testDeclarationsPreserved": 27,
+  "sharedDeclarationsPreserved": 1,
+  "setupPreservedInEverySuite": true,
+  "documentedPersistenceDrainFix": false,
+  "ownedLocalDeclarationsPreservedPerFile": true,
+  "importsPreserved": true,
+  "maximumLines": 438,
+  "currentSourceHashes": {
+    "packages/server-core/src/sessions/completed-chat-retention.test.ts": "ac75a2bb1b577e2f1307e126c578cfef3fc83c27bc142a372670b3493a0af042",
+    "packages/server-core/src/sessions/completed-chat-retention-reuses-an-intent-whose-move-never-started-and-completes-it-on-the.test.ts": "fe058b52659f81c4704351bb094f0608092c5efdafe2811950fcb028e3fdce1d",
+    "packages/server-core/src/sessions/testing/completed-chat-retention-fixture.ts": "92c2f3c22369fdcb4eb4911415c6bb8140f52408e8fa37789b315513a778f2e3"
+  },
+  "issues": []
+}

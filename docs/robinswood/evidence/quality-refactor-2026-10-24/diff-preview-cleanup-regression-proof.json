@@ -1,0 +1,62 @@
+{
+  "status": "passed",
+  "beforeBrowser": {
+    "status": "baseline-recorded",
+    "cases": [
+      {
+        "name": "native diff renders its file header and changed source",
+        "status": "passed"
+      },
+      {
+        "name": "a native header click invokes the callback once",
+        "status": "passed"
+      },
+      {
+        "name": "the file header callback uses the current path",
+        "status": "passed"
+      },
+      {
+        "name": "unmount removes the listener from its actual shadow header",
+        "status": "failed",
+        "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n    'qa-before.ts',\n    'qa-after.ts',\n+   'qa-after.ts'\n  ]\n"
+      }
+    ],
+    "failed": [
+      {
+        "name": "unmount removes the listener from its actual shadow header",
+        "status": "failed",
+        "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n    'qa-before.ts',\n    'qa-after.ts',\n+   'qa-after.ts'\n  ]\n"
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [],
+    "browserVersion": "145.0.7632.6",
+    "headless": false
+  },
+  "afterBrowser": {
+    "status": "passed",
+    "cases": [
+      {
+        "name": "native diff renders its file header and changed source",
+        "status": "passed"
+      },
+      {
+        "name": "a native header click invokes the callback once",
+        "status": "passed"
+      },
+      {
+        "name": "the file header callback uses the current path",
+        "status": "passed"
+      },
+      {
+        "name": "unmount removes the listener from its actual shadow header",
+        "status": "passed"
+      }
+    ],
+    "failed": [],
+    "errors": [],
+    "consoleErrors": [],
+    "browserVersion": "145.0.7632.6",
+    "headless": false
+  }
+}

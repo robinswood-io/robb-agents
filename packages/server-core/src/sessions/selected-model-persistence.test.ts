@@ -1,3 +1,7 @@
+import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
+import { StoredConfigSchema } from '../../../shared/src/config/validators.ts';
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import {
   afterAll,
   afterEach,
@@ -24,7 +28,7 @@ type Manager = InstanceType<typeof SessionManager>;
 const CONNECTION_SLUG = 'openai-subscription';
 const COMPLEX_MODEL = 'pi/gpt-5.6-sol';
 const ROUTINE_MODEL = 'pi/gpt-5.6-luna';
-const originalCraftConfigDir = process.env.CRAFT_CONFIG_DIR;
+const originalCraftConfigDir = process.env["CRAFT_CONFIG_DIR"];
 const managers: Manager[] = [];
 const workspaceRoots: string[] = [];
 let configRoot: string;
@@ -33,6 +37,7 @@ let restoreStoredConfig: (() => void) | undefined;
 function writeGlobalConfig(): void {
   mkdirSync(configRoot, { recursive: true });
   writeFileSync(join(configRoot, 'config.json'), JSON.stringify({
+    schemaVersion: 1,
     workspaces: [],
     activeWorkspaceId: null,
     activeSessionId: null,
@@ -95,19 +100,11 @@ function createAgentStub() {
 }
 
 function runtimeFor(manager: Manager) {
-  return manager as unknown as {
-    sessions: Map<string, Managed>;
-    persistSession: (managed: Managed) => boolean;
-    tryRefreshAgentRuntime: (managed: Managed, reason: string) => Promise<void>;
-    getOrCreateAgent: (
-      managed: Managed,
-      turn: { message: string; messageId: string },
-    ) => Promise<unknown>;
-  };
+  return sessionManagerForTest(manager);
 }
 
 function registerManager(): { manager: Manager; runtime: ReturnType<typeof runtimeFor> } {
-  const manager = new SessionManager();
+  const manager = withSessionOperationsForTest(new SessionManager());
   managers.push(manager);
   const runtime = runtimeFor(manager);
   // Keep this integration harness on the real routing and persistence paths;
@@ -147,12 +144,12 @@ async function routeObjectiveTurn(input: {
 
 beforeAll(async () => {
   configRoot = mkdtempSync(join(tmpdir(), 'objective-model-floor-config-'));
-  process.env.CRAFT_CONFIG_DIR = configRoot;
+  process.env["CRAFT_CONFIG_DIR"] = configRoot;
   writeGlobalConfig();
 
   const storage = await import('@craft-agent/shared/config/storage');
   const storedConfigSpy = spyOn(storage, 'loadStoredConfig').mockImplementation(() => (
-    JSON.parse(readFileSync(join(configRoot, 'config.json'), 'utf8'))
+    StoredConfigSchema.parse(JSON.parse(readFileSync(join(configRoot, 'config.json'), 'utf8'))) as NonNullable<ReturnType<typeof storage.loadStoredConfig>>
   ));
   restoreStoredConfig = () => storedConfigSpy.mockRestore();
 
@@ -171,8 +168,8 @@ afterEach(async () => {
 afterAll(() => {
   restoreStoredConfig?.();
   rmSync(configRoot, { recursive: true, force: true });
-  if (originalCraftConfigDir === undefined) delete process.env.CRAFT_CONFIG_DIR;
-  else process.env.CRAFT_CONFIG_DIR = originalCraftConfigDir;
+  if (originalCraftConfigDir === undefined) delete process.env["CRAFT_CONFIG_DIR"];
+  else process.env["CRAFT_CONFIG_DIR"] = originalCraftConfigDir;
 });
 
 describe('public selected-model persistence', () => {
@@ -191,7 +188,7 @@ describe('public selected-model persistence', () => {
       createdAt: 1,
     }, workspace as never, { messagesLoaded: true });
     managed.agent = createAgentStub() as never;
-    first.runtime.sessions.set(managed.id, managed);
+    sessionRuntimeStateForTest(first.runtime).sessions.set(managed.id, managed);
 
     await routeObjectiveTurn({
       ...first,
@@ -230,7 +227,7 @@ describe('public selected-model persistence', () => {
       messagesLoaded: true,
     });
     reloaded.agent = createAgentStub() as never;
-    resumed.runtime.sessions.set(reloaded.id, reloaded);
+    sessionRuntimeStateForTest(resumed.runtime).sessions.set(reloaded.id, reloaded);
 
     await routeObjectiveTurn({
       ...resumed,

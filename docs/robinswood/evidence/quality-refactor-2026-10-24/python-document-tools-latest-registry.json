@@ -1,0 +1,195 @@
+{
+  "pypdfium2": {
+    "version": "5.14.0",
+    "requires_python": ">=3.6",
+    "source": "https://pypi.org/pypi/pypdfium2/json",
+    "requires_dist": null
+  },
+  "pypdf": {
+    "version": "6.21.2",
+    "requires_python": ">=3.9",
+    "source": "https://pypi.org/pypi/pypdf/json",
+    "requires_dist": [
+      "typing_extensions>=4.0; python_version < \"3.11\"",
+      "brotli>=1.2.0; extra == \"brotli\"",
+      "cryptography>3.0; extra == \"crypto\"",
+      "PyCryptodome; extra == \"cryptodome\"",
+      "flit; extra == \"dev\"",
+      "pip-tools; extra == \"dev\"",
+      "pre-commit; extra == \"dev\"",
+      "pytest-cov; extra == \"dev\"",
+      "pytest-socket; extra == \"dev\"",
+      "pytest-timeout; extra == \"dev\"",
+      "pytest-xdist; extra == \"dev\"",
+      "wheel; extra == \"dev\"",
+      "myst_parser; extra == \"docs\"",
+      "sphinx; extra == \"docs\"",
+      "sphinx_rtd_theme; extra == \"docs\"",
+      "fonttools; extra == \"fonts\"",
+      "arabic-reshaper; extra == \"full\"",
+      "brotli>=1.2.0; extra == \"full\"",
+      "cryptography>3.0; extra == \"full\"",
+      "fonttools; extra == \"full\"",
+      "Pillow>=8.0.0; extra == \"full\"",
+      "python-bidi; extra == \"full\"",
+      "Pillow>=8.0.0; extra == \"image\"",
+      "arabic-reshaper; extra == \"rtl-text\"",
+      "python-bidi; extra == \"rtl-text\""
+    ]
+  },
+  "img2pdf": {
+    "version": "0.6.3",
+    "requires_python": ">=3.5",
+    "source": "https://pypi.org/pypi/img2pdf/json",
+    "requires_dist": [
+      "Pillow",
+      "pikepdf"
+    ]
+  },
+  "Pillow": {
+    "version": "13.0.0",
+    "requires_python": ">=3.11",
+    "source": "https://pypi.org/pypi/Pillow/json",
+    "requires_dist": [
+      "furo; extra == \"docs\"",
+      "olefile; extra == \"docs\"",
+      "sphinx>=8.2; extra == \"docs\"",
+      "sphinx-autobuild; extra == \"docs\"",
+      "sphinx-copybutton; extra == \"docs\"",
+      "sphinx-inline-tabs; extra == \"docs\"",
+      "sphinxext-opengraph; extra == \"docs\"",
+      "olefile; extra == \"fpx\"",
+      "olefile; extra == \"mic\"",
+      "arro3-compute; extra == \"test-arrow\"",
+      "arro3-core; extra == \"test-arrow\"",
+      "nanoarrow; extra == \"test-arrow\"",
+      "pyarrow; extra == \"test-arrow\"",
+      "coverage>=7.4.2; extra == \"tests\"",
+      "defusedxml; extra == \"tests\"",
+      "markdown2; extra == \"tests\"",
+      "olefile; extra == \"tests\"",
+      "packaging; extra == \"tests\"",
+      "psutil; (sys_platform == \"linux\" or sys_platform == \"darwin\") and extra == \"tests\"",
+      "pytest; extra == \"tests\"",
+      "pytest-cov; extra == \"tests\"",
+      "pytest-timeout; extra == \"tests\"",
+      "pytest-xdist; extra == \"tests\"",
+      "setuptools; extra == \"tests\"",
+      "trove-classifiers>=2024.10.12; extra == \"tests\"",
+      "defusedxml; extra == \"xmp\""
+    ]
+  },
+  "click": {
+    "version": "8.5.0",
+    "requires_python": ">=3.10",
+    "source": "https://pypi.org/pypi/click/json",
+    "requires_dist": null
+  },
+  "python-pptx": {
+    "version": "1.0.2",
+    "requires_python": ">=3.8",
+    "source": "https://pypi.org/pypi/python-pptx/json",
+    "requires_dist": [
+      "Pillow>=3.3.2",
+      "XlsxWriter>=0.5.7",
+      "lxml>=3.1.0",
+      "typing-extensions>=4.9.0"
+    ]
+  },
+  "python-docx": {
+    "version": "1.2.0",
+    "requires_python": ">=3.9",
+    "source": "https://pypi.org/pypi/python-docx/json",
+    "requires_dist": [
+      "lxml>=3.1.0",
+      "typing_extensions>=4.9.0"
+    ]
+  },
+  "openpyxl": {
+    "version": "3.1.5",
+    "requires_python": ">=3.8",
+    "source": "https://pypi.org/pypi/openpyxl/json",
+    "requires_dist": [
+      "et-xmlfile"
+    ]
+  },
+  "markitdown": {
+    "version": "0.1.9",
+    "requires_python": "<3.15,>=3.10",
+    "source": "https://pypi.org/pypi/markitdown/json",
+    "requires_dist": [
+      "beautifulsoup4",
+      "certifi>=2026.10.19",
+      "charset-normalizer",
+      "defusedxml",
+      "magika<2,>=0.6.1",
+      "markdownify",
+      "requests",
+      "azure-ai-contentunderstanding>=1.2.0b1; extra == \"all\"",
+      "azure-ai-documentintelligence; extra == \"all\"",
+      "azure-identity; extra == \"all\"",
+      "lxml; extra == \"all\"",
+      "mammoth<2,>=1.12.2; extra == \"all\"",
+      "olefile; extra == \"all\"",
+      "openpyxl; extra == \"all\"",
+      "pandas; extra == \"all\"",
+      "pdfminer-six>=20251230; extra == \"all\"",
+      "pdfplumber>=0.11.9; extra == \"all\"",
+      "pydub; extra == \"all\"",
+      "python-pptx; extra == \"all\"",
+      "speechrecognition; extra == \"all\"",
+      "xlrd; extra == \"all\"",
+      "youtube-transcript-api~=1.2.3; extra == \"all\"",
+      "pydub; extra == \"audio-transcription\"",
+      "speechrecognition; extra == \"audio-transcription\"",
+      "azure-ai-contentunderstanding>=1.2.0b1; extra == \"az-content-understanding\"",
+      "azure-identity; extra == \"az-content-understanding\"",
+      "azure-ai-documentintelligence; extra == \"az-doc-intel\"",
+      "azure-identity; extra == \"az-doc-intel\"",
+      "lxml; extra == \"docx\"",
+      "mammoth<2,>=1.12.2; extra == \"docx\"",
+      "olefile; extra == \"outlook\"",
+      "pdfminer-six>=20251230; extra == \"pdf\"",
+      "pdfplumber>=0.11.9; extra == \"pdf\"",
+      "python-pptx; extra == \"pptx\"",
+      "pandas; extra == \"xls\"",
+      "xlrd; extra == \"xls\"",
+      "openpyxl; extra == \"xlsx\"",
+      "pandas; extra == \"xlsx\"",
+      "youtube-transcript-api~=1.2.3; extra == \"youtube-transcription\""
+    ]
+  },
+  "diff-match-patch": {
+    "version": "20241021",
+    "requires_python": ">=3.7",
+    "source": "https://pypi.org/pypi/diff-match-patch/json",
+    "requires_dist": [
+      "attribution==1.8.0; extra == \"dev\"",
+      "build>=1; extra == \"dev\"",
+      "black==24.8.0; extra == \"dev\"",
+      "flit==3.9.0; extra == \"dev\"",
+      "mypy==1.12.1; extra == \"dev\"",
+      "ufmt==2.7.3; extra == \"dev\"",
+      "usort==1.0.8.post1; extra == \"dev\""
+    ]
+  },
+  "icalendar": {
+    "version": "7.3.0",
+    "requires_python": ">=3.10",
+    "source": "https://pypi.org/pypi/icalendar/json",
+    "requires_dist": [
+      "python-dateutil",
+      "typing-extensions~=4.10; python_version < \"3.13\"",
+      "tzdata>=2025.3"
+    ]
+  },
+  "python-dateutil": {
+    "version": "3.0.0",
+    "requires_python": "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7",
+    "source": "https://pypi.org/pypi/python-dateutil/json",
+    "requires_dist": [
+      "six>=1.6",
+      "tzdata"
+    ]
+  }
+}

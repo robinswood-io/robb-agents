@@ -12,7 +12,7 @@ export function* sessionJsonlChunks(
   header: SessionHeader,
   messages: readonly StoredMessage[],
   sessionDir: string,
-): Generator<string> {
+): Generator<string, void, unknown> {
   let pending = ''
   for (let index = -1; index < messages.length; index++) {
     const line = makeSessionPathPortable(JSON.stringify(index < 0 ? header : messages[index]), sessionDir) + '\n'

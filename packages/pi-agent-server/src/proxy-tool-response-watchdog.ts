@@ -22,10 +22,10 @@ function isBrowserTool(toolName: string): boolean {
 }
 
 function browserCommand(args: Record<string, unknown> | undefined): string | string[] | undefined {
-  const command = args?.command;
+  const command = args?.["command"];
   if (typeof command === 'string') return command;
   if (Array.isArray(command) && command.length > 0
-    && command.every(part => typeof part === 'string')) return command;
+    && command.every((part: unknown) => typeof part === 'string')) return command;
   return undefined;
 }
 

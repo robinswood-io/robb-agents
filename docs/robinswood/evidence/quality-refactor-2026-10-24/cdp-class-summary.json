@@ -1,0 +1,224 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Contrôle navigateur CDP : captures, références, géométrie et interactions",
+  "changes": [
+    "27 implémentations réparties par responsabilité ; champs, constructeur, ordre des commandes, méthodes publiques et accès au même objet conservés.",
+    "Quatre any supprimés grâce aux champs CDP réellement consommés et au type natif MouseInputEvent. Les valeurs des scripts de page restent inconnues à la frontière.",
+    "Aucune dépendance ni couche d’orchestration ajoutée."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/main/browser-cdp.ts",
+      "lines": 155,
+      "sha256": "b4264c5539885fa70cc378687cc8b6e09cc6d97d946f6f0a14080bf9e51cb906"
+    },
+    {
+      "file": "apps/electron/src/main/browser-cdp/connection.ts",
+      "lines": 53,
+      "sha256": "7c9eed83758eb343d1647e2b9dcea1514b7c056b60b39651734b13c0529d2e70"
+    },
+    {
+      "file": "apps/electron/src/main/browser-cdp/geometry.ts",
+      "lines": 208,
+      "sha256": "fa57cec4bd3da51babe271444bdeb1f397f6b3833eee9d3858760f5c1a661852"
+    },
+    {
+      "file": "apps/electron/src/main/browser-cdp/input.ts",
+      "lines": 398,
+      "sha256": "a405e1d475ea9efed7944568b50c4c61caf7f26683044fe49669e047b559c48a"
+    },
+    {
+      "file": "apps/electron/src/main/browser-cdp/pointer.ts",
+      "lines": 166,
+      "sha256": "7aafe08516bf751bd92df042fb9fb11d4b5831674074f553b3bb0b31411ff5e7"
+    },
+    {
+      "file": "apps/electron/src/main/browser-cdp/protocol.ts",
+      "lines": 50,
+      "sha256": "39ad5101fcac0a61f1696614f6323c57335d15707d18db1f25df457e787d2e2a"
+    },
+    {
+      "file": "apps/electron/src/main/browser-cdp/references.ts",
+      "lines": 86,
+      "sha256": "d9eeac8ad094b320acd96bca20026722b6d090f931087d12b9b234ed248c55f2"
+    },
+    {
+      "file": "apps/electron/src/main/browser-cdp/shared.ts",
+      "lines": 99,
+      "sha256": "ff2452332f5b46a44d11edbc41358ab1ad9d00f78dd9fa702029cfcec20d6d3f"
+    },
+    {
+      "file": "apps/electron/src/main/browser-cdp/snapshot.ts",
+      "lines": 188,
+      "sha256": "9ddaf45727ea87c341311fed15bb087a23f854f87fef612289e347cf2008db1c"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 16.12,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/cdp-class-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 21.68,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/cdp-class-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/main/browser-cdp.ts",
+        "apps/electron/src/main/browser-cdp",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.05,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/cdp-class-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./apps/electron/src/main/__tests__/browser-cdp.test.ts",
+        "./apps/electron/src/main/__tests__/browser-cdp.accessibility.test.ts",
+        "./apps/electron/src/main/__tests__/browser-cdp.interaction.test.ts",
+        "./apps/electron/src/main/__tests__/browser-cdp-input.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.14,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/cdp-class-browser-tests.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 15.77,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/cdp-class-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 139.5,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/cdp-class-test.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "scripts/source-quality.ts",
+        "--json",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/cdp-class-source-gate-report.json"
+      ],
+      "exitCode": 1,
+      "seconds": 2.05,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/cdp-class-source-gate.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        ".",
+        "--format",
+        "json",
+        "--output-file",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/cdp-class-global-lint-report.json",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 1,
+      "seconds": 14.38,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/cdp-class-global-lint.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "classes": [
+      {
+        "source": "apps/electron/src/main/browser-cdp.ts",
+        "nativeMethodBodies": 27,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [
+          "send",
+          "sendMouseEvent"
+        ],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      }
+    ],
+    "runtimeImportCycles": 0,
+    "maximumFileLines": 399
+  },
+  "fullTestSummary": {
+    "pass": 10741,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "browserTests": {
+      "pass": 34,
+      "fail": 0,
+      "expectCalls": 123
+    }
+  },
+  "sourceGate": {
+    "max-lines": 114,
+    "no-explicit-any": 369
+  },
+  "globalLint": {
+    "files": 3270,
+    "errors": 453,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 350,
+      "max-lines": 103,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "limits": [
+    "114 fichiers trop longs et 369 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-25T18:44:01.266444+00:00"
+}

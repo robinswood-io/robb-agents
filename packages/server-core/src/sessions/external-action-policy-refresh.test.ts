@@ -1,3 +1,5 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it, jest } from 'bun:test'
 import type { ExternalActionPolicy } from '@craft-agent/shared/workspaces'
 import { SessionManager, createManagedSession } from './SessionManager.ts'
@@ -19,13 +21,13 @@ function injectSession(
     isProcessing: () => processing.value,
     setExternalActionPolicy,
   } as never
-  ;(manager as unknown as { sessions: Map<string, unknown> }).sessions.set(id, managed)
+  ;sessionRuntimeStateForTest(manager).sessions.set(id, managed)
   return { managed, setExternalActionPolicy }
 }
 
 describe('workspace external-action policy runtime refresh', () => {
   it('updates idle agents in the selected workspace immediately', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const idle = injectSession(manager, 'idle', 'workspace-a', { value: false })
     const other = injectSession(manager, 'other', 'workspace-b', { value: false })
 
@@ -37,7 +39,7 @@ describe('workspace external-action policy runtime refresh', () => {
   })
 
   it('does not interrupt an active stream and applies the latest value once idle', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const processing = { value: true }
     const busy = injectSession(manager, 'busy', 'workspace-a', processing)
 
@@ -48,7 +50,7 @@ describe('workspace external-action policy runtime refresh', () => {
     expect(busy.managed.pendingExternalActionPolicy).toBe('confirm')
 
     processing.value = false
-    const applied = (manager as unknown as {
+    const applied = (manager as {
       applyExternalActionPolicyToRuntime: (
         managed: typeof busy.managed,
         policy: ExternalActionPolicy,

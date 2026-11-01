@@ -1,4 +1,6 @@
+import { isUnknownArray } from "../../../../shared/src/utils/json.ts";
 import type { Message } from '@craft-agent/core'
+import type { ActiveSessionObjective } from '@craft-agent/shared/sessions'
 import type { TodoItem } from './TurnCard'
 import type { AssistantTurn, Turn } from './turn-utils'
 import { describeJourneyActivity, safeActivityText, type JourneyActivity } from './journey-activity'
@@ -6,37 +8,20 @@ import { describeJourneyActivity, safeActivityText, type JourneyActivity } from 
 export interface ConversationPresentationOptions {
   /** Processing state of this session, separately from delegated work. */
   isProcessing: boolean
-  sessionId?: string
-  parentSessionId?: string
-  hasActiveDescendants?: boolean
+  sessionId?: string | undefined
+  parentSessionId?: string | undefined
+  hasActiveDescendants?: boolean | undefined
   /** Read-only subset of the host contract; keeps the viewer independent of server modules. */
-  activeObjective?: {
-    objectiveId?: string
-    userMessageId: string
-    lastUserMessageId?: string
-    startedAt: number
-    originalText?: string
-    terminalState: 'active' | 'complete_verified' | 'blocked_human' | 'blocked_policy' | 'exhausted'
-    lastOutcome?: { remainingWork?: string[] }
-    interruptedTurnRecovery?: {
-      objectiveId: string
-      userMessageId: string
-      recovery: {
-        lastCause?: string
-        continuationOrigin?: 'objective_continue'
-        continuationWork?: string[]
-      }
-    }
-  }
+  activeObjective?: Pick<ActiveSessionObjective, 'objectiveId' | 'userMessageId' | 'lastUserMessageId' | 'startedAt' | 'originalText' | 'terminalState' | 'lastOutcome' | 'interruptedTurnRecovery'> | undefined
   pendingTurnRecovery?: unknown
-  awaitingInput?: boolean
+  awaitingInput?: boolean | undefined
 }
 
 export interface ConversationProgress {
   state: 'running' | 'recovering' | 'waiting'
   phase: 'preparing' | 'working' | 'checking' | 'finishing'
   steps: TodoItem[]
-  activity?: JourneyActivity
+  activity?: JourneyActivity | undefined
 }
 
 export interface ConversationOutcome {
@@ -47,7 +32,7 @@ export interface ConversationOutcome {
   validationGaps?: string[]
   hasFinalResponse: boolean
   /** Existing accepted request to resume; never a hidden recovery or a queued message. */
-  retryUserMessageId?: string
+  retryUserMessageId?: string | undefined
   steps?: TodoItem[]
 }
 
@@ -64,7 +49,7 @@ const INTERRUPTION = /\b(?:interrupted|interruption|cancelled|canceled|interromp
 const LEGACY_VALIDATION_FAILURE = /^Automatic continuation stopped because the completion contract still could not be validated within the retry limit\./
 
 function displayValidationGaps(value: unknown): string[] {
-  if (!Array.isArray(value)) return []
+  if (!isUnknownArray(value)) return []
   return [...new Set(value.slice(0, 16).map(gap => safeActivityText(gap, 500)).filter((gap): gap is string => !!gap))]
 }
 
@@ -106,7 +91,7 @@ function legacyUserText(content: string, knownUserIds: Set<string>): string {
 }
 
 function record(value: unknown): Record<string, unknown> | undefined {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
+  return value !== null && typeof value === 'object' && !isUnknownArray(value)
     ? value as Record<string, unknown>
     : undefined
 }
@@ -138,7 +123,7 @@ function finalTurn(message: Message): AssistantTurn {
   return {
     type: 'assistant', turnId: message.turnId ?? message.id,
     activities: [], isStreaming: false, isComplete: true, timestamp: message.timestamp,
-    response: { text: message.content, messageId: message.id, isStreaming: false, annotations: message.annotations },
+    response: { text: message.content, messageId: message.id, isStreaming: false, ...(message.annotations !== undefined ? { annotations: message.annotations } : {}) },
   }
 }
 
@@ -149,16 +134,16 @@ function confirmedPlan(message: Message): TodoItem[] | undefined {
     || message.toolCheckpoint || message.isPending || message.isStreaming
     || !message.toolResult?.trim()) return undefined
   const input = message.toolInput
-  const values = input?.todos ?? input?.plan
-  if (!Array.isArray(values)) return undefined
+  const values = input?.["todos"] ?? input?.["plan"]
+  if (!isUnknownArray(values)) return undefined
   const steps: TodoItem[] = []
   for (const value of values) {
     const item = record(value)
-    const content = item?.content ?? item?.step
-    const status = item?.status
+    const content = item?.["content"] ?? item?.["step"]
+    const status = item?.["status"]
     if (typeof content !== 'string' || !content.trim()
       || (status !== 'pending' && status !== 'in_progress' && status !== 'completed')) return undefined
-    steps.push({ content, status, ...(typeof item?.activeForm === 'string' ? { activeForm: item.activeForm } : {}) })
+    steps.push({ content, status, ...(typeof item?.["activeForm"] === 'string' ? { activeForm: item["activeForm"] } : {}) })
   }
   return steps
 }
@@ -219,7 +204,7 @@ export function projectConversation(
   const scoped = ordered.slice(scopeStart)
   const scopedPublic = scoped.filter(isPublic)
   const recovery = record(options.pendingTurnRecovery)
-  const recoveryRoot = recovery?.userMessageId
+  const recoveryRoot = recovery?.["userMessageId"]
   const recoveryMatches = typeof recoveryRoot === 'string'
     && (recoveryRoot === objective?.userMessageId || recoveryRoot === objective?.lastUserMessageId
       || recoveryRoot === lastUser?.id)
@@ -236,10 +221,10 @@ export function projectConversation(
   // Once the host is idle, an error/stop after its last attempt must remain
   // actionable even if the marker could not be cleared (for example ENOSPC).
   const stoppedRecovery = !options.isProcessing && !!latestSignal
-    && (typeof recovery?.lastAttemptAt !== 'number' || latestSignal.timestamp >= recovery.lastAttemptAt)
-  const recovering = !terminal && !stoppedRecovery && recoveryMatches && !recovery?.exhaustedAt
-    && (typeof recovery?.lastCause === 'string' || recovery?.continuationRequired === true
-      || (typeof recovery?.attempts === 'number' && recovery.attempts > 0))
+    && (typeof recovery?.["lastAttemptAt"] !== 'number' || latestSignal.timestamp >= recovery["lastAttemptAt"])
+  const recovering = !terminal && !stoppedRecovery && recoveryMatches && !recovery?.["exhaustedAt"]
+    && (typeof recovery?.["lastCause"] === 'string' || recovery?.["continuationRequired"] === true
+      || (typeof recovery?.["attempts"] === 'number' && recovery["attempts"] > 0))
   const pendingAuth = scopedPublic.some(message => message.role === 'auth-request' && message.authStatus === 'pending')
   const lastSubmittedPlan = scopedPublic.map(message => message.role === 'plan').lastIndexOf(true)
   const pendingPlan = lastSubmittedPlan >= 0 && !scopedPublic.slice(lastSubmittedPlan + 1).some(message =>
@@ -350,7 +335,7 @@ export function projectConversation(
       type: 'assistant', turnId: message.turnId ?? message.id, isComplete: true, isStreaming: false,
       timestamp: message.timestamp,
       activities: [{ id: message.id, type: 'plan', status: 'completed', content: message.content,
-        messageId: message.id, annotations: message.annotations, timestamp: message.timestamp }],
+        messageId: message.id, ...(message.annotations !== undefined ? { annotations: message.annotations } : {}), timestamp: message.timestamp }],
     })
     else if (visibleFinalIds.has(message.id)) turns.push(finalTurn(message))
   }
@@ -362,7 +347,7 @@ export function projectConversation(
   } }
 
   const interrupted = !!interruptedContinuation || latestSignal?.role === 'info'
-  const failed = latestSignal?.role === 'error' || latestSignal?.authStatus === 'failed' || (recoveryMatches && !!recovery?.exhaustedAt)
+  const failed = latestSignal?.role === 'error' || latestSignal?.authStatus === 'failed' || (recoveryMatches && !!recovery?.["exhaustedAt"])
   // Legacy/direct conversations already have their answer. Missing host proof
   // metadata alone is no reason to append a warning or repeat the request.
   if (!objective && currentFinal && isFinal(currentFinal.message) && !failed && !interrupted && !steps.length) return { turns }
@@ -380,14 +365,14 @@ export function projectConversation(
   // objective can include a newer clarification: require its own marker or a
   // validation attempt observed after that clarification before reusing gaps.
   const recoveryDiagnosticsAreCurrent = recoveryMatches && (!lastUser || recoveryRoot === lastUser.id
-    || (typeof recovery?.lastAttemptAt === 'number' && recovery.lastAttemptAt >= lastUser.timestamp))
+    || (typeof recovery?.["lastAttemptAt"] === 'number' && recovery["lastAttemptAt"] >= lastUser.timestamp))
   const legacyValidationFailure = (!latestSignal && objective?.terminalState === 'exhausted')
     || (latestSignal?.role === 'error' && !latestSignal.errorCode && LEGACY_VALIDATION_FAILURE.test(latestSignal.content))
   const validationGaps = state === 'failed' || state === 'unverified'
     ? typedValidationFailure ? displayValidationGaps(latestSignal.errorDetails)
       : legacyValidationFailure && recoveryDiagnosticsAreCurrent
-        && (recovery?.lastCause === 'objective_incomplete' || recovery?.lastCause === 'evidence_gate')
-        ? displayValidationGaps(recovery?.validationGaps) : []
+        && (recovery?.["lastCause"] === 'objective_incomplete' || recovery?.["lastCause"] === 'evidence_gate')
+        ? displayValidationGaps(recovery?.["validationGaps"]) : []
     : []
   return { turns, outcome: {
     objectiveText: legacyUserText(objective?.originalText ?? (rootIndex >= 0 ? ordered[rootIndex]?.content : lastUser?.content) ?? '', knownUserIds),

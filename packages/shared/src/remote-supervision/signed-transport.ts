@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 import {
   createHmac,
   randomUUID,
@@ -188,7 +189,7 @@ export class RemoteSupervisionClient {
     this.fetchImplementation = options.fetch ?? globalThis.fetch;
     this.responseVerifier = new RemoteEnvelopeVerifier(
       (keyId) => keyId === options.keyId ? options.sharedSecret : null,
-      { now: options.now },
+      { ...(options.now !== undefined ? { now: options.now } : {}) },
     );
   }
 
@@ -244,7 +245,7 @@ function canonicalJson(value: unknown): string {
     if (!Number.isFinite(value)) throw new Error('Remote supervision envelopes require finite numbers');
     return JSON.stringify(value);
   }
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (isUnknownArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   if (typeof value === 'object') {
     const record = value as Record<string, unknown>;
     return `{${Object.keys(record)
@@ -274,37 +275,37 @@ function validateRemoteBaseUrl(value: string): URL {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === 'object' && value !== null && !isUnknownArray(value);
 }
 
 function parseProjectionResponse(value: unknown): RemoteProjectionResponse {
-  if (!isRecord(value) || typeof value.requestId !== 'string') {
+  if (!isRecord(value) || typeof value["requestId"] !== 'string') {
     throw new Error('Remote projection response is invalid');
   }
-  if (value.projection !== null && !isRecord(value.projection)) {
+  if (value["projection"] !== null && !isRecord(value["projection"])) {
     throw new Error('Remote projection response is invalid');
   }
   return {
-    requestId: value.requestId,
-    projection: value.projection as RemoteTaskProjection | null,
+    requestId: value["requestId"],
+    projection: value["projection"] as RemoteTaskProjection | null,
   };
 }
 
 function parseActionResponse(value: unknown): RemoteActionResponse {
   if (
     !isRecord(value)
-    || typeof value.requestId !== 'string'
-    || value.accepted !== true
-    || (value.action !== 'task.pause' && value.action !== 'task.cancel' && value.action !== 'approval.resolve')
-    || typeof value.executedAt !== 'string'
-    || !Number.isFinite(Date.parse(value.executedAt))
+    || typeof value["requestId"] !== 'string'
+    || value["accepted"] !== true
+    || (value["action"] !== 'task.pause' && value["action"] !== 'task.cancel' && value["action"] !== 'approval.resolve')
+    || typeof value["executedAt"] !== 'string'
+    || !Number.isFinite(Date.parse(value["executedAt"]))
   ) {
     throw new Error('Remote action response is invalid');
   }
   return {
-    requestId: value.requestId,
-    action: value.action,
+    requestId: value["requestId"],
+    action: value["action"],
     accepted: true,
-    executedAt: value.executedAt,
+    executedAt: value["executedAt"],
   };
 }

@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "checks": {
+    "allOriginalSessionsRetained": true,
+    "connectionSlugsUnchanged": true,
+    "defaultConnectionUnchanged": true,
+    "workspaceIdsUnchanged": true,
+    "all35SourceConfigsUnchanged": true,
+    "nativeQaSessionPresent": true
+  },
+  "originalSessionCount": 2321,
+  "currentSessionCount": 2322,
+  "connectionCount": 6,
+  "sourceCount": 35,
+  "newSessionIds": [
+    "261024-lively-coyote"
+  ]
+}

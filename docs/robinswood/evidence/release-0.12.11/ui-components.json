@@ -1,0 +1,27 @@
+{
+  "status": "passed",
+  "checks": [
+    "RichTextInput preserves its draft when placeholder props change",
+    "Real TaskEditor preserves authored title across parent rerenders",
+    "Real TaskEditor rejects a late response from the previous target",
+    "Real WhatsApp dialog handles loggedOut without restarting its mock connection"
+  ],
+  "errors": [],
+  "scope": "Real source components in fresh Chromium; mock APIs only; no production profile or WhatsApp connection",
+  "source_files": {
+    "apps/electron/src/renderer/components/ui/rich-text-input.tsx": "7ce741b1087a64fe2dfaaf290300dac4a75e9975746a1303224d286ad82f13ce",
+    "apps/electron/src/renderer/components/app-shell/kanban/TaskEditor.tsx": "a04e6a188dce81f98f6f78b6066a4a8d5911a4deddf2a01db56db78bc9a4e7e5",
+    "apps/electron/src/renderer/components/messaging/WhatsAppConnectDialog.tsx": "9ed93b63805389574963f47bf1e194b55d75aac6bb2094f9126d9d3976dc646d"
+  },
+  "test_script_sha256": "7a3aba07a570738e9ccb4d2f74c838e08d1b5239d3bd98b7d181e2f16743f543",
+  "limitations": [
+    "Mock-only browser component scenarios; packaged Electron installation remains a separate check."
+  ],
+  "checked_at": "2026-10-28T19:56:55.690430+00:00",
+  "dependency_versions": {
+    "@tiptap/core": "3.32.1",
+    "@tiptap/react": "3.32.1",
+    "@tiptap/starter-kit": "3.32.1"
+  },
+  "lock_sha256": "e377baa900f223f15975f4f142c5cc2e6000e5c27495d6d659b029b4af499479"
+}

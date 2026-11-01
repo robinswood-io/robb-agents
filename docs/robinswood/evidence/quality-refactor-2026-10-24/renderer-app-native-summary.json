@@ -1,0 +1,203 @@
+{
+  "status": "tested; complete browser missions and local staging pending",
+  "scope": "renderer-app-native",
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/App.tsx",
+      "lines": 478,
+      "sha256": "e857e502a6eae9d1ef74d8c7f2ab886bc025fc5a116aba38f69b2965fe40ffe2"
+    },
+    {
+      "file": "apps/electron/src/renderer/app-runtime-helpers.ts",
+      "lines": 162,
+      "sha256": "185392559da8086e3e2d6fd732677965184046e045ba89a7e832967a9e65518e"
+    },
+    {
+      "file": "apps/electron/src/renderer/app-status-views.tsx",
+      "lines": 167,
+      "sha256": "c6407eaee6130628af2a062a5b2ab136d0498f3550c90564c6cf181ed8de3fd7"
+    },
+    {
+      "file": "apps/electron/src/renderer/app-main-view.tsx",
+      "lines": 257,
+      "sha256": "8454cf5a6c8207870aa05311f4ab811ee2d434897fc278951943e599e4a0329b"
+    },
+    {
+      "file": "apps/electron/src/renderer/use-app-session-state.ts",
+      "lines": 186,
+      "sha256": "6c2f79089dc52589066365db7b5d1b393701b62d34bce60401dd165c0742cf5a"
+    },
+    {
+      "file": "apps/electron/src/renderer/use-app-session-loading.ts",
+      "lines": 216,
+      "sha256": "116c87e2ce6b688eabf53f7acee4c6044f02bd352acaf2f25a481681a22faf5a"
+    },
+    {
+      "file": "apps/electron/src/renderer/use-app-onboarding.ts",
+      "lines": 96,
+      "sha256": "bc0abb71697d3763c852608f9595dce7d7e8657a1cd2c8c428c8511b02f78b29"
+    },
+    {
+      "file": "apps/electron/src/renderer/use-app-window-events.ts",
+      "lines": 197,
+      "sha256": "0ee93aee41b7481f20a98f08ba3e35e55011b5c628bf61c8be6651c5112d78c9"
+    },
+    {
+      "file": "apps/electron/src/renderer/use-app-event-stream.ts",
+      "lines": 342,
+      "sha256": "dd7a510ccb9436fc1d971d40b1bed748a89f2539c7a10f5ecb6afd96bb1a7296"
+    },
+    {
+      "file": "apps/electron/src/renderer/use-app-listeners.ts",
+      "lines": 101,
+      "sha256": "eb659cfc5128d5f0dfff78f4acf02c055323ecc33fd937837cf61c8ae853eef2"
+    },
+    {
+      "file": "apps/electron/src/renderer/use-app-session-actions.ts",
+      "lines": 119,
+      "sha256": "0ed7cd3912cc13c9b924c4828985478bd2e41acf0446366e3e7b134be18687af"
+    },
+    {
+      "file": "apps/electron/src/renderer/use-app-message-sending.ts",
+      "lines": 215,
+      "sha256": "50acd1361d27cd09c655a246462b67241e5a73afcb71c1a5c8cd059314a831c7"
+    },
+    {
+      "file": "apps/electron/src/renderer/use-app-drafts.ts",
+      "lines": 124,
+      "sha256": "5d8fc1e0633fb1b71a324530753013b1c199dd608cb62359e9ab6d88d815edde"
+    },
+    {
+      "file": "apps/electron/src/renderer/use-app-prompts.ts",
+      "lines": 77,
+      "sha256": "4e8b982d92864a3a0b0af8dbde85b82b20ce5c1964f7895b8b15383d1d5ff134"
+    },
+    {
+      "file": "apps/electron/src/renderer/use-app-transport-status.ts",
+      "lines": 27,
+      "sha256": "a5802898ee59a3d7f65ac9ff5348daf885f0b95aaa00f3942318874f053a82b3"
+    },
+    {
+      "file": "apps/electron/src/renderer/use-app-workspaces.ts",
+      "lines": 170,
+      "sha256": "ab17cd3d4fc52f46ab8e33240526e9be1708a98144c3dca71a0d20b561682b41"
+    },
+    {
+      "file": "apps/electron/src/renderer/use-app-shell-values.ts",
+      "lines": 210,
+      "sha256": "36ee2c4b896559f39466f15dbf9bff5d35393c583f9f3653a70d20d2da6515af"
+    }
+  ],
+  "checks": {
+    "lint": {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/App.tsx",
+        "apps/electron/src/renderer/app-runtime-helpers.ts",
+        "apps/electron/src/renderer/app-status-views.tsx",
+        "apps/electron/src/renderer/app-main-view.tsx",
+        "apps/electron/src/renderer/use-app-session-state.ts",
+        "apps/electron/src/renderer/use-app-session-loading.ts",
+        "apps/electron/src/renderer/use-app-onboarding.ts",
+        "apps/electron/src/renderer/use-app-window-events.ts",
+        "apps/electron/src/renderer/use-app-event-stream.ts",
+        "apps/electron/src/renderer/use-app-listeners.ts",
+        "apps/electron/src/renderer/use-app-session-actions.ts",
+        "apps/electron/src/renderer/use-app-message-sending.ts",
+        "apps/electron/src/renderer/use-app-drafts.ts",
+        "apps/electron/src/renderer/use-app-prompts.ts",
+        "apps/electron/src/renderer/use-app-transport-status.ts",
+        "apps/electron/src/renderer/use-app-workspaces.ts",
+        "apps/electron/src/renderer/use-app-shell-values.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.06,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/renderer-app-native-lint.log"
+    },
+    "types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 3.61,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/renderer-app-native-types.log"
+    },
+    "compat": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 24.5,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/renderer-app-native-compat.log"
+    },
+    "focused": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/renderer/hooks/__tests__/useOnboarding.test.ts",
+        "apps/electron/src/renderer/lib/__tests__/session-created-hydration.test.ts",
+        "apps/electron/src/renderer/lib/__tests__/drafts.test.ts",
+        "apps/electron/src/renderer/lib/__tests__/reconnect-recovery.test.ts",
+        "apps/electron/src/renderer/lib/__tests__/session-load.test.ts",
+        "apps/electron/src/renderer/lib/permission-mode-reconciliation.test.ts",
+        "apps/electron/src/renderer/event-processor/handlers/__tests__/canonical-user-message.test.ts",
+        "apps/electron/src/renderer/event-processor/handlers/__tests__/session-processing-revision.test.ts",
+        "apps/electron/src/renderer/atoms/__tests__/sessions.test.ts",
+        "apps/electron/src/renderer/atoms/__tests__/session-auth-requests.test.tsx",
+        "apps/electron/src/renderer/components/app-shell/__tests__/transport-connection-banner.test.ts",
+        "apps/electron/src/renderer/lib/__tests__/input-text.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.22,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/renderer-app-native-focused.log"
+    },
+    "build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 13.23,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/renderer-app-native-build.log"
+    }
+  },
+  "targetedTests": {
+    "pass": 82,
+    "fail": 0
+  },
+  "sourceGate": {
+    "max-lines": 5
+  },
+  "globalLint": {
+    "files": 3716,
+    "errors": 5,
+    "warnings": 28,
+    "fatal": 0
+  },
+  "limits": [
+    "Other historical files and lint warnings remain",
+    "Complete browser missions and local staging installation are pending",
+    "Global suite rerun denied by PreToolUse; last full suite f521166: 10759 passed"
+  ]
+}

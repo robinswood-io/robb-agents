@@ -50,7 +50,7 @@ function getOpenAiCodexAccessToken(piAuth?: SearchProviderAuthConfig): string | 
   return getOAuthAccess(piAuth) ?? getApiKey(piAuth);
 }
 
-export function resolveSearchProvider(piAuth?: SearchProviderAuthConfig): WebSearchProvider {
+export function resolveSearchProvider(piAuth?: SearchProviderAuthConfig, model?: string): WebSearchProvider {
   const provider = piAuth?.provider;
   const apiKey = getApiKey(piAuth);
   const openAiCodexAccess = getOpenAiCodexAccessToken(piAuth);
@@ -75,7 +75,9 @@ export function resolveSearchProvider(piAuth?: SearchProviderAuthConfig): WebSea
     }
     const accountId = extractChatGptAccountId(openAiCodexAccess);
     if (accountId) {
-      return new ChatGPTBackendSearchProvider(openAiCodexAccess, accountId);
+      return new ChatGPTBackendSearchProvider(openAiCodexAccess, accountId, {
+        model: model?.replace(/^pi\//, ''),
+      });
     }
     // Can't extract accountId (malformed/non-JWT token) → fall through to DDG
   }

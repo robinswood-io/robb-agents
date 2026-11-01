@@ -6,7 +6,7 @@ const originalDocument = globalThis.document
 
 afterEach(() => {
   setDismissibleLayerBridge(null)
-  ;(globalThis as unknown as { document: Document | undefined }).document = originalDocument
+  ;((globalThis) as { document: Document | undefined }).document = originalDocument
 })
 
 describe('hasOpenOverlay', () => {
@@ -19,7 +19,7 @@ describe('hasOpenOverlay', () => {
       handleEscape: () => true,
     })
 
-    ;(globalThis as unknown as { document: { querySelector: (_selector: string) => null } }).document = {
+    ;((globalThis) as { document: { querySelector: (_selector: string) => null } }).document = {
       querySelector: () => null,
     }
 
@@ -27,7 +27,7 @@ describe('hasOpenOverlay', () => {
   })
 
   it('returns true when an island dialog is open', () => {
-    ;(globalThis as unknown as { document: { querySelector: (selector: string) => object | null } }).document = {
+    ;((globalThis) as { document: { querySelector: (selector: string) => object | null } }).document = {
       querySelector: (selector: string) => {
         if (selector.includes('[data-ca-island-dialog="true"][data-state="open"]')) {
           return {}
@@ -41,7 +41,7 @@ describe('hasOpenOverlay', () => {
   })
 
   it('returns false when no overlays are open', () => {
-    ;(globalThis as unknown as { document: { querySelector: (_selector: string) => null } }).document = {
+    ;((globalThis) as { document: { querySelector: (_selector: string) => null } }).document = {
       querySelector: () => null,
     }
 

@@ -1,0 +1,46 @@
+{
+  "status": "passed",
+  "nativeDeclarationBodiesPreserved": true,
+  "reviewedStableDependencyAdditions": {},
+  "reviewedStableEffectDependencyAdditions": {},
+  "reviewedEffectDependencyRemovals": {},
+  "reviewedDependencyRemovals": {},
+  "nativeMainJSXAndInlineCallbacksPreserved": true,
+  "nativeRootAndActionHooksReinlinedExactly": true,
+  "viewAddsNoStateOrEffects": false,
+  "nativeValuesPassedDirectly": true,
+  "nativeImportsAndRootEvaluationOrderPreserved": true,
+  "newStateOrWorkflowEngine": false,
+  "files": [
+    {
+      "file": "apps/webui/src/App.tsx",
+      "lines": 426,
+      "sha256": "49d55a9811a49cc506a54ba6320c83ebe52604bc2aec7a89e6c7a9cd51b4ce72"
+    },
+    {
+      "file": "apps/webui/src/components/webui-shell-screens.tsx",
+      "lines": 113,
+      "sha256": "fecb7f6431c892311e93deba85b65c0b872921567dc06d8e163ba89d63956116"
+    },
+    {
+      "file": "apps/webui/src/use-webui-initialization.ts",
+      "lines": 331,
+      "sha256": "7c7b5aac58880f118d37c7f820d58b7d196704f4a767f093fe2b83b972701b97"
+    },
+    {
+      "file": "apps/webui/src/use-webui-offline-views.ts",
+      "lines": 84,
+      "sha256": "d726cf7ccf5e181cbe5b2c1ccaecb990014682f7652832e0143ba08b39e656aa"
+    },
+    {
+      "file": "apps/webui/src/use-webui-offline-actions.ts",
+      "lines": 194,
+      "sha256": "9eb742c5342ea37f50e2c10705fb5f4f9247688f2dee9ac2a093b75ba809bfbf"
+    },
+    {
+      "file": "apps/webui/src/use-webui-session-actions.tsx",
+      "lines": 234,
+      "sha256": "ce9335836ef0ab50a66ae7dfa83134c02de879543d017c35a846e4d1fa998c3a"
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "status": "testé dans le candidat local ; chantier global en cours",
+  "scope": "Validation et décomposition du registre canonique des outils de session",
+  "files": [
+    "packages/session-tools-core/src/tool-defs.ts",
+    "packages/session-tools-core/src/tool-defs",
+    "packages/session-tools-core/src/tool-argument-validation.test.ts"
+  ],
+  "maximumLines": 290,
+  "behavior": "25 traitements reçoivent uniquement les arguments validés par leur schéma ; les trois traitements acceptant unknown conservent leur propre validation, leurs messages et les métadonnées host.",
+  "regression": "Sept cas : six rejets avant tout accès au fichier ou callback et un plan QA valide exécuté une seule fois. Avant correction : six échecs, un succès.",
+  "proof": "50 déclarations originales et toutes les métadonnées/ordre du registre conservées ; seule signature any vers unknown et validation ajoutée.",
+  "checks": {
+    "session-handler-validation-red": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/session-tools-core/src/tool-argument-validation.test.ts"
+      ],
+      "exitCode": 1,
+      "seconds": 0.2,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-handler-validation-red.log"
+    },
+    "session-handler-validation-green-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/session-tools-core"
+      ],
+      "exitCode": 0,
+      "seconds": 1.73,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-handler-validation-green-2.log"
+    },
+    "registry-validation-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 20.42,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/registry-validation-types.log"
+    },
+    "registry-validation-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 19.7,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/registry-validation-build.log"
+    },
+    "registry-validation-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/session-tools-core/src/tool-defs.ts",
+        "packages/session-tools-core/src/tool-defs",
+        "packages/session-tools-core/src/tool-argument-validation.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 2.61,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/registry-validation-lint.log"
+    },
+    "registry-validation-all-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 140.57,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/registry-validation-all-tests.log"
+    }
+  },
+  "remaining": {
+    "max-lines": 197,
+    "no-explicit-any": 564
+  },
+  "installedApplication": "inchangée"
+}

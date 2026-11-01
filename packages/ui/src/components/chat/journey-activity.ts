@@ -100,7 +100,7 @@ export function describeJourneyActivity(messages: Message[], steps: TodoItem[]):
       && message.toolStatus === 'completed' && !message.isError && !message.toolCheckpoint
       && !message.isPending && !message.isStreaming
       && message.toolExecuted !== false && !!message.toolResult?.trim()) {
-      commentary = safeActivityText(message.toolInput?.explanation)
+      commentary = safeActivityText(message.toolInput?.["explanation"])
       if (commentary) observedAt = Math.max(observedAt, message.timestamp)
     }
     if (!toolText && message.role === 'tool' && message.toolStatus === 'executing'

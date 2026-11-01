@@ -2,19 +2,21 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import sys
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
+from pydantic import JsonValue, TypeAdapter
 from temporalio.client import Client
-
 from workflows import RbwAutomationWorkflow
 
+logger = logging.getLogger(__name__)
 ROOT = Path('/srv/rbw-agents-oss')
 ADMIN_QUEUE_POLICY = ROOT / 'config/admin-wrapper-queue-policy.json'
-DEFAULT_POLICY = {
+DEFAULT_POLICY: dict[str, JsonValue] = {
     'defaults': {
         'manualDuplicatePolicy': 'skip_if_running',
         'manualDuplicateAgeMinutes': 45,
@@ -44,32 +46,32 @@ TRANSIENT_TEMPORAL_MARKERS = (
 )
 
 
-def _load_json(path: Path) -> dict:
+def _load_json(path: Path) -> dict[str, JsonValue]:
     if not path.exists():
         return {}
     try:
-        data = json.loads(path.read_text(encoding='utf-8'))
-    except Exception:
+        data = TypeAdapter(JsonValue).validate_json(path.read_bytes())
+    except (OSError, ValueError):
         return {}
     return data if isinstance(data, dict) else {}
 
 
-def _load_policy() -> dict:
+def _load_policy() -> dict[str, JsonValue]:
     policy = DEFAULT_POLICY.copy()
     loaded = _load_json(ADMIN_QUEUE_POLICY)
     if loaded:
         policy.update(loaded)
-        defaults = dict(DEFAULT_POLICY.get('defaults') or {})
-        defaults.update(loaded.get('defaults') or {})
+        defaults = TypeAdapter(dict[str, JsonValue]).validate_python(DEFAULT_POLICY.get('defaults') or {})
+        defaults.update(TypeAdapter(dict[str, JsonValue]).validate_python(loaded.get('defaults') or {}))
         policy['defaults'] = defaults
     return policy
 
 
-def _load_rows(path: Path):
+def _load_rows(path: Path) -> list[dict[str, JsonValue]]:
     if not path.exists():
         return []
-    data = json.loads(path.read_text(encoding='utf-8'))
-    rows = []
+    data = TypeAdapter(JsonValue).validate_json(path.read_bytes())
+    rows: list[dict[str, JsonValue]] = []
     if isinstance(data, dict):
         for value in data.values():
             if isinstance(value, list):
@@ -79,30 +81,30 @@ def _load_rows(path: Path):
     return rows
 
 
-def _lookup(legacy_id: str) -> dict:
+def _lookup(legacy_id: str) -> dict[str, JsonValue]:
     rows = _load_rows(ROOT / 'config' / 'command-manifest.json') + _load_rows(ROOT / 'config' / 'automation-mapping.json')
-    merged = {}
+    merged: dict[str, JsonValue] = {}
     for row in rows:
         if row.get('legacy_id') == legacy_id:
             merged.update(row)
     return merged
 
 
-def _task_queue_for(legacy_id: str, row: dict, policy: dict) -> tuple[str, str]:
+def _task_queue_for(legacy_id: str, row: dict[str, JsonValue], policy: dict[str, JsonValue]) -> tuple[str, str]:
     if legacy_id in MANUAL_SYNC_QUEUE_OVERRIDES:
         return 'sync', 'manual-sync-override-2026-06-15'
-    admin_queue = (policy.get('defaults') or {}).get('adminTaskQueue') or 'watchdog'
-    watchdog_wrappers = set(policy.get('watchdogQueueWrappers') or [])
+    admin_queue = TypeAdapter(dict[str, JsonValue]).validate_python(policy.get('defaults') or {}).get('adminTaskQueue') or 'watchdog'
+    watchdog_wrappers = set(TypeAdapter(list[str]).validate_python(policy.get('watchdogQueueWrappers') or []))
     if legacy_id in watchdog_wrappers:
         return str(admin_queue), 'admin-wrapper-queue-policy'
     return str(row.get('task_queue') or row.get('taskQueue') or 'default'), 'manifest'
 
 
-def _duplicate_protected(legacy_id: str, policy: dict) -> bool:
-    return legacy_id in set(policy.get('duplicateProtectedWrappers') or [])
+def _duplicate_protected(legacy_id: str, policy: dict[str, JsonValue]) -> bool:
+    return legacy_id in set(TypeAdapter(list[str]).validate_python(policy.get('duplicateProtectedWrappers') or []))
 
 
-def _parse_flags(argv: list[str]) -> dict:
+def _parse_flags(argv: list[str]) -> dict[str, bool]:
     return {
         'force': '--force' in argv,
         'no_dedupe': '--no-dedupe' in argv,
@@ -117,7 +119,7 @@ def _env_float(name: str, default: float, minimum: float = 0.1) -> float:
     try:
         value = float(raw)
         return max(value, minimum)
-    except Exception:
+    except ValueError:
         return default
 
 
@@ -126,28 +128,29 @@ def _is_transient_temporal_error(exc: BaseException) -> bool:
     return any(marker in text for marker in TRANSIENT_TEMPORAL_MARKERS)
 
 
-async def _find_running_duplicate(client: Client, legacy_id: str, max_age_minutes: float) -> dict | None:
-    now = datetime.now(timezone.utc)
+async def _find_running_duplicate(client: Client, legacy_id: str, max_age_minutes: float) -> dict[str, JsonValue] | None:
+    now = datetime.now(UTC)
     prefix = f'manual-{legacy_id}-'
     scheduled_prefix = f'rbw.{legacy_id}'
     try:
         async for wf in client.list_workflows('ExecutionStatus="Running"'):
             wf_id = str(wf.id)
-            if not (wf_id.startswith(prefix) or wf_id.startswith(scheduled_prefix)):
+            if not wf_id.startswith((prefix, scheduled_prefix)):
                 continue
             start = wf.start_time
             age_minutes = None
             if start:
-                age_minutes = (now - start.astimezone(timezone.utc)).total_seconds() / 60
+                age_minutes = (now - start.astimezone(UTC)).total_seconds() / 60
             if age_minutes is None or age_minutes <= max_age_minutes:
                 return {
                     'workflowId': wf.id,
                     'runId': wf.run_id,
-                    'taskQueue': getattr(wf, 'task_queue', None),
+                    'taskQueue': wf.task_queue,
                     'startTime': start.isoformat() if start else None,
                     'ageMinutes': round(age_minutes, 1) if age_minutes is not None else None,
                 }
     except Exception as exc:
+        logger.exception("Temporal operation failed")
         return {'dedupeVisibilityError': repr(exc)}
     return None
 
@@ -157,7 +160,7 @@ async def _connect_client() -> Client:
     return await asyncio.wait_for(Client.connect('127.0.0.1:57233'), timeout=timeout)
 
 
-async def main():
+async def main() -> None:
     argv = sys.argv[1:]
     flags = _parse_flags(argv)
     positional = [arg for arg in argv if not arg.startswith('--')]
@@ -165,7 +168,7 @@ async def main():
 
     policy = _load_policy()
     row = _lookup(legacy_id)
-    payload = {
+    payload: dict[str, JsonValue] = {
         'legacy_id': legacy_id,
         'name': row.get('name') or 'Manual workflow test',
         'llm_connection': row.get('llm_connection') or row.get('llmConnection'),
@@ -179,6 +182,7 @@ async def main():
     try:
         client = await _connect_client()
     except Exception as exc:
+        logger.exception("Temporal operation failed")
         print(json.dumps({
             'started': False,
             'ok': False,
@@ -193,10 +197,10 @@ async def main():
         }, ensure_ascii=False, indent=2))
         sys.exit(75 if _is_transient_temporal_error(exc) else 1)
 
-    duplicate = None
-    defaults = policy.get('defaults') or {}
+    duplicate: dict[str, JsonValue] | None = None
+    defaults = TypeAdapter(dict[str, JsonValue]).validate_python(policy.get('defaults') or {})
     duplicate_policy = defaults.get('manualDuplicatePolicy') or 'skip_if_running'
-    duplicate_age_minutes = float(defaults.get('manualDuplicateAgeMinutes') or 45)
+    duplicate_age_minutes = float(TypeAdapter(str | int | float).validate_python(defaults.get('manualDuplicateAgeMinutes') or 45))
     if duplicate_policy == 'skip_if_running' and not flags['force'] and not flags['no_dedupe']:
         should_dedupe = flags['start_only'] or _duplicate_protected(legacy_id, policy)
         if should_dedupe:
@@ -204,6 +208,7 @@ async def main():
             try:
                 duplicate = await asyncio.wait_for(_find_running_duplicate(client, legacy_id, duplicate_age_minutes), timeout=dedupe_timeout)
             except Exception as exc:
+                logger.exception("Temporal dedupe visibility failed")
                 duplicate = {'dedupeVisibilityError': repr(exc), 'boundedBySeconds': dedupe_timeout}
             if duplicate and 'dedupeVisibilityError' not in duplicate:
                 print(json.dumps({
@@ -226,6 +231,7 @@ async def main():
             task_queue=task_queue,
         )
     except Exception as exc:
+        logger.exception("Temporal operation failed")
         print(json.dumps({
             'started': False,
             'ok': False,
@@ -240,7 +246,7 @@ async def main():
         }, ensure_ascii=False, indent=2))
         sys.exit(75 if _is_transient_temporal_error(exc) else 1)
 
-    started_payload = {
+    started_payload: dict[str, JsonValue] = {
         'started': True,
         'workflow_id': rid,
         'first_execution_run_id': handle.first_execution_run_id,
@@ -256,7 +262,7 @@ async def main():
     result_timeout = _env_float('RBW_MANUAL_WORKFLOW_RESULT_TIMEOUT_SECONDS', 90.0, 1.0)
     try:
         result = await asyncio.wait_for(handle.result(), timeout=result_timeout)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         print(json.dumps({
             **started_payload,
             'ok': True,
@@ -268,6 +274,7 @@ async def main():
         }, ensure_ascii=False, indent=2))
         return
     except Exception as exc:
+        logger.exception("Temporal operation failed")
         if _is_transient_temporal_error(exc):
             print(json.dumps({
                 **started_payload,
@@ -296,3 +303,5 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+
+__all__ = ["_duplicate_protected", "_load_policy", "_load_rows", "_task_queue_for", "main"]

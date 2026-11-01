@@ -158,7 +158,7 @@ export class TokenRefreshManager {
         markSourceAuthenticated(source.workspaceRootPath, source.config.slug);
         source.config['isAuthenticated'] = true;
         source.config.connectionStatus = 'connected';
-        source.config.connectionError = undefined;
+        delete source.config.connectionError
 
         return { success: true, token };
       } else {

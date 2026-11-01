@@ -9,6 +9,7 @@
 
 import * as React from 'react'
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { parseViewerSession } from '../session-schema'
 import type { StoredSession } from '@craft-agent/core'
 import { Upload, FileJson, AlertCircle } from 'lucide-react'
 
@@ -31,15 +32,7 @@ export function SessionUpload({ onSessionLoad }: SessionUploadProps) {
 
     try {
       const text = await file.text()
-      const data = JSON.parse(text)
-
-      // Validate basic session structure
-      if (!data.id || !data.messages || !Array.isArray(data.messages)) {
-        setError('Invalid session format: missing id or messages array')
-        return
-      }
-
-      onSessionLoad(data as StoredSession)
+      onSessionLoad(parseViewerSession(JSON.parse(text)))
     } catch {
       setError('Failed to parse JSON file')
     }
@@ -86,10 +79,7 @@ export function SessionUpload({ onSessionLoad }: SessionUploadProps) {
       if (!text) return
 
       try {
-        const data = JSON.parse(text)
-        if (data.id && data.messages && Array.isArray(data.messages)) {
-          onSessionLoad(data as StoredSession)
-        }
+        onSessionLoad(parseViewerSession(JSON.parse(text)))
       } catch {
         // Not valid JSON, ignore
       }

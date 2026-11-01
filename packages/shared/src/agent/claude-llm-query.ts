@@ -8,9 +8,8 @@
 import type { SDKMessage, SDKResultError, SDKResultSuccess } from '@anthropic-ai/claude-agent-sdk';
 import type { LLMQueryResult } from './llm-tool.ts';
 
-type SdkResultErrorSubtype = SDKResultError['subtype'];
 
-const ERROR_SUBTYPE_LABELS: Record<SdkResultErrorSubtype, string> = {
+const ERROR_SUBTYPE_LABELS: Readonly<Record<string, string>> = {
   error_max_turns: 'Model stopped at max turns',
   error_max_budget_usd: 'Model stopped at budget cap',
   error_max_structured_output_retries: 'Structured output retries exhausted',
@@ -18,8 +17,9 @@ const ERROR_SUBTYPE_LABELS: Record<SdkResultErrorSubtype, string> = {
 };
 
 /** Format an SDK error-result into a one-line human warning. */
-export function summarizeSdkError(r: SDKResultError): string {
-  const base = ERROR_SUBTYPE_LABELS[r.subtype] ?? `Model stopped (${r.subtype})`;
+export function summarizeSdkError(r: Pick<SDKResultError, 'errors' | 'num_turns'> & { subtype: string }): string {
+  const label: unknown = ERROR_SUBTYPE_LABELS[r.subtype];
+  const base = typeof label === 'string' ? label : `Model stopped (${r.subtype})`;
   const extra = r.errors?.length ? ` — ${r.errors.join('; ')}` : '';
   return `${base}${extra} (num_turns=${r.num_turns})`;
 }
@@ -78,7 +78,7 @@ export async function consumeLlmQueryMessages(
   }
 
   if (structuredOutput !== undefined) {
-    return { text: JSON.stringify(structuredOutput, null, 2), warning };
+    return { text: JSON.stringify(structuredOutput, null, 2), ...(warning !== undefined ? { warning } : {}) };
   }
-  return { text: text.trim(), warning };
+  return { text: text.trim(), ...(warning !== undefined ? { warning } : {}) };
 }

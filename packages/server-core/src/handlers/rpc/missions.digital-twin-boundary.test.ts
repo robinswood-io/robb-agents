@@ -35,10 +35,10 @@ describe('Mission digital twin RPC trust boundary', () => {
       policyAllowed: true,
       connectorReady: true,
       availableBudgetUsd: 1_000,
-    } as unknown as MissionPreflightRequest)).toThrow(/Unexpected Mission preflight request fields/);
+    } as MissionPreflightRequest)).toThrow(/Unexpected Mission preflight request fields/);
     expect(() => assertMissionPreflightRequest({
       missionId: 'rpc-preflight',
       spec,
-    } as unknown as MissionPreflightRequest)).toThrow(/exactly one/);
+    } as MissionPreflightRequest)).toThrow(/exactly one/);
   });
 });

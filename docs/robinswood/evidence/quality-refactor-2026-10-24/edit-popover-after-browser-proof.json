@@ -1,0 +1,25 @@
+{
+  "status": "passed",
+  "cases": [
+    {
+      "name": "uncontrolled native popover closes and reopens",
+      "status": "passed"
+    },
+    {
+      "name": "inline request creates one hidden QA session and sends the native edit prompt",
+      "status": "passed"
+    },
+    {
+      "name": "legacy request keeps the native URL contract and closes the popover",
+      "status": "passed"
+    },
+    {
+      "name": "controlled close uses the latest parent callback and preserves the draft",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "consoleErrors": [],
+  "browser": "145.0.7632.6",
+  "target": "native popover with existing QA context; no real sessions or URL opened"
+}

@@ -10,11 +10,19 @@ describe('Pi provider handoff boundary', () => {
     let acknowledgements = 0;
     const preflight = createProviderHandoffPreflight(() => { acknowledgements += 1; });
 
-    preflight(false);
+    preflight('handled');
     expect(acknowledgements).toBe(0);
-    preflight(true);
-    preflight(true);
+    preflight('started');
+    preflight('started');
 
+    expect(acknowledgements).toBe(1);
+  });
+
+  it('acknowledges a natively queued follow-up once', () => {
+    let acknowledgements = 0;
+    const preflight = createProviderHandoffPreflight(() => { acknowledgements += 1; });
+    preflight('queued');
+    preflight('started');
     expect(acknowledgements).toBe(1);
   });
 
@@ -93,8 +101,8 @@ describe('Pi provider handoff boundary', () => {
       turnId => acknowledgements.push(turnId),
     );
     const matchesCurrent = (request: Record<string, unknown>) => {
-      const params = request.params as Record<string, unknown> | undefined;
-      return params?.marker === 'current';
+      const params = request["params"] as Record<string, unknown> | undefined;
+      return params?.["marker"] === 'current';
     };
     observed.reserve('current-turn', matchesCurrent);
     const writer = observed.stream.writable.getWriter();

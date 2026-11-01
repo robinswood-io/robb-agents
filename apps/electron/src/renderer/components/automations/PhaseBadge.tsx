@@ -23,7 +23,7 @@ const CATEGORY_BADGE: Record<EventCategory, { label: string; color: BadgeColor }
 
 export interface PhaseBadgeProps {
   event: AutomationTrigger
-  className?: string
+  className?: string | undefined
 }
 
 export function PhaseBadge({ event, className }: PhaseBadgeProps) {

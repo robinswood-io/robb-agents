@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 import {
   RemoteEnvelopeAuthenticationError,
   RemoteEnvelopeReplayError,
@@ -53,7 +54,7 @@ export function createRemoteSupervisionHttpGateway(
 ): (request: Request) => Promise<Response> {
   const verifier = new RemoteEnvelopeVerifier(
     (keyId) => options.resolvePeer(keyId)?.sharedSecret ?? null,
-    { now: options.now },
+    omitUndefined({ now: options.now }),
   )
   const maxRequestsPerMinute = options.maxRequestsPerMinute
     ?? DEFAULT_REMOTE_SUPERVISION_REQUESTS_PER_MINUTE
@@ -103,7 +104,7 @@ export function createRemoteSupervisionHttpGateway(
           workspaceId: payload.workspaceId,
           action: payload.action,
           identity: peer.identity,
-          targetId: payload.targetId,
+          ...(payload.targetId !== undefined ? { targetId: payload.targetId } : {}),
         })
         const responsePayload: RemoteActionResponse = {
           requestId: envelope.requestId,
@@ -259,37 +260,37 @@ function resolveWorkspaceService(
 }
 
 function parseProjectionRequest(value: unknown): RemoteProjectionRequest {
-  if (!isRecord(value) || typeof value.workspaceId !== 'string') {
+  if (!isRecord(value) || typeof value["workspaceId"] !== 'string') {
     throw new RemoteSupervisionBadRequestError('Remote projection request is invalid')
   }
   return {
-    workspaceId: parseNonEmptyString(value.workspaceId, 'workspaceId'),
-    snapshot: parseTaskProjection(value.snapshot),
+    workspaceId: parseNonEmptyString(value["workspaceId"], 'workspaceId'),
+    snapshot: parseTaskProjection(value["snapshot"]),
   }
 }
 
 function parseActionRequest(value: unknown): RemoteActionRequest {
-  if (!isRecord(value) || typeof value.workspaceId !== 'string') {
+  if (!isRecord(value) || typeof value["workspaceId"] !== 'string') {
     throw new RemoteSupervisionBadRequestError('Remote action request is invalid')
   }
-  return {
-    workspaceId: parseNonEmptyString(value.workspaceId, 'workspaceId'),
-    action: parseRemoteAction(value.action),
-    targetId: value.targetId === undefined ? undefined : parseNonEmptyString(value.targetId, 'targetId'),
-  }
+  return omitUndefined<RemoteActionRequest>({
+    workspaceId: parseNonEmptyString(value["workspaceId"], 'workspaceId'),
+    action: parseRemoteAction(value["action"]),
+    targetId: value["targetId"] === undefined ? undefined : parseNonEmptyString(value["targetId"], 'targetId'),
+  })
 }
 
 function parseTaskProjection(value: unknown): RemoteTaskProjection {
-  if (!isRecord(value) || !isRecord(value.task)) {
+  if (!isRecord(value) || !isRecord(value["task"])) {
     throw new RemoteSupervisionBadRequestError('Remote task projection is invalid')
   }
   const task: RemoteTaskProjection['task'] = {}
-  if (value.task.status !== undefined) task.status = parseNonEmptyString(value.task.status, 'status')
-  if (value.task.progress !== undefined) task.progress = parseProgress(value.task.progress)
-  if (value.task.blockers !== undefined) task.blockers = parseStringArray(value.task.blockers, 'blockers')
-  if (value.task.approvals !== undefined) task.approvals = parseApprovals(value.task.approvals)
-  if (value.task.cost !== undefined) task.cost = parseCost(value.task.cost)
-  if (value.task.timestamps !== undefined) task.timestamps = parseTimestamps(value.task.timestamps)
+  if (value["task"]["status"] !== undefined) task.status = parseNonEmptyString(value["task"]["status"], 'status')
+  if (value["task"]["progress"] !== undefined) task.progress = parseProgress(value["task"]["progress"])
+  if (value["task"]["blockers"] !== undefined) task.blockers = parseStringArray(value["task"]["blockers"], 'blockers')
+  if (value["task"]["approvals"] !== undefined) task.approvals = parseApprovals(value["task"]["approvals"])
+  if (value["task"]["cost"] !== undefined) task.cost = parseCost(value["task"]["cost"])
+  if (value["task"]["timestamps"] !== undefined) task.timestamps = parseTimestamps(value["task"]["timestamps"])
   return { task }
 }
 
@@ -307,35 +308,35 @@ function parseProgress(value: unknown): number {
 
 function parseStringArray(value: unknown, fieldName: string): string[] {
   if (!Array.isArray(value)) throw new RemoteSupervisionBadRequestError(`Remote ${fieldName} must be an array`)
-  return value.map((item) => parseNonEmptyString(item, fieldName))
+  return value.map((item: unknown) => parseNonEmptyString(item, fieldName))
 }
 
 function parseApprovals(value: unknown): Array<{ id: string; status: string }> {
   if (!Array.isArray(value)) throw new RemoteSupervisionBadRequestError('Remote approvals must be an array')
-  return value.map((item) => {
+  return value.map((item: unknown) => {
     if (!isRecord(item)) throw new RemoteSupervisionBadRequestError('Remote approval is invalid')
     return {
-      id: parseNonEmptyString(item.id, 'approval.id'),
-      status: parseNonEmptyString(item.status, 'approval.status'),
+      id: parseNonEmptyString(item["id"], 'approval.id'),
+      status: parseNonEmptyString(item["status"], 'approval.status'),
     }
   })
 }
 
 function parseCost(value: unknown): { amount: number; currency: string } {
-  if (!isRecord(value) || typeof value.amount !== 'number' || !Number.isFinite(value.amount)) {
+  if (!isRecord(value) || typeof value["amount"] !== 'number' || !Number.isFinite(value["amount"])) {
     throw new RemoteSupervisionBadRequestError('Remote task cost is invalid')
   }
   return {
-    amount: value.amount,
-    currency: parseNonEmptyString(value.currency, 'cost.currency'),
+    amount: value["amount"],
+    currency: parseNonEmptyString(value["currency"], 'cost.currency'),
   }
 }
 
 function parseTimestamps(value: unknown): { createdAt?: string; updatedAt?: string } {
   if (!isRecord(value)) throw new RemoteSupervisionBadRequestError('Remote task timestamps are invalid')
   const timestamps: { createdAt?: string; updatedAt?: string } = {}
-  if (value.createdAt !== undefined) timestamps.createdAt = parseIsoDate(value.createdAt, 'timestamps.createdAt')
-  if (value.updatedAt !== undefined) timestamps.updatedAt = parseIsoDate(value.updatedAt, 'timestamps.updatedAt')
+  if (value["createdAt"] !== undefined) timestamps.createdAt = parseIsoDate(value["createdAt"], 'timestamps.createdAt')
+  if (value["updatedAt"] !== undefined) timestamps.updatedAt = parseIsoDate(value["updatedAt"], 'timestamps.updatedAt')
   return timestamps
 }
 

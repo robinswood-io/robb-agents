@@ -1,3 +1,5 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
+import { scopeReviewFixture } from './__fixtures__/scope-review.ts';
 import { describe, expect, it } from 'bun:test';
 import type { Message, ObjectiveOutcomeDeclaration } from '@craft-agent/core/types';
 import type { ActiveSessionObjective } from '@craft-agent/shared/sessions';
@@ -23,7 +25,7 @@ function terminal(objective: ActiveSessionObjective, messages: Message[], final:
 
 describe('registered criteria always govern objective completion', () => {
   it('replays the actual Gantt conclusion without promoting its unparsed JSON comment', () => {
-    for (const snapshot of [gantt, JSON.parse(JSON.stringify(gantt))]) {
+    for (const snapshot of [gantt, JSON.parse(JSON.stringify(gantt)) as typeof gantt]) {
       const objective = snapshot.objective as ActiveSessionObjective;
       expect(objective.orchestrationMode).toBe('direct');
       expect(objective.requiresExecutionEvidence).toBeUndefined();
@@ -108,9 +110,9 @@ describe('registered criteria always govern objective completion', () => {
     const observation: Message = { id: 'check', role: 'tool', content: '', timestamp: 3, toolName: 'Read', toolUseId: 'check-call', toolInput: { file_path: '/srv/check.json' }, toolResult: '{"ready":true}', toolExecuted: true, toolStatus: 'completed' };
     const declaration: ObjectiveOutcomeDeclaration = { state: 'complete_verified', criteria: [...objective.completionCriteria, 'target-ready'].map(id => ({ id, satisfied: true, evidence: ['check-call'] })), remainingWork: [], blocker: null };
     const final: Message = { id: 'final', role: 'assistant', content: 'Le résultat est vérifié.', timestamp: 4, objectiveOutcome: declaration };
-    const messages: Message[] = [{ id: objective.userMessageId, role: 'user', content: objective.originalText!, timestamp: 1 }, observation, final];
+    const messages: Message[] = [{ id: objective.userMessageId, role: 'user', content: objective.originalText!, timestamp: 1 }, observation, scopeReviewFixture(objective, [observation]), final];
     const before = structuredClone({ objective, messages });
-    expect(terminal(objective, messages, { ...final, objectiveOutcome: undefined })).toBe('continue');
+    expect(terminal(objective, messages, omitUndefined<Message>({ ...final, objectiveOutcome: undefined }))).toBe('continue');
     expect(terminal(objective, messages, final)).toBe('complete_verified');
     for (const changes of [{ toolResult: '{"ready":false}' }, { toolExecuted: false }, { toolStatus: 'error' as const }, { toolInput: { file_path: '/srv/other.json' } }]) {
       expect(terminal(objective, [messages[0]!, { ...observation, ...changes }, final], final)).toBe('continue');

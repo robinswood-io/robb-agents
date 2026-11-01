@@ -1,3 +1,4 @@
+import type { SnapshotInput } from '@craft-agent/shared/utils/json';
 import * as React from 'react'
 import { Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -32,38 +33,38 @@ interface KanbanBoardProps {
   projectsById: Map<string, KanbanProject>
   statusesById: Map<string, SessionStatus>
   /** Ordered workspace statuses for the per-tile status picker. */
-  statuses?: SessionStatus[]
+  statuses?: SessionStatus[] | undefined
   /** Change a task's status from its tile. Enables the status-badge picker when set. */
-  onChangeStatus?: (taskId: string, statusId: string) => void
+  onChangeStatus?: ((taskId: string, statusId: string) => void) | undefined
   /** Project color treatment. Defaults to 'stripe-tint'. */
-  treatment?: ProjectColorTreatment
+  treatment?: ProjectColorTreatment | undefined
   expandedTaskIds: Set<string>
-  onTaskClick?: (taskId: string) => void
+  onTaskClick?: ((taskId: string) => void) | undefined
   /** Open the full-pane editor against a tile (edit mode). Enables the tile's "Edit task" action. */
-  onEditTask?: (taskId: string) => void
-  onToggleSubtasks?: (taskId: string) => void
-  onSubtaskClick?: (taskId: string, subtaskId: string) => void
-  onAddSubtask?: (taskId: string, title: string, model: string) => void
+  onEditTask?: ((taskId: string) => void) | undefined
+  onToggleSubtasks?: ((taskId: string) => void) | undefined
+  onSubtaskClick?: ((taskId: string, subtaskId: string) => void) | undefined
+  onAddSubtask?: ((taskId: string, title: string, model: string) => void) | undefined
   /** Run all pending subtasks of a task. Shows each tile's Play button when set. */
-  onRunSubtasks?: (taskId: string) => void
+  onRunSubtasks?: ((taskId: string) => void) | undefined
   /** Provider→model catalog for each tile's "Add subtask" composer. */
-  subtaskModelGroups?: KanbanModelProviderGroup[]
+  subtaskModelGroups?: KanbanModelProviderGroup[] | undefined
   /** Model id pre-selected in the composer. */
-  defaultSubtaskModel?: string
+  defaultSubtaskModel?: string | undefined
   /** Create a task tile from a typed title. Renders the inline composer in the first column. */
-  onCreateTask?: (title: string) => void
+  onCreateTask?: ((title: string) => void) | undefined
   /** Move a tile to another column (drag-and-drop). Placement only — never touches status. */
-  onMoveTask?: (taskId: string, toColumn: KanbanColumnId) => void
+  onMoveTask?: ((taskId: string, toColumn: KanbanColumnId) => void) | undefined
   /** Per-column status auto-applied on drop. Keyed by column id; empty = leave untouched. */
-  columnDropStatus?: Partial<Record<KanbanColumnId, string>>
+  columnDropStatus?: Partial<Record<KanbanColumnId, string>> | undefined
   /** Set a column's drop-status from its header. Enables the header picker when provided. */
-  onSelectDropStatus?: (column: KanbanColumnId, statusId: string) => void
+  onSelectDropStatus?: ((column: KanbanColumnId, statusId: string) => void) | undefined
   /** Rename/recolor a custom column (single-project edit mode). Enables the column editor. */
-  onUpdateColumn?: (columnId: string, patch: Partial<KanbanColumnDef>) => void
+  onUpdateColumn?: ((columnId: string, patch: Partial<SnapshotInput<KanbanColumnDef>>) => void) | undefined
   /** Remove a custom column (single-project edit mode); its cards reassign to the first column. */
-  onRemoveColumn?: (columnId: string) => void
+  onRemoveColumn?: ((columnId: string) => void) | undefined
   /** Append a new custom column (single-project edit mode). Renders the "add column" affordance. */
-  onAddColumn?: () => void
+  onAddColumn?: (() => void) | undefined
 }
 
 /**

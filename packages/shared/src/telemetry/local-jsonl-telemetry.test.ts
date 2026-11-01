@@ -1,8 +1,9 @@
+import { parseJsonObject } from '../utils/json.ts';
 import { afterEach, describe, expect, it } from 'bun:test';
 import { chmod, link, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { LocalJsonlTelemetrySink } from './execution-telemetry.ts';
+import { LocalJsonlTelemetrySink, type CoreExecutionTelemetryEvent } from './execution-telemetry.ts';
 
 let directory: string | undefined;
 
@@ -25,7 +26,7 @@ describe('LocalJsonlTelemetrySink', () => {
       toolName: 'Read',
       durationMs: 12,
       secretSentinel: 'must-not-persist',
-    } as any);
+    } as CoreExecutionTelemetryEvent);
 
     const persisted = await readFile(filePath, 'utf8');
     expect(persisted).toContain('tool.completed');
@@ -77,7 +78,7 @@ describe('LocalJsonlTelemetrySink', () => {
 
     const records = `${await readFile(`${filePath}.1`, 'utf8')}${await readFile(filePath, 'utf8')}`
       .trim().split('\n').map(line => JSON.parse(line) as { eventId: string });
-    expect(records.map(record => record.eventId)).toEqual(events.map(event => event.eventId));
+    expect(records.map((record) => record.eventId)).toEqual(events.map(event => event.eventId));
     expect(Buffer.byteLength(await readFile(filePath))).toBeLessThanOrEqual(400);
     expect(Buffer.byteLength(await readFile(`${filePath}.1`))).toBeLessThanOrEqual(400);
   });
@@ -103,8 +104,8 @@ describe('LocalJsonlTelemetrySink', () => {
 
     const active = await readFile(filePath, 'utf8');
     const archived = await readFile(`${filePath}.1`, 'utf8');
-    const records = `${archived}${active}`.trim().split('\n').map(line => JSON.parse(line));
-    expect(records.map(record => record.eventId).sort()).toEqual(['sink-a', 'sink-b']);
+    const records = `${archived}${active}`.trim().split('\n').map(line => parseJsonObject(line));
+    expect(records.map((record) => record["eventId"]).sort()).toEqual(['sink-a', 'sink-b']);
     expect(Buffer.byteLength(active)).toBeLessThanOrEqual(maxBytes);
     expect(Buffer.byteLength(archived)).toBeLessThanOrEqual(maxBytes);
   });
@@ -127,12 +128,12 @@ describe('LocalJsonlTelemetrySink', () => {
     });
 
     const persisted = await readFile(filePath, 'utf8');
-    const records = persisted.trim().split('\n').map(line => JSON.parse(line));
+    const records = persisted.trim().split('\n').map(line => parseJsonObject(line));
     expect(records).toHaveLength(2);
     expect(records[0]).toEqual({ legacy: 'complete' });
-    expect(records[1].eventId).toBe('after-repair');
+    expect(records[1]?.["eventId"]).toBe('after-repair');
     const archived = await readFile(`${filePath}.1`, 'utf8');
-    expect(archived.trim().split('\n').map(line => JSON.parse(line))).toEqual([
+    expect(archived.trim().split('\n').map(line => parseJsonObject(line))).toEqual([
       { archived: 'complete' },
     ]);
     expect(Buffer.byteLength(persisted)).toBeLessThanOrEqual(maxBytes);
@@ -223,8 +224,8 @@ describe('LocalJsonlTelemetrySink', () => {
 
     const persisted = await readFile(filePath, 'utf8');
     const archived = await readFile(`${filePath}.1`, 'utf8');
-    const records = `${archived}${persisted}`.trim().split('\n').map(line => JSON.parse(line));
-    expect(records.map(record => record.eventId)).toEqual(['old-event', 'new-event']);
+    const records = `${archived}${persisted}`.trim().split('\n').map(line => parseJsonObject(line));
+    expect(records.map((record) => record["eventId"])).toEqual(['old-event', 'new-event']);
     expect(`${archived}${persisted}`).not.toContain('oversized-event');
     expect(Buffer.byteLength(persisted)).toBeLessThanOrEqual(maxBytes);
     expect(Buffer.byteLength(archived)).toBeLessThanOrEqual(maxBytes);
@@ -249,7 +250,7 @@ describe('LocalJsonlTelemetrySink', () => {
     });
 
     const persisted = await readFile(filePath, 'utf8');
-    expect(JSON.parse(persisted).eventId).toBe('bounded-event');
+    expect(parseJsonObject(persisted)["eventId"]).toBe('bounded-event');
     expect(Buffer.byteLength(persisted)).toBeLessThanOrEqual(maxBytes);
     await expect(stat(`${filePath}.1`)).rejects.toMatchObject({ code: 'ENOENT' });
   });

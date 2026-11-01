@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "manifest-only-policy-v1",
+  "updatedAt": "2026-07-12T17:38:30.034327Z",
+  "updatedBy": "oss-architecture-v2-install",
+  "description": "Explicit allowlist for command-manifest rows intentionally absent from automation-mapping because they are manual, test, one-shot, or human-approved wrappers. This prevents false drift while keeping any new unclassified manifest-only row visible.",
+  "defaults": {
+    "mappingExpectation": "mapped_or_scheduled_unless_accepted_here",
+    "scheduleAllowed": false,
+    "temporalMappingRequired": false,
+    "requiresExplicitReviewBeforeScheduling": true
+  },
+  "counts": {
+    "acceptedManifestOnly": 51,
+    "currentManifestOnly": 51,
+    "staleRetainedForAudit": 0
+  },
+  "acceptedManifestOnly": []
+}

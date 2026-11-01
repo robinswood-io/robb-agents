@@ -1,0 +1,26 @@
+{
+  "status": "passed",
+  "fixtureRuntimeImports": [],
+  "packing": "Contiguous native cases retain their lexical scopes, file-owned state, module initializer order and lifecycle",
+  "source": "packages/server-core/src/sessions/native-question-retry.test.ts",
+  "typing": {
+    "status": "passed",
+    "typedSourceHash": "33f692a0109061381a300319c9b7b1ba5454d971de853c6034e2d14a6749fb13",
+    "nativeSourceUnchanged": true,
+    "typeEdits": 0
+  },
+  "testDeclarations": 14,
+  "nativeTestBodiesAndWithinGroupOrderPreserved": true,
+  "nestedSuiteIdentityPreserved": true,
+  "nativeSetupAndBeforeEachRetainedPerFile": true,
+  "nativeModuleInitializersAndOwnedStatePreserved": true,
+  "nativeExternalImportOrderPreserved": true,
+  "sharedDeclarations": [],
+  "sharedMutableStateAdded": false,
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 397,
+  "currentSourceHashes": {
+    "packages/server-core/src/sessions/native-question-retry.test.ts": "d8d779a04a0beb97703b15f9213c92ac1edb5f457caee5f89980b68d1d27361b",
+    "packages/server-core/src/sessions/native-question-retry-keeps-a-non-retry-legacy-hidden-answer-snapshot-until-hydration-c.test.ts": "9e544517e770ef82e3da5fbdfea62a0d032c79a53eb4e1a1743d27fc0cc171c8"
+  }
+}

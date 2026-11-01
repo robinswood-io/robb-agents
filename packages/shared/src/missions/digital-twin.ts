@@ -1,3 +1,4 @@
+import { isUnknownArray } from '../utils/json.ts';
 import { createHash } from 'node:crypto';
 import {
   MissionSpecSchema,
@@ -376,7 +377,7 @@ function itemFingerprint(item: MissionWorkItem): string {
 
 function canonicalJson(value: unknown): string {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (isUnknownArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
   return `{${Object.entries(value as Record<string, unknown>)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([key, child]) => `${JSON.stringify(key)}:${canonicalJson(child)}`)

@@ -144,16 +144,16 @@ describe('script_sandbox', () => {
     const shadow = join(hostileBin, 'sandbox-exec');
     writeFileSync(shadow, `#!/bin/sh\n/usr/bin/touch ${JSON.stringify(marker)}\nexit 0\n`);
     chmodSync(shadow, 0o755);
-    const previousPath = process.env.PATH;
-    process.env.PATH = `${hostileBin}:${previousPath ?? ''}`;
+    const previousPath = process.env["PATH"];
+    process.env["PATH"] = `${hostileBin}:${previousPath ?? ''}`;
     try {
       const result = await handleScriptSandbox(ctx(), {
         language: 'node', script: "console.log('system sandbox')", timeoutMs: 1500,
       });
       expect(result.content[0]?.text ?? '').not.toContain('sandbox_apply');
     } finally {
-      if (previousPath === undefined) delete process.env.PATH;
-      else process.env.PATH = previousPath;
+      if (previousPath === undefined) delete process.env["PATH"];
+      else process.env["PATH"] = previousPath;
     }
     expect(existsSync(marker)).toBe(false);
   });

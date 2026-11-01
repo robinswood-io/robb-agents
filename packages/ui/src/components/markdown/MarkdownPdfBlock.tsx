@@ -37,7 +37,7 @@ import { ItemNavigator } from '../overlay/ItemNavigator'
 import { usePlatform } from '../../context/PlatformContext'
 import { useTranslation } from 'react-i18next'
 import { resolveMarkdownLinkTarget } from './link-target'
-import { parseMarkdownPreviewSpec, normalizePreviewItems } from './markdown-preview-helpers'
+import { parseMarkdownPreviewSpec, normalizePreviewItems, type MarkdownPreviewItem as PreviewItem, type MarkdownPreviewSpec as PdfPreviewSpec } from './markdown-preview-helpers'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 
@@ -47,16 +47,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
-interface PreviewItem {
-  src: string
-  label?: string
-}
 
-interface PdfPreviewSpec {
-  src?: string
-  title?: string
-  items?: PreviewItem[]
-}
 
 // ── Error boundary ───────────────────────────────────────────────────────────
 
@@ -64,12 +55,12 @@ class PdfBlockErrorBoundary extends React.Component<
   { children: React.ReactNode; fallback: React.ReactNode },
   { hasError: boolean }
 > {
-  state = { hasError: false }
+  override state = { hasError: false }
   static getDerivedStateFromError() { return { hasError: true } }
-  componentDidCatch(error: Error) {
+  override componentDidCatch(error: Error) {
     console.warn('[MarkdownPdfBlock] Render failed, falling back to CodeBlock:', error)
   }
-  render() {
+  override render() {
     if (this.state.hasError) return this.props.fallback
     return this.props.children
   }
@@ -79,8 +70,8 @@ class PdfBlockErrorBoundary extends React.Component<
 
 export interface MarkdownPdfBlockProps {
   code: string
-  className?: string
-  onCreateRegionAnnotation?: (region: { page?: number; x: number; y: number; w: number; h: number; unit: 'pixel' | 'percent' }) => void
+  className?: string | undefined
+  onCreateRegionAnnotation?: ((region: { page?: number; x: number; y: number; w: number; h: number; unit: 'pixel' | 'percent' }) => void) | undefined
 }
 
 export function MarkdownPdfBlock({ code, className, onCreateRegionAnnotation: _onCreateRegionAnnotation }: MarkdownPdfBlockProps) {
@@ -125,7 +116,7 @@ export function MarkdownPdfBlock({ code, className, onCreateRegionAnnotation: _o
         // Store a copy — react-pdf transfers ArrayBuffers to workers, detaching the original
         setContentCache((prev) => ({ ...prev, [activeItem.src]: new Uint8Array(data) }))
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : 'Failed to read PDF file')
       })
       .finally(() => setLoading(false))

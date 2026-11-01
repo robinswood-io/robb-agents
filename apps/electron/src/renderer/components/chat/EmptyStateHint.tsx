@@ -1,3 +1,4 @@
+import { omitUndefined } from '@craft-agent/shared/utils/json';
 /**
  * EmptyStateHint - Rotating workflow suggestions for empty chat state
  *
@@ -80,7 +81,7 @@ function parseHintTemplate(template: string, id: string): ParsedHint {
   const tokenRegex = /\{(source|file|folder|skill)(?::([^}]+))?\}/g
 
   let lastIndex = 0
-  let match
+  let match: RegExpExecArray | null
 
   while ((match = tokenRegex.exec(template)) !== null) {
     // Add text before the token
@@ -97,12 +98,12 @@ function parseHintTemplate(template: string, id: string): ParsedHint {
     // For source type, the second part is the provider/label
     // For other types, it's just a custom label
     if (entityType === 'source') {
-      segments.push({
+      segments.push(omitUndefined<Extract<HintSegment, { type: 'entity' }>>({
         type: 'entity',
         entityType,
         label: labelOrProvider || 'source',
         provider: labelOrProvider?.toLowerCase(),
-      })
+      }))
     } else {
       segments.push({
         type: 'entity',
@@ -139,7 +140,7 @@ function parseAllHints(t: (key: string) => string): ParsedHint[] {
 interface EntityBadgeProps {
   entityType: EntityType
   label: string
-  provider?: string
+  provider?: string | undefined
 }
 
 /**
@@ -159,9 +160,9 @@ function EntityBadge({ label }: EntityBadgeProps) {
 
 export interface EmptyStateHintProps {
   /** Specific hint index to display (for playground testing) */
-  hintIndex?: number
+  hintIndex?: number | undefined
   /** Custom class name */
-  className?: string
+  className?: string | undefined
 }
 
 /**
@@ -186,6 +187,7 @@ export function EmptyStateHint({ hintIndex, className }: EmptyStateHintProps) {
   // Update if hintIndex prop changes
   const displayIndex = hintIndex !== undefined ? hintIndex : selectedIndex
   const hint = allHints[displayIndex % allHints.length]
+  if (!hint) return null
 
   return (
     <div
@@ -225,5 +227,7 @@ export function getHintCount(): number {
  * Get hint template key by index (for debugging/testing)
  */
 export function getHintTemplate(index: number): string {
-  return HINT_TEMPLATE_KEYS[index % HINT_TEMPLATE_KEYS.length]
+  const key = HINT_TEMPLATE_KEYS[index % HINT_TEMPLATE_KEYS.length]
+  if (!key) throw new RangeError('Invalid hint index')
+  return key
 }
