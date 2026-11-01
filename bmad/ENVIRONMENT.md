@@ -78,8 +78,8 @@ hôte natif qualifié. Les labels sont des exigences, pas une preuve de disponib
 Aucun repli implicite sur les runners hébergés GitHub n'est autorisé.
 Les contributions externes ne doivent pas être routées vers DEV partagé : leur CI
 reste distincte et son isolation doit être établie avant une migration de runners.
-Le contrôleur privé épinglé est celui de la diffusion 15, commit
-f9ab876de31a6beb0dca75b8f850531ccebbba99. Les contrôles applicatifs restent inchangés.
+Le contrôleur privé épinglé est celui de la diffusion 16, commit
+b73cea49b01edb4dd043c0ae82a43b659d5cce53. Les contrôles applicatifs restent inchangés.
 
 Le packaging Windows de la CI des pull requests exige le label distinct
 robb-ci-isolated (self-hosted, Windows, X64), jamais le runner de release.

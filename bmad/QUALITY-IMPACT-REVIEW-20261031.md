@@ -399,7 +399,7 @@ relevant; renew the source scope after this impact review. Inspect generated
 provenance and all source-size checks before the next full RUN/VERIFY.
 This correction is not a successful RUN/VERIFY or packaged mission qualification.
 
-## Internal release runners and policy diffusion 15
+## Internal release runners and policy diffusion 16
 The user requires desktop builds on company-controlled runners. Release preflight,
 Linux build and publication now require the existing dedicated Linux/X64 label;
 macOS ARM64/X64 and Windows X64 require dedicated self-hosted native runners.
@@ -410,15 +410,16 @@ CI is not redirected onto shared DEV without isolation; its migration is pending
 The trusted release triggers, dependency graph, concurrency, timeouts, signatures,
 installer tests, checksums, attestations and private module boundary are preserved.
 A regression test checks every direct and matrix release runner declaration.
-Controller diffusion 15 replaces 13. Canonical changes affecting this project are
-rules 04/18/28 (browser completion) and 48 (governance), plus the project-policy
-export. They require observing the final native journey on the correct host,
-reuse of authorized sessions, bounded technical recovery and explicit remaining
-human authentication. No browser outcome is inferred from code tests or screenshots.
-The existing native mission plan covers missing input, deduplication, continuation,
-a new request, report preview and restart persistence. Those candidate runs remain
-pending; no installed application, protected data or connection is changed here.
-Rule 50 remains 1.5.0 and the executable controller is unchanged between revisions.
+Controller diffusion 16 replaces 15; its rules and contracts are byte-identical.
+The earlier browser/governance review remains applicable: observe native outcomes,
+reuse authorized sessions and report remaining human authentication explicitly.
+The controller's first-manifest preflight now requires a regular file, a matching
+systemd-bun-watch destination, a command and unique services. Existing destination
+manifests retain their validation. Robb introduces no manifest or preflight bypass.
+The native mission plan (missing input, deduplication, continuation, new request,
+preview, restart) remains pending; no installed app, data or connection changes.
+Rule 50 remains 1.5.0, governance 2.6.0. The private controller commit is upstream;
+its new pin requires exact-commit RUN and VERIFY, not inherited gate success.
 Review impact: runner routing (rule 30), trusted release boundary (security/git),
 new browser/governance obligations and the environment reference. Reuse unaffected
 source reviews after renewing the exact source scope; preserve every control,
