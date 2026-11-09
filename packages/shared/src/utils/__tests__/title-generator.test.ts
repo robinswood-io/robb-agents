@@ -1,3 +1,8 @@
+// @rbw-module robinswood-agents:shared/title-generator-tests
+// @rbw-role Unit tests for cross-AI session title prompt builder, client prefix resolver, and CLIENT + SUJET formatter
+// @rbw-bounds in=[title-generator functions] | out=[test assertions] | invariants=[<=500 lines]
+// @rbw-memory project:robinswood-agents#mod:shared/title-generator
+
 import { describe, test, expect } from 'bun:test';
 import {
   sliceAtWord,
@@ -7,6 +12,8 @@ import {
   validateTitle,
   buildTitlePrompt,
   buildRegenerateTitlePrompt,
+  resolveCrossAiClientCode,
+  formatCrossAiChatTitle,
 } from '../title-generator.ts';
 
 // ---------------------------------------------------------------------------
@@ -378,5 +385,45 @@ describe('buildRegenerateTitlePrompt', () => {
   test('includes assistant response snippet', () => {
     const prompt = buildRegenerateTitlePrompt(['msg'], 'I helped with auth');
     expect(prompt).toContain('I helped with auth');
+  });
+
+  test('enforces CLIENT (1 word) + SUJET (2-3 words) rule in prompts', () => {
+    const prompt1 = buildTitlePrompt('Corriger la facturation Sellsy pour Atria');
+    expect(prompt1).toContain('ATRIA Correction facturation');
+    expect(prompt1).toContain('PNS-GEN Traitement mail Ludwig');
+    expect(prompt1).toContain('client hint: ATRIA');
+
+    const prompt2 = buildRegenerateTitlePrompt(['Traiter le mail de Ludwig sur P\'S Gen'], 'Mail analysé');
+    expect(prompt2).toContain('client hint: PNS-GEN');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveCrossAiClientCode & formatCrossAiChatTitle
+// ---------------------------------------------------------------------------
+describe('resolveCrossAiClientCode & formatCrossAiChatTitle', () => {
+  test('preserves already compliant canonical examples', () => {
+    expect(formatCrossAiChatTitle('ATRIA Correction facturation')).toBe('ATRIA Correction facturation');
+    expect(formatCrossAiChatTitle('PNS-GEN Traitement mail Ludwig')).toBe('PNS-GEN Traitement mail Ludwig');
+  });
+
+  test('resolves client prefix and trims subject to 2-3 words without punctuation', () => {
+    expect(
+      formatCrossAiChatTitle('Atria — conformité des factures existantes · retours Franck'),
+    ).toBe('ATRIA Conformité factures existantes');
+    expect(
+      formatCrossAiChatTitle('Traitement du mail de Ludwig', "P'S Gen lettre de mission"),
+    ).toBe('PNS-GEN Traitement mail Ludwig');
+    expect(
+      formatCrossAiChatTitle('Audit du connecteur ISAGRI chez Plc Consiel'),
+    ).toBe('PLC Audit connecteur ISAGRI');
+    expect(
+      formatCrossAiChatTitle('Synchronisation des devis Batigest sur Saxium'),
+    ).toBe('JLM Synchronisation devis Batigest');
+  });
+
+  test('defaults to RBW when no external client is referenced', () => {
+    expect(resolveCrossAiClientCode('Optimiser le routage des modèles IA')).toBe('RBW');
+    expect(formatCrossAiChatTitle('Optimiser le routage des modèles IA')).toBe('RBW Optimiser routage modèles');
   });
 });
