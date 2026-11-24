@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "mode": "github_workflow",
+  "project": "robinswood-agents",
+  "country_code": "FR",
+  "preauthorized_policy_ref": "bmad/PROJECT-POLICY.md",
+  "github_repo": "robinswood-io/robb-agents",
+  "workflow_file": "release.yml",
+  "branch": "robinswood/main",
+  "require_human_approval": true,
+  "sensitive_changes": [],
+  "ready_url": "https://orion.rbw.ovh"
+}

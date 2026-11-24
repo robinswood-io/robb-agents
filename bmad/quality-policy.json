@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "environment_reference": "bmad/PROJECT-POLICY.md",
+  "max_lines": 500,
+  "languages": [
+    "css",
+    "javascript",
+    "json",
+    "python",
+    "shell",
+    "typescript",
+    "yaml"
+  ],
+  "commands": {
+    "environment": [
+      "rtk",
+      "/home/ubuntu/.cache/rulebook-quality/bun-v1.4.4/bun",
+      "--version"
+    ],
+    "typecheck": [
+      "rtk",
+      "/home/ubuntu/.cache/rulebook-quality/bun-v1.4.4/bun",
+      "x",
+      "tsc",
+      "--noEmit"
+    ],
+    "lint": [
+      "rtk",
+      "/home/ubuntu/.cache/rulebook-quality/bun-v1.4.4/bun",
+      "/opt/ia-webdev/rulebook-ai/scripts/bmad/rbw.mts",
+      "check-dev",
+      "/srv/workspace/robinswood-agents"
+    ],
+    "tests": [
+      "rtk",
+      "/home/ubuntu/.cache/rulebook-quality/bun-v1.4.4/bun",
+      "test"
+    ]
+  },
+  "rules": {},
+  "typescript_configs": [
+    "tsconfig.json"
+  ]
+}
